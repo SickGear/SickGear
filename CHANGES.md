@@ -1,4 +1,6 @@
 ### 0.x.x (2014-11-xx xx:xx:xx UTC)
+Add "Sync watch state" setting to the Config/Notifications/Social tab
+Add output of the Trakt watched state to the CMD_ShowSeasons() API endpoint
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
 

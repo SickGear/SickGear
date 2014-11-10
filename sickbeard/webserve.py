@@ -2416,7 +2416,7 @@ class ConfigNotifications(MainHandler):
                           use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
                           email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
                           email_tls=None, email_user=None, email_password=None, email_list=None, email_show_list=None,
-                          email_show=None):
+                          email_show=None, trakt_watch_states=None):
 
         results = []
 
@@ -2515,6 +2515,7 @@ class ConfigNotifications(MainHandler):
         sickbeard.TRAKT_USE_RECOMMENDED = config.checkbox_to_value(trakt_use_recommended)
         sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
         sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
+        sickbeard.TRAKT_WATCH_STATES = config.checkbox_to_value(trakt_watch_states)
 
         if sickbeard.USE_TRAKT:
             sickbeard.traktCheckerScheduler.silent = False
