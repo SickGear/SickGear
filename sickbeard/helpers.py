@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty    of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import with_statement
 import getpass
@@ -713,7 +713,7 @@ def create_https_certificates(ssl_cert, ssl_key):
     careq = createCertRequest(cakey, CN='Certificate Authority')
     cacert = createCertificate(careq, (careq, cakey), serial, (0, 60 * 60 * 24 * 365 * 10))  # ten years
 
-    cname = 'SickRage'
+    cname = 'SickGear'
     pkey = createKeyPair(TYPE_RSA, 1024)
     req = createCertRequest(pkey, CN=cname)
     cert = createCertificate(req, (cacert, cakey), serial, (0, 60 * 60 * 24 * 365 * 10))  # ten years
@@ -1037,7 +1037,7 @@ def get_show(name, tryIndexers=False):
         if showObj and not fromCache:
             sickbeard.name_cache.addNameToCache(name, showObj.indexerid)
     except Exception as e:
-        logger.log(u"Error when attempting to find show: " + name + " in SickRage: " + str(e), logger.DEBUG)
+        logger.log(u"Error when attempting to find show: " + name + " in SickGear: " + str(e), logger.DEBUG)
 
     return showObj
 
@@ -1227,9 +1227,9 @@ def _getTempDir():
         try:
             uid = getpass.getuser()
         except ImportError:
-            return os.path.join(tempfile.gettempdir(), "sickrage")
+            return os.path.join(tempfile.gettempdir(), "SickGear")
 
-    return os.path.join(tempfile.gettempdir(), "sickrage-%s" % (uid))
+    return os.path.join(tempfile.gettempdir(), "SickGear-%s" % (uid))
 
 def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False):
     """

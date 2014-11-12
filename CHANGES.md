@@ -1,5 +1,6 @@
-### 0.x.x (2014-11-11 xx:xx:xx UTC)
+### 0.x.x (2014-11-12 xx:xx:xx UTC)
 
+* Change logos, text etc. branding to SickGear
 * Add Bootstrap for UI features
 * Change UI to resize fluidly on different display sizes, fixes the issue where top menu items would disappear on smaller screens
 * Add date formats "dd/mm/yy", "dd/mm/yyyy", "day, dd/mm/yy" and "day, dd/mm/yyyy"
@@ -26,7 +27,7 @@
 * Change move Providers Priorities qtip options to a new Search Providers/Provider Options tab
 * Remove superfish-1.4.8.js and supersubs-0.2b.js as they are no longer required with new UI
 * Change overhaul Config Search Settings in line with General Configuration
-* Fix error when a show folder is deleted outside of SickRage
+* Fix error when a show folder is deleted outside of SickGear
 * Change combine the delete button function into the remove button on the display show page
 * Change other small UI tweaks
 * Fix keyerrors on backlog overview preventing the page to load
@@ -47,13 +48,13 @@
 * Add handler for when Trakt returns no results for Add Show/Add Trending Show page
 * Fix image links when anchor child images are not found at Trakt on Add Show/Add Trending Show page
 * Add image to be used when Trakt posters are void on Add Show/Add Trending Show page
-* Fix growl registration not sending sickrage an update notification registration
+* Fix growl registration not sending SickGear an update notification registration
 * Add an anonymous redirect builder for external links
 * Update xbmc link to Kodi at Config Notifications
 * Fix missing url for kickasstorrents in config_providers
 * Fix post processing when using tvrage indexer and mediabrowser metadata generation
 * Change reporting failed network_timezones.txt updates from an error to a warning
-* Fix missing header and "on <missing text>" when network is none and Layout "Poster" with Sort By "Network" on coming episodes page.
+* Fix missing header and "on <missing text>" when network is none and Layout "Poster" with Sort By "Network" on coming episodes page
 * Change how the "local/network" setting is handled to address some issues
 
 [develop changelog]
@@ -77,28 +78,22 @@
 * Fix display show status and subtitle searches to use new column class names
 * Fix API response header for JSON content type and the return of JSONP data
 * Update PNotify to version [2.0.1]
-* Change the notification popups to always show the close button.
-* Fix issue where popups did not show if multiple tabs are used. Popups now queue and display when a tab is brought into focus.
-* Fix missing HTML in notifications resulting in incorrect formatting.
+* Change the notification popups to always show the close button
+* Fix issue where popups did not show if multiple tabs are used. Popups now queue and display when a tab is brought into focus
+* Fix missing HTML in notifications resulting in incorrect formatting
 
 
 ### 0.2.2 (2014-11-12 08:25:00 UTC)
-
-[full changelog](https://github.com/SickGear/SickGear/compare/release_0.2.1...release_0.2.2)
 
 * Change updater URLs to reflect new repository location
 
 
 ### 0.2.1 (2014-10-22 06:41:00 UTC)
 
-[full changelog](https://github.com/SickGear/SickGear/compare/release_0.2.0...release_0.2.1)
-
 * Fix HDtorrents provider screen scraping
 
 
 ### 0.2.0 (2014-10-21 12:36:50 UTC)
-
-[full changelog](https://github.com/SickGear/SickGear/compare/release_0.1.0...release_0.2.0)
 
 * Fix for failed episodes not counted in total
 * Fix for custom newznab providers with leading integer in name

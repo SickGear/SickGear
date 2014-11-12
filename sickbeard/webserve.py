@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import with_statement
 
@@ -88,7 +88,7 @@ def authenticated(handler_class):
         def basicauth(handler, transforms, *args, **kwargs):
             def _request_basic_auth(handler):
                 handler.set_status(401)
-                handler.set_header('WWW-Authenticate', 'Basic realm="SickRage"')
+                handler.set_header('WWW-Authenticate', 'Basic realm="SickGear"')
                 handler._transforms = []
                 handler.finish()
                 return False
@@ -443,8 +443,8 @@ class MainHandler(RequestHandler):
         # Create a iCal string
         ical = 'BEGIN:VCALENDAR\r\n'
         ical += 'VERSION:2.0\r\n'
-        ical += 'X-WR-CALNAME:SickRage\r\n'
-        ical += 'X-WR-CALDESC:SickRage\r\n'
+        ical += 'X-WR-CALNAME:SickGear\r\n'
+        ical += 'X-WR-CALDESC:SickGear\r\n'
         ical += 'PRODID://Sick-Beard Upcoming Episodes//\r\n'
 
         # Limit dates
@@ -1619,7 +1619,7 @@ class ConfigBackupRestore(MainHandler):
 
         if backupDir:
             source = [os.path.join(sickbeard.DATA_DIR, 'sickbeard.db'), sickbeard.CONFIG_FILE]
-            target = os.path.join(backupDir, 'sickrage-' + time.strftime('%Y%m%d%H%M%S') + '.zip')
+            target = os.path.join(backupDir, 'SickGear-' + time.strftime('%Y%m%d%H%M%S') + '.zip')
 
             if helpers.makeZip(source, target):
                 finalResult += "Successful backup to " + target
@@ -1643,7 +1643,7 @@ class ConfigBackupRestore(MainHandler):
 
             if helpers.extractZip(source, target_dir):
                 finalResult += "Successfully extracted restore files to " + target_dir
-                finalResult += "<br>Restart sickrage to complete the restore."
+                finalResult += "<br>Restart SickGear to complete the restore."
             else:
                 finalResult += "Restore FAILED"
         else:
@@ -3625,7 +3625,7 @@ class Home(MainHandler):
         sickbeard.events.put(sickbeard.events.SystemEvent.SHUTDOWN)
 
         title = "Shutting down"
-        message = "SickRage is shutting down..."
+        message = "SickGear is shutting down..."
 
         return self._genericMessage(title, message)
 
@@ -4016,7 +4016,7 @@ class Home(MainHandler):
                             # rescan the episodes in the new folder
                     except exceptions.NoNFOException:
                         errors.append(
-                            "The folder at <tt>%s</tt> doesn't contain a tvshow.nfo - copy your files to that folder before you change the directory in SickRage." % location)
+                            "The folder at <tt>%s</tt> doesn't contain a tvshow.nfo - copy your files to that folder before you change the directory in SickGear." % location)
 
             # save it to the DB
             showObj.saveToDB()

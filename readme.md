@@ -1,14 +1,14 @@
-SickRage
+SickGear
 =====
 
-SickRage is a Video File Manager for TV Shows, It watches for new episodes of your favorite shows and when they are posted it does its magic.
+SickGear is a Video File Manager for TV Shows, It watches for new episodes of your favorite shows and when they are posted it does its magic.
 
-*SickRage  is currently in beta release stage. There may be severe bugs in it and at any given time it may not work at all.*
+*SickGear  is currently in beta release stage. There may be severe bugs in it and at any given time it may not work at all.*
 
-There are currently a lot of changes that we're working on, which affect the very core of how SickRage works. We're doing this to lay the groundwork
-for making SickRage seriously more awesome, scalable and resource-friendly than it already is.
+There are currently a lot of changes that we're working on, which affect the very core of how SickGear works. We're doing this to lay the groundwork
+for making SickGear seriously more awesome, scalable and resource-friendly than it already is.
  
-While we're doing this, please expect SickRage do strange things, or maybe even not work at all. In any case, we need your help. If you see SickRage behaving weird, check if someone has reported it, and if not, open a new issue. There is little to no use to report "software should be stable". We will focus on that later, not now.
+While we're doing this, please expect SickGear do strange things, or maybe even not work at all. In any case, we need your help. If you see SickGear behaving weird, check if someone has reported it, and if not, open a new issue. There is little to no use to report "software should be stable". We will focus on that later, not now.
 
 !!! Please before using this with your existing database (sickbeard.db) please make a backup copy of it and delete any other database files such as cache.db and failed.db if present, we HIGHLY recommend starting out with no database files at all to make this a fresh start but the choice is at your own risk !!!
 
@@ -30,12 +30,12 @@ FEATURES:
 
 ## Dependencies
 
-To run SickRage from source you will need Python 2.6+ and Cheetah 2.1.0+.
+To run SickGear from source you will need Python 2.6+ and Cheetah 2.1.0+.
 
 ## Forums
 
-Any questions or setup info your looking for can be found at out forums https://www.sickrage.tv
+Any questions or setup info your looking for can be found at our [wiki](https://github.com/SickGear/SickGear/wiki)
 <br>
-If you find a bug please report at our forums https://sickrage.tv/forums/forum/help-support/bug-issue-reports
+If you find a bug please report at our [SickGear IRC channel](http://webchat.freenode.net/?channels=SickGear)
 <br>
-Be sure to provide a sickrage log in debug mode where is the error evidence or it'll never get fixed.
+Be sure to provide a SickGear log at pastebin.com in debug mode where the error is evidence or it'll never get fixed.

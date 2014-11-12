@@ -1549,6 +1549,10 @@ select .selected {
 	border-top: 1px dotted #666666; 
 }
 
+.infoTableHeader .icon16-sb {
+	background: url("../images/ico/favicon-16x16.png") 0 0 no-repeat;
+}
+
 [class^="icon16-"], [class*=" icon16-"] {
     background-image: url("../images/glyphicons-config-black.png");
     background-position: -40px 0;

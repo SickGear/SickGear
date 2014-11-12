@@ -167,12 +167,16 @@ inc_top.tmpl
 	background-image: url("../images/menu/menu-icons-white.png"); 
 }
 
-[class^="icon16-"], 
+.infoTableHeader .icon16-sb {
+	background: url("../images/ico/favicon-16x16.png") 0 0 no-repeat;
+}
+
+[class^="icon16-"],
 [class*=" icon16-"] { 
 	background-image: url("../images/glyphicons-config.png");
 }
 
-.ui-autocomplete-loading { 
+.ui-autocomplete-loading {
 	background: white url("../images/loading16.gif") right center no-repeat; 
 }
 

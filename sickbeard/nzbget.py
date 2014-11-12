@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
@@ -52,7 +52,7 @@ def sendNZB(nzb, proper=False):
 
     nzbGetRPC = xmlrpclib.ServerProxy(url)
     try:
-        if nzbGetRPC.writelog("INFO", "SickRage connected to drop of %s any moment now." % (nzb.name + ".nzb")):
+        if nzbGetRPC.writelog("INFO", "SickGear connected to drop of %s any moment now." % (nzb.name + ".nzb")):
             logger.log(u"Successful connected to NZBget", logger.DEBUG)
         else:
             logger.log(u"Successful connected to NZBget, but unable to send a message", logger.ERROR)
@@ -76,9 +76,9 @@ def sendNZB(nzb, proper=False):
     for curEp in nzb.episodes:
         if dupekey == "":
             if curEp.show.indexer == 1:
-                dupekey = "SickRage-" + str(curEp.show.indexerid)
+                dupekey = "SickGear-" + str(curEp.show.indexerid)
             elif curEp.show.indexer == 2:
-                dupekey = "SickRage-tvr" + str(curEp.show.indexerid)
+                dupekey = "SickGear-tvr" + str(curEp.show.indexerid)
         dupekey += "-" + str(curEp.season) + "." + str(curEp.episode)
         if datetime.date.today() - curEp.airdate <= datetime.timedelta(days=7):
             addToTop = True
