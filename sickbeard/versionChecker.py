@@ -130,10 +130,10 @@ class CheckVersion():
 
 class UpdateManager():
     def get_github_repo_user(self):
-        return 'SickragePVR'
+        return 'SickGear'
 
     def get_github_repo(self):
-        return 'SickRage'
+        return 'SickGear'
 
     def get_update_url(self):
         return sickbeard.WEB_ROOT + "/home/update/?pid=" + str(sickbeard.PID)
