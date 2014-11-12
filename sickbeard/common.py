@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import os.path
 import operator
@@ -23,7 +23,7 @@ import re
 import uuid
 
 INSTANCE_ID = str(uuid.uuid1())
-USER_AGENT = ('SickRage/(' + platform.system() + '; ' + platform.release() + '; ' + INSTANCE_ID + ')')
+USER_AGENT = ('SickGear/(' + platform.system() + '; ' + platform.release() + '; ' + INSTANCE_ID + ')')
 
 mediaExtensions = ['avi', 'mkv', 'mpg', 'mpeg', 'wmv',
                    'ogm', 'mp4', 'iso', 'img', 'divx',
@@ -53,8 +53,8 @@ notifyStrings = {}
 notifyStrings[NOTIFY_SNATCH] = "Started Download"
 notifyStrings[NOTIFY_DOWNLOAD] = "Download Finished"
 notifyStrings[NOTIFY_SUBTITLE_DOWNLOAD] = "Subtitle Download Finished"
-notifyStrings[NOTIFY_GIT_UPDATE] = "SickRage Updated"
-notifyStrings[NOTIFY_GIT_UPDATE_TEXT] = "SickRage Updated To Commit#: "
+notifyStrings[NOTIFY_GIT_UPDATE] = "SickGear Updated"
+notifyStrings[NOTIFY_GIT_UPDATE_TEXT] = "SickGear Updated To Commit#: "
 
 ### Episode statuses
 UNKNOWN = -1  # should never happen
@@ -152,7 +152,7 @@ class Quality:
     @staticmethod
     def nameQuality(name, anime=False):
         """
-        Return The quality from an episode File renamed by SickRage
+        Return The quality from an episode File renamed by SickGear
         If no quality is achieved it will try sceneQuality regex
         """
 

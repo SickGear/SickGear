@@ -6,8 +6,8 @@
 # Required-Stop:     $all
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: starts SickRage
-# Description:       starts SickRage
+# Short-Description: starts SickGear
+# Description:       starts SickGear
 ### END INIT INFO
 
 # Source function library.

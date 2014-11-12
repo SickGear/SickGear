@@ -9,25 +9,25 @@
 #
 # sickbeard_enable (bool):	Set to NO by default.
 #			Set it to YES to enable it.
-# sickbeard_user:  The user account SickRage daemon runs as what
+# sickbeard_user:  The user account SickGear daemon runs as what
 #			you want it to be. It uses '_sabnzbd' user by
 #			default. Do not sets it as empty or it will run
 #			as root.
-# sickbeard_dir:	Directory where SickRage lives.
+# sickbeard_dir:	Directory where SickGear lives.
 #			Default: /usr/local/sickbeard
-# sickbeard_chdir:  Change to this directory before running SickRage.
+# sickbeard_chdir:  Change to this directory before running SickGear.
 #     Default is same as sickbeard_dir.
 # sickbeard_datadir:  Data directory for Sick Beard (DB, Logs, config)
 #     Default is same as sickbeard_chdir
 # sickbeard_pid:  The name of the pidfile to create.
 #     Default is sickbeard.pid in sickbeard_dir.
-# sickbeard_host: The hostname or IP SickRage is listening on
+# sickbeard_host: The hostname or IP SickGear is listening on
 #     Default is 127.0.0.1
-# sickbeard_port: The port SickRage is listening on
+# sickbeard_port: The port SickGear is listening on
 #     Default is 8081
-# sickbeard_web_user: Username to authenticate to the SickRage web interface
+# sickbeard_web_user: Username to authenticate to the SickGear web interface
 #     Default is an empty string (no username)
-# sickbeard_web_password: Password to authenticate to the SickRage web interface
+# sickbeard_web_password: Password to authenticate to the SickGear web interface
 #     Default is an empty string (no password)
 # sickbeard_webroot: Set to value of web_root in config (for proxies etc)
 #     Default is an empty string (if set must start with a "/")
@@ -69,13 +69,13 @@ if [ `id -u` != "0" ]; then
 fi
 
 verify_sickbeard_pid() {
-    # Make sure the pid corresponds to the SickRage process.
+    # Make sure the pid corresponds to the SickGear process.
     pid=`cat ${sickbeard_pid} 2>/dev/null`
     ps -p ${pid} 2>/dev/null | grep -q "python ${sickbeard_dir}/SickBeard.py"
     return $?
 }
 
-# Try to stop SickRage cleanly by calling shutdown over http.
+# Try to stop SickGear cleanly by calling shutdown over http.
 sickbeard_stop() {
     echo "Stopping $name"
     verify_sickbeard_pid

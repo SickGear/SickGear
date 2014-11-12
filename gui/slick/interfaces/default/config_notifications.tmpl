@@ -42,7 +42,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_xbmc" id="use_xbmc" #if $sickbeard.USE_XBMC then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send XBMC commands ?<p>
+                                    <p>should SickGear send XBMC commands ?<p>
                                 </span>
                             </label>
                         </div>
@@ -168,7 +168,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_plex" id="use_plex" #if $sickbeard.USE_PLEX then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Plex commands ?</p>
+                                    <p>should SickGear send Plex commands ?</p>
                                 </span>
                             </label>
                         </div>
@@ -275,7 +275,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_nmj" id="use_nmj" #if $sickbeard.USE_NMJ then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send update commands to NMJ ?</p>
+                                    <p>should SickGear send update commands to NMJ ?</p>
                                 </span>
                             </label>
                         </div>
@@ -341,7 +341,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_nmjv2" id="use_nmjv2" #if $sickbeard.USE_NMJv2 then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send update commands to NMJv2 ?</p>
+                                    <p>should SickGear send update commands to NMJv2 ?</p>
                                 </span>
                             </label>
                         </div>
@@ -431,12 +431,12 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_synoindex" id="use_synoindex" #if $sickbeard.USE_SYNOINDEX then "checked=\"checked\"" else ""# /> 
-                                    <p>should SickRage send Synology notifications ?</p>
+                                    <p>should SickGear send Synology notifications ?</p>
                                 </span>
                             </label>
                             <label>
                                 <span class="component-title">&nbsp;</span>
-                                <span class="component-desc"><b>Note:</b> requires SickRage to be running on your Synology NAS.</span>
+                                <span class="component-desc"><b>Note:</b> requires SickGear to be running on your Synology NAS.</span>
                             </label>
                         </div>
 
@@ -461,12 +461,12 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_synologynotifier" id="use_synologynotifier" #if $sickbeard.USE_SYNOLOGYNOTIFIER then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send notifications to the Synology Notifier ?</p>
+                                    <p>should SickGear send notifications to the Synology Notifier ?</p>
                                 </span>
                             </label>
                             <label>
                                 <span class="component-title">&nbsp;</span>
-                                <span class="component-desc"><b>Note:</b> requires SickRage to be running on your Synology DSM.</span>
+                                <span class="component-desc"><b>Note:</b> requires SickGear to be running on your Synology DSM.</span>
                             </label>
                            </div>
                         <div id="content_use_synologynotifier">
@@ -515,7 +515,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_pytivo" id="use_pytivo" #if $sickbeard.USE_PYTIVO then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send notifications to pyTivo ?</p>
+                                    <p>should SickGear send notifications to pyTivo ?</p>
                                 </span>
                             </label>
                             <label>
@@ -577,7 +577,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_growl" id="use_growl" #if $sickbeard.USE_GROWL then "checked=\"checked\"" else ""# /> 
-                                    <p>should SickRage send Growl notifications ?</p>
+                                    <p>should SickGear send Growl notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -627,7 +627,7 @@
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
-                                    <span class="component-desc">may leave blank if SickRage is on the same host.</span>
+                                    <span class="component-desc">may leave blank if SickGear is on the same host.</span>
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
@@ -655,7 +655,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_prowl" id="use_prowl" #if $sickbeard.USE_PROWL then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Prowl notifications ?</p>
+                                    <p>should SickGear send Prowl notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -711,7 +711,7 @@
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
-                                    <span class="component-desc">priority of Prowl messages from SickRage.</span>
+                                    <span class="component-desc">priority of Prowl messages from SickGear.</span>
                                 </label>
                             </div>
                             <div class="testNotification" id="testProwl-result">Click below to test.</div>
@@ -735,7 +735,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_libnotify" id="use_libnotify" #if $sickbeard.USE_LIBNOTIFY then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Libnotify notifications ?</p>
+                                    <p>should SickGear send Libnotify notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -780,7 +780,7 @@
                 <div class="component-group">
                     <div class="component-group-desc">
                         <img class="notifier-icon" src="$sbRoot/images/notifiers/pushover.png" alt="" title="Pushover" />
-                        <h3><a href="<%= anon_url('https://pushover.net/apps/clone/sickrage') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushover</a></h3>
+                        <h3><a href="<%= anon_url('https://pushover.net/apps/clone/SickGear') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushover</a></h3>
                         <p>Pushover makes it easy to send real-time notifications to your Android and iOS devices.</p>
                     </div>
                     <fieldset class="component-group-list">
@@ -789,7 +789,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_pushover" id="use_pushover" #if $sickbeard.USE_PUSHOVER then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Pushover notifications ?</p>
+                                    <p>should SickGear send Pushover notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -839,7 +839,7 @@
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
-                                    <span class="component-desc"><a href="<%= anon_url('https://pushover.net/apps/clone/sickrage') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</span>
+                                    <span class="component-desc"><a href="<%= anon_url('https://pushover.net/apps/clone/SickGear') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</span>
                                 </label>
                             </div>
                             <div class="testNotification" id="testPushover-result">Click below to test.</div>
@@ -862,7 +862,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_boxcar" id="use_boxcar" #if $sickbeard.USE_BOXCAR then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Boxcar notifications ?</p>
+                                    <p>should SickGear send Boxcar notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -925,7 +925,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_boxcar2" id="use_boxcar2" #if $sickbeard.USE_BOXCAR2 then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Boxcar2 notifications ?</p>
+                                    <p>should SickGear send Boxcar2 notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -988,7 +988,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_nma" id="use_nma" #if $sickbeard.USE_NMA then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send NMA notifications ?</p>
+                                    <p>should SickGear send NMA notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -1044,7 +1044,7 @@
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
-                                    <span class="component-desc">priority of NMA messages from SickRage.</span>
+                                    <span class="component-desc">priority of NMA messages from SickGear.</span>
                                 </label>
                             </div>
                             <div class="testNotification" id="testNMA-result">Click below to test.</div>
@@ -1067,7 +1067,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_pushalot" id="use_pushalot" #if $sickbeard.USE_PUSHALOT then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Pushalot notifications ?
+                                    <p>should SickGear send Pushalot notifications ?
                                 </span>
                             </label>
                         </div>
@@ -1130,7 +1130,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_pushbullet" id="use_pushbullet" #if $sickbeard.USE_PUSHBULLET then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Pushbullet notifications ?</p>
+                                    <p>should SickGear send Pushbullet notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -1208,7 +1208,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_twitter" id="use_twitter" #if $sickbeard.USE_TWITTER then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage post tweets on Twitter ?</p>
+                                    <p>should SickGear post tweets on Twitter ?</p>
                                 </span>
                             </label>
                             <label>
@@ -1292,7 +1292,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_trakt" id="use_trakt" #if $sickbeard.USE_TRAKT then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send Trakt.tv notifications ?</p>
+                                    <p>should SickGear send Trakt.tv notifications ?</p>
                                 </span>
                             </label>
                         </div>
@@ -1345,7 +1345,7 @@
                                     <span class="component-title">Sync libraries:</span>
                                     <span class="component-desc">
                                         <input type="checkbox" class="enabler" name="trakt_sync" id="trakt_sync" #if $sickbeard.TRAKT_SYNC then "checked=\"checked\"" else ""# />
-                                        <p>sync your SickRage show library with your trakt show library.</p>
+                                        <p>sync your SickGear show library with your trakt show library.</p>
                                     </span>
                                 </label>
                             </div>
@@ -1420,7 +1420,7 @@
                                 <span class="component-title">Enable</span>
                                 <span class="component-desc">
                                     <input type="checkbox" class="enabler" name="use_email" id="use_email" #if $sickbeard.USE_EMAIL then "checked=\"checked\"" else ""# />
-                                    <p>should SickRage send email notifications ?</p>
+                                    <p>should SickGear send email notifications ?</p>
                                 </span>
                             </label>
                         </div>

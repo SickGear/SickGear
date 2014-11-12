@@ -4,7 +4,7 @@ $(document).ready(function () {
 		var target = $( this ).attr('href');
 		$.confirm({
 			'title'		: 'Shutdown',
-			'message'	: 'Are you sure you want to shutdown SickRage ?',
+			'message'	: 'Are you sure you want to shutdown SickGear ?',
 			'buttons'	: {
 				'Yes'	: {
 					'class'	: 'green',
@@ -25,7 +25,7 @@ $(document).ready(function () {
 		var target = $( this ).attr('href');
 		$.confirm({
 			'title'		: 'Restart',
-			'message'	: 'Are you sure you want to restart SickRage ?',
+			'message'	: 'Are you sure you want to restart SickGear ?',
 			'buttons'	: {
 				'Yes'	: {
 					'class'	: 'green',

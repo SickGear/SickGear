@@ -58,7 +58,7 @@
 								<span class="component-title">Launch browser</span>
 								<span class="component-desc">
 									<input type="checkbox" name="launch_browser" id="launch_browser" #if $sickbeard.LAUNCH_BROWSER then 'checked="checked"' else ''#/>
-									<p>open the SickRage home page on startup</p>
+									<p>open the SickGear home page on startup</p>
 								</span>
 							</label>
 						</div>
@@ -180,7 +180,7 @@
 								<span class="component-title">Notify on software update</span>
 								<span class="component-desc">
 									<input type="checkbox" name="notify_on_update" id="notify_on_update" #if $sickbeard.NOTIFY_ON_UPDATE then 'checked="checked"' else ''#/>
-									<p>send a message to all enabled notifiers when SickRage has been updated</p>
+									<p>send a message to all enabled notifiers when SickGear has been updated</p>
 								</span>
 							</label>
 						</div>
@@ -311,7 +311,7 @@
 
 					<div class="component-group-desc">
 						<h3>Web Interface</h3>
-						<p>It is recommended that you enable a username and password to secure SickRage from being tampered with remotely.</p>
+						<p>It is recommended that you enable a username and password to secure SickGear from being tampered with remotely.</p>
 						<p><b>These options require a manual restart to take effect.</b></p>
 					</div>
 
@@ -322,7 +322,7 @@
 								<span class="component-title">Enable API</span>
 								<span class="component-desc">
 									<input type="checkbox" name="use_api" class="enabler" id="use_api" #if $sickbeard.USE_API then 'checked="checked"' else ''#/>
-									<p>allow the use of the SickRage API</p>
+									<p>allow the use of the SickGear API</p>
 								</span>
 							</label>
 						</div>
@@ -333,7 +333,7 @@
 								<span class="component-desc">
 									<input type="text" name="api_key" id="api_key" value="$sickbeard.API_KEY" class="form-control input-sm input300" readonly="readonly" />
 									<input class="btn btn-inline" type="button" id="generate_new_apikey" value="Generate">
-									<div class="clear-left"><p>used to give 3rd party programs limited access to SickRage</p></div>
+									<div class="clear-left"><p>used to give 3rd party programs limited access to SickGear</p></div>
 								</span>
 							</label>
 						</div>
@@ -373,7 +373,7 @@
 								<span class="component-title">HTTP port</span>
 								<span class="component-desc">
 									<input type="text" name="web_port" id="web_port" value="$sickbeard.WEB_PORT" class="form-control input-sm input100" />
-									<p>web port to browse and access SickRage (default:8081)</p>
+									<p>web port to browse and access SickGear (default:8081)</p>
 								</span>
 							</label>
 						</div>

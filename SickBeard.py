@@ -2,20 +2,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 # Check needed software dependencies to nudge users to fix their setup
 from __future__ import with_statement
@@ -69,7 +69,7 @@ signal.signal(signal.SIGINT, sickbeard.sig_handler)
 signal.signal(signal.SIGTERM, sickbeard.sig_handler)
 
 
-class SickRage(object):
+class SickGear(object):
     def __init__(self):
         # system event callback for shutdown/restart
         sickbeard.events = Events(self.shutdown)
@@ -147,7 +147,7 @@ class SickRage(object):
             # On non-unicode builds this will raise an AttributeError, if encoding type is not valid it throws a LookupError
             sys.setdefaultencoding(sickbeard.SYS_ENCODING)
         except:
-            print 'Sorry, you MUST add the SickRage folder to the PYTHONPATH environment variable'
+            print 'Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable'
             print 'or find another way to force Python to use ' + sickbeard.SYS_ENCODING + ' for string encoding.'
             sys.exit(1)
 
@@ -280,12 +280,12 @@ class SickRage(object):
         if CUR_DB_VERSION > 0:
             if CUR_DB_VERSION < MIN_DB_VERSION:
                 raise SystemExit("Your database version (" + str(
-                    CUR_DB_VERSION) + ") is too old to migrate from with this version of SickRage (" + str(
+                    CUR_DB_VERSION) + ") is too old to migrate from with this version of SickGear (" + str(
                     MIN_DB_VERSION) + ").\n" + \
                                  "Upgrade using a previous version of SB first, or start with no database file to begin fresh.")
             if CUR_DB_VERSION > MAX_DB_VERSION:
                 raise SystemExit("Your database version (" + str(
-                    CUR_DB_VERSION) + ") has been incremented past what this version of SickRage supports (" + str(
+                    CUR_DB_VERSION) + ") has been incremented past what this version of SickGear supports (" + str(
                     MAX_DB_VERSION) + ").\n" + \
                                  "If you have used other forks of SB, your database may be unusable due to their modifications.")
 
@@ -350,7 +350,7 @@ class SickRage(object):
             os._exit(1)
 
         if self.consoleLogging:
-            print "Starting up SickRage " + sickbeard.BRANCH + " from " + sickbeard.CONFIG_FILE
+            print "Starting up SickGear " + sickbeard.BRANCH + " from " + sickbeard.CONFIG_FILE
 
         # Fire up all our threads
         sickbeard.start()
@@ -519,7 +519,7 @@ class SickRage(object):
                     popen_list += sickbeard.MY_ARGS
                     if '--nolaunch' not in popen_list:
                         popen_list += ['--nolaunch']
-                    logger.log(u"Restarting SickRage with " + str(popen_list))
+                    logger.log(u"Restarting SickGear with " + str(popen_list))
                     logger.close()
                     subprocess.Popen(popen_list, cwd=os.getcwd())
 
@@ -531,5 +531,5 @@ if __name__ == "__main__":
     if sys.hexversion >= 0x020600F0:
         freeze_support()
 
-    # start sickrage
-    SickRage().start()
+    # start SickGear
+    SickGear().start()

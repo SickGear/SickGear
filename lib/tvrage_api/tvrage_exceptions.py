@@ -1,14 +1,11 @@
 #!/usr/bin/env python2
 #encoding:utf-8
-#author:echel0n
+#author:dbr/Ben (ripped from tvdb:echel0n)
 #project:tvrage_api
-#repository:http://github.com/echel0n/tvrage_api
+
 #license:unlicense (http://unlicense.org/)
 
 """Custom exceptions used or raised by tvrage_api"""
-
-__author__ = "echel0n"
-__version__ = "1.0"
 
 __all__ = ["tvrage_error", "tvrage_userabort", "tvrage_shownotfound",
 "tvrage_seasonnotfound", "tvrage_episodenotfound", "tvrage_attributenotfound"]
