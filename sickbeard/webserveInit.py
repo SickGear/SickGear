@@ -54,13 +54,6 @@ class SRWebServer(threading.Thread):
         assert isinstance(self.options['port'], int)
         assert 'data_root' in self.options
 
-        # video root
-        if sickbeard.ROOT_DIRS:
-            root_dirs = sickbeard.ROOT_DIRS.split('|')
-            self.video_root = root_dirs[int(root_dirs[0]) + 1]
-        else:
-            self.video_root = None
-
         # web root
         self.options['web_root'] = ('/' + self.options['web_root'].lstrip('/')) if self.options[
             'web_root'] else ''
@@ -113,12 +106,6 @@ class SRWebServer(threading.Thread):
              {'paths': [os.path.join(self.options['data_root'], 'js')]}),
         ])
 
-        # Static Videos Path
-        if self.video_root:
-            self.app.add_handlers(".*$", [
-                (r'%s/%s/(.*)' % (self.options['web_root'], 'videos'), MultiStaticFileHandler,
-                 {'paths': [self.video_root]}),
-            ])
 
     def run(self):
         if self.enable_https:
