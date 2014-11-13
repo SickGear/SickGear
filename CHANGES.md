@@ -2,6 +2,7 @@
 
 * Change footer stats to not add newlines when copy/pasting from them
 * Remove redundant references from Config / Help & Info
+* Fix poster preview on small poster layout
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
