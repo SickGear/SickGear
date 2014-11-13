@@ -58,7 +58,7 @@ import getopt
 import sickbeard
 from sickbeard import db, logger, network_timezones, failed_history, name_cache, versionChecker
 from sickbeard.tv import TVShow
-from sickbeard.webserveInit import SRWebServer
+from sickbeard.webserveInit import WebServer
 from sickbeard.databases.mainDB import MIN_DB_VERSION, MAX_DB_VERSION
 from sickbeard.event_queue import Events
 from lib.configobj import ConfigObj
@@ -339,7 +339,7 @@ class SickGear(object):
 
         # start web server
         try:
-            self.webserver = SRWebServer(self.web_options)
+            self.webserver = WebServer(self.web_options)
             self.webserver.start()
         except IOError:
             logger.log(u"Unable to start web server, is something else running on port %d?" % self.startPort,

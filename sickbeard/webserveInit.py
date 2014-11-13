@@ -36,7 +36,7 @@ class MultiStaticFileHandler(StaticFileHandler):
         raise HTTPError(404)
 
 
-class SRWebServer(threading.Thread):
+class WebServer(threading.Thread):
     def __init__(self, options={}, io_loop=None):
         threading.Thread.__init__(self)
         self.daemon = True
