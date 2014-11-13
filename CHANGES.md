@@ -1,4 +1,6 @@
-### 0.x.x (2014-11-12 xx:xx:xx UTC)
+### 0.x.x (2014-11-xx xx:xx:xx UTC)
+
+### 0.3.0 (2014-11-12 14:30:00 UTC)
 
 * Change logos, text etc. branding to SickGear
 * Add Bootstrap for UI features
