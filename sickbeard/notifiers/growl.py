@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import socket
 
@@ -29,7 +29,7 @@ from lib.growl import gntp
 class GrowlNotifier:
     def test_notify(self, host, password):
         self._sendRegistration(host, password, 'Test')
-        return self._sendGrowl("Test Growl", "Testing Growl settings from SickRage", "Test", host, password,
+        return self._sendGrowl("Test Growl", "Testing Growl settings from SickGear", "Test", host, password,
                                force=True)
 
     def notify_snatch(self, ep_name):
@@ -70,7 +70,7 @@ class GrowlNotifier:
             notice.add_header('Notification-Priority', options['priority'])
         if options['icon']:
             notice.add_header('Notification-Icon',
-                              'https://raw.github.com/SickGear/SickGear/master/gui/slick/images/sickrage.png')
+                              'https://raw.github.com/SickGear/SickGear/master/gui/slick/images/sickgear.png')
 
         if message:
             notice.add_header('Notification-Text', message)
@@ -92,7 +92,7 @@ class GrowlNotifier:
 
         return response
 
-    def _sendGrowl(self, title="SickRage Notification", message=None, name=None, host=None, password=None,
+    def _sendGrowl(self, title="SickGear Notification", message=None, name=None, host=None, password=None,
                    force=False):
         if not sickbeard.USE_GROWL and not force:
             return False
@@ -117,7 +117,7 @@ class GrowlNotifier:
         opts['name'] = name
 
         opts['title'] = title
-        opts['app'] = 'SickRage'
+        opts['app'] = 'SickGear'
 
         opts['sticky'] = None
         opts['priority'] = None
@@ -146,7 +146,7 @@ class GrowlNotifier:
                 logger.log(u"GROWL: Unable to send growl to " + opts['host'] + ":" + str(opts['port']) + " - " + ex(e), logger.WARNING)
                 return False
 
-    def _sendRegistration(self, host=None, password=None, name='SickRage Notification'):
+    def _sendRegistration(self, host=None, password=None, name='SickGear Notification'):
         opts = {}
 
         if host == None:
@@ -167,19 +167,20 @@ class GrowlNotifier:
         else:
             opts['password'] = password
 
-        opts['app'] = 'SickRage'
+        opts['app'] = 'SickGear'
         opts['debug'] = False
 
         #Send Registration
         register = gntp.GNTPRegister()
         register.add_header('Application-Name', opts['app'])
         register.add_header('Application-Icon',
-                            'https://raw.githubusercontent.com/SickGear/SickGear/master/gui/slick/images/sickrage-shark-mascot.png')
+                            'https://raw.githubusercontent.com/SickGear/SickGear/master/gui/slick/images/ico/apple-touch-icon-72x72.png')
 
         register.add_notification('Test', True)
         register.add_notification(common.notifyStrings[common.NOTIFY_SNATCH], True)
         register.add_notification(common.notifyStrings[common.NOTIFY_DOWNLOAD], True)
-
+        register.add_notification(common.notifyStrings[common.NOTIFY_GIT_UPDATE], True)
+        
         if opts['password']:
             register.set_password(opts['password'])
 

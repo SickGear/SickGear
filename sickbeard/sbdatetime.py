@@ -1,26 +1,27 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
 import locale
 import functools
 
 import sickbeard
+from sickbeard.network_timezones import sb_timezone
 
 date_presets = ('%Y-%m-%d',
                 '%a, %Y-%m-%d',
@@ -52,6 +53,12 @@ date_presets = ('%Y-%m-%d',
                 '%d-%m-%y',
                 '%a, %d-%m-%y',
                 '%A, %d-%m-%y',
+                '%d/%m/%Y',
+                '%a, %d/%m/%Y',
+                '%A, %d/%m/%Y',
+                '%d/%m/%y',
+                '%a, %d/%m/%y',
+                '%A, %d/%m/%y',
                 '%d.%m.%Y',
                 '%a, %d.%m.%Y',
                 '%A, %d.%m.%Y',
@@ -94,13 +101,31 @@ class static_or_instance(object):
 # subclass datetime.datetime to add function to display custom date and time formats
 class sbdatetime(datetime.datetime):
     has_locale = True
-    ORIG_LC_TIME = locale.LC_TIME
 
-    # display Time in SickRage Format
+    @static_or_instance
+    def convert_to_setting(self, dt=None):
+        try:
+            if sickbeard.TIMEZONE_DISPLAY == 'local':
+                if self is None:
+                    return dt.astimezone(sb_timezone)
+                else:
+                    return self.astimezone(sb_timezone)
+            else:
+                if self is None:
+                    return dt
+                else:
+                    return self
+        except:
+            if self is None:
+                return dt
+            else:
+                return self
+
+    # display Time in SickGear Format
     @static_or_instance
     def sbftime(self, dt=None, show_seconds=False, t_preset=None):
 
-        try:locale.setlocale(locale.LC_TIME, self.ORIG_LC_TIME)
+        try:locale.setlocale(locale.LC_TIME, '')
         except:pass
 
         try:
@@ -129,18 +154,18 @@ class sbdatetime(datetime.datetime):
         finally:
             try:
                 if sbdatetime.has_locale:
-                    locale.setlocale(locale.LC_TIME, self.ORIG_LC_TIME)
+                    locale.setlocale(locale.LC_TIME, '')
             except:
                 sbdatetime.has_locale = False
 
             return strt
 
-    # display Date in SickRage Format
+    # display Date in SickGear Format
     @static_or_instance
     def sbfdate(self, dt=None, d_preset=None):
 
         try:
-            locale.setlocale(locale.LC_TIME, self.ORIG_LC_TIME)
+            locale.setlocale(locale.LC_TIME, '')
         except:
             pass
 
@@ -160,18 +185,18 @@ class sbdatetime(datetime.datetime):
         finally:
 
             try:
-                locale.setlocale(locale.LC_TIME, self.ORIG_LC_TIME)
+                locale.setlocale(locale.LC_TIME, '')
             except:
                 pass
 
             return strd
 
-    # display Datetime in SickRage Format
+    # display Datetime in SickGear Format
     @static_or_instance
     def sbfdatetime(self, dt=None, show_seconds=False, d_preset=None, t_preset=None):
 
         try:
-            locale.setlocale(locale.LC_TIME, self.ORIG_LC_TIME)
+            locale.setlocale(locale.LC_TIME, '')
         except:
             pass
 
@@ -213,7 +238,7 @@ class sbdatetime(datetime.datetime):
         finally:
             try:
                 if sbdatetime.has_locale:
-                    locale.setlocale(locale.LC_TIME, self.ORIG_LC_TIME)
+                    locale.setlocale(locale.LC_TIME, '')
             except:
                 sbdatetime.has_locale = False
 

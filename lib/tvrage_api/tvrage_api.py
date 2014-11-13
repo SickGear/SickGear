@@ -1,8 +1,7 @@
 # !/usr/bin/env python2
 # encoding:utf-8
-#author:echel0n
+#author:dbr/Ben (ripped from tvdb:echel0n)
 #project:tvrage_api
-#repository:http://github.com/echel0n/tvrage_api
 #license:unlicense (http://unlicense.org/)
 
 """
@@ -11,9 +10,6 @@ Simple-to-use Python interface to The TVRage's API (tvrage.com)
 """
 from functools import wraps
 import traceback
-
-__author__ = "echel0n"
-__version__ = "1.0"
 
 import os
 import re
@@ -479,9 +475,9 @@ class TVRage:
 
         if resp.ok:
             try:
-                return xmltodict.parse(resp.content.strip().encode('utf-8'), postprocessor=remap_keys)
-            except:
                 return xmltodict.parse(resp.content.strip(), postprocessor=remap_keys)
+            except:
+                return dict([(u'data', None)])
 
     def _getetsrc(self, url, params=None):
         """Loads a URL using caching, returns an ElementTree of the source
@@ -664,7 +660,7 @@ class TVRage:
                 self._getShowData(key, True)
             return self.shows[key]
 
-        key = str(key).lower()
+        key = key.lower()
         self.config['searchterm'] = key
         selected_series = self._getSeries(key)
         if isinstance(selected_series, dict):

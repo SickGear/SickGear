@@ -1,8 +1,7 @@
 #!/usr/bin/env python2
 #encoding:utf-8
-#author:echel0n
+#author:dbr/Ben (ripped from tvdb:echel0n)
 #project:tvrage_api
-#repository:http://github.com/echel0n/tvrage_api
 #license:unlicense (http://unlicense.org/)
 
 """
@@ -10,9 +9,6 @@ urllib2 caching handler
 Modified from http://code.activestate.com/recipes/491261/
 """
 from __future__ import with_statement
-
-__author__ = "echel0n"
-__version__ = "1.0"
 
 import os
 import time

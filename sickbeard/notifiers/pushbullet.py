@@ -2,20 +2,20 @@
 # Based on pushalot.py by Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage. If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
 import socket
 import base64
@@ -28,7 +28,7 @@ from sickbeard import logger, common
 
 class PushbulletNotifier:
     def test_notify(self, pushbullet_api):
-        return self._sendPushbullet(pushbullet_api, event="Test", message="Testing Pushbullet settings from SickRage",
+        return self._sendPushbullet(pushbullet_api, event="Test", message="Testing Pushbullet settings from SickGear",
                                     method="POST", notificationType="note", force=True)
 
     def get_devices(self, pushbullet_api):

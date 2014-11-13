@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import platform
@@ -59,8 +59,8 @@ class CheckVersion():
 
         if self.check_for_new_version(force):
             if sickbeard.AUTO_UPDATE:
-                logger.log(u"New update found for SickRage, starting auto-updater ...")
-                ui.notifications.message('New update found for SickRage, starting auto-updater')
+                logger.log(u"New update found for SickGear, starting auto-updater ...")
+                ui.notifications.message('New update found for SickGear, starting auto-updater')
                 if sickbeard.versionCheckScheduler.action.update():
                     logger.log(u"Update was successful!")
                     ui.notifications.message('Update was successful')
@@ -162,7 +162,7 @@ class WindowsUpdateManager(UpdateManager):
             version = sickbeard.BRANCH
             return int(version[6:])
         except ValueError:
-            logger.log(u"Unknown SickRage Windows binary release: " + version, logger.ERROR)
+            logger.log(u"Unknown SickGear Windows binary release: " + version, logger.ERROR)
             return None
 
     def _find_installed_branch(self):
@@ -177,7 +177,7 @@ class WindowsUpdateManager(UpdateManager):
                     only the build number. default: False
         """
 
-        regex = ".*SickRage\-win32\-alpha\-build(\d+)(?:\.\d+)?\.zip"
+        regex = ".*SickGear\-win32\-alpha\-build(\d+)(?:\.\d+)?\.zip"
 
         version_url_data = helpers.getURL(self.version_url)
         if not version_url_data:
@@ -212,7 +212,7 @@ class WindowsUpdateManager(UpdateManager):
         sickbeard.NEWEST_VERSION_STRING = None
 
         if not self._cur_version:
-            newest_text = "Unknown SickRage Windows binary version. Not updating with original version."
+            newest_text = "Unknown SickGear Windows binary version. Not updating with original version."
         else:
             newest_text = 'There is a <a href="' + self.gc_url + '" onclick="window.open(this.href); return false;">newer version available</a> (build ' + str(
                 self._newest_version) + ')'
@@ -307,7 +307,7 @@ class GitUpdateManager(UpdateManager):
         self._num_commits_ahead = 0
 
     def _git_error(self):
-        error_message = 'Unable to find your git executable - Shutdown SickRage and EITHER set git_path in your config.ini OR delete your .git folder and run from source to enable updates.'
+        error_message = 'Unable to find your git executable - Shutdown SickGear and EITHER set git_path in your config.ini OR delete your .git folder and run from source to enable updates.'
         sickbeard.NEWEST_VERSION_STRING = error_message
 
     def _find_working_git(self):
@@ -353,7 +353,7 @@ class GitUpdateManager(UpdateManager):
                     logger.log(u"Not using: " + cur_git, logger.DEBUG)
 
         # Still haven't found a working git
-        error_message = 'Unable to find your git executable - Shutdown SickRage and EITHER set git_path in your config.ini OR delete your .git folder and run from source to enable updates.'
+        error_message = 'Unable to find your git executable - Shutdown SickGear and EITHER set git_path in your config.ini OR delete your .git folder and run from source to enable updates.'
         sickbeard.NEWEST_VERSION_STRING = error_message
 
         return None
@@ -404,7 +404,7 @@ class GitUpdateManager(UpdateManager):
 
     def _find_installed_version(self):
         """
-        Attempts to find the currently installed version of SickRage.
+        Attempts to find the currently installed version of SickGear.
 
         Uses git show to get commit version.
 
@@ -443,7 +443,7 @@ class GitUpdateManager(UpdateManager):
         self._num_commits_ahead = 0
 
         # get all new info from github
-        output, err, exit_status = self._run_git(self._git_path, 'fetch origin')
+        output, err, exit_status = self._run_git(self._git_path, 'fetch %s' % sickbeard.GIT_REMOTE)
 
         if not exit_status == 0:
             logger.log(u"Unable to contact github, can't check for update", logger.ERROR)
@@ -533,12 +533,12 @@ class GitUpdateManager(UpdateManager):
 
     def update(self):
         """
-        Calls git pull origin <branch> in order to update SickRage. Returns a bool depending
+        Calls git pull origin <branch> in order to update SickGear. Returns a bool depending
         on the call's success.
         """
 
         if self.branch == self._find_installed_branch():
-            output, err, exit_status = self._run_git(self._git_path, 'pull -f origin ' + self.branch)  # @UnusedVariable
+            output, err, exit_status = self._run_git(self._git_path, 'pull -f %s %s' % (sickbeard.GIT_REMOTE, self.branch))  # @UnusedVariable
         else:
             output, err, exit_status = self._run_git(self._git_path, 'checkout -f ' + self.branch)  # @UnusedVariable
 
@@ -553,7 +553,7 @@ class GitUpdateManager(UpdateManager):
         return False
 
     def list_remote_branches(self):
-        branches, err, exit_status = self._run_git(self._git_path, 'ls-remote --heads origin')  # @UnusedVariable
+        branches, err, exit_status = self._run_git(self._git_path, 'ls-remote --heads %s' % sickbeard.GIT_REMOTE)  # @UnusedVariable
         if exit_status == 0 and branches:
             return re.findall('\S+\Wrefs/heads/(.*)', branches)
         return []
@@ -598,7 +598,7 @@ class SourceUpdateManager(UpdateManager):
     def _check_github_for_update(self):
         """
         Uses pygithub to ask github if there is a newer version that the provided
-        commit hash. If there is a newer version it sets SickRage's version text.
+        commit hash. If there is a newer version it sets SickGear's version text.
 
         commit_hash: hash that we're checking against
         """
@@ -644,7 +644,7 @@ class SourceUpdateManager(UpdateManager):
         if not self._cur_commit_hash:
             logger.log(u"Unknown current version number, don't know if we should update or not", logger.DEBUG)
 
-            newest_text = "Unknown current version number: If you've never used the SickRage upgrade system before then current version is not set."
+            newest_text = "Unknown current version number: If you've never used the SickGear upgrade system before then current version is not set."
             newest_text += "&mdash; <a href=\"" + self.get_update_url() + "\">Update Now</a>"
 
         elif self._num_commits_behind > 0:

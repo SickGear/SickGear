@@ -24,7 +24,7 @@ except:
     sys.exit(1)
 
 # mostly stolen from the SABnzbd package.py file
-name = 'SickRage'
+name = 'SickGear'
 version = '0.1'
 
 release = name + '-' + version
@@ -34,9 +34,9 @@ Win32WindowName = 'SickBeard.exe'
 
 
 def findLatestBuild():
-    regex = "http\://sickrage\.googlecode\.com/files/SickRage\-win32\-alpha\-build(\d+)(?:\.\d+)?\.zip"
+    regex = "http\://SickGear\.googlecode\.com/files/SickGear\-win32\-alpha\-build(\d+)(?:\.\d+)?\.zip"
 
-    svnFile = urllib.urlopen("http://code.google.com/p/sickrage/downloads/list")
+    svnFile = urllib.urlopen("http://code.google.com/p/SickGear/downloads/list")
 
     for curLine in svnFile.readlines():
         match = re.search(regex, curLine)
@@ -126,8 +126,8 @@ data_files = recursive_find_data_files('data', ['gif', 'png', 'jpg', 'ico', 'js'
 options = dict(
     name=name,
     version=release,
-    author='echel0n',
-    author_email='sickrage.tv@gmail.com',
+    author='SickGear',
+    author_email='SickGear@outlook.com',
     description=name + ' ' + release,
     scripts=['SickBeard.py'],
     packages=find_all_libraries(['sickbeard', 'lib']),
@@ -144,7 +144,7 @@ options['options'] = {'py2exe':
                               'compressed': 0
                           }
 }
-options['zipfile'] = 'lib/sickrage.zip'
+options['zipfile'] = 'lib/SickGear.zip'
 options['console'] = program
 options['data_files'] = data_files
 
@@ -214,7 +214,7 @@ else:
     changeString = ""
 
     # cycle through all the git commits and save their commit messages
-    for curCommit in gh.commits.forBranch('echel0n', 'SickRage'):
+    for curCommit in gh.commits.forBranch('SickGear', 'SickGear'):
         if curCommit.id == lastCommit:
             break
 
@@ -239,7 +239,7 @@ if os.path.exists("CHANGELOG.txt"):
 
 # figure out what we're going to call the zip file
 print 'Zipping files...'
-zipFilename = 'SickRage-win32-alpha-build' + str(currentBuildNumber)
+zipFilename = 'SickGear-win32-alpha-build' + str(currentBuildNumber)
 if os.path.isfile(zipFilename + '.zip'):
     zipNum = 2
     while os.path.isfile(zipFilename + '.{0:0>2}.zip'.format(str(zipNum))):
@@ -268,7 +268,7 @@ gc_password = config.get("GC", "password")
 # upload to google code unless I tell it not to
 if "noup" not in oldArgs and "test" not in oldArgs:
     print "Uploading zip to google code"
-    googlecode_upload.upload(os.path.abspath(zipFilename + ".zip"), "sickrage", gc_username, gc_password,
+    googlecode_upload.upload(os.path.abspath(zipFilename + ".zip"), "SickGear", gc_username, gc_password,
                              "Win32 alpha build " + str(currentBuildNumber) + " (unstable/development release)",
                              ["Featured", "Type-Executable", "OpSys-Windows"])
 

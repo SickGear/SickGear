@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
 
@@ -185,16 +185,16 @@ class InitialSchema(db.SchemaUpgrade):
 
             if cur_db_version < MIN_DB_VERSION:
                 logger.log_error_and_exit(u"Your database version (" + str(
-                    cur_db_version) + ") is too old to migrate from what this version of SickRage supports (" + \
+                    cur_db_version) + ") is too old to migrate from what this version of SickGear supports (" + \
                                           str(MIN_DB_VERSION) + ").\n" + \
-                                          "Upgrade using a previous version (tag) build 496 to build 501 of SickRage first or remove database file to begin fresh."
+                                          "Upgrade using a previous version (tag) build 496 to build 501 of SickGear first or remove database file to begin fresh."
                 )
 
             if cur_db_version > MAX_DB_VERSION:
                 logger.log_error_and_exit(u"Your database version (" + str(
-                    cur_db_version) + ") has been incremented past what this version of SickRage supports (" + \
+                    cur_db_version) + ") has been incremented past what this version of SickGear supports (" + \
                                           str(MAX_DB_VERSION) + ").\n" + \
-                                          "If you have used other forks of SickRage, your database may be unusable due to their modifications."
+                                          "If you have used other forks of SickGear, your database may be unusable due to their modifications."
                 )
 
 

@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import with_statement
 
@@ -39,7 +39,6 @@ from sickbeard.config import CheckSection, check_setting_int, check_setting_str,
     naming_ep_type
 from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
     subtitles, traktChecker
-from sickbeard.automations import imdbChecker
 from sickbeard import helpers, db, exceptions, show_queue, search_queue, scheduler, show_name_helpers
 from sickbeard import logger
 from sickbeard import naming
@@ -105,6 +104,7 @@ AUTO_UPDATE = False
 NOTIFY_ON_UPDATE = False
 CUR_COMMIT_HASH = None
 BRANCH = ''
+GIT_REMOTE = ''
 CUR_COMMIT_BRANCH = ''
 
 INIT_LOCK = Lock()
@@ -122,8 +122,6 @@ WEB_USERNAME = None
 WEB_PASSWORD = None
 WEB_HOST = None
 WEB_IPV6 = None
-
-PLAY_VIDEOS = False
 
 HANDLE_REVERSE_PROXY = False
 PROXY_SETTING = None
@@ -147,6 +145,8 @@ CACHE_DIR = None
 ACTUAL_CACHE_DIR = None
 ROOT_DIRS = None
 UPDATE_SHOWS_ON_START = False
+TRASH_REMOVE_SHOW = False
+TRASH_ROTATE_LOGS = False
 SORT_ARTICLE = False
 DEBUG = False
 
@@ -428,6 +428,8 @@ TIME_PRESET = None
 TIME_PRESET_W_SECONDS = None
 TIMEZONE_DISPLAY = None
 THEME_NAME = None
+POSTER_SORTBY = None
+POSTER_SORTDIR = None
 
 USE_SUBTITLES = False
 SUBTITLES_LANGUAGES = []
@@ -461,7 +463,7 @@ def get_backlog_cycle_time():
 def initialize(consoleLogging=True):
     with INIT_LOCK:
 
-        global BRANCH, CUR_COMMIT_HASH, CUR_COMMIT_BRANCH, ACTUAL_LOG_DIR, LOG_DIR, WEB_PORT, WEB_LOG, ENCRYPTION_VERSION, WEB_ROOT, WEB_USERNAME, WEB_PASSWORD, WEB_HOST, WEB_IPV6, USE_API, API_KEY, ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, \
+        global BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, CUR_COMMIT_BRANCH, ACTUAL_LOG_DIR, LOG_DIR, WEB_PORT, WEB_LOG, ENCRYPTION_VERSION, WEB_ROOT, WEB_USERNAME, WEB_PASSWORD, WEB_HOST, WEB_IPV6, USE_API, API_KEY, ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, \
             HANDLE_REVERSE_PROXY, USE_NZBS, USE_TORRENTS, NZB_METHOD, NZB_DIR, DOWNLOAD_PROPERS, CHECK_PROPERS_INTERVAL, ALLOW_HIGH_PRIORITY, TORRENT_METHOD, \
             SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, SAB_HOST, \
             NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, NZBGET_HOST, NZBGET_USE_HTTPS, backlogSearchScheduler, \
@@ -469,10 +471,9 @@ def initialize(consoleLogging=True):
             USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, \
             XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, BACKLOG_FREQUENCY, \
             USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_API, TRAKT_REMOVE_WATCHLIST, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
-            USE_IMDBWATCHLIST, IMDB_WATCHLISTCSV, imdbWatchlistScheduler, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
-            showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SORT_ARTICLE, showList, loadingShowList, \
+            showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, SORT_ARTICLE, showList, loadingShowList, \
             NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, DAILYSEARCH_STARTUP, \
             GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
@@ -497,12 +498,13 @@ def initialize(consoleLogging=True):
             USE_LISTVIEW, METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, metadata_provider_dict, \
             NEWZBIN, NEWZBIN_USERNAME, NEWZBIN_PASSWORD, GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, dailySearchScheduler, NFO_RENAME, \
             GUI_NAME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, COMING_EPS_LAYOUT, COMING_EPS_SORT, COMING_EPS_DISPLAY_PAUSED, COMING_EPS_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
+            POSTER_SORTBY, POSTER_SORTDIR, \
             METADATA_WDTV, METADATA_TIVO, METADATA_MEDE8ER, IGNORE_WORDS, REQUIRE_WORDS, CALENDAR_UNPROTECTED, CREATE_MISSING_SHOW_DIRS, \
             ADD_SHOWS_WO_DIR, USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_HISTORY, SUBTITLES_FINDER_FREQUENCY, subtitlesFinderScheduler, \
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, LOCALHOST_IP, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, ANIMESUPPORT, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
-            ANIME_SPLIT_HOME, SCENE_DEFAULT, PLAY_VIDEOS, BACKLOG_DAYS
+            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS
 
         if __INITIALIZED__:
             return False
@@ -528,10 +530,12 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'Pushalot')
         CheckSection(CFG, 'Pushbullet')
         CheckSection(CFG, 'Subtitles')
-        CheckSection(CFG, 'IMDBWatchlist')
 
         # wanted branch
         BRANCH = check_setting_str(CFG, 'General', 'branch', '')
+
+        # git_remote
+        GIT_REMOTE = check_setting_str(CFG, 'General', 'git_remote', 'origin')
 
         # current commit hash
         CUR_COMMIT_HASH = check_setting_str(CFG, 'General', 'cur_commit_hash', '')
@@ -580,7 +584,7 @@ def initialize(consoleLogging=True):
 
         if WEB_PORT < 21 or WEB_PORT > 65535:
             WEB_PORT = 8081
-        
+
         WEB_HOST = check_setting_str(CFG, 'General', 'web_host', '0.0.0.0')
         WEB_IPV6 = bool(check_setting_int(CFG, 'General', 'web_ipv6', 0))
         WEB_ROOT = check_setting_str(CFG, 'General', 'web_root', '').rstrip("/")
@@ -590,20 +594,21 @@ def initialize(consoleLogging=True):
         WEB_PASSWORD = check_setting_str(CFG, 'General', 'web_password', '')
         LAUNCH_BROWSER = bool(check_setting_int(CFG, 'General', 'launch_browser', 1))
 
-        PLAY_VIDEOS = bool(check_setting_int(CFG, 'General', 'play_videos', 0))
-
         LOCALHOST_IP = check_setting_str(CFG, 'General', 'localhost_ip', '')
 
         CPU_PRESET = check_setting_str(CFG, 'General', 'cpu_preset', 'NORMAL')
 
         ANON_REDIRECT = check_setting_str(CFG, 'General', 'anon_redirect', 'http://dereferer.org/?')
         PROXY_SETTING = check_setting_str(CFG, 'General', 'proxy_setting', '')
-        PROXY_INDEXERS = bool(check_setting_str(CFG, 'General', 'proxy_indexers', 1))
+        PROXY_INDEXERS = bool(check_setting_int(CFG, 'General', 'proxy_indexers', 1))
         # attempt to help prevent users from breaking links by using a bad url 
         if not ANON_REDIRECT.endswith('?'):
             ANON_REDIRECT = ''
 
         UPDATE_SHOWS_ON_START = bool(check_setting_int(CFG, 'General', 'update_shows_on_start', 0))
+        TRASH_REMOVE_SHOW = bool(check_setting_int(CFG, 'General', 'trash_remove_show', 0))
+        TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
+
         SORT_ARTICLE = bool(check_setting_int(CFG, 'General', 'sort_article', 0))
 
         USE_API = bool(check_setting_int(CFG, 'General', 'use_api', 0))
@@ -783,7 +788,7 @@ def initialize(consoleLogging=True):
             check_setting_int(CFG, 'Twitter', 'twitter_notify_onsubtitledownload', 0))
         TWITTER_USERNAME = check_setting_str(CFG, 'Twitter', 'twitter_username', '')
         TWITTER_PASSWORD = check_setting_str(CFG, 'Twitter', 'twitter_password', '')
-        TWITTER_PREFIX = check_setting_str(CFG, 'Twitter', 'twitter_prefix', 'SickRage')
+        TWITTER_PREFIX = check_setting_str(CFG, 'Twitter', 'twitter_prefix', 'SickGear')
 
         USE_BOXCAR = bool(check_setting_int(CFG, 'Boxcar', 'use_boxcar', 0))
         BOXCAR_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Boxcar', 'boxcar_notify_onsnatch', 0))
@@ -843,11 +848,7 @@ def initialize(consoleLogging=True):
         TRAKT_USE_RECOMMENDED = bool(check_setting_int(CFG, 'Trakt', 'trakt_use_recommended', 0))
         TRAKT_SYNC = bool(check_setting_int(CFG, 'Trakt', 'trakt_sync', 0))
         TRAKT_DEFAULT_INDEXER = check_setting_int(CFG, 'Trakt', 'trakt_default_indexer', 1)
-        
-        ### IMDB Watchlist set default values for config
-        USE_IMDBWATCHLIST = bool(check_setting_int(CFG, 'IMDBWatchlist', 'use_imdbwatchlist', 0))
-        IMDB_WATCHLISTCSV = check_setting_str(CFG, 'IMDBWatchlist', 'imdb_watchlistcsv', '')
-        
+
         CheckSection(CFG, 'pyTivo')
         USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
         PYTIVO_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsnatch', 0))
@@ -949,6 +950,8 @@ def initialize(consoleLogging=True):
         TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
         TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u":%S", u"")
         TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
+        POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
+        POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
 
         # initialize NZB and TORRENT providers
         providerList = providers.makeProviderList()
@@ -1161,11 +1164,6 @@ def initialize(consoleLogging=True):
                                                        cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_FREQUENCY),
                                                        threadName="FINDSUBTITLES",
                                                        silent=not USE_SUBTITLES)
-        
-        imdbWatchlistScheduler = scheduler.Scheduler(imdbChecker.IMDB(),
-                                                    cycleTime=datetime.timedelta(hours=1),
-                                                    threadName="IMDBWATCHLIST",
-                                                    silent=not USE_IMDBWATCHLIST)
 
         showList = []
         loadingShowList = {}
@@ -1178,7 +1176,7 @@ def start():
     global __INITIALIZED__, backlogSearchScheduler, \
         showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
         properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
-        subtitlesFinderScheduler, USE_SUBTITLES, traktCheckerScheduler, imdbWatchlistScheduler, \
+        subtitlesFinderScheduler, USE_SUBTITLES, traktCheckerScheduler, \
         dailySearchScheduler, events, started
 
     with INIT_LOCK:
@@ -1219,10 +1217,7 @@ def start():
             # start the trakt checker
             if USE_TRAKT:
                 traktCheckerScheduler.start()
-                
-            if USE_IMDBWATCHLIST:
-                imdbWatchlistScheduler.start()
-                
+
             started = True
 
 
@@ -1230,7 +1225,7 @@ def halt():
     global __INITIALIZED__, backlogSearchScheduler, \
         showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
         properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
-        subtitlesFinderScheduler, traktCheckerScheduler, imdbWatchlistScheduler, \
+        subtitlesFinderScheduler, traktCheckerScheduler, \
         dailySearchScheduler, events, started
 
     with INIT_LOCK:
@@ -1303,14 +1298,6 @@ def halt():
                     traktCheckerScheduler.join(10)
                 except:
                     pass
-                
-            if USE_IMDBWATCHLIST:
-                imdbWatchlistScheduler.stop.set()
-                logger.log(u"Waiting for the IMDBWATCHLIST thread to exit")
-                try:
-                    imdbWatchlistScheduler.join(10)
-                except:
-                    pass
 
             if DOWNLOAD_PROPERS:
                 properFinderScheduler.stop.set()
@@ -1376,6 +1363,7 @@ def save_config():
     # For passwords you must include the word `password` in the item_name and add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
     new_config['General'] = {}
     new_config['General']['branch'] = BRANCH
+    new_config['General']['git_remote'] = GIT_REMOTE
     new_config['General']['cur_commit_hash'] = CUR_COMMIT_HASH
     new_config['General']['cur_commit_branch'] = CUR_COMMIT_BRANCH
     new_config['General']['config_version'] = CONFIG_VERSION
@@ -1389,7 +1377,6 @@ def save_config():
     new_config['General']['web_root'] = WEB_ROOT
     new_config['General']['web_username'] = WEB_USERNAME
     new_config['General']['web_password'] = helpers.encrypt(WEB_PASSWORD, ENCRYPTION_VERSION)
-    new_config['General']['play_videos'] = int(PLAY_VIDEOS)
     new_config['General']['localhost_ip'] = LOCALHOST_IP
     new_config['General']['cpu_preset'] = CPU_PRESET
     new_config['General']['anon_redirect'] = ANON_REDIRECT
@@ -1439,6 +1426,8 @@ def save_config():
     new_config['General']['naming_anime'] = int(NAMING_ANIME)
     new_config['General']['launch_browser'] = int(LAUNCH_BROWSER)
     new_config['General']['update_shows_on_start'] = int(UPDATE_SHOWS_ON_START)
+    new_config['General']['trash_remove_show'] = int(TRASH_REMOVE_SHOW)
+    new_config['General']['trash_rotate_logs'] = int(TRASH_ROTATE_LOGS)
     new_config['General']['sort_article'] = int(SORT_ARTICLE)
     new_config['General']['proxy_setting'] = PROXY_SETTING
     new_config['General']['proxy_indexers'] = int(PROXY_INDEXERS)
@@ -1712,11 +1701,7 @@ def save_config():
     new_config['Trakt']['trakt_use_recommended'] = int(TRAKT_USE_RECOMMENDED)
     new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
     new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
-    
-    new_config['IMDBWatchlist'] = {}
-    new_config['IMDBWatchlist']['use_imdbwatchlist'] = int(USE_IMDBWATCHLIST)
-    new_config['IMDBWatchlist']['imdb_watchlistcsv'] = IMDB_WATCHLISTCSV
-    
+
     new_config['pyTivo'] = {}
     new_config['pyTivo']['use_pytivo'] = int(USE_PYTIVO)
     new_config['pyTivo']['pytivo_notify_onsnatch'] = int(PYTIVO_NOTIFY_ONSNATCH)
@@ -1784,6 +1769,8 @@ def save_config():
     new_config['GUI']['date_preset'] = DATE_PRESET
     new_config['GUI']['time_preset'] = TIME_PRESET_W_SECONDS
     new_config['GUI']['timezone_display'] = TIMEZONE_DISPLAY
+    new_config['GUI']['poster_sortby'] = POSTER_SORTBY
+    new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)

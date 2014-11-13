@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import with_statement
 
@@ -45,6 +45,7 @@ from sickbeard import naming
 from sickbeard import scene_exceptions
 from sickbeard import subtitles
 from sickbeard import network_timezones
+from sickbeard import sbdatetime
 
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings, cpu_presets
@@ -87,7 +88,7 @@ def authenticated(handler_class):
         def basicauth(handler, transforms, *args, **kwargs):
             def _request_basic_auth(handler):
                 handler.set_status(401)
-                handler.set_header('WWW-Authenticate', 'Basic realm="SickRage"')
+                handler.set_header('WWW-Authenticate', 'Basic realm="SickGear"')
                 handler._transforms = []
                 handler.finish()
                 return False
@@ -95,9 +96,11 @@ def authenticated(handler_class):
             try:
                 if not (sickbeard.WEB_USERNAME and sickbeard.WEB_PASSWORD):
                     return True
-                elif (handler.request.uri.startswith('/api') and '/api/builder' not in handler.request.uri):
+                elif (handler.request.uri.startswith(sickbeard.WEB_ROOT + '/api') and
+                              '/api/builder' not in handler.request.uri):
                     return True
-                elif (handler.request.uri.startswith('/calendar') and sickbeard.CALENDAR_UNPROTECTED):
+                elif (handler.request.uri.startswith(sickbeard.WEB_ROOT + '/calendar') and
+                        sickbeard.CALENDAR_UNPROTECTED):
                     return True
 
                 auth_hdr = handler.request.headers.get('Authorization')
@@ -290,6 +293,19 @@ class MainHandler(RequestHandler):
 
         redirect("/home/")
 
+    def setPosterSortBy(self, sort):
+
+        if sort not in ('name', 'date', 'network', 'progress'):
+            sort = 'name'
+
+        sickbeard.POSTER_SORTBY = sort
+        sickbeard.save_config()
+
+    def setPosterSortDir(self, direction):
+
+        sickbeard.POSTER_SORTDIR = int(direction)
+        sickbeard.save_config()
+
     def setHistoryLayout(self, layout):
 
         if layout not in ('compact', 'detailed'):
@@ -325,7 +341,7 @@ class MainHandler(RequestHandler):
     def setComingEpsSort(self, sort):
         if sort not in ('date', 'network', 'show'):
             sort = 'date'
-        
+
         if sickbeard.COMING_EPS_LAYOUT == 'calendar':
             sort = 'date'
 
@@ -377,8 +393,8 @@ class MainHandler(RequestHandler):
 
         # add localtime to the dict
         for index, item in enumerate(sql_results):
-            sql_results[index]['localtime'] = network_timezones.parse_date_time(item['airdate'], item['airs'],
-                                                                                item['network'])
+            sql_results[index]['localtime'] = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(item['airdate'], 
+                                                                                       item['airs'], item['network']))
 
         sql_results.sort(sorts[sickbeard.COMING_EPS_SORT])
 
@@ -427,8 +443,8 @@ class MainHandler(RequestHandler):
         # Create a iCal string
         ical = 'BEGIN:VCALENDAR\r\n'
         ical += 'VERSION:2.0\r\n'
-        ical += 'X-WR-CALNAME:SickRage\r\n'
-        ical += 'X-WR-CALDESC:SickRage\r\n'
+        ical += 'X-WR-CALNAME:SickGear\r\n'
+        ical += 'X-WR-CALDESC:SickGear\r\n'
         ical += 'PRODID://Sick-Beard Upcoming Episodes//\r\n'
 
         # Limit dates
@@ -471,7 +487,7 @@ class MainHandler(RequestHandler):
                            episode['description'].splitlines()[0] + '\r\n'
                 else:
                     ical = ical + 'DESCRIPTION:' + (show['airs'] or '(Unknown airs)') + ' on ' + (show['network'] or 'Unknown network') + '\r\n'
-               
+
                 ical = ical + 'END:VEVENT\r\n'
 
         # Ending the iCal
@@ -500,6 +516,7 @@ class PageTemplate(Template):
         self.sbHttpsPort = sickbeard.WEB_PORT
         self.sbHttpsEnabled = sickbeard.ENABLE_HTTPS
         self.sbHandleReverseProxy = sickbeard.HANDLE_REVERSE_PROXY
+        self.sbThemeName = sickbeard.THEME_NAME
 
         if headers['Host'][0] == '[':
             self.sbHost = re.match("^\[.*\]", headers['Host'], re.X | re.M | re.S).group(0)
@@ -1444,9 +1461,7 @@ class ConfigGeneral(MainHandler):
 
     def saveRootDirs(self, rootDirString=None):
         sickbeard.ROOT_DIRS = rootDirString
-        
-    def saveImdbWatchlists(self, imdbWatchlistString=None):
-        sickbeard.IMDB_WATCHLISTCSV = imdbWatchlistString
+
 
     def saveAddShowDefaults(self, defaultStatus, anyQualities, bestQualities, defaultFlattenFolders, subtitles=False,
                             anime=False, scene=False):
@@ -1500,26 +1515,26 @@ class ConfigGeneral(MainHandler):
 
 
     def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None,
-                    update_shows_on_start=None, update_frequency=None, launch_browser=None, web_username=None,
+                    update_shows_on_start=None, trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
                     handle_reverse_proxy=None, sort_article=None, auto_update=None, notify_on_update=None,
-                    proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, calendar_unprotected=None,
+                    proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
-                    indexer_timeout=None, play_videos=None, rootDir=None, use_imdbwl=None, imdbWatchlistCsv=None, theme_name=None):
+                    indexer_timeout=None, rootDir=None, theme_name=None):
 
         results = []
 
         # Misc
-        sickbeard.PLAY_VIDEOS = config.checkbox_to_value(play_videos)
         sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
         config.change_VERSION_NOTIFY(config.checkbox_to_value(version_notify))
         sickbeard.AUTO_UPDATE = config.checkbox_to_value(auto_update)
         sickbeard.NOTIFY_ON_UPDATE = config.checkbox_to_value(notify_on_update)
-        sickbeard.USE_IMDBWATCHLIST = config.checkbox_to_value(use_imdbwl)
         # sickbeard.LOG_DIR is set in config.change_LOG_DIR()
 
         sickbeard.UPDATE_SHOWS_ON_START = config.checkbox_to_value(update_shows_on_start)
+        sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
+        sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
         config.change_UPDATE_FREQUENCY(update_frequency)
         sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
         sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
@@ -1528,6 +1543,7 @@ class ConfigGeneral(MainHandler):
         sickbeard.PROXY_SETTING = proxy_setting
         sickbeard.PROXY_INDEXERS = config.checkbox_to_value(proxy_indexers)
         sickbeard.GIT_PATH = git_path
+        sickbeard.GIT_REMOTE = git_remote
         sickbeard.CALENDAR_UNPROTECTED = config.checkbox_to_value(calendar_unprotected)
         # sickbeard.LOG_DIR is set in config.change_LOG_DIR()
 
@@ -1602,7 +1618,7 @@ class ConfigBackupRestore(MainHandler):
 
         if backupDir:
             source = [os.path.join(sickbeard.DATA_DIR, 'sickbeard.db'), sickbeard.CONFIG_FILE]
-            target = os.path.join(backupDir, 'sickrage-' + time.strftime('%Y%m%d%H%M%S') + '.zip')
+            target = os.path.join(backupDir, 'SickGear-' + time.strftime('%Y%m%d%H%M%S') + '.zip')
 
             if helpers.makeZip(source, target):
                 finalResult += "Successful backup to " + target
@@ -1626,7 +1642,7 @@ class ConfigBackupRestore(MainHandler):
 
             if helpers.extractZip(source, target_dir):
                 finalResult += "Successfully extracted restore files to " + target_dir
-                finalResult += "<br>Restart sickrage to complete the restore."
+                finalResult += "<br>Restart SickGear to complete the restore."
             else:
                 finalResult += "Restore FAILED"
         else:
@@ -1968,25 +1984,25 @@ class ConfigProviders(MainHandler):
         '''
         error = ""
         success = False
-        
+
         if not name:
-            error += "\nNo Provider Name specified" 
+            error += "\nNo Provider Name specified"
         if not url:
             error += "\nNo Provider Url specified"
         if not key:
             error += "\nNo Provider Api key specified"
-            
+
         if error <> "":
             return json.dumps({'success' : False, 'error': error})
-        
-        #Get list with Newznabproviders        
+
+        #Get list with Newznabproviders
         #providerDict = dict(zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
-        
+
         #Get newznabprovider obj with provided name
         tempProvider= newznab.NewznabProvider(name, url, key)
-        
+
         success, tv_categories, error = tempProvider.get_newznab_categories()
-        
+
         return json.dumps({'success' : success,'tv_categories' : tv_categories, 'error' : error})
 
     def deleteNewznabProvider(self, nnid):
@@ -2093,13 +2109,13 @@ class ConfigProviders(MainHandler):
                     newznabProviderDict[cur_id].name = cur_name
                     newznabProviderDict[cur_id].url = cur_url
                     newznabProviderDict[cur_id].key = cur_key
-                    newznabProviderDict[cur_id].catIDs = cur_cat 
+                    newznabProviderDict[cur_id].catIDs = cur_cat
                     # a 0 in the key spot indicates that no key is needed
                     if cur_key == '0':
                         newznabProviderDict[cur_id].needs_auth = False
                     else:
                         newznabProviderDict[cur_id].needs_auth = True
-                    
+
                     try:
                         newznabProviderDict[cur_id].search_mode = str(kwargs[cur_id + '_search_mode']).strip()
                     except:
@@ -2973,6 +2989,11 @@ class NewHomeAddShows(MainHandler):
 
         t.trending_shows = TraktCall("shows/trending.json/%API%", sickbeard.TRAKT_API_KEY)
 
+        if None is not t.trending_shows:
+            for item in t.trending_shows:
+                if helpers.findCertainShow(sickbeard.showList, int(item['tvdb_id'])):
+                    item['tvdb_id'] = u'ExistsInLibrary'
+
         return _munge(t)
 
     def existingShows(self, *args, **kwargs):
@@ -3603,7 +3624,7 @@ class Home(MainHandler):
         sickbeard.events.put(sickbeard.events.SystemEvent.SHUTDOWN)
 
         title = "Shutting down"
-        message = "SickRage is shutting down..."
+        message = "SickGear is shutting down..."
 
         return self._genericMessage(title, message)
 
@@ -3695,9 +3716,6 @@ class Home(MainHandler):
 
         if not sickbeard.showQueueScheduler.action.isBeingAdded(showObj):  # @UndefinedVariable
             if not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
-                t.submenu.append(
-                    {'title': 'Delete', 'path': 'home/deleteShow?show=%d&amp;full=1' % showObj.indexerid,
-                     'confirm': True})
                 t.submenu.append(
                     {'title': 'Remove', 'path': 'home/deleteShow?show=%d' % showObj.indexerid, 'confirm': True})
                 t.submenu.append({'title': 'Re-scan files', 'path': 'home/refreshShow?show=%d' % showObj.indexerid})
@@ -3866,7 +3884,10 @@ class Home(MainHandler):
         anime = config.checkbox_to_value(anime)
         subtitles = config.checkbox_to_value(subtitles)
 
-        indexer_lang = indexerLang
+        if indexerLang and indexerLang in sickbeard.indexerApi(showObj.indexer).indexer().config['valid_languages']:
+            indexer_lang = indexerLang
+        else:
+            indexer_lang = showObj.lang
 
         # if we changed the language then kick off an update
         if indexer_lang == showObj.lang:
@@ -3994,7 +4015,7 @@ class Home(MainHandler):
                             # rescan the episodes in the new folder
                     except exceptions.NoNFOException:
                         errors.append(
-                            "The folder at <tt>%s</tt> doesn't contain a tvshow.nfo - copy your files to that folder before you change the directory in SickRage." % location)
+                            "The folder at <tt>%s</tt> doesn't contain a tvshow.nfo - copy your files to that folder before you change the directory in SickGear." % location)
 
             # save it to the DB
             showObj.saveToDB()
@@ -4051,7 +4072,10 @@ class Home(MainHandler):
 
         showObj.deleteShow(bool(full))
 
-        ui.notifications.message('<b>%s</b> has been deleted' % showObj.name)
+        ui.notifications.message('<b>%s</b> has been %s %s' %
+                                 (showObj.name,
+                                 ('deleted', 'trashed')[sickbeard.TRASH_REMOVE_SHOW],
+                                 ('(media untouched)', '(with all related media)')[bool(full)]))
         redirect("/home/")
 
 
@@ -4225,6 +4249,7 @@ class Home(MainHandler):
 
         if int(status) == WANTED:
             msg = "Backlog was automatically started for the following seasons of <b>" + showObj.name + "</b>:<br />"
+            msg += '<ul>'
 
             for season, segment in segments.items():
                 cur_backlog_queue_item = search_queue.BacklogQueueItem(showObj, segment)
@@ -4241,6 +4266,7 @@ class Home(MainHandler):
 
         if int(status) == FAILED:
             msg = "Retrying Search was automatically started for the following season of <b>" + showObj.name + "</b>:<br />"
+            msg += '<ul>'
 
             for season, segment in segments.items():
                 cur_failed_queue_item = search_queue.FailedQueueItem(showObj, [segment])
@@ -4353,9 +4379,9 @@ class Home(MainHandler):
             root_ep_obj.rename()
 
         redirect("/home/displayShow?show=" + show)
-    
+
     def searchEpisode(self, show=None, season=None, episode=None):
-        
+
         # retrieve the episode object and fail if we can't get one
         ep_obj = _getEpisode(show, season, episode)
         if isinstance(ep_obj, str):
@@ -4365,7 +4391,7 @@ class Home(MainHandler):
         ep_queue_item = search_queue.ManualSearchQueueItem(ep_obj.show, ep_obj)
 
         sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)  # @UndefinedVariable
-        
+
         if ep_queue_item.success:
             return returnManualSearchResult(ep_queue_item)
         if not ep_queue_item.started and ep_queue_item.success is None:
@@ -4384,35 +4410,35 @@ class Home(MainHandler):
         currentManualSearchThreadsQueued = []
         currentManualSearchThreadActive = []
         finishedManualSearchThreadItems= []
-        
+
         # Queued Searches
         currentManualSearchThreadsQueued = sickbeard.searchQueueScheduler.action.get_all_ep_from_queue(show)
         # Running Searches
         if (sickbeard.searchQueueScheduler.action.is_manualsearch_in_progress()):
             currentManualSearchThreadActive = sickbeard.searchQueueScheduler.action.currentItem
-            
+
         # Finished Searches
         finishedManualSearchThreadItems =  sickbeard.search_queue.MANUAL_SEARCH_HISTORY
-        
+
         if currentManualSearchThreadsQueued:
             for searchThread in currentManualSearchThreadsQueued:
                 searchstatus = 'queued'
-                if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):    
+                if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
                     episodes.append({'episode': searchThread.segment.episode,
-                                     'episodeindexid': searchThread.segment.indexerid, 
-                                     'season' : searchThread.segment.season, 
-                                     'searchstatus' : searchstatus, 
-                                     'status' : statusStrings[searchThread.segment.status], 
+                                     'episodeindexid': searchThread.segment.indexerid,
+                                     'season' : searchThread.segment.season,
+                                     'searchstatus' : searchstatus,
+                                     'status' : statusStrings[searchThread.segment.status],
                                      'quality': self.getQualityClass(searchThread.segment)})
                 else:
                     for epObj in searchThread.segment:
                         episodes.append({'episode': epObj.episode,
                              'episodeindexid': epObj.indexerid,
-                             'season' : epObj.season, 
-                             'searchstatus' : searchstatus, 
-                             'status' : statusStrings[epObj.status], 
+                             'season' : epObj.season,
+                             'searchstatus' : searchstatus,
+                             'status' : statusStrings[epObj.status],
                              'quality': self.getQualityClass(epObj)})
-        
+
         if currentManualSearchThreadActive:
             searchThread = currentManualSearchThreadActive
             searchstatus = 'searching'
@@ -4422,11 +4448,11 @@ class Home(MainHandler):
                 searchstatus = 'searching'
             episodes.append({'episode': searchThread.segment.episode,
                              'episodeindexid': searchThread.segment.indexerid,
-                             'season' : searchThread.segment.season, 
-                             'searchstatus' : searchstatus, 
-                             'status' : statusStrings[searchThread.segment.status], 
+                             'season' : searchThread.segment.season,
+                             'searchstatus' : searchstatus,
+                             'status' : statusStrings[searchThread.segment.status],
                              'quality': self.getQualityClass(searchThread.segment)})
-            
+
         if finishedManualSearchThreadItems:
             for searchThread in finishedManualSearchThreadItems:
                 if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
@@ -4434,9 +4460,9 @@ class Home(MainHandler):
                         searchstatus = 'finished'
                         episodes.append({'episode': searchThread.segment.episode,
                                          'episodeindexid': searchThread.segment.indexerid,
-                                 'season' : searchThread.segment.season, 
-                                 'searchstatus' : searchstatus, 
-                                 'status' : statusStrings[searchThread.segment.status], 
+                                 'season' : searchThread.segment.season,
+                                 'searchstatus' : searchstatus,
+                                 'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
                 else:
                     ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
@@ -4446,18 +4472,18 @@ class Home(MainHandler):
                                 searchstatus = 'finished'
                                 episodes.append({'episode': epObj.episode,
                                                  'episodeindexid': epObj.indexerid,
-                                         'season' : epObj.season, 
-                                         'searchstatus' : searchstatus, 
-                                         'status' : statusStrings[epObj.status], 
+                                         'season' : epObj.season,
+                                         'searchstatus' : searchstatus,
+                                         'status' : statusStrings[epObj.status],
                                          'quality': self.getQualityClass(epObj)})
-        
+
         return json.dumps({'show': show, 'episodes' : episodes})
 
         #return json.dumps()
-    
+
     def getQualityClass(self, ep_obj):
         # return the correct json value
-    
+
         # Find the quality class for the episode
         quality_class = Quality.qualityStrings[Quality.UNKNOWN]
         ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
@@ -4586,7 +4612,7 @@ class Home(MainHandler):
             return json.dumps({'result': 'success'})
         else:
             return json.dumps({'result': 'failure'})
-        
+
 
 class UI(MainHandler):
     def add_message(self):

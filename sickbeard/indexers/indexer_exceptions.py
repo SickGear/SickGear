@@ -1,14 +1,9 @@
 #!/usr/bin/env python2
 #encoding:utf-8
-#author:echel0n
 #project:indexer_api
-#repository:http://github.com/echel0n/Sick-Beard
 #license:unlicense (http://unlicense.org/)
 
 """Custom exceptions used or raised by indexer_api"""
-
-__author__ = "echel0n"
-__version__ = "1.0"
 
 from lib.tvrage_api.tvrage_exceptions import \
     tvrage_exception, tvrage_attributenotfound, tvrage_episodenotfound, tvrage_error, \

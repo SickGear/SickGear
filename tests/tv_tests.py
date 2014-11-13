@@ -2,20 +2,20 @@
 # Author: Dennis Lutter <lad1337@gmail.com>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
 import test_lib as test
@@ -29,11 +29,11 @@ class TVShowTests(test.SickbeardTestDBCase):
         super(TVShowTests, self).setUp()
         sickbeard.showList = []
 
-    def test_init_tvdbid(self):
+    def test_init_indexerid(self):
         show = TVShow(1, 0001, "en")
-        self.assertEqual(show.tvdbid, 0001)
+        self.assertEqual(show.indexerid, 0001)
 
-    def test_change_tvdbid(self):
+    def test_change_indexerid(self):
         show = TVShow(1, 0001, "en")
         show.name = "show name"
         show.tvrname = "show name"
@@ -47,11 +47,11 @@ class TVShowTests(test.SickbeardTestDBCase):
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
 
-        show.tvdbid = 0002
+        show.indexerid = 0002
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
 
-        self.assertEqual(show.tvdbid, 0002)
+        self.assertEqual(show.indexerid, 0002)
 
     def test_set_name(self):
         show = TVShow(1, 0001, "en")

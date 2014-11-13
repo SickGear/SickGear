@@ -1,20 +1,20 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickRage.
+# This file is part of SickGear.
 #
-# SickRage is free software: you can redistribute it and/or modify
+# SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# SickRage is distributed in the hope that it will be useful,
+# SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with SickRage.  If not, see <http://www.gnu.org/licenses/>.
+# along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import with_statement
 
@@ -34,6 +34,11 @@ import xml.etree.cElementTree as etree
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 from lib import subliminal
+
+try:
+    from lib.send2trash import send2trash
+except ImportError:
+    pass
 
 from lib.imdb import imdb
 
@@ -806,7 +811,11 @@ class TVShow(object):
             self.flatten_folders = int(sqlResults[0]["flatten_folders"])
             self.paused = int(sqlResults[0]["paused"])
 
-            self.location = sqlResults[0]["location"]
+            try:
+                self.location = sqlResults[0]["location"]
+            except Exception:
+                dirty_setter("_location")(self, sqlResults[0]["location"])
+                self._isDirGood = False
 
             if not self.lang:
                 self.lang = sqlResults[0]["lang"]
@@ -982,32 +991,51 @@ class TVShow(object):
         myDB = db.DBConnection()
         myDB.mass_action(sql_l)
 
+        action = ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW]
+
         # remove self from show list
         sickbeard.showList = [x for x in sickbeard.showList if int(x.indexerid) != self.indexerid]
 
         # clear the cache
         image_cache_dir = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images')
         for cache_file in ek.ek(glob.glob, ek.ek(os.path.join, image_cache_dir, str(self.indexerid) + '.*')):
-            logger.log(u"Deleting cache file " + cache_file)
-            os.remove(cache_file)
+            logger.log(u'Attempt to %s cache file %s' % (action, cache_file))
+            try:
+                if sickbeard.TRASH_REMOVE_SHOW:
+                    send2trash(cache_file)
+                else:
+                    os.remove(cache_file)
+
+            except OSError, e:
+                logger.log(u'Unable to %s %s: %s / %s' % (action, cache_file, repr(e), str(e)), logger.WARNING)
 
         # remove entire show folder
         if full:
             try:
-                logger.log(u"Deleting show folder " + self.location)
+                logger.log(u'Attempt to %s show folder %s' % (action, self._location))
                 # check first the read-only attribute
                 file_attribute = ek.ek(os.stat, self.location)[0]
                 if (not file_attribute & stat.S_IWRITE):
                     # File is read-only, so make it writeable
-                    logger.log('Read only mode on folder ' + self.location + ' Will try to make it writeable', logger.DEBUG)
+                    logger.log('Attempting to make writeable the read only folder %s' % self._location, logger.DEBUG)
                     try:
                         ek.ek(os.chmod, self.location, stat.S_IWRITE)
                     except:
-                        logger.log(u'Cannot change permissions of ' + self.location, logger.WARNING)
+                        logger.log(u'Unable to change permissions of %s' % self._location, logger.WARNING)
 
-                ek.ek(shutil.rmtree, self.location)
+                if sickbeard.TRASH_REMOVE_SHOW:
+                    send2trash(self.location)
+                else:
+                    ek.ek(shutil.rmtree, self.location)
+
+                logger.log(u'%s show folder %s' %
+                           (('Deleted', 'Trashed')[sickbeard.TRASH_REMOVE_SHOW],
+                            self._location))
+
+            except exceptions.ShowDirNotFoundException:
+                logger.log(u"Show folder does not exist, no need to %s %s" % (action, self._location), logger.WARNING)
             except OSError, e:
-                logger.log(u"Unable to delete " + self.location + ": " + repr(e) + " / " + str(e), logger.WARNING)
+                logger.log(u'Unable to %s %s: %s / %s' % (action, self._location, repr(e), str(e)), logger.WARNING)
 
     def populateCache(self):
         cache_inst = image_cache.ImageCache()
@@ -2177,17 +2205,17 @@ class TVEpisode(object):
         # if there's no release group then replace it with a reasonable facsimile
         if not replace_map['%RN']:
             if self.show.air_by_date or self.show.sports:
-                result_name = result_name.replace('%RN', '%S.N.%A.D.%E.N-SiCKRAGE')
-                result_name = result_name.replace('%rn', '%s.n.%A.D.%e.n-sickrage')
+                result_name = result_name.replace('%RN', '%S.N.%A.D.%E.N-SickGear')
+                result_name = result_name.replace('%rn', '%s.n.%A.D.%e.n-SickGear')
             elif anime_type != 3:
-                result_name = result_name.replace('%RN', '%S.N.%AB.%E.N-SiCKRAGE')
-                result_name = result_name.replace('%rn', '%s.n.%ab.%e.n-sickrage')
+                result_name = result_name.replace('%RN', '%S.N.%AB.%E.N-SickGear')
+                result_name = result_name.replace('%rn', '%s.n.%ab.%e.n-SickGear')
             else:
-                result_name = result_name.replace('%RN', '%S.N.S%0SE%0E.%E.N-SiCKRAGE')
-                result_name = result_name.replace('%rn', '%s.n.s%0se%0e.%e.n-sickrage')
+                result_name = result_name.replace('%RN', '%S.N.S%0SE%0E.%E.N-SickGear')
+                result_name = result_name.replace('%rn', '%s.n.s%0se%0e.%e.n-SickGear')
 
-            result_name = result_name.replace('%RG', 'SICKRAGE')
-            result_name = result_name.replace('%rg', 'sickrage')
+            result_name = result_name.replace('%RG', 'SickGear')
+            result_name = result_name.replace('%rg', 'SickGear')
             logger.log(u"Episode has no release name, replacing it with a generic one: " + result_name, logger.DEBUG)
 
         if not replace_map['%RT']:
@@ -2466,6 +2494,7 @@ class TVEpisode(object):
         if airs:
             hr = int(airs.group(1))
             hr = (12 + hr, hr)[None is airs.group(3)]
+            hr = (hr, hr - 12)[0 == hr % 12]
             min = int((airs.group(2), min)[None is airs.group(2)])
         airtime = datetime.time(hr, min)
 
