@@ -3,6 +3,7 @@
 * Change footer stats to not add newlines when copy/pasting from them
 * Remove redundant references from Config / Help & Info
 * Fix poster preview on small poster layout
+* Remove output of source code line when warnings highlight libraries not used with IMDb
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
