@@ -10,6 +10,7 @@
 * Change sharper looking heart image on the Add Show page
 * Change Add Show on Add Trending Show Page to use the full Add New Show flow
 * Fix adding shows with titles that contain "&" on Add Trending Show page
+* Fix unset vars on Add New Shows Page used in the Add Existing Shows context
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
