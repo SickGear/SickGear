@@ -4,6 +4,7 @@
 * Remove redundant references from Config / Help & Info
 * Fix poster preview on small poster layout
 * Change overhaul Config Anime to be in line with General Configuration
+* Remove output of source code line when warnings highlight libraries not used with IMDb
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
