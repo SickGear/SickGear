@@ -3,6 +3,8 @@
 * Change footer stats to not add newlines when copy/pasting from them
 * Remove redundant references from Config / Help & Info
 * Fix poster preview on small poster layout
+* Add filtering to shows on trending shows
+* Add dropdown on trending shows to filter all, not in library and in library.
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
