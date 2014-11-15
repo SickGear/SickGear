@@ -1,6 +1,7 @@
 #import sickbeard
 #import datetime
 #import re
+#import urllib
 #from sickbeard.common import *
 #from sickbeard import sbdatetime
 #from sickbeard.helpers import anon_url
@@ -148,7 +149,8 @@
 #if 'ExistsInLibrary' in $cur_show['tvdb_id']:
 				<p style="line-height: 1.5; padding: 2px 5px 3px">In library</p>
 #else
-				<a href="$sbRoot/home/addTraktShow?indexer_id=${cur_show['tvdb_id']}&amp;showName=${cur_show['title']}" class="btn btn-xs">Add Show</a>
+				#set $encoded_show_title = urllib.quote($cur_show['title'].encode("utf-8"))
+				<a href="$sbRoot/home/addTraktShow?indexer_id=${cur_show['tvdb_id']}&amp;showName=${encoded_show_title}" class="btn btn-xs">Add Show</a>
 #end if
 			</div>
 		</div>
