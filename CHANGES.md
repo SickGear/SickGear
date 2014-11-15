@@ -5,6 +5,7 @@
 * Fix poster preview on small poster layout
 * Change overhaul Config Anime to be in line with General Configuration
 * Remove output of source code line when warnings highlight libraries not used with IMDb
+* Add dropdown on Add Trending Shows to display all shows, shows not in library, or shows in library
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)

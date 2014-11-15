@@ -2988,10 +2988,11 @@ class NewHomeAddShows(MainHandler):
         t.submenu = HomeMenu()
 
         t.trending_shows = TraktCall("shows/trending.json/%API%", sickbeard.TRAKT_API_KEY)
-
+        t.trending_inlibrary = 0
         if None is not t.trending_shows:
             for item in t.trending_shows:
                 if helpers.findCertainShow(sickbeard.showList, int(item['tvdb_id'])):
+                    t.trending_inlibrary += 1
                     item['tvdb_id'] = u'ExistsInLibrary'
 
         return _munge(t)
