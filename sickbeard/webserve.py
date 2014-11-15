@@ -2885,8 +2885,7 @@ class NewHomeAddShows(MainHandler):
 
         return _munge(t)
 
-
-    def newShow(self, show_to_add=None, other_shows=None):
+    def newShow(self, show_to_add=None, other_shows=None, use_show_name=None):
         """
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
@@ -2905,7 +2904,9 @@ class NewHomeAddShows(MainHandler):
         t.use_provided_info = use_provided_info
 
         # use the given show_dir for the indexer search if available
-        if not show_dir:
+        if use_show_name:
+            t.default_show_name = show_name
+        elif not show_dir:
             t.default_show_name = ''
         elif not show_name:
             t.default_show_name = ek.ek(os.path.basename, ek.ek(os.path.normpath, show_dir)).replace('.', ' ')
@@ -3009,37 +3010,7 @@ class NewHomeAddShows(MainHandler):
     def addTraktShow(self, indexer_id, showName):
         if helpers.findCertainShow(sickbeard.showList, int(indexer_id)):
             return
-
-        if sickbeard.ROOT_DIRS:
-            root_dirs = sickbeard.ROOT_DIRS.split('|')
-            location = root_dirs[int(root_dirs[0]) + 1]
-        else:
-            location = None
-
-        if location:
-            show_dir = ek.ek(os.path.join, location, helpers.sanitizeFileName(showName))
-            dir_exists = helpers.makeDir(show_dir)
-            if not dir_exists:
-                logger.log(u"Unable to create the folder " + show_dir + ", can't add the show", logger.ERROR)
-                return
-            else:
-                helpers.chmodAsParent(show_dir)
-
-            sickbeard.showQueueScheduler.action.addShow(1, int(indexer_id), show_dir,
-                                                        default_status=sickbeard.STATUS_DEFAULT,
-                                                        quality=sickbeard.QUALITY_DEFAULT,
-                                                        flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT,
-                                                        subtitles=sickbeard.SUBTITLES_DEFAULT,
-                                                        anime=sickbeard.ANIME_DEFAULT,
-                                                        scene=sickbeard.SCENE_DEFAULT)
-
-            ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
-        else:
-            logger.log(u"There was an error creating the show, no root directory setting found", logger.ERROR)
-            return
-
-        # done adding show
-        redirect('/home/')
+        return self.newShow('|'.join(['', '', indexer_id, showName]), use_show_name=True)
 
     def addNewShow(self, whichSeries=None, indexerLang="en", rootDir=None, defaultStatus=None,
                    anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
