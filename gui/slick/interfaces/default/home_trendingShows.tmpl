@@ -23,6 +23,7 @@
     // initialise combos for dirty page refreshes
     \$('#showsort').val('original');
     \$('#showsortdirection').val('asc');
+    \$('#showfilter').val('*');
 
     var \$container = [\$('#container')];
     jQuery.each(\$container, function (j) {
@@ -73,6 +74,11 @@
     \$('#showsortdirection').on( 'change', function() {
         \$('#container').isotope({sortAscending: ('asc' == this.value)});
     });
+
+    \$('#showfilter').on( 'change', function() {
+        var filterValue = this.value;
+        \$('#container').isotope({ filter: filterValue });
+    });
 });
 
 //-->
@@ -86,7 +92,16 @@
 
 #if $trending_shows
 <div class="pull-right" style="margin-top: -40px;">
-	<span>Sort By:</span>
+	<span>Show:</span>
+	<select id="showfilter" class="form-control form-control-inline input-sm">
+#set $count_trending = len($trending_shows)
+#set $count_inlibrary = $trending_inlibrary
+		<option value="*" selected="selected">All<%= ' (%d)' % count_trending %></option>
+		<option value=".notinlibrary">Not In Library<%= ' (%d)' % (count_trending - count_inlibrary) %></option>
+		<option value=".inlibrary">In Library<%= ' (%d)' % count_inlibrary %></option>
+	</select>
+
+	<span style="margin-left:12px">Sort By:</span>
 	<select id="showsort" class="form-control form-control-inline input-sm">
 		<option value="name">Name</option>
 		<option value="original" selected="selected">Original</option>
@@ -115,7 +130,7 @@
 
 #set $image = re.sub(r'(.*)(\..*?)$', r'\1-300\2', $cur_show['images']['poster'], 0, re.IGNORECASE | re.MULTILINE)
 
-	<div class="trakt_show" data-name="$cur_show['title']" data-rating="$cur_show['ratings']['percentage']" data-votes="$cur_show['ratings']['votes']">
+	<div class="trakt_show <%= ('notinlibrary', 'inlibrary')['ExistsInLibrary' in cur_show['tvdb_id']] %>" data-name="$cur_show['title']" data-rating="$cur_show['ratings']['percentage']" data-votes="$cur_show['ratings']['votes']">
 		<div class="traktContainer">
 			<div class="trakt-image">
 				<a class="trakt-image" href="<%= anon_url(cur_show['url']) %>" target="_blank"><img alt="" class="trakt-image" src="${image}" /></a>
