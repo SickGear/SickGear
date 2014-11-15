@@ -7,6 +7,7 @@
 * Remove output of source code line when warnings highlight libraries not used with IMDb
 * Add dropdown on Add Trending Shows to display all shows, shows not in library, or shows in library
 * Change Help and Info icon sprites to color and text of Arguments if unused
+* Change sharper looking heart image on the Add Show page
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
