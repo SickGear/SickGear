@@ -89,3 +89,14 @@ class AddSceneExceptionsRefresh(AddSceneExceptionsCustom):
     def execute(self):
         self.connection.action(
             "CREATE TABLE scene_exceptions_refresh (list TEXT PRIMARY KEY, last_refreshed INTEGER)")
+
+
+class AddNetworkConversions(AddSceneExceptionsRefresh):
+    def test(self):
+        return self.hasTable('network_conversions')
+
+    def execute(self):
+        self.connection.action('CREATE TABLE network_conversions (tvdb_network TEXT PRIMARY KEY, tvrage_network TEXT,'
+                               ' tvrage_country TEXT)')
+        
+        self.connection.action('CREATE INDEX tvrage_idx on network_conversions (tvrage_network, tvrage_country)')

@@ -1423,3 +1423,6 @@ def get_size(start_path='.'):
             total_size += ek.ek(os.path.getsize, fp)
     return total_size
 
+
+def build_dict(seq, key):
+    return dict((d[key], dict(d, index=index)) for (index, d) in enumerate(seq))
