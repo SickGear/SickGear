@@ -22,6 +22,7 @@ import datetime as dt
 import requests
 import requests.exceptions
 import xmltodict
+from sickbeard.network_timezones import standardize_network
 
 try:
     import xml.etree.cElementTree as ElementTree
@@ -443,7 +444,9 @@ class TVRage:
             if value:
                 if isinstance(value, dict):
                     if key == 'network':
-                        value = value['#text']
+                        network = value['#text']
+                        country = value['@country']
+                        value = standardize_network(network, country)
                     if key == 'genre':
                         value = value['genre']
                         if not value:

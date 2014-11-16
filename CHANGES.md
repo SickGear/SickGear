@@ -1,6 +1,7 @@
 ### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
 * Fix slow database operations (port from midgetspy/sickbeard)
+* Add TVRage network name standardization
 
 [develop changelog]
 
