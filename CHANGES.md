@@ -1,4 +1,6 @@
-### 0.x.x (2014-11-xx xx:xx:xx UTC)
+### 0.3.1 (2014-11-19 16:40:00 UTC)
+
+* Fix failing travis test
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
 
@@ -59,31 +61,6 @@
 * Fix missing header and "on <missing text>" when network is none and Layout "Poster" with Sort By "Network" on coming episodes page
 * Change how the "local/network" setting is handled to address some issues
 * Remove browser player from Config General and Display Shows page
-
-[develop changelog]
-* Change improve display of progress bars in the Downloads columns of the show list page
-* Change improve display of progress bars under the images in Layout Poster of the show list page
-* Fix default top navbar background white-out behaviour on browsers that don't support gradients
-* Change improve top navbar gradient use for greater cross browser compatibility (e.g. Safari)
-* Fix dark theme divider between Season numbers on display show page
-* Fix main background and border colour of logs on log page
-* Fix "Subtitle Language" drop down font colour when entering text on the Subtitles Search settings
-* Add confirmation dialogs back in that were missed due to new UI changes
-* Fix the home page from failing to load if a show status contains nothing
-* Fix and repositioned show_message on display show to use bootstrap styling
-* Remove commented out html from display show accidently left in during UI changes
-* Fix display issue of season tables in displayShow view / Display Specials
-* Change to suppress reporting of Tornado exception error 1
-* Fix progress sort direction for poster layout view on home page
-* Fix invalid use of str() in the Send2Trash library for platforms other
-* Fix dropdown confirm dialogs for restart and shutdown
-* Fix parsing utf8 data from tvdb and tvrage
-* Fix display show status and subtitle searches to use new column class names
-* Fix API response header for JSON content type and the return of JSONP data
-* Update PNotify to version [2.0.1]
-* Change the notification popups to always show the close button
-* Fix issue where popups did not show if multiple tabs are used. Popups now queue and display when a tab is brought into focus
-* Fix missing HTML in notifications resulting in incorrect formatting
 
 
 ### 0.2.2 (2014-11-12 08:25:00 UTC)
