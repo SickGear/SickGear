@@ -346,6 +346,7 @@ ANIDB_PASSWORD = None
 ANIDB_USE_MYLIST = False
 ADBA_CONNECTION = None
 ANIME_SPLIT_HOME = False
+ANIME_TREAT_AS_HDTV = False
 
 USE_SYNOINDEX = False
 
@@ -504,7 +505,7 @@ def initialize(consoleLogging=True):
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, LOCALHOST_IP, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, ANIMESUPPORT, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
-            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS
+            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV
 
         if __INITIALIZED__:
             return False
@@ -928,6 +929,7 @@ def initialize(consoleLogging=True):
         ANIDB_USE_MYLIST = bool(check_setting_int(CFG, 'ANIDB', 'anidb_use_mylist', 0))
 
         ANIME_SPLIT_HOME = bool(check_setting_int(CFG, 'ANIME', 'anime_split_home', 0))
+        ANIME_TREAT_AS_HDTV = bool(check_setting_int(CFG, 'ANIME', 'anime_treat_as_hdtv', 0))
 
         METADATA_XBMC = check_setting_str(CFG, 'General', 'metadata_xbmc', '0|0|0|0|0|0|0|0|0|0')
         METADATA_XBMC_12PLUS = check_setting_str(CFG, 'General', 'metadata_xbmc_12plus', '0|0|0|0|0|0|0|0|0|0')
@@ -1794,6 +1796,7 @@ def save_config():
 
     new_config['ANIME'] = {}
     new_config['ANIME']['anime_split_home'] = int(ANIME_SPLIT_HOME)
+    new_config['ANIME']['anime_treat_as_hdtv'] = int(ANIME_TREAT_AS_HDTV)
 
     new_config.write()
 
