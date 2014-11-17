@@ -100,6 +100,16 @@
 							</label>
 						</div>
 
+						<div class="field-pair">
+							<label for="anime_assume_quality">
+								<span class="component-title">Quality control</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="anime_assume_quality" id="anime_assume_quality" #if $sickbeard.ANIME_ASSUME_QUALITY then 'checked="checked"' else ""# />
+									<p>assume "unknown" quality anime is HDTV quality</p>
+								</span>
+							</label>
+						</div>
+
 						<input type="submit" class="btn config_submitter" value="Save Changes" />
 					</fieldset>
 				</div><!-- /component-group //-->
