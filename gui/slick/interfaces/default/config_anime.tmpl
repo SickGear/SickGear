@@ -25,10 +25,43 @@
 			<div id="config-components">
 
 				<ul>
-					<li><a href="#core-component-group1">AniDB Settings</a></li>
+					<li><a href="#core-component-group1">Settings</a></li>
 				</ul>
 
 				<div id="core-component-group1">
+
+<div class="component-group">
+
+					<div class="component-group-desc">
+						<h3>General</h3>
+						<p>Settings for anime</p>
+					</div>
+
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="split_home">
+								<span class="component-title">Split show lists</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="split_home" id="split_home" #if $sickbeard.ANIME_SPLIT_HOME then 'checked="checked"' else ""# />
+									<p>separate anime from other shows on the home page</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="anime_assume_quality">
+								<span class="component-title">Quality control</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="anime_assume_quality" id="anime_assume_quality" #if $sickbeard.ANIME_ASSUME_QUALITY then 'checked="checked"' else ""# />
+									<p>assume "unknown" quality anime is HDTV quality</p>
+								</span>
+							</label>
+						</div>
+
+						<input type="submit" class="btn config_submitter" value="Save Changes" />
+					</fieldset>
+				</div><!-- /component-group //-->
+
 				<div class="component-group">
 
 					<div class="component-group-desc">
@@ -82,27 +115,6 @@
 					</fieldset>
 				</div><!-- /component-group //-->
 
-				<div class="component-group">
-
-					<div class="component-group-desc">
-						<h3>User Interface</h3>
-						<p>Change how anime appears on the home page.</p>
-					</div>
-
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="split_home">
-								<span class="component-title">Split show lists</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="split_home" id="split_home" #if $sickbeard.ANIME_SPLIT_HOME then 'checked="checked"' else ""# />
-									<p>separate anime from other shows on the home page</p>
-								</span>
-							</label>
-						</div>
-
-						<input type="submit" class="btn config_submitter" value="Save Changes" />
-					</fieldset>
-				</div><!-- /component-group //-->
 				</div><!-- /component-group1 //-->
 
 				<br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
