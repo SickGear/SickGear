@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# PROVIDE: sickbeard
+# PROVIDE: sickgear
 # REQUIRE: LOGIN
 # KEYWORD: shutdown
 #
@@ -14,7 +14,7 @@
 #			default. Do not sets it as empty or it will run
 #			as root.
 # sickbeard_dir:	Directory where SickGear lives.
-#			Default: /usr/local/sickbeard
+#			Default: /usr/local/sickgear
 # sickbeard_chdir:  Change to this directory before running SickGear.
 #     Default is same as sickbeard_dir.
 # sickbeard_datadir:  Data directory for Sick Beard (DB, Logs, config)
@@ -35,14 +35,14 @@ PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 
 . /etc/rc.subr
 
-name="sickbeard"
+name="sickgear"
 rcvar=${name}_enable
 
 load_rc_config ${name}
 
 : ${sickbeard_enable:="NO"}
 : ${sickbeard_user:="_sabnzbd"}
-: ${sickbeard_dir:="/usr/local/sickbeard"}
+: ${sickbeard_dir:="/usr/local/sickgear"}
 : ${sickbeard_chdir:="${sickbeard_dir}"}
 : ${sickbeard_datadir:="${sickbeard_chdir}"}
 : ${sickbeard_pid:="${sickbeard_dir}/sickbeard.pid"}
