@@ -2642,7 +2642,7 @@ class ConfigAnime(MainHandler):
 
 
     def saveAnime(self, use_anidb=None, anidb_username=None, anidb_password=None, anidb_use_mylist=None,
-                  split_home=None):
+                  split_home=None, anime_treat_as_hdtv=None):
 
         results = []
 
@@ -2651,6 +2651,7 @@ class ConfigAnime(MainHandler):
         sickbeard.ANIDB_PASSWORD = anidb_password
         sickbeard.ANIDB_USE_MYLIST = config.checkbox_to_value(anidb_use_mylist)
         sickbeard.ANIME_SPLIT_HOME = config.checkbox_to_value(split_home)
+        sickbeard.ANIME_TREAT_AS_HDTV = config.checkbox_to_value(anime_treat_as_hdtv)
 
         sickbeard.save_config()
 

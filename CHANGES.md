@@ -1,20 +1,24 @@
 ### 0.x.x (2014-11-xx xx:xx:xx UTC)
 
 * Change footer stats to not add newlines when copy/pasting from them
-* Remove redundant references from Config / Help & Info
+* Remove redundant references from Config/Help & Info
 * Fix poster preview on small poster layout
-* Change overhaul Config Anime to be in line with General Configuration
+* Change overhaul Config/Anime to be in line with General Configuration
 * Remove output of source code line when warnings highlight libraries not used with IMDb
 * Add dropdown on Add Trending Shows to display all shows, shows not in library, or shows in library
 * Change Help and Info icon sprites to color and text of Arguments if unused
 * Change sharper looking heart image on the Add Show page
-* Change Add Show on Add Trending Show Page to use the full Add New Show flow
+* Change Add Show on Add Trending Show page to use the full Add New Show flow
 * Fix adding shows with titles that contain "&" on Add Trending Show page
-* Fix unset vars on Add New Shows Page used in the Add Existing Shows context
+* Fix unset vars on Add New Shows page used in the Add Existing Shows context
 * Remove unneeded datetime convert from Coming Episodes page
 * Fix the log output of the limited backlog search for episodes missed
-* Remove unsupported t411 provider
-* Remove obsolete Animezb provider
+* Remove unsupported t411 search provider
+* Remove obsolete Animezb search provider
+* Add option to treat anime releases that lack a quality tag as HDTV instead of "unknown"
+
+[develop changelog]
+* Change descriptions and layout on Config/Anime page
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
