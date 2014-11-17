@@ -13,6 +13,7 @@
 * Fix unset vars on Add New Shows Page used in the Add Existing Shows context
 * Remove unneeded datetime convert from Coming Episodes page
 * Fix the log output of the limited backlog search for episodes missed
+* Add option to assume unknown quality anime files are hdtv quality
 
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
