@@ -211,7 +211,6 @@ inc_top.tmpl
 
 .ui-widget-content a:hover {
     color: #09A2FF;
-	text-decoration: none;
 }
 
 .ui-widget-header { 

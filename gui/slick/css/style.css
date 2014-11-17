@@ -3006,6 +3006,9 @@ span.token-input-delete-token {
 	margin: 0 1px;
 }
 
+.ui-widget-content a {
+	text-decoration: none;
+}
 .red-text {color:#d33}
 .clear-left {clear:left}
 .nextline-block {display:block}

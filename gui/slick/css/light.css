@@ -199,7 +199,15 @@ inc_top.tmpl
 	background: #dcdcdc url("../css/lib/images/ui-bg_highlight-soft_75_dcdcdc_1x100.png") 50% top repeat-x; 
 }
 
-.ui-widget-header { 
+.ui-widget-content a {
+	color: rgb(42, 100, 150);
+}
+
+.ui-widget-content a:hover {
+	color: #09A2FF;
+}
+
+.ui-widget-header {
 	background: #ffffff url("../css/lib/images/ui-bg_flat_0_ffffff_40x100.png") 50% 50% repeat-x; 
 }
 

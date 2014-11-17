@@ -18,6 +18,9 @@
 * Add option to treat anime releases that lack a quality tag as HDTV instead of "unknown"
 * Remove old version checking code that no longer applies to SickGear's release system
 * Fix pnotify notifications going full page
+* Change overhaul Config Post Processing to be in line with General Configuration
+* Change rearrange post processing items into sections for easier use
+* Fix CSS overriding link colors on config pages
 
 [develop changelog]
 * Change descriptions and layout on Config/Anime page
