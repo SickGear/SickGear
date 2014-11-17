@@ -37,7 +37,6 @@ __all__ = ['ezrss',
            'animezb',
            'freshontv',
            'bitsoup',
-           't411',
            'tokyotoshokan',
 ]
 
