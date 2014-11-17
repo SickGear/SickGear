@@ -477,7 +477,7 @@ button.ui-button::-moz-focus-inner {
 	color: #222222;
 }
 .ui-widget-content a {
-	color: #222222;
+	text-decoration: none;
 }
 .ui-widget-header {
 	border: 1px solid #aaaaaa;
