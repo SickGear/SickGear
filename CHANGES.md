@@ -17,6 +17,7 @@
 * Remove obsolete Animezb search provider
 * Add option to treat anime releases that lack a quality tag as HDTV instead of "unknown"
 * Remove old version checking code that no longer applies to SickGear's release system
+* Fix pnotify notifications going full page
 
 [develop changelog]
 * Change descriptions and layout on Config/Anime page
