@@ -4,6 +4,7 @@
 * Remove redundant references from Config/Help & Info
 * Fix poster preview on small poster layout
 * Change overhaul Config/Anime to be in line with General Configuration
+* Change descriptions and layout on Config/Anime page
 * Remove output of source code line when warnings highlight libraries not used with IMDb
 * Add dropdown on Add Trending Shows to display all shows, shows not in library, or shows in library
 * Change Help and Info icon sprites to color and text of Arguments if unused
@@ -18,9 +19,16 @@
 * Add option to treat anime releases that lack a quality tag as HDTV instead of "unknown"
 * Remove old version checking code that no longer applies to SickGear's release system
 * Fix pnotify notifications going full page
+* Change overhaul Config Post Processing to be in line with General Configuration
+* Change rearrange Config Post Processing items into sections for easier use
+* Fix CSS overriding link colors on config pages
+* Change Config Post Processing texts and descriptions throughout
+* Fix Config Post Processing info icons in "Naming Legends"
+* Change Config Post Processing naming sample lines to be more available
+* Add Config Post Processing failed downloads Sabnzbd setup guide
+* Fix Config Post Processing "Anime name pattern" custom javascript validation
 
 [develop changelog]
-* Change descriptions and layout on Config/Anime page
 
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)

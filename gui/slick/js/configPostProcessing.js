@@ -230,26 +230,26 @@ $(document).ready(function () {
         $.get(sbRoot + '/config/postProcessing/isNamingValid', {pattern: pattern, multi: multi, anime_type: anime_type},
             function (data) {
                 if (data == "invalid") {
-                    $('#naming_pattern').qtip('option', {
+                    $('#naming_anime_pattern').qtip('option', {
                         'content.text': 'This pattern is invalid.',
                         'style.classes': 'qtip-rounded qtip-shadow qtip-red'
                     });
-                    $('#naming_pattern').qtip('toggle', true);
-                    $('#naming_pattern').css('background-color', '#FFDDDD');
+                    $('#naming_anime_pattern').qtip('toggle', true);
+                    $('#naming_anime_pattern').css('background-color', '#FFDDDD');
                 } else if (data == "seasonfolders") {
-                    $('#naming_pattern').qtip('option', {
+                    $('#naming_anime_pattern').qtip('option', {
                         'content.text': 'This pattern would be invalid without the folders, using it will force "Flatten" off for all shows.',
                         'style.classes': 'qtip-rounded qtip-shadow qtip-red'
                     });
-                    $('#naming_pattern').qtip('toggle', true);
-                    $('#naming_pattern').css('background-color', '#FFFFDD');
+                    $('#naming_anime_pattern').qtip('toggle', true);
+                    $('#naming_anime_pattern').css('background-color', '#FFFFDD');
                 } else {
-                    $('#naming_pattern').qtip('option', {
+                    $('#naming_anime_pattern').qtip('option', {
                         'content.text': 'This pattern is valid.',
                         'style.classes': 'qtip-rounded qtip-shadow qtip-green'
                     });
-                    $('#naming_pattern').qtip('toggle', false);
-                    $('#naming_pattern').css('background-color', '#FFFFFF');
+                    $('#naming_anime_pattern').qtip('toggle', false);
+                    $('#naming_anime_pattern').css('background-color', '#FFFFFF');
                 }
             });
     }
