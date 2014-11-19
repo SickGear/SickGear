@@ -27,6 +27,7 @@
 * Change Config Post Processing naming sample lines to be more available
 * Add Config Post Processing failed downloads Sabnzbd setup guide
 * Fix Config Post Processing "Anime name pattern" custom javascript validation
+* Add check that SSLv3 is available before use by requests lib
 
 [develop changelog]
 
