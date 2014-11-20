@@ -29,7 +29,8 @@
 * Fix Config Post Processing "Anime name pattern" custom javascript validation
 * Add check that SSLv3 is available before use by requests lib
 * Update Requests library 2.3.0 to 2.4.3 (9dc6602)
-* Change suppress HTTPS verification InsecureRequestWarning as many sites use self-certified certificates.
+* Change suppress HTTPS verification InsecureRequestWarning as many sites use self-certified certificates
+* Fix API endpoint Episode.SetStatus to "Wanted"
 
 [develop changelog]
 
