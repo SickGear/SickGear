@@ -29,7 +29,7 @@ except ImportError:
     import xml.etree.ElementTree as ElementTree
 
 from lib.dateutil.parser import parse
-from cachecontrol import CacheControl, caches
+from lib.cachecontrol import CacheControl, caches
 
 from tvrage_ui import BaseUI
 from tvrage_exceptions import (tvrage_error, tvrage_userabort, tvrage_shownotfound,

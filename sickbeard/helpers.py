@@ -62,7 +62,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard import notifiers
 from sickbeard import clients
 
-from cachecontrol import CacheControl, caches
+from lib.cachecontrol import CacheControl, caches
 from itertools import izip, cycle
 
 urllib._urlopener = classes.SickBeardURLopener()
