@@ -32,6 +32,7 @@
 * Change suppress HTTPS verification InsecureRequestWarning as many sites use self-certified certificates
 * Fix API endpoint Episode.SetStatus to "Wanted"
 * Change airdateModifyStamp to handle hour that is "00:00"
+* Fix a handler when ShowData is not available in tvdb and tvrage APIs
 
 [develop changelog]
 
