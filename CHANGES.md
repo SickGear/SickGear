@@ -33,6 +33,7 @@
 * Fix API endpoint Episode.SetStatus to "Wanted"
 * Change airdateModifyStamp to handle hour that is "00:00"
 * Fix a handler when ShowData is not available in tvdb and tvrage APIs
+* Fix a handler when EpisodeData is not available in tvdb and tvrage APIs
 
 [develop changelog]
 
