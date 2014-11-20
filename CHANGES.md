@@ -28,6 +28,7 @@
 * Add Config Post Processing failed downloads Sabnzbd setup guide
 * Fix Config Post Processing "Anime name pattern" custom javascript validation
 * Add check that SSLv3 is available before use by requests lib
+* Update Requests library 2.3.0 to 2.4.3 (9dc6602)
 
 [develop changelog]
 
