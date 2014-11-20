@@ -1,144 +1,211 @@
-$(document).ready(function () {
-    function getRecommendedShows() {
-        $.getJSON(sbRoot + '/home/addShows/getRecommendedShows', {}, function (data) {
-            var firstResult = true;
-            var resultStr = '<fieldset>\n<legend>Recommended Shows:</legend>\n';
-            var checked = '';
+$(document).ready(function (){
 
-            if (data.results.length === 0) {
-                resultStr += '<b>No recommended shows found, update your watched shows list on trakt.tv.</b>';
-            } else {
-                $.each(data.results, function (index, obj) {
-                    if (firstResult) {
-                        checked = ' checked';
-                        firstResult = false;
-                    } else {
-                        checked = '';
-                    }
+	function getRecommendedShows(){
 
-                    var whichSeries = obj.join('|');
+		$('#searchResults').empty().html('<img id="searchingAnim"'
+			+ ' src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif"'
+			+ ' height="32" width="32" />'
+			+ ' fetching recommendations...');
 
-                    resultStr += '<input type="radio" id="whichSeries" name="whichSeries" value="' + whichSeries + '"' + checked + ' /> ';
-                    resultStr += '<a href="' + anonURL + obj[1] + '" onclick="window.open(this.href, \'_blank\'); return false;"><b>' + obj[2] + '</b></a>';
+		$.getJSON(sbRoot + '/home/addShows/getRecommendedShows',
+			{},
+			function (data){
+				var resultStr = '', checked = '', rowType, row = 0;
 
-                    if (obj[4] !== null) {
-                        var startDate = new Date(obj[4]);
-                        var today = new Date();
-                        if (startDate > today) {
-                            resultStr += ' (will debut on ' + obj[4] + ')';
-                        } else {
-                            resultStr += ' (started on ' + obj[4] + ')';
-                        }
-                    }
+				if (null === data || 0 === data.results.length){
+					resultStr += '<p>Sorry, no recommended shows found, this can happen from time to time.</p>'
+						+ '<p>However, if the issue persists, then try updating your watched shows list on trakt.tv</p>';
+				} else {
 
-                    if (obj[0] !== null) {
-                        resultStr += ' [' + obj[0] + ']';
-                    }
+					$.each(data.results, function (index, obj){
+						checked = (0 == row ? ' checked' : '');
+						rowType = (0 == row % 2 ? '' : ' class="alt"');
+						row++;
 
-                    if (obj[3] !== null) {
-                        resultStr += '<br />' + obj[3];
-                    }
+						var whichSeries = obj[6] + '|' + obj[0] + '|' + obj[1] + '|' + obj[2] + '|' + obj[3],
+							showstartdate = '';
 
-                    resultStr += '<p /><br />';
-                });
-                resultStr += '</ul>';
-            }
-            resultStr += '</fieldset>';
-            $('#searchResults').html(resultStr);
-            updateSampleText();
-            myform.loadsection(0);
-        });
-    }
+						if (null !== obj[3]){
+							var startDate = new Date(obj[3]);
+							var today = new Date();
+							showstartdate = '&nbsp;<span class="stepone-result-date">('
+								+ (startDate > today ? 'will debut' : 'started')
+								+ ' on ' + obj[3] + ')</span>';
+						}
 
-    $('#addShowButton').click(function () {
-        // if they haven't picked a show don't let them submit
-        if (!$("input:radio[name='whichSeries']:checked").val() && !$("input:hidden[name='whichSeries']").val().length) {
-            alert('You must choose a show to continue');
-            return false;
-        }
+						resultStr += '<div' + rowType + '>'
+							+ '<input id="whichSeries" type="radio"'
+							+ ' class="stepone-result-radio"'
+							+ ' style="float:left;margin-top:4px"'
+                            + ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + obj[1] + '</span>"'
+							+ ' name="whichSeries"'
+							+ ' value="' + whichSeries + '"'
+							+ checked
+							+ ' />'
+							+ '<div style="margin-left:20px">'
+							+ '<a'
+							+ ' class="stepone-result-title"'
+							+ ' style="margin-left:5px"'
+							+ ' title="View <span class=\'boldest\'>Trakt</span> detail for <span style=\'color: rgb(66, 139, 202)\'>' + obj[1] + '</span>"'
+							+ ' href="' + anonURL + obj[0] + '"'
+							+ ' onclick="window.open(this.href, \'_blank\'); return false;"'
+							+ '>' + obj[1] + '</a>'
+							+ showstartdate
+							+ (null == obj[6] ? ''
+								: '&nbsp;'
+									+ '<span class="stepone-result-db grey-text">'
+									+ '<a class="service" href="' + anonURL + obj[7] + '"'
+									+ ' onclick="window.open(this.href, \'_blank\'); return false;"'
+									+ ' title="View <span class=\'boldest\'>' + obj[4] + '</span> detail for <span style=\'color: rgb(66, 139, 202)\'>' + obj[1] + '</span>"'
+									+ '>'
+									+ '<img alt="' + obj[4] + '" height="16" width="16" src="' + sbRoot + '/images/' + obj[5] + '" />'
+									+ ''
+									+ '</a>'
+									+ '</span>'
+								)
+							+ (null == obj[10] ? ''
+								: '&nbsp;'
+									+ '<span class="stepone-result-db grey-text">'
+									+ '<a class="service" href="' + anonURL + obj[11] + '"'
+									+ ' onclick="window.open(this.href, \'_blank\'); return false;"'
+									+ ' title="View <span class=\'boldest\'>' + obj[8] + '</span> detail for <span style=\'color: rgb(66, 139, 202)\'>' + obj[1] + '</span>"'
+									+ '>'
+									+ '<img alt="' + obj[8] + '" height="16" width="16" src="' + sbRoot + '/images/' + obj[9] + '" />'
+									+ ''
+									+ '</a>'
+									+ '</span>'
+								)
+							+ (null == obj[2] ? ''
+									: '&nbsp;<div class="stepone-result-overview grey-text">' + obj[2] + '</div>')
+							+ '</div></div>';
+					});
+				}
 
-        $('#recommendedShowsForm').submit();
-    });
+				$('#searchResults').html(
+					'<fieldset>' + "\n" + '<legend class="legendStep" style="margin-bottom: 15px">'
+						+ (0 < row ? row : 'No')
+						+ ' recommended result' + (1 == row ? '' : 's') + '...</legend>' + "\n"
+						+ resultStr
+						+ '</fieldset>'
+					);
+				updateSampleText();
+				myform.loadsection(0);
+				$('.stepone-result-radio, .stepone-result-title, .service').each(addQTip);
+			}
+		);
+	}
 
-    $('#qualityPreset').change(function () {
-        myform.loadsection(2);
-    });
+	$('#addShowButton').click(function () {
+		// if they haven't picked a show don't let them submit
+		if (!$('input:radio[name="whichSeries"]:checked').val()
+			&& !$('input:hidden[name="whichSeries"]').val().length) {
+				alert('You must choose a show to continue');
+				return false;
+		}
+		$('#addShowForm').submit();
+	});
 
-    var myform = new formtowizard({
-        formid: 'recommendedShowsForm',
-        revealfx: ['slide', 500],
-        oninit: function () {
-            getRecommendedShows();
-            updateSampleText();
-        }
-    });
+	$('#qualityPreset').change(function (){
+		myform.loadsection(2);
+	});
 
-    function goToStep(num) {
-        $('.step').each(function () {
-            if ($.data(this, 'section') + 1 == num) {
-                $(this).click();
-            }
-        });
-    }
+	var myform = new FormToWizard({
+		fieldsetborderwidth: 0,
+		formid: 'addShowForm',
+		revealfx: ['slide', 500],
+		oninit: function (){
+			getRecommendedShows();
+			updateSampleText();
+		}
+	});
 
-    function updateSampleText() {
-        // if something's selected then we have some behavior to figure out
+	function goToStep(num){
+		$('.step').each(function (){
+			if ($.data(this, 'section') + 1 == num){
+				$(this).click();
+			}
+		});
+	}
 
-        var show_name, sep_char;
-        // if they've picked a radio button then use that
-        if ($('input:radio[name=whichSeries]:checked').length) {
-            show_name = $('input:radio[name=whichSeries]:checked').val().split('|')[2];
-        } else {
-            show_name = '';
-        }
+	function updateSampleText(){
+		// if something's selected then we have some behavior to figure out
 
-        var sample_text = 'Adding show <b>' + show_name + '</b> into <b>';
+		var elRadio = $('input:radio[name="whichSeries"]:checked'),
+			elFullShowPath = $('#fullShowPath'),
+			sep_char = '',
+			root_dirs = $('#rootDirs'),
+			// if they've picked a radio button then use that
+			show_name = (elRadio.length ? elRadio.val().split('|')[2] : ''),
+			sample_text = '<p>Adding show <span class="show-name">' + show_name + '</span>'
+				+ ('' == show_name ? 'into<br />' : '<br />into')
+				+ ' <span class="show-dest">';
 
-        // if we have a root dir selected, figure out the path
-        if ($("#rootDirs option:selected").length) {
-            var root_dir_text = $('#rootDirs option:selected').val();
-            if (root_dir_text.indexOf('/') >= 0) {
-                sep_char = '/';
-            } else if (root_dir_text.indexOf('\\') >= 0) {
-                sep_char = '\\';
-            } else {
-                sep_char = '';
-            }
+		// if we have a root dir selected, figure out the path
+		if (root_dirs.find('option:selected').length){
+			var root_dir_text = root_dirs.find('option:selected').val();
+			if (0 <= root_dir_text.indexOf('/')){
+				sep_char = '/';
+			} else if (0 <= root_dir_text.indexOf('\\')){
+				sep_char = '\\';
+			}
 
-            if (root_dir_text.substr(sample_text.length - 1) != sep_char) {
-                root_dir_text += sep_char;
-            }
-            root_dir_text += '<i>||</i>' + sep_char;
+			root_dir_text += (sep_char != root_dir_text.substr(sample_text.length - 1)
+				? sep_char : '')
+				+ '<i>||</i>' + sep_char;
 
-            sample_text += root_dir_text;
-        } else if ($('#fullShowPath').length && $('#fullShowPath').val().length) {
-            sample_text += $('#fullShowPath').val();
-        } else {
-            sample_text += 'unknown dir.';
-        }
+			sample_text += root_dir_text;
+		} else if (elFullShowPath.length && elFullShowPath.val().length){
+			sample_text += elFullShowPath.val();
+		} else {
+			sample_text += 'unknown dir.';
+		}
 
-        sample_text += '</b>';
+		sample_text += '</span></p>';
 
-        // if we have a show name then sanitize and use it for the dir name
-        if (show_name.length) {
-            $.get(sbRoot + '/home/addShows/sanitizeFileName', {name: show_name}, function (data) {
-                $('#displayText').html(sample_text.replace('||', data));
-            });
-        // if not then it's unknown
-        } else {
-            $('#displayText').html(sample_text.replace('||', '??'));
-        }
+		// if we have a show name then sanitize and use it for the dir name
+		if (show_name.length){
+			$.get(sbRoot + '/home/addShows/sanitizeFileName', {name: show_name}, function (data){
+				$('#displayText').html(sample_text.replace('||', data));
+			});
+		// if not then it's unknown
+		} else {
+			$('#displayText').html(sample_text.replace('||', '??'));
+		}
 
-        // also toggle the add show button
-        if (($("#rootDirs option:selected").length || ($('#fullShowPath').length && $('#fullShowPath').val().length)) &&
-            ($('input:radio[name=whichSeries]:checked').length)) {
-            $('#addShowButton').attr('disabled', false);
-        } else {
-            $('#addShowButton').attr('disabled', true);
-        }
-    }
+		// also toggle the add show button
+		$('#addShowButton').attr('disabled',
+			((root_dirs.find('option:selected').length
+				|| (elFullShowPath.length && elFullShowPath.val().length))
+				&& elRadio.length
+				? false : true));
+	}
 
-    $('#rootDirText').change(updateSampleText);
-    $('#whichSeries').live('change', updateSampleText);
+	var addQTip = (function(){
+		$(this).css('cursor', 'help');
+		$(this).qtip({
+			show: {
+				solo: true
+			},
+			position: {
+				viewport: $(window),
+				my: 'left center',
+				adjust: {
+					y: -10,
+					x: 2
+				}
+			},
+			style: {
+				tip: {
+					corner: true,
+					method: 'polygon'
+				},
+				classes: 'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'
+			}
+		});
+	});
+
+	$('#rootDirText').change(updateSampleText);
+
+	$('#searchResults').on('click', '.stepone-result-radio', updateSampleText);
 
 });

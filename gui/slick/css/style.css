@@ -511,7 +511,6 @@ home.tmpl
 	border: 1px solid #ccc;
 	overflow: hidden;
 	height: 66px;
-	overflow: hidden;
 	border-radius: 8px;
 	vertical-align: top;
 	width: 360px;
@@ -792,31 +791,42 @@ home_addShows.tmpl
 ========================================================================== */
 
 #addShowPortal {
-	width: 700px;
+	width: 750px;
 	padding: 10px 0;
 	margin-right: auto;
 	margin-left: auto;
 }
 
 #addShowPortal  a {
-	padding: 10px;
+/*	padding: 10px;*/
+	padding: 0px 20px;
+	width: 360px;
+
+	float: left;
+	margin: 0 15px 15px 0;
 }
 
 div.button {
 	display: table-cell;
 	vertical-align: middle;
-	padding-left: 10px;
+/*	padding-left: 10px;*/
 }
 
 div.buttontext {
 	display: table-cell;
+/*
 	padding-left: 20px;
+	padding: 10px 15px;
+*/
+	padding: 10px 0px 10px 15px;
 	text-align: left;
 	white-space: normal;
 }
-
+div.buttontext p {
+	margin: 0
+}
 div.buttontext h3 {
-	margin-top: 10px;
+	margin-top: 0px;
 }
 
 div.buttontext p {
@@ -850,13 +860,19 @@ div.buttontext p {
 /* =======================================================================
 home_newShow.tmpl
 ========================================================================== */
-#addShowForm, #recommendedShowsForm {
+#addShowForm,
+#newShowPortal,
+fieldset.sectionwrap,
+div.formpaginate {
+	width: 801px
+}
+
+#addShowForm {
 	margin-left: auto;
 	margin-right: auto;
 }
 
 #newShowPortal {
-	width: 800px;
 	padding: 10px 0;
 	margin-right: auto;
 	margin-left: auto;
@@ -866,12 +882,36 @@ home_newShow.tmpl
 	padding: 8px;
 	overflow: hidden;
 	font-size: 14px;
-	background-color: #efefef;
-	border: 1px solid #dfdede;
+	border: 1px solid;
 }
 
 #searchResults input[type="radio"] {
 	vertical-align: -2px;
+}
+
+#addShowForm #promptForSettings,
+#addShowForm #rootDirStaticList input,
+#addShowForm div.field-pair input,
+#addShowForm div.field-pair select {
+	margin-right: 6px;
+}
+
+#addShowForm #customQualityWrapper div.component-group-desc p {
+	font-size: 14px;
+}
+
+#addShowForm #nameToSearch {
+	width: 460px;
+	margin-top: 0
+}
+
+#addShowForm #providedIndexer,
+#addShowForm #indexerLangSelect {
+	margin-left: 7px
+}
+
+#addShowForm #searchName {
+	margin-left: 10px
 }
 
 /* =======================================================================
@@ -879,7 +919,7 @@ home_addExistingShow.tmpl
 ========================================================================== */
 
 .existingtabs {
-	padding: 1em 1.4em;
+	padding: 20px;
 }
 
 ul#rootDirStaticList {
@@ -887,14 +927,15 @@ ul#rootDirStaticList {
 	margin-right: auto;
 	margin-left: auto;
 	text-align: left;
+	list-style-type: none;
+	padding: 0
 }
 
 ul#rootDirStaticList li {
-	padding: 4px 5px 4px 5px;
-	margin: 2px;
+	padding: 4px 10px;
+	margin: 2px 0;
 	list-style: none outside none;
 	cursor: pointer;
-	background: url('../css/lib/images/ui-bg_highlight-soft_75_efefef_1x100.png') repeat-x scroll 50% 50% #EFEFEF;
 }
 
 ul#rootDirStaticList li label {
@@ -1537,15 +1578,27 @@ config*.tmpl
 	color: #666;
 }
 
-#config div.field-pair {
-	padding: 12px 0px;
+.stepDiv #customQualityWrapper h4 {
+	margin-top: 6px;
+	padding: 0 0
 }
 
+.stepDiv div.field-pair {
+	padding: 0 0 10px
+}
+
+#config div.field-pair {
+	padding: 12px 0
+}
+
+.stepDiv .component-desc select,
+.stepDiv .component-desc input,
 #config div.field-pair select,
 #config div.field-pair input {
 	margin-right: 15px;
 }
 
+.stepDiv .component-desc input,
 #config div.field-pair input {
 	float: left;
 }
@@ -1554,6 +1607,11 @@ config*.tmpl
 	padding-left: 20px;
 }
 
+.stepDiv span.component-title.input {
+	line-height: 30px
+}
+
+.stepDiv span.component-title,
 #config span.component-title {
 	float: left;
 	width: 172px;
@@ -1562,6 +1620,11 @@ config*.tmpl
 	font-weight: bold;
 }
 
+#addShowForm .stepDiv span.component-desc {
+	width:578px;
+}
+
+.stepDiv span.component-desc,
 #config span.component-desc {
 	font-size: 12px;
 	font-weight: normal;
@@ -2297,9 +2360,9 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 	border-radius: 5px;
 }
 
-.btn-large [class^="icon-"] {
+/*.btn-large [class^="icon-"] {
 	margin-top: 1px;
-}
+}*/
 
 .btn-small {
 	padding: 5px 9px;
@@ -2680,45 +2743,46 @@ browser.css
 
 
 /* =======================================================================
-formWizard.css
+formWizard
 ========================================================================== */
 
 fieldset.sectionwrap {
-	width: 800px;
-	padding: 5px;
+	padding: 5px 0;
 	text-align: left;
 	border-width: 0;
 }
 
+.step-one #searchResults legend.legendStep {
+	margin-top: 10px;
+}
+
+div.stepsguide .step,
 legend.legendStep {
-	color: #57442b;
-	margin-bottom: 0px;
+	margin-bottom: 0;
+}
+
+legend.legendStep p {
+	padding-left: 15px;
 }
 
 div.stepsguide {
-	margin-bottom: 15px;
-	overflow: hidden;
 	text-align: left;
 	cursor: pointer;
 }
 
 div.stepsguide .step {
 	float: left;
-	width: 266px;
+	width: 267px;
 	font: bold 24px Arial;
 }
 
 div.stepsguide .step p {
-	margin: 12px 0;
-	border-bottom: 4px solid #57442b;
-}
-
-div.stepsguide .disabledstep {
-	color: #c4c4c4;
+	margin: 12px 0 0;
+	border-bottom: 5px solid;
 }
 
 div.stepsguide .disabledstep p {
-	border-bottom: 4px solid #8a775e;
+	border-bottom: 2px solid;
 }
 
 div.stepsguide .step .smalltext {
@@ -2727,56 +2791,41 @@ div.stepsguide .step .smalltext {
 }
 
 div.formpaginate {
-	width: 800px;
 	margin-top: 1em;
-	overflow: auto;
 	font-weight: bold;
 	text-align: center;
 }
 
+.step-outer {
+	overflow: hidden
+}
+
 div.formpaginate .prev, div.formpaginate .next {
 	padding: 3px 6px;
-	color: #fff;
 	cursor: hand;
 	cursor: pointer;
-	background: #57442b;
 	-webkit-border-radius: 6px;
-		-moz-border-radius: 6px;
-			border-radius: 6px;
+	-moz-border-radius: 6px;
+	border-radius: 6px;
 }
 
 .stepDiv {
 	padding: 15px;
 }
+.stepDiv.parent-folder {
+	padding: 15px 0 0;
+	width: 430px;
+	margin: 0px auto;
+}
 
-#tabs .nocheck,
 .stepDiv .nocheck {
 	padding-left: 16px;
-}
-
-#tabs label span.component-title,
-.stepDiv label span.component-title {
-	padding-bottom: 6px;
-	float: left;
-	width: 172px;
-	margin-right: 10px;
-	font-size: 13px;
-	font-weight: bold;
-}
-
-#tabs label span.component-desc,
-.stepDiv label span.component-desc {
-	padding-bottom: 6px;
-	font-size: 12px;
-	font-weight: normal;
-	display:inline-block;
-	width:475px;
 }
 
 /* step 3 related */
 #customQuality {
 	display: block;
-	padding: 10px 0;
+	padding: 0 0 10px 0;
 	overflow: hidden;
 	clear: both;
 }
@@ -2790,7 +2839,6 @@ div.formpaginate .prev, div.formpaginate .next {
 	width: 85%;
 	margin: .8em 0;
 	font-size: 1.2em;
-	color: #666;
 }
 
 /* =======================================================================
@@ -2810,9 +2858,9 @@ tablesorter.css
 .tablesorter th,
 .tablesorter td {
 	padding: 4px;
-	border-top: #fff 1px solid;
-	border-left: #fff 1px solid;
-	vertical-align: middle;
+	border-top: 1px solid;
+	border-left: 1px solid;
+	vertical-align: baseline;
 }
 
 /* remove extra border from left edge */
@@ -2822,10 +2870,7 @@ tablesorter.css
 }
 
 .tablesorter th {
-	color: #fff;
 	text-align: center;
-	text-shadow: -1px -1px 0 rgba(0,0,0,0.3);
-	background-color: #333;
 	border-collapse: collapse;
 	font-weight: normal;
 }
@@ -2833,22 +2878,7 @@ tablesorter.css
 .tablesorter .tablesorter-header {
 	padding: 4px 18px 4px 18px;
 	cursor: pointer;
-	background-image: url(data:image/gif;base64,R0lGODlhFQAJAIAAAP///////yH5BAEAAAEALAAAAAAVAAkAAAIXjI+AywnaYnhUMoqt3gZXPmVg94yJVQAAOw==);
-	background-position: center right;
-	background-repeat: no-repeat;
-	/* background-image: url(../images/tablesorter/bg.gif); */
-}
-
-.tablesorter thead .tablesorter-headerDesc {
-	background-color: #555;
-	background-image: url(data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7);
-	/* background-image: url(../images/tablesorter/asc.gif); */
-}
-
-.tablesorter thead .tablesorter-headerAsc {
-  background-color: #555;
-  background-image: url(data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjI8Bya2wnINUMopZAQA7);
-  /* background-image: url(../images/tablesorter/desc.gif); */
+	vertical-align: middle;
 }
 
 .tablesorter thead .sorter-false {
@@ -2909,7 +2939,6 @@ thead.tablesorter-stickyHeader {
 }
 
 .tablesorter tfoot a {
-	color:#fff;
 	text-decoration: none;
 }
 
@@ -3050,6 +3079,42 @@ div.token-input-dropdown ul li.token-input-selected-dropdown-item {
 
 span.token-input-delete-token {
 	margin: 0 1px;
+}
+
+.stepDiv #searchResults div {
+	line-height: 1.7;
+}
+
+.stepDiv #searchResults #searchingAnim {
+	margin-right: 6px;
+}
+
+.stepone-result-title {
+	font-weight: 600;
+	margin-left: 10px
+}
+
+.stepone-result-date,
+.stepone-result-db,
+.stepone-result-overview {
+	margin-left: 5px
+}
+.stepone-result-db img {
+	margin-top: 3px;
+	vertical-align: top;
+}
+#newShowPortal #displayText .show-name,
+#newShowPortal #displayText .show-dest,
+#newShowPortal #displayText p {
+	margin: 0;
+}
+#newShowPortal #displayText .show-name,
+#newShowPortal #displayText .show-dest {
+	font-weight: 600;
+}
+
+#addRootDirTable td label .filepath {
+	font-weight: 900
 }
 
 .boldest {font-weight: 900}

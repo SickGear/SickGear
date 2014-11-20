@@ -1,17 +1,15 @@
 #import os.path
 #import sickbeard
 #from sickbeard.common import *
-#set global $title="Existing Show"
-#set global $header="Existing Show"
+#set global $title = 'Existing Show'
+#set global $header = 'Existing Show'
 
-#set global $sbPath="../.."
+#set global $sbPath = '../..'
 
-#set global $statpath="../.."#
-#set global $topmenu="home"#
+#set global $statpath = '../..'
+#set global $topmenu = 'home'
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
-
-<form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/addExistingShow.js?$sbPID"></script>
@@ -21,7 +19,7 @@
 <script type="text/javascript" charset="utf-8">
 <!--
 \$(document).ready(function(){ 
-    \$( "#tabs" ).tabs({
+    \$( '#tabs' ).tabs({
         collapsible: true,
         selected: #if $sickbeard.ROOT_DIRS then '-1' else '0'#
     });
@@ -29,41 +27,55 @@
 //-->
 </script>
 
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 
-<div id="tabs">
-    <ul>
-        <li><a href="#tabs-1">Manage Directories</a></li>
-        <li><a href="#tabs-2">Customize Options</a></li>
-    </ul>
-    <div id="tabs-1" class="existingtabs">
-        #include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_rootDirs.tmpl")
-    </div>
-    <div id="tabs-2" class="existingtabs">
-        #include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_addShowOptions.tmpl")
-    </div>
-</div>
-<br />
+<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32<%= '-dark' if 'dark' == sickbeard.THEME_NAME else '' %>.gif" width="32" height="32" border="0">
 
-<p>SickGear can add existing shows, using the current options, by using locally stored NFO/XML metadata to eliminate user interaction.<br />
-If you would rather have SickGear prompt you to customize each show, then use the checkbox below.</p>
+<form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
 
-<p><input type="checkbox" name="promptForSettings" id="promptForSettings" /> <label for="promptForSettings">Prompt me to set settings for each show</label></p>
+	<p>Tip: shows are added quicker when usable show nfo and xml metadata is found</p>
 
-<hr />
+	<p style="margin-top:15px">
+		<input type="checkbox" id="promptForSettings" name="promptForSettings" style="vertical-align: top;" />
+		<label for="promptForSettings">Enable to change the following options per show, otherwise use these options with all shows added below</label>
+	</p>
 
-<h5><b>Displaying folders within these directories which aren't already added to SickGear:</b></h5>
+	<div id="tabs">
+		<ul>
+			<li><a href="#tabs-1">Manage parent folders</a></li>
+			<li><a href="#tabs-2">Custom options</a></li>
+		</ul>
+		<div id="tabs-1" class="existingtabs">
+			<div style="width: 430px; margin: 0px auto">
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
+			</div>
+		</div>
+		<div id="tabs-2">
+			<div class="stepDiv">
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
+			</div>
+		</div>
+	</div>
 
-<ul id="rootDirStaticList"><li></li></ul>
+	<br />
+	<hr />
 
-<br />
-<div id="tableDiv"></div>
-<br />
-<input class="btn btn-primary" type="button" value="Submit" id="submitShowDirs" />
+	<p>The following parent folder(s) are scanned for existing shows. Toggle a folder to display shows</p>
+
+	<ul id="rootDirStaticList">
+		<li></li>
+	</ul>
+
+	<p>shows <span class="boldest">not known</span> to SickGear are listed below...</p>
+
+	<div id="tableDiv"></div>
+
+	<br />
+	<input class="btn btn-primary" type="button" value="Submit" id="submitShowDirs" />
 
 </form>
-#include $os.path.join($sickbeard.PROG_DIR,"gui/slick/interfaces/default/inc_bottom.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
