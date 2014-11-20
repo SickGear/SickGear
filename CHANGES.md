@@ -31,6 +31,7 @@
 * Update Requests library 2.3.0 to 2.4.3 (9dc6602)
 * Change suppress HTTPS verification InsecureRequestWarning as many sites use self-certified certificates
 * Fix API endpoint Episode.SetStatus to "Wanted"
+* Change airdateModifyStamp to handle hour that is "00:00"
 
 [develop changelog]
 
