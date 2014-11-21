@@ -852,12 +852,15 @@ div.buttontext p {
 home_newShow.tmpl
 ========================================================================== */
 #addShowForm, #recommendedShowsForm {
+	width: 800px;
 	margin-left: auto;
 	margin-right: auto;
+	padding: 10px 0;
+	font-size:13px;
 }
 
 #newShowPortal {
-	width: 800px;
+	width: 900px;
 	padding: 10px 0;
 	margin-right: auto;
 	margin-left: auto;
@@ -884,7 +887,6 @@ home_addExistingShow.tmpl
 }
 
 ul#rootDirStaticList {
-	width: 90%;
 	margin-right: auto;
 	margin-left: auto;
 	text-align: left;
@@ -2684,7 +2686,7 @@ div.stepsguide {
 
 div.stepsguide .step {
 	float: left;
-	width: 266px;
+	width: 33%;
 	font: bold 24px Arial;
 }
 
@@ -2726,7 +2728,7 @@ div.formpaginate .prev, div.formpaginate .next {
 }
 
 .stepDiv {
-	padding: 15px;
+	padding: 15px 0;
 }
 
 #tabs .nocheck,
@@ -2736,7 +2738,7 @@ div.formpaginate .prev, div.formpaginate .next {
 
 #tabs label span.component-title,
 .stepDiv label span.component-title {
-	padding-bottom: 6px;
+	padding-bottom: 10px;
 	float: left;
 	width: 172px;
 	margin-right: 10px;
@@ -2746,12 +2748,18 @@ div.formpaginate .prev, div.formpaginate .next {
 
 #tabs label span.component-desc,
 .stepDiv label span.component-desc {
-	padding-bottom: 6px;
+	padding-bottom: 10px;
 	font-size: 12px;
 	font-weight: normal;
-	display:inline-block;
-	width:475px;
+	display: block;
+	width: 475px;
+	margin-left: 182px;
 }
+
+div.field-pair input {
+	margin-right: 6px;
+	float: left;
+ }
 
 /* step 3 related */
 #customQuality {
@@ -2763,13 +2771,14 @@ div.formpaginate .prev, div.formpaginate .next {
 
 #customQualityWrapper div.component-group-desc {
 	float: left;
-	width: 165px;
+	width: 172px;
+	margin-right: 10px;
 }	
 
 #customQualityWrapper div.component-group-desc p {
 	width: 85%;
 	margin: .8em 0;
-	font-size: 1.2em;
+	font-size: 1.13em;
 	color: #666;
 }
 
