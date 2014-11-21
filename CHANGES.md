@@ -34,6 +34,7 @@
 * Change airdateModifyStamp to handle hour that is "00:00"
 * Fix a handler when ShowData is not available in tvdb and tvrage APIs
 * Fix a handler when EpisodeData is not available in tvdb and tvrage APIs
+* Fix qtips on Display Show and Config Post Processing
 
 [develop changelog]
 * Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
