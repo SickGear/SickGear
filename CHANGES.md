@@ -32,12 +32,14 @@
 * Change suppress HTTPS verification InsecureRequestWarning as many sites use self-certified certificates
 * Fix API endpoint Episode.SetStatus to "Wanted"
 * Change airdateModifyStamp to handle hour that is "00:00"
-* Fix a handler when ShowData is not available in tvdb and tvrage APIs
-* Fix a handler when EpisodeData is not available in tvdb and tvrage APIs
+* Fix a handler when ShowData is not available in TVDB and TVRage APIs
+* Fix a handler when EpisodeData is not available in TVDB and TVRage APIs
+* Add TVRage "Canceled/Ended" as "Ended" status to sort on Simple Layout of Show List page
 * Fix qtips on Display Show and Config Post Processing
 
 [develop changelog]
 * Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
+* Fix adding show from TVRage API
 
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)

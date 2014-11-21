@@ -604,7 +604,7 @@ class TVRage:
 
             self.config['params_epInfo']['sid'] = sid
             epsEt = self._getetsrc(self.config['url_epInfo'], self.config['params_epInfo'])
-            if 'episode' not in epsEt:
+            if 'episodelist' not in epsEt and 'season' not in epsEt['episodelist']:
                 return False
 
             seasons = epsEt['episodelist']['season']
