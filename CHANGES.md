@@ -36,6 +36,7 @@
 * Fix a handler when EpisodeData is not available in TVDB and TVRage APIs
 * Add TVRage "Canceled/Ended" as "Ended" status to sort on Simple Layout of Show List page
 * Fix qtips on Display Show and Config Post Processing
+* Fix glitch above rating stars on Display Show page
 
 [develop changelog]
 * Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217

@@ -971,8 +971,7 @@ displayShow.tmpl
 
 #posterCol {
 	float: left;
-	margin-right: 10px;
-	margin-bottom: 20px;
+	margin: 3px 10px 20px 0;
 }
 
 #showCol {
@@ -1019,23 +1018,34 @@ h1.title {
 }
 
 span.imdbstars {
-	display: inline-block; 
-	vertical-align: top;
+	display: inline-block;
+	margin: 0 3px 0 0;
+	vertical-align: baseline;
 	cursor: help;
-	margin-top: 4px;
 }
-
+span.imdbstars > * {
+	background-position: 0 0 !important;
+	max-width:120px;
+}
 span.imdbstars, span.imdbstars > * {
 	height: 12px;
-	background: url(../images/rating.png) 0 -12px repeat-x;
 	width: 120px;
 	display: inline-block;
-	vertical-align: top;
+	font-size:10px
 }
 
-span.imdbstars > * {
-	background-position: 0 0;
-	max-width:120px;
+#showinfo .flag {
+	margin: 0 3px 0 0;
+	vertical-align: baseline;
+}
+
+#showinfo .imdb-info {
+	margin: 0 3px 0 0;
+}
+
+#showinfo a.service {
+	margin: 0 3px 0 0;
+	font-size: 16px;
 }
 
 ul.tags {

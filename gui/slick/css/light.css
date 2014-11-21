@@ -947,12 +947,6 @@ home_postprocess.tmpl
 displayShow.tmpl 
 ========================================================================== */
 
-#posterCol {
-	float: left;
-	margin-right: 10px;
-	margin-bottom: 20px;
-}
-
 #showCol {
 	overflow: hidden;
 	margin-bottom: 20px;
@@ -996,24 +990,8 @@ h1.title {
 	top: -3px;
 }
 
-span.imdbstars {
-	display: inline-block; 
-	vertical-align: top;
-	cursor: help;
-	margin-top: 4px;
-}
-
 span.imdbstars, span.imdbstars > * {
-	height: 12px;
 	background: url(../images/rating.png) 0 -12px repeat-x;
-	width: 120px;
-	display: inline-block;
-	vertical-align: top;
-}
-
-span.imdbstars > * {
-	background-position: 0 0;
-	max-width:120px;
 }
 
 ul.tags {
