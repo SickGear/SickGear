@@ -660,7 +660,7 @@ class TVRage:
             # Item is integer, treat as show id
             if key not in self.shows:
                 self._getShowData(key, True)
-            return (None, self.shows[key])[key in self.show]
+            return (None, self.shows[key])[key in self.shows]
 
         key = key.lower()
         self.config['searchterm'] = key
