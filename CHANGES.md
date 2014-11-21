@@ -36,6 +36,7 @@
 * Fix a handler when EpisodeData is not available in tvdb and tvrage APIs
 
 [develop changelog]
+* Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
 
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)
