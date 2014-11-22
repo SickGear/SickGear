@@ -43,10 +43,11 @@
 * Fix failing "Search Settings" link that is shown on Config/Search Providers when Torrents Search is not enabled
 * Fix failing "Providers" link on Config/Search Settings/Episode Search
 * Change case of labels in General Config/Interface/Timezone
-* Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab 
+* Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab
 * Fix searches freezing due to unescaped ignored or required words
 * Add failed database to unit tests tear down function
 * Fix purging of database files in tear down function during unit tests
+* Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
 
 [develop changelog]
 * Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217

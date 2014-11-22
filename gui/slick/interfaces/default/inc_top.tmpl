@@ -61,10 +61,10 @@
 		<script type="text/javascript" src="$sbRoot/js/script.js?$sbPID"></script>
 
 		
-		#if $sickbeard.FUZZY_DATING:
+#if $sickbeard.FUZZY_DATING:
 		<script type="text/javascript" src="$sbRoot/js/moment/moment.min.js?$sbPID"></script>
 		<script type="text/javascript" src="$sbRoot/js/fuzzyMoment.js?$sbPID"></script>
-		#end if
+#end if
 		<script type="text/javascript" charset="utf-8">
 		<!--
 			sbRoot = '$sbRoot'; // needed for browser.js & ajaxNotifications.js
@@ -119,13 +119,13 @@
 				\$("#NAV$topmenu").addClass("active");
 				
 				\$('.dropdown-toggle').dropdownHover();
-				
+
 			});
 		//-->
 		</script>
-        <script type="text/javascript" src="$sbRoot/js/confirmations.js?$sbPID"></script>
+		<script type="text/javascript" src="$sbRoot/js/confirmations.js?$sbPID"></script>
 	</head>
-
+#set $tab = 4
 	<body>
 		<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
 			<div class="container-fluid">
@@ -136,84 +136,84 @@
 						<span class="icon-bar"></span>
 						<span class="icon-bar"></span>
 					</button>
-					<a class="navbar-brand" href="$sbRoot/home/" title="SickGear"><img alt="SickGear" src="$sbRoot/images/sickgear.png" style="height: 50px;" class="img-responsive pull-left" /></a>
+					<a href="$sbRoot/home/" class="navbar-brand" tabindex="-1" title="SickGear"><img alt="SickGear" src="$sbRoot/images/sickgear.png" style="height: 50px;" class="img-responsive pull-left" /></a>
 				</div>
 
 				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 					<ul class="nav navbar-nav navbar-right">
 						<li id="NAVhome" class="dropdown">
-                            <a href="$sbRoot/home/" class="dropdown-toggle" data-toggle="dropdown">Shows <b class="caret"></b></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="$sbRoot/home/"><i class="menu-icon-home"></i>&nbsp;Show List</a></li>
-                                <li><a href="$sbRoot/home/addShows/"><i class="menu-icon-addshow"></i>&nbsp;Add Shows</a></li>
-                                <li><a href="$sbRoot/home/postprocess/"><i class="menu-icon-postprocess"></i>&nbsp;Manual Post-Processing</a></li>
-                            </ul>
-                        </li>
-						
-						<li id="NAVcomingEpisodes">
-                            <a href="$sbRoot/comingEpisodes/">Coming Episodes</a>
-                        </li>
-						
-						<li id="NAVhistory">
-                            <a href="$sbRoot/history/">History</a>
-                        </li>
-						
-						<li id="NAVmanage" class="dropdown">
-                            <a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown">Manage <b class="caret"></b></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="$sbRoot/manage/"><i class="menu-icon-manage"></i>&nbsp;Mass Update</a></li>
-                                <li><a href="$sbRoot/manage/backlogOverview/"><i class="menu-icon-backlog-view"></i>&nbsp;Backlog Overview</a></li>
-                                <li><a href="$sbRoot/manage/manageSearches/"><i class="menu-icon-manage-searches"></i>&nbsp;Manage Searches</a></li>
-                                <li><a href="$sbRoot/manage/episodeStatuses/"><i class="menu-icon-backlog"></i>&nbsp;Episode Status Management</a></li>
-                            #if $sickbeard.USE_PLEX and $sickbeard.PLEX_SERVER_HOST != "":
-								<li><a href="$sbRoot/home/updatePLEX/"><i class="menu-icon-backlog-view"></i>&nbsp;Update PLEX</a></li>
-							#end if
-							#if $sickbeard.USE_XBMC and $sickbeard.XBMC_HOST != "":
-								<li><a href="$sbRoot/home/updateXBMC/"><i class="menu-icon-xbmc"></i>&nbsp;Update XBMC</a></li>
-							#end if	
-							#if $sickbeard.USE_TORRENTS and $sickbeard.TORRENT_METHOD != 'blackhole' \
-							and ($sickbeard.ENABLE_HTTPS and $sickbeard.TORRENT_HOST[:5] == 'https' \
-							or not $sickbeard.ENABLE_HTTPS and $sickbeard.TORRENT_HOST[:5] == 'http:'):                            
-								<li><a href="$sbRoot/manage/manageTorrents/"><i class="menu-icon-bittorrent"></i>&nbsp;Manage Torrents</a></li>
-							#end if
-							#if $sickbeard.USE_FAILED_DOWNLOADS:
-								<li><a href="$sbRoot/manage/failedDownloads/"><i class="menu-icon-failed-download"></i>&nbsp;Failed Downloads</a></li>
-							#end if
-							#if $sickbeard.USE_SUBTITLES:
-								<li><a href="$sbRoot/manage/subtitleMissed/"><i class="menu-icon-backlog"></i>&nbsp;Missed Subtitle Management</a></li>
-							#end if
-                            </ul>
-                        </li>
-						
-						<li id="NAVerrorlogs" class="dropdown">
-                            <a href="$sbRoot/errorlogs/" class="dropdown-toggle" data-toggle="dropdown">$logPageTitle <b class="caret"></b></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="$sbRoot/errorlogs/"><i class="menu-icon-viewlog-errors"></i>&nbsp;View Log (Errors)</a></li>
-                                <li><a href="$sbRoot/errorlogs/viewlog/"><i class="menu-icon-viewlog"></i>&nbsp;View Log</a></li>
-                            </ul>
-                        </li>
-						
-						<li id="NAVconfig" class="dropdown">
-                            <a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="$sbRoot/config/"><i class="menu-icon-help"></i>&nbsp;Help &amp; Info</a></li>
-                                <li><a href="$sbRoot/config/general/"><i class="menu-icon-config"></i>&nbsp;General</a></li>
-								<li><a href="$sbRoot/config/backuprestore/"><i class="menu-icon-config"></i>&nbsp;Backup &amp; Restore</a></li>
-                                <li><a href="$sbRoot/config/search/"><i class="menu-icon-config"></i>&nbsp;Search Settings</a></li>
-                                <li><a href="$sbRoot/config/providers/"><i class="menu-icon-config"></i>&nbsp;Search Providers</a></li>
-								<li><a href="$sbRoot/config/subtitles/"><i class="menu-icon-config"></i>&nbsp;Subtitles Settings</a></li>
-                                <li><a href="$sbRoot/config/postProcessing/"><i class="menu-icon-config"></i>&nbsp;Post Processing</a></li>
-                                <li><a href="$sbRoot/config/notifications/"><i class="menu-icon-config"></i>&nbsp;Notifications</a></li>
-								<li><a href="$sbRoot/config/anime/"><i class="menu-icon-config"></i>&nbsp;Anime</a></li>
-                            </ul>
-                        </li>
-						
-						<li class="dropdown">
-							<a href="#" class="dropdown-toggle" data-toggle="dropdown"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span></a>
+							<a href="$sbRoot/home/" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#">Shows <b class="caret"></b></a>
 							<ul class="dropdown-menu">
-								<li><a href="$sbRoot/manage/manageSearches/forceVersionCheck"><i class="menu-icon-update"></i>&nbsp;Force Version Check</a></li>
-                                <li><a href="$sbRoot/home/restart/?pid=$sbPID" class="confirm restart"><i class="menu-icon-restart"></i>&nbsp;Restart</a></li>
-                                <li><a href="$sbRoot/home/shutdown/?pid=$sbPID" class="confirm shutdown"><i class="menu-icon-shutdown"></i>&nbsp;Shutdown</a></li>
+								<li><a href="$sbRoot/home/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-home"></i>&nbsp;Show List</a></li>
+								<li><a href="$sbRoot/home/addShows/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-addshow"></i>&nbsp;Add Shows</a></li>
+								<li><a href="$sbRoot/home/postprocess/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-postprocess"></i>&nbsp;Manual Post-Processing</a></li>
+							</ul>
+						</li>
+
+						<li id="NAVcomingEpisodes">
+							<a href="$sbRoot/comingEpisodes/" tabindex="$tab#set $tab += 1#">Coming Episodes</a>
+						</li>
+
+						<li id="NAVhistory">
+							<a href="$sbRoot/history/" tabindex="$tab#set $tab += 1#">History</a>
+						</li>
+
+						<li id="NAVmanage" class="dropdown">
+							<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b></a>
+							<ul class="dropdown-menu">
+								<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-manage"></i>&nbsp;Mass Update</a></li>
+								<li><a href="$sbRoot/manage/backlogOverview/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-backlog-view"></i>&nbsp;Backlog Overview</a></li>
+								<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-manage-searches"></i>&nbsp;Manage Searches</a></li>
+								<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-backlog"></i>&nbsp;Episode Status Management</a></li>
+#if $sickbeard.USE_PLEX and $sickbeard.PLEX_SERVER_HOST != "":
+								<li><a href="$sbRoot/home/updatePLEX/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-backlog-view"></i>&nbsp;Update PLEX</a></li>
+#end if
+#if $sickbeard.USE_XBMC and $sickbeard.XBMC_HOST != "":
+								<li><a href="$sbRoot/home/updateXBMC/" tabindex="16><i class="menu-icon-xbmc""></i>&nbsp;Update XBMC</a></li>
+#end if
+#if $sickbeard.USE_TORRENTS and $sickbeard.TORRENT_METHOD != 'blackhole' \
+    and ($sickbeard.ENABLE_HTTPS and $sickbeard.TORRENT_HOST[:5] == 'https' \
+    or not $sickbeard.ENABLE_HTTPS and $sickbeard.TORRENT_HOST[:5] == 'http:'):
+								<li><a href="$sbRoot/manage/manageTorrents/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-bittorrent"></i>&nbsp;Manage Torrents</a></li>
+#end if
+#if $sickbeard.USE_FAILED_DOWNLOADS:
+								<li><a href="$sbRoot/manage/failedDownloads/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-failed-download"></i>&nbsp;Failed Downloads</a></li>
+#end if
+#if $sickbeard.USE_SUBTITLES:
+								<li><a href="$sbRoot/manage/subtitleMissed/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-backlog"></i>&nbsp;Missed Subtitle Management</a></li>
+#end if
+							</ul>
+						</li>
+
+						<li id="NAVerrorlogs" class="dropdown">
+							<a href="$sbRoot/errorlogs/" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#">$logPageTitle <b class="caret"></b></a>
+							<ul class="dropdown-menu">
+								<li><a href="$sbRoot/errorlogs/"><i class="menu-icon-viewlog-errors" tabindex="$tab#set $tab += 1#"></i>&nbsp;View Log (Errors)</a></li>
+								<li><a href="$sbRoot/errorlogs/viewlog/"><i class="menu-icon-viewlog" tabindex="$tab#set $tab += 1#"></i>&nbsp;View Log</a></li>
+							</ul>
+						</li>
+
+						<li id="NAVconfig" class="dropdown">
+							<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
+							<ul class="dropdown-menu">
+								<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-help"></i>&nbsp;Help &amp; Info</a></li>
+								<li><a href="$sbRoot/config/general/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-config"></i>&nbsp;General</a></li>
+								<li><a href="$sbRoot/config/backuprestore/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-config"></i>&nbsp;Backup &amp; Restore</a></li>
+								<li><a href="$sbRoot/config/search/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-config"></i>&nbsp;Search Settings</a></li>
+								<li><a href="$sbRoot/config/providers/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-config"></i>&nbsp;Search Providers</a></li>
+								<li><a href="$sbRoot/config/subtitles/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-config"></i>&nbsp;Subtitles Settings</a></li>
+								<li><a href="$sbRoot/config/postProcessing/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-config"></i>&nbsp;Post Processing</a></li>
+								<li><a href="$sbRoot/config/notifications/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-config"></i>&nbsp;Notifications</a></li>
+								<li><a href="$sbRoot/config/anime/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-config"></i>&nbsp;Anime</a></li>
+							</ul>
+						</li>
+
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span></a>
+							<ul class="dropdown-menu">
+								<li><a href="$sbRoot/manage/manageSearches/forceVersionCheck" tabindex="$tab#set $tab += 1#"><i class="menu-icon-update"></i>&nbsp;Force Version Check</a></li>
+								<li><a href="$sbRoot/home/restart/?pid=$sbPID" class="confirm restart" tabindex="$tab#set $tab += 1#"><i class="menu-icon-restart"></i>&nbsp;Restart</a></li>
+								<li><a href="$sbRoot/home/shutdown/?pid=$sbPID" class="confirm shutdown" tabindex="$tab#set $tab += 1#"><i class="menu-icon-shutdown"></i>&nbsp;Shutdown</a></li>
 							</ul>
 						</li>
 					</ul>
@@ -222,35 +222,35 @@
 			</div><!-- /.container-fluid -->
 		</nav>
 
-		#if $varExists('submenu'):
+#if $varExists('submenu'):
 		<div id="SubMenu">
-		<span>
-		#set $first = True
-		#for $menuItem in $submenu:
-			#if 'requires' not in $menuItem or $menuItem.requires():      
-				  #if type($menuItem.path) == dict:
-					  #if $first then "" else "</span><span>"#<b>$menuItem.title</b>
-					  #set $first = False
-					  #set $inner_first = True
-					  #for $cur_link in $menuItem.path:
-						  #if $inner_first then "" else "&middot; "#<a class="inner" href="$sbRoot/$menuItem.path[$cur_link]">$cur_link</a>
-						  #set $inner_first = False
-					  #end for
-				  #else
-					  #if $first then "" else ""#<a href="$sbRoot/$menuItem.path" #if 'confirm' in $menuItem then "class=\"confirm\"" else "" #>$menuItem.title</a>
-					  #set $first = False
-				  #end if
-			#end if
-		#end for
-		</span>
+			<span>
+        #set $first = True
+        #for $menuItem in $submenu:
+            #if 'requires' not in $menuItem or $menuItem.requires():
+                #if type($menuItem.path) == dict:
+                    #if $first then "" else "</span><span>"#<b>$menuItem.title</b>
+                    #set $first = False
+                    #set $inner_first = True
+                    #for $cur_link in $menuItem.path:
+                        #if $inner_first then "" else "&middot; "#<a class="inner" href="$sbRoot/$menuItem.path[$cur_link]">$cur_link</a>
+                        #set $inner_first = False
+                    #end for
+                #else
+                    #if $first then "" else ""#<a href="$sbRoot/$menuItem.path" #if 'confirm' in $menuItem then "class=\"confirm\"" else "" # tabindex="$tab#set $tab += 1#">$menuItem.title</a>
+                    #set $first = False
+                #end if
+            #end if
+        #end for
+			</span>
 		</div>
-		#end if
-	  
-		#if $sickbeard.NEWEST_VERSION_STRING:	
+#end if
+
+#if $sickbeard.NEWEST_VERSION_STRING:
 		<div class="alert alert-success upgrade-notification" role="alert">
 			<span>$sickbeard.NEWEST_VERSION_STRING</span>
 		</div>
-		#end if
+#end if
 
-<div id="contentWrapper">
-    <div id="content">
+		<div id="contentWrapper">
+			<div id="content">

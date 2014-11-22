@@ -194,41 +194,53 @@
 		\$('#container-anime').isotope({ sortAscending: sortDirection });
         \$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
 	});
-	
+#if $sickbeard.HOME_SEARCH_FOCUS
+    \$('#search_show_name').focus();
+#end if
 });
 
 //-->
 </script>
 
 #if $varExists('header') 
-	<h1 class="header">$header</h1>
+	<h1 class="header" style="margin-bottom:0">$header</h1>
 #else 
-	<h1 class="title">$title</h1>
+	<h1 class="title" style="margin-bottom:0">$title</h1>
 #end if
 
-<div id="HomeLayout" class="pull-right" style="margin-top: -40px;">
-	<span> Layout: 
-		<select name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
+#set $tab = 1
+
+#if $layout != 'poster':
+<div id="HomeLayout" class="pull-right not-poster">
+	<div class="not-poster">
+		<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" data-column="1" placeholder="Search Show Name" tabindex="$tab#set $tab += 1#">
+		&nbsp;<button type="button" class="resetshows resetanime btn btn-inline" tabindex="$tab#set $tab += 1#">Reset Search</button>
+	</div>
+	<span class="pull-right not-poster"> Layout:
+#else
+<div id="HomeLayout" class="pull-right poster">
+	<span class="pull-right poster">Layout:
+#end if
+
+		<select name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" tabindex="$tab#set $tab += 1#">
 			<option value="$sbRoot/setHomeLayout/?layout=poster" #if $sickbeard.HOME_LAYOUT == "poster" then "selected=\"selected\"" else ""#>Poster</option>
 			<option value="$sbRoot/setHomeLayout/?layout=small" #if $sickbeard.HOME_LAYOUT == "small" then "selected=\"selected\"" else ""#>Small Poster</option>
 			<option value="$sbRoot/setHomeLayout/?layout=banner" #if $sickbeard.HOME_LAYOUT == "banner" then "selected=\"selected\"" else ""#>Banner</option>
 			<option value="$sbRoot/setHomeLayout/?layout=simple" #if $sickbeard.HOME_LAYOUT == "simple" then "selected=\"selected\"" else ""#>Simple</option>
 		</select>
 	</span>
-	
+
 	#if $layout == 'poster':
-	&nbsp;
-	<span> Sort By: 
-		<select id="postersort" class="form-control form-control-inline input-sm">
+	<span>Sort By:
+		<select id="postersort" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
             <option value="name" data-sort="$sbRoot/setPosterSortBy/?sort=name" #if $sickbeard.POSTER_SORTBY == "name" then "selected=\"selected\"" else ""#>Name</option>
             <option value="date" data-sort="$sbRoot/setPosterSortBy/?sort=date" #if $sickbeard.POSTER_SORTBY == "date" then "selected=\"selected\"" else ""#>Next Episode</option>
             <option value="network" data-sort="$sbRoot/setPosterSortBy/?sort=network" #if $sickbeard.POSTER_SORTBY == "network" then "selected=\"selected\"" else ""#>Network</option>
             <option value="progress" data-sort="$sbRoot/setPosterSortBy/?sort=progress" #if $sickbeard.POSTER_SORTBY == "progress" then "selected=\"selected\"" else ""#>Progress</option>
 		</select>
 	</span>
-	&nbsp;
-	<span> Sort Order: 
-		<select id="postersortdirection" class="form-control form-control-inline input-sm">
+	<span style="margin:0 0 0 5px">Sort Order:
+		<select id="postersortdirection" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
             <option value="true" data-sort="$sbRoot/setPosterSortDir/?direction=1" #if $sickbeard.POSTER_SORTDIR == 1 then "selected=\"selected\"" else ""#>Asc</option>
             <option value="false" data-sort="$sbRoot/setPosterSortDir/?direction=0" #if $sickbeard.POSTER_SORTDIR == 0 then "selected=\"selected\"" else ""#>Desc</option>
 		</select>
@@ -238,11 +250,6 @@
 	#end if
 </div>
 
-#if $layout != 'poster':
-<div class="pull-right">
-	<input class="search form-control form-control-inline input-sm input200" type="search" data-column="1" placeholder="Search Show Name"> <button type="button" class="resetshows resetanime btn btn-inline">Reset Search</button>
-</div>
-#end if
 
 #for $curShowlist in $showlists:
 #set $curListType = $curShowlist[0]
