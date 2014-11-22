@@ -44,6 +44,7 @@
 * Fix failing "Providers" link on Config/Search Settings/Episode Search
 * Change case of labels in General Config/Interface/Timezone
 * Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab 
+* Fix typo on General Config/Misc
 
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)
