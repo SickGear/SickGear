@@ -535,9 +535,13 @@ home.tmpl
 	margin-right: 5px;
 }
 
-.search {
-	margin-bottom: 10px;
-}
+#HomeLayout { margin-top: -35px; }
+#HomeLayout.not-poster { height: 75px }
+#HomeLayout div.not-poster { position:relative; top:38px; }
+#HomeLayout span.not-poster { margin-top: -30px }
+#HomeLayout.poster { margin-top: -35px; }
+#HomeLayout span.poster { margin-bottom:10px }
+#search_show_name { margin-top: 0 }
 
 .ui-progressbar {
 	height: 20px;

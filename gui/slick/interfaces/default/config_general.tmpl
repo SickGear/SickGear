@@ -216,6 +216,16 @@
 						</div>
 
 						<div class="field-pair">
+							<label for="home_search_focus">
+								<span class="component-title">Give show list search focus</span>
+								<span class="component-desc">
+									<input type="checkbox" name="home_search_focus" id="home_search_focus" #if $sickbeard.HOME_SEARCH_FOCUS then 'checked="checked"' else ''#/>
+									<p>page refresh on "Show List" will start search box focused</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
 							<label for="sort_article">
 								<span class="component-title">Sort with "The", "A", "An"</span>
 								<span class="component-desc">
