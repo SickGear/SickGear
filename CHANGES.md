@@ -37,6 +37,13 @@
 * Add TVRage "Canceled/Ended" as "Ended" status to sort on Simple Layout of Show List page
 * Fix qtips on Display Show and Config Post Processing
 * Fix glitch above rating stars on Display Show page
+* Change overhaul Config/Search Providers
+* Change Config/Search Providers texts and descriptions
+* Fix display when no providers are visible on Config/Search Providers
+* Fix failing "Search Settings" link that is shown on Config/Search Providers when Torrents Search is not enabled
+* Fix failing "Providers" link on Config/Search Settings/Episode Search
+* Change case of labels in General Config/Interface/Timezone
+* Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab 
 
 [develop changelog]
 * Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
