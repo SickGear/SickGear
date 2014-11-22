@@ -45,6 +45,8 @@
 * Change case of labels in General Config/Interface/Timezone
 * Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab 
 * Fix searches freezing due to unescaped ignored or required words
+* Add failed database to unit tests tear down function
+* Fix purging of database files in tear down function during unit tests
 
 [develop changelog]
 * Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
