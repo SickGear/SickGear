@@ -351,11 +351,12 @@ class MainHandler(RequestHandler):
 
     def comingEpisodes(self, layout="None"):
 
-        today1 = datetime.date.today()
+        today1 = datetime.date.today() - datetime.timedelta(days=1)
         today = today1.toordinal()
+        tommorrow = (datetime.date.today() + datetime.timedelta(days=1))
         next_week1 = (datetime.date.today() + datetime.timedelta(days=7))
-        next_week = next_week1.toordinal()
-        recently = (datetime.date.today() - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
+        next_week = (next_week1 + datetime.timedelta(days=1)).toordinal()
+        recently = (today1 - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
 
         done_show_list = []
         qualList = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
@@ -378,7 +379,7 @@ class MainHandler(RequestHandler):
 
         more_sql_results = myDB.select(
             "SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate < ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [today, recently, WANTED] + qualList)
+                ['?'] * len(qualList)) + ")", [tommorrow, recently, WANTED] + qualList)
         sql_results += more_sql_results
 
         # sort by localtime
