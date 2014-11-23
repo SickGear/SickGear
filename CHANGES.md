@@ -1,4 +1,4 @@
-### 0.4.0 (2014-11-23 03:27:00 UTC)
+### 0.4.0 (2014-11-23 08:44:00 UTC)
 
 * Change footer stats to not add newlines when copy/pasting from them
 * Remove redundant references from Config/Help & Info
@@ -43,10 +43,11 @@
 * Fix failing "Search Settings" link that is shown on Config/Search Providers when Torrents Search is not enabled
 * Fix failing "Providers" link on Config/Search Settings/Episode Search
 * Change case of labels in General Config/Interface/Timezone
-* Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab 
+* Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab
 * Fix typo on General Config/Misc
 * Fix Add Trending Shows "Not In library" now filters tvrage added shows
 * Add a hover over text "In library" on Add Trending Shows to display tv database show was added from
+* Fix reduces time API endpoint Shows takes to return results
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)
 
