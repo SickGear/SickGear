@@ -3,6 +3,8 @@
 * Add failed database to unit tests tear down function
 * Fix purging of database files in tear down function during unit tests
 * Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
+* Fix TVRage API garbage collection
+* Fix TVRage <-> TVDB indexer mapper caching
 
 [develop changelog]
 * Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
