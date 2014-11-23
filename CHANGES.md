@@ -1,4 +1,15 @@
 ### 0.x.x (2014-11-xx xx:xx:xx UTC)
+* Fix searches freezing due to unescaped ignored or required words
+* Add failed database to unit tests tear down function
+* Fix purging of database files in tear down function during unit tests
+* Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
+
+[develop changelog]
+* Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
+* Fix adding show from TVRage API
+
+
+### 0.4.0 (2014-11-22 02:52:00 UTC)
 
 * Change footer stats to not add newlines when copy/pasting from them
 * Remove redundant references from Config/Help & Info
@@ -44,14 +55,7 @@
 * Fix failing "Providers" link on Config/Search Settings/Episode Search
 * Change case of labels in General Config/Interface/Timezone
 * Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab
-* Fix searches freezing due to unescaped ignored or required words
-* Add failed database to unit tests tear down function
-* Fix purging of database files in tear down function during unit tests
-* Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
-
-[develop changelog]
-* Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
-* Fix adding show from TVRage API
+* Fix typo on General Config/Misc
 
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)
