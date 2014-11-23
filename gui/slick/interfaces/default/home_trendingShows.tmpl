@@ -131,7 +131,7 @@
 
 #set $image = re.sub(r'(.*)(\..*?)$', r'\1-300\2', $cur_show['images']['poster'], 0, re.IGNORECASE | re.MULTILINE)
 
-	<div class="trakt_show <%= ('notinlibrary', 'inlibrary')['ExistsInLibrary' in cur_show['tvdb_id']] %>" data-name="$cur_show['title']" data-rating="$cur_show['ratings']['percentage']" data-votes="$cur_show['ratings']['votes']">
+	<div class="trakt_show <%= ('notinlibrary', 'inlibrary')[':' in cur_show['show_id']] %>" data-name="$cur_show['title']" data-rating="$cur_show['ratings']['percentage']" data-votes="$cur_show['ratings']['votes']">
 		<div class="traktContainer">
 			<div class="trakt-image">
 				<a class="trakt-image" href="<%= anon_url(cur_show['url']) %>" target="_blank"><img alt="" class="trakt-image" src="${image}" /></a>
@@ -146,11 +146,11 @@
 			<i>$cur_show['ratings']['votes'] votes</i>
 
 			<div class="traktShowTitleIcons">
-#if 'ExistsInLibrary' in $cur_show['tvdb_id']:
-				<p style="line-height: 1.5; padding: 2px 5px 3px">In library</p>
+#if ':' in $cur_show['show_id']:
+				<p style="line-height: 1.5; padding: 2px 5px 3px" title="<%= '%s added' % ('TVRage', 'theTVDB')['1' == cur_show['show_id'][:1]] %>">In library</p>
 #else
 				#set $encoded_show_title = urllib.quote($cur_show['title'].encode("utf-8"))
-				<a href="$sbRoot/home/addTraktShow?indexer_id=${cur_show['tvdb_id']}&amp;showName=${encoded_show_title}" class="btn btn-xs">Add Show</a>
+				<a href="$sbRoot/home/addTraktShow?indexer_id=${cur_show['show_id']}&amp;showName=${encoded_show_title}" class="btn btn-xs">Add Show</a>
 #end if
 			</div>
 		</div>
