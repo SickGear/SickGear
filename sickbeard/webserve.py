@@ -2994,9 +2994,18 @@ class NewHomeAddShows(MainHandler):
         t.trending_inlibrary = 0
         if None is not t.trending_shows:
             for item in t.trending_shows:
-                if helpers.findCertainShow(sickbeard.showList, int(item['tvdb_id'])):
-                    t.trending_inlibrary += 1
-                    item['tvdb_id'] = u'ExistsInLibrary'
+                tvdbs = ['tvdb_id', 'tvrage_id']
+                for index, tvdb in enumerate(tvdbs):
+                    try:
+                        item[u'show_id'] = item[tvdb]
+                        tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
+                    except:
+                        continue
+                    # check tvshow indexer is not using the same id from another indexer
+                    if tvshow and (index + 1) == tvshow.indexer:
+                        item[u'show_id'] = u'%s:%s' % (tvshow.indexer, item[tvdb])
+                        t.trending_inlibrary += 1
+                        break
 
         return _munge(t)
 
