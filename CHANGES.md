@@ -1,4 +1,5 @@
 ### 0.x.x (2014-11-xx xx:xx:xx UTC)
+
 * Fix searches freezing due to unescaped ignored or required words
 * Add failed database to unit tests tear down function
 * Fix purging of database files in tear down function during unit tests
@@ -6,11 +7,10 @@
 * Add TVRage network name standardization
 
 [develop changelog]
-* Fix typo for commit "ShowData handler" i.e. SHA-1:3eec217
-* Fix adding show from TVRage API
 
 
-### 0.4.0 (2014-11-23 08:44:00 UTC)
+
+### 0.4.0 (2014-11-24 00:55:00 UTC)
 
 * Change footer stats to not add newlines when copy/pasting from them
 * Remove redundant references from Config/Help & Info
@@ -60,6 +60,7 @@
 * Fix Add Trending Shows "Not In library" now filters tvrage added shows
 * Add a hover over text "In library" on Add Trending Shows to display tv database show was added from
 * Fix reduces time API endpoint Shows takes to return results
+* Fix Coming Eps Page to include shows +/- 1 day for time zone corrections
 
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)
