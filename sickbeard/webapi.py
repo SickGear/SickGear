@@ -725,17 +725,22 @@ class CMD_ComingEpisodes(ApiCall):
 
     def run(self):
         """ display the coming episodes """
-        today = datetime.date.today().toordinal()
-        next_week = (datetime.date.today() + datetime.timedelta(days=7)).toordinal()
-        recently = (datetime.date.today() - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
+        today1 = datetime.date.today()
+        today = today1.toordinal()
+        yesterday1 = today1 - datetime.timedelta(days=1)
+        yesterday = yesterday1.toordinal()
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
+        next_week1 = (datetime.date.today() + datetime.timedelta(days=7))
+        next_week = (next_week1 + datetime.timedelta(days=1)).toordinal()
+        recently = (yesterday1 - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
 
         done_show_list = []
         qualList = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
 
-        myDB = db.DBConnection(row_type="dict")
+        myDB = db.DBConnection()
         sql_results = myDB.select(
-            "SELECT airdate, airs, episode, name AS 'ep_name', description AS 'ep_plot', network, season, showid AS 'indexerid', show_name, tv_shows.quality AS quality, tv_shows.status AS 'show_status', tv_shows.paused AS 'paused' FROM tv_episodes, tv_shows WHERE season != 0 AND airdate >= ? AND airdate < ? AND tv_shows.indexer_id = tv_episodes.showid AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [today, next_week] + qualList)
+            "SELECT airdate, airs, episode, name AS 'ep_name', description AS 'ep_plot', network, season, showid AS 'indexerid', show_name, tv_shows.quality AS quality, tv_shows.status AS 'show_status', tv_shows.paused AS 'paused' FROM tv_episodes, tv_shows WHERE season != 0 AND airdate >= ? AND airdate <= ? AND tv_shows.indexer_id = tv_episodes.showid AND tv_episodes.status NOT IN (" + ','.join(
+                ['?'] * len(qualList)) + ")", [yesterday, next_week] + qualList)
         for cur_result in sql_results:
             done_show_list.append(int(cur_result["indexerid"]))
 
@@ -748,17 +753,26 @@ class CMD_ComingEpisodes(ApiCall):
         sql_results += more_sql_results
 
         more_sql_results = myDB.select(
-            "SELECT airdate, airs, episode, name AS 'ep_name', description AS 'ep_plot', network, season, showid AS 'indexerid', show_name, tv_shows.quality AS quality, tv_shows.status AS 'show_status', tv_shows.paused AS 'paused' FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate < ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [today, recently, WANTED] + qualList)
+            "SELECT airdate, airs, episode, name AS 'ep_name', description AS 'ep_plot', network, season, showid AS 'indexerid', show_name, tv_shows.quality AS quality, tv_shows.status AS 'show_status', tv_shows.paused AS 'paused' FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate <= ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (" + ','.join(
+                ['?'] * len(qualList)) + ")", [tomorrow, recently, WANTED] + qualList)
         sql_results += more_sql_results
 
+        sql_results = list(set(sql_results))
+
+        # make a dict out of the sql results
+        sql_results = [dict(row) for row in sql_results]
+                
         # sort by air date
         sorts = {
-            'date': (lambda x, y: cmp(int(x["airdate"]), int(y["airdate"]))),
-            'show': (lambda a, b: cmp(a["show_name"], b["show_name"])),
-            'network': (lambda a, b: cmp(a["network"], b["network"])),
+            'date': (lambda x, y: cmp(x["parsed_datetime"], y["parsed_datetime"])),
+            'show': (lambda a, b: cmp((a["show_name"], a["parsed_datetime"]), (b["show_name"], b["parsed_datetime"]))),
+            'network': (lambda a, b: cmp((a["network"], a["parsed_datetime"]), (b["network"], b["parsed_datetime"]))),
         }
 
+        # add localtime to the dict
+        for index, item in enumerate(sql_results):
+            sql_results[index]['parsed_datetime'] = network_timezones.parse_date_time(item['airdate'], item['airs'], item['network'])
+        
         sql_results.sort(sorts[self.sort])
         finalEpResults = {}
 
@@ -777,9 +791,7 @@ class CMD_ComingEpisodes(ApiCall):
             if ep["paused"] and not self.paused:
                 continue
 
-            ep['airs'] = str(ep['airs']).replace('am', ' AM').replace('pm', ' PM').replace('  ', ' ')
-            dtEpisodeAirs = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(int(ep['airdate']), ep['airs'], ep['network']))
-            ep['airdate'] = dtEpisodeAirs.toordinal()
+            ep['airdate'] = int(ep["airdate"])
 
             status = "soon"
             if ep["airdate"] < today:
@@ -801,12 +813,13 @@ class CMD_ComingEpisodes(ApiCall):
 
             ep["quality"] = _get_quality_string(ep["quality"])
             # clean up tvdb horrible airs field
-            ep['airs'] = sbdatetime.sbdatetime.sbftime(dtEpisodeAirs, t_preset=timeFormat).lstrip('0').replace(' 0', ' ')
+            ep['airs'] = str(ep['airs']).replace('am', ' AM').replace('pm', ' PM').replace('  ', ' ')
             # start day of the week on 1 (monday)
-            ep['weekday'] = 1 + datetime.date.fromordinal(dtEpisodeAirs.toordinal()).weekday()
+            ep['weekday'] = 1 + datetime.date.fromordinal(ep['airdate']).weekday()
             # Add tvdbid for backward compability
             ep["tvdbid"] = ep['indexerid']
-            ep['airdate'] = sbdatetime.sbdatetime.sbfdate(dtEpisodeAirs, d_preset=dateFormat)
+            ep['airdate'] = sbdatetime.sbdatetime.sbfdate(datetime.date.fromordinal(ep['airdate']), d_preset=dateFormat)
+            ep['parsed_datetime'] = sbdatetime.sbdatetime.sbfdatetime(ep['parsed_datetime'], d_preset=dateFormat, t_preset='%H:%M %z')
 
             # TODO: check if this obsolete
             if not status in finalEpResults:
