@@ -1,0 +1,61 @@
+# SickGear systemd service unit file
+#
+# Configuration Notes
+#
+# - Option names (e.g. ExecStart=, Type=) are case-sensitive.
+#
+# - Adjust User= and Group= to the user/group you want SickGear to run as.
+#
+# - Optional adjust EnvironmentFile= path to configuration file
+# Can ONLY be used for configuring extra options used in ExecStart.
+# Putting a minus (-) in front of file means no error warning if the file doesn't exist
+#
+# - Adjust ExecStart= to point to your python and SickGear executables.
+# The FIRST token of the command line must be an ABSOLUTE FILE NAME,
+# then followed by optional arguments for the process.
+# If no --datadir is given, data is stored in same dir as SickBeard.py
+# Arguments can also be set in EnvironmentFile (except python)
+#
+# - WantedBy= specifies which target (i.e. runlevel) to start SickGear.
+# multi-user.target equates to runlevel 3 (multi-user text mode)
+# graphical.target equates to runlevel 5 (multi-user X11 graphical mode)
+#
+##
+## Example using SickGear as daemon with pid file
+##//
+# Type=forking
+# PIDFile=/var/run/sickgear/sickgear.pid
+# ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --pidfile=/var/run/sickgear/sickgear.pid --datadir=/opt/sickgear/data
+##
+## Example using SickGear as daemon without pid file
+##//
+# Type=forking
+# GuessMainPID=no
+# ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear/data
+##
+## Example using simple
+##//
+# Type=simple
+# ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --nolaunch
+##
+## Example using simple with a *Sickbeard* EnvironmentFile where SB_DATA=/home/sickbeard/.sickbeard in /etc/sickbeard.conf
+##//
+# Type=simple
+# EnvironmentFile=/etc/sickbeard.conf
+# ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --nolaunch --datadir=${SB_DATA}
+####
+# Configuration
+
+[Unit]
+Description=SickGear Daemon
+After=network.target
+
+[Service]
+User='<<<USERNAME OR UID>>>'           ### I user 1000 (Default user that is initially setup)
+Group='<<<USER GROUP OR GID>>>'        ### I use 100   (Default group that is initially setup)
+Type=forking
+GuessMainPID=no
+ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear/data
+
+[Install]
+WantedBy=multi-user.target

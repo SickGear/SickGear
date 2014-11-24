@@ -52,6 +52,7 @@
 * Fix restart issue
 * Fix to use new TorrentDay URLs
 * Fix typo in menu item Manage/Update XBMC
+* Add startup-scripts folder and move start scripts into it
 
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)
