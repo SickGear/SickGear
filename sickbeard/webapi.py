@@ -725,14 +725,14 @@ class CMD_ComingEpisodes(ApiCall):
 
     def run(self):
         """ display the coming episodes """
-        today1 = datetime.date.today()
-        today = today1.toordinal()
-        yesterday1 = today1 - datetime.timedelta(days=1)
-        yesterday = yesterday1.toordinal()
+        today_dt = datetime.date.today()
+        today = today_dt.toordinal()
+        yesterday_dt = today_dt - datetime.timedelta(days=1)
+        yesterday = yesterday_dt.toordinal()
         tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
-        next_week1 = (datetime.date.today() + datetime.timedelta(days=7))
-        next_week = (next_week1 + datetime.timedelta(days=1)).toordinal()
-        recently = (yesterday1 - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
+        next_week_dt = (datetime.date.today() + datetime.timedelta(days=7))
+        next_week = (next_week_dt + datetime.timedelta(days=1)).toordinal()
+        recently = (yesterday_dt - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
 
         done_show_list = []
         qualList = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
@@ -762,14 +762,30 @@ class CMD_ComingEpisodes(ApiCall):
         # make a dict out of the sql results
         sql_results = [dict(row) for row in sql_results]
                 
-        # sort by air date
+        # multi dimension sort
         sorts = {
-            'date': (lambda x, y: cmp(x["parsed_datetime"], y["parsed_datetime"])),
-            'show': (lambda a, b: cmp((a["show_name"], a["parsed_datetime"]), (b["show_name"], b["parsed_datetime"]))),
-            'network': (lambda a, b: cmp((a["network"], a["parsed_datetime"]), (b["network"], b["parsed_datetime"]))),
+            'date': (lambda a, b: cmp(
+                (a['parsed_datetime'],
+                 (a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['season'], a['episode']),
+                (b['parsed_datetime'],
+                 (b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['season'], b['episode']))),
+            'show': (lambda a, b: cmp(
+                ((a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['parsed_datetime'], a['season'], a['episode']),
+                ((b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['parsed_datetime'], b['season'], b['episode']))),
+            'network': (lambda a, b: cmp(
+                (a['network'], a['parsed_datetime'],
+                 (a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['season'], a['episode']),
+                (b['network'], b['parsed_datetime'],
+                 (b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['season'], b['episode'])))
         }
 
-        # add localtime to the dict
+        # add parsed_datetime to the dict
         for index, item in enumerate(sql_results):
             sql_results[index]['parsed_datetime'] = network_timezones.parse_date_time(item['airdate'], item['airs'], item['network'])
         

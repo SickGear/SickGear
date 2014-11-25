@@ -350,16 +350,18 @@ class MainHandler(RequestHandler):
         redirect("/comingEpisodes/")
 
     def comingEpisodes(self, layout="None"):
-
-        today1 = datetime.date.today() - datetime.timedelta(days=1)
-        today = today1.toordinal()
+        """ display the coming episodes """
+        today_dt = datetime.date.today()
+        #today = today_dt.toordinal()
+        yesterday_dt = today_dt - datetime.timedelta(days=1)
+        yesterday = yesterday_dt.toordinal()
         tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
-        next_week1 = (datetime.date.today() + datetime.timedelta(days=7))
-        next_week = (next_week1 + datetime.timedelta(days=1)).toordinal()
+        next_week_dt = (datetime.date.today() + datetime.timedelta(days=7))
+        next_week = (next_week_dt + datetime.timedelta(days=1)).toordinal()
         if not (layout and layout in ('calendar')) and not (sickbeard.COMING_EPS_LAYOUT and sickbeard.COMING_EPS_LAYOUT in ('calendar')):
-            recently = (today1 - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
+            recently = (yesterday_dt - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
         else:
-            recently = today
+            recently = yesterday
 
         done_show_list = []
         qualList = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
@@ -367,7 +369,7 @@ class MainHandler(RequestHandler):
         myDB = db.DBConnection()
         sql_results = myDB.select(
             "SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND airdate >= ? AND airdate <= ? AND tv_shows.indexer_id = tv_episodes.showid AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [today, next_week] + qualList)
+                ['?'] * len(qualList)) + ")", [yesterday, next_week] + qualList)
 
         for cur_result in sql_results:
             done_show_list.append(int(cur_result["showid"]))
@@ -388,11 +390,27 @@ class MainHandler(RequestHandler):
 
         sql_results = list(set(sql_results))
 
-        # sort by localtime
+        # multi dimension sort
         sorts = {
-            'date': (lambda x, y: cmp(x["localtime"], y["localtime"])),
-            'show': (lambda a, b: cmp((a["show_name"], a["localtime"]), (b["show_name"], b["localtime"]))),
-            'network': (lambda a, b: cmp((a["network"], a["localtime"]), (b["network"], b["localtime"]))),
+            'date': (lambda a, b: cmp(
+                (a['localtime'],
+                 (a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['season'], a['episode']),
+                (b['localtime'],
+                 (b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['season'], b['episode']))),
+            'show': (lambda a, b: cmp(
+                ((a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['localtime'], a['season'], a['episode']),
+                ((b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['localtime'], b['season'], b['episode']))),
+            'network': (lambda a, b: cmp(
+                (a['network'], a['localtime'],
+                 (a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['season'], a['episode']),
+                (b['network'], b['localtime'],
+                 (b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['season'], b['episode'])))
         }
 
         # make a dict out of the sql results
@@ -425,8 +443,8 @@ class MainHandler(RequestHandler):
             paused_item,
         ]
 
-        t.next_week = datetime.datetime.combine(next_week1, datetime.time(tzinfo=network_timezones.sb_timezone))
-        t.today = datetime.datetime.now().replace(tzinfo=network_timezones.sb_timezone)
+        t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
+        t.today = datetime.datetime.now(network_timezones.sb_timezone)
         t.sql_results = sql_results
 
         # Allow local overriding of layout parameter
