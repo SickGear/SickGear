@@ -5,6 +5,7 @@
 * Fix purging of database files in tear down function during unit tests
 * Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
 * Add TVRage network name standardization
+* Fix missing season id on Display Show for season jumping via dropdown menu
 
 [develop changelog]
 
