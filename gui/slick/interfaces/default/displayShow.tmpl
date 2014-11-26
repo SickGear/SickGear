@@ -349,7 +349,7 @@
 		#end if
 
 		#if int($epResult["season"]) != $curSeason:
-		    <tr>
+		    <tr id="season-$epResult['season']">
 				<th class="row-seasonheader" colspan="13" style="width: auto;"><h3><a name="season-$epResult["season"]"></a>#if int($epResult["season"]) == 0 then "Specials" else "Season " + str($epResult["season"])#</h3></th>
 			</tr>
 			
