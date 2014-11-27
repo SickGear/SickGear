@@ -4401,7 +4401,7 @@ class Home(MainHandler):
         sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)  # @UndefinedVariable
 
         if ep_queue_item.success:
-            return returnManualSearchResult(ep_queue_item)
+            return self.getManualSearchStatus(ep_queue_item)
         if not ep_queue_item.started and ep_queue_item.success is None:
             return json.dumps({'result': 'success'}) #I Actually want to call it queued, because the search hasnt been started yet!
         if ep_queue_item.started and ep_queue_item.success is None:
@@ -4415,79 +4415,60 @@ class Home(MainHandler):
     def getManualSearchStatus(self, show=None, season=None):
 
         episodes = []
-        currentManualSearchThreadsQueued = []
-        currentManualSearchThreadActive = []
-        finishedManualSearchThreadItems= []
 
         # Queued Searches
-        currentManualSearchThreadsQueued = sickbeard.searchQueueScheduler.action.get_all_ep_from_queue(show)
+        queued_manual_search_threads = sickbeard.searchQueueScheduler.action.get_all_ep_from_queue(show)
+
         # Running Searches
-        if (sickbeard.searchQueueScheduler.action.is_manualsearch_in_progress()):
-            currentManualSearchThreadActive = sickbeard.searchQueueScheduler.action.currentItem
+        active_manual_search_thread = ([], sickbeard.searchQueueScheduler.action.currentItem)[
+            sickbeard.searchQueueScheduler.action.is_manualsearch_in_progress()]
 
         # Finished Searches
-        finishedManualSearchThreadItems =  sickbeard.search_queue.MANUAL_SEARCH_HISTORY
+        finished_manual_search_thread_items = sickbeard.search_queue.MANUAL_SEARCH_HISTORY
 
-        if currentManualSearchThreadsQueued:
-            for searchThread in currentManualSearchThreadsQueued:
-                searchstatus = 'queued'
-                if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
-                    episodes.append({'episode': searchThread.segment.episode,
-                                     'episodeindexid': searchThread.segment.indexerid,
-                                     'season' : searchThread.segment.season,
-                                     'searchstatus' : searchstatus,
-                                     'status' : statusStrings[searchThread.segment.status],
-                                     'quality': self.getQualityClass(searchThread.segment)})
-                else:
-                    for epObj in searchThread.segment:
-                        episodes.append({'episode': epObj.episode,
-                             'episodeindexid': epObj.indexerid,
-                             'season' : epObj.season,
-                             'searchstatus' : searchstatus,
-                             'status' : statusStrings[epObj.status],
-                             'quality': self.getQualityClass(epObj)})
+        def episodes_append(episodes, tv_episode, searchstatus):
+            episodes.append({'episode': tv_episode.episode,
+                             'episodeindexid': tv_episode.indexerid,
+                             'season': tv_episode.season,
+                             'searchstatus': searchstatus,
+                             'status': statusStrings[tv_episode.status],
+                             'quality': self.getQualityClass(tv_episode)})
 
-        if currentManualSearchThreadActive:
-            searchThread = currentManualSearchThreadActive
-            searchstatus = 'searching'
-            if searchThread.success:
-                searchstatus = 'finished'
-            else:
-                searchstatus = 'searching'
-            episodes.append({'episode': searchThread.segment.episode,
-                             'episodeindexid': searchThread.segment.indexerid,
-                             'season' : searchThread.segment.season,
-                             'searchstatus' : searchstatus,
-                             'status' : statusStrings[searchThread.segment.status],
-                             'quality': self.getQualityClass(searchThread.segment)})
+        if queued_manual_search_threads:
+            searchstatus = 'queued'
+            for search_thread in queued_manual_search_threads:
+                episode_list = ([search_thread.segment], search_thread.segment)[isinstance(search_thread.segment, list)]
+                for tv_episode in episode_list:
+                    episodes_append(episodes, tv_episode, searchstatus)
 
-        if finishedManualSearchThreadItems:
-            for searchThread in finishedManualSearchThreadItems:
-                if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
-                    if str(searchThread.show.indexerid) == show and not [x for x in episodes if x['episodeindexid'] == searchThread.segment.indexerid]:
-                        searchstatus = 'finished'
-                        episodes.append({'episode': searchThread.segment.episode,
-                                         'episodeindexid': searchThread.segment.indexerid,
-                                 'season' : searchThread.segment.season,
-                                 'searchstatus' : searchstatus,
-                                 'status' : statusStrings[searchThread.segment.status],
-                                 'quality': self.getQualityClass(searchThread.segment)})
+        if active_manual_search_thread:
+            search_thread = active_manual_search_thread
+            searchstatus = ('searching', 'finished')[None is not search_thread.success]
+            episode_list = ([search_thread.segment], search_thread.segment)[isinstance(search_thread.segment, list)]
+
+            for tv_episode in episode_list:
+                episodes_append(episodes, tv_episode, searchstatus)
+
+        if finished_manual_search_thread_items:
+            searchstatus = 'finished'
+            for search_thread in finished_manual_search_thread_items:
+                if isinstance(search_thread, sickbeard.search_queue.ManualSearchQueueItem):
+                    episode_list = ([search_thread.segment], search_thread.segment)[
+                        isinstance(search_thread.segment, list)]
+                    for tv_episode in episode_list:
+                        if show == str(search_thread.show.indexerid)\
+                                and not [x for x in episodes if tv_episode.indexerid == x['episodeindexid']]:
+                            episodes_append(episodes, tv_episode, searchstatus)
                 else:
                     ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
-                    if str(searchThread.show.indexerid) == show:
-                        for epObj in searchThread.segment:
-                            if not [x for x in episodes if x['episodeindexid'] == epObj.indexerid]:
-                                searchstatus = 'finished'
-                                episodes.append({'episode': epObj.episode,
-                                                 'episodeindexid': epObj.indexerid,
-                                         'season' : epObj.season,
-                                         'searchstatus' : searchstatus,
-                                         'status' : statusStrings[epObj.status],
-                                         'quality': self.getQualityClass(epObj)})
+                    if show == str(search_thread.show.indexerid):
+                        episode_list = ([search_thread.segment], search_thread.segment)[
+                            isinstance(search_thread.segment, list)]
+                        for tv_episode in episode_list:
+                            if not [x for x in episodes if tv_episode.indexerid == x['episodeindexid']]:
+                                episodes_append(episodes, tv_episode, searchstatus)
 
-        return json.dumps({'show': show, 'episodes' : episodes})
-
-        #return json.dumps()
+        return json.dumps({'show': show, 'episodes': episodes})
 
     def getQualityClass(self, ep_obj):
         # return the correct json value
@@ -4613,7 +4594,7 @@ class Home(MainHandler):
         sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)  # @UndefinedVariable
 
         if ep_queue_item.success:
-            return returnManualSearchResult(ep_queue_item)
+            return self.getManualSearchStatus(ep_queue_item)
         if not ep_queue_item.started and ep_queue_item.success is None:
             return json.dumps({'result': 'success'}) #I Actually want to call it queued, because the search hasnt been started yet!
         if ep_queue_item.started and ep_queue_item.success is None:
