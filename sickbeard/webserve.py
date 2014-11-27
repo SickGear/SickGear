@@ -52,6 +52,7 @@ from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStri
 from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
+from sickbeard.helpers import remove_article
 from sickbeard.scene_exceptions import get_scene_exceptions
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
@@ -394,22 +395,22 @@ class MainHandler(RequestHandler):
         sorts = {
             'date': (lambda a, b: cmp(
                 (a['localtime'],
-                 (a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
                  a['season'], a['episode']),
                 (b['localtime'],
-                 (b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
                  b['season'], b['episode']))),
             'show': (lambda a, b: cmp(
-                ((a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                ((a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
                  a['localtime'], a['season'], a['episode']),
-                ((b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                ((b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
                  b['localtime'], b['season'], b['episode']))),
             'network': (lambda a, b: cmp(
                 (a['network'], a['localtime'],
-                 (a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
                  a['season'], a['episode']),
                 (b['network'], b['localtime'],
-                 (b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
                  b['season'], b['episode'])))
         }
 

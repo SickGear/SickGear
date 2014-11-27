@@ -1431,3 +1431,7 @@ def get_size(start_path='.'):
 
 def build_dict(seq, key):
     return dict((d[key], dict(d, index=index)) for (index, d) in enumerate(seq))
+
+
+def remove_article(text=''):
+    return re.sub(r'(?i)/^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)
