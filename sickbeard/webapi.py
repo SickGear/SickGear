@@ -37,6 +37,7 @@ from sickbeard import processTV
 from sickbeard import network_timezones, sbdatetime
 from sickbeard.exceptions import ex
 from sickbeard.common import SNATCHED, SNATCHED_PROPER, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
+from sickbeard.helpers import remove_article
 from common import Quality, qualityPresetStrings, statusStrings
 
 try:
@@ -766,22 +767,22 @@ class CMD_ComingEpisodes(ApiCall):
         sorts = {
             'date': (lambda a, b: cmp(
                 (a['parsed_datetime'],
-                 (a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
                  a['season'], a['episode']),
                 (b['parsed_datetime'],
-                 (b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
                  b['season'], b['episode']))),
             'show': (lambda a, b: cmp(
-                ((a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                ((a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
                  a['parsed_datetime'], a['season'], a['episode']),
-                ((b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                ((b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
                  b['parsed_datetime'], b['season'], b['episode']))),
             'network': (lambda a, b: cmp(
                 (a['network'], a['parsed_datetime'],
-                 (a['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
                  a['season'], a['episode']),
                 (b['network'], b['parsed_datetime'],
-                 (b['show_name'], re.sub(r'(?i)^(The|A|An)\s', '', b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
                  b['season'], b['episode'])))
         }
 
