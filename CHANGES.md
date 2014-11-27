@@ -6,6 +6,7 @@
 * Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
 * Add TVRage network name standardization
 * Change some provider images. Add a few new images
+* Remove redundant Coming Eps template code used in the old UI
 
 [develop changelog]
 
