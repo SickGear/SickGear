@@ -82,7 +82,7 @@
         if (0 == s.indexOf('Loading...'))
             return s.replace('Loading...', '000')
 #if not $sickbeard.SORT_ARTICLE:
-            return (s || '').replace(/^(The|A|An)\s/i, '')
+            return (s || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1')
 #else:
             return (s || '')
 #end if

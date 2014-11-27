@@ -58,7 +58,7 @@
           return s.replace('Loading...','000');
 		else
 		#if not $sickbeard.SORT_ARTICLE:
-			return (s || '').replace(/^(The|A|An)\s/i,'');
+			return (s || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
 		#else:
 			return (s || '');
 		#end if	
@@ -162,7 +162,7 @@
 				name: function( itemElem ) { 
 					var name = \$( itemElem ).attr('data-name');
 					#if not $sickbeard.SORT_ARTICLE:
-						return (name || '').replace(/^(The|A|An)\s/i,'');
+						return (name || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
 					#else:
 						return (name || '');
 					#end if	
