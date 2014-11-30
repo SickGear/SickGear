@@ -31,14 +31,14 @@ fi
 ## Don't edit this file!
 ## Edit user configuation in /etc/default/sickgear to change
 ##
-## SG_USER=         #$RUN_AS, username to run sickgear under, the default is sickgear
-## SG_GROUP=        #$RUN_GROUP, group to run sickgear under, the default is sickgear
-## SG_HOME=         #$APP_PATH, the location of SickGear.py, the default is /opt/sickgear
-## SG_DATA=         #$DATA_DIR, the location of sickgear.db, cache, logs, the default is /opt/sickgear
-## SG_PIDFILE=      #$PID_FILE, the location of sickgear.pid, the default is /var/run/sickgear/sickgear.pid
-## PYTHON_BIN=      #$DAEMON, the location of the python binary, the default is /usr/bin/python
-## SG_OPTS=         #$EXTRA_DAEMON_OPTS, extra cli option for sickgear, i.e. " --config=/home/sickgear/config.ini"
-## SSD_OPTS=        #$EXTRA_SSD_OPTS, extra start-stop-daemon option like " --group=users"
+## SG_USER=         #$SG_USER, username to run sickgear under, the default is sickgear
+## SG_GROUP=        #$SG_GROUP, group to run sickgear under, the default is sickgear
+## SG_HOME=         #$SG_HOME, the location of SickGear.py, the default is /opt/sickgear
+## SG_DATA=         #$SG_DATA, the location of sickgear.db, cache, logs, the default is /opt/sickgear
+## SG_PIDFILE=      #$SG_PIDFILE, the location of sickgear.pid, the default is /var/run/sickgear/sickgear.pid
+## PYTHON_BIN=      #$PYTHON_BIN, the location of the python binary, the default is /usr/bin/python
+## SG_OPTS=         #$SG_OPTS, extra cli option for sickgear, i.e. " --config=/home/sickgear/config.ini"
+## SSD_OPTS=        #$SSD_OPTS, extra start-stop-daemon option like " --group=users"
 ##
 ## EXAMPLE if want to run as different user
 ## add SG_USER=username to /etc/default/sickgear
@@ -51,60 +51,44 @@ NAME=$(basename "$0")
 DESC=SickGear
 
 ## The defaults
-# Run as username
-RUN_AS=${SG_USER-${SB_USER-sickgear}}
+: ${SG_USER:=${SB_USER-sickgear}}
+: ${SG_GROUP:=${SB_GROUP-sickgear}}
+: ${SG_HOME:=${SB_HOME-/opt/sickgear}}
+: ${SG_DATA:=${SB_DATA-/opt/sickgear}}
+: ${SG_PIDFILE:=${SB_PIDFILE-/var/run/sickgear/sickgear.pid}}
+: ${PYTHON_BIN:=/usr/bin/python}
+: ${SG_OPTS:=${SB_OPTS}}
 
-# Run as group
-RUN_GROUP=${SG_GROUP-${SB_GROUP-sickgear}}
-
-# Path to app SG_HOME=path_to_app_SickGear.py
-APP_PATH=${SG_HOME-${SB_HOME-/opt/sickgear}}
-
-# Data directory where sickgear.db, cache and logs are stored
-DATA_DIR=${SG_DATA-${SB_DATA-/opt/sickgear}}
-
-# Path to store PID file
-PID_FILE=${SG_PIDFILE-${SB_PIDFILE-/var/run/sickgear/sickgear.pid}}
-
-# path to python bin
-DAEMON=${PYTHON_BIN-/usr/bin/python}
-
-# Extra daemon option like: SG_OPTS=" --config=/home/sickgear/config.ini"
-EXTRA_DAEMON_OPTS=${SG_OPTS-${SB_OPTS-}}
-
-# Extra start-stop-daemon option like START_OPTS=" --group=users"
-EXTRA_SSD_OPTS=${SSD_OPTS-}
-##
-
-PID_PATH=$(dirname $PID_FILE)
-DAEMON_OPTS=" SickBeard.py -q --daemon --nolaunch --pidfile=${PID_FILE} --datadir=${DATA_DIR} ${EXTRA_DAEMON_OPTS}"
+## Computed variables
+PID_PATH=$(dirname $SG_PIDFILE)
+DAEMON_OPTS=" SickBeard.py -q --daemon --nolaunch --pidfile=${SG_PIDFILE} --datadir=${SG_DATA} ${SG_OPTS}"
 
 ##
 
-test -x $DAEMON || exit 0
+test -x $PYTHON_BIN || exit 0
 
 # Create PID directory if not exist and ensure the SickGear user can write to it
 if [ ! -d $PID_PATH ]; then
     mkdir -p $PID_PATH
-    chown $RUN_AS $PID_PATH
+    chown $SG_USER $PID_PATH
 fi
 
-if [ ! -d $DATA_DIR ]; then
-    mkdir -p $DATA_DIR
-    chown $RUN_AS $DATA_DIR
+if [ ! -d $SG_DATA ]; then
+    mkdir -p $SG_DATA
+    chown $SG_USER $SG_DATA
 fi
 
-if [ -e $PID_FILE ]; then
-    PID=`cat $PID_FILE`
+if [ -e $SG_PIDFILE ]; then
+    PID=`cat $SG_PIDFILE`
     if ! kill -0 $PID > /dev/null 2>&1; then
-        [ "$VERBOSE" != no ] && echo "Removing stale $PID_FILE"
-        rm -f $PID_FILE
+        [ "$VERBOSE" != no ] && echo "Removing stale $SG_PIDFILE"
+        rm -f $SG_PIDFILE
     fi
 fi
 
 start_sickgear() {
     [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
-    start-stop-daemon -d $APP_PATH -c $RUN_AS --group=${RUN_GROUP} $EXTRA_SSD_OPTS --start --quiet --pidfile $PID_FILE --exec $DAEMON -- $DAEMON_OPTS
+    start-stop-daemon -d $SG_HOME -c $SG_USER --group=${SG_GROUP} $SSD_OPTS --start --quiet --pidfile $SG_PIDFILE --exec $PYTHON_BIN -- $DAEMON_OPTS
     RETVAL="$?"
     case "${RETVAL}" in
         # Service was started or was running already
@@ -118,7 +102,7 @@ start_sickgear() {
 
 stop_sickgear() {
     [ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
-    start-stop-daemon --stop --pidfile $PID_FILE --quiet --retry TERM/30/KILL/5
+    start-stop-daemon --stop --pidfile $SG_PIDFILE --quiet --retry TERM/30/KILL/5
     RETVAL="$?"
     case "${RETVAL}" in
         # Service was stopped or wasn't running
@@ -127,7 +111,7 @@ stop_sickgear() {
         2) [ "${VERBOSE}" != no ] && log_end_msg 1 ;;
     esac
     [ "${RETVAL}" = 2 ] && return 2
-    [ -f "${PID_FILE}" ] && rm -f ${PID_FILE}
+    [ -f "${SG_PIDFILE}" ] && rm -f ${SG_PIDFILE}
     return 0
 }
 
@@ -148,7 +132,7 @@ case "$1" in
         return $?
         ;;
     status)
-        status_of_proc -p "$PID_FILE" "$DAEMON" "$DESC"
+        status_of_proc -p "$SG_PIDFILE" "$PYTHON_BIN" "$DESC"
         exit 0
         ;;
     *)

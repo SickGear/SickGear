@@ -16,6 +16,8 @@
 # Source SickGear configuration
 if [ -f /etc/sysconfig/sickgear ]; then
         . /etc/sysconfig/sickgear
+elif [ -f /etc/sysconfig/sickbeard ]; then
+        . /etc/sysconfig/sickbeard
 fi
 
 prog=sickgear
@@ -23,31 +25,31 @@ lockfile=/var/lock/subsys/$prog
 
 ## Edit user configuation in /etc/sysconfig/sickgear to change
 ## the defaults
-username=${SG_USER-${SB_USER-sickgear}}
-homedir=${SG_HOME-${SB_HOME-/opt/sickgear}}
-datadir=${SG_DATA-${SB_DATA-/opt/sickgear}}
-pidfile=${SG_PIDFILE-${SB_PIDFILE-/var/run/sickgear/sickbeard.pid}}
-nice=${SG_NICE-${SB_NICE-}}
+: ${SG_USER:=${SB_USER-sickgear}}
+: ${SG_HOME:=${SB_HOME-/opt/sickgear}}
+: ${SG_DATA:=${SB_DATA-/opt/sickgear}}
+: ${SG_PIDFILE:=${SB_PIDFILE-/var/run/sickgear/sickbeard.pid}}
+: ${SG_NICE:=${SB_NICE}}
 ##
 
-pidpath=`dirname ${pidfile}`
-options=" --daemon --nolaunch --pidfile=${pidfile} --datadir=${datadir}"
+pidpath=`dirname ${SG_PIDFILE}`
+options=" --daemon --nolaunch --SG_PIDFILE=${SG_PIDFILE} --SG_DATA=${SG_DATA}"
 
 # create PID directory if not exist and ensure the SickGear user can write to it
 if [ ! -d $pidpath ]; then
         mkdir -p $pidpath
-        chown $username $pidpath
+        chown $SG_USER $pidpath
 fi
 
-if [ ! -d $datadir ]; then
-        mkdir -p $datadir
-        chown $username $datadir
+if [ ! -d $SG_DATA ]; then
+        mkdir -p $SG_DATA
+        chown $SG_USER $SG_DATA
 fi
 
 start() {
         # Start daemon.
         echo -n $"Starting $prog: "
-        daemon --user=${username} --pidfile=${pidfile} ${nice} python ${homedir}/SickBeard.py ${options}
+        daemon --user=${SG_USER} --SG_PIDFILE=${SG_PIDFILE} ${SG_NICE} python ${SG_HOME}/SickBeard.py ${options}
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && touch $lockfile
@@ -56,7 +58,7 @@ start() {
 
 stop() {
         echo -n $"Shutting down $prog: "
-        killproc -p ${pidfile} python
+        killproc -p ${SG_PIDFILE} python
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && rm -f $lockfile
