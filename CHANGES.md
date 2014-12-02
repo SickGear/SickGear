@@ -20,6 +20,9 @@
 * Fix anime searches on BTN provider
 * Change replace "Daily-Search" with "Recent-Search"
 * Add daily search to recent search renaming to config migration code
+* Change Coming Episodes calendar view to a fluid layout, change episode layout design, and add day and month in column headers.
+* Add isotope plug-in to Coming Episodes calendar view to enable sort columns by Date, Network, and Show name.
+* Add imagesLoaded plug-in to prevent layout breakage by calling isotope to update content after a page auto-refresh.
 
 [develop changelog]
 

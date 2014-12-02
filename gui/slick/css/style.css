@@ -1498,45 +1498,90 @@ h2.day, h2.network {
 }
 
 .calendarWrapper {
-	width:1000px; 
-	margin:0 auto;
-	padding:0 3px
+	max-width: 1400px; 
+	margin: 0 auto;
+	padding: 0 3px
 }
 
-.calendarTable {
-	float:left;
-	width:142px !important;
-	white-space:nowrap;
-	table-layout:fixed !important;
+.calendar-row {
+	float: left;
+	width: 14.28%;
+	padding: 0px 2px;
 }
 
-.calendarShow {
-	padding:0 !important
+.calendar-row .day-number {
+	position: relative;
+	height: 40px;
+	background-color: #333;
+	color: #fff;
 }
 
-.calendarShow .poster {
-	padding-bottom:2px
-}
-.calendarShow .poster img {
-	width:142px;
-	height:auto
-}
-
-.calendarShow .text {
-	padding:0 5px 10px 5px
+.calendar-row .day-number .number {
+	position: absolute;
+	right: 5px;
+	font-weight: bold;
+	font-size: 32px;
+	line-height: 38px;
 }
 
-.calendarShow .text .airtime,
-.calendarShow .text .episode-title {
-	overflow:hidden;
-	text-overflow:ellipsis;
-	display:block;
-	font-size:11px
+.calendar-row .day-number .day {
+	position: absolute;
+	left: 5px;
+	top: 3px;
+	text-transform: uppercase;
+	font-weight: bold;
 }
 
-.calendarShow .show-status {
-	padding:5px 10px 10px;
-	text-align:center
+.calendar-row .day-number .month {
+	position: absolute;
+	left: 5px;
+	bottom: 3px;
+	text-transform: uppercase;
+}
+
+.today .day-number .number, .today .day-number .month, .today .day-number .day {
+	color: #c7db40;
+}
+
+.calendar-show {
+	margin-top: 4px;
+	padding: 4px;
+	width: 100%
+}
+
+.odd .calendar-show {
+	background-color: #F5F1E4;
+}
+
+.even .calendar-show {
+	background-color: #DFDACF;
+}
+
+.calendar-row .poster img {
+	border: 1px solid #CCC;
+	border-radius: 5px;
+	margin-bottom: 2px;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.calendar-row .text .airtime,
+.calendar-row .text .episode-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
+	font-size: 12px;
+}
+
+.calendar-row .episode-blank {
+	width: 250px;
+	height: 32px;
+	text-align: center;
+	font-style: italic;
+	display: table-cell;
+	vertical-align: middle;
+	font-size: 12px;
 }
 
 /* =======================================================================
