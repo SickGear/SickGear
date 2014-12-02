@@ -10,6 +10,10 @@
 * Change update Plex notifier (port from SickBeard)
 * Change Plex notifications to allow authenticated library updates (port from mmccurdy07/Sick-Beard)
 * Change Config/Notifications/Plex logo and description (adapted port from mmccurdy07/Sick-Beard)
+* Change Coming Episodes calendar view to a fluid layout, now includes day and month in column header
+* Change Coming Episodes calendar sorting to be done by isotope plug-in
+* Add imagesLoaded plugin to trigger a relayout for isotope on Coming Episodes once images are loaded so layout dosn't break during autorefresh
+
 
 [develop changelog]
 

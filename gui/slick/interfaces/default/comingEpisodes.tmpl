@@ -20,6 +20,37 @@
 	<h1 class="title">$title</h1>
 #end if
 
+<script type="text/javascript" charset="utf-8">
+<!--
+\$(document).ready(function(){ 
+	
+	var \$container = [\$('#day0'), \$('#day1'), \$('#day2'), \$('#day3'), \$('#day4'), \$('#day5'), \$('#day6')];
+	
+	jQuery.each(\$container, function (j) {
+		this.isotope({
+			itemSelector: '.calendar-show',
+			sortBy : 'date',
+			layoutMode: 'vertical',
+			transitionDuration: 0,
+			getSortData: {
+				date: function( itemElem ) {
+					var date = \$( itemElem ).attr('data-date');
+					return date.length && parseInt( date, 10 );
+				}
+			}
+		});
+	});
+
+	imagesLoaded( '.calendar-show', function() {
+		jQuery.each(\$container, function (j) {
+			this.isotope('layout');
+		});
+	});
+	
+});
+//-->
+</script>
+
 <style type="text/css">
 #SubMenu {display:none}
 #contentWrapper {padding-top:30px}
@@ -35,7 +66,7 @@
 		</select>
 	</span>
 	&nbsp;
-
+#if 'calendar' != $layout:
 	<span>Sort By:
 		<select name="sort" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
 			<option value="$sbRoot/setComingEpsSort/?sort=date" #if 'date' == $sickbeard.COMING_EPS_SORT then 'selected="selected"' else ''#>Date</option>
@@ -44,7 +75,7 @@
 		</select>
 	</span>
 	&nbsp;
-
+#end if
 	<span>View Paused:
 		<select name="viewpaused" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
 			<option value="$sbRoot/toggleComingEpsDisplayPaused"<%= (' selected="selected"', '')[True == sickbeard.COMING_EPS_DISPLAY_PAUSED] %>>Hidden</option>
@@ -487,55 +518,75 @@
 <br>
 <div class="calendarWrapper">
 <input type="hidden" id="sbRoot" value="$sbRoot" />
-    #for $day in $dates
-    #set $tbl_day += 1
-		<table class="sickbeardTable tablesorter calendarTable <%= 'cal-%s' % (('even', 'odd')[1 == tbl_day % 2]) %>" cellspacing="0" border="0" cellpadding="0">
-		<thead><tr><th>$sbdatetime.sbdatetime.sbfdate($day, '%A').decode($sickbeard.SYS_ENCODING).capitalize()</th></tr></thead>
-		<tbody>
-        #set $day_has_show = False
-        #for $cur_result in $sql_results:
-            #if int($cur_result['paused']) and not $sickbeard.COMING_EPS_DISPLAY_PAUSED:
-                #continue
-            #end if
+	#for $day in $dates
+	#set $tbl_day += 1
 
-            #set $cur_indexer = int($cur_result['indexer'])
-            #set $runtime = $cur_result['runtime']
-            #set $airday = $cur_result['localtime'].date()
+	#if $tbl_day == 1
+		#set $showtoday = 'today'
+	#else
+		#set $showtoday = ''
+	#end if
 
-            #if $airday == $day:
-                #set $day_has_show = True
-                #set $airtime = $sbdatetime.sbdatetime.sbftime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)
-                #if $sickbeard.TRIM_ZERO:
-                #set $airtime = re.sub(r'0(\d:\d\d)', r'\1', $airtime, 0, re.IGNORECASE | re.MULTILINE)
-                #end if
-
-				<tr>
-					<td class="calendarShow">
-						<div class="poster">
-							<a title="${cur_result['show_name']}" href="$sbRoot/home/displayShow?show=${cur_result['showid']}"><img alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=poster_thumb" /></a>
-						</div>
-						<div class="text">
-							<span class="airtime">
-								${airtime} on $cur_result["network"]
-							</span>
-							<span class="episode-title" title="$cur_result['name']">
-								<%= 'S%02iE%02i' % (int(cur_result['season']), int(cur_result['episode'])) %> - $cur_result['name']
-							</span>
-						</div>
-					</td> <!-- end $cur_result['show_name'] -->
-				</tr>
+	<div class="calendar-row $showtoday <%= '%s' % (('even', 'odd')[1 == tbl_day % 2]) %>">
+		<div class="day-number">
+			<div class="number">$sbdatetime.sbdatetime.sbfdate($day, ' %d').decode($sickbeard.SYS_ENCODING).replace(' 0', ' ')</div>
+			<div class="day">
+				<span class="visible-lg">$sbdatetime.sbdatetime.sbfdate($day, '%A').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+				<span class="hidden-lg">$sbdatetime.sbdatetime.sbfdate($day, '%a').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+			</div>
+			<div class="month">
+				<span class="visible-lg">$sbdatetime.sbdatetime.sbfdate($day, '%B').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+				<span class="hidden-lg">$sbdatetime.sbdatetime.sbfdate($day, '%b').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+			</div>
+		</div>
+		<div id="$sbdatetime.sbdatetime.sbfdate($day, 'day%w')">
+		
+		#set $day_has_show = False
+		#for $cur_result in $sql_results:
+			#if int($cur_result['paused']) and not $sickbeard.COMING_EPS_DISPLAY_PAUSED:
+				#continue
 			#end if
 
-        #end for
-        #if not $day_has_show:
-            <tr><td class="calendarShow"><span class="show-status">No shows for this day</span></td></tr>
-        #end if
-        </tbody>
-        </table>
-    #end for
+			#set $cur_indexer = int($cur_result['indexer'])
+			#set $runtime = $cur_result['runtime']
+			#set $airday = $cur_result['localtime'].date()
+
+			#if $airday == $day:
+				#set $day_has_show = True
+				#set $airtime = $sbdatetime.sbdatetime.sbftime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)
+				
+				#if $sickbeard.TRIM_ZERO:
+					#set $airtime = re.sub(r'0(\d:\d\d)', r'\1', $airtime, 0, re.IGNORECASE | re.MULTILINE)
+				#end if
+
+				<div id="show-$cur_result['showid']" class="calendar-show" data-date="$time.mktime($cur_result['localtime'].timetuple())">
+					<div class="poster">
+						<a title="${cur_result['show_name']}" href="$sbRoot/home/displayShow?show=${cur_result['showid']}"><img class="img-responsive" alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=poster_thumb" /></a>
+					</div>
+					<div class="text">
+						<div class="episode-title" title="$cur_result['name']">
+							<%= 'S%02iE%02i' % (int(cur_result['season']), int(cur_result['episode'])) %> - $cur_result['name']
+						</div>
+						<div class="airtime">
+							${airtime} on $cur_result["network"]
+						</div>
+					</div>
+				</div><!-- end show-$cur_result['showid'] //-->
+
+			#end if
+
+		#end for
+
+		#if not $day_has_show:
+			<div class="calendar-show" data-date="0">
+				<span class="episode-blank">No shows for this day</span>
+			</div>
+		#end if
+		</div>
+	</div>
+	#end for
 
 <!-- end calender view //-->
-</div>
 #end if
 
 <div class="clearfix"></div>

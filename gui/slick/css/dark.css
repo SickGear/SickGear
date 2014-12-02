@@ -1414,17 +1414,30 @@ h2.day, h2.network {
 	color: #09A2FF;
 }
 
-table.cal-odd {
+.calendar-row .day-number {
+	background-color: #15528F;
+	color: #fff;
+}
+
+.today .day-number .number, .today .day-number .month, .today .day-number .day {
+	color: #8dbeee;
+}
+
+.odd .calendar-show {
 	background-color: #333;
 }
-table.cal-even {
+
+.even .calendar-show {
 	background-color: #3d3d3d;
 }
-.calendarShow .text .airtime {
-	color:#fff
+
+.calendar-row .poster img {
+	border: 1px solid #111;
 }
-.calendarShow .text .episode-title {
-	color:#aaa
+
+.calendar-row .text .airtime,
+.calendar-row .text .episode-title {
+	color: #fff;
 }
 
 /* =======================================================================
