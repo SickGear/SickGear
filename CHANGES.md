@@ -1,4 +1,6 @@
 ### 0.x.x (2014-11-xx xx:xx:xx UTC)
+Add "Sync watch state" setting to the Config/Notifications/Social tab
+Add output of the Trakt watched state to the CMD_ShowSeasons() API endpoint
 
 * Fix searches freezing due to unescaped ignored or required words
 * Add failed database to unit tests tear down function

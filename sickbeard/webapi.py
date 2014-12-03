@@ -2343,8 +2343,8 @@ class CMD_ShowSeasons(ApiCall):
         myDB = db.DBConnection(row_type="dict")
 
         if self.season == None:
-            sqlResults = myDB.select("SELECT name, episode, airdate, status, season FROM tv_episodes WHERE showid = ?",
-                                     [self.indexerid])
+            sqlResults = myDB.select("SELECT name, episode, airdate, status, season, trakt_watched FROM tv_episodes "
+                                     "WHERE showid = ?", [self.indexerid])
             seasons = {}
             for row in sqlResults:
                 status, quality = Quality.splitCompositeStatus(int(row["status"]))
@@ -2362,7 +2362,7 @@ class CMD_ShowSeasons(ApiCall):
 
         else:
             sqlResults = myDB.select(
-                "SELECT name, episode, airdate, status FROM tv_episodes WHERE showid = ? AND season = ?",
+                "SELECT name, episode, airdate, status, trakt_watched FROM tv_episodes WHERE showid = ? AND season = ?",
                 [self.indexerid, self.season])
             if len(sqlResults) is 0:
                 return _responds(RESULT_FAILURE, msg="Season not found")

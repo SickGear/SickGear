@@ -1401,6 +1401,15 @@
                                     </label>
                                 </div>
                             </div>
+                            <div class="field-pair">
+                                <label for="trakt_watch_states">
+                                    <span class="component-title">Sync watch state:</span>
+                                    <span class="component-desc">
+                                        <input type="checkbox" class="enabler" name="trakt_watch_states" id="trakt_watch_states" #if $sickbeard.TRAKT_WATCH_STATES then "checked=\"checked\"" else ""# />
+                                        <p>sync episode watch states</p>
+                                    </span>
+                                </label>
+                            </div>
                             <div class="testNotification" id="testTrakt-result">Click below to test.</div>
                             <input type="button" class="btn" value="Test Trakt" id="testTrakt" />
                             <input type="submit" class="btn config_submitter" value="Save Changes" />

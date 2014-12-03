@@ -21,6 +21,7 @@ import traceback
 import datetime
 
 import sickbeard
+from sickbeard import db
 from sickbeard import encodingKludge as ek
 from sickbeard import logger
 from sickbeard import helpers
@@ -49,6 +50,9 @@ class TraktChecker():
                 self.syncLibrary()
         except Exception:
             logger.log(traceback.format_exc(), logger.DEBUG)
+
+        if sickbeard.TRAKT_WATCH_STATES:
+            self.syncWatchStates()
 
     def findShow(self, indexer, indexerid):
         library = TraktCall("user/library/shows/all.json/%API%/" + sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
@@ -227,3 +231,44 @@ class TraktChecker():
         for episode in episodes:
             self.todoWanted.remove(episode)
             self.setEpisodeToWanted(show, episode[1], episode[2])
+
+    def syncWatchStates(self):
+    
+        logger.log('Beginning watch status sync', logger.DEBUG)
+
+        watchedlist = TraktCall('user/library/shows/watched.json/%API%/' + sickbeard.TRAKT_USERNAME + '/min',
+                                sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
+        if not watchedlist:
+            return
+
+        def build_dict(seq, key):
+            return dict((d[key], dict(d, index=index)) for (index, d) in enumerate(seq))
+
+        tvdb_dict = build_dict(watchedlist, key='tvdb_id')
+        tvrage_dict = build_dict(watchedlist, key='tvrage_id')
+        cl = []
+
+        for showObj in sickbeard.showList:
+            try:
+                if showObj.indexer == 1:
+                    temp = tvdb_dict[str(showObj.indexerid)]
+                elif showObj.indexer == 2:
+                    temp = tvrage_dict[str(showObj.indexerid)]
+                else:
+                    continue
+            except:
+                continue
+
+            for season in temp['seasons']:
+                    for episode in season['episodes']:
+                        cl.append(['UPDATE tv_episodes SET trakt_watched = 1 WHERE indexer = ? AND showid = ? AND'
+                                   ' season = ? AND episode = ?', [showObj.indexer, showObj.indexerid, season['season'],
+                                                                   episode]])
+        if len(cl) > 0:
+            myDB = db.DBConnection()
+            #wipe all the current watch states as people might have 'unwatched' a show on trakt
+            myDB.action('UPDATE tv_episodes SET trakt_watched = 0')
+            myDB.mass_action(cl)
+            logger.log('Watch state update successful', logger.DEBUG)
+        else:
+            logger.log('Watch state update unsuccessful', logger.DEBUG)
