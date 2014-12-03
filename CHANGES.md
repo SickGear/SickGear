@@ -7,6 +7,7 @@
 * Add TVRage network name standardization
 * Change some provider images. Add a few new images
 * Remove redundant Coming Eps template code used in the old UI
+* Change update plex notifier (port from SickBeard)
 
 [develop changelog]
 
