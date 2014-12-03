@@ -159,7 +159,7 @@
                     <div class="component-group-desc">
                         <img class="notifier-icon" src="$sbRoot/images/notifiers/plex.png" alt="" title="Plex Media Server" />
                         <h3><a href="<%= anon_url('http://www.plexapp.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Plex Media Server</a></h3>
-                        <p>Experience your media on a visually stunning, easy to use interface on your Mac connected to your TV. Your media library has never looked this good!</p>
+                        <p>Plex organizes all of your personal media, wherever you keep it, so you can enjoy it on any device</p>
                         <p class="plexinfo hide">For sending notifications to Plex Home Theater (PHT) clients, use the XBMC notifier with port <b>3005</b>.</p>
                     </div>
                     <fieldset class="component-group-list">
@@ -222,12 +222,12 @@
                             </div>
                             <div class="field-pair">
                                 <label for="plex_host">
-                                    <span class="component-title">Plex Client IP:Port</span>
+                                    <span class="component-title">Plex client IP:Port</span>
                                     <input type="text" name="plex_host" id="plex_host" value="$sickbeard.PLEX_HOST" class="form-control input-sm input350" />
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
-                                    <span class="component-desc">host running Plex Client (eg. 192.168.1.100:3000)</span>
+                                    <span class="component-desc">host running Plex client (eg. 192.168.1.100:3000)</span>
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
@@ -236,22 +236,22 @@
                             </div>
                             <div class="field-pair">
                                 <label for="plex_username">
-                                    <span class="component-title">Plex Client username</span>
+                                    <span class="component-title">Plex client username</span>
                                     <input type="text" name="plex_username" id="plex_username" value="$sickbeard.PLEX_USERNAME" class="form-control input-sm input250" />
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
-                                    <span class="component-desc">username for your Plex client API (blank for none)</span>
+                                    <span class="component-desc">needed if your client / server requires authentication (blank for none)</span>
                                 </label>
                             </div>
                             <div class="field-pair">
                                 <label for="plex_password">
-                                    <span class="component-title">Plex Client password</span>
+                                    <span class="component-title">Plex client password</span>
                                     <input type="password" name="plex_password" id="plex_password" value="$sickbeard.PLEX_PASSWORD" class="form-control input-sm input250" />
                                 </label>
                                 <label>
                                     <span class="component-title">&nbsp;</span>
-                                    <span class="component-desc">password for your Plex client API (blank for none)</span>
+                                    <span class="component-desc">needed if your client / server requires authentication (blank for none)</span>
                                 </label>
                             </div>
                             <div class="testNotification" id="testPLEX-result">Click below to test.</div>
