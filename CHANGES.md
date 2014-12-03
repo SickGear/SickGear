@@ -6,11 +6,12 @@
 * Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
 * Add TVRage network name standardization
 * Change some provider images. Add a few new images
+* Change updated plex notifier (ported from SickBeard)
 
 [develop changelog]
 
 
-### 0.4.0 (2014-11-26 13:30:00 UTC)
+### 0.4.0 (2014-11-27 03:30:00 UTC)
 
 * Change footer stats to not add newlines when copy/pasting from them
 * Remove redundant references from Config/Help & Info
@@ -62,6 +63,7 @@
 * Fix reduces time API endpoint Shows takes to return results
 * Fix Coming Eps Page to include shows +/- 1 day for time zone corrections
 * Fix season jumping dropdown menu for shows with over 15 seasons on Display Show
+* Fix article sorting for Coming Eps, Manage, Show List, and Trending Shows
 
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)
