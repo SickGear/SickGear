@@ -29,10 +29,19 @@
 	jQuery.each(\$container, function (j) {
 		this.isotope({
 			itemSelector: '.calendar-show',
-			sortBy : 'date',
+			sortBy : '$sickbeard.COMING_EPS_SORT',
 			layoutMode: 'vertical',
 			transitionDuration: 0,
 			getSortData: {
+				show: function( itemElem ) { 
+					var name = \$( itemElem ).attr('data-name');
+					#if not $sickbeard.SORT_ARTICLE:
+						return (name || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
+					#else:
+						return (name || '');
+					#end if	
+				},
+				network: '[data-network]',
 				date: function( itemElem ) {
 					var date = \$( itemElem ).attr('data-date');
 					return date.length && parseInt( date, 10 );
@@ -46,7 +55,15 @@
 			this.isotope('layout');
 		});
 	});
-	
+
+	\$('#sort').on( 'change', function() {
+		var sortValue = this.value;
+		jQuery.each(\$container, function (j) {
+			this.isotope({ sortBy: sortValue });
+		});
+		\$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
+	});
+
 });
 //-->
 </script>
@@ -72,6 +89,15 @@
 			<option value="$sbRoot/setComingEpsSort/?sort=date" #if 'date' == $sickbeard.COMING_EPS_SORT then 'selected="selected"' else ''#>Date</option>
 			<option value="$sbRoot/setComingEpsSort/?sort=network" #if 'network' == $sickbeard.COMING_EPS_SORT then 'selected="selected"' else ''#>Network</option>
 			<option value="$sbRoot/setComingEpsSort/?sort=show" #if 'show' == $sickbeard.COMING_EPS_SORT then 'selected="selected"' else ''#>Show</option>
+		</select>
+	</span>
+	&nbsp;
+#else
+	<span>Sort By:
+		<select name="sort" id="sort" class="form-control form-control-inline input-sm">
+			<option value="date" data-sort="$sbRoot/setComingEpsSort/?sort=date" #if 'date' == $sickbeard.COMING_EPS_SORT then 'selected="selected"' else ''#>Date</option>
+			<option value="network" data-sort="$sbRoot/setComingEpsSort/?sort=network" #if 'network' == $sickbeard.COMING_EPS_SORT then 'selected="selected"' else ''#>Network</option>
+			<option value="show" data-sort="$sbRoot/setComingEpsSort/?sort=show" #if 'show' == $sickbeard.COMING_EPS_SORT then 'selected="selected"' else ''#>Show</option>
 		</select>
 	</span>
 	&nbsp;
@@ -559,7 +585,7 @@
 					#set $airtime = re.sub(r'0(\d:\d\d)', r'\1', $airtime, 0, re.IGNORECASE | re.MULTILINE)
 				#end if
 
-				<div id="show-$cur_result['showid']" class="calendar-show" data-date="$time.mktime($cur_result['localtime'].timetuple())">
+				<div id="show-$cur_result['showid']" class="calendar-show" data-name="$cur_result['show_name']" data-network="$cur_result['network']" data-date="$time.mktime($cur_result['localtime'].timetuple())">
 					<div class="poster">
 						<a title="${cur_result['show_name']}" href="$sbRoot/home/displayShow?show=${cur_result['showid']}"><img class="img-responsive" alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=poster_thumb" /></a>
 					</div>
