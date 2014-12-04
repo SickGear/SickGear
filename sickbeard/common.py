@@ -22,6 +22,9 @@ import platform
 import re
 import uuid
 
+import logger
+import sickbeard
+
 INSTANCE_ID = str(uuid.uuid1())
 USER_AGENT = ('SickGear/(' + platform.system() + '; ' + platform.release() + '; ' + INSTANCE_ID + ')')
 
@@ -202,6 +205,10 @@ class Quality:
                 return Quality.HDBLURAY
             elif blueRayOptions and fullHD and not hdOptions:
                 return Quality.FULLHDBLURAY
+            elif sickbeard.ANIME_TREAT_AS_HDTV:
+                logger.log(u'Treating file: ' + name + ' with "unknown" quality as HDTV per user settings',
+                           logger.DEBUG)
+                return Quality.HDTV
             else:
                 return Quality.UNKNOWN
 

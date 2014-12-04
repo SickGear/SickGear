@@ -1,6 +1,5 @@
 $(function () {
-    $('.title a').each(function () {
-        match = $(this).parent().attr("id").match(/^scene_exception_(\d+)$/);
+    $('.title span').each(function () {
         $(this).qtip({
             content: {
                 text: 'Loading...',
@@ -20,11 +19,11 @@ $(function () {
             },
             position: {
                 viewport: $(window),
-                my: 'bottom center',
-                at: 'top center',
+                my: 'left middle',
+                at: 'right middle',
                 adjust: {
-                    y: 10,
-                    x: 0
+                    y: 0,
+                    x: 10
                 }
             },
             style: {

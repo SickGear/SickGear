@@ -82,7 +82,7 @@
         if (0 == s.indexOf('Loading...'))
             return s.replace('Loading...', '000')
 #if not $sickbeard.SORT_ARTICLE:
-            return (s || '').replace(/^(The|A|An)\s/i, '')
+            return (s || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1')
 #else:
             return (s || '')
 #end if
@@ -359,10 +359,10 @@
                 #set $too_late_header = True
                 #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date():
                     #if $cur_ep_airdate == $today.date():
-						<br /><h2 class="day">$datetime.date.fromordinal($cur_ep_airdate.toordinal).strftime('%A').decode($sickbeard.SYS_ENCODING).capitalize() <span style="font-size: 14px; vertical-align: top;">[Today]</span></h2>
+						<br /><h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize() <span style="font-size: 14px; vertical-align: top;">[Today]</span></h2>
 					#set $today_header = True
                     #else:
-						<br /><h2 class="day">$datetime.date.fromordinal($cur_ep_airdate.toordinal).strftime('%A').decode($sickbeard.SYS_ENCODING).capitalize()</h2>
+						<br /><h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize()</h2>
                     #end if
                 #end if
             #end if
@@ -371,10 +371,11 @@
 
         #if $cur_ep_airdate == $today.date() and not $today_header:
 			<div class="comingepheader">
-			<br /><h2 class="day">$datetime.date.fromordinal($cur_ep_airdate.toordinal).strftime('%A').decode($sickbeard.SYS_ENCODING).capitalize() <span style="font-size: 14px; vertical-align: top;">[Today]</span></h2>
+			<br /><h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize() <span style="font-size: 14px; vertical-align: top;">[Today]</span></h2>
             #set $today_header = True
         #end if
         #if $runtime:
+            #set $cur_ep_enddate = $cur_result['localtime'] + datetime.timedelta(minutes = $runtime)
             #if $cur_ep_enddate < $today:
                 #set $show_div = 'ep_listing listing-overdue'
             #elif $cur_ep_airdate >= $next_week.date():
@@ -489,7 +490,7 @@
     #for $day in $dates
     #set $tbl_day += 1
 		<table class="sickbeardTable tablesorter calendarTable <%= 'cal-%s' % (('even', 'odd')[1 == tbl_day % 2]) %>" cellspacing="0" border="0" cellpadding="0">
-		<thead><tr><th>$day.strftime('%A').decode($sickbeard.SYS_ENCODING).capitalize()</th></tr></thead>
+		<thead><tr><th>$sbdatetime.sbdatetime.sbfdate($day, '%A').decode($sickbeard.SYS_ENCODING).capitalize()</th></tr></thead>
 		<tbody>
         #set $day_has_show = False
         #for $cur_result in $sql_results:
@@ -503,7 +504,7 @@
 
             #if $airday == $day:
                 #set $day_has_show = True
-                #set $airtime = $sbdatetime.sbdatetime.fromtimestamp($time.mktime($cur_result['localtime'].timetuple())).sbftime().decode($sickbeard.SYS_ENCODING)
+                #set $airtime = $sbdatetime.sbdatetime.sbftime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)
                 #if $sickbeard.TRIM_ZERO:
                 #set $airtime = re.sub(r'0(\d:\d\d)', r'\1', $airtime, 0, re.IGNORECASE | re.MULTILINE)
                 #end if

@@ -1,6 +1,62 @@
+### 0.4.0 (2014-12-04 10:50:00 UTC)
+
+* Change footer stats to not add newlines when copy/pasting from them
+* Remove redundant references from Config/Help & Info
+* Fix poster preview on small poster layout
+* Change overhaul Config/Anime to be in line with General Configuration
+* Change descriptions and layout on Config/Anime page
+* Remove output of source code line when warnings highlight libraries not used with IMDb
+* Add dropdown on Add Trending Shows to display all shows, shows not in library, or shows in library
+* Change Help and Info icon sprites to color and text of Arguments if unused
+* Change sharper looking heart image on the Add Show page
+* Change Add Show on Add Trending Show page to use the full Add New Show flow
+* Fix adding shows with titles that contain "&" on Add Trending Show page
+* Fix unset vars on Add New Shows page used in the Add Existing Shows context
+* Remove unneeded datetime convert from Coming Episodes page
+* Fix the log output of the limited backlog search for episodes missed
+* Remove unsupported t411 search provider
+* Remove obsolete Animezb search provider
+* Add option to treat anime releases that lack a quality tag as HDTV instead of "unknown"
+* Remove old version checking code that no longer applies to SickGear's release system
+* Fix pnotify notifications going full page
+* Change overhaul Config Post Processing to be in line with General Configuration
+* Change rearrange Config Post Processing items into sections for easier use
+* Fix CSS overriding link colors on config pages
+* Change Config Post Processing texts and descriptions throughout
+* Fix Config Post Processing info icons in "Naming Legends"
+* Change Config Post Processing naming sample lines to be more available
+* Add Config Post Processing failed downloads Sabnzbd setup guide
+* Fix Config Post Processing "Anime name pattern" custom javascript validation
+* Add check that SSLv3 is available before use by requests lib
+* Update Requests library 2.3.0 to 2.4.3 (9dc6602)
+* Change suppress HTTPS verification InsecureRequestWarning as many sites use self-certified certificates
+* Fix API endpoint Episode.SetStatus to "Wanted"
+* Change airdateModifyStamp to handle hour that is "00:00"
+* Fix a handler when ShowData is not available in TVDB and TVRage APIs
+* Fix a handler when EpisodeData is not available in TVDB and TVRage APIs
+* Add TVRage "Canceled/Ended" as "Ended" status to sort on Simple Layout of Show List page
+* Fix qtips on Display Show and Config Post Processing
+* Fix glitch above rating stars on Display Show page
+* Change overhaul Config/Search Providers
+* Change Config/Search Providers texts and descriptions
+* Fix display when no providers are visible on Config/Search Providers
+* Fix failing "Search Settings" link that is shown on Config/Search Providers when Torrents Search is not enabled
+* Fix failing "Providers" link on Config/Search Settings/Episode Search
+* Change case of labels in General Config/Interface/Timezone
+* Split enabled from not enabled providers in the Configure Provider drop down on the Providers Options tab
+* Fix typo on General Config/Misc
+* Fix Add Trending Shows "Not In library" now filters tvrage added shows
+* Add a hover over text "In library" on Add Trending Shows to display tv database show was added from
+* Fix reduces time API endpoint Shows takes to return results
+* Fix Coming Eps Page to include shows +/- 1 day for time zone corrections
+* Fix season jumping dropdown menu for shows with over 15 seasons on Display Show
+* Fix article sorting for Coming Eps, Manage, Show List, Display Show, API, and Trending Shows pages
+
+
 ### 0.3.1 (2014-11-19 16:40:00 UTC)
 
 * Fix failing travis test
+
 
 ### 0.3.0 (2014-11-12 14:30:00 UTC)
 

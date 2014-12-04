@@ -82,7 +82,7 @@
 	<div class="clearfix"></div>
 
 	<div id="showtitle" data-showname="$show.name">
-		<h1 class="title" id="scene_exception_$show.indexerid">$show.name</h1>
+		<h1 class="title" id="scene_exception_$show.indexerid"><span>$show.name</span></h1>
 	</div>
 
 	
@@ -163,17 +163,17 @@
 #else
     #if 'country_codes' in $show.imdb_info:
         #for $country in $show.imdb_info['country_codes'].split('|')
-				<img src="$sbRoot/images/flags/${$country}.png" width="16" height="11" style="margin-left: 3px; vertical-align:middle;" />
+				<img class="flag" src="$sbRoot/images/flags/${$country}.png" width="16" height="11" />
         #end for
     #end if
     #if 'year' in $show.imdb_info:
-				<span>($show.imdb_info['year']) - $show.imdb_info['runtimes'] minutes - </span>
+				<span class="imdb-info">($show.imdb_info['year']) - $show.imdb_info['runtimes'] minutes</span>
     #end if
-				<a href="<%= anon_url('http://www.imdb.com/title/', _show.imdbid) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="http://www.imdb.com/title/$show.imdbid"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" style="margin-top: -1px; vertical-align:middle;"/></a>
+				<a class="service" href="<%= anon_url('http://www.imdb.com/title/', _show.imdbid) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="http://www.imdb.com/title/$show.imdbid"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" /></a>
 #end if
-				<a href="<%= anon_url(sickbeard.indexerApi(_show.indexer).config['show_url'], _show.indexerid) %>" onclick="window.open(this.href, '_blank'); return false;" title="$sickbeard.indexerApi($show.indexer).config["show_url"]$show.indexerid"><img alt="$sickbeard.indexerApi($show.indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($show.indexer).config["icon"] "style="margin-top: -1px; vertical-align:middle;"/></a>
+				<a class="service" href="<%= anon_url(sickbeard.indexerApi(_show.indexer).config['show_url'], _show.indexerid) %>" onclick="window.open(this.href, '_blank'); return false;" title="$sickbeard.indexerApi($show.indexer).config['show_url']$show.indexerid"><img alt="$sickbeard.indexerApi($show.indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($show.indexer).config['icon']" /></a>
 #if $xem_numbering or $xem_absolute_numbering:
-				<a href="<%= anon_url('http://thexem.de/search?q=', _show.name) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="http://thexem.de/search?q-$show.name"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" style="margin-top: -1px; vertical-align:middle;"/></a>
+				<a class="service" href="<%= anon_url('http://thexem.de/search?q=', _show.name) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="http://thexem.de/search?q-$show.name"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" /></a>
 #end if
 			</div>
 
@@ -349,7 +349,7 @@
 		#end if
 
 		#if int($epResult["season"]) != $curSeason:
-		    <tr>
+			<tr id="season-$epResult['season']">
 				<th class="row-seasonheader" colspan="13" style="width: auto;"><h3><a name="season-$epResult["season"]"></a>#if int($epResult["season"]) == 0 then "Specials" else "Season " + str($epResult["season"])#</h3></th>
 			</tr>
 			

@@ -52,6 +52,7 @@ from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStri
 from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
+from sickbeard.helpers import remove_article
 from sickbeard.scene_exceptions import get_scene_exceptions
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
@@ -350,42 +351,67 @@ class MainHandler(RequestHandler):
         redirect("/comingEpisodes/")
 
     def comingEpisodes(self, layout="None"):
-
-        today1 = datetime.date.today()
-        today = today1.toordinal()
-        next_week1 = (datetime.date.today() + datetime.timedelta(days=7))
-        next_week = next_week1.toordinal()
-        recently = (datetime.date.today() - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
+        """ display the coming episodes """
+        today_dt = datetime.date.today()
+        #today = today_dt.toordinal()
+        yesterday_dt = today_dt - datetime.timedelta(days=1)
+        yesterday = yesterday_dt.toordinal()
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
+        next_week_dt = (datetime.date.today() + datetime.timedelta(days=7))
+        next_week = (next_week_dt + datetime.timedelta(days=1)).toordinal()
+        if not (layout and layout in ('calendar')) and not (sickbeard.COMING_EPS_LAYOUT and sickbeard.COMING_EPS_LAYOUT in ('calendar')):
+            recently = (yesterday_dt - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
+        else:
+            recently = yesterday
 
         done_show_list = []
         qualList = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
 
         myDB = db.DBConnection()
         sql_results = myDB.select(
-            "SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND airdate >= ? AND airdate < ? AND tv_shows.indexer_id = tv_episodes.showid AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [today, next_week] + qualList)
+            "SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND airdate >= ? AND airdate <= ? AND tv_shows.indexer_id = tv_episodes.showid AND tv_episodes.status NOT IN (" + ','.join(
+                ['?'] * len(qualList)) + ")", [yesterday, next_week] + qualList)
 
         for cur_result in sql_results:
             done_show_list.append(int(cur_result["showid"]))
 
-        more_sql_results = myDB.select(
-            "SELECT *, tv_shows.status as show_status FROM tv_episodes outer_eps, tv_shows WHERE season != 0 AND showid NOT IN (" + ','.join(
-                ['?'] * len(
-                    done_show_list)) + ") AND tv_shows.indexer_id = outer_eps.showid AND airdate = (SELECT airdate FROM tv_episodes inner_eps WHERE inner_eps.season != 0 AND inner_eps.showid = outer_eps.showid AND inner_eps.airdate >= ? ORDER BY inner_eps.airdate ASC LIMIT 1) AND outer_eps.status NOT IN (" + ','.join(
-                ['?'] * len(Quality.DOWNLOADED + Quality.SNATCHED)) + ")",
-            done_show_list + [next_week] + Quality.DOWNLOADED + Quality.SNATCHED)
-        sql_results += more_sql_results
+        if not (layout and layout in ('calendar')) and not (sickbeard.COMING_EPS_LAYOUT and sickbeard.COMING_EPS_LAYOUT in ('calendar')):
+            more_sql_results = myDB.select(
+                "SELECT *, tv_shows.status as show_status FROM tv_episodes outer_eps, tv_shows WHERE season != 0 AND showid NOT IN (" + ','.join(
+                    ['?'] * len(
+                        done_show_list)) + ") AND tv_shows.indexer_id = outer_eps.showid AND airdate = (SELECT airdate FROM tv_episodes inner_eps WHERE inner_eps.season != 0 AND inner_eps.showid = outer_eps.showid AND inner_eps.airdate >= ? ORDER BY inner_eps.airdate ASC LIMIT 1) AND outer_eps.status NOT IN (" + ','.join(
+                    ['?'] * len(Quality.DOWNLOADED + Quality.SNATCHED)) + ")",
+                done_show_list + [next_week] + Quality.DOWNLOADED + Quality.SNATCHED)
+            sql_results += more_sql_results
 
         more_sql_results = myDB.select(
-            "SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate < ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [today, recently, WANTED] + qualList)
+            "SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate <= ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (" + ','.join(
+                ['?'] * len(qualList)) + ")", [tomorrow, recently, WANTED] + qualList)
         sql_results += more_sql_results
 
-        # sort by localtime
+        sql_results = list(set(sql_results))
+
+        # multi dimension sort
         sorts = {
-            'date': (lambda x, y: cmp(x["localtime"], y["localtime"])),
-            'show': (lambda a, b: cmp((a["show_name"], a["localtime"]), (b["show_name"], b["localtime"]))),
-            'network': (lambda a, b: cmp((a["network"], a["localtime"]), (b["network"], b["localtime"]))),
+            'date': (lambda a, b: cmp(
+                (a['localtime'],
+                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['season'], a['episode']),
+                (b['localtime'],
+                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['season'], b['episode']))),
+            'show': (lambda a, b: cmp(
+                ((a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['localtime'], a['season'], a['episode']),
+                ((b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['localtime'], b['season'], b['episode']))),
+            'network': (lambda a, b: cmp(
+                (a['network'], a['localtime'],
+                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
+                 a['season'], a['episode']),
+                (b['network'], b['localtime'],
+                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
+                 b['season'], b['episode'])))
         }
 
         # make a dict out of the sql results
@@ -418,8 +444,8 @@ class MainHandler(RequestHandler):
             paused_item,
         ]
 
-        t.next_week = datetime.datetime.combine(next_week1, datetime.time(tzinfo=network_timezones.sb_timezone))
-        t.today = datetime.datetime.now().replace(tzinfo=network_timezones.sb_timezone)
+        t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
+        t.today = datetime.datetime.now(network_timezones.sb_timezone)
         t.sql_results = sql_results
 
         # Allow local overriding of layout parameter
@@ -2642,7 +2668,7 @@ class ConfigAnime(MainHandler):
 
 
     def saveAnime(self, use_anidb=None, anidb_username=None, anidb_password=None, anidb_use_mylist=None,
-                  split_home=None):
+                  split_home=None, anime_treat_as_hdtv=None):
 
         results = []
 
@@ -2651,6 +2677,7 @@ class ConfigAnime(MainHandler):
         sickbeard.ANIDB_PASSWORD = anidb_password
         sickbeard.ANIDB_USE_MYLIST = config.checkbox_to_value(anidb_use_mylist)
         sickbeard.ANIME_SPLIT_HOME = config.checkbox_to_value(split_home)
+        sickbeard.ANIME_TREAT_AS_HDTV = config.checkbox_to_value(anime_treat_as_hdtv)
 
         sickbeard.save_config()
 
@@ -2885,8 +2912,7 @@ class NewHomeAddShows(MainHandler):
 
         return _munge(t)
 
-
-    def newShow(self, show_to_add=None, other_shows=None):
+    def newShow(self, show_to_add=None, other_shows=None, use_show_name=None):
         """
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
@@ -2905,7 +2931,9 @@ class NewHomeAddShows(MainHandler):
         t.use_provided_info = use_provided_info
 
         # use the given show_dir for the indexer search if available
-        if not show_dir:
+        if use_show_name:
+            t.default_show_name = show_name
+        elif not show_dir:
             t.default_show_name = ''
         elif not show_name:
             t.default_show_name = ek.ek(os.path.basename, ek.ek(os.path.normpath, show_dir)).replace('.', ' ')
@@ -2988,11 +3016,21 @@ class NewHomeAddShows(MainHandler):
         t.submenu = HomeMenu()
 
         t.trending_shows = TraktCall("shows/trending.json/%API%", sickbeard.TRAKT_API_KEY)
-
+        t.trending_inlibrary = 0
         if None is not t.trending_shows:
             for item in t.trending_shows:
-                if helpers.findCertainShow(sickbeard.showList, int(item['tvdb_id'])):
-                    item['tvdb_id'] = u'ExistsInLibrary'
+                tvdbs = ['tvdb_id', 'tvrage_id']
+                for index, tvdb in enumerate(tvdbs):
+                    try:
+                        item[u'show_id'] = item[tvdb]
+                        tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
+                    except:
+                        continue
+                    # check tvshow indexer is not using the same id from another indexer
+                    if tvshow and (index + 1) == tvshow.indexer:
+                        item[u'show_id'] = u'%s:%s' % (tvshow.indexer, item[tvdb])
+                        t.trending_inlibrary += 1
+                        break
 
         return _munge(t)
 
@@ -3008,37 +3046,7 @@ class NewHomeAddShows(MainHandler):
     def addTraktShow(self, indexer_id, showName):
         if helpers.findCertainShow(sickbeard.showList, int(indexer_id)):
             return
-
-        if sickbeard.ROOT_DIRS:
-            root_dirs = sickbeard.ROOT_DIRS.split('|')
-            location = root_dirs[int(root_dirs[0]) + 1]
-        else:
-            location = None
-
-        if location:
-            show_dir = ek.ek(os.path.join, location, helpers.sanitizeFileName(showName))
-            dir_exists = helpers.makeDir(show_dir)
-            if not dir_exists:
-                logger.log(u"Unable to create the folder " + show_dir + ", can't add the show", logger.ERROR)
-                return
-            else:
-                helpers.chmodAsParent(show_dir)
-
-            sickbeard.showQueueScheduler.action.addShow(1, int(indexer_id), show_dir,
-                                                        default_status=sickbeard.STATUS_DEFAULT,
-                                                        quality=sickbeard.QUALITY_DEFAULT,
-                                                        flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT,
-                                                        subtitles=sickbeard.SUBTITLES_DEFAULT,
-                                                        anime=sickbeard.ANIME_DEFAULT,
-                                                        scene=sickbeard.SCENE_DEFAULT)
-
-            ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
-        else:
-            logger.log(u"There was an error creating the show, no root directory setting found", logger.ERROR)
-            return
-
-        # done adding show
-        redirect('/home/')
+        return self.newShow('|'.join(['', '', indexer_id, showName]), use_show_name=True)
 
     def addNewShow(self, whichSeries=None, indexerLang="en", rootDir=None, defaultStatus=None,
                    anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
@@ -3751,15 +3759,7 @@ class Home(MainHandler):
                 epCounts[curEpCat] += 1
 
         def titler(x):
-            if not x or sickbeard.SORT_ARTICLE:
-                return x
-            if x.lower().startswith('a '):
-                x = x[2:]
-            if x.lower().startswith('an '):
-                x = x[3:]
-            elif x.lower().startswith('the '):
-                x = x[4:]
-            return x
+            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
 
         if sickbeard.ANIME_SPLIT_HOME:
             shows = []

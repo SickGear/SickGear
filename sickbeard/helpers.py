@@ -62,7 +62,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard import notifiers
 from sickbeard import clients
 
-from cachecontrol import CacheControl, caches
+from lib.cachecontrol import CacheControl, caches
 from itertools import izip, cycle
 
 urllib._urlopener = classes.SickBeardURLopener()
@@ -667,9 +667,9 @@ def get_all_episodes_from_absolute_number(show, absolute_numbers, indexer_id=Non
 def sanitizeSceneName(name, ezrss=False):
     """
     Takes a show name and returns the "scenified" version of it.
-    
+
     ezrss: If true the scenified version will follow EZRSS's cracksmoker rules as best as possible
-    
+
     Returns: A string containing the scene version of the show name given.
     """
 
@@ -900,7 +900,7 @@ def md5_for_file(filename, block_size=2 ** 16):
 
 def get_lan_ip():
     """
-    Simple function to get LAN localhost_ip 
+    Simple function to get LAN localhost_ip
     http://stackoverflow.com/questions/11735821/python-get-localhost-ip
     """
 
@@ -970,7 +970,7 @@ By Pedro Jose Pereira Vieito <pvieito@gmail.com> (@pvieito)
 * The keys should be unique for each device
 
 To add a new encryption_version:
-  1) Code your new encryption_version        
+  1) Code your new encryption_version
   2) Update the last encryption_version available in webserve.py
   3) Remember to maintain old encryption versions and key generators for retrocompatibility
 """
@@ -1164,8 +1164,13 @@ def mapIndexersToShow(showObj):
 
     # for each mapped entry
     for curResult in sqlResults:
-        logger.log(u"Found indexer mapping in cache for show: " + showObj.name, logger.DEBUG)
-        mapped[int(curResult['mindexer'])] = int(curResult['mindexer_id'])
+        nlist = [i for i in curResult if None is not i]
+        # Check if its mapped with both tvdb and tvrage.
+        if 4 <= len(nlist):
+            logger.log(u"Found indexer mapping in cache for show: " + showObj.name, logger.DEBUG)
+            mapped[int(curResult['mindexer'])] = int(curResult['mindexer_id'])
+            break
+
     else:
         sql_l = []
         for indexer in sickbeard.indexerApi().indexers:
@@ -1423,3 +1428,6 @@ def get_size(start_path='.'):
             total_size += ek.ek(os.path.getsize, fp)
     return total_size
 
+
+def remove_article(text=''):
+    return re.sub(r'(?i)/^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)

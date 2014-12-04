@@ -29,7 +29,7 @@ except ImportError:
     import xml.etree.ElementTree as ElementTree
 
 from lib.dateutil.parser import parse
-from cachecontrol import CacheControl, caches
+from lib.cachecontrol import CacheControl, caches
 
 from tvrage_ui import BaseUI
 from tvrage_exceptions import (tvrage_error, tvrage_userabort, tvrage_shownotfound,
@@ -97,15 +97,12 @@ class ShowContainer(dict):
 
         #keep only the 100th latest results
         if time.time() - self._lastgc > 20:
-            tbd = self._stack[:-100]
-            i = 0
-            for o in tbd:
+            for o in self._stack[:-100]:
                 del self[o]
-                del self._stack[i]
-                i += 1
+                
+            self._stack = self._stack[-100:]
 
-            _lastgc = time.time()
-            del tbd
+            self._lastgc = time.time()
 
         super(ShowContainer, self).__setitem__(key, value)
 
@@ -604,6 +601,8 @@ class TVRage:
 
             self.config['params_epInfo']['sid'] = sid
             epsEt = self._getetsrc(self.config['url_epInfo'], self.config['params_epInfo'])
+            if 'episodelist' not in epsEt and 'season' not in epsEt['episodelist']:
+                return False
 
             seasons = epsEt['episodelist']['season']
             if not isinstance(seasons, list):
@@ -658,7 +657,7 @@ class TVRage:
             # Item is integer, treat as show id
             if key not in self.shows:
                 self._getShowData(key, True)
-            return self.shows[key]
+            return (None, self.shows[key])[key in self.shows]
 
         key = key.lower()
         self.config['searchterm'] = key

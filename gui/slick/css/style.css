@@ -199,6 +199,10 @@ inc_top.tmpl
 	background: #dcdcdc url("../css/lib/images/ui-bg_highlight-soft_75_dcdcdc_1x100.png") 50% top repeat-x; 
 }
 
+.ui-widget-content a {
+	text-decoration: none;
+}
+
 .ui-widget-header { 
 	background: #ffffff url("../css/lib/images/ui-bg_flat_0_ffffff_40x100.png") 50% 50% repeat-x; 
 }
@@ -967,8 +971,7 @@ displayShow.tmpl
 
 #posterCol {
 	float: left;
-	margin-right: 10px;
-	margin-bottom: 20px;
+	margin: 3px 10px 20px 0;
 }
 
 #showCol {
@@ -1015,23 +1018,34 @@ h1.title {
 }
 
 span.imdbstars {
-	display: inline-block; 
-	vertical-align: top;
+	display: inline-block;
+	margin: 0 3px 0 0;
+	vertical-align: baseline;
 	cursor: help;
-	margin-top: 4px;
 }
-
+span.imdbstars > * {
+	background-position: 0 0 !important;
+	max-width:120px;
+}
 span.imdbstars, span.imdbstars > * {
 	height: 12px;
-	background: url(../images/rating.png) 0 -12px repeat-x;
 	width: 120px;
 	display: inline-block;
-	vertical-align: top;
+	font-size:10px
 }
 
-span.imdbstars > * {
-	background-position: 0 0;
-	max-width:120px;
+#showinfo .flag {
+	margin: 0 3px 0 0;
+	vertical-align: baseline;
+}
+
+#showinfo .imdb-info {
+	margin: 0 3px 0 0;
+}
+
+#showinfo a.service {
+	margin: 0 3px 0 0;
+	font-size: 16px;
 }
 
 ul.tags {
@@ -1512,6 +1526,7 @@ config*.tmpl
 .component-group-desc{
 	float: left;
 	width: 250px;
+	padding-right: 10px;
 }
 
 .component-group-desc h3{
@@ -1519,7 +1534,6 @@ config*.tmpl
 }
 
 .component-group-desc p {
-	width: 90%;
 	margin: 10px 0;
 	color: #666;
 }
@@ -1530,7 +1544,7 @@ config*.tmpl
 
 #config div.field-pair select,
 #config div.field-pair input {
-	margin-right: 6px;
+	margin-right: 15px;
 }
 
 #config div.field-pair input {
@@ -1558,7 +1572,7 @@ config*.tmpl
 }
 
 #config label.space-right {
-	margin-right:10px
+	margin-right:20px
 }
 #config .metadataDiv {
 	display: none;
@@ -1598,16 +1612,56 @@ select .selected {
 	list-style-type: none;
 }
 
-#provider_order_list li, 
+#config.search_providers #core-component-group1 #provider_key h4 {
+	display: inline-block;
+	float: left;
+	margin: 0;
+}
+
+#config.search_providers #core-component-group1 #provider_key p {
+	margin: 0 0 20px 30px;
+}
+
+#config.search_providers #core-component-group1 .component-group-desc,
+#config.search_providers #provider_order_list,
+#config.search_providers #core-component-group1 #provider_key {
+	width: 300px
+}
+
+#config.search_providers #provider_order_list {
+	padding: 0;
+	float: left
+}
+
+#config.search_providers #provider_order_list,
+#config.search_providers #core-component-group1 .btn {
+	margin: 0 auto
+}
+
+#config.search_providers #core-component-group1 .btn {
+	display: block
+}
+
+#config.search_providers #core-component-group1 #provider_key {
+	float: right;
+	margin-bottom:25px
+}
+
+#provider_order_list li,
 #service_order_list li {
 	padding: 5px;
-	margin: 5px 0;
+	margin: 0 0 5px;
 	font-size: 14px;
 }
 
 #provider_order_list input, 
 #service_order_list input {
-	margin: 0px 2px;
+	margin: 0 5px 0 2px;
+	vertical-align: middle;
+}
+
+#provider_order_list a.imgLink {
+	margin-right: 3px
 }
 
 #config .tip_scale label span.component-title {
@@ -1631,38 +1685,50 @@ select .selected {
 }
 
 [class^="icon16-"], [class*=" icon16-"] {
-	background-image: url("../images/glyphicons-config-black.png");
-	background-position: -40px 0;
+	background-image: url("../images/glyphicons-config.png");
 	background-repeat: no-repeat;
 	display: inline-block;
 	height: 16px;
-	line-height: 16px;
 	vertical-align: text-top;
 	width: 16px;
+	margin-top: 1px;
 }
 
 .icon16-github {
 	background-position: 0 0;
 }
 .icon16-mirc {
-	background-position: -20px 0;
+	background-position: -26px 0;
 }
-.icon16-sb {
-	background-position: -40px 0;
+.icon16-sg {
+	background-position: -52px 0;
 }
 .icon16-web {
-	background-position: -60px 0;
+	background-position: -78px 0;
 }
 .icon16-win {
-	background-position: -80px 0;
+	background-position: -104px 0;
 }
 
 /* =======================================================================
 config_postProcessing.tmpl
 ========================================================================== */
 
+#config .episode-sample {
+	width: 240px;
+	margin-right: 10px;
+	border: 1px solid;
+}
+
+#config .episode-sample h3 {
+	margin: 10px;
+	font-size: 18px;
+	line-height: 24px;
+}
+
 #config div.example {
-	padding: 10px; background-color: #efefef;
+	padding: 10px;
+	border: 1px solid;
 }
 
 .Key {
@@ -1710,53 +1776,52 @@ div.metadata_options_wrapper {
 }
 
 div.metadata_example_wrapper {
-	float: right;
-	width: 325px;
+	margin-left: 220px;
+}
+
+div.metadata_options_wrapper h4,
+div.metadata_example_wrapper h4 {
+	margin: 0 0 10px;
 }
 
 div.metadata_options {
-	padding: 7px;
 	overflow: auto;
 	background: #f5f1e4;
 	border: 1px solid #ccc;
 }
 
 div.metadata_options label:hover {
-	color: #fff;
-	background-color: #57442b;
 	cursor: pointer;
 }
 
 div.metadata_options label {
-	display: block;
-	padding-left: 7px;
-	line-height: 20px;
 	color: #036;
 }
 
-div.metadata_example {
-	padding: 8px;
+div.metadata_example label {
+	cursor: pointer;
+	font-weight: 600;
 }
 
+div.metadata_options label,
 div.metadata_example label {
-	display: block;
 	line-height: 21px;
-	color: #000;
-	cursor: pointer;
+	display: block;
+	padding: 3px;
+	margin: 0px;
+}
+div.metadata_options input {
+	margin-right: 3px;
+	vertical-align: baseline;
 }
 
 div.metadataDiv .disabled {
-	color: #ccc;
+	font-weight: normal;
 }
 
 .notifier-icon {
 	float: left;
 	margin: 6px 4px 0px 0px;
-}
-
-.warning {
-	border-color: #F89406;
-	background: url("../images/warning16.png") no-repeat right 5px center #fff;
 }
 
 /* =======================================================================
@@ -2153,34 +2218,15 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 	font-size: 12px;
 	line-height: 16px;
 	*line-height: 20px;
-	color: #333333;
 	text-align: center;
-	text-shadow: 0 1px 1px rgba(255, 255, 255, 0.75);
 	vertical-align: middle;
 	cursor: pointer;
-	background-color: #f5f5f5;
-	*background-color: #e6e6e6;
-	background-image: -ms-linear-gradient(top, #ffffff, #e6e6e6);
-	background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#ffffff), to(#e6e6e6));
-	background-image: -webkit-linear-gradient(top, #ffffff, #e6e6e6);
-	background-image: -o-linear-gradient(top, #ffffff, #e6e6e6);
-	background-image: linear-gradient(top, #ffffff, #e6e6e6);
-	background-image: -moz-linear-gradient(top, #ffffff, #e6e6e6);
 	background-repeat: repeat-x;
-	border: 1px solid #cccccc;
 	*border: 0;
-	border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-	border-color: #e6e6e6 #e6e6e6 #bfbfbf;
-	border-bottom-color: #b3b3b3;
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
-	filter: progid:dximagetransform.microsoft.gradient(startColorstr='#ffffff', endColorstr='#e6e6e6', GradientType=0);
-	filter: progid:dximagetransform.microsoft.gradient(enabled=false);
 	*zoom: 1;
-	-webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
-	-moz-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btn:hover,
@@ -3007,16 +3053,37 @@ span.token-input-delete-token {
 	margin: 0 1px;
 }
 
+.boldest {font-weight: 900}
 .red-text {color:#d33}
 .clear-left {clear:left}
+.float-left {float:left}
 .nextline-block {display:block}
+
+#failed-guide,
+#failed-guide .title,
+#failed-guide li {margin:0; padding:0}
+#failed-guide .title {list-style-type: none}
+#failed-guide li {margin-left:15px}
+
+.icon-info-sign {
+	display: block;
+	width: 16px;
+	height: 16px;
+	margin: 2px 5px;
+	float: left;
+}
+
+.pp .component-group-list.right,
+.pp .field-pair.right {
+	margin: 0 0 0 250px;
+}
 
 .trakt-image {
 	display: block;
 	width: 100%;
 	height: 100%;
 	z-index: 0;
-	background-image: url(/images/poster-dark.jpg)
+	background-image: url(../images/poster-dark.jpg)
 }
 /* =======================================================================
 jquery.confirm.css
@@ -3028,7 +3095,7 @@ jquery.confirm.css
 	position: fixed;
 	top: 0;
 	left: 0;
-	background: url('../images/bg.gif');
+	background: url(../images/bg.gif);
 	background: -moz-linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)) repeat-x rgba(0,0,0,0.5);
 	background:-webkit-gradient(linear, 0% 0%, 0% 100%, from(rgba(0,0,0,0.5)), to(rgba(0,0,0,0.5))) repeat-x rgba(0,0,0,0.5);
 	z-index: 100000;
@@ -3056,13 +3123,13 @@ jquery.confirm.css
 	color: #fff;
 	margin: 0;
 	font-size: 22px;
-	text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.75);
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.75);
 }
 
 #confirmBox p {
 	padding-top: 20px;
 	color: #000;
-	text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.75);
+	text-shadow: 0 1px 1px rgba(255, 255, 255, 0.75);
 }
 
 #confirmButtons {
@@ -3118,10 +3185,10 @@ pnotify.css
 ========================================================================== */
 
 .ui-pnotify-sticker {
-    margin-top: -12px;
+	margin-top: -12px;
 }
 
 .ui-pnotify-closer {
-    margin-top: -12px;
-    margin-right: -10px;
+	margin-top: -12px;
+	margin-right: -10px;
 }
