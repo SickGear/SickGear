@@ -1396,17 +1396,30 @@ h2.day, h2.network {
 	vertical-align: middle;
 }
 
-table.cal-odd {
-	background-color: #ddd;
+.calendar-row .day-number {
+	background-color: #333;
+	color: #fff;
 }
-table.cal-even {
-	background-color: #d2d2d2;
+
+.today .day-number .number, .today .day-number .month, .today .day-number .day {
+	color: #c7db40;
 }
-.calendarShow .text .airtime {
-	color:#000
+
+.odd .calendar-show {
+	background-color: #F5F1E4;
 }
-.calendarShow .text .episode-title {
-	color:#888
+
+.even .calendar-show {
+	background-color: #DFDACF;
+}
+
+.calendar-row .poster img {
+	border: 1px solid #CCC;
+}
+
+.calendar-row .text .airtime,
+.calendar-row .text .episode-title {
+	color: #000;
 }
 
 /* =======================================================================
