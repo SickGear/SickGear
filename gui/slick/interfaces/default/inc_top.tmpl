@@ -252,5 +252,17 @@
 		</div>
 #end if
 
+#set $items = []
+#try
+    $items.append($topmenu)
+#except (NameError, NotFound):
+    #pass
+#end try
+#try
+    $items.append($layout)
+#except (NameError, NotFound):
+    #pass
+#end try
+#set $page_class = ('', ' class="%s"' % '_'.join($items).lower().replace(' ', '-'))[0 < len($items)]
 		<div id="contentWrapper">
-			<div id="content">
+			<div id="content"$page_class>

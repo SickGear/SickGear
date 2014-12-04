@@ -1,4 +1,4 @@
-### 0.x.x (2014-11-xx xx:xx:xx UTC)
+### 0.x.x (2014-12-xx xx:xx:xx UTC)
 
 * Fix searches freezing due to unescaped ignored or required words
 * Add failed database to unit tests tear down function
@@ -10,11 +10,12 @@
 * Change update Plex notifier (port from SickBeard)
 * Change Plex notifications to allow authenticated library updates (port from mmccurdy07/Sick-Beard)
 * Change Config/Notifications/Plex logo and description (adapted port from mmccurdy07/Sick-Beard)
+* Add ability for CSS/JS to target a specific page and layout
 
 [develop changelog]
 
 
-### 0.4.0 (2014-11-27 03:30:00 UTC)
+### 0.4.0 (2014-12-04 10:50:00 UTC)
 
 * Change footer stats to not add newlines when copy/pasting from them
 * Remove redundant references from Config/Help & Info
