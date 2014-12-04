@@ -126,15 +126,7 @@ class Api(webserve.MainHandler):
         t = webserve.PageTemplate(headers=self.request.headers, file="apiBuilder.tmpl")
 
         def titler(x):
-            if not x or sickbeard.SORT_ARTICLE:
-                return x
-            if x.lower().startswith('a '):
-                x = x[2:]
-            elif x.lower().startswith('an '):
-                x = x[3:]
-            elif x.lower().startswith('the '):
-                x = x[4:]
-            return x
+            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
 
         t.sortedShowList = sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))
 

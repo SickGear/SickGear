@@ -66,7 +66,7 @@
 * Fix reduces time API endpoint Shows takes to return results
 * Fix Coming Eps Page to include shows +/- 1 day for time zone corrections
 * Fix season jumping dropdown menu for shows with over 15 seasons on Display Show
-* Fix article sorting for Coming Eps, Manage, Show List, and Trending Shows
+* Fix article sorting for Coming Eps, Manage, Show List, Display Show, API, and Trending Shows pages
 
 
 ### 0.3.1 (2014-11-19 16:40:00 UTC)
