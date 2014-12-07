@@ -12,6 +12,7 @@
 * Change Config/Notifications/Plex logo and description (adapted port from mmccurdy07/Sick-Beard)
 * Add ability for CSS/JS to target a specific page and layout
 * Remove legacy sickbeard updater and build automation code
+* Add more debug logging to the network conversions update process
 
 [develop changelog]
 
