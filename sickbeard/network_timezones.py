@@ -26,6 +26,7 @@ from os.path import basename, join, isfile
 import os
 import re
 import datetime
+from exceptions import ex
 
 # regex to parse time (12/24 hour format)
 time_regex = re.compile(r'(\d{1,2})(([:.](\d{2,2}))? ?([PA][. ]? ?M)|[:.](\d{2,2}))\b', flags=re.IGNORECASE)
@@ -292,7 +293,7 @@ def standardize_network(network, country):
 
 
 def load_network_conversions():
-
+    logger.log(u'Updating network conversions table', logger.MESSAGE)
     conversions = []
 
     # network conversions are stored on github pages
@@ -310,8 +311,9 @@ def load_network_conversions():
             if not (tvdb_network and tvrage_network and tvrage_country):
                 continue
             conversions.append({'tvdb_network': tvdb_network, 'tvrage_network': tvrage_network, 'tvrage_country': tvrage_country})
-    except (IOError, OSError):
-        pass
+    except Exception, e:
+        logger.log(u'Failed to parse network conversions table from github: ' + ex(e), logger.WARNING)
+        return
 
     my_db = db.DBConnection('cache.db')
 
@@ -321,19 +323,25 @@ def load_network_conversions():
     # list of sql commands to update the network_conversions table
     cl = []
 
+    logger.log(u'Generating list of network conversions to be added', logger.DEBUG)
+
     for n_w in conversions:
         cl.append(['INSERT OR REPLACE INTO network_conversions (tvdb_network, tvrage_network, tvrage_country)'
                        'VALUES (?,?,?)', [n_w['tvdb_network'], n_w['tvrage_network'], n_w['tvrage_country']]])
         try:
             del old_d[n_w['tvdb_network']]
         except:
-            pass
+            continue
+
+    logger.log(u'Generating old network conversion records to be removed', logger.DEBUG)
 
     # remove deleted records
     if len(old_d) > 0:
         old_items = list(va for va in old_d)
         cl.append(['DELETE FROM network_conversions WHERE tvdb_network'
                    ' IN (%s)' % ','.join(['?'] * len(old_items)), old_items])
+
+    logger.log(u'Writing network conversion changes', logger.DEBUG)
 
     # change all network conversion info at once (much faster)
     if len(cl) > 0:
