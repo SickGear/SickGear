@@ -16,6 +16,7 @@
 * Fix startup code order and general re-factoring (adapted from midgetspy/Sick-Beard)
 * Add database migration code
 * Change KickassTorrents provider URLs
+* Fix missing Content-Type headers for posters and banners
 
 [develop changelog]
 * Add TVRage network name standardization

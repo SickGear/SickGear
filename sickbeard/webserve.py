@@ -61,6 +61,7 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 from browser import WebFileBrowser
+from mimetypes import MimeTypes
 
 from lib.dateutil import tz
 from lib.unrar2 import RarFile
@@ -234,7 +235,9 @@ class MainHandler(RequestHandler):
                     func = getattr(klass, 'index', None)
 
             if callable(func):
-                return func(**args)
+                out = func(**args)
+                self._headers = klass._headers
+                return out
 
         raise HTTPError(404)
 
@@ -264,7 +267,7 @@ class MainHandler(RequestHandler):
         else:
             default_image_name = 'banner.png'
 
-        default_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', default_image_name)
+        image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', default_image_name)
         if show and sickbeard.helpers.findCertainShow(sickbeard.showList, int(show)):
             cache_obj = image_cache.ImageCache()
 
@@ -279,10 +282,11 @@ class MainHandler(RequestHandler):
                 image_file_name = cache_obj.banner_thumb_path(show)
 
             if ek.ek(os.path.isfile, image_file_name):
-                with file(image_file_name, 'rb') as img:
-                    return img.read()
+                image_path = image_file_name
 
-        with file(default_image_path, 'rb') as img:
+        mime_type, encoding = MimeTypes().guess_type(image_path)
+        self.set_header('Content-Type', mime_type)
+        with file(image_path, 'rb') as img:
             return img.read()
 
     def setHomeLayout(self, layout):
