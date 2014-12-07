@@ -4,7 +4,6 @@
 * Add failed database to unit tests tear down function
 * Fix purging of database files in tear down function during unit tests
 * Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
-* Add TVRage network name standardization
 * Change some provider images. Add a few new images
 * Remove redundant Coming Eps template code used in the old UI
 * Change update Plex notifier (port from SickBeard)
@@ -14,6 +13,8 @@
 * Remove legacy sickbeard updater and build automation code
 
 [develop changelog]
+* Add TVRage network name standardization
+* Remove TVRage network name standardization
 
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)
