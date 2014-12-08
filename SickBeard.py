@@ -25,6 +25,7 @@ import signal
 import sys
 import shutil
 import subprocess
+import socket
 
 if sys.version_info < (2, 6):
     print "Sorry, requires Python 2.6 or 2.7."
@@ -226,13 +227,13 @@ class SickGear(object):
             if self.runAsDaemon:
                 pid_dir = os.path.dirname(self.PIDFILE)
                 if not os.access(pid_dir, os.F_OK):
-                    sys.exit("PID dir: " + pid_dir + " doesn't exist. Exiting.")
+                    sys.exit(u"PID dir: %s doesn't exist. Exiting." % pid_dir)
                 if not os.access(pid_dir, os.W_OK):
-                    sys.exit("PID dir: " + pid_dir + " must be writable (write permissions). Exiting.")
+                    sys.exit(u'PID dir: %s must be writable (write permissions). Exiting.' % pid_dir)
 
             else:
                 if self.consoleLogging:
-                    sys.stdout.write("Not running in daemon mode. PID file creation disabled.\n")
+                    print u'Not running in daemon mode. PID file creation disabled'
 
                 self.CREATEPID = False
 
@@ -244,34 +245,28 @@ class SickGear(object):
         if not os.access(sickbeard.DATA_DIR, os.F_OK):
             try:
                 os.makedirs(sickbeard.DATA_DIR, 0744)
-            except os.error, e:
-                raise SystemExit("Unable to create datadir '" + sickbeard.DATA_DIR + "'")
+            except os.error:
+                sys.exit(u'Unable to create data directory: %s + Exiting.' % sickbeard.DATA_DIR)
 
         # Make sure we can write to the data dir
         if not os.access(sickbeard.DATA_DIR, os.W_OK):
-            raise SystemExit("Datadir must be writeable '" + sickbeard.DATA_DIR + "'")
+            sys.exit(u'Data directory: %s must be writable (write permissions). Exiting.' % sickbeard.DATA_DIR)
 
         # Make sure we can write to the config file
         if not os.access(sickbeard.CONFIG_FILE, os.W_OK):
             if os.path.isfile(sickbeard.CONFIG_FILE):
-                raise SystemExit("Config file '" + sickbeard.CONFIG_FILE + "' must be writeable.")
+                sys.exit(u'Config file: %s must be writeable (write permissions). Exiting.' % sickbeard.CONFIG_FILE)
             elif not os.access(os.path.dirname(sickbeard.CONFIG_FILE), os.W_OK):
-                raise SystemExit(
-                    "Config file root dir '" + os.path.dirname(sickbeard.CONFIG_FILE) + "' must be writeable.")
-
-        # Check if we need to perform a restore first
-        restoreDir = os.path.join(sickbeard.DATA_DIR, 'restore')
-        if os.path.exists(restoreDir):
-            if self.restore(restoreDir, sickbeard.DATA_DIR):
-                logger.log(u"Restore successful...")
-            else:
-                logger.log(u"Restore FAILED!", logger.ERROR)
-
+                sys.exit(u'Config file directory: %s must be writeable (write permissions). Exiting'
+                         % os.path.dirname(sickbeard.CONFIG_FILE))
         os.chdir(sickbeard.DATA_DIR)
+
+        if self.consoleLogging:
+           print u'Starting up SickGear from %s' % sickbeard.CONFIG_FILE
 
         # Load the config and publish it to the sickbeard package
         if not os.path.isfile(sickbeard.CONFIG_FILE):
-            logger.log(u"Unable to find '" + sickbeard.CONFIG_FILE + "' , all settings will be default!", logger.ERROR)
+            print u'Unable to find "%s", all settings will be default!' % sickbeard.CONFIG_FILE
 
         sickbeard.CFG = ConfigObj(sickbeard.CONFIG_FILE)
 
@@ -279,15 +274,13 @@ class SickGear(object):
 
         if CUR_DB_VERSION > 0:
             if CUR_DB_VERSION < MIN_DB_VERSION:
-                raise SystemExit("Your database version (" + str(
-                    CUR_DB_VERSION) + ") is too old to migrate from with this version of SickGear (" + str(
-                    MIN_DB_VERSION) + ").\n" + \
-                                 "Upgrade using a previous version of SB first, or start with no database file to begin fresh.")
+                print u'Your database version (%s) is too old to migrate from with this version of SickGear' \
+                      % CUR_DB_VERSION
+                sys.exit(u'Upgrade using a previous version of SG first, or start with no database file to begin fresh')
             if CUR_DB_VERSION > MAX_DB_VERSION:
-                raise SystemExit("Your database version (" + str(
-                    CUR_DB_VERSION) + ") has been incremented past what this version of SickGear supports (" + str(
-                    MAX_DB_VERSION) + ").\n" + \
-                                 "If you have used other forks of SB, your database may be unusable due to their modifications.")
+                print u'Your database version (%s) has been incremented past what this version of SickGear supports' \
+                      % CUR_DB_VERSION
+                sys.exit(u'If you have used other forks of SB, your database may be unusable due to their modifications')
 
         # Initialize the config and our threads
         sickbeard.initialize(consoleLogging=self.consoleLogging)
@@ -297,9 +290,6 @@ class SickGear(object):
 
         # Get PID
         sickbeard.PID = os.getpid()
-
-        # Build from the DB to start with
-        self.loadShowsFromDB()
 
         if self.forcedPort:
             logger.log(u"Forcing web server to port " + str(self.forcedPort))
@@ -339,6 +329,11 @@ class SickGear(object):
 
         # start web server
         try:
+            # used to check if existing SG instances have been started
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind((self.web_options['host'], self.web_options['port']))
+            s.close()
+
             self.webserver = WebServer(self.web_options)
             self.webserver.start()
         except IOError:
@@ -349,8 +344,16 @@ class SickGear(object):
                 sickbeard.launchBrowser(self.startPort)
             os._exit(1)
 
-        if self.consoleLogging:
-            print "Starting up SickGear " + sickbeard.BRANCH + " from " + sickbeard.CONFIG_FILE
+        # Check if we need to perform a restore first
+        restoreDir = os.path.join(sickbeard.DATA_DIR, 'restore')
+        if os.path.exists(restoreDir):
+            if self.restore(restoreDir, sickbeard.DATA_DIR):
+                logger.log(u"Restore successful...")
+            else:
+                logger.log_error_and_exit(u"Restore FAILED!", logger.ERROR)
+
+        # Build from the DB to start with
+        self.loadShowsFromDB()
 
         # Fire up all our threads
         sickbeard.start()
