@@ -15,6 +15,7 @@
 * Fix garbled text appearing during startup in console
 * Fix startup code order and general re-factoring (adapted from midgetspy/Sick-Beard)
 * Add database migration code
+* Change KickassTorrents provider URLs
 
 [develop changelog]
 * Add TVRage network name standardization
