@@ -1452,7 +1452,6 @@ class History(MainHandler):
 
 ConfigMenu = [
     {'title': 'General', 'path': 'config/general/'},
-    {'title': 'Backup/Restore', 'path': 'config/backuprestore/'},
     {'title': 'Search Settings', 'path': 'config/search/'},
     {'title': 'Search Providers', 'path': 'config/providers/'},
     {'title': 'Subtitles Settings', 'path': 'config/subtitles/'},
@@ -1616,53 +1615,6 @@ class ConfigGeneral(MainHandler):
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
         redirect("/config/general/")
-
-
-class ConfigBackupRestore(MainHandler):
-    def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file="config_backuprestore.tmpl")
-        t.submenu = ConfigMenu
-        return _munge(t)
-
-    def backup(self, backupDir=None):
-
-        finalResult = ''
-
-        if backupDir:
-            source = [os.path.join(sickbeard.DATA_DIR, 'sickbeard.db'), sickbeard.CONFIG_FILE]
-            target = os.path.join(backupDir, 'SickGear-' + time.strftime('%Y%m%d%H%M%S') + '.zip')
-
-            if helpers.makeZip(source, target):
-                finalResult += "Successful backup to " + target
-            else:
-                finalResult += "Backup FAILED"
-        else:
-            finalResult += "You need to choose a folder to save your backup to!"
-
-        finalResult += "<br />\n"
-
-        return finalResult
-
-
-    def restore(self, backupFile=None):
-
-        finalResult = ''
-
-        if backupFile:
-            source = backupFile
-            target_dir = os.path.join(sickbeard.DATA_DIR, 'restore')
-
-            if helpers.extractZip(source, target_dir):
-                finalResult += "Successfully extracted restore files to " + target_dir
-                finalResult += "<br>Restart SickGear to complete the restore."
-            else:
-                finalResult += "Restore FAILED"
-        else:
-            finalResult += "You need to select a backup file to restore!"
-
-        finalResult += "<br />\n"
-
-        return finalResult
 
 
 class ConfigSearch(MainHandler):
@@ -2687,7 +2639,6 @@ class Config(MainHandler):
 
     # map class names to urls
     general = ConfigGeneral
-    backuprestore = ConfigBackupRestore
     search = ConfigSearch
     providers = ConfigProviders
     subtitles = ConfigSubtitles

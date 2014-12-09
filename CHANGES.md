@@ -17,6 +17,7 @@
 * Add database migration code
 * Change KickassTorrents provider URLs
 * Fix missing Content-Type headers for posters and banners
+* Remove config Backup & Restore
 
 [develop changelog]
 * Add TVRage network name standardization
