@@ -20,11 +20,11 @@
 from __future__ import with_statement
 
 import unittest
-
 import sqlite3
-
+import glob
 import sys
 import os.path
+
 sys.path.append(os.path.abspath('..'))
 sys.path.append(os.path.abspath('../lib'))
 
@@ -173,7 +173,7 @@ def setUp_test_db():
     """upgrades the db to the latest version
     """
     # upgrading the db
-    db.upgradeDatabase(db.DBConnection(), mainDB.InitialSchema)
+    db.MigrationCode(db.DBConnection())
 
     # fix up any db problems
     db.sanityCheckDatabase(db.DBConnection(), mainDB.MainSanityCheck)
@@ -191,8 +191,9 @@ def tearDown_test_db():
     """
     # uncomment next line so leave the db intact between test and at the end
     #return False
-    if os.path.exists(os.path.join(TESTDIR, TESTDBNAME)):
-        os.remove(os.path.join(TESTDIR, TESTDBNAME))
+
+    for filename in glob.glob(os.path.join(TESTDIR, TESTDBNAME) + '*'):
+        os.remove(filename)
     if os.path.exists(os.path.join(TESTDIR, TESTCACHEDBNAME)):
         os.remove(os.path.join(TESTDIR, TESTCACHEDBNAME))
     if os.path.exists(os.path.join(TESTDIR, TESTFAILEDDBNAME)):

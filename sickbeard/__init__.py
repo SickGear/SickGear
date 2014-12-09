@@ -1069,7 +1069,7 @@ def initialize(consoleLogging=True):
 
         # initialize the main SB database
         myDB = db.DBConnection()
-        db.upgradeDatabase(myDB, mainDB.InitialSchema)
+        db.MigrationCode(myDB)
 
         # initialize the cache database
         myDB = db.DBConnection('cache.db')

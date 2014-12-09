@@ -14,6 +14,7 @@
 * Fix multiple instances of SG being able to start
 * Fix garbled text appearing during startup in console
 * Fix startup code order and general re-factoring (adapted from midgetspy/Sick-Beard)
+* Add database migration code
 
 [develop changelog]
 * Add TVRage network name standardization
