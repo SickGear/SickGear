@@ -1429,4 +1429,4 @@ def get_size(start_path='.'):
     return total_size
 
 def remove_article(text=''):
-    return re.sub(r'(?i)/^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)
+    return re.sub(r'(?i)^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)
