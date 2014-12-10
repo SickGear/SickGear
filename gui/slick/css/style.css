@@ -167,12 +167,7 @@ inc_top.tmpl
 	background-image: url("../images/menu/menu-icons-white.png"); 
 }
 
-[class^="icon16-"], 
-[class*=" icon16-"] { 
-	background-image: url("../images/glyphicons-config.png");
-}
-
-.ui-autocomplete-loading { 
+.ui-autocomplete-loading {
 	background: white url("../images/loading16.gif") right center no-repeat; 
 }
 
@@ -1688,14 +1683,14 @@ select .selected {
 	border-top: 1px dotted #666666; 
 }
 
-[class^="icon16-"], [class*=" icon16-"] {
-	background-image: url("../images/glyphicons-config.png");
-	background-repeat: no-repeat;
-	display: inline-block;
+[class^="icon16-"],
+[class*=" icon16-"] {
+	background: url('../images/glyphicons-config.png') no-repeat;
+	display: block;
 	height: 16px;
-	vertical-align: text-top;
 	width: 16px;
-	margin-top: 1px;
+	float: left;
+	margin-right: 5px;
 }
 
 .icon16-github {

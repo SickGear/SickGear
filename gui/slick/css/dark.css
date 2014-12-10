@@ -171,11 +171,6 @@ inc_top.tmpl
 	background: url("../images/ico/favicon-16x16.png") 0 0 no-repeat;
 }
 
-[class^="icon16-"],
-[class*=" icon16-"] { 
-	background-image: url("../images/glyphicons-config.png");
-}
-
 .ui-autocomplete-loading {
 	background: white url("../images/loading16.gif") right center no-repeat; 
 }
@@ -1535,32 +1530,6 @@ select .selected {
 
 .infoTableSeperator { 
 	border-top: 1px dotted #666666; 
-}
-
-[class^="icon16-"], [class*=" icon16-"] {
-	background-image: url("../images/glyphicons-config.png");
-	background-repeat: no-repeat;
-	display: inline-block;
-	height: 16px;
-	vertical-align: text-top;
-	width: 16px;
-	margin-top: 1px;
-}
-
-.icon16-github {
-	background-position: 0 0;
-}
-.icon16-mirc {
-	background-position: -26px 0;
-}
-.icon16-sg {
-	background-position: -52px 0;
-}
-.icon16-web {
-	background-position: -78px 0;
-}
-.icon16-win {
-	background-position: -104px 0;
 }
 
 /* =======================================================================

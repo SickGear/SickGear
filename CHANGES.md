@@ -19,6 +19,7 @@
 * Fix missing Content-Type headers for posters and banners
 * Remove config Backup & Restore
 * Fix article removal for sorting on Display Show, and API pages
+* Fix visual positioning of sprites on Config page
 
 [develop changelog]
 * Add TVRage network name standardization
