@@ -15,15 +15,11 @@ $(function () {
 			at: 'center left',
             adjust: {
                 y: 0,
-                x: -6
+                x: -2
             }
         },
         style: {
-            tip: {
-                corner: true,
-                method: 'polygon'
-            },
-            classes: 'qtip-rounded qtip-shadow ui-tooltip-sb'
+            classes: 'qtip-rounded qtip-shadow'
         }
     });
 });

@@ -17,7 +17,7 @@ $(document).ready(function () {
                 } else {
                     $('#unpack').qtip('option', {
                         'content.text': 'Unrar Executable not found.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
 				    });
 					$('#unpack').qtip('toggle', true);
                     $('#unpack').css('background-color', '#FFFFDD');
@@ -56,21 +56,21 @@ $(document).ready(function () {
                 if (data == "invalid") {
                     $('#naming_pattern').qtip('option', {
                         'content.text': 'This pattern is invalid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_pattern').qtip('toggle', true);
                     $('#naming_pattern').css('background-color', '#FFDDDD');
                 } else if (data == "seasonfolders") {
                     $('#naming_pattern').qtip('option', {
                         'content.text': 'This pattern would be invalid without the folders, using it will force "Flatten" off for all shows.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_pattern').qtip('toggle', true);
                     $('#naming_pattern').css('background-color', '#FFFFDD');
                 } else {
                     $('#naming_pattern').qtip('option', {
                         'content.text': 'This pattern is valid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-green'
+                        'style.classes': 'qtip-green qtip-rounded qtip-shadow'
                     });
                     $('#naming_pattern').qtip('toggle', false);
                     $('#naming_pattern').css('background-color', '#FFFFFF');
@@ -97,21 +97,21 @@ $(document).ready(function () {
                 if (data == "invalid") {
                     $('#naming_abd_pattern').qtip('option', {
                         'content.text': 'This pattern is invalid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_abd_pattern').qtip('toggle', true);
                     $('#naming_abd_pattern').css('background-color', '#FFDDDD');
                 } else if (data == "seasonfolders") {
                     $('#naming_abd_pattern').qtip('option', {
                         'content.text': 'This pattern would be invalid without the folders, using it will force "Flatten" off for all shows.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_abd_pattern').qtip('toggle', true);
                     $('#naming_abd_pattern').css('background-color', '#FFFFDD');
                 } else {
                     $('#naming_abd_pattern').qtip('option', {
                         'content.text': 'This pattern is valid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-green'
+                        'style.classes': 'qtip-green qtip-rounded qtip-shadow'
                     });
                     $('#naming_abd_pattern').qtip('toggle', false);
                     $('#naming_abd_pattern').css('background-color', '#FFFFFF');
@@ -138,21 +138,21 @@ $(document).ready(function () {
                 if (data == "invalid") {
                     $('#naming_sports_pattern').qtip('option', {
                         'content.text': 'This pattern is invalid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_sports_pattern').qtip('toggle', true);
                     $('#naming_sports_pattern').css('background-color', '#FFDDDD');
                 } else if (data == "seasonfolders") {
                     $('#naming_sports_pattern').qtip('option', {
                         'content.text': 'This pattern would be invalid without the folders, using it will force "Flatten" off for all shows.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_sports_pattern').qtip('toggle', true);
                     $('#naming_sports_pattern').css('background-color', '#FFFFDD');
                 } else {
                     $('#naming_sports_pattern').qtip('option', {
                         'content.text': 'This pattern is valid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-green'
+                        'style.classes': 'qtip-green qtip-rounded qtip-shadow'
                     });
                     $('#naming_sports_pattern').qtip('toggle', false);
                     $('#naming_sports_pattern').css('background-color', '#FFFFFF');
@@ -179,21 +179,21 @@ $(document).ready(function () {
                 if (data == "invalid") {
                     $('#naming_sports_pattern').qtip('option', {
                         'content.text': 'This pattern is invalid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_sports_pattern').qtip('toggle', true);
                     $('#naming_sports_pattern').css('background-color', '#FFDDDD');
                 } else if (data == "seasonfolders") {
                     $('#naming_sports_pattern').qtip('option', {
                         'content.text': 'This pattern would be invalid without the folders, using it will force "Flatten" off for all shows.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_sports_pattern').qtip('toggle', true);
                     $('#naming_sports_pattern').css('background-color', '#FFFFDD');
                 } else {
                     $('#naming_sports_pattern').qtip('option', {
                         'content.text': 'This pattern is valid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-green'
+                        'style.classes': 'qtip-green qtip-rounded qtip-shadow'
                     });
                     $('#naming_sports_pattern').qtip('toggle', false);
                     $('#naming_sports_pattern').css('background-color', '#FFFFFF');
@@ -232,21 +232,21 @@ $(document).ready(function () {
                 if (data == "invalid") {
                     $('#naming_anime_pattern').qtip('option', {
                         'content.text': 'This pattern is invalid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_anime_pattern').qtip('toggle', true);
                     $('#naming_anime_pattern').css('background-color', '#FFDDDD');
                 } else if (data == "seasonfolders") {
                     $('#naming_anime_pattern').qtip('option', {
                         'content.text': 'This pattern would be invalid without the folders, using it will force "Flatten" off for all shows.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-red'
+                        'style.classes': 'qtip-red qtip-rounded qtip-shadow'
                     });
                     $('#naming_anime_pattern').qtip('toggle', true);
                     $('#naming_anime_pattern').css('background-color', '#FFFFDD');
                 } else {
                     $('#naming_anime_pattern').qtip('option', {
                         'content.text': 'This pattern is valid.',
-                        'style.classes': 'qtip-rounded qtip-shadow qtip-green'
+                        'style.classes': 'qtip-green qtip-rounded qtip-shadow'
                     });
                     $('#naming_anime_pattern').qtip('toggle', false);
                     $('#naming_anime_pattern').css('background-color', '#FFFFFF');
@@ -485,35 +485,27 @@ $(document).ready(function () {
     }
 
     $(this).refreshMetadataConfig(true);
-    $('img[title]').qtip( {
+    $('img[title]').qtip({
         position: {
             viewport: $(window),
-            at: 'bottom center',
-            my: 'top right'
+            my: 'top right',
+            at: 'bottom center'
         },
         style: {
-            tip: {
-                corner: true,
-                method: 'polygon'
-            },
-            classes: 'qtip-shadow qtip-dark'
+            classes: 'qtip-dark qtip-rounded qtip-shadow'
         }
     });
-    $('i[title]').qtip( {
+    $('i[title]').qtip({
         position: {
             viewport: $(window),
-            at: 'top center',
-            my: 'bottom center'
+            my: 'bottom center',
+            at: 'top center'
         },
         style: {
-            tip: {
-                corner: true,
-                method: 'polygon'
-            },
-            classes: 'qtip-rounded qtip-shadow ui-tooltip-sb'
+            classes: 'qtip-rounded qtip-shadow'
         }
     });
-    $('.custom-pattern,#unpack').qtip( {
+    $('.custom-pattern,#unpack').qtip({
         content: 'validating...',
         show: {
             event: false,
@@ -522,15 +514,11 @@ $(document).ready(function () {
         hide: false,
         position: {
             viewport: $(window),
-            at: 'center left',
-            my: 'center right'
+            my: 'right center',
+            at: 'left center'
         },
         style: {
-            tip: {
-                corner: true,
-                method: 'polygon'
-            },
-            classes: 'qtip-rounded qtip-shadow qtip-red'
+            classes: 'qtip-red qtip-rounded qtip-shadow'
         }
     });
 
