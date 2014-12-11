@@ -21,6 +21,7 @@
 * Fix article removal for sorting on Display Show, and API pages
 * Fix visual positioning of sprites on Config page
 * Fix missing navbar gradients for all browsers
+* Update qTip2 to v2.2.1
 
 [develop changelog]
 * Add TVRage network name standardization
