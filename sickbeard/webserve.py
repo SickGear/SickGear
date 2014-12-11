@@ -2810,7 +2810,7 @@ class NewHomeAddShows(MainHandler):
 
                 cur_dir = {
                     'dir': cur_path,
-                    'display_dir': '<b>' + ek.ek(os.path.dirname, cur_path) + os.sep + '</b>' + ek.ek(
+                    'display_dir': '<span class="filepath">' + ek.ek(os.path.dirname, cur_path) + os.sep + '</span>' + ek.ek(
                         os.path.basename,
                         cur_path),
                 }
@@ -2827,6 +2827,9 @@ class NewHomeAddShows(MainHandler):
 
                 indexer_id = show_name = indexer = None
                 for cur_provider in sickbeard.metadata_provider_dict.values():
+                    if indexer_id and show_name:
+                        continue
+
                     (indexer_id, show_name, indexer) = cur_provider.retrieveShowMetadata(cur_path)
 
                     # default to TVDB if indexer was not detected
@@ -2854,6 +2857,10 @@ class NewHomeAddShows(MainHandler):
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
         """
+        self.set_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.set_header('Pragma', 'no-cache')
+        self.set_header('Expires', '0')
+
         t = PageTemplate(headers=self.request.headers, file="home_newShow.tmpl")
         t.submenu = HomeMenu()
 
@@ -2899,6 +2906,10 @@ class NewHomeAddShows(MainHandler):
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
         """
+        self.set_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.set_header('Pragma', 'no-cache')
+        self.set_header('Expires', '0')
+
         t = PageTemplate(headers=self.request.headers, file="home_recommendedShows.tmpl")
         t.submenu = HomeMenu()
 
@@ -2920,11 +2931,21 @@ class NewHomeAddShows(MainHandler):
             return
 
         map(final_results.append,
-            ([int(show['tvdb_id'] or 0) if sickbeard.TRAKT_DEFAULT_INDEXER == 1 else int(show['tvdb_id'] or 0),
-              show['url'], show['title'], show['overview'],
-              datetime.date.fromtimestamp(int(show['first_aired']) / 1000.0).strftime('%Y%m%d')] for show in
-             recommendedlist if not helpers.findCertainShow(sickbeard.showList, indexerid=int(show['tvdb_id']))))
+            ([show['url'],
+              show['title'],
+              show['overview'],
+              sbdatetime.sbdatetime.sbfdate(datetime.date.fromtimestamp(int(show['first_aired']))),
+              sickbeard.indexerApi(1).name,
+              sickbeard.indexerApi(1).config['icon'],
+              int(show['tvdb_id'] or 0),
+              '%s%s' % (sickbeard.indexerApi(1).config['show_url'], int(show['tvdb_id'] or 0)),
+              sickbeard.indexerApi(2).name,
+              sickbeard.indexerApi(2).config['icon'],
+              int(show['tvrage_id'] or 0),
+              '%s%s' % (sickbeard.indexerApi(2).config['show_url'], int(show['tvrage_id'] or 0))
+             ] for show in recommendedlist if not helpers.findCertainShow(sickbeard.showList, indexerid=int(show['tvdb_id']))))
 
+        self.set_header('Content-Type', 'application/json')
         return json.dumps({'results': final_results})
 
     def addRecommendedShow(self, whichSeries=None, indexerLang="en", rootDir=None, defaultStatus=None,

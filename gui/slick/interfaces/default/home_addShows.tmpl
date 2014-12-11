@@ -1,16 +1,16 @@
 #import os.path
 #import urllib
 #import sickbeard
-#set global $title="Add Show"
-#set global $header="Add Show"
+#set global $title = 'Add Show'
+#set global $header = 'Add Show'
 
-#set global $sbPath="../.."
+#set global $sbPath = '../..'
 
-#set global $statpath="../.."#
-#set global $topmenu="home"#
+#set global $statpath = '../..'
+#set global $topmenu = 'home'
 #import os.path
 
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 #if $varExists('header') 
 	<h1 class="header">$header</h1>
@@ -18,46 +18,49 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<div id="addShowPortal">
+	<div id="addShowPortal">
 
-    <a href="$sbRoot/home/addShows/newShow/" id="btnNewShow" class="btn btn-large">
-        <div class="button"><div class="icon-addnewshow"></div></div>
-        <div class="buttontext">
-            <h3>Add New Show</h3>
-            <p>For shows that you haven't downloaded yet, this option finds a show on theTVDB.com and TVRage.com, creates a directory for its episodes, and adds it to SickGear.</p>
-        </div>
-    </a>
+		<a class="btn btn-large" href="$sbRoot/home/addShows/newShow/">
+			<div class="button"><div class="icon-addnewshow"></div></div>
+			<div class="buttontext">
+				<h3>Add New Show</h3>
+				<p>Search a TV database for a show to add. A new folder will be created for episodes</p>
+			</div>
+		</a>
 
-	<br/><br/>
-    <a href="$sbRoot/home/addShows/trendingShows/" id="btnNewShow" class="btn btn-large">
-        <div class="button"><div class="icon-addtrendingshow"></div></div>
-        <div class="buttontext">
-            <h3>Add Trending Show</h3>
-            <p>For shows that you haven't downloaded yet, this option lets you choose from a list of current trending shows with ratings to add, creates a directory for its episodes, and adds it to SickGear.</p>
-        </div>
-    </a>
+		<a class="btn btn-large" href="$sbRoot/home/addShows/trendingShows/">
+			<div class="button"><div class="icon-addtrendingshow"></div></div>
+			<div class="buttontext">
+				<h3>Add From Trending</h3>
+				<p>Browse a current trending show list to add from. A folder for episodes will be created</p>
+			</div>
+		</a>
 
-    <br/><br/>
-    #if $sickbeard.USE_TRAKT == True:
-	<a href="$sbRoot/home/addShows/recommendedShows/" id="btnNewShow" class="btn btn-large">
-        <div class="button"><div class="icon-addrecommendedshow"></div></div>
-        <div class="buttontext">
-            <h3>Add Recommended Shows</h3>
-            <p>For shows that you haven't downloaded yet, this option recommends shows to add based on your Trakt.tv show library, creates a directory for its episodes, and adds it to SickGear.</p>
-        </div>
-    </a>
+		<a class="btn btn-large" href="$sbRoot/home/addShows/existingShows/">
+			<div class="button"><div class="icon-addexistingshow"></div></div>
+			<div class="buttontext">
+				<h3>Add Existing Shows</h3>
+				<p>Scan parent folders for shows and episode metadata to import into SickGear</p>
+			</div>
+		</a>
 
-    <br/><br/>
-	#end if
-    <a href="$sbRoot/home/addShows/existingShows/" id="btnExistingShow" class="btn btn-large">
-        <div class="button"><div class="icon-addexistingshow"></div></div>
-        <div class="buttontext">
-            <h3>Add Existing Shows</h3>
-            <p>Use this option to add shows that already have a folder created on your hard drive. SickGear will scan your existing metadata/episodes and add the show accordingly.</p>
-        </div>
-    </a>
+#if True == $sickbeard.USE_TRAKT:
+		<a class="btn btn-large" href="$sbRoot/home/addShows/recommendedShows/">
+			<div class="button"><div class="icon-addrecommendedshow"></div></div>
+			<div class="buttontext">
+				<h3>Add Recommended</h3>
+				<p>Browse recommendations based on your Trakt.tv show library to add to SickGear</p>
+			</div>
+		</a>
+#else
+		<div class="buttontext" style="padding:10px 5px">
+			<p>There's more... unlock another button to browse<br />
+			recommended shows based on your Trakt.tv show<br />
+			library by enabling Trakt in Config/Notifications/Social</p>
+		</div>
+#end if
+	</div>
 
-</div>
+	<div style="clear:both">&nbsp;</div>
 
-
-#include $os.path.join($sickbeard.PROG_DIR,"gui/slick/interfaces/default/inc_bottom.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
