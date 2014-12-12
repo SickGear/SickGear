@@ -23,6 +23,7 @@
 * Fix missing navbar gradients for all browsers
 * Update qTip2 to v2.2.1
 * Overhaul all Add Show pages
+* Fix Display Show next/previous when show list is split
 
 [develop changelog]
 * Add TVRage network name standardization
