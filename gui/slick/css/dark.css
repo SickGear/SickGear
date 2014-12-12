@@ -2256,11 +2256,13 @@ pre {
 /* =======================================================================
 input sizing (for config pages)
 ========================================================================== */
+#pickShow optgroup,
 #editAProvider optgroup {
 	color: #eee;
 	background-color: rgb(51, 51, 51);
 }
 
+#pickShow optgroup option,
 #editAProvider optgroup option {
 	color: #222;
 	background-color: #fff;

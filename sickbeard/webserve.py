@@ -3729,6 +3729,12 @@ class Home(MainHandler):
                     shows.append(show)
             t.sortedShowLists = [["Shows", sorted(shows, lambda x, y: cmp(titler(x.name), titler(y.name)))],
                                  ["Anime", sorted(anime, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+
+            tvshows = []
+            for tvshow_types in t.sortedShowLists:
+                for tvshow in tvshow_types[1]:
+                    tvshows.append(tvshow.indexerid)
+            t.tvshow_id_csv = ','.join(str(x) for x in tvshows)
         else:
             t.sortedShowLists = [
                 ["Shows", sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
