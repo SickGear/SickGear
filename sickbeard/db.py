@@ -261,6 +261,14 @@ class DBConnection(object):
     def hasColumn(self, tableName, column):
         return column in self.tableInfo(tableName)
 
+    def hasIndex(self, tableName, index):
+        sqlResults = self.select('PRAGMA index_list([%s])' % tableName)
+        for result in sqlResults:
+            if result['name'] == index:
+                return True
+        return False
+
+
     def addColumn(self, table, column, type="NUMERIC", default=0):
         self.action("ALTER TABLE [%s] ADD %s %s" % (table, column, type))
         self.action("UPDATE [%s] SET %s = ?" % (table, column), (default,))
