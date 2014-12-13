@@ -26,6 +26,7 @@
 * Fix Display Show next/previous when show list is split
 * Change Display Show next/previous when show list is not split to loop around
 * Fix SQL statements that have dynamic table names to use proper syntax
+* Fix port checking code preventing startup directly after a SG restart
 
 [develop changelog]
 * Add TVRage network name standardization

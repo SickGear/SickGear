@@ -330,13 +330,11 @@ class SickGear(object):
         # start web server
         try:
             # used to check if existing SG instances have been started
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind((self.web_options['host'], self.web_options['port']))
-            s.close()
+            sickbeard.helpers.wait_for_free_port(self.web_options['host'], self.web_options['port'])
 
             self.webserver = WebServer(self.web_options)
             self.webserver.start()
-        except IOError:
+        except Exception:
             logger.log(u"Unable to start web server, is something else running on port %d?" % self.startPort,
                        logger.ERROR)
             if sickbeard.LAUNCH_BROWSER and not self.runAsDaemon:
