@@ -27,6 +27,11 @@
 * Change Display Show next/previous when show list is not split to loop around
 * Fix SQL statements that have dynamic table names to use proper syntax
 * Fix port checking code preventing startup directly after a SG restart
+* Add a link from the footer number of snatched to episode snatched overview page. The link to the 
+  Episode Overview page is available on all pages except on the Episode Overview page
+* Change the default state for all check boxes on the Episode Overview page to not checked
+* Add validation to Go button to ensure at least one item is checked on Episode Overview page
+* Add highlight to current status text in header on Episode Overview page
 
 [develop changelog]
 * Add TVRage network name standardization

@@ -1,34 +1,40 @@
 $(document).ready(function() { 
 
     function make_row(indexer_id, season, episode, name, checked) {
-        if (checked)
-            var checked = ' checked';
-        else
-            var checked = '';
-        
-        var row_class = $('#row_class').val();
-        
-        var row = '';
-        row += ' <tr class="'+row_class+'">';
-        row += '  <td class="tableleft" align="center"><input type="checkbox" class="'+indexer_id+'-epcheck" name="'+indexer_id+'-'+season+'x'+episode+'"'+checked+'></td>';
-        row += '  <td>'+season+'x'+episode+'</td>';
-        row += '  <td class="tableright" style="width: 100%">'+name+'</td>';
-        row += ' </tr>'
-        
-        return row;
+        var checkedbox = (checked ? ' checked' : ''),
+            row_class = $('#row_class').val();
+
+        return ' <tr class="' + row_class + '">'
+            + '  <td class="tableleft" align="center">'
+                + '<input type="checkbox"'
+                    + ' class="' + indexer_id + '-epcheck"'
+                    + ' name="' + indexer_id + '-' + season + 'x' + episode + '"'
+                    + checkedbox+'></td>'
+            + '  <td>' + season + 'x' + episode + '</td>'
+            + '  <td class="tableright" style="width: 100%">' + name + '</td>'
+            + ' </tr>';
     }
+
+    $('.go').click(function() {
+        var selected;
+
+        if (selected = (0 === $('input[class*="-epcheck"]:checked').length))
+            alert('Please select at least one episode');
+
+        return !selected
+    });
 
     $('.allCheck').click(function(){
         var indexer_id = $(this).attr('id').split('-')[1];
-        $('.'+indexer_id+'-epcheck').prop('checked', $(this).prop('checked'));
+        $('.' + indexer_id + '-epcheck').prop('checked', $(this).prop('checked'));
     });
 
     $('.get_more_eps').click(function(){
         var cur_indexer_id = $(this).attr('id');
-        var checked = $('#allCheck-'+cur_indexer_id).prop('checked');
-        var last_row = $('tr#'+cur_indexer_id);
+        var checked = $('#allCheck-' + cur_indexer_id).prop('checked');
+        var last_row = $('tr#' + cur_indexer_id);
         
-        $.getJSON(sbRoot+'/manage/showEpisodeStatuses',
+        $.getJSON(sbRoot + '/manage/showEpisodeStatuses',
                   {
                    indexer_id: cur_indexer_id,
                    whichStatus: $('#oldStatus').val()
