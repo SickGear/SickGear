@@ -229,20 +229,20 @@ class DBConnection(object):
 
         genParams = lambda myDict: [x + " = ?" for x in myDict.keys()]
 
-        query = "UPDATE " + tableName + " SET " + ", ".join(genParams(valueDict)) + " WHERE " + " AND ".join(
+        query = "UPDATE [" + tableName + "] SET " + ", ".join(genParams(valueDict)) + " WHERE " + " AND ".join(
             genParams(keyDict))
 
         self.action(query, valueDict.values() + keyDict.values())
 
         if self.connection.total_changes == changesBefore:
-            query = "INSERT INTO " + tableName + " (" + ", ".join(valueDict.keys() + keyDict.keys()) + ")" + \
+            query = "INSERT INTO [" + tableName + "] (" + ", ".join(valueDict.keys() + keyDict.keys()) + ")" + \
                     " VALUES (" + ", ".join(["?"] * len(valueDict.keys() + keyDict.keys())) + ")"
             self.action(query, valueDict.values() + keyDict.values())
 
     def tableInfo(self, tableName):
 
         # FIXME ? binding is not supported here, but I cannot find a way to escape a string manually
-        sqlResult = self.select("PRAGMA table_info(%s)" % tableName)
+        sqlResult = self.select("PRAGMA table_info([%s])" % tableName)
         columns = {}
         for column in sqlResult:
             columns[column['name']] = {'type': column['type']}
@@ -262,8 +262,8 @@ class DBConnection(object):
         return column in self.tableInfo(tableName)
 
     def addColumn(self, table, column, type="NUMERIC", default=0):
-        self.action("ALTER TABLE %s ADD %s %s" % (table, column, type))
-        self.action("UPDATE %s SET %s = ?" % (table, column), (default,))
+        self.action("ALTER TABLE [%s] ADD %s %s" % (table, column, type))
+        self.action("UPDATE [%s] SET %s = ?" % (table, column), (default,))
 
     def close(self):
         """Close database connection"""
@@ -353,12 +353,12 @@ class SchemaUpgrade(object):
         return column in self.connection.tableInfo(tableName)
 
     def addColumn(self, table, column, type="NUMERIC", default=0):
-        self.connection.action("ALTER TABLE %s ADD %s %s" % (table, column, type))
-        self.connection.action("UPDATE %s SET %s = ?" % (table, column), (default,))
+        self.connection.action("ALTER TABLE [%s] ADD %s %s" % (table, column, type))
+        self.connection.action("UPDATE [%s] SET %s = ?" % (table, column), (default,))
 
     def dropColumn(self, table, column):
         # get old table columns and store the ones we want to keep
-        result = self.connection.select('pragma table_info(%s)' % table)
+        result = self.connection.select('pragma table_info([%s])' % table)
         keptColumns = [c for c in result if c['name'] != column]
 
         keptColumnsNames = []
@@ -395,21 +395,21 @@ class SchemaUpgrade(object):
 
         # generate sql for the new table creation
         if len(pk) == 0:
-            sql = 'CREATE TABLE %s_new (%s)' % (table, final)
+            sql = 'CREATE TABLE [%s_new] (%s)' % (table, final)
         else:
             pk = ', '.join(pk)
-            sql = 'CREATE TABLE %s_new (%s, PRIMARY KEY(%s))' % (table, final, pk)
+            sql = 'CREATE TABLE [%s_new] (%s, PRIMARY KEY(%s))' % (table, final, pk)
 
         # create new temporary table and copy the old table data across, barring the removed column
         self.connection.action(sql)
-        self.connection.action('INSERT INTO %s_new SELECT %s FROM %s' % (table, keptColumnsNames, table))
+        self.connection.action('INSERT INTO [%s_new] SELECT %s FROM [%s]' % (table, keptColumnsNames, table))
 
         # copy the old indexes from the old table
         result = self.connection.select('SELECT sql FROM sqlite_master WHERE tbl_name=? and type="index"', [table])
 
         # remove the old table and rename the new table to take it's place
-        self.connection.action('DROP TABLE %s' % table)
-        self.connection.action('ALTER TABLE %s_new RENAME TO %s' % (table, table))
+        self.connection.action('DROP TABLE [%s]' % table)
+        self.connection.action('ALTER TABLE [%s_new] RENAME TO [%s]' % (table, table))
 
         # write any indexes to the new table
         if len(result) > 0:
