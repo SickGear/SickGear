@@ -33,6 +33,7 @@
 * Add validation to Go button to ensure at least one item is checked on Episode Overview page
 * Add highlight to current status text in header on Episode Overview page
 * Fix table alignment on homepage
+* Fix duplicate entries in cache database
 
 [develop changelog]
 * Add TVRage network name standardization
