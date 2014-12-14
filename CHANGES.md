@@ -1,4 +1,4 @@
-### 0.x.x (2014-12-xx xx:xx:xx UTC)
+### 0.5.0 (2014-12-14 13:55:00 UTC)
 
 * Fix searches freezing due to unescaped ignored or required words
 * Add failed database to unit tests tear down function
@@ -35,10 +35,7 @@
 * Fix table alignment on homepage
 * Fix duplicate entries in cache database
 * Fix network sorting on home page
-
-[develop changelog]
-* Add TVRage network name standardization
-* Remove TVRage network name standardization
+* Fix restart issue
 
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)

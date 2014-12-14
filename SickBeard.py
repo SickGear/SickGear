@@ -25,7 +25,6 @@ import signal
 import sys
 import shutil
 import subprocess
-import socket
 
 if sys.version_info < (2, 6):
     print "Sorry, requires Python 2.6 or 2.7."
