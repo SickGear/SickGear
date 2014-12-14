@@ -35,6 +35,7 @@
 * Fix table alignment on homepage
 * Fix duplicate entries in cache database
 * Fix network sorting on home page
+* Fix restart issue
 
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)

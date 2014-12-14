@@ -136,6 +136,4 @@ class WebServer(threading.Thread):
 
     def shutDown(self):
         self.alive = False
-        if self.server:
-            self.server.stop()
-            self.io_loop.stop()
+        self.io_loop.stop()
