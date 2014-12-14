@@ -2860,6 +2860,10 @@ tablesorter.css
 	padding: 4px;
 	border-top: 1px solid;
 	border-left: 1px solid;
+	vertical-align: middle;
+}
+
+#addRootDirTable.tablesorter td {
 	vertical-align: baseline;
 }
 
