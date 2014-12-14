@@ -36,41 +36,44 @@ import itertools
 
 class CacheDBConnection(db.DBConnection):
     def __init__(self, providerName):
-        db.DBConnection.__init__(self, "cache.db")
+        db.DBConnection.__init__(self, 'cache.db')
 
         # Create the table if it's not already there
         try:
             if not self.hasTable(providerName):
                 self.action(
-                    "CREATE TABLE [" + providerName + "] (name TEXT, season NUMERIC, episodes TEXT, indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT, release_group TEXT)")
-            else:
+                    'CREATE TABLE [' + providerName + '] (name TEXT, season NUMERIC, episodes TEXT, indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT, release_group TEXT)')
+                self.action(
+                    'CREATE UNIQUE INDEX IF NOT EXISTS [idx_' + providerName + '_url] ON [' + providerName + '] (url)')
+            elif not self.hasIndex(providerName, 'idx_%s_url' % providerName):
                 sqlResults = self.select(
-                    "SELECT url, COUNT(url) as count FROM [" + providerName + "] GROUP BY url HAVING count > 1")
+                    'SELECT url, COUNT(url) as count FROM [' + providerName + '] GROUP BY url HAVING count > 1')
 
                 for cur_dupe in sqlResults:
-                    self.action("DELETE FROM [" + providerName + "] WHERE url = ?", [cur_dupe["url"]])
+                    self.action('DELETE FROM [' + providerName + '] WHERE url = ?', [cur_dupe['url']])
 
-            # add unique index to prevent further dupes from happening if one does not exist
-            self.action("CREATE UNIQUE INDEX IF NOT EXISTS idx_url ON [" + providerName + "] (url)")
+                self.action(
+                    'CREATE UNIQUE INDEX IF NOT EXISTS [idx_' + providerName + '_url] ON [' + providerName + '] (url)')
+
 
             # add release_group column to table if missing
             if not self.hasColumn(providerName, 'release_group'):
-                self.addColumn(providerName, 'release_group', "TEXT", "")
+                self.addColumn(providerName, 'release_group', 'TEXT', '')
 
             # add version column to table if missing
             if not self.hasColumn(providerName, 'version'):
-                self.addColumn(providerName, 'version', "NUMERIC", "-1")
+                self.addColumn(providerName, 'version', 'NUMERIC', '-1')
 
         except Exception, e:
-            if str(e) != "table [" + providerName + "] already exists":
+            if str(e) != 'table [' + providerName + '] already exists':
                 raise
 
         # Create the table if it's not already there
         try:
             if not self.hasTable('lastUpdate'):
-                self.action("CREATE TABLE lastUpdate (provider TEXT, time NUMERIC)")
+                self.action('CREATE TABLE lastUpdate (provider TEXT, time NUMERIC)')
         except Exception, e:
-            if str(e) != "table lastUpdate already exists":
+            if str(e) != 'table lastUpdate already exists':
                 raise
 
 class TVCache():
@@ -91,7 +94,7 @@ class TVCache():
     def _clearCache(self):
         if self.shouldClearCache():
             myDB = self._getDB()
-            myDB.action("DELETE FROM [" + self.providerID + "] WHERE 1")
+            myDB.action('DELETE FROM [' + self.providerID + '] WHERE 1')
 
     def _get_title_and_url(self, item):
         # override this in the provider if daily search has a different data layout to backlog searches
@@ -151,22 +154,22 @@ class TVCache():
             title = self._translateTitle(title)
             url = self._translateLinkURL(url)
 
-            logger.log(u"Attempting to add item to cache: " + title, logger.DEBUG)
+            logger.log(u'Attempting to add item to cache: ' + title, logger.DEBUG)
             return self._addCacheEntry(title, url)
 
         else:
             logger.log(
-                u"The data returned from the " + self.provider.name + " feed is incomplete, this result is unusable",
+                u'The data returned from the ' + self.provider.name + ' feed is incomplete, this result is unusable',
                 logger.DEBUG)
             return None
 
 
     def _getLastUpdate(self):
         myDB = self._getDB()
-        sqlResults = myDB.select("SELECT time FROM lastUpdate WHERE provider = ?", [self.providerID])
+        sqlResults = myDB.select('SELECT time FROM lastUpdate WHERE provider = ?', [self.providerID])
 
         if sqlResults:
-            lastTime = int(sqlResults[0]["time"])
+            lastTime = int(sqlResults[0]['time'])
             if lastTime > int(time.mktime(datetime.datetime.today().timetuple())):
                 lastTime = 0
         else:
@@ -176,10 +179,10 @@ class TVCache():
 
     def _getLastSearch(self):
         myDB = self._getDB()
-        sqlResults = myDB.select("SELECT time FROM lastSearch WHERE provider = ?", [self.providerID])
+        sqlResults = myDB.select('SELECT time FROM lastSearch WHERE provider = ?', [self.providerID])
 
         if sqlResults:
-            lastTime = int(sqlResults[0]["time"])
+            lastTime = int(sqlResults[0]['time'])
             if lastTime > int(time.mktime(datetime.datetime.today().timetuple())):
                 lastTime = 0
         else:
@@ -193,7 +196,7 @@ class TVCache():
             toDate = datetime.datetime.today()
 
         myDB = self._getDB()
-        myDB.upsert("lastUpdate",
+        myDB.upsert('lastUpdate',
                     {'time': int(time.mktime(toDate.timetuple()))},
                     {'provider': self.providerID})
 
@@ -202,7 +205,7 @@ class TVCache():
             toDate = datetime.datetime.today()
 
         myDB = self._getDB()
-        myDB.upsert("lastSearch",
+        myDB.upsert('lastSearch',
                     {'time': int(time.mktime(toDate.timetuple()))},
                     {'provider': self.providerID})
 
@@ -212,7 +215,7 @@ class TVCache():
     def shouldUpdate(self):
         # if we've updated recently then skip the update
         if datetime.datetime.today() - self.lastUpdate < datetime.timedelta(minutes=self.minTime):
-            logger.log(u"Last update was too soon, using old cache: today()-" + str(self.lastUpdate) + "<" + str(
+            logger.log(u'Last update was too soon, using old cache: today()-' + str(self.lastUpdate) + '<' + str(
                 datetime.timedelta(minutes=self.minTime)), logger.DEBUG)
             return False
 
@@ -239,10 +242,10 @@ class TVCache():
                 myParser = NameParser(showObj=showObj, convert=True)
                 parse_result = myParser.parse(name)
             except InvalidNameException:
-                logger.log(u"Unable to parse the filename " + name + " into a valid episode", logger.DEBUG)
+                logger.log(u'Unable to parse the filename ' + name + ' into a valid episode', logger.DEBUG)
                 return None
             except InvalidShowException:
-                logger.log(u"Unable to parse the filename " + name + " into a valid show", logger.DEBUG)
+                logger.log(u'Unable to parse the filename ' + name + ' into a valid show', logger.DEBUG)
                 return None
 
             if not parse_result or not parse_result.series_name:
@@ -254,7 +257,7 @@ class TVCache():
 
         if season and episodes:
             # store episodes as a seperated string
-            episodeText = "|" + "|".join(map(str, episodes)) + "|"
+            episodeText = '|' + '|'.join(map(str, episodes)) + '|'
 
             # get the current timestamp
             curTimestamp = int(time.mktime(datetime.datetime.today().timetuple()))
@@ -271,10 +274,10 @@ class TVCache():
             # get version
             version = parse_result.version
 
-            logger.log(u"Added RSS item: [" + name + "] to cache: [" + self.providerID + "]", logger.DEBUG)
+            logger.log(u'Added RSS item: [' + name + '] to cache: [' + self.providerID + ']', logger.DEBUG)
 
             return [
-                "INSERT OR IGNORE INTO [" + self.providerID + "] (name, season, episodes, indexerid, url, time, quality, release_group, version) VALUES (?,?,?,?,?,?,?,?,?)",
+                'INSERT OR IGNORE INTO [' + self.providerID + '] (name, season, episodes, indexerid, url, time, quality, release_group, version) VALUES (?,?,?,?,?,?,?,?,?)',
                 [name, season, episodeText, parse_result.show.indexerid, url, curTimestamp, quality, release_group, version]]
 
 
@@ -285,12 +288,12 @@ class TVCache():
         else:
             return []
 
-    def listPropers(self, date=None, delimiter="."):
+    def listPropers(self, date=None, delimiter='.'):
         myDB = self._getDB()
         sql = "SELECT * FROM [" + self.providerID + "] WHERE name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%'"
 
         if date != None:
-            sql += " AND time >= " + str(int(time.mktime(date.timetuple())))
+            sql += ' AND time >= ' + str(int(time.mktime(date.timetuple())))
 
         return filter(lambda x: x['indexerid'] != 0, myDB.select(sql))
 
@@ -302,14 +305,14 @@ class TVCache():
         myDB = self._getDB()
         if type(episode) != list:
             sqlResults = myDB.select(
-                "SELECT * FROM [" + self.providerID + "] WHERE indexerid = ? AND season = ? AND episodes LIKE ?",
-                [episode.show.indexerid, episode.season, "%|" + str(episode.episode) + "|%"])
+                'SELECT * FROM [' + self.providerID + '] WHERE indexerid = ? AND season = ? AND episodes LIKE ?',
+                [episode.show.indexerid, episode.season, '%|' + str(episode.episode) + '|%'])
         else:
             for epObj in episode:
                 cl.append([
-                    "SELECT * FROM [" + self.providerID + "] WHERE indexerid = ? AND season = ? AND episodes LIKE ? "
-                    "AND quality IN (" + ",".join([str(x) for x in epObj.wantedQuality]) + ")",
-                    [epObj.show.indexerid, epObj.season, "%|" + str(epObj.episode) + "|%"]])
+                    'SELECT * FROM [' + self.providerID + '] WHERE indexerid = ? AND season = ? AND episodes LIKE ? '
+                    'AND quality IN (' + ','.join([str(x) for x in epObj.wantedQuality]) + ')',
+                    [epObj.show.indexerid, epObj.season, '%|' + str(epObj.episode) + '|%']])
 
             sqlResults = myDB.mass_action(cl, fetchall=True)
             sqlResults = list(itertools.chain(*sqlResults))
@@ -318,45 +321,45 @@ class TVCache():
         for curResult in sqlResults:
 
             # skip non-tv crap
-            if not show_name_helpers.filterBadReleases(curResult["name"], parse=False):
+            if not show_name_helpers.filterBadReleases(curResult['name'], parse=False):
                 continue
 
             # get the show object, or if it's not one of our shows then ignore it
-            showObj = helpers.findCertainShow(sickbeard.showList, int(curResult["indexerid"]))
+            showObj = helpers.findCertainShow(sickbeard.showList, int(curResult['indexerid']))
             if not showObj:
                 continue
 
             # skip if provider is anime only and show is not anime
             if self.provider.anime_only and not showObj.is_anime:
-                logger.log(u"" + str(showObj.name) + " is not an anime, skiping", logger.DEBUG)
+                logger.log(u'' + str(showObj.name) + ' is not an anime, skiping', logger.DEBUG)
                 continue
 
             # get season and ep data (ignoring multi-eps for now)
-            curSeason = int(curResult["season"])
+            curSeason = int(curResult['season'])
             if curSeason == -1:
                 continue
-            curEp = curResult["episodes"].split("|")[1]
+            curEp = curResult['episodes'].split('|')[1]
             if not curEp:
                 continue
             curEp = int(curEp)
 
-            curQuality = int(curResult["quality"])
-            curReleaseGroup = curResult["release_group"]
-            curVersion = curResult["version"]
+            curQuality = int(curResult['quality'])
+            curReleaseGroup = curResult['release_group']
+            curVersion = curResult['version']
 
             # if the show says we want that episode then add it to the list
             if not showObj.wantEpisode(curSeason, curEp, curQuality, manualSearch):
-                logger.log(u"Skipping " + curResult["name"] + " because we don't want an episode that's " +
+                logger.log(u'Skipping ' + curResult['name'] + ' because we don\'t want an episode that\'s ' +
                            Quality.qualityStrings[curQuality], logger.DEBUG)
                 continue
 
             epObj = showObj.getEpisode(curSeason, curEp)
 
             # build a result object
-            title = curResult["name"]
-            url = curResult["url"]
+            title = curResult['name']
+            url = curResult['url']
 
-            logger.log(u"Found result " + title + " at " + url)
+            logger.log(u'Found result ' + title + ' at ' + url)
 
             result = self.provider.getResult([epObj])
             result.show = showObj

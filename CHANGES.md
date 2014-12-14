@@ -32,6 +32,7 @@
 * Change the default state for all check boxes on the Episode Overview page to not checked
 * Add validation to Go button to ensure at least one item is checked on Episode Overview page
 * Add highlight to current status text in header on Episode Overview page
+* Fix duplicate entries in cache database
 
 [develop changelog]
 * Add TVRage network name standardization
