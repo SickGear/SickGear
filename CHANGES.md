@@ -34,6 +34,7 @@
 * Add highlight to current status text in header on Episode Overview page
 * Fix table alignment on homepage
 * Fix duplicate entries in cache database
+* Fix network sorting on home page
 
 [develop changelog]
 * Add TVRage network name standardization
