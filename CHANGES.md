@@ -1,3 +1,11 @@
+### 0.x.x (2014-12-xx xx:xx:xx UTC)
+
+* Add network logo's for BBC Canada, Crackle, El Rey Network, SKY Atlantic, and Watch
+* Change Yahoo! screen network logo
+
+[develop changelog]
+
+
 ### 0.5.0 (2014-12-14 13:55:00 UTC)
 
 * Fix searches freezing due to unescaped ignored or required words
