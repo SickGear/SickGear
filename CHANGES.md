@@ -12,6 +12,9 @@
 * Change Search Settings/Torrent/Deluge option texts for improved understanding
 * Fix Womble's Index searching (ssl disabled for now, old categories are the new active ones again)
 * Fix Add From Trending Show page to work with Trakt changes
+* Add anime unit test cases (port from lad1337/sickbeard)
+* Fix normal tv show regex (port from midgetspy/sickbeard)
+* Fix anime regex (port from lad1337/sickbeard)
 
 [develop changelog]
 
@@ -56,6 +59,10 @@
 * Fix restart issue
 * Fix to use new TorrentDay URLs
 * Fix typo in menu item Manage/Update XBMC
+* Fix NameParser unittests
+* Add Anime unittest cases (port from lad1337/sickbeard)
+* Fix normal tv show regex (port from midgetspy/sickbeard)
+* Fix anime regex (port from lad1337/sickbeard)
 
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)
