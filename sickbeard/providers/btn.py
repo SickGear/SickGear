@@ -239,7 +239,9 @@ class BTNProvider(generic.TorrentProvider):
             # combined with the series identifier should result in just one episode
             search_params['name'] = date_str.replace('-', '.')
         elif ep_obj.show.anime:
-            search_params['name'] = "%i" % int(ep_obj.scene_absolute_number)
+            #search_params['name'] = "%i" % int(ep_obj.scene_absolute_number)
+            #btn wants scene season and episode not absolute
+            search_params['name'] = "S%02dE%02d" % (ep_obj.scene_season, ep_obj.scene_episode)
         else:
             # Do a general name search for the episode, formatted like SXXEYY
             search_params['name'] = "S%02dE%02d" % (ep_obj.scene_season, ep_obj.scene_episode)
