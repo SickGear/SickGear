@@ -1,5 +1,5 @@
 $(function () {
-    $('.plotInfo').each(function () {
+    $('.plotInfo, .plot-daybyday').each(function () {
         var match = $(this).attr('id').match(/^plot_info_(\d+)_(\d+)_(\d+)$/);
         $(this).qtip({
             content: {

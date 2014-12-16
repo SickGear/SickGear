@@ -448,8 +448,9 @@ class ConfigMigrator():
                                 3: 'Rename omgwtfnzb variables',
                                 4: 'Add newznab catIDs',
                                 5: 'Metadata update',
-                                6: 'Rename daily search to recent search'
-        }
+                                6: 'Rename daily search to recent search',
+                                7: 'Rename coming episodes to episode view'
+                                }
 
     def migrate_config(self):
         """
@@ -730,3 +731,12 @@ class ConfigMigrator():
             if hasattr(curProvider, 'enable_recentsearch'):
                 curProvider.enable_recentsearch = bool(check_setting_int(self.config_obj, curProvider.getID().upper(),
                                                            curProvider.getID() + '_enable_dailysearch', 1))
+
+    def _migrate_v7(self):
+
+        sickbeard.EPISODE_VIEW_LAYOUT = check_setting_str(self.config_obj, 'GUI', 'coming_eps_layout', 'banner')
+        sickbeard.EPISODE_VIEW_SORT = check_setting_str(self.config_obj, 'GUI', 'coming_eps_sort', 'time')
+        if 'date' == sickbeard.EPISODE_VIEW_SORT:
+            sickbeard.EPISODE_VIEW_SORT = 'time'
+        sickbeard.EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(self.config_obj, 'GUI', 'coming_eps_display_paused', 0))
+        sickbeard.EPISODE_VIEW_MISSED_RANGE = check_setting_int(self.config_obj, 'GUI', 'coming_eps_missed_range', 7)
