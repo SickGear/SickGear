@@ -153,7 +153,7 @@ inc_top.tmpl
 /*	background: url("../images/bg.png") repeat 0 0 transparent; */
 }
 
-[class^="icon-"], 
+[class^="icon-"],
 [class*=" icon-"] { 
 	background-image: url("../images/glyphicons-halflings.png"); 
 }
@@ -1591,10 +1591,13 @@ config*.tmpl
 	padding: 12px 0
 }
 
-.stepDiv .component-desc select,
-.stepDiv .component-desc input,
 #config div.field-pair select,
 #config div.field-pair input {
+	margin-right: 6px;
+}
+
+.stepDiv .component-desc select,
+.stepDiv .component-desc input {
 	margin-right: 15px;
 }
 
@@ -3153,6 +3156,11 @@ span.token-input-delete-token {
 	z-index: 0;
 	background-image: url(../images/poster-dark.jpg)
 }
+
+.time-am-pm {
+	margin-left: 2px;
+}
+
 /* =======================================================================
 jquery.confirm.css
 ========================================================================== */

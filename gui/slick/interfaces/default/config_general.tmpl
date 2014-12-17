@@ -103,9 +103,9 @@
 								<span class="component-desc">
 									<select id="indexer_default" name="indexer_default" class="form-control input-sm">
 										<option value="0" #if $indexer == 0 then 'selected="selected"' else ''#>All Indexers</option>
-										#for $indexer in $sickbeard.indexerApi().indexers
+#for $indexer in $sickbeard.indexerApi().indexers
 										<option value="$indexer" #if $indexer == $sickbeard.INDEXER_DEFAULT then 'selected="selected"' else ''#>$sickbeard.indexerApi().indexers[$indexer]</option>
-										#end for
+#end for
 									</select>
 									<span>as the default selection when adding new shows</span>
 								</span>
@@ -127,7 +127,7 @@
 								<span class="component-title">Show root directories</span>
 								<span class="component-desc">
 								    <p>where the files of shows are located</p>
-								    #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
 							    </span>
 							</label>
 						</div>
@@ -246,10 +246,10 @@
 						</div>
 						<div class="field-pair show_if_fuzzy_dating#if True == $sickbeard.FUZZY_DATING then '' else ' metadataDiv'#">
 							<label for="trim_zero">
-								<span class="component-title">Trim zero padding</span>
+								<span class="component-title">Trim date and time</span>
 								<span class="component-desc">
 									<input type="checkbox" name="trim_zero" id="trim_zero" #if True == $sickbeard.TRIM_ZERO then 'checked="checked"' else ''#/>
-									<p>remove the leading number "0" shown on hour of day, and date of month</p>
+									<p>display minimalist date and time i.e. <del>02:00</del> = 2:00, <del>02:00pm</del> = 2pm, <del>03 Jan</del> = 3 Jan</p>
 								</span>
 							</label>
 						</div>
@@ -259,16 +259,16 @@
 								<span class="component-title">Date style:</span>
 								<span class="component-desc">
 									<select class="form-control input-sm #if True == $sickbeard.FUZZY_DATING then '' else ' metadataDiv'#" id="date_presets#if True == $sickbeard.FUZZY_DATING then '' else '_na'#" name="date_preset#if True == $sickbeard.FUZZY_DATING then '' else '_na'#">
-										#for $cur_preset in $date_presets:
-											<option value="$cur_preset" #if $cur_preset == $sickbeard.DATE_PRESET or ("%x" == $sickbeard.DATE_PRESET and "$cur_preset" == '%a, %b %d, %Y') then 'selected="selected"' else ''#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
-										#end for
+#for $cur_preset in $date_presets:
+										<option value="$cur_preset" #if $cur_preset == $sickbeard.DATE_PRESET or ("%x" == $sickbeard.DATE_PRESET and "$cur_preset" == '%a, %b %d, %Y') then 'selected="selected"' else ''#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
+#end for
 									</select>
 
 									<select class="form-control input-sm #if True != $sickbeard.FUZZY_DATING then '' else ' metadataDiv'#" id="date_presets#if True != $sickbeard.FUZZY_DATING then '' else '_na'#" name="date_preset#if True != $sickbeard.FUZZY_DATING then '' else '_na'#">
 										<option value="%x" #if "%x" == $sickbeard.DATE_PRESET then 'selected="selected"' else ''#>Use System Default</option>
-										#for $cur_preset in $date_presets:
-											<option value="$cur_preset" #if $cur_preset == $sickbeard.DATE_PRESET then 'selected="selected"' else ''#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
-										#end for
+#for $cur_preset in $date_presets:
+										<option value="$cur_preset" #if $cur_preset == $sickbeard.DATE_PRESET then 'selected="selected"' else ''#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
+#end for
 									</select>
 								</span>
 							</label>
@@ -279,11 +279,12 @@
 								<span class="component-title">Time style:</span>
 								<span class="component-desc">
 									<select id="time_presets" name="time_preset" class="form-control input-sm">
-										 #for $cur_preset in $time_presets:
-											<option value="$cur_preset" #if $cur_preset == $sickbeard.TIME_PRESET_W_SECONDS then 'selected="selected"' else ''#>$sbdatetime.now().sbftime(show_seconds=True,t_preset=$cur_preset)</option>
-										 #end for
+#for $cur_preset in $time_presets:
+    #set $show_seconds = not $sickbeard.FUZZY_DATING
+										<option value="$cur_preset" #if $cur_preset == $sickbeard.TIME_PRESET_W_SECONDS then 'selected="selected"' else ''#>$sbdatetime.now().sbftime(show_seconds=$show_seconds, t_preset=$cur_preset)</option>
+#end for
 									</select>
-									<span><b>note:</b> seconds are only shown on the History page</span>
+									<span id="trim_info_seconds"><b>note:</b> seconds are only shown on the History page</span>
 								</span>
 							</label>
 						</div>
@@ -450,9 +451,9 @@
 								<span class="component-title">Branch version:</span>
 								<span class="component-desc">
 									<select id="branchVersion" class="form-control form-control-inline input-sm pull-left">
-									#for $cur_branch in $sickbeard.versionCheckScheduler.action.list_remote_branches():
+#for $cur_branch in $sickbeard.versionCheckScheduler.action.list_remote_branches():
 										<option value="$cur_branch" #if $cur_branch == $sickbeard.BRANCH then 'selected="selected"' else ''#>$cur_branch</option>
-									#end for
+#end for
 									</select>
 									<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="branchCheckout" value="Checkout Branch">
 									<div class="clear-left"><p>select branch to use (restart required)</p></div>
@@ -485,9 +486,9 @@
 								<span class="component-title">CPU throttling:</span>
 								<span class="component-desc">
 									<select id="cpu_presets" name="cpu_preset" class="form-control input-sm">
-									#for $cur_preset in $cpu_presets:
+#for $cur_preset in $cpu_presets:
 										<option value="$cur_preset" #if $cur_preset == $sickbeard.CPU_PRESET then 'selected="selected"' else ''#>$cur_preset.capitalize()</option>
-									#end for
+#end for
 									</select>
 									<span>Normal (default). High is lower and Low is higher CPU use</span>
 								</span>

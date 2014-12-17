@@ -1,10 +1,13 @@
 ### 0.x.x (2014-12-xx xx:xx:xx UTC)
 
-* Add network logo's for BBC Canada, Crackle, El Rey Network, SKY Atlantic, and Watch
+* Add network logos BBC Canada, Crackle, El Rey Network, SKY Atlantic, and Watch
 * Change Yahoo! screen network logo
-* Change added and updated Discovery Network's channel logo's
-* Remove unrequired duplicate network logo's
-* Add Discovery Network International/A&E Network International/Scripps Networks International missing channel logos
+* Add and update Discovery Network's channel logos
+* Add A&E Network International/Scripps Networks International channel logos
+* Remove non required duplicate network logos
+* Add lowercase PM to the General Config/Interface/Time style selection
+* Change General Config/Interface/Trim zero padding to Trim date and time, now handles 2:00 pm > 2 pm
+* Fix trim zero of military time hour to not use 12 hr time
 
 [develop changelog]
 

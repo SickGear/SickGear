@@ -19,6 +19,7 @@
 import datetime
 import locale
 import functools
+import re
 
 import sickbeard
 from sickbeard.network_timezones import sb_timezone
@@ -82,12 +83,12 @@ date_presets = ('%Y-%m-%d',
                 '%A, %b %d, %Y',
                 '%B %d, %Y',
                 '%a, %B %d, %Y',
-                '%A, %B %d, %Y'
-)
+                '%A, %B %d, %Y')
 
 time_presets = ('%I:%M:%S %p',
-                '%H:%M:%S'
-)
+                '%I:%M:%S %P',
+                '%H:%M:%S')
+
 
 # helper class
 class static_or_instance(object):
@@ -104,142 +105,98 @@ class sbdatetime(datetime.datetime):
 
     @static_or_instance
     def convert_to_setting(self, dt=None):
+        obj = (dt, self)[self is not None]
         try:
-            if sickbeard.TIMEZONE_DISPLAY == 'local':
-                if self is None:
-                    return dt.astimezone(sb_timezone)
-                else:
-                    return self.astimezone(sb_timezone)
-            else:
-                if self is None:
-                    return dt
-                else:
-                    return self
+            if 'local' == sickbeard.TIMEZONE_DISPLAY:
+                return obj.astimezone(sb_timezone)
         except:
-            if self is None:
-                return dt
-            else:
-                return self
+            pass
+
+        return obj
+
+    @static_or_instance
+    def setlocale(self, setlocale=True, use_has_locale=None, locale_str=''):
+        if setlocale:
+            try:
+                if None is use_has_locale or use_has_locale:
+                    locale.setlocale(locale.LC_TIME, locale_str)
+            except:
+                if None is not use_has_locale:
+                    sbdatetime.has_locale = False
+                pass
 
     # display Time in SickGear Format
     @static_or_instance
-    def sbftime(self, dt=None, show_seconds=False, t_preset=None):
+    def sbftime(self, dt=None, show_seconds=False, t_preset=None, setlocale=True, markup=False):
 
-        try:locale.setlocale(locale.LC_TIME, '')
-        except:pass
-
-        try:
-            if sbdatetime.has_locale:
-                locale.setlocale(locale.LC_TIME, 'us_US')
-        except:
-            sbdatetime.has_locale = False
+        sbdatetime.setlocale(setlocale=setlocale, use_has_locale=sbdatetime.has_locale, locale_str='us_US')
 
         strt = ''
         try:
-            if self is None:
-                if dt is not None:
-                    if t_preset is not None:
-                        strt = dt.strftime(t_preset)
-                    elif show_seconds:
-                        strt = dt.strftime(sickbeard.TIME_PRESET_W_SECONDS)
-                    else:
-                        strt = dt.strftime(sickbeard.TIME_PRESET)
-            else:
-                if t_preset is not None:
-                    strt = self.strftime(t_preset)
-                elif show_seconds:
-                    strt = self.strftime(sickbeard.TIME_PRESET_W_SECONDS)
-                else:
-                    strt = self.strftime(sickbeard.TIME_PRESET)
-        finally:
-            try:
-                if sbdatetime.has_locale:
-                    locale.setlocale(locale.LC_TIME, '')
-            except:
-                sbdatetime.has_locale = False
+            obj = (dt, self)[self is not None]
+            if None is not obj:
+                tmpl = (((sickbeard.TIME_PRESET, sickbeard.TIME_PRESET_W_SECONDS)[show_seconds]),
+                        t_preset)[None is not t_preset]
+                tmpl = (tmpl.replace(':%S', ''), tmpl)[show_seconds]
 
+                strt = obj.strftime(tmpl.replace('%P', '%p'))
+
+                if sickbeard.TRIM_ZERO:
+                    strt = re.sub(r'^0(\d:\d\d)', r'\1', strt)
+
+                if re.search(r'(?im)%p$', tmpl):
+                    if '%p' in tmpl:
+                        strt = strt.upper()
+                    elif '%P' in tmpl:
+                        strt = strt.lower()
+
+                    if sickbeard.TRIM_ZERO:
+                        strt = re.sub(r'(?im)^(\d+)(?::00)?(\s?[ap]m)', r'\1\2', strt)
+
+                if markup:
+                    match = re.search(r'(?im)(\d{1,2})(?:(.)(\d\d)(?:(.)(\d\d))?)?(?:\s?([ap]m))?$', strt)
+                    if match:
+                        strt = ('%s%s%s%s%s%s' % (
+                            ('<span class="time-hr">%s</span>' % match.group(1), '')[None is match.group(1)],
+                            ('<span class="time-hr-min">%s</span>' % match.group(2), '')[None is match.group(2)],
+                            ('<span class="time-min">%s</span>' % match.group(3), '')[None is match.group(3)],
+                            ('<span class="time-min-sec">%s</span>' % match.group(4), '')[None is match.group(4)],
+                            ('<span class="time-sec">%s</span>' % match.group(5), '')[None is match.group(5)],
+                            ('<span class="time-am-pm">%s</span>' % match.group(6), '')[None is match.group(6)]))
+
+        finally:
+            sbdatetime.setlocale(setlocale=setlocale, use_has_locale=sbdatetime.has_locale)
             return strt
 
     # display Date in SickGear Format
     @static_or_instance
-    def sbfdate(self, dt=None, d_preset=None):
+    def sbfdate(self, dt=None, d_preset=None, setlocale=True):
 
-        try:
-            locale.setlocale(locale.LC_TIME, '')
-        except:
-            pass
+        sbdatetime.setlocale(setlocale=setlocale)
 
         strd = ''
         try:
-            if self is None:
-                if dt is not None:
-                    if d_preset is not None:
-                        strd = dt.strftime(d_preset)
-                    else:
-                        strd = dt.strftime(sickbeard.DATE_PRESET)
-            else:
-                if d_preset is not None:
-                    strd = self.strftime(d_preset)
-                else:
-                    strd = self.strftime(sickbeard.DATE_PRESET)
+            obj = (dt, self)[self is not None]
+            if None is not obj:
+                strd = obj.strftime((sickbeard.DATE_PRESET, d_preset)[None is not d_preset])
+
         finally:
-
-            try:
-                locale.setlocale(locale.LC_TIME, '')
-            except:
-                pass
-
+            sbdatetime.setlocale(setlocale=setlocale)
             return strd
 
     # display Datetime in SickGear Format
     @static_or_instance
-    def sbfdatetime(self, dt=None, show_seconds=False, d_preset=None, t_preset=None):
+    def sbfdatetime(self, dt=None, show_seconds=False, d_preset=None, t_preset=None, markup=False):
 
-        try:
-            locale.setlocale(locale.LC_TIME, '')
-        except:
-            pass
+        sbdatetime.setlocale()
 
         strd = ''
+        obj = (dt, self)[self is not None]
         try:
-            if self is None:
-                if dt is not None:
-                    if d_preset is not None:
-                        strd = dt.strftime(d_preset)
-                    else:
-                        strd = dt.strftime(sickbeard.DATE_PRESET)
-                    try:
-                        if sbdatetime.has_locale:
-                            locale.setlocale(locale.LC_TIME, 'us_US')
-                    except:
-                        sbdatetime.has_locale = False
-                    if t_preset is not None:
-                        strd += u', ' + dt.strftime(t_preset)
-                    elif show_seconds:
-                        strd += u', ' + dt.strftime(sickbeard.TIME_PRESET_W_SECONDS)
-                    else:
-                        strd += u', ' + dt.strftime(sickbeard.TIME_PRESET)
-            else:
-                if d_preset is not None:
-                    strd = self.strftime(d_preset)
-                else:
-                    strd = self.strftime(sickbeard.DATE_PRESET)
-                try:
-                    if sbdatetime.has_locale:
-                        locale.setlocale(locale.LC_TIME, 'us_US')
-                except:
-                    sbdatetime.has_locale = False
-                if t_preset is not None:
-                    strd += u', ' + self.strftime(t_preset)
-                elif show_seconds:
-                    strd += u', ' + self.strftime(sickbeard.TIME_PRESET_W_SECONDS)
-                else:
-                    strd += u', ' + self.strftime(sickbeard.TIME_PRESET)
-        finally:
-            try:
-                if sbdatetime.has_locale:
-                    locale.setlocale(locale.LC_TIME, '')
-            except:
-                sbdatetime.has_locale = False
+            if None is not obj:
+                strd = u'%s, %s' % (obj.strftime((sickbeard.DATE_PRESET, d_preset)[None is not d_preset]),
+                                    sbdatetime.sbftime(dt, show_seconds, t_preset, False, markup))
 
+        finally:
+            sbdatetime.setlocale(use_has_locale=sbdatetime.has_locale)
             return strd
