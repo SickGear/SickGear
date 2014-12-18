@@ -2,6 +2,8 @@
 
 * Add network logo's for BBC Canada, Crackle, El Rey Network, SKY Atlantic, and Watch
 * Change Yahoo! screen network logo
+* Change added and updated Discovery Network's channel logo's
+* Remove unrequired duplicate network logo's
 
 [develop changelog]
 
