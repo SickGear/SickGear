@@ -1375,11 +1375,6 @@ config*.tmpl
 	padding: 12px 0px;
 }
 
-#config div.field-pair input {
-	float: left;
-	margin-right: 6px;
-}
-
 #config .nocheck, #config div #customQuality, .metadataDiv {
 	padding-left: 20px;
 }
