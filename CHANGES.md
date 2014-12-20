@@ -4,6 +4,7 @@
 * Change Yahoo! screen network logo
 * Change added and updated Discovery Network's channel logo's
 * Remove unrequired duplicate network logo's
+* Add Discovery Network International/A&E Network International/Scripps Networks International missing channel logos
 
 [develop changelog]
 
