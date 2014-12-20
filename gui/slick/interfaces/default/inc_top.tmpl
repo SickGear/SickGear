@@ -168,7 +168,7 @@
 								<li><a href="$sbRoot/home/updatePLEX/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-backlog-view"></i>&nbsp;Update PLEX</a></li>
 #end if
 #if $sickbeard.USE_XBMC and $sickbeard.XBMC_HOST != "":
-								<li><a href="$sbRoot/home/updateXBMC/" tabindex="16><i class="menu-icon-xbmc""></i>&nbsp;Update XBMC</a></li>
+								<li><a href="$sbRoot/home/updateXBMC/" tabindex="$tab#set $tab += 1#"><i class="menu-icon-xbmc"></i>&nbsp;Update XBMC</a></li>
 #end if
 #if $sickbeard.USE_TORRENTS and $sickbeard.TORRENT_METHOD != 'blackhole' \
     and ($sickbeard.ENABLE_HTTPS and $sickbeard.TORRENT_HOST[:5] == 'https' \
