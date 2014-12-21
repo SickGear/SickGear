@@ -1,4 +1,4 @@
-### 0.5.0 (2014-12-14 13:55:00 UTC)
+### 0.5.0 (2014-12-21 11:40:00 UTC)
 
 * Fix searches freezing due to unescaped ignored or required words
 * Add failed database to unit tests tear down function
