@@ -1,66 +1,65 @@
 #!/bin/sh
 #
-# PROVIDE: sickbeard
+# PROVIDE: sickgear
 # REQUIRE: LOGIN
 # KEYWORD: shutdown
 #
 # Add the following lines to /etc/rc.conf.local or /etc/rc.conf
 # to enable this service:
 #
-# sickbeard_enable (bool):	Set to NO by default.
-#			Set it to YES to enable it.
-# sickbeard_user:  The user account SickGear daemon runs as what
-#			you want it to be. It uses '_sabnzbd' user by
-#			default. Do not sets it as empty or it will run
-#			as root.
-# sickbeard_dir:	Directory where SickGear lives.
-#			Default: /usr/local/sickbeard
-# sickbeard_chdir:  Change to this directory before running SickGear.
-#     Default is same as sickbeard_dir.
-# sickbeard_datadir:  Data directory for Sick Beard (DB, Logs, config)
-#     Default is same as sickbeard_chdir
-# sickbeard_pid:  The name of the pidfile to create.
-#     Default is sickbeard.pid in sickbeard_dir.
-# sickbeard_host: The hostname or IP SickGear is listening on
+# sickgear_enable (bool): Set to NO by default.
+#     Set it to YES to enable it.
+# sickgear_user: The user account SickGear daemon runs as what
+#     you want it to be. It uses '_sabnzbd' user by default.
+#     Do not set it as empty or else it will run as root.
+# sickgear_dir:	Directory where SickGear lives.
+#     Default: /usr/local/sickgear/app
+# sickgear_datadir:  Data directory for Sick Beard (DB, Logs, config)
+#     Default: /usr/local/sickgear/data
+# sickgear_chdir: Change to this directory before running SickGear.
+#     Default is same as sickgear_dir.
+# sickgear_pid: The name of the pidfile to create.
+#     Default is sickgear.pid in sickgear_dir.
+# sickgear_host: The hostname or IP SickGear is listening on
 #     Default is 127.0.0.1
-# sickbeard_port: The port SickGear is listening on
+# sickgear_port: The port SickGear is listening on
 #     Default is 8081
-# sickbeard_web_user: Username to authenticate to the SickGear web interface
+# sickgear_web_user: Username to authenticate to the SickGear web interface
 #     Default is an empty string (no username)
-# sickbeard_web_password: Password to authenticate to the SickGear web interface
+# sickgear_web_password: Password to authenticate to the SickGear web interface
 #     Default is an empty string (no password)
-# sickbeard_webroot: Set to value of web_root in config (for proxies etc)
+# sickgear_webroot: Set to value of web_root in config (for proxies etc)
 #     Default is an empty string (if set must start with a "/")
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 
 . /etc/rc.subr
 
-name="sickbeard"
+name="sickgear"
 rcvar=${name}_enable
 
 load_rc_config ${name}
 
-: ${sickbeard_enable:="NO"}
-: ${sickbeard_user:="_sabnzbd"}
-: ${sickbeard_dir:="/usr/local/sickbeard"}
-: ${sickbeard_chdir:="${sickbeard_dir}"}
-: ${sickbeard_datadir:="${sickbeard_chdir}"}
-: ${sickbeard_pid:="${sickbeard_dir}/sickbeard.pid"}
-: ${sickbeard_host:="127.0.0.1"}
-: ${sickbeard_port:="8081"}
-: ${sickbeard_web_user:=""}
-: ${sickbeard_web_password:=""}
-: ${sickbeard_webroot:=""}
+: ${sickgear_enable:="NO"}
+: ${sickgear_user:="_sabnzbd"}
+: ${sickgear_dir:="/usr/local/sickgear/app"}
+: ${sickgear_datadir:="/usr/local/sickgear/data"}
+: ${sickgear_chdir:="${sickgear_dir}"}
+: ${sickgear_pid:="${sickgear_dir}/sickgear.pid"}
+: ${sickgear_host:="127.0.0.1"}
+: ${sickgear_port:="8081"}
+: ${sickgear_web_user:=""}
+: ${sickgear_web_password:=""}
+: ${sickgear_webroot:=""}
 
 status_cmd="${name}_status"
 stop_cmd="${name}_stop"
 
 command="/usr/sbin/daemon"
-command_args="-f -p ${sickbeard_pid} python ${sickbeard_dir}/SickBeard.py --quiet --nolaunch"
+command_args="-f -p ${sickgear_pid} python ${sickgear_dir}/SickBeard.py --quiet --nolaunch"
 
 # Add datadir to the command if set
-[ ! -z "${sickbeard_datadir}" ] && \
-  command_args="${command_args} --datadir ${sickbeard_datadir}"
+[ ! -z "${sickgear_datadir}" ] && \
+  command_args="${command_args} --datadir ${sickgear_datadir}"
 
 # Ensure user is root when running this script.
 if [ `id -u` != "0" ]; then
@@ -68,31 +67,31 @@ if [ `id -u` != "0" ]; then
   exit 1
 fi
 
-verify_sickbeard_pid() {
+verify_sickgear_pid() {
     # Make sure the pid corresponds to the SickGear process.
-    pid=`cat ${sickbeard_pid} 2>/dev/null`
-    ps -p ${pid} 2>/dev/null | grep -q "python ${sickbeard_dir}/SickBeard.py"
+    pid=`cat ${sickgear_pid} 2>/dev/null`
+    ps -p ${pid} 2>/dev/null | grep -q "python ${sickgear_dir}/SickBeard.py"
     return $?
 }
 
 # Try to stop SickGear cleanly by calling shutdown over http.
-sickbeard_stop() {
+sickgear_stop() {
     echo "Stopping $name"
-    verify_sickbeard_pid
-    sickbeard_url="${sickbeard_host}:${sickbeard_port}"
-    [ ! -z "${sickbeard_web_user}" ] && \
-       sickbeard_url="${sickbeard_web_user}:${sickbeard_web_password}@${sickbeard_url}"
-    [ ! -z "${sickbeard_webroot}" ] && \
-       sickbeard_url="${sickbeard_url}${sickbeard_webroot}"
-    fetch -o - -q "http://${sickbeard_url}/home/shutdown/?pid=${pid}" >/dev/null
+    verify_sickgear_pid
+    sickgear_url="${sickgear_host}:${sickgear_port}"
+    [ ! -z "${sickgear_web_user}" ] && \
+       sickgear_url="${sickgear_web_user}:${sickgear_web_password}@${sickgear_url}"
+    [ ! -z "${sickgear_webroot}" ] && \
+       sickgear_url="${sickgear_url}${sickgear_webroot}"
+    fetch -o - -q "http://${sickgear_url}/home/shutdown/?pid=${pid}" >/dev/null
     if [ -n "${pid}" ]; then
       wait_for_pids ${pid}
       echo "Stopped"
     fi
 }
 
-sickbeard_status() {
-    verify_sickbeard_pid && echo "$name is running as ${pid}" || echo "$name is not running"
+sickgear_status() {
+    verify_sickgear_pid && echo "$name is running as ${pid}" || echo "$name is not running"
 }
 
 run_rc_command "$1"

@@ -20,39 +20,35 @@
 # multi-user.target equates to runlevel 3 (multi-user text mode)
 # graphical.target equates to runlevel 5 (multi-user X11 graphical mode)
 #
-##
-## Example using SickGear as daemon with pid file
-##//
+
+### Example using SickGear as daemon with pid file
 # Type=forking
 # PIDFile=/var/run/sickgear/sickgear.pid
 # ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --pidfile=/var/run/sickgear/sickgear.pid --datadir=/opt/sickgear/data
-##
-## Example using SickGear as daemon without pid file
-##//
+
+### Example using SickGear as daemon without pid file
 # Type=forking
 # GuessMainPID=no
 # ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear/data
-##
-## Example using simple
-##//
+
+### Example using simple
 # Type=simple
 # ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --nolaunch
-##
-## Example using simple with a *Sickbeard* EnvironmentFile where SB_DATA=/home/sickbeard/.sickbeard in /etc/sickbeard.conf
-##//
+
+### Example using simple with a SickGear EnvironmentFile where SG_DATA=/home/sickgear/data in /etc/sickgear.conf
 # Type=simple
-# EnvironmentFile=/etc/sickbeard.conf
-# ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --nolaunch --datadir=${SB_DATA}
-####
-# Configuration
+# EnvironmentFile=/etc/sickgear.conf
+# ExecStart=/usr/bin/python /opt/sickgear/app/SickBeard.py -q --nolaunch --datadir=${SG_DATA}
+
+### Configuration
 
 [Unit]
 Description=SickGear Daemon
 After=network.target
 
 [Service]
-User='<<<USERNAME OR UID>>>'           ### I user 1000 (Default user that is initially setup)
-Group='<<<USER GROUP OR GID>>>'        ### I use 100   (Default group that is initially setup)
+User='<<<USERNAME OR UID>>>'           # e.g. 1000 (Default user that is initially set up)
+Group='<<<USER GROUP OR GID>>>'        # e.g. 100  (Default group that is initially set up)
 Type=forking
 GuessMainPID=no
 ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear/data
