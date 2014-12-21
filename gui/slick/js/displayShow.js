@@ -13,14 +13,14 @@ $(document).ready(function () {
         $(this).val('jump');
     });
 
-    $("#prevShow").click(function () {
-        $('#pickShow option:selected').prev('option').attr('selected', 'selected');
-        $("#pickShow").change();
-    });
-
-    $("#nextShow").click(function () {
-        $('#pickShow option:selected').next('option').attr('selected', 'selected');
-        $("#pickShow").change();
+    $('#prevShow, #nextShow').click(function () {
+        var select$ = $('#pickShow'),
+            index = $.inArray(select$.find('option:selected').val()*1, TVShowList);
+        select$.find('option[value="' + TVShowList[('nextShow' === $(this).attr('id')
+            ? (index < TVShowList.length - 1 ? index + 1 : 0)
+            : (0 < index ? index - 1 : TVShowList.length - 1))] + '"]').attr('selected', 'selected');
+        select$.change();
+        return false;
     });
 
     $('#changeStatus').click(function () {

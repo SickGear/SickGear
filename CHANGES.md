@@ -1,3 +1,45 @@
+### 0.5.0 (2014-12-21 11:40:00 UTC)
+
+* Fix searches freezing due to unescaped ignored or required words
+* Add failed database to unit tests tear down function
+* Fix purging of database files in tear down function during unit tests
+* Add ability to auto focus Search Show box on Home page and control this option via General Config/Interface
+* Change some provider images. Add a few new images
+* Remove redundant Coming Eps template code used in the old UI
+* Change update Plex notifier (port from SickBeard)
+* Change Plex notifications to allow authenticated library updates (port from mmccurdy07/Sick-Beard)
+* Change Config/Notifications/Plex logo and description (adapted port from mmccurdy07/Sick-Beard)
+* Add ability for CSS/JS to target a specific page and layout
+* Remove legacy sickbeard updater and build automation code
+* Fix multiple instances of SG being able to start
+* Fix garbled text appearing during startup in console
+* Fix startup code order and general re-factoring (adapted from midgetspy/Sick-Beard)
+* Add database migration code
+* Change KickassTorrents provider URLs
+* Fix missing Content-Type headers for posters and banners
+* Remove config Backup & Restore
+* Fix article removal for sorting on Display Show, and API pages
+* Fix visual positioning of sprites on Config page
+* Fix missing navbar gradients for all browsers
+* Update qTip2 to v2.2.1
+* Overhaul all Add Show pages
+* Fix Display Show next/previous when show list is split
+* Change Display Show next/previous when show list is not split to loop around
+* Fix SQL statements that have dynamic table names to use proper syntax
+* Fix port checking code preventing startup directly after a SG restart
+* Add a link from the footer number of snatched to episode snatched overview page. The link to the 
+  Episode Overview page is available on all pages except on the Episode Overview page
+* Change the default state for all check boxes on the Episode Overview page to not checked
+* Add validation to Go button to ensure at least one item is checked on Episode Overview page
+* Add highlight to current status text in header on Episode Overview page
+* Fix table alignment on homepage
+* Fix duplicate entries in cache database
+* Fix network sorting on home page
+* Fix restart issue
+* Fix to use new TorrentDay URLs
+* Fix typo in menu item Manage/Update XBMC
+
+
 ### 0.4.0 (2014-12-04 10:50:00 UTC)
 
 * Change footer stats to not add newlines when copy/pasting from them

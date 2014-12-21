@@ -12,7 +12,6 @@
 
 #include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
 
-<link rel="stylesheet" type="text/css" href="$sbRoot/css/formwizard.css?$sbPID" />
 <script type="text/javascript" src="$sbRoot/js/formwizard.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/recommendedShows.js?$sbPID"></script>
@@ -24,35 +23,40 @@
 <h1 class="title">$title</h1>
 #end if
 
+<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32<%= '-dark' if 'dark' == sickbeard.THEME_NAME else '' %>.gif" width="32" height="32" border="0">
+
 <div id="newShowPortal">
 
 	<div id="displayText"></div>
 	<br />
 
-	<form id="recommendedShowsForm" method="post" action="$sbRoot/home/addShows/addRecommendedShow" accept-charset="utf-8"  style="width: 800px;">
+	<form id="addShowForm" method="post" action="$sbRoot/home/addShows/addRecommendedShow" accept-charset="utf-8">
 	
-		<fieldset class="sectionwrap">
-			<legend class="legendStep">Select a recommended show</legend>
+		<fieldset class="sectionwrap step-one">
+			<legend class="legendStep"><p>Select a recommended show</p></legend>
 
 			<div class="stepDiv">
 				<div id="searchResults" style="height: 100%;"><br/></div>
 			</div>
+			<div style="clear:both">&nbsp;</div>
 		</fieldset>
 
-		<fieldset class="sectionwrap">
-			<legend class="legendStep">Pick the parent folder</legend>
+		<fieldset class="sectionwrap step-two">
+			<legend class="legendStep"><p>Pick parent folder</p></legend>
 
-			<div class="stepDiv">
+			<div class="stepDiv parent-folder">
 				#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_rootDirs.tmpl")
 			</div>
+			<div style="clear:both">&nbsp;</div>
 		</fieldset>
 
-		<fieldset class="sectionwrap">
-			<legend class="legendStep">Customize options</legend>
+		<fieldset class="sectionwrap step-three">
+			<legend class="legendStep"><p>Set custom options</p></legend>
 
 			<div class="stepDiv">
 				#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_addShowOptions.tmpl")
 			</div>
+			<div style="clear:both">&nbsp;</div>
 		</fieldset>
 	</form>
 

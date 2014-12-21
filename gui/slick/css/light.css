@@ -167,12 +167,7 @@ inc_top.tmpl
 	background-image: url("../images/menu/menu-icons-white.png"); 
 }
 
-[class^="icon16-"], 
-[class*=" icon16-"] { 
-	background-image: url("../images/glyphicons-config.png");
-}
-
-.ui-autocomplete-loading { 
+.ui-autocomplete-loading {
 	background: white url("../images/loading16.gif") right center no-repeat; 
 }
 
@@ -525,10 +520,6 @@ home.tmpl
 	margin-right: 5px;
 }
 
-.search {
-	margin-bottom: 10px;
-}
-
 .ui-progressbar {
 	height: 20px;
 	line-height: 18px;
@@ -769,120 +760,36 @@ td.tvShow a:hover {
 /* =======================================================================
 home_addShows.tmpl
 ========================================================================== */
-
-#addShowPortal {
-	width: 700px;
-	padding: 10px 0;
-	margin-right: auto;
-	margin-left: auto;
-}
-
-#addShowPortal  a {
-	padding: 10px;
-}
-
-div.button {
-	display: table-cell;
-	vertical-align: middle;
-	padding-left: 10px;
-}
-
-div.buttontext {
-	display: table-cell;
-	padding-left: 20px;
-	text-align: left;
-	white-space: normal;
-}
-
-div.buttontext h3 {
-	margin-top: 10px;
-}
-
-div.buttontext p {
-	font-size: 13px;
-}
-
 .icon-addnewshow {
 	background-image: url("../images/addshows/add-new32-black.png");
-	width: 32px;
-	height: 32px;
 }
 
 .icon-addtrendingshow {
 	background-image: url("../images/addshows/add-trending32-black.png");
-	width: 32px;
-	height: 32px;
 }
 
 .icon-addrecommendedshow {
 	background-image: url("../images/addshows/add-trakt32-black.png");
-	width: 32px;
-	height: 32px;
 }
 
 .icon-addexistingshow {
 	background-image: url("../images/addshows/add-existing32-black.png");
-	width: 32px;
-	height: 32px;
 }
 
 /* =======================================================================
 home_newShow.tmpl
 ========================================================================== */
-#addShowForm, #recommendedShowsForm {
-	margin-left: auto;
-	margin-right: auto;
-}
-
-#newShowPortal {
-	width: 800px;
-	padding: 10px 0;
-	margin-right: auto;
-	margin-left: auto;
-}
-
 #displayText {
-	padding: 8px;
-	overflow: hidden;
-	font-size: 14px;
 	background-color: #efefef;
-	border: 1px solid #dfdede;
-}
-
-#searchResults input[type="radio"] {
-	vertical-align: -2px;
+	border-color: #dfdede;
 }
 
 /* =======================================================================
 home_addExistingShow.tmpl
 ========================================================================== */
 
-.existingtabs {
-	padding: 1em 1.4em;
-}
-
-ul#rootDirStaticList {
-	width: 90%;
-	margin-right: auto;
-	margin-left: auto;
-	text-align: left;
-}
-
 ul#rootDirStaticList li {
-	padding: 4px 5px 4px 5px;
-	margin: 2px;
-	list-style: none outside none;
-	cursor: pointer;
 	background: url('../css/lib/images/ui-bg_highlight-soft_75_efefef_1x100.png') repeat-x scroll 50% 50% #EFEFEF;
-}
-
-ul#rootDirStaticList li label {
-	margin-top: 5px;
-	margin-bottom: 5px;
-}
-
-ul#rootDirStaticList li input[type="checkbox"] {
-	vertical-align: -2px;
 }
 
 /* =======================================================================
@@ -1518,32 +1425,6 @@ select .selected {
 	border-top: 1px dotted #666666; 
 }
 
-[class^="icon16-"], [class*=" icon16-"] {
-	background-image: url("../images/glyphicons-config.png");
-	background-repeat: no-repeat;
-	display: inline-block;
-	height: 16px;
-	vertical-align: text-top;
-	width: 16px;
-	margin-top: 1px;
-}
-
-.icon16-github {
-	background-position: 0 0;
-}
-.icon16-mirc {
-	background-position: -26px 0;
-}
-.icon16-sg {
-	background-position: -52px 0;
-}
-.icon16-web {
-	background-position: -78px 0;
-}
-.icon16-win {
-	background-position: -104px 0;
-}
-
 /* =======================================================================
 config_postProcessing.tmpl
 ========================================================================== */
@@ -1848,10 +1729,6 @@ body {
 	color: #000;
 }
 
-html * { 
-	outline: 0 !important; 
-}
-
 input[type="radio"] {
 	margin: 2px 0px 0px;
 	line-height: normal;
@@ -1875,8 +1752,12 @@ input, textarea, select, .uneditable-input {
 .navbar-default {
 	background-color: #333333;
 	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#555555', endColorstr='#333333');
-	background: -webkit-gradient(linear, left top, left bottom, from(#555), to(#333));
-	background: -moz-linear-gradient(top,  #555,  #333);
+	background-image: -ms-linear-gradient(top, #555555 0%, #333333 100%);
+	background-image: -moz-linear-gradient(top, #555555 0%, #333333 100%);
+	background-image: -o-linear-gradient(top, #555555 0%, #333333 100%);
+	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #555555), color-stop(1, #333333));
+	background-image: -webkit-linear-gradient(top, #555555 0%, #333333 100%);
+	background-image: linear-gradient(to bottom, #555555 0%, #333333 100%);
 	border-color: #3e3f3a;
 }
 
@@ -2058,7 +1939,6 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 
 .btn:hover {
 	color: #333333;
-	text-decoration: none;
 	background-color: #e6e6e6;
 	*background-color: #d9d9d9;
 	background-position: 0 -15px;
@@ -2089,26 +1969,12 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 .btn.disabled,
 .btn[disabled] {
 	cursor: default;
-	background-color: #e6e6e6;
-	background-image: none;
+	background: #e6e6e6 none;
 	opacity: 0.65;
 	filter: alpha(opacity=65);
 	-webkit-box-shadow: none;
 	-moz-box-shadow: none;
 	box-shadow: none;
-}
-
-.btn-large {
-	padding: 9px 14px;
-	font-size: 15px;
-	line-height: normal;
-	-webkit-border-radius: 5px;
-	-moz-border-radius: 5px;
-	border-radius: 5px;
-}
-
-.btn-large [class^="icon-"] {
-	margin-top: 1px;
 }
 
 .btn-small {
@@ -2370,60 +2236,16 @@ pre {
 /* =======================================================================
 input sizing (for config pages)
 ========================================================================== */
+#pickShow optgroup,
 #editAProvider optgroup {
 	color: #eee;
-    background-color: #888;
+	background-color: #888;
 }
 
+#pickShow optgroup option,
 #editAProvider optgroup option {
 	color: #222;
-    background-color: #fff;
-}
-
-#config select {
-	min-width: 0;
-	width: auto;
-	display: inline;
-	margin-top: -4px;
-}
-
-.btn-inline {
-	margin-top: -3px;
-}
-
-.input75 {
-	width: 75px;
-	margin-top: -4px;
-}
-
-.input100 {
-	width: 100px;
-	margin-top: -4px;
-}
-
-.input150 {
-	width: 150px;
-	margin-top: -4px;
-}
-
-.input200 {
-	width: 200px;
-	margin-top: -4px;
-}
-
-.input250 {
-	width: 250px;
-	margin-top: -4px;
-}
-
-.input300 {
-	width: 300px;
-	margin-top: -4px;
-}
-
-.input350 {
-	width: 350px;
-	margin-top: -4px;
+	background-color: #fff;
 }
 
 /* =======================================================================
@@ -2501,92 +2323,31 @@ browser.css
 
 
 /* =======================================================================
-formWizard.css
+formWizard
 ========================================================================== */
-
-fieldset.sectionwrap {
-	width: 800px;
-	padding: 5px;
-	text-align: left;
-	border-width: 0;
-}
-
+.step,
 legend.legendStep {
 	color: #57442b;
-	margin-bottom: 0px;
-}
-
-div.stepsguide {
-	margin-bottom: 15px;
-	overflow: hidden;
-	text-align: left;
-	cursor: pointer;
-}
-
-div.stepsguide .step {
-	float: left;
-	width: 266px;
-	font: bold 24px Arial;
 }
 
 div.stepsguide .step p {
-	margin: 12px 0;
-	border-bottom: 4px solid #57442b;
+	border-color: #57442b;
 }
 
-div.stepsguide .disabledstep {
+.disabledstep {
 	color: #c4c4c4;
 }
 
 div.stepsguide .disabledstep p {
-	border-bottom: 4px solid #8a775e;
-}
-
-div.stepsguide .step .smalltext {
-	font-size: 13px;
-	font-weight: normal;
-}
-
-div.formpaginate {
-	width: 800px;
-	margin-top: 1em;
-	overflow: auto;
-	font-weight: bold;
-	text-align: center;
+	border-color: #8a775e;
 }
 
 div.formpaginate .prev, div.formpaginate .next {
-	padding: 3px 6px;
 	color: #fff;
-	cursor: hand;
-	cursor: pointer;
 	background: #57442b;
-	-webkit-border-radius: 6px;
-		-moz-border-radius: 6px;
-			border-radius: 6px;
 }
-
-.stepDiv {
-	padding: 15px;
-}
-
-/* step 3 related */
-#customQuality {
-	display: block;
-	padding: 10px 0;
-	overflow: hidden;
-	clear: both;
-}
-
-#customQualityWrapper div.component-group-desc {
-	float: left;
-	width: 165px;
-}	
 
 #customQualityWrapper div.component-group-desc p {
-	width: 85%;
-	margin: .8em 0;
-	font-size: 1.2em;
 	color: #666;
 }
 
@@ -2606,10 +2367,7 @@ tablesorter.css
 
 .tablesorter th,
 .tablesorter td {
-	padding: 4px;
-	border-top: #fff 1px solid;
-	border-left: #fff 1px solid;
-	vertical-align: middle;
+	border-color: #fff;
 }
 
 /* remove extra border from left edge */
@@ -2620,32 +2378,23 @@ tablesorter.css
 
 .tablesorter th {
 	color: #fff;
-	text-align: center;
 	text-shadow: -1px -1px 0 rgba(0,0,0,0.3);
 	background-color: #333;
-	border-collapse: collapse;
-	font-weight: normal;
 }
 
 .tablesorter .tablesorter-header {
-	padding: 4px 18px 4px 18px;
-	cursor: pointer;
-	background-image: url(data:image/gif;base64,R0lGODlhFQAJAIAAAP///////yH5BAEAAAEALAAAAAAVAAkAAAIXjI+AywnaYnhUMoqt3gZXPmVg94yJVQAAOw==);
-	background-position: center right;
-	background-repeat: no-repeat;
+	background: #333 url(data:image/gif;base64,R0lGODlhFQAJAIAAAP///////yH5BAEAAAEALAAAAAAVAAkAAAIXjI+AywnaYnhUMoqt3gZXPmVg94yJVQAAOw==) no-repeat center right;
 	/* background-image: url(../images/tablesorter/bg.gif); */
 }
 
 .tablesorter thead .tablesorter-headerDesc {
-	background-color: #555;
-	background-image: url(data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7);
+	background: #555 url(data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7) no-repeat center right;
 	/* background-image: url(../images/tablesorter/asc.gif); */
 }
 
 .tablesorter thead .tablesorter-headerAsc {
-  background-color: #555;
-  background-image: url(data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjI8Bya2wnINUMopZAQA7);
-  /* background-image: url(../images/tablesorter/desc.gif); */
+	background: #555 url(data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjI8Bya2wnINUMopZAQA7) no-repeat center right;
+	/* background-image: url(../images/tablesorter/desc.gif); */
 }
 
 .tablesorter thead .sorter-false {
@@ -2707,7 +2456,6 @@ thead.tablesorter-stickyHeader {
 
 .tablesorter tfoot a {
 	color:#fff;
-	text-decoration: none;
 }
 
 /* =======================================================================
@@ -2844,6 +2592,25 @@ span.token-input-delete-token {
 	margin: 0 1px;
 }
 
+.step-one #searchResults .alt {
+	background-color: rgb(245, 245, 245);
+}
+
+#addRootDirTable td label .filepath,
+.grey-text {
+	color:#666
+}
+
+#newShowPortal #displayText .show-name,
+#newShowPortal #displayText .show-dest,
+#newShowPortal #displayText p {
+	color: rgb(153, 153, 153);
+}
+
+#newShowPortal #displayText .show-name,
+#newShowPortal #displayText .show-dest {
+	color: rgb(87, 68, 43);
+}
 /* =======================================================================
 jquery.confirm.css
 ========================================================================== */

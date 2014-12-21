@@ -61,6 +61,7 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 from browser import WebFileBrowser
+from mimetypes import MimeTypes
 
 from lib.dateutil import tz
 from lib.unrar2 import RarFile
@@ -234,7 +235,9 @@ class MainHandler(RequestHandler):
                     func = getattr(klass, 'index', None)
 
             if callable(func):
-                return func(**args)
+                out = func(**args)
+                self._headers = klass._headers
+                return out
 
         raise HTTPError(404)
 
@@ -264,7 +267,7 @@ class MainHandler(RequestHandler):
         else:
             default_image_name = 'banner.png'
 
-        default_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', default_image_name)
+        image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', default_image_name)
         if show and sickbeard.helpers.findCertainShow(sickbeard.showList, int(show)):
             cache_obj = image_cache.ImageCache()
 
@@ -279,10 +282,11 @@ class MainHandler(RequestHandler):
                 image_file_name = cache_obj.banner_thumb_path(show)
 
             if ek.ek(os.path.isfile, image_file_name):
-                with file(image_file_name, 'rb') as img:
-                    return img.read()
+                image_path = image_file_name
 
-        with file(default_image_path, 'rb') as img:
+        mime_type, encoding = MimeTypes().guess_type(image_path)
+        self.set_header('Content-Type', mime_type)
+        with file(image_path, 'rb') as img:
             return img.read()
 
     def setHomeLayout(self, layout):
@@ -425,25 +429,6 @@ class MainHandler(RequestHandler):
         sql_results.sort(sorts[sickbeard.COMING_EPS_SORT])
 
         t = PageTemplate(headers=self.request.headers, file="comingEpisodes.tmpl")
-        # paused_item = { 'title': '', 'path': 'toggleComingEpsDisplayPaused' }
-        # paused_item['title'] = 'Hide Paused' if sickbeard.COMING_EPS_DISPLAY_PAUSED else 'Show Paused'
-        paused_item = {'title': 'View Paused:', 'path': {'': ''}}
-        paused_item['path'] = {'Hide': 'toggleComingEpsDisplayPaused'} if sickbeard.COMING_EPS_DISPLAY_PAUSED else {
-            'Show': 'toggleComingEpsDisplayPaused'}
-        t.submenu = [
-            {'title': 'Sort by:', 'path': {'Date': 'setComingEpsSort/?sort=date',
-                                           'Show': 'setComingEpsSort/?sort=show',
-                                           'Network': 'setComingEpsSort/?sort=network',
-            }},
-
-            {'title': 'Layout:', 'path': {'Banner': 'setComingEpsLayout/?layout=banner',
-                                          'Poster': 'setComingEpsLayout/?layout=poster',
-                                          'List': 'setComingEpsLayout/?layout=list',
-                                          'Calendar': 'setComingEpsLayout/?layout=calendar',
-            }},
-            paused_item,
-        ]
-
         t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
         t.today = datetime.datetime.now(network_timezones.sb_timezone)
         t.sql_results = sql_results
@@ -1467,7 +1452,6 @@ class History(MainHandler):
 
 ConfigMenu = [
     {'title': 'General', 'path': 'config/general/'},
-    {'title': 'Backup/Restore', 'path': 'config/backuprestore/'},
     {'title': 'Search Settings', 'path': 'config/search/'},
     {'title': 'Search Providers', 'path': 'config/providers/'},
     {'title': 'Subtitles Settings', 'path': 'config/subtitles/'},
@@ -1544,7 +1528,7 @@ class ConfigGeneral(MainHandler):
                     update_shows_on_start=None, trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
-                    handle_reverse_proxy=None, sort_article=None, auto_update=None, notify_on_update=None,
+                    handle_reverse_proxy=None, home_search_focus=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, theme_name=None):
@@ -1563,6 +1547,7 @@ class ConfigGeneral(MainHandler):
         sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
         config.change_UPDATE_FREQUENCY(update_frequency)
         sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
+        sickbeard.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
         sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
         sickbeard.CPU_PRESET = cpu_preset
         sickbeard.ANON_REDIRECT = anon_redirect
@@ -1630,53 +1615,6 @@ class ConfigGeneral(MainHandler):
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
         redirect("/config/general/")
-
-
-class ConfigBackupRestore(MainHandler):
-    def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file="config_backuprestore.tmpl")
-        t.submenu = ConfigMenu
-        return _munge(t)
-
-    def backup(self, backupDir=None):
-
-        finalResult = ''
-
-        if backupDir:
-            source = [os.path.join(sickbeard.DATA_DIR, 'sickbeard.db'), sickbeard.CONFIG_FILE]
-            target = os.path.join(backupDir, 'SickGear-' + time.strftime('%Y%m%d%H%M%S') + '.zip')
-
-            if helpers.makeZip(source, target):
-                finalResult += "Successful backup to " + target
-            else:
-                finalResult += "Backup FAILED"
-        else:
-            finalResult += "You need to choose a folder to save your backup to!"
-
-        finalResult += "<br />\n"
-
-        return finalResult
-
-
-    def restore(self, backupFile=None):
-
-        finalResult = ''
-
-        if backupFile:
-            source = backupFile
-            target_dir = os.path.join(sickbeard.DATA_DIR, 'restore')
-
-            if helpers.extractZip(source, target_dir):
-                finalResult += "Successfully extracted restore files to " + target_dir
-                finalResult += "<br>Restart SickGear to complete the restore."
-            else:
-                finalResult += "Restore FAILED"
-        else:
-            finalResult += "You need to select a backup file to restore!"
-
-        finalResult += "<br />\n"
-
-        return finalResult
 
 
 class ConfigSearch(MainHandler):
@@ -2701,7 +2639,6 @@ class Config(MainHandler):
 
     # map class names to urls
     general = ConfigGeneral
-    backuprestore = ConfigBackupRestore
     search = ConfigSearch
     providers = ConfigProviders
     subtitles = ConfigSubtitles
@@ -2873,7 +2810,7 @@ class NewHomeAddShows(MainHandler):
 
                 cur_dir = {
                     'dir': cur_path,
-                    'display_dir': '<b>' + ek.ek(os.path.dirname, cur_path) + os.sep + '</b>' + ek.ek(
+                    'display_dir': '<span class="filepath">' + ek.ek(os.path.dirname, cur_path) + os.sep + '</span>' + ek.ek(
                         os.path.basename,
                         cur_path),
                 }
@@ -2890,6 +2827,9 @@ class NewHomeAddShows(MainHandler):
 
                 indexer_id = show_name = indexer = None
                 for cur_provider in sickbeard.metadata_provider_dict.values():
+                    if indexer_id and show_name:
+                        continue
+
                     (indexer_id, show_name, indexer) = cur_provider.retrieveShowMetadata(cur_path)
 
                     # default to TVDB if indexer was not detected
@@ -2917,6 +2857,10 @@ class NewHomeAddShows(MainHandler):
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
         """
+        self.set_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.set_header('Pragma', 'no-cache')
+        self.set_header('Expires', '0')
+
         t = PageTemplate(headers=self.request.headers, file="home_newShow.tmpl")
         t.submenu = HomeMenu()
 
@@ -2962,6 +2906,10 @@ class NewHomeAddShows(MainHandler):
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
         """
+        self.set_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.set_header('Pragma', 'no-cache')
+        self.set_header('Expires', '0')
+
         t = PageTemplate(headers=self.request.headers, file="home_recommendedShows.tmpl")
         t.submenu = HomeMenu()
 
@@ -2983,11 +2931,21 @@ class NewHomeAddShows(MainHandler):
             return
 
         map(final_results.append,
-            ([int(show['tvdb_id'] or 0) if sickbeard.TRAKT_DEFAULT_INDEXER == 1 else int(show['tvdb_id'] or 0),
-              show['url'], show['title'], show['overview'],
-              datetime.date.fromtimestamp(int(show['first_aired']) / 1000.0).strftime('%Y%m%d')] for show in
-             recommendedlist if not helpers.findCertainShow(sickbeard.showList, indexerid=int(show['tvdb_id']))))
+            ([show['url'],
+              show['title'],
+              show['overview'],
+              sbdatetime.sbdatetime.sbfdate(datetime.date.fromtimestamp(int(show['first_aired']))),
+              sickbeard.indexerApi(1).name,
+              sickbeard.indexerApi(1).config['icon'],
+              int(show['tvdb_id'] or 0),
+              '%s%s' % (sickbeard.indexerApi(1).config['show_url'], int(show['tvdb_id'] or 0)),
+              sickbeard.indexerApi(2).name,
+              sickbeard.indexerApi(2).config['icon'],
+              int(show['tvrage_id'] or 0),
+              '%s%s' % (sickbeard.indexerApi(2).config['show_url'], int(show['tvrage_id'] or 0))
+             ] for show in recommendedlist if not helpers.findCertainShow(sickbeard.showList, indexerid=int(show['tvdb_id']))))
 
+        self.set_header('Content-Type', 'application/json')
         return json.dumps({'results': final_results})
 
     def addRecommendedShow(self, whichSeries=None, indexerLang="en", rootDir=None, defaultStatus=None,
@@ -3771,9 +3729,16 @@ class Home(MainHandler):
                     shows.append(show)
             t.sortedShowLists = [["Shows", sorted(shows, lambda x, y: cmp(titler(x.name), titler(y.name)))],
                                  ["Anime", sorted(anime, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+
         else:
             t.sortedShowLists = [
                 ["Shows", sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+
+        tvshows = []
+        for tvshow_types in t.sortedShowLists:
+            for tvshow in tvshow_types[1]:
+                tvshows.append(tvshow.indexerid)
+        t.tvshow_id_csv = ','.join(str(x) for x in tvshows)
 
         t.bwl = None
         if showObj.is_anime:

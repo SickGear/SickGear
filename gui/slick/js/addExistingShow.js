@@ -1,78 +1,93 @@
-$(document).ready(function() { 
+$(document).ready(function(){
 
-    $('#checkAll').live('click', function(){
-    
-        var seasCheck = this;
+	var tableDiv = $('#tableDiv');
 
-        $('.dirCheck').each(function(){
-           this.checked = seasCheck.checked;
-        });
-    });
+	tableDiv.on('click', '#checkAll', function(){
 
-    $('#submitShowDirs').click(function(){
+		var cbToggle = this.checked;
 
-        var dirArr = new Array();
+		$('.dirCheck').each(function(){
+			this.checked = cbToggle;
+		});
+	});
 
-        $('.dirCheck').each(function(i,w) {
-        if (this.checked == true) {
-            var show = $(this).attr('id');
-            var indexer = $(this).closest('tr').find('select').val();
-            dirArr.push(encodeURIComponent(indexer + '|' + show));
-        }
-        });  
+	$('#submitShowDirs').click(function(){
 
-        if (dirArr.length == 0)
-            return false;
+		var dirArr = [];
 
-        url = sbRoot+'/home/addShows/addExistingShows?promptForSettings='+ ($('#promptForSettings').prop('checked') ? 'on' : 'off');
+		$('.dirCheck').each(function(){
+			if (true == this.checked){
+				var show = $(this).attr('id');
+				var indexer = $(this).closest('tr').find('select').val();
+				dirArr.push(encodeURIComponent(indexer + '|' + show));
+			}
+		});
 
-        url += '&shows_to_add='+dirArr.join('&shows_to_add=');
+		if (0 == dirArr.length)
+			return false;
 
-        window.location.href = url;
-    });
+		window.location.href = sbRoot + '/home/addShows/addExistingShows'
+			+ '?promptForSettings=' + ($('#promptForSettings').prop('checked') ? 'on' : 'off')
+			+ '&shows_to_add=' + dirArr.join('&shows_to_add=');
+	});
 
 
-    function loadContent() {
-        var url = '';
-        $('.dir_check').each(function(i,w){
-            if ($(w).is(':checked')) {
-                if (url.length)
-                    url += '&';
-                url += 'rootDir=' + encodeURIComponent($(w).attr('id'));
-            }
-        });
+	function loadContent(){
+		var url = '';
+		$('.dir_check').each(function(i, w){
+			if ($(w).is(':checked')){
+				url += (url.length ? '&' : '')
+					+ 'rootDir=' + encodeURIComponent($(w).attr('id'));
+			}
+		});
 
-        $('#tableDiv').html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" /> loading folders...');
-        $.get(sbRoot+'/home/addShows/massAddTable', url, function(data) {
-            $('#tableDiv').html(data);
-            $("#addRootDirTable").tablesorter({
-                //sortList: [[1,0]],
-                widgets: ['zebra'],
-                headers: {
-                    0: { sorter: false }
-                }
-            });
-        });
+		$('#tableDiv').html('<img id="searchingAnim"'
+			+ ' style="margin-right:10px"'
+			+ ' src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif"'
+			+ ' height="32" width="32" />'
+			+ ' scanning parent folders...');
 
-    }
+		$.get(sbRoot + '/home/addShows/massAddTable',
+			url,
+			function(data){
+				$('#tableDiv').html(data);
+				$('#addRootDirTable').tablesorter({
+					sortList: [[1,0]],
+					widgets: ['zebra'],
+					headers: {
+						0: { sorter: false }
+					}
+				});
+			});
+	}
 
-    var last_txt = '';
-    $('#rootDirText').change(function() {
-        if (last_txt == $('#rootDirText').val())
-            return false;
-        else
-            last_txt = $('#rootDirText').val();
-        $('#rootDirStaticList').html('');           
-        $('#rootDirs option').each(function(i, w) {
-            $('#rootDirStaticList').append('<li class="ui-state-default ui-corner-all"><input type="checkbox" class="dir_check" id="'+$(w).val()+'" checked=checked> <label for="'+$(w).val()+'" style="color:#09A2FF;"><b>'+$(w).val()+'</b></label></li>')
-        });
-        loadContent();
-    });
-    
-    $('.dir_check').live('click', loadContent);
+	var last_txt = '', new_text = '', id;
+	$('#rootDirText').change(function(){
+		if (last_txt == (new_text = $('#rootDirText').val()))
+			return false;
 
-    $('.showManage').live('click', function() {
-      $( "#tabs" ).tabs( 'select', 0 );
-    });
+		last_txt = new_text;
+		$('#rootDirStaticList').html('');
+		$('#rootDirs').find('option').each(function(i, w){
+			id = $(w).val();
+			$('#rootDirStaticList').append('<li class="ui-state-default ui-corner-all">'
+				+ '<input id="' + id + '" type="checkbox"' + ' checked=checked'
+				+ ' class="dir_check"'
+				+ ' />'
+				+ ' <label for="' + id + '"'
+				+ ' style="color:#09A2FF">'
+				+ '<b>' + id + '</b></label>'
+				+ '</li>')
+		});
+		loadContent();
+	});
+
+	$('#rootDirStaticList').on('click', '.dir_check', loadContent);
+
+	tableDiv.on('click', '.showManage', function(event) {
+		event.preventDefault();
+		$('#tabs').tabs('option', 'active', 0);
+		$('html,body').animate({scrollTop: 0}, 1000);
+	});
 
 });

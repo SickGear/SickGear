@@ -229,20 +229,20 @@ class DBConnection(object):
 
         genParams = lambda myDict: [x + " = ?" for x in myDict.keys()]
 
-        query = "UPDATE " + tableName + " SET " + ", ".join(genParams(valueDict)) + " WHERE " + " AND ".join(
+        query = "UPDATE [" + tableName + "] SET " + ", ".join(genParams(valueDict)) + " WHERE " + " AND ".join(
             genParams(keyDict))
 
         self.action(query, valueDict.values() + keyDict.values())
 
         if self.connection.total_changes == changesBefore:
-            query = "INSERT INTO " + tableName + " (" + ", ".join(valueDict.keys() + keyDict.keys()) + ")" + \
+            query = "INSERT INTO [" + tableName + "] (" + ", ".join(valueDict.keys() + keyDict.keys()) + ")" + \
                     " VALUES (" + ", ".join(["?"] * len(valueDict.keys() + keyDict.keys())) + ")"
             self.action(query, valueDict.values() + keyDict.values())
 
     def tableInfo(self, tableName):
 
         # FIXME ? binding is not supported here, but I cannot find a way to escape a string manually
-        sqlResult = self.select("PRAGMA table_info(%s)" % tableName)
+        sqlResult = self.select("PRAGMA table_info([%s])" % tableName)
         columns = {}
         for column in sqlResult:
             columns[column['name']] = {'type': column['type']}
@@ -261,9 +261,17 @@ class DBConnection(object):
     def hasColumn(self, tableName, column):
         return column in self.tableInfo(tableName)
 
+    def hasIndex(self, tableName, index):
+        sqlResults = self.select('PRAGMA index_list([%s])' % tableName)
+        for result in sqlResults:
+            if result['name'] == index:
+                return True
+        return False
+
+
     def addColumn(self, table, column, type="NUMERIC", default=0):
-        self.action("ALTER TABLE %s ADD %s %s" % (table, column, type))
-        self.action("UPDATE %s SET %s = ?" % (table, column), (default,))
+        self.action("ALTER TABLE [%s] ADD %s %s" % (table, column, type))
+        self.action("UPDATE [%s] SET %s = ?" % (table, column), (default,))
 
     def close(self):
         """Close database connection"""
@@ -353,8 +361,71 @@ class SchemaUpgrade(object):
         return column in self.connection.tableInfo(tableName)
 
     def addColumn(self, table, column, type="NUMERIC", default=0):
-        self.connection.action("ALTER TABLE %s ADD %s %s" % (table, column, type))
-        self.connection.action("UPDATE %s SET %s = ?" % (table, column), (default,))
+        self.connection.action("ALTER TABLE [%s] ADD %s %s" % (table, column, type))
+        self.connection.action("UPDATE [%s] SET %s = ?" % (table, column), (default,))
+
+    def dropColumn(self, table, column):
+        # get old table columns and store the ones we want to keep
+        result = self.connection.select('pragma table_info([%s])' % table)
+        keptColumns = [c for c in result if c['name'] != column]
+
+        keptColumnsNames = []
+        final = []
+        pk = []
+
+        # copy the old table schema, column by column
+        for column in keptColumns:
+
+            keptColumnsNames.append(column['name'])
+
+            cl = []
+            cl.append(column['name'])
+            cl.append(column['type'])
+
+            '''
+            To be implemented if ever required
+            if column['dflt_value']:
+                cl.append(str(column['dflt_value']))
+
+            if column['notnull']:
+                cl.append(column['notnull'])
+            '''
+
+            if int(column['pk']) != 0:
+                pk.append(column['name'])
+
+            b = ' '.join(cl)
+            final.append(b)
+
+        # join all the table column creation fields
+        final = ', '.join(final)
+        keptColumnsNames = ', '.join(keptColumnsNames)
+
+        # generate sql for the new table creation
+        if len(pk) == 0:
+            sql = 'CREATE TABLE [%s_new] (%s)' % (table, final)
+        else:
+            pk = ', '.join(pk)
+            sql = 'CREATE TABLE [%s_new] (%s, PRIMARY KEY(%s))' % (table, final, pk)
+
+        # create new temporary table and copy the old table data across, barring the removed column
+        self.connection.action(sql)
+        self.connection.action('INSERT INTO [%s_new] SELECT %s FROM [%s]' % (table, keptColumnsNames, table))
+
+        # copy the old indexes from the old table
+        result = self.connection.select('SELECT sql FROM sqlite_master WHERE tbl_name=? and type="index"', [table])
+
+        # remove the old table and rename the new table to take it's place
+        self.connection.action('DROP TABLE [%s]' % table)
+        self.connection.action('ALTER TABLE [%s_new] RENAME TO [%s]' % (table, table))
+
+        # write any indexes to the new table
+        if len(result) > 0:
+            for index in result:
+                self.connection.action(index['sql'])
+
+        # vacuum the db as we will have a lot of space to reclaim after dropping tables
+        self.connection.action("VACUUM")
 
     def checkDBVersion(self):
         return self.connection.checkDBVersion()
@@ -363,3 +434,82 @@ class SchemaUpgrade(object):
         new_version = self.checkDBVersion() + 1
         self.connection.action("UPDATE db_version SET db_version = ?", [new_version])
         return new_version
+
+    def setDBVersion(self, new_version):
+        self.connection.action("UPDATE db_version SET db_version = ?", [new_version])
+        return new_version
+
+
+def MigrationCode(myDB):
+
+    schema = {
+        0: sickbeard.mainDB.InitialSchema,  # 0->20000
+        9: sickbeard.mainDB.AddSizeAndSceneNameFields,
+        10: sickbeard.mainDB.RenameSeasonFolders,
+        11: sickbeard.mainDB.Add1080pAndRawHDQualities,
+        12: sickbeard.mainDB.AddShowidTvdbidIndex,
+        13: sickbeard.mainDB.AddLastUpdateTVDB,
+        14: sickbeard.mainDB.AddDBIncreaseTo15,
+        15: sickbeard.mainDB.AddIMDbInfo,
+        16: sickbeard.mainDB.AddProperNamingSupport,
+        17: sickbeard.mainDB.AddEmailSubscriptionTable,
+        18: sickbeard.mainDB.AddProperSearch,
+        19: sickbeard.mainDB.AddDvdOrderOption,
+        20: sickbeard.mainDB.AddSubtitlesSupport,
+        21: sickbeard.mainDB.ConvertTVShowsToIndexerScheme,
+        22: sickbeard.mainDB.ConvertTVEpisodesToIndexerScheme,
+        23: sickbeard.mainDB.ConvertIMDBInfoToIndexerScheme,
+        24: sickbeard.mainDB.ConvertInfoToIndexerScheme,
+        25: sickbeard.mainDB.AddArchiveFirstMatchOption,
+        26: sickbeard.mainDB.AddSceneNumbering,
+        27: sickbeard.mainDB.ConvertIndexerToInteger,
+        28: sickbeard.mainDB.AddRequireAndIgnoreWords,
+        29: sickbeard.mainDB.AddSportsOption,
+        30: sickbeard.mainDB.AddSceneNumberingToTvEpisodes,
+        31: sickbeard.mainDB.AddAnimeTVShow,
+        32: sickbeard.mainDB.AddAbsoluteNumbering,
+        33: sickbeard.mainDB.AddSceneAbsoluteNumbering,
+        34: sickbeard.mainDB.AddAnimeBlacklistWhitelist,
+        35: sickbeard.mainDB.AddSceneAbsoluteNumbering2,
+        36: sickbeard.mainDB.AddXemRefresh,
+        37: sickbeard.mainDB.AddSceneToTvShows,
+        38: sickbeard.mainDB.AddIndexerMapping,
+        39: sickbeard.mainDB.AddVersionToTvEpisodes,
+
+        40: sickbeard.mainDB.BumpDatabaseVersion,
+        41: sickbeard.mainDB.Migrate41,
+
+        10000: sickbeard.mainDB.SickGearDatabaseVersion,
+        10001: sickbeard.mainDB.RemoveDefaultEpStatusFromTvShows
+
+        #20000: sickbeard.mainDB.AddCoolSickGearFeature1,
+        #20001: sickbeard.mainDB.AddCoolSickGearFeature2,
+        #20002: sickbeard.mainDB.AddCoolSickGearFeature3,
+    }
+
+    db_version = myDB.checkDBVersion()
+    logger.log(u'Detected database version: v' + str(db_version), logger.DEBUG)
+
+    if not (db_version in schema):
+        if db_version == sickbeard.mainDB.MAX_DB_VERSION:
+            logger.log(u'Database schema is up-to-date, no upgrade required')
+        elif db_version < 10000:
+            logger.log_error_and_exit(u'SickGear does not currently support upgrading from this database version')
+        else:
+            logger.log_error_and_exit(u'Invalid database version')
+
+    else:
+
+        while db_version < sickbeard.mainDB.MAX_DB_VERSION:
+            try:
+                update = schema[db_version](myDB)
+                db_version = update.execute()
+            except Exception, e:
+                myDB.close()
+                logger.log(u'Failed to update database with error: ' + ex(e) + ' attempting recovery...', logger.ERROR)
+
+                if restoreDatabase(db_version):
+                    # initialize the main SB database
+                    logger.log_error_and_exit(u'Successfully restored database version:' + str(db_version))
+                else:
+                    logger.log_error_and_exit(u'Failed to restore database version:' + str(db_version))

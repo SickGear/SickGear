@@ -1,227 +1,278 @@
 $(document).ready(function () {
 
-    function populateSelect() {
-        if (!$('#nameToSearch').length) {
-            return;
-        }
+	function populateSelect() {
+		if (!$('#nameToSearch').length)
+			return;
 
-        if ($('#indexerLangSelect option').length <= 1) {
-            $.getJSON(sbRoot + '/home/addShows/getIndexerLanguages', {}, function (data) {
-                var selected, resultStr = '';
+		if (1 >= $('#indexerLangSelect').find('option').length) {
 
-                if (data.results.length === 0) {
-                    resultStr = '<option value="en" selected="selected">en</option>';
-                } else {
-                    $.each(data.results, function (index, obj) {
-                        if (resultStr == '') {
-                            selected = ' selected="selected"';
-                        } else {
-                            selected = '';
-                        }
+			$.getJSON(sbRoot + '/home/addShows/getIndexerLanguages', {}, function (data) {
 
-                        resultStr += '<option value="' + obj + '"' + selected + '>' + obj + '</option>';
-                    });
-                }
+				var resultStr = '',
+					selected = ' selected="selected"',
+					elIndexerLang = $('#indexerLangSelect');
 
-                $('#indexerLangSelect').html(resultStr);
-                $('#indexerLangSelect').change(function () { searchIndexers(); });
-            });
-        }
-    }
+				if (0 === data.results.length) {
+					resultStr = '<option value="en"' + selected + '>en</option>';
+				} else {
+					$.each(data.results, function (index, obj) {
+						resultStr += '<option value="' + obj + '"'
+							+ ('' == resultStr ? selected : '')
+							+ '>' + obj + '</option>';
+					});
+				}
 
-    var searchRequestXhr = null;
+				elIndexerLang.html(resultStr);
+				elIndexerLang.change(function () {
+					searchIndexers();
+				});
+			});
+		}
+	}
 
-    function searchIndexers() {
-        if (!$('#nameToSearch').val().length) {
-            return;
-        }
+	var searchRequestXhr = null;
 
-        if (searchRequestXhr) searchRequestXhr.abort();
+	function searchIndexers() {
+		var elNameToSearch = $('#nameToSearch');
 
-        var searchingFor = $('#nameToSearch').val() + ' on ' + $('#providedIndexer option:selected').text() + ' in ' + $('#indexerLangSelect').val();
-        $('#searchResults').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" /> searching ' + searchingFor + '...');
+		if (!elNameToSearch.val().length)
+			return;
 
-        searchRequestXhr = $.ajax({
-            url: sbRoot + '/home/addShows/searchIndexersForShowName',
-            data: {'search_term': $('#nameToSearch').val(), 'lang': $('#indexerLangSelect').val(), 'indexer': $('#providedIndexer').val()},
-            timeout: parseInt($('#indexer_timeout').val(), 10) * 1000,
-            dataType: 'json',
-            error: function () {
-                $('#searchResults').empty().html('search timed out, try again or try another indexer');
-            },
-            success: function (data) {
-                var firstResult = true;
-                var resultStr = '<fieldset>\n<legend>Search Results:</legend>\n';
-                var checked = '';
+		if (searchRequestXhr)
+			searchRequestXhr.abort();
 
-                if (data.results.length === 0) {
-                    resultStr += '<b>No results found, try a different search.</b>';
-                } else {
-                    $.each(data.results, function (index, obj) {
-                        if (firstResult) {
-                            checked = ' checked';
-                            firstResult = false;
-                        } else {
-                            checked = '';
-                        }
+		var elTvDatabase = $('#providedIndexer'),
+			elIndexerLang = $('#indexerLangSelect'),
+			searchingFor = elNameToSearch.val() + ' on ' + elTvDatabase.find('option:selected').text() + ' in ' + elIndexerLang.val();
 
-                        var whichSeries = obj.join('|');
+		$('#searchResults').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" /> searching ' + searchingFor + '...');
 
+		searchRequestXhr = $.ajax({
+			url: sbRoot + '/home/addShows/searchIndexersForShowName',
+			data: {
+				'search_term': elNameToSearch.val(),
+				'lang': elIndexerLang.val(),
+				'indexer': elTvDatabase.val()
+			},
+			timeout: parseInt($('#indexer_timeout').val(), 10) * 1000,
+			dataType: 'json',
+			error: function () {
+				$('#searchResults').empty().html('search timed out, try again or try another database');
+			},
+			success: function (data) {
+				var resultStr = '', checked = '', rowType, row = 0;
 
-                        resultStr += '<input type="radio" id="whichSeries" name="whichSeries" value="' + whichSeries + '"' + checked + ' /> ';
-                        if (data.langid && data.langid != "") {
-                            resultStr += '<a href="' + anonURL + obj[2] + obj[3] + '&lid=' + data.langid + '" onclick=\"window.open(this.href, \'_blank\'); return false;\" ><b>' + obj[4] + '</b></a>';
-                        } else {
-                            resultStr += '<a href="' + anonURL + obj[2] + obj[3] + '" onclick=\"window.open(this.href, \'_blank\'); return false;\" ><b>' + obj[4] + '</b></a>';
-                        }
+				if (0 === data.results.length) {
+					resultStr += '<span class="boldest">Sorry, no results found. Try a different search.</span>';
+				} else {
+					$.each(data.results, function (index, obj) {
+						checked = (0 == row ? ' checked' : '');
+						rowType = (0 == row % 2 ? '' : ' class="alt"');
+						row++;
 
-                        if (obj[5] !== null) {
-                            var startDate = new Date(obj[5]);
-                            var today = new Date();
-                            if (startDate > today) {
-                                resultStr += ' (will debut on ' + obj[5] + ')';
-                            } else {
-                                resultStr += ' (started on ' + obj[5] + ')';
-                            }
-                        }
+						var whichSeries = obj.join('|'),
+							showstartdate = '';
 
-                        if (obj[0] !== null) {
-                            resultStr += ' [' + obj[0] + ']';
-                        }
+						if (null !== obj[5]) {
+							var startDate = new Date(obj[5]);
+							var today = new Date();
+							showstartdate = '&nbsp;<span class="stepone-result-date">('
+								+ (startDate > today ? 'will debut' : 'started')
+								+ ' on ' + obj[5] + ')</span>';
+						}
 
-                        resultStr += '<br />';
-                    });
-                    resultStr += '</ul>';
-                }
-                resultStr += '</fieldset>';
-                $('#searchResults').html(resultStr);
-                updateSampleText();
-                myform.loadsection(0);
-            }
-        });
-    }
+						resultStr += '<div' + rowType + '>'
+							+ '<input id="whichSeries" type="radio"'
+							+ ' class="stepone-result-radio"'
+                            + ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + obj[4] + '</span>"'
+							+ ' name="whichSeries"'
+							+ ' value="' + whichSeries + '"'
+							+ checked
+							+ ' />'
+							+ '<a'
+							+ ' class="stepone-result-title"'
+							+ ' title="View detail for <span style=\'color: rgb(66, 139, 202)\'>' + obj[4] + '</span>"'
+							+ ' href="' + anonURL + obj[2] + obj[3] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
+							+ ' onclick="window.open(this.href, \'_blank\'); return false;"'
+							+ '>' + obj[4] + '</a>'
+							+ showstartdate
+							+ (null == obj[0] ? ''
+								: '&nbsp;<span class="stepone-result-db grey-text">' + '[' + obj[0] + ']' + '</span>')
+							+ '</div>' + "\n";
+					});
+				}
+				$('#searchResults').html(
+					'<fieldset>' + "\n" + '<legend class="legendStep" style="margin-bottom: 15px">'
+						+ (0 < row ? row : 'No')
+						+ ' search result' + (1 == row ? '' : 's') + '...</legend>' + "\n"
+						+ resultStr
+						+ '</fieldset>'
+					);
+				updateSampleText();
+				myform.loadsection(0);
+				$('.stepone-result-radio, .stepone-result-title').each(addQTip);
+			}
+		});
+	}
 
-    $('#searchName').click(function () { searchIndexers(); });
+	var elNameToSearch = $('#nameToSearch'),
+		elSearchName = $('#searchName');
 
-    if ($('#nameToSearch').length && $('#nameToSearch').val().length) {
-        $('#searchName').click();
-    }
+	elSearchName.click(function () { searchIndexers(); });
 
-    $('#addShowButton').click(function () {
-        // if they haven't picked a show don't let them submit
-        if (!$("input:radio[name='whichSeries']:checked").val() && !$("input:hidden[name='whichSeries']").val().length) {
-            alert('You must choose a show to continue');
-            return false;
-        }
+	if (elNameToSearch.length && elNameToSearch.val().length) {
+		elSearchName.click();
+	}
 
-        $('#addShowForm').submit();
-    });
+	$('#addShowButton').click(function () {
+		// if they haven't picked a show don't let them submit
+		if (!$('input:radio[name="whichSeries"]:checked').val()
+			&& !$('input:hidden[name="whichSeries"]').val().length) {
+				alert('You must choose a show to continue');
+				return false;
+		}
+		$('#addShowForm').submit();
+	});
 
-    $('#skipShowButton').click(function () {
-        $('#skipShow').val('1');
-        $('#addShowForm').submit();
-    });
+	$('#skipShowButton').click(function () {
+		$('#skipShow').val('1');
+		$('#addShowForm').submit();
+	});
 
-    $('#qualityPreset').change(function () {
-        myform.loadsection(2);
-    });
+	$('#qualityPreset').change(function () {
+		myform.loadsection(2);
+	});
 
-    /***********************************************
-    * jQuery Form to Form Wizard- (c) Dynamic Drive (www.dynamicdrive.com)
-    * This notice MUST stay intact for legal use
-    * Visit http://www.dynamicdrive.com/ for this script and 100s more.
-    ***********************************************/
+	/***********************************************
+	* jQuery Form to Form Wizard- (c) Dynamic Drive (www.dynamicdrive.com)
+	* This notice MUST stay intact for legal use
+	* Visit http://www.dynamicdrive.com/ for this script and 100s more.
+	***********************************************/
 
-    var myform = new formtowizard({
-        formid: 'addShowForm',
-        revealfx: ['slide', 500],
-        oninit: function () {
-            populateSelect();
-            updateSampleText();
-            if ($('input:hidden[name=whichSeries]').length && $('#fullShowPath').length) {
-                goToStep(3);
-            }
-        }
-    });
+	var myform = new FormToWizard({
+		fieldsetborderwidth: 0,
+		formid: 'addShowForm',
+		revealfx: ['slide', 500],
+		oninit: function () {
+			populateSelect();
+			updateSampleText();
+			if ($('input:hidden[name="whichSeries"]').length && $('#fullShowPath').length) {
+				goToStep(3);
+			}
+		}
+	});
 
-    function goToStep(num) {
-        $('.step').each(function () {
-            if ($.data(this, 'section') + 1 == num) {
-                $(this).click();
-            }
-        });
-    }
+	function goToStep(num) {
+		$('.step').each(function () {
+			if ($.data(this, 'section') + 1 == num) {
+				$(this).click();
+			}
+		});
+	}
 
-    $('#nameToSearch').focus();
+	elNameToSearch.focus();
 
-    function updateSampleText() {
-        // if something's selected then we have some behavior to figure out
+	function updateSampleText() {
+		// if something's selected then we have some behavior to figure out
 
-        var show_name, sep_char;
-        // if they've picked a radio button then use that
-        if ($('input:radio[name=whichSeries]:checked').length) {
-            show_name = $('input:radio[name=whichSeries]:checked').val().split('|')[4];
-        }
-        // if we provided a show in the hidden field, use that
-        else if ($('input:hidden[name=whichSeries]').length && $('input:hidden[name=whichSeries]').val().length) {
-            show_name = $('#providedName').val();
-        } else {
-            show_name = '';
-        }
+		var show_name,
+			sep_char,
+			elRadio = $('input:radio[name="whichSeries"]:checked'),
+			elInput = $('input:hidden[name="whichSeries"]'),
+			elRootDirs = $('#rootDirs'),
+			elFullShowPath = $('#fullShowPath');
 
-        var sample_text = 'Adding show <b>' + show_name + '</b> into <b>';
+		// if they've picked a radio button then use that
+		if (elRadio.length) {
+			show_name = elRadio.val().split('|')[4];
+		}
+		// if we provided a show in the hidden field, use that
+		else if (elInput.length && elInput.val().length) {
+			show_name = $('#providedName').val();
+		} else {
+			show_name = '';
+		}
 
-        // if we have a root dir selected, figure out the path
-        if ($("#rootDirs option:selected").length) {
-            var root_dir_text = $('#rootDirs option:selected').val();
-            if (root_dir_text.indexOf('/') >= 0) {
-                sep_char = '/';
-            } else if (root_dir_text.indexOf('\\') >= 0) {
-                sep_char = '\\';
-            } else {
-                sep_char = '';
-            }
+		var sample_text = '<p>Adding show <span class="show-name">' + show_name + '</span>'
+			+ ('' == show_name ? 'into<br />' : '<br />into')
+			+ ' <span class="show-dest">';
 
-            if (root_dir_text.substr(sample_text.length - 1) != sep_char) {
-                root_dir_text += sep_char;
-            }
-            root_dir_text += '<i>||</i>' + sep_char;
+		// if we have a root dir selected, figure out the path
+		if (elRootDirs.find('option:selected').length) {
+			var root_dir_text = elRootDirs.find('option:selected').val();
+			if (root_dir_text.indexOf('/') >= 0) {
+				sep_char = '/';
+			} else if (root_dir_text.indexOf('\\') >= 0) {
+				sep_char = '\\';
+			} else {
+				sep_char = '';
+			}
 
-            sample_text += root_dir_text;
-        } else if ($('#fullShowPath').length && $('#fullShowPath').val().length) {
-            sample_text += $('#fullShowPath').val();
-        } else {
-            sample_text += 'unknown dir.';
-        }
+			if (root_dir_text.substr(sample_text.length - 1) != sep_char) {
+				root_dir_text += sep_char;
+			}
+			root_dir_text += '<i>||</i>' + sep_char;
 
-        sample_text += '</b>';
+			sample_text += root_dir_text;
+		} else if (elFullShowPath.length && elFullShowPath.val().length) {
+			sample_text += elFullShowPath.val();
+		} else {
+			sample_text += 'unknown dir.';
+		}
 
-        // if we have a show name then sanitize and use it for the dir name
-        if (show_name.length) {
-            $.get(sbRoot + '/home/addShows/sanitizeFileName', {name: show_name}, function (data) {
-                $('#displayText').html(sample_text.replace('||', data));
-            });
-        // if not then it's unknown
-        } else {
-            $('#displayText').html(sample_text.replace('||', '??'));
-        }
+		sample_text += '</span></p>';
 
-        // also toggle the add show button
-        if (($("#rootDirs option:selected").length || ($('#fullShowPath').length && $('#fullShowPath').val().length)) &&
-            ($('input:radio[name=whichSeries]:checked').length) || ($('input:hidden[name=whichSeries]').length && $('input:hidden[name=whichSeries]').val().length)) {
-            $('#addShowButton').attr('disabled', false);
-        } else {
-            $('#addShowButton').attr('disabled', true);
-        }
-    }
+		// if we have a show name then sanitize and use it for the dir name
+		if (show_name.length) {
+			$.get(sbRoot + '/home/addShows/sanitizeFileName', {name: show_name}, function (data) {
+				$('#displayText').html(sample_text.replace('||', data));
+			});
+		// if not then it's unknown
+		} else {
+			$('#displayText').html(sample_text.replace('||', '??'));
+		}
 
-    $('#rootDirText').change(updateSampleText);
-    $('#whichSeries').live('change', updateSampleText);
+		// also toggle the add show button
+		if ((elRootDirs.find('option:selected').length || (elFullShowPath.length && elFullShowPath.val().length)) &&
+			(elRadio.length) || (elInput.length && elInput.val().length)) {
+			$('#addShowButton').attr('disabled', false);
+		} else {
+			$('#addShowButton').attr('disabled', true);
+		}
+	}
 
-    $('#nameToSearch').keyup(function (event) {
-        if (event.keyCode == 13) {
-            $('#searchName').click();
-        }
-    });
+	$('#rootDirText').change(updateSampleText);
+
+	$('#searchResults').on('click', '.stepone-result-radio', updateSampleText);
+
+	elNameToSearch.keyup(function (event) {
+		if (event.keyCode == 13) {
+			elSearchName.click();
+		}
+	});
+
+	var addQTip = (function() {
+		$(this).css('cursor', 'help');
+		$(this).qtip({
+			show: {
+				solo: true
+			},
+			position: {
+				viewport: $(window),
+				my: 'left center',
+				adjust: {
+					y: -10,
+					x: 2
+				}
+			},
+			style: {
+				tip: {
+					corner: true,
+					method: 'polygon'
+				},
+				classes: 'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'
+			}
+		});
+	});
 
 });

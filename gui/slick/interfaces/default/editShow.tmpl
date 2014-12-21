@@ -65,7 +65,6 @@
 <input type="hidden" name="show" value="$show.indexerid" />
 <b>Location:</b> <input type="text" name="location" id="location" value="$show._location" class="form-control form-control-inline input-sm input350" /><br />
 <br />
-<b>Quality:</b>
 #set $qualities = $common.Quality.splitQuality(int($show.quality))
 #set global $anyQualities = $qualities[0]
 #set global $bestQualities = $qualities[1]

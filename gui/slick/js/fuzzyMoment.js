@@ -54,11 +54,7 @@
                     }
                 },
                 style: {
-                    tip: {
-                        corner: true,
-                        method: 'polygon'
-                    },
-                    classes: 'qtip-rounded qtip-dark qtip-shadow ui-tooltip-sb'
+                    classes: 'qtip-dark qtip-rounded qtip-shadow'
                 }
             });
         });
