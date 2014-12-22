@@ -97,7 +97,7 @@ class TVCache():
             myDB.action('DELETE FROM [' + self.providerID + '] WHERE 1')
 
     def _get_title_and_url(self, item):
-        # override this in the provider if daily search has a different data layout to backlog searches
+        # override this in the provider if recent search has a different data layout to backlog searches
         return self.provider._get_title_and_url(item)
 
     def _getRSSData(self):
@@ -222,7 +222,7 @@ class TVCache():
         return True
 
     def shouldClearCache(self):
-        # if daily search hasn't used our previous results yet then don't clear the cache
+        # if recent search hasn't used our previous results yet then don't clear the cache
         if self.lastUpdate > self.lastSearch:
             return False
 

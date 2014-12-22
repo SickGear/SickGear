@@ -375,7 +375,7 @@ def searchForNeededEpisodes():
 
         episodes.extend(wantedEpisodes(curShow, fromDate))
 
-    providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_daily]
+    providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_recentsearch]
     for curProvider in providers:
 
         # spawn separate threads for each provider so we don't need to wait for providers with slow network operation
@@ -435,7 +435,7 @@ def searchForNeededEpisodes():
 
     if not didSearch:
         logger.log(
-            u"No NZB/Torrent providers found or enabled in the SickGear config for daily searches. Please check your settings.",
+            u"No NZB/Torrent providers found or enabled in the SickGear config for recent searches. Please check your settings.",
             logger.ERROR)
 
     return foundResults.values()

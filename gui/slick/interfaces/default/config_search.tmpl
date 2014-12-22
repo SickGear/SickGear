@@ -90,10 +90,10 @@
 
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Daily search frequency</span>
+								<span class="component-title">Recent search frequency</span>
 								<span class="component-desc">
-									<input type="text" name="dailysearch_frequency" value="$sickbeard.DAILYSEARCH_FREQUENCY" class="form-control input-sm input75" />
-									<p>time in minutes between searches (min. $sickbeard.MIN_DAILYSEARCH_FREQUENCY)</p>
+									<input type="text" name="recentsearch_frequency" value="$sickbeard.RECENTSEARCH_FREQUENCY" class="form-control input-sm input75" />
+									<p>time in minutes between searches (min. $sickbeard.MIN_RECENTSEARCH_FREQUENCY)</p>
 									</span>
 							</label>
 						</div>
@@ -139,11 +139,11 @@
 						</div>
 
 						<div class="field-pair">
-							<label for="dailysearch_startup">
-								<span class="component-title">Daily search on startup</span>
+							<label for="recentsearch_startup">
+								<span class="component-title">Recent search on startup</span>
 								<span class="component-desc">
-									<input type="checkbox" name="dailysearch_startup" id="dailysearch_startup" <%= html_checked if sickbeard.DAILYSEARCH_STARTUP == True else '' %>/>
-									<p>start daily search on startup of SickGear</p>
+									<input type="checkbox" name="recentsearch_startup" id="recentsearch_startup" <%= html_checked if sickbeard.RECENTSEARCH_STARTUP == True else '' %>/>
+									<p>start recent search on startup of SickGear</p>
 								</span>
 							</label>
 						</div>

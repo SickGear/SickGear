@@ -8,6 +8,7 @@
 * Add lowercase PM to the General Config/Interface/Time style selection
 * Change General Config/Interface/Trim zero padding to Trim date and time, now handles 2:00 pm > 2 pm
 * Fix trim zero of military time hour to not use 12 hr time
+* Change replace "Daily-Search" with "Recent-Search"
 
 [develop changelog]
 
