@@ -33,7 +33,7 @@ from sickbeard.search import pickBestResult
 search_queue_lock = threading.Lock()
 
 BACKLOG_SEARCH = 10
-DAILY_SEARCH = 20
+RECENT_SEARCH = 20
 FAILED_SEARCH = 30
 MANUAL_SEARCH = 40
 
@@ -95,17 +95,17 @@ class SearchQueue(generic_queue.GenericQueue):
                 return True
         return False
 
-    def is_dailysearch_in_progress(self):
+    def is_recentsearch_in_progress(self):
         for cur_item in self.queue + [self.currentItem]:
-            if isinstance(cur_item, DailySearchQueueItem):
+            if isinstance(cur_item, RecentSearchQueueItem):
                 return True
         return False
 
     def queue_length(self):
-        length = {'backlog': 0, 'daily': 0, 'manual': 0, 'failed': 0}
+        length = {'backlog': 0, 'recent': 0, 'manual': 0, 'failed': 0}
         for cur_item in self.queue:
-            if isinstance(cur_item, DailySearchQueueItem):
-                length['daily'] += 1
+            if isinstance(cur_item, RecentSearchQueueItem):
+                length['recent'] += 1
             elif isinstance(cur_item, BacklogQueueItem):
                 length['backlog'] += 1
             elif isinstance(cur_item, ManualSearchQueueItem):
@@ -116,8 +116,8 @@ class SearchQueue(generic_queue.GenericQueue):
 
 
     def add_item(self, item):
-        if isinstance(item, DailySearchQueueItem):
-            # daily searches
+        if isinstance(item, RecentSearchQueueItem):
+            # recent searches
             generic_queue.GenericQueue.add_item(self, item)
         elif isinstance(item, BacklogQueueItem) and not self.is_in_queue(item.show, item.segment):
             # backlog searches
@@ -128,16 +128,16 @@ class SearchQueue(generic_queue.GenericQueue):
         else:
             logger.log(u"Not adding item, it's already in the queue", logger.DEBUG)
 
-class DailySearchQueueItem(generic_queue.QueueItem):
+class RecentSearchQueueItem(generic_queue.QueueItem):
     def __init__(self):
         self.success = None
-        generic_queue.QueueItem.__init__(self, 'Daily Search', DAILY_SEARCH)
+        generic_queue.QueueItem.__init__(self, 'Recent Search', RECENT_SEARCH)
 
     def run(self):
         generic_queue.QueueItem.run(self)
 
         try:
-            logger.log("Beginning daily search for new episodes")
+            logger.log("Beginning recent search for new episodes")
             foundResults = search.searchForNeededEpisodes()
 
             if not len(foundResults):

@@ -18,6 +18,7 @@
 * Add pull request checkout option to General Config/Advanced Settings
 * Add BTN api call parameter debug logging
 * Fix anime searches on BTN provider
+* Change replace "Daily-Search" with "Recent-Search"
 
 [develop changelog]
 

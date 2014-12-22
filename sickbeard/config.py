@@ -155,13 +155,13 @@ def change_AUTOPOSTPROCESSER_FREQUENCY(freq):
 
     sickbeard.autoPostProcesserScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.AUTOPOSTPROCESSER_FREQUENCY)
 
-def change_DAILYSEARCH_FREQUENCY(freq):
-    sickbeard.DAILYSEARCH_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_DAILYSEARCH_FREQUENCY)
+def change_RECENTSEARCH_FREQUENCY(freq):
+    sickbeard.RECENTSEARCH_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_RECENTSEARCH_FREQUENCY)
 
-    if sickbeard.DAILYSEARCH_FREQUENCY < sickbeard.MIN_DAILYSEARCH_FREQUENCY:
-        sickbeard.DAILYSEARCH_FREQUENCY = sickbeard.MIN_DAILYSEARCH_FREQUENCY
+    if sickbeard.RECENTSEARCH_FREQUENCY < sickbeard.MIN_RECENTSEARCH_FREQUENCY:
+        sickbeard.RECENTSEARCH_FREQUENCY = sickbeard.MIN_RECENTSEARCH_FREQUENCY
 
-    sickbeard.dailySearchScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.DAILYSEARCH_FREQUENCY)
+    sickbeard.recentSearchScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.RECENTSEARCH_FREQUENCY)
 
 def change_BACKLOG_FREQUENCY(freq):
     sickbeard.BACKLOG_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_BACKLOG_FREQUENCY)
