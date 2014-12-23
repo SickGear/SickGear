@@ -3772,10 +3772,10 @@ class Home(MainHandler):
 
     def plotDetails(self, show, season, episode):
         myDB = db.DBConnection()
-        result = myDB.selectOne(
+        result = myDB.select(
             "SELECT description FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?",
             (int(show), int(season), int(episode)))
-        return result['description'] if result else 'Episode not found.'
+        return result[0]['description'] if result else 'Episode not found.'
 
 
     def sceneExceptions(self, show):

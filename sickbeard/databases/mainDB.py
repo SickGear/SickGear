@@ -27,7 +27,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20000
+MAX_DB_VERSION = 20001
 
 
 class MainSanityCheck(db.DBSanityCheck):
@@ -947,6 +947,16 @@ class SickGearDatabaseVersion(db.SchemaUpgrade):
         logger.log('Bumping database version to new SickGear standards')
 
         self.setDBVersion(20000)
+        return self.checkDBVersion()
+
+# 20000 -> 20001
+class DBIncreaseTo20001(db.SchemaUpgrade):
+    def execute(self):
+        backup_database(self.checkDBVersion())
+
+        logger.log('Bumping database version to force a backup before new database code')
+
+        self.setDBVersion(20001)
         return self.checkDBVersion()
 
 
