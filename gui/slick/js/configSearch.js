@@ -62,7 +62,9 @@ $(document).ready(function(){
 
             $(label_warning_deluge).hide();
             $(host_desc_rtorrent).hide();
+            $(host_desc_deluge).hide();
             $(host_desc_torrent).show();
+            $(torrent_username_option).show();
             $(torrent_verify_cert_option).hide();
             $(torrent_path_option).show();
             $(torrent_path_option).find('.fileBrowser').show();
@@ -86,6 +88,9 @@ $(document).ready(function(){
                 client = 'Deluge';
                 $(torrent_verify_cert_option).show();
                 $(label_warning_deluge).show();
+                $(host_desc_torrent).hide();
+                $(host_desc_deluge).show();
+                $(torrent_username_option).hide();
                 //$('#directory_title').text(client + directory);
             } else if ('download_station' == selectedProvider){
                 client = 'Synology DS';
