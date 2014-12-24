@@ -9,6 +9,7 @@
 * Change General Config/Interface/Trim zero padding to Trim date and time, now handles 2:00 pm > 2 pm
 * Fix trim zero of military time hour to not use 12 hr time
 * Change ThePirateBay to use oldpiratebay as a temporary fix
+* Change Search Settings/Torrent/Deluge option texts for improved understanding
 
 [develop changelog]
 
