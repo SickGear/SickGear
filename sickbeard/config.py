@@ -27,6 +27,8 @@ from sickbeard import helpers
 from sickbeard import logger
 from sickbeard import naming
 from sickbeard import db
+from sickbeard import providers
+from sickbeard.providers.generic import GenericProvider
 
 naming_ep_type = ("%(seasonnumber)dx%(episodenumber)02d",
                   "s%(seasonnumber)02de%(episodenumber)02d",
@@ -445,7 +447,8 @@ class ConfigMigrator():
                                 2: 'Sync backup number with version number',
                                 3: 'Rename omgwtfnzb variables',
                                 4: 'Add newznab catIDs',
-                                5: 'Metadata update'
+                                5: 'Metadata update',
+                                6: 'Rename daily search to recent search'
         }
 
     def migrate_config(self):
@@ -712,3 +715,18 @@ class ConfigMigrator():
         sickbeard.METADATA_WDTV = _migrate_metadata(metadata_wdtv, 'WDTV', use_banner)
         sickbeard.METADATA_TIVO = _migrate_metadata(metadata_tivo, 'TIVO', use_banner)
         sickbeard.METADATA_MEDE8ER = _migrate_metadata(metadata_mede8er, 'Mede8er', use_banner)
+
+    # Migration v6: Rename daily search to recent search
+    def _migrate_v6(self):
+
+        sickbeard.RECENTSEARCH_FREQUENCY = check_setting_int(self.config_obj, 'General', 'dailysearch_frequency',
+                                                             sickbeard.DEFAULT_RECENTSEARCH_FREQUENCY)
+
+        sickbeard.RECENTSEARCH_STARTUP = bool(check_setting_int(self.config_obj, 'General', 'dailysearch_startup', 1))
+        if sickbeard.RECENTSEARCH_FREQUENCY < sickbeard.MIN_RECENTSEARCH_FREQUENCY:
+            sickbeard.RECENTSEARCH_FREQUENCY = sickbeard.MIN_RECENTSEARCH_FREQUENCY
+
+        for curProvider in providers.sortedProviderList():
+            if hasattr(curProvider, 'enable_recentsearch'):
+                curProvider.enable_recentsearch = bool(check_setting_int(self.config_obj, curProvider.getID().upper(),
+                                                           curProvider.getID() + '_enable_dailysearch', 1))

@@ -58,7 +58,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 5
+CONFIG_VERSION = 6
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -674,10 +674,7 @@ def initialize(consoleLogging=True):
 
         ALLOW_HIGH_PRIORITY = bool(check_setting_int(CFG, 'General', 'allow_high_priority', 1))
 
-        RECENTSEARCH_STARTUP = check_setting_int(CFG, 'General', 'dailysearch_startup', 'deprecated')
-        if 'deprecated' == RECENTSEARCH_STARTUP:
-            RECENTSEARCH_STARTUP = check_setting_int(CFG, 'General', 'recentsearch_startup', 1)
-        RECENTSEARCH_STARTUP = bool(RECENTSEARCH_STARTUP)
+        RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 1))
         BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 1))
         SKIP_REMOVED_FILES = bool(check_setting_int(CFG, 'General', 'skip_removed_files', 0))
 
@@ -688,11 +685,8 @@ def initialize(consoleLogging=True):
         if AUTOPOSTPROCESSER_FREQUENCY < MIN_AUTOPOSTPROCESSER_FREQUENCY:
             AUTOPOSTPROCESSER_FREQUENCY = MIN_AUTOPOSTPROCESSER_FREQUENCY
 
-        RECENTSEARCH_FREQUENCY = check_setting_int(CFG, 'General', 'dailysearch_frequency',
-                                                   'deprecated')
-        if 'deprecated' == RECENTSEARCH_FREQUENCY:
-            RECENTSEARCH_FREQUENCY = check_setting_int(CFG, 'General', 'recentsearch_frequency',
-                                                       DEFAULT_RECENTSEARCH_FREQUENCY)
+        RECENTSEARCH_FREQUENCY = check_setting_int(CFG, 'General', 'recentsearch_frequency',
+                                                   DEFAULT_RECENTSEARCH_FREQUENCY)
         if RECENTSEARCH_FREQUENCY < MIN_RECENTSEARCH_FREQUENCY:
             RECENTSEARCH_FREQUENCY = MIN_RECENTSEARCH_FREQUENCY
 
@@ -1029,15 +1023,9 @@ def initialize(consoleLogging=True):
                                                                             0))
 
             if hasattr(curTorrentProvider, 'enable_recentsearch'):
-                curTorrentProvider.enable_recentsearch = check_setting_int(CFG, curTorrentProvider.getID().upper(),
-                                                                                curTorrentProvider.getID() + '_enable_dailysearch',
-                                                                                'deprecated')
-                if 'deprecated' == curTorrentProvider.enable_recentsearch:
-                    curTorrentProvider.enable_recentsearch = check_setting_int(CFG, curTorrentProvider.getID().upper(),
-                                                                               curTorrentProvider.getID() + '_enable_recentsearch',
-                                                                               1)
-                curTorrentProvider.enable_recentsearch = bool(curTorrentProvider.enable_recentsearch)
-
+                curTorrentProvider.enable_recentsearch = bool(check_setting_int(CFG, curTorrentProvider.getID().upper(),
+                                                                                curTorrentProvider.getID() +
+                                                                                '_enable_recentsearch', 1))
             if hasattr(curTorrentProvider, 'enable_backlog'):
                 curTorrentProvider.enable_backlog = bool(check_setting_int(CFG, curTorrentProvider.getID().upper(),
                                                                            curTorrentProvider.getID() + '_enable_backlog',
@@ -1062,15 +1050,9 @@ def initialize(consoleLogging=True):
                                                                         curNzbProvider.getID() + '_search_fallback',
                                                                         0))
             if hasattr(curNzbProvider, 'enable_recentsearch'):
-                curNzbProvider.enable_recentsearch = check_setting_int(CFG, curNzbProvider.getID().upper(),
-                                                                       curNzbProvider.getID() + '_enable_dailysearch',
-                                                                       'deprecated')
-                if 'deprecated' == curNzbProvider.enable_recentsearch:
-                    curNzbProvider.enable_recentsearch = check_setting_int(CFG, curNzbProvider.getID().upper(),
-                                                                           curNzbProvider.getID() + '_enable_recentsearch',
-                                                                           1)
-                curNzbProvider.enable_recentsearch = bool(curNzbProvider.enable_recentsearch)
-
+                curNzbProvider.enable_recentsearch = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
+                                                                       curNzbProvider.getID() + '_enable_recentsearch',
+                                                                       1))
             if hasattr(curNzbProvider, 'enable_backlog'):
                 curNzbProvider.enable_backlog = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
                                                                        curNzbProvider.getID() + '_enable_backlog',
