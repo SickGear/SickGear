@@ -10,6 +10,7 @@
 * Fix trim zero of military time hour to not use 12 hr time
 * Change ThePirateBay to use oldpiratebay as a temporary fix
 * Change Search Settings/Torrent/Deluge option texts for improved understanding
+* Fix Womble's Index searching (ssl disabled for now, old categories are the new active ones again)
 
 [develop changelog]
 
