@@ -129,7 +129,7 @@
 #else
 #for $cur_show in $trending_shows:
 
-#set $image = re.sub(r'(.*)(\..*?)$', r'\1-300\2', $cur_show['images']['poster'], 0, re.IGNORECASE | re.MULTILINE)
+#set $image = re.sub(r'(.*)/original/(.+)$', r'\1/thumb/\2', $cur_show['images']['poster'], 0, re.IGNORECASE | re.MULTILINE)
 
 	<div class="trakt_show <%= ('notinlibrary', 'inlibrary')[':' in cur_show['show_id']] %>" data-name="$cur_show['title']" data-rating="$cur_show['ratings']['percentage']" data-votes="$cur_show['ratings']['votes']">
 		<div class="traktContainer">

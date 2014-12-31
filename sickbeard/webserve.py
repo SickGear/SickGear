@@ -2980,7 +2980,7 @@ class NewHomeAddShows(MainHandler):
                 tvdbs = ['tvdb_id', 'tvrage_id']
                 for index, tvdb in enumerate(tvdbs):
                     try:
-                        item[u'show_id'] = item[tvdb]
+                        item[u'show_id'] = str(item[tvdb])
                         tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
                     except:
                         continue
