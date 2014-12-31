@@ -11,6 +11,7 @@
 * Change ThePirateBay to use oldpiratebay as a temporary fix
 * Change Search Settings/Torrent/Deluge option texts for improved understanding
 * Fix Womble's Index searching (ssl disabled for now, old categories are the new active ones again)
+* Fix Add From Trending Show page to work with Trakt changes
 
 [develop changelog]
 
