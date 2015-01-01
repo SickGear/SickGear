@@ -461,6 +461,24 @@
 							</label>
 						</div>
 
+						#set pulls = sickbeard.versionCheckScheduler.action.list_remote_pulls()
+						#if len(pulls) > 0 and $sickbeard.BRANCH != 'master':
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Pull request:</span>
+									<span class="component-desc">
+										<select id="pullRequestVersion" class="form-control form-control-inline input-sm pull-left">
+										#for $cur_branch in $pulls:
+											<option value="$cur_branch.fetch_name()" #if $cur_branch == $sickbeard.BRANCH then 'selected="selected"' else ''#>$cur_branch</option>
+										#end for
+										</select>
+										<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="pullRequestCheckout" value="Checkout Pull Request">
+										<div class="clear-left"><p>select pull request to test (restart required)</p></div>
+									</span>
+								</label>
+							</div>
+						#end if
+
 						<div class="field-pair">
 							<label for="git_remote">
 								<span class="component-title">Git remote for branch</span>

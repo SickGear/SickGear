@@ -113,6 +113,10 @@ $(document).ready(function(){
 	$('#branchCheckout').click(function(){
 		window.location.href = sbRoot + '/home/branchCheckout?branch=' + $('#branchVersion').val();
 	});
+
+	$('#pullRequestCheckout').click(function(){
+		window.location.href = sbRoot + '/home/pullRequestCheckout?branch=' + $('#pullRequestVersion').val();
+	});
 	
 });
 

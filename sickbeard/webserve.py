@@ -3628,6 +3628,17 @@ class Home(MainHandler):
         ui.notifications.message('Checking out branch: ', branch)
         return self.update(sickbeard.PID)
 
+    def pullRequestCheckout(self, branch):
+        pull_request = branch
+        branch = branch.split(':')[1]
+        fetched = sickbeard.versionCheckScheduler.action.fetch(pull_request)
+        if fetched:
+            sickbeard.BRANCH = branch
+            ui.notifications.message('Checking out branch: ', branch)
+            return self.update(sickbeard.PID)
+        else:
+            return redirect('/home/')
+
     def displayShow(self, show=None):
 
         if show is None:
