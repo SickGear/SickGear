@@ -64,6 +64,7 @@
 * Add Anime unittest cases (port from lad1337/sickbeard)
 * Fix normal tv show regex (port from midgetspy/sickbeard)
 * Fix anime regex (port from lad1337/sickbeard)
+* Change provider code to not force names into scene sanitized naming
 
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)
