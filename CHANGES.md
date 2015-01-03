@@ -16,6 +16,7 @@
 * Fix normal tv show regex (port from midgetspy/sickbeard)
 * Fix anime regex (port from lad1337/sickbeard)
 * Add pull request checkout option to General Config/Advanced Settings
+* Fix anime searches on BTN provider
 
 [develop changelog]
 
