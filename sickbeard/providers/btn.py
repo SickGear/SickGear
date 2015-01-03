@@ -136,6 +136,8 @@ class BTNProvider(generic.TorrentProvider):
         server = jsonrpclib.Server(self.url)
         parsedJSON = {}
 
+        logger.log(u'Searching with parameters: %s' % params, logger.DEBUG)
+
         try:
             parsedJSON = server.getTorrents(apikey, params, int(results_per_page), int(offset))
 
