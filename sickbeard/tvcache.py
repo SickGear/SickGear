@@ -141,7 +141,7 @@ class TVCache():
         return RSSFeeds(self.providerID).getFeed(url, post_data, request_headers)
 
     def _translateTitle(self, title):
-        return u'' + title.replace(' ', '.')
+        return u'' + title
 
     def _translateLinkURL(self, url):
         return url.replace('&amp;', '&')

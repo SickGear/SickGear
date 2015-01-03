@@ -131,7 +131,9 @@ simple_test_cases = {
         '[UTW]_Fractal_-_01_[h264-720p][96D3F1BF]': parser.ParseResult(None, 'Fractal', None, [], 'h264-720p', 'UTW', None, [1]),
         '[a-s]_inuyasha_-_028_rs2_[BFDDF9F2]': parser.ParseResult(None, 'inuyasha', None, [], 'BFDDF9F2', 'a-s', None, [28]),
         '[HorribleSubs] Fairy Tail S2 - 37 [1080p]': parser.ParseResult(None,'Fairy Tail S2', None, [], '1080p', 'HorribleSubs', None, [37]),
-        '[HorribleSubs] Sword Art Online II - 23 [720p]': parser.ParseResult(None, 'Sword Art Online II', None, [], '720p', 'HorribleSubs', None, [23])
+        '[HorribleSubs] Sword Art Online II - 23 [720p]': parser.ParseResult(None, 'Sword Art Online II', None, [], '720p', 'HorribleSubs', None, [23]),
+        '[HorribleSubs] PSYCHO-PASS 2 - 02 [1080p].mkv': parser.ParseResult(None, 'PSYCHO-PASS 2', None, [], '1080p', 'HorribleSubs', None, [2])
+
     },
 
     'anime_ep_name': {
