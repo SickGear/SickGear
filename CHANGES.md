@@ -2,6 +2,11 @@
 
 * Fix slow database operations (port from midgetspy/sickbeard)
 * Add TVRage network name standardization
+* Remove recent and backlog search at start up options from GUI
+* Change recent and backlog search at start up default value to false
+* Change recent search to occur 5 minutes after start up
+* Change backlog search to occur 10 minutes after start up
+* Change UI footer to display time left until a backlog search
 
 [develop changelog]
 
