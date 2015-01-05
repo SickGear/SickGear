@@ -17,6 +17,7 @@
 * Fix anime regex (port from lad1337/sickbeard)
 * Add pull request checkout option to General Config/Advanced Settings
 * Add BTN api call parameter debug logging
+* Fix anime searches on BTN provider
 
 [develop changelog]
 
@@ -61,10 +62,7 @@
 * Fix restart issue
 * Fix to use new TorrentDay URLs
 * Fix typo in menu item Manage/Update XBMC
-* Fix NameParser unittests
-* Add Anime unittest cases (port from lad1337/sickbeard)
-* Fix normal tv show regex (port from midgetspy/sickbeard)
-* Fix anime regex (port from lad1337/sickbeard)
+
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)
 
