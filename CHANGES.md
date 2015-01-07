@@ -33,6 +33,8 @@
 * Add text "[paused]" where appropriate to shows on layout Day by Day on Episodes page
 * Change Epsiodes page auto refresh from 10 to 30 mins
 * Add UI tweaks
+* Change Add From Trending Show page to a fluid layout
+* Add imagesLoaded plug-in to prevent layout breakage by calling isotope to update content after a page auto-refresh
 
 [develop changelog]
 

@@ -149,7 +149,7 @@ inc_top.tmpl
 	margin-bottom: -15px;
 }
 
-[class^="icon-"],
+[class^="icon-"], 
 [class*=" icon-"] { 
 	background-image: url("../images/glyphicons-halflings.png"); 
 }
@@ -783,45 +783,13 @@ ul#rootDirStaticList li {
 home_trendingShows.tmpl
 ========================================================================== */
 
-.traktShowTitleIcons {
-	float: right;
-	padding-right: 4px;
-	padding-bottom: 4px;
-}
-
-.traktContainer p { 
-	padding-top: 2px;
-}
-
-.traktContainer p img { 
-	position: relative;
-	top: -2px;
-}
-
-.traktContainer p, .traktContainer i { 
-	white-space: nowrap;
-	font-size: 12px;
-	overflow: hidden;
-/*	text-shadow: 1px 1px 0 #000;*/
-	padding-left: 4px;
-	margin: 0;
-}
-
-.traktContainer {
-	margin: 12px;
-	width: 188px;
+.trakt-container {
 	background-color: #DFDACF;
-	border: 1px solid #111;
-	border-radius: 6px;
 }
 
+.trakt-container,
 .trakt-image {
-	overflow: hidden;
-	height: 273px;
-	width: 186px;
-	border-top-left-radius: 5px;
-	border-top-right-radius: 5px;
-	border-bottom: 1px solid #111;
+	border-color: #111;
 }
 
 
@@ -1144,7 +1112,7 @@ td.col-search {
 }
 
 /* =======================================================================
-episodeView.tmpl
+comingEpisodes.tmpl
 ========================================================================== */
 
 .sort_data {
@@ -1314,7 +1282,7 @@ h2.day, h2.network {
 .day-of-week .poster img {
     border-color: #CCC;
 }
-
+/* =======================================================================
 .day-of-week .text .airtime,
 .day-of-week .text .episode,
 .day-of-week .text .episode .name {
@@ -1323,13 +1291,13 @@ h2.day, h2.network {
 .day-of-week .text .episode .season,
 .day-of-week .text .episode .number {
     color: rgb(9, 133, 225);
-    /*color: #3d3d3d;*/
+config*.tmpl
 }
 .day-of-week .text .episode  {
     color: #888;
 }
+========================================================================== */
 
-/* =======================================================================
 config*.tmpl
 ========================================================================== */
 
@@ -1591,12 +1559,12 @@ span.path {
 
 span.quality {
 	font: 12px/13px "Open Sans", verdana, sans-serif;
-	background-image:-webkit-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
-	background-image:-moz-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
-	background-image:-o-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
-	background-image:linear-gradient(to bottom, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
-	-webkit-box-shadow:inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15);
-	box-shadow:inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15);
+	background-image:-webkit-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.25));
+	background-image:-moz-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.25));
+	background-image:-o-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.25));
+	background-image:linear-gradient(to bottom, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.25));
+	-webkit-box-shadow:inset 0 1px rgba(255,255,255,0.1),inset 0 -1px 3px rgba(0,0,0,0.3),inset 0 0 0 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.15);
+	box-shadow:inset 0 1px rgba(255,255,255,0.1),inset 0 -1px 3px rgba(0,0,0,0.3),inset 0 0 0 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.15);
 	text-shadow: 0 1px rgba(0, 0, 0, 0.8);
 	color: #FFFFFF;
 	display: inline-block;
@@ -1688,7 +1656,7 @@ option.flag {
 
 div.blackwhitelist{
 	float:left;
-	text-align: center;
+	text-align: center; 
 }
 
 div.blackwhitelist input {
@@ -1725,8 +1693,8 @@ div.blackwhitelist.anidb, div.blackwhitelist.manual {
 bootstrap Overrides
 ========================================================================== */
 
-body {
-	padding-top: 60px;
+body { 
+	padding-top: 60px; 
 	overflow-y: scroll;
 	font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 	color: #000;
@@ -2381,7 +2349,7 @@ tablesorter.css
 
 .tablesorter th {
 	color: #fff;
-	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
+	text-shadow: -1px -1px 0 rgba(0,0,0,0.3);
 	background-color: #333;
 }
 
@@ -2452,7 +2420,7 @@ thead.tablesorter-stickyHeader {
 .tablesorter tfoot tr {
 	color: #fff;
 	text-align: center;
-	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
+	text-shadow: -1px -1px 0 rgba(0,0,0,0.3);
 	background-color: #333;
 	border-collapse: collapse;
 }
@@ -2627,8 +2595,8 @@ jquery.confirm.css
 	top: 0;
 	left: 0;
 	background: url('../images/bg.gif');
-	background: -moz-linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)) repeat-x rgba(0, 0, 0, 0.5);
-	background:-webkit-gradient(linear, 0% 0%, 0% 100%, from(rgba(0, 0, 0, 0.5)), to(rgba(0, 0, 0, 0.5))) repeat-x rgba(0, 0, 0, 0.5);
+	background: -moz-linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)) repeat-x rgba(0,0,0,0.5);
+	background:-webkit-gradient(linear, 0% 0%, 0% 100%, from(rgba(0,0,0,0.5)), to(rgba(0,0,0,0.5))) repeat-x rgba(0,0,0,0.5);
 	z-index: 100000;
 }
 
@@ -2683,12 +2651,12 @@ jquery.confirm.css
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 	box-sizing: border-box;
-	background-image: -webkit-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 51%,rgba(0, 0, 0, 0.25));
-	background-image: -moz-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 51%,rgba(0, 0, 0, 0.25));
-	background-image: -o-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 51%,rgba(0, 0, 0, 0.25));
-	background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 51%,rgba(0, 0, 0, 0.25));
-	-webkit-box-shadow: inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15);
-	box-shadow: inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15);
+	background-image: -webkit-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 51%,rgba(0,0,0,0.25));
+	background-image: -moz-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 51%,rgba(0,0,0,0.25));
+	background-image: -o-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 51%,rgba(0,0,0,0.25));
+	background-image: linear-gradient(to bottom, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 51%,rgba(0,0,0,0.25));
+	-webkit-box-shadow: inset 0 1px rgba(255,255,255,0.1),inset 0 -1px 3px rgba(0,0,0,0.3),inset 0 0 0 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.15);
+	box-shadow: inset 0 1px rgba(255,255,255,0.1),inset 0 -1px 3px rgba(0,0,0,0.3),inset 0 0 0 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.15);
 }
 
 #confirmBox .button:last-child {	

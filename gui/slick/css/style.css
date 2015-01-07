@@ -946,23 +946,49 @@ ul#rootDirStaticList li input[type="checkbox"] {
 /* =======================================================================
 home_trendingShows.tmpl
 ========================================================================== */
+.trakt-show {
+	width: 20%;
+    float: left;
+}
+@media screen and (min-width: 1200px) {.trakt-show { width: 16.66% }}
+@media screen and (min-width: 1300px) {.trakt-show { width: 14.28% }}
+@media screen and (min-width: 1500px) {.trakt-show { width: 12.5% }}
+@media screen and (min-width: 1700px) {.trakt-show { width: 11.1% }}
+@media screen and (min-width: 1900px) {.trakt-show { width: 10% }}
 
-.traktShowTitleIcons {
-	float: right;
-	padding-right: 4px;
-	padding-bottom: 4px;
+.trakt-container {
+	margin: 6px 3px;
+	border: 1px solid;
+	border-radius: 5px;
 }
 
-.traktContainer p { 
+.trakt-image {
+	width: 185px;
+	height: 278px;
+	background-image: url(../images/poster-dark.jpg);
+}
+
+.trakt-image {
+	width: 100%;
+	height: 100%;
+	display: block;
+	overflow: hidden;
+	border-bottom: 1px solid;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+	z-index: 0;
+}
+
+.trakt-container p {
 	padding-top: 2px;
 }
 
-.traktContainer p img { 
+.trakt-container p img { 
 	position: relative;
 	top: -2px;
 }
 
-.traktContainer p, .traktContainer i { 
+.trakt-container p, .trakt-container i { 
 	white-space: nowrap;
 	font-size: 12px;
 	overflow: hidden;
@@ -970,23 +996,11 @@ home_trendingShows.tmpl
 	margin: 0;
 }
 
-.traktContainer {
-	margin: 12px;
-	width: 188px;
-	background-color: #DFDACF;
-	border: 1px solid #111;
-	border-radius: 6px;
+.trakt-show-title-icons {
+	float: right;
+	padding-right: 4px;
+	padding-bottom: 4px;
 }
-
-.trakt-image {
-	overflow: hidden;
-	height: 273px;
-	width: 186px;
-	border-top-left-radius: 5px;
-	border-top-right-radius: 5px;
-	border-bottom: 1px solid #111;
-}
-
 
 /* =======================================================================
 home_postprocess.tmpl
@@ -3184,14 +3198,6 @@ span.token-input-delete-token {
 	margin: 0 0 0 250px;
 }
 
-.trakt-image {
-	display: block;
-	width: 100%;
-	height: 100%;
-	z-index: 0;
-	background-image: url(../images/poster-dark.jpg)
-}
-
 .time-am-pm {
 	margin-left: 2px;
 }
@@ -3200,6 +3206,11 @@ span.token-input-delete-token {
 	margin-left: 0;
 }
 
+.clearfix:after {
+  content: '';
+  display: block;
+  clear: both;
+}
 /* =======================================================================
 jquery.confirm.css
 ========================================================================== */
