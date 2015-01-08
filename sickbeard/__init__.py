@@ -58,7 +58,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 6
+CONFIG_VERSION = 7
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -419,10 +419,10 @@ GUI_NAME = None
 HOME_LAYOUT = None
 HISTORY_LAYOUT = None
 DISPLAY_SHOW_SPECIALS = False
-COMING_EPS_LAYOUT = None
-COMING_EPS_DISPLAY_PAUSED = False
-COMING_EPS_SORT = None
-COMING_EPS_MISSED_RANGE = None
+EPISODE_VIEW_LAYOUT = None
+EPISODE_VIEW_SORT = None
+EPISODE_VIEW_DISPLAY_PAUSED = False
+EPISODE_VIEW_MISSED_RANGE = None
 FUZZY_DATING = False
 TRIM_ZERO = False
 DATE_PRESET = None
@@ -499,7 +499,7 @@ def initialize(consoleLogging=True):
             USE_EMAIL, EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_LIST, \
             USE_LISTVIEW, METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, metadata_provider_dict, \
             NEWZBIN, NEWZBIN_USERNAME, NEWZBIN_PASSWORD, GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, recentSearchScheduler, NFO_RENAME, \
-            GUI_NAME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, COMING_EPS_LAYOUT, COMING_EPS_SORT, COMING_EPS_DISPLAY_PAUSED, COMING_EPS_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
+            GUI_NAME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, EPISODE_VIEW_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
             POSTER_SORTBY, POSTER_SORTDIR, \
             METADATA_WDTV, METADATA_TIVO, METADATA_MEDE8ER, IGNORE_WORDS, REQUIRE_WORDS, CALENDAR_UNPROTECTED, CREATE_MISSING_SHOW_DIRS, \
             ADD_SHOWS_WO_DIR, USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_HISTORY, SUBTITLES_FINDER_FREQUENCY, subtitlesFinderScheduler, \
@@ -944,10 +944,10 @@ def initialize(consoleLogging=True):
         HOME_LAYOUT = check_setting_str(CFG, 'GUI', 'home_layout', 'poster')
         HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
         DISPLAY_SHOW_SPECIALS = bool(check_setting_int(CFG, 'GUI', 'display_show_specials', 1))
-        COMING_EPS_LAYOUT = check_setting_str(CFG, 'GUI', 'coming_eps_layout', 'banner')
-        COMING_EPS_DISPLAY_PAUSED = bool(check_setting_int(CFG, 'GUI', 'coming_eps_display_paused', 0))
-        COMING_EPS_SORT = check_setting_str(CFG, 'GUI', 'coming_eps_sort', 'date')
-        COMING_EPS_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'coming_eps_missed_range', 7)
+        EPISODE_VIEW_LAYOUT = check_setting_str(CFG, 'GUI', 'episode_view_layout', 'banner')
+        EPISODE_VIEW_SORT = check_setting_str(CFG, 'GUI', 'episode_view_sort', 'time')
+        EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(CFG, 'GUI', 'episode_view_display_paused', 0))
+        EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
         FUZZY_DATING = bool(check_setting_int(CFG, 'GUI', 'fuzzy_dating', 0))
         TRIM_ZERO = bool(check_setting_int(CFG, 'GUI', 'trim_zero', 0))
         DATE_PRESET = check_setting_str(CFG, 'GUI', 'date_preset', '%x')
@@ -1763,10 +1763,10 @@ def save_config():
     new_config['GUI']['home_layout'] = HOME_LAYOUT
     new_config['GUI']['history_layout'] = HISTORY_LAYOUT
     new_config['GUI']['display_show_specials'] = int(DISPLAY_SHOW_SPECIALS)
-    new_config['GUI']['coming_eps_layout'] = COMING_EPS_LAYOUT
-    new_config['GUI']['coming_eps_display_paused'] = int(COMING_EPS_DISPLAY_PAUSED)
-    new_config['GUI']['coming_eps_sort'] = COMING_EPS_SORT
-    new_config['GUI']['coming_eps_missed_range'] = int(COMING_EPS_MISSED_RANGE)
+    new_config['GUI']['episode_view_layout'] = EPISODE_VIEW_LAYOUT
+    new_config['GUI']['episode_view_display_paused'] = int(EPISODE_VIEW_DISPLAY_PAUSED)
+    new_config['GUI']['episode_view_sort'] = EPISODE_VIEW_SORT
+    new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
     new_config['GUI']['fuzzy_dating'] = int(FUZZY_DATING)
     new_config['GUI']['trim_zero'] = int(TRIM_ZERO)
     new_config['GUI']['date_preset'] = DATE_PRESET

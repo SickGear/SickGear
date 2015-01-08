@@ -1,4 +1,4 @@
-### 0.x.x (2014-12-xx xx:xx:xx UTC)
+### 0.x.x (2015-01-xx xx:xx:xx UTC)
 
 * Add network logos BBC Canada, Crackle, El Rey Network, SKY Atlantic, and Watch
 * Change Yahoo! screen network logo
@@ -20,6 +20,19 @@
 * Fix anime searches on BTN provider
 * Change replace "Daily-Search" with "Recent-Search"
 * Add daily search to recent search renaming to config migration code
+* Change Coming Episodes calendar view to a fluid layout, change episode layout design, and add day and month in column headers
+* Add isotope plug-in to Coming Episodes calendar view to enable sort columns by Date, Network, and Show name
+* Add imagesLoaded plug-in to prevent layout breakage by calling isotope to update content after a page auto-refresh
+* Change Coming Episodes to "Episodes" page (API endpoint is not renamed)
+* Add coming episodes to episode view renaming to config migration code
+* Change Layout term "Calender" to "Day by Day" on Episodes page
+* Fix saving of sort modes to config file on Episodes page
+* Add qTip episode plots to "Day by Day" on Episodes page
+* Add article sorting to networks on Episodes page
+* Add toggle sort direction and multidimensional sort to isotope on Episodes page
+* Add text "[paused]" where appropriate to shows on layout Day by Day on Episodes page
+* Change Epsiodes page auto refresh from 10 to 30 mins
+* Add UI tweaks
 
 [develop changelog]
 

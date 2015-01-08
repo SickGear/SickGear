@@ -57,6 +57,7 @@
 		<script type="text/javascript" src="$sbRoot/js/lib/jquery.form-3.35.js?$sbPID"></script>
 		<script type="text/javascript" src="$sbRoot/js/lib/jquery.ui.touch-punch-0.2.2.min.js?$sbPID"></script>
 		<script type="text/javascript" src="$sbRoot/js/lib/isotope.pkgd.min.js?$sbPID"></script>
+		<script type="text/javascript" src="$sbRoot/js/lib/imagesloaded.pkgd.min.js?$sbPID"></script>
 		<script type="text/javascript" src="$sbRoot/js/lib/jquery.confirm.js?$sbPID"></script>
 		<script type="text/javascript" src="$sbRoot/js/script.js?$sbPID"></script>
 
@@ -149,8 +150,8 @@
 							</ul>
 						</li>
 
-						<li id="NAVcomingEpisodes">
-							<a href="$sbRoot/comingEpisodes/" tabindex="$tab#set $tab += 1#">Coming Episodes</a>
+						<li id="NAVepisodeView">
+							<a href="$sbRoot/episodeView/" tabindex="$tab#set $tab += 1#">Episodes</a>
 						</li>
 
 						<li id="NAVhistory">
@@ -261,6 +262,6 @@
 #except (NameError, NotFound):
     #pass
 #end try
-#set $page_class = ('', ' class="%s"' % '_'.join($items).lower().replace(' ', '-'))[0 < len($items)]
+#set $page_class = ('', ' class="%s"' % '_'.join($items).lower().replace(' ', '-').replace('_', '-'))[0 < len($items)]
 		<div id="contentWrapper">
 			<div id="content"$page_class>
