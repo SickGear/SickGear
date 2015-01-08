@@ -630,7 +630,7 @@ class ManageSearches(MainHandler):
         # t.backlogPI = sickbeard.backlogSearchScheduler.action.getProgressIndicator()
         t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()  # @UndefinedVariable
         t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()  # @UndefinedVariable
-        t.dailySearchStatus = sickbeard.dailySearchScheduler.action.amActive  # @UndefinedVariable
+        t.recentSearchStatus = sickbeard.recentSearchScheduler.action.amActive  # @UndefinedVariable
         t.findPropersStatus = sickbeard.properFinderScheduler.action.amActive  # @UndefinedVariable
         t.queueLength = sickbeard.searchQueueScheduler.action.queue_length()
 
@@ -658,10 +658,10 @@ class ManageSearches(MainHandler):
     def forceSearch(self, *args, **kwargs):
 
         # force it to run the next time it looks
-        result = sickbeard.dailySearchScheduler.forceRun()
+        result = sickbeard.recentSearchScheduler.forceRun()
         if result:
-            logger.log(u"Daily search forced")
-            ui.notifications.message('Daily search started')
+            logger.log(u"Recent search forced")
+            ui.notifications.message('Recent search started')
 
         redirect("/manage/manageSearches/")
 
@@ -1628,10 +1628,10 @@ class ConfigSearch(MainHandler):
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
                    sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None,
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
-                   backlog_days=None, backlog_frequency=None, dailysearch_frequency=None,
+                   backlog_days=None, backlog_frequency=None, recentsearch_frequency=None,
                    nzb_method=None, torrent_method=None, usenet_retention=None,
                    download_propers=None, check_propers_interval=None, allow_high_priority=None,
-                   backlog_startup=None, dailysearch_startup=None,
+                   backlog_startup=None, recentsearch_startup=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
                    torrent_label=None, torrent_path=None, torrent_verify_cert=None,
                    torrent_seed_time=None, torrent_paused=None, torrent_high_bandwidth=None, ignore_words=None, require_words=None):
@@ -1644,7 +1644,7 @@ class ConfigSearch(MainHandler):
         if not config.change_TORRENT_DIR(torrent_dir):
             results += ["Unable to create directory " + os.path.normpath(torrent_dir) + ", dir not changed."]
 
-        config.change_DAILYSEARCH_FREQUENCY(dailysearch_frequency)
+        config.change_RECENTSEARCH_FREQUENCY(recentsearch_frequency)
 
         config.change_BACKLOG_FREQUENCY(backlog_frequency)
         sickbeard.BACKLOG_DAYS = config.to_int(backlog_days, default=7)
@@ -1664,7 +1664,7 @@ class ConfigSearch(MainHandler):
 
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 
-        sickbeard.DAILYSEARCH_STARTUP = config.checkbox_to_value(dailysearch_startup)
+        sickbeard.RECENTSEARCH_STARTUP = config.checkbox_to_value(recentsearch_startup)
         sickbeard.BACKLOG_STARTUP = config.checkbox_to_value(backlog_startup)
 
         sickbeard.SAB_USERNAME = sab_username
@@ -2092,10 +2092,10 @@ class ConfigProviders(MainHandler):
                         newznabProviderDict[cur_id].search_fallback = 0
 
                     try:
-                        newznabProviderDict[cur_id].enable_daily = config.checkbox_to_value(
-                            kwargs[cur_id + '_enable_daily'])
+                        newznabProviderDict[cur_id].enable_recentsearch = config.checkbox_to_value(
+                            kwargs[cur_id + '_enable_recentsearch'])
                     except:
-                        newznabProviderDict[cur_id].enable_daily = 0
+                        newznabProviderDict[cur_id].enable_recentsearch = 0
 
                     try:
                         newznabProviderDict[cur_id].enable_backlog = config.checkbox_to_value(
@@ -2258,12 +2258,12 @@ class ConfigProviders(MainHandler):
                 except:
                     curTorrentProvider.search_fallback = 0  # these exceptions are catching unselected checkboxes
 
-            if hasattr(curTorrentProvider, 'enable_daily'):
+            if hasattr(curTorrentProvider, 'enable_recentsearch'):
                 try:
-                    curTorrentProvider.enable_daily = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_enable_daily'])
+                    curTorrentProvider.enable_recentsearch = config.checkbox_to_value(
+                        kwargs[curTorrentProvider.getID() + '_enable_recentsearch'])
                 except:
-                    curTorrentProvider.enable_daily = 0 # these exceptions are actually catching unselected checkboxes
+                    curTorrentProvider.enable_recentsearch = 0 # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curTorrentProvider, 'enable_backlog'):
                 try:
@@ -2300,12 +2300,12 @@ class ConfigProviders(MainHandler):
                 except:
                     curNzbProvider.search_fallback = 0  # these exceptions are actually catching unselected checkboxes
 
-            if hasattr(curNzbProvider, 'enable_daily'):
+            if hasattr(curNzbProvider, 'enable_recentsearch'):
                 try:
-                    curNzbProvider.enable_daily = config.checkbox_to_value(
-                        kwargs[curNzbProvider.getID() + '_enable_daily'])
+                    curNzbProvider.enable_recentsearch = config.checkbox_to_value(
+                        kwargs[curNzbProvider.getID() + '_enable_recentsearch'])
                 except:
-                    curNzbProvider.enable_daily = 0  # these exceptions are actually catching unselected checkboxes
+                    curNzbProvider.enable_recentsearch = 0  # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curNzbProvider, 'enable_backlog'):
                 try:

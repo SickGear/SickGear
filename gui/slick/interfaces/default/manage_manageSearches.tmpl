@@ -29,9 +29,9 @@ Currently running<br />
 #end if
 <br />
 
-<h3>Daily Search:</h3>
+<h3>Recent Search:</h3>
 <a class="btn" href="$sbRoot/manage/manageSearches/forceSearch"><i class="icon-exclamation-sign"></i> Force</a>
-#if not $dailySearchStatus:
+#if not $recentSearchStatus:
 Not in progress<br />
 #else:
 In Progress<br />
@@ -53,7 +53,7 @@ In Progress<br />
 
 <h3>Search Queue:</h3>
 Backlog: <i>$queueLength['backlog'] pending items</i></br>
-Daily: <i>$queueLength['daily'] pending items</i></br>
+Recent: <i>$queueLength['recent'] pending items</i></br>
 Manual: <i>$queueLength['manual'] pending items</i></br>
 Failed: <i>$queueLength['failed'] pending items</i></br>
 </div>

@@ -32,7 +32,7 @@ from sickbeard import network_timezones
 from sickbeard.exceptions import ex
 
 
-class DailySearcher():
+class RecentSearcher():
     def __init__(self):
         self.lock = threading.Lock()
         self.amActive = False
@@ -97,8 +97,8 @@ class DailySearcher():
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
-        # queue episode for daily search
-        dailysearch_queue_item = sickbeard.search_queue.DailySearchQueueItem()
-        sickbeard.searchQueueScheduler.action.add_item(dailysearch_queue_item)
+        # queue episode for recent search
+        recentsearch_queue_item = sickbeard.search_queue.RecentSearchQueueItem()
+        sickbeard.searchQueueScheduler.action.add_item(recentsearch_queue_item)
 
         self.amActive = False

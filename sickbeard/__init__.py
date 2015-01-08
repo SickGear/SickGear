@@ -42,7 +42,7 @@ from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, 
 from sickbeard import helpers, db, exceptions, show_queue, search_queue, scheduler, show_name_helpers
 from sickbeard import logger
 from sickbeard import naming
-from sickbeard import dailysearcher
+from sickbeard import searchRecent
 from sickbeard import scene_numbering, scene_exceptions, name_cache
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, indexer_episodenotfound, \
@@ -58,7 +58,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 5
+CONFIG_VERSION = 6
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -78,7 +78,7 @@ NO_RESIZE = False
 # system events
 events = None
 
-dailySearchScheduler = None
+recentSearchScheduler = None
 backlogSearchScheduler = None
 showUpdateScheduler = None
 versionCheckScheduler = None
@@ -196,19 +196,19 @@ CHECK_PROPERS_INTERVAL = None
 ALLOW_HIGH_PRIORITY = False
 
 AUTOPOSTPROCESSER_FREQUENCY = None
-DAILYSEARCH_FREQUENCY = None
+RECENTSEARCH_FREQUENCY = None
 UPDATE_FREQUENCY = None
-DAILYSEARCH_STARTUP = False
+RECENTSEARCH_STARTUP = False
 BACKLOG_FREQUENCY = None
 BACKLOG_STARTUP = False
 
 DEFAULT_AUTOPOSTPROCESSER_FREQUENCY = 10
-DEFAULT_DAILYSEARCH_FREQUENCY = 40
+DEFAULT_RECENTSEARCH_FREQUENCY = 40
 DEFAULT_BACKLOG_FREQUENCY = 21
 DEFAULT_UPDATE_FREQUENCY = 1
 
 MIN_AUTOPOSTPROCESSER_FREQUENCY = 1
-MIN_DAILYSEARCH_FREQUENCY = 10
+MIN_RECENTSEARCH_FREQUENCY = 10
 MIN_BACKLOG_FREQUENCY = 10
 MIN_UPDATE_FREQUENCY = 1
 
@@ -459,7 +459,7 @@ TRAKT_API_KEY = 'abd806c54516240c76e4ebc9c5ccf394'
 __INITIALIZED__ = False
 
 def get_backlog_cycle_time():
-    cycletime = DAILYSEARCH_FREQUENCY * 2 + 7
+    cycletime = RECENTSEARCH_FREQUENCY * 2 + 7
     return max([cycletime, 720])
 
 def initialize(consoleLogging=True):
@@ -477,7 +477,7 @@ def initialize(consoleLogging=True):
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, \
             NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
-            QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, DAILYSEARCH_STARTUP, \
+            QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, RECENTSEARCH_STARTUP, \
             GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_GROWL, GROWL_HOST, GROWL_PASSWORD, USE_PROWL, PROWL_NOTIFY_ONSNATCH, PROWL_NOTIFY_ONDOWNLOAD, PROWL_NOTIFY_ONSUBTITLEDOWNLOAD, PROWL_API, PROWL_PRIORITY, PROG_DIR, \
             USE_PYTIVO, PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME, \
@@ -485,12 +485,12 @@ def initialize(consoleLogging=True):
             USE_PUSHALOT, PUSHALOT_NOTIFY_ONSNATCH, PUSHALOT_NOTIFY_ONDOWNLOAD, PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHALOT_AUTHORIZATIONTOKEN, \
             USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_API, PUSHBULLET_DEVICE, \
             versionCheckScheduler, VERSION_NOTIFY, AUTO_UPDATE, NOTIFY_ON_UPDATE, PROCESS_AUTOMATICALLY, UNPACK, CPU_PRESET, \
-            KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, MIN_DAILYSEARCH_FREQUENCY, DEFAULT_UPDATE_FREQUENCY, MIN_UPDATE_FREQUENCY, UPDATE_FREQUENCY, \
+            KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, MIN_RECENTSEARCH_FREQUENCY, DEFAULT_UPDATE_FREQUENCY, MIN_UPDATE_FREQUENCY, UPDATE_FREQUENCY, \
             showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, TIMEZONE_DISPLAY, \
             NAMING_PATTERN, NAMING_MULTI_EP, NAMING_ANIME_MULTI_EP, NAMING_FORCE_FOLDERS, NAMING_ABD_PATTERN, NAMING_CUSTOM_ABD, NAMING_SPORTS_PATTERN, NAMING_CUSTOM_SPORTS, NAMING_ANIME_PATTERN, NAMING_CUSTOM_ANIME, NAMING_STRIP_YEAR, \
             RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcesserScheduler, \
             WOMBLE, OMGWTFNZBS, OMGWTFNZBS_USERNAME, OMGWTFNZBS_APIKEY, providerList, newznabProviderList, torrentRssProviderList, \
-            EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, DAILYSEARCH_FREQUENCY, \
+            EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, RECENTSEARCH_FREQUENCY, \
             USE_BOXCAR, BOXCAR_USERNAME, BOXCAR_PASSWORD, BOXCAR_NOTIFY_ONDOWNLOAD, BOXCAR_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR_NOTIFY_ONSNATCH, \
             USE_BOXCAR2, BOXCAR2_ACCESSTOKEN, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR2_NOTIFY_ONSNATCH, \
             USE_PUSHOVER, PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHOVER_NOTIFY_ONSNATCH, \
@@ -498,7 +498,7 @@ def initialize(consoleLogging=True):
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_EMAIL, EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_LIST, \
             USE_LISTVIEW, METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, metadata_provider_dict, \
-            NEWZBIN, NEWZBIN_USERNAME, NEWZBIN_PASSWORD, GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, dailySearchScheduler, NFO_RENAME, \
+            NEWZBIN, NEWZBIN_USERNAME, NEWZBIN_PASSWORD, GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, recentSearchScheduler, NFO_RENAME, \
             GUI_NAME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, COMING_EPS_LAYOUT, COMING_EPS_SORT, COMING_EPS_DISPLAY_PAUSED, COMING_EPS_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
             POSTER_SORTBY, POSTER_SORTDIR, \
             METADATA_WDTV, METADATA_TIVO, METADATA_MEDE8ER, IGNORE_WORDS, REQUIRE_WORDS, CALENDAR_UNPROTECTED, CREATE_MISSING_SHOW_DIRS, \
@@ -674,7 +674,7 @@ def initialize(consoleLogging=True):
 
         ALLOW_HIGH_PRIORITY = bool(check_setting_int(CFG, 'General', 'allow_high_priority', 1))
 
-        DAILYSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'dailysearch_startup', 1))
+        RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 1))
         BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 1))
         SKIP_REMOVED_FILES = bool(check_setting_int(CFG, 'General', 'skip_removed_files', 0))
 
@@ -685,10 +685,10 @@ def initialize(consoleLogging=True):
         if AUTOPOSTPROCESSER_FREQUENCY < MIN_AUTOPOSTPROCESSER_FREQUENCY:
             AUTOPOSTPROCESSER_FREQUENCY = MIN_AUTOPOSTPROCESSER_FREQUENCY
 
-        DAILYSEARCH_FREQUENCY = check_setting_int(CFG, 'General', 'dailysearch_frequency',
-                                                  DEFAULT_DAILYSEARCH_FREQUENCY)
-        if DAILYSEARCH_FREQUENCY < MIN_DAILYSEARCH_FREQUENCY:
-            DAILYSEARCH_FREQUENCY = MIN_DAILYSEARCH_FREQUENCY
+        RECENTSEARCH_FREQUENCY = check_setting_int(CFG, 'General', 'recentsearch_frequency',
+                                                   DEFAULT_RECENTSEARCH_FREQUENCY)
+        if RECENTSEARCH_FREQUENCY < MIN_RECENTSEARCH_FREQUENCY:
+            RECENTSEARCH_FREQUENCY = MIN_RECENTSEARCH_FREQUENCY
 
         MIN_BACKLOG_FREQUENCY = get_backlog_cycle_time()
         BACKLOG_FREQUENCY = check_setting_int(CFG, 'General', 'backlog_frequency', DEFAULT_BACKLOG_FREQUENCY)
@@ -1022,11 +1022,10 @@ def initialize(consoleLogging=True):
                                                                             curTorrentProvider.getID() + '_search_fallback',
                                                                             0))
 
-            if hasattr(curTorrentProvider, 'enable_daily'):
-                curTorrentProvider.enable_daily = bool(check_setting_int(CFG, curTorrentProvider.getID().upper(),
-                                                                         curTorrentProvider.getID() + '_enable_daily',
-                                                                         1))
-
+            if hasattr(curTorrentProvider, 'enable_recentsearch'):
+                curTorrentProvider.enable_recentsearch = bool(check_setting_int(CFG, curTorrentProvider.getID().upper(),
+                                                                                curTorrentProvider.getID() +
+                                                                                '_enable_recentsearch', 1))
             if hasattr(curTorrentProvider, 'enable_backlog'):
                 curTorrentProvider.enable_backlog = bool(check_setting_int(CFG, curTorrentProvider.getID().upper(),
                                                                            curTorrentProvider.getID() + '_enable_backlog',
@@ -1050,11 +1049,10 @@ def initialize(consoleLogging=True):
                 curNzbProvider.search_fallback = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
                                                                         curNzbProvider.getID() + '_search_fallback',
                                                                         0))
-            if hasattr(curNzbProvider, 'enable_daily'):
-                curNzbProvider.enable_daily = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
-                                                                     curNzbProvider.getID() + '_enable_daily',
-                                                                     1))
-
+            if hasattr(curNzbProvider, 'enable_recentsearch'):
+                curNzbProvider.enable_recentsearch = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
+                                                                       curNzbProvider.getID() + '_enable_recentsearch',
+                                                                       1))
             if hasattr(curNzbProvider, 'enable_backlog'):
                 curNzbProvider.enable_backlog = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
                                                                        curNzbProvider.getID() + '_enable_backlog',
@@ -1124,11 +1122,11 @@ def initialize(consoleLogging=True):
                                                    cycleTime=datetime.timedelta(seconds=3),
                                                    threadName="SEARCHQUEUE")
 
-        update_interval = datetime.timedelta(minutes=DAILYSEARCH_FREQUENCY)
-        dailySearchScheduler = scheduler.Scheduler(dailysearcher.DailySearcher(),
+        update_interval = datetime.timedelta(minutes=RECENTSEARCH_FREQUENCY)
+        recentSearchScheduler = scheduler.Scheduler(searchRecent.RecentSearcher(),
                                                    cycleTime=update_interval,
-                                                   threadName="DAILYSEARCHER",
-                                                   run_delay=update_now if DAILYSEARCH_STARTUP
+                                                   threadName="RECENTSEARCHER",
+                                                   run_delay=update_now if RECENTSEARCH_STARTUP
                                                    else update_interval)
 
         update_interval = datetime.timedelta(minutes=BACKLOG_FREQUENCY)
@@ -1181,15 +1179,15 @@ def start():
         showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
         properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
         subtitlesFinderScheduler, USE_SUBTITLES, traktCheckerScheduler, \
-        dailySearchScheduler, events, started
+        recentSearchScheduler, events, started
 
     with INIT_LOCK:
         if __INITIALIZED__:
             # start sysetm events queue
             events.start()
 
-            # start the daily search scheduler
-            dailySearchScheduler.start()
+            # start the recent search scheduler
+            recentSearchScheduler.start()
 
             # start the backlog scheduler
             backlogSearchScheduler.start()
@@ -1230,7 +1228,7 @@ def halt():
         showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
         properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
         subtitlesFinderScheduler, traktCheckerScheduler, \
-        dailySearchScheduler, events, started
+        recentSearchScheduler, events, started
 
     with INIT_LOCK:
 
@@ -1245,10 +1243,10 @@ def halt():
             except:
                 pass
 
-            dailySearchScheduler.stop.set()
-            logger.log(u"Waiting for the DAILYSEARCH thread to exit")
+            recentSearchScheduler.stop.set()
+            logger.log(u"Waiting for the RECENTSEARCH thread to exit")
             try:
-                dailySearchScheduler.join(10)
+                recentSearchScheduler.join(10)
             except:
                 pass
 
@@ -1397,13 +1395,13 @@ def save_config():
     new_config['General']['torrent_method'] = TORRENT_METHOD
     new_config['General']['usenet_retention'] = int(USENET_RETENTION)
     new_config['General']['autopostprocesser_frequency'] = int(AUTOPOSTPROCESSER_FREQUENCY)
-    new_config['General']['dailysearch_frequency'] = int(DAILYSEARCH_FREQUENCY)
+    new_config['General']['recentsearch_frequency'] = int(RECENTSEARCH_FREQUENCY)
     new_config['General']['backlog_frequency'] = int(BACKLOG_FREQUENCY)
     new_config['General']['update_frequency'] = int(UPDATE_FREQUENCY)
     new_config['General']['download_propers'] = int(DOWNLOAD_PROPERS)
     new_config['General']['check_propers_interval'] = CHECK_PROPERS_INTERVAL
     new_config['General']['allow_high_priority'] = int(ALLOW_HIGH_PRIORITY)
-    new_config['General']['dailysearch_startup'] = int(DAILYSEARCH_STARTUP)
+    new_config['General']['recentsearch_startup'] = int(RECENTSEARCH_STARTUP)
     new_config['General']['backlog_startup'] = int(BACKLOG_STARTUP)
     new_config['General']['skip_removed_files'] = int(SKIP_REMOVED_FILES)
     new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
@@ -1526,9 +1524,9 @@ def save_config():
         if hasattr(curTorrentProvider, 'search_fallback'):
             new_config[curTorrentProvider.getID().upper()][curTorrentProvider.getID() + '_search_fallback'] = int(
                 curTorrentProvider.search_fallback)
-        if hasattr(curTorrentProvider, 'enable_daily'):
-            new_config[curTorrentProvider.getID().upper()][curTorrentProvider.getID() + '_enable_daily'] = int(
-                curTorrentProvider.enable_daily)
+        if hasattr(curTorrentProvider, 'enable_recentsearch'):
+            new_config[curTorrentProvider.getID().upper()][curTorrentProvider.getID() + '_enable_recentsearch'] = int(
+                curTorrentProvider.enable_recentsearch)
         if hasattr(curTorrentProvider, 'enable_backlog'):
             new_config[curTorrentProvider.getID().upper()][curTorrentProvider.getID() + '_enable_backlog'] = int(
                 curTorrentProvider.enable_backlog)
@@ -1550,9 +1548,9 @@ def save_config():
         if hasattr(curNzbProvider, 'search_fallback'):
             new_config[curNzbProvider.getID().upper()][curNzbProvider.getID() + '_search_fallback'] = int(
                 curNzbProvider.search_fallback)
-        if hasattr(curNzbProvider, 'enable_daily'):
-            new_config[curNzbProvider.getID().upper()][curNzbProvider.getID() + '_enable_daily'] = int(
-                curNzbProvider.enable_daily)
+        if hasattr(curNzbProvider, 'enable_recentsearch'):
+            new_config[curNzbProvider.getID().upper()][curNzbProvider.getID() + '_enable_recentsearch'] = int(
+                curNzbProvider.enable_recentsearch)
         if hasattr(curNzbProvider, 'enable_backlog'):
             new_config[curNzbProvider.getID().upper()][curNzbProvider.getID() + '_enable_backlog'] = int(
                 curNzbProvider.enable_backlog)

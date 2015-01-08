@@ -36,7 +36,7 @@ from lib.bencode import bdecode
 
 
 class TorrentRssProvider(generic.TorrentProvider):
-    def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False, enable_daily=False,
+    def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False, enable_recentsearch=False,
                  enable_backlog=False):
         generic.TorrentProvider.__init__(self, name)
         self.cache = TorrentRssCache(self)
@@ -48,7 +48,7 @@ class TorrentRssProvider(generic.TorrentProvider):
 
         self.search_mode = search_mode
         self.search_fallback = search_fallback
-        self.enable_daily = enable_daily
+        self.enable_recentsearch = enable_recentsearch
         self.enable_backlog = enable_backlog
         self.cookies = cookies
 
@@ -59,7 +59,7 @@ class TorrentRssProvider(generic.TorrentProvider):
                                             self.enabled,
                                             self.search_mode or '',
                                             self.search_fallback,
-                                            self.enable_daily,
+                                            self.enable_recentsearch,
                                             self.enable_backlog)
 
     def imageName(self):

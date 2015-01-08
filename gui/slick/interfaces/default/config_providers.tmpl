@@ -214,13 +214,13 @@
 						</div>
     #end if
 
-    #if $hasattr($curNewznabProvider, 'enable_daily'):
+    #if $hasattr($curNewznabProvider, 'enable_recentsearch'):
 						<div class="field-pair">
-							<label for="${curNewznabProvider.getID()}_enable_daily">
-								<span class="component-title">Enable daily searches</span>
+							<label for="${curNewznabProvider.getID()}_enable_recentsearch">
+								<span class="component-title">Enable recent searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curNewznabProvider.getID()}_enable_daily" id="${curNewznabProvider.getID()}_enable_daily" <%= html_checked if curNewznabProvider.enable_daily else '' %>/>
-									<p>perform daily searches at provider</p>
+									<input type="checkbox" name="${curNewznabProvider.getID()}_enable_recentsearch" id="${curNewznabProvider.getID()}_enable_recentsearch" <%= html_checked if curNewznabProvider.enable_recentsearch else '' %>/>
+									<p>perform recent searches at provider</p>
 								</span>
 							</label>
 						</div>
@@ -292,13 +292,13 @@
     #end if
 
 
-    #if $hasattr($curNzbProvider, 'enable_daily'):
+    #if $hasattr($curNzbProvider, 'enable_recentsearch'):
 						<div class="field-pair">
-							<label for="${curNzbProvider.getID()}_enable_daily">
-								<span class="component-title">Enable daily searches</span>
+							<label for="${curNzbProvider.getID()}_enable_recentsearch">
+								<span class="component-title">Enable recent searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curNzbProvider.getID()}_enable_daily" id="${curNzbProvider.getID()}_enable_daily" <%= html_checked if curNzbProvider.enable_daily else '' %>/>
-									<p>enable provider to perform daily searches.</p>
+									<input type="checkbox" name="${curNzbProvider.getID()}_enable_recentsearch" id="${curNzbProvider.getID()}_enable_recentsearch" <%= html_checked if curNzbProvider.enable_recentsearch else '' %>/>
+									<p>enable provider to perform recent searches.</p>
 								</span>
 							</label>
 						</div>
@@ -512,13 +512,13 @@
 						</div>
     #end if
 
-    #if $hasattr($curTorrentProvider, 'enable_daily'):
+    #if $hasattr($curTorrentProvider, 'enable_recentsearch'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.getID()}_enable_daily">
-								<span class="component-title">Enable daily searches</span>
+							<label for="${curTorrentProvider.getID()}_enable_recentsearch">
+								<span class="component-title">Enable recent searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curTorrentProvider.getID()}_enable_daily" id="${curTorrentProvider.getID()}_enable_daily" <%= html_checked if curTorrentProvider.enable_daily else '' %>/>
-									<p>enable provider to perform daily searches.</p>
+									<input type="checkbox" name="${curTorrentProvider.getID()}_enable_recentsearch" id="${curTorrentProvider.getID()}_enable_recentsearch" <%= html_checked if curTorrentProvider.enable_recentsearch else '' %>/>
+									<p>enable provider to perform recent searches.</p>
 								</span>
 							</label>
 						</div>
