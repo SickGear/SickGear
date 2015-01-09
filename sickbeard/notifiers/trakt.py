@@ -83,23 +83,24 @@ class TraktNotifier:
                     # Start by getting all episodes in the watchlist
                     watchlist = TraktCall("user/watchlist/episodes.json/%API%/" + sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
 
-                    # Convert watchlist to only contain current show
-                    for show in watchlist:
-                        # Check if tvdb_id exists
-                        if 'tvdb_id' in show:
-                            if unicode(data['shows'][0]['tvdb_id']) == show['tvdb_id']:
-                                data_show = {
-                                    'title': show['title'],
-                                    'tvdb_id': show['tvdb_id'],
-                                    'episodes': []
-                                }
-                            
-                                # Add series and episode (number) to the arry
-                                for episodes in show['episodes']:
-                                    ep = {'season': episodes['season'], 'episode': episodes['number']}
-                                    data_show['episodes'].append(ep)
-                    if data_show is not None:
-                        TraktCall("show/episode/unwatchlist/%API%", sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD, data_show)
+                    if watchlist is not None:
+                        # Convert watchlist to only contain current show
+                        for show in watchlist:
+                            # Check if tvdb_id exists
+                            if 'tvdb_id' in show:
+                                if unicode(data['shows'][0]['tvdb_id']) == show['tvdb_id']:
+                                    data_show = {
+                                        'title': show['title'],
+                                        'tvdb_id': show['tvdb_id'],
+                                        'episodes': []
+                                    }
+                                
+                                    # Add series and episode (number) to the arry
+                                    for episodes in show['episodes']:
+                                        ep = {'season': episodes['season'], 'episode': episodes['number']}
+                                        data_show['episodes'].append(ep)
+                        if data_show is not None:
+                            TraktCall("show/episode/unwatchlist/%API%", sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD, data_show)
 
     def test_notify(self, api, username, password):
         """
