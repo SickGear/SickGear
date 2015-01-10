@@ -77,6 +77,8 @@
 * Fix restart issue
 * Fix to use new TorrentDay URLs
 * Fix typo in menu item Manage/Update XBMC
+* Fix 'NoneType' object is not iterable in trakt module
+* Add log message for when trakt does not return a watchlist
 
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)

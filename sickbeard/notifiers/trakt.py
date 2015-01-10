@@ -101,6 +101,9 @@ class TraktNotifier:
                                         data_show['episodes'].append(ep)
                         if data_show is not None:
                             TraktCall("show/episode/unwatchlist/%API%", sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD, data_show)
+                    else:
+                        logger.log('Failed to get watchlist from trakt. Unable to remove episode from watchlist',
+                                   logger.ERROR)
 
     def test_notify(self, api, username, password):
         """
