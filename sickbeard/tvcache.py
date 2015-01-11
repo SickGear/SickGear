@@ -85,11 +85,7 @@ class TVCache():
         self.minTime = 10
 
     def _getDB(self):
-        # init provider database if not done already
-        if not self.providerDB:
-            self.providerDB = CacheDBConnection(self.providerID)
-
-        return self.providerDB
+        return CacheDBConnection(self.providerID)
 
     def _clearCache(self):
         if self.shouldClearCache():
@@ -313,9 +309,12 @@ class TVCache():
                     'SELECT * FROM [' + self.providerID + '] WHERE indexerid = ? AND season = ? AND episodes LIKE ? '
                     'AND quality IN (' + ','.join([str(x) for x in epObj.wantedQuality]) + ')',
                     [epObj.show.indexerid, epObj.season, '%|' + str(epObj.episode) + '|%']])
+            sqlResults = myDB.mass_action(cl)
+            if sqlResults:
+                sqlResults = list(itertools.chain(*sqlResults))
 
-            sqlResults = myDB.mass_action(cl, fetchall=True)
-            sqlResults = list(itertools.chain(*sqlResults))
+        if not sqlResults:
+            return neededEps
 
         # for each cache entry
         for curResult in sqlResults:

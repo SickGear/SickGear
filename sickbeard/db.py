@@ -48,60 +48,13 @@ def dbFilename(filename="sickbeard.db", suffix=None):
 
 class DBConnection(object):
     def __init__(self, filename="sickbeard.db", suffix=None, row_type=None):
-
         self.filename = filename
-        self.suffix = suffix
-        self.row_type = row_type
-        self.connection = None
+        self.connection = sqlite3.connect(dbFilename(filename), 20)
 
-        try:
-            self.reconnect()
-        except Exception as e:
-            logger.log(u"DB error: " + ex(e), logger.ERROR)
-            raise
-
-    def reconnect(self):
-        """Closes the existing database connection and re-opens it."""
-        self.close()
-        self.connection = sqlite3.connect(dbFilename(self.filename, self.suffix), 20, check_same_thread=False)
-        self.connection.isolation_level = None
-
-        if self.row_type == "dict":
+        if row_type == "dict":
             self.connection.row_factory = self._dict_factory
         else:
             self.connection.row_factory = sqlite3.Row
-
-    def __del__(self):
-        self.close()
-
-    def _cursor(self):
-        """Returns the cursor; reconnects if disconnected."""
-        if self.connection is None: self.reconnect()
-        return self.connection.cursor()
-
-    def execute(self, query, args=None, fetchall=False, fetchone=False):
-        """Executes the given query, returning the lastrowid from the query."""
-        cursor = self._cursor()
-
-        try:
-            if fetchall:
-                return self._execute(cursor, query, args).fetchall()
-            elif fetchone:
-                return self._execute(cursor, query, args).fetchone()
-            else:
-                return self._execute(cursor, query, args)
-        finally:
-            cursor.close()
-
-    def _execute(self, cursor, query, args):
-        try:
-            if args == None:
-                return cursor.execute(query)
-            return cursor.execute(query, args)
-        except sqlite3.OperationalError as e:
-            logger.log(u"DB error: " + ex(e), logger.ERROR)
-            self.close()
-            raise
 
     def checkDBVersion(self):
 
@@ -118,13 +71,11 @@ class DBConnection(object):
         else:
             return 0
 
-    def mass_action(self, querylist, logTransaction=False, fetchall=False):
+    def mass_action(self, querylist, logTransaction=False):
 
         with db_lock:
-            # remove None types
-            querylist = [i for i in querylist if i != None]
 
-            if querylist == None:
+            if querylist is None:
                 return
 
             sqlResult = []
@@ -135,17 +86,15 @@ class DBConnection(object):
                     for qu in querylist:
                         if len(qu) == 1:
                             if logTransaction:
-                                logger.log(qu[0], logger.DEBUG)
-                            sqlResult.append(self.execute(qu[0], fetchall=fetchall))
+                                logger.log(qu[0], logger.DB)
+                            sqlResult.append(self.connection.execute(qu[0]).fetchall())
                         elif len(qu) > 1:
                             if logTransaction:
-                                logger.log(qu[0] + " with args " + str(qu[1]), logger.DEBUG)
-                            sqlResult.append(self.execute(qu[0], qu[1], fetchall=fetchall))
-
-                    logger.log(u"Transaction with " + str(len(querylist)) + u" queries executed", logger.DEBUG)
-
-                    # finished
-                    break
+                                logger.log(qu[0] + " with args " + str(qu[1]), logger.DB)
+                            sqlResult.append(self.connection.execute(qu[0], qu[1]).fetchall())
+                    self.connection.commit()
+                    logger.log(u"Transaction with " + str(len(querylist)) + u" query's executed", logger.DEBUG)
+                    return sqlResult
                 except sqlite3.OperationalError, e:
                     sqlResult = []
                     if self.connection:
@@ -164,15 +113,13 @@ class DBConnection(object):
                     logger.log(u"Fatal error executing query: " + ex(e), logger.ERROR)
                     raise
 
-            #time.sleep(0.02)
-
             return sqlResult
 
-    def action(self, query, args=None, fetchall=False, fetchone=False):
+    def action(self, query, args=None):
 
         with db_lock:
 
-            if query == None:
+            if query is None:
                 return
 
             sqlResult = None
@@ -180,13 +127,13 @@ class DBConnection(object):
 
             while attempt < 5:
                 try:
-                    if args == None:
+                    if args is None:
                         logger.log(self.filename + ": " + query, logger.DB)
+                        sqlResult = self.connection.execute(query)
                     else:
                         logger.log(self.filename + ": " + query + " with args " + str(args), logger.DB)
-
-                    sqlResult = self.execute(query, args, fetchall=fetchall, fetchone=fetchone)
-
+                        sqlResult = self.connection.execute(query, args)
+                    self.connection.commit()
                     # get out of the connection attempt loop since we were successful
                     break
                 except sqlite3.OperationalError, e:
@@ -201,27 +148,17 @@ class DBConnection(object):
                     logger.log(u"Fatal error executing query: " + ex(e), logger.ERROR)
                     raise
 
-            #time.sleep(0.02)
-
             return sqlResult
 
     def select(self, query, args=None):
 
-        sqlResults = self.action(query, args, fetchall=True)
+        sqlResults = self.action(query, args).fetchall()
 
-        if sqlResults == None:
+        if sqlResults is None:
             return []
 
         return sqlResults
 
-    def selectOne(self, query, args=None):
-
-        sqlResults = self.action(query, args, fetchone=True)
-
-        if sqlResults == None:
-            return []
-
-        return sqlResults
 
     def upsert(self, tableName, valueDict, keyDict):
 
@@ -480,9 +417,9 @@ def MigrationCode(myDB):
         41: sickbeard.mainDB.Migrate41,
 
         10000: sickbeard.mainDB.SickGearDatabaseVersion,
-        10001: sickbeard.mainDB.RemoveDefaultEpStatusFromTvShows
+        10001: sickbeard.mainDB.RemoveDefaultEpStatusFromTvShows,
 
-        #20000: sickbeard.mainDB.AddCoolSickGearFeature1,
+        20000: sickbeard.mainDB.DBIncreaseTo20001,
         #20001: sickbeard.mainDB.AddCoolSickGearFeature2,
         #20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
