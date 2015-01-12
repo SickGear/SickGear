@@ -1,6 +1,7 @@
 ### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
 * Fix slow database operations (port from midgetspy/sickbeard)
+* Fix progress bars disappearing on home page
 
 [develop changelog]
 
