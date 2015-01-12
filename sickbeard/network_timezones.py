@@ -140,6 +140,7 @@ def _update_zoneinfo():
 def update_network_dict():
     _remove_old_zoneinfo()
     _update_zoneinfo()
+    load_network_conversions()
 
     d = {}
 
@@ -278,3 +279,62 @@ def test_timeformat(t):
         return False
     else:
         return True
+
+
+def standardize_network(network, country):
+    myDB = db.DBConnection('cache.db')
+    sqlResults = myDB.select('SELECT * FROM network_conversions WHERE tvrage_network = ? and tvrage_country = ?',
+                             [network, country])
+    if len(sqlResults) == 1:
+        return sqlResults[0]['tvdb_network']
+    else:
+        return network
+
+
+def load_network_conversions():
+
+    conversions = []
+
+    # network conversions are stored on github pages
+    url = 'https://raw.githubusercontent.com/prinz23/sg_network_conversions/master/conversions.txt'
+
+    url_data = helpers.getURL(url)
+    if url_data is None:
+        # When urlData is None, trouble connecting to github
+        logger.log(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
+        return
+
+    try:
+        for line in url_data.splitlines():
+            (tvdb_network, tvrage_network, tvrage_country) = line.decode('utf-8').strip().rsplit(u'::', 2)
+            if not (tvdb_network and tvrage_network and tvrage_country):
+                continue
+            conversions.append({'tvdb_network': tvdb_network, 'tvrage_network': tvrage_network, 'tvrage_country': tvrage_country})
+    except (IOError, OSError):
+        pass
+
+    my_db = db.DBConnection('cache.db')
+
+    old_d = my_db.select('SELECT * FROM network_conversions')
+    old_d = helpers.build_dict(old_d, 'tvdb_network')
+
+    # list of sql commands to update the network_conversions table
+    cl = []
+
+    for n_w in conversions:
+        cl.append(['INSERT OR REPLACE INTO network_conversions (tvdb_network, tvrage_network, tvrage_country)'
+                       'VALUES (?,?,?)', [n_w['tvdb_network'], n_w['tvrage_network'], n_w['tvrage_country']]])
+        try:
+            del old_d[n_w['tvdb_network']]
+        except:
+            pass
+
+    # remove deleted records
+    if len(old_d) > 0:
+        old_items = list(va for va in old_d)
+        cl.append(['DELETE FROM network_conversions WHERE tvdb_network'
+                   ' IN (%s)' % ','.join(['?'] * len(old_items)), old_items])
+
+    # change all network conversion info at once (much faster)
+    if len(cl) > 0:
+        my_db.mass_action(cl)
