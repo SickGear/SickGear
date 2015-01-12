@@ -33,6 +33,7 @@
 * Add text "[paused]" where appropriate to shows on layout Day by Day on Episodes page
 * Change Epsiodes page auto refresh from 10 to 30 mins
 * Add UI tweaks
+* Fix progress bars disappearing on home page
 
 
 ### 0.5.0 (2014-12-21 11:40:00 UTC)
