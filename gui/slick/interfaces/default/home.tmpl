@@ -366,13 +366,13 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 					if (classvalue<20) {
 						classtoadd = "progress-20"
 					}
-					if (classvalue>20 && classvalue<60) {
+					if (classvalue>=20 && classvalue<60) {
 						classtoadd = "progress-40"
 					}
-					if (classvalue>40 && classvalue<80) {
+					if (classvalue>=40 && classvalue<80) {
 						classtoadd = "progress-60"
 					}
-					if (classvalue>80) {
+					if (classvalue>=80) {
 						classtoadd = "progress-80"
 					}		
 					\$("\#progressbar$curShow.indexerid > .ui-progressbar-value").addClass(classtoadd);
@@ -596,13 +596,13 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 					if (classvalue<20) {
 						classtoadd = "progress-20"
 					}
-					if (classvalue>20 && classvalue<60) {
+					if (classvalue>=20 && classvalue<60) {
 						classtoadd = "progress-40"
 					}
-					if (classvalue>40 && classvalue<80) {
+					if (classvalue>=40 && classvalue<80) {
 						classtoadd = "progress-60"
 					}
-					if (classvalue>80) {
+					if (classvalue>=80) {
 						classtoadd = "progress-80"
 					}
 					\$("\#progressbar$curShow.indexerid > .ui-progressbar-value").addClass(classtoadd);
