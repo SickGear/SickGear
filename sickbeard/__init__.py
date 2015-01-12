@@ -58,7 +58,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 7
+CONFIG_VERSION = 8
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -674,8 +674,8 @@ def initialize(consoleLogging=True):
 
         ALLOW_HIGH_PRIORITY = bool(check_setting_int(CFG, 'General', 'allow_high_priority', 1))
 
-        RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 1))
-        BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 1))
+        RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 0))
+        BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 0))
         SKIP_REMOVED_FILES = bool(check_setting_int(CFG, 'General', 'skip_removed_files', 0))
 
         USENET_RETENTION = check_setting_int(CFG, 'General', 'usenet_retention', 500)
@@ -1052,7 +1052,7 @@ def initialize(consoleLogging=True):
             if hasattr(curNzbProvider, 'enable_recentsearch'):
                 curNzbProvider.enable_recentsearch = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
                                                                        curNzbProvider.getID() + '_enable_recentsearch',
-                                                                       1))
+                                                                     1))
             if hasattr(curNzbProvider, 'enable_backlog'):
                 curNzbProvider.enable_backlog = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
                                                                        curNzbProvider.getID() + '_enable_backlog',
@@ -1127,14 +1127,14 @@ def initialize(consoleLogging=True):
                                                    cycleTime=update_interval,
                                                    threadName="RECENTSEARCHER",
                                                    run_delay=update_now if RECENTSEARCH_STARTUP
-                                                   else update_interval)
+                                                   else datetime.timedelta(minutes=5))
 
         update_interval = datetime.timedelta(minutes=BACKLOG_FREQUENCY)
         backlogSearchScheduler = searchBacklog.BacklogSearchScheduler(searchBacklog.BacklogSearcher(),
                                                                       cycleTime=update_interval,
                                                                       threadName="BACKLOG",
                                                                       run_delay=update_now if BACKLOG_STARTUP
-                                                                      else update_interval)
+                                                                      else datetime.timedelta(minutes=10))
 
         search_intervals = {'15m': 15, '45m': 45, '90m': 90, '4h': 4 * 60, 'daily': 24 * 60}
         if CHECK_PROPERS_INTERVAL in search_intervals:

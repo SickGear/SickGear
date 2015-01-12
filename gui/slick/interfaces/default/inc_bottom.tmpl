@@ -63,7 +63,7 @@
 			%>
 			&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded
 		| recent search: <span class="footerhighlight"><%= str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0] %></span>
-		| backlog search: <span class="footerhighlight">$sbdatetime.sbdatetime.sbfdate($sickbeard.backlogSearchScheduler.nextRun())</span>
+		| backlog search: <span class="footerhighlight"><%= str(sickbeard.backlogSearchScheduler.timeLeft()).split('.')[0] %></span>
 
 	</div>
 
