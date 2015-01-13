@@ -12,6 +12,7 @@
 * Add Kodi notifier and metadata
 * Add priority, device, and sound support to Pushover notifier (port from midgetspy/sickbeard)
 * Fix updating of pull requests
+* Add hidden cache debug page
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

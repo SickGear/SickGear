@@ -4628,3 +4628,20 @@ class ApiBuilder(MainHandler):
             t.apikey = 'api key not generated'
 
         return t.respond()
+
+
+class Cache(MainHandler):
+    def index(self):
+        myDB = db.DBConnection('cache.db')
+        results = []
+        for provider in sickbeard.providers.sortedProviderList():
+            try:
+                sqlResults = myDB.select('SELECT * FROM %s' % provider.cache.providerID)
+            except:
+                continue
+            results.append((provider.name, sqlResults))
+
+        t = PageTemplate(headers=self.request.headers, file='cache.tmpl')
+        t.cacheResults = results
+
+        return t.respond()
