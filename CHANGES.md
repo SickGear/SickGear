@@ -1,4 +1,4 @@
-### 0.6.0 (2015-01-11 03:28:00 UTC)
+### 0.6.0 (2015-01-18 05:05:00 UTC)
 
 * Add network logos BBC Canada, Crackle, El Rey Network, SKY Atlantic, and Watch
 * Change Yahoo! screen network logo
