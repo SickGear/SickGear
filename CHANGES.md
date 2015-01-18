@@ -11,7 +11,7 @@
 [develop changelog]
 
 
-### 0.6.0 (2015-01-11 03:28:00 UTC)
+### 0.6.0 (2015-01-18 05:05:00 UTC)
 
 * Add network logos BBC Canada, Crackle, El Rey Network, SKY Atlantic, and Watch
 * Change Yahoo! screen network logo
@@ -33,6 +33,8 @@
 * Fix anime searches on BTN provider
 * Change replace "Daily-Search" with "Recent-Search"
 * Add daily search to recent search renaming to config migration code
+* Fix 'NoneType' object is not iterable in trakt module
+* Add log message for when trakt does not return a watchlist
 * Change Coming Episodes calendar view to a fluid layout, change episode layout design, and add day and month in column headers
 * Add isotope plug-in to Coming Episodes calendar view to enable sort columns by Date, Network, and Show name
 * Add imagesLoaded plug-in to prevent layout breakage by calling isotope to update content after a page auto-refresh
@@ -89,8 +91,6 @@
 * Fix restart issue
 * Fix to use new TorrentDay URLs
 * Fix typo in menu item Manage/Update XBMC
-* Fix 'NoneType' object is not iterable in trakt module
-* Add log message for when trakt does not return a watchlist
 
 
 ### 0.4.0 (2014-12-04 10:50:00 UTC)
