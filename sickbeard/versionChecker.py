@@ -115,8 +115,14 @@ class CheckVersion():
         if self.updater.need_update():
             return self.updater.update()
 
+    def fetch(self, pull_request):
+        return self.updater.fetch(pull_request)
+
     def list_remote_branches(self):
         return self.updater.list_remote_branches()
+
+    def list_remote_pulls(self):
+        return self.updater.list_remote_pulls()
 
     def get_branch(self):
         return self.updater.branch
@@ -400,6 +406,17 @@ class GitUpdateManager(UpdateManager):
             return re.findall('\S+\Wrefs/heads/(.*)', branches)
         return []
 
+    def list_remote_pulls(self):
+        gh = github.GitHub(self.github_repo_user, self.github_repo, self.branch)
+        return gh.pull_requests()
+
+    def fetch(self, pull_request):
+        output, err, exit_status = self._run_git(self._git_path, 'fetch -f %s %s' % (sickbeard.GIT_REMOTE, pull_request))  # @UnusedVariable
+        if exit_status == 0:
+            return True
+        return False
+
+
 
 class SourceUpdateManager(UpdateManager):
     def __init__(self):
@@ -597,3 +614,7 @@ class SourceUpdateManager(UpdateManager):
     def list_remote_branches(self):
         gh = github.GitHub(self.github_repo_user, self.github_repo, self.branch)
         return [x['name'] for x in gh.branches() if x and 'name' in x]
+
+    def list_remote_pulls(self):
+        # we don't care about testers that don't use git
+        return []

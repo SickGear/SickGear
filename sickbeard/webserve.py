@@ -67,7 +67,7 @@ from lib.dateutil import tz
 from lib.unrar2 import RarFile
 
 from lib import subliminal
-from trakt import TraktCall
+from lib.trakt import TraktCall
 
 try:
     import json
@@ -300,7 +300,7 @@ class MainHandler(RequestHandler):
 
     def setPosterSortBy(self, sort):
 
-        if sort not in ('name', 'date', 'network', 'progress'):
+        if sort not in ('name', 'time', 'network', 'progress'):
             sort = 'name'
 
         sickbeard.POSTER_SORTBY = sort
@@ -326,36 +326,40 @@ class MainHandler(RequestHandler):
 
         redirect("/home/displayShow?show=" + show)
 
-    def setComingEpsLayout(self, layout):
-        if layout not in ('poster', 'banner', 'list', 'calendar'):
+    def setEpisodeViewLayout(self, layout):
+        if layout not in ('poster', 'banner', 'list', 'daybyday'):
             layout = 'banner'
 
-        if layout == 'calendar':
-            sickbeard.COMING_EPS_SORT = 'date'
+        if 'daybyday' == layout:
+            sickbeard.EPISODE_VIEW_SORT = 'time'
 
-        sickbeard.COMING_EPS_LAYOUT = layout
+        sickbeard.EPISODE_VIEW_LAYOUT = layout
 
-        redirect("/comingEpisodes/")
+        sickbeard.save_config()
 
-    def toggleComingEpsDisplayPaused(self, *args, **kwargs):
+        redirect("/episodeView/")
 
-        sickbeard.COMING_EPS_DISPLAY_PAUSED = not sickbeard.COMING_EPS_DISPLAY_PAUSED
+    def toggleEpisodeViewDisplayPaused(self, *args, **kwargs):
 
-        redirect("/comingEpisodes/")
+        sickbeard.EPISODE_VIEW_DISPLAY_PAUSED = not sickbeard.EPISODE_VIEW_DISPLAY_PAUSED
 
-    def setComingEpsSort(self, sort):
-        if sort not in ('date', 'network', 'show'):
-            sort = 'date'
+        sickbeard.save_config()
 
-        if sickbeard.COMING_EPS_LAYOUT == 'calendar':
-            sort = 'date'
+        redirect("/episodeView/")
 
-        sickbeard.COMING_EPS_SORT = sort
+    def setEpisodeViewSort(self, sort, redir=1):
+        if sort not in ('time', 'network', 'show'):
+            sort = 'time'
 
-        redirect("/comingEpisodes/")
+        sickbeard.EPISODE_VIEW_SORT = sort
 
-    def comingEpisodes(self, layout="None"):
-        """ display the coming episodes """
+        sickbeard.save_config()
+
+        if int(redir):
+            redirect("/episodeView/")
+
+    def episodeView(self, layout="None"):
+        """ display the episodes """
         today_dt = datetime.date.today()
         #today = today_dt.toordinal()
         yesterday_dt = today_dt - datetime.timedelta(days=1)
@@ -363,8 +367,8 @@ class MainHandler(RequestHandler):
         tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
         next_week_dt = (datetime.date.today() + datetime.timedelta(days=7))
         next_week = (next_week_dt + datetime.timedelta(days=1)).toordinal()
-        if not (layout and layout in ('calendar')) and not (sickbeard.COMING_EPS_LAYOUT and sickbeard.COMING_EPS_LAYOUT in ('calendar')):
-            recently = (yesterday_dt - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
+        if not (layout and layout in 'daybyday') and not (sickbeard.EPISODE_VIEW_LAYOUT and sickbeard.EPISODE_VIEW_LAYOUT in 'daybyday'):
+            recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
         else:
             recently = yesterday
 
@@ -379,7 +383,7 @@ class MainHandler(RequestHandler):
         for cur_result in sql_results:
             done_show_list.append(int(cur_result["showid"]))
 
-        if not (layout and layout in ('calendar')) and not (sickbeard.COMING_EPS_LAYOUT and sickbeard.COMING_EPS_LAYOUT in ('calendar')):
+        if not (layout and layout in 'daybyday') and not (sickbeard.EPISODE_VIEW_LAYOUT and sickbeard.EPISODE_VIEW_LAYOUT in 'daybyday'):
             more_sql_results = myDB.select(
                 "SELECT *, tv_shows.status as show_status FROM tv_episodes outer_eps, tv_shows WHERE season != 0 AND showid NOT IN (" + ','.join(
                     ['?'] * len(
@@ -395,49 +399,44 @@ class MainHandler(RequestHandler):
 
         sql_results = list(set(sql_results))
 
-        # multi dimension sort
-        sorts = {
-            'date': (lambda a, b: cmp(
-                (a['localtime'],
-                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
-                 a['season'], a['episode']),
-                (b['localtime'],
-                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
-                 b['season'], b['episode']))),
-            'show': (lambda a, b: cmp(
-                ((a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
-                 a['localtime'], a['season'], a['episode']),
-                ((b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
-                 b['localtime'], b['season'], b['episode']))),
-            'network': (lambda a, b: cmp(
-                (a['network'], a['localtime'],
-                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
-                 a['season'], a['episode']),
-                (b['network'], b['localtime'],
-                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
-                 b['season'], b['episode'])))
-        }
-
         # make a dict out of the sql results
         sql_results = [dict(row) for row in sql_results]
+
+        # multi dimension sort
+        sorts = {
+            'network': (lambda a, b: cmp(
+                (a['data_network'], a['localtime'], a['data_show_name'], a['season'], a['episode']),
+                (b['data_network'], b['localtime'], b['data_show_name'], b['season'], b['episode']))),
+            'show': (lambda a, b: cmp(
+                (a['data_show_name'], a['localtime'], a['season'], a['episode']),
+                (b['data_show_name'], b['localtime'], b['season'], b['episode']))),
+            'time': (lambda a, b: cmp(
+                (a['localtime'], a['data_show_name'], a['season'], a['episode']),
+                (b['localtime'], b['data_show_name'], b['season'], b['episode'])))
+        }
+
+        def value_maybe_article(value=''):
+            return (remove_article(value.lower()), value.lower())[sickbeard.SORT_ARTICLE]
 
         # add localtime to the dict
         for index, item in enumerate(sql_results):
             sql_results[index]['localtime'] = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(item['airdate'], 
                                                                                        item['airs'], item['network']))
+            sql_results[index]['data_show_name'] = value_maybe_article(item['show_name'])
+            sql_results[index]['data_network'] = value_maybe_article(item['network'])
 
-        sql_results.sort(sorts[sickbeard.COMING_EPS_SORT])
+        sql_results.sort(sorts[sickbeard.EPISODE_VIEW_SORT])
 
-        t = PageTemplate(headers=self.request.headers, file="comingEpisodes.tmpl")
+        t = PageTemplate(headers=self.request.headers, file="episodeView.tmpl")
         t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
         t.today = datetime.datetime.now(network_timezones.sb_timezone)
         t.sql_results = sql_results
 
         # Allow local overriding of layout parameter
-        if layout and layout in ('poster', 'banner', 'list','calendar'):
+        if layout and layout in ('banner', 'daybyday', 'list', 'poster'):
             t.layout = layout
         else:
-            t.layout = sickbeard.COMING_EPS_LAYOUT
+            t.layout = sickbeard.EPISODE_VIEW_LAYOUT
 
         return _munge(t)
 
@@ -549,7 +548,7 @@ class PageTemplate(Template):
         self.sbPID = str(sickbeard.PID)
         self.menu = [
             {'title': 'Home', 'key': 'home'},
-            {'title': 'Coming Episodes', 'key': 'comingEpisodes'},
+            {'title': 'Episodes', 'key': 'episodeView'},
             {'title': 'History', 'key': 'history'},
             {'title': 'Manage', 'key': 'manage'},
             {'title': 'Config', 'key': 'config'},
@@ -630,7 +629,7 @@ class ManageSearches(MainHandler):
         # t.backlogPI = sickbeard.backlogSearchScheduler.action.getProgressIndicator()
         t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()  # @UndefinedVariable
         t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()  # @UndefinedVariable
-        t.dailySearchStatus = sickbeard.dailySearchScheduler.action.amActive  # @UndefinedVariable
+        t.recentSearchStatus = sickbeard.recentSearchScheduler.action.amActive  # @UndefinedVariable
         t.findPropersStatus = sickbeard.properFinderScheduler.action.amActive  # @UndefinedVariable
         t.queueLength = sickbeard.searchQueueScheduler.action.queue_length()
 
@@ -658,10 +657,10 @@ class ManageSearches(MainHandler):
     def forceSearch(self, *args, **kwargs):
 
         # force it to run the next time it looks
-        result = sickbeard.dailySearchScheduler.forceRun()
+        result = sickbeard.recentSearchScheduler.forceRun()
         if result:
-            logger.log(u"Daily search forced")
-            ui.notifications.message('Daily search started')
+            logger.log(u"Recent search forced")
+            ui.notifications.message('Recent search started')
 
         redirect("/manage/manageSearches/")
 
@@ -1628,10 +1627,10 @@ class ConfigSearch(MainHandler):
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
                    sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None,
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
-                   backlog_days=None, backlog_frequency=None, dailysearch_frequency=None,
+                   backlog_days=None, backlog_frequency=None, recentsearch_frequency=None,
                    nzb_method=None, torrent_method=None, usenet_retention=None,
                    download_propers=None, check_propers_interval=None, allow_high_priority=None,
-                   backlog_startup=None, dailysearch_startup=None,
+                   backlog_startup=None, recentsearch_startup=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
                    torrent_label=None, torrent_path=None, torrent_verify_cert=None,
                    torrent_seed_time=None, torrent_paused=None, torrent_high_bandwidth=None, ignore_words=None, require_words=None):
@@ -1644,7 +1643,7 @@ class ConfigSearch(MainHandler):
         if not config.change_TORRENT_DIR(torrent_dir):
             results += ["Unable to create directory " + os.path.normpath(torrent_dir) + ", dir not changed."]
 
-        config.change_DAILYSEARCH_FREQUENCY(dailysearch_frequency)
+        config.change_RECENTSEARCH_FREQUENCY(recentsearch_frequency)
 
         config.change_BACKLOG_FREQUENCY(backlog_frequency)
         sickbeard.BACKLOG_DAYS = config.to_int(backlog_days, default=7)
@@ -1664,7 +1663,7 @@ class ConfigSearch(MainHandler):
 
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 
-        sickbeard.DAILYSEARCH_STARTUP = config.checkbox_to_value(dailysearch_startup)
+        sickbeard.RECENTSEARCH_STARTUP = config.checkbox_to_value(recentsearch_startup)
         sickbeard.BACKLOG_STARTUP = config.checkbox_to_value(backlog_startup)
 
         sickbeard.SAB_USERNAME = sab_username
@@ -2092,10 +2091,10 @@ class ConfigProviders(MainHandler):
                         newznabProviderDict[cur_id].search_fallback = 0
 
                     try:
-                        newznabProviderDict[cur_id].enable_daily = config.checkbox_to_value(
-                            kwargs[cur_id + '_enable_daily'])
+                        newznabProviderDict[cur_id].enable_recentsearch = config.checkbox_to_value(
+                            kwargs[cur_id + '_enable_recentsearch'])
                     except:
-                        newznabProviderDict[cur_id].enable_daily = 0
+                        newznabProviderDict[cur_id].enable_recentsearch = 0
 
                     try:
                         newznabProviderDict[cur_id].enable_backlog = config.checkbox_to_value(
@@ -2258,12 +2257,12 @@ class ConfigProviders(MainHandler):
                 except:
                     curTorrentProvider.search_fallback = 0  # these exceptions are catching unselected checkboxes
 
-            if hasattr(curTorrentProvider, 'enable_daily'):
+            if hasattr(curTorrentProvider, 'enable_recentsearch'):
                 try:
-                    curTorrentProvider.enable_daily = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_enable_daily'])
+                    curTorrentProvider.enable_recentsearch = config.checkbox_to_value(
+                        kwargs[curTorrentProvider.getID() + '_enable_recentsearch'])
                 except:
-                    curTorrentProvider.enable_daily = 0 # these exceptions are actually catching unselected checkboxes
+                    curTorrentProvider.enable_recentsearch = 0 # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curTorrentProvider, 'enable_backlog'):
                 try:
@@ -2300,12 +2299,12 @@ class ConfigProviders(MainHandler):
                 except:
                     curNzbProvider.search_fallback = 0  # these exceptions are actually catching unselected checkboxes
 
-            if hasattr(curNzbProvider, 'enable_daily'):
+            if hasattr(curNzbProvider, 'enable_recentsearch'):
                 try:
-                    curNzbProvider.enable_daily = config.checkbox_to_value(
-                        kwargs[curNzbProvider.getID() + '_enable_daily'])
+                    curNzbProvider.enable_recentsearch = config.checkbox_to_value(
+                        kwargs[curNzbProvider.getID() + '_enable_recentsearch'])
                 except:
-                    curNzbProvider.enable_daily = 0  # these exceptions are actually catching unselected checkboxes
+                    curNzbProvider.enable_recentsearch = 0  # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curNzbProvider, 'enable_backlog'):
                 try:
@@ -2980,7 +2979,7 @@ class NewHomeAddShows(MainHandler):
                 tvdbs = ['tvdb_id', 'tvrage_id']
                 for index, tvdb in enumerate(tvdbs):
                     try:
-                        item[u'show_id'] = item[tvdb]
+                        item[u'show_id'] = str(item[tvdb])
                         tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
                     except:
                         continue
@@ -3627,6 +3626,17 @@ class Home(MainHandler):
         sickbeard.BRANCH = branch
         ui.notifications.message('Checking out branch: ', branch)
         return self.update(sickbeard.PID)
+
+    def pullRequestCheckout(self, branch):
+        pull_request = branch
+        branch = branch.split(':')[1]
+        fetched = sickbeard.versionCheckScheduler.action.fetch(pull_request)
+        if fetched:
+            sickbeard.BRANCH = branch
+            ui.notifications.message('Checking out branch: ', branch)
+            return self.update(sickbeard.PID)
+        else:
+            return redirect('/home/')
 
     def displayShow(self, show=None):
 

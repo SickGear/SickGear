@@ -43,7 +43,7 @@ from lib.bencode import bdecode
 
 class NewznabProvider(generic.NZBProvider):
     def __init__(self, name, url, key='', catIDs='5030,5040', search_mode='eponly', search_fallback=False,
-                 enable_daily=False, enable_backlog=False):
+                 enable_recentsearch=False, enable_backlog=False):
 
         generic.NZBProvider.__init__(self, name)
 
@@ -55,7 +55,7 @@ class NewznabProvider(generic.NZBProvider):
 
         self.search_mode = search_mode
         self.search_fallback = search_fallback
-        self.enable_daily = enable_daily
+        self.enable_recentsearch = enable_recentsearch
         self.enable_backlog = enable_backlog
 
         # a 0 in the key spot indicates that no key is needed
@@ -77,7 +77,7 @@ class NewznabProvider(generic.NZBProvider):
     def configStr(self):
         return self.name + '|' + self.url + '|' + self.key + '|' + self.catIDs + '|' + str(
             int(self.enabled)) + '|' + self.search_mode + '|' + str(int(self.search_fallback)) + '|' + str(
-            int(self.enable_daily)) + '|' + str(int(self.enable_backlog))
+            int(self.enable_recentsearch)) + '|' + str(int(self.enable_backlog))
 
     def imageName(self):
         if ek.ek(os.path.isfile,

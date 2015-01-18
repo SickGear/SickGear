@@ -711,7 +711,7 @@ class CMD_ComingEpisodes(ApiCall):
         self.sort, args = self.check_params(args, kwargs, "sort", "date", False, "string", ["date", "show", "network"])
         self.type, args = self.check_params(args, kwargs, "type", "today|missed|soon|later", False, "list",
                                             ["missed", "later", "today", "soon"])
-        self.paused, args = self.check_params(args, kwargs, "paused", sickbeard.COMING_EPS_DISPLAY_PAUSED, False, "int",
+        self.paused, args = self.check_params(args, kwargs, "paused", sickbeard.EPISODE_VIEW_DISPLAY_PAUSED, False, "int",
                                               [0, 1])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
@@ -725,7 +725,7 @@ class CMD_ComingEpisodes(ApiCall):
         tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
         next_week_dt = (datetime.date.today() + datetime.timedelta(days=7))
         next_week = (next_week_dt + datetime.timedelta(days=1)).toordinal()
-        recently = (yesterday_dt - datetime.timedelta(days=sickbeard.COMING_EPS_MISSED_RANGE)).toordinal()
+        recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
 
         done_show_list = []
         qualList = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
@@ -758,31 +758,27 @@ class CMD_ComingEpisodes(ApiCall):
         # multi dimension sort
         sorts = {
             'date': (lambda a, b: cmp(
-                (a['parsed_datetime'],
-                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
-                 a['season'], a['episode']),
-                (b['parsed_datetime'],
-                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
-                 b['season'], b['episode']))),
-            'show': (lambda a, b: cmp(
-                ((a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
-                 a['parsed_datetime'], a['season'], a['episode']),
-                ((b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
-                 b['parsed_datetime'], b['season'], b['episode']))),
+                (a['parsed_datetime'], a['data_show_name'], a['season'], a['episode']),
+                (b['parsed_datetime'], b['data_show_name'], b['season'], b['episode']))),
             'network': (lambda a, b: cmp(
-                (a['network'], a['parsed_datetime'],
-                 (a['show_name'], remove_article(a['show_name']))[not sickbeard.SORT_ARTICLE],
-                 a['season'], a['episode']),
-                (b['network'], b['parsed_datetime'],
-                 (b['show_name'], remove_article(b['show_name']))[not sickbeard.SORT_ARTICLE],
-                 b['season'], b['episode'])))
+                (a['data_network'], a['parsed_datetime'], a['data_show_name'], a['season'], a['episode']),
+                (b['data_network'], b['parsed_datetime'], b['data_show_name'], b['season'], b['episode']))),
+            'show': (lambda a, b: cmp(
+                (a['data_show_name'], a['parsed_datetime'], a['season'], a['episode']),
+                (b['data_show_name'], b['parsed_datetime'], b['season'], b['episode'])))
         }
+
+        def value_maybe_article(value=''):
+            return (remove_article(value.lower()), value.lower())[sickbeard.SORT_ARTICLE]
 
         # add parsed_datetime to the dict
         for index, item in enumerate(sql_results):
             sql_results[index]['parsed_datetime'] = network_timezones.parse_date_time(item['airdate'], item['airs'], item['network'])
-        
+            sql_results[index]['data_show_name'] = value_maybe_article(item['show_name'])
+            sql_results[index]['data_network'] = value_maybe_article(item['network'])
+
         sql_results.sort(sorts[self.sort])
+
         finalEpResults = {}
 
         # add all requested types or all
@@ -1507,7 +1503,7 @@ class CMD_SickBeardGetDefaults(ApiCall):
 
         data = {"status": statusStrings[sickbeard.STATUS_DEFAULT].lower(),
                 "flatten_folders": int(sickbeard.FLATTEN_FOLDERS_DEFAULT), "initial": anyQualities,
-                "archive": bestQualities, "future_show_paused": int(sickbeard.COMING_EPS_DISPLAY_PAUSED)}
+                "archive": bestQualities, "future_show_paused": int(sickbeard.EPISODE_VIEW_DISPLAY_PAUSED)}
         return _responds(RESULT_SUCCESS, data)
 
 
@@ -1756,7 +1752,7 @@ class CMD_SickBeardSetDefaults(ApiCall):
             sickbeard.FLATTEN_FOLDERS_DEFAULT = int(self.flatten_folders)
 
         if self.future_show_paused != None:
-            sickbeard.COMING_EPS_DISPLAY_PAUSED = int(self.future_show_paused)
+            sickbeard.EPISODE_VIEW_DISPLAY_PAUSED = int(self.future_show_paused)
 
         return _responds(RESULT_SUCCESS, msg="Saved defaults")
 

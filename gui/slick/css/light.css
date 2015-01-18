@@ -149,11 +149,7 @@ inc_top.tmpl
 	margin-bottom: -15px;
 }
 
-#contentWrapper { 
-/*	background: url("../images/bg.png") repeat 0 0 transparent; */
-}
-
-[class^="icon-"], 
+[class^="icon-"],
 [class*=" icon-"] { 
 	background-image: url("../images/glyphicons-halflings.png"); 
 }
@@ -289,18 +285,18 @@ inc_top.tmpl
 }
 
 .ui-tabs {
-	padding: 0px;
+	padding: 0;
 	background: none;
-	border-width: 0px;
+	border-width: 0;
 }
 
 .ui-tabs .ui-tabs-nav {
-	padding-left: 0px;
+	padding-left: 0;
 	background: transparent;
-	border-width: 0px 0px 0px 0px;
-	-moz-border-radius: 0px;
-	-webkit-border-radius: 0px;
-	border-radius: 0px;
+	border-width: 0 0 0 0;
+	-moz-border-radius: 0;
+	-webkit-border-radius: 0;
+	border-radius: 0;
 }
 
 .ui-tabs .ui-tabs-panel { 
@@ -318,15 +314,6 @@ inc_top.tmpl
 	border-top-right-radius: 5px;
 }
 
-#content {
-	width: 95%;
-	min-width: 875px;
-	padding: 15px;
-	margin-left: auto;
-	margin-right: auto;
-	clear: both;
-}
-
 #SubMenu {
 	padding-right: 20px;
 	clear: both;
@@ -340,7 +327,7 @@ inc_top.tmpl
 	margin-left: auto; 
 	margin-right: auto; 
 	margin-top: 50px; 
-	margin-bottom: 0px;
+	margin-bottom: 0;
 }
 
 [class^="menu-icon-"], [class*=" menu-icon-"] {
@@ -366,83 +353,83 @@ inc_top.tmpl
 }
 
 .menu-icon-addshow {
-	background-position: 0px 0px;
+	background-position: 0 0;
 }
 
 .menu-icon-anime {
-	background-position: -21px 0px;
+	background-position: -21px 0;
 }
 
 .menu-icon-backlog-view {
-	background-position: -42px 0px;
+	background-position: -42px 0;
 }
 
 .menu-icon-backlog {
-	background-position: -63px 0px;
+	background-position: -63px 0;
 }
 
 .menu-icon-bittorrent {
-	background-position: -84px 0px;
+	background-position: -84px 0;
 }
 
 .menu-icon-config-index {
-	background-position: -105px 0px;
+	background-position: -105px 0;
 }
 
 .menu-icon-config {
-	background-position: -126px 0px;
+	background-position: -126px 0;
 }
 
 .menu-icon-failed-download {
-	background-position: -147px 0px;
+	background-position: -147px 0;
 }
 
 .menu-icon-home {
-	background-position: -168px 0px;
+	background-position: -168px 0;
 }
 
 .menu-icon-manage {
-	background-position: -189px 0px;
+	background-position: -189px 0;
 }
 
 .menu-icon-manage-searches {
-	background-position: -210px 0px;
+	background-position: -210px 0;
 }
 
 .menu-icon-poster {
-	background-position: -231px 0px;
+	background-position: -231px 0;
 }
 
 .menu-icon-postprocess {
-	background-position: -252px 0px;
+	background-position: -252px 0;
 }
 
 .menu-icon-restart {
-	background-position: -273px 0px;
+	background-position: -273px 0;
 }
 
 .menu-icon-shutdown {
-	background-position: -294px 0px;
+	background-position: -294px 0;
 }
 
 .menu-icon-update {
-	background-position: -315px 0px;
+	background-position: -315px 0;
 }
 
 .menu-icon-viewlog-errors {
-	background-position: -336px 0px;
+	background-position: -336px 0;
 }
 
 .menu-icon-viewlog {
-	background-position: -357px 0px;
+	background-position: -357px 0;
 }
 
 .menu-icon-xbmc {
-	background-position: -378px 0px;
+	background-position: -378px 0;
 }
 
 .menu-icon-help {
-	background-position: -399px 0px;
+	background-position: -399px 0;
 }
 
 [class^="submenu-icon-"], [class*=" submenu-icon-"] {
@@ -452,27 +439,27 @@ inc_top.tmpl
 }
 
 .submenu-icon-anime {
-	background-position: -21px 0px;
+	background-position: -21px 0;
 }
 
 .submenu-icon-bittorrent {
-	background-position: -84px 0px;
+	background-position: -84px 0;
 }
 
 .submenu-icon-failed-download {
-	background-position: -147px 0px;
+	background-position: -147px 0;
 }
 
 .submenu-icon-restart {
-	background-position: -273px 0px;
+	background-position: -273px 0;
 }
 
 .submenu-icon-shutdown {
-	background-position: -294px 0px;
+	background-position: -294px 0;
 }
 
 .submenu-icon-xbmc {
-	background-position: -378px 0px;
+	background-position: -378px 0;
 }
 
 /* =======================================================================
@@ -609,42 +596,42 @@ home.tmpl
 }
 
 .show .ui-corner-all, .ui-corner-bottom, .ui-corner-right, .ui-corner-br {
-	border-bottom-right-radius: 0px;
+	border-bottom-right-radius: 0;
 }
 
 .show .ui-corner-all, .ui-corner-bottom, .ui-corner-left, .ui-corner-bl {
-	border-bottom-left-radius: 0px;
+	border-bottom-left-radius: 0;
 }
 
 .show .ui-corner-all, .ui-corner-top, .ui-corner-right, .ui-corner-tr {
-	border-top-right-radius: 0px;
+	border-top-right-radius: 0;
 }
 
 .show .ui-corner-all, .ui-corner-top, .ui-corner-left, .ui-corner-tl {
-	border-top-left-radius: 0px;
+	border-top-left-radius: 0;
 }
 
 .show .ui-widget-content {
 	border-top: 1px solid #111;
 	border-bottom: 1px solid #111;
-	border-left: 0px;
-	border-right: 0px;
+	border-left: 0;
+	border-right: 0;
 }
 
 .show .progress-80 {
-	border-radius: 0px;
+	border-radius: 0;
 }
 
 .show .progress-60 {
-	border-radius: 0px;
+	border-radius: 0;
 }
 
 .show .progress-40 {
-	border-radius: 0px;
+	border-radius: 0;
 }
 
 .show .progress-20 {
-	border-radius: 0px;
+	border-radius: 0;
 }
 
 .show-title {
@@ -652,7 +639,7 @@ home.tmpl
 	overflow: hidden;
 	white-space: nowrap;
 	font-size: 11px;
-	margin: 4px 4px 0px 4px;
+	margin: 4px 4px 0 4px;
 }
 
 .show-title:after {
@@ -675,7 +662,7 @@ home.tmpl
 	overflow: hidden;
 	white-space: nowrap;
 	font-size: 11px;
-	margin: 0px 4px 4px 4px;
+	margin: 0 4px 4px 4px;
 }
 
 .show-date:after {
@@ -815,7 +802,7 @@ home_trendingShows.tmpl
 	white-space: nowrap;
 	font-size: 12px;
 	overflow: hidden;
-/*	text-shadow: 1px 1px 0px #000;*/
+/*	text-shadow: 1px 1px 0 #000;*/
 	padding-left: 4px;
 	margin: 0;
 }
@@ -917,7 +904,7 @@ ul.tags li {
 	border: 1px solid #111;
 	color: #FFF;
 	font: 14px/18px "Open Sans", "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
-	text-shadow: 0px 1px rgba(0, 0, 0, 0.8);
+	text-shadow: 0 1px rgba(0, 0, 0, 0.8);
 	float: left;
 }
 
@@ -1074,7 +1061,7 @@ tr.seasonheader {
 	padding-top: 10px;
 	text-align: left;
 	border: none;
-	color: #fff;
+	color: #000;
 }
 
 th.col-checkbox,
@@ -1157,7 +1144,7 @@ td.col-search {
 }
 
 /* =======================================================================
-comingEpisodes.tmpl
+episodeView.tmpl
 ========================================================================== */
 
 .sort_data {
@@ -1219,7 +1206,7 @@ h2.day, h2.network {
 	letter-spacing: 1px;
 	color: #FFF;
 	text-align: center;
-	text-shadow: -1px -1px 0px rgba(0, 0, 0, 0.3);
+	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
 	background-color: #333;
 }
 
@@ -1228,7 +1215,7 @@ h2.day, h2.network {
 	clear: both;
 	border: 1px solid #ccc;
 	margin: auto;
-	padding: 0px;
+	padding: 0;
 	text-align: left;
 	width: 750px;
 	border-radius: 5px;
@@ -1307,17 +1294,39 @@ h2.day, h2.network {
 	vertical-align: middle;
 }
 
-table.cal-odd {
-	background-color: #ddd;
+.day-of-week .day-number {
+	background-color: #333;
+	color: #fff;
 }
-table.cal-even {
-	background-color: #d2d2d2;
+
+.today .day-number .number, .today .day-number .month, .today .day-number .day {
+	color: #c7db40;
 }
-.calendarShow .text .airtime {
-	color:#000
+
+.odd .daybyday-show {
+	background-color: #F5F1E4;
 }
-.calendarShow .text .episode-title {
-	color:#888
+
+.even .daybyday-show {
+	background-color: #DFDACF;
+}
+
+.day-of-week .poster img {
+    border-color: #CCC;
+}
+
+.day-of-week .text .airtime,
+.day-of-week .text .episode,
+.day-of-week .text .episode .name {
+	color: #000;
+}
+.day-of-week .text .episode .season,
+.day-of-week .text .episode .number {
+    color: rgb(9, 133, 225);
+    /*color: #3d3d3d;*/
+}
+.day-of-week .text .episode  {
+    color: #888;
 }
 
 /* =======================================================================
@@ -1355,12 +1364,7 @@ config*.tmpl
 }
 
 #config div.field-pair {
-	padding: 12px 0px;
-}
-
-#config div.field-pair input {
-	float: left;
-	margin-right: 6px;
+	padding: 12px 0;
 }
 
 #config .nocheck, #config div #customQuality, .metadataDiv {
@@ -1538,7 +1542,7 @@ td.tableright {
 	text-align: left;
 	vertical-align: middle;
 	width: 225px;
-	padding: 6px 0px;
+	padding: 6px 0;
 }
 
 .optionWrapper div.selectChoices {
@@ -1572,7 +1576,6 @@ Global
 ========================================================================== */
 
 span.path {
-	padding: 3px 6px;
 	color: #8b0000;
 	background-color: #f5f1e4;
 }
@@ -1588,13 +1591,13 @@ span.path {
 
 span.quality {
 	font: 12px/13px "Open Sans", verdana, sans-serif;
-	background-image:-webkit-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.25));
-	background-image:-moz-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.25));
-	background-image:-o-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.25));
-	background-image:linear-gradient(to bottom, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,rgba(0,0,0,0.25));
-	-webkit-box-shadow:inset 0 1px rgba(255,255,255,0.1),inset 0 -1px 3px rgba(0,0,0,0.3),inset 0 0 0 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.15);
-	box-shadow:inset 0 1px rgba(255,255,255,0.1),inset 0 -1px 3px rgba(0,0,0,0.3),inset 0 0 0 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.15);
-	text-shadow: 0px 1px rgba(0, 0, 0, 0.8);
+	background-image:-webkit-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
+	background-image:-moz-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
+	background-image:-o-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
+	background-image:linear-gradient(to bottom, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
+	-webkit-box-shadow:inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15);
+	box-shadow:inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15);
+	text-shadow: 0 1px rgba(0, 0, 0, 0.8);
 	color: #FFFFFF;
 	display: inline-block;
 	padding: 2px 4px;
@@ -1685,7 +1688,7 @@ option.flag {
 
 div.blackwhitelist{
 	float:left;
-	text-align: center; 
+	text-align: center;
 }
 
 div.blackwhitelist input {
@@ -1714,7 +1717,7 @@ div.blackwhitelist span {
 }
 
 div.blackwhitelist.anidb, div.blackwhitelist.manual {
-	margin: 7px 0px;
+	margin: 7px 0;
 }
 
 
@@ -1722,15 +1725,15 @@ div.blackwhitelist.anidb, div.blackwhitelist.manual {
 bootstrap Overrides
 ========================================================================== */
 
-body { 
-	padding-top: 60px; 
+body {
+	padding-top: 60px;
 	overflow-y: scroll;
 	font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 	color: #000;
 }
 
 input[type="radio"] {
-	margin: 2px 0px 0px;
+	margin: 2px 0 0;
 	line-height: normal;
 }
 
@@ -1745,7 +1748,7 @@ input, textarea, select, .uneditable-input {
 }
 
 .navbar-brand {
-	padding: 0px;
+	padding: 0;
 }
 
 /* navbar styling */
@@ -1884,7 +1887,7 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 .dropdown-menu {
 	background-color: #F5F1E4;
 	border: 1px solid rgba(0, 0, 0, 0.15);
-	box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.176);
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.176);
 }
 
 .form-control {
@@ -2378,7 +2381,7 @@ tablesorter.css
 
 .tablesorter th {
 	color: #fff;
-	text-shadow: -1px -1px 0 rgba(0,0,0,0.3);
+	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
 	background-color: #333;
 }
 
@@ -2449,7 +2452,7 @@ thead.tablesorter-stickyHeader {
 .tablesorter tfoot tr {
 	color: #fff;
 	text-align: center;
-	text-shadow: -1px -1px 0 rgba(0,0,0,0.3);
+	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
 	background-color: #333;
 	border-collapse: collapse;
 }
@@ -2596,6 +2599,8 @@ span.token-input-delete-token {
 	background-color: rgb(245, 245, 245);
 }
 
+.episodeview-daybyday .time .time-min,
+.episodeview-daybyday .time .time-am-pm,
 #addRootDirTable td label .filepath,
 .grey-text {
 	color:#666
@@ -2622,8 +2627,8 @@ jquery.confirm.css
 	top: 0;
 	left: 0;
 	background: url('../images/bg.gif');
-	background: -moz-linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)) repeat-x rgba(0,0,0,0.5);
-	background:-webkit-gradient(linear, 0% 0%, 0% 100%, from(rgba(0,0,0,0.5)), to(rgba(0,0,0,0.5))) repeat-x rgba(0,0,0,0.5);
+	background: -moz-linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)) repeat-x rgba(0, 0, 0, 0.5);
+	background:-webkit-gradient(linear, 0% 0%, 0% 100%, from(rgba(0, 0, 0, 0.5)), to(rgba(0, 0, 0, 0.5))) repeat-x rgba(0, 0, 0, 0.5);
 	z-index: 100000;
 }
 
@@ -2635,7 +2640,7 @@ jquery.confirm.css
 	top: 50%;
 	margin: -130px 0 0 -230px;
 	border: 1px solid #111;
-	box-shadow: 0px 0px 12px 0px rgba(0, 0, 0, 0.175);
+	box-shadow: 0 0 12px 0 rgba(0, 0, 0, 0.175);
 }
 
 #confirmBox h1,
@@ -2649,13 +2654,13 @@ jquery.confirm.css
 	color: #fff;
 	margin: 0;
 	font-size: 22px;
-	text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.75);
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.75);
 }
 
 #confirmBox p {
 	padding-top: 20px;
 	color: #000;
-	text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.75);
+	text-shadow: 0 1px 1px rgba(255, 255, 255, 0.75);
 }
 
 #confirmButtons {
@@ -2670,7 +2675,7 @@ jquery.confirm.css
 	display: inline-block;
 	color: #fff;
 	text-align:center;
-	text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.75);
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.75);
 	background-clip: padding-box;
 	border: 1px solid #111;
 	border-radius: 3px;
@@ -2678,12 +2683,12 @@ jquery.confirm.css
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 	box-sizing: border-box;
-	background-image: -webkit-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 51%,rgba(0,0,0,0.25));
-	background-image: -moz-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 51%,rgba(0,0,0,0.25));
-	background-image: -o-linear-gradient(top, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 51%,rgba(0,0,0,0.25));
-	background-image: linear-gradient(to bottom, rgba(255,255,255,0.08),rgba(255,255,255,0) 50%,rgba(0,0,0,0) 51%,rgba(0,0,0,0.25));
-	-webkit-box-shadow: inset 0 1px rgba(255,255,255,0.1),inset 0 -1px 3px rgba(0,0,0,0.3),inset 0 0 0 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.15);
-	box-shadow: inset 0 1px rgba(255,255,255,0.1),inset 0 -1px 3px rgba(0,0,0,0.3),inset 0 0 0 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.15);
+	background-image: -webkit-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 51%,rgba(0, 0, 0, 0.25));
+	background-image: -moz-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 51%,rgba(0, 0, 0, 0.25));
+	background-image: -o-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 51%,rgba(0, 0, 0, 0.25));
+	background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 51%,rgba(0, 0, 0, 0.25));
+	-webkit-box-shadow: inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15);
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 #confirmBox .button:last-child {	

@@ -93,3 +93,26 @@ class GitHub(object):
             ['repos', self.github_repo_user, self.github_repo, 'branches'],
             params={'per_page': 100})
         return access_API
+
+    def pull_requests(self):
+        access_API = self._access_API(
+            ['repos', self.github_repo_user, self.github_repo, 'pulls'],
+            params={'per_page': 100})
+        pull = []
+        for x in access_API:
+            try:
+                pull.append(PullRequest(x['head']['ref'], x['number']))
+            except:
+                continue
+        return pull
+
+class PullRequest(object):
+    def __init__(self, ref, number):
+        self.ref = ref
+        self.number = number
+
+    def __repr__(self):
+        return '%s: %s' % (self.number, self.ref)
+
+    def fetch_name(self):
+        return 'pull/%s/head:pull/%s/%s' % (self.number, self.number, self.ref)
