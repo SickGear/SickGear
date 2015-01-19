@@ -3748,7 +3748,7 @@ class Home(MainHandler):
 
         t.bwl = None
         if showObj.is_anime:
-            t.bwl = BlackAndWhiteList(showObj.indexerid)
+            t.bwl = showObj.release_groups
 
         t.epCounts = epCounts
         t.epCats = epCats
@@ -3790,7 +3790,7 @@ class Home(MainHandler):
     def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, archive_firstmatch=None, rls_ignore_words=None,
-                 rls_require_words=None, anime=None, blackWords=None, whiteWords=None, blacklist=None, whitelist=None,
+                 rls_require_words=None, anime=None, blacklist=None, whitelist=None,
                  scene=None):
 
         if show is None:
@@ -3816,23 +3816,8 @@ class Home(MainHandler):
             t.submenu = HomeMenu()
 
             if showObj.is_anime:
-                bwl = BlackAndWhiteList(showObj.indexerid)
-
-                t.whiteWords = ""
-                if "global" in bwl.whiteDict:
-                    t.whiteWords = ", ".join(bwl.whiteDict["global"])
-
-                t.blackWords = ""
-                if "global" in bwl.blackDict:
-                    t.blackWords = ", ".join(bwl.blackDict["global"])
-
-                t.whitelist = []
-                if bwl.whiteDict.has_key("release_group"):
-                    t.whitelist = bwl.whiteDict["release_group"]
-
-                t.blacklist = []
-                if bwl.blackDict.has_key("release_group"):
-                    t.blacklist = bwl.blackDict["release_group"]
+                t.whitelist = showObj.release_groups.whitelist
+                t.blacklist = showObj.release_groups.blacklist
 
                 t.groups = []
                 if helpers.set_up_anidb_connection():
@@ -3889,55 +3874,46 @@ class Home(MainHandler):
             else:
                 do_update_exceptions = True
 
-            if showObj.is_anime:
-                bwl = BlackAndWhiteList(showObj.indexerid)
-                if whitelist:
-                    whitelist = whitelist.split(",")
-                    shortWhiteList = []
-                    if helpers.set_up_anidb_connection():
-                        for groupName in whitelist:
-                            group = sickbeard.ADBA_CONNECTION.group(gname=groupName)
-                            for line in group.datalines:
-                                if line["shortname"]:
-                                    shortWhiteList.append(line["shortname"])
-                            else:
-                                if not groupName in shortWhiteList:
-                                    shortWhiteList.append(groupName)
+            with showObj.lock:
+                if anime:
+                    if not showObj.release_groups:
+                        showObj.release_groups = BlackAndWhiteList(showObj.indexerid)
+
+                    if whitelist:
+                        whitelist = whitelist.split(",")
+                        shortWhiteList = []
+                        if helpers.set_up_anidb_connection():
+                            for groupName in whitelist:
+                                group = sickbeard.ADBA_CONNECTION.group(gname=groupName)
+                                for line in group.datalines:
+                                    if line["shortname"]:
+                                        shortWhiteList.append(line["shortname"])
+                                else:
+                                    if not groupName in shortWhiteList:
+                                        shortWhiteList.append(groupName)
+                        else:
+                            shortWhiteList = whitelist
+                        showObj.release_groups.set_white_keywords(shortWhiteList)
                     else:
-                        shortWhiteList = whitelist
-                    bwl.set_white_keywords_for("release_group", shortWhiteList)
-                else:
-                    bwl.set_white_keywords_for("release_group", [])
+                        showObj.release_groups.set_white_keywords([])
 
-                if blacklist:
-                    blacklist = blacklist.split(",")
-                    shortBlacklist = []
-                    if helpers.set_up_anidb_connection():
-                        for groupName in blacklist:
-                            group = sickbeard.ADBA_CONNECTION.group(gname=groupName)
-                            for line in group.datalines:
-                                if line["shortname"]:
-                                    shortBlacklist.append(line["shortname"])
-                            else:
-                                if not groupName in shortBlacklist:
-                                    shortBlacklist.append(groupName)
+                    if blacklist:
+                        blacklist = blacklist.split(",")
+                        shortBlacklist = []
+                        if helpers.set_up_anidb_connection():
+                            for groupName in blacklist:
+                                group = sickbeard.ADBA_CONNECTION.group(gname=groupName)
+                                for line in group.datalines:
+                                    if line["shortname"]:
+                                        shortBlacklist.append(line["shortname"])
+                                else:
+                                    if not groupName in shortBlacklist:
+                                        shortBlacklist.append(groupName)
+                        else:
+                            shortBlacklist = blacklist
+                        showObj.release_groups.set_black_keywords(shortBlacklist)
                     else:
-                        shortBlacklist = blacklist
-                    bwl.set_black_keywords_for("release_group", shortBlacklist)
-                else:
-                    bwl.set_black_keywords_for("release_group", [])
-
-                if whiteWords:
-                    whiteWords = [x.strip() for x in whiteWords.split(",")]
-                    bwl.set_white_keywords_for("global", whiteWords)
-                else:
-                    bwl.set_white_keywords_for("global", [])
-
-                if blackWords:
-                    blackWords = [x.strip() for x in blackWords.split(",")]
-                    bwl.set_black_keywords_for("global", blackWords)
-                else:
-                    bwl.set_black_keywords_for("global", [])
+                        showObj.release_groups.set_black_keywords([])
 
         errors = []
         with showObj.lock:

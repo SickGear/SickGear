@@ -8,6 +8,7 @@
 * Change backlog search to occur 10 minutes after start up
 * Change UI footer to display time left until a backlog search
 * Remove obsolete tvtorrents search provider
+* Change anime release groups to in memory storage for lowered latency
 
 [develop changelog]
 

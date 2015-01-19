@@ -50,6 +50,7 @@ from sickbeard import notifiers
 from sickbeard import postProcessor
 from sickbeard import subtitles
 from sickbeard import history
+from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 from sickbeard import encodingKludge as ek
 
@@ -105,6 +106,7 @@ class TVShow(object):
         self.isDirGood = False
         self.episodes = {}
         self.nextaired = ""
+        self.release_groups = None
 
         otherShow = helpers.findCertainShow(sickbeard.showList, self.indexerid)
         if otherShow != None:
@@ -827,6 +829,9 @@ class TVShow(object):
 
             if not self.imdbid:
                 self.imdbid = sqlResults[0]["imdb_id"]
+
+        if self.is_anime:
+            self.release_groups = BlackAndWhiteList(self.indexerid)
 
         # Get IMDb_info from database
         myDB = db.DBConnection()

@@ -198,23 +198,14 @@ def filter_release_name(name, filter_words):
 def pickBestResult(results, show, quality_list=None):
     logger.log(u"Picking the best result out of " + str([x.name for x in results]), logger.DEBUG)
 
-    # build the black And white list
-    bwl = None
-    if show:
-        if show.is_anime:
-            bwl = BlackAndWhiteList(show.indexerid)
-    else:
-        logger.log("Could not create black and white list no show was given", logger.DEBUG)
-
     # find the best result for the current episode
     bestResult = None
     for cur_result in results:
             
         logger.log("Quality of " + cur_result.name + " is " + Quality.qualityStrings[cur_result.quality])
 
-        if bwl:
-            if not bwl.is_valid(cur_result):
-                logger.log(cur_result.name+" does not match the blacklist or the whitelist, rejecting it. Result: " + bwl.get_last_result_msg(), logger.MESSAGE)
+        if show.is_anime:
+            if not show.release_groups.is_valid(cur_result):
                 continue
 
         if quality_list and cur_result.quality not in quality_list:
@@ -269,9 +260,7 @@ def isFinalResult(result):
 
     show_obj = result.episodes[0].show
 
-    bwl = None
-    if show_obj.is_anime:
-        bwl = BlackAndWhiteList(show_obj.indexerid)
+
 
     any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
 
@@ -280,7 +269,7 @@ def isFinalResult(result):
         return False
 
     # if it does not match the shows black and white list its no good
-    elif bwl and not bwl.is_valid(result):
+    elif show_obj.is_anime and show_obj.release_groups.is_valid(result):
         return False
 
     # if there's no redownload that's higher (above) and this is the highest initial download then we're good
