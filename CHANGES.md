@@ -1,3 +1,8 @@
+### 0.6.1 (2015-01-20 14:00:00 UTC)
+
+* Fix snatching from TorrentBytes provider
+
+
 ### 0.6.0 (2015-01-18 05:05:00 UTC)
 
 * Add network logos BBC Canada, Crackle, El Rey Network, SKY Atlantic, and Watch

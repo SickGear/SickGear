@@ -226,9 +226,10 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
         if title:
             title = u'' + title
-            title = title.replace(' ', '.')
+            title = title.replace(' ', '.').replace(u'\xa0', '')
 
         if url:
+            url = url.replace(u'\xa0', '')
             url = str(url).replace('&amp;', '&')
 
         return (title, url)
