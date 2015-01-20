@@ -12,6 +12,7 @@
 * Fix incorrect class names in a couple of templates
 * Change anime release groups to in memory storage for lowered latency
 * Change adjust menu delay and hover styling
+* Fix provider list color
 
 [develop changelog]
 
