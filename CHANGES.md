@@ -10,6 +10,7 @@
 * Remove obsolete tvtorrents search provider
 * Change light and dark theme css to only hold color information
 * Fix incorrect class names in a couple of templates
+* Change anime release groups to in memory storage for lowered latency
 
 [develop changelog]
 
