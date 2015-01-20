@@ -797,7 +797,7 @@ input, textarea, select, .uneditable-input {
 .navbar-default .navbar-nav > li > a:hover,
 .navbar-default .navbar-nav > li > a:focus {
 	color: #ffffff;
-	background-color: transparent;
+	background-color: #124477;
 }
 
 .navbar-default .navbar-nav > .active > a,
