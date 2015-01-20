@@ -652,6 +652,12 @@ config*.tmpl
 	border: 1px dotted #CCC;
 }
 
+#provider_order_list li,
+#service_order_list li {
+	background: #333 !important;
+	color: #fff;
+}
+
 .infoTableSeperator {
 	border-top: 1px dotted #666;
 }
