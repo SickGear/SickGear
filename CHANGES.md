@@ -8,6 +8,8 @@
 * Change backlog search to occur 10 minutes after start up
 * Change UI footer to display time left until a backlog search
 * Remove obsolete tvtorrents search provider
+* Change light and dark theme css to only hold color information
+* Fix incorrect class names in a couple of templates
 
 [develop changelog]
 
