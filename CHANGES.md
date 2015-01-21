@@ -13,6 +13,7 @@
 * Change anime release groups to in memory storage for lowered latency
 * Change adjust menu delay and hover styling
 * Fix provider list color
+* Add handling of exceptional case with missing network name (NoneType) in Episode View 
 
 [develop changelog]
 
