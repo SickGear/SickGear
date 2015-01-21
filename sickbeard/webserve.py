@@ -2122,7 +2122,7 @@ class ConfigProviders(MainHandler):
                     continue
 
                 curName, curURL, curCookies = curTorrentRssProviderStr.split('|')
-                curURL = config.clean_url(curURL)
+                curURL = config.clean_url(curURL, False)
 
                 newProvider = rsstorrent.TorrentRssProvider(curName, curURL, curCookies)
 

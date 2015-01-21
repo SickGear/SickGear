@@ -1,3 +1,8 @@
+### 0.6.2 (2015-01-21 23:35:00 UTC)
+
+* Fix invalid addition of trailing slash to custom torrent RSS URLs
+
+
 ### 0.6.1 (2015-01-20 14:00:00 UTC)
 
 * Fix snatching from TorrentBytes provider
