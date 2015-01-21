@@ -768,7 +768,9 @@ class CMD_ComingEpisodes(ApiCall):
                 (b['data_show_name'], b['parsed_datetime'], b['season'], b['episode'])))
         }
 
-        def value_maybe_article(value=''):
+        def value_maybe_article(value=None):
+            if None is value:
+                return ''
             return (remove_article(value.lower()), value.lower())[sickbeard.SORT_ARTICLE]
 
         # add parsed_datetime to the dict

@@ -415,7 +415,9 @@ class MainHandler(RequestHandler):
                 (b['localtime'], b['data_show_name'], b['season'], b['episode'])))
         }
 
-        def value_maybe_article(value=''):
+        def value_maybe_article(value=None):
+            if None is value:
+                return ''
             return (remove_article(value.lower()), value.lower())[sickbeard.SORT_ARTICLE]
 
         # add localtime to the dict
