@@ -313,7 +313,7 @@ def clean_hosts(hosts, default_port=None):
     return cleaned_hosts
 
 
-def clean_url(url):
+def clean_url(url, add_slash=True):
     """
     Returns an cleaned url starting with a scheme and folder with trailing /
     or an empty string
@@ -330,7 +330,7 @@ def clean_url(url):
 
         if not path.endswith('/'):
             basename, ext = ek.ek(os.path.splitext, ek.ek(os.path.basename, path))  # @UnusedVariable
-            if not ext:
+            if not ext and add_slash:
                 path = path + '/'
 
         cleaned_url = urlparse.urlunsplit((scheme, netloc, path, query, fragment))
