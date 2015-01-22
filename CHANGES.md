@@ -14,6 +14,7 @@
 * Change adjust menu delay and hover styling
 * Fix provider list color
 * Add handling of exceptional case with missing network name (NoneType) in Episode View 
+* Fix black and white list initialization on new show creation
 
 [develop changelog]
 

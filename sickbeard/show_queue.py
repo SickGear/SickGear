@@ -29,6 +29,7 @@ from sickbeard import exceptions, logger, ui, db
 from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
+from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 
 class ShowQueue(generic_queue.GenericQueue):
@@ -292,6 +293,9 @@ class QueueItemAdd(ShowQueueItem):
             self.show.anime = self.anime if self.anime != None else sickbeard.ANIME_DEFAULT
             self.show.scene = self.scene if self.scene != None else sickbeard.SCENE_DEFAULT
             self.show.paused = self.paused if self.paused != None else False
+
+            if self.show.anime:
+                self.show.release_groups = BlackAndWhiteList(self.show.indexerid)
 
             # be smartish about this
             if self.show.genre and "talk show" in self.show.genre.lower():
