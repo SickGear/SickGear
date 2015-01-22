@@ -590,8 +590,6 @@
 <!-- end non list view //-->
 #end if
 
-
-
 #if 'daybyday' == $layout:
 
     #set $today = datetime.date.today()
@@ -600,8 +598,23 @@
 
 <input type="hidden" id="sbRoot" value="$sbRoot" />
 
-<br>
-<br>
+<div class="daybydayCarouselContainer">
+	<div id="Carousel" class="carousel slide">
+	
+		<div class="controlsBlock">
+			<a class="left carousel-control" href="#Carousel" data-slide="prev"><i class="glyphicon glyphicon-chevron-left"></i></a>
+			<a class="right carousel-control" href="#Carousel" data-slide="next"><i class="glyphicon glyphicon-chevron-right"></i></a>
+			<div class="carousel-indicators">
+				<li data-target="#Carousel" data-slide-to="0" class="active"></li>
+				<li data-target="#Carousel" data-slide-to="1"></li>
+				<li data-target="#Carousel" data-slide-to="2"></li>
+			</div>
+		</div>
+
+		<div class="carousel-inner">
+
+			<div class="item active"> <!-- page 1 -->
+		
 <div class="daybydayWrapper">  <!-- style="width:1600px" -->
     #for $day in $dates
         #set $tbl_day += 1
@@ -681,6 +694,20 @@
 	#end for
 </div>
 
+			</div> <!-- end page 1 //-->
+			
+			<div class="item">
+				Page 2
+			</div>
+			
+			<div class="item">
+				Page 3
+			</div>
+		
+		</div> <!-- end carouselinner //-->
+	</div> <!-- end Carousel //-->
+</div> <!-- end daybydayCarouselContainer //--> 
+
 <!-- end calender view //-->
 #end if
 
@@ -689,6 +716,20 @@
 <script type="text/javascript" charset="utf-8">
 <!--
 window.setInterval('location.reload(true)', 30*60000); // Refresh every xx minutes
+
+\$('#Carousel').carousel({
+	interval: 0
+});
+
+\$(document).bind('keyup', function(e) {
+	if(e.which == 39){
+		\$('.carousel').carousel('next');
+	}
+	else if(e.which == 37){
+		\$('.carousel').carousel('prev');
+	}
+});
+
 //-->
 </script>
 

@@ -1631,6 +1631,54 @@ h2.day, h2.network {
 	margin-left: 0;
 }
 
+.daybydayCarouselContainer {
+	min-height: 20px;
+	padding: 19px;
+	margin-bottom: 20px;
+}
+
+.controlsBlock {
+	position: relative;
+	display: block;
+	width: 220px;
+	margin: 0 auto;
+	height: 45px;
+	text-align: center;
+}
+
+.carousel-control {
+	top: -24px;
+	background: none !important;
+	text-align: center;
+	opacity: 0.75;
+}
+
+.carousel-indicators {
+	position: absolute;
+	bottom: 12px;
+}
+
+.carousel-indicators li {
+	border-radius: 0;
+	width: 12px;
+	height: 12px;
+}
+
+.carousel-indicators .active {
+	width: 14px;
+	height: 14px;
+} 
+
+@media screen and (min-width: 768px) {
+	.carousel-control .glyphicon-chevron-left,
+	.carousel-control .glyphicon-chevron-right {
+		width: 30px;
+		height: 30px;
+		margin-top: 0;
+		font-size: 20px;
+	}
+}
+
 /* =======================================================================
 config*.tmpl
 ========================================================================== */

@@ -611,6 +611,25 @@ h2.day, h2.network {
 	color: #666;
 }
 
+.carousel-control {
+  	color: #000;
+}
+
+.carousel-control:hover,
+.carousel-control:focus {
+  	color: #000;
+}
+
+.carousel-indicators li {
+	background: #555;
+	border: 1px solid #555;
+}
+
+.carousel-indicators .active {
+	background: #C7DB40;
+	border-color: #C7DB40;
+} 
+
 /* =======================================================================
 config*.tmpl
 ========================================================================== */

@@ -632,6 +632,29 @@ h2.day, h2.network {
 	color: #999;
 }
 
+.carousel-control {
+	color: #297AB8;
+	filter: alpha(opacity=100);
+	opacity: 1;
+}
+
+.carousel-control:hover,
+.carousel-control:focus {
+	color: #15528F;
+	filter: alpha(opacity=100);
+	opacity: 1;
+}
+
+.carousel-indicators li {
+	background: #555;
+	border: 1px solid #555;
+}
+
+.carousel-indicators .active {
+	background: #8DBEEE;
+	border-color: #8DBEEE;
+} 
+
 /* =======================================================================
 config*.tmpl
 ========================================================================== */
