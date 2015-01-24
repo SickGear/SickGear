@@ -7,11 +7,10 @@
 #import os.path, os
 #import datetime
 
-#set global $title=$show.name
-##set global $header = '<a></a>' % 
-#set global $topmenu="manageShows"#
-#set $exceptions_string = " | ".join($show.exceptions)
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
+#set global $title = $show.name
+#set global $topmenu = 'home'
+#set $exceptions_string = ', '.join($show.exceptions)
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/lib/jquery.bookmarkscroll.js?$sbPID"></script>
 
@@ -492,4 +491,4 @@
 	
 </table>
 
-#include $os.path.join($sickbeard.PROG_DIR,"gui/slick/interfaces/default/inc_bottom.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
