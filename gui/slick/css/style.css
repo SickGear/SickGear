@@ -2228,6 +2228,10 @@ div.blackwhitelist.anidb, div.blackwhitelist.manual {
 	display:block;
 }
 
+.padbottom {
+	padding-bottom: 10px;
+}
+
 /* =======================================================================
 bootstrap Overrides
 ========================================================================== */
