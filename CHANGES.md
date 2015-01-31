@@ -16,6 +16,8 @@
 * Add handling of exceptional case with missing network name (NoneType) in Episode View 
 * Fix black and white list initialization on new show creation
 * Add select all and clear all buttons to testRename template
+* Fix displayShow topmenu variable to point to a valid menu item
+* Change displayShow scene exception separator to a comma for neater appearance
 
 [develop changelog]
 
