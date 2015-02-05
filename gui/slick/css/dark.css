@@ -632,6 +632,17 @@ h2.day, h2.network {
 	color: #999;
 }
 
+.over-layer0 {
+	background: rgb(61,61,61);
+}
+
+.over-layer1 {
+	background: transparent;
+	color:white;
+	border-left: 1px solid rgb(34, 34, 34);
+	border-bottom :1px solid rgb(34, 34, 34)
+}
+
 .carousel-control {
 	color: #297AB8;
 	filter: alpha(opacity=100);

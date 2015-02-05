@@ -367,35 +367,31 @@ class MainHandler(RequestHandler):
         tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
         next_week_dt = (datetime.date.today() + datetime.timedelta(days=7))
         next_week = (next_week_dt + datetime.timedelta(days=1)).toordinal()
-        if not (layout and layout in 'daybyday') and not (sickbeard.EPISODE_VIEW_LAYOUT and sickbeard.EPISODE_VIEW_LAYOUT in 'daybyday'):
-            recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
-        else:
-            recently = yesterday
+        recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
 
         done_show_list = []
-        qualList = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
+        qualities = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
 
         myDB = db.DBConnection()
         sql_results = myDB.select(
-            "SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND airdate >= ? AND airdate <= ? AND tv_shows.indexer_id = tv_episodes.showid AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [yesterday, next_week] + qualList)
+            'SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND airdate >= ? AND airdate <= ? AND tv_shows.indexer_id = tv_episodes.showid AND tv_episodes.status NOT IN (%s)'
+            % ','.join(['?'] * len(qualities)),
+            [yesterday, next_week] + qualities)
 
         for cur_result in sql_results:
-            done_show_list.append(int(cur_result["showid"]))
+            done_show_list.append(int(cur_result['showid']))
 
-        if not (layout and layout in 'daybyday') and not (sickbeard.EPISODE_VIEW_LAYOUT and sickbeard.EPISODE_VIEW_LAYOUT in 'daybyday'):
-            more_sql_results = myDB.select(
-                "SELECT *, tv_shows.status as show_status FROM tv_episodes outer_eps, tv_shows WHERE season != 0 AND showid NOT IN (" + ','.join(
-                    ['?'] * len(
-                        done_show_list)) + ") AND tv_shows.indexer_id = outer_eps.showid AND airdate = (SELECT airdate FROM tv_episodes inner_eps WHERE inner_eps.season != 0 AND inner_eps.showid = outer_eps.showid AND inner_eps.airdate >= ? ORDER BY inner_eps.airdate ASC LIMIT 1) AND outer_eps.status NOT IN (" + ','.join(
-                    ['?'] * len(Quality.DOWNLOADED + Quality.SNATCHED)) + ")",
-                done_show_list + [next_week] + Quality.DOWNLOADED + Quality.SNATCHED)
-            sql_results += more_sql_results
+        sql_results += myDB.select(
+            'SELECT *, tv_shows.status as show_status FROM tv_episodes outer_eps, tv_shows WHERE season != 0 AND showid NOT IN (%s)'
+            % ','.join(['?'] * len(done_show_list))
+            + ' AND tv_shows.indexer_id = outer_eps.showid AND airdate = (SELECT airdate FROM tv_episodes inner_eps WHERE inner_eps.season != 0 AND inner_eps.showid = outer_eps.showid AND inner_eps.airdate >= ? ORDER BY inner_eps.airdate ASC LIMIT 1) AND outer_eps.status NOT IN (%s)'
+            % ','.join(['?'] * len(Quality.DOWNLOADED + Quality.SNATCHED)),
+            done_show_list + [next_week] + Quality.DOWNLOADED + Quality.SNATCHED)
 
-        more_sql_results = myDB.select(
-            "SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate <= ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [tomorrow, recently, WANTED] + qualList)
-        sql_results += more_sql_results
+        sql_results += myDB.select(
+            'SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate <= ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (%s)'
+            % ','.join(['?'] * len(qualities)),
+            [tomorrow, recently, WANTED] + qualities)
 
         sql_results = list(set(sql_results))
 
@@ -429,7 +425,7 @@ class MainHandler(RequestHandler):
 
         sql_results.sort(sorts[sickbeard.EPISODE_VIEW_SORT])
 
-        t = PageTemplate(headers=self.request.headers, file="episodeView.tmpl")
+        t = PageTemplate(headers=self.request.headers, file='episodeView.tmpl')
         t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
         t.today = datetime.datetime.now(network_timezones.sb_timezone)
         t.sql_results = sql_results
