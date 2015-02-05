@@ -18,6 +18,7 @@
 * Add select all and clear all buttons to testRename template
 * Fix displayShow topmenu variable to point to a valid menu item
 * Change displayShow scene exception separator to a comma for neater appearance
+* Remove non english subtitle providers
 
 [develop changelog]
 
