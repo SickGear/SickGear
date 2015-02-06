@@ -5,11 +5,12 @@ import threading
 import sys
 import sickbeard
 import webserve
+import browser
 import webapi
 
 from sickbeard import logger
 from sickbeard.helpers import create_https_certificates
-from tornado.web import Application, StaticFileHandler, RedirectHandler, HTTPError
+from tornado.web import Application, StaticFileHandler, HTTPError
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
@@ -41,7 +42,7 @@ class WebServer(threading.Thread):
         threading.Thread.__init__(self)
         self.daemon = True
         self.alive = True
-        self.name = "TORNADO"
+        self.name = 'TORNADO'
         self.io_loop = io_loop or IOLoop.current()
 
         self.options = options
@@ -68,12 +69,12 @@ class WebServer(threading.Thread):
             if not (self.https_cert and os.path.exists(self.https_cert)) or not (
                 self.https_key and os.path.exists(self.https_key)):
                 if not create_https_certificates(self.https_cert, self.https_key):
-                    logger.log(u"Unable to create CERT/KEY files, disabling HTTPS")
+                    logger.log(u'Unable to create CERT/KEY files, disabling HTTPS')
                     sickbeard.ENABLE_HTTPS = False
                     self.enable_https = False
 
             if not (os.path.exists(self.https_cert) and os.path.exists(self.https_key)):
-                logger.log(u"Disabled HTTPS because of missing CERT and KEY files", logger.WARNING)
+                logger.log(u'Disabled HTTPS because of missing CERT and KEY files', logger.WARNING)
                 sickbeard.ENABLE_HTTPS = False
                 self.enable_https = False
 
@@ -83,47 +84,87 @@ class WebServer(threading.Thread):
                                  autoreload=False,
                                  gzip=True,
                                  xheaders=sickbeard.HANDLE_REVERSE_PROXY,
-                                 cookie_secret='61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo='
+                                 cookie_secret=sickbeard.COOKIE_SECRET,
+                                 login_url='%s/login/' % self.options['web_root'],
         )
 
         # Main Handler
-        self.app.add_handlers(".*$", [
-            (r'%s/api/(.*)(/?)' % self.options['web_root'], webapi.Api),
-            (r'%s/(.*)(/?)' % self.options['web_root'], webserve.MainHandler),
-            (r'(.*)', webserve.MainHandler)
+        self.app.add_handlers('.*$', [
+            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webapi.ApiBuilder),
+            (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
+            (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
+            (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
+            (r'%s/config/providers(/?.*)' % self.options['web_root'], webserve.ConfigProviders),
+            (r'%s/config/subtitles(/?.*)' % self.options['web_root'], webserve.ConfigSubtitles),
+            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigPostProcessing),
+            (r'%s/config/notifications(/?.*)' % self.options['web_root'], webserve.ConfigNotifications),
+            (r'%s/config/anime(/?.*)' % self.options['web_root'], webserve.ConfigAnime),
+            (r'%s/config(/?.*)' % self.options['web_root'], webserve.Config),
+            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.ErrorLogs),
+            (r'%s/history(/?.*)' % self.options['web_root'], webserve.History),
+            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
+            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.NewHomeAddShows),
+            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomePostProcess),
+            (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
+            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
+            (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
+            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
+            (r'%s/browser(/?.*)' % self.options['web_root'], browser.WebFileBrowser),
+            (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
 
-        # Static Path Handler
-        self.app.add_handlers(".*$", [
-            (r'%s/(favicon\.ico)' % self.options['web_root'], MultiStaticFileHandler,
-             {'paths': [os.path.join(self.options['data_root'], 'images/ico/favicon.ico')]}),
-            (r'%s/%s/(.*)(/?)' % (self.options['web_root'], 'images'), MultiStaticFileHandler,
-             {'paths': [os.path.join(self.options['data_root'], 'images'),
-                        os.path.join(sickbeard.CACHE_DIR, 'images')]}),
-            (r'%s/%s/(.*)(/?)' % (self.options['web_root'], 'css'), MultiStaticFileHandler,
-             {'paths': [os.path.join(self.options['data_root'], 'css')]}),
-            (r'%s/%s/(.*)(/?)' % (self.options['web_root'], 'js'), MultiStaticFileHandler,
-             {'paths': [os.path.join(self.options['data_root'], 'js')]}),
+        # webui login/logout handlers
+        self.app.add_handlers('.*$', [
+            (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),
+            (r'%s/logout(/?)' % self.options['web_root'], webserve.LogoutHandler),
+        ])
+
+        # Web calendar handler (Needed because option Unprotected calendar)
+        self.app.add_handlers('.*$', [
+            (r'%s/calendar' % self.options['web_root'], webserve.CalendarHandler),
+        ])
+
+        # Static File Handlers
+        self.app.add_handlers('.*$', [
+            # favicon
+            (r'%s/(favicon\.ico)' % self.options['web_root'], StaticFileHandler,
+             {'path': os.path.join(self.options['data_root'], 'images/ico/favicon.ico')}),
+
+            # images
+            (r'%s/images/(.*)' % self.options['web_root'], StaticFileHandler,
+             {'path': os.path.join(self.options['data_root'], 'images')}),
+
+            # cached images
+            (r'%s/cache/images/(.*)' % self.options['web_root'], StaticFileHandler,
+             {'path': os.path.join(sickbeard.CACHE_DIR, 'images')}),
+
+            # css
+            (r'%s/css/(.*)' % self.options['web_root'], StaticFileHandler,
+             {'path': os.path.join(self.options['data_root'], 'css')}),
+
+            # javascript
+            (r'%s/js/(.*)' % self.options['web_root'], StaticFileHandler,
+             {'path': os.path.join(self.options['data_root'], 'js')}),
         ])
 
 
     def run(self):
         if self.enable_https:
-            protocol = "https"
-            self.server = HTTPServer(self.app, ssl_options={"certfile": self.https_cert, "keyfile": self.https_key})
+            protocol = 'https'
+            self.server = HTTPServer(self.app, ssl_options={'certfile': self.https_cert, 'keyfile': self.https_key})
         else:
-            protocol = "http"
+            protocol = 'http'
             self.server = HTTPServer(self.app)
 
-        logger.log(u"Starting SickGear on " + protocol + "://" + str(self.options['host']) + ":" + str(
-            self.options['port']) + "/")
+        logger.log(u'Starting SickGear on ' + protocol + '://' + str(self.options['host']) + ':' + str(
+            self.options['port']) + '/')
 
         try:
             self.server.listen(self.options['port'], self.options['host'])
         except:
             etype, evalue, etb = sys.exc_info()
             logger.log(
-                "Could not start webserver on %s. Excpeption: %s, Error: %s" % (self.options['port'], etype, evalue),
+                'Could not start webserver on %s. Excpeption: %s, Error: %s' % (self.options['port'], etype, evalue),
                 logger.ERROR)
             return
 
@@ -131,7 +172,7 @@ class WebServer(threading.Thread):
             self.io_loop.start()
             self.io_loop.close(True)
         except (IOError, ValueError):
-            # Ignore errors like "ValueError: I/O operation on closed kqueue fd". These might be thrown during a reload.
+            # Ignore errors like 'ValueError: I/O operation on closed kqueue fd'. These might be thrown during a reload.
             pass
 
     def shutDown(self):

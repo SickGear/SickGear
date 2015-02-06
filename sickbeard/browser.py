@@ -22,7 +22,7 @@ import string
 from tornado.httputil import HTTPHeaders
 from tornado.web import RequestHandler
 from sickbeard import encodingKludge as ek
-from sickbeard import logger
+from sickbeard import logger, webserve
 
 # use the built-in if it's available (python 2.6), if not use the included library
 try:
@@ -107,7 +107,7 @@ def foldersAtPath(path, includeParent=False, includeFiles=False):
     return entries
 
 
-class WebFileBrowser(RequestHandler):
+class WebFileBrowser(webserve.MainHandler):
     def index(self, path='', includeFiles=False, *args, **kwargs):
         self.set_header("Content-Type", "application/json")
         return json.dumps(foldersAtPath(path, True, bool(int(includeFiles))))

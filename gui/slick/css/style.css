@@ -139,7 +139,6 @@ fonts
 	font-style: normal;
 }
 
-
 /* =======================================================================
 inc_top.tmpl
 ========================================================================== */
@@ -444,6 +443,18 @@ inc_top.tmpl
 	background-position: -399px 0;
 }
 
+.menu-icon-logout {
+	background-position: -420px 0;
+}
+
+.menu-icon-kodi {
+	background-position: -441px 0;
+}
+
+.menu-icon-plex {
+	background-position: -462px 0;
+}
+
 [class^="submenu-icon-"], [class*=" submenu-icon-"] {
 	background: url("../images/menu/menu-icons-black.png");
 	height: 16px;
@@ -472,6 +483,14 @@ inc_top.tmpl
 
 .submenu-icon-xbmc {
 	background-position: -378px 0;
+}
+
+.submenu-icon-kodi {
+	background-position: -441px 0;
+}
+
+.submenu-icon-plex {
+	background-position: -462px 0;
 }
 
 /* =======================================================================
@@ -2206,6 +2225,25 @@ a.whitelink {
 	color: #fff;
 }
 
+/* =======================================================================
+404.tmpl
+========================================================================== */
+
+#error-404 {
+	text-align: center;
+}
+
+#error-404 h1 {
+	font-size: 200px;
+	line-height: 200px;
+	font-weight: 900;
+}
+
+#error-404 h2 {
+	text-transform: uppercase;
+	font-size: 50px;
+	font-weight: 900;
+}
 
 /* =======================================================================
 Global

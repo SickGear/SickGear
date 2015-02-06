@@ -1,0 +1,98 @@
+/* =======================================================================
+login.tmpl
+========================================================================== */
+
+.login-remember span {
+	color: #aaa
+}
+
+/* =======================================================================
+Global
+========================================================================== */
+
+.red-text {
+	color: #d33;
+}
+
+/* =======================================================================
+bootstrap Overrides
+========================================================================== */
+
+body {
+	color: #fff;
+	background-color: #222;
+}
+
+input, textarea, select, .uneditable-input {
+	width: auto;
+	color: #000;
+}
+
+.btn {
+	color: #fff;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.75);
+	background-color: #2672B6;
+	*background-color: #2672B6;
+	background-image: -ms-linear-gradient(top, #297AB8, #15528F);
+	background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#297AB8), to(#15528F));
+	background-image: -webkit-linear-gradient(top, #297AB8, #15528F);
+	background-image: -o-linear-gradient(top, #297AB8, #15528F);
+	background-image: linear-gradient(top, #297AB8, #15528F);
+	background-image: -moz-linear-gradient(top, #297AB8, #15528F);
+	border: 1px solid #111;
+	border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+	border-color: #111 #111 #111;
+	border-bottom-color: #111;
+	filter: progid:dximagetransform.microsoft.gradient(startColorstr='#297AB8', endColorstr='#15528F', GradientType=0);
+	filter: progid:dximagetransform.microsoft.gradient(enabled=false);
+	-webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.0), 0 1px 2px rgba(0, 0, 0, 0.05);
+	-moz-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.0), 0 1px 2px rgba(0, 0, 0, 0.05);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.0), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn:hover,
+.btn:active,
+.btn.active,
+.btn.disabled,
+.btn[disabled] {
+	background-color: #2672B6;
+	*background-color: #2672B6;
+	color: #fff;
+}
+
+.btn:active,
+.btn.active {
+	background-color: #cccccc \9;
+	color: #fff;
+}
+
+.btn:hover {
+	color: #fff;
+	background-color: #2672B6;
+	*background-color: #2672B6;
+	background-position: 0 -150px;
+	-webkit-transition: background-position 0.0s linear;
+	-moz-transition: background-position 0.0s linear;
+	-ms-transition: background-position 0.0s linear;
+	-o-transition: background-position 0.0s linear;
+	transition: background-position 0.0s linear;
+}
+
+.btn:focus {
+	outline: thin dotted #333;
+	outline: 5px auto -webkit-focus-ring-color;
+	outline-offset: -2px;
+	color: #fff;
+}
+
+.btn.active,
+.btn:active {
+	background-color: #2672B6;
+	background-color: #2672B6 \9;
+	background-image: none;
+	color: #fff;
+	outline: 0;
+	-webkit-box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.05);
+	-moz-box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.05);
+	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.05);
+}

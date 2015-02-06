@@ -68,6 +68,10 @@
 * Add cleansing of text used in the processes to a add a show
 * Add sorting of AniDB available group results
 * Add error handling and related UI feedback to reflect result of AniDB communications
+* Change replace HTTP auth with a login page
+* Change to improve webserve code
+* Add logout menu item with confirmation
+* Add 404 error page
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed

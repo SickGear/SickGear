@@ -60,7 +60,6 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
 
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
 
-from browser import WebFileBrowser
 from mimetypes import MimeTypes
 
 from lib.dateutil import tz
@@ -82,54 +81,8 @@ except ImportError:
 from lib import adba
 
 from Cheetah.Template import Template
-from tornado.web import RequestHandler, HTTPError, asynchronous
-
-
-def authenticated(handler_class):
-    def wrap_execute(handler_execute):
-        def basicauth(handler, transforms, *args, **kwargs):
-            def _request_basic_auth(handler):
-                handler.set_status(401)
-                handler.set_header('WWW-Authenticate', 'Basic realm="SickGear"')
-                handler._transforms = []
-                handler.finish()
-                return False
-
-            try:
-                if not (sickbeard.WEB_USERNAME and sickbeard.WEB_PASSWORD):
-                    return True
-                elif (handler.request.uri.startswith(sickbeard.WEB_ROOT + '/api') and
-                              '/api/builder' not in handler.request.uri):
-                    return True
-                elif (handler.request.uri.startswith(sickbeard.WEB_ROOT + '/calendar') and
-                        sickbeard.CALENDAR_UNPROTECTED):
-                    return True
-
-                auth_hdr = handler.request.headers.get('Authorization')
-
-                if auth_hdr == None:
-                    return _request_basic_auth(handler)
-                if not auth_hdr.startswith('Basic '):
-                    return _request_basic_auth(handler)
-
-                auth_decoded = base64.decodestring(auth_hdr[6:])
-                username, password = auth_decoded.split(':', 2)
-
-                if username != sickbeard.WEB_USERNAME or password != sickbeard.WEB_PASSWORD:
-                    return _request_basic_auth(handler)
-            except Exception, e:
-                return _request_basic_auth(handler)
-            return True
-
-        def _execute(self, transforms, *args, **kwargs):
-            if not basicauth(self, transforms, *args, **kwargs):
-                return False
-            return handler_execute(self, transforms, *args, **kwargs)
-
-        return _execute
-
-    handler_class._execute = wrap_execute(handler_class._execute)
-    return handler_class
+from tornado.web import RequestHandler, HTTPError, asynchronous, authenticated
+from tornado import gen, escape
 
 
 class HTTPRedirect(Exception):
@@ -151,8 +104,119 @@ def redirect(url, permanent=False, status=None):
     raise HTTPRedirect(sickbeard.WEB_ROOT + url, permanent, status)
 
 
-@authenticated
-class MainHandler(RequestHandler):
+class BaseHandler(RequestHandler):
+    def set_default_headers(self):
+        self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+
+    def redirect(self, url, permanent=False, status=None):
+        if not url.startswith(sickbeard.WEB_ROOT):
+            url = sickbeard.WEB_ROOT + url
+
+        super(BaseHandler, self).redirect(url, permanent, status)
+
+    def get_current_user(self, *args, **kwargs):
+        if sickbeard.WEB_USERNAME or sickbeard.WEB_PASSWORD:
+            return self.get_secure_cookie('user')
+        else:
+            return True
+
+    def showPoster(self, show=None, which=None, api=None):
+        # Redirect initial poster/banner thumb to default images
+        if which[0:6] == 'poster':
+            default_image_name = 'poster.png'
+        else:
+            default_image_name = 'banner.png'
+
+        static_image_path = os.path.join('/images', default_image_name)
+        if show and sickbeard.helpers.findCertainShow(sickbeard.showList, int(show)):
+            cache_obj = image_cache.ImageCache()
+
+            image_file_name = None
+            if which == 'poster':
+                image_file_name = cache_obj.poster_path(show)
+            if which == 'poster_thumb':
+                image_file_name = cache_obj.poster_thumb_path(show)
+            if which == 'banner':
+                image_file_name = cache_obj.banner_path(show)
+            if which == 'banner_thumb':
+                image_file_name = cache_obj.banner_thumb_path(show)
+
+            if ek.ek(os.path.isfile, image_file_name):
+                static_image_path = image_file_name
+
+        if api:
+            mime_type, encoding = MimeTypes().guess_type(static_image_path)
+            self.set_header('Content-Type', mime_type)
+            with file(static_image_path, 'rb') as img:
+                return img.read()
+        else:
+            static_image_path = os.path.normpath(static_image_path.replace(sickbeard.CACHE_DIR, '/cache'))
+            static_image_path = static_image_path.replace('\\', '/')
+            return redirect(static_image_path)
+
+
+class LogoutHandler(BaseHandler):
+    def get(self, *args, **kwargs):
+        self.clear_cookie('user')
+        self.redirect('/login/')
+
+
+class LoginHandler(BaseHandler):
+    def get(self, *args, **kwargs):
+        if self.get_current_user():
+            self.redirect(self.get_argument('next', '/home/'))
+        else:
+            t = PageTemplate(headers=self.request.headers, file='login.tmpl')
+            t.resp = self.get_argument('resp', '')
+            self.set_status(401)
+            self.finish(t.respond())
+
+    def post(self, *args, **kwargs):
+        username = sickbeard.WEB_USERNAME
+        password = sickbeard.WEB_PASSWORD
+
+        if (self.get_argument('username') == username or not username) \
+                and (self.get_argument('password') == password or not password):
+
+            remember_me = int(self.get_argument('remember_me', default=0) or 0)
+            self.set_secure_cookie('user', sickbeard.COOKIE_SECRET, expires_days=30 if remember_me > 0 else None)
+
+            self.redirect(self.get_argument('next', '/home/'))
+        else:
+            next_arg = '&next=' + self.get_argument('next', '/home/')
+            self.redirect('/login?resp=authfailed' + next_arg)
+
+
+class WebHandler(BaseHandler):
+    def page_not_found(self):
+        t = PageTemplate(headers=self.request.headers, file='404.tmpl')
+        return _munge(t)
+
+    @authenticated
+    @gen.coroutine
+    def get(self, route, *args, **kwargs):
+        route = route.strip('/') or 'index'
+        try:
+            method = getattr(self, route)
+        except:
+            self.finish(self.page_not_found())
+        else:
+            kwargss = self.request.arguments
+            for arg, value in kwargss.items():
+                if len(value) == 1:
+                    kwargss[arg] = value[0]
+            try:
+                self.finish(method(**kwargss))
+            except HTTPRedirect, e:
+                self.redirect(e.url, e.permanent, e.status)
+
+    post = get
+
+
+class MainHandler(WebHandler):
+    def index(self):
+        return redirect('/home/')
+
     def http_error_401_handler(self):
         """ Custom handler for 401 error """
         return r'''<!DOCTYPE html>
@@ -193,101 +257,10 @@ class MainHandler(RequestHandler):
                                </html>""" % (error, error,
                                              trace_info, request_info))
 
-    def _dispatch(self):
-        path = self.request.uri.replace(sickbeard.WEB_ROOT, '').split('?')[0]
-
-        method = path.strip('/').split('/')[-1]
-
-        if method == 'robots.txt':
-            method = 'robots_txt'
-
-        if path.startswith('/api') and method != 'builder':
-            apikey = path.strip('/').split('/')[-1]
-            method = path.strip('/').split('/')[0]
-            self.request.arguments.update({'apikey': [apikey]})
-
-        def pred(c):
-            return inspect.isclass(c) and c.__module__ == pred.__module__
-
-        try:
-            klass = [cls[1] for cls in
-                     inspect.getmembers(sys.modules[__name__], pred) + [(self.__class__.__name__, self.__class__)] if
-                     cls[0].lower() == method.lower() or method in cls[1].__dict__.keys()][0](self.application,
-                                                                                              self.request)
-        except:
-            klass = None
-
-        if klass and not method.startswith('_'):
-            # Sanitize argument lists:
-            args = self.request.arguments
-            for arg, value in args.items():
-                if len(value) == 1:
-                    args[arg] = value[0]
-
-            # Regular method handler for classes
-            func = getattr(klass, method, None)
-
-            # Special index method handler for classes and subclasses:
-            if path.startswith('/api') or path.endswith('/'):
-                if func and getattr(func, 'index', None):
-                    func = getattr(func(self.application, self.request), 'index', None)
-                elif not func:
-                    func = getattr(klass, 'index', None)
-
-            if callable(func):
-                out = func(**args)
-                self._headers = klass._headers
-                return out
-
-        raise HTTPError(404)
-
-    @asynchronous
-    def get(self, *args, **kwargs):
-        try:
-            self.finish(self._dispatch())
-        except HTTPRedirect, e:
-            self.redirect(e.url, e.permanent, e.status)
-
-    @asynchronous
-    def post(self, *args, **kwargs):
-        try:
-            self.finish(self._dispatch())
-        except HTTPRedirect, e:
-            self.redirect(e.url, e.permanent, e.status)
-
     def robots_txt(self, *args, **kwargs):
         """ Keep web crawlers out """
         self.set_header('Content-Type', 'text/plain')
         return "User-agent: *\nDisallow: /"
-
-    def showPoster(self, show=None, which=None):
-        # Redirect initial poster/banner thumb to default images
-        if which[0:6] == 'poster':
-            default_image_name = 'poster.png'
-        else:
-            default_image_name = 'banner.png'
-
-        image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', default_image_name)
-        if show and sickbeard.helpers.findCertainShow(sickbeard.showList, int(show)):
-            cache_obj = image_cache.ImageCache()
-
-            image_file_name = None
-            if which == 'poster':
-                image_file_name = cache_obj.poster_path(show)
-            if which == 'poster_thumb':
-                image_file_name = cache_obj.poster_thumb_path(show)
-            if which == 'banner':
-                image_file_name = cache_obj.banner_path(show)
-            if which == 'banner_thumb':
-                image_file_name = cache_obj.banner_thumb_path(show)
-
-            if ek.ek(os.path.isfile, image_file_name):
-                image_path = image_file_name
-
-        mime_type, encoding = MimeTypes().guess_type(image_path)
-        self.set_header('Content-Type', mime_type)
-        with file(image_path, 'rb') as img:
-            return img.read()
 
     def setHomeLayout(self, layout):
 
@@ -418,7 +391,7 @@ class MainHandler(RequestHandler):
 
         # add localtime to the dict
         for index, item in enumerate(sql_results):
-            sql_results[index]['localtime'] = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(item['airdate'], 
+            sql_results[index]['localtime'] = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(item['airdate'],
                                                                                        item['airs'], item['network']))
             sql_results[index]['data_show_name'] = value_maybe_article(item['show_name'])
             sql_results[index]['data_network'] = value_maybe_article(item['network'])
@@ -438,11 +411,26 @@ class MainHandler(RequestHandler):
 
         return _munge(t)
 
-    # iCalendar (iCal) - Standard RFC 5545 <http://tools.ietf.org/html/rfc5546>
-    # Works with iCloud, Google Calendar and Outlook.
+    def _genericMessage(self, subject, message):
+        t = PageTemplate(headers=self.request.headers, file="genericMessage.tmpl")
+        t.submenu = HomeMenu()
+        t.subject = subject
+        t.message = message
+        return _munge(t)
+
+
+class CalendarHandler(BaseHandler):
+    def get(self, *args, **kwargs):
+        if sickbeard.CALENDAR_UNPROTECTED or self.get_current_user():
+            self.write(self.calendar())
+        else:
+            self.set_status(401)
+            self.write('User authentication required')
+
     def calendar(self, *args, **kwargs):
-        """ Provides a subscribeable URL for iCal subscriptions
-        """
+        """ iCalendar (iCal) - Standard RFC 5545 <http://tools.ietf.org/html/rfc5546>
+        Works with iCloud, Google Calendar and Outlook.
+        Provides a subscribeable URL for iCal subscriptions """
 
         logger.log(u'Receiving iCal request from %s' % self.request.remote_ip)
 
@@ -490,14 +478,27 @@ class MainHandler(RequestHandler):
         # Ending the iCal
         return ical + 'END:VCALENDAR'
 
-    def _genericMessage(self, subject, message):
-        t = PageTemplate(headers=self.request.headers, file="genericMessage.tmpl")
-        t.submenu = HomeMenu()
-        t.subject = subject
-        t.message = message
-        return _munge(t)
 
-    browser = WebFileBrowser
+class IsAliveHandler(BaseHandler):
+    def get(self, *args, **kwargs):
+        kwargs = self.request.arguments
+        if 'callback' in kwargs and '_' in kwargs:
+            callback, _ = kwargs['callback'][0], kwargs['_']
+        else:
+            return "Error: Unsupported Request. Send jsonp request with 'callback' variable in the query string."
+
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+        self.set_header('Content-Type', 'text/javascript')
+        self.set_header('Access-Control-Allow-Origin', '*')
+        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
+
+        if sickbeard.started:
+            results = callback + '(' + json.dumps(
+                {"msg": str(sickbeard.PID)}) + ');'
+        else:
+            results = callback + '(' + json.dumps({"msg": "nope"}) + ');'
+
+        self.write(results)
 
 
 class PageTemplate(Template):
@@ -622,7 +623,6 @@ class ManageSearches(MainHandler):
 
         return _munge(t)
 
-
     def forceVersionCheck(self, *args, **kwargs):
         # force a check to see if there is a new version
         if sickbeard.versionCheckScheduler.action.check_for_new_version(force=True):
@@ -649,7 +649,6 @@ class ManageSearches(MainHandler):
 
         redirect("/manage/manageSearches/")
 
-
     def forceFindPropers(self, *args, **kwargs):
 
         # force it to run the next time it looks
@@ -659,7 +658,6 @@ class ManageSearches(MainHandler):
             ui.notifications.message('Find propers search started')
 
         redirect("/manage/manageSearches/")
-
 
     def pauseBacklog(self, paused=None):
         if paused == "1":
@@ -675,7 +673,6 @@ class Manage(MainHandler):
         t = PageTemplate(headers=self.request.headers, file="manage.tmpl")
         t.submenu = ManageMenu()
         return _munge(t)
-
 
     def showEpisodeStatuses(self, indexer_id, whichStatus):
         status_list = [int(whichStatus)]
@@ -698,7 +695,6 @@ class Manage(MainHandler):
             result[cur_season][cur_episode] = cur_result["name"]
 
         return json.dumps(result)
-
 
     def episodeStatuses(self, whichStatus=None):
 
@@ -744,7 +740,6 @@ class Manage(MainHandler):
         t.sorted_show_ids = sorted_show_ids
         return _munge(t)
 
-
     def changeEpisodeStatuses(self, oldStatus, newStatus, *args, **kwargs):
 
         status_list = [int(oldStatus)]
@@ -783,7 +778,6 @@ class Manage(MainHandler):
 
         redirect('/manage/episodeStatuses/')
 
-
     def showSubtitleMissed(self, indexer_id, whichSubs):
         myDB = db.DBConnection()
         cur_show_results = myDB.select(
@@ -815,7 +809,6 @@ class Manage(MainHandler):
                 cur_result["subtitles"] == '' else ''
 
         return json.dumps(result)
-
 
     def subtitleMissed(self, whichSubs=None):
 
@@ -856,7 +849,6 @@ class Manage(MainHandler):
         t.sorted_show_ids = sorted_show_ids
         return _munge(t)
 
-
     def downloadSubtitleMissed(self, *args, **kwargs):
 
         to_download = {}
@@ -891,7 +883,6 @@ class Manage(MainHandler):
 
         redirect('/manage/subtitleMissed/')
 
-
     def backlogShow(self, indexer_id):
 
         show_obj = helpers.findCertainShow(sickbeard.showList, int(indexer_id))
@@ -900,7 +891,6 @@ class Manage(MainHandler):
             sickbeard.backlogSearchScheduler.action.searchBacklog([show_obj])  # @UndefinedVariable
 
         redirect("/manage/backlogOverview/")
-
 
     def backlogOverview(self, *args, **kwargs):
 
@@ -942,7 +932,6 @@ class Manage(MainHandler):
         t.showSQLResults = showSQLResults
 
         return _munge(t)
-
 
     def massEdit(self, toEdit=None):
 
@@ -1067,7 +1056,6 @@ class Manage(MainHandler):
 
         return _munge(t)
 
-
     def massEditSubmit(self, archive_firstmatch=None, paused=None, anime=None, sports=None, scene=None, flatten_folders=None,
                        quality_preset=False,
                        subtitles=None, air_by_date=None, anyQualities=[], bestQualities=[], toEdit=None, *args,
@@ -1171,7 +1159,6 @@ class Manage(MainHandler):
                                    " ".join(errors))
 
         redirect("/manage/")
-
 
     def massUpdate(self, toUpdate=None, toRefresh=None, toRename=None, toDelete=None, toRemove=None, toMetadata=None, toSubtitle=None):
 
@@ -1291,7 +1278,6 @@ class Manage(MainHandler):
 
         redirect("/manage/")
 
-
     def manageTorrents(self, *args, **kwargs):
 
         t = PageTemplate(headers=self.request.headers, file="manage_torrents.tmpl")
@@ -1316,7 +1302,6 @@ class Manage(MainHandler):
                 t.info_download_station = '<p>To have a better experience please set the Download Station alias as <code>download</code>, you can check this setting in the Synology DSM <b>Control Panel</b> > <b>Application Portal</b>. Make sure you allow DSM to be embedded with iFrames too in <b>Control Panel</b> > <b>DSM Settings</b> > <b>Security</b>.</p><br/><p>There is more information about this available <a href="https://github.com/midgetspy/Sick-Beard/pull/338">here</a>.</p><br/>'
 
         return _munge(t)
-
 
     def failedDownloads(self, limit=100, toRemove=None):
 
@@ -1452,10 +1437,8 @@ class ConfigGeneral(MainHandler):
         t.submenu = ConfigMenu
         return _munge(t)
 
-
     def saveRootDirs(self, rootDirString=None):
         sickbeard.ROOT_DIRS = rootDirString
-
 
     def saveAddShowDefaults(self, defaultStatus, anyQualities, bestQualities, defaultFlattenFolders, subtitles=False,
                             anime=False, scene=False):
@@ -1483,7 +1466,6 @@ class ConfigGeneral(MainHandler):
 
         sickbeard.save_config()
 
-
     def generateKey(self, *args, **kwargs):
         """ Return a new randomized API_KEY
         """
@@ -1506,7 +1488,6 @@ class ConfigGeneral(MainHandler):
         # Return a hex digest of the md5, eg 49f68a5c8493ec2c0bf489821c21fc3b
         logger.log(u"New API generated")
         return m.hexdigest()
-
 
     def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None,
                     update_shows_on_start=None, show_update_hour=None, trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
@@ -1609,7 +1590,6 @@ class ConfigSearch(MainHandler):
         t.submenu = ConfigMenu
         return _munge(t)
 
-
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
                    sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None,
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
@@ -1690,7 +1670,6 @@ class ConfigPostProcessing(MainHandler):
         t = PageTemplate(headers=self.request.headers, file="config_postProcessing.tmpl")
         t.submenu = ConfigMenu
         return _munge(t)
-
 
     def savePostProcessing(self, naming_pattern=None, naming_multi_ep=None,
                            xbmc_data=None, xbmc_12plus_data=None, mediabrowser_data=None, sony_ps3_data=None,
@@ -1819,7 +1798,6 @@ class ConfigPostProcessing(MainHandler):
 
         return result
 
-
     def isNamingValid(self, pattern=None, multi=None, abd=False, sports=False, anime_type=None):
         if pattern is None:
             return "invalid"
@@ -1854,7 +1832,6 @@ class ConfigPostProcessing(MainHandler):
         else:
             return "invalid"
 
-
     def isRarSupported(self, *args, **kwargs):
         """
         Test Packing Support:
@@ -1879,7 +1856,6 @@ class ConfigProviders(MainHandler):
         t.submenu = ConfigMenu
         return _munge(t)
 
-
     def canAddNewznabProvider(self, name):
 
         if not name:
@@ -1893,7 +1869,6 @@ class ConfigProviders(MainHandler):
             return json.dumps({'error': 'Provider Name already exists as ' + providerDict[tempProvider.getID()].name})
         else:
             return json.dumps({'success': tempProvider.getID()})
-
 
     def saveNewznabProvider(self, name, url, key=''):
 
@@ -1965,7 +1940,6 @@ class ConfigProviders(MainHandler):
 
         return '1'
 
-
     def canAddTorrentRssProvider(self, name, url, cookies):
 
         if not name:
@@ -1984,7 +1958,6 @@ class ConfigProviders(MainHandler):
                 return json.dumps({'success': tempProvider.getID()})
             else:
                 return json.dumps({'error': errMsg})
-
 
     def saveTorrentRssProvider(self, name, url, cookies):
 
@@ -2005,7 +1978,6 @@ class ConfigProviders(MainHandler):
             sickbeard.torrentRssProviderList.append(newProvider)
             return newProvider.getID() + '|' + newProvider.configStr()
 
-
     def deleteTorrentRssProvider(self, id):
 
         providerDict = dict(
@@ -2021,7 +1993,6 @@ class ConfigProviders(MainHandler):
             sickbeard.PROVIDER_ORDER.remove(id)
 
         return '1'
-
 
     def saveProviders(self, newznab_string='', torrentrss_string='', provider_order=None, **kwargs):
 
@@ -2578,7 +2549,6 @@ class ConfigAnime(MainHandler):
         t.submenu = ConfigMenu
         return _munge(t)
 
-
     def saveAnime(self, use_anidb=None, anidb_username=None, anidb_password=None, anidb_use_mylist=None,
                   split_home=None, anime_treat_as_hdtv=None):
 
@@ -2602,7 +2572,6 @@ class ConfigAnime(MainHandler):
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
         redirect("/config/anime/")
-
 
 class Config(MainHandler):
     def index(self, *args, **kwargs):
@@ -2694,7 +2663,6 @@ class NewHomeAddShows(MainHandler):
         t.submenu = HomeMenu()
         return _munge(t)
 
-
     def getIndexerLanguages(self, *args, **kwargs):
         result = sickbeard.indexerApi().config['valid_languages']
 
@@ -2706,10 +2674,8 @@ class NewHomeAddShows(MainHandler):
 
         return json.dumps({'results': result})
 
-
     def sanitizeFileName(self, name):
         return helpers.sanitizeFileName(name)
-
 
     def searchIndexersForShowName(self, search_term, lang="en", indexer=None):
         if not lang or lang == 'null':
@@ -2741,7 +2707,6 @@ class NewHomeAddShows(MainHandler):
 
         lang_id = sickbeard.indexerApi().config['langabbv_to_id'][lang]
         return json.dumps({'results': final_results, 'langid': lang_id})
-
 
     def massAddTable(self, rootDir=None):
         t = PageTemplate(headers=self.request.headers, file="home_massAddTable.tmpl")
@@ -3110,7 +3075,6 @@ class NewHomeAddShows(MainHandler):
 
         return (indexer, show_dir, indexer_id, show_name)
 
-
     def addExistingShows(self, shows_to_add=None, promptForSettings=None):
         """
         Receives a dir list and add them. Adds the ones with given TVDB IDs first, then forwards
@@ -3192,11 +3156,9 @@ class ErrorLogs(MainHandler):
 
         return _munge(t)
 
-
     def clearerrors(self, *args, **kwargs):
         classes.ErrorViewer.clear()
         redirect("/errorlogs/")
-
 
     def viewlog(self, minLevel=logger.MESSAGE, maxLines=500):
 
@@ -3253,24 +3215,6 @@ class ErrorLogs(MainHandler):
 
 
 class Home(MainHandler):
-    def is_alive(self, *args, **kwargs):
-        if 'callback' in kwargs and '_' in kwargs:
-            callback, _ = kwargs['callback'], kwargs['_']
-        else:
-            return "Error: Unsupported Request. Send jsonp request with 'callback' variable in the query string."
-
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-        self.set_header('Content-Type', 'text/javascript')
-        self.set_header('Access-Control-Allow-Origin', '*')
-        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
-
-        if sickbeard.started:
-            return callback + '(' + json.dumps(
-                {"msg": str(sickbeard.PID)}) + ');'
-        else:
-            return callback + '(' + json.dumps({"msg": "nope"}) + ');'
-
-
     def index(self, *args, **kwargs):
 
         t = PageTemplate(headers=self.request.headers, file="home.tmpl")
@@ -3309,7 +3253,6 @@ class Home(MainHandler):
         else:
             return "Unable to connect to host"
 
-
     def testTorrent(self, torrent_method=None, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3320,7 +3263,6 @@ class Home(MainHandler):
         connection, accesMsg = client(host, username, password).testAuthentication()
 
         return accesMsg
-
 
     def testGrowl(self, host=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3338,7 +3280,6 @@ class Home(MainHandler):
         else:
             return "Registration and Testing of growl failed " + urllib.unquote_plus(host) + pw_append
 
-
     def testProwl(self, prowl_api=None, prowl_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3347,7 +3288,6 @@ class Home(MainHandler):
             return "Test prowl notice sent successfully"
         else:
             return "Test prowl notice failed"
-
 
     def testBoxcar2(self, accesstoken=None, sound=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3358,7 +3298,6 @@ class Home(MainHandler):
         else:
             return "Error sending Boxcar2 notification"
 
-
     def testPushover(self, userKey=None, apiKey=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3368,12 +3307,10 @@ class Home(MainHandler):
         else:
             return "Error sending Pushover notification"
 
-
     def twitterStep1(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         return notifiers.twitter_notifier._get_authorization()
-
 
     def twitterStep2(self, key):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3385,7 +3322,6 @@ class Home(MainHandler):
         else:
             return "Unable to verify key"
 
-
     def testTwitter(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3394,7 +3330,6 @@ class Home(MainHandler):
             return "Tweet successful, check your twitter to make sure it worked"
         else:
             return "Error sending tweet"
-
 
     def testXBMC(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3451,7 +3386,6 @@ class Home(MainHandler):
         else:
             return notifiers.libnotify.diagnose()
 
-
     def testNMJ(self, host=None, database=None, mount=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3461,7 +3395,6 @@ class Home(MainHandler):
             return "Successfully started the scan update"
         else:
             return "Test failed to start the scan update"
-
 
     def settingsNMJ(self, host=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3474,7 +3407,6 @@ class Home(MainHandler):
         else:
             return '{"message": "Failed! Make sure your Popcorn is on and NMJ is running. (see Log & Errors -> Debug for detailed info)", "database": "", "mount": ""}'
 
-
     def testNMJv2(self, host=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3484,7 +3416,6 @@ class Home(MainHandler):
             return "Test notice sent successfully to " + urllib.unquote_plus(host)
         else:
             return "Test notice failed to " + urllib.unquote_plus(host)
-
 
     def settingsNMJv2(self, host=None, dbloc=None, instance=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3498,7 +3429,6 @@ class Home(MainHandler):
             return '{"message": "Unable to find NMJ Database at location: %(dbloc)s. Is the right location selected and PCH running?", "database": ""}' % {
                 "dbloc": dbloc}
 
-
     def testTrakt(self, api=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3507,7 +3437,6 @@ class Home(MainHandler):
             return "Test notice sent successfully to Trakt"
         else:
             return "Test notice failed to Trakt"
-
 
     def loadShowNotifyLists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3523,7 +3452,6 @@ class Home(MainHandler):
         data['_size'] = size
         return json.dumps(data)
 
-
     def testEmail(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3532,7 +3460,6 @@ class Home(MainHandler):
             return 'Test email sent successfully! Check inbox.'
         else:
             return 'ERROR: %s' % notifiers.email_notifier.last_err
-
 
     def testNMA(self, nma_api=None, nma_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3543,7 +3470,6 @@ class Home(MainHandler):
         else:
             return "Test NMA notice failed"
 
-
     def testPushalot(self, authorizationToken=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3553,7 +3479,6 @@ class Home(MainHandler):
         else:
             return "Error sending Pushalot notification"
 
-
     def testPushbullet(self, api=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3562,7 +3487,6 @@ class Home(MainHandler):
             return "Pushbullet notification succeeded. Check your device to make sure it worked"
         else:
             return "Error sending Pushbullet notification"
-
 
     def getPushbulletDevices(self, api=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -3761,14 +3685,12 @@ class Home(MainHandler):
 
         return _munge(t)
 
-
     def plotDetails(self, show, season, episode):
         myDB = db.DBConnection()
         result = myDB.select(
             "SELECT description FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?",
             (int(show), int(season), int(episode)))
         return result[0]['description'] if result else 'Episode not found.'
-
 
     def sceneExceptions(self, show):
         exceptionsList = sickbeard.scene_exceptions.get_all_scene_exceptions(show)
@@ -3781,7 +3703,6 @@ class Home(MainHandler):
                 season = "*"
             out.append("S" + str(season) + ": " + ", ".join(names))
         return "<br/>".join(out)
-
 
     def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
@@ -3974,7 +3895,6 @@ class Home(MainHandler):
 
         redirect("/home/displayShow?show=" + show)
 
-
     def deleteShow(self, show=None, full=0):
 
         if show is None:
@@ -4000,7 +3920,6 @@ class Home(MainHandler):
                                  '<b>%s</b>' % showObj.name)
         redirect("/home/")
 
-
     def refreshShow(self, show=None):
 
         if show is None:
@@ -4021,7 +3940,6 @@ class Home(MainHandler):
         time.sleep(cpu_presets[sickbeard.CPU_PRESET])
 
         redirect("/home/displayShow?show=" + str(showObj.indexerid))
-
 
     def updateShow(self, show=None, force=0):
 
@@ -4045,7 +3963,6 @@ class Home(MainHandler):
 
         redirect("/home/displayShow?show=" + str(showObj.indexerid))
 
-
     def subtitleShow(self, show=None, force=0):
 
         if show is None:
@@ -4062,7 +3979,6 @@ class Home(MainHandler):
         time.sleep(cpu_presets[sickbeard.CPU_PRESET])
 
         redirect("/home/displayShow?show=" + str(showObj.indexerid))
-
 
     def updateXBMC(self, showName=None):
 
@@ -4209,7 +4125,6 @@ class Home(MainHandler):
         else:
             redirect("/home/displayShow?show=" + show)
 
-
     def testRename(self, show=None):
 
         if show is None:
@@ -4254,7 +4169,6 @@ class Home(MainHandler):
         t.show = showObj
 
         return _munge(t)
-
 
     def doRename(self, show=None, eps=None):
 
@@ -4514,7 +4428,6 @@ class Home(MainHandler):
                 (result['sceneSeason'], result['sceneEpisode']) = (None, None)
 
         return json.dumps(result)
-
 
     def retryEpisode(self, show, season, episode):
 

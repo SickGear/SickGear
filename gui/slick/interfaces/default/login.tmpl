@@ -1,0 +1,75 @@
+#import sickbeard
+
+#set global $title = 'Login'
+
+#set global $sbPath = '..'
+
+#set global $topmenu = 'login'
+#import os.path
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	
+		<title>SickGear - BRANCH:[$sickbeard.BRANCH] - $title</title>
+	
+		<!--[if lt IE 9]>
+			<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+			<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+		<![endif]-->
+
+		<link rel="shortcut icon" href="$sbRoot/images/ico/favicon.ico">
+		<link rel="apple-touch-icon" sizes="180x180" href="$sbRoot/images/ico/apple-touch-icon-180x180.png">
+		<link rel="apple-touch-icon" sizes="152x152" href="$sbRoot/images/ico/apple-touch-icon-152x152.png">
+		<link rel="apple-touch-icon" sizes="144x144" href="$sbRoot/images/ico/apple-touch-icon-144x144.png">
+		<link rel="apple-touch-icon" sizes="120x120" href="$sbRoot/images/ico/apple-touch-icon-120x120.png">
+		<link rel="apple-touch-icon" sizes="114x114" href="$sbRoot/images/ico/apple-touch-icon-114x114.png">
+		<link rel="apple-touch-icon" sizes="76x76" href="$sbRoot/images/ico/apple-touch-icon-76x76.png">
+		<link rel="apple-touch-icon" sizes="72x72" href="$sbRoot/images/ico/apple-touch-icon-72x72.png">
+		<link rel="apple-touch-icon" sizes="60x60" href="$sbRoot/images/ico/apple-touch-icon-60x60.png">
+		<link rel="apple-touch-icon" sizes="57x57" href="$sbRoot/images/ico/apple-touch-icon-57x57.png">		
+		<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-192x192.png" sizes="192x192">
+		<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-160x160.png" sizes="160x160">
+		<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-96x96.png" sizes="96x96">
+		<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-32x32.png" sizes="32x32">
+		<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-16x16.png" sizes="16x16">
+		<meta name="msapplication-TileColor" content="#2b5797">
+		<meta name="msapplication-TileImage" content="$sbRoot/images/ico/mstile-144x144.png">
+		<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
+
+		<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap.css?$sbPID"/>
+		<link rel="stylesheet" type="text/css" href="$sbRoot/css/style-login.css?$sbPID"/>
+		<link rel="stylesheet" type="text/css" href="$sbRoot/css/${sickbeard.THEME_NAME}-login.css?$sbPID" />
+
+	</head>
+	
+	<body>
+		<div class="login">
+			<form action="" method="post">
+				<div class="login-img center-block form-group"></div>
+				
+				<div class="login-error">
+					<span class="#if 'authfailed'==$resp then 'showme red-text' else 'hide' #"><i class="error16">&nbsp;</i> Authentication failed, please retry</span>
+				</div>
+					
+				<div class="form-group input-group">
+					<span class="input-group-addon glyphicon glyphicon-user"></span>
+					<input name="username" class="form-control" placeholder="Username" type="text" autofocus required>
+				</div>
+				
+				<div class="form-group input-group">
+					<span class="input-group-addon glyphicon glyphicon-lock"></span>
+					<input name="password" class="form-control" placeholder="Password" type="password">
+				</div>
+				
+				<div class="form-group">
+					<label for="remember_me" class="login-remember"><input id="remember_me" name="remember_me" type="checkbox" value="1" checked="checked"><span>Remember me</span></label>
+					<input class="btn pull-right" name="submit" type="submit" value="Login">
+				</div>
+			</form>
+		</div>
+	</body>
+</html>
