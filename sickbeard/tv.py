@@ -2441,7 +2441,7 @@ class TVEpisode(object):
             return
 
         related_files = postProcessor.PostProcessor(self.location).list_associated_files(
-            self.location)
+            self.location, base_name_only=True)
 
         if self.show.subtitles and sickbeard.SUBTITLES_DIR != '':
             related_subs = postProcessor.PostProcessor(self.location).list_associated_files(sickbeard.SUBTITLES_DIR,

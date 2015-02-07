@@ -19,6 +19,7 @@
 * Fix displayShow topmenu variable to point to a valid menu item
 * Change displayShow scene exception separator to a comma for neater appearance
 * Remove non english subtitle providers
+* Fix rename of excluded metadata
 
 [develop changelog]
 
