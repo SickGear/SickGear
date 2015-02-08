@@ -56,7 +56,7 @@ class EmailNotifier:
             show = self._parseEp(ep_name)
             to = self._generate_recepients(show)
             if len(to) == 0:
-                logger.log('Skipping email notify because there are no configured recepients', logger.WARNING)
+                logger.log('Skipping email notification because there are no configured recepients', logger.WARNING)
             else:
                 try:
                     msg = MIMEMultipart('alternative')
@@ -91,7 +91,7 @@ class EmailNotifier:
             show = self._parseEp(ep_name)
             to = self._generate_recepients(show)
             if len(to) == 0:
-                logger.log('Skipping email notify because there are no configured recepients', logger.WARNING)
+                logger.log('Skipping email notification because there are no configured recepients', logger.WARNING)
             else:
                 try:
                     msg = MIMEMultipart('alternative')
@@ -126,7 +126,7 @@ class EmailNotifier:
             show = self._parseEp(ep_name)
             to = self._generate_recepients(show)
             if len(to) == 0:
-                logger.log('Skipping email notify because there are no configured recepients', logger.WARNING)
+                logger.log('Skipping email notification because there are no configured recepients', logger.WARNING)
             else:
                 try:
                     msg = MIMEMultipart('alternative')

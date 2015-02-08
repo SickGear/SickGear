@@ -113,7 +113,7 @@ class HDTorrentsProvider(generic.TorrentProvider):
 
             if re.search('You need cookies enabled to log in.', response.text) \
                     or response.status_code == 401:
-                logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
+                logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
                 return False
 
             self._uid = requests.utils.dict_from_cookiejar(self.session.cookies)['uid']
@@ -212,7 +212,7 @@ class HDTorrentsProvider(generic.TorrentProvider):
                             continue
 
                         if not entries:
-                            logger.log(u"The Data returned from " + self.name + " do not contains any torrent",
+                            logger.log(u"The data returned from " + self.name + " does not contain any torrents",
                                        logger.DEBUG)
                             continue
 

@@ -97,7 +97,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
         if re.search('Invalid Username/password', response.text) \
                 or re.search('<title>Login :: TorrentLeech.org</title>', response.text) \
                 or response.status_code == 401:
-            logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
+            logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
             return False
 
         return True
@@ -182,7 +182,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
 
                         #Continue only if one Release is found
                         if len(torrent_rows) < 2:
-                            logger.log(u"The Data returned from " + self.name + " do not contains any torrent",
+                            logger.log(u"The data returned from " + self.name + " does not contain any torrents",
                                        logger.DEBUG)
                             continue
 

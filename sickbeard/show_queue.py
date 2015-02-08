@@ -106,7 +106,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
         if (self.isBeingUpdated(show) or self.isInUpdateQueue(show)) and not force:
             logger.log(
-                u"A refresh was attempted but there is already an update queued or in progress. Since updates do a refres at the end anyway I'm skipping this request.",
+                u"A refresh was attempted but there is already an update queued or in progress. Since updates do a refresh at the end anyway I'm skipping this request.",
                 logger.DEBUG)
             return
 
@@ -336,7 +336,7 @@ class QueueItemAdd(ShowQueueItem):
             self.show.loadIMDbInfo()
         except imdb_exceptions.IMDbError, e:
             #todo Insert UI notification
-            logger.log(u" Something wrong on IMDb api: " + ex(e), logger.WARNING)
+            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
         except Exception, e:
             logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
 
@@ -365,7 +365,7 @@ class QueueItemAdd(ShowQueueItem):
         try:
             self.show.loadEpisodesFromDir()
         except Exception, e:
-            logger.log(u"Error searching dir for episodes: " + ex(e), logger.ERROR)
+            logger.log(u"Error searching directory for episodes: " + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         # if they gave a custom status then change all the eps to it
@@ -450,7 +450,7 @@ class QueueItemRename(ShowQueueItem):
         try:
             show_loc = self.show.location
         except exceptions.ShowDirNotFoundException:
-            logger.log(u"Can't perform rename on " + self.show.name + " when the show dir is missing.", logger.WARNING)
+            logger.log(u"Can't perform rename on " + self.show.name + " when the show directory is missing.", logger.WARNING)
             return
 
         ep_obj_rename_list = []
@@ -519,7 +519,7 @@ class QueueItemUpdate(ShowQueueItem):
         try:
             self.show.loadIMDbInfo()
         except imdb_exceptions.IMDbError, e:
-            logger.log(u" Something wrong on IMDb api: " + ex(e), logger.WARNING)
+            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
         except Exception, e:
             logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)

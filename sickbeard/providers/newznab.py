@@ -250,6 +250,9 @@ class NewznabProvider(generic.NZBProvider):
             elif code == '102':
                 raise AuthException(
                     "Your account isn't allowed to use the API on " + self.name + ", contact the administrator")
+            elif code == '910':
+                logger.log(u"" + self.name + " currently has their API disabled, please check with provider.", logger.WARNING)
+                return False
             else:
                 logger.log(u"Unknown error given from " + self.name + ": " + data.feed['error']['description'],
                            logger.ERROR)
@@ -308,7 +311,7 @@ class NewznabProvider(generic.NZBProvider):
                     results.append(item)
                 else:
                     logger.log(
-                        u"The data returned from the " + self.name + " is incomplete, this result is unusable",
+                        u"The data returned from " + self.name + " is incomplete, this result is unusable",
                         logger.DEBUG)
 
             # get total and offset attribs
@@ -336,7 +339,7 @@ class NewznabProvider(generic.NZBProvider):
                     params['limit']) + " items.", logger.DEBUG)
             else:
                 logger.log(str(
-                    total - int(params['offset'])) + " No more searches needed, could find anything I was looking for! " + str(
+                    total - int(params['offset'])) + " No more searches needed, couldn't find anything I was looking for! " + str(
                     params['limit']) + " items.", logger.DEBUG)
                 break
 
