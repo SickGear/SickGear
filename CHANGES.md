@@ -20,6 +20,7 @@
 * Change displayShow scene exception separator to a comma for neater appearance
 * Remove non english subtitle providers
 * Fix rename of excluded metadata
+* Add Rarbg torrent provider
 
 [develop changelog]
 
