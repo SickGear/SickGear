@@ -20,6 +20,8 @@
 * Change displayShow scene exception separator to a comma for neater appearance
 * Remove non english subtitle providers
 * Fix rename of excluded metadata
+* Remove kickmirror from KickAssTorrents as it is no longer available
+* Change KickAssTorrents url from .so to .to
 
 [develop changelog]
 
