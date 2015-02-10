@@ -24,6 +24,7 @@
 * Change minor PEP8 tweaks in sab.py
 * Add api disabled error code for newznab providers
 * Add support for a proxy host PAC url on the General Config/Advanced Settings page
+* Add proxy request url parsing to enforce netloc only matching which prevents false positives when url query parts contain FQDNs
 
 [develop changelog]
 
