@@ -4190,7 +4190,9 @@ class Home(MainHandler):
                     epObj.status = int(status)
 
                     # mass add to database
-                    sql_l.append(epObj.get_sql())
+                    result = epObj.get_sql()
+                    if None is not result:
+                        sql_l.append(result)
 
             if len(sql_l) > 0:
                 myDB = db.DBConnection()

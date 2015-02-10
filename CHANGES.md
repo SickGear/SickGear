@@ -28,6 +28,10 @@
 [develop changelog]
 
 
+### 0.6.4 (2015-02-10 20:20:00 UTC)
+* Fix issue where setting the status for an episode that doesn't need a db update fails
+
+
 ### 0.6.3 (2015-02-10 05:30:00 UTC)
 * Change KickAssTorrents URL
 
