@@ -23,6 +23,7 @@
 * Change corrected spelling & better clarified various log messages
 * Change minor PEP8 tweaks in sab.py
 * Add api disabled error code for newznab providers
+* Add support for a proxy host PAC url on the General Config/Advanced Settings page
 
 [develop changelog]
 
