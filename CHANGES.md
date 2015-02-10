@@ -27,6 +27,10 @@
 [develop changelog]
 
 
+### 0.6.3 (2015-02-10 05:30:00 UTC)
+* Change KickAssTorrents URL
+
+
 ### 0.6.2 (2015-01-21 23:35:00 UTC)
 
 * Fix invalid addition of trailing slash to custom torrent RSS URLs
