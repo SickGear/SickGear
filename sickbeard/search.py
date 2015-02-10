@@ -296,7 +296,7 @@ def isFirstBestMatch(result):
     Checks if the given result is a best quality match and if we want to archive the episode on first match.
     """
 
-    logger.log(u"Checking if we should archive our first best quality match for for episode " + result.name,
+    logger.log(u"Checking if we should archive our first best quality match for episode " + result.name,
                logger.DEBUG)
 
     show_obj = result.episodes[0].show
@@ -550,7 +550,7 @@ def searchProviders(show, episodes, manualSearch=False):
             # if we need every ep in the season and there's nothing better then just download this and be done with it (unless single episodes are preferred)
             if allWanted and bestSeasonResult.quality == highest_quality_overall:
                 logger.log(
-                    u"Every ep in this season is needed, downloading the whole " + bestSeasonResult.provider.providerType + " " + bestSeasonResult.name)
+                    u"Every episode in this season is needed, downloading the whole " + bestSeasonResult.provider.providerType + " " + bestSeasonResult.name)
                 epObjs = []
                 for curEpNum in allEps:
                     epObjs.append(show.getEpisode(season, curEpNum))
@@ -560,7 +560,7 @@ def searchProviders(show, episodes, manualSearch=False):
 
             elif not anyWanted:
                 logger.log(
-                    u"No eps from this season are wanted at this quality, ignoring the result of " + bestSeasonResult.name,
+                    u"No episodes from this season are wanted at this quality, ignoring the result of " + bestSeasonResult.name,
                     logger.DEBUG)
 
             else:
@@ -590,7 +590,7 @@ def searchProviders(show, episodes, manualSearch=False):
 
                     # Season result from Torrent Provider must be a full-season torrent, creating multi-ep result for it.
                     logger.log(
-                        u"Adding multi-ep result for full-season torrent. Set the episodes you don't want to 'don't download' in your torrent client if desired!")
+                        u"Adding multi episode result for full season torrent. Set the episodes you don't want to 'don't download' in your torrent client if desired!")
                     epObjs = []
                     for curEpNum in allEps:
                         epObjs.append(show.getEpisode(season, curEpNum))
@@ -607,11 +607,11 @@ def searchProviders(show, episodes, manualSearch=False):
         if MULTI_EP_RESULT in foundResults[curProvider.name]:
             for multiResult in foundResults[curProvider.name][MULTI_EP_RESULT]:
 
-                logger.log(u"Seeing if we want to bother with multi-episode result " + multiResult.name, logger.DEBUG)
+                logger.log(u"Seeing if we want to bother with multi episode result " + multiResult.name, logger.DEBUG)
 
                 if sickbeard.USE_FAILED_DOWNLOADS and failed_history.hasFailed(multiResult.name, multiResult.size,
                                                                                multiResult.provider.name):
-                    logger.log(multiResult.name + u" has previously failed, rejecting this multi-ep result")
+                    logger.log(multiResult.name + u" has previously failed, rejecting this multi episode result")
                     continue
 
                 # see how many of the eps that this result covers aren't covered by single results
@@ -626,11 +626,11 @@ def searchProviders(show, episodes, manualSearch=False):
                         notNeededEps.append(epNum)
 
                 logger.log(
-                    u"Single-ep check result is neededEps: " + str(neededEps) + ", notNeededEps: " + str(notNeededEps),
+                    u"Single episode check result is needed episodes: " + str(neededEps) + ", not needed episodes: " + str(notNeededEps),
                     logger.DEBUG)
 
                 if not notNeededEps:
-                    logger.log(u"All of these episodes were covered by single episode results, ignoring this multi-episode result", logger.DEBUG)
+                    logger.log(u"All of these episodes were covered by single episode results, ignoring this multi episode result", logger.DEBUG)
                     continue
 
                 # check if these eps are already covered by another multi-result
@@ -644,12 +644,12 @@ def searchProviders(show, episodes, manualSearch=False):
                         multiNeededEps.append(epNum)
 
                 logger.log(
-                    u"Multi-ep check result is multiNeededEps: " + str(multiNeededEps) + ", multiNotNeededEps: " + str(
+                    u"Multi episode check result is multi needed episodes: " + str(multiNeededEps) + ", multi not needed episodes: " + str(
                         multiNotNeededEps), logger.DEBUG)
 
                 if not multiNeededEps:
                     logger.log(
-                        u"All of these episodes were covered by another multi-episode nzbs, ignoring this multi-ep result",
+                        u"All of these episodes were covered by another multi episode nzb, ignoring this multi episode result",
                         logger.DEBUG)
                     continue
 
@@ -662,8 +662,8 @@ def searchProviders(show, episodes, manualSearch=False):
                     epNum = epObj.episode
                     if epNum in foundResults[curProvider.name]:
                         logger.log(
-                            u"A needed multi-episode result overlaps with a single-episode result for ep #" + str(
-                                epNum) + ", removing the single-episode results from the list", logger.DEBUG)
+                            u"A needed multi episode result overlaps with a single episode result for episode #" + str(
+                                epNum) + ", removing the single episode results from the list", logger.DEBUG)
                         del foundResults[curProvider.name][epNum]
 
         # of all the single ep results narrow it down to the best one for each episode

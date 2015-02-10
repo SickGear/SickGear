@@ -20,6 +20,9 @@
 * Change displayShow scene exception separator to a comma for neater appearance
 * Remove non english subtitle providers
 * Fix rename of excluded metadata
+* Change corrected spelling & better clarified various log messages
+* Change minor PEP8 tweaks in sab.py
+* Add api disabled error code for newznab providers
 
 [develop changelog]
 

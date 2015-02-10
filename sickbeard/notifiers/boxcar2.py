@@ -78,7 +78,7 @@ class Boxcar2Notifier:
 
             # If you receive an HTTP status code of 400, it is because you failed to send the proper parameters
             elif e.code == 400:
-                logger.log("Wrong data send to boxcar2", logger.ERROR)
+                logger.log("Wrong data sent to boxcar2", logger.ERROR)
                 return False
 
         logger.log("Boxcar2 notification successful.", logger.DEBUG)

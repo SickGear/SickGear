@@ -52,10 +52,10 @@ def sendNZB(nzb, proper=False):
 
     nzbGetRPC = xmlrpclib.ServerProxy(url)
     try:
-        if nzbGetRPC.writelog("INFO", "SickGear connected to drop of %s any moment now." % (nzb.name + ".nzb")):
-            logger.log(u"Successful connected to NZBget", logger.DEBUG)
+        if nzbGetRPC.writelog("INFO", "SickGear connected to drop off %s any moment now." % (nzb.name + ".nzb")):
+            logger.log(u"Successfully connected to NZBget", logger.DEBUG)
         else:
-            logger.log(u"Successful connected to NZBget, but unable to send a message", logger.ERROR)
+            logger.log(u"Successfully connected to NZBget, but unable to send a message", logger.ERROR)
 
     except httplib.socket.error:
         logger.log(
@@ -94,8 +94,8 @@ def sendNZB(nzb, proper=False):
         data = nzb.extraInfo[0]
         nzbcontent64 = standard_b64encode(data)
 
-    logger.log(u"Sending NZB to NZBget")
-    logger.log(u"URL: " + url, logger.DEBUG)
+    logger.log(u"Sending NZB to NZBGet: %s" % nzb.name)
+    logger.log(u"NZBGet URL: " + url, logger.DEBUG)
 
     try:
         # Find out if nzbget supports priority (Version 9.0+), old versions beginning with a 0.x will use the old command

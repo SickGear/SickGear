@@ -114,7 +114,7 @@ class PushbulletNotifier:
                 logger.log(u"Pushbullet notifications sent.", logger.DEBUG)
                 return True
         elif request_status == 410:
-            logger.log(u"Pushbullet auth failed: %s" % response.reason, logger.ERROR)
+            logger.log(u"Pushbullet authentication failed: %s" % response.reason, logger.ERROR)
             return False
         else:
             logger.log(u"Pushbullet notification failed.", logger.ERROR)

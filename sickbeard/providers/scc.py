@@ -98,7 +98,7 @@ class SCCProvider(generic.TorrentProvider):
         if re.search('Username or password incorrect', response.text) \
                 or re.search('<title>SceneAccess \| Login</title>', response.text) \
                 or response.status_code == 401:
-            logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
+            logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
             return False
 
         return True
@@ -204,7 +204,7 @@ class SCCProvider(generic.TorrentProvider):
                                     source = self.name + " (" + html.title.string + ")"
                                 else:
                                     source = self.name
-                                logger.log(u"The Data returned from " + source + " does not contain any torrent", logger.DEBUG)
+                                logger.log(u"The data returned from " + source + " does not contain any torrents", logger.DEBUG)
                                 continue
 
                             for result in torrent_table.find_all('tr')[1:]:

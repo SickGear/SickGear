@@ -416,7 +416,7 @@ def make_dirs(path):
         # Windows, create all missing folders
         if os.name == 'nt' or os.name == 'ce':
             try:
-                logger.log(u"Folder " + path + " didn't exist, creating it", logger.DEBUG)
+                logger.log(u"Folder " + path + " doesn't exist, creating it", logger.DEBUG)
                 ek.ek(os.makedirs, path)
             except (OSError, IOError), e:
                 logger.log(u"Failed creating " + path + " : " + ex(e), logger.ERROR)
@@ -436,7 +436,7 @@ def make_dirs(path):
                     continue
 
                 try:
-                    logger.log(u"Folder " + sofar + " didn't exist, creating it", logger.DEBUG)
+                    logger.log(u"Folder " + sofar + " doesn't exist, creating it", logger.DEBUG)
                     ek.ek(os.mkdir, sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
                     chmodAsParent(ek.ek(os.path.normpath, sofar))
@@ -1464,7 +1464,7 @@ def wait_for_free_port(host, port):
         else:
             return
 
-    raise IOError("Port %r not free on %r" % (port, host))
+    raise IOError("Port %r is not free on %r" % (port, host))
 
 
 def check_port(host, port, timeout=1.0):

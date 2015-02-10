@@ -483,7 +483,7 @@ class AddShowidTvdbidIndex(db.SchemaUpgrade):
     def execute(self):
         backup_database(self.checkDBVersion())
 
-        logger.log(u'Check for duplicate shows before adding unique index.')
+        logger.log(u'Checking for duplicate shows before adding unique index.')
         MainSanityCheck(self.connection).fix_duplicate_shows('tvdb_id')
 
         logger.log(u'Adding index on tvdb_id (tv_shows) and showid (tv_episodes) to speed up searches/queries.')

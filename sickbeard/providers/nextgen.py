@@ -208,7 +208,7 @@ class NextGenProvider(generic.TorrentProvider):
                         resultsTable = html.find('div', attrs={'id': 'torrent-table-wrapper'})
 
                         if not resultsTable:
-                            logger.log(u"The Data returned from " + self.name + " do not contains any torrent",
+                            logger.log(u"The data returned from " + self.name + " does not contain any torrents",
                                        logger.DEBUG)
                             continue
 
@@ -253,7 +253,7 @@ class NextGenProvider(generic.TorrentProvider):
                                 items[mode].append(item)
 
                         else:
-                            logger.log(u"The Data returned from " + self.name + " do not contains any torrent",
+                            logger.log(u"The data returned from " + self.name + " does not contain any torrents",
                                        logger.WARNING)
                             continue
 
