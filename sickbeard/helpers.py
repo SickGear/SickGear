@@ -1236,6 +1236,60 @@ def _getTempDir():
 
     return os.path.join(tempfile.gettempdir(), "SickGear-%s" % (uid))
 
+
+def proxy_setting(proxy_setting, request_url, force=False):
+    """
+    Returns a list of a) proxy_setting address value or a PAC is fetched and parsed if proxy_setting
+    starts with "PAC:" (case-insensitive) and b) True/False if "PAC" is found in the proxy_setting.
+
+    The PAC data parser is crude, javascript is not eval'd. The first "PROXY URL" found is extracted with a list
+    of "url_a_part.url_remaining", "url_b_part.url_remaining", "url_n_part.url_remaining" and so on.
+    Also, PAC data items are escaped for matching therefore regular expression items will not match a request_url.
+
+    If force is True or request_url contains a PAC parsed data item then the PAC proxy address is returned else False.
+    None is returned in the event of an error fetching PAC data.
+
+    """
+
+    # check for "PAC" usage
+    match = re.search(r'^\s*PAC:\s*(.*)', proxy_setting, re.I)
+    if not match:
+        return proxy_setting, False
+    pac_url = match.group(1)
+
+    # prevent a recursive test with existing proxy setting when fetching PAC url
+    proxy_setting_backup = sickbeard.PROXY_SETTING
+    sickbeard.PROXY_SETTING = ''
+
+    resp = ''
+    try:
+        resp = getURL(pac_url)
+    except:
+        pass
+    sickbeard.PROXY_SETTING = proxy_setting_backup
+
+    if not resp:
+        return None, False
+
+    proxy_address = None
+    request_url_match = False
+    for pac_data in re.finditer(r"""(?:[^'"]*['"])([^\.]+\.[^'"]*)(?:['"])""", resp, re.I):
+        data = re.search(r"""PROXY\s+([^'"]+)""", pac_data.group(1), re.I)
+        if data:
+            if force:
+                return data.group(1), True
+            proxy_address = (proxy_address, data.group(1))[None is proxy_address]
+        elif re.search(re.escape(pac_data.group(1)), request_url, re.I):
+            request_url_match = True
+            if None is not proxy_address:
+                break
+
+    if None is proxy_address:
+        return None, True
+
+    return (False, proxy_address)[request_url_match], True
+
+
 def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False):
     """
     Returns a byte-string retrieved from the url provider.
@@ -1265,11 +1319,17 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
         # request session proxies
         if sickbeard.PROXY_SETTING:
-            logger.log("Using proxy for url: " + url, logger.DEBUG)
-            session.proxies = {
-                "http": sickbeard.PROXY_SETTING,
-                "https": sickbeard.PROXY_SETTING,
-            }
+            (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING, url)
+            msg = '%sproxy for url: %s' % (('', 'PAC parsed ')[pac_found], url)
+            if None is proxy_address:
+                logger.log('Proxy error, aborted the request using %s' % msg, logger.DEBUG)
+                return
+            elif proxy_address:
+                logger.log('Using %s' % msg, logger.DEBUG)
+                session.proxies = {
+                    'http': proxy_address,
+                    'https': proxy_address
+                }
 
         # decide if we get or post data to server
         if post_data:
@@ -1316,11 +1376,17 @@ def download_file(url, filename, session=None):
 
     # request session proxies
     if sickbeard.PROXY_SETTING:
-        logger.log("Using proxy for url: " + url, logger.DEBUG)
-        session.proxies = {
-            "http": sickbeard.PROXY_SETTING,
-            "https": sickbeard.PROXY_SETTING,
-        }
+        (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING, url)
+        msg = '%sproxy for url: %s' % (('', 'PAC parsed ')[pac_found], url)
+        if None is proxy_address:
+            logger.log('Proxy error, aborted the request using %s' % msg, logger.DEBUG)
+            return
+        elif proxy_address:
+            logger.log('Using %s' % msg, logger.DEBUG)
+            session.proxies = {
+                'http': proxy_address,
+                'https': proxy_address
+            }
 
     try:
         resp = session.get(url)

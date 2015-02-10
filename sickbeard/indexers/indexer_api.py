@@ -19,7 +19,7 @@ import os
 import sickbeard
 
 from indexer_config import initConfig, indexerConfig
-
+from sickbeard.helpers import proxy_setting
 
 class indexerApi(object):
     def __init__(self, indexerID=None):
@@ -49,7 +49,9 @@ class indexerApi(object):
             if sickbeard.CACHE_DIR:
                 indexerConfig[self.indexerID]['api_params']['cache'] = os.path.join(sickbeard.CACHE_DIR, 'indexers', self.name)
             if sickbeard.PROXY_SETTING and sickbeard.PROXY_INDEXERS:
-                indexerConfig[self.indexerID]['api_params']['proxy'] = sickbeard.PROXY_SETTING
+                (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING, indexerConfig[self.indexerID]['base_url'], force=True)
+                if proxy_address:
+                    indexerConfig[self.indexerID]['api_params']['proxy'] = proxy_address
 
             return indexerConfig[self.indexerID]['api_params']
 
