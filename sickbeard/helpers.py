@@ -1273,13 +1273,15 @@ def proxy_setting(proxy_setting, request_url, force=False):
 
     proxy_address = None
     request_url_match = False
+    parsed_url = urlparse.urlparse(request_url)
+    netloc = (parsed_url.path, parsed_url.netloc)['' != parsed_url.netloc]
     for pac_data in re.finditer(r"""(?:[^'"]*['"])([^\.]+\.[^'"]*)(?:['"])""", resp, re.I):
         data = re.search(r"""PROXY\s+([^'"]+)""", pac_data.group(1), re.I)
         if data:
             if force:
                 return data.group(1), True
             proxy_address = (proxy_address, data.group(1))[None is proxy_address]
-        elif re.search(re.escape(pac_data.group(1)), request_url, re.I):
+        elif re.search(re.escape(pac_data.group(1)), netloc, re.I):
             request_url_match = True
             if None is not proxy_address:
                 break
@@ -1359,6 +1361,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         return resp.json()
 
     return resp.content
+
 
 def download_file(url, filename, session=None):
     # create session
