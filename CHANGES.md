@@ -33,6 +33,8 @@
 * Change Episodes page/DayByDay layout cards to display show title in a qtip when there is no plot
 * Change position of "[paused]" text to top right of a card on the Episodes page/DayByDay layout
 * Add "On Air until" text and overdue/on air colour bars to show episode states on the Episodes page/DayByDay layout
+* Change The Pirate Bay url back as it's now back up and oldpiratebay hasn't been updated for weeks
+* Remove duplicate thepiratebay icon
 
 [develop changelog]
 
