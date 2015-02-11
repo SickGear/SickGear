@@ -1401,6 +1401,7 @@ episodeView.tmpl
 	border-radius: 5px;
 }
 
+.carousel-indicators li.listing-soon,
 .listing-default {
 	background-color: #f5f1e4;
 }
@@ -1409,14 +1410,17 @@ episodeView.tmpl
 	background-color: #dfd;
 }
 
+.carousel-indicators li.listing-overdue,
 .listing-overdue {
 	background-color: #fdd;
 }
 
+.carousel-indicators li.listing-default,
 .listing-toofar {
 	background-color: #bedeed;
 }
 
+.carousel-indicators li.listing-soon,
 span.listing-default {
 	color: #826f30;
 	border: 1px solid #826f30;
@@ -1427,11 +1431,13 @@ span.listing-current {
 	border: 1px solid #295730;
 }
 
+.carousel-indicators li.listing-overdue,
 span.listing-overdue {
 	color: #890000;
 	border: 1px solid #890000;
 }
 
+.carousel-indicators li.listing-default,
 span.listing-toofar {
 	color: #1d5068;
 	border: 1px solid #1d5068;
@@ -1579,6 +1585,23 @@ h2.day, h2.network {
 	width: 100%
 }
 
+.daybyday-show .state {
+	height: 3px;
+}
+
+.daybyday-show .listing-default {
+	background-color: transparent;
+}
+
+.carousel-indicators li.listing-overdue,
+.daybyday-show .listing-overdue {
+	background-color: #ffb0b0;
+}
+
+.daybyday-show .listing-current {
+	background-color: #aaffaa;
+}
+
 .day-of-week .poster img {
 	border: 1px solid;
 	border-radius: 5px;
@@ -1629,6 +1652,96 @@ h2.day, h2.network {
 #content.episodeview-banner .time-am-pm,
 #content.episodeview-poster .time-am-pm {
 	margin-left: 0;
+}
+
+.over-layer0 {
+	filter: alpha(opacity=60);
+	opacity: .6;
+}
+
+.over-layer1 {
+	background: transparent;
+}
+
+.over-layer0,
+.over-layer1 {
+	position: absolute;
+	top: 0;
+	right: 0;
+	font-size: 10px;
+	padding: 4px 6px 2px 2px;
+}
+
+.on-air0,
+.on-air1 {
+	text-align: right;
+}
+.on-air0 {
+	background-color: #dfd !important;
+	filter: alpha(opacity=75);
+	opacity: .75;
+}
+.on-air1 {
+	color: #295730 !important;
+	border-left: 1px solid #295730 !important;
+	border-bottom: 1px solid #295730 !important;
+}
+
+.daybydayCarouselContainer {
+	min-height: 20px;
+	margin: 19px 0;
+}
+
+.controlsBlock {
+	position: relative;
+	display: block;
+	width: 180px;
+	margin: 0 auto;
+	height: 35px;
+	text-align: center;
+}
+
+.carousel-control {
+	background: none !important;
+	text-align: center;
+	opacity: 0.75;
+	height: 20px;
+	width: 20px;
+	top:1px
+}
+
+.carousel-indicators {
+	top: 1px;
+}
+
+.carousel-indicators li {
+	border-radius: 0;
+	width: 12px;
+	height: 18px;
+}
+
+.carousel-indicators .active {
+	width: 14px;
+	height: 20px;
+}
+
+.carousel-control.right {
+	right: 4px
+}
+
+.carousel-control .glyphicon-chevron-left {
+	margin-left: -10px;
+}
+.carousel-control .glyphicon-chevron-right {
+	margin-right: -10px;
+}
+.carousel-control .glyphicon-chevron-left,
+.carousel-control .glyphicon-chevron-right {
+	width: 20px;
+	height: 20px;
+	margin-top: 0;
+	font-size: 20px;
+	top:0;
 }
 
 /* =======================================================================

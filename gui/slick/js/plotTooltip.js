@@ -1,6 +1,7 @@
 $(function () {
     $('.plotInfo, .plot-daybyday').each(function () {
-        var match = $(this).attr('id').match(/^plot_info_(\d+)_(\d+)_(\d+)$/);
+        var match = $(this).attr('id').match(/^plot(?:_info_|-)((\d+)_(\d+)[_x](\d+))$/);
+        var showName = $('#show-' + match[1]).attr('data-rawname');
         $(this).qtip({
             content: {
                 text: function(event, api) {
@@ -9,14 +10,16 @@ $(function () {
                         url: $('#sbRoot').val() + '/home/plotDetails',
                         type: 'GET',
                         data: {
-                            show: match[1],
-                            episode: match[3],
-                            season: match[2]
+                            show: match[2],
+                            episode: match[4],
+                            season: match[3]
                         }
                     })
                     .then(function(content) {
                         // Set the tooltip content upon successful retrieval
-                        api.set('content.text', content);
+                        api.set('content.text', ('undefined' === typeof(showName) ? ''
+                            : ('' !== content ? '<b class="boldest">' + showName + '</b>' : showName))
+                            + ('' !== content ? ' ' + content : ''));
                     }, function(xhr, status, error) {
                         // Upon failure... set the tooltip content to the status and error value
                         api.set('content.text', status + ': ' + error);
@@ -32,7 +35,7 @@ $(function () {
                 my: 'left center',
                 adjust: {
                     y: -10,
-                    x: 2
+                    x: 0
                 }
             },
             style: {

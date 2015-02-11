@@ -591,6 +591,20 @@ h2.day, h2.network {
     border-color: #CCC;
 }
 
+.over-layer0 {
+	background: rgb(61,61,61);
+}
+
+.over-layer1 {
+	background: transparent;
+	color:white;
+	border-left: 1px solid rgb(255,255,255);
+	border-bottom :1px solid rgb(255,255,255)
+}
+
+.carousel-control,
+.carousel-control:hover,
+.carousel-control:focus,
 .day-of-week .text .airtime,
 .day-of-week .text .episode,
 .day-of-week .text .episode .name {
@@ -610,6 +624,16 @@ h2.day, h2.network {
 .episodeview-daybyday .time .time-am-pm {
 	color: #666;
 }
+
+.carousel-indicators li {
+	background: #555;
+	border: 1px solid #555;
+}
+
+.carousel-indicators .active {
+	background: #C7DB40;
+	border-color: #C7DB40;
+} 
 
 /* =======================================================================
 config*.tmpl

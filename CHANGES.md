@@ -25,6 +25,14 @@
 * Add api disabled error code for newznab providers
 * Add support for a proxy host PAC url on the General Config/Advanced Settings page
 * Add proxy request url parsing to enforce netloc only matching which prevents false positives when url query parts contain FQDNs
+* Add scroll into view buttons when overdues shows are available on the Episodes page/DayByDay layout
+* Add scroll into view buttons when future shows are available on the Episodes page/DayByDay layout
+* Add qTips to episode names on the Episodes page/DayByDay layout
+* Change Episodes page/List layout qtips to prepend show title to episode plot
+* Change Episodes page/DayByDay layout qtips to prepend show title to episode plot
+* Change Episodes page/DayByDay layout cards to display show title in a qtip when there is no plot
+* Change position of "[paused]" text to top right of a card on the Episodes page/DayByDay layout
+* Add "On Air until" text and overdue/on air colour bars to show episode states on the Episodes page/DayByDay layout
 
 [develop changelog]
 
