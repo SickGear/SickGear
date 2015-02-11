@@ -47,7 +47,7 @@ from lib.unidecode import unidecode
 class ThePirateBayProvider(generic.TorrentProvider):
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, "ThePirateBay")
+        generic.TorrentProvider.__init__(self, 'The Pirate Bay')
 
         self.supportsBacklog = True
 
@@ -61,11 +61,11 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         self.proxy = ThePirateBayWebproxy()
 
-        self.url = 'http://oldpiratebay.org/'
+        self.url = 'https://thepiratebay.se/'
 
-        self.searchurl = self.url + 'search.php?q=%s&Torrent_sort=seeders.desc' # order by seed       
+        self.searchurl = self.url + 'search/%s/0/7/200'  # order by seed       
 
-        self.re_title_url = 'href=["\'](?P<url>magnet:.*?)&.*?/torrent/(?P<id>\d+)/(?P<title>.*?)".+?seeders-row sy">(?P<seeders>\d+)</td>.+?leechers-row ly">(?P<leechers>\d+)</td>'
+        self.re_title_url = '/torrent/(?P<id>\d+)/(?P<title>.*?)//1".+?(?P<url>magnet.*?)//1".+?(?P<seeders>\d+)</td>.+?(?P<leechers>\d+)</td>'
 
     def isEnabled(self):
         return self.enabled
@@ -108,7 +108,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         mediaExtensions = ['avi', 'mkv', 'wmv', 'divx',
                            'vob', 'dvr-ms', 'wtv', 'ts'
-                                                   'ogv', 'rar', 'zip', 'mp4']
+                           'ogv', 'rar', 'zip', 'mp4']
 
         quality = Quality.UNKNOWN
 
@@ -248,8 +248,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                 match = re.compile(re_title_url, re.DOTALL).finditer(urllib.unquote(data))
                 for torrent in match:
 
-                    title = torrent.group('title').replace('_',
-                                                           '.')  #Do not know why but SickBeard skip release with '_' in name
+                    title = torrent.group('title').replace('_', '.')  #Do not know why but SickBeard skip release with '_' in name
                     url = torrent.group('url')
                     id = int(torrent.group('id'))
                     seeders = int(torrent.group('seeders'))
@@ -259,7 +258,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                     if mode != 'RSS' and (seeders < self.minseed or leechers < self.minleech):
                         continue
 
-                        #Accept Torrent only from Good People for every Episode Search
+                    #Accept Torrent only from Good People for every Episode Search
                     if self.confirmed and re.search('(VIP|Trusted|Helper|Moderator)', torrent.group(0)) is None:
                         logger.log(u"ThePirateBay Provider found result " + torrent.group(
                             'title') + " but that doesn't seem like a trusted result so I'm ignoring it", logger.DEBUG)
