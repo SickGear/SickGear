@@ -35,6 +35,7 @@
 * Add "On Air until" text and overdue/on air colour bars to show episode states on the Episodes page/DayByDay layout
 * Change The Pirate Bay url back as it's now back up and oldpiratebay hasn't been updated for weeks
 * Remove duplicate thepiratebay icon
+* Change to ensure uTorrent API parameters are ordered for uT 2.2.1 compatibility
 
 [develop changelog]
 
