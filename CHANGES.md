@@ -38,6 +38,7 @@
 * Change to ensure uTorrent API parameters are ordered for uT 2.2.1 compatibility
 
 [develop changelog]
+* Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
 
 
 ### 0.6.4 (2015-02-10 20:20:00 UTC)
