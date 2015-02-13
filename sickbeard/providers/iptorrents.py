@@ -40,9 +40,9 @@ from sickbeard.show_name_helpers import allPossibleShowNames
 
 
 class IPTorrentsProvider(generic.TorrentProvider):
-    urls = {'base_url': 'https://www.iptorrents.com',
-            'login': 'https://www.iptorrents.com/torrents/',
-            'search': 'https://www.iptorrents.com/torrents/?%s%s&q=%s&qf=ti',
+    urls = {'base_url': 'https://iptorrents.com',
+            'login': 'https://iptorrents.com/torrents/',
+            'search': 'https://iptorrents.com/torrents/?%s%s&q=%s&qf=ti',
     }
 
     def __init__(self):
