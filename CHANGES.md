@@ -55,6 +55,7 @@
 * Update PNotify to latest master (2014-12-25) for desktop notifications
 * Add desktop notifications
 * Change the AniDB provider image for a sharper looking version
+* Change to streamline iCal function and make it handle missing network names
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed

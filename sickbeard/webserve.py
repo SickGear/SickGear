@@ -438,70 +438,57 @@ class MainHandler(RequestHandler):
 
         return _munge(t)
 
-    # Raw iCalendar implementation by Pedro Jose Pereira Vieito (@pvieito).
-    #
     # iCalendar (iCal) - Standard RFC 5545 <http://tools.ietf.org/html/rfc5546>
     # Works with iCloud, Google Calendar and Outlook.
     def calendar(self, *args, **kwargs):
         """ Provides a subscribeable URL for iCal subscriptions
         """
 
-        logger.log(u"Receiving iCal request from %s" % self.request.remote_ip)
-
-        # Create a iCal string
-        ical = 'BEGIN:VCALENDAR\r\n'
-        ical += 'VERSION:2.0\r\n'
-        ical += 'X-WR-CALNAME:SickGear\r\n'
-        ical += 'X-WR-CALDESC:SickGear\r\n'
-        ical += 'PRODID://Sick-Beard Upcoming Episodes//\r\n'
+        logger.log(u'Receiving iCal request from %s' % self.request.remote_ip)
 
         # Limit dates
         past_date = (datetime.date.today() + datetime.timedelta(weeks=-52)).toordinal()
         future_date = (datetime.date.today() + datetime.timedelta(weeks=52)).toordinal()
+        utc = tz.gettz('GMT')
 
-        # Get all the shows that are not paused and are currently on air (from kjoconnor Fork)
+        # Get all the shows that are not paused and are currently on air
         myDB = db.DBConnection()
-        calendar_shows = myDB.select(
-            "SELECT show_name, indexer_id, network, airs, runtime FROM tv_shows WHERE ( status = 'Continuing' OR status = 'Returning Series' ) AND paused != '1'")
-        for show in calendar_shows:
+        show_list = myDB.select(
+            'SELECT show_name, indexer_id, network, airs, runtime FROM tv_shows WHERE ( status = "Continuing" OR status = "Returning Series" ) AND paused != "1"')
+
+        nl = "\\n\\n"
+        crlf = "\r\n"
+
+        # Create iCal header
+        appname = 'SickGear'
+        ical = 'BEGIN:VCALENDAR%sVERSION:2.0%sX-WR-CALNAME:%s%sX-WR-CALDESC:%s%sPRODID://%s Upcoming Episodes//%s'\
+               % (crlf, crlf, appname, crlf, appname, crlf, appname, crlf)
+
+        for show in show_list:
             # Get all episodes of this show airing between today and next month
             episode_list = myDB.select(
-                "SELECT indexerid, name, season, episode, description, airdate FROM tv_episodes WHERE airdate >= ? AND airdate < ? AND showid = ?",
-                (past_date, future_date, int(show["indexer_id"])))
-
-            utc = tz.gettz('GMT')
+                'SELECT indexerid, name, season, episode, description, airdate FROM tv_episodes WHERE airdate >= ? AND airdate < ? AND showid = ?',
+                (past_date, future_date, int(show['indexer_id'])))
 
             for episode in episode_list:
 
-                air_date_time = network_timezones.parse_date_time(episode['airdate'], show["airs"],
+                air_date_time = network_timezones.parse_date_time(episode['airdate'], show['airs'],
                                                                   show['network']).astimezone(utc)
                 air_date_time_end = air_date_time + datetime.timedelta(
-                    minutes=helpers.tryInt(show["runtime"], 60))
+                    minutes=helpers.tryInt(show['runtime'], 60))
 
                 # Create event for episode
-                ical = ical + 'BEGIN:VEVENT\r\n'
-                ical = ical + 'DTSTART:' + air_date_time.strftime("%Y%m%d") + 'T' + air_date_time.strftime(
-                    "%H%M%S") + 'Z\r\n'
-                ical = ical + 'DTEND:' + air_date_time_end.strftime(
-                    "%Y%m%d") + 'T' + air_date_time_end.strftime(
-                    "%H%M%S") + 'Z\r\n'
-                ical = ical + 'SUMMARY:' + show['show_name'] + ' - ' + str(
-                    episode['season']) + "x" + str(episode['episode']) + " - " + episode['name'] + '\r\n'
-                ical = ical + 'UID:Sick-Beard-' + str(datetime.date.today().isoformat()) + '-' + show[
-                    'show_name'].replace(" ", "-") + '-E' + str(episode['episode']) + 'S' + str(
-                    episode['season']) + '\r\n'
-                if (episode['description'] is not None and episode['description'] != ''):
-                    ical = ical + 'DESCRIPTION:' + show['airs'] + ' on ' + show['network'] + '\\n\\n' + \
-                           episode['description'].splitlines()[0] + '\r\n'
-                else:
-                    ical = ical + 'DESCRIPTION:' + (show['airs'] or '(Unknown airs)') + ' on ' + (show['network'] or 'Unknown network') + '\r\n'
-
-                ical = ical + 'END:VEVENT\r\n'
+                ical += 'BEGIN:VEVENT%s' % crlf\
+                    + 'DTSTART:%sT%sZ%s' % (air_date_time.strftime('%Y%m%d'), air_date_time.strftime('%H%M%S'), crlf)\
+                    + 'DTEND:%sT%sZ%s' % (air_date_time_end.strftime('%Y%m%d'), air_date_time_end.strftime('%H%M%S'), crlf)\
+                    + 'SUMMARY:%s - %sx%s - %s%s' % (show['show_name'], str(episode['season']), str(episode['episode']), episode['name'], crlf)\
+                    + 'UID:%s-%s-%s-E%sS%s%s' % (appname, str(datetime.date.today().isoformat()), show['show_name'].replace(' ', '-'), str(episode['episode']), str(episode['season']), crlf)\
+                    + 'DESCRIPTION:%s on %s' % ((show['airs'] or '(Unknown airs)'), (show['network'] or 'Unknown network'))\
+                    + ('' if not episode['description'] else '%s%s' % (nl, episode['description'].splitlines()[0]))\
+                    + '%sEND:VEVENT%s' % (crlf, crlf)
 
         # Ending the iCal
-        ical += 'END:VCALENDAR'
-
-        return ical
+        return ical + 'END:VCALENDAR'
 
     def _genericMessage(self, subject, message):
         t = PageTemplate(headers=self.request.headers, file="genericMessage.tmpl")
