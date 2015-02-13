@@ -33,7 +33,6 @@ __all__ = ['ezrss',
            'nyaatorrents',
            'fanzub',
            'torrentbytes',
-           'freshontv',
            'bitsoup',
            'tokyotoshokan',
 ]
