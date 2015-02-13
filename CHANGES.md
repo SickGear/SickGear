@@ -38,6 +38,7 @@
 * Change indicate when not sorting with article by dimming ("The", "A", "An") on Show List, Episode, History,
   Mass Update, Add with Browse and from Existing views
 * Add Emby notifier to config/Notifications
+* Use a subprocess and cp for copying files on posix systems to preserve file metadata
 * Fix alternative unicode show names from breaking search
 * Change show update, set shows with newly added airdate or existing episodes with future or never dates, to "Wanted"
 * Fix rare NameParser case where numeric episode name was parsed as episode number
