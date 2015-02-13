@@ -2345,7 +2345,7 @@ class ConfigNotifications(MainHandler):
                           use_twitter=None, twitter_notify_onsnatch=None, twitter_notify_ondownload=None,
                           twitter_notify_onsubtitledownload=None,
                           use_boxcar2=None, boxcar2_notify_onsnatch=None, boxcar2_notify_ondownload=None,
-                          boxcar2_notify_onsubtitledownload=None, boxcar2_accesstoken=None,
+                          boxcar2_notify_onsubtitledownload=None, boxcar2_accesstoken=None, boxcar2_sound=None,
                           use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None,
                           pushover_notify_onsubtitledownload=None, pushover_userkey=None, pushover_apikey=None,
                           use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
@@ -2421,6 +2421,7 @@ class ConfigNotifications(MainHandler):
         sickbeard.BOXCAR2_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(boxcar2_notify_ondownload)
         sickbeard.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(boxcar2_notify_onsubtitledownload)
         sickbeard.BOXCAR2_ACCESSTOKEN = boxcar2_accesstoken
+        sickbeard.BOXCAR2_SOUND = boxcar2_sound
 
         sickbeard.USE_PUSHOVER = config.checkbox_to_value(use_pushover)
         sickbeard.PUSHOVER_NOTIFY_ONSNATCH = config.checkbox_to_value(pushover_notify_onsnatch)
@@ -3349,10 +3350,10 @@ class Home(MainHandler):
             return "Test prowl notice failed"
 
 
-    def testBoxcar2(self, accesstoken=None):
+    def testBoxcar2(self, accesstoken=None, sound=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        result = notifiers.boxcar2_notifier.test_notify(accesstoken)
+        result = notifiers.boxcar2_notifier.test_notify(accesstoken, sound)
         if result:
             return "Boxcar2 notification succeeded. Check your Boxcar2 clients to make sure it worked"
         else:
