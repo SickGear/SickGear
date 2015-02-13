@@ -91,7 +91,7 @@ class PLEXNotifier:
             logger.log(u"PLEX: Warning: Couldn't contact Plex at " + fixStupidEncodings(url) + " " + ex(e), logger.WARNING)
             return False
 
-    def _notify(self, message, title="SickGear", host=None, username=None, password=None, force=False):
+    def _notify_pmc(self, message, title="SickGear", host=None, username=None, password=None, force=False):
         """Internal wrapper for the notify_snatch and notify_download functions
 
         Args:
@@ -154,7 +154,7 @@ class PLEXNotifier:
             self._notify_pmc(update_text + new_version, title)
 
     def test_notify(self, host, username, password):
-        return self._notify("This is a test notification from SickGear", "Test", host, username, password, force=True)
+        return self._notify_pmc("This is a test notification from SickGear", "Test", host, username, password, force=True)
 
     def update_library(self, ep_obj=None, host=None, username=None, password=None):
         """Handles updating the Plex Media Server host via HTTP API
@@ -187,24 +187,24 @@ class PLEXNotifier:
 
                 logger.log(u"PLEX: fetching credentials for Plex user: " + username, logger.DEBUG)            
                 req = urllib2.Request("https://plex.tv/users/sign_in.xml", data="")
-                base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
-                authheader = "Basic %s" % base64string
+                authheader = "Basic %s" % base64.encodestring('%s:%s' % (username, password))[:-1]
                 req.add_header("Authorization", authheader)
-                req.add_header("X-Plex-Client-Identifier", "Sick-Beard-Notifier")
+                req.add_header("X-Plex-Device-Name", "SickGear")
+                req.add_header("X-Plex-Product", "SickGear Notifier")
+                req.add_header("X-Plex-Client-Identifier", "5f48c063eaf379a565ff56c9bb2b401e")
+                req.add_header("X-Plex-Version", "1.0")
                 
                 try:
                     response = urllib2.urlopen(req)
-                except urllib2.URLError, e:
-                    logger.log(u"PLEX: Error fetching credentials from from plex.tv for user %s: %s" % (username, ex(e)), logger.MESSAGE)
-                    return False
-                
-                try:
                     auth_tree = etree.parse(response)
                     token = auth_tree.findall(".//authentication-token")[0].text
                     token_arg = "?X-Plex-Token=" + token
+                
+                except urllib2.URLError as e:
+                    logger.log(u"PLEX: Error fetching credentials from from plex.tv for user %s: %s" % (username, ex(e)), logger.MESSAGE)
+                
                 except (ValueError, IndexError) as e:
                     logger.log(u"PLEX: Error parsing plex.tv response: " + ex(e), logger.MESSAGE)
-                    return False
 
             url = "http://%s/library/sections%s" % (sickbeard.PLEX_SERVER_HOST, token_arg)
             try:
