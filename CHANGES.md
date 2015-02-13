@@ -36,6 +36,7 @@
 * Change The Pirate Bay url back as it's now back up and oldpiratebay hasn't been updated for weeks
 * Remove duplicate thepiratebay icon
 * Change to ensure uTorrent API parameters are ordered for uT 2.2.1 compatibility
+* Remove defunct boxcar notifier
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
