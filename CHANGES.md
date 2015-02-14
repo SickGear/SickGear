@@ -54,6 +54,7 @@
 * Add catch exceptions when unable to cache a requests response
 * Update PNotify to latest master (2014-12-25) for desktop notifications
 * Add desktop notifications
+* Change the AniDB provider image for a sharper looking version
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
