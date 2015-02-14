@@ -47,6 +47,7 @@
 * Change the ui notifications to show the Plex Media Server(s) actioned for library updating
 * Fix issue where PMS text wasn't initialised on the config/notifications page and added info about Plex clients
 * Add ability to test Plex Server(s) on config/notifications page
+* Add percentage of episodes downloaded to footer and remove double spaces in text
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
