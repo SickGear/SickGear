@@ -2,22 +2,25 @@ from __future__ import absolute_import
 
 import time
 import os
+import errno
 
 from . import (LockBase, LockFailed, NotLocked, NotMyLock, LockTimeout,
                AlreadyLocked)
 
-class LinkLockFile(LockBase):
-    """Lock access to a file using atomic property of link(2).
 
-    >>> lock = LinkLockFile('somefile')
-    >>> lock = LinkLockFile('somefile', threaded=False)
+class LinkLockFile(LockBase):
+    """
+    Lock access to a file using atomic property of link(2).
+
+    lock = LinkLockFile('somefile'[, threaded=False[, timeout=None]])
     """
 
+    # noinspection PyTypeChecker
     def acquire(self, timeout=None):
         try:
-            open(self.unique_name, "wb").close()
+            open(self.unique_name, 'wb').close()
         except IOError:
-            raise LockFailed("failed to create %s" % self.unique_name)
+            raise LockFailed('failed to create %s' % self.unique_name)
 
         timeout = timeout is not None and timeout or self.timeout
         end_time = time.time()
@@ -28,7 +31,10 @@ class LinkLockFile(LockBase):
             # Try and create a hard link to it.
             try:
                 os.link(self.unique_name, self.lock_file)
-            except OSError:
+            except OSError as e:
+                if errno.ENOSYS == e.errno:
+                    raise LockFailed('%s' % e.strerror)
+
                 # Link creation failed.  Maybe we've double-locked?
                 nlinks = os.stat(self.unique_name).st_nlink
                 if nlinks == 2:
@@ -40,22 +46,20 @@ class LinkLockFile(LockBase):
                     if timeout is not None and time.time() > end_time:
                         os.unlink(self.unique_name)
                         if timeout > 0:
-                            raise LockTimeout("Timeout waiting to acquire"
-                                              " lock for %s" %
-                                              self.path)
+                            raise LockTimeout('Timeout waiting to acquire lock for %s' % self.path)
                         else:
-                            raise AlreadyLocked("%s is already locked" %
-                                                self.path)
-                    time.sleep(timeout is not None and timeout/10 or 0.1)
+                            raise AlreadyLocked('%s is already locked' % self.path)
+
+                    time.sleep(timeout is not None and (timeout / 10) or 0.1)
             else:
                 # Link creation succeeded.  We're good to go.
                 return
 
     def release(self):
         if not self.is_locked():
-            raise NotLocked("%s is not locked" % self.path)
+            raise NotLocked('%s is not locked' % self.path)
         elif not os.path.exists(self.unique_name):
-            raise NotMyLock("%s is locked, but not by me" % self.path)
+            raise NotMyLock('%s is locked, but not by me' % self.path)
         os.unlink(self.unique_name)
         os.unlink(self.lock_file)
 
@@ -70,4 +74,3 @@ class LinkLockFile(LockBase):
     def break_lock(self):
         if os.path.exists(self.lock_file):
             os.unlink(self.lock_file)
-
