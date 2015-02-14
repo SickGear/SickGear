@@ -50,6 +50,7 @@
 * Add percentage of episodes downloaded to footer and remove double spaces in text
 * Fix SSL authentication on Synology stations
 * Change IPT urls to reduce 301 redirection
+* Update PNotify to 2.0 for desktop notifications
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
