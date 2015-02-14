@@ -2393,7 +2393,7 @@ class ConfigNotifications(MainHandler):
         sickbeard.PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(plex_notify_onsubtitledownload)
         sickbeard.PLEX_UPDATE_LIBRARY = config.checkbox_to_value(plex_update_library)
         sickbeard.PLEX_HOST = config.clean_hosts(plex_host)
-        sickbeard.PLEX_SERVER_HOST = config.clean_host(plex_server_host)
+        sickbeard.PLEX_SERVER_HOST = config.clean_hosts(plex_server_host)
         sickbeard.PLEX_USERNAME = plex_username
         sickbeard.PLEX_PASSWORD = plex_password
 
@@ -3412,21 +3412,37 @@ class Home(MainHandler):
 
         return finalResult
 
-
-    def testPLEX(self, host=None, username=None, password=None):
+    def testPMC(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         finalResult = ''
-        for curHost in [x.strip() for x in host.split(",")]:
-            curResult = notifiers.plex_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
-            if len(curResult.split(":")) > 2 and 'OK' in curResult.split(":")[2]:
-                finalResult += "Test Plex notice sent successfully to " + urllib.unquote_plus(curHost)
+        for curHost in [x.strip() for x in host.split(',')]:
+            curResult = notifiers.plex_notifier.test_notify_pmc(urllib.unquote_plus(curHost), username, password)
+            if len(curResult.split(':')) > 2 and 'OK' in curResult.split(':')[2]:
+                finalResult += 'Successful test notice sent to Plex client ... ' + urllib.unquote_plus(curHost)
             else:
-                finalResult += "Test Plex notice failed to " + urllib.unquote_plus(curHost)
-            finalResult += "<br />\n"
+                finalResult += 'Test failed for Plex client ... ' + urllib.unquote_plus(curHost)
+            finalResult += '<br />' + "\n"
+
+        ui.notifications.message('Tested Plex client(s): ', urllib.unquote_plus(host.replace(',', ', ')))
 
         return finalResult
 
+    def testPMS(self, host=None, username=None, password=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        finalResult = ''
+
+        curResult = notifiers.plex_notifier.test_notify_pms(urllib.unquote_plus(host), username, password)
+        if None is curResult:
+            finalResult += 'Successful test of Plex server(s) ... ' + urllib.unquote_plus(host.replace(',', ', '))
+        else:
+            finalResult += 'Test failed for Plex server(s) ... ' + urllib.unquote_plus(curResult.replace(',', ', '))
+        finalResult += '<br />' + "\n"
+
+        ui.notifications.message('Tested Plex Media Server host(s): ', urllib.unquote_plus(host.replace(',', ', ')))
+
+        return finalResult
 
     def testLibnotify(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -4085,15 +4101,14 @@ class Home(MainHandler):
             ui.notifications.error("Unable to contact one or more XBMC host(s): " + host)
         redirect('/home/')
 
-
     def updatePLEX(self, *args, **kwargs):
-        if notifiers.plex_notifier.update_library():
+        result = notifiers.plex_notifier.update_library()
+        if None is result:
             ui.notifications.message(
-                "Library update command sent to Plex Media Server host: " + sickbeard.PLEX_SERVER_HOST)
+                'Library update command sent to', 'Plex Media Server host(s): ' + sickbeard.PLEX_SERVER_HOST.replace(',', ', '))
         else:
-            ui.notifications.error("Unable to contact Plex Media Server host: " + sickbeard.PLEX_SERVER_HOST)
+            ui.notifications.error('Unable to contact', 'Plex Media Server host(s): ' + result.replace(',', ', '))
         redirect('/home/')
-
 
     def setStatus(self, show=None, eps=None, status=None, direct=False):
 

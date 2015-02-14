@@ -56,22 +56,41 @@ $(document).ready(function(){
 			});
 	});
 
-	$('#testPLEX').click(function () {
+	$('#testPMC').click(function () {
 		var plex_host = $.trim($('#plex_host').val());
 		var plex_username = $.trim($('#plex_username').val());
 		var plex_password = $.trim($('#plex_password').val());
 		if (!plex_host) {
-			$('#testPLEX-result').html('Please fill out the necessary fields above.');
+			$('#testPMC-result').html('Please fill out the necessary fields above.');
 			$('#plex_host').addClass('warning');
 			return;
 		}
 		$('#plex_host').removeClass('warning');
 		$(this).prop('disabled', true);
-		$('#testPLEX-result').html(loading);
-		$.get(sbRoot + '/home/testPLEX', {'host': plex_host, 'username': plex_username, 'password': plex_password})
+		$('#testPMC-result').html(loading);
+		$.get(sbRoot + '/home/testPMC', {'host': plex_host, 'username': plex_username, 'password': plex_password})
 			.done(function (data) {
-				$('#testPLEX-result').html(data);
-				$('#testPLEX').prop('disabled', false);
+				$('#testPMC-result').html(data);
+				$('#testPMC').prop('disabled', false);
+			});
+	});
+
+	$('#testPMS').click(function () {
+		var plex_server_host = $.trim($('#plex_server_host').val());
+		var plex_username = $.trim($('#plex_username').val());
+		var plex_password = $.trim($('#plex_password').val());
+		if (!plex_server_host) {
+			$('#testPMS-result').html('Please fill out the necessary fields above.');
+			$('#plex_server_host').addClass('warning');
+			return;
+		}
+		$('#plex_server_host').removeClass('warning');
+		$(this).prop('disabled', true);
+		$('#testPMS-result').html(loading);
+		$.get(sbRoot + '/home/testPMS', {'host': plex_server_host, 'username': plex_username, 'password': plex_password})
+			.done(function (data) {
+				$('#testPMS-result').html(data);
+				$('#testPMS').prop('disabled', false);
 			});
 	});
 
@@ -158,7 +177,7 @@ $(document).ready(function(){
 		}
 		$('#testNMJ-result').html(loading);
 		var nmj_host = $('#nmj_host').val();
-		
+
 		$.get(sbRoot + '/home/settingsNMJ', {'host': nmj_host},
 			function (data) {
 				if (data === null) {
@@ -220,7 +239,7 @@ $(document).ready(function(){
 		}
 
 		var nmjv2_dbinstance=$('#NMJv2db_instance').val();
-		$.get(sbRoot + '/home/settingsNMJv2', {'host': nmjv2_host,'dbloc': nmjv2_dbloc,'instance': nmjv2_dbinstance}, 
+		$.get(sbRoot + '/home/settingsNMJv2', {'host': nmjv2_host,'dbloc': nmjv2_dbloc,'instance': nmjv2_dbinstance},
 		function (data){
 			if (data == null) {
 				$('#nmjv2_database').removeAttr('readonly');
@@ -228,7 +247,7 @@ $(document).ready(function(){
 			var JSONData = $.parseJSON(data);
 			$('#testNMJv2-result').html(JSONData.message);
 			$('#nmjv2_database').val(JSONData.database);
-			
+
 			if (JSONData.database)
 				$('#nmjv2_database').attr('readonly', true);
 			else
@@ -379,7 +398,7 @@ $(document).ready(function(){
 		if(msg){
 			$('#testPushbullet-result').html(loading);
 		}
-		
+
 		var pushbullet_api = $("#pushbullet_api").val();
 
 		if(!pushbullet_api) {
@@ -417,7 +436,7 @@ $(document).ready(function(){
 	$('#getPushbulletDevices').click(function(){
 		get_pushbullet_devices("Device list updated. Please choose a device to push to.");
 	});
-	
+
 	// we have to call this function on dom ready to create the devices select
 	get_pushbullet_devices();
 
@@ -458,5 +477,5 @@ $(document).ready(function(){
 			$('.plexinfo').addClass('hide');
 		}
 	});
-
+	if ($('input[id="use_plex"]').is(':checked')) {$('.plexinfo').removeClass('hide')}
 });
