@@ -39,6 +39,8 @@
 * Remove defunct boxcar notifier
 * Add sound selection for boxcar2 notifier
 * Change boxcar2 notifier to use updated api scheme
+* Add percentage of episodes downloaded to footer
+* Fix double space in footer
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
