@@ -40,6 +40,13 @@
 * Add sound selection for boxcar2 notifier
 * Change boxcar2 notifier to use updated api scheme
 * Update the Plex notifier from a port at midgetspy/sickbeard
+* Add support for multiple server hosts to the updated Plex server notifier
+* Change Plex Media Server settings section for multi server(s) and improve the layout in the config/notifications page
+* Add logic to Plex notifier to update a single server where its TV section path matches the downloaded show. All server
+  libraries are updated if no single server has a download path match.
+* Change the ui notifications to show the Plex Media Server(s) actioned for library updating
+* Fix issue where PMS text wasn't initialised on the config/notifications page and added info about Plex clients
+* Add ability to test Plex Server(s) on config/notifications page
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
