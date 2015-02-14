@@ -51,6 +51,7 @@
 * Fix SSL authentication on Synology stations
 * Change IPT urls to reduce 301 redirection
 * Add detection of file-system having no support for link creation (e.g. Unraid shares)
+* Add catch exceptions when unable to cache a requests response
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
