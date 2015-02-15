@@ -31,7 +31,6 @@ from sickbeard import name_cache
 from sickbeard.exceptions import ex
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 
-
 class ShowQueue(generic_queue.GenericQueue):
     def __init__(self):
         generic_queue.GenericQueue.__init__(self)
@@ -133,9 +132,9 @@ class ShowQueue(generic_queue.GenericQueue):
         return queueItemObj
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
-                lang="en", subtitles=None, anime=None, scene=None, paused=None):
+                lang="en", subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
-                                    subtitles, anime, scene, paused)
+                                    subtitles, anime, scene, paused, blacklist, whitelist)
 
         self.add_item(queueItemObj)
 
@@ -192,7 +191,7 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused):
+                 scene, paused, blacklist, whitelist):
 
         self.indexer = indexer
         self.indexer_id = indexer_id
@@ -205,6 +204,8 @@ class QueueItemAdd(ShowQueueItem):
         self.anime = anime
         self.scene = scene
         self.paused = paused
+        self.blacklist = blacklist
+        self.whitelist = whitelist
 
         self.show = None
 
@@ -296,6 +297,10 @@ class QueueItemAdd(ShowQueueItem):
 
             if self.show.anime:
                 self.show.release_groups = BlackAndWhiteList(self.show.indexerid)
+                if self.blacklist:
+                    self.show.release_groups.set_black_keywords(self.blacklist)
+                if self.whitelist:
+                    self.show.release_groups.set_white_keywords(self.whitelist)
 
             # be smartish about this
             if self.show.genre and "talk show" in self.show.genre.lower():

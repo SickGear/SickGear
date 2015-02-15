@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Sick Beard.  If not, see <http://www.gnu.org/licenses/>.
 
-from sickbeard import db, logger
+import sickbeard
+from sickbeard import db, logger, helpers
 
 
 class BlackAndWhiteList(object):
@@ -71,6 +72,10 @@ class BlackAndWhiteList(object):
 
     def is_valid(self, result):
 
+        if not result.release_group:
+            logger.log('Failed to detect release group, invalid result', logger.DEBUG)
+            return False
+
         if result.release_group.lower() in [x.lower() for x in self.whitelist]:
             white_result = True
         else:
@@ -88,5 +93,23 @@ class BlackAndWhiteList(object):
         else:
             return False
 
+
 class BlackWhitelistNoShowIDException(Exception):
     'No show_id was given'
+
+
+def short_group_names(groups):
+    groups = groups.split(",")
+    shortGroupList = []
+    if helpers.set_up_anidb_connection():
+        for groupName in groups:
+            group = sickbeard.ADBA_CONNECTION.group(gname=groupName)
+            for line in group.datalines:
+                if line["shortname"]:
+                    shortGroupList.append(line["shortname"])
+                else:
+                    if not groupName in shortGroupList:
+                        shortGroupList.append(groupName)
+    else:
+        shortGroupList = groups
+    return shortGroupList

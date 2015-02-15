@@ -57,9 +57,12 @@
 * Change the AniDB provider image for a sharper looking version
 * Change to streamline iCal function and make it handle missing network names
 * Change when picking a best result to only test items that have a size specifier against the failed history
+* Add anime release groups to add new show options page
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
+* Fix black and white list initialization on new show creation
+* Fix validation of release groups when no group is detected
 
 
 ### 0.6.4 (2015-02-10 20:20:00 UTC)

@@ -949,6 +949,11 @@ div.formpaginate {
 	font-weight: 900
 }
 
+#addShowForm #blackwhitelist,
+#addShowForm #blackwhitelist h4 {
+	font-size: 13px;
+}
+
 /* =======================================================================
 home_addExistingShow.tmpl
 ========================================================================== */

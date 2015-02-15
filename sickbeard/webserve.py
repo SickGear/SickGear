@@ -58,7 +58,7 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
     get_scene_absolute_numbering
 
-from sickbeard.blackandwhitelist import BlackAndWhiteList
+from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
 
 from browser import WebFileBrowser
 from mimetypes import MimeTypes
@@ -2871,6 +2871,9 @@ class NewHomeAddShows(MainHandler):
         t.other_shows = other_shows
         t.provided_indexer = int(indexer or sickbeard.INDEXER_DEFAULT)
         t.indexers = sickbeard.indexerApi().indexers
+        t.whitelist = []
+        t.blacklist = []
+        t.groups = []
 
         return _munge(t)
 
@@ -2971,6 +2974,9 @@ class NewHomeAddShows(MainHandler):
         """
         t = PageTemplate(headers=self.request.headers, file="home_addExistingShow.tmpl")
         t.submenu = HomeMenu()
+        t.whitelist = []
+        t.blacklist = []
+        t.groups = []
 
         return _munge(t)
 
@@ -2982,7 +2988,7 @@ class NewHomeAddShows(MainHandler):
     def addNewShow(self, whichSeries=None, indexerLang="en", rootDir=None, defaultStatus=None,
                    anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None):
+                   scene=None, blacklist=None, whitelist=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to newShow, if not it goes to /home.
@@ -3065,6 +3071,11 @@ class NewHomeAddShows(MainHandler):
         flatten_folders = config.checkbox_to_value(flatten_folders)
         subtitles = config.checkbox_to_value(subtitles)
 
+        if whitelist:
+            whitelist = short_group_names(whitelist)
+        if blacklist:
+            blacklist = short_group_names(blacklist)
+
         if not anyQualities:
             anyQualities = []
         if not bestQualities:
@@ -3078,7 +3089,7 @@ class NewHomeAddShows(MainHandler):
         # add the show
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
-                                                    scene)  # @UndefinedVariable
+                                                    scene, None, blacklist, whitelist)  # @UndefinedVariable
         ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()
@@ -3862,40 +3873,15 @@ class Home(MainHandler):
                 if anime:
                     if not showObj.release_groups:
                         showObj.release_groups = BlackAndWhiteList(showObj.indexerid)
-
                     if whitelist:
-                        whitelist = whitelist.split(",")
-                        shortWhiteList = []
-                        if helpers.set_up_anidb_connection():
-                            for groupName in whitelist:
-                                group = sickbeard.ADBA_CONNECTION.group(gname=groupName)
-                                for line in group.datalines:
-                                    if line["shortname"]:
-                                        shortWhiteList.append(line["shortname"])
-                                else:
-                                    if not groupName in shortWhiteList:
-                                        shortWhiteList.append(groupName)
-                        else:
-                            shortWhiteList = whitelist
-                        showObj.release_groups.set_white_keywords(shortWhiteList)
+                        shortwhitelist = short_group_names(whitelist)
+                        showObj.release_groups.set_white_keywords(shortwhitelist)
                     else:
                         showObj.release_groups.set_white_keywords([])
 
                     if blacklist:
-                        blacklist = blacklist.split(",")
-                        shortBlacklist = []
-                        if helpers.set_up_anidb_connection():
-                            for groupName in blacklist:
-                                group = sickbeard.ADBA_CONNECTION.group(gname=groupName)
-                                for line in group.datalines:
-                                    if line["shortname"]:
-                                        shortBlacklist.append(line["shortname"])
-                                else:
-                                    if not groupName in shortBlacklist:
-                                        shortBlacklist.append(groupName)
-                        else:
-                            shortBlacklist = blacklist
-                        showObj.release_groups.set_black_keywords(shortBlacklist)
+                        shortblacklist = short_group_names(blacklist)
+                        showObj.release_groups.set_black_keywords(shortblacklist)
                     else:
                         showObj.release_groups.set_black_keywords([])
 
@@ -4544,6 +4530,16 @@ class Home(MainHandler):
             return json.dumps({'result': 'success'})
         else:
             return json.dumps({'result': 'failure'})
+
+    @staticmethod
+    def fetch_releasegroups(show_name):
+
+        if helpers.set_up_anidb_connection():
+            anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=show_name)
+            groups = anime.get_groups()
+            return json.dumps({'result': 'success', 'groups': groups})
+
+        return json.dumps({'result': 'failure'})
 
 
 class UI(MainHandler):
