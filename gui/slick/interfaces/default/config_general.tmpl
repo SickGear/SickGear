@@ -68,11 +68,21 @@
 								<span class="component-title">Update shows on startup</span>
 								<span class="component-desc">
 									<input type="checkbox" name="update_shows_on_start" id="update_shows_on_start" #if $sickbeard.UPDATE_SHOWS_ON_START then 'checked="checked"' else ''#/>
-									<p>with information such as next air dates, show ended, etc. Disable for a faster startup as show info is scheduled to update in the background anyway</p>
+									<p>with show data; episode plot, images, air and end dates, etc. Disable for a quicker startup. Show data is scheduled to update during hour <span class="show_update_hour_value">$sickbeard.SHOW_UPDATE_HOUR</span>.</p>
 								</span>
 							</label>
 						</div>
 
+						<div class="field-pair">
+							<label for="show_update_hour">
+								<span class="component-title">Update shows during hour</span>
+								<span class="component-desc">
+									<input type="number" name="show_update_hour" id="show_update_hour" value="$sickbeard.SHOW_UPDATE_HOUR" class="form-control input-sm input75" />
+									<p>(0 ... 23) with show data; episode plot, images, air and end dates, etc.</p>
+								</span>
+							</label>
+						</div>
+						
 						<div class="field-pair">
 							<span class="component-title">Send to trash for actions</span>
 							<span class="component-desc">
