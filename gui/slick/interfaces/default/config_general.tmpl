@@ -28,6 +28,8 @@
     #set $indexer = $sickbeard.INDEXER_DEFAULT
 #end if
 
+#set $notificationDelay = $sickbeard.NOTIFICATION_DELAY
+
 <script type="text/javascript" src="$sbRoot/js/config.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/rootDirs.js?$sbPID"></script>
 
@@ -310,6 +312,16 @@
 								</label>
 								<div class="clear-left"><p>display dates and times in either your timezone or the shows network timezone</p></div>
 							</span>
+						</div>
+
+						<div class="field-pair">
+							<label for="notification_delay">
+								<span class="component-title">Show popup messages for</span>
+								<span class="component-desc">
+									<input type="number" id="notification_delay" name="notification_delay" class="form-control input-sm input100" value="$notificationDelay">
+									<span id="notification_delay_seconds">seconds</span>
+								</span>
+							</label>
 						</div>
 
 						<input type="submit" class="btn config_submitter" value="Save Changes">
