@@ -222,8 +222,9 @@ def pickBestResult(results, show, quality_list=None):
                        logger.MESSAGE)
             continue
 
-        if sickbeard.USE_FAILED_DOWNLOADS and failed_history.hasFailed(cur_result.name, cur_result.size,
-                                                                       cur_result.provider.name):
+        cur_size = getattr(cur_result, 'size', None)
+        if sickbeard.USE_FAILED_DOWNLOADS and None is not cur_size and failed_history.hasFailed(
+                cur_result.name, cur_size, cur_result.provider.name):
             logger.log(cur_result.name + u" has previously failed, rejecting it")
             continue
 
