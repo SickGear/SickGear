@@ -56,6 +56,7 @@
 * Add desktop notifications
 * Change the AniDB provider image for a sharper looking version
 * Change to streamline iCal function and make it handle missing network names
+* Change when picking a best result to only test items that have a size specifier against the failed history
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
