@@ -13,11 +13,13 @@ function check_notifications() {
 	if(document.visibilityState == 'visible') {
 		$.getJSON(message_url, function(data){
 			$.each(data, function(name,data){
+				var text = data.message.replace(/<\/?i?b?>/ig, '*').replace(/<\/[ul]?[li]?>/ig, '');
+				text = text.replace(/<ul>/ig, '').replace(/<li>/ig, '   \n').replace(/<br \/>/ig, '\n');
 				new PNotify({
 					type: data.type,
 					hide: data.type == 'notice',
 					title: data.title,
-					text: data.message.replace(/<\/?i>/ig, '*'),
+					text: text,
 					history: false,
 					desktop: {
 						desktop: true,
