@@ -2350,6 +2350,10 @@ div.blackwhitelist.anidb, div.blackwhitelist.manual {
 	padding-bottom: 10px;
 }
 
+.max300 {
+	max-width: 300px;
+}
+
 /* =======================================================================
 bootstrap Overrides
 ========================================================================== */
@@ -3447,3 +3451,4 @@ pnotify.css
 	margin-top: -12px;
 	margin-right: -10px;
 }
+

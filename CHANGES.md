@@ -59,6 +59,7 @@
 * Change when picking a best result to only test items that have a size specifier against the failed history
 * Add anime release groups to add new show options page
 * Add setting "Update shows during hour" to General Config/Misc
+* Add max-width to prevent ui glitch on Pull request and Branch Version selectors on config/General/Advanced and change <input> tags to html5
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
