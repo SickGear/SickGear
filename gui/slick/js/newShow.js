@@ -1,6 +1,6 @@
 $(document).ready(function () {
 
-	function populateSelect() {
+	function populateLangSelect() {
 		if (!$('#nameToSearch').length)
 			return;
 
@@ -30,6 +30,16 @@ $(document).ready(function () {
 		}
 	}
 
+	function cleanseText(text, toDisplay) {
+		return (!0 == toDisplay
+			? text
+			.replace(/["]/g, '&quot;')
+			: text
+			.replace(/Pokémon/, 'Pokemon')
+			.replace(/(?:["]|&quot;)/g, '')
+		);
+	}
+
 	var searchRequestXhr = null;
 
 	function searchIndexers() {
@@ -42,15 +52,17 @@ $(document).ready(function () {
 			searchRequestXhr.abort();
 
 		var elTvDatabase = $('#providedIndexer'),
-			elIndexerLang = $('#indexerLangSelect'),
-			searchingFor = elNameToSearch.val() + ' on ' + elTvDatabase.find('option:selected').text() + ' in ' + elIndexerLang.val();
+			elIndexerLang = $('#indexerLangSelect');
 
-		$('#searchResults').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" /> searching ' + searchingFor + '...');
+		$('#searchResults').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
+			+ ' searching <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
+			+ ' on ' + elTvDatabase.find('option:selected').text() + ' in ' + elIndexerLang.val()
+			+ '...');
 
 		searchRequestXhr = $.ajax({
 			url: sbRoot + '/home/addShows/searchIndexersForShowName',
 			data: {
-				'search_term': elNameToSearch.val(),
+				'search_term': cleanseText(elNameToSearch.val(), !1),
 				'lang': elIndexerLang.val(),
 				'indexer': elTvDatabase.val()
 			},
@@ -70,7 +82,8 @@ $(document).ready(function () {
 						rowType = (0 == row % 2 ? '' : ' class="alt"');
 						row++;
 
-						var whichSeries = obj.join('|'),
+						var whichSeries = cleanseText(obj.join('|'), !0),
+							display_show_name = cleanseText(obj[4], !0),
 							showstartdate = '';
 
 						if (null !== obj[5]) {
@@ -84,17 +97,17 @@ $(document).ready(function () {
 						resultStr += '<div' + rowType + '>'
 							+ '<input id="whichSeries" type="radio"'
 							+ ' class="stepone-result-radio"'
-							+ ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + obj[4] + '</span>"'
+							+ ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + display_show_name + '</span>"'
 							+ ' name="whichSeries"'
 							+ ' value="' + whichSeries + '"'
 							+ checked
 							+ ' />'
 							+ '<a'
 							+ ' class="stepone-result-title"'
-							+ ' title="View detail for <span style=\'color: rgb(66, 139, 202)\'>' + obj[4] + '</span>"'
+							+ ' title="View detail for <span style=\'color: rgb(66, 139, 202)\'>' + display_show_name + '</span>"'
 							+ ' href="' + anonURL + obj[2] + obj[3] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return false;"'
-							+ '>' + obj[4] + '</a>'
+							+ '>' + display_show_name + '</a>'
 							+ showstartdate
 							+ (null == obj[0] ? ''
 								: '&nbsp;<span class="stepone-result-db grey-text">' + '[' + obj[0] + ']' + '</span>')
@@ -131,7 +144,7 @@ $(document).ready(function () {
 				alert('You must choose a show to continue');
 				return false;
 		}
-		generate_bwlist()
+		generate_bwlist();
 		$('#addShowForm').submit();
 	});
 
@@ -155,7 +168,7 @@ $(document).ready(function () {
 		formid: 'addShowForm',
 		revealfx: ['slide', 500],
 		oninit: function () {
-			populateSelect();
+			populateLangSelect();
 			updateSampleText();
 			if ($('input:hidden[name="whichSeries"]').length && $('#fullShowPath').length) {
 				goToStep(3);
@@ -193,8 +206,8 @@ $(document).ready(function () {
 		} else {
 			show_name = '';
 		}
-	   update_bwlist(show_name);
-		var sample_text = '<p>Adding show <span class="show-name">' + show_name + '</span>'
+		update_bwlist(show_name);
+		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(show_name, !0) + '</span>'
 			+ ('' == show_name ? 'into<br />' : '<br />into')
 			+ ' <span class="show-dest">';
 
@@ -225,7 +238,7 @@ $(document).ready(function () {
 
 		// if we have a show name then sanitize and use it for the dir name
 		if (show_name.length) {
-			$.get(sbRoot + '/home/addShows/sanitizeFileName', {name: show_name}, function (data) {
+			$.get(sbRoot + '/home/addShows/sanitizeFileName', {name: cleanseText(show_name, !1)}, function (data) {
 				$('#displayText').html(sample_text.replace('||', data));
 			});
 		// if not then it's unknown
@@ -281,29 +294,54 @@ $(document).ready(function () {
 		myform.loadsection(2);
 	});
 
+	function add_option_to_pool (text) {
+		var groupvalue = '', groupview = text,
+			option = $('<option>'),
+			match = /^(.*?)#<3SG#(.*)$/m.exec(text);
+
+		if (match != null) {
+			groupvalue = match[1];
+			groupview = groupvalue + match[2];
+		}
+		option.attr('value', groupvalue);
+		option.html(groupview);
+		option.appendTo('#pool');
+	}
+
 	function update_bwlist (show_name) {
 
-		$('#white').children().remove();
-		$('#black').children().remove();
-		$('#pool').children().remove();
+		$('#black, #white, #pool').children().remove();
 
 		if ($('#anime').prop('checked')) {
 			$('#blackwhitelist').show();
 			if (show_name) {
-				$.getJSON(sbRoot + '/home/fetch_releasegroups', {'show_name': show_name}, function (data) {
-				if (data['result'] == 'success') {
-					$.each(data.groups, function(i, group) {
-						var option = $("<option>");
-						option.attr("value", group.name);
-						option.html(group.name + ' | ' + group.rating + ' | ' + group.range);
-						option.appendTo('#pool');
-					});
-				}
-			 });
+				$.getJSON(sbRoot + '/home/fetch_releasegroups', {'show_name': cleanseText(show_name, !1)}, function (data) {
+					if ('success' == data['result']) {
+						var groups = [];
+						$.each(data.groups, function (i, group) {
+							if ('' != group.name) {
+								groups.push(group.name + '#<3SG#' + ' (' + group.rating + ') ' + group.range)
+							}
+						});
+						if (0 < groups.length) {
+							groups.sort();
+							$.each(groups, function (i, text) {
+								add_option_to_pool(text);
+							});
+						} else {
+							add_option_to_pool('No groups returned from AniDB');
+						}
+					} else if ('fail' == data['result']) {
+						if ('connect' == data['resp']) {
+							add_option_to_pool('Fail:AniDB connect. Restart sg else check debug log');
+						} else if ('init' == data['resp']) {
+							add_option_to_pool('Did not initialise AniDB. Check debug log if reqd.');
+						}
+					}
+			 	});
 			}
 		} else {
 			$('#blackwhitelist').hide();
 		}
-	};
-
+	}
 });

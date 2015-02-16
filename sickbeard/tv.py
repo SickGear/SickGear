@@ -991,7 +991,9 @@ class TVShow(object):
                  ["DELETE FROM tv_shows WHERE indexer_id = ?", [self.indexerid]],
                  ["DELETE FROM imdb_info WHERE indexer_id = ?", [self.indexerid]],
                  ["DELETE FROM xem_refresh WHERE indexer_id = ?", [self.indexerid]],
-                 ["DELETE FROM scene_numbering WHERE indexer_id = ?", [self.indexerid]]]
+                 ["DELETE FROM scene_numbering WHERE indexer_id = ?", [self.indexerid]],
+                 ["DELETE FROM whitelist WHERE show_id = ?", [self.indexerid]],
+                 ["DELETE FROM blacklist WHERE show_id = ?", [self.indexerid]]]
 
         myDB = db.DBConnection()
         myDB.mass_action(sql_l)

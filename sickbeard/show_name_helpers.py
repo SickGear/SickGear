@@ -32,9 +32,6 @@ from name_parser.parser import NameParser, InvalidNameException, InvalidShowExce
 from lib.unidecode import unidecode
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 
-resultFilters = ["sub(bed|ed|pack|s)", "(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?",
-                 "(dir|sample|sub|nfo)fix", "sample", "(dvd)?extras",
-                 "dub(bed)?"]
 
 def filterBadReleases(name, parse=True):
     """
@@ -55,6 +52,10 @@ def filterBadReleases(name, parse=True):
     except InvalidShowException:
         logger.log(u"Unable to parse the filename " + name + " into a valid show", logger.DEBUG)
         return False
+
+    resultFilters = ['sub(bed|ed|pack|s)', '(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?',
+                     '(dir|sample|sub|nfo)fix', 'sample', '(dvd)?extras',
+                     'dub(bed)?']
 
     # if any of the bad strings are in the name then say no
     if sickbeard.IGNORE_WORDS:

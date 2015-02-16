@@ -950,7 +950,8 @@ div.formpaginate {
 }
 
 #addShowForm #blackwhitelist,
-#addShowForm #blackwhitelist h4 {
+#addShowForm #blackwhitelist h4,
+#addShowForm #blackwhitelist p {
 	font-size: 13px;
 }
 
@@ -1372,6 +1373,17 @@ td.col-search {
 	padding-right: 6px;
 	padding-bottom: 1px;
 	width: 150px;
+	vertical-align: top;
+}
+.options-on-right {
+	width:180px;
+	float: right;
+	vertical-align: middle;
+	height: 100%;
+}
+.options-on-right .showLegendRight {
+	padding-right: 6px;
+	padding-bottom: 1px;
 }
 
 .input-scene {
@@ -1381,10 +1393,11 @@ td.col-search {
 }
 
 #editShow {
-	width: 700px;
-	padding-top: 10px;
+	/*width: 700px;
+	padding-top: 10px;*/
 	margin-right: auto;
 	margin-left: auto;
+	padding: 15px 0 0
 }
 
 /* =======================================================================
@@ -1867,6 +1880,15 @@ select .selected {
 	line-height: 24px;
 }
 
+#editShow .field-pair #SceneException h4,
+#editShow .field-pair #customQuality h4 {
+	font-size: 13px !important;
+	margin-bottom: 10px
+}
+#editShow .field-pair #customQuality h4 {
+	margin-bottom:1px;
+}
+
 .testNotification {
 	padding: 5px;
 	margin-bottom: 10px;
@@ -2293,44 +2315,59 @@ option.flag {
 }
 
 #Anime div.component-group-desc p {
-	margin-bottom: 0.4em;
-	margin-left: 0;
-	margin-right: 0;
-	margin-top: 0.4em;
+	margin: 0.4em 0;
 	width: 95%;
 }
 
+div.blackwhitelist h4 {
+	margin-top:0
+}
 div.blackwhitelist{
-	float:left;
-	text-align: center; 
-}
-
-div.blackwhitelist input {
-	margin: 5px 5px;
-}
-
-div.blackwhitelist.pool select{
-	width: 300px;
-}
-
-div.blackwhitelist.pool {
-	margin:5px;
-}
-
-div.blackwhitelist.white select, div.blackwhitelist.black select {
-	width: 180px;
-}
-
-div.blackwhitelist.white, div.blackwhitelist.black {
-	margin:5px;
-}
-
-div.blackwhitelist span {
-	display: block;
 	text-align: center;
 }
 
-div.blackwhitelist.anidb, div.blackwhitelist.manual {
+div.blackwhitelist.white input,
+div.blackwhitelist.black input,
+div.blackwhitelist.pool input {
+	margin: 5px 0 !important;
+}
+div.blackwhitelist select {
+	margin : 0 !important
+}
+
+div.blackwhitelist .inuse {
+	margin-right: 5px;
+	width: 243px;
+	float: left
+}
+
+div.blackwhitelist.white,
+div.blackwhitelist.black {
+	width: 243px;
+}
+div.blackwhitelist.white select,
+div.blackwhitelist.black select{
+	margin:0;
+	width: 215px;
+/*	clear:both*/
+}
+div.blackwhitelist.white select,
+div.blackwhitelist.black select {
+	height: 110px;
+}
+div.blackwhitelist.pool,
+div.blackwhitelist.pool select{
+	width: 330px;
+	height: 265px;
+	float:right
+}
+
+div.blackwhitelist span {
+	text-align: center;
+}
+
+div#blackwhitelist,
+div.blackwhitelist.manual {
 	margin: 7px 0;
 }
 

@@ -18,7 +18,7 @@
 
 import sickbeard
 from sickbeard import db, logger, helpers
-
+import urllib
 
 class BlackAndWhiteList(object):
     blacklist = []
@@ -64,7 +64,7 @@ class BlackAndWhiteList(object):
 
         groups = []
         for result in sqlResults:
-            groups.append(result["keyword"])
+            groups.append(result['keyword'])
 
         logger.log('BWL: ' + str(self.show_id) + ' loaded keywords from ' + table + ': ' + str(groups), logger.DEBUG)
 
@@ -76,7 +76,7 @@ class BlackAndWhiteList(object):
             logger.log('Failed to detect release group, invalid result', logger.DEBUG)
             return False
 
-        if result.release_group.lower() in [x.lower() for x in self.whitelist]:
+        if result.release_group.lower() in [x.lower() for x in self.whitelist] or not self.whitelist:
             white_result = True
         else:
             white_result = False
@@ -95,21 +95,23 @@ class BlackAndWhiteList(object):
 
 
 class BlackWhitelistNoShowIDException(Exception):
-    'No show_id was given'
+    """
+    No show_id was given
+    """
 
 
 def short_group_names(groups):
-    groups = groups.split(",")
-    shortGroupList = []
+    group_list = groups.split(',')
+    short_group_list = []
     if helpers.set_up_anidb_connection():
-        for groupName in groups:
-            group = sickbeard.ADBA_CONNECTION.group(gname=groupName)
-            for line in group.datalines:
-                if line["shortname"]:
-                    shortGroupList.append(line["shortname"])
+        for group_name in group_list:
+            adba_result = sickbeard.ADBA_CONNECTION.group(gname=group_name)  # no such group is returned for utf8 groups like interrobang
+            for line in adba_result.datalines:
+                if line['shortname']:
+                    short_group_list.append(line['shortname'])
                 else:
-                    if not groupName in shortGroupList:
-                        shortGroupList.append(groupName)
+                    if group_name not in short_group_list:
+                        short_group_list.append(group_name)
     else:
-        shortGroupList = groups
-    return shortGroupList
+        short_group_list = group_list
+    return short_group_list

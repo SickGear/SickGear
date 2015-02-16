@@ -1082,22 +1082,29 @@ def validateShow(show, season=None, episode=None):
 
 def set_up_anidb_connection():
     if not sickbeard.USE_ANIDB:
-        logger.log(u"Usage of anidb disabled. Skiping", logger.DEBUG)
+        logger.log(u'Usage of anidb disabled. Skipping', logger.DEBUG)
         return False
 
     if not sickbeard.ANIDB_USERNAME and not sickbeard.ANIDB_PASSWORD:
-        logger.log(u"anidb username and/or password are not set. Aborting anidb lookup.", logger.DEBUG)
+        logger.log(u'anidb username and/or password are not set. Aborting anidb lookup.', logger.DEBUG)
         return False
 
     if not sickbeard.ADBA_CONNECTION:
-        anidb_logger = lambda x: logger.log("ANIDB: " + str(x), logger.DEBUG)
+        anidb_logger = lambda x: logger.log('ANIDB: ' + str(x), logger.DEBUG)
         sickbeard.ADBA_CONNECTION = adba.Connection(keepAlive=True, log=anidb_logger)
 
-    if not sickbeard.ADBA_CONNECTION.authed():
+    auth = False
+    try:
+        auth = sickbeard.ADBA_CONNECTION.authed()
+    except Exception, e:
+        logger.log(u'exception msg: ' + str(e))
+        pass
+
+    if not auth:
         try:
             sickbeard.ADBA_CONNECTION.auth(sickbeard.ANIDB_USERNAME, sickbeard.ANIDB_PASSWORD)
         except Exception, e:
-            logger.log(u"exception msg: " + str(e))
+            logger.log(u'exception msg: ' + str(e))
             return False
     else:
         return True
