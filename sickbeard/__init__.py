@@ -36,7 +36,7 @@ from providers import ezrss, btn, newznab, womble, thepiratebay, torrentleech, k
     omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, nextgen, speedcd, nyaatorrents, fanzub, torrentbytes, \
     freshontv, bitsoup, tokyotoshokan
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
-    naming_ep_type
+    naming_ep_type, minimax
 from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
     subtitles, traktChecker
 from sickbeard import helpers, db, exceptions, show_queue, search_queue, scheduler, show_name_helpers
@@ -91,6 +91,8 @@ traktCheckerScheduler = None
 
 showList = None
 loadingShowList = None
+UPDATE_SHOWS_ON_START = False
+SHOW_UPDATE_HOUR = 3
 
 providerList = []
 newznabProviderList = []
@@ -144,7 +146,6 @@ LAUNCH_BROWSER = False
 CACHE_DIR = None
 ACTUAL_CACHE_DIR = None
 ROOT_DIRS = None
-UPDATE_SHOWS_ON_START = False
 TRASH_REMOVE_SHOW = False
 TRASH_ROTATE_LOGS = False
 HOME_SEARCH_FOCUS = True
@@ -468,7 +469,7 @@ def initialize(consoleLogging=True):
             USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_API, TRAKT_REMOVE_WATCHLIST, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
-            showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, \
+            showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, RECENTSEARCH_STARTUP, \
             GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
@@ -594,11 +595,13 @@ def initialize(consoleLogging=True):
         ANON_REDIRECT = check_setting_str(CFG, 'General', 'anon_redirect', 'http://dereferer.org/?')
         PROXY_SETTING = check_setting_str(CFG, 'General', 'proxy_setting', '')
         PROXY_INDEXERS = bool(check_setting_int(CFG, 'General', 'proxy_indexers', 1))
-        # attempt to help prevent users from breaking links by using a bad url 
+        # attempt to help prevent users from breaking links by using a bad url
         if not ANON_REDIRECT.endswith('?'):
             ANON_REDIRECT = ''
 
         UPDATE_SHOWS_ON_START = bool(check_setting_int(CFG, 'General', 'update_shows_on_start', 0))
+        SHOW_UPDATE_HOUR = check_setting_int(CFG, 'General', 'show_update_hour', 3)
+        SHOW_UPDATE_HOUR = minimax(SHOW_UPDATE_HOUR, 3, 0, 23)
         TRASH_REMOVE_SHOW = bool(check_setting_int(CFG, 'General', 'trash_remove_show', 0))
         TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
 
@@ -1101,7 +1104,7 @@ def initialize(consoleLogging=True):
         showUpdateScheduler = scheduler.Scheduler(showUpdater.ShowUpdater(),
                                                   cycleTime=datetime.timedelta(hours=1),
                                                   threadName="SHOWUPDATER",
-                                                  start_time=datetime.time(hour=3))  # 3 AM
+                                                  start_time=datetime.time(hour=SHOW_UPDATE_HOUR))  # 3 AM
 
         # searchers
         searchQueueScheduler = scheduler.Scheduler(search_queue.SearchQueue(),
@@ -1414,6 +1417,7 @@ def save_config():
     new_config['General']['naming_anime'] = int(NAMING_ANIME)
     new_config['General']['launch_browser'] = int(LAUNCH_BROWSER)
     new_config['General']['update_shows_on_start'] = int(UPDATE_SHOWS_ON_START)
+    new_config['General']['show_update_hour'] = int(SHOW_UPDATE_HOUR)
     new_config['General']['trash_remove_show'] = int(TRASH_REMOVE_SHOW)
     new_config['General']['trash_rotate_logs'] = int(TRASH_ROTATE_LOGS)
     new_config['General']['home_search_focus'] = int(HOME_SEARCH_FOCUS)
