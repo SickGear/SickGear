@@ -2,7 +2,6 @@ var message_url = sbRoot + '/ui/get_messages';
 
 PNotify.prototype.options.styling = 'jqueryui';
 PNotify.prototype.options.buttons.closer_hover = false;
-PNotify.prototype.options.delay = 4000;
 PNotify.prototype.options.width = '340px';
 PNotify.prototype.options.shadow = false;
 PNotify.prototype.options.addclass = 'stack-bottomright';

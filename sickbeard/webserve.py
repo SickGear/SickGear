@@ -1515,7 +1515,7 @@ class ConfigGeneral(MainHandler):
                     handle_reverse_proxy=None, home_search_focus=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
-                    indexer_timeout=None, rootDir=None, theme_name=None):
+                    indexer_timeout=None, rootDir=None, theme_name=None, notification_delay=None):
 
         results = []
 
@@ -1588,6 +1588,8 @@ class ConfigGeneral(MainHandler):
         sickbeard.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
 
         sickbeard.THEME_NAME = theme_name
+
+        sickbeard.NOTIFICATION_DELAY = notification_delay
 
         sickbeard.save_config()
 
