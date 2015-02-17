@@ -323,49 +323,17 @@
 					<div class="component-group-desc">
 						<h3>Web Interface</h3>
 						<p>It is recommended that you enable a username and password to secure SickGear from being tampered with remotely.</p>
-						<p><b>These options require a manual restart to take effect.</b></p>
+						<p><b class="boldest">These options require a manual restart to take effect.</b></p>
 					</div>
 
 					<fieldset class="component-group-list">
-
-						<div class="field-pair">
-							<label for="use_api">
-								<span class="component-title">Enable API</span>
-								<span class="component-desc">
-									<input type="checkbox" name="use_api" class="enabler" id="use_api" #if $sickbeard.USE_API then 'checked="checked"' else ''#>
-									<p>allow the use of the SickGear API</p>
-								</span>
-							</label>
-						</div>
-						<div id="content_use_api">
-						<div class="field-pair">
-							<label for="api_key">
-								<span class="component-title">API key</span>
-								<span class="component-desc">
-									<input type="text" name="api_key" id="api_key" value="$sickbeard.API_KEY" class="form-control input-sm input300" readonly="readonly">
-									<input class="btn btn-inline" type="button" id="generate_new_apikey" value="Generate">
-									<div class="clear-left"><p>used to give 3rd party programs limited access to SickGear</p></div>
-								</span>
-							</label>
-						</div>
-						</div>
-
-						<div class="field-pair">
-							<label for="web_log">
-								<span class="component-title">HTTP logs</span>
-								<span class="component-desc">
-									<input type="checkbox" name="web_log" id="web_log" #if $sickbeard.WEB_LOG then 'checked="checked"' else ''#>
-									<p>enable logs from the internal Tornado web server</p>
-								</span>
-							</label>
-						</div>
 
 						<div class="field-pair">
 							<label for="web_username">
 								<span class="component-title">HTTP username</span>
 								<span class="component-desc">
 									<input type="text" name="web_username" id="web_username" value="$sickbeard.WEB_USERNAME" class="form-control input-sm input300">
-									<p>set blank for no login</p>
+									<p>blank = disable SickGear login</p>
 								</span>
 							</label>
 						</div>
@@ -375,8 +343,43 @@
 								<span class="component-title">HTTP password</span>
 								<span class="component-desc">
 									<input type="password" name="web_password" id="web_password" value="$sickbeard.WEB_PASSWORD" class="form-control input-sm input300">
-									<p>blank = no authentication</span>
+									<p>blank = no authentication</p>
+									<span class="clear-left">check autoProcessTV.cfg is set up for external apps to use post processing scripts
 							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="calendar_unprotected">
+								<span class="component-title">Unprotected calendar</span>
+								<span class="component-desc">
+									<input type="checkbox" name="calendar_unprotected" id="calendar_unprotected" #if $sickbeard.CALENDAR_UNPROTECTED then 'checked="checked"' else ''#>
+									<p>permit subscribing to the calendar without username and password.
+									Some services like Google Calendar will only work with <b class="boldest">no</b> authentication</p>
+								</span>
+
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="use_api">
+								<span class="component-title">API enable</span>
+								<span class="component-desc">
+									<input type="checkbox" name="use_api" class="enabler" id="use_api" #if $sickbeard.USE_API then 'checked="checked"' else ''#>
+									<p>permit the use of the SickGear (SickBeard) API</p>
+								</span>
+							</label>
+						</div>
+						<div id="content_use_api">
+							<div class="field-pair">
+								<label for="api_key">
+									<span class="component-title">API key</span>
+									<span class="component-desc">
+										<input type="text" name="api_key" id="api_key" value="$sickbeard.API_KEY" class="form-control input-sm input300" readonly="readonly">
+										<input class="btn btn-inline" type="button" id="generate_new_apikey" value="Generate">
+										<div class="clear-left"><p>used to give 3rd party programs limited access to SickGear</p></div>
+									</span>
+								</label>
+							</div>
 						</div>
 
 						<div class="field-pair">
@@ -384,9 +387,49 @@
 								<span class="component-title">HTTP port</span>
 								<span class="component-desc">
 									<input type="text" name="web_port" id="web_port" value="$sickbeard.WEB_PORT" class="form-control input-sm input100">
-									<p>web port to browse and access SickGear (default:8081)</p>
+									<p>web port to access and browse SickGear (default:8081)</p>
 								</span>
 							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="web_log">
+								<span class="component-title">HTTP logs</span>
+								<span class="component-desc">
+									<input type="checkbox" name="web_log" id="web_log" #if $sickbeard.WEB_LOG then 'checked="checked"' else ''#>
+									<p>enable logs from the internal web server</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="enable_https">
+								<span class="component-title">SSL enable</span>
+								<span class="component-desc">
+									<input type="checkbox" name="enable_https" class="enabler" id="enable_https" #if $sickbeard.ENABLE_HTTPS then 'checked="checked"' else ''#>
+									<p>use a HTTPS address to access the web interface</p>
+								</span>
+							</label>
+						</div>
+						<div id="content_enable_https">
+							<div class="field-pair">
+								<label for="https_cert">
+									<span class="component-title">HTTPS certificate</span>
+									<span class="component-desc">
+										<input type="text" name="https_cert" id="https_cert" value="$sickbeard.HTTPS_CERT" class="form-control input-sm input300">
+										<div class="clear-left"><p>file name or path to a <b class="boldest">server.crt</b> certificate file</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="https_key">
+									<span class="component-title">HTTPS key</span>
+									<span class="component-desc">
+										<input type="text" name="https_key" id="https_key" value="$sickbeard.HTTPS_KEY" class="form-control input-sm input300">
+										<div class="clear-left"><p>file name or path to a <b class="boldest">server.key</b> file</p></div>
+									</span>
+								</label>
+							</div>
 						</div>
 
 						<div class="field-pair">
@@ -397,36 +440,6 @@
 									<p>attempt binding to any available IPv6 address</p>
 								</span>
 							</label>
-						</div>
-
-						<div class="field-pair">
-							<label for="enable_https">
-								<span class="component-title">Enable HTTPS</span>
-								<span class="component-desc">
-									<input type="checkbox" name="enable_https" class="enabler" id="enable_https" #if $sickbeard.ENABLE_HTTPS then 'checked="checked"' else ''#>
-									<p>enable access to the web interface using a HTTPS address</p>
-								</span>
-							</label>
-						</div>
-						<div id="content_enable_https">
-							<div class="field-pair">
-								<label for="https_cert">
-									<span class="component-title">HTTPS certificate</span>
-									<span class="component-desc">
-										<input type="text" name="https_cert" id="https_cert" value="$sickbeard.HTTPS_CERT" class="form-control input-sm input300">
-										<div class="clear-left"><p>file name or path to HTTPS certificate</p></div>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="https_key">
-									<span class="component-title">HTTPS key</span>
-									<span class="component-desc">
-										<input type="text" name="https_key" id="https_key" value="$sickbeard.HTTPS_KEY" class="form-control input-sm input300">
-										<div class="clear-left"><p>file name or path to HTTPS key</p></div>
-									</span>
-								</label>
-							</div>
 						</div>
 
 						<div class="field-pair">
@@ -541,18 +554,6 @@
 									<p>in the <code>config.ini</code> file.
 									<b>Warning:</b> Passwords must only contain <a target="_blank" href="<%= anon_url('http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters') %>">ASCII characters</a></p>
 								</span>
-							</label>
-						</div>
-
-						<div class="field-pair">
-							<label for="calendar_unprotected">
-								<span class="component-title">Unprotected calendar</span>
-								<span class="component-desc">
-									<input type="checkbox" name="calendar_unprotected" id="calendar_unprotected" #if $sickbeard.CALENDAR_UNPROTECTED then 'checked="checked"' else ''#>
-									<p>allow subscribing to the calendar without user and password.
-									Some services like Google Calendar only work this way</p>
-								</span>
-
 							</label>
 						</div>
 
