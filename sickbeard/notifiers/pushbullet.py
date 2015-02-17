@@ -1,5 +1,4 @@
-# Author: Pedro Correia (http://github.com/pedrocorreia/)
-# Based on pushalot.py by Nic Wolfe <nic@wolfeden.ca>
+# Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
@@ -17,109 +16,123 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
+import urllib
+import urllib2
 import socket
 import base64
-from httplib import HTTPSConnection, HTTPException
-import json
-from ssl import SSLError
+
 import sickbeard
-from sickbeard import logger, common
+
+from sickbeard import logger
+from sickbeard.common import notifyStrings, NOTIFY_SNATCH, NOTIFY_DOWNLOAD, NOTIFY_SUBTITLE_DOWNLOAD, NOTIFY_GIT_UPDATE, NOTIFY_GIT_UPDATE_TEXT
+from sickbeard.exceptions import ex
+
+PUSHAPI_ENDPOINT = 'https://api.pushbullet.com/v2/pushes'
+DEVICEAPI_ENDPOINT = 'https://api.pushbullet.com/v2/devices'
 
 
 class PushbulletNotifier:
-    def test_notify(self, pushbullet_api):
-        return self._sendPushbullet(pushbullet_api, event="Test", message="Testing Pushbullet settings from SickGear",
-                                    method="POST", notificationType="note", force=True)
 
-    def get_devices(self, pushbullet_api):
-        return self._sendPushbullet(pushbullet_api, method="GET", force=True)
+    def get_devices(self, accessToken=None):
+        # fill in omitted parameters
+        if not accessToken:
+            accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
 
-    def notify_snatch(self, ep_name):
-        if sickbeard.PUSHBULLET_NOTIFY_ONSNATCH:
-            self._sendPushbullet(pushbullet_api=None, event=common.notifyStrings[common.NOTIFY_SNATCH] + " : " + ep_name, message=ep_name,
-                                 notificationType="note", method="POST")
+        # get devices from pushbullet
+        try:
+            req = urllib2.Request(DEVICEAPI_ENDPOINT)
+            base64string = base64.encodestring('%s:%s' % (accessToken, ''))[:-1]
+            req.add_header('Authorization', 'Basic %s' % base64string)
+            handle = urllib2.urlopen(req)
+            if handle:
+                result = handle.read()
+            handle.close()
+            return result
+        except urllib2.URLError:
+            return None
+        except socket.timeout:
+            return None
 
-    def notify_download(self, ep_name):
-        if sickbeard.PUSHBULLET_NOTIFY_ONDOWNLOAD:
-            self._sendPushbullet(pushbullet_api=None, event=common.notifyStrings[common.NOTIFY_DOWNLOAD] + " : " + ep_name,
-                                 message=ep_name, notificationType="note", method="POST")
+    def _sendPushbullet(self, title, body, accessToken, device_iden):
 
-    def notify_subtitle_download(self, ep_name, lang):
-        if sickbeard.PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD:
-            self._sendPushbullet(pushbullet_api=None, event=common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD] + " : " + ep_name + " : " + lang,
-                                 message=ep_name + ": " + lang, notificationType="note", method="POST")
-                                 
-    def notify_git_update(self, new_version = "??"):
-        if sickbeard.USE_PUSHBULLET:
-            update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
-            title=common.notifyStrings[common.NOTIFY_GIT_UPDATE]
-            self._sendPushbullet(pushbullet_api=None, event=title, message=update_text + new_version, method="POST")
+        # build up the URL and parameters
+        body = body.strip().encode('utf-8')
 
-    def _sendPushbullet(self, pushbullet_api=None, pushbullet_device=None, event=None, message=None,
-                        notificationType=None, method=None, force=False):
+        data = urllib.urlencode({
+            'type': 'note',
+            'title': title,
+            'body': body,
+            'device_iden': device_iden
+            })
 
+        # send the request to pushbullet
+        try:
+            req = urllib2.Request(PUSHAPI_ENDPOINT)
+            base64string = base64.encodestring('%s:%s' % (accessToken, ''))[:-1]
+            req.add_header('Authorization', 'Basic %s' % base64string)
+            handle = urllib2.urlopen(req, data)
+            handle.close()
+        except socket.timeout:
+            return False
+        except urllib2.URLError, e:
+
+            if e.code == 404:
+                logger.log(u'PUSHBULLET: Access token is wrong/not associated to a device.', logger.ERROR)
+            elif e.code == 401:
+                logger.log(u'PUSHBULLET: Unauthorized, not a valid access token.', logger.ERROR)
+            elif e.code == 400:
+                logger.log(u'PUSHBULLET: Bad request, missing required parameter.', logger.ERROR)
+            elif e.code == 503:
+                logger.log(u'PUSHBULLET: Pushbullet server to busy to handle the request at this time.', logger.WARNING)
+            return False
+
+        logger.log(u'PUSHBULLET: Notification successful.', logger.MESSAGE)
+        return True
+
+    def _notifyPushbullet(self, title, body, accessToken=None, device_iden=None, force=False):
+        """
+        Sends a pushbullet notification based on the provided info or SG config
+
+        title: The title of the notification to send
+        body: The body string to send
+        accessToken: The access token to grant access
+        device_iden: The iden of a specific target, if none provided send to all devices
+        force: If True then the notification will be sent even if Pushbullet is disabled in the config
+        """
+
+        # suppress notifications if the notifier is disabled but the notify options are checked
         if not sickbeard.USE_PUSHBULLET and not force:
             return False
 
-        if pushbullet_api == None:
-            pushbullet_api = sickbeard.PUSHBULLET_API
-        if pushbullet_device == None:
-            pushbullet_device = sickbeard.PUSHBULLET_DEVICE
+        # fill in omitted parameters
+        if not accessToken:
+            accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
+        if not device_iden:
+            device_iden = sickbeard.PUSHBULLET_DEVICE_IDEN
 
-        if method == 'POST':
-            uri = '/v2/pushes'
-        else:
-            uri = '/v2/devices'
+        logger.log(u'PUSHBULLET: Sending notice with details: \"%s - %s\", device_iden: %s' % (title, body, device_iden), logger.DEBUG)
 
-        logger.log(u"Pushbullet event: " + str(event), logger.DEBUG)
-        logger.log(u"Pushbullet message: " + str(message), logger.DEBUG)
-        logger.log(u"Pushbullet api: " + str(pushbullet_api), logger.DEBUG)
-        logger.log(u"Pushbullet devices: " + str(pushbullet_device), logger.DEBUG)
-        logger.log(u"Pushbullet notification type: " + str(notificationType), logger.DEBUG)
+        return self._sendPushbullet(title, body, accessToken, device_iden)
 
-        http_handler = HTTPSConnection("api.pushbullet.com")
+    def notify_snatch(self, ep_name):
+        if sickbeard.PUSHBULLET_NOTIFY_ONSNATCH:
+            self._notifyPushbullet(notifyStrings[NOTIFY_SNATCH], ep_name)
 
-        if notificationType == None:
-            testMessage = True
-            try:
-                logger.log(u"Testing Pushbullet authentication and retrieving the device list.", logger.DEBUG)
-                http_handler.request(method, uri, None, headers={'Authorization': 'Bearer %s' % pushbullet_api})
-            except (SSLError, HTTPException, socket.error):
-                logger.log(u"Pushbullet notification failed.", logger.ERROR)
-                return False
-        else:
-            testMessage = False
-            try:
-                data = {
-                    'title': event.encode('utf-8'),
-                    'body': message.encode('utf-8'),
-                    'device_iden': pushbullet_device,
-                    'type': notificationType}
-                data = json.dumps(data)
-                http_handler.request(method, uri, body=data,
-                                     headers={'Content-Type': 'application/json', 'Authorization': 'Bearer %s' % pushbullet_api})
-                pass
-            except (SSLError, HTTPException, socket.error):
-                return False
+    def notify_download(self, ep_name):
+        if sickbeard.PUSHBULLET_NOTIFY_ONDOWNLOAD:
+            self._notifyPushbullet(notifyStrings[NOTIFY_DOWNLOAD], ep_name)
 
-        response = http_handler.getresponse()
-        request_body = response.read()
-        request_status = response.status
-        logger.log(u"Pushbullet response: %s" % request_body, logger.DEBUG)
+    def notify_subtitle_download(self, ep_name, lang):
+        if sickbeard.PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD:
+            self._notifyPushbullet(notifyStrings[NOTIFY_SUBTITLE_DOWNLOAD], ep_name + ': ' + lang)
 
-        if request_status == 200:
-            if testMessage:
-                return request_body
-            else:
-                logger.log(u"Pushbullet notifications sent.", logger.DEBUG)
-                return True
-        elif request_status == 410:
-            logger.log(u"Pushbullet authentication failed: %s" % response.reason, logger.ERROR)
-            return False
-        else:
-            logger.log(u"Pushbullet notification failed.", logger.ERROR)
-            return False
+    def notify_git_update(self, new_version = '??'):
+        if sickbeard.USE_PUSHBULLET:
+            update_text=notifyStrings[NOTIFY_GIT_UPDATE_TEXT]
+            title=notifyStrings[NOTIFY_GIT_UPDATE]
+            self._notifyPushbullet(title, update_text + new_version)
 
+    def test_notify(self, accessToken, device_iden):
+        return self._notifyPushbullet('Test', 'This is a test notification from SickGear', accessToken, device_iden, force=True)
 
 notifier = PushbulletNotifier
-
