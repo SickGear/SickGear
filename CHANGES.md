@@ -65,6 +65,8 @@
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
 * Fix black and white list initialization on new show creation
 * Fix validation of release groups when no group is detected
+* Fix missed html tag replacing in notifications
+* Add history module to pnotify lib
 
 
 ### 0.6.4 (2015-02-10 20:20:00 UTC)
