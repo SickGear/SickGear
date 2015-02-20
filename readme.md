@@ -3,8 +3,6 @@ SickGear
 
 SickGear is a Video File Manager for TV Shows, It watches for new episodes of your favorite shows and when they are posted it does its magic.
 
-*SickGear  is currently in beta release stage. There may be severe bugs in it and at any given time it may not work at all.*
-
 There are currently a lot of changes that we're working on, which affect the very core of how SickGear works. We're doing this to lay the groundwork
 for making SickGear seriously more awesome, scalable and resource-friendly than it already is.
  
@@ -30,7 +28,7 @@ FEATURES:
 
 ## Dependencies
 
-To run SickGear from source you will need Python 2.6+ and Cheetah 2.1.0+.
+To run SickGear from source you will need [Python 2.6+](https://www.python.org/downloads/) and [Cheetah 2.1.0+](https://pypi.python.org/pypi/Cheetah/2.4.4).
 
 ## Forums
 
