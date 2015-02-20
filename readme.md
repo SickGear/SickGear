@@ -28,7 +28,7 @@ FEATURES:
 
 ## Dependencies
 
-To run SickGear from source you will need Python 2.6+ and Cheetah 2.1.0+.
+To run SickGear from source you will need [Python 2.6+](https://www.python.org/downloads/) and [Cheetah 2.1.0+](https://pypi.python.org/pypi/Cheetah/2.4.4).
 
 ## Forums
 
