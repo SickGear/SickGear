@@ -25,12 +25,8 @@ import datetime
 import traceback
 
 import sickbeard
-
 from common import SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, Quality, SEASON_RESULT, MULTI_EP_RESULT
-
 from sickbeard import logger, db, show_name_helpers, exceptions, helpers
-from sickbeard import sab
-from sickbeard import nzbget
 from sickbeard import clients
 from sickbeard import history
 from sickbeard import notifiers
@@ -38,10 +34,11 @@ from sickbeard import nzbSplitter
 from sickbeard import ui
 from sickbeard import encodingKludge as ek
 from sickbeard import failed_history
+from sickbeard.clients import nzbget, sab
 from sickbeard.exceptions import ex
 from sickbeard.providers.generic import GenericProvider
-from sickbeard.blackandwhitelist import BlackAndWhiteList
 from sickbeard import common
+
 
 def _downloadResult(result):
     """

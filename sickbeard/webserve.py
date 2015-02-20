@@ -31,7 +31,7 @@ from mimetypes import MimeTypes
 from Cheetah.Template import Template
 
 import sickbeard
-from sickbeard import config, sab, clients, history, notifiers, processTV, ui, logger, helpers, exceptions, classes, \
+from sickbeard import config, clients, history, notifiers, processTV, ui, logger, helpers, exceptions, classes, \
     db, search_queue, image_cache, naming, scene_exceptions, subtitles, network_timezones, sbdatetime
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
@@ -46,6 +46,7 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
     get_scene_absolute_numbering
 from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
+from sickbeard.clients import sab
 from tornado import gen
 from tornado.web import RequestHandler, authenticated
 from lib import adba
