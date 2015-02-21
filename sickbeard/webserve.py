@@ -3817,8 +3817,13 @@ class Home(MainHandler):
 
                 t.groups = []
                 if helpers.set_up_anidb_connection():
-                    anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=showObj.name)
-                    t.groups = anime.get_groups()
+                    try:
+                        anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=showObj.name)
+                        t.groups = anime.get_groups()
+                    except Exception, e:
+                        t.groups.append(dict([('name', 'Fail:AniDB connect. Restart sg else check debug log'), ('rating', ''), ('range', '')]))
+                else:
+                    t.groups.append(dict([('name', 'Did not initialise AniDB. Check debug log if reqd.'), ('rating', ''), ('range', '')]))
 
             with showObj.lock:
                 t.show = showObj
@@ -3990,10 +3995,9 @@ class Home(MainHandler):
 
         showObj.deleteShow(bool(full))
 
-        ui.notifications.message('<b>%s</b> has been %s %s' %
-                                 (showObj.name,
-                                 ('deleted', 'trashed')[sickbeard.TRASH_REMOVE_SHOW],
-                                 ('(media untouched)', '(with all related media)')[bool(full)]))
+        ui.notifications.message('%s with %s' % (('Deleting', 'Trashing')[sickbeard.TRASH_REMOVE_SHOW],
+                                                 ('media left untouched', 'all related media')[bool(full)]),
+                                 '<b>%s</b>' % showObj.name)
         redirect("/home/")
 
 
@@ -4536,11 +4540,16 @@ class Home(MainHandler):
     def fetch_releasegroups(show_name):
 
         if helpers.set_up_anidb_connection():
-            anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=show_name)
-            groups = anime.get_groups()
+            try:
+                anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=show_name)
+                groups = anime.get_groups()
+            except Exception, e:
+                logger.log(u'exception msg: ' + str(e), logger.DEBUG)
+                return json.dumps({'result': 'fail', 'resp': 'connect'})
+
             return json.dumps({'result': 'success', 'groups': groups})
 
-        return json.dumps({'result': 'failure'})
+        return json.dumps({'result': 'fail', 'resp': 'init'})
 
 
 class UI(MainHandler):

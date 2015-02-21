@@ -1,54 +1,30 @@
 function generate_bwlist() {
-	var realvalues = [];
+	$.each(['white', 'black'], function(i, list) {
+		var group_list = [];
 
-		$('#white option').each(function(i, selected) {
-			realvalues[i] = $(selected).val();
+		$('#' + list + ' option').each(function(i, option) {
+			group_list.push($(option).val());
 		});
-		$("#whitelist").val(realvalues.join(","));
 
-		realvalues = [];
-		$('#black option').each(function(i, selected) {
-			realvalues[i] = $(selected).val();
-		});
-		$("#blacklist").val(realvalues.join(","));
-};
+		$('#' + list + 'list').val(group_list.join(','));
+	});
+}
 
-$('#removeW').click(function() {
-	!$('#white option:selected').remove().appendTo('#pool');
+$('#add-white, #add-black').click(function() {
+	!$('#pool option:selected').remove().appendTo('#' + $(this).attr('id').replace(/add[-]/i, ''));
 });
 
-$('#addW').click(function() {
-	!$('#pool option:selected').remove().appendTo('#white');
+$('#remove-white, #remove-black').click(function() {
+	!$('#' + $(this).attr('id').replace(/remove[-]/i, '') + ' option:selected').remove().appendTo('#pool');
 });
 
-$('#addB').click(function() {
-	!$('#pool option:selected').remove().appendTo('#black');
-});
-
-$('#removeP').click(function() {
-	!$('#pool option:selected').remove();
-});
-
-$('#removeB').click(function() {
-	!$('#black option:selected').remove().appendTo('#pool');
-});
-
-$('#addToWhite').click(function() {
-	var group = $('#addToPoolText').attr("value");
-	if(group == "") { return; }
-	$('#addToPoolText').attr("value", "");
-	var option = $("<option>");
-	option.attr("value",group);
-	option.html(group);
-	option.appendTo('#white');
-});
-
-$('#addToBlack').click(function() {
-	var group = $('#addToPoolText').attr("value");
-	if(group == "") { return; }
-	$('#addToPoolText').attr("value", "");
-	var option = $("<option>");
-	option.attr("value",group);
-	option.html(group);
-	option.appendTo('#black');
+$('#new-white, #new-black').click(function() {
+	var group = $('#addToPoolText').attr('value');
+	if ('' != group) {
+		var option = $('<option>');
+		option.attr('value', group);
+		option.html(group);
+		option.appendTo('#' + $(this).attr('id').replace(/new[-]/i, ''));
+		$('#addToPoolText').attr('value', '');
+	}
 });

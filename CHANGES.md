@@ -61,6 +61,13 @@
 * Add setting "Update shows during hour" to General Config/Misc
 * Add max-width to prevent ui glitch on Pull request and Branch Version selectors on config/General/Advanced and change <input> tags to html5
 * Change order of some settings on Config/General/Interface/Web Interface and tweak texts
+* Change overhaul UI of editShow and anime release groups, refactor and simplify code
+* Change list order of option on the right of the displayShow page to be mostly inline with the order of options on editShow
+* Change legend wording and text colour on the displayShow page
+* Add output message if no release group results are available
+* Add cleansing of text used in the processes to a add a show
+* Add sorting of AniDB available group results
+* Add error handling and related UI feedback to reflect result of AniDB communications
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
@@ -68,6 +75,7 @@
 * Fix validation of release groups when no group is detected
 * Fix missed html tag replacing in notifications
 * Add history module to pnotify lib
+* Change the remove show notification to properly send the title and message parameters to PNotify
 
 
 ### 0.6.4 (2015-02-10 20:20:00 UTC)
