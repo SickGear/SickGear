@@ -29,6 +29,8 @@ from threading import Lock
 # apparently py2exe won't build these unless they're imported somewhere
 import sys
 import os.path
+import uuid
+import base64
 sys.path.append(os.path.abspath('../lib'))
 from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
@@ -450,6 +452,8 @@ CALENDAR_UNPROTECTED = False
 TMDB_API_KEY = 'edc5f123313769de83a71e157758030b'
 TRAKT_API_KEY = 'abd806c54516240c76e4ebc9c5ccf394'
 
+COOKIE_SECRET = base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
+
 __INITIALIZED__ = False
 
 def get_backlog_cycle_time():
@@ -499,7 +503,8 @@ def initialize(consoleLogging=True):
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, LOCALHOST_IP, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, ANIMESUPPORT, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
-            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV
+            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV, \
+            COOKIE_SECRET
 
         if __INITIALIZED__:
             return False

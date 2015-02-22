@@ -1,5 +1,26 @@
 $(document).ready(function () {
-	$('a.shutdown').bind("click",function(e) {
+	$('a.logout').bind('click',function(e) {
+		e.preventDefault();
+		var target = $( this ).attr('href');
+		$.confirm({
+			'title'		: 'Logout',
+			'message'	: 'Are you sure you want to Logout from SickGear ?',
+			'buttons'	: {
+				'Yes'	: {
+					'class'	: 'green',
+					'action': function(){
+						location.href = target;
+					}
+				},
+				'No'	: {
+					'class'	: 'red',
+					'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
+				}
+			}
+		});
+	});
+
+	$('a.shutdown').bind('click',function(e) {
 		e.preventDefault();
 		var target = $( this ).attr('href');
 		$.confirm({
@@ -20,7 +41,7 @@ $(document).ready(function () {
 		});
 	});
 
-	$('a.restart').bind("click",function(e) {
+	$('a.restart').bind('click',function(e) {
 		e.preventDefault();
 		var target = $( this ).attr('href');
 		$.confirm({
@@ -41,10 +62,10 @@ $(document).ready(function () {
 		});
 	});
 
-	$('a.remove').bind("click",function(e) {
+	$('a.remove').bind('click',function(e) {
 		e.preventDefault();
 		var target = $( this ).attr('href');
-		var showname = document.getElementById("showtitle").getAttribute('data-showname');
+		var showname = document.getElementById('showtitle').getAttribute('data-showname');
 		$.confirm({
 			'title'		: 'Remove Show',
 			'message'	: 'Are you sure you want to remove <span class="footerhighlight">' + showname + '</span> from the database ?<br /><br /><input type="checkbox" id="deleteFiles"> <span class="red-text">Check to delete files as well. IRREVERSIBLE</span></input>',
@@ -64,7 +85,7 @@ $(document).ready(function () {
 		});
 	});
 
-	$('a.clearhistory').bind("click",function(e) {
+	$('a.clearhistory').bind('click',function(e) {
 		e.preventDefault();
 		var target = $( this ).attr('href');
 		$.confirm({
@@ -85,7 +106,7 @@ $(document).ready(function () {
 		});
 	});
 	
-	$('a.trimhistory').bind("click",function(e) {
+	$('a.trimhistory').bind('click',function(e) {
 		e.preventDefault();
 		var target = $( this ).attr('href');
 		$.confirm({

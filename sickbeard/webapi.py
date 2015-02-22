@@ -39,6 +39,7 @@ from sickbeard.exceptions import ex
 from sickbeard.common import SNATCHED, SNATCHED_PROPER, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
 from sickbeard.helpers import remove_article
 from common import Quality, qualityPresetStrings, statusStrings
+from sickbeard.webserve import MainHandler
 
 try:
     import json
@@ -66,15 +67,27 @@ result_type_map = {RESULT_SUCCESS: "success",
 }
 # basically everything except RESULT_SUCCESS / success is bad
 
-class Api(webserve.MainHandler):
+
+class Api(webserve.BaseHandler):
     """ api class that returns json results """
     version = 4  # use an int since float-point is unpredictible
     intent = 4
 
-    def index(self, *args, **kwargs):
+    def set_default_headers(self):
+        self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+
+    def get(self, route, *args, **kwargs):
+        route = route.strip('/') or 'index'
+
+        kwargs = self.request.arguments
+        for arg, value in kwargs.items():
+            if len(value) == 1:
+                kwargs[arg] = value[0]
+
+        args = args[1:]
 
         self.apiKey = sickbeard.API_KEY
-        access, accessMsg, args, kwargs = self._grand_access(self.apiKey, args, kwargs)
+        access, accessMsg, args, kwargs = self._grand_access(self.apiKey, route, args, kwargs)
 
         # set the output callback
         # default json
@@ -118,10 +131,43 @@ class Api(webserve.MainHandler):
             outputCallback = outputCallbackDict[outDict['outputType']]
         else:
             outputCallback = outputCallbackDict['default']
+        self.finish(outputCallback(outDict))
 
-        return outputCallback(outDict)
+    def _out_as_json(self, dict):
+        self.set_header('Content-Type', 'application/json')
+        try:
+            out = json.dumps(dict, indent=self.intent, sort_keys=True)
+            if 'jsonp' in self.request.query_arguments:
+                out = self.request.arguments['jsonp'] + '(' + out + ');'  # wrap with JSONP call if requested
 
-    def builder(self):
+        except Exception, e:  # if we fail to generate the output fake an error
+            logger.log(u'API :: ' + traceback.format_exc(), logger.DEBUG)
+            out = '{"result":"' + result_type_map[RESULT_ERROR] + '", "message": "error while composing output: "' + ex(
+                e) + '"}'
+
+        tornado_write_hack_dict = {'unwrap_json': out}
+        return tornado_write_hack_dict
+
+    def _grand_access(self, realKey, apiKey, args, kwargs):
+        """ validate api key and log result """
+        remoteIp = self.request.remote_ip
+
+        if not sickbeard.USE_API:
+            msg = u'API :: ' + remoteIp + ' - SB API Disabled. ACCESS DENIED'
+            return False, msg, args, kwargs
+        elif apiKey == realKey:
+            msg = u'API :: ' + remoteIp + ' - gave correct API KEY. ACCESS GRANTED'
+            return True, msg, args, kwargs
+        elif not apiKey:
+            msg = u'API :: ' + remoteIp + ' - gave NO API KEY. ACCESS DENIED'
+            return False, msg, args, kwargs
+        else:
+            msg = u'API :: ' + remoteIp + ' - gave WRONG API KEY ' + apiKey + '. ACCESS DENIED'
+            return False, msg, args, kwargs
+
+
+class ApiBuilder(webserve.MainHandler):
+    def index(self):
         """ expose the api-builder template """
         t = webserve.PageTemplate(headers=self.request.headers, file="apiBuilder.tmpl")
 
@@ -152,45 +198,6 @@ class Api(webserve.MainHandler):
             t.apikey = "api key not generated"
 
         return webserve._munge(t)
-
-    def _out_as_json(self, dict):
-        self.set_header("Content-Type", "application/json")
-        try:
-            out = json.dumps(dict, indent=self.intent, sort_keys=True)
-            if 'jsonp' in self.request.query_arguments:
-                out = self.request.arguments['jsonp'] + '(' + out + ');'  # wrap with JSONP call if requested
-
-        except Exception, e:  # if we fail to generate the output fake an error
-            logger.log(u"API :: " + traceback.format_exc(), logger.DEBUG)
-            out = '{"result":"' + result_type_map[RESULT_ERROR] + '", "message": "error while composing output: "' + ex(
-                e) + '"}'
-
-        tornado_write_hack_dict = {'unwrap_json': out}
-        return tornado_write_hack_dict
-
-    def _grand_access(self, realKey, args, kwargs):
-        """ validate api key and log result """
-        remoteIp = self.request.remote_ip
-        apiKey = kwargs.get("apikey", None)
-        if not apiKey:
-            if args:  # if we have keyless vars we assume first one is the api key, always !
-                apiKey = args[0]
-                args = args[1:]  # remove the apikey from the args tuple
-        else:
-            del kwargs["apikey"]
-
-        if not sickbeard.USE_API:
-            msg = u"API :: " + remoteIp + " - SB API Disabled. ACCESS DENIED"
-            return False, msg, args, kwargs
-        elif apiKey == realKey:
-            msg = u"API :: " + remoteIp + " - gave correct API KEY. ACCESS GRANTED"
-            return True, msg, args, kwargs
-        elif not apiKey:
-            msg = u"API :: " + remoteIp + " - gave NO API KEY. ACCESS DENIED"
-            return False, msg, args, kwargs
-        else:
-            msg = u"API :: " + remoteIp + " - gave WRONG API KEY " + apiKey + ". ACCESS DENIED"
-            return False, msg, args, kwargs
 
 
 def call_dispatcher(handler, args, kwargs):
@@ -2191,7 +2198,7 @@ class CMD_ShowGetPoster(ApiCall):
 
     def run(self):
         """ get the poster for a show in sickbeard """
-        return {'outputType': 'image', 'image': self.handler.showPoster(self.indexerid, 'poster')}
+        return {'outputType': 'image', 'image': self.handler.showPoster(self.indexerid, 'poster', True)}
 
 
 class CMD_ShowGetBanner(ApiCall):
@@ -2209,7 +2216,7 @@ class CMD_ShowGetBanner(ApiCall):
 
     def run(self):
         """ get the banner for a show in sickbeard """
-        return {'outputType': 'image', 'image': self.handler.showPoster(self.indexerid, 'banner')}
+        return {'outputType': 'image', 'image': self.handler.showPoster(self.indexerid, 'banner', True)}
 
 
 class CMD_ShowPause(ApiCall):
