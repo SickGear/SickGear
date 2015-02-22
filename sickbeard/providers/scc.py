@@ -20,7 +20,6 @@
 import re
 import traceback
 import datetime
-import urlparse
 import sickbeard
 import generic
 from sickbeard.common import Quality
@@ -31,7 +30,6 @@ from sickbeard import classes
 from sickbeard import helpers
 from sickbeard import show_name_helpers
 from sickbeard.exceptions import ex
-from sickbeard import clients
 from lib import requests
 from lib.requests import exceptions
 from sickbeard.bs4_parser import BS4Parser
@@ -42,17 +40,16 @@ from sickbeard.helpers import sanitizeSceneName
 class SCCProvider(generic.TorrentProvider):
     urls = {'base_url': 'https://sceneaccess.eu',
             'login': 'https://sceneaccess.eu/login',
-            'detail': 'https://www.sceneaccess.eu/details?id=%s',
+            'detail': 'https://sceneaccess.eu/details?id=%s',
             'search': 'https://sceneaccess.eu/browse?search=%s&method=1&%s',
             'nonscene': 'https://sceneaccess.eu/nonscene?search=%s&method=1&c44=44&c45=44',
             'foreign': 'https://sceneaccess.eu/foreign?search=%s&method=1&c34=34&c33=33',
             'archive': 'https://sceneaccess.eu/archive?search=%s&method=1&c26=26',
-            'download': 'https://www.sceneaccess.eu/%s',
-    }
+            'download': 'https://sceneaccess.eu/%s'}
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, "SceneAccess")
+        generic.TorrentProvider.__init__(self, 'SceneAccess')
 
         self.supportsBacklog = True
 
@@ -67,7 +64,7 @@ class SCCProvider(generic.TorrentProvider):
 
         self.url = self.urls['base_url']
 
-        self.categories = "c27=27&c17=17&c11=11"
+        self.categories = 'c27=27&c17=17&c11=11'
 
     def isEnabled(self):
         return self.enabled
@@ -84,21 +81,20 @@ class SCCProvider(generic.TorrentProvider):
 
         login_params = {'username': self.username,
                         'password': self.password,
-                        'submit': 'come on in',
-        }
+                        'submit': 'come on in'}
 
         self.session = requests.Session()
 
         try:
             response = self.session.post(self.urls['login'], data=login_params, headers=self.headers, timeout=30, verify=False)
         except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError), e:
-            logger.log(u'Unable to connect to ' + self.name + ' provider: ' + ex(e), logger.ERROR)
+            logger.log(u'Unable to connect to %s provider: %s' % (self.name, ex(e)), logger.ERROR)
             return False
 
         if re.search('Username or password incorrect', response.text) \
                 or re.search('<title>SceneAccess \| Login</title>', response.text) \
-                or response.status_code == 401:
-            logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
+                or 401 == response.status_code:
+            logger.log(u'Your authentication credentials for %s are incorrect, check your config.' % self.name, logger.ERROR)
             return False
 
         return True
@@ -108,13 +104,13 @@ class SCCProvider(generic.TorrentProvider):
         search_string = {'Season': []}
         for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
             if ep_obj.show.air_by_date or ep_obj.show.sports:
-                ep_string = show_name + ' ' + str(ep_obj.airdate).split('-')[0]
+                ep_string = str(ep_obj.airdate).split('-')[0]
             elif ep_obj.show.anime:
-                ep_string = show_name + ' ' + "%d" % ep_obj.scene_absolute_number
+                ep_string = '%d' % ep_obj.scene_absolute_number
             else:
-                ep_string = show_name + ' S%02d' % int(ep_obj.scene_season)  #1) showName SXX
+                ep_string = 'S%02d' % int(ep_obj.scene_season)  # 1) showName SXX
 
-            search_string['Season'].append(ep_string)
+            search_string['Season'].append('%s %s' % (show_name, ep_string))
 
         return [search_string]
 
@@ -128,24 +124,24 @@ class SCCProvider(generic.TorrentProvider):
         if self.show.air_by_date:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
                 ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|')
+                    str(ep_obj.airdate).replace('-', '|')
                 search_string['Episode'].append(ep_string)
         elif self.show.sports:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
                 ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|') + '|' + \
-                            ep_obj.airdate.strftime('%b')
+                    str(ep_obj.airdate).replace('-', '|') + '|' + \
+                    ep_obj.airdate.strftime('%b')
                 search_string['Episode'].append(ep_string)
         elif self.show.anime:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
                 ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            "%i" % int(ep_obj.scene_absolute_number)
+                    '%i' % int(ep_obj.scene_absolute_number)
                 search_string['Episode'].append(ep_string)
         else:
             for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
                 ep_string = show_name_helpers.sanitizeSceneName(show_name) + ' ' + \
-                            sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                                  'episodenumber': ep_obj.scene_episode}
+                    sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
+                                                          'episodenumber': ep_obj.scene_episode}
 
                 search_string['Episode'].append(re.sub('\s+', ' ', ep_string))
 
@@ -164,47 +160,49 @@ class SCCProvider(generic.TorrentProvider):
         items = {'Season': [], 'Episode': [], 'RSS': []}
 
         if not self._doLogin():
-            return []
+            return results
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-
+                search_string, url = self._get_title_and_url([search_string, self.urls['search'], '', '', ''])
                 if isinstance(search_string, unicode):
                     search_string = unidecode(search_string)
 
                 nonsceneSearchURL = None
                 foreignSearchURL = None
-                if mode == 'Season':
-                    searchURL = self.urls['archive'] % (search_string)
+                if 'Season' == mode:
+                    searchURL = self.urls['archive'] % search_string
                     data = [self.getURL(searchURL)]
                 else:
                     searchURL = self.urls['search'] % (search_string, self.categories)
-                    nonsceneSearchURL = self.urls['nonscene'] % (search_string)
-                    foreignSearchURL = self.urls['foreign'] % (search_string)
+                    nonsceneSearchURL = self.urls['nonscene'] % search_string
+                    foreignSearchURL = self.urls['foreign'] % search_string
                     data = [self.getURL(searchURL),
                             self.getURL(nonsceneSearchURL),
                             self.getURL(foreignSearchURL)]
-                    logger.log(u"Search string: " + nonsceneSearchURL, logger.DEBUG)
-                    logger.log(u"Search string: " + foreignSearchURL, logger.DEBUG)
+                    logger.log(u'Search string: ' + nonsceneSearchURL, logger.DEBUG)
+                    logger.log(u'Search string: ' + foreignSearchURL, logger.DEBUG)
 
-                logger.log(u"Search string: " + searchURL, logger.DEBUG)
+                logger.log(u'Search string: ' + searchURL, logger.DEBUG)
 
                 if not data:
                     continue
 
                 try:
                     for dataItem in data:
-                        with BS4Parser(dataItem, features=["html5lib", "permissive"]) as html:
+                        with BS4Parser(dataItem, features=['html5lib', 'permissive']) as html:
                             torrent_table = html.find('table', attrs={'id': 'torrents-table'})
-                            torrent_rows = torrent_table.find_all('tr') if torrent_table else []
+                            torrent_rows = []
+                            if torrent_table:
+                                torrent_rows = torrent_table.find_all('tr')
 
-                            #Continue only if at least one Release is found
-                            if len(torrent_rows) < 2:
+                            # Continue only if at least one Release is found
+                            if 2 > len(torrent_rows):
                                 if html.title:
-                                    source = self.name + " (" + html.title.string + ")"
+                                    source = '%s (%s)' % (self.name, html.title.string)
                                 else:
                                     source = self.name
-                                logger.log(u"The data returned from " + source + " does not contain any torrents", logger.DEBUG)
+                                logger.log(u'The data returned from %s does not contain any torrents' % source, logger.DEBUG)
                                 continue
 
                             for result in torrent_table.find_all('tr')[1:]:
@@ -220,7 +218,7 @@ class SCCProvider(generic.TorrentProvider):
 
                                     title = link.string
                                     if re.search('\.\.\.', title):
-                                        data = self.getURL(self.url + "/" + link['href'])
+                                        data = self.getURL(self.url + '/' + link['href'])
                                         if data:
                                             with BS4Parser(data) as details_html:
                                                 title = re.search('(?<=").+(?<!")', details_html.title.string).group(0)
@@ -231,7 +229,7 @@ class SCCProvider(generic.TorrentProvider):
                                 except (AttributeError, TypeError):
                                     continue
 
-                                if mode != 'RSS' and (seeders < self.minseed or leechers < self.minleech):
+                                if 'RSS' != mode and (self.minseed > seeders or self.minleech > leechers):
                                     continue
 
                                 if not title or not download_url:
@@ -240,18 +238,18 @@ class SCCProvider(generic.TorrentProvider):
                                 item = title, download_url, id, seeders, leechers
 
                                 if self._isSection('Non-Scene', dataItem):
-                                    logger.log(u"Found result: " + title + "(" + nonsceneSearchURL + ")", logger.DEBUG)
+                                    logger.log(u'Found result: %s (%s)' % (title, nonsceneSearchURL), logger.DEBUG)
                                 elif self._isSection('Foreign', dataItem):
-                                    logger.log(u"Found result: " + title + "(" + foreignSearchURL + ")", logger.DEBUG)
+                                    logger.log(u'Found result: %s (%s)' % (title, foreignSearchURL), logger.DEBUG)
                                 else:
-                                    logger.log(u"Found result: " + title + "(" + searchURL + ")", logger.DEBUG)
+                                    logger.log(u'Found result: %s (%s)' % (title, searchURL), logger.DEBUG)
 
                                 items[mode].append(item)
 
                 except Exception, e:
-                    logger.log(u"Failed parsing " + self.name + " Traceback: " + traceback.format_exc(), logger.ERROR)
+                    logger.log(u'Failed parsing %s Traceback: %s' % (self.name, traceback.format_exc()), logger.ERROR)
 
-            #For each search mode sort all the items by seeders
+            # For each search mode sort all the items by seeders
             items[mode].sort(key=lambda tup: tup[3], reverse=True)
 
             results += items[mode]
@@ -263,13 +261,13 @@ class SCCProvider(generic.TorrentProvider):
         title, url, id, seeders, leechers = item
 
         if title:
-            title = u'' + title
-            title = title.replace(' ', '.')
+            title += u''
+            title = re.sub(r'\s+', '.', title)
 
         if url:
             url = str(url).replace('&amp;', '&')
 
-        return (title, url)
+        return title, url
 
     def findPropers(self, search_date=datetime.datetime.today()):
 
@@ -288,9 +286,9 @@ class SCCProvider(generic.TorrentProvider):
             return []
 
         for sqlshow in sqlResults:
-            self.show = helpers.findCertainShow(sickbeard.showList, int(sqlshow["showid"]))
+            self.show = helpers.findCertainShow(sickbeard.showList, int(sqlshow['showid']))
             if self.show:
-                curEp = self.show.getEpisode(int(sqlshow["season"]), int(sqlshow["episode"]))
+                curEp = self.show.getEpisode(int(sqlshow['season']), int(sqlshow['episode']))
 
                 searchString = self._get_episode_search_strings(curEp, add_string='PROPER|REPACK')
 
@@ -315,7 +313,6 @@ class SCCCache(tvcache.TVCache):
     def _getRSSData(self):
         search_params = {'RSS': ['']}
         return self.provider._doSearch(search_params)
-
 
 
 provider = SCCProvider()

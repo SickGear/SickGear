@@ -72,6 +72,7 @@
 * Change to improve webserve code
 * Add logout menu item with confirmation
 * Add 404 error page
+* Change SCC URLs to remove redirection overhead
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
