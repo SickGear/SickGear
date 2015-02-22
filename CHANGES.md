@@ -74,6 +74,7 @@
 * Add 404 error page
 * Change SCC URLs to remove redirection overhead
 * Change TorrentBytes login parameter in line with site change
+* Change FreshOnTv login parameter and use secure URLs, add logging of Cloudflare blocking and prevent vacant cookie tracebacks
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
