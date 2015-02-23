@@ -2,6 +2,7 @@
 
 * Add requirements file for pip (port from midgetspy/sick-beard)
 * Remove unused libraries fuzzywuzzy and pysrt
+* Change webserve code to a logical layout and PEP8
 
 [develop changelog]
 

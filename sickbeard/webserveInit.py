@@ -1,11 +1,8 @@
 import os
-import socket
-import time
 import threading
 import sys
 import sickbeard
 import webserve
-import browser
 import webapi
 
 from sickbeard import logger
@@ -90,7 +87,7 @@ class WebServer(threading.Thread):
 
         # Main Handler
         self.app.add_handlers('.*$', [
-            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webapi.ApiBuilder),
+            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
             (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
             (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
             (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
@@ -109,7 +106,7 @@ class WebServer(threading.Thread):
             (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
             (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
-            (r'%s/browser(/?.*)' % self.options['web_root'], browser.WebFileBrowser),
+            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
             (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
 
