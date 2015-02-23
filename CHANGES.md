@@ -77,6 +77,7 @@
 * Change FreshOnTv login parameter and use secure URLs, add logging of Cloudflare blocking and prevent vacant cookie tracebacks
 * Change TPB webproxy list and add SSL variants 
 * Add YTV network logo
+* Update trakt notifier logo
 
 [develop changelog]
 * Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
