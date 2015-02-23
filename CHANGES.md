@@ -1,5 +1,6 @@
 ### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
+* Change Wombles to use tv-dvd section
 * Add requirements file for pip (port from midgetspy/sick-beard)
 * Remove unused libraries fuzzywuzzy and pysrt
 * Change webserve code to a logical layout and PEP8
@@ -102,7 +103,7 @@
 * Change SCC URLs to remove redirection overhead
 * Change TorrentBytes login parameter in line with site change
 * Change FreshOnTv login parameter and use secure URLs, add logging of Cloudflare blocking and prevent vacant cookie tracebacks
-* Change TPB webproxy list and add SSL variants 
+* Change TPB webproxy list and add SSL variants
 * Add YTV network logo
 
 
