@@ -1,4 +1,4 @@
-### 0.x.x (2015-xx-xx xx:xx:xx UTC)
+### 0.7.0 (2015-02-23 11:02:00 UTC)
 
 * Fix slow database operations (port from midgetspy/sickbeard)
 * Add TVRage network name standardization
@@ -78,20 +78,14 @@
 * Change TPB webproxy list and add SSL variants 
 * Add YTV network logo
 
-[develop changelog]
-* Change uT params from unicode to str.format as magnet URLs worked but sending files in POST bodies failed
-* Fix black and white list initialization on new show creation
-* Fix validation of release groups when no group is detected
-* Fix missed html tag replacing in notifications
-* Add history module to pnotify lib
-* Change the remove show notification to properly send the title and message parameters to PNotify
-
 
 ### 0.6.4 (2015-02-10 20:20:00 UTC)
+
 * Fix issue where setting the status for an episode that doesn't need a db update fails
 
 
 ### 0.6.3 (2015-02-10 05:30:00 UTC)
+
 * Change KickAssTorrents URL
 
 
