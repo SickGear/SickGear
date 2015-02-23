@@ -75,6 +75,7 @@
 * Change SCC URLs to remove redirection overhead
 * Change TorrentBytes login parameter in line with site change
 * Change FreshOnTv login parameter and use secure URLs, add logging of Cloudflare blocking and prevent vacant cookie tracebacks
+* Change TPB webproxy list and add SSL variants 
 * Add YTV network logo
 
 [develop changelog]
