@@ -1,6 +1,7 @@
 ### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
 * Add requirements file for pip (port from midgetspy/sick-beard)
+* Remove unused libraries fuzzywuzzy and pysrt
 
 [develop changelog]
 
