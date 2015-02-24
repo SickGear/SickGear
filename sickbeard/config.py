@@ -449,8 +449,9 @@ class ConfigMigrator():
                                 4: 'Add newznab catIDs',
                                 5: 'Metadata update',
                                 6: 'Rename daily search to recent search',
-                                7: 'Rename coming episodes to episode view'
-                                }
+                                7: 'Rename coming episodes to episode view',
+                                8: 'Disable searches on start',
+                                9: 'Rename pushbullet variables',}
 
     def migrate_config(self):
         """
@@ -745,3 +746,7 @@ class ConfigMigrator():
         # removing settings from gui and making it a hidden debug option
         sickbeard.RECENTSEARCH_STARTUP = False
         sickbeard.BACKLOG_STARTUP = False
+
+    def _migrate_v9(self):
+        sickbeard.PUSHBULLET_ACCESS_TOKEN = check_setting_str(self.config_obj, 'Pushbullet', 'pushbullet_api', '')
+        sickbeard.PUSHBULLET_DEVICE_IDEN = check_setting_str(self.config_obj, 'Pushbullet', 'pushbullet_device', '')

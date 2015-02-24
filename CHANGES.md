@@ -5,6 +5,7 @@
 * Change webserve code to a logical layout and PEP8
 * Add text to explain params passed to extra scripts on Config/Post Processing
 * Remove unused SickBeardURLOpener and AuthURLOpener classes
+* Update Pushbullet notifier (port from midgetspy/sickbeard)
 
 [develop changelog]
 

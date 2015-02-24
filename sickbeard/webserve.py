@@ -817,19 +817,19 @@ class Home(MainHandler):
         else:
             return 'Error sending Pushalot notification'
 
-    def testPushbullet(self, api=None):
+    def testPushbullet(self, accessToken=None, device_iden=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        result = notifiers.pushbullet_notifier.test_notify(api)
+        result = notifiers.pushbullet_notifier.test_notify(accessToken, device_iden)
         if result:
             return 'Pushbullet notification succeeded. Check your device to make sure it worked'
         else:
             return 'Error sending Pushbullet notification'
 
-    def getPushbulletDevices(self, api=None):
+    def getPushbulletDevices(self, accessToken=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        result = notifiers.pushbullet_notifier.get_devices(api)
+        result = notifiers.pushbullet_notifier.get_devices(accessToken)
         if result:
             return result
         else:
@@ -4067,8 +4067,8 @@ class ConfigNotifications(Config):
                           use_pushalot=None, pushalot_notify_onsnatch=None, pushalot_notify_ondownload=None,
                           pushalot_notify_onsubtitledownload=None, pushalot_authorizationtoken=None,
                           use_pushbullet=None, pushbullet_notify_onsnatch=None, pushbullet_notify_ondownload=None,
-                          pushbullet_notify_onsubtitledownload=None, pushbullet_api=None, pushbullet_device=None,
-                          pushbullet_device_list=None,
+                          pushbullet_notify_onsubtitledownload=None, pushbullet_access_token=None,
+                          pushbullet_device_iden=None, pushbullet_device_list=None,
                           use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
                           email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
                           email_tls=None, email_user=None, email_password=None, email_list=None, email_show_list=None,
@@ -4210,8 +4210,8 @@ class ConfigNotifications(Config):
         sickbeard.PUSHBULLET_NOTIFY_ONSNATCH = config.checkbox_to_value(pushbullet_notify_onsnatch)
         sickbeard.PUSHBULLET_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pushbullet_notify_ondownload)
         sickbeard.PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pushbullet_notify_onsubtitledownload)
-        sickbeard.PUSHBULLET_API = pushbullet_api
-        sickbeard.PUSHBULLET_DEVICE = pushbullet_device_list
+        sickbeard.PUSHBULLET_ACCESS_TOKEN = pushbullet_access_token
+        sickbeard.PUSHBULLET_DEVICE_IDEN = pushbullet_device_iden
 
         sickbeard.save_config()
 
