@@ -39,7 +39,7 @@ from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStri
 from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
-from sickbeard.helpers import remove_article
+from sickbeard.helpers import remove_article, starify
 from sickbeard.scene_exceptions import get_scene_exceptions
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
@@ -580,6 +580,10 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_url(host)
+        if None is not password and set('*') == set(password):
+            password = sickbeard.SAB_PASSWORD
+        if None is not apikey and starify(apikey, True):
+            apikey = sickbeard.SAB_APIKEY
 
         connection, accesMsg = sab.getSabAccesMethod(host, username, password, apikey)
         if connection:
@@ -595,6 +599,8 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_url(host)
+        if None is not password and set('*') == set(password):
+            password = sickbeard.TORRENT_PASSWORD
 
         client = clients.getClientIstance(torrent_method)
 
@@ -606,6 +612,8 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_host(host, default_port=23053)
+        if None is not password and set('*') == set(password):
+            password = sickbeard.GROWL_PASSWORD
 
         result = notifiers.growl_notifier.test_notify(host, password)
         if password is None or password == '':
@@ -621,6 +629,9 @@ class Home(MainHandler):
     def testProwl(self, prowl_api=None, prowl_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
+        if None is not prowl_api and starify(prowl_api, True):
+            prowl_api = sickbeard.PROWL_API
+
         result = notifiers.prowl_notifier.test_notify(prowl_api, prowl_priority)
         if result:
             return 'Test prowl notice sent successfully'
@@ -630,6 +641,9 @@ class Home(MainHandler):
     def testBoxcar2(self, accesstoken=None, sound=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
+        if None is not accesstoken and starify(accesstoken, True):
+            accesstoken = sickbeard.BOXCAR2_ACCESSTOKEN
+
         result = notifiers.boxcar2_notifier.test_notify(accesstoken, sound)
         if result:
             return 'Boxcar2 notification succeeded. Check your Boxcar2 clients to make sure it worked'
@@ -638,6 +652,12 @@ class Home(MainHandler):
 
     def testPushover(self, userKey=None, apiKey=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not userKey and starify(userKey, True):
+            userKey = sickbeard.PUSHOVER_USERKEY
+
+        if None is not apiKey and starify(apiKey, True):
+            apiKey = sickbeard.PUSHOVER_APIKEY
 
         result = notifiers.pushover_notifier.test_notify(userKey, apiKey)
         if result:
@@ -673,6 +693,9 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_hosts(host)
+        if None is not password and set('*') == set(password):
+            password = sickbeard.XBMC_PASSWORD
+
         finalResult = ''
         for curHost in [x.strip() for x in host.split(',')]:
             curResult = notifiers.xbmc_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
@@ -686,6 +709,9 @@ class Home(MainHandler):
 
     def testPMC(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not password and set('*') == set(password):
+            password = sickbeard.PLEX_PASSWORD
 
         finalResult = ''
         for curHost in [x.strip() for x in host.split(',')]:
@@ -702,6 +728,9 @@ class Home(MainHandler):
 
     def testPMS(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not password and set('*') == set(password):
+            password = sickbeard.PLEX_PASSWORD
 
         finalResult = ''
 
@@ -770,6 +799,11 @@ class Home(MainHandler):
     def testTrakt(self, api=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
+        if None is not api and starify(api, True):
+            api = sickbeard.TRAKT_API
+        if None is not password and set('*') == set(password):
+            password = sickbeard.TRAKT_PASSWORD
+
         result = notifiers.trakt_notifier.test_notify(api, username, password)
         if result:
             return 'Test notice sent successfully to Trakt'
@@ -793,7 +827,10 @@ class Home(MainHandler):
     def testEmail(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
+        if None is not pwd and set('*') == set(pwd):
+            pwd = sickbeard.EMAIL_PASSWORD
         host = config.clean_host(host)
+
         if notifiers.email_notifier.test_notify(host, port, smtp_from, use_tls, user, pwd, to):
             return 'Test email sent successfully! Check inbox.'
         else:
@@ -801,6 +838,9 @@ class Home(MainHandler):
 
     def testNMA(self, nma_api=None, nma_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not nma_api and starify(nma_api, True):
+            nma_api = sickbeard.NMA_API
 
         result = notifiers.nma_notifier.test_notify(nma_api, nma_priority)
         if result:
@@ -811,6 +851,9 @@ class Home(MainHandler):
     def testPushalot(self, authorizationToken=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
+        if None is not authorizationToken and starify(authorizationToken, True):
+            authorizationToken = sickbeard.PUSHALOT_AUTHORIZATIONTOKEN
+
         result = notifiers.pushalot_notifier.test_notify(authorizationToken)
         if result:
             return 'Pushalot notification succeeded. Check your Pushalot clients to make sure it worked'
@@ -820,6 +863,9 @@ class Home(MainHandler):
     def testPushbullet(self, accessToken=None, device_iden=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
+        if None is not accessToken and starify(accessToken, True):
+            accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
+
         result = notifiers.pushbullet_notifier.test_notify(accessToken, device_iden)
         if result:
             return 'Pushbullet notification succeeded. Check your device to make sure it worked'
@@ -828,6 +874,9 @@ class Home(MainHandler):
 
     def getPushbulletDevices(self, accessToken=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not accessToken and starify(accessToken, True):
+            accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
 
         result = notifiers.pushbullet_notifier.get_devices(accessToken)
         if result:
@@ -3272,7 +3321,8 @@ class ConfigGeneral(Config):
         # sickbeard.WEB_LOG is set in config.change_LOG_DIR()
         sickbeard.ENCRYPTION_VERSION = config.checkbox_to_value(encryption_version)
         sickbeard.WEB_USERNAME = web_username
-        sickbeard.WEB_PASSWORD = web_password
+        if set('*') != set(web_password):
+            sickbeard.WEB_PASSWORD = web_password
 
         sickbeard.FUZZY_DATING = config.checkbox_to_value(fuzzy_dating)
         sickbeard.TRIM_ZERO = config.checkbox_to_value(trim_zero)
@@ -3372,20 +3422,25 @@ class ConfigSearch(Config):
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 
         sickbeard.SAB_USERNAME = sab_username
-        sickbeard.SAB_PASSWORD = sab_password
-        sickbeard.SAB_APIKEY = sab_apikey.strip()
+        if set('*') != set(sab_password):
+            sickbeard.SAB_PASSWORD = sab_password
+        key = sab_apikey.strip()
+        if not starify(key, True):
+            sickbeard.SAB_APIKEY = key
         sickbeard.SAB_CATEGORY = sab_category
         sickbeard.SAB_HOST = config.clean_url(sab_host)
 
         sickbeard.NZBGET_USERNAME = nzbget_username
-        sickbeard.NZBGET_PASSWORD = nzbget_password
+        if set('*') != set(nzbget_password):
+            sickbeard.NZBGET_PASSWORD = nzbget_password
         sickbeard.NZBGET_CATEGORY = nzbget_category
         sickbeard.NZBGET_HOST = config.clean_host(nzbget_host)
         sickbeard.NZBGET_USE_HTTPS = config.checkbox_to_value(nzbget_use_https)
         sickbeard.NZBGET_PRIORITY = config.to_int(nzbget_priority, default=100)
 
         sickbeard.TORRENT_USERNAME = torrent_username
-        sickbeard.TORRENT_PASSWORD = torrent_password
+        if set('*') != set(torrent_password):
+            sickbeard.TORRENT_PASSWORD = torrent_password
         sickbeard.TORRENT_LABEL = torrent_label
         sickbeard.TORRENT_VERIFY_CERT = config.checkbox_to_value(torrent_verify_cert)
         sickbeard.TORRENT_PATH = torrent_path
@@ -3759,6 +3814,9 @@ class ConfigProviders(Config):
                 cur_name, cur_url, cur_key, cur_cat = curNewznabProviderStr.split('|')
                 cur_url = config.clean_url(cur_url)
 
+                if starify(cur_key, True):
+                    cur_key = ''
+
                 newProvider = newznab.NewznabProvider(cur_name, cur_url, key=cur_key)
 
                 cur_id = newProvider.getID()
@@ -3767,7 +3825,8 @@ class ConfigProviders(Config):
                 if cur_id in newznabProviderDict:
                     newznabProviderDict[cur_id].name = cur_name
                     newznabProviderDict[cur_id].url = cur_url
-                    newznabProviderDict[cur_id].key = cur_key
+                    if cur_key:
+                        newznabProviderDict[cur_id].key = cur_key
                     newznabProviderDict[cur_id].catIDs = cur_cat
                     # a 0 in the key spot indicates that no key is needed
                     if cur_key == '0':
@@ -3820,6 +3879,9 @@ class ConfigProviders(Config):
                 curName, curURL, curCookies = curTorrentRssProviderStr.split('|')
                 curURL = config.clean_url(curURL, False)
 
+                if starify(curCookies, True):
+                    curCookies = ''
+
                 newProvider = rsstorrent.TorrentRssProvider(curName, curURL, curCookies)
 
                 curID = newProvider.getID()
@@ -3828,7 +3890,8 @@ class ConfigProviders(Config):
                 if curID in torrentRssProviderDict:
                     torrentRssProviderDict[curID].name = curName
                     torrentRssProviderDict[curID].url = curURL
-                    torrentRssProviderDict[curID].cookies = curCookies
+                    if curCookies:
+                        torrentRssProviderDict[curID].cookies = curCookies
                 else:
                     sickbeard.torrentRssProviderList.append(newProvider)
 
@@ -3885,13 +3948,17 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'hash'):
                 try:
-                    curTorrentProvider.hash = str(kwargs[curTorrentProvider.getID() + '_hash']).strip()
+                    key = str(kwargs[curTorrentProvider.getID() + '_hash']).strip()
+                    if not starify(key, True):
+                        curTorrentProvider.hash = key
                 except:
                     curTorrentProvider.hash = None
 
             if hasattr(curTorrentProvider, 'api_key'):
                 try:
-                    curTorrentProvider.api_key = str(kwargs[curTorrentProvider.getID() + '_api_key']).strip()
+                    key = str(kwargs[curTorrentProvider.getID() + '_api_key']).strip()
+                    if not starify(key, True):
+                        curTorrentProvider.api_key = key
                 except:
                     curTorrentProvider.api_key = None
 
@@ -3903,13 +3970,17 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'password'):
                 try:
-                    curTorrentProvider.password = str(kwargs[curTorrentProvider.getID() + '_password']).strip()
+                    key = str(kwargs[curTorrentProvider.getID() + '_password']).strip()
+                    if set('*') != set(key):
+                        curTorrentProvider.password = key
                 except:
                     curTorrentProvider.password = None
 
             if hasattr(curTorrentProvider, 'passkey'):
                 try:
-                    curTorrentProvider.passkey = str(kwargs[curTorrentProvider.getID() + '_passkey']).strip()
+                    key = str(kwargs[curTorrentProvider.getID() + '_passkey']).strip()
+                    if not starify(key, True):
+                        curTorrentProvider.passkey = key
                 except:
                     curTorrentProvider.passkey = None
 
@@ -3972,7 +4043,9 @@ class ConfigProviders(Config):
 
             if hasattr(curNzbProvider, 'api_key'):
                 try:
-                    curNzbProvider.api_key = str(kwargs[curNzbProvider.getID() + '_api_key']).strip()
+                    key = str(kwargs[curNzbProvider.getID() + '_api_key']).strip()
+                    if not starify(key, True):
+                        curNzbProvider.api_key = key
                 except:
                     curNzbProvider.api_key = None
 
@@ -4086,7 +4159,8 @@ class ConfigNotifications(Config):
         sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
         sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
         sickbeard.XBMC_USERNAME = xbmc_username
-        sickbeard.XBMC_PASSWORD = xbmc_password
+        if set('*') != set(xbmc_password):
+            sickbeard.XBMC_PASSWORD = xbmc_password
 
         sickbeard.USE_PLEX = config.checkbox_to_value(use_plex)
         sickbeard.PLEX_NOTIFY_ONSNATCH = config.checkbox_to_value(plex_notify_onsnatch)
@@ -4096,20 +4170,24 @@ class ConfigNotifications(Config):
         sickbeard.PLEX_HOST = config.clean_hosts(plex_host)
         sickbeard.PLEX_SERVER_HOST = config.clean_hosts(plex_server_host)
         sickbeard.PLEX_USERNAME = plex_username
-        sickbeard.PLEX_PASSWORD = plex_password
+        if set('*') != set(plex_password):
+            sickbeard.PLEX_PASSWORD = plex_password
 
         sickbeard.USE_GROWL = config.checkbox_to_value(use_growl)
         sickbeard.GROWL_NOTIFY_ONSNATCH = config.checkbox_to_value(growl_notify_onsnatch)
         sickbeard.GROWL_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(growl_notify_ondownload)
         sickbeard.GROWL_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(growl_notify_onsubtitledownload)
         sickbeard.GROWL_HOST = config.clean_host(growl_host, default_port=23053)
-        sickbeard.GROWL_PASSWORD = growl_password
+        if set('*') != set(growl_password):
+            sickbeard.GROWL_PASSWORD = growl_password
 
         sickbeard.USE_PROWL = config.checkbox_to_value(use_prowl)
         sickbeard.PROWL_NOTIFY_ONSNATCH = config.checkbox_to_value(prowl_notify_onsnatch)
         sickbeard.PROWL_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(prowl_notify_ondownload)
         sickbeard.PROWL_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(prowl_notify_onsubtitledownload)
-        sickbeard.PROWL_API = prowl_api
+        key = prowl_api.strip()
+        if not starify(key, True):
+            sickbeard.PROWL_API = key
         sickbeard.PROWL_PRIORITY = prowl_priority
 
         sickbeard.USE_TWITTER = config.checkbox_to_value(use_twitter)
@@ -4121,15 +4199,21 @@ class ConfigNotifications(Config):
         sickbeard.BOXCAR2_NOTIFY_ONSNATCH = config.checkbox_to_value(boxcar2_notify_onsnatch)
         sickbeard.BOXCAR2_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(boxcar2_notify_ondownload)
         sickbeard.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(boxcar2_notify_onsubtitledownload)
-        sickbeard.BOXCAR2_ACCESSTOKEN = boxcar2_accesstoken
+        key = boxcar2_accesstoken.strip()
+        if not starify(key, True):
+            sickbeard.BOXCAR2_ACCESSTOKEN = key
         sickbeard.BOXCAR2_SOUND = boxcar2_sound
 
         sickbeard.USE_PUSHOVER = config.checkbox_to_value(use_pushover)
         sickbeard.PUSHOVER_NOTIFY_ONSNATCH = config.checkbox_to_value(pushover_notify_onsnatch)
         sickbeard.PUSHOVER_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pushover_notify_ondownload)
         sickbeard.PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pushover_notify_onsubtitledownload)
-        sickbeard.PUSHOVER_USERKEY = pushover_userkey
-        sickbeard.PUSHOVER_APIKEY = pushover_apikey
+        key = pushover_userkey.strip()
+        if not starify(key, True):
+            sickbeard.PUSHOVER_USERKEY = key
+        key = pushover_apikey.strip()
+        if not starify(key, True):
+            sickbeard.PUSHOVER_APIKEY = key
 
         sickbeard.USE_LIBNOTIFY = config.checkbox_to_value(use_libnotify)
         sickbeard.LIBNOTIFY_NOTIFY_ONSNATCH = config.checkbox_to_value(libnotify_notify_onsnatch)
@@ -4156,8 +4240,11 @@ class ConfigNotifications(Config):
 
         sickbeard.USE_TRAKT = config.checkbox_to_value(use_trakt)
         sickbeard.TRAKT_USERNAME = trakt_username
-        sickbeard.TRAKT_PASSWORD = trakt_password
-        sickbeard.TRAKT_API = trakt_api
+        if set('*') != set(trakt_password):
+            sickbeard.TRAKT_PASSWORD = trakt_password
+        key = trakt_api.strip()
+        if not starify(key, True):
+            sickbeard.TRAKT_API = key
         sickbeard.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
         sickbeard.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
         sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
@@ -4181,7 +4268,8 @@ class ConfigNotifications(Config):
         sickbeard.EMAIL_FROM = email_from
         sickbeard.EMAIL_TLS = config.checkbox_to_value(email_tls)
         sickbeard.EMAIL_USER = email_user
-        sickbeard.EMAIL_PASSWORD = email_password
+        if set('*') != set(email_password):
+            sickbeard.EMAIL_PASSWORD = email_password
         sickbeard.EMAIL_LIST = email_list
 
         sickbeard.USE_PYTIVO = config.checkbox_to_value(use_pytivo)
@@ -4197,20 +4285,26 @@ class ConfigNotifications(Config):
         sickbeard.NMA_NOTIFY_ONSNATCH = config.checkbox_to_value(nma_notify_onsnatch)
         sickbeard.NMA_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(nma_notify_ondownload)
         sickbeard.NMA_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(nma_notify_onsubtitledownload)
-        sickbeard.NMA_API = nma_api
+        key = nma_api.strip()
+        if not starify(key, True):
+            sickbeard.NMA_API = key
         sickbeard.NMA_PRIORITY = nma_priority
 
         sickbeard.USE_PUSHALOT = config.checkbox_to_value(use_pushalot)
         sickbeard.PUSHALOT_NOTIFY_ONSNATCH = config.checkbox_to_value(pushalot_notify_onsnatch)
         sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pushalot_notify_ondownload)
         sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pushalot_notify_onsubtitledownload)
-        sickbeard.PUSHALOT_AUTHORIZATIONTOKEN = pushalot_authorizationtoken
+        key = pushalot_authorizationtoken.strip()
+        if not starify(key, True):
+            sickbeard.PUSHALOT_AUTHORIZATIONTOKEN = key
 
         sickbeard.USE_PUSHBULLET = config.checkbox_to_value(use_pushbullet)
         sickbeard.PUSHBULLET_NOTIFY_ONSNATCH = config.checkbox_to_value(pushbullet_notify_onsnatch)
         sickbeard.PUSHBULLET_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pushbullet_notify_ondownload)
         sickbeard.PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pushbullet_notify_onsubtitledownload)
-        sickbeard.PUSHBULLET_ACCESS_TOKEN = pushbullet_access_token
+        key = pushbullet_access_token.strip()
+        if not starify(key, True):
+            sickbeard.PUSHBULLET_ACCESS_TOKEN = key
         sickbeard.PUSHBULLET_DEVICE_IDEN = pushbullet_device_iden
 
         sickbeard.save_config()
@@ -4297,7 +4391,8 @@ class ConfigAnime(Config):
 
         sickbeard.USE_ANIDB = config.checkbox_to_value(use_anidb)
         sickbeard.ANIDB_USERNAME = anidb_username
-        sickbeard.ANIDB_PASSWORD = anidb_password
+        if set('*') != set(anidb_password):
+            sickbeard.ANIDB_PASSWORD = anidb_password
         sickbeard.ANIDB_USE_MYLIST = config.checkbox_to_value(anidb_use_mylist)
         sickbeard.ANIME_SPLIT_HOME = config.checkbox_to_value(split_home)
         sickbeard.ANIME_TREAT_AS_HDTV = config.checkbox_to_value(anime_treat_as_hdtv)

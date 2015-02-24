@@ -1,7 +1,7 @@
 #import sickbeard
 #from sickbeard.providers.generic import GenericProvider
 #from sickbeard.providers import thepiratebay
-#from sickbeard.helpers import anon_url
+#from sickbeard.helpers import anon_url, starify
 
 #set global $title="Config - Providers"
 #set global $header="Search Providers"
@@ -43,7 +43,7 @@
 
         #for $curNewznabProvider in $sickbeard.newznabProviderList:
 
-    \$(this).addProvider('$curNewznabProvider.getID()', '$curNewznabProvider.name', '$curNewznabProvider.url', '$curNewznabProvider.key', '$curNewznabProvider.catIDs', $int($curNewznabProvider.default), show_nzb_providers);
+    \$(this).addProvider('$curNewznabProvider.getID()', '$curNewznabProvider.name', '$curNewznabProvider.url', '<%= starify(curNewznabProvider.key) %>', '$curNewznabProvider.catIDs', $int($curNewznabProvider.default), show_nzb_providers);
 
         #end for
 
@@ -53,7 +53,7 @@
 
         #for $curTorrentRssProvider in $sickbeard.torrentRssProviderList:
 
-    \$(this).addTorrentRssProvider('$curTorrentRssProvider.getID()', '$curTorrentRssProvider.name', '$curTorrentRssProvider.url', '$curTorrentRssProvider.cookies');
+    \$(this).addTorrentRssProvider('$curTorrentRssProvider.getID()', '$curTorrentRssProvider.name', '$curTorrentRssProvider.url', '<%= starify(curTorrentRssProvider.cookies) %>');
 
         #end for
 
@@ -207,7 +207,7 @@
 							<label for="${curNewznabProvider.getID()}_hash">
 								<span class="component-title">API key</span>
 								<span class="component-desc">
-									<input type="text" id="${curNewznabProvider.getID()}_hash" value="$curNewznabProvider.key" newznab_name="${curNewznabProvider.getID()}_hash" class="newznab_key form-control input-sm input350" />
+									<input type="text" id="${curNewznabProvider.getID()}_hash" value="<%= starify(curNewznabProvider.key) %>" newznab_name="${curNewznabProvider.getID()}_hash" class="newznab_key form-control input-sm input350" />
 									<div class="clear-left"><p>get API key from provider website</p></div>
 								</span>
 							</label>
@@ -285,7 +285,7 @@
 							<label for="${curNzbProvider.getID()}_api_key">
 								<span class="component-title">API key</span>
 								<span class="component-desc">
-									<input type="text" name="${curNzbProvider.getID()}_api_key" value="$curNzbProvider.api_key" class="form-control input-sm input350" />
+									<input type="text" name="${curNzbProvider.getID()}_api_key" value="<%= starify(curNzbProvider.api_key) %>" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
@@ -361,7 +361,7 @@
 							<label for="${curTorrentProvider.getID()}_api_key">
 								<span class="component-title">Api key:</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.getID()}_api_key" id="${curTorrentProvider.getID()}_api_key" value="$curTorrentProvider.api_key" class="form-control input-sm input350" />
+									<input type="text" name="${curTorrentProvider.getID()}_api_key" id="${curTorrentProvider.getID()}_api_key" value="<%= starify(curTorrentProvider.api_key) %>" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
@@ -405,7 +405,7 @@
 							<label for="${curTorrentProvider.getID()}_password">
 								<span class="component-title">Password:</span>
 								<span class="component-desc">
-									<input type="password" name="${curTorrentProvider.getID()}_password" id="${curTorrentProvider.getID()}_password" value="$curTorrentProvider.password" class="form-control input-sm input350" />
+									<input type="password" name="${curTorrentProvider.getID()}_password" id="${curTorrentProvider.getID()}_password" value="#echo '*' * len($curTorrentProvider.password)#" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
@@ -416,7 +416,7 @@
 							<label for="${curTorrentProvider.getID()}_passkey">
 								<span class="component-title">Passkey:</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.getID()}_passkey" id="${curTorrentProvider.getID()}_passkey" value="$curTorrentProvider.passkey" class="form-control input-sm input350" />
+									<input type="text" name="${curTorrentProvider.getID()}_passkey" id="${curTorrentProvider.getID()}_passkey" value="<%= starify(curTorrentProvider.passkey) %>" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
