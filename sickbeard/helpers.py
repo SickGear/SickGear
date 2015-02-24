@@ -65,8 +65,6 @@ from sickbeard import clients
 from lib.cachecontrol import CacheControl, caches
 from itertools import izip, cycle
 
-urllib._urlopener = classes.SickBeardURLopener()
-
 
 def indentXML(elem, level=0):
     '''
