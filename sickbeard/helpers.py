@@ -959,6 +959,17 @@ def anon_url(*url):
     return '' if None in url else '%s%s' % (sickbeard.ANON_REDIRECT, ''.join(str(s) for s in url))
 
 
+def starify(text, verify=False):
+    """
+    Return text input string with either its latter half or its centre area (if 12 chars or more)
+    replaced with asterisks. Useful for securely presenting api keys to a ui.
+
+    If verify is true, return true if text is a star block created text else return false.
+    """
+    return ((('%s%s' % (text[:len(text) / 2], '*' * (len(text) / 2))),
+            ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
+            set('*') == set((text[len(text) / 2:], text[4:-4])[12 <= len(text)]))[verify]
+
 """
 Encryption
 ==========
@@ -1357,6 +1368,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         return
     except requests.exceptions.Timeout, e:
         logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
+        return
+    except requests.exceptions.ReadTimeout, e:
+        logger.log(u'Read timed out ' + str(e.message) + ' while loading URL ' + url, logger.WARNING)
         return
     except Exception:
         logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)
