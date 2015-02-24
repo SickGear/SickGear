@@ -4,6 +4,7 @@
 * Remove unused libraries fuzzywuzzy and pysrt
 * Change webserve code to a logical layout and PEP8
 * Add text to explain params passed to extra scripts on Config/Post Processing
+* Remove unused SickBeardURLOpener and AuthURLOpener classes
 
 [develop changelog]
 
