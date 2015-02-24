@@ -7,6 +7,7 @@
 * Remove unused SickBeardURLOpener and AuthURLOpener classes
 * Update Pushbullet notifier (port from midgetspy/sickbeard)
 * Change startup code cleanup and PEP8
+* Change authentication credentials to display more securely on config pages
 
 [develop changelog]
 

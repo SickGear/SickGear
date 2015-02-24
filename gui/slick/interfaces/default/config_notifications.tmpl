@@ -1,6 +1,6 @@
 #import sickbeard
 #import re
-#from sickbeard.helpers import anon_url
+#from sickbeard.helpers import anon_url, starify
 
 #set global $title = 'Config - Notifications'
 #set global $header = 'Notifications'
@@ -139,7 +139,7 @@
 							<div class="field-pair">
 								<label for="xbmc_password">
 									<span class="component-title">XBMC password</span>
-									<input type="password" name="xbmc_password" id="xbmc_password" value="$sickbeard.XBMC_PASSWORD" class="form-control input-sm input250" />
+									<input type="password" name="xbmc_password" id="xbmc_password" value="#echo '*' * len($sickbeard.XBMC_PASSWORD)#" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -189,7 +189,7 @@
 									<label for="plex_password">
 										<span class="component-title">Server/client password</span>
 										<span class="component-desc">
-											<input type="password" name="plex_password" id="plex_password" value="$sickbeard.PLEX_PASSWORD" class="form-control input-sm input250" />
+											<input type="password" name="plex_password" id="plex_password" value="#echo '*' * len($sickbeard.PLEX_PASSWORD)#" class="form-control input-sm input250" />
 											<p>blank = no authentication</p>
 										</span>
 									</label>
@@ -641,7 +641,7 @@
 							<div class="field-pair">
 								<label for="growl_password">
 									<span class="component-title">Growl password</span>
-									<input type="password" name="growl_password" id="growl_password" value="$sickbeard.GROWL_PASSWORD" class="form-control input-sm input250" />
+									<input type="password" name="growl_password" id="growl_password" value="#echo '*' * len($sickbeard.GROWL_PASSWORD)#" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -709,7 +709,7 @@
 							<div class="field-pair">
 								<label for="prowl_api">
 									<span class="component-title">Prowl API key:</span>
-									<input type="text" name="prowl_api" id="prowl_api" value="$sickbeard.PROWL_API" class="form-control input-sm input250" />
+									<input type="text" name="prowl_api" id="prowl_api" value="<%= starify(sickbeard.PROWL_API) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -843,7 +843,7 @@
 							<div class="field-pair">
 								<label for="pushover_userkey">
 									<span class="component-title">Pushover key</span>
-									<input type="text" name="pushover_userkey" id="pushover_userkey" value="$sickbeard.PUSHOVER_USERKEY" class="form-control input-sm input250" />
+									<input type="text" name="pushover_userkey" id="pushover_userkey" value="<%= starify(sickbeard.PUSHOVER_USERKEY) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -853,7 +853,7 @@
 							<div class="field-pair">
 								<label for="pushover_apikey">
 									<span class="component-title">Pushover API key</span>
-									<input type="text" name="pushover_apikey" id="pushover_apikey" value="$sickbeard.PUSHOVER_APIKEY" class="form-control input-sm input250" />
+									<input type="text" name="pushover_apikey" id="pushover_apikey" value="<%= starify(sickbeard.PUSHOVER_APIKEY) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -916,7 +916,7 @@
 							<div class="field-pair">
 								<label for="boxcar2_accesstoken">
 									<span class="component-title">Boxcar2 access token</span>
-									<input type="text" name="boxcar2_accesstoken" id="boxcar2_accesstoken" value="$sickbeard.BOXCAR2_ACCESSTOKEN" class="form-control input-sm input250" />
+									<input type="text" name="boxcar2_accesstoken" id="boxcar2_accesstoken" value="<%= starify(sickbeard.BOXCAR2_ACCESSTOKEN) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1020,7 +1020,7 @@
 							<div class="field-pair">
 								<label for="nma_api">
 									   <span class="component-title">NMA API key:</span>
-									<input type="text" name="nma_api" id="nma_api" value="$sickbeard.NMA_API" class="form-control input-sm input350" />
+									<input type="text" name="nma_api" id="nma_api" value="<%= starify(sickbeard.NMA_API) %>" class="form-control input-sm input350" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1099,7 +1099,7 @@
 							<div class="field-pair">
 								<label for="pushalot_authorizationtoken">
 									<span class="component-title">Pushalot authorization token</span>
-									<input type="text" name="pushalot_authorizationtoken" id="pushalot_authorizationtoken" value="$sickbeard.PUSHALOT_AUTHORIZATIONTOKEN" class="form-control input-sm input350" />
+									<input type="text" name="pushalot_authorizationtoken" id="pushalot_authorizationtoken" value="<%= starify(sickbeard.PUSHALOT_AUTHORIZATIONTOKEN) %>" class="form-control input-sm input350" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1162,7 +1162,7 @@
 							<div class="field-pair">
 								<label for="pushbullet_access_token">
 									<span class="component-title">Pushbullet access token</span>
-									<input type="text" name="pushbullet_access_token" id="pushbullet_access_token" value="$sickbeard.PUSHBULLET_ACCESS_TOKEN" class="form-control input-sm input250" />
+									<input type="text" name="pushbullet_access_token" id="pushbullet_access_token" value="<%= starify(sickbeard.PUSHBULLET_ACCESS_TOKEN) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1308,7 +1308,7 @@
 							<div class="field-pair">
 								<label for="trakt_password">
 									<span class="component-title">Trakt password</span>
-									<input type="password" name="trakt_password" id="trakt_password" value="$sickbeard.TRAKT_PASSWORD" class="form-control input-sm input250" />
+									<input type="password" name="trakt_password" id="trakt_password" value="#echo '*' * len($sickbeard.TRAKT_PASSWORD)#" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1318,7 +1318,7 @@
 							<div class="field-pair">
 								<label for="trakt_api">
 									<span class="component-title">Trakt API key:</span>
-									<input type="text" name="trakt_api" id="trakt_api" value="$sickbeard.TRAKT_API" class="form-control input-sm input250" />
+									<input type="text" name="trakt_api" id="trakt_api" value="<%= starify(sickbeard.TRAKT_API) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1502,7 +1502,7 @@
 							<div class="field-pair">
 								<label for="email_password">
 									<span class="component-title">SMTP password</span>
-									<input type="password" name="email_password" id="email_password" value="$sickbeard.EMAIL_PASSWORD" class="form-control input-sm input250" />
+									<input type="password" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>

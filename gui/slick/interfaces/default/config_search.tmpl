@@ -1,5 +1,7 @@
 #import sickbeard
 #from sickbeard import clients
+#from sickbeard.helpers import starify
+
 #set global $title = 'Config - Episode Search'
 #set global $header = 'Search Settings'
 
@@ -214,7 +216,7 @@
 								<label>
 									<span class="component-title">SABnzbd password</span>
 									<span class="component-desc">
-										<input type="password" name="sab_password" id="sab_password" value="$sickbeard.SAB_PASSWORD" class="form-control input-sm input200" />
+										<input type="password" name="sab_password" id="sab_password" value="#echo '*' * len($sickbeard.SAB_PASSWORD)#" class="form-control input-sm input200" />
 										<p>(blank for none)</p>
 									</span>
 								</label>
@@ -224,7 +226,7 @@
 								<label>
 									<span class="component-title">SABnzbd API key</span>
 									<span class="component-desc">
-										<input type="text" name="sab_apikey" id="sab_apikey" value="$sickbeard.SAB_APIKEY" class="form-control input-sm input350" />
+										<input type="text" name="sab_apikey" id="sab_apikey" value="<%= starify(sickbeard.SAB_APIKEY) %>" class="form-control input-sm input350" />
 										<div class="clear-left"><p>locate at... SABnzbd Config -> General -> API Key</p></div>
 									</span>
 								</label>
@@ -278,7 +280,7 @@
 								<label>
 									<span class="component-title">NZBget password</span>
 									<span class="component-desc">
-										<input type="password" name="nzbget_password" id="nzbget_password" value="$sickbeard.NZBGET_PASSWORD" class="form-control input-sm input200" />
+										<input type="password" name="nzbget_password" id="nzbget_password" value="#echo '*' * len($sickbeard.NZBGET_PASSWORD)#" class="form-control input-sm input200" />
 										<p>locate in nzbget.conf (default:tegbzn6789)</p>
 									</span>
 								</label>
@@ -431,7 +433,7 @@
 								<label>
 									<span class="component-title" id="password_title">Client password</span>
 									<span class="component-desc">
-										<input type="password" name="torrent_password" id="torrent_password" value="$sickbeard.TORRENT_PASSWORD" class="form-control input-sm input200" />
+										<input type="password" name="torrent_password" id="torrent_password" value="#echo '*' * len($sickbeard.TORRENT_PASSWORD)#" class="form-control input-sm input200" />
 										<p>(blank for none)</p>
 									</span>
 								</label>
