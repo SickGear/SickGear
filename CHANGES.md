@@ -6,6 +6,7 @@
 * Add text to explain params passed to extra scripts on Config/Post Processing
 * Remove unused SickBeardURLOpener and AuthURLOpener classes
 * Update Pushbullet notifier (port from midgetspy/sickbeard)
+* Change startup code cleanup and PEP8
 
 [develop changelog]
 
