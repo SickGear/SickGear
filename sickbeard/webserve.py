@@ -557,7 +557,14 @@ class Home(MainHandler):
         return epObj
 
     def index(self, *args, **kwargs):
+        if 'episodes' == sickbeard.DEFAULT_HOME:
+            self.redirect('/episodeView/')
+        elif 'history' == sickbeard.DEFAULT_HOME:
+            self.redirect('/history/')
+        else:
+            self.redirect('/home/showlistView/')
 
+    def showlistView(self):
         t = PageTemplate(headers=self.request.headers, file='home.tmpl')
         if sickbeard.ANIME_SPLIT_HOME:
             shows = []
@@ -3288,7 +3295,7 @@ class ConfigGeneral(Config):
                     handle_reverse_proxy=None, home_search_focus=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
-                    indexer_timeout=None, rootDir=None, theme_name=None):
+                    indexer_timeout=None, rootDir=None, theme_name=None, default_home=None):
 
         results = []
 
@@ -3362,6 +3369,7 @@ class ConfigGeneral(Config):
         sickbeard.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
 
         sickbeard.THEME_NAME = theme_name
+        sickbeard.DEFAULT_HOME = default_home
 
         sickbeard.save_config()
 
