@@ -56,6 +56,25 @@ $(document).ready(function(){
 			});
 	});
 
+	$('#testKODI').click(function () {
+		var kodi_host = $.trim($('#kodi_host').val());
+		var kodi_username = $.trim($('#kodi_username').val());
+		var kodi_password = $.trim($('#kodi_password').val());
+		if (!kodi_host) {
+			$('#testKODI-result').html('Please fill out the necessary fields above.');
+			$('#kodi_host').addClass('warning');
+			return;
+		}
+		$('#kodi_host').removeClass('warning');
+		$(this).prop('disabled', true);
+		$('#testKODI-result').html(loading);
+		$.get(sbRoot + '/home/testKODI', {'host': kodi_host, 'username': kodi_username, 'password': kodi_password})
+			.done(function (data) {
+				$('#testKODI-result').html(data);
+				$('#testKODI').prop('disabled', false);
+			});
+	});
+
 	$('#testPMC').click(function () {
 		var plex_host = $.trim($('#plex_host').val());
 		var plex_username = $.trim($('#plex_username').val());

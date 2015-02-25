@@ -162,6 +162,7 @@ METADATA_PS3 = None
 METADATA_WDTV = None
 METADATA_TIVO = None
 METADATA_MEDE8ER = None
+METADATA_KODI = None
 
 QUALITY_DEFAULT = None
 STATUS_DEFAULT = None
@@ -279,6 +280,18 @@ XBMC_UPDATE_ONLYFIRST = False
 XBMC_HOST = ''
 XBMC_USERNAME = None
 XBMC_PASSWORD = None
+
+USE_KODI = False
+KODI_ALWAYS_ON = True
+KODI_NOTIFY_ONSNATCH = False
+KODI_NOTIFY_ONDOWNLOAD = False
+KODI_NOTIFY_ONSUBTITLEDOWNLOAD = False
+KODI_UPDATE_LIBRARY = False
+KODI_UPDATE_FULL = False
+KODI_UPDATE_ONLYFIRST = False
+KODI_HOST = ''
+KODI_USERNAME = None
+KODI_PASSWORD = None
 
 USE_PLEX = False
 PLEX_NOTIFY_ONSNATCH = False
@@ -471,6 +484,7 @@ def initialize(consoleLogging=True):
             TORRENT_USERNAME, TORRENT_PASSWORD, TORRENT_HOST, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_LABEL, TORRENT_VERIFY_CERT, \
             USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, \
             XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, BACKLOG_FREQUENCY, \
+            USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
             USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_API, TRAKT_REMOVE_WATCHLIST, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
@@ -495,7 +509,7 @@ def initialize(consoleLogging=True):
             USE_LIBNOTIFY, LIBNOTIFY_NOTIFY_ONSNATCH, LIBNOTIFY_NOTIFY_ONDOWNLOAD, LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD, USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, USE_SYNOINDEX, \
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_EMAIL, EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_LIST, \
-            USE_LISTVIEW, METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, metadata_provider_dict, \
+            USE_LISTVIEW, METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, METADATA_KODI, metadata_provider_dict, \
             NEWZBIN, NEWZBIN_USERNAME, NEWZBIN_PASSWORD, GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, recentSearchScheduler, NFO_RENAME, \
             GUI_NAME, DEFAULT_HOME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, EPISODE_VIEW_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
             POSTER_SORTBY, POSTER_SORTDIR, \
@@ -516,6 +530,7 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'SABnzbd')
         CheckSection(CFG, 'NZBget')
         CheckSection(CFG, 'XBMC')
+        CheckSection(CFG, 'Kodi')
         CheckSection(CFG, 'PLEX')
         CheckSection(CFG, 'Growl')
         CheckSection(CFG, 'Prowl')
@@ -761,6 +776,18 @@ def initialize(consoleLogging=True):
         XBMC_USERNAME = check_setting_str(CFG, 'XBMC', 'xbmc_username', '')
         XBMC_PASSWORD = check_setting_str(CFG, 'XBMC', 'xbmc_password', '')
 
+        USE_KODI = bool(check_setting_int(CFG, 'Kodi', 'use_kodi', 0))
+        KODI_ALWAYS_ON = bool(check_setting_int(CFG, 'Kodi', 'kodi_always_on', 1))
+        KODI_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Kodi', 'kodi_notify_onsnatch', 0))
+        KODI_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Kodi', 'kodi_notify_ondownload', 0))
+        KODI_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Kodi', 'kodi_notify_onsubtitledownload', 0))
+        KODI_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_library', 0))
+        KODI_UPDATE_FULL = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_full', 0))
+        KODI_UPDATE_ONLYFIRST = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_onlyfirst', 0))
+        KODI_HOST = check_setting_str(CFG, 'Kodi', 'kodi_host', '')
+        KODI_USERNAME = check_setting_str(CFG, 'Kodi', 'kodi_username', '')
+        KODI_PASSWORD = check_setting_str(CFG, 'Kodi', 'kodi_password', '')
+
         USE_PLEX = bool(check_setting_int(CFG, 'Plex', 'use_plex', 0))
         PLEX_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Plex', 'plex_notify_onsnatch', 0))
         PLEX_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Plex', 'plex_notify_ondownload', 0))
@@ -936,6 +963,7 @@ def initialize(consoleLogging=True):
         METADATA_WDTV = check_setting_str(CFG, 'General', 'metadata_wdtv', '0|0|0|0|0|0|0|0|0|0')
         METADATA_TIVO = check_setting_str(CFG, 'General', 'metadata_tivo', '0|0|0|0|0|0|0|0|0|0')
         METADATA_MEDE8ER = check_setting_str(CFG, 'General', 'metadata_mede8er', '0|0|0|0|0|0|0|0|0|0')
+        METADATA_KODI = check_setting_str(CFG, 'General', 'metadata_kodi', '0|0|0|0|0|0|0|0|0|0')
 
         HOME_LAYOUT = check_setting_str(CFG, 'GUI', 'home_layout', 'poster')
         HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
@@ -1090,6 +1118,7 @@ def initialize(consoleLogging=True):
                                    (METADATA_WDTV, metadata.wdtv),
                                    (METADATA_TIVO, metadata.tivo),
                                    (METADATA_MEDE8ER, metadata.mede8er),
+                                   (METADATA_KODI, metadata.kodi),
         ]:
             (cur_metadata_config, cur_metadata_class) = cur_metadata_tuple
             tmp_provider = cur_metadata_class.metadata_class()
@@ -1440,6 +1469,7 @@ def save_config():
     new_config['General']['metadata_wdtv'] = METADATA_WDTV
     new_config['General']['metadata_tivo'] = METADATA_TIVO
     new_config['General']['metadata_mede8er'] = METADATA_MEDE8ER
+    new_config['General']['metadata_kodi'] = METADATA_KODI
 
     new_config['General']['backlog_days'] = int(BACKLOG_DAYS)
 
@@ -1601,6 +1631,19 @@ def save_config():
     new_config['XBMC']['xbmc_host'] = XBMC_HOST
     new_config['XBMC']['xbmc_username'] = XBMC_USERNAME
     new_config['XBMC']['xbmc_password'] = helpers.encrypt(XBMC_PASSWORD, ENCRYPTION_VERSION)
+
+    new_config['Kodi'] = {}
+    new_config['Kodi']['use_kodi'] = int(USE_KODI)
+    new_config['Kodi']['kodi_always_on'] = int(KODI_ALWAYS_ON)
+    new_config['Kodi']['kodi_notify_onsnatch'] = int(KODI_NOTIFY_ONSNATCH)
+    new_config['Kodi']['kodi_notify_ondownload'] = int(KODI_NOTIFY_ONDOWNLOAD)
+    new_config['Kodi']['kodi_notify_onsubtitledownload'] = int(KODI_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Kodi']['kodi_update_library'] = int(KODI_UPDATE_LIBRARY)
+    new_config['Kodi']['kodi_update_full'] = int(KODI_UPDATE_FULL)
+    new_config['Kodi']['kodi_update_onlyfirst'] = int(KODI_UPDATE_ONLYFIRST)
+    new_config['Kodi']['kodi_host'] = KODI_HOST
+    new_config['Kodi']['kodi_username'] = KODI_USERNAME
+    new_config['Kodi']['kodi_password'] = helpers.encrypt(KODI_PASSWORD, ENCRYPTION_VERSION)
 
     new_config['Plex'] = {}
     new_config['Plex']['use_plex'] = int(USE_PLEX)
