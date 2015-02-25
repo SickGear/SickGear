@@ -1050,7 +1050,7 @@ class Home(MainHandler):
                                   showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
                 t.submenu.append({'title': 'Update show in Kodi',
                                   'path': 'home/updateKODI?showName=%s' % urllib.quote_plus(
-                                  showObj.name.encode('utf-8')), 'requires': haveKODI})
+                                  showObj.name.encode('utf-8')), 'requires': self.haveKODI})
                 t.submenu.append({'title': 'Preview Rename', 'path': 'home/testRename?show=%d' % showObj.indexerid})
                 if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
                         showObj) and showObj.subtitles:
@@ -1443,7 +1443,7 @@ class Home(MainHandler):
             ui.notifications.message('Library update command sent to Kodi host(s): ' + host)
         else:
             ui.notifications.error('Unable to contact one or more Kodi host(s): ' + host)
-        redirect('/home/')
+        self.redirect('/home/')
 
     def updatePLEX(self, *args, **kwargs):
         result = notifiers.plex_notifier.update_library()
