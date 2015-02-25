@@ -9,6 +9,7 @@
 * Change startup code cleanup and PEP8
 * Change authentication credentials to display more securely on config pages
 * Add a "Use as default home page" selector to General Config/Interface/User Interface
+* Add priority, device, and sound support to Pushover notifier (port from midgetspy/sickbeard)
 
 [develop changelog]
 

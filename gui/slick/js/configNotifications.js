@@ -113,8 +113,11 @@ $(document).ready(function(){
 	});
 
 	$('#testPushover').click(function () {
-		var pushover_userkey = $('#pushover_userkey').val();
-		var pushover_apikey = $('#pushover_apikey').val();
+		var pushover_userkey = $.trim($('#pushover_userkey').val());
+		var pushover_apikey = $.trim($('#pushover_apikey').val());
+		var pushover_priority = $("#pushover_priority").val();
+		var pushover_device = $("#pushover_device").val();
+		var pushover_sound = $("#pushover_sound").val();
 		if (!pushover_userkey || !pushover_apikey) {
 			$('#testPushover-result').html('Please fill out the necessary fields above.');
 			if (!pushover_userkey) {
@@ -132,12 +135,70 @@ $(document).ready(function(){
 		$('#pushover_userkey,#pushover_apikey').removeClass('warning');
 		$(this).prop('disabled', true);
 		$('#testPushover-result').html(loading);
-		$.get(sbRoot + '/home/testPushover', {'userKey': pushover_userkey, 'apiKey': pushover_apikey})
+		$.get(sbRoot + '/home/testPushover', {'userKey': pushover_userkey, 'apiKey': pushover_apikey, 'priority': pushover_priority, 'device': pushover_device, 'sound': pushover_sound})
 			.done(function (data) {
 				$('#testPushover-result').html(data);
 				$('#testPushover').prop('disabled', false);
 			});
 	});
+
+	function get_pushover_devices (msg) {
+		var pushover_userkey = $.trim($('#pushover_userkey').val());
+		var pushover_apikey = $.trim($('#pushover_apikey').val());
+		if (!pushover_userkey || !pushover_apikey) {
+			$('#testPushover-result').html('Please fill out the necessary fields above.');
+			if (!pushover_userkey) {
+				$('#pushover_userkey').addClass('warning');
+			} else {
+				$('#pushover_userkey').removeClass('warning');
+			}
+			if (!pushover_apikey) {
+				$('#pushover_apikey').addClass('warning');
+			} else {
+				$('#pushover_apikey').removeClass('warning');
+			}
+			return;
+		}
+		$(this).prop('disabled', true);
+		if (msg) {
+			$('#testPushover-result').html(loading);
+		}
+		var current_pushover_device = $('#pushover_device').val();
+		$.get(sbRoot + "/home/getPushoverDevices", {'userKey': pushover_userkey, 'apiKey': pushover_apikey})
+			.done(function (data) {
+				var devices = jQuery.parseJSON(data || '{}').devices;
+				$('#pushover_device_list').html('');
+				// add default option to send to all devices
+				$('#pushover_device_list').append('<option value="all" selected="selected">-- All Devices --</option>');
+				if (devices) {
+					for (var i = 0; i < devices.length; i++) {
+						// if a device in the list matches our current iden, select it
+						if (current_pushover_device == devices[i]) {
+							$('#pushover_device_list').append('<option value="' + devices[i] + '" selected="selected">' + devices[i] + '</option>');
+						} else {
+							$('#pushover_device_list').append('<option value="' + devices[i] + '">' + devices[i] + '</option>');
+						}
+					}
+				}
+				$('#getPushoverDevices').prop('disabled', false);
+				if (msg) {
+					$('#testPushover-result').html(msg);
+				}
+			});
+
+		$('#pushover_device_list').change(function () {
+			$('#pushover_device').val($('#pushover_device_list').val());
+			$('#testPushover-result').html('Don\'t forget to save your new Pushover settings.');
+		});
+	}
+
+	$('#getPushoverDevices').click(function () {
+		get_pushover_devices('Device list updated. Select specific device to use.');
+	});
+
+	if ($('#use_pushover').prop('checked')) {
+		get_pushover_devices();
+	}
 
 	$('#testLibnotify').click(function() {
 		$('#testLibnotify-result').html(loading);

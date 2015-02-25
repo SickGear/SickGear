@@ -857,11 +857,76 @@
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
-									<span class="component-desc"><a href="<%= anon_url('https://pushover.net/apps/clone/SickGear') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</span>
+									<span class="component-desc"><a href="<%= anon_url('https://pushover.net/apps/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover_priority">
+									<span class="component-title">Pushover priority:</span>
+									<select id="pushover_priority" name="pushover_priority" class="form-control input-sm">
+										<option value="-2" #if $sickbeard.PUSHOVER_PRIORITY == -2 then 'selected="selected"' else ""#>Lowest</option>
+										<option value="-1" #if $sickbeard.PUSHOVER_PRIORITY == -1 then 'selected="selected"' else ""#>Low</option>
+										<option value="0" #if $sickbeard.PUSHOVER_PRIORITY == 0 then 'selected="selected"' else ""#>Normal</option>
+										<option value="1" #if $sickbeard.PUSHOVER_PRIORITY == 1 then 'selected="selected"' else ""#>High</option>
+									</select>
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">priority of Pushover messages from SickGear.</span>
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">overview: <a href="<%= anon_url('https://pushover.net/api#priority') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://pushover.net/api#priority</a></span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover_device">
+									<span class="component-title">Pushover device</span>
+									<input type="hidden" name="pushover_device" id="pushover_device" value="$sickbeard.PUSHOVER_DEVICE" size="35" />
+									<select id="pushover_device_list" name="pushover_device_list" class="pull-left form-control input-sm" style="margin-right: 5px;">
+									</select>
+									<input type="button" class="btn btn-inline" value="Refresh Devices" id="getPushoverDevices" />
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">which device do you want to push to?</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover_sound">
+									<span class="component-title">Pushover sound</span>
+									<select id="pushover_sound" name="pushover_sound" class="form-control input-sm">
+										<option value="pushover" #if $sickbeard.PUSHOVER_SOUND == "pushover" then 'selected="selected"' else ""#>Pushover (default)</option>
+										<option value="bike" #if $sickbeard.PUSHOVER_SOUND == "bike" then 'selected="selected"' else ""#>Bike</option>
+										<option value="bugle" #if $sickbeard.PUSHOVER_SOUND == "bugle" then 'selected="selected"' else ""#>Bugle</option>
+										<option value="cashregister" #if $sickbeard.PUSHOVER_SOUND == "cashregister" then 'selected="selected"' else ""#>Cash Register</option>
+										<option value="classical" #if $sickbeard.PUSHOVER_SOUND == "classical" then 'selected="selected"' else ""#>Classical</option>
+										<option value="cosmic" #if $sickbeard.PUSHOVER_SOUND == "cosmic" then 'selected="selected"' else ""#>Cosmic</option>
+										<option value="falling" #if $sickbeard.PUSHOVER_SOUND == "falling" then 'selected="selected"' else ""#>Falling</option>
+										<option value="gamelan" #if $sickbeard.PUSHOVER_SOUND == "gamelan" then 'selected="selected"' else ""#>Gamelan</option>
+										<option value="incoming" #if $sickbeard.PUSHOVER_SOUND == "incoming" then 'selected="selected"' else ""#>Incoming</option>
+										<option value="intermission" #if $sickbeard.PUSHOVER_SOUND == "intermission" then 'selected="selected"' else ""#>Intermission</option>
+										<option value="magic" #if $sickbeard.PUSHOVER_SOUND == "magic" then 'selected="selected"' else ""#>Magic</option>
+										<option value="mechanical" #if $sickbeard.PUSHOVER_SOUND == "mechanical" then 'selected="selected"' else ""#>Mechanical</option>
+										<option value="pianobar" #if $sickbeard.PUSHOVER_SOUND == "pianobar" then 'selected="selected"' else ""#>Piano Bar</option>
+										<option value="siren" #if $sickbeard.PUSHOVER_SOUND == "siren" then 'selected="selected"' else ""#>Siren</option>
+										<option value="spacealarm" #if $sickbeard.PUSHOVER_SOUND == "spacealarm" then 'selected="selected"' else ""#>Space Alarm</option>
+										<option value="tugboat" #if $sickbeard.PUSHOVER_SOUND == "tugboat" then 'selected="selected"' else ""#>Tug Boat</option>
+										<option value="alien" #if $sickbeard.PUSHOVER_SOUND == "alien" then 'selected="selected"' else ""#>Alien Alarm (long)</option>
+										<option value="climb" #if $sickbeard.PUSHOVER_SOUND == "climb" then 'selected="selected"' else ""#>Climb (long)</option>
+										<option value="persistent" #if $sickbeard.PUSHOVER_SOUND == "persistent" then 'selected="selected"' else ""#>Persistent (long)</option>
+										<option value="echo" #if $sickbeard.PUSHOVER_SOUND == "echo" then 'selected="selected"' else ""#>Pushover Echo (long)</option>
+										<option value="updown" #if $sickbeard.PUSHOVER_SOUND == "updown" then 'selected="selected"' else ""#>Up Down (long)</option>
+										<option value="none" #if $sickbeard.PUSHOVER_SOUND == "none" then 'selected="selected"' else ""#>None (silent)</option>
+									</select>
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">select one of the predefined sounds for your notifications</span>
 								</label>
 							</div>
 							<div class="testNotification" id="testPushover-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Pushover" id="testPushover" />
+							<input class="btn" type="button" value="Test Pushover" id="testPushover" />
 							<input type="submit" class="config_submitter btn" value="Save Changes" />
 						</div><!-- /content_use_pushover //-->
 
