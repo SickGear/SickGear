@@ -226,6 +226,19 @@
 						</div>
 
 						<div class="field-pair">
+							<label for="default_home">
+								<span class="component-title">Use as default home page:</span>
+								<span class="component-desc">
+									<select id="default_home" name="default_home" class="form-control input-sm">
+										<option value="shows" #if $sickbeard.DEFAULT_HOME == 'shows' then 'selected="selected"' else ''#>Shows</option>
+										<option value="episodes" #if $sickbeard.DEFAULT_HOME == 'episodes' then 'selected="selected"' else ''#>Episodes</option>
+										<option value="history" #if $sickbeard.DEFAULT_HOME == 'history' then 'selected="selected"' else ''#>History</option>
+									</select>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
 							<label for="home_search_focus">
 								<span class="component-title">Give show list search focus</span>
 								<span class="component-desc">
