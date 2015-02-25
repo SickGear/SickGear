@@ -14,6 +14,9 @@
 * Fix updating of pull requests
 * Add hidden cache debug page
 * Change autoProcessTV scripts python code quotes from " -> '
+* Add expand all button to Episode Status Management
+* Add Unknown status query to Episode Status Management
+
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
