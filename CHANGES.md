@@ -13,7 +13,7 @@
 * Add priority, device, and sound support to Pushover notifier (port from midgetspy/sickbeard)
 
 [develop changelog]
-
+* Fix traceback error when using the menu item Manage/Update Kodi
 
 ### 0.7.0 (2015-02-23 11:02:00 UTC)
 
