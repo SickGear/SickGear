@@ -47,6 +47,7 @@ $(document).ready(function() {
 				});
 			});
 		$(this).hide();
+		($('.get_more_eps:visible').length == 0 ? $('.expandAll').hide() : '');
 	});
 
 	$('.expandAll').click(function() {
