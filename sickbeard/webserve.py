@@ -662,7 +662,7 @@ class Home(MainHandler):
         else:
             return 'Error sending Boxcar2 notification'
 
-    def testPushover(self, userKey=None, apiKey=None):
+    def testPushover(self, userKey=None, apiKey=None, priority=None, device=None, sound=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         if None is not userKey and starify(userKey, True):
@@ -671,11 +671,26 @@ class Home(MainHandler):
         if None is not apiKey and starify(apiKey, True):
             apiKey = sickbeard.PUSHOVER_APIKEY
 
-        result = notifiers.pushover_notifier.test_notify(userKey, apiKey)
+        result = notifiers.pushover_notifier.test_notify(userKey, apiKey, priority, device, sound)
         if result:
             return 'Pushover notification succeeded. Check your Pushover clients to make sure it worked'
         else:
             return 'Error sending Pushover notification'
+
+    def getPushoverDevices(self, userKey=None, apiKey=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not userKey and starify(userKey, True):
+            userKey = sickbeard.PUSHOVER_USERKEY
+
+        if None is not apiKey and starify(apiKey, True):
+            apiKey = sickbeard.PUSHOVER_APIKEY
+
+        result = notifiers.pushover_notifier.get_devices(userKey, apiKey)
+        if result:
+            return result
+        else:
+            return "{}"
 
     def twitterStep1(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -4176,6 +4191,7 @@ class ConfigNotifications(Config):
                           boxcar2_notify_onsubtitledownload=None, boxcar2_accesstoken=None, boxcar2_sound=None,
                           use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None,
                           pushover_notify_onsubtitledownload=None, pushover_userkey=None, pushover_apikey=None,
+                          pushover_priority=None, pushover_device=None, pushover_sound=None, pushover_device_list=None,
                           use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
                           libnotify_notify_onsubtitledownload=None,
                           use_nmj=None, nmj_host=None, nmj_database=None, nmj_mount=None, use_synoindex=None,
@@ -4281,6 +4297,9 @@ class ConfigNotifications(Config):
         key = pushover_apikey.strip()
         if not starify(key, True):
             sickbeard.PUSHOVER_APIKEY = key
+        sickbeard.PUSHOVER_PRIORITY = pushover_priority
+        sickbeard.PUSHOVER_DEVICE = pushover_device
+        sickbeard.PUSHOVER_SOUND = pushover_sound
 
         sickbeard.USE_LIBNOTIFY = config.checkbox_to_value(use_libnotify)
         sickbeard.LIBNOTIFY_NOTIFY_ONSNATCH = config.checkbox_to_value(libnotify_notify_onsnatch)

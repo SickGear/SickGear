@@ -10,6 +10,7 @@
 * Change authentication credentials to display more securely on config pages
 * Add a "Use as default home page" selector to General Config/Interface/User Interface
 * Add Kodi notifier and metadata
+* Add priority, device, and sound support to Pushover notifier (port from midgetspy/sickbeard)
 
 [develop changelog]
 
