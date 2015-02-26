@@ -116,7 +116,7 @@ class BaseHandler(RequestHandler):
 
     def get_current_user(self, *args, **kwargs):
         if sickbeard.WEB_USERNAME or sickbeard.WEB_PASSWORD:
-            return self.get_secure_cookie('user')
+            return self.get_secure_cookie('sickgear-session')
         else:
             return True
 
@@ -157,7 +157,7 @@ class BaseHandler(RequestHandler):
 
 class LogoutHandler(BaseHandler):
     def get(self, *args, **kwargs):
-        self.clear_cookie('user')
+        self.clear_cookie('sickgear-session')
         self.redirect('/login/')
 
 
@@ -179,7 +179,7 @@ class LoginHandler(BaseHandler):
                 and (self.get_argument('password') == password or not password):
 
             remember_me = int(self.get_argument('remember_me', default=0) or 0)
-            self.set_secure_cookie('user', sickbeard.COOKIE_SECRET, expires_days=30 if remember_me > 0 else None)
+            self.set_secure_cookie('sickgear-session', sickbeard.COOKIE_SECRET, expires_days=30 if remember_me > 0 else None)
 
             self.redirect(self.get_argument('next', '/home/'))
         else:
@@ -1528,8 +1528,16 @@ class ConfigGeneral(MainHandler):
         sickbeard.WEB_IPV6 = config.checkbox_to_value(web_ipv6)
         # sickbeard.WEB_LOG is set in config.change_LOG_DIR()
         sickbeard.ENCRYPTION_VERSION = config.checkbox_to_value(encryption_version)
-        sickbeard.WEB_USERNAME = web_username
-        sickbeard.WEB_PASSWORD = web_password
+
+        reload_page = False
+
+        if sickbeard.WEB_USERNAME != web_username:
+            sickbeard.WEB_USERNAME = web_username
+            reload_page = True
+
+        if sickbeard.WEB_PASSWORD != web_password:
+            sickbeard.WEB_PASSWORD = web_password
+            reload_page = True
 
         sickbeard.FUZZY_DATING = config.checkbox_to_value(fuzzy_dating)
         sickbeard.TRIM_ZERO = config.checkbox_to_value(trim_zero)
@@ -1580,7 +1588,9 @@ class ConfigGeneral(MainHandler):
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
-        redirect("/config/general/")
+        if reload_page:
+            self.clear_cookie('sickgear-session')
+            self.write('reload')
 
 
 class ConfigSearch(MainHandler):
