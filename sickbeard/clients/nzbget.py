@@ -31,7 +31,7 @@ from sickbeard.providers.generic import GenericProvider
 
 from sickbeard import logger, helpers
 
-from common import Quality
+from sickbeard.common import Quality
 
 
 def sendNZB(nzb, proper=False):

@@ -11,6 +11,7 @@
 * Add a "Use as default home page" selector to General Config/Interface/User Interface
 * Add Kodi notifier and metadata
 * Add priority, device, and sound support to Pushover notifier (port from midgetspy/sickbeard)
+* Change folder for sab and nzbget python modules
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
