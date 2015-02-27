@@ -1782,6 +1782,31 @@ h2.day, h2.network {
 }
 
 /* =======================================================================
+cache.tmpl
+========================================================================== */
+
+#cacheTable {
+	text-align: center;
+}
+
+th.col-name-cache,
+td.col-name-cache {
+	text-align: left;
+}
+
+th.col-episodes,
+td.col-episodes {
+	max-width: 250px;
+	word-wrap: break-word;
+}
+
+th.col-cache,
+td.col-cache {
+	width: 20px;
+}
+
+
+/* =======================================================================
 config*.tmpl
 ========================================================================== */
 
