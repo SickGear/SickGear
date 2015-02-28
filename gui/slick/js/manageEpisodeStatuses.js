@@ -16,12 +16,10 @@ $(document).ready(function() {
 	}
 
 	$('.go').click(function() {
-		var selected;
-
-		if (selected = (0 === $('input[class*="-epcheck"]:checked').length))
-			alert('Please select at least one episode');
-
-		return !selected
+		if ($('input[class*="-epcheck"]:checked').length === 0 && $('input[id*="allCheck-"]:checked').length === 0) {
+			alert('Please select at least one Show or Episode');
+			return false
+		}
 	});
 
 	$('.allCheck').click(function(){

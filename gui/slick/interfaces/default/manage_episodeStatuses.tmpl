@@ -41,7 +41,7 @@
 <h3>${len($sorted_show_ids)} Shows containing <span class="grey-text">$common.statusStrings[$int($whichStatus)]</span> episodes</h3>
 
 #if $whichStatus in ($common.ARCHIVED, $common.IGNORED, $common.SNATCHED):
-    #set $row_class = "good"
+    #set $row_class = 'good'
 #else
     #set $row_class = $common.Overview.overviewStrings[$whichStatus]
 #end if
