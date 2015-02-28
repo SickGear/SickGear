@@ -9,6 +9,7 @@
 * Change startup code cleanup and PEP8
 * Change authentication credentials to display more securely on config pages
 * Add a "Use as default home page" selector to General Config/Interface/User Interface
+* Change to improve the integrity of the already post processed video checker
 * Add Kodi notifier and metadata
 * Add priority, device, and sound support to Pushover notifier (port from midgetspy/sickbeard)
 * Fix updating of pull requests
