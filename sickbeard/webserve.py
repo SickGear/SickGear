@@ -355,7 +355,7 @@ class MainHandler(WebHandler):
 
         sickbeard.HOME_LAYOUT = layout
 
-        self.redirect('/home/')
+        self.redirect('/home/showlistView/')
 
     def setPosterSortBy(self, sort):
 
