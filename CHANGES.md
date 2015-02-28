@@ -17,6 +17,7 @@
 * Add expand all button to Episode Status Management
 * Add Unknown status query to Episode Status Management
 * Fix Episode Status Management error popup from coming up when show is selected without expanding
+* Change redirect from home to showlistView on changing Layout on showlistView
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
