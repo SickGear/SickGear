@@ -187,7 +187,7 @@ class BacklogSearcher:
             myDB.action("UPDATE info SET last_backlog=" + str(when))
 
 
-    def run(self, force=False):
+    def run(self):
         try:
             self.searchBacklog()
         except:
