@@ -94,8 +94,8 @@ $(document).ready(function(){
 			});
 			$('.show_update_hour_value').text($('#show_update_hour').val())
 		},
-		success: function(){
-			setTimeout('config_success()', 2000)
+		success: function(response){
+			setTimeout(function(){config_success(response)}, 2000);
 		}
 	});
 
@@ -121,7 +121,10 @@ $(document).ready(function(){
 	
 });
 
-function config_success(){
+function config_success(response){
+	if (response == 'reload'){
+		window.location.reload(true);
+	}
 	$('.config_submitter').each(function(){
 		$(this).removeAttr('disabled');
 		$(this).next().remove();
