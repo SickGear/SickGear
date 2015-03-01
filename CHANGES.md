@@ -20,11 +20,12 @@
 * Add Unknown status query to Episode Status Management
 * Fix Episode Status Management error popup from coming up when show is selected without expanding
 * Add BET network logo
-* Change redirect from home to showlistView on changing Layout on showlistView
+* Remove unused force variable from code and PEP8
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
 * Change BET network logo filename to lower case
+* Change redirect from home to showlistView on changing Layout on showlistView
 
 ### 0.7.0 (2015-02-23 11:02:00 UTC)
 

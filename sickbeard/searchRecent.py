@@ -37,7 +37,7 @@ class RecentSearcher():
         self.lock = threading.Lock()
         self.amActive = False
 
-    def run(self, force=False):
+    def run(self):
 
         self.amActive = True
 

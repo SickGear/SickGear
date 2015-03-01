@@ -39,7 +39,7 @@ class ProperFinder():
     def __init__(self):
         self.amActive = False
 
-    def run(self, force=False):
+    def run(self):
 
         if not sickbeard.DOWNLOAD_PROPERS:
             return
