@@ -17,8 +17,8 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import datetime
-import sickbeard
 
+import sickbeard
 from lib.dateutil import parser
 from sickbeard.common import Quality
 
@@ -35,7 +35,7 @@ class SearchResult:
         self.show = None
 
         # URL to the NZB/torrent file
-        self.url = ""
+        self.url = ''
 
         # used by some providers to store extra info associated with the result
         self.extraInfo = []
@@ -47,58 +47,57 @@ class SearchResult:
         self.quality = Quality.UNKNOWN
 
         # release name
-        self.name = ""
+        self.name = ''
 
         # size of the release (-1 = n/a)
         self.size = -1
 
         # release group
-        self.release_group = ""
+        self.release_group = ''
 
         # version
         self.version = -1
 
     def __str__(self):
 
-        if self.provider == None:
-            return "Invalid provider, unable to print self"
+        if self.provider is None:
+            return 'Invalid provider, unable to print self'
 
-        myString = self.provider.name + " @ " + self.url + "\n"
-        myString += "Extra Info:\n"
+        myString = '%s @ %s\n' % (self.provider.name, self.url)
+        myString += 'Extra Info:\n'
         for extra in self.extraInfo:
-            myString += "  " + extra + "\n"
-
-        myString += "Episode: " + str(self.episodes) + "\n"
-        myString += "Quality: " + Quality.qualityStrings[self.quality] + "\n"
-        myString += "Name: " + self.name + "\n"
-        myString += "Size: " + str(self.size) + "\n"
-        myString += "Release Group: " + str(self.release_group) + "\n"
+            myString += '  %s\n' % extra
+        myString += 'Episode: %s\n' % self.episodes
+        myString += 'Quality: %s\n' % Quality.qualityStrings[self.quality]
+        myString += 'Name: %s\n' % self.name
+        myString += 'Size: %s\n' % str(self.size)
+        myString += 'Release Group: %s\n' % self.release_group
 
         return myString
 
     def fileName(self):
-        return self.episodes[0].prettyName() + "." + self.resultType
+        return self.episodes[0].prettyName() + '.' + self.resultType
 
 
 class NZBSearchResult(SearchResult):
     """
     Regular NZB result with an URL to the NZB
     """
-    resultType = "nzb"
+    resultType = 'nzb'
 
 
 class NZBDataSearchResult(SearchResult):
     """
     NZB result where the actual NZB XML data is stored in the extraInfo
     """
-    resultType = "nzbdata"
+    resultType = 'nzbdata'
 
 
 class TorrentSearchResult(SearchResult):
     """
     Torrent result with an URL to the torrent
     """
-    resultType = "torrent"
+    resultType = 'torrent'
 
     # torrent hash
     content = None
@@ -138,9 +137,9 @@ class AllShowsListUI:
                         if searchterm.lower() in name.lower():
                             if 'firstaired' not in curShow:
                                 curShow['firstaired'] = str(datetime.date.fromordinal(1))
-                                curShow['firstaired'] = re.sub("([-]0{2}){1,}", "", curShow['firstaired'])
+                                curShow['firstaired'] = re.sub('([-]0{2}){1,}', '', curShow['firstaired'])
                                 fixDate = parser.parse(curShow['firstaired'], fuzzy=True).date()
-                                curShow['firstaired'] = fixDate.strftime("%Y-%m-%d")
+                                curShow['firstaired'] = fixDate.strftime('%Y-%m-%d')
 
                             if curShow not in searchResults:
                                 searchResults += [curShow]
@@ -191,8 +190,8 @@ class Proper:
         self.scene_episode = -1
 
     def __str__(self):
-        return str(self.date) + " " + self.name + " " + str(self.season) + "x" + str(self.episode) + " of " + str(
-            self.indexerid) + " from " + str(sickbeard.indexerApi(self.indexer).name)
+        return str(self.date) + ' ' + self.name + ' ' + str(self.season) + 'x' + str(self.episode) + ' of ' + str(
+            self.indexerid) + ' from ' + str(sickbeard.indexerApi(self.indexer).name)
 
 
 class ErrorViewer():
