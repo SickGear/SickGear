@@ -11,7 +11,7 @@
 # SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
@@ -22,6 +22,7 @@ import string
 from sickbeard import encodingKludge as ek
 from sickbeard import logger
 
+
 # use the built-in if it's available (python 2.6), if not use the included library
 try:
     import json
@@ -31,6 +32,7 @@ except ImportError:
 # this is for the drive letter code, it only works on windows
 if os.name == 'nt':
     from ctypes import windll
+
 
 # adapted from http://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python/827490
 def getWinDrives():
@@ -61,11 +63,11 @@ def foldersAtPath(path, includeParent=False, includeFiles=False):
         else:
             path = os.path.dirname(path)
 
-    if path == "":
+    if path == '':
         if os.name == 'nt':
             entries = [{'current_path': 'Root'}]
             for letter in getWinDrives():
-                letterPath = letter + ':\\'
+                letterPath = '%s:\\' % letter
                 entries.append({'name': letterPath, 'path': letterPath})
             return entries
         else:
@@ -77,21 +79,23 @@ def foldersAtPath(path, includeParent=False, includeFiles=False):
 
     # if we're at the root then the next step is the meta-node showing our drive letters
     if path == parentPath and os.name == 'nt':
-        parentPath = ""
+        parentPath = ''
 
     try:
-        fileList = [{'name': filename, 'path': ek.ek(os.path.join, path, filename)} for filename in ek.ek(os.listdir, path)]
+        fileList = [{'name': filename, 'path': ek.ek(os.path.join, path, filename)} for filename in
+                    ek.ek(os.listdir, path)]
     except OSError, e:
-        logger.log(u"Unable to open " + path + ": " + repr(e) + " / " + str(e), logger.WARNING)
-        fileList = [{'name': filename, 'path': ek.ek(os.path.join, parentPath, filename)} for filename in ek.ek(os.listdir, parentPath)]
+        logger.log(u'Unable to open %s: %r / %s' % (path, e, e), logger.WARNING)
+        fileList = [{'name': filename, 'path': ek.ek(os.path.join, parentPath, filename)} for filename in
+                    ek.ek(os.listdir, parentPath)]
 
     if not includeFiles:
         fileList = filter(lambda entry: ek.ek(os.path.isdir, entry['path']), fileList)
 
     # prune out directories to proect the user from doing stupid things (already lower case the dir to reduce calls)
-    hideList = ["boot", "bootmgr", "cache", "msocache", "recovery", "$recycle.bin", "recycler",
-                "system volume information", "temporary internet files"]  # windows specific
-    hideList += [".fseventd", ".spotlight", ".trashes", ".vol", "cachedmessages", "caches", "trash"]  # osx specific
+    hideList = ['boot', 'bootmgr', 'cache', 'msocache', 'recovery', '$recycle.bin', 'recycler',
+                'system volume information', 'temporary internet files']  # windows specific
+    hideList += ['.fseventd', '.spotlight', '.trashes', '.vol', 'cachedmessages', 'caches', 'trash']  # osx specific
     fileList = filter(lambda entry: entry['name'].lower() not in hideList, fileList)
 
     fileList = sorted(fileList,
@@ -99,7 +103,7 @@ def foldersAtPath(path, includeParent=False, includeFiles=False):
 
     entries = [{'current_path': path}]
     if includeParent and parentPath != path:
-        entries.append({'name': "..", 'path': parentPath})
+        entries.append({'name': '..', 'path': parentPath})
     entries.extend(fileList)
 
     return entries
