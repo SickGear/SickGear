@@ -174,12 +174,9 @@ class LoginHandler(BaseHandler):
         username = sickbeard.WEB_USERNAME
         password = sickbeard.WEB_PASSWORD
 
-        if (self.get_argument('username') == username or not username) \
-                and (self.get_argument('password') == password or not password):
-
+        if (self.get_argument('username') == username) and (self.get_argument('password') == password):
             remember_me = int(self.get_argument('remember_me', default=0) or 0)
             self.set_secure_cookie('sickgear-session', sickbeard.COOKIE_SECRET, expires_days=30 if remember_me > 0 else None)
-
             self.redirect(self.get_argument('next', '/home/'))
         else:
             next_arg = '&next=' + self.get_argument('next', '/home/')
