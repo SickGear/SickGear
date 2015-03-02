@@ -3445,6 +3445,27 @@ class ConfigGeneral(Config):
             self.clear_cookie('sickgear-session')
             self.write('reload')
 
+    @staticmethod
+    def fetch_pullrequests():
+        if sickbeard.BRANCH == 'master':
+            return json.dumps({'result': 'success', 'pulls': []})
+        else:
+            try:
+                pulls = sickbeard.versionCheckScheduler.action.list_remote_pulls()
+                return json.dumps({'result': 'success', 'pulls': pulls})
+            except Exception, e:
+                logger.log(u'exception msg: ' + str(e), logger.DEBUG)
+                return json.dumps({'result': 'fail'})
+
+    @staticmethod
+    def fetch_branches():
+        try:
+            branches = sickbeard.versionCheckScheduler.action.list_remote_branches()
+            return json.dumps({'result': 'success', 'branches': branches})
+        except Exception, e:
+            logger.log(u'exception msg: ' + str(e), logger.DEBUG)
+            return json.dumps({'result': 'fail'})
+
 
 class ConfigSearch(Config):
     def index(self, *args, **kwargs):

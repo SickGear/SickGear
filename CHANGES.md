@@ -24,11 +24,13 @@
 * Change browser, bs4 parser and classes code to PEP8 standards
 * Change common and config code to PEP8 standards
 * Change database code to PEP8 standards
+* Change general config's branches and pull request list generation for faster page loading
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
 * Change BET network logo filename to lower case
 * Change redirect from home to showlistView on changing Layout on showlistView
+
 
 ### 0.7.0 (2015-02-23 11:02:00 UTC)
 
