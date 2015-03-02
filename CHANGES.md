@@ -23,6 +23,7 @@
 * Remove unused force variable from code and PEP8
 * Change browser, bs4 parser and classes code to PEP8 standards
 * Change common and config code to PEP8 standards
+* Change database code to PEP8 standards
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
