@@ -111,6 +111,7 @@
 * Change FreshOnTv login parameter and use secure URLs, add logging of Cloudflare blocking and prevent vacant cookie tracebacks
 * Change TPB webproxy list and add SSL variants
 * Add YTV network logo
+* Remove defunct Fanzub provider
 
 
 ### 0.6.4 (2015-02-10 20:20:00 UTC)
