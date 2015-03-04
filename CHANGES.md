@@ -1,4 +1,4 @@
-### 0.7.0 (2015-02-23 11:02:00 UTC)
+### 0.7.0 (2015-03-04 06:00:00 UTC)
 
 * Fix slow database operations (port from midgetspy/sickbeard)
 * Add TVRage network name standardization
