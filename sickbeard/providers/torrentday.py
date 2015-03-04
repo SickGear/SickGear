@@ -101,11 +101,11 @@ class TorrentDayProvider(generic.TorrentProvider):
                 return False
 
             if re.search('You tried too often', response.text):
-                logger.log(u'Too many login access for ' + self.name + ', can''t retrive any data', logger.ERROR)
+                logger.log(u'Too many login attempts for ' + self.name + ', can\'t retrive any data', logger.ERROR)
                 return False
 
             if response.status_code == 401:
-                logger.log(u'Invalid username or password for ' + self.name + ', Check your settings!', logger.ERROR)
+                logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
                 return False
 
             if requests.utils.dict_from_cookiejar(self.session.cookies)['uid'] and requests.utils.dict_from_cookiejar(self.session.cookies)['pass']:
@@ -118,7 +118,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                 return True
 
             else:
-                logger.log(u'Unable to obtain cookie for TorrentDay', logger.ERROR)
+                logger.log(u'Unable to obtain a cookie for TorrentDay', logger.ERROR)
                 return False
 
 

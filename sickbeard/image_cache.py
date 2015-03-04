@@ -188,11 +188,11 @@ class ImageCache:
 
         # make sure the cache folder exists before we try copying to it
         if not ek.ek(os.path.isdir, self._cache_dir()):
-            logger.log(u"Image cache dir didn't exist, creating it at " + str(self._cache_dir()))
+            logger.log(u"Image cache directory doesn't exist, creating it at " + str(self._cache_dir()))
             ek.ek(os.makedirs, self._cache_dir())
 
         if not ek.ek(os.path.isdir, self._thumbnails_dir()):
-            logger.log(u"Thumbnails cache dir didn't exist, creating it at " + str(self._thumbnails_dir()))
+            logger.log(u"Thumbnails cache directory doesn't exist, creating it at " + str(self._thumbnails_dir()))
             ek.ek(os.makedirs, self._thumbnails_dir())
 
         logger.log(u"Copying from " + image_path + " to " + dest_path)
@@ -276,12 +276,12 @@ class ImageCache:
 
                         if cur_file_type in need_images and need_images[cur_file_type]:
                             logger.log(
-                                u"Found an image in the show dir that doesn't exist in the cache, caching it: " + cur_file_name + ", type " + str(
+                                u"Found an image in the show directory that doesn't exist in the cache, caching it: " + cur_file_name + ", type " + str(
                                     cur_file_type), logger.DEBUG)
                             self._cache_image_from_file(cur_file_name, cur_file_type, show_obj.indexerid)
                             need_images[cur_file_type] = False
             except exceptions.ShowDirNotFoundException:
-                logger.log(u"Unable to search for images in show dir because it doesn't exist", logger.WARNING)
+                logger.log(u"Unable to search for images in show directory because it doesn't exist", logger.WARNING)
 
         # download from indexer for missing ones
         for cur_image_type in [self.POSTER, self.BANNER, self.POSTER_THUMB, self.BANNER_THUMB]:

@@ -96,7 +96,7 @@ class NyaaProvider(generic.TorrentProvider):
                     results.append(curItem)
                 else:
                     logger.log(
-                        u"The data returned from the " + self.name + " is incomplete, this result is unusable",
+                        u"The data returned from " + self.name + " is incomplete, this result is unusable",
                         logger.DEBUG)
 
             return results

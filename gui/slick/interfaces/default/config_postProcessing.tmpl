@@ -54,7 +54,7 @@
 								</span>
 								<span class="component-desc">
 									<input type="text" name="tv_download_dir" id="tv_download_dir" value="$sickbeard.TV_DOWNLOAD_DIR" class="form-control input-sm input350" />
-									<div class="float-left">
+									<div class="pull-left">
 										<p>folder where download clients save <b><em class="boldest">completed</em></b> downloads.&nbsp;
 										<b>note:</b> only use if not using SABnzbd post processing <em>or</em> if SABnzbd is on a different PC to SickGear</p>
 									</div>
@@ -1177,14 +1177,14 @@
 								<div class="metadata_options">
 									<label for="${cur_id}_show_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_show_metadata" #if $cur_metadata_inst.show_metadata then $checked else ''#/>&nbsp;Show Metadata</label>
 									<label for="${cur_id}_episode_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_metadata" #if $cur_metadata_inst.episode_metadata then $checked else ''#/>&nbsp;Episode Metadata</label>
-									<label for="${cur_id}_fanart"><input type="checkbox" class="float-left metadata_checkbox" id="${cur_id}_fanart" #if $cur_metadata_inst.fanart then $checked else ''#/>&nbsp;Show Fanart</label>
-									<label for="${cur_id}_poster"><input type="checkbox" class="float-left metadata_checkbox" id="${cur_id}_poster" #if $cur_metadata_inst.poster then $checked else ''#/>&nbsp;Show Poster</label>
-									<label for="${cur_id}_banner"><input type="checkbox" class="float-left metadata_checkbox" id="${cur_id}_banner" #if $cur_metadata_inst.banner then $checked else ''#/>&nbsp;Show Banner</label>
-									<label for="${cur_id}_episode_thumbnails"><input type="checkbox" class="float-left metadata_checkbox" id="${cur_id}_episode_thumbnails" #if $cur_metadata_inst.episode_thumbnails then $checked else ''#/>&nbsp;Episode Thumbnails</label>
-									<label for="${cur_id}_season_posters"><input type="checkbox" class="float-left metadata_checkbox" id="${cur_id}_season_posters" #if $cur_metadata_inst.season_posters then $checked else ''#/>&nbsp;Season Posters</label>
-									<label for="${cur_id}_season_banners"><input type="checkbox" class="float-left metadata_checkbox" id="${cur_id}_season_banners" #if $cur_metadata_inst.season_banners then $checked else ''#/>&nbsp;Season Banners</label>
-									<label for="${cur_id}_season_all_poster"><input type="checkbox" class="float-left metadata_checkbox" id="${cur_id}_season_all_poster" #if $cur_metadata_inst.season_all_poster then $checked else ''#/>&nbsp;Season All Poster</label>
-									<label for="${cur_id}_season_all_banner"><input type="checkbox" class="float-left metadata_checkbox" id="${cur_id}_season_all_banner" #if $cur_metadata_inst.season_all_banner then $checked else ''#/>&nbsp;Season All Banner</label>
+									<label for="${cur_id}_fanart"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_fanart" #if $cur_metadata_inst.fanart then $checked else ''#/>&nbsp;Show Fanart</label>
+									<label for="${cur_id}_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_poster" #if $cur_metadata_inst.poster then $checked else ''#/>&nbsp;Show Poster</label>
+									<label for="${cur_id}_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_banner" #if $cur_metadata_inst.banner then $checked else ''#/>&nbsp;Show Banner</label>
+									<label for="${cur_id}_episode_thumbnails"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_thumbnails" #if $cur_metadata_inst.episode_thumbnails then $checked else ''#/>&nbsp;Episode Thumbnails</label>
+									<label for="${cur_id}_season_posters"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_posters" #if $cur_metadata_inst.season_posters then $checked else ''#/>&nbsp;Season Posters</label>
+									<label for="${cur_id}_season_banners"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_banners" #if $cur_metadata_inst.season_banners then $checked else ''#/>&nbsp;Season Banners</label>
+									<label for="${cur_id}_season_all_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_poster" #if $cur_metadata_inst.season_all_poster then $checked else ''#/>&nbsp;Season All Poster</label>
+									<label for="${cur_id}_season_all_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_banner" #if $cur_metadata_inst.season_all_banner then $checked else ''#/>&nbsp;Season All Banner</label>
 								</div>
 							</div>
 							<div class="metadata_example_wrapper">

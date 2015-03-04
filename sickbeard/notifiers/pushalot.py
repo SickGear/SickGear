@@ -88,7 +88,7 @@ class PushalotNotifier:
             logger.log(u"Pushalot notifications sent.", logger.DEBUG)
             return True
         elif request_status == 410:
-            logger.log(u"Pushalot auth failed: %s" % response.reason, logger.ERROR)
+            logger.log(u"Pushalot authentication failed: %s" % response.reason, logger.ERROR)
             return False
         else:
             logger.log(u"Pushalot notification failed.", logger.ERROR)

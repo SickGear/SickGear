@@ -218,6 +218,7 @@ def retrieve_exceptions():
 
     # write all the exceptions we got off the net into the database
     myDB = db.DBConnection('cache.db')
+    cl = []
     for cur_indexer_id in exception_dict:
 
         # get a list of the existing exceptions for this ID
@@ -236,9 +237,11 @@ def retrieve_exceptions():
                 if not isinstance(cur_exception, unicode):
                     cur_exception = unicode(cur_exception, 'utf-8', 'replace')
 
-                myDB.action("INSERT INTO scene_exceptions (indexer_id, show_name, season) VALUES (?,?,?)",
-                            [cur_indexer_id, cur_exception, curSeason])
+                cl.append(["INSERT INTO scene_exceptions (indexer_id, show_name, season) VALUES (?,?,?)",
+                            [cur_indexer_id, cur_exception, curSeason]])
                 changed_exceptions = True
+
+    myDB.mass_action(cl)
 
     # since this could invalidate the results of the cache we clear it out after updating
     if changed_exceptions:

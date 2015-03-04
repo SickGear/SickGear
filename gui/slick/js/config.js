@@ -92,14 +92,15 @@ $(document).ready(function(){
 				$(this).after('<span><img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif"> Saving...</span>');
 				$(this).hide();
 			});
+			$('.show_update_hour_value').text($('#show_update_hour').val())
 		},
-		success: function(){
-			setTimeout('config_success()', 2000)
+		success: function(response){
+			setTimeout(function(){config_success(response)}, 2000);
 		}
 	});
 
 	$('#api_key').click(function(){ $('#api_key').select() });
-	$("#generate_new_apikey").click(function(){
+	$('#generate_new_apikey').click(function(){
 		$.get(sbRoot + '/config/general/generateKey',
 			function(data){
 				if (data.error != undefined) {
@@ -120,7 +121,10 @@ $(document).ready(function(){
 	
 });
 
-function config_success(){
+function config_success(response){
+	if (response == 'reload'){
+		window.location.reload(true);
+	}
 	$('.config_submitter').each(function(){
 		$(this).removeAttr('disabled');
 		$(this).next().remove();

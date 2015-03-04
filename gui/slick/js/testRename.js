@@ -12,6 +12,20 @@ $(document).ready(function(){
         });
     });
 
+    // selects all visible episode checkboxes
+    $('.seriesCheck').click(function () {
+        $('.epCheck:visible, .seasonCheck:visible').each(function () {
+            this.checked = true
+        });
+    });
+
+    // clears all visible episode checkboxes and the season selectors
+    $('.clearAll').click(function () {
+        $('.epCheck:visible, .seasonCheck:visible').each(function () {
+            this.checked = false
+        });
+    });
+
     $('input[type=submit]').click(function(){
         var epArr = new Array()
 

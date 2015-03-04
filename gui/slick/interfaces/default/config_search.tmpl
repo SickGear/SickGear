@@ -110,20 +110,20 @@
 
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Ignore words</span>
+								<span class="component-title">Ignore result with any word</span>
 								<span class="component-desc">
 									<input type="text" name="ignore_words" value="$sickbeard.IGNORE_WORDS" class="form-control input-sm input350" />
-									<div class="clear-left">results containing any word in the comma separated word list will be ignored</div>
+									<div class="clear-left">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words</div>
 								</span>
 							</label>
 						</div>
 
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Require words</span>
+								<span class="component-title">Require at least one word</span>
 								<span class="component-desc">
 									<input type="text" name="require_words" value="$sickbeard.REQUIRE_WORDS" class="form-control input-sm input350" />
-									<div class="clear-left">results not containing all words in the comma separated word list will be ignored</div>
+									<div class="clear-left">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words</div>
 								</span>
 							</label>
 						</div>
@@ -134,26 +134,6 @@
 								<span class="component-desc">
 									<input type="checkbox" name="allow_high_priority" id="allow_high_priority" <%= html_checked if sickbeard.ALLOW_HIGH_PRIORITY == True else '' %>/>
 									<p>set downloads of recently aired episodes to high priority</p>
-								</span>
-							</label>
-						</div>
-
-						<div class="field-pair">
-							<label for="recentsearch_startup">
-								<span class="component-title">Recent search on startup</span>
-								<span class="component-desc">
-									<input type="checkbox" name="recentsearch_startup" id="recentsearch_startup" <%= html_checked if sickbeard.RECENTSEARCH_STARTUP == True else '' %>/>
-									<p>start recent search on startup of SickGear</p>
-								</span>
-							</label>
-						</div>
-
-						<div class="field-pair">
-							<label for="backlog_startup">
-								<span class="component-title">Run backlog on startup</span>
-								<span class="component-desc">
-									<input type="checkbox" name="backlog_startup" id="backlog_startup" <%= html_checked if sickbeard.BACKLOG_STARTUP == True else '' %>/>
-									<p>start processing backlogged episodes on startup of SickGear</p>
 								</span>
 							</label>
 						</div>

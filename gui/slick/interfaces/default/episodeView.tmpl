@@ -108,6 +108,19 @@
 			\$(this).removeClass(sortdir).addClass(newdir);
 			uiSortBy(\$('#sort').val());
 		});
+
+		\$('.carousel').on('slide.bs.carousel', function () {
+			imagesLoaded('.daybyday-show', function() {
+				jQuery.each(\$container, function(j) {
+					this.isotope('layout');
+				});
+			});
+		});
+
+		\$('div[title!=""], span[title!=""]').qtip({style: {classes: 'qtip-rounded qtip-shadow'},
+			position: {viewport: \$(window), my: 'left center', adjust: {y: -10, x: 0}},
+			show: {solo: true}
+		});
 	});
 //-->
 </script>
@@ -116,7 +129,7 @@
 <style type="text/css">
 #SubMenu {display:none}
 #if 'daybyday' == $layout:
-.caret {
+.ep-caret {
 	cursor: pointer;
 	vertical-align: middle;
 	margin-right: 2px;
@@ -133,7 +146,7 @@
 </style>
 
 <div class="h2footer pull-right">
-	<span>Layout:
+	<span>Layout
 		<select name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
 			<option value="$sbRoot/setEpisodeViewLayout/?layout=banner" #if 'banner' == $sickbeard.EPISODE_VIEW_LAYOUT then 'selected="selected"' else ''#>Banner</option>
 			<option value="$sbRoot/setEpisodeViewLayout/?layout=daybyday" #if 'daybyday' == $sickbeard.EPISODE_VIEW_LAYOUT then 'selected="selected"' else ''#>Day by Day</option>
@@ -144,7 +157,7 @@
 	&nbsp;
 	<span>Sort
 #if 'daybyday' == $layout:
-		<span id="sort-dir" data-sort-dir="asc" class="caret asc" title="Click to sort descending">&nbsp;</span>
+		<span id="sort-dir" data-sort-dir="asc" class="caret ep-caret asc" title="Click to sort descending">&nbsp;</span>
 #end if
 		 By
 #if 'daybyday' == $layout:
@@ -161,7 +174,7 @@
 		</select>
 	</span>
 	&nbsp;
-	<span>View Paused:
+	<span>View Paused
 		<select name="viewpaused" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
 			<option value="$sbRoot/toggleEpisodeViewDisplayPaused"<%= (' selected="selected"', '')[True == sickbeard.EPISODE_VIEW_DISPLAY_PAUSED] %>>Hidden</option>
 			<option value="$sbRoot/toggleEpisodeViewDisplayPaused"<%= ('', ' selected="selected"')[True == sickbeard.EPISODE_VIEW_DISPLAY_PAUSED] %>>Shown</option>
@@ -313,8 +326,9 @@
             #end if
         #end if
 
+        #set $show_id = '%s_%sx%s' % (str($cur_result['showid']), str($cur_result['season']), str($cur_result['episode']))
 		<!-- start $cur_result['show_name'] //-->
-		<tr class="$show_div">
+		<tr id="show-${show_id}" class="$show_div" data-rawname="$cur_result['show_name']">
 			## forced to use a div to wrap airdate, the column sort went crazy with a span
 			<td align="center" class="nowrap">
 				<div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</div><span class="sort_data">$time.mktime($cur_result['localtime'].timetuple())</span>
@@ -332,7 +346,7 @@
 
 			<td>
         #if $cur_result['description']:
-				<img alt="" src="$sbRoot/images/info32.png" height="16" width="16" class="plotInfo" id="plot_info_<%= '%s_%s_%s' % (str(cur_result['showid']), str(cur_result['season']), str(cur_result['episode'])) %>" />
+				<img alt="" src="$sbRoot/images/info32.png" height="16" width="16" class="plotInfo" id="plot-${show_id}" />
         #else:
 				<img alt="" src="$sbRoot/images/info32.png" width="16" height="16" class="plotInfoNone" />
         #end if
@@ -590,96 +604,186 @@
 <!-- end non list view //-->
 #end if
 
-
-
 #if 'daybyday' == $layout:
 
-    #set $today = datetime.date.today()
-    #set $dates = [$today + datetime.timedelta(days = $i) for $i in range(7)]
-    #set $tbl_day = 0
+    #set $shows_overdue = []
+    #set $shows_soon = []
+    #set $shows_future = []
+
+    #set $state_overdue = 'listing-overdue'
+    #set $state_current = 'listing-current'
+    #set $state_soon = 'listing-soon'
+    #set $state_future = 'listing-default'
+
+    #for $cur_result in $sql_results:
+        #if int($cur_result['paused']) and not $sickbeard.EPISODE_VIEW_DISPLAY_PAUSED:
+            #continue
+        #end if
+        #if $cur_result['runtime']:
+            #set $air_date = $cur_result['localtime'].date()
+            #set $end_datetime = $cur_result['localtime'] + datetime.timedelta(minutes = $cur_result['runtime'])
+            #if $air_date >= $next_week.date():
+                #set $cur_result['state'] = ''
+                $shows_future.append($cur_result)
+            #elif $cur_result['localtime'] > $today
+                #set $cur_result['state'] = ''
+                $shows_soon.append($cur_result)
+            #elif $end_datetime > $today
+                #set $cur_result['state'] = $state_current
+                #set $cur_result['state-title'] = 'Currently On Air'
+                $shows_soon.append($cur_result)
+            #elif $air_date == $today.date():
+                #set $cur_result['state'] = $state_overdue
+                #set $cur_result['state-title'] = 'Overdue'
+                $shows_soon.append($cur_result)
+            #else
+                #set $cur_result['state'] = $state_overdue
+                #set $cur_result['state-title'] = 'Overdue'
+                $shows_overdue.append($cur_result)
+            #end if
+        #else
+            #set $cur_result['state'] = $state_soon
+            $shows_soon.append($cur_result)
+        #end if
+    #end for
+
+    ##set $state_init = [int(bool($shows_overdue)), ($state_soon, $state_overdue)[0 < len($shows_overdue)]] ## default overdue
+    #set $state_init = [int(bool($shows_overdue)), $state_soon] ## default soon
+
+    #set $dates_future = sorted({$i['localtime'].date():$i for $i in $shows_future})
+    #set $rounded_week = len($dates_future)/7*7 + int(bool(len($dates_future)%7))*7
+    #set $dates_future += [$dates_future[-1] + datetime.timedelta(days = 1 + $i) for $i in range($rounded_week - len($dates_future))]
+    #set $num_weeks = $rounded_week/7
 
 <input type="hidden" id="sbRoot" value="$sbRoot" />
 
-<br>
-<br>
-<div class="daybydayWrapper">  <!-- style="width:1600px" -->
-    #for $day in $dates
-        #set $tbl_day += 1
+<div class="daybydayCarouselContainer">
+	<div id="Carousel" class="carousel slide">
 
-        #set $col_class = ''
-        #if 1 == $tbl_day
-            #set $col_class = 'today'
-        #end if
-        #set $col_class = '%s %s' % ($col_class, ('even', 'odd')[1 == tbl_day % 2])
+		<div class="controlsBlock">
+			<a class="left carousel-control" href="#Carousel" data-slide="prev"><i class="glyphicon glyphicon-chevron-left"></i></a>
+			<a class="right carousel-control" href="#Carousel" data-slide="next"><i class="glyphicon glyphicon-chevron-right"></i></a>
+			<div class="carousel-indicators">
 
-	<div class="day-of-week $col_class">
-		<div class="day-number">
-			<div class="number">$sbdatetime.sbdatetime.sbfdate($day, ' %d').decode($sickbeard.SYS_ENCODING).replace(' 0', ' ')</div>
-			<div class="day">
-				<span class="visible-lg">$sbdatetime.sbdatetime.sbfdate($day, '%A').decode($sickbeard.SYS_ENCODING).capitalize()</span>
-				<span class="hidden-lg">$sbdatetime.sbdatetime.sbfdate($day, '%a').decode($sickbeard.SYS_ENCODING).capitalize()</span>
-			</div>
-			<div class="month">
-				<span class="visible-lg">$sbdatetime.sbdatetime.sbfdate($day, '%B').decode($sickbeard.SYS_ENCODING).capitalize()</span>
-				<span class="hidden-lg">$sbdatetime.sbdatetime.sbfdate($day, '%b').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+    #set $slide_id = 0
+    #if len($shows_overdue)
+				<li data-target="#Carousel" data-slide-to="$slide_id" class="$state_overdue#if $state_init[1] == $state_overdue then ' active' else ''#"></li>
+        #set $slide_id = 1
+    #end if
+				<li data-target="#Carousel" data-slide-to="$slide_id" class="$state_soon#if $state_init[1] == $state_soon then ' active' else ''#"></li>
+        #set $slide_id += 1
+
+    #for $i in range($slide_id, $slide_id + $num_weeks)
+				<li data-target="#Carousel" data-slide-to="${i}" class="$state_future#if $state_init[1] == $state_future and $state_init[0] == $i then ' active' else ''#"></li>
+    #end for
 			</div>
 		</div>
-		<div id="$sbdatetime.sbdatetime.sbfdate($day, 'day%w')">
-		
-		#set $day_has_show = False
-		#for $cur_result in $sql_results:
-			#if int($cur_result['paused']) and not $sickbeard.EPISODE_VIEW_DISPLAY_PAUSED:
-				#continue
-			#end if
 
-			#set $cur_indexer = int($cur_result['indexer'])
-			#set $runtime = $cur_result['runtime']
-			#set $airday = $cur_result['localtime'].date()
+		<div class="carousel-inner">
 
-			#if $airday == $day:
-				#set $day_has_show = True
-				#set $airtime = $sbdatetime.sbdatetime.sbftime($cur_result['localtime'], markup=True).decode($sickbeard.SYS_ENCODING)
-				#set $img_tag = '<img'
-                #set $plot_class = 'class="img-responsive'
-                #set $title_text = ''
-                #if $cur_result['description']:
-                    #set $img_tag += ' id="plot_info_%s_%s_%s"' % (str($cur_result['showid']), str($cur_result['season']), str($cur_result['episode']))
-                    #set $plot_class += ' plot-daybyday'
-                #else
-                    #set $title_text = $cur_result['show_name']
-                #end if
-
-				<div id="show-$cur_result['showid']" class="daybyday-show" data-name="$cur_result['data_show_name']" data-season="$cur_result['season']" data-episode="$cur_result['episode']" data-network="$cur_result['data_network']" data-time="$time.mktime($cur_result['localtime'].timetuple())">
-					<div class="poster">
-						<a title="${title_text}" href="$sbRoot/home/displayShow?show=${cur_result['showid']}">
-						${img_tag} ${plot_class}" alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=poster_thumb" /></a>
-					</div>
-					<div class="text">
-						<div class="airtime">
-							<span class="time">${airtime}</span> <span class="network pull-right grey-text">$cur_result['network']</span>
-						</div>
-						<div class="episode" title="$cur_result['name']">
-							<span class="season"><%= '%i' % int(cur_result['season']) %></span>x<span class="number"><%= '%02i' % int(cur_result['episode']) %></span>
-							<span class="name">$cur_result['name']</span>
-                #if int($cur_result['paused']):
-							<span class="pause">[paused]</span>
-                #end if
-						</div>
-					</div>
-				</div><!-- end show-$cur_result['showid'] //-->
-
-			#end if
-
-        #end for
-        #if not $day_has_show:
-			<div class="daybyday-show">
-				<span class="episode-blank">No shows for this day</span>
-			</div>
+    #for $shows, $state in [[$shows_overdue, $state_overdue], [$shows_soon, $state_soon], [$shows_future, $state_future]]
+        #if 0 == len($shows) and ($state_overdue == $state or $state_future == $state)
+            #continue
         #end if
-		</div>
-	</div>
-	#end for
-</div>
+        #set $week_num = 0
+        #set $num_weeks = 1
+        #while ($num_weeks)
+            #if $state_future == $state
+                #set $dates = $dates_future[$week_num*7:$week_num*7+7]
+                #if 0 == $week_num
+                    #set $num_weeks = $rounded_week/7
+                #end if
+                #set $week_num += 1
+            #else
+                #set $dates = [($today + datetime.timedelta(days = ($i, -7+$i)[$state_overdue == $state])).date() for $i in range(7)]
+            #end if
+            #set $num_weeks -= 1
+
+			<div class="item#if $state_init[1] == $state then ' active' else ''#"> <!-- start $state -->
+				<div class="daybydayWrapper">
+
+            #set $tbl_day = 0
+            #for $day in $dates
+
+                #set $tbl_day += 1
+
+                #set $col_class = ''
+                #if 1 == $tbl_day and $state_soon == $state
+                    #set $col_class = 'today'
+                #end if
+                #set $col_class = '%s %s' % ($col_class, ('even', 'odd')[1 == tbl_day % 2])
+
+					<div class="day-of-week $col_class">
+						<div class="day-number">
+							<div class="number">$sbdatetime.sbdatetime.sbfdate($day, ' %d').decode($sickbeard.SYS_ENCODING).replace(' 0', ' ')</div>
+							<div class="day">
+								<span class="visible-lg">$sbdatetime.sbdatetime.sbfdate($day, '%A').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+								<span class="hidden-lg">$sbdatetime.sbdatetime.sbfdate($day, '%a').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+							</div>
+							<div class="month">
+								<span class="visible-lg">$sbdatetime.sbdatetime.sbfdate($day, '%B').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+								<span class="hidden-lg">$sbdatetime.sbdatetime.sbfdate($day, '%b').decode($sickbeard.SYS_ENCODING).capitalize()</span>
+							</div>
+						</div>
+
+						<div id="$sbdatetime.sbdatetime.sbfdate($day, 'day%j')">
+
+                #set $day_has_show = False
+                #for $cur_result in $shows:
+                    #if $day == $cur_result['localtime'].date():
+                        #set $day_has_show = True
+                        #set $airtime = $sbdatetime.sbdatetime.sbftime($cur_result['localtime'], markup=True).decode($sickbeard.SYS_ENCODING)
+                        #set $img_id = ''
+                        #set $plot_class = ''
+                        #set $title_text = ''
+                        #set $show_id = '%s_%sx%s' % (str($cur_result['showid']), str($cur_result['season']), str($cur_result['episode']))
+                        #set $img_id = ' id="plot-%s"' % $show_id
+                        #set $plot_class = ' plot-daybyday'
+
+							<div id="show-${show_id}" class="daybyday-show" data-name="$cur_result['data_show_name']" data-season="$cur_result['season']" data-episode="$cur_result['episode']" data-network="$cur_result['data_network']" data-time="$time.mktime($cur_result['localtime'].timetuple())" data-rawname="$cur_result['show_name']">
+								<div class="poster">
+									<a${title_text} href="$sbRoot/home/displayShow?show=${cur_result['showid']}">
+									<img${img_id} class="img-responsive${plot_class}" alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=poster_thumb" /></a>
+								</div>
+								<div class="state#if len($cur_result['state']) then ' %s" title="%s"' % ($cur_result['state'], $cur_result['state-title']) else '"' #></div>
+								<div class="text">
+									<div class="airtime">
+										<span class="time">${airtime}</span> <span class="network pull-right grey-text">$cur_result['network']</span>
+									</div>
+									<div class="episode" title="$cur_result['name']">
+										<span class="season"><%= '%i' % int(cur_result['season']) %></span>x<span class="number"><%= '%02i' % int(cur_result['episode']) %></span>
+										<span class="name">$cur_result['name']</span>
+									</div>
+								</div>
+                        #if int($cur_result['paused']):
+								<span class="over-layer0">[paused]</span>
+								<span class="over-layer1">[paused]</span>
+                        #elif $state_current == $cur_result['state']
+                            #set $endtime = $sbdatetime.sbdatetime.sbftime($cur_result['localtime'] + datetime.timedelta(minutes = $cur_result['runtime']), markup=True).decode($sickbeard.SYS_ENCODING)
+								<span class="over-layer0 on-air0">On Air until<br />$endtime</span>
+								<span class="over-layer1 on-air1">On Air until<br />$endtime</span>
+                        #end if
+							</div><!-- end show-$cur_result['showid'] //-->
+
+                    #end if
+                #end for
+                #if not $day_has_show:
+							<div class="daybyday-show">
+                    #set $theday = ('this ', 'to')[1 == $tbl_day and $state_soon == $state]
+								<span class="episode-blank">No shows ${theday}day</span>
+							</div>
+                #end if
+						</div>
+					</div>
+            #end for
+				</div> <!-- end daybydayWrapper //-->
+			</div> <!-- end $state //-->
+        #end while
+    #end for
+
+		</div> <!-- end carouselinner //-->
+	</div> <!-- end Carousel //-->
+</div> <!-- end daybydayCarouselContainer //--> 
 
 <!-- end calender view //-->
 #end if
@@ -689,6 +793,20 @@
 <script type="text/javascript" charset="utf-8">
 <!--
 window.setInterval('location.reload(true)', 30*60000); // Refresh every xx minutes
+
+\$('#Carousel').carousel({
+	interval: 0
+});
+
+\$(document).bind('keyup', function(e) {
+	if(e.which == 39){
+		\$('.carousel').carousel('next');
+	}
+	else if(e.which == 37){
+		\$('.carousel').carousel('prev');
+	}
+});
+
 //-->
 </script>
 

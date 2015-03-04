@@ -32,9 +32,6 @@ from name_parser.parser import NameParser, InvalidNameException, InvalidShowExce
 from lib.unidecode import unidecode
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 
-resultFilters = ["sub(bed|ed|pack|s)", "(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?",
-                 "(dir|sample|sub|nfo)fix", "sample", "(dvd)?extras",
-                 "dub(bed)?"]
 
 def filterBadReleases(name, parse=True):
     """
@@ -55,6 +52,10 @@ def filterBadReleases(name, parse=True):
     except InvalidShowException:
         logger.log(u"Unable to parse the filename " + name + " into a valid show", logger.DEBUG)
         return False
+
+    resultFilters = ['sub(bed|ed|pack|s)', '(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?',
+                     '(dir|sample|sub|nfo)fix', 'sample', '(dvd)?extras',
+                     'dub(bed)?']
 
     # if any of the bad strings are in the name then say no
     if sickbeard.IGNORE_WORDS:
@@ -164,7 +165,6 @@ def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
         numseasons = int(numseasonsSQlResult[0][0])
         seasonStrings = ["S%02d" % int(ep_obj.scene_season)]
 
-    bwl = BlackAndWhiteList(show.indexerid)
     showNames = set(makeSceneShowSearchStrings(show, ep_obj.scene_season))
 
     toReturn = []
@@ -179,8 +179,8 @@ def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
             # for providers that don't allow multiple searches in one request we only search for Sxx style stuff
             else:
                 for cur_season in seasonStrings:
-                    if len(bwl.whiteList) > 0:
-                        for keyword in bwl.whiteList:
+                    if len(show.release_groups.whitelist) > 0:
+                        for keyword in show.release_groups.whitelist:
                             toReturn.append(keyword + '.' + curShow+ "." + cur_season)
                     else:
                         toReturn.append(curShow + "." + cur_season)
@@ -210,15 +210,14 @@ def makeSceneSearchString(show, ep_obj):
     if numseasons == 1 and not ep_obj.show.is_anime:
         epStrings = ['']
 
-    bwl = BlackAndWhiteList(ep_obj.show.indexerid)
     showNames = set(makeSceneShowSearchStrings(show, ep_obj.scene_season))
 
     toReturn = []
 
     for curShow in showNames:
         for curEpString in epStrings:
-            if len(bwl.whiteList) > 0:
-                for keyword in bwl.whiteList:
+            if len(ep_obj.show.release_groups.whitelist) > 0:
+                for keyword in ep_obj.show.release_groups.whitelist:
                     toReturn.append(keyword + '.' + curShow + '.' + curEpString)
             else:
                 toReturn.append(curShow + '.' + curEpString)

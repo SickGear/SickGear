@@ -150,7 +150,7 @@
 				<p style="line-height: 1.5; padding: 2px 5px 3px" title="<%= '%s added' % ('TVRage', 'theTVDB')['1' == cur_show['show_id'][:1]] %>">In library</p>
 #else
 				#set $encoded_show_title = urllib.quote($cur_show['title'].encode("utf-8"))
-				<a href="$sbRoot/home/addTraktShow?indexer_id=${cur_show['show_id']}&amp;showName=${encoded_show_title}" class="btn btn-xs">Add Show</a>
+				<a href="$sbRoot/home/addShows/addTraktShow?indexer_id=${cur_show['show_id']}&amp;showName=${encoded_show_title}" class="btn btn-xs">Add Show</a>
 #end if
 			</div>
 		</div>

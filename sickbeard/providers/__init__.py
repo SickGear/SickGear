@@ -17,7 +17,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 __all__ = ['ezrss',
-           'tvtorrents',
            'womble',
            'btn',
            'thepiratebay',
@@ -32,7 +31,6 @@ __all__ = ['ezrss',
            'nextgen',
            'speedcd',
            'nyaatorrents',
-           'fanzub',
            'torrentbytes',
            'freshontv',
            'bitsoup',

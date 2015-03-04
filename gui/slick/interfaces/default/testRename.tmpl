@@ -1,13 +1,13 @@
 #import sickbeard
 #from sickbeard import common
 #from sickbeard import exceptions
-#set global $title="Test Rename"
+#set global $title = 'Test Rename ' + $show.name
 #set global $header = '<a href="' + $sbRoot + '/home/displayShow?show=%d">%s</a>' % ($show.indexerid, $show.name)
-#set global $sbPath=".."
+#set global $sbPath = '..'
 
-#set global $topmenu="home"#
+#set global $topmenu = 'home'
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 #if $varExists('header') 
 	<h1 class="header">$header</h1>
@@ -32,6 +32,14 @@
 
 #set $curSeason = -1
 #set $odd = False
+
+<div class="clearfix padbottom">
+	<button class="btn seriesCheck">Select All Episodes</button> 
+	<button class="btn clearAll">Clear All</button>
+</div>
+
+<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
+
 <table id="testRenameTable" class="sickbeardTable" cellspacing="1" border="0" cellpadding="0">
 
 #for $cur_ep_obj in $ep_obj_list:
@@ -43,7 +51,6 @@
     <thead>
         <tr class="seasonheader" id="season-$cur_ep_obj.season">
             <td colspan="4">
-                <br/>
                 <h2>#if int($cur_ep_obj.season) == 0 then "Specials" else "Season "+str($cur_ep_obj.season)#</h2>
             </td>
         </tr>
@@ -84,4 +91,4 @@
 #end for
 </table><br />
 <input type="submit" value="Rename Selected" class="btn btn-success"> <a href="/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_bottom.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -40,9 +40,9 @@ from sickbeard.show_name_helpers import allPossibleShowNames
 
 
 class IPTorrentsProvider(generic.TorrentProvider):
-    urls = {'base_url': 'https://www.iptorrents.com',
-            'login': 'https://www.iptorrents.com/torrents/',
-            'search': 'https://www.iptorrents.com/torrents/?%s%s&q=%s&qf=ti',
+    urls = {'base_url': 'https://iptorrents.com',
+            'login': 'https://iptorrents.com/torrents/',
+            'search': 'https://iptorrents.com/torrents/?%s%s&q=%s&qf=ti',
     }
 
     def __init__(self):
@@ -97,7 +97,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
         if re.search('tries left', response.text) \
                 or re.search('<title>IPT</title>', response.text) \
                 or response.status_code == 401:
-            logger.log(u'Invalid username or password for ' + self.name + ', Check your settings!', logger.ERROR)
+            logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
             return False
 
         return True
@@ -189,7 +189,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
                         #Continue only if one Release is found
                         if len(torrents) < 2:
-                            logger.log(u"The Data returned from " + self.name + " do not contains any torrent",
+                            logger.log(u"The data returned from " + self.name + " does not contain any torrents",
                                        logger.WARNING)
                             continue
 

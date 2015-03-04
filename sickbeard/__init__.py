@@ -29,14 +29,16 @@ from threading import Lock
 # apparently py2exe won't build these unless they're imported somewhere
 import sys
 import os.path
+import uuid
+import base64
 sys.path.append(os.path.abspath('../lib'))
 from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
-from providers import ezrss, tvtorrents, btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
-    omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, nextgen, speedcd, nyaatorrents, fanzub, torrentbytes, \
+from providers import ezrss, btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
+    omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, nextgen, speedcd, nyaatorrents, torrentbytes, \
     freshontv, bitsoup, tokyotoshokan
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
-    naming_ep_type
+    naming_ep_type, minimax
 from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
     subtitles, traktChecker
 from sickbeard import helpers, db, exceptions, show_queue, search_queue, scheduler, show_name_helpers
@@ -58,7 +60,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 7
+CONFIG_VERSION = 8
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -91,6 +93,8 @@ traktCheckerScheduler = None
 
 showList = None
 loadingShowList = None
+UPDATE_SHOWS_ON_START = False
+SHOW_UPDATE_HOUR = 3
 
 providerList = []
 newznabProviderList = []
@@ -144,7 +148,6 @@ LAUNCH_BROWSER = False
 CACHE_DIR = None
 ACTUAL_CACHE_DIR = None
 ROOT_DIRS = None
-UPDATE_SHOWS_ON_START = False
 TRASH_REMOVE_SHOW = False
 TRASH_ROTATE_LOGS = False
 HOME_SEARCH_FOCUS = True
@@ -309,19 +312,12 @@ TWITTER_USERNAME = None
 TWITTER_PASSWORD = None
 TWITTER_PREFIX = None
 
-USE_BOXCAR = False
-BOXCAR_NOTIFY_ONSNATCH = False
-BOXCAR_NOTIFY_ONDOWNLOAD = False
-BOXCAR_NOTIFY_ONSUBTITLEDOWNLOAD = False
-BOXCAR_USERNAME = None
-BOXCAR_PASSWORD = None
-BOXCAR_PREFIX = None
-
 USE_BOXCAR2 = False
 BOXCAR2_NOTIFY_ONSNATCH = False
 BOXCAR2_NOTIFY_ONDOWNLOAD = False
 BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = False
 BOXCAR2_ACCESSTOKEN = None
+BOXCAR2_SOUND = None
 
 USE_PUSHOVER = False
 PUSHOVER_NOTIFY_ONSNATCH = False
@@ -456,6 +452,8 @@ CALENDAR_UNPROTECTED = False
 TMDB_API_KEY = 'edc5f123313769de83a71e157758030b'
 TRAKT_API_KEY = 'abd806c54516240c76e4ebc9c5ccf394'
 
+COOKIE_SECRET = base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
+
 __INITIALIZED__ = False
 
 def get_backlog_cycle_time():
@@ -475,7 +473,7 @@ def initialize(consoleLogging=True):
             USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_API, TRAKT_REMOVE_WATCHLIST, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
-            showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, \
+            showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, RECENTSEARCH_STARTUP, \
             GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
@@ -491,8 +489,7 @@ def initialize(consoleLogging=True):
             RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcesserScheduler, \
             WOMBLE, OMGWTFNZBS, OMGWTFNZBS_USERNAME, OMGWTFNZBS_APIKEY, providerList, newznabProviderList, torrentRssProviderList, \
             EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, RECENTSEARCH_FREQUENCY, \
-            USE_BOXCAR, BOXCAR_USERNAME, BOXCAR_PASSWORD, BOXCAR_NOTIFY_ONDOWNLOAD, BOXCAR_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR_NOTIFY_ONSNATCH, \
-            USE_BOXCAR2, BOXCAR2_ACCESSTOKEN, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR2_NOTIFY_ONSNATCH, \
+            USE_BOXCAR2, BOXCAR2_ACCESSTOKEN, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_SOUND, \
             USE_PUSHOVER, PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHOVER_NOTIFY_ONSNATCH, \
             USE_LIBNOTIFY, LIBNOTIFY_NOTIFY_ONSNATCH, LIBNOTIFY_NOTIFY_ONDOWNLOAD, LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD, USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, USE_SYNOINDEX, \
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
@@ -506,7 +503,8 @@ def initialize(consoleLogging=True):
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, LOCALHOST_IP, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, ANIMESUPPORT, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
-            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV
+            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV, \
+            COOKIE_SECRET
 
         if __INITIALIZED__:
             return False
@@ -521,7 +519,6 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'Growl')
         CheckSection(CFG, 'Prowl')
         CheckSection(CFG, 'Twitter')
-        CheckSection(CFG, 'Boxcar')
         CheckSection(CFG, 'Boxcar2')
         CheckSection(CFG, 'NMJ')
         CheckSection(CFG, 'NMJv2')
@@ -603,11 +600,13 @@ def initialize(consoleLogging=True):
         ANON_REDIRECT = check_setting_str(CFG, 'General', 'anon_redirect', 'http://dereferer.org/?')
         PROXY_SETTING = check_setting_str(CFG, 'General', 'proxy_setting', '')
         PROXY_INDEXERS = bool(check_setting_int(CFG, 'General', 'proxy_indexers', 1))
-        # attempt to help prevent users from breaking links by using a bad url 
+        # attempt to help prevent users from breaking links by using a bad url
         if not ANON_REDIRECT.endswith('?'):
             ANON_REDIRECT = ''
 
         UPDATE_SHOWS_ON_START = bool(check_setting_int(CFG, 'General', 'update_shows_on_start', 0))
+        SHOW_UPDATE_HOUR = check_setting_int(CFG, 'General', 'show_update_hour', 3)
+        SHOW_UPDATE_HOUR = minimax(SHOW_UPDATE_HOUR, 3, 0, 23)
         TRASH_REMOVE_SHOW = bool(check_setting_int(CFG, 'General', 'trash_remove_show', 0))
         TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
 
@@ -674,8 +673,8 @@ def initialize(consoleLogging=True):
 
         ALLOW_HIGH_PRIORITY = bool(check_setting_int(CFG, 'General', 'allow_high_priority', 1))
 
-        RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 1))
-        BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 1))
+        RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 0))
+        BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 0))
         SKIP_REMOVED_FILES = bool(check_setting_int(CFG, 'General', 'skip_removed_files', 0))
 
         USENET_RETENTION = check_setting_int(CFG, 'General', 'usenet_retention', 500)
@@ -793,18 +792,13 @@ def initialize(consoleLogging=True):
         TWITTER_PASSWORD = check_setting_str(CFG, 'Twitter', 'twitter_password', '')
         TWITTER_PREFIX = check_setting_str(CFG, 'Twitter', 'twitter_prefix', 'SickGear')
 
-        USE_BOXCAR = bool(check_setting_int(CFG, 'Boxcar', 'use_boxcar', 0))
-        BOXCAR_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Boxcar', 'boxcar_notify_onsnatch', 0))
-        BOXCAR_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Boxcar', 'boxcar_notify_ondownload', 0))
-        BOXCAR_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Boxcar', 'boxcar_notify_onsubtitledownload', 0))
-        BOXCAR_USERNAME = check_setting_str(CFG, 'Boxcar', 'boxcar_username', '')
-
         USE_BOXCAR2 = bool(check_setting_int(CFG, 'Boxcar2', 'use_boxcar2', 0))
         BOXCAR2_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Boxcar2', 'boxcar2_notify_onsnatch', 0))
         BOXCAR2_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Boxcar2', 'boxcar2_notify_ondownload', 0))
         BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
             check_setting_int(CFG, 'Boxcar2', 'boxcar2_notify_onsubtitledownload', 0))
         BOXCAR2_ACCESSTOKEN = check_setting_str(CFG, 'Boxcar2', 'boxcar2_accesstoken', '')
+        BOXCAR2_SOUND = check_setting_str(CFG, 'Boxcar2', 'boxcar2_sound', 'default')
 
         USE_PUSHOVER = bool(check_setting_int(CFG, 'Pushover', 'use_pushover', 0))
         PUSHOVER_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Pushover', 'pushover_notify_onsnatch', 0))
@@ -1052,7 +1046,7 @@ def initialize(consoleLogging=True):
             if hasattr(curNzbProvider, 'enable_recentsearch'):
                 curNzbProvider.enable_recentsearch = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
                                                                        curNzbProvider.getID() + '_enable_recentsearch',
-                                                                       1))
+                                                                     1))
             if hasattr(curNzbProvider, 'enable_backlog'):
                 curNzbProvider.enable_backlog = bool(check_setting_int(CFG, curNzbProvider.getID().upper(),
                                                                        curNzbProvider.getID() + '_enable_backlog',
@@ -1115,7 +1109,7 @@ def initialize(consoleLogging=True):
         showUpdateScheduler = scheduler.Scheduler(showUpdater.ShowUpdater(),
                                                   cycleTime=datetime.timedelta(hours=1),
                                                   threadName="SHOWUPDATER",
-                                                  start_time=datetime.time(hour=3))  # 3 AM
+                                                  start_time=datetime.time(hour=SHOW_UPDATE_HOUR))  # 3 AM
 
         # searchers
         searchQueueScheduler = scheduler.Scheduler(search_queue.SearchQueue(),
@@ -1127,14 +1121,14 @@ def initialize(consoleLogging=True):
                                                    cycleTime=update_interval,
                                                    threadName="RECENTSEARCHER",
                                                    run_delay=update_now if RECENTSEARCH_STARTUP
-                                                   else update_interval)
+                                                   else datetime.timedelta(minutes=5))
 
         update_interval = datetime.timedelta(minutes=BACKLOG_FREQUENCY)
         backlogSearchScheduler = searchBacklog.BacklogSearchScheduler(searchBacklog.BacklogSearcher(),
                                                                       cycleTime=update_interval,
                                                                       threadName="BACKLOG",
                                                                       run_delay=update_now if BACKLOG_STARTUP
-                                                                      else update_interval)
+                                                                      else datetime.timedelta(minutes=10))
 
         search_intervals = {'15m': 15, '45m': 45, '90m': 90, '4h': 4 * 60, 'daily': 24 * 60}
         if CHECK_PROPERS_INTERVAL in search_intervals:
@@ -1428,6 +1422,7 @@ def save_config():
     new_config['General']['naming_anime'] = int(NAMING_ANIME)
     new_config['General']['launch_browser'] = int(LAUNCH_BROWSER)
     new_config['General']['update_shows_on_start'] = int(UPDATE_SHOWS_ON_START)
+    new_config['General']['show_update_hour'] = int(SHOW_UPDATE_HOUR)
     new_config['General']['trash_remove_show'] = int(TRASH_REMOVE_SHOW)
     new_config['General']['trash_rotate_logs'] = int(TRASH_ROTATE_LOGS)
     new_config['General']['home_search_focus'] = int(HOME_SEARCH_FOCUS)
@@ -1641,19 +1636,13 @@ def save_config():
     new_config['Twitter']['twitter_password'] = helpers.encrypt(TWITTER_PASSWORD, ENCRYPTION_VERSION)
     new_config['Twitter']['twitter_prefix'] = TWITTER_PREFIX
 
-    new_config['Boxcar'] = {}
-    new_config['Boxcar']['use_boxcar'] = int(USE_BOXCAR)
-    new_config['Boxcar']['boxcar_notify_onsnatch'] = int(BOXCAR_NOTIFY_ONSNATCH)
-    new_config['Boxcar']['boxcar_notify_ondownload'] = int(BOXCAR_NOTIFY_ONDOWNLOAD)
-    new_config['Boxcar']['boxcar_notify_onsubtitledownload'] = int(BOXCAR_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Boxcar']['boxcar_username'] = BOXCAR_USERNAME
-
     new_config['Boxcar2'] = {}
     new_config['Boxcar2']['use_boxcar2'] = int(USE_BOXCAR2)
     new_config['Boxcar2']['boxcar2_notify_onsnatch'] = int(BOXCAR2_NOTIFY_ONSNATCH)
     new_config['Boxcar2']['boxcar2_notify_ondownload'] = int(BOXCAR2_NOTIFY_ONDOWNLOAD)
     new_config['Boxcar2']['boxcar2_notify_onsubtitledownload'] = int(BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['Boxcar2']['boxcar2_accesstoken'] = BOXCAR2_ACCESSTOKEN
+    new_config['Boxcar2']['boxcar2_sound'] = BOXCAR2_SOUND
 
     new_config['Pushover'] = {}
     new_config['Pushover']['use_pushover'] = int(USE_PUSHOVER)

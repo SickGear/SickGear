@@ -3,271 +3,303 @@
 #from sickbeard import common
 #from sickbeard import exceptions
 #from sickbeard import scene_exceptions
-#from sickbeard.blackandwhitelist import *
-#set global $title="Edit " + $show.name
-#set global $header="Edit " + $show.name
+#import sickbeard.blackandwhitelist
 
-#set global $sbPath=".."
+#set global $title = 'Edit ' + $show.name
+#set global $header = 'Edit ' + $show.name
 
-#set global $topmenu="home"
+#set global $sbPath = '..'
+#set html_checked = ' checked="checked"'
+#set html_disabled = ' disabled="disabled"'
+
+#set global $topmenu = 'home'
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
 
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-#if $varExists('header') 
-	<h1 class="header">$header</h1>
-#else 
-	<h1 class="title">$title</h1>
-#end if
-
-<div id="editShow">
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
 <script type="text/javascript" charset="utf-8">
 <!--
 \$(document).ready(function(){
 
-  \$.getJSON('$sbRoot/home/addShows/getIndexerLanguages', {}, function(data) {
-        var resultStr = '';
+	\$.getJSON('$sbRoot/home/addShows/getIndexerLanguages', {}, function(data) {
+		var resultStr = '';
 
-        if (data.results.length == 0) {
-            flag = ' class="flag" style="background-image:url($sbRoot/images/flags/${show.lang}.png)"';
-            resultStr = '<option value="$show.lang" selected="selected" + flag>$show.lang</option>';
-        } else {
-            var current_lang_added = false;
-            \$.each(data.results, function(index, obj) {
+		if (data.results.length == 0) {
+			flag = ' class="flag" style="background-image:url($sbRoot/images/flags/${show.lang}.png)"';
+			resultStr = '<option value="$show.lang" selected="selected" + flag>$show.lang</option>';
+		} else {
+			var current_lang_added = false;
+			\$.each(data.results, function(index, obj) {
 
-                if (obj == "$show.lang") {
-                	selected = ' selected="selected"';
-                    current_lang_added = true;
-                }
-                else {
-                    selected = '';
-                }
+				if (obj == '$show.lang') {
+					selected = ' selected="selected"';
+					current_lang_added = true;
+				}
+				else {
+					selected = '';
+				}
 
-                flag = ' class="flag" style="background-image:url($sbRoot/images/flags/' + obj + '.png);"';
-                resultStr += '<option value="' + obj + '"' + selected + flag + '>' + obj + '</option>';
-            });
-            if (!current_lang_added)
-                resultStr += '<option value="$show.lang" selected="selected">$show.lang</option>';
+				flag = ' class="flag" style="background-image:url($sbRoot/images/flags/' + obj + '.png);"';
+				resultStr += '<option value="' + obj + '"' + selected + flag + '>' + obj + '</option>';
+			});
 
-        }
-        \$('#indexerLangSelect').html(resultStr)
+			if (!current_lang_added)
+				resultStr += '<option value="$show.lang" selected="selected">$show.lang</option>';
 
-  });
-
+		}
+		\$('#indexerLangSelectEdit').html(resultStr)
+	});
 });
 //-->
 </script>
 
-<br>
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
 
-<form action="editShow" method="post">
-<input type="hidden" name="show" value="$show.indexerid" />
-<b>Location:</b> <input type="text" name="location" id="location" value="$show._location" class="form-control form-control-inline input-sm input350" /><br />
-<br />
+<form action="editShow" method="post" id="addShowForm">
+<input type="hidden" name="show" value="$show.indexerid">
+
+	<div id="editShow" class="stepDiv">
+
+		<div class="field-pair">
+			<label for="paused">
+				<span class="component-title">Paused</span>
+				<span class="component-desc">
+					<input type="checkbox" name="paused" id="paused"#if 1 == $show.paused then $html_checked else ''#>
+					<p>enable to pause searching providers for show episodes</p>
+				</span>
+			</label>
+		</div>
+
+		<div class="field-pair">
 #set $qualities = $common.Quality.splitQuality(int($show.quality))
 #set global $anyQualities = $qualities[0]
 #set global $bestQualities = $qualities[1]
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_qualityChooser.tmpl")
-<br />
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
 
 #if $anyQualities + $bestQualities
-<b>Archive on first match: </b>
-<input type="checkbox" name="archive_firstmatch" #if $show.archive_firstmatch == 1 then "checked=\"checked\"" else ""# /><br>
-(check this to have the episode archived after the first best match is found from your archive quality list)
-<br />
-<br />
+			<div class="field-pair">
+				<label for="archive_firstmatch">
+					<span class="component-title">Archive on first match</span>
+					<span class="component-desc">
+						<input type="checkbox" name="archive_firstmatch" id="archive_firstmatch"#if $show.archive_firstmatch == 1 then $html_checked else ''#>
+						<p>enable to have the episode archived after the first best match is found from your archive quality list</p>
+					</span>
+				</label>
+			</div>
 #end if
+		</div>
 
-<b>Scene Exception:</b>
-<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200"> 
-<input class="btn btn-inline" type="button" value="Add" id="addSceneName"><br />
+		<div class="field-pair">
+			<label for="SceneName">
+				<span class="component-title input">Scene exception</span>
+				<span class="component-desc">
+					<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200">
+					<input class="btn btn-inline" type="button" value="Add" id="addSceneName">
+					<p class="clear-left">add alternative release names found on search providers for <b class="boldest grey-text">$show.name</b></p>
+				</span>
+				<span class="component-desc">
+					<div id="SceneException">
+						<h4>Exceptions list (multi-selectable)</h4>
+						<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="input200" style="min-height:90px; float:left" >
+#for $cur_exception in $show.exceptions:
+							<option value="$cur_exception">$cur_exception</option>
+#end for
+						</select>
+						<span><p>this list overrides the original name<br />to search, it doesn't append to it</p></span>
+						<div>
+							<input id="removeSceneName" value="Remove" class="btn pull-left" type="button" style="margin-top: 10px;"/>
+						</div>
+					</div>
+				</span>
+			</label>
+			<div style="clear:right">&nbsp;</div>
+		</div>
 
-<div id="SceneException" >
+		<div class="field-pair">
+			<label for="rls_ignore_words">
+				<span class="component-title input">Ignore result with any word</span>
+				<span class="component-desc">
+					<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="$show.rls_ignore_words" class="form-control form-control-inline input-sm input350">
+					<p>e.g. [word1,word2, ... ,word_n]</p>
+					<span><p>ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words</p></span>
+				</span>
+			</label>
+		</div>
 
-	<div>
-		<p>This will <b>affect the episode show search</b> on nzb and torrent provider.<br />
-		This list overrides the original name, it doesn't append to it.<br />
-		</p>
-	</div>		
-	
-	<div class="pull-left" style="text-align:center;">
-		<h4>Exceptions List</h4>
-		<select id="exceptions_list" name="exceptions_list" multiple="multiple" style="min-width:10em;" >
-				#for $cur_exception in $show.exceptions:
-					<option value="$cur_exception">$cur_exception</option>
-				#end for
-		</select>
-	<div>	
-		<input id="removeSceneName" value="Remove" class="btn float-left" type="button" style="margin-top: 10px;"/>
-	</div>	
-<br />
-</div>	
-</div>
-<div class="clearfix"></div>
-<br />
+		<div class="field-pair">
+			<label for="rls_require_words">
+				<span class="component-title input">Require at least one word</span>
+				<span class="component-desc">
+					<input type="text" name="rls_require_words" id="rls_require_words" value="$show.rls_require_words" class="form-control form-control-inline input-sm input350">
+					<p>e.g. [word1,word2, ... ,word_n]</p>
+					<span><p>ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words</p></span>
+				</span>
+			</label>
+		</div>
 
-<b>Info Language:</b> <select name="indexerLang" id="indexerLangSelect" class="form-control form-control-inline input-sm"></select><br />
-Note: This will only affect the language of the retrieved metadata file contents and episode filenames.<br />
-This <b>DOES NOT</b> allow SickGear to download non-english TV episodes!<br />
-<br />
+		<div class="field-pair">
+			<label for="location">
+				<span class="component-title input">Location for files</span>
+				<span class="component-desc">
+					<input type="text" name="location" id="location" value="$show._location" class="form-control form-control-inline input-sm input350">
+				</span>
+			</label>
+		</div>
 
-<b>Flatten files (no folders):</b> <input type="checkbox" name="flatten_folders" #if $show.flatten_folders == 1 and not $sickbeard.NAMING_FORCE_FOLDERS then "checked=\"checked\"" else ""# #if $sickbeard.NAMING_FORCE_FOLDERS then "disabled=\"disabled\"" else ""#/><br /><br />
-<b>Paused:</b> <input type="checkbox" name="paused" #if $show.paused == 1 then "checked=\"checked\"" else ""# /><br /><br />
-<b>Subtitles:</b> <input type="checkbox" name="subtitles"#if $show.subtitles == 1 and $sickbeard.USE_SUBTITLES then " checked=\"checked\"" else ""##if not $sickbeard.USE_SUBTITLES then " disabled=\"disabled\"" else ""#/><br /><br />
+		<div class="field-pair">
+			<label for="flatten_folders">
+				<span class="component-title">Flat folder structure</span>
+				<span class="component-desc">
+					<input type="checkbox" name="flatten_folders" id="flatten_folders"#if 1 == $show.flatten_folders and not $sickbeard.NAMING_FORCE_FOLDERS then $html_checked else ''##if $sickbeard.NAMING_FORCE_FOLDERS then $html_disabled else ''#>
+					<p>enable to prevent creating the folders normally used to group seasons</p>
+				</span>
+			</label>
+		</div>
 
-<b>Scene Numbering: </b>
-<input type="checkbox" name="scene" #if $show.scene == 1 then "checked=\"checked\"" else ""# /><br/>
-(check this if you wish to search by scene numbering, uncheck to search by indexer numbering)
-<br/><br/>
-<b>Air by date: </b> 
-<input type="checkbox" name="air_by_date" #if $show.air_by_date == 1 then "checked=\"checked\"" else ""# /><br />
-(check this if the show is released as Show.03.02.2010 rather than Show.S02E03) 
-<br /><br />
-<b>Sports: </b>
-<input type="checkbox" name="sports" #if $show.sports == 1 then "checked=\"checked\"" else ""# /><br />
-(check this if the show is a sporting or MMA event)
-<br /><br />
-<b>Anime: </b>
-<input type="checkbox" name="anime" #if $show.is_anime then "CHECKED" else ""#><br />
-(check this if the show is released as Show.265 rather than Show.S02E03, this show is an anime)
-<br /><br />
-<b>DVD Order: </b>
-<input type="checkbox" name="dvdorder" #if $show.dvdorder == 1 then "checked=\"checked\"" else ""# /><br/>
-(check this if you wish to use the DVD order instead of the Airing order)
-<br/><br/>
+		<div class="field-pair">
+			<label for="air_by_date">
+				<span class="component-title">Air by date episode names</span>
+				<span class="component-desc">
+					<input type="checkbox" name="air_by_date" id="air_by_date"#if 1 == $show.air_by_date then $html_checked else ''#>
+					<p>enable if episode releases are named ... <em class="grey-text">Show.03.02.2010</em> instead of <em class="grey-text">Show.S02E03</em></p>
+				</span>
+			</label>
+		</div>
 
-<b>Ignored Words:</b>  <input type="text" name="rls_ignore_words" id="rls_ignore_words" value="$show.rls_ignore_words" class="form-control form-control-inline input-sm input350" /><br />
-Results with any of these words in the title will be filtered out <br />
-Separate words with a comma, e.g. "word1,word2,word3"
-<br /><br />
+		<div class="field-pair">
+			<label for="dvdorder">
+				<span class="component-title">Use DVD order</span>
+				<span class="component-desc">
+					<input type="checkbox" name="dvdorder" id="dvdorder"#if 1 == $show.dvdorder then $html_checked else ''#>
+					<p>for episode titles, numbering etc. instead of the order the show aired on the network</p>
+				</span>
+			</label>
+		</div>
 
-<b>Required Words:</b> <input type="text" name="rls_require_words" id="rls_require_words" value="$show.rls_require_words" class="form-control form-control-inline input-sm input350" /><br />
-Results without one of these words in the title will be filtered out <br />
-Separate words with a comma, e.g. "word1,word2,word3"
-<br /><br />
+		<div class="field-pair">
+			<label for="scene">
+				<span class="component-title">Scene numbering</span>
+				<span class="component-desc">
+					<input type="checkbox" name="scene" id="scene"#if $show.scene == 1 then $html_checked else ''#>
+					<p>search for episodes that are numbered by scene groups instead of by the TV network</p>
+				</span>
+			</label>
+		</div>
+
+		<div class="field-pair" style="margin-bottom:10px">
+			<label for="indexerLangSelectEdit">
+				<span class="component-title input">Info language</span>
+				<span class="component-desc">
+					<select name="indexerLang" id="indexerLangSelectEdit" class="form-control form-control-inline input-sm"></select>
+					<span>attempt to fetch show data and episode filenames in this language</span>
+				</span>
+			</label>
+		</div>
+
+		<div class="field-pair">
+			<label for="subtitles">
+				<span class="component-title">Subtitles</span>
+				<span class="component-desc">
+					<input type="checkbox" name="subtitles" id="subtitles"#if 1 == $show.subtitles and $sickbeard.USE_SUBTITLES then $html_checked else ''##if not $sickbeard.USE_SUBTITLES then $html_disabled else ''#>
+					<p#if not $sickbeard.USE_SUBTITLES then ' class="grey-text"><del' else ''#>attempt to download episode subtitles for this show#if not $sickbeard.USE_SUBTITLES then '</del> ... (<span class="red-text">note: first <a href="%s/config/subtitles/">enable the subtitle system here</a></span>)' % $sbRoot else ''#</p>
+				</span>
+			</label>
+		</div>
+
+		<div class="field-pair">
+			<label for="sports">
+				<span class="component-title">Show is sports</span>
+				<span class="component-desc">
+					<input type="checkbox" name="sports" id="sports"#if 1 == $show.sports then $html_checked else ''#>
+					<p>enable to treat this show as a sporting or MMA event</p>
+				</span>
+			</label>
+		</div>
+
+		<div class="field-pair">
+			<label for="anime">
+				<span class="component-title">Show is anime</span>
+				<span class="component-desc">
+					<input type="checkbox" name="anime" id="anime"#if $show.is_anime then $html_checked else ''#>
+					<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
+				</span>
+			</label>
+		</div>
 
 #if $show.is_anime:
-#from sickbeard.blackandwhitelist import *
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_blackwhitelist.tmpl")
+    #import sickbeard.blackandwhitelist
+    #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
+		<script type="text/javascript" src="$sbRoot/js/blackwhite.js?$sbPID"></script>
 #end if
-
-<input type="hidden" name="whitelist" id="whitelist"/>
-<input type="hidden" name="blacklist" id="blacklist"/>
-
-<input type="submit" id="submit" value="Submit" class="btn btn-primary" />
-</form>
+		<input type="submit" id="submit" value="Submit" class="btn btn-primary" />
+	</form>
 
 <script type="text/javascript" charset="utf-8">
 <!--
-   	var all_exceptions = new Array;
+	var all_exceptions = new Array;
 
-    jQuery('#location').fileBrowser({ title: 'Select Show Location' });
-   
-    \$('#submit').click(function(){
+	jQuery('#location').fileBrowser({ title: 'Select Show Location' });
+
+	\$('#submit').click(function(){
 		all_exceptions = []
 
-		\$("#exceptions_list option").each  ( function() {
+		\$('#exceptions_list option').each  ( function() {
 			all_exceptions.push( \$(this).val() );
-	    });
-		
-		\$("#exceptions_list").val(all_exceptions);
-
-        var realvalues = [];
-
-		\$('#white option').each(function(i, selected) {
-		    realvalues[i] = \$(selected).val();
 		});
-		\$("#whitelist").val(realvalues.join(","));
 
-		realvalues = [];
-		\$('#black option').each(function(i, selected) {
-		    realvalues[i] = \$(selected).val();
-		});
-		\$("#blacklist").val(realvalues.join(","));
+		\$('#exceptions_list').val(all_exceptions);
+#if $show.is_anime:
+		generate_bwlist()
+#end if
+	});
 
-	});  
-   
-    \$('#addSceneName').click(function() {
-        var scene_ex = \$('#SceneName').val()
-        var option = \$("<option>")
+	\$('#addSceneName').click(function() {
+		var scene_ex = \$('#SceneName').val()
+		var option = \$('<option>')
 		all_exceptions = []
 			
-	    \$("#exceptions_list option").each  ( function() {
-	       all_exceptions.push( \$(this).val() )
-	    });
-        
-        \$('#SceneName').val('')
-        
-        if (jQuery.inArray(scene_ex, all_exceptions) > -1 || (scene_ex == ''))
-        	return
+		\$('#exceptions_list option').each  ( function() {
+		   all_exceptions.push( \$(this).val() )
+		});
 
-		\$("#SceneException").show()
+		\$('#SceneName').val('')
 
-        option.attr("value",scene_ex)
-        option.html(scene_ex)
-        return option.appendTo('#exceptions_list');
-    });
-    
-    \$('#removeSceneName').click(function() {
+		if (jQuery.inArray(scene_ex, all_exceptions) > -1 || (scene_ex == ''))
+			return
+
+		\$('#SceneException').show()
+
+		option.attr('value',scene_ex)
+		option.html(scene_ex)
+		return option.appendTo('#exceptions_list');
+	});
+
+	\$('#removeSceneName').click(function() {
 		\$('#exceptions_list option:selected').remove();
 		
 		\$(this).toggle_SceneException()
-    });
-    
-   $.fn.toggle_SceneException = function() {
-   		all_exceptions = []
-   		
-   		\$("#exceptions_list option").each  ( function() {
+	});
+
+	$.fn.toggle_SceneException = function() {
+		all_exceptions = []
+
+		\$('#exceptions_list option').each  ( function() {
 			all_exceptions.push( \$(this).val() );
-	    });
-	    
-		if (all_exceptions == '')
-			\$("#SceneException").hide();
+		});
+
+		if ('' == all_exceptions)
+			\$('#SceneException').hide();
 		else
-			\$("#SceneException").show();
+			\$('#SceneException').show();
 	}
 
 	\$(this).toggle_SceneException();
-
-    \$('#removeW').click(function() {
-		return !\$('#white option:selected').remove().appendTo('#pool');
-	});
-	\$('#addW').click(function() {
-	 	return !\$('#pool option:selected').remove().appendTo('#white');
-	});
-	\$('#addB').click(function() {
-	 	return !\$('#pool option:selected').remove().appendTo('#black');
-	 });
-    \$('#removeP').click(function() {
-        return !\$('#pool option:selected').remove();
-    });
-	\$('#removeB').click(function() {
-        return !\$('#black option:selected').remove().appendTo('#pool');
-    });
-
-    \$('#addToWhite').click(function() {
-        var group = \$('#addToPoolText').attr("value")
-        if(group == "")
-            return
-        \$('#addToPoolText').attr("value", "")
-        var option = \$("<option>")
-        option.attr("value",group)
-        option.html(group)
-        return option.appendTo('#white');
-    });
-    \$('#addToBlack').click(function() {
-        var group = \$('#addToPoolText').attr("value")
-        if(group == "")
-            return
-        \$('#addToPoolText').attr("value", "")
-        var option = \$("<option>")
-        option.attr("value",group)
-        option.html(group)
-        return option.appendTo('#black');
-    });
-
 //-->
 </script>
 </div>
-#include $os.path.join($sickbeard.PROG_DIR,"gui/slick/interfaces/default/inc_bottom.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

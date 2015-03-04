@@ -1,8 +1,92 @@
+### 0.7.0 (2015-03-04 06:00:00 UTC)
+
+* Fix slow database operations (port from midgetspy/sickbeard)
+* Add TVRage network name standardization
+* Remove recent and backlog search at start up options from GUI
+* Change recent and backlog search at start up default value to false
+* Change recent search to occur 5 minutes after start up
+* Change backlog search to occur 10 minutes after start up
+* Change UI footer to display time left until a backlog search
+* Remove obsolete tvtorrents search provider
+* Change light and dark theme css to only hold color information
+* Fix incorrect class names in a couple of templates
+* Change anime release groups to in memory storage for lowered latency
+* Change adjust menu delay and hover styling
+* Fix provider list color
+* Add handling of exceptional case with missing network name (NoneType) in Episode View 
+* Fix black and white list initialization on new show creation
+* Add select all and clear all buttons to testRename template
+* Fix displayShow topmenu variable to point to a valid menu item
+* Change displayShow scene exception separator to a comma for neater appearance
+* Remove non english subtitle providers
+* Fix rename of excluded metadata
+* Change corrected spelling & better clarified various log messages
+* Change minor PEP8 tweaks in sab.py
+* Add api disabled error code for newznab providers
+* Add support for a proxy host PAC url on the General Config/Advanced Settings page
+* Add proxy request url parsing to enforce netloc only matching which prevents false positives when url query parts contain FQDNs
+* Add scroll into view buttons when overdues shows are available on the Episodes page/DayByDay layout
+* Add scroll into view buttons when future shows are available on the Episodes page/DayByDay layout
+* Add qTips to episode names on the Episodes page/DayByDay layout
+* Change Episodes page/List layout qtips to prepend show title to episode plot
+* Change Episodes page/DayByDay layout qtips to prepend show title to episode plot
+* Change Episodes page/DayByDay layout cards to display show title in a qtip when there is no plot
+* Change position of "[paused]" text to top right of a card on the Episodes page/DayByDay layout
+* Add "On Air until" text and overdue/on air colour bars to show episode states on the Episodes page/DayByDay layout
+* Change The Pirate Bay url back as it's now back up and oldpiratebay hasn't been updated for weeks
+* Remove duplicate thepiratebay icon
+* Change to ensure uTorrent API parameters are ordered for uT 2.2.1 compatibility
+* Remove defunct boxcar notifier
+* Add sound selection for boxcar2 notifier
+* Change boxcar2 notifier to use updated api scheme
+* Update the Plex notifier from a port at midgetspy/sickbeard
+* Add support for multiple server hosts to the updated Plex server notifier
+* Change Plex Media Server settings section for multi server(s) and improve the layout in the config/notifications page
+* Add logic to Plex notifier to update a single server where its TV section path matches the downloaded show. All server
+  libraries are updated if no single server has a download path match.
+* Change the ui notifications to show the Plex Media Server(s) actioned for library updating
+* Fix issue where PMS text wasn't initialised on the config/notifications page and added info about Plex clients
+* Add ability to test Plex Server(s) on config/notifications page
+* Add percentage of episodes downloaded to footer and remove double spaces in text
+* Fix SSL authentication on Synology stations
+* Change IPT urls to reduce 301 redirection
+* Add detection of file-system having no support for link creation (e.g. Unraid shares)
+* Add catch exceptions when unable to cache a requests response
+* Update PNotify to latest master (2014-12-25) for desktop notifications
+* Add desktop notifications
+* Change the AniDB provider image for a sharper looking version
+* Change to streamline iCal function and make it handle missing network names
+* Change when picking a best result to only test items that have a size specifier against the failed history
+* Add anime release groups to add new show options page
+* Add setting "Update shows during hour" to General Config/Misc
+* Add max-width to prevent ui glitch on Pull request and Branch Version selectors on config/General/Advanced and change <input> tags to html5
+* Change order of some settings on Config/General/Interface/Web Interface and tweak texts
+* Change overhaul UI of editShow and anime release groups, refactor and simplify code
+* Change list order of option on the right of the displayShow page to be mostly inline with the order of options on editShow
+* Change legend wording and text colour on the displayShow page
+* Add output message if no release group results are available
+* Add cleansing of text used in the processes to a add a show
+* Add sorting of AniDB available group results
+* Add error handling and related UI feedback to reflect result of AniDB communications
+* Change replace HTTP auth with a login page
+* Change to improve webserve code
+* Add logout menu item with confirmation
+* Add 404 error page
+* Change SCC URLs to remove redirection overhead
+* Change TorrentBytes login parameter in line with site change
+* Change FreshOnTv login parameter and use secure URLs, add logging of Cloudflare blocking and prevent vacant cookie tracebacks
+* Change TPB webproxy list and add SSL variants 
+* Add YTV network logo
+* Remove defunct Fanzub provider
+
+
 ### 0.6.4 (2015-02-10 20:20:00 UTC)
+
 * Fix issue where setting the status for an episode that doesn't need a db update fails
 
 
 ### 0.6.3 (2015-02-10 05:30:00 UTC)
+
 * Change KickAssTorrents URL
 
 

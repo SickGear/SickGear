@@ -740,3 +740,8 @@ class ConfigMigrator():
             sickbeard.EPISODE_VIEW_SORT = 'time'
         sickbeard.EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(self.config_obj, 'GUI', 'coming_eps_display_paused', 0))
         sickbeard.EPISODE_VIEW_MISSED_RANGE = check_setting_int(self.config_obj, 'GUI', 'coming_eps_missed_range', 7)
+
+    def _migrate_v8(self):
+        # removing settings from gui and making it a hidden debug option
+        sickbeard.RECENTSEARCH_STARTUP = False
+        sickbeard.BACKLOG_STARTUP = False

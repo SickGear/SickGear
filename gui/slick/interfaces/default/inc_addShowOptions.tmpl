@@ -20,6 +20,33 @@
 			<p class="grey-text">Tip: The following options are <span style="font-weight:800">edit</span>able later in the detail view of the show</p>
 		</div>
 
+		<div class="field-pair">
+#set $qualities = $Quality.splitQuality($sickbeard.QUALITY_DEFAULT)
+#set global $anyQualities = $qualities[0]
+#set global $bestQualities = $qualities[1]
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
+		</div>
+
+		<div class="field-pair alt">
+			<label for="flatten_folders">
+				<span class="component-title">Flat folder structure</span>
+				<span class="component-desc">
+					<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders" #if $sickbeard.FLATTEN_FOLDERS_DEFAULT then "checked=\"checked\"" else ""# />
+					<p>do not create sub folders</p>
+				</span>
+			</label>
+		</div>
+
+		<div class="field-pair alt">
+			<label for="scene">
+				<span class="component-title">Scene numbering</span>
+				<span class="component-desc">
+					<input type="checkbox" name="scene" id="scene" #if $sickbeard.SCENE_DEFAULT then "checked=\"checked\"" else ""# />
+					<p>search for episodes that are numbered by scene groups instead of by the TV network</p>
+				</span>
+			</label>
+		</div>
+
 #if $sickbeard.USE_SUBTITLES:
 		<div class="field-pair alt">
 			<label for="subtitles">
@@ -33,41 +60,16 @@
 #end if
 
 		<div class="field-pair alt">
-			<label for="flatten_folders">
-				<span class="component-title">Flatten folders</span>
-				<span class="component-desc">
-					<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders" #if $sickbeard.FLATTEN_FOLDERS_DEFAULT then "checked=\"checked\"" else ""# />
-					<p>do not create sub folders</p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair alt">
 			<label for="anime">
-				<span class="component-title">Anime</span>
+				<span class="component-title">Show is anime</span>
 				<span class="component-desc">
 					<input type="checkbox" name="anime" id="anime" #if $sickbeard.ANIME_DEFAULT then "checked=\"checked\"" else ""# />
-					<p>use anime processing for this show</p>
+					<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
 				</span>
 			</label>
 		</div>
 
-		<div class="field-pair alt">
-			<label for="scene">
-				<span class="component-title">Scene numbering</span>
-				<span class="component-desc">
-					<input type="checkbox" name="scene" id="scene" #if $sickbeard.SCENE_DEFAULT then "checked=\"checked\"" else ""# />
-					<p>enable if episodes are numbered by scene releases and not by the TV network</p>
-				</span>
-			</label>
-		</div>
-
-#set $qualities = $Quality.splitQuality($sickbeard.QUALITY_DEFAULT)
-#set global $anyQualities = $qualities[0]
-#set global $bestQualities = $qualities[1]
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_qualityChooser.tmpl")
-
-		<div class="field-pair alt" style="margin-top:30px">
+		<div class="field-pair alt" style="margin-top:20px">
 			<label for="saveDefaultsButton">
 				<span class="component-title">Save options as defaults</span>
 				<span class="component-desc">
@@ -76,3 +78,6 @@
 				</span>
 			</label>
 		</div>
+
+#import sickbeard.blackandwhitelist
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')

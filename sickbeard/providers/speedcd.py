@@ -91,7 +91,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         if re.search('Incorrect username or Password. Please try again.', response.text) \
                 or response.status_code == 401:
-            logger.log(u'Invalid username or password for ' + self.name + ' Check your settings', logger.ERROR)
+            logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
             return False
 
         return True

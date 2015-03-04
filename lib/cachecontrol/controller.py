@@ -6,7 +6,7 @@ import calendar
 import time
 import datetime
 
-from requests.structures import CaseInsensitiveDict
+from lib.requests.structures import CaseInsensitiveDict
 
 from .cache import DictCache
 from .compat import parsedate_tz
@@ -21,7 +21,7 @@ def parse_uri(uri):
         (scheme, authority, path, query, fragment) = parse_uri(uri)
     """
     groups = URI.match(uri).groups()
-    return (groups[1], groups[3], groups[4], groups[6], groups[8])
+    return groups[1], groups[3], groups[4], groups[6], groups[8]
 
 
 class CacheController(object):

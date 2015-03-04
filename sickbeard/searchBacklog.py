@@ -38,6 +38,8 @@ class BacklogSearchScheduler(scheduler.Scheduler):
     def nextRun(self):
         if self.action._lastBacklog <= 1:
             return datetime.date.today()
+        elif (self.action._lastBacklog + self.action.cycleTime) < datetime.date.today().toordinal():
+            return datetime.date.today()
         else:
             return datetime.date.fromordinal(self.action._lastBacklog + self.action.cycleTime)
 

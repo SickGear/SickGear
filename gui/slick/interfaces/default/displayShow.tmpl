@@ -7,11 +7,10 @@
 #import os.path, os
 #import datetime
 
-#set global $title=$show.name
-##set global $header = '<a></a>' % 
-#set global $topmenu="manageShows"#
-#set $exceptions_string = " | ".join($show.exceptions)
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
+#set global $title = $show.name
+#set global $topmenu = 'home'
+#set $exceptions_string = ', '.join($show.exceptions)
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/lib/jquery.bookmarkscroll.js?$sbPID"></script>
 
@@ -197,68 +196,69 @@
 			<div id="summary">
 				<table class="summaryTable pull-left">
 				#if $show.network and $show.airs:
-					<tr><td class="showLegend">Originally Airs: </td><td>$show.airs #if not $network_timezones.test_timeformat($show.airs) then " <font color='#FF0000'><b>(invalid Timeformat)</b></font> " else ""# on $show.network</td></tr>
+					<tr><td class="showLegend grey-text">Originally airs</td><td>$show.airs #if not $network_timezones.test_timeformat($show.airs) then ' <font color="#FF0000"><b>(invalid Timeformat)</b></font> ' else ''# on $show.network</td></tr>
 				#else if $show.network:
-					<tr><td class="showLegend">Originally Airs: </td><td>$show.network</td></tr>
+					<tr><td class="showLegend grey-text">Originally airs</td><td>$show.network</td></tr>
 				#else if $show.airs:
-					<tr><td class="showLegend">Originally Airs: </td><td>>$show.airs #if not $network_timezones.test_timeformat($show.airs) then " <font color='#FF0000'><b>(invalid Timeformat)</b></font> " else ""#</td></tr>
+					<tr><td class="showLegend grey-text">Originally airs</td><td>$show.airs #if not $network_timezones.test_timeformat($show.airs) then ' <font color="#FF0000"><b>(invalid Timeformat)</b></font> ' else ''#</td></tr>
 				#end if
-					<tr><td class="showLegend">Status: </td><td>$show.status</td></tr>
+					<tr><td class="showLegend grey-text">Status</td><td>$show.status</td></tr>
 				#if $showLoc[1]:
-					<tr><td class="showLegend">Location: </td><td>$showLoc[0]</td></tr>
+					<tr><td class="showLegend grey-text">Location</td><td>$showLoc[0]</td></tr>
 				#else:
-					<tr><td class="showLegend"><span style="color: red;">Location: </span></td><td><span style="color: red;">$showLoc[0]</span> (dir is missing)</td></tr>
+					<tr><td class="showLegend grey-text"><span style="color: red;">Location</span></td><td><span style="color: red;">$showLoc[0]</span> (dir is missing)</td></tr>
 				#end if
 				#set $anyQualities, $bestQualities = $Quality.splitQuality(int($show.quality))
-					<tr><td class="showLegend">Quality: </td><td>
+					<tr><td class="showLegend grey-text">Quality</td><td>
 				#if $show.quality in $qualityPresets:
 					<span class="quality $qualityPresetStrings[$show.quality]">$qualityPresetStrings[$show.quality]</span>
 				#else:
 				#if $anyQualities:
-					<i>Initial:</i> <%=", ".join([Quality.qualityStrings[x] for x in sorted(anyQualities)])%> #if $bestQualities then " </br> " else ""#
+					<i class="grey-text">Initial ...</i> <%= ', '.join([Quality.qualityStrings[x] for x in sorted(anyQualities)])%> #if $bestQualities then " </br> " else ""#
 				#end if
 				#if $bestQualities:
-					<i>Replace with:</i> <%=", ".join([Quality.qualityStrings[x] for x in sorted(bestQualities)])%>
+					<i class="grey-text">Replace with ...</i> <%= ', '.join([Quality.qualityStrings[x] for x in sorted(bestQualities)])%>
 				#end if
 				#end if
-					<tr><td class="showLegend">Scene Name:</td><td>#if $show.exceptions then $exceptions_string else $show.name#</td></tr>
+					<tr><td class="showLegend grey-text">Scene name</td><td>#if $show.exceptions then $exceptions_string else $show.name#</td></tr>
 					
-				#if $show.rls_require_words:
-					<tr><td class="showLegend">Required Words: </td><td>#echo $show.rls_require_words#</td></tr>
-				#end if
 				#if $show.rls_ignore_words:
-					<tr><td class="showLegend">Ignored Words: </td><td>#echo $show.rls_ignore_words#</td></tr>
+					<tr><td class="showLegend grey-text">Ignore with any of</td><td>#echo $show.rls_ignore_words#</td></tr>
 				#end if
-				#if $bwl and $bwl.get_white_keywords_for("release_group"):
-					<tr><td class="showLegend">Wanted Group#if len($bwl.get_white_keywords_for("release_group"))>1 then "s" else ""#:</td>
-					<td>#echo ', '.join($bwl.get_white_keywords_for("release_group"))#</td>
+				#if $show.rls_require_words:
+					<tr><td class="showLegend grey-text">Require one of</td><td>#echo $show.rls_require_words#</td></tr>
+				#end if
+
+				#if $bwl and $bwl.whitelist:
+					<tr><td class="showLegend grey-text">Whitelist group#if len($bwl.whitelist)>1 then 's' else ''#</td>
+					<td>#echo ', '.join($bwl.whitelist)#</td>
 					</tr>
 				#end if
-				#if $bwl and $bwl.get_black_keywords_for("release_group"):
-					<tr><td class="showLegend">Unwanted Group#if len($bwl.get_black_keywords_for("release_group"))>1 then "s" else ""#:</td>
-					<td>#echo ', '.join($bwl.get_black_keywords_for("release_group"))#</td>
+				#if $bwl and $bwl.blacklist:
+					<tr><td class="showLegend grey-text">Blacklist group#if len($bwl.blacklist)>1 then 's' else ''#</td>
+					<td>#echo ', '.join($bwl.blacklist)#</td>
 					</tr>
 				#end if
 
-				<tr><td class="showLegend">Size:</td><td>$sickbeard.helpers.human(sickbeard.helpers.get_size($showLoc[0]))</td></tr>
+					<tr><td class="showLegend grey-text">Size</td><td>$sickbeard.helpers.human(sickbeard.helpers.get_size($showLoc[0]))</td></tr>
 
 				</table>
 			
-				<table style="width:180px; float: right; vertical-align: middle; height: 100%;">
-					<tr><td class="showLegend">Info Language:</td><td><img src="$sbRoot/images/flags/${show.lang}.png" width="16" height="11" alt="$show.lang" title="$show.lang" /></td></tr>
-					#if $sickbeard.USE_SUBTITLES
-					<tr><td class="showLegend">Subtitles: </td><td><img src="$sbRoot/images/#if int($show.subtitles) == 1 then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
-					#end if
-					<tr><td class="showLegend">Flat Folders: </td><td><img src="$sbRoot/images/#if $show.flatten_folders == 1 or $sickbeard.NAMING_FORCE_FOLDERS then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
-					<tr><td class="showLegend">Paused: </td><td><img src="$sbRoot/images/#if int($show.paused) == 1 then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
-					<tr><td class="showLegend">Air-by-Date: </td><td><img src="$sbRoot/images/#if int($show.air_by_date) == 1 then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
-					<tr><td class="showLegend">Sports: </td><td><img src="$sbRoot/images/#if int($show.is_sports) == 1 then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
-					<tr><td class="showLegend">Anime: </td><td><img src="$sbRoot/images/#if int($show.is_anime) == 1 then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
-					<tr><td class="showLegend">DVD Order: </td><td><img src="$sbRoot/images/#if int($show.dvdorder) == 1 then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
-					<tr><td class="showLegend">Scene Numbering: </td><td><img src="$sbRoot/images/#if int($show.scene) == 1 then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
+				<table class="options-on-right">
+					<tr><td class="showLegendRight grey-text">Paused</td><td><img src="$sbRoot/images/#if int($show.paused) == 1 then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
 					#if $anyQualities + $bestQualities
-					<tr><td class="showLegend">Archive First Match: </td><td><img src="$sbRoot/images/#if int($show.archive_firstmatch) == 1 then "yes16.png\" alt=\"Y" else "no16.png\" alt=\"N"#" width="16" height="16" /></td></tr>
+					<tr><td class="showLegendRight grey-text">Archive on first match</td><td><img src="$sbRoot/images/#if int($show.archive_firstmatch) == 1 then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
 					#end if
+					<tr><td class="showLegendRight grey-text">Flat folder structure</td><td><img src="$sbRoot/images/#if $show.flatten_folders == 1 or $sickbeard.NAMING_FORCE_FOLDERS then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
+					<tr><td class="showLegendRight grey-text">Air by date naming</td><td><img src="$sbRoot/images/#if int($show.air_by_date) == 1 then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
+					<tr><td class="showLegendRight grey-text">Use DVD order</td><td><img src="$sbRoot/images/#if int($show.dvdorder) == 1 then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
+					<tr><td class="showLegendRight grey-text">Scene numbering</td><td><img src="$sbRoot/images/#if int($show.scene) == 1 then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
+					#if $sickbeard.USE_SUBTITLES
+					<tr><td class="showLegendRight grey-text">Subtitles</td><td><img src="$sbRoot/images/#if int($show.subtitles) == 1 then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
+					#end if
+					<tr><td class="showLegendRight grey-text">Show is sports</td><td><img src="$sbRoot/images/#if int($show.is_sports) == 1 then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
+					<tr><td class="showLegendRight grey-text">Show is anime</td><td><img src="$sbRoot/images/#if int($show.is_anime) == 1 then 'yes16.png" title="Yes" alt="Yes' else 'no16.png" title="No" alt="No'#" width="16" height="16" /></td></tr>
+					<tr><td class="showLegendRight grey-text">Info language</td><td><img src="$sbRoot/images/flags/${show.lang}.png" width="16" height="11" alt="$show.lang" title="$show.lang" /></td></tr>
 				</table>
 			</div>
 		
@@ -490,4 +490,4 @@
 	
 </table>
 
-#include $os.path.join($sickbeard.PROG_DIR,"gui/slick/interfaces/default/inc_bottom.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -21,6 +21,7 @@ import re
 import sickbeard
 from sickbeard import logger
 from sickbeard.clients.generic import GenericClient
+import urllib
 
 
 class uTorrentAPI(GenericClient):
@@ -32,8 +33,11 @@ class uTorrentAPI(GenericClient):
 
     def _request(self, method='get', params={}, files=None):
 
-        params.update({'token': self.auth})
-        return super(uTorrentAPI, self)._request(method=method, params=params, files=files)
+        return super(uTorrentAPI, self)._request(
+            method=method,
+            params='token={0:s}&{1:s}'.format(self.auth, '&'.join(
+                ['%s' % urllib.urlencode(dict([[key, str(value)]])) for key, value in params.iteritems()])) if any(params) else params,
+            files=files)
 
     def _get_auth(self):
 

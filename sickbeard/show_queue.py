@@ -29,7 +29,7 @@ from sickbeard import exceptions, logger, ui, db
 from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
-
+from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 class ShowQueue(generic_queue.GenericQueue):
     def __init__(self):
@@ -105,7 +105,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
         if (self.isBeingUpdated(show) or self.isInUpdateQueue(show)) and not force:
             logger.log(
-                u"A refresh was attempted but there is already an update queued or in progress. Since updates do a refres at the end anyway I'm skipping this request.",
+                u"A refresh was attempted but there is already an update queued or in progress. Since updates do a refresh at the end anyway I'm skipping this request.",
                 logger.DEBUG)
             return
 
@@ -132,9 +132,9 @@ class ShowQueue(generic_queue.GenericQueue):
         return queueItemObj
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
-                lang="en", subtitles=None, anime=None, scene=None, paused=None):
+                lang="en", subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
-                                    subtitles, anime, scene, paused)
+                                    subtitles, anime, scene, paused, blacklist, whitelist)
 
         self.add_item(queueItemObj)
 
@@ -191,7 +191,7 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused):
+                 scene, paused, blacklist, whitelist):
 
         self.indexer = indexer
         self.indexer_id = indexer_id
@@ -204,6 +204,8 @@ class QueueItemAdd(ShowQueueItem):
         self.anime = anime
         self.scene = scene
         self.paused = paused
+        self.blacklist = blacklist
+        self.whitelist = whitelist
 
         self.show = None
 
@@ -293,6 +295,13 @@ class QueueItemAdd(ShowQueueItem):
             self.show.scene = self.scene if self.scene != None else sickbeard.SCENE_DEFAULT
             self.show.paused = self.paused if self.paused != None else False
 
+            if self.show.anime:
+                self.show.release_groups = BlackAndWhiteList(self.show.indexerid)
+                if self.blacklist:
+                    self.show.release_groups.set_black_keywords(self.blacklist)
+                if self.whitelist:
+                    self.show.release_groups.set_white_keywords(self.whitelist)
+
             # be smartish about this
             if self.show.genre and "talk show" in self.show.genre.lower():
                 self.show.air_by_date = 1
@@ -332,7 +341,7 @@ class QueueItemAdd(ShowQueueItem):
             self.show.loadIMDbInfo()
         except imdb_exceptions.IMDbError, e:
             #todo Insert UI notification
-            logger.log(u" Something wrong on IMDb api: " + ex(e), logger.WARNING)
+            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
         except Exception, e:
             logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
 
@@ -361,7 +370,7 @@ class QueueItemAdd(ShowQueueItem):
         try:
             self.show.loadEpisodesFromDir()
         except Exception, e:
-            logger.log(u"Error searching dir for episodes: " + ex(e), logger.ERROR)
+            logger.log(u"Error searching directory for episodes: " + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         # if they gave a custom status then change all the eps to it
@@ -446,7 +455,7 @@ class QueueItemRename(ShowQueueItem):
         try:
             show_loc = self.show.location
         except exceptions.ShowDirNotFoundException:
-            logger.log(u"Can't perform rename on " + self.show.name + " when the show dir is missing.", logger.WARNING)
+            logger.log(u"Can't perform rename on " + self.show.name + " when the show directory is missing.", logger.WARNING)
             return
 
         ep_obj_rename_list = []
@@ -515,7 +524,7 @@ class QueueItemUpdate(ShowQueueItem):
         try:
             self.show.loadIMDbInfo()
         except imdb_exceptions.IMDbError, e:
-            logger.log(u" Something wrong on IMDb api: " + ex(e), logger.WARNING)
+            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
         except Exception, e:
             logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)

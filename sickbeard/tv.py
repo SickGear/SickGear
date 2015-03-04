@@ -50,6 +50,7 @@ from sickbeard import notifiers
 from sickbeard import postProcessor
 from sickbeard import subtitles
 from sickbeard import history
+from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 from sickbeard import encodingKludge as ek
 
@@ -105,6 +106,7 @@ class TVShow(object):
         self.isDirGood = False
         self.episodes = {}
         self.nextaired = ""
+        self.release_groups = None
 
         otherShow = helpers.findCertainShow(sickbeard.showList, self.indexerid)
         if otherShow != None:
@@ -331,7 +333,7 @@ class TVShow(object):
         result = False
 
         if not ek.ek(os.path.isdir, self._location):
-            logger.log(str(self.indexerid) + u": Show dir doesn't exist, skipping NFO generation")
+            logger.log(str(self.indexerid) + u": Show directory doesn't exist, skipping NFO generation")
             return False
 
         logger.log(str(self.indexerid) + u": Writing NFOs for show")
@@ -343,7 +345,7 @@ class TVShow(object):
     def writeMetadata(self, show_only=False):
 
         if not ek.ek(os.path.isdir, self._location):
-            logger.log(str(self.indexerid) + u": Show dir doesn't exist, skipping NFO generation")
+            logger.log(str(self.indexerid) + u": Show directory doesn't exist, skipping NFO generation")
             return
 
         self.getImages()
@@ -356,7 +358,7 @@ class TVShow(object):
     def writeEpisodeNFOs(self):
 
         if not ek.ek(os.path.isdir, self._location):
-            logger.log(str(self.indexerid) + u": Show dir doesn't exist, skipping NFO generation")
+            logger.log(str(self.indexerid) + u": Show directory doesn't exist, skipping NFO generation")
             return
 
         logger.log(str(self.indexerid) + u": Writing NFOs for all episodes")
@@ -374,7 +376,7 @@ class TVShow(object):
     def updateMetadata(self):
 
         if not ek.ek(os.path.isdir, self._location):
-            logger.log(str(self.indexerid) + u": Show dir doesn't exist, skipping NFO generation")
+            logger.log(str(self.indexerid) + u": Show directory doesn't exist, skipping NFO generation")
             return
 
         self.updateShowNFO()
@@ -384,7 +386,7 @@ class TVShow(object):
         result = False
 
         if not ek.ek(os.path.isdir, self._location):
-            logger.log(str(self.indexerid) + u": Show dir doesn't exist, skipping NFO generation")
+            logger.log(str(self.indexerid) + u": Show directory doesn't exist, skipping NFO generation")
             return False
 
         logger.log(str(self.indexerid) + u": Updating NFOs for show with new indexer info")
@@ -397,7 +399,7 @@ class TVShow(object):
     def loadEpisodesFromDir(self):
 
         if not ek.ek(os.path.isdir, self._location):
-            logger.log(str(self.indexerid) + u": Show dir doesn't exist, not loading episodes from disk")
+            logger.log(str(self.indexerid) + u": Show directory doesn't exist, not loading episodes from disk")
             return
 
         logger.log(str(self.indexerid) + u": Loading all episodes from the show directory " + self._location)
@@ -704,14 +706,14 @@ class TVShow(object):
 
                 # if it was snatched and now exists then set the status correctly
                 if oldStatus == SNATCHED and oldQuality <= newQuality:
-                    logger.log(u"STATUS: this ep used to be snatched with quality " + Quality.qualityStrings[
+                    logger.log(u"STATUS: this episode used to be snatched with quality " + Quality.qualityStrings[
                         oldQuality] + u" but a file exists with quality " + Quality.qualityStrings[
                                    newQuality] + u" so I'm setting the status to DOWNLOADED", logger.DEBUG)
                     newStatus = DOWNLOADED
 
                 # if it was snatched proper and we found a higher quality one then allow the status change
                 elif oldStatus == SNATCHED_PROPER and oldQuality < newQuality:
-                    logger.log(u"STATUS: this ep used to be snatched proper with quality " + Quality.qualityStrings[
+                    logger.log(u"STATUS: this episode used to be snatched proper with quality " + Quality.qualityStrings[
                         oldQuality] + u" but a file exists with quality " + Quality.qualityStrings[
                                    newQuality] + u" so I'm setting the status to DOWNLOADED", logger.DEBUG)
                     newStatus = DOWNLOADED
@@ -827,6 +829,9 @@ class TVShow(object):
 
             if not self.imdbid:
                 self.imdbid = sqlResults[0]["imdb_id"]
+
+        if self.is_anime:
+            self.release_groups = BlackAndWhiteList(self.indexerid)
 
         # Get IMDb_info from database
         myDB = db.DBConnection()
@@ -986,7 +991,9 @@ class TVShow(object):
                  ["DELETE FROM tv_shows WHERE indexer_id = ?", [self.indexerid]],
                  ["DELETE FROM imdb_info WHERE indexer_id = ?", [self.indexerid]],
                  ["DELETE FROM xem_refresh WHERE indexer_id = ?", [self.indexerid]],
-                 ["DELETE FROM scene_numbering WHERE indexer_id = ?", [self.indexerid]]]
+                 ["DELETE FROM scene_numbering WHERE indexer_id = ?", [self.indexerid]],
+                 ["DELETE FROM whitelist WHERE show_id = ?", [self.indexerid]],
+                 ["DELETE FROM blacklist WHERE show_id = ?", [self.indexerid]]]
 
         myDB = db.DBConnection()
         myDB.mass_action(sql_l)
@@ -1105,7 +1112,7 @@ class TVShow(object):
     def downloadSubtitles(self, force=False):
         # TODO: Add support for force option
         if not ek.ek(os.path.isdir, self._location):
-            logger.log(str(self.indexerid) + ": Show dir doesn't exist, can't download subtitles", logger.DEBUG)
+            logger.log(str(self.indexerid) + ": Show directory doesn't exist, can't download subtitles", logger.DEBUG)
             return
         logger.log(str(self.indexerid) + ": Downloading subtitles", logger.DEBUG)
 
@@ -1713,7 +1720,7 @@ class TVEpisode(object):
         if not ek.ek(os.path.isdir,
                      self.show._location) and not sickbeard.CREATE_MISSING_SHOW_DIRS and not sickbeard.ADD_SHOWS_WO_DIR:
             logger.log(
-                u"The show dir is missing, not bothering to change the episode statuses since it'd probably be invalid")
+                u"The show directory is missing, not bothering to change the episode statuses since it'd probably be invalid")
             return
 
         if self.location:
@@ -1747,7 +1754,7 @@ class TVEpisode(object):
 
                 else:
                     logger.log(
-                        u"Not touching status because we have no ep file, the airdate is in the past, and the status is " + str(
+                        u"Not touching status because we have no episode file, the airdate is in the past, and the status is " + str(
                             self.status), logger.DEBUG)
 
         # if we have a media file then it's downloaded
@@ -1768,7 +1775,7 @@ class TVEpisode(object):
 
         if not ek.ek(os.path.isdir, self.show._location):
             logger.log(
-                str(self.show.indexerid) + u": The show dir is missing, not bothering to try loading the episode NFO")
+                str(self.show.indexerid) + u": The show directory is missing, not bothering to try loading the episode NFO")
             return
 
         logger.log(
@@ -1871,7 +1878,7 @@ class TVEpisode(object):
     def createMetaFiles(self):
 
         if not ek.ek(os.path.isdir, self.show._location):
-            logger.log(str(self.show.indexerid) + u": The show dir is missing, not bothering to try to create metadata")
+            logger.log(str(self.show.indexerid) + u": The show directory is missing, not bothering to try to create metadata")
             return
 
         self.createNFO()
@@ -2436,7 +2443,7 @@ class TVEpisode(object):
             return
 
         related_files = postProcessor.PostProcessor(self.location).list_associated_files(
-            self.location)
+            self.location, base_name_only=True)
 
         if self.show.subtitles and sickbeard.SUBTITLES_DIR != '':
             related_subs = postProcessor.PostProcessor(self.location).list_associated_files(sickbeard.SUBTITLES_DIR,

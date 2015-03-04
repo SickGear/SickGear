@@ -1,53 +1,68 @@
-<b>Fansub Groups:</b>
-	<div >
-		<p>Select your preferred fansub groups from the <b>Available Groups</b> and add them to the <b>Whitelist</b>. Add groups to the <b>Blacklist</b> to ignore them.</p>
-		<p>The <b>Whitelist</b> is checked <i>before</i> the <b>Blacklist</b>.</p>
-		<p>Groups are shown as <b>Name</b> | <b>Rating</b> | <b>Number of subbed episodes</b>.</p>
-		<p>You may also add any fansub group not listed to either list manually.</p>
-	</div>
-	<div class="bwlWrapper" id="Anime">
-	<div class="blackwhitelist all">
-		<div class="blackwhitelist anidb">
-			<div class="blackwhitelist white">
-				<span><h4>Whitelist</h4></span>
-				<select id="white" multiple="multiple" size="12">
-					#for $keyword in $whitelist:
-						<option value="$keyword">$keyword</option>
-					#end for
-				</select>
-				<br/>
-				<input class="btn" id="removeW" value="Remove" type="button"/>
-			</div>
-			<div class="blackwhitelist pool">
-				<span><h4>Available Groups</h4></span>
-				<select id="pool" multiple="multiple" size="12">
-				#for $group in $groups
-					#if $group not in $whitelist and $group['name'] not in $blacklist:
-						<option value="$group['name']">$group['name'] | $group['rating'] | $group['range']</option>
-					#end if
-				#end for
-				</select>
-				<br/>
-				<input class="btn" id="addW" value="Add to Whitelist" type="button"/>
-				<input class="btn" id="addB" value="Add to Blacklist" type="button"/>
-			</div>
-			<div class="blackwhitelist black">
-				<span><h4>Blacklist</h4></span>
-				<select id="black" multiple="multiple" size="12">
-					#for $keyword in $blacklist:
-						<option value="$keyword">$keyword</option>
-					#end for
-				</select>
-				<br/>
-				<input class="btn" id="removeB" value="Remove" type="button"/>
+<div class="field-pair alt" id="blackwhitelist">
+	<input type="hidden" name="whitelist" id="whitelist">
+	<input type="hidden" name="blacklist" id="blacklist">
+
+	<span class="component-title">Fansub groups</span>
+	<span class="component-desc">
+
+		<div class="bwlWrapper">
+			<div class="blackwhitelist all">
+
+				<div class="blackwhitelist anidb">
+					<div class="inuse" style="padding:0">
+						<div class="blackwhitelist white" style="margin-bottom:10px">
+							<h4 style="margin:0 41px 6px 0">Whitelist<br /><span class="grey-text">Only snatch releases by group(s)</span></h4>
+							<div style="width:243px; height:110px">
+								<select style="width:202px" class="pull-left" id="white" multiple="multiple" size="12">
+#for $keyword in sorted($whitelist):
+									<option value="$keyword">$keyword</option>
+#end for
+								</select>
+								<div style="position:relative; width:36px; height:64px; margin: -32px 0 0; top: 50%;" class="pull-right">
+									<input style="margin:0 0 10px !important" class="btn" id="add-white" value="<<" type="button">
+									<input style="margin:0 !important" class="btn clear:right" id="remove-white" value=">>" type="button">
+								</div>
+							</div>
+						</div>
+
+						<div class="blackwhitelist black" style="position:relative; bottom: -1px">
+							<h4 style="margin:0 41px 6px 0">Blacklist<br /><span class="grey-text">Ignore releases by group(s)</span></h4>
+							<div style="width:243px; height:110px">
+								<select style="width:202px" class="pull-left" id="black" multiple="multiple" size="12">
+#for $keyword in sorted($blacklist):
+									<option value="$keyword">$keyword</option>
+#end for
+								</select>
+								<div style="position:relative; width:36px; height:64px; margin: -32px 0 0; top: 50%;" class="pull-right">
+									<input style="margin:0 0 10px !important" class="btn" id="add-black" value="<<" type="button">
+									<input style="margin:0 !important" class="btn clear:right" id="remove-black" value=">>" type="button">
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="blackwhitelist pool">
+						<h4 style="margin:0 0 6px 0">Available groups<br /><span class="grey-text">Name (Rating) Number of subbed episodes</span></h4>
+						<select id="pool" multiple="multiple" size="12">
+#for $group in sorted($groups)
+	#if $group not in $whitelist and $group['name'] not in $blacklist:
+							<option value="$group['name']">$group['name'] ($group['rating']) $group['range']</option>
+	#end if
+#end for
+						</select>
+					</div>
+				</div>
+
+				<div style="clear:both">&nbsp;</div>
+				<div class="blackwhitelist manual">
+					<div class="pull-left">
+						<input type="text" id="addToPoolText" class="form-control form-control-inline input-sm input200" style="width:202px">
+						<input class="btn btn-inline" type="button" value="Add to Whitelist" id="new-white">
+						<input style="margin-right:0" class="btn btn-inline" type="button" value="Add to Blacklist" id="new-black">
+					</div>
+					<span class="pull-left">add a custom item to either the whitelist or blacklist</span>
+					<div style="clear:both">&nbsp;</div>
+				</div>
 			</div>
 		</div>
-		<br style="clear:both" />
-		<div class="blackwhitelist manual">
-			<input type="text" id="addToPoolText" class="form-control form-control-inline input-sm input250" />
-			<input class="btn btn-inline" type="button" value="Add to Whitelist" id="addToWhite">
-			<input class="btn btn-inline" type="button" value="Add to Blacklist" id="addToBlack">
-		</div>
-	</div>
-	<br style="clear:both" />
-</div>
+	</span>
+</div><!-- /blackwhitelist -->
