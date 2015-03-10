@@ -2095,6 +2095,7 @@ class NewHomeAddShows(Home):
 
         t = PageTemplate(headers=self.request.headers, file='home_newShow.tmpl')
         t.submenu = self.HomeMenu()
+        t.enable_anime_options = True
 
         indexer, show_dir, indexer_id, show_name = self.split_extra_show(show_to_add)
 
@@ -2147,6 +2148,7 @@ class NewHomeAddShows(Home):
 
         t = PageTemplate(headers=self.request.headers, file='home_recommendedShows.tmpl')
         t.submenu = self.HomeMenu()
+        t.enable_anime_options = False
 
         return t.respond()
 
@@ -2233,9 +2235,7 @@ class NewHomeAddShows(Home):
         """
         t = PageTemplate(headers=self.request.headers, file='home_addExistingShow.tmpl')
         t.submenu = self.HomeMenu()
-        t.whitelist = []
-        t.blacklist = []
-        t.groups = []
+        t.enable_anime_options = False
 
         return t.respond()
 

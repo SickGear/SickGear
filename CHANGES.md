@@ -33,6 +33,12 @@
 * Fix the return flow from calls to the redirect function from executing incorrect code
 
 
+### 0.7.1 (2015-03-10 17:00:00 UTC)
+
+* Fix error page when clicking "Add Recommended"
+* Remove failed Anime options from "Add Existing Show"
+
+
 ### 0.7.0 (2015-03-04 06:00:00 UTC)
 
 * Fix slow database operations (port from midgetspy/sickbeard)
