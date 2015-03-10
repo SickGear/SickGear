@@ -33,6 +33,11 @@
 * Fix the return flow from calls to the redirect function from executing incorrect code
 
 
+### 0.7.2 (2015-03-10 17:05:00 UTC)
+
+* Fix Add From Trending page (indexer_id can be "None" which causes white screen when clicking "Add Show")
+
+
 ### 0.7.1 (2015-03-10 17:00:00 UTC)
 
 * Fix error page when clicking "Add Recommended"

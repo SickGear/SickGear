@@ -2240,7 +2240,7 @@ class NewHomeAddShows(Home):
         return t.respond()
 
     def addTraktShow(self, indexer_id, showName):
-        if helpers.findCertainShow(sickbeard.showList, int(indexer_id)):
+        if helpers.findCertainShow(sickbeard.showList, config.to_int(indexer_id, '')):
             return
         return self.newShow('|'.join(['', '', indexer_id, showName]), use_show_name=True)
 
