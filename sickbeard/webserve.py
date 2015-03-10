@@ -2809,6 +2809,7 @@ class NewHomeAddShows(MainHandler):
 
         t = PageTemplate(headers=self.request.headers, file="home_newShow.tmpl")
         t.submenu = HomeMenu()
+        t.enable_anime_options = True
 
         indexer, show_dir, indexer_id, show_name = self.split_extra_show(show_to_add)
 
@@ -2861,6 +2862,7 @@ class NewHomeAddShows(MainHandler):
 
         t = PageTemplate(headers=self.request.headers, file="home_recommendedShows.tmpl")
         t.submenu = HomeMenu()
+        t.enable_anime_options = False
 
         return _munge(t)
 
@@ -2947,9 +2949,7 @@ class NewHomeAddShows(MainHandler):
         """
         t = PageTemplate(headers=self.request.headers, file="home_addExistingShow.tmpl")
         t.submenu = HomeMenu()
-        t.whitelist = []
-        t.blacklist = []
-        t.groups = []
+        t.enable_anime_options = False
 
         return _munge(t)
 

@@ -59,6 +59,7 @@
 		</div>
 #end if
 
+#if $enable_anime_options
 		<div class="field-pair alt">
 			<label for="anime">
 				<span class="component-title">Show is anime</span>
@@ -69,6 +70,7 @@
 			</label>
 		</div>
 
+#end if
 		<div class="field-pair alt" style="margin-top:20px">
 			<label for="saveDefaultsButton">
 				<span class="component-title">Save options as defaults</span>
@@ -79,5 +81,9 @@
 			</label>
 		</div>
 
+#if $enable_anime_options
 #import sickbeard.blackandwhitelist
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
+#else
+		<input type="hidden" name="anime" id="anime" value="0" />
+#end if
