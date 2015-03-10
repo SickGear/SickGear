@@ -30,6 +30,7 @@
 * Fix traceback error when using the menu item Manage/Update Kodi
 * Change BET network logo filename to lower case
 * Change redirect from home to showlistView on changing Layout on showlistView
+* Fix the return flow from calls to the redirect function from executing incorrect code
 
 
 ### 0.7.0 (2015-03-04 06:00:00 UTC)

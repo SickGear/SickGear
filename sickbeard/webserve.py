@@ -929,7 +929,7 @@ class Home(MainHandler):
     def shutdown(self, pid=None):
 
         if str(pid) != str(sickbeard.PID):
-            self.redirect('/home/')
+            return self.redirect('/home/')
 
         sickbeard.events.put(sickbeard.events.SystemEvent.SHUTDOWN)
 
@@ -941,7 +941,7 @@ class Home(MainHandler):
     def restart(self, pid=None):
 
         if str(pid) != str(sickbeard.PID):
-            self.redirect('/home/')
+            return self.redirect('/home/')
 
         t = PageTemplate(headers=self.request.headers, file='restart.tmpl')
         t.submenu = self.HomeMenu()
@@ -954,7 +954,7 @@ class Home(MainHandler):
     def update(self, pid=None):
 
         if str(pid) != str(sickbeard.PID):
-            self.redirect('/home/')
+            return self.redirect('/home/')
 
         updated = sickbeard.versionCheckScheduler.action.update()  # @UndefinedVariable
         if updated:
@@ -1635,7 +1635,7 @@ class Home(MainHandler):
             return self._genericMessage('Error', "Can't rename episodes when the show dir is missing.")
 
         if eps is None:
-            self.redirect('/home/displayShow?show=' + show)
+            return self.redirect('/home/displayShow?show=' + show)
 
         myDB = db.DBConnection()
         for curEp in eps.split('|'):
@@ -2262,7 +2262,7 @@ class NewHomeAddShows(Home):
         def finishAddShow():
             # if there are no extra shows then go home
             if not other_shows:
-                self.redirect('/home/')
+                return self.redirect('/home/')
 
             # peel off the next one
             next_show_dir = other_shows[0]
@@ -2287,7 +2287,8 @@ class NewHomeAddShows(Home):
                 logger.log('Unable to add show due to show selection. Not enough arguments: %s' % (repr(series_pieces)),
                            logger.ERROR)
                 ui.notifications.error('Unknown error. Unable to add show due to problem with show selection.')
-                self.redirect('/home/addShows/existingShows/')
+                return self.redirect('/home/addShows/existingShows/')
+
             indexer = int(series_pieces[1])
             indexer_id = int(series_pieces[3])
             show_name = series_pieces[4]
@@ -2309,7 +2310,7 @@ class NewHomeAddShows(Home):
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
         if ek.ek(os.path.isdir, show_dir) and not fullShowPath:
             ui.notifications.error('Unable to add show', 'Folder ' + show_dir + ' exists already')
-            self.redirect('/home/addShows/existingShows/')
+            return self.redirect('/home/addShows/existingShows/')
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:
@@ -2320,7 +2321,8 @@ class NewHomeAddShows(Home):
                 logger.log(u'Unable to create the folder ' + show_dir + ", can't add the show", logger.ERROR)
                 ui.notifications.error('Unable to add show',
                                        'Unable to create the folder ' + show_dir + ", can't add the show")
-                self.redirect('/home/')
+                return self.redirect('/home/')
+
             else:
                 helpers.chmodAsParent(show_dir)
 
@@ -2429,7 +2431,7 @@ class NewHomeAddShows(Home):
 
         # if we're done then go home
         if not dirs_only:
-            self.redirect('/home/')
+            return self.redirect('/home/')
 
         # for the remaining shows we need to prompt for each one, so forward this on to the newShow page
         return self.newShow(dirs_only[0], dirs_only[1:])
@@ -2725,7 +2727,7 @@ class Manage(MainHandler):
         t.submenu = self.ManageMenu()
 
         if not toEdit:
-            self.redirect('/manage/')
+            return self.redirect('/manage/')
 
         showIDs = toEdit.split('|')
         showList = []
@@ -3104,7 +3106,7 @@ class Manage(MainHandler):
             myDB.action('DELETE FROM failed WHERE release = ?', [release])
 
         if toRemove:
-            self.redirect('/manage/failedDownloads/')
+            return self.redirect('/manage/failedDownloads/')
 
         t = PageTemplate(headers=self.request.headers, file='manage_failedDownloads.tmpl')
         t.failedResults = sqlResults
