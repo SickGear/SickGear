@@ -20,6 +20,7 @@
 * Add Unknown status query to Episode Status Management
 * Fix Episode Status Management error popup from coming up when show is selected without expanding
 * Add BET network logo
+* Change "Force Backlog" button for paused shows on Backlog Overview page to "Paused" indicator
 * Remove unused force variable from code and PEP8
 * Change browser, bs4 parser and classes code to PEP8 standards
 * Change common and config code to PEP8 standards

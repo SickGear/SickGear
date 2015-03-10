@@ -1025,7 +1025,7 @@ def _check_against_names(nameInQuestion, show, season=-1):
 
 
 def get_show(name, tryIndexers=False):
-    if not sickbeard.showList:
+    if not sickbeard.showList or None is name:
         return
 
     showObj = None

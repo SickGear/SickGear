@@ -1533,24 +1533,30 @@ class Home(MainHandler):
                 myDB = db.DBConnection()
                 myDB.mass_action(sql_l)
 
-        if int(status) == WANTED:
-            msg = 'Backlog was automatically started for the following seasons of <b>' + showObj.name + '</b>:<br />'
-            msg += '<ul>'
-
+        if WANTED == int(status):
+            season_list = ''
+            season_wanted = []
             for season, segment in segments.items():
-                cur_backlog_queue_item = search_queue.BacklogQueueItem(showObj, segment)
-                sickbeard.searchQueueScheduler.action.add_item(cur_backlog_queue_item)  # @UndefinedVariable
+                if not showObj.paused:
+                    cur_backlog_queue_item = search_queue.BacklogQueueItem(showObj, segment)
+                    sickbeard.searchQueueScheduler.action.add_item(cur_backlog_queue_item)  # @UndefinedVariable
 
-                msg += '<li>Season ' + str(season) + '</li>'
-                logger.log(u'Sending backlog for ' + showObj.name + ' season ' + str(
-                    season) + ' because some eps were set to wanted')
+                if season not in season_wanted:
+                    season_wanted += [season]
+                    season_list += u'<li>Season %s</li>' % season
+                    logger.log((u'Not adding wanted eps to backlog search for %s season %s because show is paused',
+                               u'Starting backlog search for %s season %s because eps were set to wanted')[
+                        not showObj.paused] % (showObj.name, season))
 
-            msg += '</ul>'
+            (title, msg) = (('Not starting backlog', u'Paused show prevented backlog search'),
+                            ('Backlog started', u'Backlog search started'))[not showObj.paused]
 
             if segments:
-                ui.notifications.message('Backlog started', msg)
+                ui.notifications.message(title,
+                                         u'%s for the following seasons of <b>%s</b>:<br /><ul>%s</ul>'
+                                         % (msg, showObj.name, season_list))
 
-        if int(status) == FAILED:
+        elif FAILED == int(status):
             msg = 'Retrying Search was automatically started for the following season of <b>' + showObj.name + '</b>:<br />'
             msg += '<ul>'
 
