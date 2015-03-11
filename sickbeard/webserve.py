@@ -3126,10 +3126,10 @@ class ManageSearches(Manage):
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='manage_manageSearches.tmpl')
         # t.backlogPI = sickbeard.backlogSearchScheduler.action.getProgressIndicator()
-        t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()  # @UndefinedVariable
-        t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()  # @UndefinedVariable
-        t.recentSearchStatus = sickbeard.recentSearchScheduler.action.amActive  # @UndefinedVariable
-        t.findPropersStatus = sickbeard.properFinderScheduler.action.amActive  # @UndefinedVariable
+        t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
+        t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
+        t.recentSearchStatus = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
+        t.findPropersStatus = sickbeard.properFinderScheduler.action.amActive
         t.queueLength = sickbeard.searchQueueScheduler.action.queue_length()
 
         t.submenu = self.ManageMenu()
