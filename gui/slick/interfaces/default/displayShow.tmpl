@@ -19,7 +19,6 @@
 <script type="text/javascript" src="$sbRoot/js/displayShow.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/plotTooltip.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/sceneExceptionsTooltip.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/ratingTooltip.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/ajaxEpSubtitles.js?$sbPID"></script>
 <script type="text/javascript" charset="utf-8">
@@ -45,12 +44,7 @@
         });
     });
     #end raw
-	
-	\$.fn.generateStars = function() {
-		return this.each(function(i,e){\$(e).html(\$('<span/>').width(\$(e).text()*12));});
-	};
 
-	\$('.imdbstars').generateStars();
 	TVShowList = [${tvshow_id_csv}]
 });
 //-->
@@ -151,25 +145,8 @@
 		<div id="showCol">
 		
 			<div id="showinfo">
-#if 'rating' in $show.imdb_info:
-    #set $rating_tip = str($show.imdb_info['rating']) + " / 10" + " Stars" + "<br />" + str($show.imdb_info['votes']) + " Votes"
-				<span class="imdbstars" qtip-content="$rating_tip">$show.imdb_info['rating']</span>
-#end if
-				
 #set $_show = $show
-#if not $show.imdbid
 				<span>($show.startyear) - $show.runtime minutes - </span>
-#else
-    #if 'country_codes' in $show.imdb_info:
-        #for $country in $show.imdb_info['country_codes'].split('|')
-				<img class="flag" src="$sbRoot/images/flags/${$country}.png" width="16" height="11" />
-        #end for
-    #end if
-    #if 'year' in $show.imdb_info:
-				<span class="imdb-info">($show.imdb_info['year']) - $show.imdb_info['runtimes'] minutes</span>
-    #end if
-				<a class="service" href="<%= anon_url('http://www.imdb.com/title/', _show.imdbid) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="http://www.imdb.com/title/$show.imdbid"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" /></a>
-#end if
 				<a class="service" href="<%= anon_url(sickbeard.indexerApi(_show.indexer).config['show_url'], _show.indexerid) %>" onclick="window.open(this.href, '_blank'); return false;" title="$sickbeard.indexerApi($show.indexer).config['show_url']$show.indexerid"><img alt="$sickbeard.indexerApi($show.indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($show.indexer).config['icon']" /></a>
 #if $xem_numbering or $xem_absolute_numbering:
 				<a class="service" href="<%= anon_url('http://thexem.de/search?q=', _show.name) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="http://thexem.de/search?q-$show.name"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" /></a>
@@ -178,18 +155,11 @@
 
 			<div id="tags">
 				<ul class="tags">
-					#if not $show.imdbid
-					#if $show.genre:
-					#for $genre in $show.genre[1:-1].split('|')
+#if $show.genre:
+    #for $genre in $show.genre[1:-1].split('|')
 						<a href="<%= anon_url('http://trakt.tv/shows/popular/', genre.lower()) %>" target="_blank" title="View other popular $genre shows on trakt.tv."><li>$genre</li></a>
-					#end for
-					#end if
-					#end if
-					#if 'year' in $show.imdb_info:
-					#for $imdbgenre in $show.imdb_info['genres'].replace('Sci-Fi','Science-Fiction').split('|')
-						<a href="<%= anon_url('http://trakt.tv/shows/popular/', imdbgenre.lower()) %>" target="_blank" title="View other popular $imdbgenre shows on trakt.tv."><li>$imdbgenre</li></a>
-					#end for
-					#end if
+    #end for
+#end if
 				</ul>
 			</div>
 		

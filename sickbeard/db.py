@@ -412,6 +412,7 @@ def MigrationCode(myDB):
         10001: sickbeard.mainDB.RemoveDefaultEpStatusFromTvShows,
 
         20000: sickbeard.mainDB.DBIncreaseTo20001,
+        20001: sickbeard.mainDB.RemoveImdbTable,
         # 20001: sickbeard.mainDB.AddCoolSickGearFeature2,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
