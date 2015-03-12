@@ -30,6 +30,7 @@
 * Change layout of Recent Search code
 * Change naming of SEARCHQUEUE threads for shorter log lines
 * Fix Recent Search running status on Manage Searches page
+* Change to no longer require restart with the "Scan and post process" option on page config/Post Processing
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

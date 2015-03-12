@@ -3586,7 +3586,15 @@ class ConfigPostProcessing(Config):
         if not config.change_TV_DOWNLOAD_DIR(tv_download_dir):
             results += ['Unable to create directory ' + os.path.normpath(tv_download_dir) + ', dir not changed.']
 
-        sickbeard.PROCESS_AUTOMATICALLY = config.checkbox_to_value(process_automatically)
+        new_val = config.checkbox_to_value(process_automatically)
+        if new_val != sickbeard.PROCESS_AUTOMATICALLY:
+            if not sickbeard.PROCESS_AUTOMATICALLY and not sickbeard.autoPostProcesserScheduler.ident:
+                try:
+                    sickbeard.autoPostProcesserScheduler.start()
+                except:
+                    pass
+            sickbeard.PROCESS_AUTOMATICALLY = new_val
+
         config.change_AUTOPOSTPROCESSER_FREQUENCY(autopostprocesser_frequency)
 
         if sickbeard.PROCESS_AUTOMATICALLY:
