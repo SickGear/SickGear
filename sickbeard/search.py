@@ -314,7 +314,6 @@ def wantedEpisodes(show, fromDate):
     anyQualities, bestQualities = common.Quality.splitQuality(show.quality) # @UnusedVariable
     allQualities = list(set(anyQualities + bestQualities))
 
-    logger.log(u"Seeing if we need anything from " + show.name)
     myDB = db.DBConnection()
 
     if show.air_by_date:
@@ -345,38 +344,18 @@ def wantedEpisodes(show, fromDate):
             epObj.wantedQuality = [i for i in allQualities if (i > curQuality and i != common.Quality.UNKNOWN)]
             wanted.append(epObj)
 
+    logger.log(u'We want %d episode(s) of %s' % (len(wanted), show.name))
+
     return wanted
 
-def searchForNeededEpisodes():
+def searchForNeededEpisodes(episodes):
     foundResults = {}
 
     didSearch = False
 
     origThreadName = threading.currentThread().name
-    threads = []
-
-    show_list = sickbeard.showList
-    fromDate = datetime.date.fromordinal(1)
-    episodes = []
-
-    for curShow in show_list:
-        if curShow.paused:
-            continue
-
-        episodes.extend(wantedEpisodes(curShow, fromDate))
 
     providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_recentsearch]
-    for curProvider in providers:
-
-        # spawn separate threads for each provider so we don't need to wait for providers with slow network operation
-        threads.append(threading.Thread(target=curProvider.cache.updateCache, name=origThreadName +
-                                                                                   " :: [" + curProvider.name + "]"))
-        # start the thread we just created
-        threads[-1].start()
-
-    # wait for all threads to finish
-    for t in threads:
-        t.join()
 
     for curProvider in providers:
         threading.currentThread().name = origThreadName + " :: [" + curProvider.name + "]"

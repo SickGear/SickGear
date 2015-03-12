@@ -27,6 +27,9 @@
 * Change database code to PEP8 standards
 * Change general config's branches and pull request list generation for faster page loading
 * Add PlayStation Network logo
+* Change layout of Recent Search code
+* Change naming of SEARCHQUEUE threads for shorter log lines
+* Fix Recent Search running status on Manage Searches page
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

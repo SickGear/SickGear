@@ -89,7 +89,8 @@ class GenericQueue(object):
 
                 # launch the queue item in a thread
                 self.currentItem = self.queue.pop(0)
-                self.currentItem.name = self.queue_name + '-' + self.currentItem.name
+                if not self.queue_name == 'SEARCHQUEUE':
+                    self.currentItem.name = self.queue_name + '-' + self.currentItem.name
                 self.currentItem.start()
 
 class QueueItem(threading.Thread):
