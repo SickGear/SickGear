@@ -310,6 +310,7 @@ def isFirstBestMatch(result):
 
     return False
 
+
 def wantedEpisodes(show, fromDate):
     anyQualities, bestQualities = common.Quality.splitQuality(show.quality) # @UnusedVariable
     allQualities = list(set(anyQualities + bestQualities))
@@ -327,6 +328,7 @@ def wantedEpisodes(show, fromDate):
 
     # check through the list of statuses to see if we want any
     wanted = []
+    total_wanted = total_replacing = 0
     for result in sqlResults:
         curCompositeStatus = int(result["status"])
         curStatus, curQuality = common.Quality.splitCompositeStatus(curCompositeStatus)
@@ -340,13 +342,24 @@ def wantedEpisodes(show, fromDate):
         if (curStatus in (common.DOWNLOADED, common.SNATCHED, common.SNATCHED_PROPER,
             common.SNATCHED_BEST) and curQuality < highestBestQuality) or curStatus == common.WANTED:
 
+            if curStatus == common.WANTED:
+                total_wanted += 1
+            else:
+                total_replacing += 1
+
             epObj = show.getEpisode(int(result["season"]), int(result["episode"]))
             epObj.wantedQuality = [i for i in allQualities if (i > curQuality and i != common.Quality.UNKNOWN)]
             wanted.append(epObj)
 
-    logger.log(u'We want %d episode(s) of %s' % (len(wanted), show.name))
+    if 0 < total_wanted + total_replacing:
+        actions = []
+        for msg, total in ['%d episode%s', total_wanted], ['to upgrade %d episode%s', total_replacing]:
+            if 0 < total:
+                actions.append(msg % (total, helpers.maybe_plural(total)))
+        logger.log(u'We want %s for %s' % (' and '.join(actions), show.name))
 
     return wanted
+
 
 def searchForNeededEpisodes(episodes):
     foundResults = {}

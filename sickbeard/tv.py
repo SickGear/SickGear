@@ -745,103 +745,104 @@ class TVShow(object):
 
     def loadFromDB(self, skipNFO=False):
 
-        logger.log(str(self.indexerid) + u": Loading show info from database")
-
         myDB = db.DBConnection()
         sqlResults = myDB.select("SELECT * FROM tv_shows WHERE indexer_id = ?", [self.indexerid])
 
         if len(sqlResults) > 1:
+            logger.log(str(self.indexerid) + u': Loading show info from database')
             raise exceptions.MultipleDBShowsException()
         elif len(sqlResults) == 0:
-            logger.log(str(self.indexerid) + ": Unable to find the show in the database")
+            logger.log(str(self.indexerid) + ': Unable to find the show in the database')
             return
         else:
             if not self.indexer:
-                self.indexer = int(sqlResults[0]["indexer"])
+                self.indexer = int(sqlResults[0]['indexer'])
             if not self.name:
-                self.name = sqlResults[0]["show_name"]
+                self.name = sqlResults[0]['show_name']
             if not self.network:
-                self.network = sqlResults[0]["network"]
+                self.network = sqlResults[0]['network']
             if not self.genre:
-                self.genre = sqlResults[0]["genre"]
+                self.genre = sqlResults[0]['genre']
             if self.classification is None:
-                self.classification = sqlResults[0]["classification"]
+                self.classification = sqlResults[0]['classification']
 
-            self.runtime = sqlResults[0]["runtime"]
+            self.runtime = sqlResults[0]['runtime']
 
-            self.status = sqlResults[0]["status"]
+            self.status = sqlResults[0]['status']
             if not self.status:
-                self.status = ""
-            self.airs = sqlResults[0]["airs"]
+                self.status = ''
+            self.airs = sqlResults[0]['airs']
             if not self.airs:
-                self.airs = ""
-            self.startyear = sqlResults[0]["startyear"]
+                self.airs = ''
+            self.startyear = sqlResults[0]['startyear']
             if not self.startyear:
                 self.startyear = 0
 
-            self.air_by_date = sqlResults[0]["air_by_date"]
+            self.air_by_date = sqlResults[0]['air_by_date']
             if not self.air_by_date:
                 self.air_by_date = 0
 
-            self.anime = sqlResults[0]["anime"]
-            if self.anime == None:
+            self.anime = sqlResults[0]['anime']
+            if None is self.anime:
                 self.anime = 0
 
-            self.sports = sqlResults[0]["sports"]
+            self.sports = sqlResults[0]['sports']
             if not self.sports:
                 self.sports = 0
 
-            self.scene = sqlResults[0]["scene"]
+            self.scene = sqlResults[0]['scene']
             if not self.scene:
                 self.scene = 0
 
-            self.subtitles = sqlResults[0]["subtitles"]
+            self.subtitles = sqlResults[0]['subtitles']
             if self.subtitles:
                 self.subtitles = 1
             else:
                 self.subtitles = 0
 
-            self.dvdorder = sqlResults[0]["dvdorder"]
+            self.dvdorder = sqlResults[0]['dvdorder']
             if not self.dvdorder:
                 self.dvdorder = 0
 
-            self.archive_firstmatch = sqlResults[0]["archive_firstmatch"]
+            self.archive_firstmatch = sqlResults[0]['archive_firstmatch']
             if not self.archive_firstmatch:
                 self.archive_firstmatch = 0
 
-            self.quality = int(sqlResults[0]["quality"])
-            self.flatten_folders = int(sqlResults[0]["flatten_folders"])
-            self.paused = int(sqlResults[0]["paused"])
+            self.quality = int(sqlResults[0]['quality'])
+            self.flatten_folders = int(sqlResults[0]['flatten_folders'])
+            self.paused = int(sqlResults[0]['paused'])
 
             try:
-                self.location = sqlResults[0]["location"]
+                self.location = sqlResults[0]['location']
             except Exception:
-                dirty_setter("_location")(self, sqlResults[0]["location"])
+                dirty_setter('_location')(self, sqlResults[0]['location'])
                 self._isDirGood = False
 
             if not self.lang:
-                self.lang = sqlResults[0]["lang"]
+                self.lang = sqlResults[0]['lang']
 
-            self.last_update_indexer = sqlResults[0]["last_update_indexer"]
+            self.last_update_indexer = sqlResults[0]['last_update_indexer']
 
-            self.rls_ignore_words = sqlResults[0]["rls_ignore_words"]
-            self.rls_require_words = sqlResults[0]["rls_require_words"]
+            self.rls_ignore_words = sqlResults[0]['rls_ignore_words']
+            self.rls_require_words = sqlResults[0]['rls_require_words']
 
             if not self.imdbid:
-                self.imdbid = sqlResults[0]["imdb_id"]
+                self.imdbid = sqlResults[0]['imdb_id']
 
-        if self.is_anime:
-            self.release_groups = BlackAndWhiteList(self.indexerid)
+            if self.is_anime:
+                self.release_groups = BlackAndWhiteList(self.indexerid)
+
+        logger.log(str(self.indexerid) + u': Show info [%s] loaded from database' % self.name)
 
         # Get IMDb_info from database
         myDB = db.DBConnection()
         sqlResults = myDB.select("SELECT * FROM imdb_info WHERE indexer_id = ?", [self.indexerid])
 
-        if len(sqlResults) == 0:
-            logger.log(str(self.indexerid) + ": Unable to find IMDb show info in the database")
+        if 0 == len(sqlResults):
+            logger.log(str(self.indexerid) + ': Unable to find IMDb show info in the database for [%s]' % self.name)
             return
-        else:
-            self.imdb_info = dict(zip(sqlResults[0].keys(), sqlResults[0]))
+    
+        self.imdb_info = dict(zip(sqlResults[0].keys(), sqlResults[0]))
 
         self.dirty = False
         return True
