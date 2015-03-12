@@ -27,6 +27,8 @@
 * Change database code to PEP8 standards
 * Change general config's branches and pull request list generation for faster page loading
 * Add PlayStation Network logo
+* Remove IMDb library
+* Remove star rating and country flag from display show page
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

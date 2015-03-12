@@ -27,7 +27,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20001
+MAX_DB_VERSION = 20002
 
 
 class MainSanityCheck(db.DBSanityCheck):
@@ -957,6 +957,18 @@ class DBIncreaseTo20001(db.SchemaUpgrade):
         logger.log('Bumping database version to force a backup before new database code')
 
         self.setDBVersion(20001)
+        return self.checkDBVersion()
+
+# 20001 -> 20002
+class RemoveImdbTable(db.SchemaUpgrade):
+    def execute(self):
+        backup_database(self.checkDBVersion())
+
+        if self.hasTable('imdb_info'):
+            logger.log(u'Removing unused "imdb_info" table')
+            self.connection.action('DROP TABLE imdb_info')
+
+        self.setDBVersion(20002)
         return self.checkDBVersion()
 
 

@@ -1116,32 +1116,12 @@ h1.title {
 	top: -3px;
 }
 
-span.imdbstars {
-	display: inline-block;
-	margin: 0 3px 0 0;
-	vertical-align: baseline;
-	cursor: help;
-}
-span.imdbstars > * {
-	background-position: 0 0 !important;
-	max-width:120px;
-}
-span.imdbstars, span.imdbstars > * {
-	height: 12px;
-	width: 120px;
-	display: inline-block;
-	font-size:10px;
-	background: url(../images/rating.png) 0 -12px repeat-x;
-}
 
 #showinfo .flag {
 	margin: 0 3px 0 0;
 	vertical-align: baseline;
 }
 
-#showinfo .imdb-info {
-	margin: 0 3px 0 0;
-}
 
 #showinfo a.service {
 	margin: 0 3px 0 0;

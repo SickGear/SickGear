@@ -22,7 +22,6 @@ import traceback
 
 import sickbeard
 
-from lib.imdb import _exceptions as imdb_exceptions
 from sickbeard.common import SKIPPED, WANTED
 from sickbeard.tv import TVShow
 from sickbeard import exceptions, logger, ui, db
@@ -336,15 +335,6 @@ class QueueItemAdd(ShowQueueItem):
             self._finishEarly()
             raise
 
-        logger.log(u"Retrieving show info from IMDb", logger.DEBUG)
-        try:
-            self.show.loadIMDbInfo()
-        except imdb_exceptions.IMDbError, e:
-            #todo Insert UI notification
-            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
-        except Exception, e:
-            logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
-
         try:
             self.show.saveToDB()
         except Exception, e:
@@ -519,15 +509,6 @@ class QueueItemUpdate(ShowQueueItem):
             logger.log(u"Data retrieved from " + sickbeard.indexerApi(
                 self.show.indexer).name + " was incomplete, aborting: " + ex(e), logger.ERROR)
             return
-
-        logger.log(u"Retrieving show info from IMDb", logger.DEBUG)
-        try:
-            self.show.loadIMDbInfo()
-        except imdb_exceptions.IMDbError, e:
-            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
-        except Exception, e:
-            logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
 
         try:
             self.show.saveToDB()
