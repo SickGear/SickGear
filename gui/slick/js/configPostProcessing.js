@@ -525,4 +525,28 @@ $(document).ready(function () {
 		}
 	});
 
+	$('.config_submitter').on('click', (function() {
+		var save_config = true;
+		$('#naming_pattern, #naming_abd_pattern, #naming_sports_pattern').each(function() {
+			if (/^((?=.*%RG)(?:(?!-%RG).)*)$/.test($(this).val())
+				|| /^((?=.*%rg)(?:(?!-%rg).)*)$/i.test($(this).val())) {
+				$(this).focus();
+				alert('You must insert a minus symbol before the %RG/%rg token i.e. -%RG, or -%rg');
+				save_config = false;
+				return save_config;
+			}
+		});
+		if (save_config) {
+			$('#naming_anime_pattern').each(function() {
+				if (/^((?=.*%RG)(?:(?!\[%RG\]).)*)$/.test($(this).val())
+					|| /^((?=.*%rg)(?:(?!\[%rg\]).)*)$/i.test($(this).val())) {
+					$(this).focus();
+					alert('You must insert a bracket around the %RG/%rg token i.e. [%RG], or [%rg]');
+					save_config = false;
+					return save_config;
+				}
+			});
+		}
+		return save_config;
+	}))
 });
