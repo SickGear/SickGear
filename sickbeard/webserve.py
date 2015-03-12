@@ -3356,7 +3356,7 @@ class ConfigGeneral(Config):
                     handle_reverse_proxy=None, home_search_focus=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
-                    indexer_timeout=None, rootDir=None, theme_name=None, default_home=None):
+                    indexer_timeout=None, use_imdb=None, rootDir=None, theme_name=None, default_home=None):
 
         results = []
 
@@ -3411,6 +3411,9 @@ class ConfigGeneral(Config):
 
         if indexer_timeout:
             sickbeard.INDEXER_TIMEOUT = config.to_int(indexer_timeout)
+
+        if use_imdb:
+            sickbeard.USE_IMDB = config.checkbox_to_value(use_imdb)
 
         if time_preset:
             sickbeard.TIME_PRESET_W_SECONDS = time_preset

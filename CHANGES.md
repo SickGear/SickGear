@@ -27,6 +27,7 @@
 * Change database code to PEP8 standards
 * Change general config's branches and pull request list generation for faster page loading
 * Add PlayStation Network logo
+* Change IMDb updater to a toggleable option under General Settings (disabled by default due to slow operations)
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
