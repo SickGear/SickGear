@@ -336,14 +336,15 @@ class QueueItemAdd(ShowQueueItem):
             self._finishEarly()
             raise
 
-        logger.log(u"Retrieving show info from IMDb", logger.DEBUG)
-        try:
-            self.show.loadIMDbInfo()
-        except imdb_exceptions.IMDbError, e:
-            #todo Insert UI notification
-            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
-        except Exception, e:
-            logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
+        if sickbeard.USE_IMDB:
+            logger.log(u'Retrieving show info from IMDb', logger.DEBUG)
+            try:
+                self.show.loadIMDbInfo()
+            except imdb_exceptions.IMDbError, e:
+                #todo Insert UI notification
+                logger.log(u'Something is wrong with IMDb api: ' + ex(e), logger.WARNING)
+            except Exception, e:
+                logger.log(u'Error loading IMDb info: ' + ex(e), logger.ERROR)
 
         try:
             self.show.saveToDB()
@@ -520,14 +521,15 @@ class QueueItemUpdate(ShowQueueItem):
                 self.show.indexer).name + " was incomplete, aborting: " + ex(e), logger.ERROR)
             return
 
-        logger.log(u"Retrieving show info from IMDb", logger.DEBUG)
-        try:
-            self.show.loadIMDbInfo()
-        except imdb_exceptions.IMDbError, e:
-            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
-        except Exception, e:
-            logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+        if sickbeard.USE_IMDB:
+            logger.log(u'Retrieving show info from IMDb', logger.DEBUG)
+            try:
+                self.show.loadIMDbInfo()
+            except imdb_exceptions.IMDbError, e:
+                logger.log(u'Something is wrong with IMDb api: ' + ex(e), logger.WARNING)
+            except Exception, e:
+                logger.log(u'Error loading IMDb info: ' + ex(e), logger.ERROR)
+                logger.log(traceback.format_exc(), logger.DEBUG)
 
         try:
             self.show.saveToDB()

@@ -133,6 +133,16 @@
 						</div>
 
 						<div class="field-pair">
+							<label for="use_imdb">
+								<span class="component-title">Enable IMDb info</span>
+								<span class="component-desc">
+									<input type="checkbox" name="use_imdb" id="use_imdb" #if $sickbeard.USE_IMDB then 'checked="checked"' else ''#>
+									<p>fetches show rating and country flag (does slow show updating process)</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
 							<label>
 								<span class="component-title">Show root directories</span>
 								<span class="component-desc">
