@@ -132,9 +132,11 @@ class ShowQueue(generic_queue.GenericQueue):
         return queueItemObj
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
-                lang="en", subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None):
+                lang="en", subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
+                default_wanted_begin=None, default_wanted_latest=None):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
-                                    subtitles, anime, scene, paused, blacklist, whitelist)
+                                    subtitles, anime, scene, paused, blacklist, whitelist,
+                                    default_wanted_begin, default_wanted_latest)
 
         self.add_item(queueItemObj)
 
@@ -191,12 +193,14 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused, blacklist, whitelist):
+                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest):
 
         self.indexer = indexer
         self.indexer_id = indexer_id
         self.showDir = showDir
         self.default_status = default_status
+        self.default_wanted_begin = default_wanted_begin
+        self.default_wanted_latest = default_wanted_latest
         self.quality = quality
         self.flatten_folders = flatten_folders
         self.lang = lang
@@ -381,10 +385,36 @@ class QueueItemAdd(ShowQueueItem):
             myDB.action("UPDATE tv_episodes SET status = ? WHERE status = ? AND showid = ? AND season != 0",
                         [self.default_status, SKIPPED, self.show.indexerid])
 
-        # if they started with WANTED eps then run the backlog
-        if self.default_status == WANTED:
-            logger.log(u"Launching backlog for this show since its episodes are WANTED")
+        # if they gave a number to start or number to end as wanted, then change those eps to it
+        def get_wanted_sql(wanted_max, sql_vars):
+            actual = 0
+            if wanted_max:
+                my_db = db.DBConnection()
+                sql = "UPDATE `tv_episodes` SET status=%s" % WANTED\
+                      + " WHERE indexerid IN "\
+                      + "(SELECT t1.indexerid FROM `tv_episodes` t1 JOIN "\
+                      + "(SELECT %s(season),showid,season FROM `tv_episodes` WHERE '%s'=showid" % (sql_vars[0], self.show.indexerid)\
+                      + " AND '0'<season ORDER BY season,episode) AS t2 ON t2.showid=t1.showid AND t2.season = t1.season"\
+                      + " ORDER BY episode %s%s)" % (sql_vars[1], (' LIMIT %s' % wanted_max, '')[-1 == wanted_max])\
+                      + ' AND status NOT IN (%s)' % ','.join([str(x) for x in sickbeard.common.Quality.DOWNLOADED + [sickbeard.common.UNAIRED]])
+                my_db.action(sql)
+                result = my_db.select("SELECT changes() as last FROM `tv_episodes`")
+                for cur_result in result:
+                    actual = cur_result['last']
+                    break
+            return actual
+
+        items_wanted = get_wanted_sql(self.default_wanted_begin, ['MIN', 'ASC'])
+        items_wanted += get_wanted_sql(self.default_wanted_latest, ['MAX', 'DESC'])
+
+        msg = ' the specified show into ' + self.showDir
+        # if started with WANTED eps then run the backlog
+        if WANTED == self.default_status or items_wanted:
+            logger.log(u'Launching backlog for this show since episodes are WANTED')
             sickbeard.backlogSearchScheduler.action.searchBacklog([self.show])  #@UndefinedVariable
+            ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
+        else:
+            ui.notifications.message('Show added', 'Adding' + msg)
 
         self.show.writeMetadata()
         self.show.updateMetadata()
@@ -403,7 +433,7 @@ class QueueItemAdd(ShowQueueItem):
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
 
-        # check if show has XEM mapping so we can determin if searches should go by scene numbering or indexer numbering.
+        # check if show has XEM mapping so we can determine if searches should go by scene numbering or indexer numbering.
         if not self.scene and sickbeard.scene_numbering.get_xem_numbering_for_show(self.show.indexerid,
                                                                                    self.show.indexer):
             self.show.scene = 1

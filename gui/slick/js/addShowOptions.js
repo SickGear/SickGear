@@ -1,35 +1,39 @@
-$(document).ready(function () {
+$(document).ready(function(){
 
-    $('#saveDefaultsButton').click(function () {
-        var anyQualArray = [];
-        var bestQualArray = [];
-        $('#anyQualities option:selected').each(function (i, d) {
-            anyQualArray.push($(d).val());
-        });
-        $('#bestQualities option:selected').each(function (i, d) {
-            bestQualArray.push($(d).val());
-        });
+	$('#saveDefaultsButton').click(function() {
+		var anyQualArray = [], bestQualArray = [];
 
-        $.get(sbRoot + '/config/general/saveAddShowDefaults', {
-            defaultStatus: $('#statusSelect').val(),
-            anyQualities: anyQualArray.join(','),
-            bestQualities: bestQualArray.join(','),
-            defaultFlattenFolders: $('#flatten_folders').prop('checked'),
-            subtitles: $('#subtitles').prop('checked'),
-            anime: $('#anime').prop('checked'),
-            scene: $('#scene').prop('checked')
-        });
+		$('#anyQualities option:selected').each(function(i, d) {
+			anyQualArray.push($(d).val());
+		});
+		$('#bestQualities option:selected').each(function(i, d) {
+			bestQualArray.push($(d).val());
+		});
 
-        $(this).attr('disabled', true);
-        new PNotify({
-            title: 'Saved Defaults',
-            text: 'Your "add show" defaults have been set to your current selections.',
-            shadow: false
-        });
-    });
+		$.get(sbRoot + '/config/general/saveAddShowDefaults', {
+			default_status: $('#statusSelect').val(),
+			any_qualities: anyQualArray.join(','),
+			best_qualities: bestQualArray.join(','),
+			default_wanted_begin: $('#wanted-begin').val(),
+			default_wanted_latest: $('#wanted-latest').val(),
+			default_flatten_folders: $('#flatten_folders').prop('checked'),
+			default_scene: $('#scene').prop('checked'),
+			default_subtitles: $('#subtitles').prop('checked'),
+			default_anime: $('#anime').prop('checked')
+		});
 
-    $('#statusSelect, #qualityPreset, #flatten_folders, #anyQualities, #bestQualities, #subtitles, #scene, #anime').change(function () {
-        $('#saveDefaultsButton').attr('disabled', false);
-    });
+		new PNotify({
+			title: 'Saving Defaults',
+			text: 'Saving your "add show" defaults.',
+			shadow: false
+		});
+
+		$(this).attr('disabled', true);
+	});
+
+	$('#statusSelect, #qualityPreset, #anyQualities, #bestQualities, #wanted-begin, #wanted-latest,'
+		+ ' #flatten_folders, #scene, #subtitles, #anime').change(function() {
+		$('#saveDefaultsButton').attr('disabled', false);
+	});
 
 });

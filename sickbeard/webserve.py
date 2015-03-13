@@ -2102,6 +2102,7 @@ class NewHomeAddShows(Home):
         t = PageTemplate(headers=self.request.headers, file='home_newShow.tmpl')
         t.submenu = self.HomeMenu()
         t.enable_anime_options = True
+        t.enable_default_wanted = True
 
         indexer, show_dir, indexer_id, show_name = self.split_extra_show(show_to_add)
 
@@ -2253,7 +2254,7 @@ class NewHomeAddShows(Home):
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
                    anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None):
+                   scene=None, blacklist=None, whitelist=None, default_wanted_begin=None, default_wanted_latest=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to newShow, if not it goes to /home.
@@ -2315,18 +2316,17 @@ class NewHomeAddShows(Home):
 
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
         if ek.ek(os.path.isdir, show_dir) and not fullShowPath:
-            ui.notifications.error('Unable to add show', 'Folder ' + show_dir + ' exists already')
+            ui.notifications.error('Unable to add show', u'Found existing folder: ' + show_dir)
             return self.redirect('/home/addShows/existingShows/')
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:
-            logger.log(u'Skipping initial creation of ' + show_dir + ' due to config.ini setting')
+            logger.log(u'Skipping initial creation due to config.ini setting (add_shows_wo_dir)')
         else:
             dir_exists = helpers.makeDir(show_dir)
             if not dir_exists:
-                logger.log(u'Unable to create the folder ' + show_dir + ", can't add the show", logger.ERROR)
-                ui.notifications.error('Unable to add show',
-                                       'Unable to create the folder ' + show_dir + ", can't add the show")
+                logger.log(u'Unable to add show because can\'t create folder: ' + show_dir, logger.ERROR)
+                ui.notifications.error('Unable to add show', u'Can\'t create folder: ' + show_dir)
                 return self.redirect('/home/')
 
             else:
@@ -2353,11 +2353,15 @@ class NewHomeAddShows(Home):
             bestQualities = [bestQualities]
         newQuality = Quality.combineQualities(map(int, anyQualities), map(int, bestQualities))
 
+        default_wanted_begin = config.minimax(default_wanted_begin, 0, -1, 10)
+        default_wanted_latest = config.minimax(default_wanted_latest, 0, -1, 10)
+
         # add the show
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
-                                                    scene, None, blacklist, whitelist)  # @UndefinedVariable
-        ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
+                                                    scene, None, blacklist, whitelist,
+                                                    default_wanted_begin, default_wanted_latest)  # @UndefinedVariable
+        # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()
 
@@ -2424,6 +2428,8 @@ class NewHomeAddShows(Home):
                 # add the show
                 sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir,
                                                             default_status=sickbeard.STATUS_DEFAULT,
+                                                            default_wanted_begin=sickbeard.WANTED_BEGIN_DEFAULT,
+                                                            default_wanted_latest=sickbeard.WANTED_LATEST_DEFAULT,
                                                             quality=sickbeard.QUALITY_DEFAULT,
                                                             flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT,
                                                             subtitles=sickbeard.SUBTITLES_DEFAULT,
@@ -3300,29 +3306,21 @@ class ConfigGeneral(Config):
     def saveRootDirs(self, rootDirString=None):
         sickbeard.ROOT_DIRS = rootDirString
 
-    def saveAddShowDefaults(self, defaultStatus, anyQualities, bestQualities, defaultFlattenFolders, subtitles=False,
-                            anime=False, scene=False):
+    def saveAddShowDefaults(self, default_status, any_qualities='', best_qualities='', default_wanted_begin=None,
+                            default_wanted_latest=None, default_flatten_folders=False, default_scene=False,
+                            default_subtitles=False, default_anime=False):
 
-        if anyQualities:
-            anyQualities = anyQualities.split(',')
-        else:
-            anyQualities = []
+        any_qualities = ([], any_qualities.split(','))[any(any_qualities)]
+        best_qualities = ([], best_qualities.split(','))[any(best_qualities)]
 
-        if bestQualities:
-            bestQualities = bestQualities.split(',')
-        else:
-            bestQualities = []
-
-        newQuality = Quality.combineQualities(map(int, anyQualities), map(int, bestQualities))
-
-        sickbeard.STATUS_DEFAULT = int(defaultStatus)
-        sickbeard.QUALITY_DEFAULT = int(newQuality)
-
-        sickbeard.FLATTEN_FOLDERS_DEFAULT = config.checkbox_to_value(defaultFlattenFolders)
-        sickbeard.SUBTITLES_DEFAULT = config.checkbox_to_value(subtitles)
-
-        sickbeard.ANIME_DEFAULT = config.checkbox_to_value(anime)
-        sickbeard.SCENE_DEFAULT = config.checkbox_to_value(scene)
+        sickbeard.STATUS_DEFAULT = int(default_status)
+        sickbeard.QUALITY_DEFAULT = int(Quality.combineQualities(map(int, any_qualities), map(int, best_qualities)))
+        sickbeard.WANTED_BEGIN_DEFAULT = config.minimax(default_wanted_begin, 0, -1, 10)
+        sickbeard.WANTED_LATEST_DEFAULT = config.minimax(default_wanted_latest, 0, -1, 10)
+        sickbeard.FLATTEN_FOLDERS_DEFAULT = config.checkbox_to_value(default_flatten_folders)
+        sickbeard.SCENE_DEFAULT = config.checkbox_to_value(default_scene)
+        sickbeard.SUBTITLES_DEFAULT = config.checkbox_to_value(default_subtitles)
+        sickbeard.ANIME_DEFAULT = config.checkbox_to_value(default_anime)
 
         sickbeard.save_config()
 
