@@ -153,18 +153,21 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
             logger.log(u'No search of cache for episodes required')
             self.success = True
         else:
-            logger.log(u'Found a total of %d episode(s) requiring searching' % len(self.episodes))
+            num_shows = len(set([ep.show.name for ep in self.episodes]))
+            logger.log(u'Found %d needed episode%s spanning %d show%s'
+                       % (len(self.episodes), helpers.maybe_plural(len(self.episodes)),
+                          num_shows, helpers.maybe_plural(num_shows)))
 
             try:
                 logger.log(u'Beginning recent search for episodes')
-                foundResults = search.searchForNeededEpisodes(self.episodes)
+                found_results = search.searchForNeededEpisodes(self.episodes)
 
-                if not len(foundResults):
+                if not len(found_results):
                     logger.log(u'No needed episodes found')
                 else:
-                    for result in foundResults:
+                    for result in found_results:
                         # just use the first result for now
-                        logger.log(u'Downloading ' + result.name + ' from ' + result.provider.name)
+                        logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                         self.success = search.snatchEpisode(result)
 
                         # give the CPU a break
@@ -195,7 +198,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                                  [common.UNAIRED, curDate])
 
         sql_l = []
-        show = None
+        wanted = show = None
 
         for sqlEp in sqlResults:
             try:
@@ -212,27 +215,29 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
             try:
                 end_time = network_timezones.parse_date_time(sqlEp['airdate'], show.airs, show.network) + datetime.timedelta(minutes=helpers.tryInt(show.runtime, 60))
-                # filter out any episodes that haven't aried yet
+                # filter out any episodes that haven't aired yet
                 if end_time > curTime:
                     continue
             except:
-                # if an error occured assume the episode hasn't aired yet
+                # if an error occurred assume the episode hasn't aired yet
                 continue
 
             ep = show.getEpisode(int(sqlEp['season']), int(sqlEp['episode']))
             with ep.lock:
-                if ep.show.paused:
-                    ep.status = common.SKIPPED
-                else:
-                    ep.status = common.WANTED
-
-                sql_l.append(ep.get_sql())
+                # Now that it is time, change state of UNAIRED show into expected or skipped
+                ep.status = (common.WANTED, common.SKIPPED)[ep.show.paused]
+                result = ep.get_sql()
+                if None is not result:
+                    sql_l.append(ep.get_sql())
+                    wanted |= (False, True)[common.WANTED == ep.status]
         else:
-            logger.log(u'No new released episodes found ...')
+            logger.log(u'No unaired episodes marked wanted')
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
+            if wanted:
+                logger.log(u'Found new episodes marked wanted')
 
     @staticmethod
     def update_providers():
@@ -252,6 +257,8 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         # wait for all threads to finish
         for t in threads:
             t.join()
+
+        logger.log('Finished updating provider caches')
 
 
 class ManualSearchQueueItem(generic_queue.QueueItem):

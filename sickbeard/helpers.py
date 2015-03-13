@@ -1520,6 +1520,11 @@ def get_size(start_path='.'):
 def remove_article(text=''):
     return re.sub(r'(?i)^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)
 
+
+def maybe_plural(number=1):
+    return ('s', '')[1 == number]
+
+
 def build_dict(seq, key):
     return dict((d[key], dict(d, index=index)) for (index, d) in enumerate(seq))
 
