@@ -86,9 +86,9 @@ Jump to Show
 				<span class="listing-key wanted">Wanted: <b>$showCounts[$curShow.indexerid][$Overview.WANTED]</b></span>
 				<span class="listing-key qual">Low Quality: <b>$showCounts[$curShow.indexerid][$Overview.QUAL]</b></span>
     #if not $curShow.paused:
-				<a class="btn btn-inline forceBacklog" href="$sbRoot/manage/backlogShow?indexer_id=$curShow.indexerid"><i class="icon-play-circle icon-white"></i> Force Backlog</a>
+				<a class="btn btn-inline forceBacklog" href="$sbRoot/manage/backlogShow?indexer_id=$curShow.indexerid"><i class="sgicon-play"></i> Force Backlog</a>
     #else
-				<span class="quality SD btn-inline forceBacklog" style="padding:4px 10px; margin-bottom:1px">Paused</span>
+				<span class="quality SD btn-inline forceBacklog" style="padding:4px 10px; margin-bottom:1px"><i class="sgicon-pause"></i> Paused</span>
     #end if
 			</div>
 		</td>

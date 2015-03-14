@@ -36,6 +36,7 @@
 * Add validation when using Release Group token on page config Post Processing/Episode Naming/Name pattern/Custom
 * Change IMDb updater to a toggleable option under General Settings (disabled by default due to slow operations)
 * Change to simplify and reduce logging output of Recent-Search and Backlog processes
+* Change overhaul menu and button icons
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
