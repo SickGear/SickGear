@@ -2254,7 +2254,7 @@ class NewHomeAddShows(Home):
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
                    anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None, default_wanted_begin=None, default_wanted_latest=None):
+                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to newShow, if not it goes to /home.
@@ -2353,14 +2353,14 @@ class NewHomeAddShows(Home):
             bestQualities = [bestQualities]
         newQuality = Quality.combineQualities(map(int, anyQualities), map(int, bestQualities))
 
-        default_wanted_begin = config.minimax(default_wanted_begin, 0, -1, 10)
-        default_wanted_latest = config.minimax(default_wanted_latest, 0, -1, 10)
+        wanted_begin = config.minimax(wanted_begin, 0, -1, 10)
+        wanted_latest = config.minimax(wanted_latest, 0, -1, 10)
 
         # add the show
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
-                                                    default_wanted_begin, default_wanted_latest)  # @UndefinedVariable
+                                                    wanted_begin, wanted_latest)  # @UndefinedVariable
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()
@@ -2428,8 +2428,6 @@ class NewHomeAddShows(Home):
                 # add the show
                 sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir,
                                                             default_status=sickbeard.STATUS_DEFAULT,
-                                                            default_wanted_begin=sickbeard.WANTED_BEGIN_DEFAULT,
-                                                            default_wanted_latest=sickbeard.WANTED_LATEST_DEFAULT,
                                                             quality=sickbeard.QUALITY_DEFAULT,
                                                             flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT,
                                                             subtitles=sickbeard.SUBTITLES_DEFAULT,

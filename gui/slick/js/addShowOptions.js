@@ -14,8 +14,8 @@ $(document).ready(function(){
 			default_status: $('#statusSelect').val(),
 			any_qualities: anyQualArray.join(','),
 			best_qualities: bestQualArray.join(','),
-			default_wanted_begin: $('#wanted-begin').val(),
-			default_wanted_latest: $('#wanted-latest').val(),
+			default_wanted_begin: $('#wanted_begin').val(),
+			default_wanted_latest: $('#wanted_latest').val(),
 			default_flatten_folders: $('#flatten_folders').prop('checked'),
 			default_scene: $('#scene').prop('checked'),
 			default_subtitles: $('#subtitles').prop('checked'),
@@ -31,7 +31,7 @@ $(document).ready(function(){
 		$(this).attr('disabled', true);
 	});
 
-	$('#statusSelect, #qualityPreset, #anyQualities, #bestQualities, #wanted-begin, #wanted-latest,'
+	$('#statusSelect, #qualityPreset, #anyQualities, #bestQualities, #wanted_begin, #wanted_latest,'
 		+ ' #flatten_folders, #scene, #subtitles, #anime').change(function() {
 		$('#saveDefaultsButton').attr('disabled', false);
 	});

@@ -22,7 +22,7 @@ import traceback
 
 import sickbeard
 
-from sickbeard.common import SKIPPED, WANTED
+from sickbeard.common import SKIPPED, WANTED, UNAIRED
 from sickbeard.tv import TVShow
 from sickbeard import exceptions, logger, ui, db
 from sickbeard import generic_queue
@@ -133,10 +133,10 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
                 lang="en", subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
-                default_wanted_begin=None, default_wanted_latest=None):
+                wanted_begin=None, wanted_latest=None):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
                                     subtitles, anime, scene, paused, blacklist, whitelist,
-                                    default_wanted_begin, default_wanted_latest)
+                                    wanted_begin, wanted_latest)
 
         self.add_item(queueItemObj)
 
@@ -370,33 +370,47 @@ class QueueItemAdd(ShowQueueItem):
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         # if they gave a custom status then change all the eps to it
+        my_db = db.DBConnection()
         if self.default_status != SKIPPED:
             logger.log(u"Setting all episodes to the specified default status: " + str(self.default_status))
-            myDB = db.DBConnection()
-            myDB.action("UPDATE tv_episodes SET status = ? WHERE status = ? AND showid = ? AND season != 0",
+            my_db.action("UPDATE tv_episodes SET status = ? WHERE status = ? AND showid = ? AND season != 0",
                         [self.default_status, SKIPPED, self.show.indexerid])
 
         # if they gave a number to start or number to end as wanted, then change those eps to it
-        def get_wanted_sql(wanted_max, sql_vars):
+        def get_wanted(db_obj, wanted_max, latest):
             actual = 0
             if wanted_max:
-                my_db = db.DBConnection()
-                sql = "UPDATE `tv_episodes` SET status=%s" % WANTED\
-                      + " WHERE indexerid IN "\
-                      + "(SELECT t1.indexerid FROM `tv_episodes` t1 JOIN "\
-                      + "(SELECT %s(season),showid,season FROM `tv_episodes` WHERE '%s'=showid" % (sql_vars[0], self.show.indexerid)\
-                      + " AND '0'<season ORDER BY season,episode) AS t2 ON t2.showid=t1.showid AND t2.season = t1.season"\
-                      + " ORDER BY episode %s%s)" % (sql_vars[1], (' LIMIT %s' % wanted_max, '')[-1 == wanted_max])\
-                      + ' AND status NOT IN (%s)' % ','.join([str(x) for x in sickbeard.common.Quality.DOWNLOADED + [sickbeard.common.UNAIRED]])
-                my_db.action(sql)
-                result = my_db.select("SELECT changes() as last FROM `tv_episodes`")
+                select_id = 'FROM [tv_episodes] t5 JOIN (SELECT t3.indexerid, t3.status, t3.season*1000000+t3.episode AS t3_se, t2.start_season FROM [tv_episodes] t3'\
+                            + ' JOIN (SELECT t1.showid, M%s(t1.season) AS start_season' % ('IN', 'AX')[latest]\
+                            + ', MAX(t1.airdate) AS airdate, t1.episode, t1.season*1000000+t1.episode AS se FROM [tv_episodes] t1'\
+                            + ' WHERE %s=t1.showid' % self.show.indexerid\
+                            + ' AND 0<t1.season AND t1.status NOT IN (%s)) AS t2' % UNAIRED\
+                            + ' ON t2.showid=t3.showid AND 0<t3.season AND t2.se>=t3_se ORDER BY t3_se %sSC' % ('A', 'DE')[latest]\
+                            + ' %s) as t4' % (' LIMIT %s' % wanted_max, '')[-1 == wanted_max]\
+                            + ' ON t4.indexerid=t5.indexerid'\
+                            + '%s' % ('', ' AND t4.start_season=t5.season')[-1 == wanted_max]\
+                            + ' AND t4.status NOT IN (%s)' % ','.join([str(x) for x in sickbeard.common.Quality.DOWNLOADED + [WANTED]])
+                select = 'SELECT t5.indexerid as indexerid, t5.season as season, t5.episode as episode, t5.status as status ' + select_id
+                update = 'UPDATE [tv_episodes] SET status=%s WHERE indexerid IN (SELECT t5.indexerid %s)' % (WANTED, select_id)
+
+                wanted_updates = db_obj.select(select)
+                db_obj.action(update)
+                result = db_obj.select("SELECT changes() as last FROM [tv_episodes]")
                 for cur_result in result:
                     actual = cur_result['last']
                     break
+
+                action_log = 'didn\'t find any episodes that need to be set wanted'
+                if actual:
+                    action_log = ('updated %s %s episodes > %s'
+                                  % ((((('%s of %s' % (actual, wanted_max)), ('%s of max %s limited' % (actual, wanted_max)))[10 == wanted_max]), ('max %s available' % actual))[-1 == wanted_max],
+                                     ('first season', 'latest')[latest],
+                                     ','.join([('S%02dE%02d=%d' % (a['season'], a['episode'], a['status'])) for a in wanted_updates])))
+                logger.log('Get wanted ' + action_log)
             return actual
 
-        items_wanted = get_wanted_sql(self.default_wanted_begin, ['MIN', 'ASC'])
-        items_wanted += get_wanted_sql(self.default_wanted_latest, ['MAX', 'DESC'])
+        items_wanted = get_wanted(my_db, self.default_wanted_begin, latest=False)
+        items_wanted += get_wanted(my_db, self.default_wanted_latest, latest=True)
 
         msg = ' the specified show into ' + self.showDir
         # if started with WANTED eps then run the backlog

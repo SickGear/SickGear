@@ -51,7 +51,7 @@
 * Fix being able to actually turn IMDb off when it has been turned on
 * Remove IMDb option from General Settings
 * Change IMDb option to enable by default now the slow operation has been eliminated from process flows
-
+* Fix to correctly use wanted_begin and wanted_latest when adding shows
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
