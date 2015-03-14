@@ -34,14 +34,23 @@
 * Fix Recent Search running status on Manage Searches page
 * Change to no longer require restart with the "Scan and post process" option on page config/Post Processing
 * Add validation when using Release Group token on page config Post Processing/Episode Naming/Name pattern/Custom
-* Change IMDb updater to a toggleable option under General Settings (disabled by default due to slow operations)
 * Change to simplify and reduce logging output of Recent-Search and Backlog processes
+* Add show names to items listed during startup in the loading from database phase 
+* Add "Enable IMDb info" option to config/General/Interface
+* Change to not display IMDb info on UI when "Enable IMDb info" is disabled
+* Change genre tags on displayShow page to link to IMDb instead of Trakt
+* Change to reduce the time taken to "Update shows" with show data
+* Change to stop updating the IMDb info during the scheduled daily update for every show
+* Change to update the IMDb info for a show after snatching an episode for it
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
 * Change BET network logo filename to lower case
 * Change redirect from home to showlistView on changing Layout on showlistView
 * Fix the return flow from calls to the redirect function from executing incorrect code
+* Fix being able to actually turn IMDb off when it has been turned on
+* Remove IMDb option from General Settings
+* Change IMDb option to enable by default now the slow operation has been eliminated from process flows
 
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)

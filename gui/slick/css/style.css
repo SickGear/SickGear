@@ -1132,11 +1132,12 @@ span.imdbstars, span.imdbstars > * {
 	display: inline-block;
 	font-size:10px;
 	background: url(../images/rating.png) 0 -12px repeat-x;
+	margin-bottom:-1px
 }
 
 #showinfo .flag {
-	margin: 0 3px 0 0;
-	vertical-align: baseline;
+	margin: 0 3px 1px 0;
+	vertical-align: middle;
 }
 
 #showinfo .imdb-info {
@@ -1146,6 +1147,10 @@ span.imdbstars, span.imdbstars > * {
 #showinfo a.service {
 	margin: 0 3px 0 0;
 	font-size: 16px;
+}
+
+#showinfo a.service img {
+	margin-bottom:1px
 }
 
 ul.tags {
@@ -1158,7 +1163,7 @@ ul.tags {
 ul.tags li {
 	margin-right: 4px;
 	margin-bottom: 5px;
-	padding: 3px 4px 3px 25px;
+	padding: 3px 7px 3px 23px;
 	background: url(../images/tag.png) no-repeat scroll 5px 4px #555;
 	border-radius: 3px;
 	border: 1px solid #111;
