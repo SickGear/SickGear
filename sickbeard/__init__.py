@@ -174,7 +174,7 @@ INDEXER_DEFAULT = None
 INDEXER_TIMEOUT = None
 SCENE_DEFAULT = False
 ANIME_DEFAULT = False
-USE_IMDB = False
+USE_IMDB_INFO = True
 PROVIDER_ORDER = []
 
 NAMING_MULTI_EP = False
@@ -525,7 +525,7 @@ def initialize(consoleLogging=True):
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, ANIMESUPPORT, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV, \
-            COOKIE_SECRET, USE_IMDB
+            COOKIE_SECRET, USE_IMDB_INFO
 
         if __INITIALIZED__:
             return False
@@ -584,10 +584,18 @@ def initialize(consoleLogging=True):
         if CACHE_DIR:
             helpers.clearCache()
 
+        THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
         GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
         DEFAULT_HOME = check_setting_str(CFG, 'GUI', 'default_home', 'home')
-
-        THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
+        USE_IMDB_INFO = bool(check_setting_int(CFG, 'GUI', 'use_imdb_info', 1))
+        HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
+        SORT_ARTICLE = bool(check_setting_int(CFG, 'General', 'sort_article', 0))
+        FUZZY_DATING = bool(check_setting_int(CFG, 'GUI', 'fuzzy_dating', 0))
+        TRIM_ZERO = bool(check_setting_int(CFG, 'GUI', 'trim_zero', 0))
+        DATE_PRESET = check_setting_str(CFG, 'GUI', 'date_preset', '%x')
+        TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
+        TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u":%S", u"")
+        TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
 
         ACTUAL_LOG_DIR = check_setting_str(CFG, 'General', 'log_dir', 'Logs')
         # put the log dir inside the data dir, unless an absolute path
@@ -633,9 +641,6 @@ def initialize(consoleLogging=True):
         TRASH_REMOVE_SHOW = bool(check_setting_int(CFG, 'General', 'trash_remove_show', 0))
         TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
 
-        HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
-        SORT_ARTICLE = bool(check_setting_int(CFG, 'General', 'sort_article', 0))
-
         USE_API = bool(check_setting_int(CFG, 'General', 'use_api', 0))
         API_KEY = check_setting_str(CFG, 'General', 'api_key', '')
 
@@ -664,7 +669,6 @@ def initialize(consoleLogging=True):
         INDEXER_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
         ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
         SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
-        USE_IMDB = bool(check_setting_int(CFG, 'General', 'use_imdb', 0))
 
         PROVIDER_ORDER = check_setting_str(CFG, 'General', 'provider_order', '').split()
 
@@ -985,12 +989,7 @@ def initialize(consoleLogging=True):
         EPISODE_VIEW_SORT = check_setting_str(CFG, 'GUI', 'episode_view_sort', 'time')
         EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(CFG, 'GUI', 'episode_view_display_paused', 0))
         EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
-        FUZZY_DATING = bool(check_setting_int(CFG, 'GUI', 'fuzzy_dating', 0))
-        TRIM_ZERO = bool(check_setting_int(CFG, 'GUI', 'trim_zero', 0))
-        DATE_PRESET = check_setting_str(CFG, 'GUI', 'date_preset', '%x')
-        TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
-        TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u":%S", u"")
-        TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
+
         POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
         POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
 
@@ -1451,7 +1450,6 @@ def save_config():
     new_config['General']['indexer_timeout'] = int(INDEXER_TIMEOUT)
     new_config['General']['anime_default'] = int(ANIME_DEFAULT)
     new_config['General']['scene_default'] = int(SCENE_DEFAULT)
-    new_config['General']['use_imdb'] = int(USE_IMDB)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
     new_config['General']['version_notify'] = int(VERSION_NOTIFY)
     new_config['General']['auto_update'] = int(AUTO_UPDATE)
@@ -1812,20 +1810,21 @@ def save_config():
 
     new_config['GUI'] = {}
     new_config['GUI']['gui_name'] = GUI_NAME
-    new_config['GUI']['default_home'] = DEFAULT_HOME
     new_config['GUI']['theme_name'] = THEME_NAME
-    new_config['GUI']['home_layout'] = HOME_LAYOUT
-    new_config['GUI']['history_layout'] = HISTORY_LAYOUT
-    new_config['GUI']['display_show_specials'] = int(DISPLAY_SHOW_SPECIALS)
-    new_config['GUI']['episode_view_layout'] = EPISODE_VIEW_LAYOUT
-    new_config['GUI']['episode_view_display_paused'] = int(EPISODE_VIEW_DISPLAY_PAUSED)
-    new_config['GUI']['episode_view_sort'] = EPISODE_VIEW_SORT
-    new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
+    new_config['GUI']['default_home'] = DEFAULT_HOME
+    new_config['GUI']['use_imdb_info'] = int(USE_IMDB_INFO)
     new_config['GUI']['fuzzy_dating'] = int(FUZZY_DATING)
     new_config['GUI']['trim_zero'] = int(TRIM_ZERO)
     new_config['GUI']['date_preset'] = DATE_PRESET
     new_config['GUI']['time_preset'] = TIME_PRESET_W_SECONDS
     new_config['GUI']['timezone_display'] = TIMEZONE_DISPLAY
+    new_config['GUI']['home_layout'] = HOME_LAYOUT
+    new_config['GUI']['history_layout'] = HISTORY_LAYOUT
+    new_config['GUI']['display_show_specials'] = int(DISPLAY_SHOW_SPECIALS)
+    new_config['GUI']['episode_view_layout'] = EPISODE_VIEW_LAYOUT
+    new_config['GUI']['episode_view_sort'] = EPISODE_VIEW_SORT
+    new_config['GUI']['episode_view_display_paused'] = int(EPISODE_VIEW_DISPLAY_PAUSED)
+    new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
 
