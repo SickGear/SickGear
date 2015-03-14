@@ -22,7 +22,6 @@ import traceback
 
 import sickbeard
 
-from lib.imdb import _exceptions as imdb_exceptions
 from sickbeard.common import SKIPPED, WANTED
 from sickbeard.tv import TVShow
 from sickbeard import exceptions, logger, ui, db
@@ -30,6 +29,7 @@ from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
 from sickbeard.blackandwhitelist import BlackAndWhiteList
+
 
 class ShowQueue(generic_queue.GenericQueue):
     def __init__(self):
@@ -156,8 +156,7 @@ class ShowQueueActions:
              UPDATE: 'Update',
              FORCEUPDATE: 'Force Update',
              RENAME: 'Rename',
-             SUBTITLE: 'Subtitle',
-    }
+             SUBTITLE: 'Subtitle'}
 
 
 class ShowQueueItem(generic_queue.QueueItem):
@@ -340,15 +339,7 @@ class QueueItemAdd(ShowQueueItem):
             self._finishEarly()
             raise
 
-        if sickbeard.USE_IMDB:
-            logger.log(u'Retrieving show info from IMDb', logger.DEBUG)
-            try:
-                self.show.loadIMDbInfo()
-            except imdb_exceptions.IMDbError, e:
-                #todo Insert UI notification
-                logger.log(u'Something is wrong with IMDb api: ' + ex(e), logger.WARNING)
-            except Exception, e:
-                logger.log(u'Error loading IMDb info: ' + ex(e), logger.ERROR)
+        self.show.load_imdb_info()
 
         try:
             self.show.saveToDB()
@@ -473,6 +464,7 @@ class QueueItemRefresh(ShowQueueItem):
 
         self.inProgress = False
 
+
 class QueueItemRename(ShowQueueItem):
     def __init__(self, show=None):
         ShowQueueItem.__init__(self, ShowQueueActions.RENAME, show)
@@ -550,16 +542,6 @@ class QueueItemUpdate(ShowQueueItem):
             logger.log(u"Data retrieved from " + sickbeard.indexerApi(
                 self.show.indexer).name + " was incomplete, aborting: " + ex(e), logger.ERROR)
             return
-
-        if sickbeard.USE_IMDB:
-            logger.log(u'Retrieving show info from IMDb', logger.DEBUG)
-            try:
-                self.show.loadIMDbInfo()
-            except imdb_exceptions.IMDbError, e:
-                logger.log(u'Something is wrong with IMDb api: ' + ex(e), logger.WARNING)
-            except Exception, e:
-                logger.log(u'Error loading IMDb info: ' + ex(e), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.DEBUG)
 
         try:
             self.show.saveToDB()
