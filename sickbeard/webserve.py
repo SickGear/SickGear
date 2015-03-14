@@ -3354,7 +3354,7 @@ class ConfigGeneral(Config):
                     handle_reverse_proxy=None, home_search_focus=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
-                    indexer_timeout=None, use_imdb=None, rootDir=None, theme_name=None, default_home=None):
+                    indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb=None):
 
         results = []
 
@@ -3372,6 +3372,7 @@ class ConfigGeneral(Config):
         config.change_UPDATE_FREQUENCY(update_frequency)
         sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
         sickbeard.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
+        sickbeard.USE_IMDB = config.checkbox_to_value(use_imdb)
         sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
         sickbeard.CPU_PRESET = cpu_preset
         sickbeard.ANON_REDIRECT = anon_redirect
@@ -3409,9 +3410,6 @@ class ConfigGeneral(Config):
 
         if indexer_timeout:
             sickbeard.INDEXER_TIMEOUT = config.to_int(indexer_timeout)
-
-        if use_imdb:
-            sickbeard.USE_IMDB = config.checkbox_to_value(use_imdb)
 
         if time_preset:
             sickbeard.TIME_PRESET_W_SECONDS = time_preset

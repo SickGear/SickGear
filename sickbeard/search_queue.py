@@ -198,7 +198,8 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                                  [common.UNAIRED, curDate])
 
         sql_l = []
-        wanted = show = None
+        show = None
+        wanted = False
 
         for sqlEp in sqlResults:
             try:
@@ -228,7 +229,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 ep.status = (common.WANTED, common.SKIPPED)[ep.show.paused]
                 result = ep.get_sql()
                 if None is not result:
-                    sql_l.append(ep.get_sql())
+                    sql_l.append(result)
                     wanted |= (False, True)[common.WANTED == ep.status]
         else:
             logger.log(u'No unaired episodes marked wanted')

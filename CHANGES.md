@@ -36,12 +36,18 @@
 * Add validation when using Release Group token on page config Post Processing/Episode Naming/Name pattern/Custom
 * Change IMDb updater to a toggleable option under General Settings (disabled by default due to slow operations)
 * Change to simplify and reduce logging output of Recent-Search and Backlog processes
+* Change to reduce the time taken to "Update shows" with show data
+* Change the "Enable IMDb info" option to be under config/General/Interface
+* Change to stop displaying IMDb ui features when the option is off
+* Change to stop updating from IMDb during the scheduled daily updater for every show
+* Change to update the IMDb info for a show after snatching an episode for it
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
 * Change BET network logo filename to lower case
 * Change redirect from home to showlistView on changing Layout on showlistView
 * Fix the return flow from calls to the redirect function from executing incorrect code
+* Fix being able to actually turn IMDb off when it has been turned on
 
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
