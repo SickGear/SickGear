@@ -42,6 +42,7 @@
 * Change to reduce the time taken to "Update shows" with show data
 * Change to stop updating the IMDb info during the scheduled daily update for every show
 * Change to update the IMDb info for a show after snatching an episode for it
+* Fix updating of scene exception name cache after adding exceptions on Editshow page
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
