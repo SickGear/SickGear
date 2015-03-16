@@ -35,6 +35,9 @@
 * Change to no longer require restart with the "Scan and post process" option on page config/Post Processing
 * Add validation when using Release Group token on page config Post Processing/Episode Naming/Name pattern/Custom
 * Change to simplify and reduce logging output of Recent-Search and Backlog processes
+* Change episode row color away from blue on display show page when indexer airdate is not defined
+* Hide year, runtime, genre tags, country flag, or status if lacking valid data to display
+* Remove redundant CSS color use (all browsers treat 3 identical digits as 6, except for possibly in gradients)
 * Add show names to items listed during startup in the loading from database phase 
 * Add "Enable IMDb info" option to config/General/Interface
 * Change to not display IMDb info on UI when "Enable IMDb info" is disabled

@@ -143,7 +143,8 @@
 	<div id="container">
 		<div id="posterCol">
 			<a href="$sbRoot/showPoster/?show=$show.indexerid&amp;which=poster" rel="dialog" title="View Poster for $show.name">
-			<img #echo ('', 'style="height:271px" ')[not $sickbeard.USE_IMDB_INFO or not $show.imdbid or 'year' not in $show.imdb_info]#src="$sbRoot/showPoster/?show=$show.indexerid&amp;which=poster_thumb" class="tvshowImg" alt="" /></a>
+			<img #echo ('', 'style="height:270px" ')[(not $sickbeard.USE_IMDB_INFO or not $show.imdbid or 'year' not in $show.imdb_info)
+			 or ($sickbeard.USE_IMDB_INFO and 'genres' in $show.imdb_info and '' == $show.imdb_info['genres'])]#src="$sbRoot/showPoster/?show=$show.indexerid&amp;which=poster_thumb" class="tvshowImg" alt="" /></a>
 		</div>
 
 		<div id="showCol">
@@ -160,15 +161,15 @@
 
 #set $_show = $show
 #if not $sickbeard.USE_IMDB_INFO or not $show.imdbid
-				<span>($show.startyear) - $show.runtime minutes - </span>
+				<span>#echo ('(%s) - ' % $show.startyear, '')['' == $show.startyear]##echo ('%s minutes - ' % $show.runtime, '')['' == $show.runtime]#</span>
 #else
-    #if 'country_codes' in $show.imdb_info:
+    #if 'country_codes' in $show.imdb_info and '' != $show.imdb_info['country_codes']:
         #for $country in $show.imdb_info['country_codes'].split('|')
 				<img class="flag" src="$sbRoot/images/flags/${$country}.png" width="16" height="11" />
         #end for
     #end if
     #if 'year' in $show.imdb_info:
-				<span class="imdb-info">($show.imdb_info['year']) - $show.imdb_info['runtimes'] minutes</span>
+				<span class="imdb-info">#echo ('(%s) - ' % $show.imdb_info['year'], '')['' == $show.imdb_info['year']]##echo ('%s minutes' % $show.imdb_info['runtimes'], '')['' == $show.imdb_info['runtimes']]#</span>
     #end if
 				<a class="service" href="<%= anon_url('http://www.imdb.com/title/', _show.imdbid) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="http://www.imdb.com/title/$show.imdbid"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" /></a>
 #end if
@@ -189,7 +190,7 @@
 			</div>
     #end if
 #end if
-#if $sickbeard.USE_IMDB_INFO and 'year' in $show.imdb_info:
+#if $sickbeard.USE_IMDB_INFO and 'genres' in $show.imdb_info and '' != $show.imdb_info['genres']:
 			<div id="tags">
 				<ul class="tags">
     #for $imdbgenre in $show.imdb_info['genres'].split('|')
@@ -208,7 +209,9 @@
 #else if $show.airs:
 					<tr><td class="showLegend grey-text">Originally airs</td><td>$show.airs #if not $network_timezones.test_timeformat($show.airs) then ' <font color="#FF0000"><b>(invalid Timeformat)</b></font> ' else ''#</td></tr>
 #end if
+#if '' != $show.status:
 					<tr><td class="showLegend grey-text">Status</td><td>$show.status</td></tr>
+#end if
 #if $showLoc[1]:
 					<tr><td class="showLegend grey-text">Location</td><td>$showLoc[0]</td></tr>
 #else:
@@ -385,11 +388,12 @@
     #end if    
 
     #set $epLoc = $epResult['location']
+    #set never_aired = 0 < $curSeason and 1 == int($epResult['airdate'])
 		
-		<tr class="$Overview.overviewStrings[$epCats[$epStr]] season-$curSeason seasonstyle">
+		<tr class="#echo ($Overview.overviewStrings[$epCats[$epStr]], 'airdate-never')[$never_aired]# season-$curSeason seasonstyle">
 		
 			<td class="col-checkbox">
-    #if $UNAIRED != int($epResult['status']) 
+    #if $UNAIRED != int($epResult['status']) and not $never_aired
 				<input type="checkbox" class="epCheck" id="<%=str(epResult['season'])+'x'+str(epResult['episode'])%>" name="<%=str(epResult['season']) +'x'+str(epResult['episode']) %>" />
     #end if
 			</td>
