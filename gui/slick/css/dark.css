@@ -128,11 +128,11 @@ inc_top.tmpl
 }
 
 .ui-widget-overlay {
-	background: #000000 url("../css/lib/images/ui-bg_flat_0_000000_40x100.png") 50% 50% repeat-x;
+	background: #000 url("../css/lib/images/ui-bg_flat_0_000000_40x100.png") 50% 50% repeat-x;
 }
 
 .ui-widget-shadow {
-	background: #000000 url("../css/lib/images/ui-bg_flat_0_000000_40x100.png") 50% 50% repeat-x;
+	background: #000 url("../css/lib/images/ui-bg_flat_0_000000_40x100.png") 50% 50% repeat-x;
 }
 
 .ui-state-active a, .ui-state-active a:link, .ui-state-active a:visited {
@@ -584,7 +584,7 @@ h2.day, h2.network {
 }
 
 .tvshowTitle a {
-	color: #000000;
+	color: #000;
 }
 
 .tvshowDiv td.next_episode {
@@ -728,7 +728,7 @@ config_postProcessing.tmpl
 }
 
 #config div.example {
-	background-color: #333333;
+	background-color: #333;
 	border-color: #111;
 }
 
@@ -847,45 +847,45 @@ input, textarea, select, .uneditable-input {
 }
 
 .navbar-default .navbar-brand {
-	color: #ffffff;
+	color: #fff;
 }
 
 .navbar-default .navbar-brand:hover,
 .navbar-default .navbar-brand:focus {
-	color: #ffffff;
+	color: #fff;
 	background-color: transparent;
 }
 
 .navbar-default .navbar-text {
-	color: #dddddd;
+	color: #ddd;
 }
 
 .navbar-default .navbar-nav > li > a {
-	color: #dddddd;
+	color: #ddd;
 }
 
 .navbar-default .navbar-nav > li > a:hover,
 .navbar-default .navbar-nav > li > a:focus {
-	color: #ffffff;
+	color: #fff;
 	background-color: #124477;
 }
 
 .navbar-default .navbar-nav > .active > a,
 .navbar-default .navbar-nav > .active > a:hover,
 .navbar-default .navbar-nav > .active > a:focus {
-	color: #ffffff;
+	color: #fff;
 	background-color: #124477;
 }
 
 .navbar-default .navbar-nav > .disabled > a,
 .navbar-default .navbar-nav > .disabled > a:hover,
 .navbar-default .navbar-nav > .disabled > a:focus {
-	color: #cccccc;
+	color: #ccc;
 	background-color: transparent;
 }
 
 .navbar-default .navbar-toggle {
-	border-color: #cccccc;
+	border-color: #ccc;
 }
 
 .navbar-default .navbar-toggle:hover,
@@ -906,38 +906,38 @@ input, textarea, select, .uneditable-input {
 .navbar-default .navbar-nav > .open > a:hover,
 .navbar-default .navbar-nav > .open > a:focus {
 	background-color: #124477;
-	color: #ffffff;
+	color: #fff;
 }
 
 @media (max-width: 767px) {
-  .navbar-default .navbar-nav .open .dropdown-menu > li > a {
-		color: #dddddd;
-  }
-  .navbar-default .navbar-nav .open .dropdown-menu > li > a:hover,
-  .navbar-default .navbar-nav .open .dropdown-menu > li > a:focus {
-		color: #ffffff;
+	.navbar-default .navbar-nav .open .dropdown-menu > li > a {
+		color: #ddd;
+	}
+	.navbar-default .navbar-nav .open .dropdown-menu > li > a:hover,
+	.navbar-default .navbar-nav .open .dropdown-menu > li > a:focus {
+		color: #fff;
 		background-color: transparent;
-  }
-  .navbar-default .navbar-nav .open .dropdown-menu > .active > a,
-  .navbar-default .navbar-nav .open .dropdown-menu > .active > a:hover,
-  .navbar-default .navbar-nav .open .dropdown-menu > .active > a:focus {
-		color: #ffffff;
+	}
+	.navbar-default .navbar-nav .open .dropdown-menu > .active > a,
+	.navbar-default .navbar-nav .open .dropdown-menu > .active > a:hover,
+	.navbar-default .navbar-nav .open .dropdown-menu > .active > a:focus {
+		color: #fff;
 		background-color: #124477;
-  }
-  .navbar-default .navbar-nav .open .dropdown-menu > .disabled > a,
-  .navbar-default .navbar-nav .open .dropdown-menu > .disabled > a:hover,
-  .navbar-default .navbar-nav .open .dropdown-menu > .disabled > a:focus {
-		color: #cccccc;
+	}
+	.navbar-default .navbar-nav .open .dropdown-menu > .disabled > a,
+	.navbar-default .navbar-nav .open .dropdown-menu > .disabled > a:hover,
+	.navbar-default .navbar-nav .open .dropdown-menu > .disabled > a:focus {
+		color: #ccc;
 		background-color: transparent;
-  }
+	}
 }
 
 .navbar-default .navbar-link {
-	color: #dddddd;
+	color: #ddd;
 }
 
 .navbar-default .navbar-link:hover {
-	color: #ffffff;
+	color: #fff;
 }
 
 .navbar-default .btn-link {
@@ -946,14 +946,14 @@ input, textarea, select, .uneditable-input {
 
 .navbar-default .btn-link:hover,
 .navbar-default .btn-link:focus {
-	color: #dddddd;
+	color: #ddd;
 }
 
 .navbar-default .btn-link[disabled]:hover,
 fieldset[disabled] .navbar-default .btn-link:hover,
 .navbar-default .btn-link[disabled]:focus,
 fieldset[disabled] .navbar-default .btn-link:focus {
-	color: #cccccc;
+	color: #ccc;
 }
 
 .dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus {
@@ -1010,7 +1010,7 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 
 .btn:active,
 .btn.active {
-	background-color: #cccccc \9;
+	background-color: #ccc \9;
 	color: #fff;
 }
 
@@ -1084,7 +1084,7 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 .btn-info:hover,
 .btn-inverse,
 .btn-inverse:hover {
-	color: #ffffff;
+	color: #fff;
 	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
 
@@ -1249,7 +1249,7 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 
 .btn-inverse {
 	background-color: #414141;
-	*background-color: #222222;
+	*background-color: #222;
 	background-image: -ms-linear-gradient(top, #555555, #222222);
 	background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#555555), to(#222222));
 	background-image: -webkit-linear-gradient(top, #555555, #222222);
@@ -1257,7 +1257,7 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 	background-image: -moz-linear-gradient(top, #555555, #222222);
 	background-image: linear-gradient(top, #555555, #222222);
 	background-repeat: repeat-x;
-	border-color: #222222 #222222 #000000;
+	border-color: #222 #222 #000;
 	border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
 	filter: progid:dximagetransform.microsoft.gradient(startColorstr='#555555', endColorstr='#222222', GradientType=0);
 	filter: progid:dximagetransform.microsoft.gradient(enabled=false);
@@ -1268,7 +1268,7 @@ fieldset[disabled] .navbar-default .btn-link:focus {
 .btn-inverse.active,
 .btn-inverse.disabled,
 .btn-inverse[disabled] {
-	background-color: #222222;
+	background-color: #222;
 	*background-color: #151515;
 }
 
@@ -1363,7 +1363,7 @@ formWizard
 ========================================================================== */
 .step,
 legend.legendStep {
-	color: #ffffff;
+	color: #fff;
 }
 
 div.stepsguide .step p {
@@ -1457,7 +1457,7 @@ thead.tablesorter-stickyHeader {
 
 /* Zebra Widget - row alternating colors */
 .tablesorter tr.odd, .sickbeardTable tr.odd {
-	background-color: #333333;
+	background-color: #333;
 }
 
 .tablesorter tr.even, .sickbeardTable tr.even {
