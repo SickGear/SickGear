@@ -61,6 +61,7 @@
 * Change IMDb option to enable by default now the slow operation has been eliminated from process flows
 * Add IMDb update capability back to the "Force Full Update" button on the displayShow page
 * Fix to correctly use wanted_begin and wanted_latest when adding shows
+* Change Log/Error Log Menu icons to correct ones
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
