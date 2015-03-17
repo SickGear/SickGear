@@ -69,6 +69,7 @@
 * Add IMDb update capability back to the "Force Full Update" button on the displayShow page
 * Fix to correctly use wanted_begin and wanted_latest when adding shows
 * Change Log/Error Log Menu icons to correct ones
+* Fix issue with missing QueueItemForceUpdate object has no attribute 'force_web'
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
