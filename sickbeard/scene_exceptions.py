@@ -322,11 +322,3 @@ def _xem_exceptions_fetcher():
         setLastRefresh('xem')
 
     return xem_exception_dict
-
-
-def getSceneSeasons(indexer_id):
-    """get a list of season numbers that have scene exceptions
-    """
-    myDB = db.DBConnection('cache.db')
-    seasons = myDB.select("SELECT DISTINCT season FROM scene_exceptions WHERE indexer_id = ?", [indexer_id])
-    return [cur_exception["season"] for cur_exception in seasons]

@@ -80,40 +80,6 @@ def filterBadReleases(name, parse=True):
     return True
 
 
-def sceneToNormalShowNames(name):
-    """
-        Takes a show name from a scene dirname and converts it to a more "human-readable" format.
-    
-    name: The show name to convert
-    
-    Returns: a list of all the possible "normal" names
-    """
-
-    if not name:
-        return []
-
-    name_list = [name]
-
-    # use both and and &
-    new_name = re.sub('(?i)([\. ])and([\. ])', '\\1&\\2', name, re.I)
-    if new_name not in name_list:
-        name_list.append(new_name)
-
-    results = []
-
-    for cur_name in name_list:
-        # add brackets around the year
-        results.append(re.sub('(\D)(\d{4})$', '\\1(\\2)', cur_name))
-
-        # add brackets around the country
-        country_match_str = '|'.join(common.countryList.values())
-        results.append(re.sub('(?i)([. _-])(' + country_match_str + ')$', '\\1(\\2)', cur_name))
-
-    results += name_list
-
-    return list(set(results))
-
-
 def makeSceneShowSearchStrings(show, season=-1):
     showNames = allPossibleShowNames(show, season=season)
 
@@ -223,40 +189,6 @@ def makeSceneSearchString(show, ep_obj):
                 toReturn.append(curShow + '.' + curEpString)
 
     return toReturn
-
-
-def isGoodResult(name, show, log=True, season=-1):
-    """
-    Use an automatically-created regex to make sure the result actually is the show it claims to be
-    """
-
-    all_show_names = allPossibleShowNames(show, season=season)
-    showNames = map(sanitizeSceneName, all_show_names) + all_show_names
-    showNames += map(unidecode, all_show_names)
-
-    for curName in set(showNames):
-        if not show.is_anime:
-            escaped_name = re.sub('\\\\[\\s.-]', '\W+', re.escape(curName))
-            if show.startyear:
-                escaped_name += "(?:\W+" + str(show.startyear) + ")?"
-            curRegex = '^' + escaped_name + '\W+(?:(?:S\d[\dE._ -])|(?:\d\d?x)|(?:\d{4}\W\d\d\W\d\d)|(?:(?:part|pt)[\._ -]?(\d|[ivx]))|Season\W+\d+\W+|E\d+\W+|(?:\d{1,3}.+\d{1,}[a-zA-Z]{2}\W+[a-zA-Z]{3,}\W+\d{4}.+))'
-        else:
-            escaped_name = re.sub('\\\\[\\s.-]', '[\W_]+', re.escape(curName))
-            # FIXME: find a "automatically-created" regex for anime releases # test at http://regexr.com?2uon3
-            curRegex = '^((\[.*?\])|(\d+[\.-]))*[ _\.]*' + escaped_name + '(([ ._-]+\d+)|([ ._-]+s\d{2})).*'
-
-        if log:
-            logger.log(u"Checking if show " + name + " matches " + curRegex, logger.DEBUG)
-
-        match = re.search(curRegex, name, re.I)
-        if match:
-            logger.log(u"Matched " + curRegex + " to " + name, logger.DEBUG)
-            return True
-
-    if log:
-        logger.log(
-            u"Provider gave result " + name + " but that doesn't seem like a valid result for " + show.name + " so I'm ignoring it")
-    return False
 
 
 def allPossibleShowNames(show, season=-1):

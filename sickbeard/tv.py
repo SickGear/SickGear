@@ -1187,8 +1187,6 @@ class TVShow(object):
         myDB = db.DBConnection()
         myDB.upsert("tv_shows", newValueDict, controlValueDict)
 
-        helpers.update_anime_support()
-
         if sickbeard.USE_IMDB_INFO and self.imdbid:
             controlValueDict = {'indexer_id': self.indexerid}
             newValueDict = self.imdb_info
