@@ -46,6 +46,9 @@
 * Change to stop updating the IMDb info on edit, mass edit and during the scheduled daily update for every show
 * Change to update the IMDb info for a show after snatching an episode for it
 * Fix updating of scene exception name cache after adding exceptions on Editshow page
+* Change log rotation to occur at midnight
+* Change to keep a maximum of 7 log files
+* Add automatic compression of old log files
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
