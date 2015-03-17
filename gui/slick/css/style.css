@@ -127,14 +127,14 @@ fonts
 	font-style: italic;
 }
 
-/* Droid Sans */
+/* SickGear Icons */
 @font-face {
-	font-family: 'droid_sans_mono';
-	src:url('fonts/droidsansmono-webfont.eot');
-	src:url('fonts/droidsansmono-webfont.eot?#iefix') format('embedded-opentype'),
-		url('fonts/droidsansmono-webfont.woff') format('woff'),
-		url('fonts/droidsansmono-webfont.ttf') format('truetype'),
-		url('fonts/droidsansmono-webfont.svg#droid_sans_monoregular') format('svg');
+	font-family: 'sgicons';
+	src:url('fonts/sgicons.eot');
+	src:url('fonts/sgicons.eot?#iefix') format('embedded-opentype'),
+		url('fonts/sgicons.woff') format('woff'),
+		url('fonts/sgicons.ttf') format('truetype'),
+		url('fonts/sgicons.svg#sgicons') format('svg');
 	font-weight: normal;
 	font-style: normal;
 }
@@ -162,11 +162,6 @@ inc_top.tmpl
 
 .icon-white { 
 	background-image: url("../images/glyphicons-halflings-white.png");
-}
-
-.dropdown-menu li > a:hover > [class^="menu-icon-"],
-.dropdown-menu li > a:hover > [class*=" menu-icon-"] {
-	background-image: url("../images/menu/menu-icons-white.png");
 }
 
 .ui-autocomplete-loading {
@@ -341,156 +336,158 @@ inc_top.tmpl
 	margin-bottom: 0;
 }
 
-[class^="menu-icon-"], [class*=" menu-icon-"] {
-	background: url("../images/menu/menu-icons-black.png");
-	height: 16px;
-	width: 16px;
-	display: inline-block;
-	position: relative;
-	top: 2px;
-	float: left;
+[class^="sgicon-"], [class*=" sgicon-"] {
+	font-family: 'sgicons';
+	speak: none;
+	font-style: normal;
+	font-weight: normal;
+	font-variant: normal;
+	text-shadow: none;
+	text-transform: none;
+	text-rendering: auto;
+	line-height: 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
-@media(max-width:767px){
-	[class^="menu-icon-"], [class*=" menu-icon-"] {
-		background: url("../images/menu/menu-icons-white.png");
-		height: 16px;
-		width: 16px;
-		display: inline-block;
-		position: relative;
-		top: 2px;
-		float: left;
-	}
+.sgicon-rss:before {
+	content: "\e622";
 }
 
-.menu-icon-addshow {
-	background-position: 0 0;
+.sgicon-pause:before {
+	content: "\e600";
 }
 
-.menu-icon-anime {
-	background-position: -21px 0;
+.sgicon-play:before {
+	content: "\e601";
 }
 
-.menu-icon-backlog-view {
-	background-position: -42px 0;
+.sgicon-queued:before {
+	content: "\e602";
 }
 
-.menu-icon-backlog {
-	background-position: -63px 0;
+.sgicon-trim:before {
+	content: "\e603";
 }
 
-.menu-icon-bittorrent {
-	background-position: -84px 0;
+.sgicon-backlog:before {
+	content: "\e604";
 }
 
-.menu-icon-config-index {
-	background-position: -105px 0;
+.sgicon-home:before {
+	content: "\e605";
 }
 
-.menu-icon-config {
-	background-position: -126px 0;
+.sgicon-delete:before {
+	content: "\e606";
 }
 
-.menu-icon-failed-download {
-	background-position: -147px 0;
+.sgicon-errorlog:before {
+	content: "\e607";
 }
 
-.menu-icon-home {
-	background-position: -168px 0;
+.sgicon-log:before {
+	content: "\e608";
 }
 
-.menu-icon-manage {
-	background-position: -189px 0;
+.sgicon-notification:before {
+	content: "\e609";
 }
 
-.menu-icon-manage-searches {
-	background-position: -210px 0;
+.sgicon-postprocess:before {
+	content: "\e60a";
 }
 
-.menu-icon-poster {
-	background-position: -231px 0;
+.sgicon-failed:before {
+	content: "\e60b";
 }
 
-.menu-icon-postprocess {
-	background-position: -252px 0;
+.sgicon-updatecheck:before {
+	content: "\e60c";
 }
 
-.menu-icon-restart {
-	background-position: -273px 0;
+.sgicon-subtitles:before {
+	content: "\e60d";
 }
 
-.menu-icon-shutdown {
-	background-position: -294px 0;
+.sgicon-episodestatus:before {
+	content: "\e60e";
 }
 
-.menu-icon-update {
-	background-position: -315px 0;
+.sgicon-anime:before {
+	content: "\e60f";
 }
 
-.menu-icon-viewlog-errors {
-	background-position: -336px 0;
+.sgicon-logout:before {
+	content: "\e610";
 }
 
-.menu-icon-viewlog {
-	background-position: -357px 0;
+.sgicon-edit:before {
+	content: "\e611";
 }
 
-.menu-icon-xbmc {
-	background-position: -378px 0;
+.sgicon-rename:before {
+	content: "\e612";
 }
 
-.menu-icon-help {
-	background-position: -399px 0;
+.sgicon-fullupdate:before {
+	content: "\e613";
 }
 
-.menu-icon-logout {
-	background-position: -420px 0;
+.sgicon-refresh:before {
+	content: "\e614";
 }
 
-.menu-icon-kodi {
-	background-position: -441px 0;
+.sgicon-massupdate:before {
+	content: "\e615";
 }
 
-.menu-icon-plex {
-	background-position: -462px 0;
+.sgicon-search:before {
+	content: "\e616";
 }
 
-[class^="submenu-icon-"], [class*=" submenu-icon-"] {
-	background: url("../images/menu/menu-icons-black.png");
-	height: 16px;
-	width: 16px;
+.sgicon-info:before {
+	content: "\e617";
 }
 
-.submenu-icon-anime {
-	background-position: -21px 0;
+.sgicon-restart:before {
+	content: "\e618";
 }
 
-.submenu-icon-bittorrent {
-	background-position: -84px 0;
+.sgicon-shutdown:before {
+	content: "\e619";
 }
 
-.submenu-icon-failed-download {
-	background-position: -147px 0;
+.sgicon-addshow:before {
+	content: "\e61a";
 }
 
-.submenu-icon-restart {
-	background-position: -273px 0;
+.sgicon-config:before {
+	content: "\e61b";
 }
 
-.submenu-icon-shutdown {
-	background-position: -294px 0;
+.sgicon-arrowup:before {
+	content: "\e61c";
 }
 
-.submenu-icon-xbmc {
-	background-position: -378px 0;
+.sgicon-arrowdown:before {
+	content: "\e61d";
 }
 
-.submenu-icon-kodi {
-	background-position: -441px 0;
+.sgicon-plex:before {
+	content: "\e61e";
 }
 
-.submenu-icon-plex {
-	background-position: -462px 0;
+.sgicon-kodi:before {
+	content: "\e61f";
+}
+
+.sgicon-bittorrent:before {
+	content: "\e620";
+}
+
+.sgicon-xbmc:before {
+	content: "\e621";
 }
 
 /* =======================================================================

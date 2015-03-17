@@ -49,6 +49,7 @@
 * Change log rotation to occur at midnight
 * Change to keep a maximum of 7 log files
 * Add automatic compression of old log files
+* Change overhaul menu and button icons
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
