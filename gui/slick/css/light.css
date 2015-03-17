@@ -127,6 +127,7 @@ inc_top.tmpl
 	color:#140F06;
 	text-decoration:none
 }
+
 .ui-state-default a, .ui-state-default a:link, .ui-state-default a:visited{
 	color:#222;
 	text-decoration:none
@@ -1150,6 +1151,7 @@ browser.css
 /* =======================================================================
 formWizard
 ========================================================================== */
+
 .step,
 legend.legendStep{
 	color:#57442b

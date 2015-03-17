@@ -51,6 +51,11 @@
 * Add automatic compression of old log files
 * Remove whitespace and semi-colon redundancy from CSS shedding 4.5kb
 * Change overhaul menu and button icons
+* Add "Status of removed episodes" to apply (or not) a preferred status to episodes whose files are detected as removed.
+  "Archived" can now be set so that removed episodes still count toward download completion stats. See setting on page
+  config/Post Processing/File Handling
+* Remove redundant "Skip remove detection" from the config/Post Processing/File Handling page
+* Change to highlight the current selected item in combos on page config/Post Processing
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

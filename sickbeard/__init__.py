@@ -704,7 +704,7 @@ def initialize(consoleLogging=True):
 
         RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 0))
         BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 0))
-        SKIP_REMOVED_FILES = bool(check_setting_int(CFG, 'General', 'skip_removed_files', 0))
+        SKIP_REMOVED_FILES = check_setting_int(CFG, 'General', 'skip_removed_files', 0)
 
         USENET_RETENTION = check_setting_int(CFG, 'General', 'usenet_retention', 500)
 

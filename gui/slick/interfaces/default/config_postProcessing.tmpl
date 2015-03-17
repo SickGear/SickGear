@@ -24,7 +24,7 @@
 	<h1 class="title">$title</h1>
 #end if
 #set $checked = 'checked="checked"'
-#set $selected = 'selected="selected"'
+#set $selected = 'selected="selected" class="selected"'
 
 <div id="config" class="pp">
 	<div id="config-content">
@@ -64,16 +64,12 @@
 
 						<div class="field-pair">
 							<label for="process_method">
-								<span class="component-title">Process episode method</span>
+								<span class="component-title input">Process episode method</span>
 								<span class="component-desc">
 									<select name="process_method" id="process_method" class="form-control input-sm">
-#set $process_method_text = {'copy': "Copy", 'move': "Move", 'hardlink': "Hard Link", 'symlink' : "Symbolic Link"}
+#set $process_method_text = {'copy': 'Copy', 'move': 'Move', 'hardlink': 'Hard Link', 'symlink' : 'Symbolic Link'}
 #for $curAction in ('copy', 'move', 'hardlink', 'symlink'):
-    #if $sickbeard.PROCESS_METHOD == $curAction:
-        #set $process_method = $selected
-    #else
-        #set $process_method = ''
-    #end if
+    #set $process_method = ('', $selected)[$sickbeard.PROCESS_METHOD == $curAction]
 										<option value="$curAction" $process_method>$process_method_text[$curAction]</option>
 #end for
 									</select>
@@ -182,11 +178,17 @@
 
 						<div class="field-pair">
 							<label for="skip_removed_files">
-								<span class="component-title">Skip remove detection</span>
+								<span class="component-title input">Status of removed episodes</span>
 								<span class="component-desc">
-									<input type="checkbox" name="skip_removed_files" id="skip_removed_files" #if $sickbeard.SKIP_REMOVED_FILES == True then $checked else ''#>
-									<p>skip detection of removed files so the episode is not set to ignored<br />
-									<b>note:</b> this may mean SickGear misses renames as well</p>
+									<select name="skip_removed_files" id="skip_removed_files" class="form-control form-control-inline input-sm">
+
+#set $opt_selected = ($sickbeard.SKIP_REMOVED_FILES, $IGNORED)[not $sickbeard.SKIP_REMOVED_FILES]
+#for $cur_status in [1, $SKIPPED, $ARCHIVED, $IGNORED]:
+    #set $opt_text = ('Will Be Untouched', 'Set ' + $statusStrings[$cur_status] + ('', ' (default)')[$IGNORED == $cur_status])[1 != $cur_status]
+										<option value="$cur_status"#echo ('', ' ' + $selected)[$cur_status == $opt_selected]#>$opt_text</option>
+#end for
+									</select>
+									<span><strong><em>untouched</em></strong> may mean SickGear also misses renames</span>
 								</span>
 							</label>
 						</div>
@@ -307,7 +309,7 @@
 
 						<div class="field-pair">
 							<label for="name_presets">
-								<span class="component-title">Name pattern</span>
+								<span class="component-title input">Name pattern</span>
 								<span class="component-desc">
 									<select id="name_presets" class="form-control input-sm">
 #set is_custom = True
@@ -458,11 +460,11 @@
 
 						<div class="field-pair">
 							<label for="naming_multi_ep">
-								<span class="component-title">Multi episode style</span>
+								<span class="component-title input">Multi episode style</span>
 								<span class="component-desc">
 									<select id="naming_multi_ep" name="naming_multi_ep" class="form-control input-sm">
 #for $cur_multi_ep in sorted($multiEpStrings.items(), key=lambda x: x[1]):
-										<option value="$cur_multi_ep[0]" #if $sickbeard.NAMING_MULTI_EP == $cur_multi_ep[0] then 'selected="selected" class="selected"' else ''#>$cur_multi_ep[1]</option>
+										<option value="$cur_multi_ep[0]" #if $sickbeard.NAMING_MULTI_EP == $cur_multi_ep[0] then $selected else ''#>$cur_multi_ep[1]</option>
 #end for
 									</select>
 								</span>
@@ -528,7 +530,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_abd_presets">
-									<span class="component-title">Air-by-date name pattern</span>
+									<span class="component-title input">Air-by-date name pattern</span>
 									<span class="component-desc">
 										<select id="name_abd_presets" class="form-control input-sm">
 #set is_abd_custom = True
@@ -726,7 +728,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_sports_presets">
-									<span class="component-title">Sports name pattern</span>
+									<span class="component-title input">Sports name pattern</span>
 									<span class="component-desc">
 										<select id="name_sports_presets" class="form-control input-sm">
 #set is_sports_custom = True
@@ -929,7 +931,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_anime_presets">
-									<span class="component-title">Anime name pattern</span>
+									<span class="component-title input">Anime name pattern</span>
 									<span class="component-desc">
 										<select id="name_anime_presets" class="form-control input-sm">
 #set is_anime_custom = True
@@ -1079,11 +1081,11 @@
 
 								<div class="field-pair">
 									<label for="naming_anime_multi_ep">
-										<span class="component-title">Multi episode style</span>
+										<span class="component-title input">Multi episode style</span>
 										<span class="component-desc">
 											<select id="naming_anime_multi_ep" name="naming_anime_multi_ep" class="form-control input-sm">
 #for $cur_multi_ep in sorted($multiEpStrings.items(), key=lambda x: x[1]):
-												<option value="$cur_multi_ep[0]" #if $sickbeard.NAMING_ANIME_MULTI_EP == $cur_multi_ep[0] then 'selected="selected" class="selected"' else ''#>$cur_multi_ep[1]</option>
+												<option value="$cur_multi_ep[0]" #if $sickbeard.NAMING_ANIME_MULTI_EP == $cur_multi_ep[0] then $selected else ''#>$cur_multi_ep[1]</option>
 #end for
 											</select>
 										</span>
@@ -1179,7 +1181,7 @@
 					<fieldset class="component-group-list">
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Metadata target</span>
+								<span class="component-title input">Metadata target</span>
 								<span class="component-desc">
 #set $m_dict = $metadata.get_metadata_generator_dict()
 									<select id="metadataType" class="form-control input-sm">

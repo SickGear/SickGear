@@ -276,6 +276,7 @@ inc_top.tmpl
 	color:#140F06;
 	text-decoration:none
 }
+
 .ui-state-default a, .ui-state-default a:link, .ui-state-default a:visited{
 	color:#222;
 	text-decoration:none
@@ -510,14 +511,17 @@ inc_bottom.tmpl
 /* =======================================================================
 inc_rootDirs.tmpl
 ========================================================================== */
+
 .rootdir-selectbox,
 .rootdir-selectbox #rootDirs,
 .rootdir-controls{
 	width:430px
 }
+
 .rootdir-selectbox{
 	padding:0 0 5px
 }
+
 .rootdir-controls{
 	text-align:center
 }
@@ -549,12 +553,12 @@ home.tmpl
 }
 
 #HomeLayout{margin-top:-35px}
-#HomeLayout.not-poster{height:75px }
+#HomeLayout.not-poster{height:75px}
 #HomeLayout div.not-poster{position:relative;top:38px}
-#HomeLayout span.not-poster{margin-top:-30px }
+#HomeLayout span.not-poster{margin-top:-30px}
 #HomeLayout.poster{margin-top:-35px}
-#HomeLayout span.poster{margin-bottom:10px }
-#search_show_name{margin-top:0 }
+#HomeLayout span.poster{margin-bottom:10px}
+#search_show_name{margin-top:0}
 
 .ui-progressbar{
 	height:20px;
@@ -666,12 +670,15 @@ home.tmpl
 	border-left:0;
 	border-right:0
 }
+
 .ui-progressbar .ui-progressbar-value{
 	height:20px
 }
+
 .ui-progressbar .progress-20{
 	border:none
 }
+
 .show .progress-20,
 .show .progress-40,
 .show .progress-60,
@@ -816,7 +823,7 @@ home_addShows.tmpl
 	margin-left:auto
 }
 
-#addShowPortal  a{
+#addShowPortal a{
 	padding:0 20px;
 	width:360px;
 	float:left;
@@ -872,6 +879,7 @@ div.buttontext p{
 /* =======================================================================
 home_newShow.tmpl
 ========================================================================== */
+
 #addShowForm,
 #newShowPortal,
 fieldset.sectionwrap,
@@ -1221,21 +1229,27 @@ ul.tags li a{
 	background-color:#eae2c8;
 	color:#666
 }
+
 .unaired{
 	background-color:#f5f1e4
 }
+
 .skipped{
 	background-color:#bedeed
 }
+
 .good{
 	background-color:#c3e3c8
 }
+
 .qual{
 	background-color:#ffda8a
 }
+
 .wanted{
 	background-color:#ffb0b0
 }
+
 .snatched{
 	background-color:#ebc1ea
 }
@@ -1300,6 +1314,7 @@ span.snatched b{
 	empty-cells:show;
 	color:#000
 }
+
 .sickbeardTable.display_show{
 	clear:both
 }
@@ -1400,12 +1415,14 @@ td.col-search{
 	width:150px;
 	vertical-align:top
 }
+
 .options-on-right{
 	width:180px;
 	float:right;
 	vertical-align:middle;
 	height:100%
 }
+
 .options-on-right .showLegendRight{
 	padding-right:6px;
 	padding-bottom:1px
@@ -1666,12 +1683,15 @@ h2.day, h2.network{
 .day-of-week .text .episode .number{
 	font-weight:900
 }
+
 .day-of-week .text .episode .season{
 	margin-right:2px
 }
+
 .day-of-week .text .episode .number{
 	margin-left:2px
 }
+
 .day-of-week .episode-blank{
 	width:250px;
 	height:32px;
@@ -1719,11 +1739,13 @@ h2.day, h2.network{
 .on-air1{
 	text-align:right
 }
+
 .on-air0{
 	background-color:#dfd !important;
 	filter:alpha(opacity=75);
 	opacity:.75
 }
+
 .on-air1{
 	color:#295730 !important;
 	border-left:1px solid #295730 !important;
@@ -1775,9 +1797,11 @@ h2.day, h2.network{
 .carousel-control .glyphicon-chevron-left{
 	margin-left:-10px
 }
+
 .carousel-control .glyphicon-chevron-right{
 	margin-right:-10px
 }
+
 .carousel-control .glyphicon-chevron-left,
 .carousel-control .glyphicon-chevron-right{
 	width:20px;
@@ -1883,6 +1907,10 @@ config*.tmpl
 	padding-left:20px
 }
 
+#config span.component-title.input{
+	line-height:24px
+}
+
 .stepDiv span.component-title.input{
 	line-height:30px
 }
@@ -1912,6 +1940,7 @@ config*.tmpl
 #config label.space-right{
 	margin-right:20px
 }
+
 #config .metadataDiv{
 	display:none
 }
@@ -1922,7 +1951,12 @@ config*.tmpl
 }
 
 select .selected{
-	font-weight:700
+	font-weight:700;
+	color:#888
+}
+
+select .selected:before{
+	content:"> "
 }
 
 .jumbo{
@@ -1935,6 +1969,7 @@ select .selected{
 	font-size:13px !important;
 	margin-bottom:10px
 }
+
 #editShow .field-pair #customQuality h4{
 	margin-bottom:1px
 }
@@ -2044,15 +2079,19 @@ select .selected{
 .icon16-github{
 	background-position:0 0
 }
+
 .icon16-mirc{
 	background-position:-26px 0
 }
+
 .icon16-sg{
 	background-position:-52px 0
 }
+
 .icon16-web{
 	background-position:-78px 0
 }
+
 .icon16-win{
 	background-position:-104px 0
 }
@@ -3180,6 +3219,7 @@ div.formpaginate .prev, div.formpaginate .next{
 .stepDiv{
 	padding:15px
 }
+
 .stepDiv.parent-folder{
 	padding:15px 0 0;
 	width:430px;
@@ -3277,6 +3317,7 @@ thead.tablesorter-stickyHeader{
 .tablesorter .filtered{
 	display:none
 }
+
 .tablesorter input.tablesorter-filter{
 	width:98%;
 	height:auto;
@@ -3332,7 +3373,7 @@ ul.token-input-list{
 	padding:0 0 1px 0;
 	background-color:#fff;
 	list-style-type:none;
-/*    clear:left;*/
+/*	clear:left; */
 	border-top-left-radius:3px;
 	border-top-right-radius:3px;
 	border-bottom-left-radius:3px;
@@ -3347,7 +3388,7 @@ ul.token-input-list li input{
 	border:0;
 	padding:3px 4px;
 	background-color:white
-/*    -webkit-appearance:caret;*/
+/*	-webkit-appearance:caret; */
 }
 
 li.token-input-token{
