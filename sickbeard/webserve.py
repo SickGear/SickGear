@@ -3623,7 +3623,7 @@ class ConfigPostProcessing(Config):
         sickbeard.NAMING_STRIP_YEAR = config.checkbox_to_value(naming_strip_year)
         sickbeard.USE_FAILED_DOWNLOADS = config.checkbox_to_value(use_failed_downloads)
         sickbeard.DELETE_FAILED = config.checkbox_to_value(delete_failed)
-        sickbeard.SKIP_REMOVED_FILES = config.checkbox_to_value(skip_removed_files)
+        sickbeard.SKIP_REMOVED_FILES = config.minimax(skip_removed_files, IGNORED, 1, IGNORED)
         sickbeard.NFO_RENAME = config.checkbox_to_value(nfo_rename)
 
         sickbeard.METADATA_XBMC = xbmc_data
