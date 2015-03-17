@@ -56,6 +56,7 @@
   config/Post Processing/File Handling
 * Remove redundant "Skip remove detection" from the config/Post Processing/File Handling page
 * Change to highlight the current selected item in combos on page config/Post Processing
+* Change the episodes downloaded stat to display e.g. 2843 / 2844 as 99.9% instead of rounding to 100%
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
