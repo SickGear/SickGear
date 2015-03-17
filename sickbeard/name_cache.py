@@ -84,13 +84,14 @@ def buildNameCache(show=None):
     global nameCache
 
     with nameCacheLock:
-        # clear internal name cache
-        clearCache()
 
         # update scene exception names
         sickbeard.scene_exceptions.retrieve_exceptions()
 
         if not show:
+            # clear internal name cache
+            clearCache()
+
             logger.log(u"Building internal name cache for all shows", logger.MESSAGE)
 
             cacheDB = db.DBConnection('cache.db')
@@ -114,6 +115,9 @@ def buildNameCache(show=None):
 
                         nameCache[name] = int(show.indexerid)
         else:
+            # remove old show cache entries
+            nameCache = dict((k, v) for k, v in nameCache.items() if v != show.indexerid)
+
             logger.log(u"Building internal name cache for " + show.name, logger.MESSAGE)
 
             for curSeason in [-1] + sickbeard.scene_exceptions.get_scene_seasons(show.indexerid):
