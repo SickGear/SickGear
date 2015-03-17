@@ -1042,7 +1042,7 @@ class Home(MainHandler):
                     {'title': 'Remove', 'path': 'home/deleteShow?show=%d' % showObj.indexerid, 'confirm': True})
                 t.submenu.append({'title': 'Re-scan files', 'path': 'home/refreshShow?show=%d' % showObj.indexerid})
                 t.submenu.append(
-                    {'title': 'Force Full Update', 'path': 'home/updateShow?show=%d&amp;force=1' % showObj.indexerid})
+                    {'title': 'Force Full Update', 'path': 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid})
                 t.submenu.append({'title': 'Update show in XBMC',
                                   'path': 'home/updateXBMC?showName=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
@@ -1375,7 +1375,7 @@ class Home(MainHandler):
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 
-    def updateShow(self, show=None, force=0):
+    def updateShow(self, show=None, force=0, web=0):
 
         if show is None:
             return self._genericMessage('Error', 'Invalid show ID')
@@ -1387,7 +1387,7 @@ class Home(MainHandler):
 
         # force the update
         try:
-            sickbeard.showQueueScheduler.action.updateShow(showObj, bool(force))  # @UndefinedVariable
+            sickbeard.showQueueScheduler.action.updateShow(showObj, bool(force), bool(web))
         except exceptions.CantUpdateException, e:
             ui.notifications.error('Unable to update this show.',
                                    ex(e))

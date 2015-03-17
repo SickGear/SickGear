@@ -75,7 +75,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
     loadingShowList = property(_getLoadingShowList)
 
-    def updateShow(self, show, force=False):
+    def updateShow(self, show, force=False, web=False):
 
         if self.isBeingAdded(show):
             raise exceptions.CantUpdateException(
@@ -91,6 +91,8 @@ class ShowQueue(generic_queue.GenericQueue):
 
         if not force:
             queueItemObj = QueueItemUpdate(show)
+        elif web:
+            queueItemObj = QueueItemForceUpdateWeb(show)
         else:
             queueItemObj = QueueItemForceUpdate(show)
 
@@ -538,6 +540,7 @@ class QueueItemUpdate(ShowQueueItem):
     def __init__(self, show=None):
         ShowQueueItem.__init__(self, ShowQueueActions.UPDATE, show)
         self.force = False
+        self.force_web = False
 
     def run(self):
 
@@ -556,6 +559,9 @@ class QueueItemUpdate(ShowQueueItem):
             logger.log(u"Data retrieved from " + sickbeard.indexerApi(
                 self.show.indexer).name + " was incomplete, aborting: " + ex(e), logger.ERROR)
             return
+
+        if self.force_web:
+            self.show.load_imdb_info()
 
         try:
             self.show.saveToDB()
@@ -606,3 +612,10 @@ class QueueItemForceUpdate(QueueItemUpdate):
     def __init__(self, show=None):
         ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show)
         self.force = True
+
+
+class QueueItemForceUpdateWeb(QueueItemUpdate):
+    def __init__(self, show=None):
+        ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show)
+        self.force = True
+        self.force_web = True
