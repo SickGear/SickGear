@@ -43,7 +43,7 @@
 * Change to not display IMDb info on UI when "Enable IMDb info" is disabled
 * Change genre tags on displayShow page to link to IMDb instead of Trakt
 * Change to reduce the time taken to "Update shows" with show data
-* Change to stop updating the IMDb info during the scheduled daily update for every show
+* Change to stop updating the IMDb info on edit, mass edit and during the scheduled daily update for every show
 * Change to update the IMDb info for a show after snatching an episode for it
 * Fix updating of scene exception name cache after adding exceptions on Editshow page
 
@@ -55,6 +55,7 @@
 * Fix being able to actually turn IMDb off when it has been turned on
 * Remove IMDb option from General Settings
 * Change IMDb option to enable by default now the slow operation has been eliminated from process flows
+* Add IMDb update capability back to the "Force Full Update" button on the displayShow page
 * Fix to correctly use wanted_begin and wanted_latest when adding shows
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
