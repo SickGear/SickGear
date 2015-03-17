@@ -612,6 +612,7 @@ class QueueItemForceUpdate(QueueItemUpdate):
     def __init__(self, show=None):
         ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show)
         self.force = True
+        self.force_web = False
 
 
 class QueueItemForceUpdateWeb(QueueItemUpdate):
