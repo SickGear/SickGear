@@ -1242,6 +1242,11 @@ ul.tags li a{
 	background-color:#c3e3c8
 }
 
+.archived{
+	background-color:#d5e3d8;
+	color:#295730
+}
+
 .qual{
 	background-color:#ffda8a
 }
