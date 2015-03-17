@@ -35,9 +35,9 @@
 * Change to no longer require restart with the "Scan and post process" option on page config/Post Processing
 * Add validation when using Release Group token on page config Post Processing/Episode Naming/Name pattern/Custom
 * Change to simplify and reduce logging output of Recent-Search and Backlog processes
-* Change episode row color away from blue on display show page when indexer airdate is not defined
 * Hide year, runtime, genre tags, country flag, or status if lacking valid data to display
 * Remove redundant CSS color use (all browsers treat 3 identical digits as 6, except for possibly in gradients)
+* Remove whitespace and semi-colon redundancy from CSS shedding 4.5kb
 * Add show names to items listed during startup in the loading from database phase 
 * Add "Enable IMDb info" option to config/General/Interface
 * Change to not display IMDb info on UI when "Enable IMDb info" is disabled
@@ -49,7 +49,6 @@
 * Change log rotation to occur at midnight
 * Change to keep a maximum of 7 log files
 * Add automatic compression of old log files
-* Remove whitespace and semi-colon redundancy from CSS shedding 4.5kb
 * Change overhaul menu and button icons
 * Add "Status of removed episodes" to apply (or not) a preferred status to episodes whose files are detected as removed.
   "Archived" can now be set so that removed episodes still count toward download completion stats. See setting on page
@@ -57,6 +56,8 @@
 * Remove redundant "Skip remove detection" from the config/Post Processing/File Handling page
 * Change to highlight the current selected item in combos on page config/Post Processing
 * Change the episodes downloaded stat to display e.g. 2843 / 2844 as 99.9% instead of rounding to 100%
+* Change 'never' episode row color away from blue on Display Show page when indexer airdate is not defined
+* Add tint to archived episode row colour to differentiate it from downloaded episodes on the Display Show page
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

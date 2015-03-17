@@ -390,7 +390,7 @@
     #set $epLoc = $epResult['location']
     #set never_aired = 0 < $curSeason and 1 == int($epResult['airdate'])
 		
-		<tr class="#echo ($Overview.overviewStrings[$epCats[$epStr]], 'airdate-never')[$never_aired]# season-$curSeason seasonstyle">
+		<tr class="#echo ($Overview.overviewStrings[$epCats[$epStr]], 'airdate-never')[$never_aired]##echo ('', ' archived')[ARCHIVED == int($epResult['status'])]# season-$curSeason seasonstyle">
 		
 			<td class="col-checkbox">
     #if $UNAIRED != int($epResult['status']) and not $never_aired
