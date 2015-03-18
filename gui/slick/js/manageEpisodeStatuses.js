@@ -1,17 +1,18 @@
 $(document).ready(function() { 
 
-	function make_row(indexer_id, season, episode, name, checked) {
+	function make_row(indexer_id, season, episode, name, checked, airdate_never) {
 		var checkedbox = (checked ? ' checked' : ''),
-			row_class = $('#row_class').val();
+			row_class = $('#row_class').val(),
+			ep_id = season + 'x' + episode;
 
-		return ' <tr class="' + row_class + '">'
+		return ' <tr id="ep-' + indexer_id + '-' + ep_id + '" class="' + (airdate_never ? 'airdate-never' : row_class) + '">'
 			+ '  <td class="tableleft" align="center">'
 				+ '<input type="checkbox"'
 					+ ' class="' + indexer_id + '-epcheck"'
-					+ ' name="' + indexer_id + '-' + season + 'x' + episode + '"'
+					+ ' name="' + indexer_id + '-' + ep_id + '"'
 					+ checkedbox+'></td>'
-			+ '  <td>' + season + 'x' + episode + '</td>'
-			+ '  <td class="tableright" style="width: 100%">' + name + '</td>'
+			+ '  <td>' + ep_id + '</td>'
+			+ '  <td class="tableright" style="width: 100%">' + name + (airdate_never ? ' (<strong><em>airdate is never, this should change in time</em></strong>)' : '') + '</td>'
 			+ ' </tr>';
 	}
 
@@ -27,48 +28,52 @@ $(document).ready(function() {
 		$('.' + indexer_id + '-epcheck').prop('checked', $(this).prop('checked'));
 	});
 
-	$('.get_more_eps').click(function(){
-		var cur_indexer_id = $(this).attr('id');
-		var checked = $('#allCheck-' + cur_indexer_id).prop('checked');
-		var last_row = $('tr#' + cur_indexer_id);
-		
-		$.getJSON(sbRoot + '/manage/showEpisodeStatuses',
-			{
-				indexer_id: cur_indexer_id,
-				whichStatus: $('#oldStatus').val()
-			},
-			function (data) {
-				$.each(data, function(season,eps){
-					$.each(eps, function(episode, name) {
-						last_row.after(make_row(cur_indexer_id, season, episode, name, checked));
-					});
-				});
-			});
-		$(this).hide();
-		($('.get_more_eps:visible').length == 0 ? $('.expandAll').hide() : '');
-	});
+	$('.get_more_eps').show();
+	function show_episodes(btn_element) {
+		var match = btn_element.attr('id').match(/(.*)[-](.*)/);
+		if (null == match)
+			return false;
 
-	$('.expandAll').click(function() {
-		$('.get_more_eps').each(function() {
-			var cur_indexer_id = $(this).attr('id');
-			var checked = $('#allCheck-' + cur_indexer_id).prop('checked');
-			var last_row = $('tr#' + cur_indexer_id);
+		var cur_indexer_id = match[1], action = match[2], checked = $('#allCheck-' + cur_indexer_id).prop('checked'),
+			show_header = $('tr#' + cur_indexer_id), episode_rows = $('tr[id*="ep-' + cur_indexer_id + '"]'),
+			void_var = 'more' == action && episode_rows.show() ||  episode_rows.hide();
 
+		$('input#' + match[0]).val('more' == action ? 'Expanding...' : 'Collapsing...');
+
+		if (0 == episode_rows.length) {
 			$.getJSON(sbRoot + '/manage/showEpisodeStatuses',
 				{
 					indexer_id: cur_indexer_id,
 					whichStatus: $('#oldStatus').val()
 				},
 				function (data) {
-					$.each(data, function(season, eps) {
-						$.each(eps, function(episode, name) {
-							last_row.after(make_row(cur_indexer_id, season, episode, name, checked));
+					$.each(data, function(season, eps){
+						$.each(eps, function(episode, meta) {
+							show_header.after(make_row(cur_indexer_id, season, episode, meta.name, checked, meta.airdate_never));
 						});
 					});
+					$('input#' + match[0]).val('more' == action ? 'Expand' : 'Collapse');
+					btn_element.hide();
+					$('input[id="' + cur_indexer_id + '-' + ('more' == action ? 'less' : 'more') + '"]').show();
 				});
-			$(this).hide();
-		});
+		} else {
+			$('input#' + match[0]).val('more' == action ? 'Expand' : 'Collapse');
+			btn_element.hide();
+			$('input[id="' + cur_indexer_id + '-' + ('more' == action ? 'less' : 'more') + '"]').show();
+		}
+
+	}
+
+	$('.get_more_eps,.get_less_eps').click(function(){
+		show_episodes($(this));
+		($('.get_more_eps:visible').length == 0 ? $('.expandAll').hide() : '');
+	});
+
+	$('.expandAll').click(function() {
 		$(this).hide();
+		$('.get_more_eps').each(function() {
+			show_episodes($(this));
+		});
 	});
 
 	// selects all visible episode checkboxes.
