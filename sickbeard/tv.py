@@ -435,8 +435,8 @@ class TVShow(object):
                 parse_result = np.parse(ep_file_name)
             except (InvalidNameException, InvalidShowException):
                 pass
+            if ep_file_name and parse_result and parse_result.release_group is not None:
 
-            if not ' ' in ep_file_name and parse_result and parse_result.release_group:
                 logger.log(
                     u"Name " + ep_file_name + u" gave release group of " + parse_result.release_group + ", seems valid",
                     logger.DEBUG)
