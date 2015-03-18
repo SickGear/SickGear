@@ -270,7 +270,8 @@ anime_regexes = [
      # Bleach.s16e03-04.313-314
      # Bleach s16e03e04 313-314
      '''
-     ^(?P<series_name>.+?)[ ._-]+                  # start of string and series name and non optinal separator
+     ^(\[(?P<release_group>.+?)\][ ._-]*)?
+     (?P<series_name>.+?)[ ._-]+                   # start of string and series name and non optinal separator
      [sS](?P<season_num>\d+)[. _-]*                # S01 and optional separator
      [eE](?P<ep_num>\d+)                           # epipisode E02
      (([. _-]*e|-)                                 # linking e/- char

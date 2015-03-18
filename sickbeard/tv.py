@@ -436,7 +436,7 @@ class TVShow(object):
             except (InvalidNameException, InvalidShowException):
                 pass
 
-            if not ' ' in ep_file_name and parse_result and parse_result.release_group:
+            if ep_file_name and parse_result and None is not parse_result.release_group:
                 logger.log(
                     u"Name " + ep_file_name + u" gave release group of " + parse_result.release_group + ", seems valid",
                     logger.DEBUG)

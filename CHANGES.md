@@ -58,6 +58,7 @@
 * Change the episodes downloaded stat to display e.g. 2843 / 2844 as 99.9% instead of rounding to 100%
 * Change 'never' episode row color away from blue on Display Show page when indexer airdate is not defined
 * Add tint to archived episode row colour to differentiate it from downloaded episodes on the Display Show page
+* Fix release group not recognised from manually downloaded filename
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
