@@ -1,5 +1,6 @@
 #import sickbeard
 #import datetime
+#import re
 #from sickbeard import db, sbdatetime
 #from sickbeard.common import *
 
@@ -37,7 +38,7 @@
     #set $ep_downloaded = 0
     #set $ep_total = 0
 #end if
-#set $ep_percentage = '' if $ep_total == 0 else '(<span class="footerhighlight">{:.1%}</span>)'.format(float($ep_downloaded)/float($ep_total))
+#set $ep_percentage = '' if $ep_total == 0 else '(<span class="footerhighlight">%s%%</span>)' % re.sub(r'(\d+)(\.\d)\d+', r'\1\2', str((float($ep_downloaded)/float($ep_total))*100))
 
 #try
     #set $localRoot = $sbRoot

@@ -36,7 +36,7 @@ from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
 from providers import ezrss, btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
     omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, nextgen, speedcd, nyaatorrents, torrentbytes, \
-    freshontv, bitsoup, tokyotoshokan
+    freshontv, bitsoup, tokyotoshokan, animenzb
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type, minimax
 from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
@@ -60,7 +60,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 8
+CONFIG_VERSION = 9
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -162,15 +162,19 @@ METADATA_PS3 = None
 METADATA_WDTV = None
 METADATA_TIVO = None
 METADATA_MEDE8ER = None
+METADATA_KODI = None
 
 QUALITY_DEFAULT = None
 STATUS_DEFAULT = None
+WANTED_BEGIN_DEFAULT = None
+WANTED_LATEST_DEFAULT = None
 FLATTEN_FOLDERS_DEFAULT = False
 SUBTITLES_DEFAULT = False
 INDEXER_DEFAULT = None
 INDEXER_TIMEOUT = None
 SCENE_DEFAULT = False
 ANIME_DEFAULT = False
+USE_IMDB_INFO = True
 PROVIDER_ORDER = []
 
 NAMING_MULTI_EP = False
@@ -280,6 +284,18 @@ XBMC_HOST = ''
 XBMC_USERNAME = None
 XBMC_PASSWORD = None
 
+USE_KODI = False
+KODI_ALWAYS_ON = True
+KODI_NOTIFY_ONSNATCH = False
+KODI_NOTIFY_ONDOWNLOAD = False
+KODI_NOTIFY_ONSUBTITLEDOWNLOAD = False
+KODI_UPDATE_LIBRARY = False
+KODI_UPDATE_FULL = False
+KODI_UPDATE_ONLYFIRST = False
+KODI_HOST = ''
+KODI_USERNAME = None
+KODI_PASSWORD = None
+
 USE_PLEX = False
 PLEX_NOTIFY_ONSNATCH = False
 PLEX_NOTIFY_ONDOWNLOAD = False
@@ -325,6 +341,9 @@ PUSHOVER_NOTIFY_ONDOWNLOAD = False
 PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD = False
 PUSHOVER_USERKEY = None
 PUSHOVER_APIKEY = None
+PUSHOVER_PRIORITY = 0
+PUSHOVER_DEVICE = None
+PUSHOVER_SOUND = None
 
 USE_LIBNOTIFY = False
 LIBNOTIFY_NOTIFY_ONSNATCH = False
@@ -336,7 +355,6 @@ NMJ_HOST = None
 NMJ_DATABASE = None
 NMJ_MOUNT = None
 
-ANIMESUPPORT = False
 USE_ANIDB = False
 ANIDB_USERNAME = None
 ANIDB_PASSWORD = None
@@ -396,8 +414,8 @@ USE_PUSHBULLET = False
 PUSHBULLET_NOTIFY_ONSNATCH = False
 PUSHBULLET_NOTIFY_ONDOWNLOAD = False
 PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PUSHBULLET_API = None
-PUSHBULLET_DEVICE = None
+PUSHBULLET_ACCESS_TOKEN = None
+PUSHBULLET_DEVICE_IDEN = None
 
 USE_EMAIL = False
 EMAIL_NOTIFY_ONSNATCH = False
@@ -412,6 +430,7 @@ EMAIL_FROM = None
 EMAIL_LIST = None
 
 GUI_NAME = None
+DEFAULT_HOME = None
 HOME_LAYOUT = None
 HISTORY_LAYOUT = None
 DISPLAY_SHOW_SPECIALS = False
@@ -470,18 +489,19 @@ def initialize(consoleLogging=True):
             TORRENT_USERNAME, TORRENT_PASSWORD, TORRENT_HOST, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_LABEL, TORRENT_VERIFY_CERT, \
             USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, \
             XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, BACKLOG_FREQUENCY, \
+            USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
             USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_API, TRAKT_REMOVE_WATCHLIST, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
-            QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, RECENTSEARCH_STARTUP, \
+            QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, RECENTSEARCH_STARTUP, \
             GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_GROWL, GROWL_HOST, GROWL_PASSWORD, USE_PROWL, PROWL_NOTIFY_ONSNATCH, PROWL_NOTIFY_ONDOWNLOAD, PROWL_NOTIFY_ONSUBTITLEDOWNLOAD, PROWL_API, PROWL_PRIORITY, PROG_DIR, \
             USE_PYTIVO, PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME, \
             USE_NMA, NMA_NOTIFY_ONSNATCH, NMA_NOTIFY_ONDOWNLOAD, NMA_NOTIFY_ONSUBTITLEDOWNLOAD, NMA_API, NMA_PRIORITY, \
             USE_PUSHALOT, PUSHALOT_NOTIFY_ONSNATCH, PUSHALOT_NOTIFY_ONDOWNLOAD, PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHALOT_AUTHORIZATIONTOKEN, \
-            USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_API, PUSHBULLET_DEVICE, \
+            USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN, \
             versionCheckScheduler, VERSION_NOTIFY, AUTO_UPDATE, NOTIFY_ON_UPDATE, PROCESS_AUTOMATICALLY, UNPACK, CPU_PRESET, \
             KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, MIN_RECENTSEARCH_FREQUENCY, DEFAULT_UPDATE_FREQUENCY, MIN_UPDATE_FREQUENCY, UPDATE_FREQUENCY, \
             showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, TIMEZONE_DISPLAY, \
@@ -490,21 +510,21 @@ def initialize(consoleLogging=True):
             WOMBLE, OMGWTFNZBS, OMGWTFNZBS_USERNAME, OMGWTFNZBS_APIKEY, providerList, newznabProviderList, torrentRssProviderList, \
             EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, RECENTSEARCH_FREQUENCY, \
             USE_BOXCAR2, BOXCAR2_ACCESSTOKEN, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_SOUND, \
-            USE_PUSHOVER, PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHOVER_NOTIFY_ONSNATCH, \
+            USE_PUSHOVER, PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHOVER_NOTIFY_ONSNATCH, PUSHOVER_PRIORITY, PUSHOVER_DEVICE, PUSHOVER_SOUND, \
             USE_LIBNOTIFY, LIBNOTIFY_NOTIFY_ONSNATCH, LIBNOTIFY_NOTIFY_ONDOWNLOAD, LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD, USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, USE_SYNOINDEX, \
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_EMAIL, EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_LIST, \
-            USE_LISTVIEW, METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, metadata_provider_dict, \
+            USE_LISTVIEW, METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, METADATA_KODI, metadata_provider_dict, \
             NEWZBIN, NEWZBIN_USERNAME, NEWZBIN_PASSWORD, GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, recentSearchScheduler, NFO_RENAME, \
-            GUI_NAME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, EPISODE_VIEW_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
+            GUI_NAME, DEFAULT_HOME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, EPISODE_VIEW_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
             POSTER_SORTBY, POSTER_SORTDIR, \
             METADATA_WDTV, METADATA_TIVO, METADATA_MEDE8ER, IGNORE_WORDS, REQUIRE_WORDS, CALENDAR_UNPROTECTED, CREATE_MISSING_SHOW_DIRS, \
             ADD_SHOWS_WO_DIR, USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_HISTORY, SUBTITLES_FINDER_FREQUENCY, subtitlesFinderScheduler, \
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, LOCALHOST_IP, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
-            ANIME_DEFAULT, NAMING_ANIME, ANIMESUPPORT, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
+            ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV, \
-            COOKIE_SECRET
+            COOKIE_SECRET, USE_IMDB_INFO
 
         if __INITIALIZED__:
             return False
@@ -515,6 +535,7 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'SABnzbd')
         CheckSection(CFG, 'NZBget')
         CheckSection(CFG, 'XBMC')
+        CheckSection(CFG, 'Kodi')
         CheckSection(CFG, 'PLEX')
         CheckSection(CFG, 'Growl')
         CheckSection(CFG, 'Prowl')
@@ -562,9 +583,18 @@ def initialize(consoleLogging=True):
         if CACHE_DIR:
             helpers.clearCache()
 
-        GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
-
         THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
+        GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
+        DEFAULT_HOME = check_setting_str(CFG, 'GUI', 'default_home', 'home')
+        USE_IMDB_INFO = bool(check_setting_int(CFG, 'GUI', 'use_imdb_info', 1))
+        HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
+        SORT_ARTICLE = bool(check_setting_int(CFG, 'General', 'sort_article', 0))
+        FUZZY_DATING = bool(check_setting_int(CFG, 'GUI', 'fuzzy_dating', 0))
+        TRIM_ZERO = bool(check_setting_int(CFG, 'GUI', 'trim_zero', 0))
+        DATE_PRESET = check_setting_str(CFG, 'GUI', 'date_preset', '%x')
+        TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
+        TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u":%S", u"")
+        TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
 
         ACTUAL_LOG_DIR = check_setting_str(CFG, 'General', 'log_dir', 'Logs')
         # put the log dir inside the data dir, unless an absolute path
@@ -610,9 +640,6 @@ def initialize(consoleLogging=True):
         TRASH_REMOVE_SHOW = bool(check_setting_int(CFG, 'General', 'trash_remove_show', 0))
         TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
 
-        HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
-        SORT_ARTICLE = bool(check_setting_int(CFG, 'General', 'sort_article', 0))
-
         USE_API = bool(check_setting_int(CFG, 'General', 'use_api', 0))
         API_KEY = check_setting_str(CFG, 'General', 'api_key', '')
 
@@ -631,6 +658,8 @@ def initialize(consoleLogging=True):
 
         QUALITY_DEFAULT = check_setting_int(CFG, 'General', 'quality_default', SD)
         STATUS_DEFAULT = check_setting_int(CFG, 'General', 'status_default', SKIPPED)
+        WANTED_BEGIN_DEFAULT = check_setting_int(CFG, 'General', 'wanted_begin_default', 0)
+        WANTED_LATEST_DEFAULT = check_setting_int(CFG, 'General', 'wanted_latest_default', 0)
         VERSION_NOTIFY = bool(check_setting_int(CFG, 'General', 'version_notify', 1))
         AUTO_UPDATE = bool(check_setting_int(CFG, 'General', 'auto_update', 0))
         NOTIFY_ON_UPDATE = bool(check_setting_int(CFG, 'General', 'notify_on_update', 1))
@@ -675,7 +704,7 @@ def initialize(consoleLogging=True):
 
         RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 0))
         BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 0))
-        SKIP_REMOVED_FILES = bool(check_setting_int(CFG, 'General', 'skip_removed_files', 0))
+        SKIP_REMOVED_FILES = check_setting_int(CFG, 'General', 'skip_removed_files', 0)
 
         USENET_RETENTION = check_setting_int(CFG, 'General', 'usenet_retention', 500)
 
@@ -759,6 +788,18 @@ def initialize(consoleLogging=True):
         XBMC_USERNAME = check_setting_str(CFG, 'XBMC', 'xbmc_username', '')
         XBMC_PASSWORD = check_setting_str(CFG, 'XBMC', 'xbmc_password', '')
 
+        USE_KODI = bool(check_setting_int(CFG, 'Kodi', 'use_kodi', 0))
+        KODI_ALWAYS_ON = bool(check_setting_int(CFG, 'Kodi', 'kodi_always_on', 1))
+        KODI_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Kodi', 'kodi_notify_onsnatch', 0))
+        KODI_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Kodi', 'kodi_notify_ondownload', 0))
+        KODI_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Kodi', 'kodi_notify_onsubtitledownload', 0))
+        KODI_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_library', 0))
+        KODI_UPDATE_FULL = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_full', 0))
+        KODI_UPDATE_ONLYFIRST = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_onlyfirst', 0))
+        KODI_HOST = check_setting_str(CFG, 'Kodi', 'kodi_host', '')
+        KODI_USERNAME = check_setting_str(CFG, 'Kodi', 'kodi_username', '')
+        KODI_PASSWORD = check_setting_str(CFG, 'Kodi', 'kodi_password', '')
+
         USE_PLEX = bool(check_setting_int(CFG, 'Plex', 'use_plex', 0))
         PLEX_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Plex', 'plex_notify_onsnatch', 0))
         PLEX_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Plex', 'plex_notify_ondownload', 0))
@@ -807,6 +848,10 @@ def initialize(consoleLogging=True):
             check_setting_int(CFG, 'Pushover', 'pushover_notify_onsubtitledownload', 0))
         PUSHOVER_USERKEY = check_setting_str(CFG, 'Pushover', 'pushover_userkey', '')
         PUSHOVER_APIKEY = check_setting_str(CFG, 'Pushover', 'pushover_apikey', '')
+        PUSHOVER_PRIORITY = check_setting_int(CFG, 'Pushover', 'pushover_priority', 0)
+        PUSHOVER_DEVICE = check_setting_str(CFG, 'Pushover', 'pushover_device', 'all')
+        PUSHOVER_SOUND = check_setting_str(CFG, 'Pushover', 'pushover_sound', 'pushover')
+
         USE_LIBNOTIFY = bool(check_setting_int(CFG, 'Libnotify', 'use_libnotify', 0))
         LIBNOTIFY_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Libnotify', 'libnotify_notify_onsnatch', 0))
         LIBNOTIFY_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Libnotify', 'libnotify_notify_ondownload', 0))
@@ -875,8 +920,8 @@ def initialize(consoleLogging=True):
         PUSHBULLET_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Pushbullet', 'pushbullet_notify_ondownload', 0))
         PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
             check_setting_int(CFG, 'Pushbullet', 'pushbullet_notify_onsubtitledownload', 0))
-        PUSHBULLET_API = check_setting_str(CFG, 'Pushbullet', 'pushbullet_api', '')
-        PUSHBULLET_DEVICE = check_setting_str(CFG, 'Pushbullet', 'pushbullet_device', '')
+        PUSHBULLET_ACCESS_TOKEN = check_setting_str(CFG, 'Pushbullet', 'pushbullet_access_token', '')
+        PUSHBULLET_DEVICE_IDEN = check_setting_str(CFG, 'Pushbullet', 'pushbullet_device_iden', '')
 
         USE_EMAIL = bool(check_setting_int(CFG, 'Email', 'use_email', 0))
         EMAIL_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Email', 'email_notify_onsnatch', 0))
@@ -918,7 +963,6 @@ def initialize(consoleLogging=True):
 
         USE_LISTVIEW = bool(check_setting_int(CFG, 'General', 'use_listview', 0))
 
-        ANIMESUPPORT = False
         USE_ANIDB = bool(check_setting_int(CFG, 'ANIDB', 'use_anidb', 0))
         ANIDB_USERNAME = check_setting_str(CFG, 'ANIDB', 'anidb_username', '')
         ANIDB_PASSWORD = check_setting_str(CFG, 'ANIDB', 'anidb_password', '')
@@ -934,6 +978,7 @@ def initialize(consoleLogging=True):
         METADATA_WDTV = check_setting_str(CFG, 'General', 'metadata_wdtv', '0|0|0|0|0|0|0|0|0|0')
         METADATA_TIVO = check_setting_str(CFG, 'General', 'metadata_tivo', '0|0|0|0|0|0|0|0|0|0')
         METADATA_MEDE8ER = check_setting_str(CFG, 'General', 'metadata_mede8er', '0|0|0|0|0|0|0|0|0|0')
+        METADATA_KODI = check_setting_str(CFG, 'General', 'metadata_kodi', '0|0|0|0|0|0|0|0|0|0')
 
         HOME_LAYOUT = check_setting_str(CFG, 'GUI', 'home_layout', 'poster')
         HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
@@ -942,12 +987,7 @@ def initialize(consoleLogging=True):
         EPISODE_VIEW_SORT = check_setting_str(CFG, 'GUI', 'episode_view_sort', 'time')
         EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(CFG, 'GUI', 'episode_view_display_paused', 0))
         EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
-        FUZZY_DATING = bool(check_setting_int(CFG, 'GUI', 'fuzzy_dating', 0))
-        TRIM_ZERO = bool(check_setting_int(CFG, 'GUI', 'trim_zero', 0))
-        DATE_PRESET = check_setting_str(CFG, 'GUI', 'date_preset', '%x')
-        TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
-        TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u":%S", u"")
-        TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
+
         POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
         POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
 
@@ -1088,6 +1128,7 @@ def initialize(consoleLogging=True):
                                    (METADATA_WDTV, metadata.wdtv),
                                    (METADATA_TIVO, metadata.tivo),
                                    (METADATA_MEDE8ER, metadata.mede8er),
+                                   (METADATA_KODI, metadata.kodi),
         ]:
             (cur_metadata_config, cur_metadata_class) = cur_metadata_tuple
             tmp_provider = cur_metadata_class.metadata_class()
@@ -1400,6 +1441,8 @@ def save_config():
     new_config['General']['skip_removed_files'] = int(SKIP_REMOVED_FILES)
     new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
     new_config['General']['status_default'] = int(STATUS_DEFAULT)
+    new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
+    new_config['General']['wanted_latest_default'] = int(WANTED_LATEST_DEFAULT)
     new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
     new_config['General']['indexer_default'] = int(INDEXER_DEFAULT)
     new_config['General']['indexer_timeout'] = int(INDEXER_TIMEOUT)
@@ -1438,6 +1481,7 @@ def save_config():
     new_config['General']['metadata_wdtv'] = METADATA_WDTV
     new_config['General']['metadata_tivo'] = METADATA_TIVO
     new_config['General']['metadata_mede8er'] = METADATA_MEDE8ER
+    new_config['General']['metadata_kodi'] = METADATA_KODI
 
     new_config['General']['backlog_days'] = int(BACKLOG_DAYS)
 
@@ -1600,6 +1644,19 @@ def save_config():
     new_config['XBMC']['xbmc_username'] = XBMC_USERNAME
     new_config['XBMC']['xbmc_password'] = helpers.encrypt(XBMC_PASSWORD, ENCRYPTION_VERSION)
 
+    new_config['Kodi'] = {}
+    new_config['Kodi']['use_kodi'] = int(USE_KODI)
+    new_config['Kodi']['kodi_always_on'] = int(KODI_ALWAYS_ON)
+    new_config['Kodi']['kodi_notify_onsnatch'] = int(KODI_NOTIFY_ONSNATCH)
+    new_config['Kodi']['kodi_notify_ondownload'] = int(KODI_NOTIFY_ONDOWNLOAD)
+    new_config['Kodi']['kodi_notify_onsubtitledownload'] = int(KODI_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Kodi']['kodi_update_library'] = int(KODI_UPDATE_LIBRARY)
+    new_config['Kodi']['kodi_update_full'] = int(KODI_UPDATE_FULL)
+    new_config['Kodi']['kodi_update_onlyfirst'] = int(KODI_UPDATE_ONLYFIRST)
+    new_config['Kodi']['kodi_host'] = KODI_HOST
+    new_config['Kodi']['kodi_username'] = KODI_USERNAME
+    new_config['Kodi']['kodi_password'] = helpers.encrypt(KODI_PASSWORD, ENCRYPTION_VERSION)
+
     new_config['Plex'] = {}
     new_config['Plex']['use_plex'] = int(USE_PLEX)
     new_config['Plex']['plex_notify_onsnatch'] = int(PLEX_NOTIFY_ONSNATCH)
@@ -1651,6 +1708,9 @@ def save_config():
     new_config['Pushover']['pushover_notify_onsubtitledownload'] = int(PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['Pushover']['pushover_userkey'] = PUSHOVER_USERKEY
     new_config['Pushover']['pushover_apikey'] = PUSHOVER_APIKEY
+    new_config['Pushover']['pushover_priority'] = int(PUSHOVER_PRIORITY)
+    new_config['Pushover']['pushover_device'] = PUSHOVER_DEVICE
+    new_config['Pushover']['pushover_sound'] = PUSHOVER_SOUND
 
     new_config['Libnotify'] = {}
     new_config['Libnotify']['use_libnotify'] = int(USE_LIBNOTIFY)
@@ -1724,8 +1784,8 @@ def save_config():
     new_config['Pushbullet']['pushbullet_notify_onsnatch'] = int(PUSHBULLET_NOTIFY_ONSNATCH)
     new_config['Pushbullet']['pushbullet_notify_ondownload'] = int(PUSHBULLET_NOTIFY_ONDOWNLOAD)
     new_config['Pushbullet']['pushbullet_notify_onsubtitledownload'] = int(PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Pushbullet']['pushbullet_api'] = PUSHBULLET_API
-    new_config['Pushbullet']['pushbullet_device'] = PUSHBULLET_DEVICE
+    new_config['Pushbullet']['pushbullet_access_token'] = PUSHBULLET_ACCESS_TOKEN
+    new_config['Pushbullet']['pushbullet_device_iden'] = PUSHBULLET_DEVICE_IDEN
 
     new_config['Email'] = {}
     new_config['Email']['use_email'] = int(USE_EMAIL)
@@ -1749,18 +1809,20 @@ def save_config():
     new_config['GUI'] = {}
     new_config['GUI']['gui_name'] = GUI_NAME
     new_config['GUI']['theme_name'] = THEME_NAME
-    new_config['GUI']['home_layout'] = HOME_LAYOUT
-    new_config['GUI']['history_layout'] = HISTORY_LAYOUT
-    new_config['GUI']['display_show_specials'] = int(DISPLAY_SHOW_SPECIALS)
-    new_config['GUI']['episode_view_layout'] = EPISODE_VIEW_LAYOUT
-    new_config['GUI']['episode_view_display_paused'] = int(EPISODE_VIEW_DISPLAY_PAUSED)
-    new_config['GUI']['episode_view_sort'] = EPISODE_VIEW_SORT
-    new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
+    new_config['GUI']['default_home'] = DEFAULT_HOME
+    new_config['GUI']['use_imdb_info'] = int(USE_IMDB_INFO)
     new_config['GUI']['fuzzy_dating'] = int(FUZZY_DATING)
     new_config['GUI']['trim_zero'] = int(TRIM_ZERO)
     new_config['GUI']['date_preset'] = DATE_PRESET
     new_config['GUI']['time_preset'] = TIME_PRESET_W_SECONDS
     new_config['GUI']['timezone_display'] = TIMEZONE_DISPLAY
+    new_config['GUI']['home_layout'] = HOME_LAYOUT
+    new_config['GUI']['history_layout'] = HISTORY_LAYOUT
+    new_config['GUI']['display_show_specials'] = int(DISPLAY_SHOW_SPECIALS)
+    new_config['GUI']['episode_view_layout'] = EPISODE_VIEW_LAYOUT
+    new_config['GUI']['episode_view_sort'] = EPISODE_VIEW_SORT
+    new_config['GUI']['episode_view_display_paused'] = int(EPISODE_VIEW_DISPLAY_PAUSED)
+    new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
 

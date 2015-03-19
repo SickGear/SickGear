@@ -14,14 +14,6 @@ from sickbeard.tv import TVShow as Show
 
 class SceneTests(test.SickbeardTestDBCase):
 
-    def _test_sceneToNormalShowNames(self, name, expected):
-        result = show_name_helpers.sceneToNormalShowNames(name)
-        self.assertTrue(len(set(expected).intersection(set(result))) == len(expected))
-
-        dot_result = show_name_helpers.sceneToNormalShowNames(name.replace(' ', '.'))
-        dot_expected = [x.replace(' ', '.') for x in expected]
-        self.assertTrue(len(set(dot_expected).intersection(set(dot_result))) == len(dot_expected))
-
     def _test_allPossibleShowNames(self, name, indexerid=0, expected=[]):
         s = Show(1, indexerid)
         s.name = name
@@ -32,39 +24,6 @@ class SceneTests(test.SickbeardTestDBCase):
     def _test_filterBadReleases(self, name, expected):
         result = show_name_helpers.filterBadReleases(name)
         self.assertEqual(result, expected)
-
-    def _test_isGoodName(self, name, show):
-        self.assertTrue(show_name_helpers.isGoodResult(name, show))
-
-    def test_isGoodName(self):
-        listOfcases = [('Show.Name.S01E02.Test-Test', 'Show/Name'),
-                        ('Show.Name.S01E02.Test-Test', 'Show. Name'),
-                        ('Show.Name.S01E02.Test-Test', 'Show- Name'),
-                        ('Show.Name.Part.IV.Test-Test', 'Show Name'),
-                        ('Show.Name.S01.Test-Test', 'Show Name'),
-                        ('Show.Name.E02.Test-Test', 'Show: Name'),
-                        ('Show Name Season 2 Test', 'Show: Name'),
-                        ]
-
-        for testCase in listOfcases:
-            scene_name, show_name = testCase
-            s = Show(1, 0)
-            s.name = show_name
-            self._test_isGoodName(scene_name, s)
-
-    def test_sceneToNormalShowNames(self):
-        self._test_sceneToNormalShowNames('Show Name 2010', ['Show Name 2010', 'Show Name (2010)'])
-        self._test_sceneToNormalShowNames('Show Name US', ['Show Name US', 'Show Name (US)'])
-        self._test_sceneToNormalShowNames('Show Name AU', ['Show Name AU', 'Show Name (AU)'])
-        self._test_sceneToNormalShowNames('Show Name CA', ['Show Name CA', 'Show Name (CA)'])
-        self._test_sceneToNormalShowNames('Show and Name', ['Show and Name', 'Show & Name'])
-        self._test_sceneToNormalShowNames('Show and Name 2010', ['Show and Name 2010', 'Show & Name 2010', 'Show and Name (2010)', 'Show & Name (2010)'])
-        self._test_sceneToNormalShowNames('show name us', ['show name us', 'show name (us)'])
-        self._test_sceneToNormalShowNames('Show And Name', ['Show And Name', 'Show & Name'])
-
-        # failure cases
-        self._test_sceneToNormalShowNames('Show Name 90210', ['Show Name 90210'])
-        self._test_sceneToNormalShowNames('Show Name YA', ['Show Name YA'])
 
     def test_allPossibleShowNames(self):
         #common.sceneExceptions[-1] = ['Exception Test']

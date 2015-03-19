@@ -1,6 +1,6 @@
 #import sickbeard
 #import re
-#from sickbeard.helpers import anon_url
+#from sickbeard.helpers import anon_url, starify
 
 #set global $title = 'Config - Notifications'
 #set global $header = 'Notifications'
@@ -139,7 +139,7 @@
 							<div class="field-pair">
 								<label for="xbmc_password">
 									<span class="component-title">XBMC password</span>
-									<input type="password" name="xbmc_password" id="xbmc_password" value="$sickbeard.XBMC_PASSWORD" class="form-control input-sm input250" />
+									<input type="password" name="xbmc_password" id="xbmc_password" value="#echo '*' * len($sickbeard.XBMC_PASSWORD)#" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -155,7 +155,127 @@
 
 				</div><!-- /xbmc component-group //-->
 
-
+				<div class="component-group">				
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/kodi.png" alt="" title="Kodi" />
+						<h3><a href="<%= anon_url('http://kodi.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Kodi</a></h3>
+						<p>Kodi (formerly known as XBMC) is an award-winning free and open source (GPL) software media player and entertainment hub.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label class="cleafix" for="use_kodi">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_kodi" id="use_kodi" #if $sickbeard.USE_KODI then "checked=\"checked\"" else ""# />
+									<p>should SickGear send Kodi commands ?<p>
+								</span>
+							</label>
+						</div>
+						<div id="content_use_kodi">
+							<div class="field-pair">
+								<label for="kodi_always_on">
+									<span class="component-title">Always on</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_always_on" id="kodi_always_on" #if $sickbeard.KODI_ALWAYS_ON then "checked=\"checked\"" else ""# />
+										<p>log errors when unreachable ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_notify_onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_notify_onsnatch" id="kodi_notify_onsnatch" #if $sickbeard.KODI_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_notify_ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_notify_ondownload" id="kodi_notify_ondownload" #if $sickbeard.KODI_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_notify_onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_notify_onsubtitledownload" id="kodi_notify_onsubtitledownload" #if $sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_update_library">
+									<span class="component-title">Update library</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_update_library" id="kodi_update_library" #if $sickbeard.KODI_UPDATE_LIBRARY then "checked=\"checked\"" else ""# />
+										<p>update Kodi library when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_update_full">
+									<span class="component-title">Full library update</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_update_full" id="kodi_update_full" #if $sickbeard.KODI_UPDATE_FULL then "checked=\"checked\"" else ""# />
+										<p>perform a full library update if update per-show fails ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_update_onlyfirst">
+									<span class="component-title">Only update first host</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_update_onlyfirst" id="kodi_update_onlyfirst" #if $sickbeard.KODI_UPDATE_ONLYFIRST then "checked=\"checked\"" else ""# />
+										<p>only send library updates to the first active host ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_host">
+									<span class="component-title">Kodi IP:Port</span>
+									<input type="text" name="kodi_host" id="kodi_host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350" />
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">host running Kodi (eg. 192.168.1.100:8080)</span>
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">(multiple host strings must be separated by commas)</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_username">
+									<span class="component-title">Kodi username</span>
+									<input type="text" name="kodi_username" id="kodi_username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250" />
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">username for your KODI server (blank for none)</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_password">
+									<span class="component-title">Kodi password</span>
+									<input type="password" name="kodi_password" id="kodi_password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250" />
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">password for your KODI server (blank for none)</span>
+								</label>
+							</div>
+							<div class="testNotification" id="testKODI-result">Click below to test.</div>
+							<input  class="btn" type="button" value="Test Kodi" id="testKODI" />
+							<input type="submit" class="config_submitter btn" value="Save Changes" />
+						</div><!-- /content_use_kodi //-->
+					</fieldset>
+				</div><!-- /kodi component-group //-->
+				
 				<div class="component-group">
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/plex.png" alt="" title="Plex Media Server" />
@@ -189,7 +309,7 @@
 									<label for="plex_password">
 										<span class="component-title">Server/client password</span>
 										<span class="component-desc">
-											<input type="password" name="plex_password" id="plex_password" value="$sickbeard.PLEX_PASSWORD" class="form-control input-sm input250" />
+											<input type="password" name="plex_password" id="plex_password" value="#echo '*' * len($sickbeard.PLEX_PASSWORD)#" class="form-control input-sm input250" />
 											<p>blank = no authentication</p>
 										</span>
 									</label>
@@ -641,7 +761,7 @@
 							<div class="field-pair">
 								<label for="growl_password">
 									<span class="component-title">Growl password</span>
-									<input type="password" name="growl_password" id="growl_password" value="$sickbeard.GROWL_PASSWORD" class="form-control input-sm input250" />
+									<input type="password" name="growl_password" id="growl_password" value="#echo '*' * len($sickbeard.GROWL_PASSWORD)#" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -709,7 +829,7 @@
 							<div class="field-pair">
 								<label for="prowl_api">
 									<span class="component-title">Prowl API key:</span>
-									<input type="text" name="prowl_api" id="prowl_api" value="$sickbeard.PROWL_API" class="form-control input-sm input250" />
+									<input type="text" name="prowl_api" id="prowl_api" value="<%= starify(sickbeard.PROWL_API) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -843,7 +963,7 @@
 							<div class="field-pair">
 								<label for="pushover_userkey">
 									<span class="component-title">Pushover key</span>
-									<input type="text" name="pushover_userkey" id="pushover_userkey" value="$sickbeard.PUSHOVER_USERKEY" class="form-control input-sm input250" />
+									<input type="text" name="pushover_userkey" id="pushover_userkey" value="<%= starify(sickbeard.PUSHOVER_USERKEY) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -853,15 +973,80 @@
 							<div class="field-pair">
 								<label for="pushover_apikey">
 									<span class="component-title">Pushover API key</span>
-									<input type="text" name="pushover_apikey" id="pushover_apikey" value="$sickbeard.PUSHOVER_APIKEY" class="form-control input-sm input250" />
+									<input type="text" name="pushover_apikey" id="pushover_apikey" value="<%= starify(sickbeard.PUSHOVER_APIKEY) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
-									<span class="component-desc"><a href="<%= anon_url('https://pushover.net/apps/clone/SickGear') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</span>
+									<span class="component-desc"><a href="<%= anon_url('https://pushover.net/apps/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover_priority">
+									<span class="component-title">Pushover priority:</span>
+									<select id="pushover_priority" name="pushover_priority" class="form-control input-sm">
+										<option value="-2" #if $sickbeard.PUSHOVER_PRIORITY == -2 then 'selected="selected"' else ""#>Lowest</option>
+										<option value="-1" #if $sickbeard.PUSHOVER_PRIORITY == -1 then 'selected="selected"' else ""#>Low</option>
+										<option value="0" #if $sickbeard.PUSHOVER_PRIORITY == 0 then 'selected="selected"' else ""#>Normal</option>
+										<option value="1" #if $sickbeard.PUSHOVER_PRIORITY == 1 then 'selected="selected"' else ""#>High</option>
+									</select>
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">priority of Pushover messages from SickGear.</span>
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">overview: <a href="<%= anon_url('https://pushover.net/api#priority') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://pushover.net/api#priority</a></span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover_device">
+									<span class="component-title">Pushover device</span>
+									<input type="hidden" name="pushover_device" id="pushover_device" value="$sickbeard.PUSHOVER_DEVICE" size="35" />
+									<select id="pushover_device_list" name="pushover_device_list" class="pull-left form-control input-sm" style="margin-right: 5px;">
+									</select>
+									<input type="button" class="btn btn-inline" value="Refresh Devices" id="getPushoverDevices" />
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">which device do you want to push to?</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover_sound">
+									<span class="component-title">Pushover sound</span>
+									<select id="pushover_sound" name="pushover_sound" class="form-control input-sm">
+										<option value="pushover" #if $sickbeard.PUSHOVER_SOUND == "pushover" then 'selected="selected"' else ""#>Pushover (default)</option>
+										<option value="bike" #if $sickbeard.PUSHOVER_SOUND == "bike" then 'selected="selected"' else ""#>Bike</option>
+										<option value="bugle" #if $sickbeard.PUSHOVER_SOUND == "bugle" then 'selected="selected"' else ""#>Bugle</option>
+										<option value="cashregister" #if $sickbeard.PUSHOVER_SOUND == "cashregister" then 'selected="selected"' else ""#>Cash Register</option>
+										<option value="classical" #if $sickbeard.PUSHOVER_SOUND == "classical" then 'selected="selected"' else ""#>Classical</option>
+										<option value="cosmic" #if $sickbeard.PUSHOVER_SOUND == "cosmic" then 'selected="selected"' else ""#>Cosmic</option>
+										<option value="falling" #if $sickbeard.PUSHOVER_SOUND == "falling" then 'selected="selected"' else ""#>Falling</option>
+										<option value="gamelan" #if $sickbeard.PUSHOVER_SOUND == "gamelan" then 'selected="selected"' else ""#>Gamelan</option>
+										<option value="incoming" #if $sickbeard.PUSHOVER_SOUND == "incoming" then 'selected="selected"' else ""#>Incoming</option>
+										<option value="intermission" #if $sickbeard.PUSHOVER_SOUND == "intermission" then 'selected="selected"' else ""#>Intermission</option>
+										<option value="magic" #if $sickbeard.PUSHOVER_SOUND == "magic" then 'selected="selected"' else ""#>Magic</option>
+										<option value="mechanical" #if $sickbeard.PUSHOVER_SOUND == "mechanical" then 'selected="selected"' else ""#>Mechanical</option>
+										<option value="pianobar" #if $sickbeard.PUSHOVER_SOUND == "pianobar" then 'selected="selected"' else ""#>Piano Bar</option>
+										<option value="siren" #if $sickbeard.PUSHOVER_SOUND == "siren" then 'selected="selected"' else ""#>Siren</option>
+										<option value="spacealarm" #if $sickbeard.PUSHOVER_SOUND == "spacealarm" then 'selected="selected"' else ""#>Space Alarm</option>
+										<option value="tugboat" #if $sickbeard.PUSHOVER_SOUND == "tugboat" then 'selected="selected"' else ""#>Tug Boat</option>
+										<option value="alien" #if $sickbeard.PUSHOVER_SOUND == "alien" then 'selected="selected"' else ""#>Alien Alarm (long)</option>
+										<option value="climb" #if $sickbeard.PUSHOVER_SOUND == "climb" then 'selected="selected"' else ""#>Climb (long)</option>
+										<option value="persistent" #if $sickbeard.PUSHOVER_SOUND == "persistent" then 'selected="selected"' else ""#>Persistent (long)</option>
+										<option value="echo" #if $sickbeard.PUSHOVER_SOUND == "echo" then 'selected="selected"' else ""#>Pushover Echo (long)</option>
+										<option value="updown" #if $sickbeard.PUSHOVER_SOUND == "updown" then 'selected="selected"' else ""#>Up Down (long)</option>
+										<option value="none" #if $sickbeard.PUSHOVER_SOUND == "none" then 'selected="selected"' else ""#>None (silent)</option>
+									</select>
+								</label>
+								<label>
+									<span class="component-title">&nbsp;</span>
+									<span class="component-desc">select one of the predefined sounds for your notifications</span>
 								</label>
 							</div>
 							<div class="testNotification" id="testPushover-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Pushover" id="testPushover" />
+							<input class="btn" type="button" value="Test Pushover" id="testPushover" />
 							<input type="submit" class="config_submitter btn" value="Save Changes" />
 						</div><!-- /content_use_pushover //-->
 
@@ -916,7 +1101,7 @@
 							<div class="field-pair">
 								<label for="boxcar2_accesstoken">
 									<span class="component-title">Boxcar2 access token</span>
-									<input type="text" name="boxcar2_accesstoken" id="boxcar2_accesstoken" value="$sickbeard.BOXCAR2_ACCESSTOKEN" class="form-control input-sm input250" />
+									<input type="text" name="boxcar2_accesstoken" id="boxcar2_accesstoken" value="<%= starify(sickbeard.BOXCAR2_ACCESSTOKEN) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1020,7 +1205,7 @@
 							<div class="field-pair">
 								<label for="nma_api">
 									   <span class="component-title">NMA API key:</span>
-									<input type="text" name="nma_api" id="nma_api" value="$sickbeard.NMA_API" class="form-control input-sm input350" />
+									<input type="text" name="nma_api" id="nma_api" value="<%= starify(sickbeard.NMA_API) %>" class="form-control input-sm input350" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1099,7 +1284,7 @@
 							<div class="field-pair">
 								<label for="pushalot_authorizationtoken">
 									<span class="component-title">Pushalot authorization token</span>
-									<input type="text" name="pushalot_authorizationtoken" id="pushalot_authorizationtoken" value="$sickbeard.PUSHALOT_AUTHORIZATIONTOKEN" class="form-control input-sm input350" />
+									<input type="text" name="pushalot_authorizationtoken" id="pushalot_authorizationtoken" value="<%= starify(sickbeard.PUSHALOT_AUTHORIZATIONTOKEN) %>" class="form-control input-sm input350" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1118,7 +1303,7 @@
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/pushbullet.png" alt="" title="Pushbullet" />
 						<h3><a href="<%= anon_url('https://www.pushbullet.com') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushbullet</a></h3>
-						<p>Pushbullet is a platform for receiving custom push notifications to connected devices running Android and desktop Chrome browsers.</p>
+						<p>Pushbullet allows you to send push notifications to Android, iOS and supported browsers.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
@@ -1160,25 +1345,26 @@
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="pushbullet_api">
-									<span class="component-title">Pushbullet API key</span>
-									<input type="text" name="pushbullet_api" id="pushbullet_api" value="$sickbeard.PUSHBULLET_API" class="form-control input-sm input350" />
+								<label for="pushbullet_access_token">
+									<span class="component-title">Pushbullet access token</span>
+									<input type="text" name="pushbullet_access_token" id="pushbullet_access_token" value="<%= starify(sickbeard.PUSHBULLET_ACCESS_TOKEN) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">API key of your Pushbullet account</span>
+									<span class="component-desc">get your token at: <a href="<%= anon_url('https://www.pushbullet.com/account') %>" rel="noreferrer" onclick="window.open('${sickbeard.ANON_REDIRECT}' + this.href, '_blank'); return false;">https://www.pushbullet.com/account</a></span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="pushbullet_device_list">
-									<span class="component-title">Pushbullet devices</span>
-									<select name="pushbullet_device_list" id="pushbullet_device_list" class="form-control input-sm"></select>
-									<input type="hidden" id="pushbullet_device" value="$sickbeard.PUSHBULLET_DEVICE">
-									<input type="button" class="btn btn-inline" value="Update device list" id="getPushbulletDevices" />
+								<label for="pushbullet_device_iden">
+									<span class="component-title">Pushbullet device</span>
+									<input type="hidden" name="pushbullet_device_iden" id="pushbullet_device_iden" value="$sickbeard.PUSHBULLET_DEVICE_IDEN" size="35" />
+									<select id="pushbullet_device_list" name="pushbullet_device_list" class="pull-left form-control input-sm" style="margin-right: 5px;">
+									</select>
+									<input type="button" class="btn btn-inline" value="Refresh Devices" id="getPushbulletDevices" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">select device you wish to push to.</span>
+									<span class="component-desc">which device do you want to push to?</span>
 								</label>
 							</div>
 							<div class="testNotification" id="testPushbullet-result">Click below to test.</div>
@@ -1307,7 +1493,7 @@
 							<div class="field-pair">
 								<label for="trakt_password">
 									<span class="component-title">Trakt password</span>
-									<input type="password" name="trakt_password" id="trakt_password" value="$sickbeard.TRAKT_PASSWORD" class="form-control input-sm input250" />
+									<input type="password" name="trakt_password" id="trakt_password" value="#echo '*' * len($sickbeard.TRAKT_PASSWORD)#" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1317,7 +1503,7 @@
 							<div class="field-pair">
 								<label for="trakt_api">
 									<span class="component-title">Trakt API key:</span>
-									<input type="text" name="trakt_api" id="trakt_api" value="$sickbeard.TRAKT_API" class="form-control input-sm input250" />
+									<input type="text" name="trakt_api" id="trakt_api" value="<%= starify(sickbeard.TRAKT_API) %>" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1501,7 +1687,7 @@
 							<div class="field-pair">
 								<label for="email_password">
 									<span class="component-title">SMTP password</span>
-									<input type="password" name="email_password" id="email_password" value="$sickbeard.EMAIL_PASSWORD" class="form-control input-sm input250" />
+									<input type="password" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250" />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>

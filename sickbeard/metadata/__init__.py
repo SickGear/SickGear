@@ -16,10 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-__all__ = ['generic', 'helpers', 'xbmc', 'xbmc_12plus', 'mediabrowser', 'ps3', 'wdtv', 'tivo', 'mede8er']
+__all__ = ['generic', 'helpers', 'kodi', 'mede8er', 'mediabrowser', 'ps3', 'tivo', 'wdtv', 'xbmc', 'xbmc_12plus']
 
 import sys
-import xbmc, xbmc_12plus, mediabrowser, ps3, wdtv, tivo, mede8er
+
+import kodi
+import mede8er
+import mediabrowser
+import ps3
+import tivo
+import wdtv
+import xbmc
+import xbmc_12plus
 
 
 def available_generators():

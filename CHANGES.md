@@ -1,3 +1,78 @@
+### 0.x.x (2015-xx-xx xx:xx:xx UTC)
+
+* Change Wombles to use tv-dvd section
+* Add requirements file for pip (port from midgetspy/sick-beard)
+* Remove unused libraries fuzzywuzzy and pysrt
+* Change webserve code to a logical layout and PEP8
+* Add text to explain params passed to extra scripts on Config/Post Processing
+* Remove unused SickBeardURLOpener and AuthURLOpener classes
+* Update Pushbullet notifier (port from midgetspy/sickbeard)
+* Change startup code cleanup and PEP8
+* Change authentication credentials to display more securely on config pages
+* Add a "Use as default home page" selector to General Config/Interface/User Interface
+* Add option to the third step of "Add Show" to set episodes as wanted from the first and latest season, this triggers
+  a backlog search on those episodes after the show is added
+* Change to improve the integrity of the already post processed video checker
+* Add Kodi notifier and metadata
+* Add priority, device, and sound support to Pushover notifier (port from midgetspy/sickbeard)
+* Fix updating of pull requests
+* Add hidden cache debug page
+* Change autoProcessTV scripts python code quotes from " -> '
+* Add expand all button to Episode Status Management
+* Add Unknown status query to Episode Status Management
+* Fix Episode Status Management error popup from coming up when show is selected without expanding
+* Add BET network logo
+* Change "Force Backlog" button for paused shows on Backlog Overview page to "Paused" indicator
+* Remove unused force variable from code and PEP8
+* Change browser, bs4 parser and classes code to PEP8 standards
+* Change common and config code to PEP8 standards
+* Change database code to PEP8 standards
+* Change general config's branches and pull request list generation for faster page loading
+* Add PlayStation Network logo
+* Change layout of Recent Search code
+* Change naming of SEARCHQUEUE threads for shorter log lines
+* Fix Recent Search running status on Manage Searches page
+* Change to no longer require restart with the "Scan and post process" option on page config/Post Processing
+* Add validation when using Release Group token on page config Post Processing/Episode Naming/Name pattern/Custom
+* Change to simplify and reduce logging output of Recent-Search and Backlog processes
+* Hide year, runtime, genre tags, country flag, or status if lacking valid data to display
+* Remove redundant CSS color use (all browsers treat 3 identical digits as 6, except for possibly in gradients)
+* Remove whitespace and semi-colon redundancy from CSS shedding 4.5kb
+* Add show names to items listed during startup in the loading from database phase 
+* Add "Enable IMDb info" option to config/General/Interface
+* Change to not display IMDb info on UI when "Enable IMDb info" is disabled
+* Change genre tags on displayShow page to link to IMDb instead of Trakt
+* Change to reduce the time taken to "Update shows" with show data
+* Change to stop updating the IMDb info on edit, mass edit and during the scheduled daily update for every show
+* Change to update the IMDb info for a show after snatching an episode for it
+* Fix updating of scene exception name cache after adding exceptions on Editshow page
+* Change log rotation to occur at midnight
+* Change to keep a maximum of 7 log files
+* Add automatic compression of old log files
+* Change overhaul menu and button icons
+* Add "Status of removed episodes" to apply (or not) a preferred status to episodes whose files are detected as removed.
+  "Archived" can now be set so that removed episodes still count toward download completion stats. See setting on page
+  config/Post Processing/File Handling
+* Remove redundant "Skip remove detection" from the config/Post Processing/File Handling page
+* Change to highlight the current selected item in combos on page config/Post Processing
+* Change the episodes downloaded stat to display e.g. 2843 / 2844 as 99.9% instead of rounding to 100%
+* Change 'never' episode row color away from blue on Display Show page when indexer airdate is not defined
+* Add tint to archived episode row colour to differentiate it from downloaded episodes on the Display Show page
+* Fix release group not recognised from manually downloaded filename
+
+[develop changelog]
+* Fix traceback error when using the menu item Manage/Update Kodi
+* Change BET network logo filename to lower case
+* Change redirect from home to showlistView on changing Layout on showlistView
+* Fix the return flow from calls to the redirect function from executing incorrect code
+* Fix being able to actually turn IMDb off when it has been turned on
+* Remove IMDb option from General Settings
+* Change IMDb option to enable by default now the slow operation has been eliminated from process flows
+* Add IMDb update capability back to the "Force Full Update" button on the displayShow page
+* Fix to correctly use wanted_begin and wanted_latest when adding shows
+* Change Log/Error Log Menu icons to correct ones
+* Fix issue with missing QueueItemForceUpdate object has no attribute 'force_web'
+
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
 * Fix Add From Trending page (indexer_id can be "None" which causes white screen when clicking "Add Show")
@@ -86,7 +161,7 @@
 * Change SCC URLs to remove redirection overhead
 * Change TorrentBytes login parameter in line with site change
 * Change FreshOnTv login parameter and use secure URLs, add logging of Cloudflare blocking and prevent vacant cookie tracebacks
-* Change TPB webproxy list and add SSL variants 
+* Change TPB webproxy list and add SSL variants
 * Add YTV network logo
 * Remove defunct Fanzub provider
 

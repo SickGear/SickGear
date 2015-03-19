@@ -166,40 +166,6 @@ class Api(webserve.BaseHandler):
             return False, msg, args, kwargs
 
 
-class ApiBuilder(webserve.MainHandler):
-    def index(self):
-        """ expose the api-builder template """
-        t = webserve.PageTemplate(headers=self.request.headers, file="apiBuilder.tmpl")
-
-        def titler(x):
-            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
-
-        t.sortedShowList = sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))
-
-        seasonSQLResults = {}
-        episodeSQLResults = {}
-
-        myDB = db.DBConnection(row_type="dict")
-        for curShow in t.sortedShowList:
-            seasonSQLResults[curShow.indexerid] = myDB.select(
-                "SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season DESC", [curShow.indexerid])
-
-        for curShow in t.sortedShowList:
-            episodeSQLResults[curShow.indexerid] = myDB.select(
-                "SELECT DISTINCT season,episode FROM tv_episodes WHERE showid = ? ORDER BY season DESC, episode DESC",
-                [curShow.indexerid])
-
-        t.seasonSQLResults = seasonSQLResults
-        t.episodeSQLResults = episodeSQLResults
-
-        if len(sickbeard.API_KEY) == 32:
-            t.apikey = sickbeard.API_KEY
-        else:
-            t.apikey = "api key not generated"
-
-        return webserve._munge(t)
-
-
 def call_dispatcher(handler, args, kwargs):
     """ calls the appropriate CMD class
         looks for a cmd in args and kwargs

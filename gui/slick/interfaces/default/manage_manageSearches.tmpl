@@ -19,8 +19,8 @@
 
 <div id="summary2" class="align-left">
 <h3>Backlog Search:</h3>
-<a class="btn" href="$sbRoot/manage/manageSearches/forceBacklog"><i class="icon-exclamation-sign"></i> Force</a>
-<a class="btn" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlogPaused then "0" else "1"#"><i class="#if $backlogPaused then "icon-play" else "icon-pause"#"></i> #if $backlogPaused then "Unpause" else "Pause"#</a> 
+<a class="btn" href="$sbRoot/manage/manageSearches/forceBacklog"><i class="sgicon-play"></i> Force</a>
+<a class="btn" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlogPaused then "0" else "1"#"><i class="#if $backlogPaused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlogPaused then "Unpause" else "Pause"#</a> 
 #if not $backlogRunning:
 Not in progress<br />
 #else:
@@ -30,7 +30,7 @@ Currently running<br />
 <br />
 
 <h3>Recent Search:</h3>
-<a class="btn" href="$sbRoot/manage/manageSearches/forceSearch"><i class="icon-exclamation-sign"></i> Force</a>
+<a class="btn" href="$sbRoot/manage/manageSearches/forceSearch"><i class="sgicon-play"></i> Force</a>
 #if not $recentSearchStatus:
 Not in progress<br />
 #else:
@@ -39,7 +39,7 @@ In Progress<br />
 <br />
 
 <h3>Find Propers Search:</h3>
-<a class="btn" href="$sbRoot/manage/manageSearches/forceFindPropers"><i class="icon-exclamation-sign"></i> Force</a>
+<a class="btn" href="$sbRoot/manage/manageSearches/forceFindPropers"><i class="sgicon-play"></i> Force</a>
 #if not $findPropersStatus:
 Not in progress<br />
 #else:
@@ -48,7 +48,7 @@ In Progress<br />
 <br />
 
 <h3>Version Check:</h3>
-<a class="btn" href="$sbRoot/manage/manageSearches/forceVersionCheck"><i class="icon-check"></i> Force Check</a>
+<a class="btn" href="$sbRoot/manage/manageSearches/forceVersionCheck"><i class="sgicon-updatecheck"></i> Force Check</a>
 <br /> <br />
 
 <h3>Search Queue:</h3>

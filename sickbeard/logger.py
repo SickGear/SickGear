@@ -22,24 +22,20 @@ import time
 import os
 import sys
 import threading
-
+import zipfile
 import logging
+import glob
+import codecs
+
+from logging.handlers import TimedRotatingFileHandler
 
 import sickbeard
-
 from sickbeard import classes
 
 try:
     from lib.send2trash import send2trash
 except ImportError:
     pass
-
-
-# number of log files to keep
-NUM_LOGS = 3
-
-# log size in bytes
-LOG_SIZE = 10000000  # 10 megs
 
 ERROR = logging.ERROR
 WARNING = logging.WARNING
@@ -59,15 +55,10 @@ class NullHandler(logging.Handler):
         pass
 
 class SBRotatingLogHandler(object):
-    def __init__(self, log_file, num_files, num_bytes):
-        self.num_files = num_files
-        self.num_bytes = num_bytes
-
+    def __init__(self, log_file):
         self.log_file = log_file
         self.log_file_path = log_file
         self.cur_handler = None
-
-        self.writes_since_check = 0
 
         self.console_logging = False
         self.log_lock = threading.Lock()
@@ -181,7 +172,7 @@ class SBRotatingLogHandler(object):
         Configure a file handler to log at file_name and return it.
         """
 
-        file_handler = logging.FileHandler(self.log_file_path, encoding='utf-8')
+        file_handler = TimedCompressedRotatingFileHandler(self.log_file_path, when='midnight', backupCount=7, encoding='utf-8')
         file_handler.setLevel(DB)
         file_handler.setFormatter(DispatchingFormatter(
             {'sickbeard': logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', '%Y-%m-%d %H:%M:%S'),
@@ -197,78 +188,9 @@ class SBRotatingLogHandler(object):
 
         return file_handler
 
-    def _log_file_name(self, i):
-        """
-        Returns a numbered log file name depending on i. If i==0 it just uses logName, if not it appends
-        it to the extension (blah.log.3 for i == 3)
-        
-        i: Log number to ues
-        """
-
-        return self.log_file_path + ('.' + str(i) if i else '')
-
-    def _num_logs(self):
-        """
-        Scans the log folder and figures out how many log files there are already on disk
-
-        Returns: The number of the last used file (eg. mylog.log.3 would return 3). If there are no logs it returns -1
-        """
-
-        cur_log = 0
-        while os.path.isfile(self._log_file_name(cur_log)):
-            cur_log += 1
-        return cur_log - 1
-
-    def _rotate_logs(self):
-
-        sb_logger = logging.getLogger('sickbeard')
-        sub_logger = logging.getLogger('subliminal')
-        imdb_logger = logging.getLogger('imdbpy')
-        tornado_logger = logging.getLogger('tornado')
-        feedcache_logger = logging.getLogger('feedcache')
-
-        # delete the old handler
-        if self.cur_handler:
-            self.close_log()
-
-        # rename or delete all the old log files
-        for i in range(self._num_logs(), -1, -1):
-            cur_file_name = self._log_file_name(i)
-            try:
-                if i >= NUM_LOGS:
-                    if sickbeard.TRASH_ROTATE_LOGS:
-                        new_name = '%s.%s' % (cur_file_name, int(time.time()))
-                        os.rename(cur_file_name, new_name)
-                        send2trash(new_name)
-                    else:
-                        os.remove(cur_file_name)
-                else:
-                    os.rename(cur_file_name, self._log_file_name(i + 1))
-            except OSError:
-                pass
-
-        # the new log handler will always be on the un-numbered .log file
-        new_file_handler = self._config_handler()
-
-        self.cur_handler = new_file_handler
-
-        sb_logger.addHandler(new_file_handler)
-        sub_logger.addHandler(new_file_handler)
-        imdb_logger.addHandler(new_file_handler)
-        tornado_logger.addHandler(new_file_handler)
-        feedcache_logger.addHandler(new_file_handler)
-
     def log(self, toLog, logLevel=MESSAGE):
 
         with self.log_lock:
-
-            # check the size and see if we need to rotate
-            if self.writes_since_check >= 10:
-                if os.path.isfile(self.log_file_path) and os.path.getsize(self.log_file_path) >= LOG_SIZE:
-                    self._rotate_logs()
-                self.writes_since_check = 0
-            else:
-                self.writes_since_check += 1
 
             meThread = threading.currentThread().getName()
             message = meThread + u" :: " + toLog
@@ -323,7 +245,53 @@ class DispatchingFormatter:
         return formatter.format(record)
 
 
-sb_log_instance = SBRotatingLogHandler('sickbeard.log', NUM_LOGS, LOG_SIZE)
+class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
+    """
+       Extended version of TimedRotatingFileHandler that compress logs on rollover.
+       by Angel Freire <cuerty at gmail dot com>
+    """
+    def doRollover(self):
+        """
+        do a rollover; in this case, a date/time stamp is appended to the filename
+        when the rollover happens.  However, you want the file to be named for the
+        start of the interval, not the current time.  If there is a backup count,
+        then we have to get a list of matching filenames, sort them and remove
+        the one with the oldest suffix.
+
+        This method is a copy of the one in TimedRotatingFileHandler. Since it uses
+
+        """
+        self.stream.close()
+        # get the time that this sequence started at and make it a TimeTuple
+        t = self.rolloverAt - self.interval
+        timeTuple = time.localtime(t)
+        file_name = self.baseFilename.rpartition('.')[0]
+        dfn = '%s_%s.log' % (file_name, time.strftime(self.suffix, timeTuple))
+        if os.path.exists(dfn):
+            os.remove(dfn)
+        os.rename(self.baseFilename, dfn)
+        if self.backupCount > 0:
+            # find the oldest log file and delete it
+            s = glob.glob(file_name + '_*')
+            if len(s) > self.backupCount:
+                s.sort()
+                os.remove(s[0])
+        #print "%s -> %s" % (self.baseFilename, dfn)
+        if self.encoding:
+            self.stream = codecs.open(self.baseFilename, 'w', self.encoding)
+        else:
+            self.stream = open(self.baseFilename, 'w')
+        self.rolloverAt = self.rolloverAt + self.interval
+        zip_name = dfn.rpartition('.')[0] + '.zip'
+        if os.path.exists(zip_name):
+            os.remove(zip_name)
+        file = zipfile.ZipFile(zip_name, 'w')
+        file.write(dfn, os.path.basename(dfn), zipfile.ZIP_DEFLATED)
+        file.close()
+        os.remove(dfn)
+
+
+sb_log_instance = SBRotatingLogHandler('sickbeard.log')
 
 
 def log(toLog, logLevel=MESSAGE):
@@ -335,4 +303,4 @@ def log_error_and_exit(error_msg):
 
 
 def close():
-    sb_log_instance.close_log()    
+    sb_log_instance.close_log()

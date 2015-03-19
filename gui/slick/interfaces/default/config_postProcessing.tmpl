@@ -24,7 +24,7 @@
 	<h1 class="title">$title</h1>
 #end if
 #set $checked = 'checked="checked"'
-#set $selected = 'selected="selected"'
+#set $selected = 'selected="selected" class="selected"'
 
 <div id="config" class="pp">
 	<div id="config-content">
@@ -53,7 +53,7 @@
 									<div class="red-text"><em class="boldest">must not</em> be the folder where downloading files are created</div>
 								</span>
 								<span class="component-desc">
-									<input type="text" name="tv_download_dir" id="tv_download_dir" value="$sickbeard.TV_DOWNLOAD_DIR" class="form-control input-sm input350" />
+									<input type="text" name="tv_download_dir" id="tv_download_dir" value="$sickbeard.TV_DOWNLOAD_DIR" class="form-control input-sm input350">
 									<div class="pull-left">
 										<p>folder where download clients save <b><em class="boldest">completed</em></b> downloads.&nbsp;
 										<b>note:</b> only use if not using SABnzbd post processing <em>or</em> if SABnzbd is on a different PC to SickGear</p>
@@ -64,16 +64,12 @@
 
 						<div class="field-pair">
 							<label for="process_method">
-								<span class="component-title">Process episode method</span>
+								<span class="component-title input">Process episode method</span>
 								<span class="component-desc">
 									<select name="process_method" id="process_method" class="form-control input-sm">
-#set $process_method_text = {'copy': "Copy", 'move': "Move", 'hardlink': "Hard Link", 'symlink' : "Symbolic Link"}
+#set $process_method_text = {'copy': 'Copy', 'move': 'Move', 'hardlink': 'Hard Link', 'symlink' : 'Symbolic Link'}
 #for $curAction in ('copy', 'move', 'hardlink', 'symlink'):
-    #if $sickbeard.PROCESS_METHOD == $curAction:
-        #set $process_method = $selected
-    #else
-        #set $process_method = ''
-    #end if
+    #set $process_method = ('', $selected)[$sickbeard.PROCESS_METHOD == $curAction]
 										<option value="$curAction" $process_method>$process_method_text[$curAction]</option>
 #end for
 									</select>
@@ -86,7 +82,7 @@
 							<label for="process_automatically">
 								<span class="component-title">Scan and post process</span>
 								<span class="component-desc">
-									<input type="checkbox" name="process_automatically" id="process_automatically" #if $sickbeard.PROCESS_AUTOMATICALLY == True then $checked else ''# />
+									<input type="checkbox" name="process_automatically" id="process_automatically" #if $sickbeard.PROCESS_AUTOMATICALLY == True then $checked else ''#>
 									<p>files in the <em>completed TV downloads</em> folder.&nbsp;
 									<b>note:</b> do not enable with external post processing scripts like sabToSickbeard for SABnzbd, or NZBMedia for NZBGET</p>
 								</span>
@@ -97,7 +93,7 @@
 							<label for="autopostprocesser_frequency">
 								<span class="component-title">Run post process every</span>
 								<span class="component-desc">
-									<input type="text" name="autopostprocesser_frequency" id="autopostprocesser_frequency" value="$sickbeard.AUTOPOSTPROCESSER_FREQUENCY" class="form-control input-sm input75" />
+									<input type="text" name="autopostprocesser_frequency" id="autopostprocesser_frequency" value="$sickbeard.AUTOPOSTPROCESSER_FREQUENCY" class="form-control input-sm input75">
 									<p>minutes to check for new files to process (e.g. 10)</p>
 								</span>
 							</label>
@@ -107,8 +103,8 @@
 							<label for="postpone_if_sync_files">
 								<span class="component-title">Postpone post processing</span>
 								<span class="component-desc">
-									<input type="checkbox" name="postpone_if_sync_files" id="postpone_if_sync_files" #if $sickbeard.POSTPONE_IF_SYNC_FILES == True then $checked else ''# />
-									<p>if <b>!sync</b> files are present in the <em>completed TV downloads</em> folder</p>
+									<input type="checkbox" name="postpone_if_sync_files" id="postpone_if_sync_files" #if $sickbeard.POSTPONE_IF_SYNC_FILES == True then $checked else ''#>
+									<p>if <b class="grey-text">!sync</b> files are present in the <em>completed TV downloads</em> folder</p>
 								</span>
 							</label>
 						</div>
@@ -117,17 +113,46 @@
 							<label for="extra_scripts">
 								<span class="component-title">Extra scripts</span>
 								<span class="component-desc">
-									<input type="text" name="extra_scripts" value="<%='|'.join(sickbeard.EXTRA_SCRIPTS)%>" class="form-control input-sm input350" />
+									<input type="text" name="extra_scripts" id="extra_scripts" value="<%='|'.join(sickbeard.EXTRA_SCRIPTS)%>" class="form-control input-sm input350">
+									<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_extra_params" title="Toggle info for script arguments" class="legend" class="legend" />
 									<div class="clear-left">
-									<p>scripts are called after SickGear's built-in post processing.
-									&nbsp;<b>note:</b> use <b>|</b> to separate additional extra scripts</span>
-									</p>
+										<p>scripts are called after built-in post processing.
+										&nbsp;<b>note:</b> use <b class="grey-text boldest">|</b> to separate additional extra scripts
+										 (e.g. <span class="grey-text">inside_SG_root_folder.sh|/other/path/to/script.py</span>)</p>
+										<div id="extra_params" style="display: none">
+											<table class="Key" style="width:auto">
+												<thead>
+													<tr>
+														<th class="text-center">Arg</th>
+														<th>Description</th>
+														<th style="width:5%"></th>
+														<th class="text-center">Arg</th>
+														<th>Description</th>
+													</tr>
+												</thead>
+												<tfoot>
+													<tr>
+														<th colspan="5">These arguments are passed to every script</th>
+													</tr>
+												</tfoot>
+												<tbody>
+													<tr><td class="text-center"><span class="grey-text">1</span></td><td>final full episode file path</td>
+													<td>&nbsp;</td><td class="text-center"><span class="grey-text">4</span></td><td>season number</td></tr>
+
+													<tr class="even"><td class="text-center"><span class="grey-text">2</span></td><td>original episode file name</td>
+													<td>&nbsp;</td><td class="text-center"><span class="grey-text">5</span></td><td style="padding-right:1.5em !important">episode number</td></tr>
+
+													<tr><td class="text-center"><span class="grey-text">3</span></td><td>show id</td>
+													<td>&nbsp;</td><td class="text-center"><span class="grey-text">6</span></td><td>episode air date</td></tr>
+												</tbody>
+											</table>
+										</div>
 									</div>
 								</span>
 							</label>
 						</div>
 
-						<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 
 					</fieldset>
 				</div>
@@ -145,7 +170,7 @@
 							<label for="unpack">
 								<span class="component-title">Unpack downloads</span>
 								<span class="component-desc">
-									<input id="unpack" type="checkbox" name="unpack" #if $sickbeard.UNPACK == True then $checked else ''# />
+									<input id="unpack" type="checkbox" name="unpack" #if $sickbeard.UNPACK == True then $checked else ''#>
 									<p>unrar TV releases in the <em>completed TV downloads</em> folder</p>
 								</span>
 							</label>
@@ -153,11 +178,17 @@
 
 						<div class="field-pair">
 							<label for="skip_removed_files">
-								<span class="component-title">Skip remove detection</span>
+								<span class="component-title input">Status of removed episodes</span>
 								<span class="component-desc">
-									<input type="checkbox" name="skip_removed_files" id="skip_removed_files" #if $sickbeard.SKIP_REMOVED_FILES == True then $checked else ''# />
-									<p>skip detection of removed files so the episode is not set to ignored<br>
-									<b>note:</b> this may mean SickGear misses renames as well</p>
+									<select name="skip_removed_files" id="skip_removed_files" class="form-control form-control-inline input-sm">
+
+#set $opt_selected = ($sickbeard.SKIP_REMOVED_FILES, $IGNORED)[not $sickbeard.SKIP_REMOVED_FILES]
+#for $cur_status in [1, $SKIPPED, $ARCHIVED, $IGNORED]:
+    #set $opt_text = ('Will Be Untouched', 'Set ' + $statusStrings[$cur_status] + ('', ' (default)')[$IGNORED == $cur_status])[1 != $cur_status]
+										<option value="$cur_status"#echo ('', ' ' + $selected)[$cur_status == $opt_selected]#>$opt_text</option>
+#end for
+									</select>
+									<span><strong><em>untouched</em></strong> may mean SickGear also misses renames</span>
 								</span>
 							</label>
 						</div>
@@ -166,7 +197,7 @@
 							<label for="move_associated_files">
 								<span class="component-title">Move associated files</span>
 								<span class="component-desc">
-									<input type="checkbox" name="move_associated_files" id="move_associated_files" #if $sickbeard.MOVE_ASSOCIATED_FILES == True then $checked else ''# />
+									<input type="checkbox" name="move_associated_files" id="move_associated_files" #if $sickbeard.MOVE_ASSOCIATED_FILES == True then $checked else ''#>
 									<p>move srr/srt/sfv/etc files with the episode when processed</p>
 								</span>
 							</label>
@@ -176,7 +207,7 @@
 							<label for="nfo_rename">
 								<span class="component-title">Rename .nfo file</span>
 								<span class="component-desc">
-									<input type="checkbox" name="nfo_rename" id="nfo_rename" #if $sickbeard.NFO_RENAME == True then $checked else ''# />
+									<input type="checkbox" name="nfo_rename" id="nfo_rename" #if $sickbeard.NFO_RENAME == True then $checked else ''#>
 									<p>rename the original .nfo file to .nfo-orig to avoid conflicts</p>
 								</span>
 							</label>
@@ -186,7 +217,7 @@
 							<label for="rename_episodes">
 								<span class="component-title">Rename episodes</span>
 								<span class="component-desc">
-									<input type="checkbox" name="rename_episodes" id="rename_episodes" #if $sickbeard.RENAME_EPISODES == True then $checked else ''# />
+									<input type="checkbox" name="rename_episodes" id="rename_episodes" #if $sickbeard.RENAME_EPISODES == True then $checked else ''#>
 									<p>rename episodes using the Episode Naming settings</p>
 								</span>
 							</label>
@@ -196,14 +227,14 @@
 							<label for="airdate_episodes">
 								<span class="component-title">Change file date</span>
 								<span class="component-desc">
-									<input type="checkbox" name="airdate_episodes" id="airdate_episodes" #if $sickbeard.AIRDATE_EPISODES == True then $checked else ''# />
-									<p>set last modified filedate to the date that the episode aired<br>
+									<input type="checkbox" name="airdate_episodes" id="airdate_episodes" #if $sickbeard.AIRDATE_EPISODES == True then $checked else ''#>
+									<p>set last modified filedate to the date that the episode aired<br />
 									<b>note:</b> some systems may ignore this feature.</p>
 								</span>
 							</label>
 						</div>
 
-					<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+					<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 
 					</fieldset>
 				</div>
@@ -221,7 +252,7 @@
 							<label for="use_failed_downloads"  style="margin-bottom:0">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input id="use_failed_downloads" type="checkbox" class="enabler" name="use_failed_downloads" #if $sickbeard.USE_FAILED_DOWNLOADS == True then $checked else ''# />
+									<input id="use_failed_downloads" type="checkbox" class="enabler" name="use_failed_downloads" #if $sickbeard.USE_FAILED_DOWNLOADS == True then $checked else ''#>
 									<p>failed download handling</p>
 								</span>
 							</label>
@@ -243,14 +274,14 @@
 								<label for="delete_failed">
 									<span class="component-title">Delete failed downloads</span>
 									<span class="component-desc">
-										<input id="delete_failed" type="checkbox" name="delete_failed" #if $sickbeard.DELETE_FAILED == True then $checked else ''# />
-										<p>delete left over files from a failed download<br>
+										<input id="delete_failed" type="checkbox" name="delete_failed" #if $sickbeard.DELETE_FAILED == True then $checked else ''#>
+										<p>delete left over files from a failed download<br />
 									</span>
 								</label>
 							</div>
 						</div>
 
-					<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+					<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 
 					</fieldset>
 				</div>
@@ -278,7 +309,7 @@
 
 						<div class="field-pair">
 							<label for="name_presets">
-								<span class="component-title">Name pattern</span>
+								<span class="component-title input">Name pattern</span>
 								<span class="component-desc">
 									<select id="name_presets" class="form-control input-sm">
 #set is_custom = True
@@ -300,7 +331,7 @@
 								<label for="naming_pattern">
 									<span class="component-title"></span>
 									<span class="component-desc">
-										<input type="text" name="naming_pattern" id="naming_pattern" value="$sickbeard.NAMING_PATTERN" class="form-control input-sm input350 custom-pattern" />
+										<input type="text" name="naming_pattern" id="naming_pattern" value="$sickbeard.NAMING_PATTERN" class="form-control input-sm input350 custom-pattern">
 										<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_naming_key" title="Toggle Naming Legend" class="legend" class="legend" />
 									</span>
 								</label>
@@ -407,33 +438,33 @@
 											<td>720p_BluRay</td>
 										</tr>
 										<tr class="even">
-											<td class="align-right"><i class="icon-info-sign" title="Multi-EP style is ignored"></i> <b>Release Name:</b></td>
+											<td class="align-right"><i class="sgicon-info" title="Multi-EP style is ignored"></i> <b>Release Name:</b></td>
 											<td>%RN</td>
 											<td>Show.Name.S02E03.HDTV.XviD-RLSGROUP</td>
 										</tr>
 										<tr>
-											<td class="align-right"><i class="icon-info-sign" title="'SickGear' is used in place of RLSGROUP if it could not be properly detected"></i> <b>Release Group:</b></td>
-											<td>%RG</td>
+											<td class="align-right"><i class="sgicon-info" title="'SickGear' is used in place of RLSGROUP if it could not be properly detected"></i> <b>Release Group:</b></td>
+											<td>-%RG</td>
 											<td>RLSGROUP</td>
 										</tr>
 										<tr class="even">
-											<td class="align-right"><i class="icon-info-sign" title="If episode is proper/repack add 'proper' to name."></i> <b>Release Type:</b></td>
+											<td class="align-right"><i class="sgicon-info" title="If episode is proper/repack add 'proper' to name."></i> <b>Release Type:</b></td>
 											<td>%RT</td>
 											<td>PROPER</td>
 										</tr>
 									</tbody>
 								</table>
-								<br/>
+								<br />
 							</div>
 						</div>
 
 						<div class="field-pair">
 							<label for="naming_multi_ep">
-								<span class="component-title">Multi episode style</span>
+								<span class="component-title input">Multi episode style</span>
 								<span class="component-desc">
 									<select id="naming_multi_ep" name="naming_multi_ep" class="form-control input-sm">
 #for $cur_multi_ep in sorted($multiEpStrings.items(), key=lambda x: x[1]):
-										<option value="$cur_multi_ep[0]" #if $sickbeard.NAMING_MULTI_EP == $cur_multi_ep[0] then 'selected="selected" class="selected"' else ''#>$cur_multi_ep[1]</option>
+										<option value="$cur_multi_ep[0]" #if $sickbeard.NAMING_MULTI_EP == $cur_multi_ep[0] then $selected else ''#>$cur_multi_ep[1]</option>
 #end for
 									</select>
 								</span>
@@ -461,7 +492,7 @@
 							<div class="example">
 								<span class="jumbo" id="naming_example">&nbsp;</span>
 							</div>
-							<br/>
+							<br />
 						</div>
 
 						<div id="naming_example_multi_div">
@@ -471,7 +502,7 @@
 							<div class="example">
 								<span class="jumbo" id="naming_example_multi">&nbsp;</span>
 							</div>
-							<br/>
+							<br />
 						</div>
 
 					</fieldset>
@@ -499,7 +530,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_abd_presets">
-									<span class="component-title">Air-by-date name pattern</span>
+									<span class="component-title input">Air-by-date name pattern</span>
 									<span class="component-desc">
 										<select id="name_abd_presets" class="form-control input-sm">
 #set is_abd_custom = True
@@ -520,7 +551,7 @@
 										<label for="naming_abd_pattern">
 											<span class="component-title"></span>
 											<span class="component-desc">
-												<input type="text" name="naming_abd_pattern" id="naming_abd_pattern" value="$sickbeard.NAMING_ABD_PATTERN" class="form-control input-sm input350 custom-pattern" />
+												<input type="text" name="naming_abd_pattern" id="naming_abd_pattern" value="$sickbeard.NAMING_ABD_PATTERN" class="form-control input-sm input350 custom-pattern">
 												<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_naming_abd_key" title="Toggle ABD Naming Legend" class="legend" />
 											</span>
 										</label>
@@ -632,23 +663,23 @@
 													<td>09</td>
 												</tr>
 												<tr>
-													<td class="align-right"><i class="icon-info-sign" title="Multi-episode style is ignored"></i> <b>Release Name:</b></td>
+													<td class="align-right"><i class="sgicon-info" title="Multi-episode style is ignored"></i> <b>Release Name:</b></td>
 													<td>%RN</td>
 													<td>Show.Name.2010.03.09.HDTV.XviD-RLSGROUP</td>
 												</tr>
 												<tr class="even">
-													<td class="align-right"><i class="icon-info-sign" title="if RLSGROUP is not detected, 'SickGear' is used"></i> <b>Release Group:</b></td>
-													<td>%RG</td>
+													<td class="align-right"><i class="sgicon-info" title="if RLSGROUP is not detected, 'SickGear' is used"></i> <b>Release Group:</b></td>
+													<td>-%RG</td>
 													<td>RLSGROUP</td>
 												</tr>
 												<tr>
-													<td class="align-right"><i class="icon-info-sign" title="Add 'proper' to name if episode is a proper or repack">&nbsp;</i> <b>Release Type:</b></td>
+													<td class="align-right"><i class="sgicon-info" title="Add 'proper' to name if episode is a proper or repack"></i> <b>Release Type:</b></td>
 													<td>%RT</td>
 													<td>PROPER</td>
 												</tr>
 											</tbody>
 										</table>
-										<br/>
+										<br />
 									</div>
 								</div><!-- /naming_abd_custom -->
 							</div>
@@ -663,13 +694,13 @@
 									<div class="example">
 										<span class="jumbo" id="naming_abd_example">&nbsp;</span>
 									</div>
-									<br/>
+									<br />
 								</div>
 							</div>
 						</fieldset>
 
 						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 						</div>
 
 					</div><!-- /naming_abd_different -->
@@ -697,7 +728,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_sports_presets">
-									<span class="component-title">Sports name pattern</span>
+									<span class="component-title input">Sports name pattern</span>
 									<span class="component-desc">
 										<select id="name_sports_presets" class="form-control input-sm">
 #set is_sports_custom = True
@@ -718,7 +749,7 @@
 										<label for="naming_sports_pattern">
 											<span class="component-title"></span>
 											<span class="component-desc">
-												<input type="text" name="naming_sports_pattern" id="naming_sports_pattern" value="$sickbeard.NAMING_SPORTS_PATTERN" class="form-control input-sm input350 custom-pattern" />
+												<input type="text" name="naming_sports_pattern" id="naming_sports_pattern" value="$sickbeard.NAMING_SPORTS_PATTERN" class="form-control input-sm input350 custom-pattern">
 												<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_naming_sports_key" title="Toggle Sports Naming Legend" class="legend" />
 											</span>
 										</label>
@@ -830,23 +861,23 @@
 													<td>09</td>
 												</tr>
 												<tr>
-													<td class="align-right"><i class="icon-info-sign" title="Multi-episode style is ignored"></i> <b>Release Name:</b></td>
+													<td class="align-right"><i class="sgicon-info" title="Multi-episode style is ignored"></i> <b>Release Name:</b></td>
 													<td>%RN</td>
 													<td>Show.Name.9th.Mar.2011.HDTV.XviD-RLSGROUP</td>
 												</tr>
 												<tr class="even">
-													<td class="align-right"><i class="icon-info-sign" title="If RLSGROUP is not detected, 'SickGear' is used"></i> <b>Release Group:</b></td>
-													<td>%RG</td>
+													<td class="align-right"><i class="sgicon-info" title="If RLSGROUP is not detected, 'SickGear' is used"></i> <b>Release Group:</b></td>
+													<td>-%RG</td>
 													<td>RLSGROUP</td>
 												</tr>
 												<tr>
-													<td class="align-right"><i class="icon-info-sign" title="Add 'proper' to name if episode is a proper or repack"></i> <b>Release Type:</b></td>
+													<td class="align-right"><i class="sgicon-info" title="Add 'proper' to name if episode is a proper or repack"></i> <b>Release Type:</b></td>
 													<td>%RT</td>
 													<td>PROPER</td>
 												</tr>
 											</tbody>
 										</table>
-										<br/>
+										<br />
 									</div>
 								</div><!-- /naming_sports_custom -->
 							</div>
@@ -863,7 +894,7 @@
 									<div class="example">
 										<span class="jumbo" id="naming_sports_example">&nbsp;</span>
 									</div>
-									<br/>
+									<br />
 								</div>
 
 							</div>
@@ -871,7 +902,7 @@
 						</fieldset>
 
 						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 						</div>
 
 					</div><!-- /naming_sports_different -->
@@ -900,7 +931,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_anime_presets">
-									<span class="component-title">Anime name pattern</span>
+									<span class="component-title input">Anime name pattern</span>
 									<span class="component-desc">
 										<select id="name_anime_presets" class="form-control input-sm">
 #set is_anime_custom = True
@@ -921,7 +952,7 @@
 										<label for="naming_anime_pattern">
 											<span class="component-title"></span>
 											<span class="component-desc">
-												<input type="text" name="naming_anime_pattern" id="naming_anime_pattern" value="$sickbeard.NAMING_ANIME_PATTERN" class="form-control input-sm input350 custom-pattern" />
+												<input type="text" name="naming_anime_pattern" id="naming_anime_pattern" value="$sickbeard.NAMING_ANIME_PATTERN" class="form-control input-sm input350 custom-pattern">
 												<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_naming_anime_key" title="Toggle Anime Naming Legend" class="legend" />
 											</span>
 										</label>
@@ -1028,33 +1059,33 @@
 													<td>720p_BluRay</td>
 												</tr>
 												<tr class="even">
-													<td class="align-right"><i class="icon-info-sign" title="Multi-episode style is ignored"></i> <b>Release Name:</b></td>
+													<td class="align-right"><i class="sgicon-info" title="Multi-episode style is ignored"></i> <b>Release Name:</b></td>
 													<td>%RN</td>
 													<td>Show.Name.S02E03.HDTV.XviD-RLSGROUP</td>
 												</tr>
 												<tr>
-													<td class="align-right"><i class="icon-info-sign" title="If RLSGROUP is not detected, 'SickGear' is used"></i> <b>Release Group:</b></td>
-													<td>%RG</td>
+													<td class="align-right"><i class="sgicon-info" title="If RLSGROUP is not detected, 'SickGear' is used"></i> <b>Release Group:</b></td>
+													<td>[%RG]</td>
 													<td>RLSGROUP</td>
 												</tr>
 												<tr class="even">
-													<td class="align-right"><i class="icon-info-sign" title="Add 'proper' to name if episode is a proper or repack"></i> <b>Release Type:</b></td>
+													<td class="align-right"><i class="sgicon-info" title="Add 'proper' to name if episode is a proper or repack"></i> <b>Release Type:</b></td>
 													<td>%RT</td>
 													<td>PROPER</td>
 												</tr>
 											</tbody>
 										</table>
-										<br/>
+										<br />
 									</div>
 								</div><!-- /naming_anime_custom -->
 
 								<div class="field-pair">
 									<label for="naming_anime_multi_ep">
-										<span class="component-title">Multi episode style</span>
+										<span class="component-title input">Multi episode style</span>
 										<span class="component-desc">
 											<select id="naming_anime_multi_ep" name="naming_anime_multi_ep" class="form-control input-sm">
 #for $cur_multi_ep in sorted($multiEpStrings.items(), key=lambda x: x[1]):
-												<option value="$cur_multi_ep[0]" #if $sickbeard.NAMING_ANIME_MULTI_EP == $cur_multi_ep[0] then 'selected="selected" class="selected"' else ''#>$cur_multi_ep[1]</option>
+												<option value="$cur_multi_ep[0]" #if $sickbeard.NAMING_ANIME_MULTI_EP == $cur_multi_ep[0] then $selected else ''#>$cur_multi_ep[1]</option>
 #end for
 											</select>
 										</span>
@@ -1074,7 +1105,7 @@
 								<div class="example">
 									<span class="jumbo" id="naming_example_anime">&nbsp;</span>
 								</div>
-								<br/>
+								<br />
 							</div>
 
 							<div id="naming_example_multi_anime_div">
@@ -1084,7 +1115,7 @@
 								<div class="example">
 									<span class="jumbo" id="naming_example_multi_anime">&nbsp;</span>
 								</div>
-								<br/>
+								<br />
 							</div>
 
 						</fieldset>
@@ -1096,7 +1127,7 @@
 									<span class="component-title">Add absolute numbering</span>
 									<span class="component-desc">
 										<input type="radio" name="naming_anime" id="naming_anime" value="1" #if $sickbeard.NAMING_ANIME == 1 then $checked else ''#/>
-										<p>add the absolute number to the season/episode format<br>
+										<p>add the absolute number to the season/episode format<br />
 										(eg. S15E45 - 310 vs S15E45)</p>
 									</span>
 								</label>
@@ -1125,7 +1156,7 @@
 						</fieldset>
 
 						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 						</div>
 
 					</div><!-- /naming_anime_different -->
@@ -1150,7 +1181,7 @@
 					<fieldset class="component-group-list">
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Metadata target</span>
+								<span class="component-title input">Metadata target</span>
 								<span class="component-desc">
 #set $m_dict = $metadata.get_metadata_generator_dict()
 									<select id="metadataType" class="form-control input-sm">
@@ -1202,18 +1233,18 @@
 									<label for="${cur_id}_season_all_banner"><span id="${cur_id}_eg_season_all_banner">$cur_metadata_inst.eg_season_all_banner</span></label>
 								</div>
 							</div>
-							<input type="hidden" name="${cur_id}_data" id="${cur_id}_data" value="$cur_metadata_inst.get_config()" />
+							<input type="hidden" name="${cur_id}_data" id="${cur_id}_data" value="$cur_metadata_inst.get_config()">
 						</div>
 #end for
-						<div class="clearfix"></div><br/>
+						<div class="clearfix"></div><br />
 
-						<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 					</fieldset>
 				</div><!-- /component-group3 //-->
 
-				<br/>
+				<br />
 				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sickbeard.DATA_DIR</span></b> </h6>
-				<input type="submit" class="btn pull-left config_submitter button" value="Save Changes" />
+				<input type="submit" class="btn pull-left config_submitter button" value="Save Changes">
 
 		</form>
 	</div>

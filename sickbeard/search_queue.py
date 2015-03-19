@@ -21,14 +21,13 @@ from __future__ import with_statement
 import time
 import traceback
 import threading
+import datetime
 
 import sickbeard
-from sickbeard import db, logger, common, exceptions, helpers
-from sickbeard import generic_queue, scheduler
-from sickbeard import search, failed_history, history
-from sickbeard import ui
-from sickbeard.exceptions import ex
-from sickbeard.search import pickBestResult
+from sickbeard import db, logger, common, exceptions, helpers, network_timezones, generic_queue, search, \
+    failed_history, history, ui
+from sickbeard.search import wantedEpisodes
+
 
 search_queue_lock = threading.Lock()
 
@@ -128,37 +127,139 @@ class SearchQueue(generic_queue.GenericQueue):
         else:
             logger.log(u"Not adding item, it's already in the queue", logger.DEBUG)
 
+
 class RecentSearchQueueItem(generic_queue.QueueItem):
     def __init__(self):
         self.success = None
+        self.episodes = []
         generic_queue.QueueItem.__init__(self, 'Recent Search', RECENT_SEARCH)
 
     def run(self):
         generic_queue.QueueItem.run(self)
 
-        try:
-            logger.log("Beginning recent search for new episodes")
-            foundResults = search.searchForNeededEpisodes()
+        self._change_missing_episodes()
 
-            if not len(foundResults):
-                logger.log(u"No needed episodes found")
-            else:
-                for result in foundResults:
-                    # just use the first result for now
-                    logger.log(u"Downloading " + result.name + " from " + result.provider.name)
-                    self.success = search.snatchEpisode(result)
+        self.update_providers()
 
-                    # give the CPU a break
-                    time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
+        show_list = sickbeard.showList
+        fromDate = datetime.date.fromordinal(1)
+        for curShow in show_list:
+            if curShow.paused:
+                continue
 
-            generic_queue.QueueItem.finish(self)
-        except Exception:
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            self.episodes.extend(wantedEpisodes(curShow, fromDate))
 
-        if self.success is None:
-            self.success = False
+        if not self.episodes:
+            logger.log(u'No search of cache for episodes required')
+            self.success = True
+        else:
+            num_shows = len(set([ep.show.name for ep in self.episodes]))
+            logger.log(u'Found %d needed episode%s spanning %d show%s'
+                       % (len(self.episodes), helpers.maybe_plural(len(self.episodes)),
+                          num_shows, helpers.maybe_plural(num_shows)))
+
+            try:
+                logger.log(u'Beginning recent search for episodes')
+                found_results = search.searchForNeededEpisodes(self.episodes)
+
+                if not len(found_results):
+                    logger.log(u'No needed episodes found')
+                else:
+                    for result in found_results:
+                        # just use the first result for now
+                        logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
+                        self.success = search.snatchEpisode(result)
+
+                        # give the CPU a break
+                        time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
+
+            except Exception:
+                logger.log(traceback.format_exc(), logger.DEBUG)
+
+            if self.success is None:
+                self.success = False
 
         self.finish()
+
+    @staticmethod
+    def _change_missing_episodes():
+        if not network_timezones.network_dict:
+            network_timezones.update_network_dict()
+
+        if network_timezones.network_dict:
+            curDate = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
+        else:
+            curDate = (datetime.date.today() - datetime.timedelta(days=2)).toordinal()
+
+        curTime = datetime.datetime.now(network_timezones.sb_timezone)
+
+        myDB = db.DBConnection()
+        sqlResults = myDB.select('SELECT * FROM tv_episodes WHERE status = ? AND season > 0 AND airdate <= ?',
+                                 [common.UNAIRED, curDate])
+
+        sql_l = []
+        show = None
+        wanted = False
+
+        for sqlEp in sqlResults:
+            try:
+                if not show or int(sqlEp['showid']) != show.indexerid:
+                    show = helpers.findCertainShow(sickbeard.showList, int(sqlEp['showid']))
+
+                # for when there is orphaned series in the database but not loaded into our showlist
+                if not show:
+                    continue
+
+            except exceptions.MultipleShowObjectsException:
+                logger.log(u'ERROR: expected to find a single show matching ' + str(sqlEp['showid']))
+                continue
+
+            try:
+                end_time = network_timezones.parse_date_time(sqlEp['airdate'], show.airs, show.network) + datetime.timedelta(minutes=helpers.tryInt(show.runtime, 60))
+                # filter out any episodes that haven't aired yet
+                if end_time > curTime:
+                    continue
+            except:
+                # if an error occurred assume the episode hasn't aired yet
+                continue
+
+            ep = show.getEpisode(int(sqlEp['season']), int(sqlEp['episode']))
+            with ep.lock:
+                # Now that it is time, change state of UNAIRED show into expected or skipped
+                ep.status = (common.WANTED, common.SKIPPED)[ep.show.paused]
+                result = ep.get_sql()
+                if None is not result:
+                    sql_l.append(result)
+                    wanted |= (False, True)[common.WANTED == ep.status]
+        else:
+            logger.log(u'No unaired episodes marked wanted')
+
+        if 0 < len(sql_l):
+            myDB = db.DBConnection()
+            myDB.mass_action(sql_l)
+            if wanted:
+                logger.log(u'Found new episodes marked wanted')
+
+    @staticmethod
+    def update_providers():
+        origThreadName = threading.currentThread().name
+        threads = []
+
+        logger.log('Updating provider caches with recent upload data')
+
+        providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_recentsearch]
+        for curProvider in providers:
+            # spawn separate threads for each provider so we don't need to wait for providers with slow network operation
+            threads.append(threading.Thread(target=curProvider.cache.updateCache, name=origThreadName +
+                                                                                       ' :: [' + curProvider.name + ']'))
+            # start the thread we just created
+            threads[-1].start()
+
+        # wait for all threads to finish
+        for t in threads:
+            t.join()
+
+        logger.log('Finished updating provider caches')
 
 
 class ManualSearchQueueItem(generic_queue.QueueItem):
