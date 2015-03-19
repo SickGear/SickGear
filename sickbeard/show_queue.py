@@ -550,7 +550,9 @@ class QueueItemUpdate(ShowQueueItem):
 
         logger.log(u"Retrieving show info from " + sickbeard.indexerApi(self.show.indexer).name + "", logger.DEBUG)
         try:
-            self.show.loadFromIndexer(cache=not self.force)
+            result = self.show.loadFromIndexer(cache=not self.force)
+            if None is not result:
+                return
         except sickbeard.indexer_error, e:
             logger.log(u"Unable to contact " + sickbeard.indexerApi(self.show.indexer).name + ", aborting: " + ex(e),
                        logger.WARNING)

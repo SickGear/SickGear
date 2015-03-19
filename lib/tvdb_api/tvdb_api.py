@@ -938,7 +938,7 @@ class Tvdb:
             # Item is integer, treat as show id
             if key not in self.shows:
                 self._getShowData(key, self.config['language'], True)
-            return (None, self.shows[key])[key in self.shows]
+            return None if key not in self.shows else self.shows[key]
 
         key = str(key).lower()
         self.config['searchterm'] = key

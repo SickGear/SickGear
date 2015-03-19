@@ -871,6 +871,9 @@ class TVShow(object):
             t = tvapi
 
         myEp = t[self.indexerid]
+        if None is myEp:
+            logger.log(u'Show not found (maybe even removed?)', logger.WARNING)
+            return False
 
         try:
             self.name = myEp['seriesname'].strip()
