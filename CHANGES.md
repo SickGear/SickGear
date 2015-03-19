@@ -66,6 +66,7 @@
 * Remove restriction to not display snatched eps link in footer on Episode Overview page
 * Change the shows episodes count text colour to visually separete from year numbers at the end of show names
 * Fix release group not recognised from manually downloaded filename
+* Change to gracefully handle some "key not found" failures when TVDB or TVRage return "Not Found" during show updates
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
