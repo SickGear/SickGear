@@ -1324,6 +1324,7 @@ span.snatched b{
 	clear:both
 }
 
+.sickbeardTable tr.header td,
 .sickbeardTable th{
 	color:#fff;
 	text-align:center;
@@ -1331,11 +1332,16 @@ span.snatched b{
 	white-space:nowrap
 }
 
-.sickbeardTable th, 
+.sickbeardTable tr.header td,
+.sickbeardTable th,
 .sickbeardTable td{
 	border-top:1px solid #fff;
 	border-left:1px solid #fff;
 	padding:4px
+}
+
+.sickbeardTable tr.header td{
+	padding:4px 8px
 }
 
 th.row-seasonheader{
@@ -2247,6 +2253,7 @@ div.metadataDiv .disabled{
 manage*.tmpl
 ========================================================================== */
 
+.sickbeardTable tr.header td,
 .manageTable th{
 	white-space:normal;
 	line-height:24px
@@ -2298,6 +2305,11 @@ td.tableright{
 
 a.whitelink{
 	color:#fff
+}
+
+input.get_more_eps,
+input.get_less_eps{
+	display:none
 }
 
 /* =======================================================================

@@ -58,6 +58,13 @@
 * Change the episodes downloaded stat to display e.g. 2843 / 2844 as 99.9% instead of rounding to 100%
 * Change 'never' episode row color away from blue on Display Show page when indexer airdate is not defined
 * Add tint to archived episode row colour to differentiate it from downloaded episodes on the Display Show page
+* Add indication of shows with never aired episodes on Episode Overview page
+* Add "Collapse" button and visuals for Expanding... and Collapsing... states
+* Add the number of episodes marked with the status being queried to Episode Overview page
+* Add indication of shows with never aired episodes on Episode Overview page
+* Change to separate "Set as wanted" to prevent disaster selection on Episode Overview page
+* Remove restriction to not display snatched eps link in footer on Episode Overview page
+* Change the shows episodes count text colour to visually separete from year numbers at the end of show names
 * Fix release group not recognised from manually downloaded filename
 
 [develop changelog]

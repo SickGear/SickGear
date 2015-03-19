@@ -1487,7 +1487,7 @@ class Home(MainHandler):
             sql_l = []
             for curEp in eps.split('|'):
 
-                logger.log(u'Attempting to set status on episode ' + curEp + ' to ' + status, logger.DEBUG)
+                logger.log(u'Attempting to set status on episode %s to %s' % (curEp, status), logger.DEBUG)
 
                 epInfo = curEp.split('x')
 
@@ -2481,7 +2481,7 @@ class Manage(MainHandler):
 
         myDB = db.DBConnection()
         cur_show_results = myDB.select(
-            'SELECT season, episode, name FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
+            'SELECT season, episode, name, airdate FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
                 ['?'] * len(status_list)) + ')', [int(indexer_id)] + status_list)
 
         result = {}
@@ -2492,7 +2492,7 @@ class Manage(MainHandler):
             if cur_season not in result:
                 result[cur_season] = {}
 
-            result[cur_season][cur_episode] = cur_result['name']
+            result[cur_season][cur_episode] = {'name': cur_result['name'], 'airdate_never': (True, False)[1000 < int(cur_result['airdate'])]}
 
         return json.dumps(result)
 
@@ -2516,12 +2516,14 @@ class Manage(MainHandler):
 
         myDB = db.DBConnection()
         status_results = myDB.select(
-            'SELECT show_name, tv_shows.indexer_id as indexer_id FROM tv_episodes, tv_shows WHERE tv_episodes.status IN (' + ','.join(
+            'SELECT show_name, tv_shows.indexer_id as indexer_id, airdate FROM tv_episodes, tv_shows WHERE tv_episodes.status IN (' + ','.join(
                 ['?'] * len(
                     status_list)) + ') AND season != 0 AND tv_episodes.showid = tv_shows.indexer_id ORDER BY show_name',
             status_list)
 
         ep_counts = {}
+        ep_count = 0
+        never_counts = {}
         show_names = {}
         sorted_show_ids = []
         for cur_status_result in status_results:
@@ -2530,6 +2532,11 @@ class Manage(MainHandler):
                 ep_counts[cur_indexer_id] = 1
             else:
                 ep_counts[cur_indexer_id] += 1
+            ep_count += 1
+            if cur_indexer_id not in never_counts:
+                never_counts[cur_indexer_id] = 0
+            if 1000 > int(cur_status_result['airdate']):
+                never_counts[cur_indexer_id] += 1
 
             show_names[cur_indexer_id] = cur_status_result['show_name']
             if cur_indexer_id not in sorted_show_ids:
@@ -2537,11 +2544,12 @@ class Manage(MainHandler):
 
         t.show_names = show_names
         t.ep_counts = ep_counts
+        t.ep_count = ep_count
+        t.never_counts = never_counts
         t.sorted_show_ids = sorted_show_ids
         return t.respond()
 
-    def changeEpisodeStatuses(self, oldStatus, newStatus, *args, **kwargs):
-
+    def changeEpisodeStatuses(self, oldStatus, newStatus, wantedStatus=sickbeard.common.UNKNOWN, *args, **kwargs):
         status_list = [int(oldStatus)]
         if status_list[0] == SNATCHED:
             status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER
@@ -2550,16 +2558,19 @@ class Manage(MainHandler):
 
         # make a list of all shows and their associated args
         for arg in kwargs:
-            indexer_id, what = arg.split('-')
-
             # we don't care about unchecked checkboxes
             if kwargs[arg] != 'on':
                 continue
+
+            indexer_id, what = arg.split('-')
 
             if indexer_id not in to_change:
                 to_change[indexer_id] = []
 
             to_change[indexer_id].append(what)
+
+        if sickbeard.common.WANTED == int(wantedStatus):
+            newStatus = sickbeard.common.WANTED
 
         myDB = db.DBConnection()
         for cur_indexer_id in to_change:

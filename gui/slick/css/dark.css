@@ -382,11 +382,13 @@ ul.tags li a{
 	border:1px solid #111
 }
 
+.sickbeardTable tr.header td,
 .sickbeardTable th{
 	color:#fff;
 	background-color:#15528F
 }
 
+.sickbeardTable tr.header td,
 .sickbeardTable th,
 .sickbeardTable td{
 	border-top:1px solid #222;
