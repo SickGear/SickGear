@@ -3310,6 +3310,10 @@ tablesorter.css
 	vertical-align:middle
 }
 
+.tablesorter .narrow.tablesorter-header{
+	padding:4px 18px 4px 4px
+}
+
 .tablesorter thead .sorter-false{
 	background-image:none;
 	padding:4px;
