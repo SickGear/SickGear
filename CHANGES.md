@@ -74,6 +74,7 @@
 * Add option to collapse seasons and leave current season open on displayShow (disabled)
 * Add filesize to episode location qtip on displayShow
 * Change selected options from editShow will only show when enabled now on displayShow
+* Add show overview from indexers to the database
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

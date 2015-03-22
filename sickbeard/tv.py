@@ -98,6 +98,7 @@ class TVShow(object):
         self._scene = 0
         self._rls_ignore_words = ""
         self._rls_require_words = ""
+        self._overview = ''
 
         self.dirty = True
 
@@ -141,6 +142,7 @@ class TVShow(object):
     scene = property(lambda self: self._scene, dirty_setter("_scene"))
     rls_ignore_words = property(lambda self: self._rls_ignore_words, dirty_setter("_rls_ignore_words"))
     rls_require_words = property(lambda self: self._rls_require_words, dirty_setter("_rls_require_words"))
+    overview = property(lambda self: self._overview, dirty_setter('_overview'))
 
     @property
     def is_anime(self):
@@ -832,6 +834,9 @@ class TVShow(object):
             if self.is_anime:
                 self.release_groups = BlackAndWhiteList(self.indexerid)
 
+            if not self.overview:
+                self.overview = sqlResults[0]['overview']
+
         logger.log(str(self.indexerid) + u': Show info [%s] loaded from database' % self.name)
 
         # Get IMDb_info from database
@@ -895,6 +900,7 @@ class TVShow(object):
             self.startyear = int(str(myEp["firstaired"]).split('-')[0])
 
         self.status = getattr(myEp, 'status', '')
+        self.overview = getattr(myEp, 'overview', '')
 
     def load_imdb_info(self):
 
@@ -1184,7 +1190,8 @@ class TVShow(object):
                         "imdb_id": self.imdbid,
                         "last_update_indexer": self.last_update_indexer,
                         "rls_ignore_words": self.rls_ignore_words,
-                        "rls_require_words": self.rls_require_words
+                        'rls_require_words': self.rls_require_words,
+                        'overview': self.overview
         }
 
         myDB = db.DBConnection()
