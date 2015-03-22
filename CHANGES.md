@@ -67,6 +67,7 @@
 * Change the shows episodes count text colour to visually separete from year numbers at the end of show names
 * Fix release group not recognised from manually downloaded filename
 * Change to gracefully handle some "key not found" failures when TVDB or TVRage return "Not Found" during show updates
+* Change no longer stamp files where airdates are never
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

@@ -2515,14 +2515,19 @@ class TVEpisode(object):
         Note: Also called from postProcessor
 
         """
-        hr = min = 0
+        if not datetime.date == type(self.airdate) or 1 == self.airdate.year:
+            logger.log(u'%s: Did not change modify date of %s because episode date is never aired or invalid'
+                       % (self.show.indexerid, os.path.basename(self.location)), logger.DEBUG)
+            return
+
+        hr = m = 0
         airs = re.search('.*?(\d{1,2})(?::\s*?(\d{2}))?\s*(pm)?', self.show.airs, re.I)
         if airs:
             hr = int(airs.group(1))
             hr = (12 + hr, hr)[None is airs.group(3)]
             hr = (hr, hr - 12)[0 == hr % 12 and 0 != hr]
-            min = int((airs.group(2), min)[None is airs.group(2)])
-        airtime = datetime.time(hr, min)
+            m = int((airs.group(2), m)[None is airs.group(2)])
+        airtime = datetime.time(hr, m)
 
         airdatetime = datetime.datetime.combine(self.airdate, airtime)
 
@@ -2533,8 +2538,8 @@ class TVEpisode(object):
 
             airdatetime = airdatetime.timetuple()
             if helpers.touchFile(self.location, time.mktime(airdatetime)):
-                logger.log(str(self.show.indexerid) + u": Changed modify date of " + os.path.basename(self.location)
-                           + " to show air date " + time.strftime("%b %d,%Y (%H:%M)", airdatetime))
+                logger.log(u'%s: Changed modify date of %s to show air date %s'
+                           % (self.show.indexerid, os.path.basename(self.location), time.strftime('%b %d,%Y (%H:%M)', airdatetime)))
 
     def __getstate__(self):
         d = dict(self.__dict__)
