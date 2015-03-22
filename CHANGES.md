@@ -65,6 +65,10 @@
 * Change to separate "Set as wanted" to prevent disaster selection on Episode Overview page
 * Remove restriction to not display snatched eps link in footer on Episode Overview page
 * Change the shows episodes count text colour to visually separete from year numbers at the end of show names
+* Change to add clarity to the subtitle and other columns on the Mass Update page
+* Add tooltips to explain why any the 6 action columns are disabled when required on the Mass Update page
+* Change to reclaimed screen estate by hiding unused columns on the Mass Update page
+* Change order of option on Mass Edit page to be inline with show edit page
 * Fix release group not recognised from manually downloaded filename
 * Change to gracefully handle some "key not found" failures when TVDB or TVRage return "Not Found" during show updates
 * Change no longer stamp files where airdates are never
