@@ -153,6 +153,9 @@ TRASH_ROTATE_LOGS = False
 HOME_SEARCH_FOCUS = True
 SORT_ARTICLE = False
 DEBUG = False
+DISPLAY_BACKGROUND = False
+DISPLAY_BACKGROUND_TRANSPARENT = None
+DISPLAY_ALL_SEASONS = True
 
 USE_LISTVIEW = False
 METADATA_XBMC = None
@@ -524,7 +527,7 @@ def initialize(consoleLogging=True):
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV, \
-            COOKIE_SECRET, USE_IMDB_INFO
+            COOKIE_SECRET, USE_IMDB_INFO, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS
 
         if __INITIALIZED__:
             return False
@@ -595,6 +598,9 @@ def initialize(consoleLogging=True):
         TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
         TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u":%S", u"")
         TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
+        DISPLAY_BACKGROUND = bool(check_setting_int(CFG, 'General', 'display_background', 0))
+        DISPLAY_BACKGROUND_TRANSPARENT = check_setting_str(CFG, 'General', 'display_background_transparent', 'transparent')
+        DISPLAY_ALL_SEASONS = bool(check_setting_int(CFG, 'General', 'display_all_seasons', 1))
 
         ACTUAL_LOG_DIR = check_setting_str(CFG, 'General', 'log_dir', 'Logs')
         # put the log dir inside the data dir, unless an absolute path
@@ -1472,6 +1478,9 @@ def save_config():
     new_config['General']['sort_article'] = int(SORT_ARTICLE)
     new_config['General']['proxy_setting'] = PROXY_SETTING
     new_config['General']['proxy_indexers'] = int(PROXY_INDEXERS)
+    new_config['General']['display_background'] = int(DISPLAY_BACKGROUND)
+    new_config['General']['display_background_transparent'] = DISPLAY_BACKGROUND_TRANSPARENT
+    new_config['General']['display_all_seasons'] = int(DISPLAY_ALL_SEASONS)
 
     new_config['General']['use_listview'] = int(USE_LISTVIEW)
     new_config['General']['metadata_xbmc'] = METADATA_XBMC

@@ -68,6 +68,12 @@
 * Fix release group not recognised from manually downloaded filename
 * Change to gracefully handle some "key not found" failures when TVDB or TVRage return "Not Found" during show updates
 * Change no longer stamp files where airdates are never
+* Change overhaul displayShow to ready for new features
+* Add section for show plot to displayShow
+* Add option to view show background on displayShow (transparent and opaque) for when background downloading is added (disabled)
+* Add option to collapse seasons and leave current season open on displayShow (disabled)
+* Add filesize to episode location qtip on displayShow
+* Change selected options from editShow will only show when enabled now on displayShow
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
