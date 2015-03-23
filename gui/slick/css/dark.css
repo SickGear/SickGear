@@ -347,6 +347,11 @@ home_postprocess.tmpl
 displayShow.tmpl
 ========================================================================== */
 
+tr.seasonheader{
+	text-align:left;
+	border:none
+}
+
 #prevShow,
 #nextShow,
 #topcontrol{
@@ -358,45 +363,44 @@ displayShow.tmpl
 	border:1px solid #111
 }
 
-.sickbeardTable tr.header td,
-.sickbeardTable th{
-	color:#fff;
-	background-color:#15528F
-}
-
-th.row-seasonheader{
-	border:none;
-	background-color:transparent;
-	color:#fff
-}
-
-tr.seasonheader{
-	text-align:left;
-	border:none
-}
-
 .display-details{
 	background-color:#3d3d3d;
 	border:1px solid #111
 }
 
-.display-details-transparent{
-	background:rgba(0,0,0,0.5);
-	border:1px solid rgba(0,0,0,0.5)
+.pro .details-title{
+	color:#999
 }
 
-.info-tag-bg,
-.genre-tag-bg{
+.back-art.pro .details-title{
+	color:#bbb
+}
+
+.back-art #details-top .label,
+.back-art #details-bottom .label{
 	background-color:#15528F
 }
 
-.info-tag-nobg,
-.genre-tag-nobg{
+#details-top .label,
+#details-bottom .label{
 	background-color:#15528F
 }
 
 .paused-highlight{
 	color:#09A2FF
+}
+
+.sickbeardTable th{
+	background-color:#15528f
+}
+
+.displayshow-wrapper .sickbeardTable th.row-seasonheader{
+	color:#fff
+}
+
+.back-art.pro .sickbeardTable .seasoncols th,
+.translucent.pro .sickbeardTable .seasoncols th{
+	background-color:rgba(21, 82, 143, 0.5)
 }
 
 /* =======================================================================

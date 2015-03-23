@@ -80,6 +80,12 @@
 * Add option to collapse seasons and leave current season open on displayShow (disabled)
 * Add filesize to episode location qtip on displayShow
 * Change selected options from editShow will only show when enabled now on displayShow
+* Change some label tags to fit with edit show page on displayShow
+* Fix handle when a show in db has all episodes removed from indexer on displayShow
+* Add the name of show that will be displayed to the hover of the Prev/Next show buttons on displayShow
+* Add hover tooltips for nfo and tbn columns for browsers that use the title attr on displayShow
+* Change Special link moved from "Season" line to "Specials" line on displayShow
+* Change code re-factored in readiness for live option switching, clean up and add closures of html tables
 * Add show overview from indexers to the database
 
 [develop changelog]
@@ -94,6 +100,11 @@
 * Fix to correctly use wanted_begin and wanted_latest when adding shows
 * Change Log/Error Log Menu icons to correct ones
 * Fix issue with missing QueueItemForceUpdate object has no attribute 'force_web'
+* Fix disabling IMDb broke page
+* Fix counting of files on displayShow
+* Add some tooltips to bottom show details for clarity on displayShow
+* Change red text on blue tag to white text on red tag to improve readability of invalid locations on displayShow
+* Change glyph to right side of "Show/Hide episodes" button text to improve visual when toggling button on displayShow
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 

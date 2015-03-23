@@ -60,8 +60,6 @@
 		<script type="text/javascript" src="$sbRoot/js/lib/imagesloaded.pkgd.min.js?$sbPID"></script>
 		<script type="text/javascript" src="$sbRoot/js/lib/jquery.confirm.js?$sbPID"></script>
 		<script type="text/javascript" src="$sbRoot/js/script.js?$sbPID"></script>
-
-		
 #if $sickbeard.FUZZY_DATING:
 		<script type="text/javascript" src="$sbRoot/js/moment/moment.min.js?$sbPID"></script>
 		<script type="text/javascript" src="$sbRoot/js/fuzzyMoment.js?$sbPID"></script>
@@ -128,7 +126,13 @@
 		<script type="text/javascript" src="$sbRoot/js/confirmations.js?$sbPID"></script>
 	</head>
 #set $tab = 4
-	<body>
+#set $body_attr = ''
+#try
+    #set $body_attr += ' id="%s"' % $page_body_attr
+#except
+    #pass
+#end try
+	<body$body_attr>
 		<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
 			<div class="container-fluid">
 				<div class="navbar-header">

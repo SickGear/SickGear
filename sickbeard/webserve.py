@@ -1068,12 +1068,40 @@ class Home(MainHandler):
         epCounts[Overview.GOOD] = 0
         epCounts[Overview.UNAIRED] = 0
         epCounts[Overview.SNATCHED] = 0
+        epCounts['videos'] = {}
+        epCounts['archived'] = {}
+        epCounts['totals'] = {}
+        highest_season = 0
+        latest_season = 0
 
         for curResult in sqlResults:
             curEpCat = showObj.getOverview(int(curResult['status']))
             if curEpCat:
                 epCats[str(curResult['season']) + 'x' + str(curResult['episode'])] = curEpCat
                 epCounts[curEpCat] += 1
+            if '' != curResult['location']:
+                if curResult['season'] not in epCounts['videos']:
+                    epCounts['videos'][curResult['season']] = 1
+                else:
+                    epCounts['videos'][curResult['season']] += 1
+            if curResult['season'] not in epCounts['totals']:
+                epCounts['totals'][curResult['season']] = 1
+            else:
+                epCounts['totals'][curResult['season']] += 1
+            if ARCHIVED == curResult['status']:
+                if curResult['season'] not in epCounts['archived']:
+                    epCounts['archived'][curResult['season']] = 1
+                else:
+                    epCounts['archived'][curResult['season']] += 1
+            if highest_season < curResult['season'] and 1000 < curResult['airdate'] and UNAIRED < curResult['status']:
+                highest_season = curResult['season']
+
+        latest_season = int(sorted(epCounts['totals'])[-1::][0])
+
+        display_seasons = []
+        if 1 < highest_season:
+            display_seasons += [1]
+        display_seasons += [highest_season]
 
         def titler(x):
             return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
@@ -1105,6 +1133,8 @@ class Home(MainHandler):
 
         t.epCounts = epCounts
         t.epCats = epCats
+        t.display_seasons = display_seasons
+        t.latest_season = latest_season
 
         showObj.exceptions = scene_exceptions.get_scene_exceptions(showObj.indexerid)
 

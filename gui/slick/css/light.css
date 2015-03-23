@@ -187,6 +187,19 @@ inc_bottom.tmpl
 	color:#428BCA
 }
 
+body#display-show.back-art .displayshow-wrapper a,
+body#display-show.back-art .footerhighlight a,
+body#display-show.back-art .footerhighlight{
+	color:#c7db40
+}
+
+body#display-show.back-art .displayshow-wrapper a:hover,
+body#display-show.back-art .displayshow-wrapper a:focus,
+body#display-show.back-art .footerhighlight a:hover,
+body#display-show.back-art .footerhighlight a:focus{
+	color:#9faf33
+}
+
 /* =======================================================================
 home.tmpl
 ========================================================================== */
@@ -335,6 +348,11 @@ home_postprocess.tmpl
 displayShow.tmpl 
 ========================================================================== */
 
+tr.seasonheader{
+	border:none;
+	color:#000
+}
+
 #prevShow,
 #nextShow,
 #topcontrol{
@@ -348,44 +366,43 @@ displayShow.tmpl
 	border:1px solid #ccc
 }
 
-.sickbeardTable th{
-	color:#fff;
-	background-color:#333
-}
-
-th.row-seasonheader{
-	border:none;
-	background-color:transparent;
-	color:#000
-}
-
-tr.seasonheader{
-	border:none;
-	color:#000
-}
-
 .display-details{
 	background-color:#efefef;
 	border:1px solid #dfdede
 }
 
-.display-details-transparent{
-	background:rgba(0,0,0,0.5);
-	border:1px solid rgba(0,0,0,0.5)
+.pro .details-title{
+	color:#666
 }
 
-.info-tag-bg,
-.genre-tag-bg{
+.back-art.pro .details-title{
+	color:#bbb
+}
+
+.back-art #details-top .label,
+.back-art #details-bottom .label{
 	background-color:#215f2f
 }
 
-.info-tag-nobg,
-.genre-tag-nobg{
+#details-top .label,
+#details-bottom .label{
 	background-color:#555
 }
 
 .paused-highlight{
 	color:#C7DB40
+}
+
+.sickbeardTable th{
+	background-color:#333
+}
+
+.displayshow-wrapper .sickbeardTable th.row-seasonheader{
+	color:#000
+}
+
+.translucent.pro .sickbeardTable th{
+	background-color:rgba(51, 51, 51, 0.5)
 }
 
 /* =======================================================================
