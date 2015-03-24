@@ -1,10 +1,10 @@
 #import sickbeard
 #from sickbeard.common import *
 #from sickbeard import subtitles
-
+        <div class="stepDiv linefix">
 		<div class="field-pair">
 			<label for="statusSelect">
-				<span class="component-title input">Initial episode status</span>
+				<span class="component-title">Initial episode status</span>
 				<span class="component-desc">
 					<select name="defaultStatus" id="statusSelect" class="form-control form-control-inline input-sm">
 #for $curStatus in [$SKIPPED, $WANTED, $ARCHIVED, $IGNORED]:
@@ -101,6 +101,7 @@
 					<p>reuse the above options when adding more shows</p>
 				</span>
 			</label>
+		</div>
 		</div>
 
 #if $enable_anime_options

@@ -66,7 +66,8 @@
 * Remove restriction to not display snatched eps link in footer on Episode Overview page
 * Change the shows episodes count text colour to visually separete from year numbers at the end of show names
 * Change to add clarity to the subtitle and other columns on the Mass Update page
-* Change to improve clarity with "Limited backlog search" on the Config/Search Settings page
+* Change to improve clarity with "Recent search" and "Limited backlog" on the Config/Search Settings page
+* Change vertical alignment of input fields to be inline with text
 * Add tooltips to explain why any the 6 action columns are disabled when required on the Mass Update page
 * Change to reclaimed screen estate by hiding unused columns on the Mass Update page
 * Change order of option on Mass Edit page to be inline with show edit page

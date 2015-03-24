@@ -27,7 +27,7 @@
 #set $selected = 'selected="selected" class="selected"'
 
 <div id="config" class="pp">
-	<div id="config-content">
+	<div id="config-content" class="linefix">
 
 		<form id="configForm" action="savePostProcessing" method="post">
 
@@ -50,12 +50,12 @@
 						<div class="field-pair">
 							<label for="tv_download_dir">
 								<span class="component-title">Completed TV downloads
-									<div class="red-text"><em class="boldest">must not</em> be the folder where downloading files are created</div>
+									<p class="red-text" style="line-height:20px;margin:0"><em class="boldest">must not</em> be the folder where downloading files are created</p>
 								</span>
 								<span class="component-desc">
 									<input type="text" name="tv_download_dir" id="tv_download_dir" value="$sickbeard.TV_DOWNLOAD_DIR" class="form-control input-sm input350">
 									<div class="pull-left">
-										<p>folder where download clients save <b><em class="boldest">completed</em></b> downloads.&nbsp;
+										<p class="note">folder where download clients save <b><em class="boldest">completed</em></b> downloads.&nbsp;
 										<b>note:</b> only use if not using SABnzbd post processing <em>or</em> if SABnzbd is on a different PC to SickGear</p>
 									</div>
 								</span>
@@ -64,7 +64,7 @@
 
 						<div class="field-pair">
 							<label for="process_method">
-								<span class="component-title input">Process episode method</span>
+								<span class="component-title">Process episode method</span>
 								<span class="component-desc">
 									<select name="process_method" id="process_method" class="form-control input-sm">
 #set $process_method_text = {'copy': 'Copy', 'move': 'Move', 'hardlink': 'Hard Link', 'symlink' : 'Symbolic Link'}
@@ -83,8 +83,8 @@
 								<span class="component-title">Scan and post process</span>
 								<span class="component-desc">
 									<input type="checkbox" name="process_automatically" id="process_automatically" #if $sickbeard.PROCESS_AUTOMATICALLY == True then $checked else ''#>
-									<p>files in the <em>completed TV downloads</em> folder.&nbsp;
-									<b>note:</b> do not enable with external post processing scripts like sabToSickbeard for SABnzbd, or NZBMedia for NZBGET</p>
+									<p>files in the <em>completed TV downloads</em> folder</p>
+									<p class="clear-left note"><b>note:</b> do not enable with external post processing scripts like sabToSickbeard for SABnzbd, or NZBMedia for NZBGET</p>
 								</span>
 							</label>
 						</div>
@@ -116,7 +116,7 @@
 									<input type="text" name="extra_scripts" id="extra_scripts" value="<%='|'.join(sickbeard.EXTRA_SCRIPTS)%>" class="form-control input-sm input350">
 									<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_extra_params" title="Toggle info for script arguments" class="legend" class="legend" />
 									<div class="clear-left">
-										<p>scripts are called after built-in post processing.
+										<p class="note">scripts are called after built-in post processing.
 										&nbsp;<b>note:</b> use <b class="grey-text boldest">|</b> to separate additional extra scripts
 										 (e.g. <span class="grey-text">inside_SG_root_folder.sh|/other/path/to/script.py</span>)</p>
 										<div id="extra_params" style="display: none">
@@ -178,7 +178,7 @@
 
 						<div class="field-pair">
 							<label for="skip_removed_files">
-								<span class="component-title input">Status of removed episodes</span>
+								<span class="component-title">Status of removed episodes</span>
 								<span class="component-desc">
 									<select name="skip_removed_files" id="skip_removed_files" class="form-control form-control-inline input-sm">
 
@@ -228,8 +228,8 @@
 								<span class="component-title">Change file date</span>
 								<span class="component-desc">
 									<input type="checkbox" name="airdate_episodes" id="airdate_episodes" #if $sickbeard.AIRDATE_EPISODES == True then $checked else ''#>
-									<p>set last modified filedate to the date that the episode aired<br />
-									<b>note:</b> some systems may ignore this feature.</p>
+									<p>set last modified filedate to the date that the episode aired</p>
+									<p class="note"><b>note:</b> some systems may ignore this feature.</p>
 								</span>
 							</label>
 						</div>
@@ -262,10 +262,10 @@
 							<div class="field-pair" style="padding-top:0">
 								<span class="component-desc">
 									<ul id="failed-guide">
-										<li class="title">SABnzbd setup guide</li>
-										<li class="action">menu "Switches"&nbsp;... [disable] "<em class="boldest">Abort jobs that cannot be completed</em>"</li>
-										<li class="action">menu "Switches"&nbsp;... [disable] "<em class="boldest">Post-Process Only Verified Jobs</em>"</li>
-										<li class="action">menu "Special"&nbsp;... [enable] "<em class="boldest">empty_postproc</em>"</li>
+										<li class="title note">SABnzbd setup guide</li>
+										<li class="action note">menu "Switches"&nbsp;... [disable] "<em class="boldest">Abort jobs that cannot be completed</em>"</li>
+										<li class="action note">menu "Switches"&nbsp;... [disable] "<em class="boldest">Post-Process Only Verified Jobs</em>"</li>
+										<li class="action note">menu "Special"&nbsp;... [enable] "<em class="boldest">empty_postproc</em>"</li>
 									</ul>
 								</span>
 							</div>
@@ -309,7 +309,7 @@
 
 						<div class="field-pair">
 							<label for="name_presets">
-								<span class="component-title input">Name pattern</span>
+								<span class="component-title">Name pattern</span>
 								<span class="component-desc">
 									<select id="name_presets" class="form-control input-sm">
 #set is_custom = True
@@ -460,7 +460,7 @@
 
 						<div class="field-pair">
 							<label for="naming_multi_ep">
-								<span class="component-title input">Multi episode style</span>
+								<span class="component-title">Multi episode style</span>
 								<span class="component-desc">
 									<select id="naming_multi_ep" name="naming_multi_ep" class="form-control input-sm">
 #for $cur_multi_ep in sorted($multiEpStrings.items(), key=lambda x: x[1]):
@@ -530,7 +530,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_abd_presets">
-									<span class="component-title input">Air-by-date name pattern</span>
+									<span class="component-title">Air-by-date name pattern</span>
 									<span class="component-desc">
 										<select id="name_abd_presets" class="form-control input-sm">
 #set is_abd_custom = True
@@ -728,7 +728,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_sports_presets">
-									<span class="component-title input">Sports name pattern</span>
+									<span class="component-title">Sports name pattern</span>
 									<span class="component-desc">
 										<select id="name_sports_presets" class="form-control input-sm">
 #set is_sports_custom = True
@@ -931,7 +931,7 @@
 						<fieldset class="component-group-list">
 							<div class="field-pair right">
 								<label for="name_anime_presets">
-									<span class="component-title input">Anime name pattern</span>
+									<span class="component-title">Anime name pattern</span>
 									<span class="component-desc">
 										<select id="name_anime_presets" class="form-control input-sm">
 #set is_anime_custom = True
@@ -1081,7 +1081,7 @@
 
 								<div class="field-pair">
 									<label for="naming_anime_multi_ep">
-										<span class="component-title input">Multi episode style</span>
+										<span class="component-title">Multi episode style</span>
 										<span class="component-desc">
 											<select id="naming_anime_multi_ep" name="naming_anime_multi_ep" class="form-control input-sm">
 #for $cur_multi_ep in sorted($multiEpStrings.items(), key=lambda x: x[1]):
@@ -1127,8 +1127,8 @@
 									<span class="component-title">Add absolute numbering</span>
 									<span class="component-desc">
 										<input type="radio" name="naming_anime" id="naming_anime" value="1" #if $sickbeard.NAMING_ANIME == 1 then $checked else ''#/>
-										<p>add the absolute number to the season/episode format<br />
-										(eg. S15E45 - 310 vs S15E45)</p>
+										<p>add the absolute number to the season/episode format</p>
+										<p class="note">(eg. S15E45 - 310 vs S15E45)</p>
 									</span>
 								</label>
 							</div>
@@ -1181,7 +1181,7 @@
 					<fieldset class="component-group-list">
 						<div class="field-pair">
 							<label>
-								<span class="component-title input">Metadata target</span>
+								<span class="component-title">Metadata target</span>
 								<span class="component-desc">
 #set $m_dict = $metadata.get_metadata_generator_dict()
 									<select id="metadataType" class="form-control input-sm">
