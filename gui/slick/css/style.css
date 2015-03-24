@@ -1899,6 +1899,10 @@ config*.tmpl
 	padding:12px 0
 }
 
+#config .linefix div.field-pair{
+	padding:6px 0 12px 0
+}
+
 #config div.field-pair select,
 #config div.field-pair input{
 	margin-right:6px
@@ -1920,6 +1924,26 @@ config*.tmpl
 
 #config span.component-title.input{
 	line-height:24px
+}
+
+.stepDiv.linefix span.component-title,
+#config .linefix span.component-title{
+	line-height:29px !important
+}
+
+.stepDiv.linefix span.component-desc,
+#config .linefix span.component-desc{
+	line-height:30px
+}
+
+.stepDiv.linefix span.component-desc .note,
+#config .linefix span.component-desc .note{
+	line-height:18px
+}
+
+.stepDiv.linefix span.component-desc p,
+#config .linefix span.component-desc p{
+	margin-bottom:0
 }
 
 .stepDiv span.component-title.input{
@@ -2158,11 +2182,6 @@ config_postProcessing.tmpl
 	background-color:#dfdede
 }
 
-.legend{
-	position:relative;
-	top:2px
-}
-
 #failed-guide,
 #failed-guide .title,
 #failed-guide li{
@@ -2197,7 +2216,7 @@ config_notifications.tmpl
 
 div.metadata_options_wrapper{
 	float:left;
-	width:190px
+	width:196px
 }
 
 div.metadata_example_wrapper{
@@ -2207,6 +2226,10 @@ div.metadata_example_wrapper{
 div.metadata_options_wrapper h4,
 div.metadata_example_wrapper h4{
 	margin:0 0 10px
+}
+
+#config .linefix div.metadata_options input[type=checkbox]{
+	margin-top:4px
 }
 
 div.metadata_options{
@@ -2232,7 +2255,7 @@ div.metadata_options label,
 div.metadata_example label{
 	line-height:21px;
 	display:block;
-	padding:3px;
+	padding:3px 6px;
 	margin:0
 }
 div.metadata_options input{
@@ -3090,6 +3113,21 @@ input sizing (for config pages)
 .input350{
 	width:350px;
 	margin-top:-4px
+}
+
+.stepDiv.linefix .select,.stepDiv.linefix .btn-inline,.stepDiv.linefix .input75,.stepDiv.linefix .input100,.stepDiv.linefix .input150,.stepDiv.linefix .input200,.stepDiv.linefix .input250,.stepDiv.linefix .input300,.stepDiv.linefix .input350,
+#config .linefix .select,#config .linefix .btn-inline,#config .linefix .input75,#config .linefix .input100,#config .linefix .input150,#config .linefix .input200,#config .linefix .input250,#config .linefix .input300,#config .linefix .input350{
+	margin-top:0
+}
+
+.stepDiv.linefix input[type=radio],.stepDiv.linefix input[type=checkbox],
+#config .linefix input[type=radio],#config .linefix input[type=checkbox]{
+	margin-top:0.7em
+}
+
+.stepDiv.linefix input[type=button],
+#config .linefix input[type=button]{
+	margin-top:1px
 }
 
 /* =======================================================================
