@@ -173,7 +173,7 @@ class SBRotatingLogHandler(object):
         """
 
         file_handler = TimedCompressedRotatingFileHandler(self.log_file_path, when='midnight', backupCount=7, encoding='utf-8')
-        file_handler.setLevel(DB)
+        file_handler.setLevel(reverseNames[sickbeard.FILE_LOGGING_PRESET])
         file_handler.setFormatter(DispatchingFormatter(
             {'sickbeard': logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', '%Y-%m-%d %H:%M:%S'),
              'subliminal': logging.Formatter('%(asctime)s %(levelname)-8s SUBLIMINAL :: %(message)s',
@@ -304,3 +304,8 @@ def log_error_and_exit(error_msg):
 
 def close():
     sb_log_instance.close_log()
+
+
+def log_set_level():
+    if sb_log_instance.cur_handler:
+        sb_log_instance.cur_handler.setLevel(reverseNames[sickbeard.FILE_LOGGING_PRESET])
