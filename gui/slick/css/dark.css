@@ -195,10 +195,6 @@ inc_top.tmpl
 inc_bottom.tmpl
 ========================================================================== */
 
-.footer{
-	color:#fff
-}
-
 .footerhighlight{
 	color:#09A2FF
 }
@@ -358,27 +354,7 @@ displayShow.tmpl
 	filter:none
 }
 
-h1.title{
-	border-bottom:1px solid #555
-}
-
-ul.tags li{
-	background:url(../images/tag.png) no-repeat scroll 5px 4px #15528F;
-	border:1px solid #111;
-	color:#FFF;
-	text-shadow:0 1px rgba(0, 0, 0, 0.8)
-}
-
-ul.tags li a{
-	color:#FFF
-}
-
 .tvshowImg{
-	border:1px solid #111
-}
-
-#summary{
-	background-color:#3d3d3d;
 	border:1px solid #111
 }
 
@@ -386,13 +362,6 @@ ul.tags li a{
 .sickbeardTable th{
 	color:#fff;
 	background-color:#15528F
-}
-
-.sickbeardTable tr.header td,
-.sickbeardTable th,
-.sickbeardTable td{
-	border-top:1px solid #222;
-	border-left:1px solid #222
 }
 
 th.row-seasonheader{
@@ -404,6 +373,30 @@ th.row-seasonheader{
 tr.seasonheader{
 	text-align:left;
 	border:none
+}
+
+.display-details{
+	background-color:#3d3d3d;
+	border:1px solid #111
+}
+
+.display-details-transparent{
+	background:rgba(0,0,0,0.5);
+	border:1px solid rgba(0,0,0,0.5)
+}
+
+.info-tag-bg,
+.genre-tag-bg{
+	background-color:#15528F
+}
+
+.info-tag-nobg,
+.genre-tag-nobg{
+	background-color:#15528F
+}
+
+.paused-highlight{
+	color:#09A2FF
 }
 
 /* =======================================================================

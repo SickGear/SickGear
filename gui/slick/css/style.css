@@ -5,7 +5,6 @@ fonts
 /* Regular */
 @font-face{
 	font-family:'Open Sans';
-
 	src:url('fonts/OpenSans-Regular-webfont.eot');
 	src:url('fonts/OpenSans-Regular-webfont.eot?#iefix') format('embedded-opentype'),
 		url('fonts/OpenSans-Regular-webfont.woff') format('woff'),
@@ -498,13 +497,11 @@ inc_bottom.tmpl
 .footer{
 	width:100%;
 	padding:20px 0;
-	color:#4e4e4e;
 	text-align:center;
 	font-size:12px
 }
 
 .footerhighlight{
-	color:#111;
 	display:inline
 }
 
@@ -1073,14 +1070,181 @@ home_postprocess.tmpl
 displayShow.tmpl 
 ========================================================================== */
 
+.background-container{
+	position:fixed;
+	top:0;
+	right:0;
+	bottom:0;
+	left:0;
+	z-index:-1
+}
+
+.background{
+	position:absolute;
+	top:0;
+	right:0;
+	bottom:0;
+	left:0;
+	background-position:center center;
+	background-size:cover
+}
+
+.background-transparent:after{
+	position:absolute;
+	content:"";
+	top:0;
+	left:0;
+	width:100%;
+	height:100%;
+	background:rgba(0,0,0,.5)
+}
+
 #posterCol{
 	float:left;
-	margin:3px 10px 20px 0
+	margin:0 10px 20px 0
 }
 
 #showCol{
 	overflow:hidden;
 	margin-bottom:20px
+}
+
+.display-show-container{
+	margin-top:10px
+}
+
+.display-show{
+	margin:30px 0
+}
+
+.display-season{
+	background:rgba(0,0,0,0.5);
+	border-radius:3px;
+	padding:10px
+}
+
+.display-details,
+.display-details-transparent{
+	border-radius:3px;
+	padding:8px 10px;
+	margin-bottom:20px
+}
+
+#details-wrapper{
+	float:left;
+	width:100%;
+	position:relative;
+	cursor:default
+}
+
+#details-top{
+	height:70px
+}
+
+#details-bottom{
+	display:inline-block;
+	width:100%
+}
+
+#details-bottom .label{
+	line-height:24px;
+	cursor:default
+}
+
+#details-right{
+	width:250px;
+	float:right;
+	margin-left:15px
+}
+
+#details-right .flag{
+	margin-right:4px;
+	vertical-align:baseline
+}
+
+.details-plot{
+	min-height:217px;
+	overflow:hidden
+}
+
+.show-class{
+	padding-bottom:5px
+}
+
+.title{
+	margin:0;
+	text-align:left;
+	white-space:nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	height:42px
+}
+
+.genre-tag-bg,
+.genre-tag-nobg{
+	padding:3px 4px 3px 22px;
+	background:url(../images/tag.png) no-repeat scroll 4px 3px;
+	cursor:default
+}
+
+.genre-tag-bg a,
+.genre-tag-bg a:hover,
+.genre-tag-nobg a,
+.genre-tag-nobg a:hover{
+	color:#fff;
+	text-decoration:none
+}
+
+span.imdbstars{
+	display:inline-block;
+	margin:0 3px 0 0;
+	vertical-align:baseline;
+	cursor:help
+}
+
+span.imdbstars > *{
+	background-position:0 0 !important;
+	max-width:120px
+}
+
+span.imdbstars, span.imdbstars > *{
+	height:12px;
+	width:120px;
+	display:inline-block;
+	font-size:10px;
+	background:url(../images/rating.png) 0 -12px repeat-x
+}
+
+.moreless{
+	margin-top:-3px
+}
+
+.no-plot{
+	font-style: italic
+}
+
+.paused{
+	font-size:200px;
+	text-align:center;
+	position:absolute;
+	margin:0 auto;
+	left:0;
+	right:0;
+	padding-top:25px;
+	opacity:.3
+}
+
+.paused-outline{
+	text-shadow:5px 5px 10px #000
+}
+
+.qtip-maxwidth {
+	max-width:1000px
+}
+
+.season-status {
+	font-size:12px;
+	vertical-align:middle
 }
 
 .navShow{
@@ -1097,112 +1261,17 @@ displayShow.tmpl
 	filter:url("data:image/svg+xml;utf8,<svg version='1.1' xmlns='http://www.w3.org/2000/svg' height='0'><filter id='greyscale'><feColorMatrix type='matrix' values='0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0' /></filter></svg>#greyscale")
 }
 
-h1.title{
-	padding-bottom:12px;
-	margin-bottom:15px;
-	line-height:30px;
-	text-align:left;
-	text-rendering:optimizelegibility;
-	border-bottom:1px solid #888
-}
-
-.displayspecials{
-	position:relative;
-	top:-24px
-}
-
-#showinfo{
-	cursor:default
-}
-
-#showinfo{
-	display:inline-block;
-	position:relative;
-	top:-3px
-}
-
-span.imdbstars{
-	display:inline-block;
-	margin:0 3px 0 0;
-	vertical-align:baseline;
-	cursor:help
-}
-span.imdbstars > *{
-	background-position:0 0 !important;
-	max-width:120px
-}
-span.imdbstars, span.imdbstars > *{
-	height:12px;
-	width:120px;
-	display:inline-block;
-	font-size:10px;
-	background:url(../images/rating.png) 0 -12px repeat-x;
-	margin-bottom:-1px
-}
-
-#showinfo .flag{
-	margin:0 3px 1px 0;
-	vertical-align:middle
-}
-
-#showinfo .imdb-info{
-	margin:0 3px 0 0
-}
-
-#showinfo a.service{
-	margin:0 3px 0 0;
-	font-size:16px
-}
-
-#showinfo a.service img{
-	margin-bottom:1px
-}
-
-ul.tags{
-	list-style-type:none;
-	position:relative;
-	top:-5px;
-	margin-left:-40px
-}
-
-ul.tags li{
-	margin-right:4px;
-	margin-bottom:5px;
-	padding:3px 7px 3px 23px;
-	background:url(../images/tag.png) no-repeat scroll 5px 4px #555;
-	border-radius:3px;
-	border:1px solid #111;
-	color:#FFF;
-	font:14px/18px "Open Sans", "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
-	text-shadow:0 1px rgba(0, 0, 0, 0.8);
-	float:left
-}
-
-ul.tags li a{
-	color:#FFF
+a.service img{
+	margin-bottom:-2px;
+	vertical-align:baseline
 }
 
 .tvshowImg{
 	border:1px solid #ccc;
-	border-radius:5px;
-	height:311px;
+	border-radius:3px;
+	height:329px;
 	width:auto;
 	float:left
-}
-
-#summary{
-	padding:10px;
-	background-color:#efefef;
-	border:1px solid #dfdede;
-	width:100%;
-	height:250px;
-	overflow:auto;
-	cursor:default
-}
-
-.summaryTable{
-	max-width:70%;
-	overflow:hidden
 }
 
 #checkboxControls{
@@ -1312,8 +1381,8 @@ span.snatched b{
 .sickbeardTable{
 	table-layout:auto;
 	width:100%;
-	border-collapse:collapse;
-	border-spacing:0;
+	border-collapse:separate !important;
+	border-spacing:1px;
 	text-align:center;
 	border:none;
 	empty-cells:show;
@@ -1335,8 +1404,6 @@ span.snatched b{
 .sickbeardTable tr.header td,
 .sickbeardTable th,
 .sickbeardTable td{
-	border-top:1px solid #fff;
-	border-left:1px solid #fff;
 	padding:4px
 }
 
@@ -1346,10 +1413,12 @@ span.snatched b{
 
 th.row-seasonheader{
 	border:none;
-	background-color:#fff;
-	color:#000;
-	padding-top:15px;
+	background-color:transparent !important;
 	text-align:left
+}
+
+th.row-seasonheader h3{
+	margin:0
 }
 
 tr.seasonheader{
@@ -1420,25 +1489,6 @@ td.col-search{
 	width:46px
 }
 
-.showLegend{
-	padding-right:6px;
-	padding-bottom:1px;
-	width:150px;
-	vertical-align:top
-}
-
-.options-on-right{
-	width:180px;
-	float:right;
-	vertical-align:middle;
-	height:100%
-}
-
-.options-on-right .showLegendRight{
-	padding-right:6px;
-	padding-bottom:1px
-}
-
 .input-scene{
 	height:20px;
 	line-height:1.5;
@@ -1446,8 +1496,6 @@ td.col-search{
 }
 
 #editShow{
-	/*width:700px;
-	padding-top:10px;*/
 	margin-right:auto;
 	margin-left:auto;
 	padding:15px 0 0
