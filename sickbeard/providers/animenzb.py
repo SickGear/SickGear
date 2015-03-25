@@ -33,7 +33,7 @@ class animenzb(generic.NZBProvider):
 
     def __init__(self):
 
-        generic.NZBProvider.__init__(self, "animenzb")
+        generic.NZBProvider.__init__(self, 'animenzb')
 
         self.supportsBacklog = False
         self.supportsAbsoluteNumbering = True
@@ -59,18 +59,18 @@ class animenzb(generic.NZBProvider):
 
     def _doSearch(self, search_string, search_mode='eponly', epcount=0, age=0):
         if self.show and not self.show.is_anime:
-            logger.log(u"" + str(self.show.name) + " is not an anime skiping ...")
+            logger.log(u'%s is not an anime skipping ...' % self.show.name)
             return []
 
         params = {
-            "cat": "anime",
-            "q": search_string.encode('utf-8'),
-            "max": "100"
+            'cat': 'anime',
+            'q': search_string.encode('utf-8'),
+            'max': '100'
         }
 
-        search_url = self.url + "rss?" + urllib.urlencode(params)
+        search_url = self.url + 'rss?' + urllib.urlencode(params)
 
-        logger.log(u"Search url: " + search_url, logger.DEBUG)
+        logger.log(u'Search url: %s' % search_url, logger.DEBUG)
 
         data = self.cache.getRSSFeed(search_url)
         if not data:
@@ -88,7 +88,7 @@ class animenzb(generic.NZBProvider):
                     results.append(curItem)
                 else:
                     logger.log(
-                        u"The data returned from " + self.name + " is incomplete, this result is unusable",
+                        u'The data returned from %s is incomplete, this result is unusable' % self.name,
                         logger.DEBUG)
 
             return results
@@ -99,7 +99,7 @@ class animenzb(generic.NZBProvider):
 
         results = []
 
-        for item in self._doSearch("v2|v3|v4|v5"):
+        for item in self._doSearch('v2|v3|v4|v5'):
 
             (title, url) = self._get_title_and_url(item)
 
@@ -108,7 +108,7 @@ class animenzb(generic.NZBProvider):
                 if result_date:
                     result_date = datetime.datetime(*result_date[0:6])
             else:
-                logger.log(u"Unable to figure out the date for entry " + title + ", skipping it")
+                logger.log(u'Unable to figure out the date for entry %s, skipping it' % title)
                 continue
 
             if not date or result_date > date:
@@ -130,13 +130,13 @@ class animenzbCache(tvcache.TVCache):
     def _getRSSData(self):
 
         params = {
-            "cat": "anime".encode('utf-8'),
-            "max": "100".encode('utf-8')
+            'cat': 'anime'.encode('utf-8'),
+            'max': '100'.encode('utf-8')
         }
 
         rss_url = self.provider.url + 'rss?' + urllib.urlencode(params)
 
-        logger.log(self.provider.name + u" cache update URL: " + rss_url, logger.DEBUG)
+        logger.log(u'%s cache update URL: %s' % (self.provider.name, rss_url), logger.DEBUG)
 
         data = self.getRSSFeed(rss_url)
 
