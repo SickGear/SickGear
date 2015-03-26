@@ -168,7 +168,7 @@ a:hover,a:focus{color:#9FAF33}
 				<div id="details-top">
 					<div id="showtitle" data-showname="$show.name">
 						<h2 class="title" id="scene_exception_$show.indexerid"><span>$show.name</span></h2>
-#if not $show.imdbid
+#if not $sickbeard.USE_IMDB_INFO:
     #if $show.genre:
         #for $genre in $show.genre[1:-1].replace('Science-Fiction','Sci-Fi').split('|')
 						<span class="label $genretag"><a href="<%= anon_url('http://www.imdb.com/search/title?at=0&genres=', genre.lower().replace('-','_'),'&amp;sort=moviemeter,asc&amp;title_type=tv_series') %>" target="_blank" title="View other popular $genre shows on imdb.com">$genre</a></span>
@@ -187,7 +187,7 @@ a:hover,a:focus{color:#9FAF33}
 			<div id="details-wrapper">
 				<div id="details-right">
 					<ul class="list-unstyled">
-#if not $show.imdbid
+#if not $sickbeard.USE_IMDB_INFO:
     #set $runtime = $show.runtime
     #set $startyear = $show.startyear
 #else
