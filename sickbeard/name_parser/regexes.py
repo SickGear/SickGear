@@ -224,6 +224,26 @@ anime_regexes = [
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
      '''),
+    ('anime_standard_ep',
+     #[Exiled-Destiny]_Girls_Bravo_Ep10v3_[R2_Video]_(B88C6415)
+     '''
+     ^(\[(?P<release_group>.+?)\][ ._-]*)?         #Release Group and separator
+     (?P<series_name>.+?)[ ._-]+                   #Show_Name and separator
+     (Ep|ep|eP|EP)(?P<ep_ab_num>\d{1,3})?          #EP01
+     (-(?P<extra_ab_ep_num>\d{1,3}))?
+     (v(?P<version>[0-9]))?                        #version
+     .*?
+     '''),
+    ('anime_standard_version',
+     #[Vivid-Watashi] Aldnoah Zero - 04v2 [5410B2FC]
+     '''
+     ^(\[(?P<release_group>.+?)\][ ._-]*)?         #release group and sep
+     (?P<series_name>.+?)[ ._-]+                   #show name
+     (?P<ep_ab_num>\d{1,3})                        #ep number
+     (-(?P<extra_ab_ep_num>\d{1,3}))?              #extra
+     (v(?P<version>[0-9]))?                        #version
+     .*?
+     '''),
     ('anime_standard_round',
      # [Stratos-Subs]_Infinite_Stratos_-_12_(1280x720_H.264_AAC)_[379759DB]
      # [ShinBunBu-Subs] Bleach - 02-03 (CX 1280x720 x264 AAC)
