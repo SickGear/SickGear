@@ -223,7 +223,8 @@ anime_regexes = [
      [ ._-]+\[(?P<extra_info>\d{3,4}[xp]?\d{0,4}[\.\w\s-]*)\] # Source_Quality_Etc-
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
-     '''),
+     '''
+    ),
     ('anime_standard_ep',
      #[Exiled-Destiny]_Girls_Bravo_Ep10v3_[R2_Video]_(B88C6415)
      '''
@@ -233,7 +234,8 @@ anime_regexes = [
      (-(?P<extra_ab_ep_num>\d{1,3}))?
      (v(?P<version>[0-9]))?                        #version
      .*?
-     '''),
+     '''
+    ),
     ('anime_standard_version',
      #[Vivid-Watashi] Aldnoah Zero - 04v2 [5410B2FC]
      '''
@@ -243,7 +245,8 @@ anime_regexes = [
      (-(?P<extra_ab_ep_num>\d{1,3}))?              #extra
      (v(?P<version>[0-9]))?                        #version
      .*?
-     '''),
+     '''
+    ),
     ('anime_standard_round',
      # [Stratos-Subs]_Infinite_Stratos_-_12_(1280x720_H.264_AAC)_[379759DB]
      # [ShinBunBu-Subs] Bleach - 02-03 (CX 1280x720 x264 AAC)
@@ -256,7 +259,8 @@ anime_regexes = [
      [ ._-]+\((?P<extra_info>(CX[ ._-]?)?\d{3,4}[xp]?\d{0,4}[\.\w\s-]*)\) # Source_Quality_Etc-
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
-     '''),
+     '''
+    ),
     ('anime_slash',
      # [SGKK] Bleach 312v1 [720p/MKV]
      '''
@@ -268,7 +272,8 @@ anime_regexes = [
      [ ._-]+\[(?P<extra_info>\d{3,4}p)             # Source_Quality_Etc-
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
-     '''),
+     '''
+    ),
     ('anime_standard_codec',
      # [Ayako]_Infinite_Stratos_-_IS_-_07_[H264][720p][EB7838FC]
      # [Ayako] Infinite Stratos - IS - 07v2 [H264][720p][44419534]
@@ -284,7 +289,8 @@ anime_regexes = [
      [ ._-]*\[(?P<extra_info>(\d{3,4}[xp]?\d{0,4})?[\.\w\s-]*)\] # Source_Quality_Etc-
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
-     '''),
+     '''
+    ),
     ('anime_and_normal',
      # Bleach - s16e03-04 - 313-314
      # Bleach.s16e03-04.313-314
@@ -375,8 +381,8 @@ anime_regexes = [
      (-(?P<extra_ab_ep_num>\d{3}))*                # E02
      (v(?P<version>[0-9]))?                        # v2
      .*?                                           # Separator and EOL
-     '''),
-
+     '''
+     ),
      ('standard',
      # Show.Name.S01E02.Source.Quality.Etc-Group
      # Show Name - S01E02 - My Ep Name
