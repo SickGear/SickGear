@@ -77,7 +77,7 @@
 * Change overhaul displayShow to ready for new features
 * Add section for show plot to displayShow
 * Add option to view show background on displayShow (transparent and opaque) for when background downloading is added (disabled)
-* Add option to collapse seasons and leave current season open on displayShow (disabled)
+* Add option to collapse seasons and leave current season open on displayShow
 * Add filesize to episode location qtip on displayShow
 * Change selected options from editShow will only show when enabled now on displayShow
 * Add show overview from indexers to the database
@@ -94,6 +94,7 @@
 * Fix to correctly use wanted_begin and wanted_latest when adding shows
 * Change Log/Error Log Menu icons to correct ones
 * Fix issue with missing QueueItemForceUpdate object has no attribute 'force_web'
+* Fix variables on displayShow for startyear, runtime and genres if imdb is disabled
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
