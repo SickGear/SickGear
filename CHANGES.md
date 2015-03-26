@@ -87,6 +87,7 @@
 * Change Special link moved from "Season" line to "Specials" line on displayShow
 * Change code re-factored in readiness for live option switching, clean up and add closures of html tables
 * Add show overview from indexers to the database
+* Fix genre tags on displayShow when imdb is disabled
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

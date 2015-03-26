@@ -62,7 +62,7 @@
 //-->
 </script>
 
-<div class="displayshow-wrapper reg all#echo ('', ' no-labels')[not $sickbeard.USE_IMDB_INFO]#">
+<div class="displayshow-wrapper reg all">
 
 	<div class="background-container">
 		<div style="" class="background"></div>
@@ -170,10 +170,9 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 					<div id="showtitle" data-showname="$show.name">
 						<h2 class="title" id="scene_exception_$show.indexerid"><span>$show.name</span></h2>
 #if not $sickbeard.USE_IMDB_INFO or not $show.imdbid
-## Disabling these trackt tags as they 404 on trakt2.0, remove False to re-enable
-    #if False and $show.genre:
-        #for $genre in $show.genre[1:-1].split('|')
-						<span class="label"><a href="<%= anon_url('http://trakt.tv/shows/popular/', genre.lower()) %>" target="_blank" title="View other popular $genre shows on trakt.tv">$genre</a></span>
+    #if $show.genre:
+        #for $genre in $show.genre[1:-1].replace('Science-Fiction','Sci-Fi').split('|')
+						<span class="label"><a href="<%= anon_url('http://www.imdb.com/search/title?at=0&genres=', genre.lower().replace('-','_'),'&amp;sort=moviemeter,asc&amp;title_type=tv_series') %>" target="_blank" title="View other popular $genre shows on imdb.com">$genre</a></span>
         #end for
     #end if
 #end if
