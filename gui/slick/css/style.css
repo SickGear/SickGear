@@ -198,14 +198,14 @@ inc_top.tmpl
 	background:#fff url("../css/lib/images/ui-bg_flat_0_ffffff_40x100.png") 50% 50% repeat-x
 }
 
-.ui-state-default, 
+.ui-state-default,
 .ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default{
 	background:#fff;
 	border:1px solid #CCC
 }
 
-.ui-state-hover, 
+.ui-state-hover,
 .ui-widget-content .ui-state-hover,
 .ui-widget-header .ui-state-hover,
 .ui-state-focus,
@@ -214,19 +214,19 @@ inc_top.tmpl
 	background:#fff
 }
 
-.ui-state-active, 
+.ui-state-active,
 .ui-widget-content .ui-state-active,
 .ui-widget-header .ui-state-active{
 	background:#F7F7F7
 }
 
-.ui-state-highlight, 
+.ui-state-highlight,
 .ui-widget-content .ui-state-highlight,
 .ui-widget-header .ui-state-highlight{
 	background:#fbf9ee url("../css/lib/images/ui-bg_glass_55_fbf9ee_1x400.png") 50% 50% repeat-x
 }
 
-.ui-state-error, 
+.ui-state-error,
 .ui-widget-content .ui-state-error,
 .ui-widget-header .ui-state-error{
 	background:#fef1ec url("../css/lib/images/ui-bg_glass_95_fef1ec_1x400.png") 50% 50% repeat-x
@@ -745,7 +745,7 @@ home.tmpl
 	background-image:linear-gradient(to left, rgba(223, 218, 207, 1), rgba(223, 218, 207, 0))
 }
 
-.show-table{	
+.show-table{
 	text-align:center;
 	vertical-align:middle;
 	width:33%
@@ -1067,7 +1067,7 @@ home_postprocess.tmpl
 
 
 /* =======================================================================
-displayShow.tmpl 
+displayShow.tmpl
 ========================================================================== */
 body#display-show.back-art {
 	color:#fff
@@ -1174,6 +1174,14 @@ body#display-show .back-art .sickbeardTable{
 	height:70px
 }
 
+#details-right .details-seasons{
+	margin-top:3px
+}
+
+#details-right .combo-seasons{
+	line-height:30px
+}
+
 #details-bottom{
 	display:inline-block;
 	width:100%
@@ -1241,13 +1249,14 @@ body#display-show .back-art .sickbeardTable{
 }
 
 #details-top .label{
-	padding:3px 4px 3px 22px;
-	background:url(../images/tag.png) no-repeat scroll 4px 3px;
+	padding:3px 4px;
 	cursor:default
 }
 
 #details-top .label a,
 #details-top .label a:hover{
+	padding:3px 4px 3px 21px;
+	background:transparent url(../images/tag.png) no-repeat scroll 3px 3px;
 	color:#fff;
 	text-decoration:none
 }
@@ -3453,7 +3462,7 @@ div.formpaginate .prev, div.formpaginate .next{
 #customQualityWrapper div.component-group-desc{
 	float:left;
 	width:165px
-}	
+}
 
 #customQualityWrapper div.component-group-desc p{
 	width:85%;
