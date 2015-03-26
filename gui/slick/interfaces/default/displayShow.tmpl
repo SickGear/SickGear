@@ -139,11 +139,11 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 						<span class="details-info">#if sickbeard.DISPLAY_SHOW_SPECIALS#<a href="#season-0">View</a><span style="margin:0 10px">-</span>#end if#<a class="inner" href="$sbRoot/toggleDisplayShowSpecials/?show=$show.indexerid">#echo ('Show', 'Hide')[sickbeard.DISPLAY_SHOW_SPECIALS]#</a></span>
     #end if
 					</div>
-
-					<div style="margin-top:3px">
-						<span class="details-title">Season</span>
+    #set $many_seasons = 12 < len($seasonResults)
+					<div class="details-seasons">
+						<span class="details-title#echo ('', ' combo-seasons')[$many_seasons]#">Season</span>
 						<span class="details-info">
-    #if 12 < (len($seasonResults)):
+    #if $many_seasons:
 							<select id="seasonJump" class="form-control form-control-inline input-sm">
 								<option value="jump">Jump to season</option>
         #for $seasonNum in $seasonResults:
@@ -171,8 +171,8 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 						<h2 class="title" id="scene_exception_$show.indexerid"><span>$show.name</span></h2>
 #if not $sickbeard.USE_IMDB_INFO or not $show.imdbid
     #if $show.genre:
-        #for $genre in $show.genre[1:-1].replace('Science-Fiction','Sci-Fi').split('|')
-						<span class="label"><a href="<%= anon_url('http://www.imdb.com/search/title?at=0&genres=', genre.lower().replace('-','_'),'&amp;sort=moviemeter,asc&amp;title_type=tv_series') %>" target="_blank" title="View other popular $genre shows on imdb.com">$genre</a></span>
+        #for $genre in $show.genre[1:-1].split('|')
+						<span class="label">$genre</span>
         #end for
     #end if
 #end if
@@ -491,7 +491,7 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 		<td align="center">
 			<input type="text" placeholder="#echo '%sx%s' % ($dfltSeas, $dfltEpis)#" size="6" maxlength="8"
 				class="sceneSeasonXEpisode form-control input-scene" data-for-season="$epResult['season']" data-for-episode="$epResult['episode']"
-				id="sceneSeasonXEpisode_#echo '%s_%s_%s' % ($show.indexerid, $epResult['season'], $epResult['episode'])#"
+				id="#echo 'sceneSeasonXEpisode_%s_%s_%s' % ($show.indexerid, $epResult['season'], $epResult['episode'])#"
 				title="Change the value here if scene numbering differs from the indexer episode numbering"
         #if ($epResult['season'], $epResult['episode']) in $scene_numbering:
             #set $scSeas, $scEpis = $scene_numbering[($epResult['season'], $epResult['episode'])]
@@ -506,7 +506,7 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 		<td align="center">
 			<input type="text" placeholder="$dfltAbsolute" size="6" maxlength="8"
 				class="sceneAbsolute form-control input-scene" data-for-absolute="$epResult['absolute_number']"
-				id="sceneAbsolute_$show.indexerid_$epResult['absolute_number']"
+				id="#echo 'sceneAbsolute_%s_%s' % ($show.indexerid, $epResult['absolute_number'])#"
 				title="Change the value here if scene absolute numbering differs from the indexer absolute numbering"
         #if $epResult['absolute_number'] in $scene_absolute_numbering:
 				value="$scene_absolute_numbering[$epResult['absolute_number']]"

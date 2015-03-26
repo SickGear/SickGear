@@ -87,7 +87,6 @@
 * Change Special link moved from "Season" line to "Specials" line on displayShow
 * Change code re-factored in readiness for live option switching, clean up and add closures of html tables
 * Add show overview from indexers to the database
-* Fix genre tags on displayShow when imdb is disabled
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
@@ -106,6 +105,10 @@
 * Add some tooltips to bottom show details for clarity on displayShow
 * Change red text on blue tag to white text on red tag to improve readability of invalid locations on displayShow
 * Change glyph to right side of "Show/Hide episodes" button text to improve visual when toggling button on displayShow
+* Change to adjust alignment of season label text when next to select combo
+* Change display genres sourced from indexers in labels underneath the show title on displayShow, remove the tag image
+* Change IMDb genre links to have the tag image applied to the link making it an easier target to click and also visually different from indexer genres
+* Fix scene anime html id construction in line with plot_info
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
