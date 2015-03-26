@@ -1069,17 +1069,46 @@ home_postprocess.tmpl
 /* =======================================================================
 displayShow.tmpl 
 ========================================================================== */
+body#display-show.back-art {
+	color:#fff
+}
 
-.background-container{
+body#display-show .pro #details-bottom .label-paused,
+body#display-show .pro .season-status .archived-count{
+	display:inline
+}
+
+body#display-show .season-status,
+body#display-show #details-bottom .label-paused,
+body#display-show .season-status .archived-count,
+.displayshow-wrapper .background-container,
+.all .sickbeardTable .row-seasonheader button,
+.reg .sickbeardTable .row-seasonheader button.latest-season,
+.pro .sickbeardTable .row-seasonheader button.display-season{
+	display:none
+}
+
+.all .sickbeardTable tbody.collapse,
+.reg .sickbeardTable tbody.collapse.latest-season,
+.pro .sickbeardTable tbody.collapse.display-season{
+	display:table-row-group
+}
+
+body#display-show .pro #details-bottom .label-paused{
+	background-color:#8f1515
+}
+
+.back-art .background-container{
 	position:fixed;
 	top:0;
 	right:0;
 	bottom:0;
 	left:0;
-	z-index:-1
+	z-index:-1;
+	display:block
 }
 
-.background{
+.back-art .background{
 	position:absolute;
 	top:0;
 	right:0;
@@ -1089,7 +1118,7 @@ displayShow.tmpl
 	background-size:cover
 }
 
-.background-transparent:after{
+.back-art.translucent .background:after{
 	position:absolute;
 	content:"";
 	top:0;
@@ -1113,21 +1142,25 @@ displayShow.tmpl
 	margin-top:10px
 }
 
-.display-show{
+body#display-show .sickbeardTable{
 	margin:30px 0
 }
 
-.display-season{
+body#display-show .back-art .sickbeardTable{
 	background:rgba(0,0,0,0.5);
 	border-radius:3px;
 	padding:10px
 }
 
-.display-details,
-.display-details-transparent{
+.display-details{
 	border-radius:3px;
 	padding:8px 10px;
 	margin-bottom:20px
+}
+
+.back-art .display-details{
+	background:rgba(0,0,0,0.5);
+	border:1px solid rgba(0,0,0,0.5)
 }
 
 #details-wrapper{
@@ -1135,6 +1168,10 @@ displayShow.tmpl
 	width:100%;
 	position:relative;
 	cursor:default
+}
+
+.no-labels #details-top{
+	height:43px
 }
 
 #details-top{
@@ -1157,13 +1194,40 @@ displayShow.tmpl
 	margin-left:15px
 }
 
-#details-right .flag{
-	margin-right:4px;
+.details-title{
+	display:inline-block;
+	float:left
+}
+
+.reg .details-title{
+	margin-right:4px
+}
+
+.reg .details-title:after{
+	content:":"
+}
+
+.pro .details-title{
+	width:80px;
+	font-size:13px;
+	line-height:20px
+}
+
+.pro .details-info{
+	display:block;
+	margin-left:85px
+}
+
+.details-info .space-right{
+	margin-right:4px
+}
+
+.details-info .flag{
 	vertical-align:baseline
 }
 
 .details-plot{
-	min-height:217px;
+	min-height:220px;
 	overflow:hidden
 }
 
@@ -1180,17 +1244,14 @@ displayShow.tmpl
 	height:42px
 }
 
-.genre-tag-bg,
-.genre-tag-nobg{
+#details-top .label{
 	padding:3px 4px 3px 22px;
 	background:url(../images/tag.png) no-repeat scroll 4px 3px;
 	cursor:default
 }
 
-.genre-tag-bg a,
-.genre-tag-bg a:hover,
-.genre-tag-nobg a,
-.genre-tag-nobg a:hover{
+#details-top .label a,
+#details-top .label a:hover{
 	color:#fff;
 	text-decoration:none
 }
@@ -1216,11 +1277,11 @@ span.imdbstars, span.imdbstars > *{
 }
 
 .moreless{
-	margin-top:-3px
+	margin-top:0
 }
 
 .no-plot{
-	font-style: italic
+	font-style:italic
 }
 
 .paused{
@@ -1269,9 +1330,21 @@ a.service img{
 .tvshowImg{
 	border:1px solid #ccc;
 	border-radius:3px;
-	height:329px;
+	height:332px;
 	width:auto;
 	float:left
+}
+.no-labels #posterCol .tvshowImg{
+	height:305px
+}
+
+.back-art .tvshowImg{
+	border-color:rgba(0,0,0,0.5)
+}
+
+.back-art.translucent.pro .tvshowImg {
+	opacity: 0.85;
+	filter: alpha(opacity=85)
 }
 
 #checkboxControls{
@@ -1299,16 +1372,36 @@ a.service img{
 	color:#666
 }
 
+.back-art.pro .airdate-never{
+	background-color:rgba(234,226,200,0.7);
+	color:#666
+}
+
 .unaired{
 	background-color:#f5f1e4
+}
+
+.back-art.pro .unaired{
+	background-color:rgba(245,241,228,0.7);
+	color:#584b20
 }
 
 .skipped{
 	background-color:#bedeed
 }
 
+.back-art.pro .skipped{
+	background-color:rgba(190,222,237,0.7);
+	color:#1d5068
+}
+
 .good{
 	background-color:#c3e3c8
+}
+
+.back-art.pro .good{
+	background-color:rgba(195,227,200,0.7);
+	color:#295730
 }
 
 .archived{
@@ -1316,16 +1409,36 @@ a.service img{
 	color:#295730
 }
 
+.back-art.pro .archived{
+	background-color:rgba(213,227,216,0.7);
+	color:#295730
+}
+
 .qual{
 	background-color:#ffda8a
+}
+
+.back-art.pro .qual{
+	background-color:rgba(255,218,138,0.7);
+	color:#765100
 }
 
 .wanted{
 	background-color:#ffb0b0
 }
 
+.back-art.pro .wanted{
+	background-color:rgba(255,176,176,0.7);
+	color:#890000
+}
+
 .snatched{
 	background-color:#ebc1ea
+}
+
+.back-art.pro .snatched{
+	background-color:rgba(235,193,234,0.7);
+	color:#652164
 }
 
 span.unaired{
@@ -1389,15 +1502,10 @@ span.snatched b{
 	color:#000
 }
 
-.sickbeardTable.display_show{
-	clear:both
-}
-
 .sickbeardTable tr.header td,
 .sickbeardTable th{
 	color:#fff;
 	text-align:center;
-	background-color:#333;
 	white-space:nowrap
 }
 
@@ -1411,10 +1519,15 @@ span.snatched b{
 	padding:4px 8px
 }
 
-th.row-seasonheader{
+.displayshow-wrapper .sickbeardTable th.row-seasonheader{
 	border:none;
-	background-color:transparent !important;
+	width:auto;
+	background-color:transparent;
 	text-align:left
+}
+
+.back-art th.row-seasonheader h3{
+	color:#fff
 }
 
 th.row-seasonheader h3{
