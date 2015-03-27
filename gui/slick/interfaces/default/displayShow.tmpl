@@ -22,7 +22,7 @@
 <script type="text/javascript" src="$sbRoot/js/displayShow.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/plotTooltip.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/sceneExceptionsTooltip.js?$sbPID"></script>
-#if $sickbeard.USE_IMDB_INFO:
+#if $sickbeard.USE_IMDB_INFO
 <script type="text/javascript" src="$sbRoot/js/ratingTooltip.js?$sbPID"></script>
 #end if
 <script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?$sbPID"></script>
@@ -32,7 +32,7 @@
 <!--
 \$(document).ready(function(){
 #set $fuzzydate = 'airdate'
-#if $sickbeard.FUZZY_DATING:
+#if $sickbeard.FUZZY_DATING
     fuzzyMoment({
         containerClass : '.${fuzzydate}',
         dateHasTime : false,
@@ -51,7 +51,7 @@
         });
     });
 #end raw
-#if $sickbeard.USE_IMDB_INFO:
+#if $sickbeard.USE_IMDB_INFO
 	\$.fn.generateStars = function() {
 		return this.each(function(i,e){\$(e).html(\$('<span/>').width(\$(e).text()*12));});
 	};
@@ -75,7 +75,7 @@
 #for $curShowList in $sortedShowLists
     #set $curShowType = $curShowList[0]
     #set $curShowList = $curShowList[1]
-    #if 1 < len($sortedShowLists):
+    #if 1 < len($sortedShowLists)
 $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
     #end if
     #for $curShow in $curShowList
@@ -105,12 +105,12 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 
 	<div class="clearfix" style="margin-bottom:15px"></div>
 
-#if $show_message:
+#if $show_message
 	<div class="alert alert-info">
 		$show_message
 	</div>
-#end if
 
+#end if
 	<div class="display-show-container">
 		<div id="posterCol" class="hidden-xs">
 			<a href="$sbRoot/showPoster/?show=$show.indexerid&amp;which=poster" rel="dialog" title="View poster for $show.name">
@@ -119,22 +119,22 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 		</div>
 
 		<div id="showCol" class="display-details">
-#if int($show.paused):
+#if int($show.paused)
 			<div class="paused paused-highlight">
 				<i class="sgicon-pause paused-outline"></i>
 			</div>
 #end if
 			<div id="details-wrapper">
 				<div id="details-right">
-#if $seasonResults:
+#if $seasonResults
     ##There is a special/season_0?##
     #set $season_special = (0, 1)[0 == int($seasonResults[-1]['season'])]
-
-    #if not $sickbeard.DISPLAY_SHOW_SPECIALS and $season_special:
+    #slurp
+    #if not $sickbeard.DISPLAY_SHOW_SPECIALS and $season_special
 	$seasonResults.pop(-1)
     #end if
 					<div>
-    #if $season_special:
+    #if $season_special
 						<span class="details-title">Specials</span>
 						<span class="details-info">#if sickbeard.DISPLAY_SHOW_SPECIALS#<a href="#season-0">View</a><span style="margin:0 10px">-</span>#end if#<a class="inner" href="$sbRoot/toggleDisplayShowSpecials/?show=$show.indexerid">#echo ('Show', 'Hide')[sickbeard.DISPLAY_SHOW_SPECIALS]#</a></span>
     #end if
@@ -143,10 +143,10 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 					<div class="details-seasons">
 						<span class="details-title#echo ('', ' combo-seasons')[$many_seasons]#">Season</span>
 						<span class="details-info">
-    #if $many_seasons:
+    #if $many_seasons
 							<select id="seasonJump" class="form-control form-control-inline input-sm">
 								<option value="jump">Jump to season</option>
-        #for $seasonNum in $seasonResults:
+        #for $seasonNum in $seasonResults
             #if 0 == int($seasonNum['season'])
                 #continue
             #end if
@@ -154,7 +154,7 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
         #end for
 							</select>
     #else:
-        #for $seasonNum in $seasonResults:
+        #for $seasonNum in $seasonResults
             #if 0 == int($seasonNum['season'])
                 #continue
             #end if
@@ -170,13 +170,13 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 					<div id="showtitle" data-showname="$show.name">
 						<h2 class="title" id="scene_exception_$show.indexerid"><span>$show.name</span></h2>
 #if not $sickbeard.USE_IMDB_INFO or not $show.imdbid
-    #if $show.genre:
+    #if $show.genre
         #for $genre in $show.genre[1:-1].split('|')
 						<span class="label">$genre</span>
         #end for
     #end if
 #end if
-#if $sickbeard.USE_IMDB_INFO and 'genres' in $show.imdb_info and '' != $show.imdb_info['genres']:
+#if $sickbeard.USE_IMDB_INFO and 'genres' in $show.imdb_info and '' != $show.imdb_info['genres']
     #for $imdbgenre in $show.imdb_info['genres'].split('|')
 						<span class="label"><a href="<%= anon_url('http://www.imdb.com/search/title?at=0&genres=', imdbgenre.lower().replace('-','_'),'&amp;sort=moviemeter,asc&amp;title_type=tv_series') %>" target="_blank" title="View other popular $imdbgenre shows on imdb.com">$imdbgenre.replace('Sci-Fi','Science-Fiction')</a></span>
     #end for
@@ -195,20 +195,20 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 							<a class="service" href="<%= anon_url('http://www.imdb.com/title/', _show.imdbid) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="Show IMDb info in new tab"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" /></a>
 #end if
 							<a class="service" href="<%= anon_url(sickbeard.indexerApi(_show.indexer).config['show_url'], _show.indexerid) %>" onclick="window.open(this.href, '_blank'); return false;" title="Show $sickbeard.indexerApi($show.indexer).name info in new tab"><img alt="$sickbeard.indexerApi($show.indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($show.indexer).config['icon']" /></a>
-#if $xem_numbering or $xem_absolute_numbering:
+#if $xem_numbering or $xem_absolute_numbering
 							<a class="service" href="<%= anon_url('http://thexem.de/search?q=', _show.name) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="Show XEM info in new tab"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" /></a>
 #end if
 						</span>
 					</div>
 
-#if not $sickbeard.USE_IMDB_INFO or not $show.imdbid
-    #set $runtime = $show.runtime
-    #set $startyear = $show.startyear
-#elif $sickbeard.USE_IMDB_INFO
-    #if 'countries' in $show.imdb_info:
-        #set $country = $show.imdb_info['countries']
+#set $startyear, $runtime = (None, None)
+#if not $sickbeard.USE_IMDB_INFO
+    #if not $show.imdbid
+        #set $runtime = $show.runtime
+        #set $startyear = $show.startyear
     #end if
-    #if 'year' in $show.imdb_info:
+#elif $sickbeard.USE_IMDB_INFO
+    #if 'year' in $show.imdb_info
         #set $runtime = $show.imdb_info['runtimes']
         #set $startyear = $show.imdb_info['year']
     #end if
@@ -216,8 +216,8 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 					<div>
 						<span class="details-title">Premiered</span>
 						<span class="details-info">
-							<span class="space-right">$startyear</span>
-#if $sickbeard.USE_IMDB_INFO and 'country_codes' in $show.imdb_info and '' != $show.imdb_info['country_codes']:
+							#if None is not $startyear#<span class="space-right">$startyear</span>#end if#
+#if $sickbeard.USE_IMDB_INFO and 'country_codes' in $show.imdb_info and '' != $show.imdb_info['country_codes']
     #for $country in $show.imdb_info['country_codes'].split('|')
 							<img class="flag space-right" src="$sbRoot/images/flags/${$country}.png" width="16" height="11" />
     #end for
@@ -225,7 +225,7 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 						</span>
 					</div>
 
-#if $show.airs:
+#if $show.airs
     #set $showairs = '%s%s' % ($show.airs.replace('y', 'y,'),
                                ('', ' <span class="red-text" style="font-weight:bold">(invalid timeformat)</span>')[not $network_timezones.test_timeformat($show.airs)])
 					<div>
@@ -234,19 +234,19 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 					</div>
 #end if
 
-#if $show.network:
+#if $show.network
 					<div>
 						<span class="details-title">Network</span>
 						<span class="details-info">$show.network</span>
 					</div>
 #end if
-
+#if None is not $runtime
 					<div>
 						<span class="details-title">Runtime</span>
 						<span class="details-info">$runtime minutes</span>
 					</div>
-
-#if '' != $show.status:
+#end if
+#if '' != $show.status
 					<div>
 						<span class="details-title">Status</span>
 						<span class="details-info">$show.status</span>
@@ -268,7 +268,7 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 #end if
 
 #set $anyQualities, $bestQualities = $Quality.splitQuality(int($show.quality))
-#if $show.quality in $qualityPresets:
+#if $show.quality in $qualityPresets
 					<div>
 						<span class="details-title">Quality</span>
 						<span class="details-info">
@@ -276,7 +276,7 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 						</span>
 					</div>
 #else:
-    #if $anyQualities:
+    #if $anyQualities
 					<div>
 						<span class="details-title">Initial</span>
 						<span class="details-info">
@@ -284,7 +284,7 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 						</span>
 					</div>
     #end if
-    #if $bestQualities:
+    #if $bestQualities
 					<div>
 						<span class="details-title">Replace with</span>
 						<span class="details-info">
@@ -312,40 +312,40 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 #if ($anyQualities + $bestQualities) and int($show.archive_firstmatch)
 						<span class="label">Archive first match</span>
 #end if
-#if $show.exceptions:
+#if $show.exceptions
 						<span class="label addQTip" title="$exceptions_string.replace(', ', '<br />')">Scene names</span>
 #end if
-#if $show.rls_ignore_words:
+#if $show.rls_ignore_words
 						<span class="label addQTip" title="#echo $show.rls_ignore_words.replace(',', '<br />')#">Ignored words</span>
 #end if
-#if $show.rls_require_words:
+#if $show.rls_require_words
 						<span class="label addQTip" title="#echo $show.rls_require_words.replace(',', '<br />')#">Required words</span>
 #end if
-#if $show.flatten_folders or $sickbeard.NAMING_FORCE_FOLDERS:
+#if $show.flatten_folders or $sickbeard.NAMING_FORCE_FOLDERS
 						<span class="label">Flat folders</span>
 #end if
-#if int($show.air_by_date):
+#if int($show.air_by_date)
 						<span class="label">Air by date</span>
 #end if
-#if int($show.dvdorder):
+#if int($show.dvdorder)
 						<span class="label">DVD order</span>
 #end if
-#if int($show.scene):
+#if int($show.scene)
 						<span class="label">Scene numbering</span>
 #end if
-#if $sickbeard.USE_SUBTITLES and int($show.subtitles):
+#if $sickbeard.USE_SUBTITLES and int($show.subtitles)
 						<span class="label">Subtitles</span>
 #end if
-#if int($show.is_sports):
+#if int($show.is_sports)
 						<span class="label">Sports</span>
 #end if
-#if int($show.is_anime):
+#if int($show.is_anime)
 						<span class="label">Anime</span>
 #end if
-#if $bwl and $bwl.whitelist:
+#if $bwl and $bwl.whitelist
 						<span class="label addQTip" title="#echo ', '.join($bwl.whitelist).replace(',', '<br />')#">Wanted group$sickbeard.helpers.maybe_plural(len($bwl.whitelist))</span>
 #end if
-#if $bwl and $bwl.blacklist:
+#if $bwl and $bwl.blacklist
 						<span class="label addQTip" title="#echo ', '.join($bwl.blacklist).replace(',', '<br />')#">Unwanted group$sickbeard.helpers.maybe_plural(len($bwl.blacklist))</span>
 #end if
 					</div>
@@ -359,8 +359,8 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 	<div class="pull-left">
 		<p style="margin-bottom:5px">Change selected episodes to</p>
 		<select id="statusSelect" class="form-control form-control-inline input-sm">
-#for $curStatus in [$WANTED, $SKIPPED, $ARCHIVED, $IGNORED, $FAILED] + sorted($Quality.DOWNLOADED):
-    #if $DOWNLOADED == $curStatus:
+#for $curStatus in [$WANTED, $SKIPPED, $ARCHIVED, $IGNORED, $FAILED] + sorted($Quality.DOWNLOADED)
+    #if $DOWNLOADED == $curStatus
         #continue
     #end if
 			<option value="$curStatus">$statusStrings[$curStatus]</option>
@@ -387,32 +387,30 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 	</div>
 
 	<div class="clearfix"></div>
-
 #set $curSeason = -1
 #set $odd = 0
-
 #set $scene, $scene_anime = (False, False)
-#if not $show.air_by_date and not $show.is_sports and not $show.is_anime and $show.is_scene:
+#if not $show.air_by_date and not $show.is_sports and not $show.is_anime and $show.is_scene
     #set $scene = True
-#elif not $show.air_by_date and not $show.is_sports and $show.is_anime and $show.is_scene:
+#elif not $show.air_by_date and not $show.is_sports and $show.is_anime and $show.is_scene
     #set $scene_anime = True
 #end if
-
+#slurp
 #if 0 == len($sqlResults)
     <div style="margin-top:50px"><h3>Episodes no longer exist for this show at the associated indexer</h3></div>
 #else:
-#for $epResult in $sqlResults:
+#for $epResult in $sqlResults
     #set $epStr = '%sx%s' % ($epResult['season'], $epResult['episode'])
-    #if not $epStr in $epCats or (0 == int($epResult['season']) and not $sickbeard.DISPLAY_SHOW_SPECIALS):
+    #if not $epStr in $epCats or (0 == int($epResult['season']) and not $sickbeard.DISPLAY_SHOW_SPECIALS)
         #continue
     #end if
     #slurp
-    #if $curSeason != int($epResult['season']):
-        #if 0 <= $curSeason:
+    #if $curSeason != int($epResult['season'])
+        #if 0 <= $curSeason
 	</tbody>
 </table>
-
         #end if
+
 <table class="sickbeardTable" cellspacing="0" border="0" cellpadding="0">
 	<tr id="season-$epResult['season']">
 		<th class="row-seasonheader" colspan="13">
@@ -433,18 +431,18 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 			<th class="col-metadata">NFO</th>
 			<th class="col-metadata">TBN</th>
 			<th class="col-ep">Episode</th>
-        #if $show.is_anime:
+        #if $show.is_anime
 			<th class="col-ep">Absolute</th>
         #end if
-        #if $scene:
+        #if $scene
 			<th class="col-ep">Scene</th>
         #end if
-        #if $scene_anime:
+        #if $scene_anime
 			<th class="col-ep">Scene absolute</th>
         #end if
 			<th class="col-name">Name</th>
 			<th class="col-airdate">Airdate</th>
-        #if $sickbeard.USE_SUBTITLES and $show.subtitles:
+        #if $sickbeard.USE_SUBTITLES and $show.subtitles
 			<th class="col-subtitles">Subtitles</th>
         #end if
 			<th class="col-status">Status</th>
@@ -469,31 +467,31 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 		<td align="center"><img src="$sbRoot/images/#if int($epResult['hastbn']) then 'tbn.gif" alt="Yes" title="Yes' else 'tbn-no.gif" alt="No" title="No'#" width="23" height="11" /></td>
 
 		<td align="center">
-    #if $epLoc and $show._location and $epLoc.lower().startswith($show._location.lower()):
+    #if $epLoc and $show._location and $epLoc.lower().startswith($show._location.lower())
         #set $epLoc = $epLoc[len($show._location)+1:]
-    #elif $epLoc and (not $epLoc.lower().startswith($show._location.lower()) or not $show._location):
+    #elif $epLoc and (not $epLoc.lower().startswith($show._location.lower()) or not $show._location)
         #set $epLoc = $epLoc
     #end if
 
-    #if '' != $epLoc and None != $epLoc:
+    #if '' != $epLoc and None != $epLoc
 			<span title="$epLoc - <strong>$sickbeard.helpers.human($epResult['file_size'])</strong>" class="addQTip">$epResult["episode"]</span>
     #else
 			$epResult['episode']
     #end if
 		</td>
 
-    #if $show.is_anime:
+    #if $show.is_anime
 		<td align="center">$epResult['absolute_number']</td>
     #end if
 
-    #if $scene:
+    #if $scene
         #set $dfltSeas, $dfltEpis = (0, 0) if ($epResult['season'], $epResult['episode']) not in $xem_numbering else $xem_numbering[($epResult['season'], $epResult['episode'])]
 		<td align="center">
 			<input type="text" placeholder="#echo '%sx%s' % ($dfltSeas, $dfltEpis)#" size="6" maxlength="8"
 				class="sceneSeasonXEpisode form-control input-scene" data-for-season="$epResult['season']" data-for-episode="$epResult['episode']"
 				id="#echo 'sceneSeasonXEpisode_%s_%s_%s' % ($show.indexerid, $epResult['season'], $epResult['episode'])#"
 				title="Change the value here if scene numbering differs from the indexer episode numbering"
-        #if ($epResult['season'], $epResult['episode']) in $scene_numbering:
+        #if ($epResult['season'], $epResult['episode']) in $scene_numbering
             #set $scSeas, $scEpis = $scene_numbering[($epResult['season'], $epResult['episode'])]
 				value="#echo '%sx%s' % ($scSeas, $scEpis)#"
         #else
@@ -501,14 +499,14 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
         #end if
 				style="padding:0; text-align:center; max-width:60px">
 		</td>
-    #elif $scene_anime:
+    #elif $scene_anime
         #set $dfltAbsolute = 0 if $epResult['absolute_number'] not in $xem_absolute_numbering else $xem_absolute_numbering[$epResult['absolute_number']]
 		<td align="center">
 			<input type="text" placeholder="$dfltAbsolute" size="6" maxlength="8"
 				class="sceneAbsolute form-control input-scene" data-for-absolute="$epResult['absolute_number']"
 				id="#echo 'sceneAbsolute_%s_%s' % ($show.indexerid, $epResult['absolute_number'])#"
 				title="Change the value here if scene absolute numbering differs from the indexer absolute numbering"
-        #if $epResult['absolute_number'] in $scene_absolute_numbering:
+        #if $epResult['absolute_number'] in $scene_absolute_numbering
 				value="$scene_absolute_numbering[$epResult['absolute_number']]"
         #else
 				value=""
@@ -527,10 +525,10 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 			<span class="${fuzzydate}">#if 1 == int($epResult['airdate']) then 'never' else $sbdatetime.sbdatetime.sbfdate($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($epResult['airdate'], $show.airs, $show.network)))#</span>
 		</td>
 
-    #if $sickbeard.USE_SUBTITLES and $show.subtitles:
+    #if $sickbeard.USE_SUBTITLES and $show.subtitles
 		<td class="col-subtitles" align="center">
-        #if $epResult['subtitles']:
-            #for $sub_lang in subliminal.language.language_list($epResult['subtitles'].split(',')):
+        #if $epResult['subtitles']
+            #for $sub_lang in subliminal.language.language_list($epResult['subtitles'].split(','))
                 #if '' != sub_lang.alpha2
 			<img src="$sbRoot/images/flags/${sub_lang.alpha2}.png" width="16" height="11" alt="${sub_lang}" />
                 #end if
@@ -540,15 +538,15 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
     #end if
 
     #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($epResult['status']))
-    #if Quality.NONE != $curQuality:
+    #if Quality.NONE != $curQuality
 		<td class="col-status">$statusStrings[$curStatus] <span class="quality $Quality.qualityStrings[$curQuality].replace('720p','HD720p').replace('1080p','HD1080p').replace('RawHD TV', 'RawHD').replace('HD TV', 'HD720p')">$Quality.qualityStrings[$curQuality]</span></td>
     #else:
 		<td class="col-status">$statusStrings[$curStatus]</td>
     #end if
 
 		<td class="col-search">
-    #if 0 != int($epResult['season']):
-        #if (int($epResult['status']) in $Quality.SNATCHED or int($epResult['status']) in $Quality.DOWNLOADED) and $sickbeard.USE_FAILED_DOWNLOADS:
+    #if 0 != int($epResult['season'])
+        #if (int($epResult['status']) in $Quality.SNATCHED or int($epResult['status']) in $Quality.DOWNLOADED) and $sickbeard.USE_FAILED_DOWNLOADS
 			<a class="epRetry" id="#echo $epStr#" name="#echo $epStr#" href="retryEpisode?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download" /></a>
         #else:
 			<a class="epSearch" id="#echo $epStr#" name="#echo $epStr#" href="searchEpisode?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search" /></a>
