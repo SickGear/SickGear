@@ -43,8 +43,9 @@
 * Change to not display IMDb info on UI when "Enable IMDb info" is disabled
 * Change genre tags on displayShow page to link to IMDb instead of Trakt
 * Change to reduce the time taken to "Update shows" with show data
-* Change to stop updating the IMDb info on edit, mass edit and during the scheduled daily update for every show
+* Change to stop updating the IMDb info on edit, and during the scheduled daily update for every show
 * Change to update the IMDb info for a show after snatching an episode for it
+* Add IMDb lookup to "Update" action on Manage/Mass Update page
 * Fix updating of scene exception name cache after adding exceptions on Editshow page
 * Change log rotation to occur at midnight
 * Change to keep a maximum of 7 log files
@@ -89,6 +90,7 @@
 * Add show overview from indexers to the database
 * Fix case where start year or runtime is not available to display show
 * Add "File logging level" to General Config/Advanced Settings
+* Fix saving of Sort By/Next Episode in Layout Poster on Show List page   
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
@@ -111,6 +113,11 @@
 * Change display genres sourced from indexers in labels underneath the show title on displayShow, remove the tag image
 * Change IMDb genre links to have the tag image applied to the link making it an easier target to click and also visually different from indexer genres
 * Fix scene anime html id construction in line with plot_info
+* Fix display indexer provided start year on the displayShow page when no IMDb data exists
+* Fix display indexer provided genres on the displayShow page when no IMDb data exists
+* Fix display IMDb indexer with correct IMDb id on the displayShow page only when IMDb data exists
+* Fix correctly display show runtime when available on the displayShow page
+* Fix correctly initialise IMDb id loaded from db
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 

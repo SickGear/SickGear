@@ -169,19 +169,23 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 				<div id="details-top">
 					<div id="showtitle" data-showname="$show.name">
 						<h2 class="title" id="scene_exception_$show.indexerid"><span>$show.name</span></h2>
-#if not $sickbeard.USE_IMDB_INFO or not $show.imdbid
-    #if $show.genre
-        #for $genre in $show.genre[1:-1].split('|')
-						<span class="label">$genre</span>
-        #end for
-    #end if
-#end if
+#set $genres_done = False
 #if $sickbeard.USE_IMDB_INFO and 'genres' in $show.imdb_info and '' != $show.imdb_info['genres']
     #for $imdbgenre in $show.imdb_info['genres'].split('|')
+        #set $genres_done = True
 						<span class="label"><a href="<%= anon_url('http://www.imdb.com/search/title?at=0&genres=', imdbgenre.lower().replace('-','_'),'&amp;sort=moviemeter,asc&amp;title_type=tv_series') %>" target="_blank" title="View other popular $imdbgenre shows on imdb.com">$imdbgenre.replace('Sci-Fi','Science-Fiction')</a></span>
     #end for
 #end if
-					</div> 
+#if not $genres_done and $show.genre
+    #for $genre in $show.genre[1:-1].split('|')
+        #set $genres_done = True
+						<span class="label">$genre</span>
+    #end for#
+#end if
+#if not $genres_done
+						<span class="label">No genres</span>
+#end if
+					</div>
 				</div>
 			</div>
 
@@ -201,29 +205,35 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 						</span>
 					</div>
 
-#set $startyear, $runtime = (None, None)
-#if not $sickbeard.USE_IMDB_INFO
-    #if not $show.imdbid
-        #set $runtime = $show.runtime
-        #set $startyear = $show.startyear
-    #end if
-#elif $sickbeard.USE_IMDB_INFO
+#set $startyear, $flags, $runtime = (None, False, None)
+#if $sickbeard.USE_IMDB_INFO and $show.imdbid
     #if 'year' in $show.imdb_info
-        #set $runtime = $show.imdb_info['runtimes']
         #set $startyear = $show.imdb_info['year']
     #end if
+    #set $flags = 'country_codes' in $show.imdb_info and '' != $show.imdb_info['country_codes']
+    #if 'runtimes' in $show.imdb_info
+        #set $runtime = $show.imdb_info['runtimes']
+    #end if
 #end if
+#if None is $startyear and $show.startyear
+    #set $startyear = $show.startyear
+#end if
+#if None is $runtime and $show.runtime
+    #set $runtime = $show.runtime
+#end if
+#if None is not $startyear or $flags
 					<div>
 						<span class="details-title">Premiered</span>
 						<span class="details-info">
-							#if None is not $startyear#<span class="space-right">$startyear</span>#end if#
-#if $sickbeard.USE_IMDB_INFO and 'country_codes' in $show.imdb_info and '' != $show.imdb_info['country_codes']
-    #for $country in $show.imdb_info['country_codes'].split('|')
+							<span class="space-right">#echo ($startyear, 'Unknown')[None is $startyear]#</span>
+    #if $flags
+        #for $country in $show.imdb_info['country_codes'].split('|')
 							<img class="flag space-right" src="$sbRoot/images/flags/${$country}.png" width="16" height="11" />
-    #end for
-#end if
+        #end for
+    #end if
 						</span>
 					</div>
+#end if
 
 #if $show.airs
     #set $showairs = '%s%s' % ($show.airs.replace('y', 'y,'),
@@ -301,7 +311,7 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
 					</div>
 
 					<div id="details-bottom">
-						<span class="label addQTip" title="Info language, $show.lang"><img src="$sbRoot/images/flags/${show.lang}.png" width="16" height="11" alt="Info language, $show.lang" title="Info language, $show.lang" style="margin-top:-1px" /></span>
+						<span class="label addQTip" title="Info language, $show.lang"><img src="$sbRoot/images/flags/${show.lang}.png" width="16" height="11" alt="" style="margin-top:-1px" /></span>
 						<span class="label addQTip" title="Location#echo (' no longer exists" style="background-color:#8f1515"', '"')[$showLoc[1]]#>$showLoc[0]</span>
 						<span class="label addQTip" title="Size">$sickbeard.helpers.human(sickbeard.helpers.get_size($showLoc[0]))</span>
 #set $filecount = sum([$c for $k, $c in $epCounts['videos'].items()])
