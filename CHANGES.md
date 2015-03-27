@@ -88,6 +88,7 @@
 * Change code re-factored in readiness for live option switching, clean up and add closures of html tables
 * Add show overview from indexers to the database
 * Fix case where start year or runtime is not available to display show
+* Add "File logging level" to General Config/Advanced Settings
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi
