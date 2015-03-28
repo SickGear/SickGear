@@ -829,7 +829,8 @@ class TVShow(object):
             self.rls_require_words = sqlResults[0]['rls_require_words']
 
             if not self.imdbid:
-                self.imdbid = sqlResults[0]['imdb_id']
+                imdbid = sqlResults[0]['imdb_id']
+                self.imdbid = ('', imdbid)[2 < len(imdbid)]
 
             if self.is_anime:
                 self.release_groups = BlackAndWhiteList(self.indexerid)
@@ -1197,7 +1198,7 @@ class TVShow(object):
         myDB = db.DBConnection()
         myDB.upsert("tv_shows", newValueDict, controlValueDict)
 
-        if sickbeard.USE_IMDB_INFO and self.imdbid:
+        if sickbeard.USE_IMDB_INFO and len(self.imdb_info):
             controlValueDict = {'indexer_id': self.indexerid}
             newValueDict = self.imdb_info
 

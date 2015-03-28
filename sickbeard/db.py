@@ -407,6 +407,11 @@ def MigrationCode(myDB):
 
         40: sickbeard.mainDB.BumpDatabaseVersion,
         41: sickbeard.mainDB.Migrate41,
+        42: sickbeard.mainDB.Migrate41,
+
+        5816: sickbeard.mainDB.MigrateUpstream,
+        5817: sickbeard.mainDB.MigrateUpstream,
+        5818: sickbeard.mainDB.MigrateUpstream,
 
         10000: sickbeard.mainDB.SickGearDatabaseVersion,
         10001: sickbeard.mainDB.RemoveDefaultEpStatusFromTvShows,

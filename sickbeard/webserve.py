@@ -357,7 +357,7 @@ class MainHandler(WebHandler):
 
     def setPosterSortBy(self, sort):
 
-        if sort not in ('name', 'time', 'network', 'progress'):
+        if sort not in ('name', 'date', 'network', 'progress'):
             sort = 'name'
 
         sickbeard.POSTER_SORTBY = sort
@@ -3066,7 +3066,7 @@ class Manage(MainHandler):
 
             if curShowID in toUpdate:
                 try:
-                    sickbeard.showQueueScheduler.action.updateShow(showObj, True)  # @UndefinedVariable
+                    sickbeard.showQueueScheduler.action.updateShow(showObj, True, True)  # @UndefinedVariable
                     updates.append(showObj.name)
                 except exceptions.CantUpdateException, e:
                     errors.append('Unable to update show ' + showObj.name + ': ' + ex(e))
