@@ -90,7 +90,8 @@
 * Add show overview from indexers to the database
 * Fix case where start year or runtime is not available to display show
 * Add "File logging level" to General Config/Advanced Settings
-* Fix saving of Sort By/Next Episode in Layout Poster on Show List page   
+* Fix saving of Sort By/Next Episode in Layout Poster on Show List page
+* Change improve backlog search
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

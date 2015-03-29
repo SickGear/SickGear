@@ -218,8 +218,9 @@ class BTNProvider(generic.TorrentProvider):
                 set(scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]))
             for name in name_exceptions:
                 # Search by name if we don't have tvdb or tvrage id
-                current_params['series'] = sanitizeSceneName(name)
-                search_params.append(current_params)
+                cur_return = current_params.copy()
+                cur_return['series'] = sanitizeSceneName(name)
+                search_params.append(cur_return)
 
         return search_params
 
@@ -254,8 +255,9 @@ class BTNProvider(generic.TorrentProvider):
             name_exceptions = list(
                 set(scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]))
             for cur_exception in name_exceptions:
-                search_params['series'] = sanitizeSceneName(cur_exception)
-                to_return.append(search_params)
+                cur_return = search_params.copy()
+                cur_return['series'] = sanitizeSceneName(cur_exception)
+                to_return.append(cur_return)
 
         return to_return
 
