@@ -1561,7 +1561,7 @@ class Home(MainHandler):
                     if None is not result:
                         sql_l.append(result)
 
-            if len(sql_l) > 0:
+            if 0 < len(sql_l):
                 myDB = db.DBConnection()
                 myDB.mass_action(sql_l)
 

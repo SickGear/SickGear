@@ -92,6 +92,7 @@
 * Add "File logging level" to General Config/Advanced Settings
 * Fix saving of Sort By/Next Episode in Layout Poster on Show List page
 * Change improve backlog search
+* Change only add valid items to save to DB
 
 [develop changelog]
 * Fix traceback error when using the menu item Manage/Update Kodi

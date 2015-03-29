@@ -453,9 +453,11 @@ class TVShow(object):
                         logger.log(str(self.indexerid) + ": Could not refresh subtitles", logger.ERROR)
                         logger.log(traceback.format_exc(), logger.DEBUG)
 
-                sql_l.append(curEpisode.get_sql())
+                result = curEpisode.get_sql()
+                if None is not result:
+                    sql_l.append(result)
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -573,11 +575,13 @@ class TVShow(object):
                         self.indexer).name + " for episode " + str(season) + "x" + str(episode), logger.DEBUG)
                     ep.loadFromIndexer(season, episode, tvapi=t)
 
-                    sql_l.append(ep.get_sql())
+                    result = ep.get_sql()
+                    if None is not result:
+                        sql_l.append(result)
 
                 scannedEps[season][episode] = True
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -731,9 +735,11 @@ class TVShow(object):
                         curEp.status = Quality.compositeStatus(newStatus, newQuality)
 
             with curEp.lock:
-                sql_l.append(curEp.get_sql())
+                result = curEp.get_sql()
+                if None is not result:
+                    sql_l.append(result)
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -1127,13 +1133,15 @@ class TVShow(object):
                         curEp.hastbn = False
                         curEp.release_name = ''
 
-                        sql_l.append(curEp.get_sql())
+                        result = curEp.get_sql()
+                        if None is not result:
+                            sql_l.append(result)
             else:
                 # the file exists, set its modify file stamp
                 if sickbeard.AIRDATE_EPISODES:
                     curEp.airdateModifyStamp()
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -2511,9 +2519,11 @@ class TVEpisode(object):
         sql_l = []
         with self.lock:
             for relEp in [self] + self.relatedEps:
-                sql_l.append(relEp.get_sql())
+                result = relEp.get_sql()
+                if None is not result:
+                    sql_l.append(result)
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
