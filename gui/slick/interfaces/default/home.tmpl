@@ -1,7 +1,7 @@
 #import sickbeard
 #import datetime
 #from sickbeard.common import *
-#from sickbeard import db, sbdatetime, network_timezones
+#from sickbeard import sbdatetime, network_timezones
 
 #set global $title="Home"
 #set global $header="Show List"
@@ -12,38 +12,6 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
 
-#set $myDB = $db.DBConnection()
-#set $today = str($datetime.date.today().toordinal())
-#set $layout = $sickbeard.HOME_LAYOUT
-
-#set status_quality = '(' + ','.join([str(x) for x in $Quality.SNATCHED + $Quality.SNATCHED_PROPER]) + ')'
-#set status_download = '(' + ','.join([str(x) for x in $Quality.DOWNLOADED + [$ARCHIVED]]) + ')'
-
-#set $sql_statement = 'SELECT showid, '
-
-#set $sql_statement += '(SELECT COUNT(*) FROM tv_episodes WHERE showid=tv_eps.showid AND season > 0 AND episode > 0 AND airdate > 1 AND status IN ' + $status_quality + ') AS ep_snatched, '
-#set $sql_statement += '(SELECT COUNT(*) FROM tv_episodes WHERE showid=tv_eps.showid AND season > 0 AND episode > 0 AND airdate > 1 AND status IN ' + $status_download + ') AS ep_downloaded, '
-
-#set $sql_statement += '(SELECT COUNT(*) FROM tv_episodes WHERE showid=tv_eps.showid AND season > 0 AND episode > 0 AND airdate > 1 '
-#set $sql_statement += ' AND ((airdate <= ' + $today + ' AND (status = ' + str($SKIPPED) + ' OR status = ' + str($WANTED) + ' OR status = ' + str($FAILED) + ')) '
-#set $sql_statement += ' OR (status IN ' + status_quality + ') OR (status IN ' + status_download + '))) AS ep_total, '
-
-#set $sql_statement += ' (SELECT airdate FROM tv_episodes WHERE showid=tv_eps.showid AND airdate >= ' + $today + ' AND (status = ' + str($UNAIRED) + ' OR status = ' + str($WANTED) + ') ORDER BY airdate ASC LIMIT 1) AS ep_airs_next '
-#set $sql_statement += ' FROM tv_episodes tv_eps GROUP BY showid'
-
-#set $sql_result = $myDB.select($sql_statement)
-
-#set $show_stat = {}
-#set $max_download_count = 1000
-
-#for $cur_result in $sql_result:
-    #set $show_stat[$cur_result['showid']] = $cur_result
-    #if $cur_result['ep_total'] > $max_download_count:
-        #set $max_download_count = $cur_result['ep_total']
-    #end if
-#end for
-
-#set $max_download_count = $max_download_count * 100
 
 <script type="text/javascript" charset="utf-8">
 <!--
