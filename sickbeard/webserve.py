@@ -36,7 +36,7 @@ from sickbeard import config, sab, clients, history, notifiers, processTV, ui, l
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings, cpu_presets
-from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED
+from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
 from sickbeard.helpers import remove_article, starify
@@ -583,6 +583,27 @@ class Home(MainHandler):
             t.showlists = [['Shows', sickbeard.showList]]
 
         t.submenu = self.HomeMenu()
+        t.layout = sickbeard.HOME_LAYOUT
+
+        # Get all show snatched / downloaded / next air date stats
+        myDB = db.DBConnection()
+        today = datetime.date.today().toordinal()
+        status_quality = ','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER])
+        status_download = ','.join([str(x) for x in Quality.DOWNLOADED + [ARCHIVED]])
+        status_total = '%s, %s, %s' % (SKIPPED, WANTED, FAILED)
+
+        sql_statement = 'SELECT showid, '
+        sql_statement += '(SELECT COUNT(*) FROM tv_episodes WHERE showid=tv_eps.showid AND season > 0 AND episode > 0 AND airdate > 1 AND status IN (%s)) AS ep_snatched, '
+        sql_statement += '(SELECT COUNT(*) FROM tv_episodes WHERE showid=tv_eps.showid AND season > 0 AND episode > 0 AND airdate > 1 AND status IN (%s)) AS ep_downloaded, '
+        sql_statement += '(SELECT COUNT(*) FROM tv_episodes WHERE showid=tv_eps.showid AND season > 0 AND episode > 0 AND airdate > 1 AND ((airdate <= %s AND (status IN (%s))) OR (status IN (%s)) OR (status IN (%s)))) AS ep_total, '
+        sql_statement += '(SELECT airdate FROM tv_episodes WHERE showid=tv_eps.showid AND airdate >= %s AND (status = %s  OR status = %s) ORDER BY airdate ASC LIMIT 1) AS ep_airs_next '
+        sql_statement += ' FROM tv_episodes tv_eps GROUP BY showid'
+        sql_result = myDB.select(sql_statement % (status_quality, status_download, today, status_total, status_quality, status_download, today, UNAIRED, WANTED))
+
+        t.show_stat = {}
+
+        for cur_result in sql_result:
+            t.show_stat[cur_result['showid']] = cur_result
 
         return t.respond()
 
