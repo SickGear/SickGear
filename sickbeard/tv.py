@@ -829,7 +829,7 @@ class TVShow(object):
             self.rls_require_words = sqlResults[0]['rls_require_words']
 
             if not self.imdbid:
-                imdbid = sqlResults[0]['imdb_id']
+                imdbid = sqlResults[0]['imdb_id'] or ''
                 self.imdbid = ('', imdbid)[2 < len(imdbid)]
 
             if self.is_anime:
