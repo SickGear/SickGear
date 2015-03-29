@@ -828,9 +828,9 @@ class TVShow(object):
             self.rls_ignore_words = sqlResults[0]['rls_ignore_words']
             self.rls_require_words = sqlResults[0]['rls_require_words']
 
+            self.imdbid = sqlResults[0]['imdb_id']
             if not self.imdbid:
-                imdbid = sqlResults[0]['imdb_id']
-                self.imdbid = ('', imdbid)[2 < len(imdbid)]
+                self.imdbid = ''
 
             if self.is_anime:
                 self.release_groups = BlackAndWhiteList(self.indexerid)
