@@ -63,10 +63,9 @@
 		</tfoot>
 
 		<tbody>
-#for $provider in $cacheResults:
-    #for $hItem in $provider[1]:
+#for $hItem in $cacheResults:
 			<tr>
-				<td class="col-cache">$provider[0]</td>
+				<td class="col-cache">$hItem['provider']</td>
 				<td class="col-name-cache">$hItem['name']</td>
 				<td class="col-cache">$hItem['season']</td>
 				<td class="col-episodes">$hItem['episodes']</td>
@@ -77,7 +76,6 @@
 				<td class="col-cache">$hItem['release_group']</td>
 				<td class="col-cache">$hItem['version']</td>
 			</tr>
-    #end for
 #end for
 		</tbody>
 	</table>

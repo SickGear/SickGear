@@ -4745,15 +4745,13 @@ class ApiBuilder(MainHandler):
 class Cache(MainHandler):
     def index(self):
         myDB = db.DBConnection('cache.db')
-        results = []
-        for provider in sickbeard.providers.sortedProviderList():
-            try:
-                sqlResults = myDB.select('SELECT * FROM %s' % provider.cache.providerID)
-            except:
-                continue
-            results.append((provider.name, sqlResults))
+        sql_results = myDB.select('SELECT * FROM provider_cache')
+        if not sql_results:
+            sql_results = []
+
+
 
         t = PageTemplate(headers=self.request.headers, file='cache.tmpl')
-        t.cacheResults = results
+        t.cacheResults = sql_results
 
         return t.respond()

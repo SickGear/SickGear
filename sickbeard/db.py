@@ -236,9 +236,9 @@ def prettyName(class_name):
     return ' '.join([x.group() for x in re.finditer('([A-Z])([a-z0-9]+)', class_name)])
 
 
-def restoreDatabase(version):
+def restoreDatabase(filename, version):
     logger.log(u'Restoring database before trying upgrade again')
-    if not sickbeard.helpers.restoreVersionedFile(dbFilename(suffix='v%s' % version), version):
+    if not sickbeard.helpers.restoreVersionedFile(dbFilename(filename=filename, suffix='v%s' % version), version):
         logger.log_error_and_exit(u'Database restore failed, abort upgrading database')
         return False
     else:
@@ -257,7 +257,6 @@ def _processUpgrade(connection, upgradeClass):
             try:
                 instance.execute()
             except:
-                restored = False
                 result = connection.select('SELECT db_version FROM db_version')
                 if result:
                     version = int(result[0]['db_version'])
@@ -265,14 +264,11 @@ def _processUpgrade(connection, upgradeClass):
                     # close db before attempting restore
                     connection.close()
 
-                    if restoreDatabase(version):
-                        # initialize the main SB database
-                        upgradeDatabase(DBConnection(), sickbeard.mainDB.InitialSchema)
-                        restored = True
+                    if restoreDatabase(connection.filename, version):
+                        logger.log_error_and_exit(u'Successfully restored database version: %s' % version)
+                    else:
+                        logger.log_error_and_exit(u'Failed to restore database version: %s' % version)
 
-                if not restored:
-                    print 'Error in %s: %s ' % (upgradeClass.__name__, ex(e))
-                    raise
         logger.log('%s upgrade completed' % upgradeClass.__name__, logger.DEBUG)
     else:
         logger.log('%s upgrade not required' % upgradeClass.__name__, logger.DEBUG)
@@ -369,6 +365,13 @@ class SchemaUpgrade(object):
         self.connection.action('UPDATE db_version SET db_version = ?', [new_version])
         return new_version
 
+    def listTables(self):
+        tables = []
+        sql_result = self.connection.select('SELECT name FROM sqlite_master where type = "table"')
+        for table in sql_result:
+            tables.append(table[0])
+        return tables
+
 
 def MigrationCode(myDB):
     schema = {
@@ -442,8 +445,15 @@ def MigrationCode(myDB):
                 myDB.close()
                 logger.log(u'Failed to update database with error: %s attempting recovery...' % ex(e), logger.ERROR)
 
-                if restoreDatabase(db_version):
+                if restoreDatabase(myDB.filename, db_version):
                     # initialize the main SB database
                     logger.log_error_and_exit(u'Successfully restored database version: %s' % db_version)
                 else:
                     logger.log_error_and_exit(u'Failed to restore database version: %s' % db_version)
+
+def backup_database(filename, version):
+    logger.log(u'Backing up database before upgrade')
+    if not sickbeard.helpers.backupVersionedFile(dbFilename(filename), version):
+        logger.log_error_and_exit(u'Database backup failed, abort upgrading database')
+    else:
+        logger.log(u'Proceeding with upgrade')
