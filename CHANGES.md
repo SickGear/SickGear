@@ -119,6 +119,7 @@
 * Fix display IMDb indexer with correct IMDb id on the displayShow page only when IMDb data exists
 * Fix correctly display show runtime when available on the displayShow page
 * Fix correctly initialise IMDb id loaded from db
+* Fix initialization of shows without an IMDb id
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
