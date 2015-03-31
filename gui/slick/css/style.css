@@ -1989,6 +1989,33 @@ h2.day, h2.network{
 }
 
 /* =======================================================================
+history.tmpl
+========================================================================== */
+
+#historyTable td,
+#historyTable td.provider span{
+	text-align:center
+}
+
+#historyTable td.provider img{
+	margin-right:3px
+}
+
+#historyTable td img,
+#historyTable td span{
+	vertical-align:middle
+}
+
+#historyTable td img.help,
+#historyTable td span.help{
+	cursor:help
+}
+
+#historyTable td.tvShow{
+	text-align:left
+}
+
+/* =======================================================================
 cache.tmpl
 ========================================================================== */
 
