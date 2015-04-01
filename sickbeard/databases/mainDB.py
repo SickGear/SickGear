@@ -145,12 +145,6 @@ class MainSanityCheck(db.DBSanityCheck):
             logger.log(u'No UNAIRED episodes, check passed')
 
 
-def backup_database(version):
-    logger.log(u'Backing up database before upgrade')
-    if not helpers.backupVersionedFile(db.dbFilename(), version):
-        logger.log_error_and_exit(u'Database backup failed, abort upgrading database')
-    else:
-        logger.log(u'Proceeding with upgrade')
 
 # ======================
 # = Main DB Migrations =
@@ -161,7 +155,7 @@ def backup_database(version):
 # 0 -> 31
 class InitialSchema(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasTable('tv_shows') and not self.hasTable('db_version'):
             queries = [
@@ -209,7 +203,7 @@ class InitialSchema(db.SchemaUpgrade):
 class AddSizeAndSceneNameFields(db.SchemaUpgrade):
     def execute(self):
 
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_episodes', 'file_size'):
             self.addColumn('tv_episodes', 'file_size')
@@ -320,7 +314,7 @@ class AddSizeAndSceneNameFields(db.SchemaUpgrade):
 # 10 -> 11
 class RenameSeasonFolders(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         # rename the column
         self.connection.action('ALTER TABLE tv_shows RENAME TO tmp_tv_shows')
@@ -404,7 +398,7 @@ class Add1080pAndRawHDQualities(db.SchemaUpgrade):
         return result
 
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         # update the default quality so we dont grab the wrong qualities after migration
         sickbeard.QUALITY_DEFAULT = self._update_composite_qualities(sickbeard.QUALITY_DEFAULT)
@@ -481,7 +475,7 @@ class AddShowidTvdbidIndex(db.SchemaUpgrade):
     # Adding index on tvdb_id (tv_shows) and showid (tv_episodes) to speed up searches/queries
 
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Checking for duplicate shows before adding unique index.')
         MainSanityCheck(self.connection).fix_duplicate_shows('tvdb_id')
@@ -500,7 +494,7 @@ class AddShowidTvdbidIndex(db.SchemaUpgrade):
 class AddLastUpdateTVDB(db.SchemaUpgrade):
     # Adding column last_update_tvdb to tv_shows for controlling nightly updates
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'last_update_tvdb'):
             logger.log(u'Adding column last_update_tvdb to tv_shows')
@@ -513,7 +507,7 @@ class AddLastUpdateTVDB(db.SchemaUpgrade):
 # 14 -> 15
 class AddDBIncreaseTo15(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Bumping database version to v%s' % self.checkDBVersion())
         self.incDBVersion()
@@ -523,7 +517,7 @@ class AddDBIncreaseTo15(db.SchemaUpgrade):
 # 15 -> 16
 class AddIMDbInfo(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Creating IMDb table imdb_info')
         self.connection.action(
@@ -540,7 +534,7 @@ class AddIMDbInfo(db.SchemaUpgrade):
 # 16 -> 17
 class AddProperNamingSupport(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'imdb_id')\
                 and self.hasColumn('tv_shows', 'rls_require_words')\
@@ -559,7 +553,7 @@ class AddProperNamingSupport(db.SchemaUpgrade):
 # 17 -> 18
 class AddEmailSubscriptionTable(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_episodes', 'is_proper')\
                 and self.hasColumn('tv_shows', 'rls_require_words')\
@@ -579,7 +573,7 @@ class AddEmailSubscriptionTable(db.SchemaUpgrade):
 # 18 -> 19
 class AddProperSearch(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'notify_list')\
                 and self.hasColumn('tv_shows', 'rls_require_words')\
@@ -600,7 +594,7 @@ class AddProperSearch(db.SchemaUpgrade):
 # 19 -> 20
 class AddDvdOrderOption(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'dvdorder'):
             logger.log(u'Adding column dvdorder to tv_shows')
@@ -613,7 +607,7 @@ class AddDvdOrderOption(db.SchemaUpgrade):
 # 20 -> 21
 class AddSubtitlesSupport(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'subtitles'):
             logger.log(u'Adding subtitles to tv_shows and tv_episodes')
@@ -629,7 +623,7 @@ class AddSubtitlesSupport(db.SchemaUpgrade):
 # 21 -> 22
 class ConvertTVShowsToIndexerScheme(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Converting TV Shows table to Indexer Scheme...')
 
@@ -656,7 +650,7 @@ class ConvertTVShowsToIndexerScheme(db.SchemaUpgrade):
 # 22 -> 23
 class ConvertTVEpisodesToIndexerScheme(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Converting TV Episodes table to Indexer Scheme...')
 
@@ -686,7 +680,7 @@ class ConvertTVEpisodesToIndexerScheme(db.SchemaUpgrade):
 # 23 -> 24
 class ConvertIMDBInfoToIndexerScheme(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Converting IMDB Info table to Indexer Scheme...')
 
@@ -708,7 +702,7 @@ class ConvertIMDBInfoToIndexerScheme(db.SchemaUpgrade):
 # 24 -> 25
 class ConvertInfoToIndexerScheme(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Converting Info table to Indexer Scheme...')
 
@@ -730,7 +724,7 @@ class ConvertInfoToIndexerScheme(db.SchemaUpgrade):
 # 25 -> 26
 class AddArchiveFirstMatchOption(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'archive_firstmatch'):
             logger.log(u'Adding column archive_firstmatch to tv_shows')
@@ -744,7 +738,7 @@ class AddArchiveFirstMatchOption(db.SchemaUpgrade):
 class AddSceneNumbering(db.SchemaUpgrade):
 
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if self.hasTable('scene_numbering'):
             self.connection.action('DROP TABLE scene_numbering')
@@ -760,7 +754,7 @@ class AddSceneNumbering(db.SchemaUpgrade):
 # 27 -> 28
 class ConvertIndexerToInteger(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         cl = []
         logger.log(u'Converting Indexer to Integer ...', logger.MESSAGE)
@@ -786,7 +780,7 @@ class AddRequireAndIgnoreWords(db.SchemaUpgrade):
             self.incDBVersion()
             return self.checkDBVersion()
 
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'rls_require_words'):
             logger.log(u'Adding column rls_require_words to tv_shows')
@@ -803,7 +797,7 @@ class AddRequireAndIgnoreWords(db.SchemaUpgrade):
 # 29 -> 30
 class AddSportsOption(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'sports'):
             logger.log(u'Adding column sports to tv_shows')
@@ -828,7 +822,7 @@ class AddSportsOption(db.SchemaUpgrade):
 # 30 -> 31
 class AddSceneNumberingToTvEpisodes(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Adding columns scene_season and scene_episode to tvepisodes')
         self.addColumn('tv_episodes', 'scene_season', 'NUMERIC', 'NULL')
@@ -841,7 +835,7 @@ class AddSceneNumberingToTvEpisodes(db.SchemaUpgrade):
 # 31 -> 32
 class AddAnimeTVShow(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Adding column anime to tv_episodes')
         self.addColumn('tv_shows', 'anime', 'NUMERIC', '0')
@@ -853,7 +847,7 @@ class AddAnimeTVShow(db.SchemaUpgrade):
 # 32 -> 33
 class AddAbsoluteNumbering(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Adding column absolute_number to tv_episodes')
         self.addColumn('tv_episodes', 'absolute_number', 'NUMERIC', '0')
@@ -865,7 +859,7 @@ class AddAbsoluteNumbering(db.SchemaUpgrade):
 # 33 -> 34
 class AddSceneAbsoluteNumbering(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Adding columns absolute_number and scene_absolute_number to scene_numbering')
         self.addColumn('scene_numbering', 'absolute_number', 'NUMERIC', '0')
@@ -878,7 +872,7 @@ class AddSceneAbsoluteNumbering(db.SchemaUpgrade):
 # 34 -> 35
 class AddAnimeBlacklistWhitelist(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         cl = []
         cl.append(['CREATE TABLE blacklist (show_id INTEGER, range TEXT, keyword TEXT)'])
@@ -893,7 +887,7 @@ class AddAnimeBlacklistWhitelist(db.SchemaUpgrade):
 # 35 -> 36
 class AddSceneAbsoluteNumbering2(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Adding column scene_absolute_number to tv_episodes')
         self.addColumn('tv_episodes', 'scene_absolute_number', 'NUMERIC', '0')
@@ -905,7 +899,7 @@ class AddSceneAbsoluteNumbering2(db.SchemaUpgrade):
 # 36 -> 37
 class AddXemRefresh(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Creating table xem_refresh')
         self.connection.action(
@@ -918,7 +912,7 @@ class AddXemRefresh(db.SchemaUpgrade):
 # 37 -> 38
 class AddSceneToTvShows(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Adding column scene to tv_shows')
         self.addColumn('tv_shows', 'scene', 'NUMERIC', '0')
@@ -930,7 +924,7 @@ class AddSceneToTvShows(db.SchemaUpgrade):
 # 38 -> 39
 class AddIndexerMapping(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if self.hasTable('indexer_mapping'):
             self.connection.action('DROP TABLE indexer_mapping')
@@ -946,7 +940,7 @@ class AddIndexerMapping(db.SchemaUpgrade):
 # 39 -> 40
 class AddVersionToTvEpisodes(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Adding columns release_group and version to tv_episodes')
         self.addColumn('tv_episodes', 'release_group', 'TEXT', '')
@@ -962,7 +956,7 @@ class AddVersionToTvEpisodes(db.SchemaUpgrade):
 # 40 -> 10000
 class BumpDatabaseVersion(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Bumping database version')
 
@@ -973,7 +967,7 @@ class BumpDatabaseVersion(db.SchemaUpgrade):
 # 41 -> 10001
 class Migrate41(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Bumping database version')
 
@@ -984,7 +978,7 @@ class Migrate41(db.SchemaUpgrade):
 # 5816 - 5818 -> 15
 class MigrateUpstream(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Migrate SickBeard DB v%s into v15' % str(self.checkDBVersion()).replace('58', ''))
 
@@ -995,7 +989,7 @@ class MigrateUpstream(db.SchemaUpgrade):
 # 10000 -> 20000
 class SickGearDatabaseVersion(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Bumping database version to new SickGear standards')
 
@@ -1006,7 +1000,7 @@ class SickGearDatabaseVersion(db.SchemaUpgrade):
 # 10001 -> 10000
 class RemoveDefaultEpStatusFromTvShows(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Dropping column default_ep_status from tv_shows')
         self.dropColumn('tv_shows', 'default_ep_status')
@@ -1018,7 +1012,7 @@ class RemoveDefaultEpStatusFromTvShows(db.SchemaUpgrade):
 # 20000 -> 20001
 class DBIncreaseTo20001(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Bumping database version to force a backup before new database code')
 
@@ -1032,7 +1026,7 @@ class DBIncreaseTo20001(db.SchemaUpgrade):
 # 20001 -> 20002
 class AddTvShowOverview(db.SchemaUpgrade):
     def execute(self):
-        backup_database(self.checkDBVersion())
+        db.backup_database('sickbeard.db', self.checkDBVersion())
 
         logger.log(u'Adding column overview to tv_shows')
         self.addColumn('tv_shows', 'overview', 'TEXT', '')

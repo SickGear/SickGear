@@ -40,36 +40,6 @@ class CacheDBConnection(db.DBConnection):
 
         # Create the table if it's not already there
         try:
-            if not self.hasTable(providerName):
-                self.action(
-                    'CREATE TABLE [' + providerName + '] (name TEXT, season NUMERIC, episodes TEXT, indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT, release_group TEXT)')
-                self.action(
-                    'CREATE UNIQUE INDEX IF NOT EXISTS [idx_' + providerName + '_url] ON [' + providerName + '] (url)')
-            elif not self.hasIndex(providerName, 'idx_%s_url' % providerName):
-                sqlResults = self.select(
-                    'SELECT url, COUNT(url) as count FROM [' + providerName + '] GROUP BY url HAVING count > 1')
-
-                for cur_dupe in sqlResults:
-                    self.action('DELETE FROM [' + providerName + '] WHERE url = ?', [cur_dupe['url']])
-
-                self.action(
-                    'CREATE UNIQUE INDEX IF NOT EXISTS [idx_' + providerName + '_url] ON [' + providerName + '] (url)')
-
-
-            # add release_group column to table if missing
-            if not self.hasColumn(providerName, 'release_group'):
-                self.addColumn(providerName, 'release_group', 'TEXT', '')
-
-            # add version column to table if missing
-            if not self.hasColumn(providerName, 'version'):
-                self.addColumn(providerName, 'version', 'NUMERIC', '-1')
-
-        except Exception, e:
-            if str(e) != 'table [' + providerName + '] already exists':
-                raise
-
-        # Create the table if it's not already there
-        try:
             if not self.hasTable('lastUpdate'):
                 self.action('CREATE TABLE lastUpdate (provider TEXT, time NUMERIC)')
         except Exception, e:
@@ -90,7 +60,7 @@ class TVCache():
     def _clearCache(self):
         if self.shouldClearCache():
             myDB = self._getDB()
-            myDB.action('DELETE FROM [' + self.providerID + '] WHERE 1')
+            myDB.action('DELETE FROM provider_cache WHERE provider = ?', [self.providerID])
 
     def _get_title_and_url(self, item):
         # override this in the provider if recent search has a different data layout to backlog searches
@@ -273,8 +243,8 @@ class TVCache():
             logger.log(u'Added RSS item: [' + name + '] to cache: [' + self.providerID + ']', logger.DEBUG)
 
             return [
-                'INSERT OR IGNORE INTO [' + self.providerID + '] (name, season, episodes, indexerid, url, time, quality, release_group, version) VALUES (?,?,?,?,?,?,?,?,?)',
-                [name, season, episodeText, parse_result.show.indexerid, url, curTimestamp, quality, release_group, version]]
+                'INSERT OR IGNORE INTO provider_cache (provider, name, season, episodes, indexerid, url, time, quality, release_group, version) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                [self.providerID, name, season, episodeText, parse_result.show.indexerid, url, curTimestamp, quality, release_group, version]]
 
 
     def searchCache(self, episode, manualSearch=False):
@@ -286,12 +256,12 @@ class TVCache():
 
     def listPropers(self, date=None, delimiter='.'):
         myDB = self._getDB()
-        sql = "SELECT * FROM [" + self.providerID + "] WHERE name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%'"
+        sql = "SELECT * FROM provider_cache WHERE name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%' AND provider = ?"
 
         if date != None:
             sql += ' AND time >= ' + str(int(time.mktime(date.timetuple())))
 
-        return filter(lambda x: x['indexerid'] != 0, myDB.select(sql))
+        return filter(lambda x: x['indexerid'] != 0, myDB.select(sql, [self.providerID]))
 
 
     def findNeededEpisodes(self, episode, manualSearch=False):
@@ -301,14 +271,14 @@ class TVCache():
         myDB = self._getDB()
         if type(episode) != list:
             sqlResults = myDB.select(
-                'SELECT * FROM [' + self.providerID + '] WHERE indexerid = ? AND season = ? AND episodes LIKE ?',
-                [episode.show.indexerid, episode.season, '%|' + str(episode.episode) + '|%'])
+                'SELECT * FROM provider_cache WHERE provider = ? AND indexerid = ? AND season = ? AND episodes LIKE ?',
+                [self.providerID, episode.show.indexerid, episode.season, '%|' + str(episode.episode) + '|%'])
         else:
             for epObj in episode:
                 cl.append([
-                    'SELECT * FROM [' + self.providerID + '] WHERE indexerid = ? AND season = ? AND episodes LIKE ? '
+                    'SELECT * FROM provider_cache WHERE provider = ? AND indexerid = ? AND season = ? AND episodes LIKE ? '
                     'AND quality IN (' + ','.join([str(x) for x in epObj.wantedQuality]) + ')',
-                    [epObj.show.indexerid, epObj.season, '%|' + str(epObj.episode) + '|%']])
+                    [self.providerID, epObj.show.indexerid, epObj.season, '%|' + str(epObj.episode) + '|%']])
             sqlResults = myDB.mass_action(cl)
             if sqlResults:
                 sqlResults = list(itertools.chain(*sqlResults))
