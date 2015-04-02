@@ -122,6 +122,7 @@
 * Fix correctly initialise IMDb id loaded from db
 * Fix loading shows from the DB that have NULL IMDb id
 * Change order of snatched provider images to chronological on History layout compact and add ordinal indicators in the tooltips
+* Fix XEM Exceptions in case of bad data from XEM
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 

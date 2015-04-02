@@ -317,7 +317,10 @@ def _xem_exceptions_fetcher():
                 continue
 
             for indexerid, names in parsedJSON['data'].items():
-                xem_exception_dict[int(indexerid)] = names
+                try:
+                    xem_exception_dict[int(indexerid)] = names
+                except:
+                    continue
 
         setLastRefresh('xem')
 
