@@ -121,6 +121,6 @@ class ConsolidateProviders(AddNetworkConversions):
         current_tables = set(self.listTables())
         remove_tables = list(current_tables - keep_tables)
         for table in remove_tables:
-            self.connection.action('DROP TABLE %s' % table)
+            self.connection.action('DROP TABLE [%s]' % table)
 
         self.incDBVersion()
