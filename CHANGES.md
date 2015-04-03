@@ -1,4 +1,4 @@
-### 0.x.x (2015-xx-xx xx:xx:xx UTC)
+### 0.8.0 (2015-04-xx xx:xx:xx UTC)
 
 * Change Wombles to use tv-dvd section
 * Add requirements file for pip (port from midgetspy/sick-beard)
@@ -93,37 +93,10 @@
 * Fix saving of Sort By/Next Episode in Layout Poster on Show List page
 * Change improve backlog search
 * Change only add valid items to save to DB
-
-[develop changelog]
-* Fix traceback error when using the menu item Manage/Update Kodi
-* Change BET network logo filename to lower case
-* Change redirect from home to showlistView on changing Layout on showlistView
-* Fix the return flow from calls to the redirect function from executing incorrect code
-* Fix being able to actually turn IMDb off when it has been turned on
-* Remove IMDb option from General Settings
-* Change IMDb option to enable by default now the slow operation has been eliminated from process flows
-* Add IMDb update capability back to the "Force Full Update" button on the displayShow page
-* Fix to correctly use wanted_begin and wanted_latest when adding shows
-* Change Log/Error Log Menu icons to correct ones
-* Fix issue with missing QueueItemForceUpdate object has no attribute 'force_web'
-* Fix disabling IMDb broke page
-* Fix counting of files on displayShow
-* Add some tooltips to bottom show details for clarity on displayShow
-* Change red text on blue tag to white text on red tag to improve readability of invalid locations on displayShow
-* Change glyph to right side of "Show/Hide episodes" button text to improve visual when toggling button on displayShow
-* Change to adjust alignment of season label text when next to select combo
-* Change display genres sourced from indexers in labels underneath the show title on displayShow, remove the tag image
-* Change IMDb genre links to have the tag image applied to the link making it an easier target to click and also visually different from indexer genres
-* Fix scene anime html id construction in line with plot_info
-* Fix display indexer provided start year on the displayShow page when no IMDb data exists
-* Fix display indexer provided genres on the displayShow page when no IMDb data exists
-* Fix display IMDb indexer with correct IMDb id on the displayShow page only when IMDb data exists
-* Fix correctly display show runtime when available on the displayShow page
-* Fix correctly initialise IMDb id loaded from db
-* Fix loading shows from the DB that have NULL IMDb id
-* Change order of snatched provider images to chronological on History layout compact and add ordinal indicators in the tooltips
+* Change provider cache storage structure
+* Add handling for failed cache database upgrades
 * Fix XEM Exceptions in case of bad data from XEM
-* Fix provider consolidation cache upgrade
+
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
