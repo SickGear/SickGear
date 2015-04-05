@@ -94,6 +94,12 @@ class SearchQueue(generic_queue.GenericQueue):
                 return True
         return False
 
+    def is_standard_backlog_in_progress(self):
+        for cur_item in self.queue + [self.currentItem]:
+            if isinstance(cur_item, BacklogQueueItem) and cur_item.standard_backlog:
+                return True
+        return False
+
     def is_recentsearch_in_progress(self):
         for cur_item in self.queue + [self.currentItem]:
             if isinstance(cur_item, RecentSearchQueueItem):
@@ -308,13 +314,14 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
 
 
 class BacklogQueueItem(generic_queue.QueueItem):
-    def __init__(self, show, segment):
+    def __init__(self, show, segment, standard_backlog=False):
         generic_queue.QueueItem.__init__(self, 'Backlog', BACKLOG_SEARCH)
         self.priority = generic_queue.QueuePriorities.LOW
         self.name = 'BACKLOG-' + str(show.indexerid)
         self.success = None
         self.show = show
         self.segment = segment
+        self.standard_backlog = standard_backlog
 
     def run(self):
         generic_queue.QueueItem.run(self)

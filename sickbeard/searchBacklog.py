@@ -28,6 +28,7 @@ from sickbeard import search_queue
 from sickbeard import logger
 from sickbeard import ui
 from sickbeard import common
+from sickbeard.search import wantedEpisodes
 
 
 class BacklogSearchScheduler(scheduler.Scheduler):
@@ -78,8 +79,10 @@ class BacklogSearcher:
 
         if which_shows:
             show_list = which_shows
+            standard_backlog = False
         else:
             show_list = sickbeard.showList
+            standard_backlog = True
 
         self._get_lastBacklog()
 
@@ -99,12 +102,12 @@ class BacklogSearcher:
             if curShow.paused:
                 continue
 
-            segments = self._get_segments(curShow, fromDate)
+            segments = wantedEpisodes(curShow, fromDate, make_dict=True)
 
             for season, segment in segments.items():
                 self.currentSearchInfo = {'title': curShow.name + " Season " + str(season)}
 
-                backlog_queue_item = search_queue.BacklogQueueItem(curShow, segment)
+                backlog_queue_item = search_queue.BacklogQueueItem(curShow, segment, standard_backlog=standard_backlog)
                 sickbeard.searchQueueScheduler.action.add_item(backlog_queue_item)  # @UndefinedVariable
             else:
                 logger.log(u'Nothing needs to be downloaded for %s, skipping' % str(curShow.name), logger.DEBUG)
@@ -135,55 +138,6 @@ class BacklogSearcher:
 
         self._lastBacklog = lastBacklog
         return self._lastBacklog
-
-    def _get_segments(self, show, fromDate):
-        anyQualities, bestQualities = common.Quality.splitQuality(show.quality)  # @UnusedVariable
-
-        myDB = db.DBConnection()
-        if show.air_by_date:
-            sqlResults = myDB.select(
-                "SELECT ep.status, ep.season, ep.episode FROM tv_episodes ep, tv_shows show WHERE season != 0 AND ep.showid = show.indexer_id AND show.paused = 0 AND ep.airdate > ? AND ep.showid = ? AND show.air_by_date = 1",
-                [fromDate.toordinal(), show.indexerid])
-        else:
-            sqlResults = myDB.select(
-                "SELECT status, season, episode FROM tv_episodes WHERE showid = ? AND season > 0 and airdate > ?",
-                [show.indexerid, fromDate.toordinal()])
-
-        # check through the list of statuses to see if we want any
-        wanted = {}
-        total_wanted = total_replacing = 0
-        for result in sqlResults:
-            curCompositeStatus = int(result["status"])
-            curStatus, curQuality = common.Quality.splitCompositeStatus(curCompositeStatus)
-
-            if bestQualities:
-                highestBestQuality = max(bestQualities)
-            else:
-                highestBestQuality = 0
-
-            # if we need a better one then say yes
-            if (curStatus in (common.DOWNLOADED, common.SNATCHED, common.SNATCHED_PROPER,
-                              common.SNATCHED_BEST) and curQuality < highestBestQuality) or curStatus == common.WANTED:
-
-                if curStatus == common.WANTED:
-                    total_wanted += 1
-                else:
-                    total_replacing += 1
-
-                epObj = show.getEpisode(int(result["season"]), int(result["episode"]))
-                if epObj.season not in wanted:
-                    wanted[epObj.season] = [epObj]
-                else:
-                    wanted[epObj.season].append(epObj)
-
-        if 0 < total_wanted + total_replacing:
-            actions = []
-            for msg, total in ['%d episode%s', total_wanted], ['to upgrade %d episode%s', total_replacing]:
-                if 0 < total:
-                    actions.append(msg % (total, helpers.maybe_plural(total)))
-            logger.log(u'We want %s for %s' % (' and '.join(actions), show.name))
-
-        return wanted
 
     def _set_lastBacklog(self, when):
 

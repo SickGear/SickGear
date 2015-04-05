@@ -27,13 +27,14 @@ from sickbeard.exceptions import ex
 
 class Scheduler(threading.Thread):
     def __init__(self, action, cycleTime=datetime.timedelta(minutes=10), run_delay=datetime.timedelta(minutes=0),
-                 start_time=None, threadName="ScheduledThread", silent=True):
+                 start_time=None, threadName="ScheduledThread", silent=True, prevent_cycle_run=None):
         super(Scheduler, self).__init__()
 
         self.lastRun = datetime.datetime.now() + run_delay - cycleTime
         self.action = action
         self.cycleTime = cycleTime
         self.start_time = start_time
+        self.prevent_cycle_run = prevent_cycle_run
 
         self.name = threadName
         self.silent = silent
@@ -69,6 +70,12 @@ class Scheduler(threading.Thread):
                         self.lastRun = current_time
                 else:
                     should_run = True
+
+            if should_run and self.prevent_cycle_run is not None and self.prevent_cycle_run():
+                logger.log(u'%s skipping this cycleTime' % self.name, logger.WARNING)
+                # set lastRun to only check start_time after another cycleTime
+                self.lastRun = current_time
+                should_run = False
 
             if should_run:
                 self.lastRun = current_time
