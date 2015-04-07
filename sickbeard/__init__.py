@@ -61,7 +61,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 10
+CONFIG_VERSION = 11
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -158,6 +158,9 @@ DEBUG = False
 DISPLAY_BACKGROUND = False
 DISPLAY_BACKGROUND_TRANSPARENT = None
 DISPLAY_ALL_SEASONS = True
+SHOW_TAGS = []
+DEFAULT_SHOW_TAG = ''
+SHOWLIST_TAGVIEW = ''
 
 USE_LISTVIEW = False
 METADATA_XBMC = None
@@ -531,7 +534,8 @@ def initialize(consoleLogging=True):
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, ANIME_TREAT_AS_HDTV, \
-            COOKIE_SECRET, USE_IMDB_INFO, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS
+            COOKIE_SECRET, USE_IMDB_INFO, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS, \
+            SHOW_TAGS, DEFAULT_SHOW_TAG, SHOWLIST_TAGVIEW
 
         if __INITIALIZED__:
             return False
@@ -605,6 +609,9 @@ def initialize(consoleLogging=True):
         DISPLAY_BACKGROUND = bool(check_setting_int(CFG, 'General', 'display_background', 0))
         DISPLAY_BACKGROUND_TRANSPARENT = check_setting_str(CFG, 'General', 'display_background_transparent', 'transparent')
         DISPLAY_ALL_SEASONS = bool(check_setting_int(CFG, 'General', 'display_all_seasons', 1))
+        SHOW_TAGS = check_setting_str(CFG, 'GUI', 'show_tags', 'Show List').split(',')
+        DEFAULT_SHOW_TAG = check_setting_str(CFG, 'GUI', 'default_show_tag', 'Show List')
+        SHOWLIST_TAGVIEW = check_setting_str(CFG, 'GUI', 'showlist_tagview', 'standard')
 
         ACTUAL_LOG_DIR = check_setting_str(CFG, 'General', 'log_dir', 'Logs')
         # put the log dir inside the data dir, unless an absolute path
@@ -1842,6 +1849,9 @@ def save_config():
     new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
+    new_config['GUI']['show_tags'] = ','.join(SHOW_TAGS)
+    new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
+    new_config['GUI']['default_tag'] = DEFAULT_SHOW_TAG
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)
@@ -1864,7 +1874,6 @@ def save_config():
     new_config['ANIDB']['anidb_use_mylist'] = int(ANIDB_USE_MYLIST)
 
     new_config['ANIME'] = {}
-    new_config['ANIME']['anime_split_home'] = int(ANIME_SPLIT_HOME)
     new_config['ANIME']['anime_treat_as_hdtv'] = int(ANIME_TREAT_AS_HDTV)
 
     new_config.write()

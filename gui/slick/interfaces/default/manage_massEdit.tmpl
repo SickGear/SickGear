@@ -164,6 +164,18 @@
 		</div><br />
 	</div>
 
+	<div class="optionWrapper #if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then 'hidden' else ''#">
+		<span class="selectTitle">Tag</span>
+		<div class="selectChoices">
+			<select id="edit_tag" name="tag" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+#for $tag in $sickbeard.SHOW_TAGS:
+				<option value="$tag" #if $tag_value == $tag then $selected else ''#>$tag</option>
+#end for
+			</select>
+		</div><br />
+	</div>
+
 	<div class="optionWrapper" style="font-size:13px;margin-top:15px">
 		<span class="separator" style="font-size:1.2em; font-weight:700">*</span>
 		Changing these settings will cause selected shows to be refreshed

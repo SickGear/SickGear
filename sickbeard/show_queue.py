@@ -135,10 +135,10 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
                 lang="en", subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
-                wanted_begin=None, wanted_latest=None):
+                wanted_begin=None, wanted_latest=None, tag=None):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
                                     subtitles, anime, scene, paused, blacklist, whitelist,
-                                    wanted_begin, wanted_latest)
+                                    wanted_begin, wanted_latest, tag)
 
         self.add_item(queueItemObj)
 
@@ -194,7 +194,7 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest):
+                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, tag):
 
         self.indexer = indexer
         self.indexer_id = indexer_id
@@ -211,6 +211,7 @@ class QueueItemAdd(ShowQueueItem):
         self.paused = paused
         self.blacklist = blacklist
         self.whitelist = whitelist
+        self.tag = tag
 
         self.show = None
 
@@ -299,6 +300,7 @@ class QueueItemAdd(ShowQueueItem):
             self.show.anime = self.anime if self.anime != None else sickbeard.ANIME_DEFAULT
             self.show.scene = self.scene if self.scene != None else sickbeard.SCENE_DEFAULT
             self.show.paused = self.paused if self.paused != None else False
+            self.show.tag = self.tag
 
             if self.show.anime:
                 self.show.release_groups = BlackAndWhiteList(self.show.indexerid)

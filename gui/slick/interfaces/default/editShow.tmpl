@@ -49,6 +49,8 @@
 
 		}
 		\$('#indexerLangSelectEdit').html(resultStr)
+
+        $('tag')
 	});
 });
 //-->
@@ -64,6 +66,20 @@
 <input type="hidden" name="show" value="$show.indexerid">
 
 	<div id="editShow" class="stepDiv linefix">
+
+		<div class="field-pair #if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then 'hidden' else ''#" style="margin-bottom:10px">
+			<label for="tag">
+				<span class="component-title">Tag</span>
+				<span class="component-desc">
+					<select name="tag" id="tag" class="form-control form-control-inline input-sm">
+#for $tag in $sickbeard.SHOW_TAGS:
+						<option value="$tag" #if $tag == $show.tag then "selected=\"selected\"" else ""#>$tag</option>
+#end for
+					</select>
+					<span>used for show list page split view</span>
+				</span>
+			</label>
+		</div>
 
 		<div class="field-pair">
 			<label for="paused">

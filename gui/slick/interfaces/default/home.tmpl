@@ -29,7 +29,7 @@
 			return (s || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
 		#else:
 			return (s || '');
-		#end if	
+		#end if
 	},
 	type: 'text'
 });
@@ -39,20 +39,18 @@
 	is: function(s) {
 		return false;
 	},
-	format: function(s) { 
+	format: function(s) {
 		return s.replace('hd1080p',5).replace('hd720p',4).replace('hd',3).replace('sd',2).replace('any',1).replace('custom',7);
 	},
 	type: 'numeric'
 });
 
-\$(document).ready(function(){ 
-	
-	\$("img#network").on('error', function(){
-		\$(this).parent().text(\$(this).attr('alt'));
-		\$(this).remove();
-	});
+\$(document).ready(function(){
 
-	\$("#showListTableShows:has(tbody tr)").tablesorter({
+#for $curShowlist in $showlists
+#set $curListID = $curShowlist[0]
+    #if $layout != 'poster'
+	\$("#$curListID:has(tbody tr)").tablesorter({
 		sortList: [[5,1],[1,0]],
 		textExtraction: {
 			0: function(node) { return \$(node).find("span").text().toLowerCase(); },
@@ -74,49 +72,12 @@
 		},
 		sortStable: true
 	});
-	
-	\$("#showListTableAnime:has(tbody tr)").tablesorter({
-		sortList: [[5,1],[1,0]],
-		textExtraction: {
-			0: function(node) { return \$(node).find("span").text().toLowerCase(); },
-			2: function(node) { return \$(node).find("span").text().toLowerCase(); },
-			3: function(node) { return \$(node).find("span").text().toLowerCase(); },
-			4: function(node) { return \$(node).find("span").text(); },
-			5: function(node) { return \$(node).find("img").attr("alt"); }
-		},
-		widgets: ['saveSort', 'zebra', 'stickyHeaders', 'filter'],
-		headers: {
-			0: { sorter: 'isoDate' },
-			1: { sorter: 'loadingNames' },
-			3: { sorter: 'quality' },
-			4: { sorter: 'eps' }
-		},
-		widgetOptions : {
-			filter_columnFilters: false,
-			filter_reset: '.resetanime'
-		},
-		sortStable: true
-	});
 
-	\$.tablesorter.filter.bindSearch( "#showListTableShows", \$('.search') );
-	
-    #if $sickbeard.ANIME_SPLIT_HOME:
-	\$.tablesorter.filter.bindSearch( "#showListTableAnime", \$('.search') );
-    #end if
+	\$.tablesorter.filter.bindSearch( "#$curListID", \$('.search') );
 
-    #set $fuzzydate = 'airdate'
-    #if $sickbeard.FUZZY_DATING:
-	fuzzyMoment({
-		dtInline : #if $layout == 'poster' then "true" else "false"#,
-		containerClass : '.${fuzzydate}',
-		dateHasTime : false,
-		dateFormat : '${sickbeard.DATE_PRESET}',
-		timeFormat : '${sickbeard.TIME_PRESET}',
-		trimZero : #if $sickbeard.TRIM_ZERO then "true" else "false"#
-	});
-    #end if
+    #else
 
-	var \$container = [\$('#container'), \$('#container-anime')];
+	var \$container = [\$('#$curListID')]
 
 	jQuery.each(\$container, function (j) {
 		this.isotope({
@@ -129,13 +90,13 @@
 				isFitWidth: true
 			},
 			getSortData: {
-				name: function( itemElem ) { 
+				name: function( itemElem ) {
 					var name = \$( itemElem ).attr('data-name');
 					#if not $sickbeard.SORT_ARTICLE:
 						return (name || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
 					#else:
 						return (name || '');
-					#end if	
+					#end if
 				},
 				network: '[data-network]',
 				date: function( itemElem ) {
@@ -152,18 +113,37 @@
 
 	\$('#postersort').on( 'change', function() {
 		var sortValue = this.value;
-		\$('#container').isotope({ sortBy: sortValue });
-		\$('#container-anime').isotope({ sortBy: sortValue });
+		\$('#$curListID').isotope({ sortBy: sortValue });
 		\$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
 	});
-	
+
 	\$('#postersortdirection').on( 'change', function() {
 		var sortDirection = this.value;
 		sortDirection = sortDirection == 'true';
-		\$('#container').isotope({ sortAscending: sortDirection });
-		\$('#container-anime').isotope({ sortAscending: sortDirection });
+		\$('#$curListID').isotope({ sortAscending: sortDirection });
 		\$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
 	});
+	#end if
+#end for
+
+	\$("img#network").on('error', function(){
+		\$(this).parent().text(\$(this).attr('alt'));
+		\$(this).remove();
+	});
+
+    #set $fuzzydate = 'airdate'
+    #if $sickbeard.FUZZY_DATING:
+	fuzzyMoment({
+		dtInline : #if $layout == 'poster' then "true" else "false"#,
+		containerClass : '.${fuzzydate}',
+		dateHasTime : false,
+		dateFormat : '${sickbeard.DATE_PRESET}',
+		timeFormat : '${sickbeard.TIME_PRESET}',
+		trimZero : #if $sickbeard.TRIM_ZERO then "true" else "false"#
+	});
+    #end if
+
+
 #if $sickbeard.HOME_SEARCH_FOCUS
 	\$('#search_show_name').focus();
 #end if
@@ -172,9 +152,9 @@
 //-->
 </script>
 
-#if $varExists('header') 
-	<h1 class="header" style="margin-bottom:0">$header</h1>
-#else 
+#if $varExists('header')
+	<h1 class="header" style="margin-bottom:0">$showlists[0][1]</h1>
+#else
 	<h1 class="title" style="margin-bottom:0">$title</h1>
 #end if
 
@@ -222,14 +202,15 @@
 
 
 #for $curShowlist in $showlists:
-#set $curListType = $curShowlist[0]
-#set $myShowList = $list($curShowlist[1])
-#if $curListType == "Anime":
-<h1 class="header">Anime List</h1>
+#set $curListID = $curShowlist[0]
+#set $curListName = $curShowlist[1]
+#set $myShowList = $list($curShowlist[2])
+#if $curShowlist != $showlists[0]:
+	<h1 class="header">$curListName</h1>
 #end if
 
 #if $layout == 'poster':
-<div id=#if $curListType == "Anime" and $layout == 'poster' then "container-anime" else "container"# class="clearfix">
+<div id="$curListID" class="clearfix container">
 <div class="posterview">
 #for $curLoadingShow in $sickbeard.showQueueScheduler.action.loadingShowList:
 
@@ -406,18 +387,18 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 
 #else
 
-<table id="showListTable$curListType" class="tablesorter" cellspacing="1" border="0" cellpadding="0">
+<table id="$curListID" class="tablesorter" cellspacing="1" border="0" cellpadding="0">
 
 	<thead>
-		<tr>
-			<th class="nowrap">Next Ep</th>
-			<th>Show</th>
-			<th>Network</th>
-			<th>Quality</th>
-			<th>Downloads</th>
-			<th>Active</th>
-			<th>Status</th>
-		</tr>
+        <tr>
+			<th class="col-airdate">Next Ep</th>
+			<th class="col-name">Show</th>
+			<th class="col-simple">Network</th>
+			<th class="col-simple">Quality</th>
+			<th class="col-simple">Downloads</th>
+			<th class="col-simple">Active</th>
+			<th class="col-simple">Status</th>
+        </tr>
 	</thead>
 
 	<tfoot>

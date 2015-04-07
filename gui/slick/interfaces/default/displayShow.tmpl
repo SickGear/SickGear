@@ -80,21 +80,12 @@ $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
     #end if
     #for $curShow in $curShowList
         #set void = $displayshowlist.append('\t\t\t<option value="%s"%s>%s</option>' % ($curShow.indexerid, ('', ' selected="selected"')[$curShow == $show], $curShow.name))
-		#if $curShow == $show
-		    #set $cur_sel = len($displayshowlist)
-		#end if
     #end for
     #if 1 < len($sortedShowLists)
         #set void = $displayshowlist.append('\t\t\t</optgroup>')
 	#end if
 #end for
-#set $last_item = len($displayshowlist)
-#set $prev_option = $displayshowlist[($cur_sel - 2, $last_item - 1)[1 == $cur_sel]]
-#set $next_option = $displayshowlist[($cur_sel, 0)[$last_item == $cur_sel]]
-#set $next_match = re.search(r'<opt[^>]+>(.*?)</opt', $prev_option)
-#set $prev_match = re.search(r'<opt[^>]+>(.*?)</opt', $next_option)
-#set $prev_title = 'Prev show' if not $next_match else 'Prev show, ' + $next_match.group(1)
-#set $next_title = 'Next show' if not $prev_match else 'Next show, ' + $prev_match.group(1)
+
 #slurp
 		<div class="navShow"><img id="prevShow" src="$sbRoot/images/prev.png" alt="&lt;&lt;" title="$prev_title" class="addQTip" /></div>
 		<select id="pickShow" class="form-control form-control-inline input-sm">

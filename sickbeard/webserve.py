@@ -27,7 +27,6 @@ import random
 import traceback
 
 from mimetypes import MimeTypes
-
 from Cheetah.Template import Template
 
 import sickbeard
@@ -59,6 +58,11 @@ try:
     import json
 except ImportError:
     from lib import simplejson as json
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    from requests.packages.urllib3.packages.ordered_dict import OrderedDict
 
 
 class PageTemplate(Template):
@@ -573,18 +577,24 @@ class Home(MainHandler):
 
     def showlistView(self):
         t = PageTemplate(headers=self.request.headers, file='home.tmpl')
-        if sickbeard.ANIME_SPLIT_HOME:
-            shows = []
-            anime = []
-            for show in sickbeard.showList:
-                if show.is_anime:
-                    anime.append(show)
-                else:
-                    shows.append(show)
-            t.showlists = [['Shows', shows],
-                           ['Anime', anime]]
+        t.showlists = []
+        index = 0
+        if sickbeard.SHOWLIST_TAGVIEW == 'custom':
+            for name in sickbeard.SHOW_TAGS:
+                results = filter(lambda x: x.tag == name, sickbeard.showList)
+                if results:
+                    t.showlists.append(['container%s' % index, name, results])
+                index += 1
+        elif sickbeard.SHOWLIST_TAGVIEW == 'anime':
+            show_results = filter(lambda x: not x.anime, sickbeard.showList)
+            anime_results = filter(lambda x: x.anime, sickbeard.showList)
+            if show_results:
+                t.showlists.append(['container%s' % index, 'Show List', show_results])
+                index += 1
+            if anime_results:
+                t.showlists.append(['container%s' % index, 'Anime List', anime_results])
         else:
-            t.showlists = [['Shows', sickbeard.showList]]
+            t.showlists.append(['container%s' % index, 'Show List', sickbeard.showList])
 
         t.submenu = self.HomeMenu()
         t.layout = sickbeard.HOME_LAYOUT
@@ -1131,7 +1141,13 @@ class Home(MainHandler):
         def titler(x):
             return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
 
-        if sickbeard.ANIME_SPLIT_HOME:
+        if sickbeard.SHOWLIST_TAGVIEW == 'custom':
+            t.sortedShowLists = []
+            for tag in sickbeard.SHOW_TAGS:
+                results = filter(lambda x: x.tag == tag, sickbeard.showList)
+                if results:
+                    t.sortedShowLists.append([tag, sorted(results, lambda x, y: cmp(titler(x.name), titler(y.name)))])
+        elif sickbeard.SHOWLIST_TAGVIEW == 'anime':
             shows = []
             anime = []
             for show in sickbeard.showList:
@@ -1144,13 +1160,21 @@ class Home(MainHandler):
 
         else:
             t.sortedShowLists = [
-                ['Shows', sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+                ['Show List', sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
 
         tvshows = []
+        tvshow_names = []
         for tvshow_types in t.sortedShowLists:
             for tvshow in tvshow_types[1]:
                 tvshows.append(tvshow.indexerid)
+                tvshow_names.append(tvshow.name)
+                if showObj.indexerid == tvshow.indexerid:
+                    cur_sel = len(tvshow_names)
         t.tvshow_id_csv = ','.join(str(x) for x in tvshows)
+
+        last_item = len(tvshow_names)
+        t.prev_title = 'Prev show, %s' % tvshow_names[(cur_sel - 2, last_item - 1)[1 == cur_sel]]
+        t.next_title = 'Next show, %s' % tvshow_names[(cur_sel, 0)[last_item == cur_sel]]
 
         t.bwl = None
         if showObj.is_anime:
@@ -1196,7 +1220,7 @@ class Home(MainHandler):
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, archive_firstmatch=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                 scene=None):
+                 scene=None, tag=None):
 
         if show is None:
             errString = 'Invalid show ID: ' + str(show)
@@ -1275,7 +1299,7 @@ class Home(MainHandler):
         if type(exceptions_list) != list:
             exceptions_list = [exceptions_list]
 
-        # If directCall from mass_edit_update no scene exceptions handling or blackandwhite list handling
+        # If directCall from mass_edit_update no scene exceptions handling or blackandwhite list handling or tags
         if directCall:
             do_update_exceptions = False
         else:
@@ -1320,6 +1344,7 @@ class Home(MainHandler):
             showObj.sports = sports
             showObj.subtitles = subtitles
             showObj.air_by_date = air_by_date
+            showObj.tag = tag
 
             if not directCall:
                 showObj.lang = indexer_lang
@@ -2320,7 +2345,7 @@ class NewHomeAddShows(Home):
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
                    anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None):
+                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to newShow, if not it goes to /home.
@@ -2426,7 +2451,7 @@ class NewHomeAddShows(Home):
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
-                                                    wanted_begin, wanted_latest)  # @UndefinedVariable
+                                                    wanted_begin, wanted_latest, tag)  # @UndefinedVariable
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()
@@ -2833,6 +2858,9 @@ class Manage(MainHandler):
         paused_all_same = True
         last_paused = None
 
+        tag_all_same = True
+        last_tag = None
+
         anime_all_same = True
         last_anime = None
 
@@ -2873,6 +2901,13 @@ class Manage(MainHandler):
                     paused_all_same = False
                 else:
                     last_paused = curShow.paused
+
+            if tag_all_same:
+                # if we had a value already and this value is different then they're not all the same
+                if last_tag not in (None, curShow.tag):
+                    tag_all_same = False
+                else:
+                    last_tag = curShow.tag
 
             if anime_all_same:
                 # if we had a value already and this value is different then they're not all the same
@@ -2920,6 +2955,7 @@ class Manage(MainHandler):
         t.showList = toEdit
         t.archive_firstmatch_value = last_archive_firstmatch if archive_firstmatch_all_same else None
         t.paused_value = last_paused if paused_all_same else None
+        t.tag_value = last_tag if tag_all_same else None
         t.anime_value = last_anime if anime_all_same else None
         t.flatten_folders_value = last_flatten_folders if flatten_folders_all_same else None
         t.quality_value = last_quality if quality_all_same else None
@@ -2931,10 +2967,9 @@ class Manage(MainHandler):
 
         return t.respond()
 
-    def massEditSubmit(self, archive_firstmatch=None, paused=None, anime=None, sports=None, scene=None, flatten_folders=None,
-                       quality_preset=False,
-                       subtitles=None, air_by_date=None, anyQualities=[], bestQualities=[], toEdit=None, *args,
-                       **kwargs):
+    def massEditSubmit(self, archive_firstmatch=None, paused=None, anime=None, sports=None, scene=None,
+                       flatten_folders=None, quality_preset=False, subtitles=None, air_by_date=None, anyQualities=[],
+                       bestQualities=[], toEdit=None, tag=None, *args, **kwargs):
 
         dir_map = {}
         for cur_arg in kwargs:
@@ -2972,6 +3007,12 @@ class Manage(MainHandler):
             else:
                 new_paused = True if paused == 'enable' else False
             new_paused = 'on' if new_paused else 'off'
+
+            if tag == 'keep':
+                new_tag = showObj.tag
+            else:
+                new_tag = tag
+
 
             if anime == 'keep':
                 new_anime = showObj.anime
@@ -3022,7 +3063,7 @@ class Manage(MainHandler):
                                                                        paused=new_paused, sports=new_sports,
                                                                        subtitles=new_subtitles, anime=new_anime,
                                                                        scene=new_scene, air_by_date=new_air_by_date,
-                                                                       directCall=True)
+                                                                       tag=new_tag, directCall=True)
 
             if curErrors:
                 logger.log(u'Errors: ' + str(curErrors), logger.ERROR)
@@ -3376,6 +3417,7 @@ class ConfigGeneral(Config):
 
         t = PageTemplate(headers=self.request.headers, file='config_general.tmpl')
         t.submenu = self.ConfigMenu
+        t.show_tags = ','.join(sickbeard.SHOW_TAGS)
         return t.respond()
 
     def saveRootDirs(self, rootDirString=None):
@@ -3430,7 +3472,8 @@ class ConfigGeneral(Config):
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
-                    display_background=None, display_background_transparent=None, display_all_seasons=None):
+                    display_background=None, display_background_transparent=None, display_all_seasons=None,
+                    show_tags=None, showlist_tagview=None):
 
         results = []
 
@@ -3455,6 +3498,22 @@ class ConfigGeneral(Config):
         sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
         sickbeard.CPU_PRESET = cpu_preset
         sickbeard.FILE_LOGGING_PRESET = file_logging_preset
+        sickbeard.SHOWLIST_TAGVIEW = showlist_tagview
+
+        # Convert csv to list, must always contain Show List as a default fallback and strip leading/trailing spaces
+        show_tags = show_tags.split(',')
+        if 'Show List' not in show_tags:
+            show_tags.append('Show List')
+        show_tags = [x.strip() for x in show_tags if x]
+
+        # Don't allow deletion of tags that are still assigned to shows
+        myDB = db.DBConnection('sickbeard.db')
+        sql_results = myDB.select('SELECT DISTINCT tag FROM tv_shows')
+        if sql_results:
+            for tag in sql_results[0]:
+                show_tags.append(tag)
+
+        sickbeard.SHOW_TAGS = list(OrderedDict.fromkeys(show_tags))  # remove dupes
 
         logger.log_set_level()
 
