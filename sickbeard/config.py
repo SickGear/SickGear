@@ -164,13 +164,9 @@ def change_RECENTSEARCH_FREQUENCY(freq):
 
 
 def change_BACKLOG_FREQUENCY(freq):
-    sickbeard.BACKLOG_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_BACKLOG_FREQUENCY)
+    sickbeard.BACKLOG_FREQUENCY = minimax(freq, sickbeard.DEFAULT_BACKLOG_FREQUENCY, sickbeard.MIN_BACKLOG_FREQUENCY, sickbeard.MAX_BACKLOG_FREQUENCY)
 
-    sickbeard.MIN_BACKLOG_FREQUENCY = sickbeard.get_backlog_cycle_time()
-    if sickbeard.BACKLOG_FREQUENCY < sickbeard.MIN_BACKLOG_FREQUENCY:
-        sickbeard.BACKLOG_FREQUENCY = sickbeard.MIN_BACKLOG_FREQUENCY
-
-    sickbeard.backlogSearchScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.BACKLOG_FREQUENCY)
+    sickbeard.backlogSearchScheduler.action.cycleTime = sickbeard.BACKLOG_FREQUENCY
 
 
 def change_UPDATE_FREQUENCY(freq):
@@ -741,3 +737,7 @@ class ConfigMigrator():
     def _migrate_v9(self):
         sickbeard.PUSHBULLET_ACCESS_TOKEN = check_setting_str(self.config_obj, 'Pushbullet', 'pushbullet_api', '')
         sickbeard.PUSHBULLET_DEVICE_IDEN = check_setting_str(self.config_obj, 'Pushbullet', 'pushbullet_device', '')
+
+    def _migrate_v10(self):
+        # reset backlog frequency to default
+        sickbeard.BACKLOG_FREQUENCY = sickbeard.DEFAULT_BACKLOG_FREQUENCY

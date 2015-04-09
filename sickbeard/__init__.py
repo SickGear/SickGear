@@ -60,7 +60,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 9
+CONFIG_VERSION = 10
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -220,7 +220,8 @@ DEFAULT_UPDATE_FREQUENCY = 1
 
 MIN_AUTOPOSTPROCESSER_FREQUENCY = 1
 MIN_RECENTSEARCH_FREQUENCY = 10
-MIN_BACKLOG_FREQUENCY = 10
+MIN_BACKLOG_FREQUENCY = 2
+MAX_BACKLOG_FREQUENCY = 35
 MIN_UPDATE_FREQUENCY = 1
 
 BACKLOG_DAYS = 7
@@ -496,7 +497,7 @@ def initialize(consoleLogging=True):
             USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
             USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_API, TRAKT_REMOVE_WATCHLIST, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
-            PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
+            PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, RECENTSEARCH_STARTUP, \
@@ -727,10 +728,8 @@ def initialize(consoleLogging=True):
         if RECENTSEARCH_FREQUENCY < MIN_RECENTSEARCH_FREQUENCY:
             RECENTSEARCH_FREQUENCY = MIN_RECENTSEARCH_FREQUENCY
 
-        MIN_BACKLOG_FREQUENCY = get_backlog_cycle_time()
         BACKLOG_FREQUENCY = check_setting_int(CFG, 'General', 'backlog_frequency', DEFAULT_BACKLOG_FREQUENCY)
-        if BACKLOG_FREQUENCY < MIN_BACKLOG_FREQUENCY:
-            BACKLOG_FREQUENCY = MIN_BACKLOG_FREQUENCY
+        BACKLOG_FREQUENCY = minimax(BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY)
 
         UPDATE_FREQUENCY = check_setting_int(CFG, 'General', 'update_frequency', DEFAULT_UPDATE_FREQUENCY)
         if UPDATE_FREQUENCY < MIN_UPDATE_FREQUENCY:
@@ -1173,9 +1172,8 @@ def initialize(consoleLogging=True):
                                                    run_delay=update_now if RECENTSEARCH_STARTUP
                                                    else datetime.timedelta(minutes=5))
 
-        update_interval = datetime.timedelta(minutes=BACKLOG_FREQUENCY)
         backlogSearchScheduler = searchBacklog.BacklogSearchScheduler(searchBacklog.BacklogSearcher(),
-                                                                      cycleTime=update_interval,
+                                                                      cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
                                                                       threadName="BACKLOG",
                                                                       run_delay=update_now if BACKLOG_STARTUP
                                                                       else datetime.timedelta(minutes=10))
