@@ -1,4 +1,4 @@
-### 0.8.0 (2015-04-xx xx:xx:xx UTC)
+### 0.8.0 (2015-04-13 14:00:00 UTC)
 
 * Change Wombles to use tv-dvd section
 * Add requirements file for pip (port from midgetspy/sick-beard)
@@ -96,6 +96,7 @@
 * Change provider cache storage structure
 * Add handling for failed cache database upgrades
 * Fix XEM Exceptions in case of bad data from XEM
+* Change order of snatched provider images to chronological on History layout compact and add ordinal indicators in the tooltips
 
 
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
