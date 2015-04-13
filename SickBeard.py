@@ -25,9 +25,14 @@ import signal
 import sys
 import shutil
 import subprocess
+import os
+import locale
+import datetime
+import threading
+import getopt
 
 if sys.version_info < (2, 6):
-    print "Sorry, requires Python 2.6 or 2.7."
+    print 'Sorry, requires Python 2.6 or 2.7.'
     sys.exit(1)
 
 try:
@@ -36,13 +41,11 @@ try:
     if Cheetah.Version[0] != '2':
         raise ValueError
 except ValueError:
-    print "Sorry, requires Python module Cheetah 2.1.0 or newer."
+    print 'Sorry, requires Python module Cheetah 2.1.0 or newer.'
     sys.exit(1)
 except:
-    print "The Python module Cheetah is required"
+    print 'The Python module Cheetah is required'
     sys.exit(1)
-
-import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
 
@@ -50,13 +53,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib'
 if sys.hexversion >= 0x020600F0:
     from multiprocessing import freeze_support  # @UnresolvedImport
 
-import locale
-import datetime
-import threading
-import getopt
-
 import sickbeard
-from sickbeard import db, logger, network_timezones, failed_history, name_cache, versionChecker
+from sickbeard import db, logger, network_timezones, failed_history, name_cache
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
 from sickbeard.databases.mainDB import MIN_DB_VERSION, MAX_DB_VERSION
@@ -85,35 +83,36 @@ class SickGear(object):
         self.forcedPort = None
         self.noLaunch = False
 
-    def help_message(self):
+    @staticmethod
+    def help_message():
         """
         print help message for commandline options
         """
-        help_msg = "\n"
-        help_msg += "Usage: " + sickbeard.MY_FULLNAME + " <option> <another option>\n"
-        help_msg += "\n"
-        help_msg += "Options:\n"
-        help_msg += "\n"
-        help_msg += "    -h          --help              Prints this message\n"
-        help_msg += "    -f          --forceupdate       Force update all shows in the DB (from tvdb) on startup\n"
-        help_msg += "    -q          --quiet             Disables logging to console\n"
-        help_msg += "                --nolaunch          Suppress launching web browser on startup\n"
+        help_msg = '\n'
+        help_msg += 'Usage: %s <option> <another option>\n' % sickbeard.MY_FULLNAME
+        help_msg += '\n'
+        help_msg += 'Options:\n'
+        help_msg += '\n'
+        help_msg += '    -h          --help              Prints this message\n'
+        help_msg += '    -f          --forceupdate       Force update all shows in the DB (from tvdb) on startup\n'
+        help_msg += '    -q          --quiet             Disables logging to console\n'
+        help_msg += '                --nolaunch          Suppress launching web browser on startup\n'
 
         if sys.platform == 'win32':
-            help_msg += "    -d          --daemon            Running as real daemon is not supported on Windows\n"
-            help_msg += "                                    On Windows, --daemon is substituted with: --quiet --nolaunch\n"
+            help_msg += '    -d          --daemon            Running as real daemon is not supported on Windows\n'
+            help_msg += '                                    On Windows, --daemon is substituted with: --quiet --nolaunch\n'
         else:
-            help_msg += "    -d          --daemon            Run as double forked daemon (includes options --quiet --nolaunch)\n"
-            help_msg += "                --pidfile=<path>    Combined with --daemon creates a pidfile (full path including filename)\n"
+            help_msg += '    -d          --daemon            Run as double forked daemon (includes options --quiet --nolaunch)\n'
+            help_msg += '                --pidfile=<path>    Combined with --daemon creates a pidfile (full path including filename)\n'
 
-        help_msg += "    -p <port>   --port=<port>       Override default/configured port to listen on\n"
-        help_msg += "                --datadir=<path>    Override folder (full path) as location for\n"
-        help_msg += "                                    storing database, configfile, cache, logfiles \n"
-        help_msg += "                                    Default: " + sickbeard.PROG_DIR + "\n"
-        help_msg += "                --config=<path>     Override config filename (full path including filename)\n"
-        help_msg += "                                    to load configuration from \n"
-        help_msg += "                                    Default: config.ini in " + sickbeard.PROG_DIR + " or --datadir location\n"
-        help_msg += "                --noresize          Prevent resizing of the banner/posters even if PIL is installed\n"
+        help_msg += '    -p <port>   --port=<port>       Override default/configured port to listen on\n'
+        help_msg += '                --datadir=<path>    Override folder (full path) as location for\n'
+        help_msg += '                                    storing database, configfile, cache, logfiles \n'
+        help_msg += '                                    Default: %s\n' % sickbeard.PROG_DIR
+        help_msg += '                --config=<path>     Override config filename (full path including filename)\n'
+        help_msg += '                                    to load configuration from \n'
+        help_msg += '                                    Default: config.ini in %s or --datadir location\n' % sickbeard.PROG_DIR
+        help_msg += '                --noresize          Prevent resizing of the banner/posters even if PIL is installed\n'
 
         return help_msg
 
@@ -127,7 +126,7 @@ class SickGear(object):
         sickbeard.SYS_ENCODING = None
 
         try:
-            locale.setlocale(locale.LC_ALL, "")
+            locale.setlocale(locale.LC_ALL, '')
         except (locale.Error, IOError):
             pass
         try:
@@ -139,7 +138,7 @@ class SickGear(object):
         if not sickbeard.SYS_ENCODING or sickbeard.SYS_ENCODING in ('ANSI_X3.4-1968', 'US-ASCII', 'ASCII'):
             sickbeard.SYS_ENCODING = 'UTF-8'
 
-        if not hasattr(sys, "setdefaultencoding"):
+        if not hasattr(sys, 'setdefaultencoding'):
             reload(sys)
 
         try:
@@ -148,17 +147,17 @@ class SickGear(object):
             sys.setdefaultencoding(sickbeard.SYS_ENCODING)
         except:
             print 'Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable'
-            print 'or find another way to force Python to use ' + sickbeard.SYS_ENCODING + ' for string encoding.'
+            print 'or find another way to force Python to use %s for string encoding.' % sickbeard.SYS_ENCODING
             sys.exit(1)
 
         # Need console logging for SickBeard.py and SickBeard-console.exe
-        self.consoleLogging = (not hasattr(sys, "frozen")) or (sickbeard.MY_NAME.lower().find('-console') > 0)
+        self.consoleLogging = (not hasattr(sys, 'frozen')) or (sickbeard.MY_NAME.lower().find('-console') > 0)
 
         # Rename the main thread
-        threading.currentThread().name = "MAIN"
+        threading.currentThread().name = 'MAIN'
 
         try:
-            opts, args = getopt.getopt(sys.argv[1:], "hfqdp::",
+            opts, args = getopt.getopt(sys.argv[1:], 'hfqdp::',
                                        ['help', 'forceupdate', 'quiet', 'nolaunch', 'daemon', 'pidfile=', 'port=',
                                         'datadir=', 'config=', 'noresize'])  # @UnusedVariable
         except getopt.GetoptError:
@@ -188,7 +187,7 @@ class SickGear(object):
                 try:
                     self.forcedPort = int(a)
                 except ValueError:
-                    sys.exit("Port: " + str(a) + " is not a number. Exiting.")
+                    sys.exit('Port: %s is not a number. Exiting.' % a)
 
             # Run as a double forked daemon
             if o in ('-d', '--daemon'):
@@ -207,7 +206,7 @@ class SickGear(object):
 
                 # If the pidfile already exists, sickbeard may still be running, so exit
                 if os.path.exists(self.PIDFILE):
-                    sys.exit("PID file: " + self.PIDFILE + " already exists. Exiting.")
+                    sys.exit('PID file: %s already exists. Exiting.' % self.PIDFILE)
 
             # Specify folder to load the config file from
             if o in ('--config',):
@@ -238,14 +237,14 @@ class SickGear(object):
 
         # If they don't specify a config file then put it in the data dir
         if not sickbeard.CONFIG_FILE:
-            sickbeard.CONFIG_FILE = os.path.join(sickbeard.DATA_DIR, "config.ini")
+            sickbeard.CONFIG_FILE = os.path.join(sickbeard.DATA_DIR, 'config.ini')
 
         # Make sure that we can create the data dir
         if not os.access(sickbeard.DATA_DIR, os.F_OK):
             try:
                 os.makedirs(sickbeard.DATA_DIR, 0744)
             except os.error:
-                sys.exit(u'Unable to create data directory: %s + Exiting.' % sickbeard.DATA_DIR)
+                sys.exit(u'Unable to create data directory: %s Exiting.' % sickbeard.DATA_DIR)
 
         # Make sure we can write to the data dir
         if not os.access(sickbeard.DATA_DIR, os.W_OK):
@@ -261,7 +260,7 @@ class SickGear(object):
         os.chdir(sickbeard.DATA_DIR)
 
         if self.consoleLogging:
-           print u'Starting up SickGear from %s' % sickbeard.CONFIG_FILE
+            print u'Starting up SickGear from %s' % sickbeard.CONFIG_FILE
 
         # Load the config and publish it to the sickbeard package
         if not os.path.isfile(sickbeard.CONFIG_FILE):
@@ -279,7 +278,8 @@ class SickGear(object):
             if CUR_DB_VERSION > MAX_DB_VERSION:
                 print u'Your database version (%s) has been incremented past what this version of SickGear supports' \
                       % CUR_DB_VERSION
-                sys.exit(u'If you have used other forks of SB, your database may be unusable due to their modifications')
+                sys.exit(
+                    u'If you have used other forks of SG, your database may be unusable due to their modifications')
 
         # Initialize the config and our threads
         sickbeard.initialize(consoleLogging=self.consoleLogging)
@@ -291,7 +291,7 @@ class SickGear(object):
         sickbeard.PID = os.getpid()
 
         if self.forcedPort:
-            logger.log(u"Forcing web server to port " + str(self.forcedPort))
+            logger.log(u'Forcing web server to port %s' % self.forcedPort)
             self.startPort = self.forcedPort
         else:
             self.startPort = sickbeard.WEB_PORT
@@ -334,10 +334,10 @@ class SickGear(object):
             self.webserver = WebServer(self.web_options)
             self.webserver.start()
         except Exception:
-            logger.log(u"Unable to start web server, is something else running on port %d?" % self.startPort,
+            logger.log(u'Unable to start web server, is something else running on port %d?' % self.startPort,
                        logger.ERROR)
             if sickbeard.LAUNCH_BROWSER and not self.runAsDaemon:
-                logger.log(u"Launching browser and exiting", logger.ERROR)
+                logger.log(u'Launching browser and exiting', logger.ERROR)
                 sickbeard.launchBrowser(self.startPort)
             os._exit(1)
 
@@ -345,9 +345,9 @@ class SickGear(object):
         restoreDir = os.path.join(sickbeard.DATA_DIR, 'restore')
         if os.path.exists(restoreDir):
             if self.restore(restoreDir, sickbeard.DATA_DIR):
-                logger.log(u"Restore successful...")
+                logger.log(u'Restore successful...')
             else:
-                logger.log_error_and_exit(u"Restore FAILED!", logger.ERROR)
+                logger.log_error_and_exit(u'Restore FAILED!')
 
         # Build from the DB to start with
         self.loadShowsFromDB()
@@ -374,7 +374,7 @@ class SickGear(object):
             sickbeard.launchBrowser(self.startPort)
 
         # main loop
-        while (True):
+        while True:
             time.sleep(1)
 
     def daemonize(self):
@@ -388,7 +388,7 @@ class SickGear(object):
             if pid != 0:
                 os._exit(0)
         except OSError, e:
-            sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.stderr.write('fork #1 failed: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1)
 
         os.setsid()  # @UndefinedVariable - only available in UNIX
@@ -403,19 +403,18 @@ class SickGear(object):
             if pid != 0:
                 os._exit(0)
         except OSError, e:
-            sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.stderr.write('fork #2 failed: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1)
 
         # Write pid
         if self.CREATEPID:
             pid = str(os.getpid())
-            logger.log(u"Writing PID: " + pid + " to " + str(self.PIDFILE))
+            logger.log(u'Writing PID: %s to %s' % (pid, self.PIDFILE))
             try:
-                file(self.PIDFILE, 'w').write("%s\n" % pid)
+                file(self.PIDFILE, 'w').write('%s\n' % pid)
             except IOError, e:
                 logger.log_error_and_exit(
-                    u"Unable to write PID file: " + self.PIDFILE + " Error: " + str(e.strerror) + " [" + str(
-                        e.errno) + "]")
+                    u'Unable to write PID file: %s Error: %s [%s]' % (self.PIDFILE, e.strerror, e.errno))
 
         # Redirect all output
         sys.stdout.flush()
@@ -429,7 +428,8 @@ class SickGear(object):
         os.dup2(stdout.fileno(), sys.stdout.fileno())
         os.dup2(stderr.fileno(), sys.stderr.fileno())
 
-    def remove_pid_file(self, PIDFILE):
+    @staticmethod
+    def remove_pid_file(PIDFILE):
         try:
             if os.path.exists(PIDFILE):
                 os.remove(PIDFILE)
@@ -439,26 +439,27 @@ class SickGear(object):
 
         return True
 
-    def loadShowsFromDB(self):
+    @staticmethod
+    def loadShowsFromDB():
         """
         Populates the showList with shows from the database
         """
 
-        logger.log(u"Loading initial show list")
+        logger.log(u'Loading initial show list')
 
         myDB = db.DBConnection()
-        sqlResults = myDB.select("SELECT * FROM tv_shows")
+        sqlResults = myDB.select('SELECT * FROM tv_shows')
 
         sickbeard.showList = []
         for sqlShow in sqlResults:
             try:
-                curShow = TVShow(int(sqlShow["indexer"]), int(sqlShow["indexer_id"]))
+                curShow = TVShow(int(sqlShow['indexer']), int(sqlShow['indexer_id']))
                 curShow.nextEpisode()
                 sickbeard.showList.append(curShow)
             except Exception, e:
                 logger.log(
-                    u"There was an error creating the show in " + sqlShow["location"] + ": " + str(e).decode('utf-8',
-                                                                                                             'replace'),
+                    u'There was an error creating the show in %s: %s' % (sqlShow['location'], str(e).decode('utf-8',
+                                                                                                            'replace')),
                     logger.ERROR)
 
     def restore(self, srcDir, dstDir):
@@ -485,7 +486,7 @@ class SickGear(object):
 
             # shutdown web server
             if self.webserver:
-                logger.log("Shutting down Tornado")
+                logger.log('Shutting down Tornado')
                 self.webserver.shutDown()
                 try:
                     self.webserver.join(10)
@@ -508,7 +509,7 @@ class SickGear(object):
                     popen_list += sickbeard.MY_ARGS
                     if '--nolaunch' not in popen_list:
                         popen_list += ['--nolaunch']
-                    logger.log(u"Restarting SickGear with " + str(popen_list))
+                    logger.log(u'Restarting SickGear with %s' % popen_list)
                     logger.close()
                     subprocess.Popen(popen_list, cwd=os.getcwd())
 
@@ -516,7 +517,7 @@ class SickGear(object):
         os._exit(0)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     if sys.hexversion >= 0x020600F0:
         freeze_support()
 

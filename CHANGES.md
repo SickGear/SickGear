@@ -1,3 +1,104 @@
+### 0.8.0 (2015-04-13 14:00:00 UTC)
+
+* Change Wombles to use tv-dvd section
+* Add requirements file for pip (port from midgetspy/sick-beard)
+* Remove unused libraries fuzzywuzzy and pysrt
+* Change webserve code to a logical layout and PEP8
+* Add text to explain params passed to extra scripts on Config/Post Processing
+* Remove unused SickBeardURLOpener and AuthURLOpener classes
+* Update Pushbullet notifier (port from midgetspy/sickbeard)
+* Change startup code cleanup and PEP8
+* Change authentication credentials to display more securely on config pages
+* Add a "Use as default home page" selector to General Config/Interface/User Interface
+* Add option to the third step of "Add Show" to set episodes as wanted from the first and latest season, this triggers
+  a backlog search on those episodes after the show is added
+* Change to improve the integrity of the already post processed video checker
+* Add Kodi notifier and metadata
+* Add priority, device, and sound support to Pushover notifier (port from midgetspy/sickbeard)
+* Fix updating of pull requests
+* Add hidden cache debug page
+* Change autoProcessTV scripts python code quotes from " -> '
+* Add expand all button to Episode Status Management
+* Add Unknown status query to Episode Status Management
+* Fix Episode Status Management error popup from coming up when show is selected without expanding
+* Add BET network logo
+* Change "Force Backlog" button for paused shows on Backlog Overview page to "Paused" indicator
+* Remove unused force variable from code and PEP8
+* Change browser, bs4 parser and classes code to PEP8 standards
+* Change common and config code to PEP8 standards
+* Change database code to PEP8 standards
+* Change general config's branches and pull request list generation for faster page loading
+* Add PlayStation Network logo
+* Change layout of Recent Search code
+* Change naming of SEARCHQUEUE threads for shorter log lines
+* Fix Recent Search running status on Manage Searches page
+* Change to no longer require restart with the "Scan and post process" option on page config/Post Processing
+* Add validation when using Release Group token on page config Post Processing/Episode Naming/Name pattern/Custom
+* Change to simplify and reduce logging output of Recent-Search and Backlog processes
+* Hide year, runtime, genre tags, country flag, or status if lacking valid data to display
+* Remove redundant CSS color use (all browsers treat 3 identical digits as 6, except for possibly in gradients)
+* Remove whitespace and semi-colon redundancy from CSS shedding 4.5kb
+* Add show names to items listed during startup in the loading from database phase 
+* Add "Enable IMDb info" option to config/General/Interface
+* Change to not display IMDb info on UI when "Enable IMDb info" is disabled
+* Change genre tags on displayShow page to link to IMDb instead of Trakt
+* Change to reduce the time taken to "Update shows" with show data
+* Change to stop updating the IMDb info on edit, and during the scheduled daily update for every show
+* Change to update the IMDb info for a show after snatching an episode for it
+* Add IMDb lookup to "Update" action on Manage/Mass Update page
+* Fix updating of scene exception name cache after adding exceptions on Editshow page
+* Change log rotation to occur at midnight
+* Change to keep a maximum of 7 log files
+* Add automatic compression of old log files
+* Change overhaul menu and button icons
+* Add "Status of removed episodes" to apply (or not) a preferred status to episodes whose files are detected as removed.
+  "Archived" can now be set so that removed episodes still count toward download completion stats. See setting on page
+  config/Post Processing/File Handling
+* Remove redundant "Skip remove detection" from the config/Post Processing/File Handling page
+* Change to highlight the current selected item in combos on page config/Post Processing
+* Change the episodes downloaded stat to display e.g. 2843 / 2844 as 99.9% instead of rounding to 100%
+* Change 'never' episode row color away from blue on Display Show page when indexer airdate is not defined
+* Add tint to archived episode row colour to differentiate it from downloaded episodes on the Display Show page
+* Add indication of shows with never aired episodes on Episode Overview page
+* Add "Collapse" button and visuals for Expanding... and Collapsing... states
+* Add the number of episodes marked with the status being queried to Episode Overview page
+* Add indication of shows with never aired episodes on Episode Overview page
+* Change to separate "Set as wanted" to prevent disaster selection on Episode Overview page
+* Remove restriction to not display snatched eps link in footer on Episode Overview page
+* Change the shows episodes count text colour to visually separete from year numbers at the end of show names
+* Change to add clarity to the subtitle and other columns on the Mass Update page
+* Change to improve clarity with "Recent search" and "Limited backlog" on the Config/Search Settings page
+* Change vertical alignment of input fields to be inline with text
+* Add tooltips to explain why any the 6 action columns are disabled when required on the Mass Update page
+* Change to reclaimed screen estate by hiding unused columns on the Mass Update page
+* Change order of option on Mass Edit page to be inline with show edit page
+* Fix release group not recognised from manually downloaded filename
+* Change to gracefully handle some "key not found" failures when TVDB or TVRage return "Not Found" during show updates
+* Change no longer stamp files where airdates are never
+* Change overhaul displayShow to ready for new features
+* Add section for show plot to displayShow
+* Add option to view show background on displayShow (transparent and opaque) for when background downloading is added (disabled)
+* Add option to collapse seasons and leave current season open on displayShow (disabled)
+* Add filesize to episode location qtip on displayShow
+* Change selected options from editShow will only show when enabled now on displayShow
+* Change some label tags to fit with edit show page on displayShow
+* Fix handle when a show in db has all episodes removed from indexer on displayShow
+* Add the name of show that will be displayed to the hover of the Prev/Next show buttons on displayShow
+* Add hover tooltips for nfo and tbn columns for browsers that use the title attr on displayShow
+* Change Special link moved from "Season" line to "Specials" line on displayShow
+* Change code re-factored in readiness for live option switching, clean up and add closures of html tables
+* Add show overview from indexers to the database
+* Fix case where start year or runtime is not available to display show
+* Add "File logging level" to General Config/Advanced Settings
+* Fix saving of Sort By/Next Episode in Layout Poster on Show List page
+* Change improve backlog search
+* Change only add valid items to save to DB
+* Change provider cache storage structure
+* Add handling for failed cache database upgrades
+* Fix XEM Exceptions in case of bad data from XEM
+* Change order of snatched provider images to chronological on History layout compact and add ordinal indicators in the tooltips
+
+
 ### 0.7.2 (2015-03-10 17:05:00 UTC)
 
 * Fix Add From Trending page (indexer_id can be "None" which causes white screen when clicking "Add Show")
@@ -86,7 +187,7 @@
 * Change SCC URLs to remove redirection overhead
 * Change TorrentBytes login parameter in line with site change
 * Change FreshOnTv login parameter and use secure URLs, add logging of Cloudflare blocking and prevent vacant cookie tracebacks
-* Change TPB webproxy list and add SSL variants 
+* Change TPB webproxy list and add SSL variants
 * Add YTV network logo
 * Remove defunct Fanzub provider
 

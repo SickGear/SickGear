@@ -15,14 +15,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-import time
 
-import sickbeard
 import generic
 
 from sickbeard import logger
 from sickbeard import tvcache
-from sickbeard.exceptions import AuthException
 
 
 class WombleProvider(generic.NZBProvider):
@@ -53,8 +50,11 @@ class WombleCache(tvcache.TVCache):
             return
 
         cl = []
-        for url in [self.provider.url + 'rss/?sec=tv-x264&fr=false', self.provider.url + 'rss/?sec=tv-sd&fr=false', self.provider.url + 'rss/?sec=tv-hd&fr=false']:
-            logger.log(u"Womble's Index cache update URL: " + url, logger.DEBUG)
+        for url in [self.provider.url + 'rss/?sec=tv-x264&fr=false',
+                    self.provider.url + 'rss/?sec=tv-sd&fr=false',
+                    self.provider.url + 'rss/?sec=tv-dvd&fr=false',
+                    self.provider.url + 'rss/?sec=tv-hd&fr=false']:
+            logger.log(u'Womble\'s Index cache update URL: ' + url, logger.DEBUG)
             data = self.getRSSFeed(url)
 
             # As long as we got something from the provider we count it as an update
@@ -65,10 +65,10 @@ class WombleCache(tvcache.TVCache):
             for item in data.entries:
                 title, url = self._get_title_and_url(item)
                 ci = self._parseItem(title, url)
-                if ci is not None:
+                if None is not ci:
                     cl.append(ci)
 
-        if len(cl) > 0:
+        if 0 < len(cl):
             myDB = self._getDB()
             myDB.mass_action(cl)
 
@@ -77,6 +77,7 @@ class WombleCache(tvcache.TVCache):
             self.setLastUpdate()
 
     def _checkAuth(self, data):
-        return data != 'Invalid Link'
+        return 'Invalid Link' != data
+
 
 provider = WombleProvider()

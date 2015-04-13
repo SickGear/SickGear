@@ -1,89 +1,112 @@
 #import sickbeard
 #import datetime
 #from sickbeard import common
-#set global $title="Episode Overview"
-#set global $header="Episode Overview"
 
-#set global $sbPath=".."
+#set global $title = 'Episode Overview'
+#set global $header = 'Episode Overview'
+#set global $sbPath = '..'
+#set global $topmenu = 'manage'
 
-#set global $topmenu="manage"#
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<div id="content960">
 #if $varExists('header') 
 	<h1 class="header">$header</h1>
 #else 
 	<h1 class="title">$title</h1>
 #end if
 
-#if not $whichStatus or ($whichStatus and not $ep_counts):
+#if not $whichStatus or ($whichStatus and not $ep_counts)
 
-#if $whichStatus:
-<h2>None of your episodes have status $common.statusStrings[$int($whichStatus)]</h2>
-<br />
-#end if
+    #if $whichStatus:
+	<h3>no episodes have status <span class="grey-text">$common.statusStrings[$int($whichStatus)].lower()</span></h3>
+    #end if
 
-<form action="$sbRoot/manage/episodeStatuses" method="get">
-Manage episodes with status <select name="whichStatus" class="form-control form-control-inline input-sm">
-#for $curStatus in [$common.SKIPPED, $common.SNATCHED, $common.WANTED, $common.ARCHIVED, $common.IGNORED]:
-<option value="$curStatus">$common.statusStrings[$curStatus]</option>
-#end for
-</select>
-<input class="btn btn-inline" type="submit" value="Manage" /> 
-</form>
+	<form action="$sbRoot/manage/episodeStatuses" method="get">
+
+		Manage episodes with status
+		<select name="whichStatus" class="form-control form-control-inline input-sm" style="margin:0 10px">
+
+    #for $curStatus in [$common.SKIPPED, $common.UNKNOWN, $common.SNATCHED, $common.WANTED, $common.ARCHIVED, $common.IGNORED]:
+			<option value="$curStatus">$common.statusStrings[$curStatus]</option>
+    #end for
+
+		</select>
+		<input class="btn btn-inline" type="submit" value="Manage">
+	</form>
 
 #else
+
+    #if $whichStatus in ($common.ARCHIVED, $common.IGNORED, $common.SNATCHED):
+        #set $row_class = 'good'
+    #else
+        #set $row_class = $common.Overview.overviewStrings[$whichStatus]
+    #end if
+
+    #set $statusList = [$common.SKIPPED, $common.ARCHIVED, $common.IGNORED]
+    #if $int($whichStatus) in $statusList
+        $statusList.remove($int($whichStatus))
+    #end if
+
+    #if $int($whichStatus) in [$common.SNATCHED, $common.SNATCHED_PROPER]
+        $statusList.append($common.FAILED)
+    #end if
 
 <script type="text/javascript" src="$sbRoot/js/manageEpisodeStatuses.js?$sbPID"></script>
 
-<form action="$sbRoot/manage/changeEpisodeStatuses" method="post">
-<input type="hidden" id="oldStatus" name="oldStatus" value="$whichStatus" />
+	<form action="$sbRoot/manage/changeEpisodeStatuses" method="post">
+		<input type="hidden" id="oldStatus" name="oldStatus" value="$whichStatus">
 
-<h2><span class="grey-text">Shows containing</span> $common.statusStrings[$int($whichStatus)] <span class="grey-text">episodes</span></h2>
+		<h3><span class="grey-text">$ep_count</span> episode#echo ('s', '')[1 == $ep_count]# marked <span class="grey-text">$common.statusStrings[$int($whichStatus)].lower()</span> in <span class="grey-text">${len($sorted_show_ids)}</span> show#echo ('s', '')[1 == len($sorted_show_ids)]#</h3>
 
-<br />
+		<input type="hidden" id="row_class" value="$row_class">
 
-#if $whichStatus in ($common.ARCHIVED, $common.IGNORED, $common.SNATCHED):
-#set $row_class = "good"
-#else
-#set $row_class = $common.Overview.overviewStrings[$whichStatus]
+		<div class="form-group">
+			<span>Set checked shows/episodes to</span>
+			<select name="newStatus" class="form-control form-control-inline input-sm" style="margin:0 10px 0 5px">
+    #for $curStatus in $statusList:
+				<option value="$curStatus">$common.statusStrings[$curStatus]</option>
+    #end for
+			</select>
+			<input class="btn btn-inline go" type="submit" value="Go">
+
+			<span class="red-text" style="margin:0 0 0 30px">Override checked status to</span>
+			<select name="wantedStatus" class="form-control form-control-inline input-sm" style="margin:0 10px 0 5px">
+				<option value="$common.UNKNOWN">nothing</option>
+				<option value="$common.WANTED">$common.statusStrings[$common.WANTED]</option>
+			</select>
+			<input class="btn btn-inline go" type="submit" value="Go">
+		</div>
+
+		<div class="form-group">
+			<input type="button" class="btn btn-xs selectAllShows" value="Select all">
+			<input type="button" class="btn btn-xs unselectAllShows" value="Clear all">
+			<input type="button" class="btn btn-xs expandAll" value="Expand All Shows">
+		</div>
+
+		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+			<thead></thead>
+			<tbody>
+    #for $cur_indexer_id in $sorted_show_ids:
+        #if 0 == int($never_counts[$cur_indexer_id])
+            #set $output = '%d' % $ep_counts[$cur_indexer_id]
+        #elif $ep_counts[$cur_indexer_id] != $never_counts[$cur_indexer_id]
+            #set $diff = $ep_counts[$cur_indexer_id] - $never_counts[$cur_indexer_id]
+            #set $output = '%d' % $diff + ('', (' episode%s plus %s never with an airdate' % (('s', '')[1 == $ep_counts[$cur_indexer_id]], $never_counts[$cur_indexer_id])))[0 < $never_counts[$cur_indexer_id]]
+        #else
+            #set $output = '%s never with an airdate' % (('all %s %ss', '%s %s')[1 == $ep_counts[$cur_indexer_id]] % ($ep_counts[$cur_indexer_id], 'episode'))
+        #end if
+				<tr id="$cur_indexer_id" class="header">
+					<td><input type="checkbox" class="allCheck" id="allCheck-$cur_indexer_id" name="$cur_indexer_id-all"></td>
+					<td colspan="2" style="width:100%;text-align:left">
+						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_indexer_id">$show_names[$cur_indexer_id]</a> <span style="color:#999">($output)</span><input type="button" class="pull-right get_more_eps btn" id="$cur_indexer_id-more" value="Expand"><input type="button" class="pull-right get_less_eps btn" id="$cur_indexer_id-less" value="Collapse">
+					</td>
+				</tr>
+    #end for
+			</tbody>
+		</table>
+	</form>
+
 #end if
-<input type="hidden" id="row_class" value="$row_class" />
 
-Set checked shows/episodes to <select name="newStatus" class="form-control form-control-inline input-sm">
-#set $statusList = [$common.SKIPPED, $common.WANTED, $common.ARCHIVED, $common.IGNORED]
-#if $int($whichStatus) in $statusList
-$statusList.remove($int($whichStatus))
-#end if
-
-#if $int($whichStatus) in [$common.SNATCHED, $common.SNATCHED_PROPER]
-$statusList.append($common.FAILED)
-#end if
-
-#for $curStatus in $statusList:
-<option value="$curStatus">$common.statusStrings[$curStatus]</option>
-#end for
-</select>
-<input class="btn btn-inline go" type="submit" value="Go" />
-
-<div>
-	<button type="button" class="btn btn-xs selectAllShows">Select all</a></button> 
-	<button type="button" class="btn btn-xs unselectAllShows">Clear all</a></button>
-</div>
-<br />
-
-<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
-#for $cur_indexer_id in $sorted_show_ids:
- <tr id="$cur_indexer_id">
-  <th><input type="checkbox" class="allCheck" id="allCheck-$cur_indexer_id" name="$cur_indexer_id-all" /></th>
-  <th colspan="2" style="width: 100%; text-align: left;"><a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_indexer_id">$show_names[$cur_indexer_id]</a> ($ep_counts[$cur_indexer_id]) <input type="button" class="pull-right get_more_eps btn" id="$cur_indexer_id" value="Expand" /></th>
- </tr>
-#end for
-</table>
-</form>
-
-#end if
-</div>
-
-#include $os.path.join($sickbeard.PROG_DIR,"gui/slick/interfaces/default/inc_bottom.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

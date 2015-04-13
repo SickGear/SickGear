@@ -317,16 +317,11 @@ def _xem_exceptions_fetcher():
                 continue
 
             for indexerid, names in parsedJSON['data'].items():
-                xem_exception_dict[int(indexerid)] = names
+                try:
+                    xem_exception_dict[int(indexerid)] = names
+                except:
+                    continue
 
         setLastRefresh('xem')
 
     return xem_exception_dict
-
-
-def getSceneSeasons(indexer_id):
-    """get a list of season numbers that have scene exceptions
-    """
-    myDB = db.DBConnection('cache.db')
-    seasons = myDB.select("SELECT DISTINCT season FROM scene_exceptions WHERE indexer_id = ?", [indexer_id])
-    return [cur_exception["season"] for cur_exception in seasons]

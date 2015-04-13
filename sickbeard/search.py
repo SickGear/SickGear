@@ -43,6 +43,7 @@ from sickbeard.providers.generic import GenericProvider
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 from sickbeard import common
 
+
 def _downloadResult(result):
     """
     Downloads a result to the appropriate black hole folder.
@@ -87,6 +88,7 @@ def _downloadResult(result):
         newResult = False
 
     return newResult
+
 
 def snatchEpisode(result, endStatus=SNATCHED):
     """
@@ -164,12 +166,16 @@ def snatchEpisode(result, endStatus=SNATCHED):
             else:
                 curEpObj.status = Quality.compositeStatus(endStatus, result.quality)
 
-            sql_l.append(curEpObj.get_sql())
+            result = curEpObj.get_sql()
+            if None is not result:
+                sql_l.append(result)
 
         if curEpObj.status not in Quality.DOWNLOADED:
             notifiers.notify_snatch(curEpObj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
 
-    if len(sql_l) > 0:
+            curEpObj.show.load_imdb_info()
+
+    if 0 < len(sql_l):
         myDB = db.DBConnection()
         myDB.mass_action(sql_l)
 
@@ -310,11 +316,11 @@ def isFirstBestMatch(result):
 
     return False
 
+
 def wantedEpisodes(show, fromDate):
     anyQualities, bestQualities = common.Quality.splitQuality(show.quality) # @UnusedVariable
     allQualities = list(set(anyQualities + bestQualities))
 
-    logger.log(u"Seeing if we need anything from " + show.name)
     myDB = db.DBConnection()
 
     if show.air_by_date:
@@ -328,6 +334,7 @@ def wantedEpisodes(show, fromDate):
 
     # check through the list of statuses to see if we want any
     wanted = []
+    total_wanted = total_replacing = 0
     for result in sqlResults:
         curCompositeStatus = int(result["status"])
         curStatus, curQuality = common.Quality.splitCompositeStatus(curCompositeStatus)
@@ -341,42 +348,33 @@ def wantedEpisodes(show, fromDate):
         if (curStatus in (common.DOWNLOADED, common.SNATCHED, common.SNATCHED_PROPER,
             common.SNATCHED_BEST) and curQuality < highestBestQuality) or curStatus == common.WANTED:
 
+            if curStatus == common.WANTED:
+                total_wanted += 1
+            else:
+                total_replacing += 1
+
             epObj = show.getEpisode(int(result["season"]), int(result["episode"]))
             epObj.wantedQuality = [i for i in allQualities if (i > curQuality and i != common.Quality.UNKNOWN)]
             wanted.append(epObj)
 
+    if 0 < total_wanted + total_replacing:
+        actions = []
+        for msg, total in ['%d episode%s', total_wanted], ['to upgrade %d episode%s', total_replacing]:
+            if 0 < total:
+                actions.append(msg % (total, helpers.maybe_plural(total)))
+        logger.log(u'We want %s for %s' % (' and '.join(actions), show.name))
+
     return wanted
 
-def searchForNeededEpisodes():
+
+def searchForNeededEpisodes(episodes):
     foundResults = {}
 
     didSearch = False
 
     origThreadName = threading.currentThread().name
-    threads = []
-
-    show_list = sickbeard.showList
-    fromDate = datetime.date.fromordinal(1)
-    episodes = []
-
-    for curShow in show_list:
-        if curShow.paused:
-            continue
-
-        episodes.extend(wantedEpisodes(curShow, fromDate))
 
     providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_recentsearch]
-    for curProvider in providers:
-
-        # spawn separate threads for each provider so we don't need to wait for providers with slow network operation
-        threads.append(threading.Thread(target=curProvider.cache.updateCache, name=origThreadName +
-                                                                                   " :: [" + curProvider.name + "]"))
-        # start the thread we just created
-        threads[-1].start()
-
-    # wait for all threads to finish
-    for t in threads:
-        t.join()
 
     for curProvider in providers:
         threading.currentThread().name = origThreadName + " :: [" + curProvider.name + "]"

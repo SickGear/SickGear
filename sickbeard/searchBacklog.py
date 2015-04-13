@@ -23,7 +23,7 @@ import threading
 
 import sickbeard
 
-from sickbeard import db, scheduler
+from sickbeard import db, scheduler, helpers
 from sickbeard import search_queue
 from sickbeard import logger
 from sickbeard import ui
@@ -107,7 +107,7 @@ class BacklogSearcher:
                 backlog_queue_item = search_queue.BacklogQueueItem(curShow, segment)
                 sickbeard.searchQueueScheduler.action.add_item(backlog_queue_item)  # @UndefinedVariable
             else:
-                logger.log(u"Nothing needs to be downloaded for " + str(curShow.name) + ", skipping",logger.DEBUG)
+                logger.log(u'Nothing needs to be downloaded for %s, skipping' % str(curShow.name), logger.DEBUG)
 
         # don't consider this an actual backlog search if we only did recent eps
         # or if we only did certain shows
@@ -139,8 +139,6 @@ class BacklogSearcher:
     def _get_segments(self, show, fromDate):
         anyQualities, bestQualities = common.Quality.splitQuality(show.quality)  # @UnusedVariable
 
-        logger.log(u"Seeing if we need anything from " + show.name)
-
         myDB = db.DBConnection()
         if show.air_by_date:
             sqlResults = myDB.select(
@@ -153,6 +151,7 @@ class BacklogSearcher:
 
         # check through the list of statuses to see if we want any
         wanted = {}
+        total_wanted = total_replacing = 0
         for result in sqlResults:
             curCompositeStatus = int(result["status"])
             curStatus, curQuality = common.Quality.splitCompositeStatus(curCompositeStatus)
@@ -166,11 +165,23 @@ class BacklogSearcher:
             if (curStatus in (common.DOWNLOADED, common.SNATCHED, common.SNATCHED_PROPER,
                               common.SNATCHED_BEST) and curQuality < highestBestQuality) or curStatus == common.WANTED:
 
+                if curStatus == common.WANTED:
+                    total_wanted += 1
+                else:
+                    total_replacing += 1
+
                 epObj = show.getEpisode(int(result["season"]), int(result["episode"]))
                 if epObj.season not in wanted:
                     wanted[epObj.season] = [epObj]
                 else:
                     wanted[epObj.season].append(epObj)
+
+        if 0 < total_wanted + total_replacing:
+            actions = []
+            for msg, total in ['%d episode%s', total_wanted], ['to upgrade %d episode%s', total_replacing]:
+                if 0 < total:
+                    actions.append(msg % (total, helpers.maybe_plural(total)))
+            logger.log(u'We want %s for %s' % (' and '.join(actions), show.name))
 
         return wanted
 
@@ -186,8 +197,7 @@ class BacklogSearcher:
         else:
             myDB.action("UPDATE info SET last_backlog=" + str(when))
 
-
-    def run(self, force=False):
+    def run(self):
         try:
             self.searchBacklog()
         except:

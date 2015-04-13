@@ -98,13 +98,14 @@ class GitHub(object):
         access_API = self._access_API(
             ['repos', self.github_repo_user, self.github_repo, 'pulls'],
             params={'per_page': 100})
-        pull = []
+        pulls = []
         for x in access_API:
             try:
-                pull.append(PullRequest(x['head']['ref'], x['number']))
+                pull = PullRequest(x['head']['ref'], x['number'])
+                pulls.append((repr(pull), pull.fetch_name()))
             except:
                 continue
-        return pull
+        return pulls
 
 class PullRequest(object):
     def __init__(self, ref, number):

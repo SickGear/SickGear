@@ -77,7 +77,7 @@ class Scheduler(threading.Thread):
                     if not self.silent:
                         logger.log(u"Starting new thread: " + self.name, logger.DEBUG)
 
-                    self.action.run(self.force)
+                    self.action.run()
                 except Exception, e:
                     logger.log(u"Exception generated in thread " + self.name + ": " + ex(e), logger.ERROR)
                     logger.log(repr(traceback.format_exc()), logger.DEBUG)

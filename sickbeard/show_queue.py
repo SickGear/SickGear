@@ -22,14 +22,14 @@ import traceback
 
 import sickbeard
 
-from lib.imdb import _exceptions as imdb_exceptions
-from sickbeard.common import SKIPPED, WANTED
+from sickbeard.common import SKIPPED, WANTED, UNAIRED
 from sickbeard.tv import TVShow
 from sickbeard import exceptions, logger, ui, db
 from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
 from sickbeard.blackandwhitelist import BlackAndWhiteList
+
 
 class ShowQueue(generic_queue.GenericQueue):
     def __init__(self):
@@ -75,7 +75,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
     loadingShowList = property(_getLoadingShowList)
 
-    def updateShow(self, show, force=False):
+    def updateShow(self, show, force=False, web=False):
 
         if self.isBeingAdded(show):
             raise exceptions.CantUpdateException(
@@ -91,6 +91,8 @@ class ShowQueue(generic_queue.GenericQueue):
 
         if not force:
             queueItemObj = QueueItemUpdate(show)
+        elif web:
+            queueItemObj = QueueItemForceUpdateWeb(show)
         else:
             queueItemObj = QueueItemForceUpdate(show)
 
@@ -132,9 +134,11 @@ class ShowQueue(generic_queue.GenericQueue):
         return queueItemObj
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
-                lang="en", subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None):
+                lang="en", subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
+                wanted_begin=None, wanted_latest=None):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
-                                    subtitles, anime, scene, paused, blacklist, whitelist)
+                                    subtitles, anime, scene, paused, blacklist, whitelist,
+                                    wanted_begin, wanted_latest)
 
         self.add_item(queueItemObj)
 
@@ -154,8 +158,7 @@ class ShowQueueActions:
              UPDATE: 'Update',
              FORCEUPDATE: 'Force Update',
              RENAME: 'Rename',
-             SUBTITLE: 'Subtitle',
-    }
+             SUBTITLE: 'Subtitle'}
 
 
 class ShowQueueItem(generic_queue.QueueItem):
@@ -191,12 +194,14 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused, blacklist, whitelist):
+                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest):
 
         self.indexer = indexer
         self.indexer_id = indexer_id
         self.showDir = showDir
         self.default_status = default_status
+        self.default_wanted_begin = default_wanted_begin
+        self.default_wanted_latest = default_wanted_latest
         self.quality = quality
         self.flatten_folders = flatten_folders
         self.lang = lang
@@ -336,14 +341,7 @@ class QueueItemAdd(ShowQueueItem):
             self._finishEarly()
             raise
 
-        logger.log(u"Retrieving show info from IMDb", logger.DEBUG)
-        try:
-            self.show.loadIMDbInfo()
-        except imdb_exceptions.IMDbError, e:
-            #todo Insert UI notification
-            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
-        except Exception, e:
-            logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
+        self.show.load_imdb_info()
 
         try:
             self.show.saveToDB()
@@ -374,16 +372,56 @@ class QueueItemAdd(ShowQueueItem):
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         # if they gave a custom status then change all the eps to it
+        my_db = db.DBConnection()
         if self.default_status != SKIPPED:
             logger.log(u"Setting all episodes to the specified default status: " + str(self.default_status))
-            myDB = db.DBConnection()
-            myDB.action("UPDATE tv_episodes SET status = ? WHERE status = ? AND showid = ? AND season != 0",
+            my_db.action("UPDATE tv_episodes SET status = ? WHERE status = ? AND showid = ? AND season != 0",
                         [self.default_status, SKIPPED, self.show.indexerid])
 
-        # if they started with WANTED eps then run the backlog
-        if self.default_status == WANTED:
-            logger.log(u"Launching backlog for this show since its episodes are WANTED")
+        # if they gave a number to start or number to end as wanted, then change those eps to it
+        def get_wanted(db_obj, wanted_max, latest):
+            actual = 0
+            if wanted_max:
+                select_id = 'FROM [tv_episodes] t5 JOIN (SELECT t3.indexerid, t3.status, t3.season*1000000+t3.episode AS t3_se, t2.start_season FROM [tv_episodes] t3'\
+                            + ' JOIN (SELECT t1.showid, M%s(t1.season) AS start_season' % ('IN', 'AX')[latest]\
+                            + ', MAX(t1.airdate) AS airdate, t1.episode, t1.season*1000000+t1.episode AS se FROM [tv_episodes] t1'\
+                            + ' WHERE %s=t1.showid' % self.show.indexerid\
+                            + ' AND 0<t1.season AND t1.status NOT IN (%s)) AS t2' % UNAIRED\
+                            + ' ON t2.showid=t3.showid AND 0<t3.season AND t2.se>=t3_se ORDER BY t3_se %sSC' % ('A', 'DE')[latest]\
+                            + ' %s) as t4' % (' LIMIT %s' % wanted_max, '')[-1 == wanted_max]\
+                            + ' ON t4.indexerid=t5.indexerid'\
+                            + '%s' % ('', ' AND t4.start_season=t5.season')[-1 == wanted_max]\
+                            + ' AND t4.status NOT IN (%s)' % ','.join([str(x) for x in sickbeard.common.Quality.DOWNLOADED + [WANTED]])
+                select = 'SELECT t5.indexerid as indexerid, t5.season as season, t5.episode as episode, t5.status as status ' + select_id
+                update = 'UPDATE [tv_episodes] SET status=%s WHERE indexerid IN (SELECT t5.indexerid %s)' % (WANTED, select_id)
+
+                wanted_updates = db_obj.select(select)
+                db_obj.action(update)
+                result = db_obj.select("SELECT changes() as last FROM [tv_episodes]")
+                for cur_result in result:
+                    actual = cur_result['last']
+                    break
+
+                action_log = 'didn\'t find any episodes that need to be set wanted'
+                if actual:
+                    action_log = ('updated %s %s episodes > %s'
+                                  % ((((('%s of %s' % (actual, wanted_max)), ('%s of max %s limited' % (actual, wanted_max)))[10 == wanted_max]), ('max %s available' % actual))[-1 == wanted_max],
+                                     ('first season', 'latest')[latest],
+                                     ','.join([('S%02dE%02d=%d' % (a['season'], a['episode'], a['status'])) for a in wanted_updates])))
+                logger.log('Get wanted ' + action_log)
+            return actual
+
+        items_wanted = get_wanted(my_db, self.default_wanted_begin, latest=False)
+        items_wanted += get_wanted(my_db, self.default_wanted_latest, latest=True)
+
+        msg = ' the specified show into ' + self.showDir
+        # if started with WANTED eps then run the backlog
+        if WANTED == self.default_status or items_wanted:
+            logger.log(u'Launching backlog for this show since episodes are WANTED')
             sickbeard.backlogSearchScheduler.action.searchBacklog([self.show])  #@UndefinedVariable
+            ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
+        else:
+            ui.notifications.message('Show added', 'Adding' + msg)
 
         self.show.writeMetadata()
         self.show.updateMetadata()
@@ -402,7 +440,7 @@ class QueueItemAdd(ShowQueueItem):
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
 
-        # check if show has XEM mapping so we can determin if searches should go by scene numbering or indexer numbering.
+        # check if show has XEM mapping so we can determine if searches should go by scene numbering or indexer numbering.
         if not self.scene and sickbeard.scene_numbering.get_xem_numbering_for_show(self.show.indexerid,
                                                                                    self.show.indexer):
             self.show.scene = 1
@@ -441,6 +479,7 @@ class QueueItemRefresh(ShowQueueItem):
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
 
         self.inProgress = False
+
 
 class QueueItemRename(ShowQueueItem):
     def __init__(self, show=None):
@@ -501,6 +540,7 @@ class QueueItemUpdate(ShowQueueItem):
     def __init__(self, show=None):
         ShowQueueItem.__init__(self, ShowQueueActions.UPDATE, show)
         self.force = False
+        self.force_web = False
 
     def run(self):
 
@@ -510,7 +550,9 @@ class QueueItemUpdate(ShowQueueItem):
 
         logger.log(u"Retrieving show info from " + sickbeard.indexerApi(self.show.indexer).name + "", logger.DEBUG)
         try:
-            self.show.loadFromIndexer(cache=not self.force)
+            result = self.show.loadFromIndexer(cache=not self.force)
+            if None is not result:
+                return
         except sickbeard.indexer_error, e:
             logger.log(u"Unable to contact " + sickbeard.indexerApi(self.show.indexer).name + ", aborting: " + ex(e),
                        logger.WARNING)
@@ -520,14 +562,8 @@ class QueueItemUpdate(ShowQueueItem):
                 self.show.indexer).name + " was incomplete, aborting: " + ex(e), logger.ERROR)
             return
 
-        logger.log(u"Retrieving show info from IMDb", logger.DEBUG)
-        try:
-            self.show.loadIMDbInfo()
-        except imdb_exceptions.IMDbError, e:
-            logger.log(u"Something is wrong with IMDb api: " + ex(e), logger.WARNING)
-        except Exception, e:
-            logger.log(u"Error loading IMDb info: " + ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+        if self.force_web:
+            self.show.load_imdb_info()
 
         try:
             self.show.saveToDB()
@@ -578,3 +614,11 @@ class QueueItemForceUpdate(QueueItemUpdate):
     def __init__(self, show=None):
         ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show)
         self.force = True
+        self.force_web = False
+
+
+class QueueItemForceUpdateWeb(QueueItemUpdate):
+    def __init__(self, show=None):
+        ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show)
+        self.force = True
+        self.force_web = True

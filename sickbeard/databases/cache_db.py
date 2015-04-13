@@ -100,3 +100,27 @@ class AddNetworkConversions(AddSceneExceptionsRefresh):
                                ' tvrage_country TEXT)')
         
         self.connection.action('CREATE INDEX tvrage_idx on network_conversions (tvrage_network, tvrage_country)')
+
+
+class ConsolidateProviders(AddNetworkConversions):
+    def test(self):
+        return self.checkDBVersion() > 1
+
+    def execute(self):
+
+        db.backup_database('cache.db', self.checkDBVersion())
+        if self.hasTable('provider_cache'):
+            self.connection.action('DROP TABLE provider_cache')
+
+        self.connection.action('CREATE TABLE provider_cache (provider TEXT ,name TEXT, season NUMERIC, episodes TEXT,'
+                               ' indexerid NUMERIC, url TEXT UNIQUE, time NUMERIC, quality TEXT, release_group TEXT, '
+                               'version NUMERIC)')
+
+        keep_tables = set(['lastUpdate', 'lastSearch', 'db_version', 'scene_exceptions', 'scene_names',
+                           'network_timezones', 'scene_exceptions_refresh', 'network_conversions', 'provider_cache'])
+        current_tables = set(self.listTables())
+        remove_tables = list(current_tables - keep_tables)
+        for table in remove_tables:
+            self.connection.action('DROP TABLE [%s]' % table)
+
+        self.incDBVersion()

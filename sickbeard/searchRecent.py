@@ -18,18 +18,9 @@
 
 from __future__ import with_statement
 
-import datetime
 import threading
-import traceback
 
 import sickbeard
-from sickbeard import logger
-from sickbeard import db
-from sickbeard import common
-from sickbeard import helpers
-from sickbeard import exceptions
-from sickbeard import network_timezones
-from sickbeard.exceptions import ex
 
 
 class RecentSearcher():
@@ -37,67 +28,10 @@ class RecentSearcher():
         self.lock = threading.Lock()
         self.amActive = False
 
-    def run(self, force=False):
+    def run(self):
 
         self.amActive = True
 
-        logger.log(u"Searching for new released episodes ...")
-
-        if not network_timezones.network_dict:
-            network_timezones.update_network_dict()
-
-        if network_timezones.network_dict:
-            curDate = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
-        else:
-            curDate = (datetime.date.today() - datetime.timedelta(days=2)).toordinal()
-
-        curTime = datetime.datetime.now(network_timezones.sb_timezone)
-
-        myDB = db.DBConnection()
-        sqlResults = myDB.select("SELECT * FROM tv_episodes WHERE status = ? AND season > 0 AND airdate <= ?",
-                                 [common.UNAIRED, curDate])
-
-        sql_l = []
-        show = None
-
-        for sqlEp in sqlResults:
-            try:
-                if not show or int(sqlEp["showid"]) != show.indexerid:
-                    show = helpers.findCertainShow(sickbeard.showList, int(sqlEp["showid"]))
-
-                # for when there is orphaned series in the database but not loaded into our showlist
-                if not show:
-                    continue
-
-            except exceptions.MultipleShowObjectsException:
-                logger.log(u"ERROR: expected to find a single show matching " + str(sqlEp['showid']))
-                continue
-
-            try:
-                end_time = network_timezones.parse_date_time(sqlEp['airdate'], show.airs, show.network) + datetime.timedelta(minutes=helpers.tryInt(show.runtime, 60))
-                # filter out any episodes that haven't aried yet
-                if end_time > curTime:
-                    continue
-            except:
-                # if an error occured assume the episode hasn't aired yet
-                continue
-
-            ep = show.getEpisode(int(sqlEp["season"]), int(sqlEp["episode"]))
-            with ep.lock:
-                if ep.show.paused:
-                    ep.status = common.SKIPPED
-                else:
-                    ep.status = common.WANTED
-
-                sql_l.append(ep.get_sql())
-        else:
-            logger.log(u"No new released episodes found ...")
-
-        if len(sql_l) > 0:
-            myDB = db.DBConnection()
-            myDB.mass_action(sql_l)
-
-        # queue episode for recent search
         recentsearch_queue_item = sickbeard.search_queue.RecentSearchQueueItem()
         sickbeard.searchQueueScheduler.action.add_item(recentsearch_queue_item)
 

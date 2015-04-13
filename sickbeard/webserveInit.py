@@ -1,40 +1,15 @@
 import os
-import socket
-import time
 import threading
 import sys
 import sickbeard
 import webserve
-import browser
 import webapi
 
 from sickbeard import logger
 from sickbeard.helpers import create_https_certificates
-from tornado.web import Application, StaticFileHandler, HTTPError
+from tornado.web import Application, StaticFileHandler
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
-
-
-class MultiStaticFileHandler(StaticFileHandler):
-    def initialize(self, paths, default_filename=None):
-        self.paths = paths
-        self.default_filename = default_filename
-
-    def get(self, path, include_body=True):
-        for p in self.paths:
-            try:
-                # Initialize the Static file with a path
-                super(MultiStaticFileHandler, self).initialize(p)
-                # Try to get the file
-                return super(MultiStaticFileHandler, self).get(path)
-            except HTTPError as exc:
-                # File not found, carry on
-                if exc.status_code == 404:
-                    continue
-                raise
-
-        # Oops file not found anywhere!
-        raise HTTPError(404)
 
 
 class WebServer(threading.Thread):
@@ -90,8 +65,9 @@ class WebServer(threading.Thread):
 
         # Main Handler
         self.app.add_handlers('.*$', [
-            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webapi.ApiBuilder),
+            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
             (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
+            (r'%s/cache(/?.*)' % self.options['web_root'], webserve.Cache),
             (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
             (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
             (r'%s/config/providers(/?.*)' % self.options['web_root'], webserve.ConfigProviders),
@@ -109,7 +85,7 @@ class WebServer(threading.Thread):
             (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
             (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
-            (r'%s/browser(/?.*)' % self.options['web_root'], browser.WebFileBrowser),
+            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
             (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
 

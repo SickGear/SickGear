@@ -23,7 +23,7 @@ import sys
 import autoProcessTV
 
 if len(sys.argv) < 2:
-    print "No folder supplied - is this being called from SABnzbd?"
+    print 'No folder supplied - is this being called from SABnzbd?'
     sys.exit()
 elif len(sys.argv) >= 8:
     autoProcessTV.processEpisode(sys.argv[1], sys.argv[2], sys.argv[7])

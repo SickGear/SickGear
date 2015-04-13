@@ -1,5 +1,6 @@
 #import sickbeard
 #import datetime
+#import re
 #from sickbeard import db, sbdatetime
 #from sickbeard.common import *
 
@@ -22,12 +23,12 @@
     % ($today, str($SKIPPED), str($WANTED))\
     + ' OR (status IN %s) OR (status IN %s))) AS ep_total FROM tv_episodes tv_eps LIMIT 1'\
     % ($status_quality, $status_download)
-
+#slurp
 #set $sql_result = $my_db.select($sql_statement)
-
+#slurp
 #set $shows_total = len($sickbeard.showList)
 #set $shows_active = len([show for show in $sickbeard.showList if 0 == show.paused and 'Ended' != show.status])
-
+#slurp
 #if $sql_result:
     #set $ep_snatched = $sql_result[0]['ep_snatched']
     #set $ep_downloaded = $sql_result[0]['ep_downloaded']
@@ -37,8 +38,8 @@
     #set $ep_downloaded = 0
     #set $ep_total = 0
 #end if
-#set $ep_percentage = '' if $ep_total == 0 else '(<span class="footerhighlight">{:.1%}</span>)'.format(float($ep_downloaded)/float($ep_total))
-
+#set $ep_percentage = '' if $ep_total == 0 else '(<span class="footerhighlight">%s%%</span>)' % re.sub(r'(\d+)(\.\d)\d+', r'\1\2', str((float($ep_downloaded)/float($ep_total))*100))
+#slurp
 #try
     #set $localRoot = $sbRoot
 #except NotFound
@@ -49,24 +50,20 @@
 #except NotFound
     #set $localheader = ''
 #end try
-
+#slurp
 		<span class="footerhighlight">$shows_total</span> shows (<span class="footerhighlight">$shows_active</span> active)
 		| <span class="footerhighlight">$ep_downloaded</span><%=
 (
 '',
 ' (<span class="footerhighlight">+%s</span> snatched)'\
-% (
-    str(ep_snatched),
-    '<a href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">%s</a>'\
-        % (localRoot, str(ep_snatched))
-  )['Episode Overview' != localheader]
+% '<a href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">%s</a>'
+    % (localRoot, str(ep_snatched))
 )[0 < ep_snatched]
 %>&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded $ep_percentage
 		| recent search: <span class="footerhighlight"><%= str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0] %></span>
 		| backlog search: <span class="footerhighlight"><%= str(sickbeard.backlogSearchScheduler.timeLeft()).split('.')[0] %></span>
-
+#slurp
 	</div>
-
 </footer>
 
 </body>

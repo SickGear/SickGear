@@ -19,6 +19,7 @@
 import sickbeard
 
 import xbmc
+import kodi
 import plex
 import nmj
 import nmjv2
@@ -43,6 +44,7 @@ from sickbeard.common import *
 
 # home theater / nas
 xbmc_notifier = xbmc.XBMCNotifier()
+kodi_notifier = kodi.KODINotifier()
 plex_notifier = plex.PLEXNotifier()
 nmj_notifier = nmj.NMJNotifier()
 nmjv2_notifier = nmjv2.NMJv2Notifier()
@@ -66,6 +68,7 @@ email_notifier = emailnotify.EmailNotifier()
 notifiers = [
     libnotify_notifier,  # Libnotify notifier goes first because it doesn't involve blocking on network activity.
     xbmc_notifier,
+    kodi_notifier,
     plex_notifier,
     nmj_notifier,
     nmjv2_notifier,

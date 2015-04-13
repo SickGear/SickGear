@@ -380,6 +380,19 @@ def already_postprocessed(dirName, videofile, force):
         #Needed if we have downloaded the same episode @ different quality
         search_sql = "SELECT tv_episodes.indexerid, history.resource FROM tv_episodes INNER JOIN history ON history.showid=tv_episodes.showid"
         search_sql += " WHERE history.season=tv_episodes.season and history.episode=tv_episodes.episode"
+
+        np = NameParser(dirName, tryIndexers=True, convert=True)
+        try:
+            parse_result = np.parse(dirName)
+        except:
+            parse_result = False
+            pass
+
+        if parse_result and (parse_result.show.indexerid and parse_result.episode_numbers and parse_result.season_number):
+            search_sql += " and tv_episodes.showid = '" + str(parse_result.show.indexerid)\
+                          + "' and tv_episodes.season = '" + str(parse_result.season_number)\
+                          + "' and tv_episodes.episode = '" + str(parse_result.episode_numbers[0]) + "'"
+
         search_sql += " and tv_episodes.status IN (" + ",".join([str(x) for x in common.Quality.DOWNLOADED]) + ")"
         search_sql += " and history.resource LIKE ?"
         sqlResult = myDB.select(search_sql, [u'%' + videofile])

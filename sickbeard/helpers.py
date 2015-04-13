@@ -65,8 +65,6 @@ from sickbeard import clients
 from lib.cachecontrol import CacheControl, caches
 from itertools import izip, cycle
 
-urllib._urlopener = classes.SickBeardURLopener()
-
 
 def indentXML(elem, level=0):
     '''
@@ -173,15 +171,6 @@ def isRarFile(filename):
     return False
 
 
-def isBeingWritten(filepath):
-    # Return True if file was modified within 60 seconds. it might still be being written to.
-    ctime = max(ek.ek(os.path.getctime, filepath), ek.ek(os.path.getmtime, filepath))
-    if ctime > time.time() - 60:
-        return True
-
-    return False
-
-
 def sanitizeFileName(name):
     '''
     >>> sanitizeFileName('a/b/c')
@@ -230,43 +219,6 @@ def makeDir(path):
         except OSError:
             return False
     return True
-
-
-def searchDBForShow(regShowName, log=False):
-    showNames = [re.sub('[. -]', ' ', regShowName)]
-
-    yearRegex = "([^()]+?)\s*(\()?(\d{4})(?(2)\))$"
-
-    myDB = db.DBConnection()
-    for showName in showNames:
-
-        sqlResults = myDB.select("SELECT * FROM tv_shows WHERE show_name LIKE ?",
-                                 [showName])
-
-        if len(sqlResults) == 1:
-            return int(sqlResults[0]["indexer_id"])
-        else:
-            # if we didn't get exactly one result then try again with the year stripped off if possible
-            match = re.match(yearRegex, showName)
-            if match and match.group(1):
-                if log:
-                    logger.log(u"Unable to match original name but trying to manually strip and specify show year",
-                               logger.DEBUG)
-                sqlResults = myDB.select(
-                    "SELECT * FROM tv_shows WHERE (show_name LIKE ?) AND startyear = ?",
-                    [match.group(1) + '%', match.group(3)])
-
-            if len(sqlResults) == 0:
-                if log:
-                    logger.log(u"Unable to match a record in the DB for " + showName, logger.DEBUG)
-                continue
-            elif len(sqlResults) > 1:
-                if log:
-                    logger.log(u"Multiple results for " + showName + " in the DB, unable to match show name",
-                               logger.DEBUG)
-                continue
-            else:
-                return int(sqlResults[0]["indexer_id"])
 
 
 def searchIndexerForShowID(regShowName, indexer=None, indexer_id=None, ui=None):
@@ -613,17 +565,6 @@ def fixSetGroupID(childPath):
                     childPath, parentGID), logger.ERROR)
 
 
-def is_anime_in_show_list():
-    for show in sickbeard.showList:
-        if show.is_anime:
-            return True
-    return False
-
-
-def update_anime_support():
-    sickbeard.ANIMESUPPORT = is_anime_in_show_list()
-
-
 def get_absolute_number_from_season_and_episode(show, season, episode):
     absolute_number = None
 
@@ -735,24 +676,6 @@ if __name__ == '__main__':
     doctest.testmod()
 
 
-def parse_json(data):
-    """
-    Parse json data into a python object
-
-    data: data string containing json
-
-    Returns: parsed data as json or None
-    """
-
-    try:
-        parsedJSON = json.loads(data)
-    except ValueError, e:
-        logger.log(u"Error trying to decode json data. Error: " + ex(e), logger.DEBUG)
-        return None
-
-    return parsedJSON
-
-
 def parse_xml(data, del_xmlns=False):
     """
     Parse data into an xml elementtree.ElementTree
@@ -773,32 +696,6 @@ def parse_xml(data, del_xmlns=False):
         parsedXML = None
 
     return parsedXML
-
-
-def get_xml_text(element, mini_dom=False):
-    """
-    Get all text inside a xml element
-
-    element: A xml element either created with elementtree.ElementTree or xml.dom.minidom
-    mini_dom: Default False use elementtree, True use minidom
-
-    Returns: text
-    """
-
-    text = ""
-
-    if mini_dom:
-        node = element
-        for child in node.childNodes:
-            if child.nodeType in (Node.CDATA_SECTION_NODE, Node.TEXT_NODE):
-                text += child.data
-    else:
-        if element is not None:
-            for child in [element] + element.findall('.//*'):
-                if child.text:
-                    text += child.text
-
-    return text.strip()
 
 
 def backupVersionedFile(old_file, version):
@@ -961,6 +858,17 @@ def anon_url(*url):
     return '' if None in url else '%s%s' % (sickbeard.ANON_REDIRECT, ''.join(str(s) for s in url))
 
 
+def starify(text, verify=False):
+    """
+    Return text input string with either its latter half or its centre area (if 12 chars or more)
+    replaced with asterisks. Useful for securely presenting api keys to a ui.
+
+    If verify is true, return true if text is a star block created text else return false.
+    """
+    return ((('%s%s' % (text[:len(text) / 2], '*' * (len(text) / 2))),
+            ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
+            set('*') == set((text[len(text) / 2:], text[4:-4])[12 <= len(text)]))[verify]
+
 """
 Encryption
 ==========
@@ -977,6 +885,7 @@ To add a new encryption_version:
 
 # Key Generators
 unique_key1 = hex(uuid.getnode() ** 2)  # Used in encryption v1
+
 
 # Encryption Functions
 def encrypt(data, encryption_version=0, decrypt=False):
@@ -1000,23 +909,8 @@ def full_sanitizeSceneName(name):
     return re.sub('[. -]', ' ', sanitizeSceneName(name)).lower().lstrip()
 
 
-def _check_against_names(nameInQuestion, show, season=-1):
-    showNames = []
-    if season in [-1, 1]:
-        showNames = [show.name]
-
-    showNames.extend(sickbeard.scene_exceptions.get_scene_exceptions(show.indexerid, season=season))
-
-    for showName in showNames:
-        nameFromList = full_sanitizeSceneName(showName)
-        if nameFromList == nameInQuestion:
-            return True
-
-    return False
-
-
 def get_show(name, tryIndexers=False):
-    if not sickbeard.showList:
+    if not sickbeard.showList or None is name:
         return
 
     showObj = None
@@ -1110,51 +1004,6 @@ def set_up_anidb_connection():
         return True
 
     return sickbeard.ADBA_CONNECTION.authed()
-
-
-def makeZip(fileList, archive):
-    """
-    'fileList' is a list of file names - full path each name
-    'archive' is the file name for the archive with a full path
-    """
-    try:
-        a = zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED)
-        for f in fileList:
-            a.write(f)
-        a.close()
-        return True
-    except Exception as e:
-        logger.log(u"Zip creation error: " + str(e), logger.ERROR)
-        return False
-
-
-def extractZip(archive, targetDir):
-    """
-    'fileList' is a list of file names - full path each name
-    'archive' is the file name for the archive with a full path
-    """
-    try:
-        if not os.path.exists(targetDir):
-            os.mkdir(targetDir)
-
-        zip_file = zipfile.ZipFile(archive, 'r')
-        for member in zip_file.namelist():
-            filename = os.path.basename(member)
-            # skip directories
-            if not filename:
-                continue
-
-            # copy file (taken from zipfile's extract)
-            source = zip_file.open(member)
-            target = file(os.path.join(targetDir, filename), "wb")
-            shutil.copyfileobj(source, target)
-            source.close()
-            target.close()
-        zip_file.close()
-        return True
-    except Exception as e:
-        logger.log(u"Zip extraction error: " + str(e), logger.ERROR)
-        return False
 
 
 def mapIndexersToShow(showObj):
@@ -1360,6 +1209,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     except requests.exceptions.Timeout, e:
         logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return
+    except requests.exceptions.ReadTimeout, e:
+        logger.log(u'Read timed out ' + str(e.message) + ' while loading URL ' + url, logger.WARNING)
+        return
     except Exception:
         logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)
         return
@@ -1469,6 +1321,7 @@ def clearCache(force=False):
                                            logger.WARNING)
                                 break
 
+
 def human(size):
     """
     format a size in bytes into a 'human' file size, e.g. bytes, KB, MB, GB, TB, PB
@@ -1508,8 +1361,14 @@ def get_size(start_path='.'):
 def remove_article(text=''):
     return re.sub(r'(?i)^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)
 
+
+def maybe_plural(number=1):
+    return ('s', '')[1 == number]
+
+
 def build_dict(seq, key):
     return dict((d[key], dict(d, index=index)) for (index, d) in enumerate(seq))
+
 
 def client_host(server_host):
     '''Extracted from cherrypy libs

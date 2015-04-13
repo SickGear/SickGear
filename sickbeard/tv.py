@@ -98,6 +98,7 @@ class TVShow(object):
         self._scene = 0
         self._rls_ignore_words = ""
         self._rls_require_words = ""
+        self._overview = ''
 
         self.dirty = True
 
@@ -141,6 +142,7 @@ class TVShow(object):
     scene = property(lambda self: self._scene, dirty_setter("_scene"))
     rls_ignore_words = property(lambda self: self._rls_ignore_words, dirty_setter("_rls_ignore_words"))
     rls_require_words = property(lambda self: self._rls_require_words, dirty_setter("_rls_require_words"))
+    overview = property(lambda self: self._overview, dirty_setter('_overview'))
 
     @property
     def is_anime(self):
@@ -436,7 +438,7 @@ class TVShow(object):
             except (InvalidNameException, InvalidShowException):
                 pass
 
-            if not ' ' in ep_file_name and parse_result and parse_result.release_group:
+            if ep_file_name and parse_result and None is not parse_result.release_group:
                 logger.log(
                     u"Name " + ep_file_name + u" gave release group of " + parse_result.release_group + ", seems valid",
                     logger.DEBUG)
@@ -451,9 +453,11 @@ class TVShow(object):
                         logger.log(str(self.indexerid) + ": Could not refresh subtitles", logger.ERROR)
                         logger.log(traceback.format_exc(), logger.DEBUG)
 
-                sql_l.append(curEpisode.get_sql())
+                result = curEpisode.get_sql()
+                if None is not result:
+                    sql_l.append(result)
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -571,11 +575,13 @@ class TVShow(object):
                         self.indexer).name + " for episode " + str(season) + "x" + str(episode), logger.DEBUG)
                     ep.loadFromIndexer(season, episode, tvapi=t)
 
-                    sql_l.append(ep.get_sql())
+                    result = ep.get_sql()
+                    if None is not result:
+                        sql_l.append(result)
 
                 scannedEps[season][episode] = True
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -729,9 +735,11 @@ class TVShow(object):
                         curEp.status = Quality.compositeStatus(newStatus, newQuality)
 
             with curEp.lock:
-                sql_l.append(curEp.get_sql())
+                result = curEp.get_sql()
+                if None is not result:
+                    sql_l.append(result)
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -745,103 +753,108 @@ class TVShow(object):
 
     def loadFromDB(self, skipNFO=False):
 
-        logger.log(str(self.indexerid) + u": Loading show info from database")
-
         myDB = db.DBConnection()
         sqlResults = myDB.select("SELECT * FROM tv_shows WHERE indexer_id = ?", [self.indexerid])
 
         if len(sqlResults) > 1:
+            logger.log(str(self.indexerid) + u': Loading show info from database')
             raise exceptions.MultipleDBShowsException()
         elif len(sqlResults) == 0:
-            logger.log(str(self.indexerid) + ": Unable to find the show in the database")
+            logger.log(str(self.indexerid) + ': Unable to find the show in the database')
             return
         else:
             if not self.indexer:
-                self.indexer = int(sqlResults[0]["indexer"])
+                self.indexer = int(sqlResults[0]['indexer'])
             if not self.name:
-                self.name = sqlResults[0]["show_name"]
+                self.name = sqlResults[0]['show_name']
             if not self.network:
-                self.network = sqlResults[0]["network"]
+                self.network = sqlResults[0]['network']
             if not self.genre:
-                self.genre = sqlResults[0]["genre"]
+                self.genre = sqlResults[0]['genre']
             if self.classification is None:
-                self.classification = sqlResults[0]["classification"]
+                self.classification = sqlResults[0]['classification']
 
-            self.runtime = sqlResults[0]["runtime"]
+            self.runtime = sqlResults[0]['runtime']
 
-            self.status = sqlResults[0]["status"]
+            self.status = sqlResults[0]['status']
             if not self.status:
-                self.status = ""
-            self.airs = sqlResults[0]["airs"]
+                self.status = ''
+            self.airs = sqlResults[0]['airs']
             if not self.airs:
-                self.airs = ""
-            self.startyear = sqlResults[0]["startyear"]
+                self.airs = ''
+            self.startyear = sqlResults[0]['startyear']
             if not self.startyear:
                 self.startyear = 0
 
-            self.air_by_date = sqlResults[0]["air_by_date"]
+            self.air_by_date = sqlResults[0]['air_by_date']
             if not self.air_by_date:
                 self.air_by_date = 0
 
-            self.anime = sqlResults[0]["anime"]
-            if self.anime == None:
+            self.anime = sqlResults[0]['anime']
+            if None is self.anime:
                 self.anime = 0
 
-            self.sports = sqlResults[0]["sports"]
+            self.sports = sqlResults[0]['sports']
             if not self.sports:
                 self.sports = 0
 
-            self.scene = sqlResults[0]["scene"]
+            self.scene = sqlResults[0]['scene']
             if not self.scene:
                 self.scene = 0
 
-            self.subtitles = sqlResults[0]["subtitles"]
+            self.subtitles = sqlResults[0]['subtitles']
             if self.subtitles:
                 self.subtitles = 1
             else:
                 self.subtitles = 0
 
-            self.dvdorder = sqlResults[0]["dvdorder"]
+            self.dvdorder = sqlResults[0]['dvdorder']
             if not self.dvdorder:
                 self.dvdorder = 0
 
-            self.archive_firstmatch = sqlResults[0]["archive_firstmatch"]
+            self.archive_firstmatch = sqlResults[0]['archive_firstmatch']
             if not self.archive_firstmatch:
                 self.archive_firstmatch = 0
 
-            self.quality = int(sqlResults[0]["quality"])
-            self.flatten_folders = int(sqlResults[0]["flatten_folders"])
-            self.paused = int(sqlResults[0]["paused"])
+            self.quality = int(sqlResults[0]['quality'])
+            self.flatten_folders = int(sqlResults[0]['flatten_folders'])
+            self.paused = int(sqlResults[0]['paused'])
 
             try:
-                self.location = sqlResults[0]["location"]
+                self.location = sqlResults[0]['location']
             except Exception:
-                dirty_setter("_location")(self, sqlResults[0]["location"])
+                dirty_setter('_location')(self, sqlResults[0]['location'])
                 self._isDirGood = False
 
             if not self.lang:
-                self.lang = sqlResults[0]["lang"]
+                self.lang = sqlResults[0]['lang']
 
-            self.last_update_indexer = sqlResults[0]["last_update_indexer"]
+            self.last_update_indexer = sqlResults[0]['last_update_indexer']
 
-            self.rls_ignore_words = sqlResults[0]["rls_ignore_words"]
-            self.rls_require_words = sqlResults[0]["rls_require_words"]
+            self.rls_ignore_words = sqlResults[0]['rls_ignore_words']
+            self.rls_require_words = sqlResults[0]['rls_require_words']
 
             if not self.imdbid:
-                self.imdbid = sqlResults[0]["imdb_id"]
+                imdbid = sqlResults[0]['imdb_id'] or ''
+                self.imdbid = ('', imdbid)[2 < len(imdbid)]
 
-        if self.is_anime:
-            self.release_groups = BlackAndWhiteList(self.indexerid)
+            if self.is_anime:
+                self.release_groups = BlackAndWhiteList(self.indexerid)
+
+            if not self.overview:
+                self.overview = sqlResults[0]['overview']
+
+        logger.log(str(self.indexerid) + u': Show info [%s] loaded from database' % self.name)
 
         # Get IMDb_info from database
         myDB = db.DBConnection()
         sqlResults = myDB.select("SELECT * FROM imdb_info WHERE indexer_id = ?", [self.indexerid])
 
-        if len(sqlResults) == 0:
-            logger.log(str(self.indexerid) + ": Unable to find IMDb show info in the database")
-            return
-        else:
+        if 0 < len(sqlResults):
             self.imdb_info = dict(zip(sqlResults[0].keys(), sqlResults[0]))
+        elif sickbeard.USE_IMDB_INFO:
+            logger.log(str(self.indexerid) + u': Unable to find IMDb show info in the database for [%s]' % self.name)
+            return
 
         self.dirty = False
         return True
@@ -870,6 +883,9 @@ class TVShow(object):
             t = tvapi
 
         myEp = t[self.indexerid]
+        if None is myEp:
+            logger.log(u'Show not found (maybe even removed?)', logger.WARNING)
+            return False
 
         try:
             self.name = myEp['seriesname'].strip()
@@ -891,8 +907,28 @@ class TVShow(object):
             self.startyear = int(str(myEp["firstaired"]).split('-')[0])
 
         self.status = getattr(myEp, 'status', '')
+        self.overview = getattr(myEp, 'overview', '')
 
-    def loadIMDbInfo(self, imdbapi=None):
+    def load_imdb_info(self):
+
+        if not sickbeard.USE_IMDB_INFO:
+            return
+
+        from lib.imdb import _exceptions as imdb_exceptions
+
+        logger.log(u'Retrieving show info from IMDb', logger.DEBUG)
+        try:
+            self._get_imdb_info()
+        except imdb_exceptions.IMDbError, e:
+            logger.log(u'Something is wrong with IMDb api: ' + ex(e), logger.WARNING)
+        except Exception, e:
+            logger.log(u'Error loading IMDb info: ' + ex(e), logger.ERROR)
+            logger.log(u'' + traceback.format_exc(), logger.DEBUG)
+
+    def _get_imdb_info(self):
+
+        if not self.imdbid:
+            return
 
         imdb_info = {'imdb_id': self.imdbid,
                      'title': '',
@@ -905,64 +941,62 @@ class TVShow(object):
                      'certificates': [],
                      'rating': '',
                      'votes': '',
-                     'last_update': ''
-        }
+                     'last_update': ''}
 
-        if self.imdbid:
-            logger.log(str(self.indexerid) + u": Loading show info from IMDb")
+        i = imdb.IMDb()
+        imdbTv = i.get_movie(str(re.sub('[^0-9]', '', self.imdbid)))
 
-            i = imdb.IMDb()
-            imdbTv = i.get_movie(str(re.sub("[^0-9]", "", self.imdbid)))
-
-            for key in filter(lambda x: x.replace('_', ' ') in imdbTv.keys(), imdb_info.keys()):
-                # Store only the first value for string type
-                if type(imdb_info[key]) == type('') and type(imdbTv.get(key)) == type([]):
-                    imdb_info[key] = imdbTv.get(key.replace('_', ' '))[0]
-                else:
-                    imdb_info[key] = imdbTv.get(key.replace('_', ' '))
-
-            # Filter only the value
-            if imdb_info['runtimes']:
-                imdb_info['runtimes'] = re.search('\d+', imdb_info['runtimes']).group(0)
+        for key in filter(lambda x: x.replace('_', ' ') in imdbTv.keys(), imdb_info.keys()):
+            # Store only the first value for string type
+            if type(imdb_info[key]) == type('') and type(imdbTv.get(key)) == type([]):
+                imdb_info[key] = imdbTv.get(key.replace('_', ' '))[0]
             else:
-                imdb_info['runtimes'] = self.runtime
+                imdb_info[key] = imdbTv.get(key.replace('_', ' '))
 
-            if imdb_info['akas']:
-                imdb_info['akas'] = '|'.join(imdb_info['akas'])
-            else:
-                imdb_info['akas'] = ''
+        # Filter only the value
+        if imdb_info['runtimes']:
+            imdb_info['runtimes'] = re.search('\d+', imdb_info['runtimes']).group(0)
+        else:
+            imdb_info['runtimes'] = self.runtime
 
-            # Join all genres in a string
-            if imdb_info['genres']:
-                imdb_info['genres'] = '|'.join(imdb_info['genres'])
-            else:
-                imdb_info['genres'] = ''
+        if imdb_info['akas']:
+            imdb_info['akas'] = '|'.join(imdb_info['akas'])
+        else:
+            imdb_info['akas'] = ''
 
-            # Get only the production country certificate if any
-            if imdb_info['certificates'] and imdb_info['countries']:
-                dct = {}
-                try:
-                    for item in imdb_info['certificates']:
-                        dct[item.split(':')[0]] = item.split(':')[1]
+        # Join all genres in a string
+        if imdb_info['genres']:
+            imdb_info['genres'] = '|'.join(imdb_info['genres'])
+        else:
+            imdb_info['genres'] = ''
 
-                    imdb_info['certificates'] = dct[imdb_info['countries']]
-                except:
-                    imdb_info['certificates'] = ''
+        # Get only the production country certificate if any
+        if imdb_info['certificates'] and imdb_info['countries']:
+            dct = {}
+            try:
+                for item in imdb_info['certificates']:
+                    dct[item.split(':')[0]] = item.split(':')[1]
 
-            else:
+                imdb_info['certificates'] = dct[imdb_info['countries']]
+            except:
                 imdb_info['certificates'] = ''
 
-            if imdb_info['country_codes']:
-                imdb_info['country_codes'] = '|'.join(imdb_info['country_codes'])
-            else:
-                imdb_info['country_codes'] = ''
+        else:
+            imdb_info['certificates'] = ''
 
-            imdb_info['last_update'] = datetime.date.today().toordinal()
+        if imdb_info['country_codes']:
+            imdb_info['country_codes'] = '|'.join(imdb_info['country_codes'])
+        else:
+            imdb_info['country_codes'] = ''
 
-            # Rename dict keys without spaces for DB upsert
-            self.imdb_info = dict(
-                (k.replace(' ', '_'), k(v) if hasattr(v, 'keys') else v) for k, v in imdb_info.items())
-            logger.log(str(self.indexerid) + u": Obtained info from IMDb ->" + str(self.imdb_info), logger.DEBUG)
+        imdb_info['last_update'] = datetime.date.today().toordinal()
+
+        # Rename dict keys without spaces for DB upsert
+        self.imdb_info = dict(
+            (k.replace(' ', '_'), k(v) if hasattr(v, 'keys') else v) for k, v in imdb_info.items())
+        logger.log(str(self.indexerid) + u': Obtained info from IMDb ->' + str(self.imdb_info), logger.DEBUG)
+
+        logger.log(str(self.indexerid) + u': Parsed latest IMDb show info for [%s]' % self.name)
 
     def nextEpisode(self):
         logger.log(str(self.indexerid) + ": Finding the episode which airs next", logger.DEBUG)
@@ -1083,14 +1117,14 @@ class TVShow(object):
                     os.path.normpath(self.location)):
 
                 # check if downloaded files still exist, update our data if this has changed
-                if not sickbeard.SKIP_REMOVED_FILES:
+                if 1 != sickbeard.SKIP_REMOVED_FILES:
                     with curEp.lock:
                         # if it used to have a file associated with it and it doesn't anymore then set it to IGNORED
                         if curEp.location and curEp.status in Quality.DOWNLOADED:
-                            logger.log(str(self.indexerid) + u": Location for " + str(season) + "x" + str(
-                                episode) + " doesn't exist, removing it and changing our status to IGNORED",
+                            curEp.status = (sickbeard.SKIP_REMOVED_FILES, IGNORED)[not sickbeard.SKIP_REMOVED_FILES]
+                            logger.log(u'%s: File no longer at location for s%02de%02d, episode removed and status changed to %s'
+                                       % (str(self.indexerid), season, episode, statusStrings[curEp.status]),
                                        logger.DEBUG)
-                            curEp.status = IGNORED
                             curEp.subtitles = list()
                             curEp.subtitles_searchcount = 0
                             curEp.subtitles_lastsearch = str(datetime.datetime.min)
@@ -1099,13 +1133,15 @@ class TVShow(object):
                         curEp.hastbn = False
                         curEp.release_name = ''
 
-                        sql_l.append(curEp.get_sql())
+                        result = curEp.get_sql()
+                        if None is not result:
+                            sql_l.append(result)
             else:
                 # the file exists, set its modify file stamp
                 if sickbeard.AIRDATE_EPISODES:
                     curEp.airdateModifyStamp()
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -1163,20 +1199,19 @@ class TVShow(object):
                         "imdb_id": self.imdbid,
                         "last_update_indexer": self.last_update_indexer,
                         "rls_ignore_words": self.rls_ignore_words,
-                        "rls_require_words": self.rls_require_words
+                        'rls_require_words': self.rls_require_words,
+                        'overview': self.overview
         }
 
         myDB = db.DBConnection()
         myDB.upsert("tv_shows", newValueDict, controlValueDict)
 
-        helpers.update_anime_support()
-
-        if self.imdbid:
-            controlValueDict = {"indexer_id": self.indexerid}
+        if sickbeard.USE_IMDB_INFO and len(self.imdb_info):
+            controlValueDict = {'indexer_id': self.indexerid}
             newValueDict = self.imdb_info
 
             myDB = db.DBConnection()
-            myDB.upsert("imdb_info", newValueDict, controlValueDict)
+            myDB.upsert('imdb_info', newValueDict, controlValueDict)
 
     def __str__(self):
         toReturn = ""
@@ -2484,9 +2519,11 @@ class TVEpisode(object):
         sql_l = []
         with self.lock:
             for relEp in [self] + self.relatedEps:
-                sql_l.append(relEp.get_sql())
+                result = relEp.get_sql()
+                if None is not result:
+                    sql_l.append(result)
 
-        if len(sql_l) > 0:
+        if 0 < len(sql_l):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
@@ -2496,14 +2533,19 @@ class TVEpisode(object):
         Note: Also called from postProcessor
 
         """
-        hr = min = 0
+        if not datetime.date == type(self.airdate) or 1 == self.airdate.year:
+            logger.log(u'%s: Did not change modify date of %s because episode date is never aired or invalid'
+                       % (self.show.indexerid, os.path.basename(self.location)), logger.DEBUG)
+            return
+
+        hr = m = 0
         airs = re.search('.*?(\d{1,2})(?::\s*?(\d{2}))?\s*(pm)?', self.show.airs, re.I)
         if airs:
             hr = int(airs.group(1))
             hr = (12 + hr, hr)[None is airs.group(3)]
             hr = (hr, hr - 12)[0 == hr % 12 and 0 != hr]
-            min = int((airs.group(2), min)[None is airs.group(2)])
-        airtime = datetime.time(hr, min)
+            m = int((airs.group(2), m)[None is airs.group(2)])
+        airtime = datetime.time(hr, m)
 
         airdatetime = datetime.datetime.combine(self.airdate, airtime)
 
@@ -2514,8 +2556,8 @@ class TVEpisode(object):
 
             airdatetime = airdatetime.timetuple()
             if helpers.touchFile(self.location, time.mktime(airdatetime)):
-                logger.log(str(self.show.indexerid) + u": Changed modify date of " + os.path.basename(self.location)
-                           + " to show air date " + time.strftime("%b %d,%Y (%H:%M)", airdatetime))
+                logger.log(u'%s: Changed modify date of %s to show air date %s'
+                           % (self.show.indexerid, os.path.basename(self.location), time.strftime('%b %d,%Y (%H:%M)', airdatetime)))
 
     def __getstate__(self):
         d = dict(self.__dict__)

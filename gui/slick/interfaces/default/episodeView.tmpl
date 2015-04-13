@@ -191,7 +191,7 @@
 	<span class="listing-key listing-toofar">Distant</span>
 #end if
 	<a class="btn btn-inline forceBacklog" href="webcal://$sbHost:$sbHttpPort/calendar">
-	<i class="icon-calendar icon-white"></i>Subscribe</a>
+	<i class="sgicon-rss"></i> Subscribe</a>
 </div>
 
 <br>
@@ -366,7 +366,7 @@
 			</td>
 
 			<td align="center" style="vertical-align: middle;">
-        #if $cur_result['imdb_id']:
+        #if sickbeard.USE_IMDB_INFO and $cur_result['imdb_id']:
 				<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" />
         #end if
 				<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'], cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="$sickbeard.indexerApi($cur_indexer).config['show_url']${cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
@@ -558,7 +558,7 @@
 					</a></span>
 
 					<span class="tvshowTitleIcons">
-        #if $cur_result['imdb_id']:
+        #if sickbeard.USE_IMDB_INFO and $cur_result['imdb_id']:
 						<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" />
         #end if
 						<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'], cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="$sickbeard.indexerApi($cur_indexer).config['show_url']${cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>

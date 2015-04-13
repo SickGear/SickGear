@@ -8,6 +8,8 @@
 #from sickbeard import metadata
 #from sickbeard.metadata.generic import GenericMetadata
 #from sickbeard.helpers import anon_url
+#from sickbeard.logger import reverseNames as file_logging_presets
+#from sickbeard.helpers import maybe_plural
 
 #set global $title  = 'Config - General'
 #set global $header = 'General Configuration'
@@ -22,6 +24,8 @@
 #else
 	<h1 class="title">$title</h1>
 #end if
+#set $checked = ' checked="checked"'
+#set $selected = ' selected="selected"'
 
 #set $indexer = 0
 #if $sickbeard.INDEXER_DEFAULT
@@ -57,7 +61,7 @@
 							<label for="launch_browser">
 								<span class="component-title">Launch browser</span>
 								<span class="component-desc">
-									<input type="checkbox" name="launch_browser" id="launch_browser" #if $sickbeard.LAUNCH_BROWSER then 'checked="checked"' else ''#>
+									<input type="checkbox" name="launch_browser" id="launch_browser"#echo ('', $checked)[$sickbeard.LAUNCH_BROWSER]#>
 									<p>open the SickGear home page on startup</p>
 								</span>
 							</label>
@@ -67,7 +71,7 @@
 							<label for="update_shows_on_start">
 								<span class="component-title">Update shows on startup</span>
 								<span class="component-desc">
-									<input type="checkbox" name="update_shows_on_start" id="update_shows_on_start" #if $sickbeard.UPDATE_SHOWS_ON_START then 'checked="checked"' else ''#>
+									<input type="checkbox" name="update_shows_on_start" id="update_shows_on_start"#echo ('', $checked)[$sickbeard.UPDATE_SHOWS_ON_START]#>
 									<p>with show data; episode plot, images, air and end dates, etc. Disable for a quicker startup. Show data is scheduled to update during hour <span class="show_update_hour_value">$sickbeard.SHOW_UPDATE_HOUR</span>.</p>
 								</span>
 							</label>
@@ -87,11 +91,11 @@
 							<span class="component-title">Send to trash for actions</span>
 							<span class="component-desc">
 								<label for="trash_remove_show" class="nextline-block">
-									<input type="checkbox" name="trash_remove_show" id="trash_remove_show" #if $sickbeard.TRASH_REMOVE_SHOW then 'checked="checked"' else ''#>
+									<input type="checkbox" name="trash_remove_show" id="trash_remove_show"#echo ('', $checked)[$sickbeard.TRASH_REMOVE_SHOW]#>
 									<p>when using show "Remove" and delete files</p>
 								</label>
 								<label for="trash_rotate_logs" class="nextline-block">
-									<input type="checkbox" name="trash_rotate_logs" id="trash_rotate_logs" #if $sickbeard.TRASH_ROTATE_LOGS then 'checked="checked"' else ''#>
+									<input type="checkbox" name="trash_rotate_logs" id="trash_rotate_logs"#echo ('', $checked)[$sickbeard.TRASH_ROTATE_LOGS]#>
 									<p>on scheduled deletes of the oldest log files</p>
 								</label>
 								<div class="clear-left"><p>selected actions use trash (recycle bin) instead of the default permanent delete</p></div>
@@ -112,9 +116,9 @@
 								<span class="component-title">Use initial indexer set to</span>
 								<span class="component-desc">
 									<select id="indexer_default" name="indexer_default" class="form-control input-sm">
-										<option value="0" #if $indexer == 0 then 'selected="selected"' else ''#>All Indexers</option>
+										<option value="0"#echo ('', $selected)[0 == $indexer]#>All Indexers</option>
 #for $indexer in $sickbeard.indexerApi().indexers
-										<option value="$indexer" #if $indexer == $sickbeard.INDEXER_DEFAULT then 'selected="selected"' else ''#>$sickbeard.indexerApi().indexers[$indexer]</option>
+										<option value="$indexer"#echo ('', $selected)[$indexer == $sickbeard.INDEXER_DEFAULT]#>$sickbeard.indexerApi().indexers[$indexer]</option>
 #end for
 									</select>
 									<span>as the default selection when adding new shows</span>
@@ -157,7 +161,7 @@
 							<label for="version_notify">
 								<span class="component-title">Check software updates</span>
 								<span class="component-desc">
-									<input type="checkbox" name="version_notify" id="version_notify" #if $sickbeard.VERSION_NOTIFY then 'checked="checked"' else ''#>
+									<input type="checkbox" name="version_notify" id="version_notify"#echo ('', $checked)[$sickbeard.VERSION_NOTIFY]#>
 									<p>and display notifications when updates are available.
 									Checks are run on startup and at the frequency set below*</p>
 								</span>
@@ -168,7 +172,7 @@
 							<label for="auto_update">
 								<span class="component-title">Automatically update</span>
 								<span class="component-desc">
-									<input type="checkbox" name="auto_update" id="auto_update" #if $sickbeard.AUTO_UPDATE then 'checked="checked"' else ''#>
+									<input type="checkbox" name="auto_update" id="auto_update"#echo ('', $checked)[$sickbeard.AUTO_UPDATE]#>
 									<p>fetch and install software updates.
 									Updates are run on startup and in the background at the frequency set below*</p>
 								</span>
@@ -189,7 +193,7 @@
 							<label for="notify_on_update">
 								<span class="component-title">Notify on software update</span>
 								<span class="component-desc">
-									<input type="checkbox" name="notify_on_update" id="notify_on_update" #if $sickbeard.NOTIFY_ON_UPDATE then 'checked="checked"' else ''#>
+									<input type="checkbox" name="notify_on_update" id="notify_on_update"#echo ('', $checked)[$sickbeard.NOTIFY_ON_UPDATE]#>
 									<p>send a message to all enabled notifiers when SickGear has been updated</p>
 								</span>
 							</label>
@@ -217,10 +221,33 @@
 								<span class="component-title">Display theme:</span>
 								<span class="component-desc">
 									<select id="theme_name" name="theme_name" class="form-control input-sm">
-										<option value="dark" #if $sickbeard.THEME_NAME == 'dark' then 'selected="selected"' else ''#>Dark</option>
-										<option value="light" #if $sickbeard.THEME_NAME == 'light' then 'selected="selected"' else ''#>Light</option>
+										<option value="dark"#echo ('', $selected)['dark' == $sickbeard.THEME_NAME]#>Dark</option>
+										<option value="light"#echo ('', $selected)['light' == $sickbeard.THEME_NAME]#>Light</option>
 									</select>
 									<span class="red-text">for appearance to take effect, save then refresh your browser</span>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="default_home">
+								<span class="component-title">Use as default home page:</span>
+								<span class="component-desc">
+									<select id="default_home" name="default_home" class="form-control input-sm">
+										<option value="shows"#echo ('', $selected)['shows' == $sickbeard.DEFAULT_HOME]#>Shows</option>
+										<option value="episodes"#echo ('', $selected)['episodes' == $sickbeard.DEFAULT_HOME]#>Episodes</option>
+										<option value="history"#echo ('', $selected)['history' == $sickbeard.DEFAULT_HOME]#>History</option>
+									</select>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="use_imdb_info">
+								<span class="component-title">Enable IMDb info</span>
+								<span class="component-desc">
+									<input type="checkbox" name="use_imdb_info" id="use_imdb_info"#echo ('', $checked)[$sickbeard.USE_IMDB_INFO]#>
+									<p>for ui links, display show; ratings, country flag, year, runtime, and genre tags</p>
 								</span>
 							</label>
 						</div>
@@ -229,7 +256,7 @@
 							<label for="home_search_focus">
 								<span class="component-title">Give show list search focus</span>
 								<span class="component-desc">
-									<input type="checkbox" name="home_search_focus" id="home_search_focus" #if $sickbeard.HOME_SEARCH_FOCUS then 'checked="checked"' else ''#>
+									<input type="checkbox" name="home_search_focus" id="home_search_focus"#echo ('', $checked)[$sickbeard.HOME_SEARCH_FOCUS]#>
 									<p>page refresh on "Show List" will start search box focused</p>
 								</span>
 							</label>
@@ -239,7 +266,7 @@
 							<label for="sort_article">
 								<span class="component-title">Sort with "The", "A", "An"</span>
 								<span class="component-desc">
-									<input type="checkbox" name="sort_article" id="sort_article" #if $sickbeard.SORT_ARTICLE then 'checked="checked"' else ''#>
+									<input type="checkbox" name="sort_article" id="sort_article"#echo ('', $checked)[$sickbeard.SORT_ARTICLE]#>
 									<p>include articles ("The", "A", "An") when sorting show lists</p>
 								</span>
 							</label>
@@ -249,16 +276,16 @@
 							<label for="fuzzy_dating">
 								<span class="component-title">Display fuzzy dates</span>
 								<span class="component-desc">
-									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="viewIf datePresets" #if $sickbeard.FUZZY_DATING == True then 'checked="checked"' else ''#>
+									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="viewIf datePresets"#echo ('', $checked)[$sickbeard.FUZZY_DATING == True]#>
 									<p>move absolute dates into tooltips and display e.g. "Last Thu", "On Tue"</p>
 								</span>
 							</label>
 						</div>
-						<div class="field-pair show_if_fuzzy_dating#if True == $sickbeard.FUZZY_DATING then '' else ' metadataDiv'#">
+						<div class="field-pair show_if_fuzzy_dating#echo (' metadataDiv', '')[$sickbeard.FUZZY_DATING]#">
 							<label for="trim_zero">
 								<span class="component-title">Trim date and time</span>
 								<span class="component-desc">
-									<input type="checkbox" name="trim_zero" id="trim_zero" #if True == $sickbeard.TRIM_ZERO then 'checked="checked"' else ''#>
+									<input type="checkbox" name="trim_zero" id="trim_zero"#echo ('', $checked)[True == $sickbeard.TRIM_ZERO]#>
 									<p>display minimalist date and time i.e. <del>02:00</del> = 2:00, <del>02:00pm</del> = 2pm, <del>03 Jan</del> = 3 Jan</p>
 								</span>
 							</label>
@@ -268,16 +295,16 @@
 							<label for="date_presets">
 								<span class="component-title">Date style:</span>
 								<span class="component-desc">
-									<select class="form-control input-sm #if True == $sickbeard.FUZZY_DATING then '' else ' metadataDiv'#" id="date_presets#if True == $sickbeard.FUZZY_DATING then '' else '_na'#" name="date_preset#if True == $sickbeard.FUZZY_DATING then '' else '_na'#">
-#for $cur_preset in $date_presets:
-										<option value="$cur_preset" #if $cur_preset == $sickbeard.DATE_PRESET or ("%x" == $sickbeard.DATE_PRESET and "$cur_preset" == '%a, %b %d, %Y') then 'selected="selected"' else ''#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
+									<select class="form-control input-sm#echo (' metadataDiv', '')[$sickbeard.FUZZY_DATING]#" id="date_presets#echo ('_na', '')[$sickbeard.FUZZY_DATING]#" name="date_preset#echo ('_na', '')[$sickbeard.FUZZY_DATING]#">
+#for $cur_preset in $date_presets
+										<option value="$cur_preset" #echo ('', $selected)[$cur_preset == $sickbeard.DATE_PRESET or ('%x' == $sickbeard.DATE_PRESET and '$cur_preset' == '%a, %b %d, %Y')]#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
 #end for
 									</select>
 
-									<select class="form-control input-sm #if True != $sickbeard.FUZZY_DATING then '' else ' metadataDiv'#" id="date_presets#if True != $sickbeard.FUZZY_DATING then '' else '_na'#" name="date_preset#if True != $sickbeard.FUZZY_DATING then '' else '_na'#">
-										<option value="%x" #if "%x" == $sickbeard.DATE_PRESET then 'selected="selected"' else ''#>Use System Default</option>
-#for $cur_preset in $date_presets:
-										<option value="$cur_preset" #if $cur_preset == $sickbeard.DATE_PRESET then 'selected="selected"' else ''#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
+									<select class="form-control input-sm#echo ('', ' metadataDiv')[$sickbeard.FUZZY_DATING]#" id="date_presets#echo (', ''_na')[$sickbeard.FUZZY_DATING]#" name="date_preset#echo ('', '_na')[$sickbeard.FUZZY_DATING]#">
+										<option value="%x"#echo ('', $selected)['%x' == $sickbeard.DATE_PRESET]#>Use System Default</option>
+#for $cur_preset in $date_presets
+										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sickbeard.DATE_PRESET]#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
 #end for
 									</select>
 								</span>
@@ -289,9 +316,9 @@
 								<span class="component-title">Time style:</span>
 								<span class="component-desc">
 									<select id="time_presets" name="time_preset" class="form-control input-sm">
-#for $cur_preset in $time_presets:
+#for $cur_preset in $time_presets
     #set $show_seconds = not $sickbeard.FUZZY_DATING
-										<option value="$cur_preset" #if $cur_preset == $sickbeard.TIME_PRESET_W_SECONDS then 'selected="selected"' else ''#>$sbdatetime.now().sbftime(show_seconds=$show_seconds, t_preset=$cur_preset)</option>
+										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sickbeard.TIME_PRESET_W_SECONDS]#>$sbdatetime.now().sbftime(show_seconds=$show_seconds, t_preset=$cur_preset)</option>
 #end for
 									</select>
 									<span id="trim_info_seconds"><b>note:</b> seconds are only shown on the History page</span>
@@ -303,10 +330,10 @@
 							<span class="component-title">Timezone:</span>
 							<span class="component-desc">
 								<label for="local" class="space-right">
-									<input type="radio" name="timezone_display" id="local" value="local" #if "local" == $sickbeard.TIMEZONE_DISPLAY then 'checked="checked"' else ''#>local
+									<input type="radio" name="timezone_display" id="local" value="local"#echo ('', $checked)['local' == $sickbeard.TIMEZONE_DISPLAY]#>local
 								</label>
 								<label for="network">
-									<input type="radio" name="timezone_display" id="network" value="network" #if "network" == $sickbeard.TIMEZONE_DISPLAY then 'checked="checked"' else ''#>network
+									<input type="radio" name="timezone_display" id="network" value="network"#echo ('', $checked)['network' == $sickbeard.TIMEZONE_DISPLAY]#>network
 								</label>
 								<div class="clear-left"><p>display dates and times in either your timezone or the shows network timezone</p></div>
 							</span>
@@ -323,7 +350,7 @@
 					<div class="component-group-desc">
 						<h3>Web Interface</h3>
 						<p>It is recommended that you enable a username and password to secure SickGear from being tampered with remotely.</p>
-						<p><b class="boldest">These options require a manual restart to take effect.</b></p>
+						<p><b>These options require a manual restart to take effect.</b></p>
 					</div>
 
 					<fieldset class="component-group-list">
@@ -342,9 +369,10 @@
 							<label for="web_password">
 								<span class="component-title">Password</span>
 								<span class="component-desc">
-									<input type="password" name="web_password" id="web_password" value="$sickbeard.WEB_PASSWORD" class="form-control input-sm input300">
+									<input type="password" name="web_password" id="web_password" value="#echo '*' * len($sickbeard.WEB_PASSWORD)#" class="form-control input-sm input300">
 									<p>blank for none</p>
-									<span class="clear-left">check autoProcessTV.cfg is set up for external apps to use post processing scripts
+									<span class="clear-left">check autoProcessTV.cfg is set up for external apps to use post processing scripts</span>
+								</span>
 							</label>
 						</div>
 
@@ -352,7 +380,7 @@
 							<label for="calendar_unprotected">
 								<span class="component-title">Unprotected calendar</span>
 								<span class="component-desc">
-									<input type="checkbox" name="calendar_unprotected" id="calendar_unprotected" #if $sickbeard.CALENDAR_UNPROTECTED then 'checked="checked"' else ''#>
+									<input type="checkbox" name="calendar_unprotected" id="calendar_unprotected"#echo ('', $checked)[$sickbeard.CALENDAR_UNPROTECTED]#>
 									<p>permit subscribing to the calendar without username and password.
 									Some services like Google Calendar will only work with <b class="boldest">no</b> authentication</p>
 								</span>
@@ -364,7 +392,7 @@
 							<label for="use_api">
 								<span class="component-title">API enable</span>
 								<span class="component-desc">
-									<input type="checkbox" name="use_api" class="enabler" id="use_api" #if $sickbeard.USE_API then 'checked="checked"' else ''#>
+									<input type="checkbox" name="use_api" class="enabler" id="use_api"#echo ('', $checked)[$sickbeard.USE_API]#>
 									<p>permit the use of the SickGear (SickBeard) API</p>
 								</span>
 							</label>
@@ -396,7 +424,7 @@
 							<label for="web_log">
 								<span class="component-title">HTTP logs</span>
 								<span class="component-desc">
-									<input type="checkbox" name="web_log" id="web_log" #if $sickbeard.WEB_LOG then 'checked="checked"' else ''#>
+									<input type="checkbox" name="web_log" id="web_log"#echo ('', $checked)[$sickbeard.WEB_LOG]#>
 									<p>enable logs from the internal web server</p>
 								</span>
 							</label>
@@ -406,7 +434,7 @@
 							<label for="enable_https">
 								<span class="component-title">SSL enable</span>
 								<span class="component-desc">
-									<input type="checkbox" name="enable_https" class="enabler" id="enable_https" #if $sickbeard.ENABLE_HTTPS then 'checked="checked"' else ''#>
+									<input type="checkbox" name="enable_https" class="enabler" id="enable_https"#echo ('', $checked)[$sickbeard.ENABLE_HTTPS]#>
 									<p>use a HTTPS address to access the web interface</p>
 								</span>
 							</label>
@@ -436,7 +464,7 @@
 							<label for="web_ipv6">
 								<span class="component-title">Listen on IPv6</span>
 								<span class="component-desc">
-									<input type="checkbox" name="web_ipv6" id="web_ipv6" #if $sickbeard.WEB_IPV6 then 'checked="checked"' else ''#>
+									<input type="checkbox" name="web_ipv6" id="web_ipv6"#echo ('', $checked)[$sickbeard.WEB_IPV6]#>
 									<p>attempt binding to any available IPv6 address</p>
 								</span>
 							</label>
@@ -446,7 +474,7 @@
 							<label for="handle_reverse_proxy">
 								<span class="component-title">Reverse proxy headers</span>
 								<span class="component-desc">
-									<input type="checkbox" name="handle_reverse_proxy" id="handle_reverse_proxy" #if $sickbeard.HANDLE_REVERSE_PROXY then 'checked="checked"' else ''#>
+									<input type="checkbox" name="handle_reverse_proxy" id="handle_reverse_proxy"#echo ('', $checked)[$sickbeard.HANDLE_REVERSE_PROXY]#>
 									<p>accept the following reverse proxy headers (advanced)...<br />(X-Forwarded-For, X-Forwarded-Host, and X-Forwarded-Proto)</p>
 								</span>
 							</label>
@@ -474,33 +502,28 @@
 								<span class="component-title">Branch version:</span>
 								<span class="component-desc">
 									<select id="branchVersion" class="form-control form-control-inline input-sm pull-left max300">
-#for $cur_branch in $sickbeard.versionCheckScheduler.action.list_remote_branches():
-										<option value="$cur_branch" #if $cur_branch == $sickbeard.BRANCH then 'selected="selected"' else ''#>$cur_branch</option>
-#end for
+										<option>Loading list from github</option>
 									</select>
-									<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="branchCheckout" value="Checkout Branch">
+									<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="branchCheckout" value="Checkout Branch" disabled="disabled">
 									<div class="clear-left"><p>select branch to use (restart required)</p></div>
 								</span>
 							</label>
 						</div>
 
-						#set pulls = sickbeard.versionCheckScheduler.action.list_remote_pulls()
-						#if len(pulls) > 0 and $sickbeard.BRANCH != 'master':
+#if $sickbeard.BRANCH != 'master'
 							<div class="field-pair">
 								<label>
 									<span class="component-title">Pull request:</span>
 									<span class="component-desc">
 										<select id="pullRequestVersion" class="form-control form-control-inline input-sm pull-left max300">
-										#for $cur_branch in $pulls:
-											<option value="$cur_branch.fetch_name()" #if $cur_branch == $sickbeard.BRANCH then 'selected="selected"' else ''#>$cur_branch</option>
-										#end for
+											<option>Loading list from github</option>
 										</select>
-										<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="pullRequestCheckout" value="Checkout Pull Request">
+										<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="pullRequestCheckout" value="Checkout Pull Request" disabled="disabled">
 										<div class="clear-left"><p>select pull request to test (restart required)</p></div>
 									</span>
 								</label>
 							</div>
-						#end if
+#end if
 
 						<div class="field-pair">
 							<label for="git_remote">
@@ -527,8 +550,8 @@
 								<span class="component-title">CPU throttling:</span>
 								<span class="component-desc">
 									<select id="cpu_presets" name="cpu_preset" class="form-control input-sm">
-#for $cur_preset in $cpu_presets:
-										<option value="$cur_preset" #if $cur_preset == $sickbeard.CPU_PRESET then 'selected="selected"' else ''#>$cur_preset.capitalize()</option>
+#for $cur_preset in $cpu_presets
+										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sickbeard.CPU_PRESET]#>$cur_preset.capitalize()</option>
 #end for
 									</select>
 									<span>Normal (default). High is lower and Low is higher CPU use</span>
@@ -550,7 +573,7 @@
 							<label for="encryption_version">
 								<span class="component-title">Encrypt passwords</span>
 								<span class="component-desc">
-									<input type="checkbox" name="encryption_version" id="encryption_version" #if $sickbeard.ENCRYPTION_VERSION then 'checked="checked"' else ''#>
+									<input type="checkbox" name="encryption_version" id="encryption_version"#echo ('', $checked)[$sickbeard.ENCRYPTION_VERSION]#>
 									<p>in the <code>config.ini</code> file.
 									<b>Warning:</b> Passwords must only contain <a target="_blank" href="<%= anon_url('http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters') %>">ASCII characters</a></p>
 								</span>
@@ -564,6 +587,7 @@
 									<input type="text" name="proxy_setting" value="$sickbeard.PROXY_SETTING" class="form-control input-sm input300">
 									<p>blank to disable</p>
 									<div class="clear-left"><p>proxy address for connecting to providers (use 'PAC:Url' for PAC support)</p></div>
+								</span>
 							</label>
 						</div>
 
@@ -571,8 +595,29 @@
 							<label for="proxy_indexers">
 								<span class="component-title">Use proxy for indexers</span>
 								<span class="component-desc">
-									<input type="checkbox" name="proxy_indexers" id="proxy_indexers" #if True == $sickbeard.PROXY_INDEXERS then 'checked="checked"' else ''#>
+									<input type="checkbox" name="proxy_indexers" id="proxy_indexers"#echo ('', $checked)[True == $sickbeard.PROXY_INDEXERS]#>
 									<p>use proxy host for connecting to indexers (thetvdb, tvrage)</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label>
+								<span class="component-title">File logging level:</span>
+								<span class="component-desc">
+									<select id="file_logging_presets" name="file_logging_preset" class="form-control input-sm">
+#set $levels = $file_logging_presets.keys()
+#set void = $levels.sort(lambda x, y: cmp($file_logging_presets[$x], $file_logging_presets[$y]))
+#set $level_count = len($levels)
+#for $level in $levels
+    #set $level_title = $level.title().upper()
+    #set $level_count -= 1
+    #set $level_text = '%s%s' % ($level.title(), (('', ' only')[0 == $level_count], ' and the next%s level%s' % ((' ' + str($level_count), '')[1 == $level_count], maybe_plural($level_count)))[0 < $level_count])
+										<option value="$level_title"#echo ('', $selected)[$level_title == $sickbeard.FILE_LOGGING_PRESET]#>$level_text</option>
+#end for
+									</select>
+									<span>(default: Db)</span>
+									<p>enable Db or Debug to pin down an issue, the others are normal use</p>
 								</span>
 							</label>
 						</div>
@@ -582,7 +627,7 @@
 				</div><!-- /component-group3 //-->
 
 				<br/>
-				<h6 class="pull-right"><b class="boldest">All non-absolute folder locations are relative to <span class="path">$sickbeard.DATA_DIR</span></b></h6>
+				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sickbeard.DATA_DIR</span></b></h6>
 				<input type="submit" class="btn pull-left config_submitter button" value="Save Changes">
 
 			</div><!-- /config-components -->
@@ -595,8 +640,8 @@
 
 <script type="text/javascript" charset="utf-8">
 <!--
-    jQuery('#log_dir').fileBrowser({ title: 'Select log file folder location' });
-    jQuery('#config-components').tabs();
+	jQuery('#log_dir').fileBrowser({ title: 'Select log file folder location' });
+	jQuery('#config-components').tabs();
 //-->
 </script>
 
