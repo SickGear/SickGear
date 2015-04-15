@@ -62,6 +62,7 @@
 %>&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded $ep_percentage
 		| recent search: <span class="footerhighlight"><%= str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0] %></span>
 		| backlog search: <span class="footerhighlight"><%= str(sickbeard.backlogSearchScheduler.timeLeft()).split('.')[0] %></span>
+		| full backlog: <span class="footerhighlight"><%= sbdatetime.sbdatetime.sbfdate(sickbeard.backlogSearchScheduler.nextRun()) %></span>
 #slurp
 	</div>
 </footer>
