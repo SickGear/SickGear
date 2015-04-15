@@ -1,3 +1,8 @@
+### 0.8.1 (2015-04-15 04:16:00 UTC)
+
+* Fix season pack search errors
+
+
 ### 0.8.0 (2015-04-13 14:00:00 UTC)
 
 * Change Wombles to use tv-dvd section
