@@ -166,9 +166,9 @@ def snatchEpisode(result, endStatus=SNATCHED):
             else:
                 curEpObj.status = Quality.compositeStatus(endStatus, result.quality)
 
-            result = curEpObj.get_sql()
-            if None is not result:
-                sql_l.append(result)
+            item = curEpObj.get_sql()
+            if None is not item:
+                sql_l.append(item)
 
         if curEpObj.status not in Quality.DOWNLOADED:
             notifiers.notify_snatch(curEpObj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
