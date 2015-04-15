@@ -64,12 +64,6 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
         self.categories = '&c41=1&c33=1&c38=1&c32=1&c37=1'
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'torrentbytes.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)

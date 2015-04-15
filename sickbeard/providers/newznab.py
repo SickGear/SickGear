@@ -86,9 +86,6 @@ class NewznabProvider(generic.NZBProvider):
             return self.getID() + '.png'
         return 'newznab.png'
 
-    def isEnabled(self):
-        return self.enabled
-
     def _getURL(self, url, post_data=None, params=None, timeout=30, json=False):
         """
         By default this is just a simple urlopen call but this method should be overridden
@@ -218,7 +215,7 @@ class NewznabProvider(generic.NZBProvider):
                 params['q'] = helpers.sanitizeSceneName(cur_exception)
                 paramsNoEp = params.copy()
                 
-                paramsNoEp['q'] = paramsNoEp['q'] + " " + str(paramsNoEp['ep'])
+                paramsNoEp['q'] = '%s.%02d' % (paramsNoEp['q'], paramsNoEp['ep'])
                 if "ep" in paramsNoEp:
                     paramsNoEp.pop("ep")
                 to_return.append(paramsNoEp)

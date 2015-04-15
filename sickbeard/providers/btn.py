@@ -39,8 +39,6 @@ class BTNProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "BTN")
 
         self.supportsBacklog = True
-        self.supportsAbsoluteNumbering = True
-
         self.enabled = False
         self.api_key = None
         self.ratio = None
@@ -48,12 +46,6 @@ class BTNProvider(generic.TorrentProvider):
         self.cache = BTNCache(self)
 
         self.url = "http://api.btnapps.net"
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'btn.png'
 
     def _checkAuth(self):
         if not self.api_key:

@@ -59,12 +59,6 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         self.re_title_url = '/torrent/(?P<id>\d+)/(?P<title>.*?)//1".+?(?P<url>magnet.*?)//1".+?(?P<seeders>\d+)</td>.+?(?P<leechers>\d+)</td>'
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'thepiratebay.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)

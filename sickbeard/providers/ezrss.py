@@ -47,12 +47,6 @@ class EZRSSProvider(generic.TorrentProvider):
 
         self.url = 'https://www.ezrss.it/'
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'ezrss.png'
-
     def getQuality(self, item, anime=False):
 
         filename = item.filename

@@ -66,12 +66,6 @@ class SCCProvider(generic.TorrentProvider):
 
         self.categories = 'c27=27&c17=17&c11=11'
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'scc.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)

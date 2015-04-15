@@ -64,12 +64,6 @@ class BitSoupProvider(generic.TorrentProvider):
 
         self.categories = "&c42=1&c45=1&c49=1&c7=1"
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'bitsoup.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)

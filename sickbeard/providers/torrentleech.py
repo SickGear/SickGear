@@ -67,12 +67,6 @@ class TorrentLeechProvider(generic.TorrentProvider):
 
         self.categories = "2,26,27,32"
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'torrentleech.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)
