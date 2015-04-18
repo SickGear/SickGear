@@ -18,14 +18,11 @@
 
 import generic
 
-from sickbeard import logger
-from sickbeard import tvcache
-
+from sickbeard import logger, tvcache
 
 class WombleProvider(generic.NZBProvider):
     def __init__(self):
-        generic.NZBProvider.__init__(self, "Womble's Index")
-        self.enabled = False
+        generic.NZBProvider.__init__(self, "Womble's Index", False, False)
         self.cache = WombleCache(self)
         self.url = 'http://newshost.co.za/'
 

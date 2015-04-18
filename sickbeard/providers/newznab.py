@@ -29,30 +29,17 @@ except ImportError:
 import sickbeard
 import generic
 
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import scene_exceptions
+from sickbeard import classes,helpers,scene_exceptions,logger,tvcache
 from sickbeard import encodingKludge as ek
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard.exceptions import ex, AuthException
-
-from lib import requests
-from lib.requests import exceptions
-from lib.bencode import bdecode
+from sickbeard.exceptions import AuthException
 
 class NewznabProvider(generic.NZBProvider):
     def __init__(self, name, url, key='', catIDs='5030,5040', search_mode='eponly', search_fallback=False,
                  enable_recentsearch=False, enable_backlog=False):
-
-        generic.NZBProvider.__init__(self, name)
-
+        generic.NZBProvider.__init__(self, name, True, False)
         self.cache = NewznabCache(self)
-
         self.url = url
-
         self.key = key
-
         self.search_mode = search_mode
         self.search_fallback = search_fallback
         self.enable_recentsearch = enable_recentsearch
@@ -68,9 +55,6 @@ class NewznabProvider(generic.NZBProvider):
             self.catIDs = catIDs
         else:
             self.catIDs = '5030,5040'
-
-        self.enabled = True
-        self.supportsBacklog = True
 
         self.default = False
 
@@ -215,7 +199,7 @@ class NewznabProvider(generic.NZBProvider):
                 params['q'] = helpers.sanitizeSceneName(cur_exception)
                 paramsNoEp = params.copy()
                 
-                paramsNoEp['q'] = '%s.%02d' % (paramsNoEp['q'], paramsNoEp['ep'])
+                paramsNoEp['q'] = '%s.%02d' % (paramsNoEp['q'], int(paramsNoEp['ep']))
                 if "ep" in paramsNoEp:
                     paramsNoEp.pop("ep")
                 to_return.append(paramsNoEp)

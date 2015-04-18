@@ -19,19 +19,12 @@
 import re
 import traceback
 import datetime
-import urlparse
+
 import sickbeard
 import generic
-from sickbeard.common import Quality, cpu_presets
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
-from sickbeard.common import Overview
+from sickbeard.common import Quality
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from sickbeard.exceptions import ex
-from sickbeard import clients
 from lib import requests
 from lib.requests import exceptions
 from sickbeard.bs4_parser import BS4Parser
@@ -49,23 +42,15 @@ class TorrentLeechProvider(generic.TorrentProvider):
     }
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "TorrentLeech")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'TorrentLeech', True, False)
         self.username = None
         self.password = None
         self.ratio = None
         self.minseed = None
         self.minleech = None
-
         self.cache = TorrentLeechCache(self)
-
         self.url = self.urls['base_url']
-
-        self.categories = "2,26,27,32"
+        self.categories = '2,26,27,32'
 
     def getQuality(self, item, anime=False):
 

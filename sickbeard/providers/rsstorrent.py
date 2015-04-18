@@ -18,34 +18,24 @@
 
 import os
 import re
-import urlparse
 
 import sickbeard
 import generic
-
-from sickbeard import helpers
+from sickbeard import helpers, logger, tvcache
 from sickbeard import encodingKludge as ek
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import clients
 from sickbeard.exceptions import ex
-
 from lib import requests
-from lib.requests import exceptions
 from lib.bencode import bdecode
 
 
 class TorrentRssProvider(generic.TorrentProvider):
     def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False, enable_recentsearch=False,
                  enable_backlog=False):
-        generic.TorrentProvider.__init__(self, name)
+        generic.TorrentProvider.__init__(self, name, False, False)
         self.cache = TorrentRssCache(self)
         self.url = re.sub('\/$', '', url)
         self.url = url
-        self.enabled = True
         self.ratio = None
-        self.supportsBacklog = False
-
         self.search_mode = search_mode
         self.search_fallback = search_fallback
         self.enable_recentsearch = enable_recentsearch

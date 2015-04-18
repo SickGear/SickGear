@@ -13,23 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import time
 import datetime
 import urllib
-import urlparse
-import sys
-import generic
-import sickbeard
 
-from lib import requests
-from lib.requests import exceptions
-from sickbeard import classes
-from sickbeard import logger, tvcache, exceptions
-from sickbeard import helpers
-from sickbeard import clients
-from sickbeard.common import cpu_presets
-from sickbeard.exceptions import ex, AuthException
+import generic
+from sickbeard import classes, logger, tvcache
+from sickbeard.exceptions import AuthException
+
+
 try:
     import json
 except ImportError:
@@ -38,18 +29,11 @@ except ImportError:
 
 class HDBitsProvider(generic.TorrentProvider):
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "HDBits")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'HDBits', True, False)
         self.username = None
         self.passkey = None
         self.ratio = None
-
         self.cache = HDBitsCache(self)
-
         self.url = 'https://hdbits.org'
         self.search_url = 'https://hdbits.org/api/torrents'
         self.rss_url = 'https://hdbits.org/api/torrents'

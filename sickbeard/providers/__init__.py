@@ -39,10 +39,11 @@ __all__ = ['ezrss',
            'totv',
 ]
 
+from os import sys
+
 import sickbeard
 import generic
 from sickbeard import logger
-from os import sys
 
 
 def sortedProviderList():

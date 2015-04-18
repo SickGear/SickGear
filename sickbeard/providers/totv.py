@@ -17,26 +17,20 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import urllib
+
 import requests
 import generic
-from sickbeard import logger
-from sickbeard import tvcache
+from sickbeard import logger, tvcache
 from sickbeard.helpers import mapIndexersToShow
 from sickbeard.exceptions import AuthException
 
 
 class ToTVProvider(generic.TorrentProvider):
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'ToTV')
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'ToTV', True, False)
         self.api_key = None
         self.ratio = None
-
         self.cache = ToTVCache(self)
-
         self.url = 'https://titansof.tv/api/torrents'
         self.download_url = 'http://titansof.tv/api/torrents/%s/download?apikey=%s'
         self.session = requests.Session()

@@ -18,24 +18,15 @@
 
 import re
 import datetime
-import urlparse
-import time
+
 import sickbeard
 import generic
-
-from sickbeard.common import Quality, cpu_presets
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
-from sickbeard.common import Overview
+from sickbeard.common import Quality
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from sickbeard.exceptions import ex
-from sickbeard import clients
+from sickbeard.helpers import sanitizeSceneName
 from lib import requests
 from lib.requests import exceptions
-from sickbeard.helpers import sanitizeSceneName
 
 
 class SpeedCDProvider(generic.TorrentProvider):
@@ -47,23 +38,15 @@ class SpeedCDProvider(generic.TorrentProvider):
     }
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "Speedcd")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'Speedcd', True, False)
         self.username = None
         self.password = None
         self.ratio = None
         self.freeleech = False
         self.minseed = None
         self.minleech = None
-
         self.cache = SpeedCDCache(self)
-
         self.url = self.urls['base_url']
-
         self.categories = {'Season': {'c14': 1}, 'Episode': {'c2': 1, 'c49': 1}, 'RSS': {'c14': 1, 'c2': 1, 'c49': 1}}
 
     def getQuality(self, item, anime=False):

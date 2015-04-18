@@ -17,18 +17,12 @@
 
 import re
 import datetime
-import urlparse
+
 import sickbeard
 import generic
 from sickbeard.common import Quality
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from sickbeard.exceptions import ex
-from sickbeard import clients
 from lib import requests
 from lib.requests import exceptions
 from sickbeard.helpers import sanitizeSceneName
@@ -43,11 +37,7 @@ class TorrentDayProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, "TorrentDay")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'TorrentDay', True, False)
         self._uid = None
         self._hash = None
         self.username = None
@@ -56,13 +46,9 @@ class TorrentDayProvider(generic.TorrentProvider):
         self.freeleech = False
         self.minseed = None
         self.minleech = None
-
         self.cache = TorrentDayCache(self)
-
         self.url = self.urls['base_url']
-
         self.cookies = None
-
         self.categories = {'Season': {'c14': 1}, 'Episode': {'c2': 1, 'c26': 1, 'c7': 1, 'c24': 1},
                            'RSS': {'c2': 1, 'c26': 1, 'c7': 1, 'c24': 1, 'c14': 1}}
 

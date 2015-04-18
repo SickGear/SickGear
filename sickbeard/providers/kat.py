@@ -19,7 +19,6 @@
 
 from __future__ import with_statement
 
-import sys
 import os
 import traceback
 import urllib
@@ -31,36 +30,20 @@ import sickbeard
 import generic
 from sickbeard.common import Quality
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import helpers
-from sickbeard import db
-from sickbeard import classes
+from sickbeard import logger,tvcache,helpers,db,classes
 from sickbeard.show_name_helpers import allPossibleShowNames, sanitizeSceneName
-from sickbeard.exceptions import ex
-from sickbeard import encodingKludge as ek
-from sickbeard import clients
 from sickbeard.bs4_parser import BS4Parser
-from lib import requests
-from lib.requests import exceptions
 from lib.unidecode import unidecode
 
 
 class KATProvider(generic.TorrentProvider):
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "KickAssTorrents")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'KickAssTorrents', True, False)
         self.confirmed = False
         self.ratio = None
         self.minseed = None
         self.minleech = None
-
         self.cache = KATCache(self)
-
         self.urls = ['https://kat.ph/', 'http://katproxy.com/', 'http://www.kickmirror.com/']
         self.url = 'https://kat.ph/'
 

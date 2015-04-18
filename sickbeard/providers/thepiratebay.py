@@ -27,36 +27,22 @@ import sickbeard
 import generic
 from sickbeard.common import Quality
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import helpers
+from sickbeard import db, classes, logger, tvcache, helpers
 from sickbeard.show_name_helpers import allPossibleShowNames, sanitizeSceneName
 from lib.unidecode import unidecode
 
 
 class ThePirateBayProvider(generic.TorrentProvider):
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, 'The Pirate Bay')
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'The Pirate Bay', True, False)
         self.ratio = None
         self.confirmed = False
         self.minseed = None
         self.minleech = None
-
         self.cache = ThePirateBayCache(self)
-
         self.proxy = ThePirateBayWebproxy()
-
         self.url = 'https://thepiratebay.se/'
-
         self.searchurl = self.url + 'search/%s/0/7/200'  # order by seed
-
         self.re_title_url = '/torrent/(?P<id>\d+)/(?P<title>.*?)//1".+?(?P<url>magnet.*?)//1".+?(?P<seeders>\d+)</td>.+?(?P<leechers>\d+)</td>'
 
     def getQuality(self, item, anime=False):

@@ -17,32 +17,19 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import urllib
-import re
 import traceback
 
-import sickbeard
 import generic
-
-from sickbeard import show_name_helpers
-from sickbeard import logger
+from sickbeard import logger, tvcache, show_name_helpers
 from sickbeard.common import Quality
-from sickbeard import tvcache
-from sickbeard import show_name_helpers, helpers
 from sickbeard.bs4_parser import BS4Parser
 
 
 class TokyoToshokanProvider(generic.TorrentProvider):
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "TokyoToshokan")
-
-        self.supportsBacklog = True
-        self.anime_only = True
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'TokyoToshokan', True, True)
         self.ratio = None
-
         self.cache = TokyoToshokanCache(self)
-
         self.url = 'http://tokyotosho.info/'
 
     def _get_title_and_url(self, item):

@@ -20,18 +20,12 @@
 import re
 import traceback
 import datetime
-import urlparse
+
 import sickbeard
 import generic
-from sickbeard.common import Quality, cpu_presets
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
+from sickbeard.common import Quality
+from sickbeard import logger,tvcache,db,classes,helpers,show_name_helpers
 from sickbeard.exceptions import ex, AuthException
-from sickbeard import clients
 from lib import requests
 from lib.requests import exceptions
 from sickbeard.bs4_parser import BS4Parser
@@ -49,12 +43,7 @@ class HDTorrentsProvider(generic.TorrentProvider):
     }
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "HDTorrents")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'HDTorrents', True, False)
         self._uid = None
         self._hash = None
         self.username = None
@@ -62,13 +51,9 @@ class HDTorrentsProvider(generic.TorrentProvider):
         self.ratio = None
         self.minseed = None
         self.minleech = None
-
         self.cache = HDTorrentsCache(self)
-
         self.url = self.urls['base_url']
-
         self.categories = "&category[]=59&category[]=60&category[]=30&category[]=38"
-
         self.cookies = None
 
     def getQuality(self, item, anime=False):
