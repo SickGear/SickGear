@@ -63,12 +63,6 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
         self.categorie = 'l73=1&l78=1&l66=1&l65=1&l79=1&l5=1&l4=1'
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'iptorrents.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)

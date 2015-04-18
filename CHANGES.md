@@ -2,6 +2,7 @@
 
 * Add ToTV provider
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
+* Change to consolidate and tidy some provider code
 
 
 ### 0.8.1 (2015-04-15 04:16:00 UTC)

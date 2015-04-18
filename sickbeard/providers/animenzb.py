@@ -36,7 +36,6 @@ class animenzb(generic.NZBProvider):
         generic.NZBProvider.__init__(self, 'animenzb')
 
         self.supportsBacklog = False
-        self.supportsAbsoluteNumbering = True
         self.anime_only = True
 
         self.enabled = False
@@ -44,12 +43,6 @@ class animenzb(generic.NZBProvider):
         self.cache = animenzbCache(self)
 
         self.url = 'http://animenzb.com/'
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'animenzb.gif'
 
     def _get_season_search_strings(self, ep_obj):
         return [x for x in show_name_helpers.makeSceneSeasonSearchString(self.show, ep_obj)]
@@ -124,7 +117,7 @@ class animenzbCache(tvcache.TVCache):
 
         tvcache.TVCache.__init__(self, provider)
 
-       
+
         self.minTime = 20
 
     def _getRSSData(self):

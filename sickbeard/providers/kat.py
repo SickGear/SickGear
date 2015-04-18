@@ -64,12 +64,6 @@ class KATProvider(generic.TorrentProvider):
         self.urls = ['https://kat.ph/', 'http://katproxy.com/', 'http://www.kickmirror.com/']
         self.url = 'https://kat.ph/'
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'kat.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)

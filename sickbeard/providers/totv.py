@@ -30,7 +30,6 @@ class ToTVProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'ToTV')
 
         self.supportsBacklog = True
-        self.supportsAbsoluteNumbering = True
 
         self.enabled = False
         self.api_key = None
@@ -41,12 +40,6 @@ class ToTVProvider(generic.TorrentProvider):
         self.url = 'https://titansof.tv/api/torrents'
         self.download_url = 'http://titansof.tv/api/torrents/%s/download?apikey=%s'
         self.session = requests.Session()
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'totv.png'
 
     def _checkAuth(self):
         if not self.api_key:

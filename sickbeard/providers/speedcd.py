@@ -66,12 +66,6 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         self.categories = {'Season': {'c14': 1}, 'Episode': {'c2': 1, 'c49': 1}, 'RSS': {'c14': 1, 'c2': 1, 'c49': 1}}
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'speedcd.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)

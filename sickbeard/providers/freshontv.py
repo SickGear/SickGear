@@ -64,12 +64,6 @@ class FreshOnTVProvider(generic.TorrentProvider):
         self.url = self.urls['base_url']
         self.cookies = None
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'freshontv.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0], anime)

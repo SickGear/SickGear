@@ -69,9 +69,6 @@ class TorrentRssProvider(generic.TorrentProvider):
             return self.getID() + '.png'
         return 'torrentrss.png'
 
-    def isEnabled(self):
-        return self.enabled
-
     def _get_title_and_url(self, item):
 
         title, url = None, None

@@ -71,12 +71,6 @@ class HDTorrentsProvider(generic.TorrentProvider):
 
         self.cookies = None
 
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'hdtorrents.png'
-
     def getQuality(self, item, anime=False):
 
         quality = Quality.sceneQuality(item[0])

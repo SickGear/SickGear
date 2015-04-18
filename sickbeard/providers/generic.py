@@ -51,11 +51,11 @@ class GenericProvider:
         self.show = None
 
         self.supportsBacklog = False
-        self.supportsAbsoluteNumbering = False
         self.anime_only = False
 
         self.search_mode = None
         self.search_fallback = False
+        self.enabled = False
         self.enable_recentsearch = False
         self.enable_backlog = False
 
@@ -97,7 +97,7 @@ class GenericProvider:
         """
         This should be overridden and should return the config setting eg. sickbeard.MYPROVIDER
         """
-        return False
+        return self.enabled
 
     def getResult(self, episodes):
         """

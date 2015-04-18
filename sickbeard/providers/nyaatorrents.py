@@ -35,7 +35,6 @@ class NyaaProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, "NyaaTorrents")
 
         self.supportsBacklog = True
-        self.supportsAbsoluteNumbering = True
         self.anime_only = True
         self.enabled = False
         self.ratio = None
@@ -43,12 +42,6 @@ class NyaaProvider(generic.TorrentProvider):
         self.cache = NyaaCache(self)
 
         self.url = 'http://www.nyaa.se/'
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'nyaatorrents.png'
 
     def getQuality(self, item, anime=False):
         title = item.title

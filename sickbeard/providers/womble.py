@@ -29,9 +29,6 @@ class WombleProvider(generic.NZBProvider):
         self.cache = WombleCache(self)
         self.url = 'http://newshost.co.za/'
 
-    def isEnabled(self):
-        return self.enabled
-
 
 class WombleCache(tvcache.TVCache):
     def __init__(self, provider):

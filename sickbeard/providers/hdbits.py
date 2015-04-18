@@ -1,16 +1,16 @@
 # This file is part of SickGear.
-#                                                                                                                                        
+#
 # SickGear is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by                                                                   
-# the Free Software Foundation, either version 3 of the License, or                                                                      
-# (at your option) any later version.                                                                                                    
-#                                                                                                                                        
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
 # SickGear is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of                                                                         
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                                                                          
-#  GNU General Public License for more details.                                                                                          
-#                                                                                                                                        
-# You should have received a copy of the GNU General Public License                                                                      
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
@@ -54,9 +54,6 @@ class HDBitsProvider(generic.TorrentProvider):
         self.search_url = 'https://hdbits.org/api/torrents'
         self.rss_url = 'https://hdbits.org/api/torrents'
         self.download_url = 'https://hdbits.org/download.php?'
-
-    def isEnabled(self):
-        return self.enabled
 
     def _checkAuth(self):
 
@@ -201,7 +198,7 @@ class HDBitsCache(tvcache.TVCache):
 
         tvcache.TVCache.__init__(self, provider)
 
-        # only poll HDBits every 15 minutes max                                                                                          
+        # only poll HDBits every 15 minutes max
         self.minTime = 15
 
     def _getRSSData(self):
@@ -216,5 +213,4 @@ class HDBitsCache(tvcache.TVCache):
             return []
 
 
-
-provider = HDBitsProvider()                                                                                                              
+provider = HDBitsProvider()
