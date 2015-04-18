@@ -19,29 +19,15 @@
 import urllib
 import datetime
 
-import sickbeard
 import generic
+from sickbeard import classes, show_name_helpers, logger, tvcache
 
-from sickbeard import classes, show_name_helpers, helpers
-
-from sickbeard import exceptions, logger
-from sickbeard.common import *
-from sickbeard import tvcache
-from lib.dateutil.parser import parse as parseDate
 
 class animenzb(generic.NZBProvider):
 
     def __init__(self):
-
-        generic.NZBProvider.__init__(self, 'animenzb')
-
-        self.supportsBacklog = False
-        self.anime_only = True
-
-        self.enabled = False
-
+        generic.NZBProvider.__init__(self, 'animenzb', True, True)
         self.cache = animenzbCache(self)
-
         self.url = 'http://animenzb.com/'
 
     def _get_season_search_strings(self, ep_obj):

@@ -17,26 +17,15 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import traceback
-import urllib2
-import urllib
 import time
 import re
 import datetime
-import urlparse
+
 import sickbeard
 import generic
-from sickbeard.common import Quality, cpu_presets
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
-from sickbeard.common import Overview
-from sickbeard.exceptions import ex
-from sickbeard import clients
+from sickbeard.common import Quality
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from lib import requests
-from lib.requests import exceptions
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import sanitizeSceneName
 
@@ -51,24 +40,14 @@ class NextGenProvider(generic.TorrentProvider):
     }
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "NextGen")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'NextGen', True, False)
         self.username = None
         self.password = None
         self.ratio = None
-
         self.cache = NextGenCache(self)
-
         self.url = self.urls['base_url']
-
         self.categories = '&c7=1&c24=1&c17=1&c22=1&c42=1&c46=1&c26=1&c28=1&c43=1&c4=1&c31=1&c45=1&c33=1'
-
         self.last_login_check = None
-
         self.login_opener = None
 
     def getQuality(self, item, anime=False):

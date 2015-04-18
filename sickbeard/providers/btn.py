@@ -20,32 +20,22 @@
 import time
 import socket
 import math
-import sickbeard
-import generic
+from datetime import datetime
 
-from sickbeard import classes
-from sickbeard import scene_exceptions
-from sickbeard import logger
-from sickbeard import tvcache
+import generic
+from sickbeard import classes, scene_exceptions, logger, tvcache
 from sickbeard.helpers import sanitizeSceneName
 from sickbeard.exceptions import ex, AuthException
-
 from lib import jsonrpclib
-from datetime import datetime
 
 
 class BTNProvider(generic.TorrentProvider):
     def __init__(self):
-        generic.TorrentProvider.__init__(self, "BTN")
-
-        self.supportsBacklog = True
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'BTN', True, False)
         self.api_key = None
         self.ratio = None
-
         self.cache = BTNCache(self)
-
-        self.url = "http://api.btnapps.net"
+        self.url = 'http://api.btnapps.net'
 
     def _checkAuth(self):
         if not self.api_key:

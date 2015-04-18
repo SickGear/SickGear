@@ -24,27 +24,16 @@ try:
 except ImportError:
     import elementtree.ElementTree as etree
 
-import sickbeard
 import generic
-
 from sickbeard.common import Quality
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import helpers
+from sickbeard import logger, tvcache, helpers
 
 
 class EZRSSProvider(generic.TorrentProvider):
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "EZRSS")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'EZRSS', True, False)
         self.ratio = None
-
         self.cache = EZRSSCache(self)
-
         self.url = 'https://www.ezrss.it/'
 
     def getQuality(self, item, anime=False):
