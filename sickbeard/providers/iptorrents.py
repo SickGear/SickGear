@@ -34,9 +34,9 @@ from sickbeard.show_name_helpers import allPossibleShowNames
 
 
 class IPTorrentsProvider(generic.TorrentProvider):
-    urls = {'base_url': 'https://iptorrents.com',
-            'login': 'https://iptorrents.com/torrents/',
-            'search': 'https://iptorrents.com/torrents/?%s%s&q=%s&qf=ti',
+    urls = {'base_url': 'https://iptorrents.eu',
+            'login': 'https://iptorrents.eu/torrents/',
+            'search': 'https://iptorrents.eu/t?%s%s&q=%s&qf=ti#torrents',
     }
 
     def __init__(self):
