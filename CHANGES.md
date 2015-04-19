@@ -1,3 +1,8 @@
+### 0.8.2 (2015-04-19 06:45:00 UTC)
+
+* Fix IPTorrents provider search strings and URL for new site changes
+
+
 ### 0.8.1 (2015-04-15 04:16:00 UTC)
 
 * Fix season pack search errors
