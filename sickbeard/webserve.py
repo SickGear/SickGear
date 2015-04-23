@@ -4263,6 +4263,8 @@ class ConfigProviders(Config):
         sickbeard.NEWZNAB_DATA = '!!!'.join([x.configStr() for x in sickbeard.newznabProviderList])
         sickbeard.PROVIDER_ORDER = provider_list
 
+        helpers.clear_unused_providers()
+
         sickbeard.save_config()
 
         if len(results) > 0:

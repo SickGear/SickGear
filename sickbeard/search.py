@@ -462,7 +462,7 @@ def searchProviders(show, episodes, manualSearch=False):
                 logger.log(u"Performing season pack search for " + show.name)
 
             try:
-                curProvider.cache.updateCache()
+                curProvider.cache._clearCache()
                 searchResults = curProvider.findSearchResults(show, episodes, search_mode, manualSearch)
             except exceptions.AuthException, e:
                 logger.log(u"Authentication error: " + ex(e), logger.ERROR)

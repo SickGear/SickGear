@@ -1439,3 +1439,10 @@ def check_port(host, port, timeout=1.0):
         except socket.error:
             if s:
                 s.close()
+
+def clear_unused_providers():
+    providers = [x.cache.providerID for x in sickbeard.providers.sortedProviderList() if x.isActive()]
+
+    if providers:
+        myDB = db.DBConnection('cache.db')
+        myDB.action('DELETE FROM provider_cache WHERE provider NOT IN (%s)' % ','.join(['?'] * len(providers)), providers)
