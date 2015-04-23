@@ -1,3 +1,8 @@
+### 0.8.3 (2015-04-25 08:48:00 UTC)
+
+* Fix clearing of the provider cache
+
+
 ### 0.8.2 (2015-04-19 06:45:00 UTC)
 
 * Fix IPTorrents provider search strings and URL for new site changes

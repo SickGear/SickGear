@@ -44,6 +44,9 @@ class ShowUpdater():
         if sickbeard.USE_FAILED_DOWNLOADS:
             failed_history.trimHistory()
 
+        # clear the data of unused providers
+        sickbeard.helpers.clear_unused_providers()
+
         logger.log(u"Doing full update on all shows")
 
         # clean out cache directory, remove everything > 12 hours old
