@@ -1,9 +1,10 @@
-### 0.x.x (2015-xx-xx xx:xx:xx UTC)
+﻿### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
 * Add ToTV provider
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
 * Change to consolidate and tidy some provider code
 * Fix restore table row colours on the Manage/Episode Status Management page
+* Fix clearing of the provider cache
 
 
 ### 0.8.2 (2015-04-19 06:45:00 UTC)
