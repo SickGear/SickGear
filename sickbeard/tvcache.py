@@ -284,6 +284,7 @@ class TVCache():
                 sqlResults = list(itertools.chain(*sqlResults))
 
         if not sqlResults:
+            self.setLastSearch()
             return neededEps
 
         # for each cache entry

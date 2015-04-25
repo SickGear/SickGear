@@ -420,10 +420,10 @@ class NewznabCache(tvcache.TVCache):
             if not data:
                 return []
 
-            self.setLastUpdate()
-
             # clear cache
             self._clearCache()
+
+            self.setLastUpdate()
 
             if self._checkAuth(data):
                 items = data.entries
