@@ -72,7 +72,7 @@ class HTTPClient(object):
         http_client.close()
     """
     def __init__(self, async_client_class=None, **kwargs):
-        self._io_loop = IOLoop()
+        self._io_loop = IOLoop(make_current=False)
         if async_client_class is None:
             async_client_class = AsyncHTTPClient
         self._async_client = async_client_class(self._io_loop, **kwargs)
@@ -95,11 +95,11 @@ class HTTPClient(object):
         If it is a string, we construct an `HTTPRequest` using any additional
         kwargs: ``HTTPRequest(request, **kwargs)``
 
-        If an error occurs during the fetch, we raise an `HTTPError`.
+        If an error occurs during the fetch, we raise an `HTTPError` unless
+        the ``raise_error`` keyword argument is set to False.
         """
         response = self._io_loop.run_sync(functools.partial(
             self._async_client.fetch, request, **kwargs))
-        response.rethrow()
         return response
 
 
@@ -136,6 +136,9 @@ class AsyncHTTPClient(Configurable):
         # or with force_instance:
         client = AsyncHTTPClient(force_instance=True,
             defaults=dict(user_agent="MyUserAgent"))
+
+    .. versionchanged:: 4.1
+       The ``io_loop`` argument is deprecated.
     """
     @classmethod
     def configurable_base(cls):
@@ -200,7 +203,7 @@ class AsyncHTTPClient(Configurable):
                 raise RuntimeError("inconsistent AsyncHTTPClient cache")
             del self._instance_cache[self.io_loop]
 
-    def fetch(self, request, callback=None, **kwargs):
+    def fetch(self, request, callback=None, raise_error=True, **kwargs):
         """Executes a request, asynchronously returning an `HTTPResponse`.
 
         The request may be either a string URL or an `HTTPRequest` object.
@@ -208,8 +211,10 @@ class AsyncHTTPClient(Configurable):
         kwargs: ``HTTPRequest(request, **kwargs)``
 
         This method returns a `.Future` whose result is an
-        `HTTPResponse`.  The ``Future`` will raise an `HTTPError` if
-        the request returned a non-200 response code.
+        `HTTPResponse`.  By default, the ``Future`` will raise an `HTTPError`
+        if the request returned a non-200 response code. Instead, if
+        ``raise_error`` is set to False, the response will always be
+        returned regardless of the response code.
 
         If a ``callback`` is given, it will be invoked with the `HTTPResponse`.
         In the callback interface, `HTTPError` is not automatically raised.
@@ -243,7 +248,7 @@ class AsyncHTTPClient(Configurable):
             future.add_done_callback(handle_future)
 
         def handle_response(response):
-            if response.error:
+            if raise_error and response.error:
                 future.set_exception(response.error)
             else:
                 future.set_result(response)
@@ -304,7 +309,8 @@ class HTTPRequest(object):
                  validate_cert=None, ca_certs=None,
                  allow_ipv6=None,
                  client_key=None, client_cert=None, body_producer=None,
-                 expect_100_continue=False, decompress_response=None):
+                 expect_100_continue=False, decompress_response=None,
+                 ssl_options=None):
         r"""All parameters except ``url`` are optional.
 
         :arg string url: URL to fetch
@@ -374,12 +380,15 @@ class HTTPRequest(object):
         :arg string ca_certs: filename of CA certificates in PEM format,
            or None to use defaults.  See note below when used with
            ``curl_httpclient``.
-        :arg bool allow_ipv6: Use IPv6 when available?  Default is false in
-           ``simple_httpclient`` and true in ``curl_httpclient``
         :arg string client_key: Filename for client SSL key, if any.  See
            note below when used with ``curl_httpclient``.
         :arg string client_cert: Filename for client SSL certificate, if any.
            See note below when used with ``curl_httpclient``.
+        :arg ssl.SSLContext ssl_options: `ssl.SSLContext` object for use in
+           ``simple_httpclient`` (unsupported by ``curl_httpclient``).
+           Overrides ``validate_cert``, ``ca_certs``, ``client_key``,
+           and ``client_cert``.
+        :arg bool allow_ipv6: Use IPv6 when available?  Default is true.
         :arg bool expect_100_continue: If true, send the
            ``Expect: 100-continue`` header and wait for a continue response
            before sending the request body.  Only supported with
@@ -402,6 +411,9 @@ class HTTPRequest(object):
 
         .. versionadded:: 4.0
            The ``body_producer`` and ``expect_100_continue`` arguments.
+
+        .. versionadded:: 4.2
+           The ``ssl_options`` argument.
         """
         # Note that some of these attributes go through property setters
         # defined below.
@@ -439,6 +451,7 @@ class HTTPRequest(object):
         self.allow_ipv6 = allow_ipv6
         self.client_key = client_key
         self.client_cert = client_cert
+        self.ssl_options = ssl_options
         self.expect_100_continue = expect_100_continue
         self.start_time = time.time()
 

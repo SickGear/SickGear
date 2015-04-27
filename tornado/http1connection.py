@@ -37,6 +37,7 @@ class _QuietException(Exception):
     def __init__(self):
         pass
 
+
 class _ExceptionLoggingContext(object):
     """Used with the ``with`` statement when calling delegate methods to
     log any exceptions with the given logger.  Any exceptions caught are
@@ -52,6 +53,7 @@ class _ExceptionLoggingContext(object):
         if value is not None:
             self.logger.error("Uncaught exception", exc_info=(typ, value, tb))
             raise _QuietException
+
 
 class HTTP1ConnectionParameters(object):
     """Parameters for `.HTTP1Connection` and `.HTTP1ServerConnection`.
@@ -162,7 +164,8 @@ class HTTP1Connection(httputil.HTTPConnection):
                     header_data = yield gen.with_timeout(
                         self.stream.io_loop.time() + self.params.header_timeout,
                         header_future,
-                        io_loop=self.stream.io_loop)
+                        io_loop=self.stream.io_loop,
+                        quiet_exceptions=iostream.StreamClosedError)
                 except gen.TimeoutError:
                     self.close()
                     raise gen.Return(False)
@@ -201,7 +204,7 @@ class HTTP1Connection(httputil.HTTPConnection):
                     # 1xx responses should never indicate the presence of
                     # a body.
                     if ('Content-Length' in headers or
-                        'Transfer-Encoding' in headers):
+                            'Transfer-Encoding' in headers):
                         raise httputil.HTTPInputError(
                             "Response code %d cannot have body" % code)
                     # TODO: client delegates will get headers_received twice
@@ -221,7 +224,8 @@ class HTTP1Connection(httputil.HTTPConnection):
                         try:
                             yield gen.with_timeout(
                                 self.stream.io_loop.time() + self._body_timeout,
-                                body_future, self.stream.io_loop)
+                                body_future, self.stream.io_loop,
+                                quiet_exceptions=iostream.StreamClosedError)
                         except gen.TimeoutError:
                             gen_log.info("Timeout reading body from %s",
                                          self.context)
@@ -326,8 +330,10 @@ class HTTP1Connection(httputil.HTTPConnection):
 
     def write_headers(self, start_line, headers, chunk=None, callback=None):
         """Implements `.HTTPConnection.write_headers`."""
+        lines = []
         if self.is_client:
             self._request_start_line = start_line
+            lines.append(utf8('%s %s HTTP/1.1' % (start_line[0], start_line[1])))
             # Client requests with a non-empty body must have either a
             # Content-Length or a Transfer-Encoding.
             self._chunking_output = (
@@ -336,6 +342,7 @@ class HTTP1Connection(httputil.HTTPConnection):
                 'Transfer-Encoding' not in headers)
         else:
             self._response_start_line = start_line
+            lines.append(utf8('HTTP/1.1 %s %s' % (start_line[1], start_line[2])))
             self._chunking_output = (
                 # TODO: should this use
                 # self._request_start_line.version or
@@ -365,7 +372,6 @@ class HTTP1Connection(httputil.HTTPConnection):
             self._expected_content_remaining = int(headers['Content-Length'])
         else:
             self._expected_content_remaining = None
-        lines = [utf8("%s %s %s" % start_line)]
         lines.extend([utf8(n) + b": " + utf8(v) for n, v in headers.get_all()])
         for line in lines:
             if b'\n' in line:
@@ -374,6 +380,7 @@ class HTTP1Connection(httputil.HTTPConnection):
         if self.stream.closed():
             future = self._write_future = Future()
             future.set_exception(iostream.StreamClosedError())
+            future.exception()
         else:
             if callback is not None:
                 self._write_callback = stack_context.wrap(callback)
@@ -412,6 +419,7 @@ class HTTP1Connection(httputil.HTTPConnection):
         if self.stream.closed():
             future = self._write_future = Future()
             self._write_future.set_exception(iostream.StreamClosedError())
+            self._write_future.exception()
         else:
             if callback is not None:
                 self._write_callback = stack_context.wrap(callback)
@@ -451,6 +459,9 @@ class HTTP1Connection(httputil.HTTPConnection):
             self._pending_write.add_done_callback(self._finish_request)
 
     def _on_write_complete(self, future):
+        exc = future.exception()
+        if exc is not None and not isinstance(exc, iostream.StreamClosedError):
+            future.result()
         if self._write_callback is not None:
             callback = self._write_callback
             self._write_callback = None
@@ -491,8 +502,9 @@ class HTTP1Connection(httputil.HTTPConnection):
         # we SHOULD ignore at least one empty line before the request.
         # http://tools.ietf.org/html/rfc7230#section-3.5
         data = native_str(data.decode('latin1')).lstrip("\r\n")
-        eol = data.find("\r\n")
-        start_line = data[:eol]
+        # RFC 7230 section allows for both CRLF and bare LF.
+        eol = data.find("\n")
+        start_line = data[:eol].rstrip("\r")
         try:
             headers = httputil.HTTPHeaders.parse(data[eol:])
         except ValueError:
@@ -686,9 +698,8 @@ class HTTP1ServerConnection(object):
                     # This exception was already logged.
                     conn.close()
                     return
-                except Exception as e:
-                    if 1 != e.errno:
-                        gen_log.error("Uncaught exception", exc_info=True)
+                except Exception:
+                    gen_log.error("Uncaught exception", exc_info=True)
                     conn.close()
                     return
                 if not ret:
