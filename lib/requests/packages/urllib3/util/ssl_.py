@@ -81,6 +81,7 @@ except ImportError:
             self.ciphers = cipher_suite
 
         def wrap_socket(self, socket, server_hostname=None):
+            """
             warnings.warn(
                 'A true SSLContext object is not available. This prevents '
                 'urllib3 from configuring SSL appropriately and may cause '
@@ -89,6 +90,7 @@ except ImportError:
                 '#insecureplatformwarning.',
                 InsecurePlatformWarning
             )
+            """
             kwargs = {
                 'keyfile': self.keyfile,
                 'certfile': self.certfile,

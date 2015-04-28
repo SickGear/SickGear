@@ -6,6 +6,8 @@
 * Change network names to only display on top line of Day by Day layout on Episode View
 * Reposition country part of network name into the hover over in Day by Day layout
 * Update Requests library 2.4.3 to 2.6.2 (ff71b25)
+* Update change to suppress HTTPS verification InsecureRequestWarning to updated package as listed in hacks.txt
+* Remove listed hacks.txt record for check that SSLv3 is available because issue was addressed by vendor
 * Add ToTV provider
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
 * Change to consolidate and tidy some provider code
