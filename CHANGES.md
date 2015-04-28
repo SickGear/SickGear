@@ -1,5 +1,7 @@
 ### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
+* Change network names to only display on top line of Day by Day layout on Episode View
+* Reposition country part of network name into the hover over in Day by Day layout
 * Add ToTV provider
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
 * Change to consolidate and tidy some provider code

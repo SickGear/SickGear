@@ -1,5 +1,6 @@
 #import sickbeard
 #import datetime
+#import re
 #from sickbeard.common import *
 #from sickbeard import sbdatetime
 #from sickbeard.helpers import anon_url
@@ -748,7 +749,8 @@
 								<div class="state#if len($cur_result['state']) then ' %s" title="%s"' % ($cur_result['state'], $cur_result['state-title']) else '"' #></div>
 								<div class="text">
 									<div class="airtime">
-										<span class="time">${airtime}</span> <span class="network pull-right grey-text">$cur_result['network']</span>
+                        #set $match = re.search(r'(.*)\s(\(\w+\))$', $cur_result['network'], re.I | re.M)
+										<span class="time">${airtime}</span> <span class="network pull-right grey-text"#echo '>%s' % $cur_result['network'] if None is $match else ' title="%s">%s' % ($match.group(2), $match.group(1))#</span>
 									</div>
 									<div class="episode" title="$cur_result['name']">
 										<span class="season"><%= '%i' % int(cur_result['season']) %></span>x<span class="number"><%= '%02i' % int(cur_result['episode']) %></span>

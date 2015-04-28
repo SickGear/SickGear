@@ -1848,12 +1848,19 @@ h2.day, h2.network{
 	margin-right:auto
 }
 
+.day-of-week .text .airtime .network,
 .day-of-week .text .airtime,
 .day-of-week .text .episode{
 	overflow:hidden;
 	text-overflow:ellipsis;
 	display:block;
 	font-size:12px
+}
+
+.day-of-week .text .airtime .network{
+	white-space:nowrap;
+	text-align:right;
+	max-width:50%
 }
 
 .day-of-week .text .episode .season,
