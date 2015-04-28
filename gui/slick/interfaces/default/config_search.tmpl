@@ -101,15 +101,6 @@
 						</div>
 
 						<div class="field-pair">
-							<label for="search_unaired">
-								<span class="component-title">Search for unaired episodes</span>
-								<span class="component-desc">
-									<input type="checkbox" name="search_unaired" id="search_unaired" class="enabler"<%= html_checked if sickbeard.SEARCH_UNAIRED == True else '' %>>
-								</span>
-							</label>
-						</div>
-
-						<div class="field-pair">
 							<label>
 								<span class="component-title">Usenet retention</span>
 								<span class="component-desc">
@@ -145,6 +136,16 @@
 								<span class="component-desc">
 									<input type="checkbox" name="allow_high_priority" id="allow_high_priority"<%= html_checked if sickbeard.ALLOW_HIGH_PRIORITY == True else '' %>>
 									<p>set downloads of recently aired episodes to high priority</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="search_unaired">
+								<span class="component-title">Unaired episodes</span>
+								<span class="component-desc">
+									<input type="checkbox" name="search_unaired" id="search_unaired" class="enabler"<%= html_checked if sickbeard.SEARCH_UNAIRED == True else '' %>>
+									<p>process episodes found before their expected airdate (disable if getting fakes)</p>
 								</span>
 							</label>
 						</div>
