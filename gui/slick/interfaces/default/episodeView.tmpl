@@ -749,7 +749,7 @@
 								<div class="state#if len($cur_result['state']) then ' %s" title="%s"' % ($cur_result['state'], $cur_result['state-title']) else '"' #></div>
 								<div class="text">
 									<div class="airtime">
-                        #set $match = re.search(r'(.*)\s(\(\w+\))$', $cur_result['network'], re.I | re.M)
+                        #set $match = None if not $cur_result['network'] else re.search(r'(.*)\s(\(\w+\))$', $cur_result['network'], re.I | re.M)
 										<span class="time">${airtime}</span> <span class="network pull-right grey-text"#echo '>%s' % $cur_result['network'] if None is $match else ' title="%s">%s' % ($match.group(2), $match.group(1))#</span>
 									</div>
 									<div class="episode" title="$cur_result['name']">
