@@ -67,6 +67,7 @@ class HTTPDigestAuth(AuthBase):
         self.nonce_count = 0
         self.chal = {}
         self.pos = None
+        self.num_401_calls = 1
 
     def build_digest_header(self, method, url):
 
@@ -102,7 +103,8 @@ class HTTPDigestAuth(AuthBase):
         # XXX not implemented yet
         entdig = None
         p_parsed = urlparse(url)
-        path = p_parsed.path
+        #: path is request-uri defined in RFC 2616 which should not be empty
+        path = p_parsed.path or "/"
         if p_parsed.query:
             path += '?' + p_parsed.query
 
@@ -123,13 +125,15 @@ class HTTPDigestAuth(AuthBase):
         s += os.urandom(8)
 
         cnonce = (hashlib.sha1(s).hexdigest()[:16])
-        noncebit = "%s:%s:%s:%s:%s" % (nonce, ncvalue, cnonce, qop, HA2)
         if _algorithm == 'MD5-SESS':
             HA1 = hash_utf8('%s:%s:%s' % (HA1, nonce, cnonce))
 
         if qop is None:
             respdig = KD(HA1, "%s:%s" % (nonce, HA2))
         elif qop == 'auth' or 'auth' in qop.split(','):
+            noncebit = "%s:%s:%s:%s:%s" % (
+                nonce, ncvalue, cnonce, 'auth', HA2
+                )
             respdig = KD(HA1, noncebit)
         else:
             # XXX handle auth-int.
@@ -154,7 +158,7 @@ class HTTPDigestAuth(AuthBase):
     def handle_redirect(self, r, **kwargs):
         """Reset num_401_calls counter on redirects."""
         if r.is_redirect:
-            setattr(self, 'num_401_calls', 1)
+            self.num_401_calls = 1
 
     def handle_401(self, r, **kwargs):
         """Takes the given response and tries digest-auth, if needed."""
@@ -168,7 +172,7 @@ class HTTPDigestAuth(AuthBase):
 
         if 'digest' in s_auth.lower() and num_401_calls < 2:
 
-            setattr(self, 'num_401_calls', num_401_calls + 1)
+            self.num_401_calls += 1
             pat = re.compile(r'digest ', flags=re.IGNORECASE)
             self.chal = parse_dict_header(pat.sub('', s_auth, count=1))
 
@@ -188,7 +192,7 @@ class HTTPDigestAuth(AuthBase):
 
             return _r
 
-        setattr(self, 'num_401_calls', num_401_calls + 1)
+        self.num_401_calls = 1
         return r
 
     def __call__(self, r):
