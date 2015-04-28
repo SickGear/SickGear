@@ -493,6 +493,10 @@ class MainHandler(WebHandler):
         else:
             t.layout = sickbeard.EPISODE_VIEW_LAYOUT
 
+        # network countries
+        cache_db = db.DBConnection('cache.db')
+        t.country_results = ['(%s)' % x['tvrage_country'] for x in cache_db.select('SELECT distinct(tvrage_country) FROM [network_conversions] where tvdb_network like "%(" || tvrage_country || ")" order by tvrage_country')]
+
         return t.respond()
 
     def _genericMessage(self, subject, message):
