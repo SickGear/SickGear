@@ -317,49 +317,78 @@ def isFirstBestMatch(result):
     return False
 
 
-def wantedEpisodes(show, fromDate):
-    anyQualities, bestQualities = common.Quality.splitQuality(show.quality) # @UnusedVariable
-    allQualities = list(set(anyQualities + bestQualities))
+def wantedEpisodes(show, fromDate, make_dict=False):
+    initialQualities, archiveQualities = common.Quality.splitQuality(show.quality)
+    allQualities = list(set(initialQualities + archiveQualities))
 
     myDB = db.DBConnection()
 
     if show.air_by_date:
-        sqlResults = myDB.select(
-            "SELECT ep.status, ep.season, ep.episode FROM tv_episodes ep, tv_shows show WHERE season != 0 AND ep.showid = show.indexer_id AND show.paused = 0 AND ep.airdate > ? AND ep.showid = ? AND show.air_by_date = 1",
-        [fromDate.toordinal(), show.indexerid])
+        sqlString = 'SELECT ep.status, ep.season, ep.episode, ep.airdate FROM [tv_episodes] AS ep, [tv_shows] AS show WHERE season != 0 AND ep.showid = show.indexer_id AND show.paused = 0 AND ep.showid = ? AND show.air_by_date = 1'
     else:
-        sqlResults = myDB.select(
-            "SELECT status, season, episode FROM tv_episodes WHERE showid = ? AND season > 0 and airdate > ?",
-            [show.indexerid, fromDate.toordinal()])
+        sqlString = 'SELECT status, season, episode, airdate FROM [tv_episodes] WHERE showid = ? AND season > 0'
+
+    if sickbeard.SEARCH_UNAIRED:
+        statusList = [common.WANTED, common.FAILED, common.UNAIRED]
+        sqlString += ' AND ( airdate > ? OR airdate = 1 )'
+    else:
+        statusList = [common.WANTED, common.FAILED]
+        sqlString += ' AND airdate > ?'
+
+    sqlResults = myDB.select(sqlString, [show.indexerid, fromDate.toordinal()])
 
     # check through the list of statuses to see if we want any
-    wanted = []
-    total_wanted = total_replacing = 0
+    if make_dict:
+        wanted = {}
+    else:
+        wanted = []
+    total_wanted = total_replacing = total_unaired = 0
+    downloadedStatusList = (common.DOWNLOADED, common.SNATCHED, common.SNATCHED_PROPER, common.SNATCHED_BEST)
     for result in sqlResults:
+        not_downloaded = True
         curCompositeStatus = int(result["status"])
         curStatus, curQuality = common.Quality.splitCompositeStatus(curCompositeStatus)
 
-        if bestQualities:
-            highestBestQuality = max(allQualities)
+        if show.archive_firstmatch and curStatus in downloadedStatusList and curQuality in archiveQualities:
+            continue
+
+        # special case: already downloaded quality is not in any of the wanted Qualities
+        other_quality_downloaded = False
+        if curStatus in downloadedStatusList and curQuality not in allQualities:
+            other_quality_downloaded = True
+            wantedQualities = allQualities
         else:
-            highestBestQuality = 0
+            wantedQualities = archiveQualities
+
+        if archiveQualities:
+            highestWantedQuality = max(wantedQualities)
+        else:
+            if other_quality_downloaded:
+                highestWantedQuality = max(initialQualities)
+            else:
+                highestWantedQuality = 0
 
         # if we need a better one then say yes
-        if (curStatus in (common.DOWNLOADED, common.SNATCHED, common.SNATCHED_PROPER,
-            common.SNATCHED_BEST) and curQuality < highestBestQuality) or curStatus == common.WANTED:
+        if (curStatus in downloadedStatusList and curQuality < highestWantedQuality) or curStatus in statusList or (sickbeard.SEARCH_UNAIRED and result['airdate'] == 1 and curStatus in (common.SKIPPED, common.IGNORED, common.UNAIRED, common.UNKNOWN, common.FAILED)):
 
-            if curStatus == common.WANTED:
+            if curStatus in (common.WANTED, common.FAILED):
                 total_wanted += 1
+            elif curStatus in (common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN):
+                total_unaired += 1
             else:
                 total_replacing += 1
+                not_downloaded = False
 
             epObj = show.getEpisode(int(result["season"]), int(result["episode"]))
-            epObj.wantedQuality = [i for i in allQualities if (i > curQuality and i != common.Quality.UNKNOWN)]
-            wanted.append(epObj)
+            if make_dict:
+                wanted.setdefault(epObj.season, []).append(epObj)
+            else:
+                epObj.wantedQuality = [i for i in (initialQualities if not_downloaded else wantedQualities) if (i > curQuality and i != common.Quality.UNKNOWN)]
+                wanted.append(epObj)
 
-    if 0 < total_wanted + total_replacing:
+    if 0 < total_wanted + total_replacing + total_unaired:
         actions = []
-        for msg, total in ['%d episode%s', total_wanted], ['to upgrade %d episode%s', total_replacing]:
+        for msg, total in ['%d episode%s', total_wanted], ['to upgrade %d episode%s', total_replacing], ['%d unaired episode%s', total_unaired]:
             if 0 < total:
                 actions.append(msg % (total, helpers.maybe_plural(total)))
         logger.log(u'We want %s for %s' % (' and '.join(actions), show.name))
@@ -393,11 +422,6 @@ def searchForNeededEpisodes(episodes):
                 continue
 
             # find the best result for the current episode
-            bestResult = None
-            for curResult in curFoundResults[curEp]:
-                if not bestResult or bestResult.quality < curResult.quality:
-                    bestResult = curResult
-
             bestResult = pickBestResult(curFoundResults[curEp], curEp.show)
 
             # if all results were rejected move on to the next episode

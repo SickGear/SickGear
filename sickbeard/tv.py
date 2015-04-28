@@ -1243,11 +1243,12 @@ class TVShow(object):
                    Quality.qualityStrings[quality], logger.DEBUG)
 
         # if the quality isn't one we want under any circumstances then just say no
-        anyQualities, bestQualities = Quality.splitQuality(self.quality)
-        logger.log(u"any,best = " + str(anyQualities) + " " + str(bestQualities) + " and found " + str(quality),
+        initialQualities, archiveQualities = Quality.splitQuality(self.quality)
+        allQualities = list(set(initialQualities + archiveQualities))
+        logger.log(u"initial + archive = (" + ",".join([Quality.qualityStrings[qual] for qual in initialQualities]) + ") + (" + ",".join([Quality.qualityStrings[qual] for qual in archiveQualities]) + ") and found " + Quality.qualityStrings[quality],
                    logger.DEBUG)
 
-        if quality not in anyQualities + bestQualities:
+        if quality not in allQualities:
             logger.log(u"Don't want this quality, ignoring found episode", logger.DEBUG)
             return False
 
@@ -1270,9 +1271,9 @@ class TVShow(object):
             return False
 
         # if it's one of these then we want it as long as it's in our allowed initial qualities
-        if quality in anyQualities + bestQualities:
-            if epStatus in (WANTED, UNAIRED, SKIPPED):
-                logger.log(u"Existing episode status is wanted/unaired/skipped, getting found episode", logger.DEBUG)
+        if quality in allQualities:
+            if epStatus in (WANTED, UNAIRED, SKIPPED, FAILED):
+                logger.log(u"Existing episode status is wanted/unaired/skipped/failed, getting found episode", logger.DEBUG)
                 return True
             elif manualSearch:
                 logger.log(
@@ -1284,9 +1285,15 @@ class TVShow(object):
                            logger.DEBUG)
 
         curStatus, curQuality = Quality.splitCompositeStatus(epStatus)
+        downloadedStatusList = (DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST)
+        # special case: already downloaded quality is not in any of the wanted Qualities
+        if curStatus in downloadedStatusList and curQuality not in allQualities:
+            wantedQualities = allQualities
+        else:
+            wantedQualities = archiveQualities
 
-        # if we are re-downloading then we only want it if it's in our bestQualities list and better than what we have
-        if curStatus in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST and quality in bestQualities and quality > curQuality:
+        # if we are re-downloading then we only want it if it's in our archiveQualities list and better than what we have
+        if curStatus in downloadedStatusList and quality in wantedQualities and quality > curQuality:
             logger.log(u"Episode already exists but the found episode has better quality, getting found episode",
                        logger.DEBUG)
             return True
@@ -1767,7 +1774,7 @@ class TVEpisode(object):
 
             # if it hasn't aired yet set the status to UNAIRED
             if self.airdate >= datetime.date.today() and self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
-                logger.log(u"Episode airs in the future, marking it " + str(UNAIRED), logger.DEBUG)
+                logger.log(u"Episode airs in the future, marking it " + statusStrings[UNAIRED], logger.DEBUG)
                 self.status = UNAIRED
 
             # if there's no airdate then set it to skipped (and respect ignored)

@@ -1,4 +1,4 @@
-### 0.x.x (2015-xx-xx xx:xx:xx UTC)
+﻿### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
 * Change network names to only display on top line of Day by Day layout on Episode View
 * Reposition country part of network name into the hover over in Day by Day layout
@@ -6,6 +6,7 @@
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
 * Change to consolidate and tidy some provider code
 * Fix restore table row colours on the Manage/Episode Status Management page
+* Add option "Search for unaired episodes" to config/Search Settings
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)

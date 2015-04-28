@@ -31,6 +31,7 @@ import sys
 import os.path
 import uuid
 import base64
+import sickbeard
 sys.path.append(os.path.abspath('../lib'))
 from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
@@ -225,6 +226,7 @@ MAX_BACKLOG_FREQUENCY = 35
 MIN_UPDATE_FREQUENCY = 1
 
 BACKLOG_DAYS = 7
+SEARCH_UNAIRED = False
 
 ADD_SHOWS_WO_DIR = False
 CREATE_MISSING_SHOW_DIRS = False
@@ -528,7 +530,7 @@ def initialize(consoleLogging=True):
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, LOCALHOST_IP, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
-            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV, \
+            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, ANIME_TREAT_AS_HDTV, \
             COOKIE_SECRET, USE_IMDB_INFO, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS
 
         if __INITIALIZED__:
@@ -736,6 +738,7 @@ def initialize(consoleLogging=True):
             UPDATE_FREQUENCY = MIN_UPDATE_FREQUENCY
 
         BACKLOG_DAYS = check_setting_int(CFG, 'General', 'backlog_days', 7)
+        SEARCH_UNAIRED = bool(check_setting_int(CFG, 'General', 'search_unaired', 0))
 
         NZB_DIR = check_setting_str(CFG, 'Blackhole', 'nzb_dir', '')
         TORRENT_DIR = check_setting_str(CFG, 'Blackhole', 'torrent_dir', '')
@@ -1170,13 +1173,15 @@ def initialize(consoleLogging=True):
                                                    cycleTime=update_interval,
                                                    threadName="RECENTSEARCHER",
                                                    run_delay=update_now if RECENTSEARCH_STARTUP
-                                                   else datetime.timedelta(minutes=5))
+                                                   else datetime.timedelta(minutes=5),
+                                                   prevent_cycle_run=sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress)
 
         backlogSearchScheduler = searchBacklog.BacklogSearchScheduler(searchBacklog.BacklogSearcher(),
                                                                       cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
                                                                       threadName="BACKLOG",
                                                                       run_delay=update_now if BACKLOG_STARTUP
-                                                                      else datetime.timedelta(minutes=10))
+                                                                      else datetime.timedelta(minutes=10),
+                                                                      prevent_cycle_run=sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress)
 
         search_intervals = {'15m': 15, '45m': 45, '90m': 90, '4h': 4 * 60, 'daily': 24 * 60}
         if CHECK_PROPERS_INTERVAL in search_intervals:
@@ -1495,6 +1500,7 @@ def save_config():
     new_config['General']['metadata_kodi'] = METADATA_KODI
 
     new_config['General']['backlog_days'] = int(BACKLOG_DAYS)
+    new_config['General']['search_unaired'] = int(SEARCH_UNAIRED)
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
     new_config['General']['root_dirs'] = ROOT_DIRS if ROOT_DIRS else ''

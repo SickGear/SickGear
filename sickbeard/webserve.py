@@ -1618,7 +1618,7 @@ class Home(MainHandler):
             msg += '<ul>'
 
             for season, segment in segments.items():
-                cur_failed_queue_item = search_queue.FailedQueueItem(showObj, [segment])
+                cur_failed_queue_item = search_queue.FailedQueueItem(showObj, segment)
                 sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)  # @UndefinedVariable
 
                 msg += '<li>Season ' + str(season) + '</li>'
@@ -1793,12 +1793,21 @@ class Home(MainHandler):
                 searchstatus = 'finished'
             else:
                 searchstatus = 'searching'
-            episodes.append({'episode': searchThread.segment.episode,
-                             'episodeindexid': searchThread.segment.indexerid,
-                             'season' : searchThread.segment.season,
-                             'searchstatus' : searchstatus,
-                             'status' : statusStrings[searchThread.segment.status],
-                             'quality': self.getQualityClass(searchThread.segment)})
+            if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
+                episodes.append({'episode': searchThread.segment.episode,
+                                 'episodeindexid': searchThread.segment.indexerid,
+                                 'season' : searchThread.segment.season,
+                                 'searchstatus' : searchstatus,
+                                 'status' : statusStrings[searchThread.segment.status],
+                                 'quality': self.getQualityClass(searchThread.segment)})
+            else:
+                for epObj in searchThread.segment:
+                    episodes.append({'episode': epObj.episode,
+                                     'episodeindexid': epObj.indexerid,
+                                     'season' : epObj.season,
+                                     'searchstatus' : searchstatus,
+                                     'status' : statusStrings[epObj.status],
+                                     'quality': self.getQualityClass(epObj)})
 
         if finishedManualSearchThreadItems:
             for searchThread in finishedManualSearchThreadItems:
@@ -3558,7 +3567,7 @@ class ConfigSearch(Config):
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
                    sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None,
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
-                   backlog_days=None, backlog_frequency=None, recentsearch_frequency=None,
+                   backlog_days=None, backlog_frequency=None, search_unaired=None, recentsearch_frequency=None,
                    nzb_method=None, torrent_method=None, usenet_retention=None,
                    download_propers=None, check_propers_interval=None, allow_high_priority=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
@@ -3590,6 +3599,8 @@ class ConfigSearch(Config):
 
         sickbeard.DOWNLOAD_PROPERS = config.checkbox_to_value(download_propers)
         sickbeard.CHECK_PROPERS_INTERVAL = check_propers_interval
+
+        sickbeard.SEARCH_UNAIRED = config.checkbox_to_value(search_unaired)
 
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 

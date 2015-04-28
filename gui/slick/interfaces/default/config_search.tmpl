@@ -101,6 +101,15 @@
 						</div>
 
 						<div class="field-pair">
+							<label for="search_unaired">
+								<span class="component-title">Search for unaired episodes</span>
+								<span class="component-desc">
+									<input type="checkbox" name="search_unaired" id="search_unaired" class="enabler"<%= html_checked if sickbeard.SEARCH_UNAIRED == True else '' %>>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
 							<label>
 								<span class="component-title">Usenet retention</span>
 								<span class="component-desc">
