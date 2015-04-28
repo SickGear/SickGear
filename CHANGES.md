@@ -6,7 +6,7 @@
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
 * Change to consolidate and tidy some provider code
 * Fix restore table row colours on the Manage/Episode Status Management page
-* Add option "Search for unaired episodes" to config/Search Settings
+* Add option "Unaired episodes" to config/Search Settings/Episode Search
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)
