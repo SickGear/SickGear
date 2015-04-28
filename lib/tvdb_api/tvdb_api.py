@@ -563,7 +563,7 @@ class Tvdb:
 
             # get response from TVDB
             if self.config['cache_enabled']:
-                session = CacheControl(cache=caches.FileCache(self.config['cache_location']))
+                session = CacheControl(requests.session(), cache=caches.FileCache(self.config['cache_location']))
                 if self.config['proxy']:
                     log().debug("Using proxy for URL: %s" % url)
                     session.proxies = {
@@ -571,7 +571,7 @@ class Tvdb:
                         "https": self.config['proxy'],
                     }
 
-                resp = session.get(url, cache_auto=True, params=params)
+                resp = session.get(url, params=params)
             else:
                 resp = requests.get(url, params=params)
         except requests.exceptions.HTTPError, e:
@@ -836,15 +836,14 @@ class Tvdb:
 
         # Parse show information
         log().debug('Getting all series data for %s' % (sid))
-        seriesInfoEt = self._getetsrc(
-            self.config['url_seriesInfo'] % (sid, getShowInLanguage)
-        )
+        url = self.config['url_epInfo%s' % ('', '_zip')[self.config['useZip']]] % (sid, language)
+        show_data = self._getetsrc(url, language=getShowInLanguage)
 
         # check and make sure we have data to process and that it contains a series name
-        if not len(seriesInfoEt) or (isinstance(seriesInfoEt, dict) and 'seriesname' not in seriesInfoEt['series']):
+        if not len(show_data) or (isinstance(show_data, dict) and 'seriesname' not in show_data['series']):
             return False
 
-        for k, v in seriesInfoEt['series'].items():
+        for k, v in show_data['series'].items():
             if v is not None:
                 if k in ['banner', 'fanart', 'poster']:
                     v = self.config['url_artworkPrefix'] % (v)
@@ -865,16 +864,10 @@ class Tvdb:
             # Parse episode data
             log().debug('Getting all episodes of %s' % (sid))
 
-            if self.config['useZip']:
-                url = self.config['url_epInfo_zip'] % (sid, language)
-            else:
-                url = self.config['url_epInfo'] % (sid, language)
-
-            epsEt = self._getetsrc(url, language=language)
-            if 'episode' not in epsEt:
+            if 'episode' not in show_data:
                 return False
 
-            episodes = epsEt['episode']
+            episodes = show_data['episode']
             if not isinstance(episodes, list):
                 episodes = [episodes]
 

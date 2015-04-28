@@ -404,7 +404,7 @@ class TVRage:
                         "https": self.config['proxy'],
                     }
 
-                resp = session.get(url.strip(), cache_auto=True, params=params)
+                resp = session.get(url.strip(), params=params)
             else:
                 resp = requests.get(url.strip(), params=params)
 

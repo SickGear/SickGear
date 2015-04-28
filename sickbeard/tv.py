@@ -485,6 +485,10 @@ class TVShow(object):
         cachedShow = t[self.indexerid]
         cachedSeasons = {}
 
+        if None is cachedShow:
+            logger.log(u'No cache showdata to parse from %s' % sickbeard.indexerApi(self.indexer).name)
+            return scannedEps
+
         for curResult in sqlResults:
 
             deleteEp = False
