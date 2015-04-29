@@ -13,6 +13,7 @@
 * Change prevent wasted API hit where show and exception names create a duplicate sanitised year
 * Add FAILED status indication to Snatched column of History compact
 * Add ARCHIVED status release groups to Downloaded column of History compact
+* Update root certificates to release dated 2015.04.28
 * Add ToTV provider
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
 * Change to consolidate and tidy some provider code
