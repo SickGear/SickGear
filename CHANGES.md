@@ -1,5 +1,8 @@
 ﻿### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
+* Update Tornado webserver to 4.2.dev1 (609dbb9)
+* Update change to suppress reporting of Tornado exception error 1 to updated package as listed in hacks.txt
+* Update fix for API response header for JSON content type and the return of JSONP data to updated package as listed in hacks.txt
 * Change network names to only display on top line of Day by Day layout on Episode View
 * Reposition country part of network name into the hover over in Day by Day layout
 * Add ToTV provider
