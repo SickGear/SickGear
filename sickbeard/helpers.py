@@ -1154,6 +1154,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     """
 
     # request session
+    if None is session:
+        session = requests.session()
     cache_dir = sickbeard.CACHE_DIR or _getTempDir()
     session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
 
@@ -1224,6 +1226,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
 def download_file(url, filename, session=None):
     # create session
+    if None is session:
+        session = requests.session()
     cache_dir = sickbeard.CACHE_DIR or _getTempDir()
     session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
 
