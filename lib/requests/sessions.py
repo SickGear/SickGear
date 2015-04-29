@@ -36,6 +36,8 @@ from .status_codes import codes
 # formerly defined here, reexposed here for backward compatibility
 from .models import REDIRECT_STATI
 
+REDIRECT_CACHE_SIZE = 1000
+
 
 def merge_setting(request_setting, session_setting, dict_class=OrderedDict):
     """
@@ -88,7 +90,7 @@ def merge_hooks(request_hooks, session_hooks, dict_class=OrderedDict):
 
 class SessionRedirectMixin(object):
     def resolve_redirects(self, resp, req, stream=False, timeout=None,
-                          verify=True, cert=None, proxies=None):
+                          verify=True, cert=None, proxies=None, **adapter_kwargs):
         """Receives a Response. Returns a generator of Responses."""
 
         i = 0
@@ -129,7 +131,7 @@ class SessionRedirectMixin(object):
             # Facilitate relative 'location' headers, as allowed by RFC 7231.
             # (e.g. '/path/to/resource' instead of 'http://domain.tld/path/to/resource')
             # Compliant with RFC3986, we percent encode the url.
-            if not urlparse(url).netloc:
+            if not parsed.netloc:
                 url = urljoin(resp.url, requote_uri(url))
             else:
                 url = requote_uri(url)
@@ -169,7 +171,10 @@ class SessionRedirectMixin(object):
             except KeyError:
                 pass
 
-            extract_cookies_to_jar(prepared_request._cookies, prepared_request, resp.raw)
+            # Extract any cookies sent on the response to the cookiejar
+            # in the new request. Because we've mutated our copied prepared
+            # request, use the old one that we haven't yet touched.
+            extract_cookies_to_jar(prepared_request._cookies, req, resp.raw)
             prepared_request._cookies.update(self.cookies)
             prepared_request.prepare_cookies(prepared_request._cookies)
 
@@ -188,6 +193,7 @@ class SessionRedirectMixin(object):
                 cert=cert,
                 proxies=proxies,
                 allow_redirects=False,
+                **adapter_kwargs
             )
 
             extract_cookies_to_jar(self.cookies, prepared_request, resp.raw)
@@ -274,7 +280,7 @@ class Session(SessionRedirectMixin):
     __attrs__ = [
         'headers', 'cookies', 'auth', 'proxies', 'hooks', 'params', 'verify',
         'cert', 'prefetch', 'adapters', 'stream', 'trust_env',
-        'max_redirects', 'redirect_cache'
+        'max_redirects',
     ]
 
     def __init__(self):
@@ -329,7 +335,7 @@ class Session(SessionRedirectMixin):
         self.mount('http://', HTTPAdapter())
 
         # Only store 1000 redirects to prevent using infinite memory
-        self.redirect_cache = RecentlyUsedContainer(1000)
+        self.redirect_cache = RecentlyUsedContainer(REDIRECT_CACHE_SIZE)
 
     def __enter__(self):
         return self
@@ -555,10 +561,6 @@ class Session(SessionRedirectMixin):
         # Set up variables needed for resolve_redirects and dispatching of hooks
         allow_redirects = kwargs.pop('allow_redirects', True)
         stream = kwargs.get('stream')
-        timeout = kwargs.get('timeout')
-        verify = kwargs.get('verify')
-        cert = kwargs.get('cert')
-        proxies = kwargs.get('proxies')
         hooks = request.hooks
 
         # Get the appropriate adapter to use
@@ -586,12 +588,7 @@ class Session(SessionRedirectMixin):
         extract_cookies_to_jar(self.cookies, request, r.raw)
 
         # Redirect resolving generator.
-        gen = self.resolve_redirects(r, request,
-            stream=stream,
-            timeout=timeout,
-            verify=verify,
-            cert=cert,
-            proxies=proxies)
+        gen = self.resolve_redirects(r, request, **kwargs)
 
         # Resolve redirects if allowed.
         history = [resp for resp in gen] if allow_redirects else []
@@ -660,11 +657,18 @@ class Session(SessionRedirectMixin):
             self.adapters[key] = self.adapters.pop(key)
 
     def __getstate__(self):
-        return dict((attr, getattr(self, attr, None)) for attr in self.__attrs__)
+        state = dict((attr, getattr(self, attr, None)) for attr in self.__attrs__)
+        state['redirect_cache'] = dict(self.redirect_cache)
+        return state
 
     def __setstate__(self, state):
+        redirect_cache = state.pop('redirect_cache', {})
         for attr, value in state.items():
             setattr(self, attr, value)
+
+        self.redirect_cache = RecentlyUsedContainer(REDIRECT_CACHE_SIZE)
+        for redirect, to in redirect_cache.items():
+            self.redirect_cache[redirect] = to
 
 
 def session():

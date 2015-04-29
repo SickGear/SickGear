@@ -72,11 +72,8 @@ class MaxRetryError(RequestError):
     def __init__(self, pool, url, reason=None):
         self.reason = reason
 
-        message = "Max retries exceeded with url: %s" % url
-        if reason:
-            message += " (Caused by %r)" % reason
-        else:
-            message += " (Caused by redirect)"
+        message = "Max retries exceeded with url: %s (Caused by %r)" % (
+            url, reason)
 
         RequestError.__init__(self, pool, url, message)
 
@@ -141,6 +138,12 @@ class LocationParseError(LocationValueError):
         self.location = location
 
 
+class ResponseError(HTTPError):
+    "Used as a container for an error reason supplied in a MaxRetryError."
+    GENERIC_ERROR = 'too many error responses'
+    SPECIFIC_ERROR = 'too many {status_code} error responses'
+
+
 class SecurityWarning(HTTPWarning):
     "Warned when perfoming security reducing actions"
     pass
@@ -153,4 +156,14 @@ class InsecureRequestWarning(SecurityWarning):
 
 class SystemTimeWarning(SecurityWarning):
     "Warned when system time is suspected to be wrong"
+    pass
+
+
+class InsecurePlatformWarning(SecurityWarning):
+    "Warned when certain SSL configuration is not available on a platform."
+    pass
+
+
+class ResponseNotChunked(ProtocolError, ValueError):
+    "Response needs to be chunked in order to read it as chunks."
     pass
