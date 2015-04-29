@@ -18,6 +18,12 @@
 * Change to consolidate and tidy some provider code
 * Fix restore table row colours on the Manage/Episode Status Management page
 * Add option "Unaired episodes" to config/Search Settings/Episode Search
+* Change reduce time to search recent result list by searching only once for a best result
+* Fix replacing episodes that have a lower quality than what is selected in the initial and archive quality list
+* Fix to include episodes marked Failed in the recent and backlog search processes
+* Fix display of search status for an alternative release after episode is manually set to "Failed" on the Display Show page
+* Change handle more varieties of media quality
+* Change to prevent another scheduled search when one of the same type is already running
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)
