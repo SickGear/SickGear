@@ -150,11 +150,11 @@ class NewznabProvider(generic.NZBProvider):
 
         # add new query strings for exceptions
         name_exceptions = list(
-            set(scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]))
+            set([helpers.sanitizeSceneName(a) for a in scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
         for cur_exception in name_exceptions:
             cur_return = cur_params.copy()
             if 'q' in cur_return:
-                cur_return['q'] = helpers.sanitizeSceneName(cur_exception) + '.' + cur_return['q']
+                cur_return['q'] = cur_exception + '.' + cur_return['q']
             to_return.append(cur_return)
 
         return to_return
@@ -185,10 +185,10 @@ class NewznabProvider(generic.NZBProvider):
 
         # add new query strings for exceptions
         name_exceptions = list(
-            set(scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]))
+            set([helpers.sanitizeSceneName(a) for a in scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
         for cur_exception in name_exceptions:
             cur_return = params.copy()
-            cur_return['q'] = helpers.sanitizeSceneName(cur_exception)
+            cur_return['q'] = cur_exception
             to_return.append(cur_return)
         
             if ep_obj.show.anime:
@@ -196,7 +196,7 @@ class NewznabProvider(generic.NZBProvider):
                 # Remove the ?ep=e46 paramater and use add the episode number to the query paramater.
                 # Can be usefull for newznab indexers that do not have the episodes 100% parsed.
                 # Start with only applying the searchstring to anime shows
-                params['q'] = helpers.sanitizeSceneName(cur_exception)
+                params['q'] = cur_exception
                 paramsNoEp = params.copy()
                 
                 paramsNoEp['q'] = '%s.%02d' % (paramsNoEp['q'], int(paramsNoEp['ep']))
