@@ -11,6 +11,8 @@
 * Update chardet packages 2.2.1 to 2.3.0 (ff40135)
 * Update cachecontrol library 0.9.3 to 0.11.2
 * Change prevent wasted API hit where show and exception names create a duplicate sanitised year
+* Add FAILED status indication to Snatched column of History compact
+* Add ARCHIVED status release groups to Downloaded column of History compact
 * Add ToTV provider
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
 * Change to consolidate and tidy some provider code

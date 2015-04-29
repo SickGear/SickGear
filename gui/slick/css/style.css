@@ -2004,8 +2004,13 @@ history.tmpl
 	text-align:center
 }
 
-#historyTable td.provider img{
-	margin-right:3px
+#historyTable td.provider span{
+	padding:0 2px
+}
+
+#historyTable td.provider span.fail img{
+	opacity:0.5;
+	filter:alpha(opacity=50)
 }
 
 #historyTable td img,

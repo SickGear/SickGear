@@ -192,17 +192,17 @@
             #if $curStatus in [SNATCHED, FAILED]
                 #set $provider = $providers.getProviderClass($generic.GenericProvider.makeID($action['provider']))
                 #if None is not $provider
-                    #set $prov_list += ['<img class="help" src="%s/images/providers/%s" width="16" height="16" alt="%s" title="%s%s.. %s: %s" />'\
-                        % ($sbRoot, $provider.imageName(), $provider.name, $order,
-                         'th' if str($order)[-1] not in $ordinal_indicators else $ordinal_indicators[str($order)[-1]],
+                    #set $prov_list += ['<span%s><img class="help" src="%s/images/providers/%s" width="16" height="16" alt="%s" title="%s.. %s: %s" /></span>'\
+                        % (('', ' class="fail"')[FAILED == $curStatus], $sbRoot, $provider.imageName(), $provider.name,
+                        ('%s%s' % ($order, 'th' if $order in [11, 12, 13] or str($order)[-1] not in $ordinal_indicators else $ordinal_indicators[str($order)[-1]]), 'Snatch failed')[FAILED == $curStatus],
                         $provider.name, $basename)]
-                    #set $order += 1
+                    #set $order += (0, 1)[SNATCHED == $curStatus]
                 #else
 					#set $prov_list += ['<img src="%s/images/providers/missing.png" width="16" height="16" alt="missing provider" title="missing provider" />'\
 					    % $sbRoot]
                 #end if
             #end if
-            #if DOWNLOADED == $curStatus
+            #if $curStatus in [DOWNLOADED, ARCHIVED]
                 #set $match = $re.search('\-(\w+)\.\w{3}\Z', $basename)
                 #set $non_scene_note = ''
                 #if not $match
