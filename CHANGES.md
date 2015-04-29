@@ -8,6 +8,7 @@
 * Update Requests library 2.4.3 to 2.6.2 (ff71b25)
 * Update change to suppress HTTPS verification InsecureRequestWarning to updated package as listed in hacks.txt
 * Remove listed hacks.txt record for check that SSLv3 is available because issue was addressed by vendor
+* Update chardet packages 2.2.1 to 2.3.0 (ff40135)
 * Add ToTV provider
 * Fix Backlog scheduler initialization and change backlog frequency from minutes to days
 * Change to consolidate and tidy some provider code
