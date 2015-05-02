@@ -25,6 +25,7 @@
 * Fix display of search status for an alternative release after episode is manually set to "Failed" on the Display Show page
 * Change handle more varieties of media quality
 * Change to prevent another scheduled search when one of the same type is already running
+* Add custom show lists to home page
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)

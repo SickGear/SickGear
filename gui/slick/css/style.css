@@ -619,7 +619,7 @@ home.tmpl
 	border-radius:3px
 }
 
-#container, #container-anime{
+#container{
 	margin:0 auto
 }
 
@@ -1589,6 +1589,12 @@ th.col-subtitles,
 td.col-subtitles{
 	width:150px;
 	text-align:center
+}
+
+th.col-simple,
+td.col-simple{
+	width: 150px;
+	text-align: center
 }
 
 th.col-status,

@@ -99,6 +99,7 @@ class TVShow(object):
         self._rls_ignore_words = ""
         self._rls_require_words = ""
         self._overview = ''
+        self._tag = ''
 
         self.dirty = True
 
@@ -143,6 +144,7 @@ class TVShow(object):
     rls_ignore_words = property(lambda self: self._rls_ignore_words, dirty_setter("_rls_ignore_words"))
     rls_require_words = property(lambda self: self._rls_require_words, dirty_setter("_rls_require_words"))
     overview = property(lambda self: self._overview, dirty_setter('_overview'))
+    tag = property(lambda self: self._tag, dirty_setter('_tag'))
 
     @property
     def is_anime(self):
@@ -848,6 +850,10 @@ class TVShow(object):
             if not self.overview:
                 self.overview = sqlResults[0]['overview']
 
+            self.tag = sqlResults[0]['tag']
+            if not self.tag:
+                self.tag = 'Show List'
+
         logger.log(str(self.indexerid) + u': Show info [%s] loaded from database' % self.name)
 
         # Get IMDb_info from database
@@ -1204,7 +1210,8 @@ class TVShow(object):
                         "last_update_indexer": self.last_update_indexer,
                         "rls_ignore_words": self.rls_ignore_words,
                         'rls_require_words': self.rls_require_words,
-                        'overview': self.overview
+                        'overview': self.overview,
+                        'tag': self.tag,
         }
 
         myDB = db.DBConnection()

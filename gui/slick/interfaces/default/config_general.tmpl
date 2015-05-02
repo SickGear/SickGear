@@ -243,6 +243,29 @@
 						</div>
 
 						<div class="field-pair">
+							<label for="showlist_tagview">
+								<span class="component-title">Show list split view style:</span>
+								<span class="component-desc">
+									<select id="showlist_tagview" name="showlist_tagview" class="form-control input-sm">
+										<option value="standard"#echo ('', $selected)['standard' == $sickbeard.SHOWLIST_TAGVIEW]#>No Lists</option>
+										<option value="anime"#echo ('', $selected)['anime' == $sickbeard.SHOWLIST_TAGVIEW]#>Show / Anime Lists</option>
+										<option value="custom"#echo ('', $selected)['custom' == $sickbeard.SHOWLIST_TAGVIEW]#>Custom Lists</option>
+									</select>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair #if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then 'hidden' else ''#">
+							<label for="show_tags">
+								<span class="component-title">Show tags:</span>
+								<span class="component-desc">
+									<input type="text" name="show_tags" id="show_tags" value="$show_tags" class="form-control input-sm input300">
+                                    <p class="clear-left note">show tags are to be selected from these comma seperated words</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
 							<label for="use_imdb_info">
 								<span class="component-title">Enable IMDb info</span>
 								<span class="component-desc">
