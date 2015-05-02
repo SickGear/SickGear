@@ -288,16 +288,16 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 
     #set $progressbar_percent = $nom * 100 / $den
 
-#set $data_date = '6000000000.0'
+#set $data_date = '600000000000'
 #if $cur_airs_next:
-    #set $data_date = $time.mktime($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next,$curShow.airs,$curShow.network)).timetuple())
+    #set $data_date = $sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next, $curShow.airs, $curShow.network)).strftime('%Y%m%d%H%M')
 #else if None is not $display_status
     #if 'nded' not in $display_status and 1 == int($curShow.paused)
-        #set $data_date = '5000000500.0'
+        #set $data_date = '500000000500'
     #else if 'ontinu' in $display_status
-        #set $data_date = '5000000000.0'
+        #set $data_date = '500000000000'
     #else if 'nded' in $display_status
-        #set $data_date = '5000000100.0'
+        #set $data_date = '500000000100'
     #end if
 #end if
 	<div class="show" id="show$curShow.indexerid" data-name="$curShow.name" data-date="$data_date" data-network="$curShow.network" data-progress="$progressbar_percent">
@@ -487,7 +487,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 	
     #if $cur_airs_next
     #set $ldatetime = $sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next,$curShow.airs,$curShow.network))
-		<td align="center" class="nowrap"><div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdate($ldatetime)</div><span class="sort_data">$time.mktime($ldatetime.timetuple())</span></td>
+		<td align="center" class="nowrap"><div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdate($ldatetime)</div><span class="sort_data">$ldatetime.strftime('%Y%m%d%H%M')</span></td>
     #else:
 		<td align="center" class="nowrap"></td>
     #end if

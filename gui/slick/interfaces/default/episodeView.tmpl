@@ -332,7 +332,7 @@
 		<tr id="show-${show_id}" class="$show_div" data-rawname="$cur_result['show_name']">
 			## forced to use a div to wrap airdate, the column sort went crazy with a span
 			<td align="center" class="nowrap">
-				<div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</div><span class="sort_data">$time.mktime($cur_result['localtime'].timetuple())</span>
+				<div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</div><span class="sort_data">$cur_result['localtime'].strftime('%Y%m%d%H%M')</span>
 			</td>
 
 			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$cur_result['show_name']</a>
@@ -741,7 +741,7 @@
                         #set $img_id = ' id="plot-%s"' % $show_id
                         #set $plot_class = ' plot-daybyday'
 
-							<div id="show-${show_id}" class="daybyday-show" data-name="$cur_result['data_show_name']" data-season="$cur_result['season']" data-episode="$cur_result['episode']" data-network="$cur_result['data_network']" data-time="$time.mktime($cur_result['localtime'].timetuple())" data-rawname="$cur_result['show_name']">
+							<div id="show-${show_id}" class="daybyday-show" data-name="$cur_result['data_show_name']" data-season="$cur_result['season']" data-episode="$cur_result['episode']" data-network="$cur_result['data_network']" data-time="$cur_result['localtime'].strftime('%Y%m%d%H%M')" data-rawname="$cur_result['show_name']">
 								<div class="poster">
 									<a${title_text} href="$sbRoot/home/displayShow?show=${cur_result['showid']}">
 									<img${img_id} class="img-responsive${plot_class}" alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=poster_thumb" /></a>

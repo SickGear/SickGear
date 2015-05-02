@@ -27,6 +27,7 @@
 * Change to prevent another scheduled search when one of the same type is already running
 * Add custom show lists to home page
 * Change travis to new container builds for faster unit testing
+* Change values used for date sorting on home page and episode view for improved compatibility with posix systems
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)
