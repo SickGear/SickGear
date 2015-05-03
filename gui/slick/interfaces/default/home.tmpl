@@ -357,15 +357,12 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 				</td>
 				
 				<td class="show-table">
-                    #if $layout != 'simple':
-                        #if $curShow.network:
-							<img class="show-network-image" src="$sbRoot/images/network/${curShow.network.replace(u"\u00C9",'e').lower()}.png" alt="$curShow.network" title="$curShow.network" />	
-                        #else:
-							<img class="show-network-image" src="$sbRoot/images/network/nonetwork.png" alt="No Network" title="No Network" />
-                        #end if
-                    #else:
-						$curShow.network
-                    #end if
+#if 'simple' != $layout:
+    #set $img_text = ($curShow.network, 'No Network')[None is $curShow.network]
+					<img class="show-network-image" src="$sbRoot/images/network/$network_images[$curShow.indexerid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
+#else:
+					$curShow.network
+#end if
 				</td>
 				
 				<td class="show-table">
@@ -513,14 +510,11 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 		<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$curShow.name</a></td>
     #end if
 
-    #if $layout != 'simple':	
+    #if 'simple' != $layout:
+        #set $img_text = ($curShow.network, 'No Network')[None is $curShow.network]
 		<td align="center">
-        #if $curShow.network:
 			<span style="display: none;">$curShow.network</span>
-			<img id="network" width="54" height="27" src="$sbRoot/images/network/${curShow.network.replace(u"\u00C9",'e').lower()}.png" alt="$curShow.network" title="$curShow.network" />
-        #else:
-			<img id="network" width="54" height="27" src="$sbRoot/images/network/nonetwork.png" alt="No Network" title="No Network" />
-        #end if
+			<img width="54" height="27" src="$sbRoot/images/network/$network_images[$curShow.indexerid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
 		</td>
     #else:
 		<td>
