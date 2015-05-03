@@ -59,11 +59,6 @@ try:
 except ImportError:
     from lib import simplejson as json
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from requests.packages.urllib3.packages.ordered_dict import OrderedDict
-
 
 class PageTemplate(Template):
     def __init__(self, headers, *args, **KWs):
@@ -3025,7 +3020,6 @@ class Manage(MainHandler):
             else:
                 new_tag = tag
 
-
             if anime == 'keep':
                 new_anime = showObj.anime
             else:
@@ -3429,7 +3423,7 @@ class ConfigGeneral(Config):
 
         t = PageTemplate(headers=self.request.headers, file='config_general.tmpl')
         t.submenu = self.ConfigMenu
-        t.show_tags = ','.join(sickbeard.SHOW_TAGS)
+        t.show_tags = ', '.join(sickbeard.SHOW_TAGS)
         return t.respond()
 
     def saveRootDirs(self, rootDirString=None):
@@ -3512,20 +3506,19 @@ class ConfigGeneral(Config):
         sickbeard.FILE_LOGGING_PRESET = file_logging_preset
         sickbeard.SHOWLIST_TAGVIEW = showlist_tagview
 
-        # Convert csv to list, must always contain Show List as a default fallback and strip leading/trailing spaces
-        show_tags = show_tags.split(',')
-        if 'Show List' not in show_tags:
-            show_tags.append('Show List')
-        show_tags = [x.strip() for x in show_tags if x]
-
-        # Don't allow deletion of tags that are still assigned to shows
-        myDB = db.DBConnection('sickbeard.db')
+        # 'Show List' is the must have default fallback. Tags in use that are removed from config ui are restored, not deleted.
+        # Deduped list order preservation is key to feature function.
+        myDB = db.DBConnection()
         sql_results = myDB.select('SELECT DISTINCT tag FROM tv_shows')
-        if sql_results:
-            for tag in sql_results[0]:
-                show_tags.append(tag)
-
-        sickbeard.SHOW_TAGS = list(OrderedDict.fromkeys(show_tags))  # remove dupes
+        new_names = [u'' + v.strip() for v in (show_tags.split(u','), [])[None is show_tags] if v.strip()]
+        orphans = [item for item in [v['tag'] for v in sql_results or []] if item not in new_names]
+        cleanser = []
+        if 0 < len(orphans):
+            cleanser = [item for item in sickbeard.SHOW_TAGS if item in orphans or item in new_names]
+            results += [u'An attempt was prevented to remove a show list group name still in use']
+        dedupe = {}
+        sickbeard.SHOW_TAGS = [dedupe.setdefault(item, item) for item in (cleanser + new_names + [u'Show List'])
+                               if item not in dedupe]
 
         logger.log_set_level()
 
@@ -3557,7 +3550,6 @@ class ConfigGeneral(Config):
 
         if date_preset:
             sickbeard.DATE_PRESET = date_preset
-            discarded_na_data = date_preset_na
 
         if indexer_default:
             sickbeard.INDEXER_DEFAULT = config.to_int(indexer_default)
@@ -3595,8 +3587,8 @@ class ConfigGeneral(Config):
         sickbeard.save_config()
 
         if len(results) > 0:
-            for x in results:
-                logger.log(x, logger.ERROR)
+            for v in results:
+                logger.log(v, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br />\n'.join(results))
         else:

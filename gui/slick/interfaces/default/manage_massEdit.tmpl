@@ -165,12 +165,12 @@
 	</div>
 
 	<div class="optionWrapper #if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then 'hidden' else ''#">
-		<span class="selectTitle">Tag</span>
+		<span class="selectTitle">Show is grouped in</span>
 		<div class="selectChoices">
 			<select id="edit_tag" name="tag" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>
 #for $tag in $sickbeard.SHOW_TAGS:
-				<option value="$tag" #if $tag_value == $tag then $selected else ''#>$tag</option>
+				<option value="$tag" #if $tag_value == $tag then $selected else ''#>$tag#echo ('', ' (default)')['Show List' == $tag]#</option>
 #end for
 			</select>
 		</div><br />

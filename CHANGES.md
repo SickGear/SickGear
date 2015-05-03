@@ -25,11 +25,21 @@
 * Fix display of search status for an alternative release after episode is manually set to "Failed" on the Display Show page
 * Change handle more varieties of media quality
 * Change to prevent another scheduled search when one of the same type is already running
-* Add custom show lists to home page
 * Change travis to new container builds for faster unit testing
 * Add handling for shows that do not have a total number of episodes
 * Add support for country network image files to the Show List view
+* Add General Config/Interface/"Group show list shows into:"... to divide shows into groups on the Show List page
+* Change Show List progress bar code, smaller page load, efficient use of js render engine
 * Change values used for date sorting on home page and episode view for improved compatibility with posix systems
+
+[develop changelog]
+Fix issue changing a custom show list group name that is in use. The bug resulted in the db containing stale group names
+but worse, orphaned shows disappeared from the Show List page entirely. Changed texts to describe this feature more
+clearly from tag to group names. Repositioned this feature on the add show, edit show, and config pages. Change the drop
+down select to dynamically hide/show the list of group names and change the respectively selected help texts. Change
+insert space between items in the list of group names for readability. Notify user if an attempt to remove an in use
+group name is prevented. PEP8 and code cleanup to SG conventions. Removed fixed column widths, this means multiple groups
+have different column widths, but the original approach is preferred because fixed widths look bad with long show titles.
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)
