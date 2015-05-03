@@ -1131,7 +1131,8 @@ class Home(MainHandler):
             if highest_season < curResult['season'] and 1000 < curResult['airdate'] and UNAIRED < curResult['status']:
                 highest_season = curResult['season']
 
-        latest_season = int(sorted(epCounts['totals'])[-1::][0])
+        if 0 < len(epCounts['totals']):
+            latest_season = int(sorted(epCounts['totals'])[-1::][0])
 
         display_seasons = []
         if 1 < highest_season:
