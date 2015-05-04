@@ -102,6 +102,7 @@
 			$('#SubMenu a:contains("Processing")').addClass('btn').html('<i class="sgicon-postprocess"></i>Post-Processing');
 			$('#SubMenu a:contains("Manage Searches")').addClass('btn').html('<i class="sgicon-search"></i>Manage Searches');
 			$('#SubMenu a:contains("Manage Torrents")').addClass('btn').html('<i class="sgicon-bittorrent"></i>Manage Torrents');
+			$('#SubMenu a:contains("Show Queue Overview")').addClass('btn').html('<i class="sgicon-showqueue"></i>Show Queue Overview');
 			$('#SubMenu a[href$="/manage/failedDownloads/"]').addClass('btn').html('<i class="sgicon-failed"></i>Failed Downloads');
 			$('#SubMenu a:contains("Notification")').addClass('btn').html('<i class="sgicon-notification"></i>Notifications');
 			$('#SubMenu a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
@@ -166,6 +167,7 @@
 							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-massupdate"></i>Mass Update</a></li>
 							<li><a href="$sbRoot/manage/backlogOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-backlog"></i>Backlog Overview</a></li>
 							<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Manage Searches</a></li>
+							<li><a href="$sbRoot/manage/showQueueOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-showqueue"></i>Show Queue Overview</a></li>
 							<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status Management</a></li>
 #if $sickbeard.USE_PLEX and $sickbeard.PLEX_SERVER_HOST != ''
 							<li><a href="$sbRoot/home/updatePLEX/" tabindex="$tab#set $tab += 1#"><i class="sgicon-plex"></i>Update PLEX</a></li>

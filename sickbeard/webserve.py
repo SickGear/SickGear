@@ -46,6 +46,7 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
 from sickbeard.name_cache import buildNameCache
 from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
+from sickbeard.searchBacklog import FULL_BACKLOG, LIMITED_BACKLOG
 from tornado import gen
 from tornado.web import RequestHandler, authenticated
 from lib import adba
@@ -2516,6 +2517,7 @@ class Manage(MainHandler):
         manageMenu = [
             {'title': 'Backlog Overview', 'path': 'manage/backlogOverview/'},
             {'title': 'Manage Searches', 'path': 'manage/manageSearches/'},
+            {'title': 'Show Queue Overview', 'path': 'manage/showQueueOverview/'},
             {'title': 'Episode Status Management', 'path': 'manage/episodeStatuses/'}, ]
 
         if sickbeard.USE_TORRENTS and sickbeard.TORRENT_METHOD != 'blackhole' \
@@ -3223,8 +3225,9 @@ class ManageSearches(Manage):
         # t.backlogPI = sickbeard.backlogSearchScheduler.action.getProgressIndicator()
         t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
         t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
+        t.backlogRunningType = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
         t.recentSearchStatus = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
-        t.findPropersStatus = sickbeard.properFinderScheduler.action.amActive
+        t.findPropersStatus = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
         t.queueLength = sickbeard.searchQueueScheduler.action.queue_length()
 
         t.submenu = self.ManageMenu()
@@ -3238,23 +3241,36 @@ class ManageSearches(Manage):
 
         self.redirect('/home/')
 
-    def forceBacklog(self, *args, **kwargs):
+    def forceLimitedBacklog(self, *args, **kwargs):
         # force it to run the next time it looks
-        result = sickbeard.backlogSearchScheduler.forceRun()
-        if result:
-            logger.log(u'Backlog search forced')
-            ui.notifications.message('Backlog search started')
+        if not sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress():
+            sickbeard.backlogSearchScheduler.forceSearch(force_type=LIMITED_BACKLOG)
+            logger.log(u'Limited Backlog search forced')
+            ui.notifications.message('Limited Backlog search started')
 
+            time.sleep(5)
+            self.redirect('/manage/manageSearches/')
+
+    def forceFullBacklog(self, *args, **kwargs):
+        # force it to run the next time it looks
+        if not sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress():
+            sickbeard.backlogSearchScheduler.forceSearch(force_type=FULL_BACKLOG)
+            logger.log(u'Full Backlog search forced')
+            ui.notifications.message('Full Backlog search started')
+
+        time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
     def forceSearch(self, *args, **kwargs):
 
         # force it to run the next time it looks
-        result = sickbeard.recentSearchScheduler.forceRun()
-        if result:
-            logger.log(u'Recent search forced')
-            ui.notifications.message('Recent search started')
+        if not sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress():
+            result = sickbeard.recentSearchScheduler.forceRun()
+            if result:
+                logger.log(u'Recent search forced')
+                ui.notifications.message('Recent search started')
 
+        time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
     def forceFindPropers(self, *args, **kwargs):
@@ -3265,6 +3281,7 @@ class ManageSearches(Manage):
             logger.log(u'Find propers search forced')
             ui.notifications.message('Find propers search started')
 
+        time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
     def pauseBacklog(self, paused=None):
@@ -3273,8 +3290,29 @@ class ManageSearches(Manage):
         else:
             sickbeard.searchQueueScheduler.action.unpause_backlog()  # @UndefinedVariable
 
+        time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
+class showQueueOverview(Manage):
+    def index(self, *args, **kwargs):
+        t = PageTemplate(headers=self.request.headers, file='manage_showQueueOverview.tmpl')
+        t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
+        t.showList = sickbeard.showList
+        t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning()
+
+        t.submenu = self.ManageMenu()
+
+        return t.respond()
+
+    def forceShowUpdate(self, *args, **kwargs):
+
+        result = sickbeard.showUpdateScheduler.forceRun()
+        if result:
+            logger.log(u'Show Update forced')
+            ui.notifications.message('Forced Show Update started')
+
+        time.sleep(5)
+        self.redirect('/manage/showQueueOverview/')
 
 class History(MainHandler):
     def index(self, limit=100):

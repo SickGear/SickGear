@@ -289,48 +289,40 @@ class TVShow(object):
         # In some situations self.status = None.. need to figure out where that is!
         if not self.status:
             self.status = ''
-            logger.log("Status missing for showid: [%s] with status: [%s]" % 
+            logger.log('Status missing for showid: [%s] with status: [%s]' %
                        (cur_indexerid, self.status), logger.DEBUG)
-        
-        # if show is not 'Ended' always update (status 'Continuing' or '')
-        if 'Ended' not in self.status:
-            return True
 
-        # run logic against the current show latest aired and next unaired data to see if we should bypass 'Ended' status
-
-        graceperiod = datetime.timedelta(days=30)
-
-        last_airdate = datetime.date.fromordinal(1)
-
-        # get latest aired episode to compare against today - graceperiod and today + graceperiod
         myDB = db.DBConnection()
-        sql_result = myDB.select(
-            "SELECT * FROM tv_episodes WHERE showid = ? AND season > '0' AND airdate > '1' AND status > '1' ORDER BY airdate DESC LIMIT 1",
-            [cur_indexerid])
+        sql_result = myDB.mass_action(
+            [['SELECT airdate FROM [tv_episodes] WHERE showid = ? AND season > "0" ORDER BY season DESC, episode DESC LIMIT 1', [cur_indexerid]],
+             ['SELECT airdate FROM [tv_episodes] WHERE showid = ? AND season > "0" AND airdate > "1" ORDER BY airdate DESC LIMIT 1', [cur_indexerid]]])
 
-        if sql_result:
-            last_airdate = datetime.date.fromordinal(sql_result[0]['airdate'])
-            if last_airdate >= (update_date - graceperiod) and last_airdate <= (update_date + graceperiod):
-                return True
+        last_airdate_unknown = int(sql_result[0][0]['airdate']) <= 1 if sql_result and sql_result[0] else True
 
-        # get next upcoming UNAIRED episode to compare against today + graceperiod
-        sql_result = myDB.select(
-            "SELECT * FROM tv_episodes WHERE showid = ? AND season > '0' AND airdate > '1' AND status = '1' ORDER BY airdate ASC LIMIT 1",
-            [cur_indexerid])
-
-        if sql_result:
-            next_airdate = datetime.date.fromordinal(sql_result[0]['airdate'])
-            if next_airdate <= (update_date + graceperiod):
-                return True
+        last_airdate = datetime.date.fromordinal(sql_result[1][0]['airdate']) if sql_result and sql_result[1] else datetime.date.fromordinal(1)
 
         last_update_indexer = datetime.date.fromordinal(self.last_update_indexer)
 
-        # in the first year after ended (last airdate), update every 30 days
-        if (update_date - last_airdate) < datetime.timedelta(days=450) and (
-                    update_date - last_update_indexer) > datetime.timedelta(days=30):
+        # if show is not 'Ended' and last episode aired less then 460 days ago or don't have an airdate for the last episode always update (status 'Continuing' or '')
+        update_days_limit = 460
+        ended_limit = datetime.timedelta(days=update_days_limit)
+        if 'Ended' not in self.status and (last_airdate == datetime.date.fromordinal(1) or last_airdate_unknown or (update_date - last_airdate) <= ended_limit or (update_date - last_update_indexer) > ended_limit):
             return True
 
-        return False
+        # in the first 460 days (last airdate), update regularly
+        airdate_diff = update_date - last_airdate
+        last_update_diff = update_date - last_update_indexer
+
+        update_step_list = [[60, 1], [120, 3], [180, 7], [365, 15], [update_days_limit, 30]]
+        for date_diff, interval in update_step_list:
+            if airdate_diff <= datetime.timedelta(days=date_diff) and last_update_diff >= datetime.timedelta(days=interval):
+                return True
+
+        # update shows without an airdate for the last episode for 460 days every 7 days
+        if last_airdate_unknown and airdate_diff <= ended_limit and last_update_diff >= datetime.timedelta(days=7):
+            return True
+        else:
+            return False
 
     def writeShowNFO(self):
 
@@ -1009,22 +1001,22 @@ class TVShow(object):
         logger.log(str(self.indexerid) + u': Parsed latest IMDb show info for [%s]' % self.name)
 
     def nextEpisode(self):
-        logger.log(str(self.indexerid) + ": Finding the episode which airs next", logger.DEBUG)
+        logger.log(str(self.indexerid) + ': Finding the episode which airs next', logger.DEBUG)
 
         curDate = datetime.date.today().toordinal()
         if not self.nextaired or self.nextaired and curDate > self.nextaired:
             myDB = db.DBConnection()
             sqlResults = myDB.select(
-                "SELECT airdate, season, episode FROM tv_episodes WHERE showid = ? AND airdate >= ? AND status in (?,?) ORDER BY airdate ASC LIMIT 1",
-                [self.indexerid, datetime.date.today().toordinal(), UNAIRED, WANTED])
+                'SELECT airdate, season, episode FROM tv_episodes WHERE showid = ? AND airdate >= ? AND status in (?,?,?) ORDER BY airdate ASC LIMIT 1',
+                [self.indexerid, datetime.date.today().toordinal(), UNAIRED, WANTED, FAILED])
 
             if sqlResults == None or len(sqlResults) == 0:
-                logger.log(str(self.indexerid) + u": No episode found... need to implement a show status",
+                logger.log(str(self.indexerid) + u': No episode found... need to implement a show status',
                            logger.DEBUG)
-                self.nextaired = ""
+                self.nextaired = ''
             else:
-                logger.log(str(self.indexerid) + u": Found episode " + str(sqlResults[0]["season"]) + "x" + str(
-                    sqlResults[0]["episode"]), logger.DEBUG)
+                logger.log(str(self.indexerid) + u': Found episode ' + str(sqlResults[0]['season']) + 'x' + str(
+                    sqlResults[0]['episode']), logger.DEBUG)
                 self.nextaired = sqlResults[0]['airdate']
 
         return self.nextaired

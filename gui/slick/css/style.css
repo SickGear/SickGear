@@ -442,6 +442,7 @@ inc_top.tmpl
 	content:"\e613"
 }
 
+.sgicon-showqueue:before,
 .sgicon-refresh:before{
 	content:"\e614"
 }
