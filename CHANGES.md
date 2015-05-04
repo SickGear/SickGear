@@ -28,6 +28,7 @@
 * Add custom show lists to home page
 * Change travis to new container builds for faster unit testing
 * Add handling for shows that do not have a total number of episodes
+* Add support for country network image files to the Show List view
 * Change values used for date sorting on home page and episode view for improved compatibility with posix systems
 
 

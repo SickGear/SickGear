@@ -497,10 +497,6 @@ class MainHandler(WebHandler):
         else:
             t.layout = sickbeard.EPISODE_VIEW_LAYOUT
 
-        # network countries
-        cache_db = db.DBConnection('cache.db')
-        t.country_results = ['(%s)' % x['tvrage_country'] for x in cache_db.select('SELECT distinct(tvrage_country) FROM [network_conversions] where tvdb_network like "%(" || tvrage_country || ")" order by tvrage_country')]
-
         return t.respond()
 
     def _genericMessage(self, subject, message):
@@ -595,6 +591,21 @@ class Home(MainHandler):
                 t.showlists.append(['container%s' % index, 'Anime List', anime_results])
         else:
             t.showlists.append(['container%s' % index, 'Show List', sickbeard.showList])
+
+        if 'simple' != sickbeard.HOME_LAYOUT:
+            t.network_images = {}
+            networks = {}
+            images_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'network')
+            for item in sickbeard.showList:
+                network_name = 'nonetwork' if None is item.network else item.network.replace(u'\u00C9', 'e').lower()
+                if network_name not in networks:
+                    filename = u'%s.png' % network_name
+                    if not ek.ek(os.path.isfile, ek.ek(os.path.join, images_path, filename)):
+                        filename = u'%s.png' % re.sub(r'(?m)(.*)\s+\(\w{2}\)$', r'\1', network_name)
+                        if not ek.ek(os.path.isfile, ek.ek(os.path.join, images_path, filename)):
+                            filename = u'nonetwork.png'
+                    networks.setdefault(network_name, filename)
+                t.network_images.setdefault(item.indexerid, networks[network_name])
 
         t.submenu = self.HomeMenu()
         t.layout = sickbeard.HOME_LAYOUT
