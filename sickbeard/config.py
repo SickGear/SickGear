@@ -743,6 +743,7 @@ class ConfigMigrator():
     def _migrate_v10(self):
         # reset backlog frequency to default
         sickbeard.BACKLOG_FREQUENCY = sickbeard.DEFAULT_BACKLOG_FREQUENCY
+
     def _migrate_v11(self):
         if check_setting_int(self.config_obj, 'ANIME', 'anime_split_home', ''):
             sickbeard.SHOWLIST_TAGVIEW = 'anime'

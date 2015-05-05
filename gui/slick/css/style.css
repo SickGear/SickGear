@@ -350,6 +350,14 @@ inc_top.tmpl
 	-moz-osx-font-smoothing:grayscale
 }
 
+.dropdown [class^="sgicon-"], .dropdown [class*=" sgicon-"]{
+	margin-right:6px
+}
+
+#SubMenu [class^="sgicon-"], #SubMenu [class*=" sgicon-"]{
+	margin-right:3px
+}
+
 .sgicon-rss:before{
 	content:"\e622"
 }
@@ -1591,12 +1599,6 @@ td.col-subtitles{
 	text-align:center
 }
 
-th.col-simple,
-td.col-simple{
-	width: 150px;
-	text-align: center
-}
-
 th.col-status,
 td.col-status{
 	width:200px;
@@ -2084,7 +2086,7 @@ config*.tmpl
 
 .component-group-desc{
 	float:left;
-	width:250px;
+	width:240px;
 	padding-right:10px
 }
 
@@ -2164,7 +2166,7 @@ config*.tmpl
 .stepDiv span.component-title,
 #config span.component-title{
 	float:left;
-	width:172px;
+	width:182px;
 	margin-right:10px;
 	font-size:13px;
 	font-weight:bold
@@ -2180,7 +2182,7 @@ config*.tmpl
 	font-weight:normal;
 	display:block;
 	width:475px;
-	margin-left:182px
+	margin-left:192px
 }
 
 #config label.space-right{
