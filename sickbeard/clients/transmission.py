@@ -37,9 +37,9 @@ class TransmissionAPI(GenericClient):
         post_data = json.dumps({'method': 'session-get', })
 
         try:
-            self.response = self.session.post(self.url, data=post_data.encode('utf-8'), timeout=120,
+            response = self.session.post(self.url, data=post_data.encode('utf-8'), timeout=120,
                                               verify=sickbeard.TORRENT_VERIFY_CERT)
-            self.auth = re.search('X-Transmission-Session-Id:\s*(\w+)', self.response.text).group(1)
+            self.auth = re.search('X-Transmission-Session-Id:\s*(\w+)', response.text).group(1)
         except:
             return None
 
@@ -62,9 +62,9 @@ class TransmissionAPI(GenericClient):
         post_data = json.dumps({'arguments': arguments,
                                 'method': 'torrent-add',
         })
-        self._request(method='post', data=post_data)
+        response = self._request(method='post', data=post_data)
 
-        return self.response.json()['result'] == "success"
+        return response.json()['result'] == 'success'
 
     def _add_torrent_file(self, result):
 
@@ -75,9 +75,9 @@ class TransmissionAPI(GenericClient):
         post_data = json.dumps({'arguments': arguments,
                                 'method': 'torrent-add',
         })
-        self._request(method='post', data=post_data)
+        response = self._request(method='post', data=post_data)
 
-        return self.response.json()['result'] == "success"
+        return response.json()['result'] == 'success'
 
     def _set_torrent_ratio(self, result):
 
@@ -101,9 +101,9 @@ class TransmissionAPI(GenericClient):
         post_data = json.dumps({'arguments': arguments,
                                 'method': 'torrent-set',
         })
-        self._request(method='post', data=post_data)
+        response = self._request(method='post', data=post_data)
 
-        return self.response.json()['result'] == "success"
+        return response.json()['result'] == 'success'
 
     def _set_torrent_seed_time(self, result):
 
@@ -117,9 +117,9 @@ class TransmissionAPI(GenericClient):
             post_data = json.dumps({'arguments': arguments,
                                 'method': 'torrent-set',
             })
-            self._request(method='post', data=post_data)
+            response = self._request(method='post', data=post_data)
 
-            return self.response.json()['result'] == "success"
+            return response.json()['result'] == 'success'
         else:
             return True
 
@@ -139,12 +139,14 @@ class TransmissionAPI(GenericClient):
         else:
             arguments['priority-normal'] = []
 
-        post_data = json.dumps({'arguments': arguments,
-                                'method': 'torrent-set',
-        })
-        self._request(method='post', data=post_data)
+        post_data = json.dumps({
+            'arguments': arguments,
+            'method': 'torrent-set',
 
-        return self.response.json()['result'] == "success"
+        })
+        response = self._request(method='post', data=post_data)
+
+        return response.json()['result'] == 'success'
 
 
 api = TransmissionAPI()
