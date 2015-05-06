@@ -31,6 +31,7 @@
 * Add General Config/Interface/"Group show list shows into:"... to divide shows into groups on the Show List page
 * Change Show List progress bar code, smaller page load, efficient use of js render engine
 * Change values used for date sorting on home page and episode view for improved compatibility with posix systems
+* Change response handling in downloaders to simplify logic.
 
 [develop changelog]
 Fix issue changing a custom show list group name that is in use. The bug resulted in the db containing stale group names

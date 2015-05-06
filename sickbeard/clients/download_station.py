@@ -36,8 +36,8 @@ class DownloadStationAPI(GenericClient):
         auth_url = self.host + 'webapi/auth.cgi?api=SYNO.API.Auth&version=2&method=login&account=' + self.username + '&passwd=' + self.password + '&session=DownloadStation&format=sid'
 
         try:
-            self.response = self.session.get(auth_url, verify=False)
-            self.auth = self.response.json()['data']['sid']
+            response = self.session.get(auth_url, verify=False)
+            self.auth = response.json()['data']['sid']
         except:
             return None
 
@@ -53,9 +53,9 @@ class DownloadStationAPI(GenericClient):
                 }
         if sickbeard.TORRENT_PATH:
             data['destination'] = sickbeard.TORRENT_PATH
-        self._request(method='post', data=data)
+        response = self._request(method='post', data=data)
 
-        return self.response.json()['success']
+        return response.json()['success']
 
     def _add_torrent_file(self, result):
 
@@ -68,8 +68,8 @@ class DownloadStationAPI(GenericClient):
         if sickbeard.TORRENT_PATH:
             data['destination'] = sickbeard.TORRENT_PATH
         files = {'file':(result.name + '.torrent', result.content)}
-        self._request(method='post', data=data, files=files)
+        response = self._request(method='post', data=data, files=files)
 
-        return self.response.json()['success']
+        return response.json()['success']
 
 api = DownloadStationAPI()
