@@ -3,12 +3,12 @@
 #import re
 #from sickbeard import db, sbdatetime
 #from sickbeard.common import *
+##
+		</div><!-- /content -->
+	</div><!-- /contentWrapper -->
 
-	</div> <!-- /content -->
-</div> <!-- /contentWrapper -->
-
-<footer>
-	<div class="footer clearfix">
+	<footer>
+		<div class="footer clearfix">
 #set $my_db = $db.DBConnection()
 #set $today = str($datetime.date.today().toordinal())
 #set status_quality = '(%s)' % ','.join([str(quality) for quality in $Quality.SNATCHED + $Quality.SNATCHED_PROPER])
@@ -23,12 +23,12 @@
     % ($today, str($SKIPPED), str($WANTED))\
     + ' OR (status IN %s) OR (status IN %s))) AS ep_total FROM tv_episodes tv_eps LIMIT 1'\
     % ($status_quality, $status_download)
-#slurp
+##
 #set $sql_result = $my_db.select($sql_statement)
-#slurp
+##
 #set $shows_total = len($sickbeard.showList)
 #set $shows_active = len([show for show in $sickbeard.showList if 0 == show.paused and 'Ended' != show.status])
-#slurp
+##
 #if $sql_result:
     #set $ep_snatched = $sql_result[0]['ep_snatched']
     #set $ep_downloaded = $sql_result[0]['ep_downloaded']
@@ -39,7 +39,7 @@
     #set $ep_total = 0
 #end if
 #set $ep_percentage = '' if $ep_total == 0 else '(<span class="footerhighlight">%s%%</span>)' % re.sub(r'(\d+)(\.\d)\d+', r'\1\2', str((float($ep_downloaded)/float($ep_total))*100))
-#slurp
+##
 #try
     #set $localRoot = $sbRoot
 #except NotFound
@@ -50,9 +50,9 @@
 #except NotFound
     #set $localheader = ''
 #end try
-#slurp
-		<span class="footerhighlight">$shows_total</span> shows (<span class="footerhighlight">$shows_active</span> active)
-		| <span class="footerhighlight">$ep_downloaded</span><%=
+##
+			<span class="footerhighlight">$shows_total</span> shows (<span class="footerhighlight">$shows_active</span> active)
+			| <span class="footerhighlight">$ep_downloaded</span><%=
 (
 '',
 ' (<span class="footerhighlight">+%s</span> snatched)'\
@@ -60,12 +60,11 @@
     % (localRoot, str(ep_snatched))
 )[0 < ep_snatched]
 %>&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded $ep_percentage
-		| recent search: <span class="footerhighlight"><%= str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0] %></span>
-		| backlog search: <span class="footerhighlight"><%= str(sickbeard.backlogSearchScheduler.timeLeft()).split('.')[0] %></span>
-		| full backlog: <span class="footerhighlight"><%= sbdatetime.sbdatetime.sbfdate(sickbeard.backlogSearchScheduler.nextRun()) %></span>
-#slurp
-	</div>
-</footer>
-
+			| recent search: <span class="footerhighlight"><%= str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0] %></span>
+			| backlog search: <span class="footerhighlight"><%= str(sickbeard.backlogSearchScheduler.timeLeft()).split('.')[0] %></span>
+			| full backlog: <span class="footerhighlight"><%= sbdatetime.sbdatetime.sbfdate(sickbeard.backlogSearchScheduler.nextRun()) %>
+			</span>
+		</div>
+	</footer>
 </body>
 </html>

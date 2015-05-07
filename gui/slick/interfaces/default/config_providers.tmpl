@@ -2,13 +2,12 @@
 #from sickbeard.providers.generic import GenericProvider
 #from sickbeard.providers import thepiratebay
 #from sickbeard.helpers import anon_url, starify
-
+##
 #set global $title="Config - Providers"
 #set global $header="Search Providers"
-
 #set global $sbPath = '../..'
-
 #set global $topmenu = 'config'
+##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
@@ -17,9 +16,6 @@
 #else 
 	<h1 class="title">$title</h1>
 #end if
-
-#set $html_selected = ' selected="selected"'
-#set $html_checked = 'checked="checked" '
 
 <script type="text/javascript" src="$sbRoot/js/configProviders.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/config.js?$sbPID"></script>
@@ -63,6 +59,9 @@
 </script>
 #end if
 
+##
+#set $html_selected = ' selected="selected"'
+#set $html_checked = 'checked="checked" '
 <div id="config" class="search_providers">
 	<div id="config-content">
 
@@ -740,4 +739,5 @@
     jQuery('#config-components').tabs();
 //-->
 </script>
-#include $os.path.join($sickbeard.PROG_DIR,'gui/slick/interfaces/default/inc_bottom.tmpl')
+
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

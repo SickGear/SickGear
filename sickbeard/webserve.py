@@ -3237,7 +3237,8 @@ class Manage(MainHandler):
         toRemove = toRemove.split('|') if toRemove is not None else []
 
         for release in toRemove:
-            myDB.action('DELETE FROM failed WHERE release = ?', [release])
+            item = re.sub('_{3,}', '%', release)
+            myDB.action('DELETE FROM failed WHERE release like ?', [item])
 
         if toRemove:
             return self.redirect('/manage/failedDownloads/')

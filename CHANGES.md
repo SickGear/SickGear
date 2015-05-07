@@ -32,6 +32,7 @@
 * Change Show List progress bar code, smaller page load, efficient use of js render engine
 * Change values used for date sorting on home page and episode view for improved compatibility with posix systems
 * Change response handling in downloaders to simplify logic.
+* Change reduce html payload across page template files
 
 [develop changelog]
 Fix issue changing a custom show list group name that is in use. The bug resulted in the db containing stale group names

@@ -1,14 +1,14 @@
 #import sickbeard
 #from sickbeard.common import *
+##
 #set global $title = 'Mass Update'
 #set global $header = 'Mass Update'
-
 #set global $sbPath = '../..'
-
 #set global $topmenu = 'manage'
+##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
-
+##
 #set $has_any_sports = False
 #set $has_any_anime = False
 #set $has_any_flat_folders = False
@@ -35,6 +35,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 	},
 	type: 'text'
 });
+
 \$.tablesorter.addParser({
 	id: 'quality',
 	is: function(s) {
@@ -45,7 +46,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 	},
 	type: 'numeric'
 });
-
+##
 #set $columns_total = 15 - ((1, 0)[$has_any_sports] + (1, 0)[$has_any_anime] + (1, 0)[$has_any_flat_folders] + (1, 0)[$sickbeard.USE_SUBTITLES])
 #set $column_headers = [('false', False), ("'showNames'", False), ("'quality'", False),
                         ((None, "'sports'")[$has_any_sports], True),
@@ -61,9 +62,9 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
         #continue
     #end if
     #set $column += 1
-    $headers.append('\t\t\t%s: { sorter: %s }' % ($column, $c))
+    #set void = $headers.append('\t\t\t%s: { sorter: %s }' % ($column, $c))
     #if $img_extract
-        $text_extract.append('\t\t\t%s%s' % ($column, ": function(node) {return $(node).find('img').attr('alt')}"))
+        #set void = $text_extract.append('\t\t\t%s%s' % ($column, ": function(node) {return $(node).find('img').attr('alt')}"))
     #end if
 #end for
 
@@ -137,39 +138,39 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 #set $yes = 'yes16.png" title="Yes" alt="Yes'
 #for $curShow in $myShowList
     #set $option_state = '<input type="checkbox" class="%sCheck" id="%s-{0:s}"%s>'.format(str($curShow.indexerid))
-    #slurp
+    ##
     #set $curUpdate_disabled = $sickbeard.showQueueScheduler.action.isBeingUpdated($curShow)\
                                or $sickbeard.showQueueScheduler.action.isInUpdateQueue($curShow)
     #set $reason = $disabled_inprogress_tip % 'Update'
     #set $curUpdate = '%s>%s' % (('', $reason)[$curUpdate_disabled],
                                  $option_state % ('update', 'update', ('', $disabled + $reason)[$curUpdate_disabled]))
-    #slurp
+    ##
     #set $curRefresh_disabled = $sickbeard.showQueueScheduler.action.isBeingRefreshed($curShow)\
                                 or $sickbeard.showQueueScheduler.action.isInRefreshQueue($curShow)
     #set $reason = $disabled_inprogress_tip % 'Rescan'
     #set $curRefresh = '%s>%s' % (('', $reason)[$curRefresh_disabled],
                                   $option_state % ('refresh', 'refresh', ('', $disabled + $reason)[$curRefresh_disabled]))
-    #slurp
+    ##
     #set $curRename_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($curShow)\
                                or $sickbeard.showQueueScheduler.action.isInRenameQueue($curShow)
     #set $reason = $disabled_inprogress_tip % 'Rename'
     #set $curRename = '%s>%s' % (('', $reason)[$curRename_disabled],
                                  $option_state % ('rename', 'rename', ('', $disabled + $reason)[$curRename_disabled]))
-    #slurp
+    ##
     #set $subtitles_disabled = not $curShow.subtitles\
                                or $sickbeard.showQueueScheduler.action.isBeingSubtitled($curShow)\
                                or $sickbeard.showQueueScheduler.action.isInSubtitleQueue($curShow)
     #set $reason = ($disabled_inprogress_tip % 'Search subtitle', $disabled_subtitles_tip)[not $curShow.subtitles]
     #set $curSubtitle = '%s>%s' % (('', $reason)[$subtitles_disabled],
                                    $option_state % ('subtitle', 'subtitle', ('', $disabled + $reason)[$subtitles_disabled]))
-    #slurp
+    ##
     #set $curDelete_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($curShow)\
                                or $sickbeard.showQueueScheduler.action.isInRenameQueue($curShow)\
                                or $sickbeard.showQueueScheduler.action.isInRefreshQueue($curShow)
     #set $reason = $disabled_inprogress_tip % 'Rename or rescan'
     #set $curDelete = '%s>%s' % (('', $reason)[$curDelete_disabled],
                                  $option_state % ('delete', 'delete', ('', $disabled + $reason)[$curDelete_disabled]))
-    #slurp
+    ##
     #set $curRemove_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($curShow)\
                                or $sickbeard.showQueueScheduler.action.isInRenameQueue($curShow)\
                                or $sickbeard.showQueueScheduler.action.isInRefreshQueue($curShow)
