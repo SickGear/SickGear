@@ -557,6 +557,10 @@ home.tmpl
 	margin-right:5px
 }
 
+.imgsmallposter.small{
+	font-size:100%
+}
+
 #HomeLayout{margin-top:-35px}
 #HomeLayout.not-poster{height:75px}
 #HomeLayout div.not-poster{position:relative;top:38px}
@@ -626,6 +630,17 @@ home.tmpl
 	-webkit-border-radius:3px;
 	border-radius:3px
 }
+
+.yes,
+.no{
+	display:inline-block;
+	vertical-align:middle;
+	width:16px;
+	height:16px
+}
+
+.yes{background-image:url("../images/yes16.png")}
+.no{background-image:url("../images/no16.png")}
 
 #container{
 	margin:0 auto
@@ -815,6 +830,21 @@ td.tvShow a{
 td.tvShow a:hover{
 	cursor:pointer;
 	color:#428BCA
+}
+
+
+#rename th, #rename td,
+#failed th, #failed td,
+#backlog th, #backlog td,
+#show-list th, #show-list td {
+	text-align:center
+}
+
+#rename th.text-left, #rename td.text-left,
+#failed th.text-left, #failed td.text-left,
+#backlog th.text-left, #backlog td.text-left,
+#show-list th.text-left, #show-list td.text-left {
+	text-align:left
 }
 
 /* =======================================================================
@@ -1615,6 +1645,10 @@ td.col-search{
 	width:46px
 }
 
+#testRenameTable tbody td.col-checkbox,
+#testRenameTable tbody td.col-ep {width:1%;vertical-align:middle}
+#testRenameTable tbody td.col-name {width:49%}
+
 .input-scene{
 	height:20px;
 	line-height:1.5;
@@ -1631,7 +1665,7 @@ td.col-search{
 episodeView.tmpl
 ========================================================================== */
 
-.sort_data{
+.sort-data{
 	display:none
 }
 

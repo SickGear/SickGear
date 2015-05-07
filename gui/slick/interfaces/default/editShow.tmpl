@@ -4,17 +4,13 @@
 #from sickbeard import exceptions
 #from sickbeard import scene_exceptions
 #import sickbeard.blackandwhitelist
-
+##
 #set global $title = 'Edit ' + $show.name
 #set global $header = 'Edit ' + $show.name
-
 #set global $sbPath = '..'
-#set html_checked = ' checked="checked"'
-#set html_disabled = ' disabled="disabled"'
-
 #set global $topmenu = 'home'
+##
 #import os.path
-
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
@@ -61,6 +57,9 @@
 	<h1 class="title">$title</h1>
 #end if
 
+##
+#set $html_checked = ' checked="checked"'
+#set $html_disabled = ' disabled="disabled"'
 <form action="editShow" method="post" id="addShowForm">
 <input type="hidden" name="show" value="$show.indexerid">
 
@@ -317,4 +316,5 @@
 //-->
 </script>
 </div>
+
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

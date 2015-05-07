@@ -32,6 +32,7 @@
 	<meta name="msapplication-TileColor" content="#2b5797">
 	<meta name="msapplication-TileImage" content="$sbRoot/images/ico/mstile-144x144.png">
 	<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
+
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap.css?$sbPID"/>
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/browser.css?$sbPID" />
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/jquery-ui-1.10.4.custom.css?$sbPID" />
@@ -64,7 +65,7 @@
 #end if
 	<script type="text/javascript" charset="utf-8">
 	<!--
-		var sbRoot = '$sbRoot', anonURL = '$sickbeard.ANON_REDIRECT', themeSpinner = '#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#'
+		var sbRoot = '$sbRoot', anonURL = '$sickbeard.ANON_REDIRECT', themeSpinner = '#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#',
 			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top" />';
 	//-->
 	</script>
@@ -74,7 +75,7 @@
 	<script type="text/javascript">
 	<!--
 #raw
-		function initActions() {
+		function initActions(){
 			$('#SubMenu a[href*="/home/restart/"]').addClass('btn restart').html('<i class="sgicon-restart"></i>Restart');
 			$('#SubMenu a[href*="/home/shutdown/"]').addClass('btn shutdown').html('<i class="sgicon-shutdown"></i>Shutdown');
 			$('#SubMenu a[href*="/home/logout/"]').addClass('btn').html('<i class="sgicon-logout"></i>Logout');
@@ -108,12 +109,11 @@
 			$('#SubMenu a[href$="/home/updateKODI/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
 		}
 #end raw	
-		\$(document).ready(function() {
-			
-			initActions();
-			\$("#NAV$topmenu").addClass("active");
-			\$('.dropdown-toggle').dropdownHover();
 
+		\$(document).ready(function(){
+			initActions();
+			\$('#NAV$topmenu').addClass('active');
+			\$('.dropdown-toggle').dropdownHover();
 		});
 	//-->
 	</script>
@@ -204,7 +204,6 @@
 							<li><a href="$sbRoot/config/general/" tabindex="$tab#set $tab += 1#"><i class="sgicon-config"></i>General</a></li>
 							<li><a href="$sbRoot/config/search/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Settings</a></li>
 							<li><a href="$sbRoot/config/providers/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Providers</a></li>
-							<li><a href="$sbRoot/config/providers/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Providers</a></li>
 							<li><a href="$sbRoot/config/subtitles/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Subtitles Settings</a></li>
 							<li><a href="$sbRoot/config/postProcessing/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Post Processing</a></li>
 							<li><a href="$sbRoot/config/notifications/" tabindex="$tab#set $tab += 1#"><i class="sgicon-notification"></i>Notifications</a></li>
@@ -241,19 +240,20 @@
                 #set $inner_first = True
                 #for $cur_link in $menuItem.path
                     #if $inner_first then '' else '&middot; '
-                    #slurp
+                    ##
 			<a class="inner" href="$sbRoot/$menuItem.path[$cur_link]">$cur_link</a>
                     #set $inner_first = False
                 #end for
             #else
-                #slurp
+                ##
 			<a href="$sbRoot/$menuItem.path"#if 'confirm' in $menuItem then ' class="confirm"' else ''# tabindex="$tab#set $tab += 1#">$menuItem.title</a>
                 #set $first = False
             #end if
         #end if
     #end for
 		</span>
-	</div>
+	</div><!-- /SubMenu -->
+
 #end if
 ##
 #if $sickbeard.NEWEST_VERSION_STRING
@@ -264,12 +264,12 @@
 ##
 #set $items = []
 #try
-    $items.append($topmenu)
+    #set void = $items.append($topmenu)
 #except (NameError, NotFound)
     #pass
 #end try
 #try
-    $items.append($layout)
+    #set void = $items.append($layout)
 #except (NameError, NotFound)
     #pass
 #end try

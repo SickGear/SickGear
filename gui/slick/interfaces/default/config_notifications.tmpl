@@ -1,13 +1,12 @@
 #import sickbeard
 #import re
 #from sickbeard.helpers import anon_url, starify
-
+##
 #set global $title = 'Config - Notifications'
 #set global $header = 'Notifications'
-
 #set global $sbPath = '../..'
-
 #set global $topmenu = 'config'
+##
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/configNotifications.js?$sbPID"></script>
@@ -43,7 +42,7 @@
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
 									<input type="checkbox" class="enabler" name="use_xbmc" id="use_xbmc" #if $sickbeard.USE_XBMC then "checked=\"checked\"" else ""# />
-									<p>should SickGear send XBMC commands ?<p>
+									<p>should SickGear send XBMC commands ?</p>
 								</span>
 							</label>
 						</div>
@@ -167,7 +166,7 @@
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
 									<input type="checkbox" class="enabler" name="use_kodi" id="use_kodi" #if $sickbeard.USE_KODI then "checked=\"checked\"" else ""# />
-									<p>should SickGear send Kodi commands ?<p>
+									<p>should SickGear send Kodi commands ?</p>
 								</span>
 							</label>
 						</div>
@@ -1248,7 +1247,7 @@
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
 									<input type="checkbox" class="enabler" name="use_pushalot" id="use_pushalot" #if $sickbeard.USE_PUSHALOT then "checked=\"checked\"" else ""# />
-									<p>should SickGear send Pushalot notifications ?
+									<p>should SickGear send Pushalot notifications ?</p>
 								</span>
 							</label>
 						</div>
@@ -1432,7 +1431,7 @@
 									<span class="component-title">Step One</span>
 								</label>
 								<label>
-									<span style="font-size: 11px;">Click the "Request Authorization" button.<br/> This will open a new page containing an auth key.<br/> <b>Note:</b> if nothing happens check your popup blocker.<br/></span>
+									<span style="font-size:11px">Click the "Request Authorization" button.<br/> This will open a new page containing an auth key.<br/> <b>Note:</b> if nothing happens check your popup blocker.<br/></span>
 									<input class="btn" type="button" value="Request Authorization" id="twitterStep1" />
 								</label>
 							</div>
@@ -1737,9 +1736,11 @@
 </div>
 
 <div class="clearfix"></div>
+
 <script type="text/javascript" charset="utf-8">
 <!--
 	jQuery('#config-components').tabs();
 //-->
 </script>
+
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
