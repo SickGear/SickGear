@@ -126,7 +126,7 @@ fonts
 	font-style:italic
 }
 
-/* SickGear Icons */
+/* Droid Sans */
 @font-face{
 	font-family:'sgicons';
 	src:url('fonts/sgicons.eot');
@@ -836,14 +836,14 @@ td.tvShow a:hover{
 #rename th, #rename td,
 #failed th, #failed td,
 #backlog th, #backlog td,
-#show-list th, #show-list td {
+#show-list th, #show-list td{
 	text-align:center
 }
 
 #rename th.text-left, #rename td.text-left,
 #failed th.text-left, #failed td.text-left,
 #backlog th.text-left, #backlog td.text-left,
-#show-list th.text-left, #show-list td.text-left {
+#show-list th.text-left, #show-list td.text-left{
 	text-align:left
 }
 
@@ -1097,17 +1097,16 @@ home_postprocess.tmpl
 ========================================================================== */
 
 #postProcess{
-	width:800px;
-	padding-top:10px;
+	width:650px;
+	padding-top:30px;
 	margin-right:auto;
 	margin-left:auto
 }
 
-
 /* =======================================================================
 displayShow.tmpl
 ========================================================================== */
-body#display-show.back-art {
+body#display-show.back-art{
 	color:#fff
 }
 
@@ -1342,11 +1341,11 @@ span.imdbstars, span.imdbstars > *{
 	text-shadow:5px 5px 10px #000
 }
 
-.qtip-maxwidth {
+.qtip-maxwidth{
 	max-width:1000px
 }
 
-.season-status {
+.season-status{
 	font-size:12px;
 	vertical-align:middle
 }
@@ -1385,9 +1384,9 @@ a.service img{
 	border-color:rgba(0,0,0,0.5)
 }
 
-.back-art.translucent.pro .tvshowImg {
-	opacity: 0.85;
-	filter: alpha(opacity=85)
+.back-art.translucent.pro .tvshowImg{
+	opacity:0.85;
+	filter:alpha(opacity=85)
 }
 
 #checkboxControls{
@@ -1646,8 +1645,8 @@ td.col-search{
 }
 
 #testRenameTable tbody td.col-checkbox,
-#testRenameTable tbody td.col-ep {width:1%;vertical-align:middle}
-#testRenameTable tbody td.col-name {width:49%}
+#testRenameTable tbody td.col-ep{width:1%;vertical-align:middle}
+#testRenameTable tbody td.col-name{width:49%}
 
 .input-scene{
 	height:20px;
@@ -2727,7 +2726,7 @@ div.blackwhitelist.pool input{
 	margin:5px 0 !important
 }
 div.blackwhitelist select{
-	margin :0 !important
+	margin:0 !important
 }
 
 div.blackwhitelist .inuse{

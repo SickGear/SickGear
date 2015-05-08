@@ -232,35 +232,32 @@ def searchIndexerForShowID(regShowName, indexer=None, indexer_id=None, ui=None):
         t = sickbeard.indexerApi(i).indexer(**lINDEXER_API_PARMS)
 
         for name in showNames:
-            logger.log(u"Trying to find " + name + " on " + sickbeard.indexerApi(i).name, logger.DEBUG)
+            logger.log(u'Trying to find ' + name + ' on ' + sickbeard.indexerApi(i).name, logger.DEBUG)
 
             try:
-                search = t[indexer_id] if indexer_id else t[name]
+                result = t[indexer_id] if indexer_id else t[name]
             except:
                 continue
 
-            try:
-                seriesname = search.seriesname
-            except:
-                seriesname = None
-
-            try:
-                series_id = search.id
-            except:
-                series_id = None
+            seriesname = series_id = False
+            for search in result:
+                seriesname = search['seriesname']
+                series_id = search['id']
+                if seriesname and series_id:
+                    break
 
             if not (seriesname and series_id):
                 continue
 
-            if str(name).lower() == str(seriesname).lower and not indexer_id:
-                return (seriesname, i, int(series_id))
-            elif int(indexer_id) == int(series_id):
-                return (seriesname, i, int(indexer_id))
+            if None is indexer_id and str(name).lower() == str(seriesname).lower():
+                return seriesname, i, int(series_id)
+            elif None is not indexer_id and int(indexer_id) == int(series_id):
+                return seriesname, i, int(indexer_id)
 
         if indexer:
             break
 
-    return (None, None, None)
+    return None, None, None
 
 
 def sizeof_fmt(num):
@@ -909,31 +906,35 @@ def full_sanitizeSceneName(name):
     return re.sub('[. -]', ' ', sanitizeSceneName(name)).lower().lstrip()
 
 
-def get_show(name, tryIndexers=False):
+def get_show(name, try_indexers=False, try_scene_exceptions=False):
     if not sickbeard.showList or None is name:
         return
 
-    showObj = None
-    fromCache = False
+    show_obj = None
+    from_cache = False
 
     try:
-        # check cache for show
         cache = sickbeard.name_cache.retrieveNameFromCache(name)
         if cache:
-            fromCache = True
-            showObj = findCertainShow(sickbeard.showList, int(cache))
+            from_cache = True
+            show_obj = findCertainShow(sickbeard.showList, cache)
 
-        if not showObj and tryIndexers:
-            showObj = findCertainShow(sickbeard.showList,
-                                      searchIndexerForShowID(full_sanitizeSceneName(name), ui=classes.ShowListUI)[2])
+        if not show_obj and try_scene_exceptions:
+            indexer_id = sickbeard.scene_exceptions.get_scene_exception_by_name(name)[0]
+            if indexer_id:
+                show_obj = findCertainShow(sickbeard.showList, indexer_id)
+
+        if not show_obj and try_indexers:
+            show_obj = findCertainShow(sickbeard.showList,
+                                       searchIndexerForShowID(full_sanitizeSceneName(name), ui=classes.ShowListUI)[2])
 
         # add show to cache
-        if showObj and not fromCache:
-            sickbeard.name_cache.addNameToCache(name, showObj.indexerid)
+        if show_obj and not from_cache:
+            sickbeard.name_cache.addNameToCache(name, show_obj.indexerid)
     except Exception as e:
-        logger.log(u"Error when attempting to find show: " + name + " in SickGear: " + str(e), logger.DEBUG)
+        logger.log(u'Error when attempting to find show: ' + name + ' in SickGear: ' + str(e), logger.DEBUG)
 
-    return showObj
+    return show_obj
 
 
 def is_hidden_folder(folder):

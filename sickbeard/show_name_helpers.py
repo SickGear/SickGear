@@ -237,7 +237,7 @@ def determineReleaseName(dir_name=None, nzb_name=None):
     """Determine a release name from an nzb and/or folder name"""
 
     if nzb_name is not None:
-        logger.log(u"Using nzb_name for release name.")
+        logger.log(u'Using nzb name for release name.')
         return nzb_name.rpartition('.')[0]
 
     if dir_name is None:

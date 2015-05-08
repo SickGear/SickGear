@@ -31,8 +31,21 @@
 * Add General Config/Interface/"Group show list shows into:"... to divide shows into groups on the Show List page
 * Change Show List progress bar code, smaller page load, efficient use of js render engine
 * Change values used for date sorting on home page and episode view for improved compatibility with posix systems
-* Change response handling in downloaders to simplify logic.
+* Change response handling in downloaders to simplify logic
 * Change reduce html payload across page template files
+* Change to post process files ordered largest to smallest and tidied PP logging output
+* Add "then trash subdirs and files" to the Process method "Move" on the manual post process page
+* Add using show scene exceptions with post processing
+* Change overhaul processTV into a thread safe class
+* Change postProcessor and processTV to PEP8 standards
+* Change overhaul Manual Post-Processing page in line with layout style and improve texts
+* Change Force Processes enabled, only the largest video file of many will be processed instead of all files
+* Change visual ui of Postprocessing results to match the logs and errors view
+* Change remove ugly printing of episode object during PP seen in external apps like sabnzbd
+* Change to streamline output toward actual work done instead of showing all vars
+* Change pp report items from describing actions about to happen to instead detail the actual outcome of actions
+* Add clarity to the output of a successful post process but with some issues rather than "there were problems"
+* Add a conclusive bottom line to the pp result report
 
 [develop changelog]
 Fix issue changing a custom show list group name that is in use. The bug resulted in the db containing stale group names
