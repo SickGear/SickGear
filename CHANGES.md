@@ -36,6 +36,7 @@
 * Change to post process files ordered largest to smallest and tidied PP logging output
 * Add "then trash subdirs and files" to the Process method "Move" on the manual post process page
 * Add using show scene exceptions with post processing
+* Change URL of scene exceptions file for TVRage indexer
 * Change overhaul processTV into a thread safe class
 * Change postProcessor and processTV to PEP8 standards
 * Change overhaul Manual Post-Processing page in line with layout style and improve texts
