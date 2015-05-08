@@ -1312,7 +1312,7 @@ class CMD_PostProcess(ApiCall):
         if not self.type:
             self.type = 'manual'
 
-        data = processTV.processDir(self.path, process_method=self.process_method, force=self.force_replace, is_priority=self.is_priority, failed=False, type=self.type)
+        data = processTV.processDir(self.path, process_method=self.process_method, force=self.force_replace, force_replace=self.is_priority, failed=False, type=self.type)
 
         if not self.return_data:
             data = ""

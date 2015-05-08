@@ -1911,72 +1911,49 @@ class Home(MainHandler):
                           sceneEpisode=None, sceneAbsolute=None):
 
         # sanitize:
-        if forSeason in ['null', '']: forSeason = None
-        if forEpisode in ['null', '']: forEpisode = None
-        if forAbsolute in ['null', '']: forAbsolute = None
-        if sceneSeason in ['null', '']: sceneSeason = None
-        if sceneEpisode in ['null', '']: sceneEpisode = None
-        if sceneAbsolute in ['null', '']: sceneAbsolute = None
+        show = None if show in [None, 'null', ''] else int(show)
+        indexer = None if indexer in [None, 'null', ''] else int(indexer)
 
-        showObj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
+        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, show)
 
-        if showObj.is_anime:
-            result = {
-                'success': True,
-                'forAbsolute': forAbsolute,
-            }
+        if not show_obj.is_anime:
+            for_season = None if forSeason in [None, 'null', ''] else int(forSeason)
+            for_episode = None if forEpisode in [None, 'null', ''] else int(forEpisode)
+            scene_season = None if sceneSeason in [None, 'null', ''] else int(sceneSeason)
+            scene_episode = None if sceneEpisode in [None, 'null', ''] else int(sceneEpisode)
+            action_log = u'Set episode scene numbering to %sx%s for episode %sx%s of "%s"'\
+                         % (scene_season, scene_episode, for_season, for_episode, show_obj.name)
+            ep_args = {'show': show, 'season': for_season, 'episode': for_episode}
+            scene_args = {'indexer_id': show, 'indexer': indexer, 'season': for_season, 'episode': for_episode,
+                          'sceneSeason': scene_season, 'sceneEpisode': scene_episode}
+            result = {'forSeason': for_season, 'forEpisode': for_episode, 'sceneSeason': None, 'sceneEpisode': None}
         else:
-            result = {
-                'success': True,
-                'forSeason': forSeason,
-                'forEpisode': forEpisode,
-            }
+            for_absolute = None if forAbsolute in [None, 'null', ''] else int(forAbsolute)
+            scene_absolute = None if sceneAbsolute in [None, 'null', ''] else int(sceneAbsolute)
+            action_log = u'Set absolute scene numbering to %s for episode %s of "%s"'\
+                         % (scene_absolute, for_absolute, show_obj.name)
+            ep_args = {'show': show, 'absolute': for_absolute}
+            scene_args = {'indexer_id': show, 'indexer': indexer, 'absolute_number': for_absolute,
+                          'sceneAbsolute': scene_absolute}
+            result = {'forAbsolute': for_absolute, 'sceneAbsolute': None}
 
-        # retrieve the episode object and fail if we can't get one
-        if showObj.is_anime:
-            ep_obj = self._getEpisode(show, absolute=forAbsolute)
+        ep_obj = self._getEpisode(**ep_args)
+        result['success'] = not isinstance(ep_obj, str)
+        if result['success']:
+            logger.log(action_log, logger.DEBUG)
+            set_scene_numbering(**scene_args)
+            show_obj.flushEpisodes()
         else:
-            ep_obj = self._getEpisode(show, forSeason, forEpisode)
-
-        if isinstance(ep_obj, str):
-            result['success'] = False
             result['errorMessage'] = ep_obj
-        elif showObj.is_anime:
-            logger.log(u'setAbsoluteSceneNumbering for %s from %s to %s' %
-                       (show, forAbsolute, sceneAbsolute), logger.DEBUG)
 
-            show = int(show)
-            indexer = int(indexer)
-            forAbsolute = int(forAbsolute)
-            if sceneAbsolute is not None: sceneAbsolute = int(sceneAbsolute)
-
-            set_scene_numbering(show, indexer, absolute_number=forAbsolute, sceneAbsolute=sceneAbsolute)
+        if not show_obj.is_anime:
+            scene_numbering = get_scene_numbering(show, indexer, for_season, for_episode)
+            if scene_numbering:
+                (result['sceneSeason'], result['sceneEpisode']) = scene_numbering
         else:
-            logger.log(u'setEpisodeSceneNumbering for %s from %sx%s to %sx%s' %
-                       (show, forSeason, forEpisode, sceneSeason, sceneEpisode), logger.DEBUG)
-
-            show = int(show)
-            indexer = int(indexer)
-            forSeason = int(forSeason)
-            forEpisode = int(forEpisode)
-            if sceneSeason is not None: sceneSeason = int(sceneSeason)
-            if sceneEpisode is not None: sceneEpisode = int(sceneEpisode)
-
-            set_scene_numbering(show, indexer, season=forSeason, episode=forEpisode, sceneSeason=sceneSeason,
-                                sceneEpisode=sceneEpisode)
-
-        if showObj.is_anime:
-            sn = get_scene_absolute_numbering(show, indexer, forAbsolute)
-            if sn:
-                result['sceneAbsolute'] = sn
-            else:
-                result['sceneAbsolute'] = None
-        else:
-            sn = get_scene_numbering(show, indexer, forSeason, forEpisode)
-            if sn:
-                (result['sceneSeason'], result['sceneEpisode']) = sn
-            else:
-                (result['sceneSeason'], result['sceneEpisode']) = (None, None)
+            scene_numbering = get_scene_absolute_numbering(show, indexer, for_absolute)
+            if scene_numbering:
+                result['sceneAbsolute'] = scene_numbering
 
         return json.dumps(result)
 
@@ -2024,33 +2001,22 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       is_priority=None, failed='0', type='auto', *args, **kwargs):
-
-        if failed == '0':
-            failed = False
-        else:
-            failed = True
-
-        if force in ['on', '1']:
-            force = True
-        else:
-            force = False
-
-        if is_priority in ['on', '1']:
-            is_priority = True
-        else:
-            is_priority = False
+                       force_replace=None, failed='0', type='auto', **kwargs):
 
         if not dir:
             self.redirect('/home/postprocess/')
         else:
-            result = processTV.processDir(dir, nzbName, process_method=process_method, force=force,
-                                          is_priority=is_priority, failed=failed, type=type)
-            if quiet is not None and int(quiet) == 1:
-                return result
+            result = processTV.processDir(dir, nzbName, process_method=process_method, type=type,
+                                          cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
+                                          force=force in ['on', '1'],
+                                          force_replace=force_replace in ['on', '1'],
+                                          failed=not '0' == failed)
 
-            result = result.replace('\n', '<br />\n')
-            return self._genericMessage('Postprocessing results', result)
+            result = re.sub(r'(?i)<br(?:[\s/]+)>', '\n', result)
+            if None is not quiet and 1 == int(quiet):
+                return u'%s' % re.sub('(?i)<a[^>]+>([^<]+)<[/]a>', r'\1', result)
+
+            return self._genericMessage('Postprocessing results', u'<pre>%s</pre>' % result)
 
 
 class NewHomeAddShows(Home):
