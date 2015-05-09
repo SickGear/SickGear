@@ -19,7 +19,7 @@
 <div class="align-left"><pre>
 #if $classes.ErrorViewer.errors
     #for $curError in sorted($classes.ErrorViewer.errors, key=lambda error: error.time, reverse=True)[:500]
-        #echo '%s %s' % ($curError.time, $curError.message)
+        #echo '%s %s\n' % ($curError.time, $curError.message)
     #end for
 #end if
 </pre></div>
