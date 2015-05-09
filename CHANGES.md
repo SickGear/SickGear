@@ -48,6 +48,7 @@
 * Change pp report items from describing actions about to happen to instead detail the actual outcome of actions
 * Add clarity to the output of a successful post process but with some issues rather than "there were problems"
 * Add a conclusive bottom line to the pp result report
+* Change location of startup scripts to a dedicated folder
 
 [develop changelog]
 Fix issue changing a custom show list group name that is in use. The bug resulted in the db containing stale group names
