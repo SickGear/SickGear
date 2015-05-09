@@ -57,6 +57,7 @@ down select to dynamically hide/show the list of group names and change the resp
 insert space between items in the list of group names for readability. Notify user if an attempt to remove an in use
 group name is prevented. PEP8 and code cleanup to SG conventions. Removed fixed column widths, this means multiple groups
 have different column widths, but the original approach is preferred because fixed widths look bad with long show titles.
+Add newlines between error log lines on the Logs & Errors page.
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)
