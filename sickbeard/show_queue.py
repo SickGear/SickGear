@@ -294,13 +294,13 @@ class QueueItemAdd(ShowQueueItem):
 
             # set up initial values
             self.show.location = self.showDir
-            self.show.subtitles = self.subtitles if self.subtitles != None else sickbeard.SUBTITLES_DEFAULT
+            self.show.subtitles = self.subtitles if None is not self.subtitles else sickbeard.SUBTITLES_DEFAULT
             self.show.quality = self.quality if self.quality else sickbeard.QUALITY_DEFAULT
-            self.show.flatten_folders = self.flatten_folders if self.flatten_folders != None else sickbeard.FLATTEN_FOLDERS_DEFAULT
-            self.show.anime = self.anime if self.anime != None else sickbeard.ANIME_DEFAULT
-            self.show.scene = self.scene if self.scene != None else sickbeard.SCENE_DEFAULT
-            self.show.paused = self.paused if self.paused != None else False
-            self.show.tag = self.tag
+            self.show.flatten_folders = self.flatten_folders if None is not self.flatten_folders else sickbeard.FLATTEN_FOLDERS_DEFAULT
+            self.show.anime = self.anime if None is not self.anime else sickbeard.ANIME_DEFAULT
+            self.show.scene = self.scene if None is not self.scene else sickbeard.SCENE_DEFAULT
+            self.show.paused = self.paused if None is not self.paused else False
+            self.show.tag = self.tag if None is not self.tag else 'Show List'
 
             if self.show.anime:
                 self.show.release_groups = BlackAndWhiteList(self.show.indexerid)

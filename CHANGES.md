@@ -50,14 +50,18 @@
 * Add a conclusive bottom line to the pp result report
 
 [develop changelog]
-Fix issue changing a custom show list group name that is in use. The bug resulted in the db containing stale group names
-but worse, orphaned shows disappeared from the Show List page entirely. Changed texts to describe this feature more
-clearly from tag to group names. Repositioned this feature on the add show, edit show, and config pages. Change the drop
-down select to dynamically hide/show the list of group names and change the respectively selected help texts. Change
-insert space between items in the list of group names for readability. Notify user if an attempt to remove an in use
-group name is prevented. PEP8 and code cleanup to SG conventions. Removed fixed column widths, this means multiple groups
-have different column widths, but the original approach is preferred because fixed widths look bad with long show titles.
-Add newlines between error log lines on the Logs & Errors page.
+* Fix issue, when adding existing shows, set its default group to ensure it now appears on the show list page
+* Fix issue, changing a custom show list group name that is in use. The issue left db records with stale group names,
+  worse, orphaned shows disappeared from the Show List page entirely
+* Changed texts to describe this feature more clearly from tag to group names
+* Repositioned this feature on the add show, edit show, and config pages
+* Change the drop down select to dynamically hide/show the group name list, and change respectively selected help texts
+* Change insert space between items in the list of group names for readability
+* Notify user if an attempt to remove an in use group name is prevented
+* PEP8 and code cleanup to SG conventions
+* Removed fixed column widths, this means multiple groups have different column widths, and this original approach is
+  preferred because fixed widths look bad with long show titles
+* Add newlines between error log lines on the Logs & Errors page removed as a biproduct of trimming html output
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)
