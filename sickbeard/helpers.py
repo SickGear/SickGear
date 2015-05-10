@@ -18,7 +18,6 @@
 
 from __future__ import with_statement
 import getpass
-
 import os
 import re
 import shutil
@@ -27,13 +26,11 @@ import stat
 import tempfile
 import time
 import traceback
-import urllib
 import hashlib
 import httplib
 import urlparse
 import uuid
 import base64
-import zipfile
 import datetime
 
 import sickbeard
@@ -41,6 +38,7 @@ import subliminal
 import adba
 import requests
 import requests.exceptions
+
 
 try:
     import json
@@ -52,15 +50,10 @@ try:
 except ImportError:
     import elementtree.ElementTree as etree
 
-from xml.dom.minidom import Node
-
 from sickbeard.exceptions import MultipleShowObjectsException, ex
-from sickbeard import logger, classes
+from sickbeard import logger, classes, db, notifiers, clients
 from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions
-from sickbeard import db
 from sickbeard import encodingKludge as ek
-from sickbeard import notifiers
-from sickbeard import clients
 
 from lib.cachecontrol import CacheControl, caches
 from itertools import izip, cycle
@@ -115,18 +108,6 @@ def remove_non_release_groups(name):
 
 
 def replaceExtension(filename, newExt):
-    '''
-    >>> replaceExtension('foo.avi', 'mkv')
-    'foo.mkv'
-    >>> replaceExtension('.vimrc', 'arglebargle')
-    '.vimrc'
-    >>> replaceExtension('a.b.c', 'd')
-    'a.b.d'
-    >>> replaceExtension('', 'a')
-    ''
-    >>> replaceExtension('foo.bar', '')
-    'foo.'
-    '''
     sepFile = filename.rpartition(".")
     if sepFile[0] == "":
         return filename
@@ -172,17 +153,6 @@ def isRarFile(filename):
 
 
 def sanitizeFileName(name):
-    '''
-    >>> sanitizeFileName('a/b/c')
-    'a-b-c'
-    >>> sanitizeFileName('abc')
-    'abc'
-    >>> sanitizeFileName('a"b')
-    'ab'
-    >>> sanitizeFileName('.a.b..')
-    'a.b'
-    '''
-
     # remove bad chars from the filename
     name = re.sub(r'[\\/\*]', '-', name)
     name = re.sub(r'[:"<>|?]', '', name)
@@ -199,8 +169,8 @@ def _remove_file_failed(file):
     except:
         pass
 
-def findCertainShow(showList, indexerid):
 
+def findCertainShow(showList, indexerid):
     results = []
     if showList and indexerid:
         results = filter(lambda x: int(x.indexerid) == int(indexerid), showList)
@@ -209,6 +179,7 @@ def findCertainShow(showList, indexerid):
         return results[0]
     elif len(results) > 1:
         raise MultipleShowObjectsException()
+
 
 def makeDir(path):
     if not ek.ek(os.path.isdir, path):
@@ -261,18 +232,6 @@ def searchIndexerForShowID(regShowName, indexer=None, indexer_id=None, ui=None):
 
 
 def sizeof_fmt(num):
-    '''
-    >>> sizeof_fmt(2)
-    '2.0 bytes'
-    >>> sizeof_fmt(1024)
-    '1.0 KB'
-    >>> sizeof_fmt(2048)
-    '2.0 KB'
-    >>> sizeof_fmt(2**20)
-    '1.0 MB'
-    >>> sizeof_fmt(1234567)
-    '1.2 MB'
-    '''
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
@@ -567,7 +526,7 @@ def get_absolute_number_from_season_and_episode(show, season, episode):
 
     if season and episode:
         myDB = db.DBConnection()
-        sql = "SELECT * FROM tv_episodes WHERE showid = ? and season = ? and episode = ?"
+        sql = 'SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?'
         sqlResults = myDB.select(sql, [show.indexerid, season, episode])
 
         if len(sqlResults) == 1:
@@ -597,7 +556,8 @@ def get_all_episodes_from_absolute_number(show, absolute_numbers, indexer_id=Non
                 ep = show.getEpisode(None, None, absolute_number=absolute_number)
                 if ep:
                     episodes.append(ep.episode)
-                    season = ep.season  # this will always take the last found seson so eps that cross the season border are not handeled well
+                    season = ep.season  # this will always take the last found season so eps that cross the season
+                                        # border are not handled well
 
     return (season, episodes)
 
@@ -863,8 +823,9 @@ def starify(text, verify=False):
     If verify is true, return true if text is a star block created text else return false.
     """
     return ((('%s%s' % (text[:len(text) / 2], '*' * (len(text) / 2))),
-            ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
+             ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
             set('*') == set((text[len(text) / 2:], text[4:-4])[12 <= len(text)]))[verify]
+
 
 """
 Encryption
@@ -1337,7 +1298,7 @@ def human(size):
         # because I really hate unnecessary plurals
         return "1 byte"
 
-    suffixes_table = [('bytes', 0), ('KB', 0), ('MB', 1), ('GB', 2),('TB', 2), ('PB', 2)]
+    suffixes_table = [('bytes', 0), ('KB', 0), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
 
     num = float(size)
     for suffix, precision in suffixes_table:
@@ -1354,7 +1315,6 @@ def human(size):
 
 
 def get_size(start_path='.'):
-
     total_size = 0
     for dirpath, dirnames, filenames in ek.ek(os.walk, start_path):
         for f in filenames:
@@ -1444,6 +1404,7 @@ def check_port(host, port, timeout=1.0):
         except socket.error:
             if s:
                 s.close()
+
 
 def clear_unused_providers():
     providers = [x.cache.providerID for x in sickbeard.providers.sortedProviderList() if x.isActive()]
