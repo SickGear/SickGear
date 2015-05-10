@@ -40,12 +40,12 @@ from providers import ezrss, btn, newznab, womble, thepiratebay, torrentleech, k
     freshontv, bitsoup, tokyotoshokan, animenzb, totv
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type, minimax
-from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
+from sickbeard import searchBacklog, showUpdater, versionChecker, autoPostProcesser, \
     subtitles, traktChecker
 from sickbeard import helpers, db, exceptions, show_queue, search_queue, scheduler, show_name_helpers
 from sickbeard import logger
 from sickbeard import naming
-from sickbeard import searchRecent
+from sickbeard import searchRecent, searchProper
 from sickbeard import scene_numbering, scene_exceptions, name_cache
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, indexer_episodenotfound, \
@@ -1158,34 +1158,35 @@ def initialize(consoleLogging=True):
         update_now = datetime.timedelta(minutes=0)
         versionCheckScheduler = scheduler.Scheduler(versionChecker.CheckVersion(),
                                                     cycleTime=datetime.timedelta(hours=UPDATE_FREQUENCY),
-                                                    threadName="CHECKVERSION",
+                                                    threadName='CHECKVERSION',
                                                     silent=False)
 
         showQueueScheduler = scheduler.Scheduler(show_queue.ShowQueue(),
                                                  cycleTime=datetime.timedelta(seconds=3),
-                                                 threadName="SHOWQUEUE")
+                                                 threadName='SHOWQUEUE')
 
         showUpdateScheduler = scheduler.Scheduler(showUpdater.ShowUpdater(),
                                                   cycleTime=datetime.timedelta(hours=1),
-                                                  threadName="SHOWUPDATER",
-                                                  start_time=datetime.time(hour=SHOW_UPDATE_HOUR))  # 3 AM
+                                                  threadName='SHOWUPDATER',
+                                                  start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
+                                                  prevent_cycle_run=sickbeard.showQueueScheduler.action.isShowUpdateRunning)  # 3 AM
 
         # searchers
         searchQueueScheduler = scheduler.Scheduler(search_queue.SearchQueue(),
                                                    cycleTime=datetime.timedelta(seconds=3),
-                                                   threadName="SEARCHQUEUE")
+                                                   threadName='SEARCHQUEUE')
 
         update_interval = datetime.timedelta(minutes=RECENTSEARCH_FREQUENCY)
         recentSearchScheduler = scheduler.Scheduler(searchRecent.RecentSearcher(),
                                                    cycleTime=update_interval,
-                                                   threadName="RECENTSEARCHER",
+                                                   threadName='RECENTSEARCHER',
                                                    run_delay=update_now if RECENTSEARCH_STARTUP
                                                    else datetime.timedelta(minutes=5),
                                                    prevent_cycle_run=sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress)
 
         backlogSearchScheduler = searchBacklog.BacklogSearchScheduler(searchBacklog.BacklogSearcher(),
                                                                       cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
-                                                                      threadName="BACKLOG",
+                                                                      threadName='BACKLOG',
                                                                       run_delay=update_now if BACKLOG_STARTUP
                                                                       else datetime.timedelta(minutes=10),
                                                                       prevent_cycle_run=sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress)
@@ -1198,27 +1199,28 @@ def initialize(consoleLogging=True):
             update_interval = datetime.timedelta(hours=1)
             run_at = datetime.time(hour=1)  # 1 AM
 
-        properFinderScheduler = scheduler.Scheduler(properFinder.ProperFinder(),
+        properFinderScheduler = scheduler.Scheduler(searchProper.ProperSearcher(),
                                                     cycleTime=update_interval,
-                                                    threadName="FINDPROPERS",
+                                                    threadName='FINDPROPERS',
                                                     start_time=run_at,
-                                                    run_delay=update_interval)
+                                                    run_delay=update_interval,
+                                                    prevent_cycle_run=sickbeard.searchQueueScheduler.action.is_propersearch_in_progress)
 
         # processors
         autoPostProcesserScheduler = scheduler.Scheduler(autoPostProcesser.PostProcesser(),
                                                          cycleTime=datetime.timedelta(
-                                                             minutes=AUTOPOSTPROCESSER_FREQUENCY),
-                                                         threadName="POSTPROCESSER",
+                                                         minutes=AUTOPOSTPROCESSER_FREQUENCY),
+                                                         threadName='POSTPROCESSER',
                                                          silent=not PROCESS_AUTOMATICALLY)
 
         traktCheckerScheduler = scheduler.Scheduler(traktChecker.TraktChecker(),
                                                     cycleTime=datetime.timedelta(hours=1),
-                                                    threadName="TRAKTCHECKER",
+                                                    threadName='TRAKTCHECKER',
                                                     silent=not USE_TRAKT)
 
         subtitlesFinderScheduler = scheduler.Scheduler(subtitles.SubtitlesFinder(),
                                                        cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_FREQUENCY),
-                                                       threadName="FINDSUBTITLES",
+                                                       threadName='FINDSUBTITLES',
                                                        silent=not USE_SUBTITLES)
 
         showList = []

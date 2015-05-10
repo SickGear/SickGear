@@ -1,4 +1,4 @@
-# Author: Nic Wolfe <nic@wolfeden.ca>
+﻿# Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
@@ -1412,3 +1412,21 @@ def clear_unused_providers():
     if providers:
         myDB = db.DBConnection('cache.db')
         myDB.action('DELETE FROM provider_cache WHERE provider NOT IN (%s)' % ','.join(['?'] * len(providers)), providers)
+
+def make_search_segment_html_string(segment, max_eps=5):
+    seg_str = ''
+    if segment and not isinstance(segment, list):
+        segment = [segment]
+    if segment and len(segment) > max_eps:
+        seasons = [x for x in set([x.season for x in segment])]
+        seg_str = u'Season' + maybe_plural(len(seasons)) + ': '
+        first_run = True
+        for x in seasons:
+            eps = [str(s.episode) for s in segment if s.season == x]
+            ep_c = len(eps)
+            seg_str += ('' if first_run else ' ,') + str(x) + ' <span title="Episode' + maybe_plural(ep_c) + ': ' + ', '.join(eps) + '">(' + str(ep_c) + ' Ep' + maybe_plural(ep_c) + ')</span>'
+            first_run = False
+    elif segment:
+        episodes = ['S' + str(x.season).zfill(2) + 'E' + str(x.episode).zfill(2) for x in segment]
+        seg_str = u'Episode' + maybe_plural(len(episodes)) + ': ' + ', '.join(episodes)
+    return seg_str

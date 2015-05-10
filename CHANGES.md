@@ -1,4 +1,4 @@
-﻿### 0.x.x (2015-xx-xx xx:xx:xx UTC)
+### 0.x.x (2015-xx-xx xx:xx:xx UTC)
 
 * Update Tornado webserver to 4.2.dev1 (609dbb9)
 * Update change to suppress reporting of Tornado exception error 1 to updated package as listed in hacks.txt
@@ -49,6 +49,16 @@
 * Add clarity to the output of a successful post process but with some issues rather than "there were problems"
 * Add a conclusive bottom line to the pp result report
 * Change helpers doctests to unittests
+* Add Search Queue Overview page
+* Add expandable search queue details on the Manage Searches page
+* Fix failed status episodes not included in next_episode search function
+* Change prevent another show update from running if one is already running
+* Change split Force backlog button on the Manage Searches page into: Force Limited, Force Full
+* Change refactor properFinder to be part of the search
+* Change improve threading of generic_queue, show_queue and search_queue
+* Change disable the Force buttons on the Manage Searches page while a search is running
+* Change disable the Pause buttons on the Manage Searches page if a search is not running
+* Change staggered periods of testing and updating of all shows "ended" status up to 460 days
 
 [develop changelog]
 * Fix issue, when adding existing shows, set its default group to ensure it now appears on the show list page
