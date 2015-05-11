@@ -3225,6 +3225,7 @@ class ManageSearches(Manage):
         # t.backlogPI = sickbeard.backlogSearchScheduler.action.getProgressIndicator()
         t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
         t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
+        t.standardBacklogRunning = sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress()
         t.backlogRunningType = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
         t.recentSearchStatus = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
         t.findPropersStatus = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
