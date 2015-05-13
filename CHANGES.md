@@ -57,7 +57,6 @@
 * Change refactor properFinder to be part of the search
 * Change improve threading of generic_queue, show_queue and search_queue
 * Change disable the Force buttons on the Manage Searches page while a search is running
-* Change disable the Pause buttons on the Manage Searches page if a search is not running
 * Change staggered periods of testing and updating of all shows "ended" status up to 460 days
 
 [develop changelog]
@@ -73,6 +72,7 @@
 * Removed fixed column widths, this means multiple groups have different column widths, and this original approach is
   preferred because fixed widths look bad with long show titles
 * Add newlines between error log lines on the Logs & Errors page removed as a biproduct of trimming html output
+* Fix Backlog Force buttons were disabled even when only a on-demand backlog was running
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)

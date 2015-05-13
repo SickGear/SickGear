@@ -19,13 +19,13 @@
 
 	<div id="summary2" class="align-left">
 		<h3>Backlog Search:</h3>
-		<a id="forcebacklog" class="btn#if $backlogRunning# disabled#end if#" href="$sbRoot/manage/manageSearches/forceLimitedBacklog"><i class="sgicon-play"></i> Force Limited</a>
-		<a id="forcefullbacklog" class="btn#if $backlogRunning# disabled#end if#" href="$sbRoot/manage/manageSearches/forceFullBacklog"><i class="sgicon-play"></i> Force Full</a>
-		<a id="pausebacklog" class="btn#if not $backlogRunning# disabled#end if#" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlogPaused then "0" else "1"#"><i class="#if $backlogPaused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlogPaused then "Unpause" else "Pause"#</a>
+		<a id="forcebacklog" class="btn#if $standardBacklogRunning# disabled#end if#" href="$sbRoot/manage/manageSearches/forceLimitedBacklog"><i class="sgicon-play"></i> Force Limited</a>
+		<a id="forcefullbacklog" class="btn#if $standardBacklogRunning# disabled#end if#" href="$sbRoot/manage/manageSearches/forceFullBacklog"><i class="sgicon-play"></i> Force Full</a>
+		<a id="pausebacklog" class="btn" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlogPaused then "0" else "1"#"><i class="#if $backlogPaused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlogPaused then "Unpause" else "Pause"#</a>
+#if $backlogPaused then 'Paused: ' else ''#
 #if not $backlogRunning:
 		Not in progress<br />
 #else
-	#if $backlogPaused then 'Paused: ' else ''#
 		Currently running ($backlogRunningType)<br />
 #end if
 		<br />
