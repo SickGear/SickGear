@@ -62,7 +62,7 @@
 
 		<div id="customQuality">
 			<div class="manageCustom pull-left">
-				<h4>Inital</h4>
+				<h4 style="font-size:14px">Initial</h4>
 #set $anyQualityList = filter(lambda x: x > $common.Quality.NONE, $common.Quality.qualityStrings)
 				<select id="anyQualities" name="anyQualities" multiple="multiple" size="len($anyQualityList)">
 #for $curQuality in sorted($anyQualityList):
@@ -71,7 +71,7 @@
 				</select>
 			</div>
 			<div class="manageCustom pull-left">
-				<h4>Archive</h4>
+				<h4 style="font-size:14px">Upgrade to</h4>
 #set $bestQualityList = filter(lambda x: x > $common.Quality.SDTV, $common.Quality.qualityStrings)
 				<select id="bestQualities" name="bestQualities" multiple="multiple" size="len($bestQualityList)">
 #for $curQuality in sorted($bestQualityList):
@@ -88,7 +88,7 @@
 	#set $isDisabled = $isSelected
 	#if $archive_firstmatch_value##set $isDisabled = ''##else##set $isEnabled = ''##end if#
 	<div class="optionWrapper clearfix">
-		<span class="selectTitle">Archive on first match</span>
+		<span class="selectTitle">End upgrade on first match</span>
 		<div class="selectChoices">
 			<select id="edit_archive_firstmatch" name="archive_firstmatch" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>

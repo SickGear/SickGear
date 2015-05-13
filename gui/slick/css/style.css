@@ -3542,11 +3542,11 @@ div.formpaginate .prev, div.formpaginate .next{
 
 #customQualityWrapper div.component-group-desc{
 	float:left;
-	width:165px
+	width:172px;
+	padding:0
 }
 
 #customQualityWrapper div.component-group-desc p{
-	width:85%;
 	margin:.8em 0;
 	font-size:1.2em
 }
