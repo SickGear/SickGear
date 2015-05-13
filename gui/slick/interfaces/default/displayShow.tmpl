@@ -286,7 +286,7 @@
     #end if
     #if $bestQualities
 					<div>
-						<span class="details-title">Replace with</span>
+						<span class="details-title">Upgrade to</span>
 						<span class="details-info">
 							#echo ', '.join([$Quality.qualityStrings[$x] for $x in sorted($bestQualities)])#
 						</span>
@@ -310,7 +310,7 @@
 						<span class="label label-paused">Paused</span>
 #end if
 #if ($anyQualities + $bestQualities) and int($show.archive_firstmatch)
-						<span class="label">Archive first match</span>
+						<span class="label">End upgrade on first match</span>
 #end if
 #if $show.exceptions
 						<span class="label addQTip" title="$exceptions_string.replace(', ', '<br />')">Scene names</span>
