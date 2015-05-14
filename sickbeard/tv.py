@@ -1556,63 +1556,64 @@ class TVEpisode(object):
 
     def loadFromDB(self, season, episode):
         logger.log(
-            str(self.show.indexerid) + u": Loading episode details from DB for episode " + str(season) + "x" + str(
+            str(self.show.indexerid) + u': Loading episode details from DB for episode ' + str(season) + 'x' + str(
                 episode), logger.DEBUG)
 
         myDB = db.DBConnection()
-        sqlResults = myDB.select("SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?",
+        sql_results = myDB.select('SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
                                  [self.show.indexerid, season, episode])
 
-        if len(sqlResults) > 1:
-            raise exceptions.MultipleDBEpisodesException("Your DB has two records for the same show somehow.")
-        elif len(sqlResults) == 0:
-            logger.log(str(self.show.indexerid) + u": Episode " + str(self.season) + "x" + str(
-                self.episode) + " not found in the database", logger.DEBUG)
+        if len(sql_results) > 1:
+            raise exceptions.MultipleDBEpisodesException('Your DB has two records for the same show somehow.')
+        elif len(sql_results) == 0:
+            logger.log(str(self.show.indexerid) + u': Episode ' + str(self.season) + 'x' + str(
+                self.episode) + ' not found in the database', logger.DEBUG)
             return False
         else:
-            # NAMEIT logger.log(u"AAAAA from" + str(self.season)+"x"+str(self.episode) + " -" + self.name + " to " + str(sqlResults[0]["name"]))
-            if sqlResults[0]["name"]:
-                self.name = sqlResults[0]["name"]
+            # NAMEIT logger.log(u'AAAAA from' + str(self.season)+'x'+str(self.episode) + ' -' + self.name + ' to ' + str(sql_results[0]['name']))
+            if sql_results[0]['name']:
+                self.name = sql_results[0]['name']
 
             self.season = season
             self.episode = episode
-            self.absolute_number = sqlResults[0]["absolute_number"]
-            self.description = sqlResults[0]["description"]
+            self.absolute_number = sql_results[0]['absolute_number']
+            self.description = sql_results[0]['description']
             if not self.description:
-                self.description = ""
-            if sqlResults[0]["subtitles"] and sqlResults[0]["subtitles"]:
-                self.subtitles = sqlResults[0]["subtitles"].split(",")
-            self.subtitles_searchcount = sqlResults[0]["subtitles_searchcount"]
-            self.subtitles_lastsearch = sqlResults[0]["subtitles_lastsearch"]
-            self.airdate = datetime.date.fromordinal(int(sqlResults[0]["airdate"]))
-            # logger.log(u"1 Status changes from " + str(self.status) + " to " + str(sqlResults[0]["status"]), logger.DEBUG)
-            self.status = int(sqlResults[0]["status"])
+                self.description = ''
+            if sql_results[0]['subtitles'] and sql_results[0]['subtitles']:
+                self.subtitles = sql_results[0]['subtitles'].split(',')
+            self.subtitles_searchcount = sql_results[0]['subtitles_searchcount']
+            self.subtitles_lastsearch = sql_results[0]['subtitles_lastsearch']
+            self.airdate = datetime.date.fromordinal(int(sql_results[0]['airdate']))
+            # logger.log(u'1 Status changes from ' + str(self.status) + ' to ' + str(sql_results[0]['status']), logger.DEBUG)
+            if sql_results[0]['status'] is not None:
+                self.status = int(sql_results[0]['status'])
 
             # don't overwrite my location
-            if sqlResults[0]["location"] and sqlResults[0]["location"]:
-                self.location = os.path.normpath(sqlResults[0]["location"])
-            if sqlResults[0]["file_size"]:
-                self.file_size = int(sqlResults[0]["file_size"])
+            if sql_results[0]['location'] and sql_results[0]['location']:
+                self.location = os.path.normpath(sql_results[0]['location'])
+            if sql_results[0]['file_size']:
+                self.file_size = int(sql_results[0]['file_size'])
             else:
                 self.file_size = 0
 
-            self.indexerid = int(sqlResults[0]["indexerid"])
-            self.indexer = int(sqlResults[0]["indexer"])
+            self.indexerid = int(sql_results[0]['indexerid'])
+            self.indexer = int(sql_results[0]['indexer'])
 
             sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
 
             try:
-                self.scene_season = int(sqlResults[0]["scene_season"])
+                self.scene_season = int(sql_results[0]['scene_season'])
             except:
                 self.scene_season = 0
 
             try:
-                self.scene_episode = int(sqlResults[0]["scene_episode"])
+                self.scene_episode = int(sql_results[0]['scene_episode'])
             except:
                 self.scene_episode = 0
 
             try:
-                self.scene_absolute_number = int(sqlResults[0]["scene_absolute_number"])
+                self.scene_absolute_number = int(sql_results[0]['scene_absolute_number'])
             except:
                 self.scene_absolute_number = 0
 
@@ -1630,17 +1631,17 @@ class TVEpisode(object):
                     self.season, self.episode
                 )
 
-            if sqlResults[0]["release_name"] is not None:
-                self.release_name = sqlResults[0]["release_name"]
+            if sql_results[0]['release_name'] is not None:
+                self.release_name = sql_results[0]['release_name']
 
-            if sqlResults[0]["is_proper"]:
-                self.is_proper = int(sqlResults[0]["is_proper"])
+            if sql_results[0]['is_proper']:
+                self.is_proper = int(sql_results[0]['is_proper'])
 
-            if sqlResults[0]["version"]:
-                self.version = int(sqlResults[0]["version"])
+            if sql_results[0]['version']:
+                self.version = int(sql_results[0]['version'])
 
-            if sqlResults[0]["release_group"] is not None:
-                self.release_group = sqlResults[0]["release_group"]
+            if sql_results[0]['release_group'] is not None:
+                self.release_group = sql_results[0]['release_group']
 
             self.dirty = False
             return True
@@ -2020,7 +2021,7 @@ class TVEpisode(object):
     def saveToDB(self, forceSave=False):
         """
         Saves this episode to the database if any of its data has been changed since the last save.
-        
+
         forceSave: If True it will save to the database even if no data has been changed since the
                     last save (aka if the record is not dirty).
         """
@@ -2091,7 +2092,7 @@ class TVEpisode(object):
         Returns the name of this episode in a "pretty" human-readable format. Used for logging
         and notifications and such.
 
-        Returns: A string representing the episode's name and season/ep numbers 
+        Returns: A string representing the episode's name and season/ep numbers
         """
 
         if self.show.anime and not self.show.scene:
@@ -2146,7 +2147,7 @@ class TVEpisode(object):
         """
         Generates a replacement map for this episode which maps all possible custom naming patterns to the correct
         value for this episode.
-        
+
         Returns: A dict with patterns as the keys and their replacement values as the values.
         """
 
@@ -2391,7 +2392,7 @@ class TVEpisode(object):
         return result_name
 
     def proper_path(self):
-        """    
+        """
         Figures out the path where this episode SHOULD live according to the renaming rules, relative from the show dir
         """
 

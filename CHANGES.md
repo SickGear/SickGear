@@ -59,6 +59,7 @@
 * Change disable the Force buttons on the Manage Searches page while a search is running
 * Change staggered periods of testing and updating of all shows "ended" status up to 460 days
 * Change "Archive" to "Upgrade to" in Edit show and other places and improve related texts for clarity
+* Fix history consolidation to only update an episode status if the history disagrees with the status.
 
 [develop changelog]
 * Fix issue, when adding existing shows, set its default group to ensure it now appears on the show list page

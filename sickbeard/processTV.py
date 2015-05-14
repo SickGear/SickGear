@@ -31,6 +31,7 @@ from sickbeard.exceptions import ex
 from sickbeard import logger
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard import common
+from sickbeard.history import reset_status
 
 from sickbeard import failedProcessor
 
@@ -420,34 +421,34 @@ class ProcessTVShow(object):
 
         parse_result = None
         try:
-            parse_result = NameParser(try_indexers=True, try_scene_exceptions=True, convert=True).parse(videofile, cache_result=False)
+            parse_result = NameParser(try_indexers=True,
+                                      try_scene_exceptions=True,
+                                      convert=True).parse(videofile,
+                                                          cache_result=False)
         except (InvalidNameException, InvalidShowException):
+            # Does not parse, move on to directory check
             pass
         if None is parse_result:
             try:
-                parse_result = NameParser(try_indexers=True, try_scene_exceptions=True, convert=True).parse(dir_name, cache_result=False)
+                parse_result = NameParser(try_indexers=True,
+                                          try_scene_exceptions=True,
+                                          convert=True).parse(
+                                              dir_name, cache_result=False)
             except (InvalidNameException, InvalidShowException):
-                pass
+                # If the filename doesn't parse, then return false as last
+                # resort. We can assume that unparseable filenames are not
+                # processed in the past
+                return False
 
-        showlink = ''
+        showlink = (' for "<a href="/home/displayShow?show=%s" target="_blank">%s</a>"' % (parse_result.show.indexerid, parse_result.show.name),
+                    parse_result.show.name)[self.any_vid_processed]
+
         ep_detail_sql = ''
-        undo_status = None
-        if parse_result:
-            showlink = (' for "<a href="/home/displayShow?show=%s" target="_blank">%s</a>"' % (parse_result.show.indexerid, parse_result.show.name),
-                        parse_result.show.name)[self.any_vid_processed]
-
-            if parse_result.show.indexerid and parse_result.episode_numbers and parse_result.season_number:
-                ep_detail_sql = " and tv_episodes.showid='%s' and tv_episodes.season='%s' and tv_episodes.episode='%s'"\
-                                % (str(parse_result.show.indexerid),
-                                   str(parse_result.season_number),
-                                   str(parse_result.episode_numbers[0]))
-                undo_status = "UPDATE `tv_episodes` SET status="\
-                              + "(SELECT h.action FROM `history` as h INNER JOIN `tv_episodes` as t on h.showid=t.showid"\
-                              + " where  t.showid='%s' and t.season='%s' and t.episode='%s'"\
-                                % (str(parse_result.show.indexerid), str(parse_result.season_number), str(parse_result.episode_numbers[0]))\
-                              + " and (h.action is not t.status) group by h.action order by h.date DESC LIMIT 1)"\
-                              + " where showid='%s' and season='%s' and episode='%s'"\
-                                % (str(parse_result.show.indexerid), str(parse_result.season_number), str(parse_result.episode_numbers[0]))
+        if parse_result.show.indexerid and parse_result.episode_numbers and parse_result.season_number:
+            ep_detail_sql = " and tv_episodes.showid='%s' and tv_episodes.season='%s' and tv_episodes.episode='%s'"\
+                            % (str(parse_result.show.indexerid),
+                                str(parse_result.season_number),
+                                str(parse_result.episode_numbers[0]))
 
         # Avoid processing the same directory again if we use a process method <> move
         my_db = db.DBConnection()
@@ -455,7 +456,9 @@ class ProcessTVShow(object):
         if sql_result:
             self._log_helper(u'Found a release directory%s that has already been processed,<br />.. skipping: %s'
                              % (showlink, dir_name))
-            my_db.action(undo_status)
+            reset_status(parse_result.show.indexerid,
+                         parse_result.season_number,
+                         parse_result.episode_numbers[0])
             return True
 
         else:
@@ -467,7 +470,9 @@ class ProcessTVShow(object):
             if sql_result:
                 self._log_helper(u'Found a video, but that release%s was already processed,<br />.. skipping: %s'
                                  % (showlink, videofile))
-                my_db.action(undo_status)
+                reset_status(parse_result.show.indexerid,
+                             parse_result.season_number,
+                             parse_result.episode_numbers[0])
                 return True
 
             # Needed if we have downloaded the same episode @ different quality
@@ -482,7 +487,9 @@ class ProcessTVShow(object):
             if sql_result:
                 self._log_helper(u'Found a video, but the episode%s is already processed,<br />.. skipping: %s'
                                  % (showlink, videofile))
-                my_db.action(undo_status)
+                reset_status(parse_result.show.indexerid,
+                             parse_result.season_number,
+                             parse_result.episode_numbers[0])
                 return True
 
         return False
