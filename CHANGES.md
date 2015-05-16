@@ -1,4 +1,7 @@
-### 0.x.x (2015-xx-xx xx:xx:xx UTC)
+### 0.10.0 (2015-xx-xx xx:xx:xx UTC)
+
+
+### 0.9.0 (2015-xx-xx xx:xx:xx UTC)
 
 * Update Tornado webserver to 4.2.dev1 (609dbb9)
 * Update change to suppress reporting of Tornado exception error 1 to updated package as listed in hacks.txt
@@ -60,21 +63,6 @@
 * Change staggered periods of testing and updating of all shows "ended" status up to 460 days
 * Change "Archive" to "Upgrade to" in Edit show and other places and improve related texts for clarity
 * Fix history consolidation to only update an episode status if the history disagrees with the status.
-
-[develop changelog]
-* Fix issue, when adding existing shows, set its default group to ensure it now appears on the show list page
-* Fix issue, changing a custom show list group name that is in use. The issue left db records with stale group names,
-  worse, orphaned shows disappeared from the Show List page entirely
-* Changed texts to describe this feature more clearly from tag to group names
-* Repositioned this feature on the add show, edit show, and config pages
-* Change the drop down select to dynamically hide/show the group name list, and change respectively selected help texts
-* Change insert space between items in the list of group names for readability
-* Notify user if an attempt to remove an in use group name is prevented
-* PEP8 and code cleanup to SG conventions
-* Removed fixed column widths, this means multiple groups have different column widths, and this original approach is
-  preferred because fixed widths look bad with long show titles
-* Add newlines between error log lines on the Logs & Errors page removed as a biproduct of trimming html output
-* Fix Backlog Force buttons were disabled even when only a on-demand backlog was running
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)
