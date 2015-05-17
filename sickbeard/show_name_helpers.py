@@ -87,7 +87,7 @@ def makeSceneShowSearchStrings(show, season=-1):
     return map(sanitizeSceneName, showNames)
 
 
-def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
+def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None, delimiter='.'):
 
     if show.air_by_date or show.sports:
         numseasons = 0
@@ -147,15 +147,15 @@ def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
                 for cur_season in seasonStrings:
                     if show.is_anime and show.release_groups is not None and show.release_groups.whitelist:
                         for keyword in show.release_groups.whitelist:
-                            toReturn.append(keyword + '.' + curShow+ "." + cur_season)
+                            toReturn.append(keyword + delimiter + curShow + delimiter + cur_season)
                     else:
-                        toReturn.append(curShow + "." + cur_season)
+                        toReturn.append(curShow + delimiter + cur_season)
 
 
     return toReturn
 
 
-def makeSceneSearchString(show, ep_obj):
+def makeSceneSearchString(show, ep_obj, delimiter='.'):
     myDB = db.DBConnection()
     numseasonsSQlResult = myDB.select(
         "SELECT COUNT(DISTINCT season) as numseasons FROM tv_episodes WHERE showid = ? and season != 0",
@@ -168,8 +168,7 @@ def makeSceneSearchString(show, ep_obj):
     elif show.is_anime:
         epStrings = ["%02i" % int(ep_obj.scene_absolute_number if ep_obj.scene_absolute_number > 0 else ep_obj.scene_episode)]
     else:
-        epStrings = ["S%02iE%02i" % (int(ep_obj.scene_season), int(ep_obj.scene_episode)),
-                     "%ix%02i" % (int(ep_obj.scene_season), int(ep_obj.scene_episode))]
+        epStrings = ["S%02iE%02i" % (int(ep_obj.scene_season), int(ep_obj.scene_episode))]
 
     # for single-season shows just search for the show name -- if total ep count (exclude s0) is less than 11
     # due to the amount of qualities and releases, it is easy to go over the 50 result limit on rss feeds otherwise
@@ -184,9 +183,9 @@ def makeSceneSearchString(show, ep_obj):
         for curEpString in epStrings:
             if ep_obj.show.is_anime and ep_obj.show.release_groups is not None and ep_obj.show.release_groups.whitelist:
                 for keyword in ep_obj.show.release_groups.whitelist:
-                    toReturn.append(keyword + '.' + curShow + '.' + curEpString)
+                    toReturn.append(keyword + delimiter + curShow + delimiter + curEpString)
             else:
-                toReturn.append(curShow + '.' + curEpString)
+                toReturn.append(curShow + delimiter + curEpString)
 
     return toReturn
 

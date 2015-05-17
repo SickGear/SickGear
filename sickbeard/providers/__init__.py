@@ -37,6 +37,7 @@ __all__ = ['womble',
            'animenzb',
            'rarbg',
            'totv',
+           'beyondhd'
 ]
 
 from os import sys
