@@ -1,5 +1,7 @@
 ### 0.10.0 (2015-xx-xx xx:xx:xx UTC)
+
 * Remove EZRSS provider
+* Update Tornado webserver to 4.2b1 (61a16c9)
 
 
 ### 0.9.0 (2015-05-18 14:33:00 UTC)
