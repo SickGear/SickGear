@@ -21,88 +21,28 @@ from sickbeard import db
 # Add new migrations at the bottom of the list; subclass the previous migration.
 class InitialSchema(db.SchemaUpgrade):
     def test(self):
-        return self.hasTable("lastUpdate")
+        return self.hasTable('lastUpdate')
 
     def execute(self):
-
         queries = [
-            ("CREATE TABLE lastUpdate (provider TEXT, time NUMERIC);",),
-            ("CREATE TABLE lastSearch (provider TEXT, time NUMERIC);",),
-            ("CREATE TABLE db_version (db_version INTEGER);",),
-            ("INSERT INTO db_version (db_version) VALUES (?)", 1),
+            'CREATE TABLE lastUpdate (provider TEXT, time NUMERIC)',
+            'CREATE TABLE lastSearch (provider TEXT, time NUMERIC)',
+            'CREATE TABLE db_version (db_version INTEGER)',
+            'INSERT INTO db_version (db_version) VALUES (1)',
+            'CREATE TABLE scene_exceptions (exception_id INTEGER PRIMARY KEY, indexer_id INTEGER KEY,'
+                ' show_name TEXT, season NUMERIC, custom NUMERIC)',
+            'CREATE TABLE scene_names (indexer_id INTEGER, name TEXT)',
+            'CREATE TABLE network_timezones (network_name TEXT PRIMARY KEY, timezone TEXT)',
+            'CREATE TABLE scene_exceptions_refresh (list TEXT PRIMARY KEY, last_refreshed INTEGER)',
+            'CREATE TABLE network_conversions ('
+                'tvdb_network TEXT PRIMARY KEY, tvrage_network TEXT, tvrage_country TEXT)',
+            'CREATE INDEX tvrage_idx on network_conversions (tvrage_network, tvrage_country)',
         ]
         for query in queries:
-            if len(query) == 1:
-                self.connection.action(query[0])
-            else:
-                self.connection.action(query[0], query[1:])
+            self.connection.action(query)
 
 
-class AddSceneExceptions(InitialSchema):
-    def test(self):
-        return self.hasTable("scene_exceptions")
-
-    def execute(self):
-        self.connection.action(
-            "CREATE TABLE scene_exceptions (exception_id INTEGER PRIMARY KEY, indexer_id INTEGER KEY, show_name TEXT)")
-
-class AddSceneNameCache(AddSceneExceptions):
-    def test(self):
-        return self.hasTable("scene_names")
-
-    def execute(self):
-        self.connection.action("CREATE TABLE scene_names (indexer_id INTEGER, name TEXT)")
-
-
-class AddNetworkTimezones(AddSceneNameCache):
-    def test(self):
-        return self.hasTable("network_timezones")
-
-    def execute(self):
-        self.connection.action("CREATE TABLE network_timezones (network_name TEXT PRIMARY KEY, timezone TEXT)")
-
-class AddLastSearch(AddNetworkTimezones):
-    def test(self):
-        return self.hasTable("lastSearch")
-
-    def execute(self):
-        self.connection.action("CREATE TABLE lastSearch (provider TEXT, time NUMERIC)")
-
-class AddSceneExceptionsSeasons(AddSceneNameCache):
-    def test(self):
-        return self.hasColumn("scene_exceptions", "season")
-
-    def execute(self):
-        self.addColumn("scene_exceptions", "season", "NUMERIC", -1)
-
-class AddSceneExceptionsCustom(AddSceneExceptionsSeasons):
-    def test(self):
-        return self.hasColumn("scene_exceptions", "custom")
-
-    def execute(self):
-        self.addColumn("scene_exceptions", "custom", "NUMERIC", 0)
-
-class AddSceneExceptionsRefresh(AddSceneExceptionsCustom):
-    def test(self):
-        return self.hasTable("scene_exceptions_refresh")
-
-    def execute(self):
-        self.connection.action(
-            "CREATE TABLE scene_exceptions_refresh (list TEXT PRIMARY KEY, last_refreshed INTEGER)")
-
-
-class AddNetworkConversions(AddSceneExceptionsRefresh):
-    def test(self):
-        return self.hasTable('network_conversions')
-
-    def execute(self):
-        self.connection.action('CREATE TABLE network_conversions (tvdb_network TEXT PRIMARY KEY, tvrage_network TEXT,'
-                               ' tvrage_country TEXT)')
-        
-        self.connection.action('CREATE INDEX tvrage_idx on network_conversions (tvrage_network, tvrage_country)')
-
-
-class ConsolidateProviders(AddNetworkConversions):
+class ConsolidateProviders(InitialSchema):
     def test(self):
         return self.checkDBVersion() > 1
 
