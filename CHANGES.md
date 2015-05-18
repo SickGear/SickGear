@@ -4,6 +4,7 @@
 * Update Tornado webserver to 4.2b1 (61a16c9)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
+* Update Requests library 2.6.2 to 2.7.0 (ab1f493)
 
 
 ### 0.9.0 (2015-05-18 14:33:00 UTC)
