@@ -2,6 +2,7 @@
 
 * Remove EZRSS provider
 * Update Tornado webserver to 4.2b1 (61a16c9)
+* Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 
 
 ### 0.9.0 (2015-05-18 14:33:00 UTC)
