@@ -1,5 +1,7 @@
 ### 0.10.0 (2015-xx-xx xx:xx:xx UTC)
 
+* Change to consolidate cache database migration code
+
 
 ### 0.9.0 (2015-05-18 14:33:00 UTC)
 
