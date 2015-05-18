@@ -110,7 +110,6 @@
                             <a href="<%= anon_url(curProvider.url) %>" class="imgLink" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><img src="$sbRoot/images/providers/$curProvider.imageName()" alt="$curProvider.name" title="$curProvider.name" width="16" height="16" style="vertical-align:middle;"/></a>
 							<span style="vertical-align:middle;">$curProvider.name</span>
 <%= '*' if not curProvider.supportsBacklog else '' %>
-<%= '**' if 'EZRSS' == curProvider.name else '' %>
 							<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="margin-top:3px"></span>
 						  </li>
 #end for
