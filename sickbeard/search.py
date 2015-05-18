@@ -433,7 +433,7 @@ def searchForNeededEpisodes(episodes):
             if curEp in foundResults and bestResult.quality <= foundResults[curEp].quality:
                 continue
 
-            # filter out possible bad torrents from providers such as ezrss
+            # filter out possible bad torrents from providers
             if bestResult.resultType == "torrent" and sickbeard.TORRENT_METHOD != "blackhole":
                 bestResult.content = None
                 if not bestResult.url.startswith('magnet'):
@@ -704,7 +704,7 @@ def searchProviders(show, episodes, manualSearch=False):
             if not bestResult:
                 continue
 
-            # filter out possible bad torrents from providers such as ezrss
+            # filter out possible bad torrents from providers
             if bestResult.resultType == "torrent" and sickbeard.TORRENT_METHOD != "blackhole":
                 bestResult.content = None
                 if not bestResult.url.startswith('magnet'):

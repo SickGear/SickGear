@@ -562,21 +562,15 @@ def get_all_episodes_from_absolute_number(show, absolute_numbers, indexer_id=Non
     return (season, episodes)
 
 
-def sanitizeSceneName(name, ezrss=False):
+def sanitizeSceneName(name):
     """
     Takes a show name and returns the "scenified" version of it.
-
-    ezrss: If true the scenified version will follow EZRSS's cracksmoker rules as best as possible
 
     Returns: A string containing the scene version of the show name given.
     """
 
     if name:
-        if not ezrss:
-            bad_chars = u",:()'!?\u2019"
-        # ezrss leaves : and ! in their show names as far as I can tell
-        else:
-            bad_chars = u",()'?\u2019"
+        bad_chars = u",:()'!?\u2019"
 
         # strip out any bad chars
         for x in bad_chars:
