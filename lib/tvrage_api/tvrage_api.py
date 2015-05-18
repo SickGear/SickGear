@@ -391,31 +391,29 @@ class TVRage:
 
     #@retry(tvrage_error)
     def _loadUrl(self, url, params=None):
+        log().debug('Retrieving URL %s' % url)
+
+        session = requests.session()
+
+        if self.config['cache_enabled']:
+            session = CacheControl(session, cache=caches.FileCache(self.config['cache_location']))
+
+        if self.config['proxy']:
+            log().debug('Using proxy for URL: %s' % url)
+            session.proxies = {'http': self.config['proxy'], 'https': self.config['proxy']}
+
+        session.headers.update({'Accept-Encoding': 'gzip,deflate'})
+
         try:
-            log().debug("Retrieving URL %s" % url)
-
-            # get response from TVRage
-            if self.config['cache_enabled']:
-                session = CacheControl(cache=caches.FileCache(self.config['cache_location']))
-                if self.config['proxy']:
-                    log().debug("Using proxy for URL: %s" % url)
-                    session.proxies = {
-                        "http": self.config['proxy'],
-                        "https": self.config['proxy'],
-                    }
-
-                resp = session.get(url.strip(), cache_auto=True, params=params)
-            else:
-                resp = requests.get(url.strip(), params=params)
-
+            resp = session.get(url.strip(), params=params)
         except requests.exceptions.HTTPError, e:
-            raise tvrage_error("HTTP error " + str(e.errno) + " while loading URL " + str(url))
+            raise tvrage_error('HTTP error %s while loading URL %s' % (e.errno, url))
         except requests.exceptions.ConnectionError, e:
-            raise tvrage_error("Connection error " + str(e.message) + " while loading URL " + str(url))
+            raise tvrage_error('Connection error %s while loading URL %s' % (e.message, url))
         except requests.exceptions.Timeout, e:
-            raise tvrage_error("Connection timed out " + str(e.message) + " while loading URL " + str(url))
+            raise tvrage_error('Connection timed out %s while loading URL %s' % (e.message, url))
         except Exception:
-            raise tvrage_error("Unknown exception while loading URL " + url + ": " + traceback.format_exc())
+            raise tvrage_error('Unknown exception while loading URL %s: %s' % (url, traceback.format_exc()))
 
         def remap_keys(path, key, value):
             name_map = {
@@ -456,22 +454,22 @@ class TVRage:
                         value = filter(None, value)
                         value = '|' + '|'.join(value) + '|'
                 try:
-                    if key == 'firstaired' and value in "0000-00-00":
+                    if key == 'firstaired' and value in '0000-00-00':
                         new_value = str(dt.date.fromordinal(1))
-                        new_value = re.sub("([-]0{2}){1,}", "", new_value)
-                        fixDate = parse(new_value, fuzzy=True).date()
-                        value = fixDate.strftime("%Y-%m-%d")
+                        new_value = re.sub('([-]0{2})+', '', new_value)
+                        fix_date = parse(new_value, fuzzy=True).date()
+                        value = fix_date.strftime('%Y-%m-%d')
                     elif key == 'firstaired':
                         value = parse(value, fuzzy=True).date()
-                        value = value.strftime("%Y-%m-%d")
+                        value = value.strftime('%Y-%m-%d')
 
                         #if key == 'airs_time':
                         #    value = parse(value).time()
-                        #    value = value.strftime("%I:%M %p")
+                        #    value = value.strftime('%I:%M %p')
                 except:
                     pass
 
-            return (key, value)
+            return key, value
 
         if resp.ok:
             try:
@@ -544,10 +542,13 @@ class TVRage:
         self.config['params_getSeries']['show'] = series
 
         try:
-            seriesFound = self._getetsrc(self.config['url_getSeries'], self.config['params_getSeries']).values()[0]
-            return seriesFound
+            seriesFound = self._getetsrc(self.config['url_getSeries'], self.config['params_getSeries'])
+            if seriesFound:
+                return seriesFound.values()[0]
         except:
-            return []
+            pass
+
+        return []
 
     def _getSeries(self, series):
         """This searches tvrage.com for the series name,

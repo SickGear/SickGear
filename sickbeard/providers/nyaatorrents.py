@@ -19,36 +19,17 @@
 import urllib
 import re
 
-import sickbeard
 import generic
-
-from sickbeard import show_name_helpers
-from sickbeard import logger
+from sickbeard import logger, tvcache, show_name_helpers
 from sickbeard.common import Quality
-from sickbeard import tvcache
-from sickbeard import show_name_helpers
 
 
 class NyaaProvider(generic.TorrentProvider):
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "NyaaTorrents")
-
-        self.supportsBacklog = True
-        self.supportsAbsoluteNumbering = True
-        self.anime_only = True
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'NyaaTorrents', True, True)
         self.ratio = None
-
         self.cache = NyaaCache(self)
-
         self.url = 'http://www.nyaa.se/'
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'nyaatorrents.png'
 
     def getQuality(self, item, anime=False):
         title = item.title

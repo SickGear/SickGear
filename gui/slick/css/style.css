@@ -126,7 +126,7 @@ fonts
 	font-style:italic
 }
 
-/* SickGear Icons */
+/* Droid Sans */
 @font-face{
 	font-family:'sgicons';
 	src:url('fonts/sgicons.eot');
@@ -350,6 +350,14 @@ inc_top.tmpl
 	-moz-osx-font-smoothing:grayscale
 }
 
+.dropdown [class^="sgicon-"], .dropdown [class*=" sgicon-"]{
+	margin-right:6px
+}
+
+#SubMenu [class^="sgicon-"], #SubMenu [class*=" sgicon-"]{
+	margin-right:3px
+}
+
 .sgicon-rss:before{
 	content:"\e622"
 }
@@ -434,6 +442,7 @@ inc_top.tmpl
 	content:"\e613"
 }
 
+.sgicon-showqueue:before,
 .sgicon-refresh:before{
 	content:"\e614"
 }
@@ -549,6 +558,10 @@ home.tmpl
 	margin-right:5px
 }
 
+.imgsmallposter.small{
+	font-size:100%
+}
+
 #HomeLayout{margin-top:-35px}
 #HomeLayout.not-poster{height:75px}
 #HomeLayout div.not-poster{position:relative;top:38px}
@@ -619,7 +632,18 @@ home.tmpl
 	border-radius:3px
 }
 
-#container, #container-anime{
+.yes,
+.no{
+	display:inline-block;
+	vertical-align:middle;
+	width:16px;
+	height:16px
+}
+
+.yes{background-image:url("../images/yes16.png")}
+.no{background-image:url("../images/no16.png")}
+
+#container{
 	margin:0 auto
 }
 
@@ -807,6 +831,21 @@ td.tvShow a{
 td.tvShow a:hover{
 	cursor:pointer;
 	color:#428BCA
+}
+
+
+#rename th, #rename td,
+#failed th, #failed td,
+#backlog th, #backlog td,
+#show-list th, #show-list td{
+	text-align:center
+}
+
+#rename th.text-left, #rename td.text-left,
+#failed th.text-left, #failed td.text-left,
+#backlog th.text-left, #backlog td.text-left,
+#show-list th.text-left, #show-list td.text-left{
+	text-align:left
 }
 
 /* =======================================================================
@@ -1059,17 +1098,16 @@ home_postprocess.tmpl
 ========================================================================== */
 
 #postProcess{
-	width:800px;
-	padding-top:10px;
+	width:650px;
+	padding-top:30px;
 	margin-right:auto;
 	margin-left:auto
 }
 
-
 /* =======================================================================
 displayShow.tmpl
 ========================================================================== */
-body#display-show.back-art {
+body#display-show.back-art{
 	color:#fff
 }
 
@@ -1304,11 +1342,11 @@ span.imdbstars, span.imdbstars > *{
 	text-shadow:5px 5px 10px #000
 }
 
-.qtip-maxwidth {
+.qtip-maxwidth{
 	max-width:1000px
 }
 
-.season-status {
+.season-status{
 	font-size:12px;
 	vertical-align:middle
 }
@@ -1347,9 +1385,9 @@ a.service img{
 	border-color:rgba(0,0,0,0.5)
 }
 
-.back-art.translucent.pro .tvshowImg {
-	opacity: 0.85;
-	filter: alpha(opacity=85)
+.back-art.translucent.pro .tvshowImg{
+	opacity:0.85;
+	filter:alpha(opacity=85)
 }
 
 #checkboxControls{
@@ -1607,6 +1645,10 @@ td.col-search{
 	width:46px
 }
 
+#testRenameTable tbody td.col-checkbox,
+#testRenameTable tbody td.col-ep{width:1%;vertical-align:middle}
+#testRenameTable tbody td.col-name{width:49%}
+
 .input-scene{
 	height:20px;
 	line-height:1.5;
@@ -1623,7 +1665,7 @@ td.col-search{
 episodeView.tmpl
 ========================================================================== */
 
-.sort_data{
+.sort-data{
 	display:none
 }
 
@@ -1720,7 +1762,7 @@ h2.day, h2.network{
 	float:left;
 	line-height:1.4em;
 	font-size:1.4em;
-	text-shadow:-1px -1px 0 #FFF)
+	text-shadow:-1px -1px 0 #FFF
 }
 
 .tvshowTitleIcons{
@@ -1848,12 +1890,19 @@ h2.day, h2.network{
 	margin-right:auto
 }
 
+.day-of-week .text .airtime .network,
 .day-of-week .text .airtime,
 .day-of-week .text .episode{
 	overflow:hidden;
 	text-overflow:ellipsis;
 	display:block;
 	font-size:12px
+}
+
+.day-of-week .text .airtime .network{
+	white-space:nowrap;
+	text-align:right;
+	max-width:50%
 }
 
 .day-of-week .text .episode .season,
@@ -1997,8 +2046,13 @@ history.tmpl
 	text-align:center
 }
 
-#historyTable td.provider img{
-	margin-right:3px
+#historyTable td.provider span{
+	padding:0 2px
+}
+
+#historyTable td.provider span.fail img{
+	opacity:0.5;
+	filter:alpha(opacity=50)
 }
 
 #historyTable td img,
@@ -2066,7 +2120,7 @@ config*.tmpl
 
 .component-group-desc{
 	float:left;
-	width:250px;
+	width:240px;
 	padding-right:10px
 }
 
@@ -2146,7 +2200,7 @@ config*.tmpl
 .stepDiv span.component-title,
 #config span.component-title{
 	float:left;
-	width:172px;
+	width:182px;
 	margin-right:10px;
 	font-size:13px;
 	font-weight:bold
@@ -2162,7 +2216,7 @@ config*.tmpl
 	font-weight:normal;
 	display:block;
 	width:475px;
-	margin-left:182px
+	margin-left:192px
 }
 
 #config label.space-right{
@@ -2673,7 +2727,7 @@ div.blackwhitelist.pool input{
 	margin:5px 0 !important
 }
 div.blackwhitelist select{
-	margin :0 !important
+	margin:0 !important
 }
 
 div.blackwhitelist .inuse{
@@ -3488,11 +3542,11 @@ div.formpaginate .prev, div.formpaginate .next{
 
 #customQualityWrapper div.component-group-desc{
 	float:left;
-	width:165px
+	width:172px;
+	padding:0
 }
 
 #customQualityWrapper div.component-group-desc p{
-	width:85%;
 	margin:.8em 0;
 	font-size:1.2em
 }

@@ -27,7 +27,6 @@ import random
 import traceback
 
 from mimetypes import MimeTypes
-
 from Cheetah.Template import Template
 
 import sickbeard
@@ -47,6 +46,7 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
 from sickbeard.name_cache import buildNameCache
 from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
+from sickbeard.searchBacklog import FULL_BACKLOG, LIMITED_BACKLOG
 from tornado import gen
 from tornado.web import RequestHandler, authenticated
 from lib import adba
@@ -569,18 +569,39 @@ class Home(MainHandler):
 
     def showlistView(self):
         t = PageTemplate(headers=self.request.headers, file='home.tmpl')
-        if sickbeard.ANIME_SPLIT_HOME:
-            shows = []
-            anime = []
-            for show in sickbeard.showList:
-                if show.is_anime:
-                    anime.append(show)
-                else:
-                    shows.append(show)
-            t.showlists = [['Shows', shows],
-                           ['Anime', anime]]
+        t.showlists = []
+        index = 0
+        if sickbeard.SHOWLIST_TAGVIEW == 'custom':
+            for name in sickbeard.SHOW_TAGS:
+                results = filter(lambda x: x.tag == name, sickbeard.showList)
+                if results:
+                    t.showlists.append(['container%s' % index, name, results])
+                index += 1
+        elif sickbeard.SHOWLIST_TAGVIEW == 'anime':
+            show_results = filter(lambda x: not x.anime, sickbeard.showList)
+            anime_results = filter(lambda x: x.anime, sickbeard.showList)
+            if show_results:
+                t.showlists.append(['container%s' % index, 'Show List', show_results])
+                index += 1
+            if anime_results:
+                t.showlists.append(['container%s' % index, 'Anime List', anime_results])
         else:
-            t.showlists = [['Shows', sickbeard.showList]]
+            t.showlists.append(['container%s' % index, 'Show List', sickbeard.showList])
+
+        if 'simple' != sickbeard.HOME_LAYOUT:
+            t.network_images = {}
+            networks = {}
+            images_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'network')
+            for item in sickbeard.showList:
+                network_name = 'nonetwork' if None is item.network else item.network.replace(u'\u00C9', 'e').lower()
+                if network_name not in networks:
+                    filename = u'%s.png' % network_name
+                    if not ek.ek(os.path.isfile, ek.ek(os.path.join, images_path, filename)):
+                        filename = u'%s.png' % re.sub(r'(?m)(.*)\s+\(\w{2}\)$', r'\1', network_name)
+                        if not ek.ek(os.path.isfile, ek.ek(os.path.join, images_path, filename)):
+                            filename = u'nonetwork.png'
+                    networks.setdefault(network_name, filename)
+                t.network_images.setdefault(item.indexerid, networks[network_name])
 
         t.submenu = self.HomeMenu()
         t.layout = sickbeard.HOME_LAYOUT
@@ -1117,7 +1138,8 @@ class Home(MainHandler):
             if highest_season < curResult['season'] and 1000 < curResult['airdate'] and UNAIRED < curResult['status']:
                 highest_season = curResult['season']
 
-        latest_season = int(sorted(epCounts['totals'])[-1::][0])
+        if 0 < len(epCounts['totals']):
+            latest_season = int(sorted(epCounts['totals'])[-1::][0])
 
         display_seasons = []
         if 1 < highest_season:
@@ -1127,7 +1149,13 @@ class Home(MainHandler):
         def titler(x):
             return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
 
-        if sickbeard.ANIME_SPLIT_HOME:
+        if sickbeard.SHOWLIST_TAGVIEW == 'custom':
+            t.sortedShowLists = []
+            for tag in sickbeard.SHOW_TAGS:
+                results = filter(lambda x: x.tag == tag, sickbeard.showList)
+                if results:
+                    t.sortedShowLists.append([tag, sorted(results, lambda x, y: cmp(titler(x.name), titler(y.name)))])
+        elif sickbeard.SHOWLIST_TAGVIEW == 'anime':
             shows = []
             anime = []
             for show in sickbeard.showList:
@@ -1140,13 +1168,21 @@ class Home(MainHandler):
 
         else:
             t.sortedShowLists = [
-                ['Shows', sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+                ['Show List', sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
 
         tvshows = []
+        tvshow_names = []
         for tvshow_types in t.sortedShowLists:
             for tvshow in tvshow_types[1]:
                 tvshows.append(tvshow.indexerid)
+                tvshow_names.append(tvshow.name)
+                if showObj.indexerid == tvshow.indexerid:
+                    cur_sel = len(tvshow_names)
         t.tvshow_id_csv = ','.join(str(x) for x in tvshows)
+
+        last_item = len(tvshow_names)
+        t.prev_title = 'Prev show, %s' % tvshow_names[(cur_sel - 2, last_item - 1)[1 == cur_sel]]
+        t.next_title = 'Next show, %s' % tvshow_names[(cur_sel, 0)[last_item == cur_sel]]
 
         t.bwl = None
         if showObj.is_anime:
@@ -1192,7 +1228,7 @@ class Home(MainHandler):
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, archive_firstmatch=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                 scene=None):
+                 scene=None, tag=None):
 
         if show is None:
             errString = 'Invalid show ID: ' + str(show)
@@ -1271,7 +1307,7 @@ class Home(MainHandler):
         if type(exceptions_list) != list:
             exceptions_list = [exceptions_list]
 
-        # If directCall from mass_edit_update no scene exceptions handling or blackandwhite list handling
+        # If directCall from mass_edit_update no scene exceptions handling or blackandwhite list handling or tags
         if directCall:
             do_update_exceptions = False
         else:
@@ -1316,6 +1352,7 @@ class Home(MainHandler):
             showObj.sports = sports
             showObj.subtitles = subtitles
             showObj.air_by_date = air_by_date
+            showObj.tag = tag
 
             if not directCall:
                 showObj.lang = indexer_lang
@@ -1614,7 +1651,7 @@ class Home(MainHandler):
             msg += '<ul>'
 
             for season, segment in segments.items():
-                cur_failed_queue_item = search_queue.FailedQueueItem(showObj, [segment])
+                cur_failed_queue_item = search_queue.FailedQueueItem(showObj, segment)
                 sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)  # @UndefinedVariable
 
                 msg += '<li>Season ' + str(season) + '</li>'
@@ -1789,12 +1826,21 @@ class Home(MainHandler):
                 searchstatus = 'finished'
             else:
                 searchstatus = 'searching'
-            episodes.append({'episode': searchThread.segment.episode,
-                             'episodeindexid': searchThread.segment.indexerid,
-                             'season' : searchThread.segment.season,
-                             'searchstatus' : searchstatus,
-                             'status' : statusStrings[searchThread.segment.status],
-                             'quality': self.getQualityClass(searchThread.segment)})
+            if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
+                episodes.append({'episode': searchThread.segment.episode,
+                                 'episodeindexid': searchThread.segment.indexerid,
+                                 'season' : searchThread.segment.season,
+                                 'searchstatus' : searchstatus,
+                                 'status' : statusStrings[searchThread.segment.status],
+                                 'quality': self.getQualityClass(searchThread.segment)})
+            else:
+                for epObj in searchThread.segment:
+                    episodes.append({'episode': epObj.episode,
+                                     'episodeindexid': epObj.indexerid,
+                                     'season' : epObj.season,
+                                     'searchstatus' : searchstatus,
+                                     'status' : statusStrings[epObj.status],
+                                     'quality': self.getQualityClass(epObj)})
 
         if finishedManualSearchThreadItems:
             for searchThread in finishedManualSearchThreadItems:
@@ -1866,72 +1912,49 @@ class Home(MainHandler):
                           sceneEpisode=None, sceneAbsolute=None):
 
         # sanitize:
-        if forSeason in ['null', '']: forSeason = None
-        if forEpisode in ['null', '']: forEpisode = None
-        if forAbsolute in ['null', '']: forAbsolute = None
-        if sceneSeason in ['null', '']: sceneSeason = None
-        if sceneEpisode in ['null', '']: sceneEpisode = None
-        if sceneAbsolute in ['null', '']: sceneAbsolute = None
+        show = None if show in [None, 'null', ''] else int(show)
+        indexer = None if indexer in [None, 'null', ''] else int(indexer)
 
-        showObj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
+        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, show)
 
-        if showObj.is_anime:
-            result = {
-                'success': True,
-                'forAbsolute': forAbsolute,
-            }
+        if not show_obj.is_anime:
+            for_season = None if forSeason in [None, 'null', ''] else int(forSeason)
+            for_episode = None if forEpisode in [None, 'null', ''] else int(forEpisode)
+            scene_season = None if sceneSeason in [None, 'null', ''] else int(sceneSeason)
+            scene_episode = None if sceneEpisode in [None, 'null', ''] else int(sceneEpisode)
+            action_log = u'Set episode scene numbering to %sx%s for episode %sx%s of "%s"'\
+                         % (scene_season, scene_episode, for_season, for_episode, show_obj.name)
+            ep_args = {'show': show, 'season': for_season, 'episode': for_episode}
+            scene_args = {'indexer_id': show, 'indexer': indexer, 'season': for_season, 'episode': for_episode,
+                          'sceneSeason': scene_season, 'sceneEpisode': scene_episode}
+            result = {'forSeason': for_season, 'forEpisode': for_episode, 'sceneSeason': None, 'sceneEpisode': None}
         else:
-            result = {
-                'success': True,
-                'forSeason': forSeason,
-                'forEpisode': forEpisode,
-            }
+            for_absolute = None if forAbsolute in [None, 'null', ''] else int(forAbsolute)
+            scene_absolute = None if sceneAbsolute in [None, 'null', ''] else int(sceneAbsolute)
+            action_log = u'Set absolute scene numbering to %s for episode %s of "%s"'\
+                         % (scene_absolute, for_absolute, show_obj.name)
+            ep_args = {'show': show, 'absolute': for_absolute}
+            scene_args = {'indexer_id': show, 'indexer': indexer, 'absolute_number': for_absolute,
+                          'sceneAbsolute': scene_absolute}
+            result = {'forAbsolute': for_absolute, 'sceneAbsolute': None}
 
-        # retrieve the episode object and fail if we can't get one
-        if showObj.is_anime:
-            ep_obj = self._getEpisode(show, absolute=forAbsolute)
+        ep_obj = self._getEpisode(**ep_args)
+        result['success'] = not isinstance(ep_obj, str)
+        if result['success']:
+            logger.log(action_log, logger.DEBUG)
+            set_scene_numbering(**scene_args)
+            show_obj.flushEpisodes()
         else:
-            ep_obj = self._getEpisode(show, forSeason, forEpisode)
-
-        if isinstance(ep_obj, str):
-            result['success'] = False
             result['errorMessage'] = ep_obj
-        elif showObj.is_anime:
-            logger.log(u'setAbsoluteSceneNumbering for %s from %s to %s' %
-                       (show, forAbsolute, sceneAbsolute), logger.DEBUG)
 
-            show = int(show)
-            indexer = int(indexer)
-            forAbsolute = int(forAbsolute)
-            if sceneAbsolute is not None: sceneAbsolute = int(sceneAbsolute)
-
-            set_scene_numbering(show, indexer, absolute_number=forAbsolute, sceneAbsolute=sceneAbsolute)
+        if not show_obj.is_anime:
+            scene_numbering = get_scene_numbering(show, indexer, for_season, for_episode)
+            if scene_numbering:
+                (result['sceneSeason'], result['sceneEpisode']) = scene_numbering
         else:
-            logger.log(u'setEpisodeSceneNumbering for %s from %sx%s to %sx%s' %
-                       (show, forSeason, forEpisode, sceneSeason, sceneEpisode), logger.DEBUG)
-
-            show = int(show)
-            indexer = int(indexer)
-            forSeason = int(forSeason)
-            forEpisode = int(forEpisode)
-            if sceneSeason is not None: sceneSeason = int(sceneSeason)
-            if sceneEpisode is not None: sceneEpisode = int(sceneEpisode)
-
-            set_scene_numbering(show, indexer, season=forSeason, episode=forEpisode, sceneSeason=sceneSeason,
-                                sceneEpisode=sceneEpisode)
-
-        if showObj.is_anime:
-            sn = get_scene_absolute_numbering(show, indexer, forAbsolute)
-            if sn:
-                result['sceneAbsolute'] = sn
-            else:
-                result['sceneAbsolute'] = None
-        else:
-            sn = get_scene_numbering(show, indexer, forSeason, forEpisode)
-            if sn:
-                (result['sceneSeason'], result['sceneEpisode']) = sn
-            else:
-                (result['sceneSeason'], result['sceneEpisode']) = (None, None)
+            scene_numbering = get_scene_absolute_numbering(show, indexer, for_absolute)
+            if scene_numbering:
+                result['sceneAbsolute'] = scene_numbering
 
         return json.dumps(result)
 
@@ -1979,33 +2002,22 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       is_priority=None, failed='0', type='auto', *args, **kwargs):
-
-        if failed == '0':
-            failed = False
-        else:
-            failed = True
-
-        if force in ['on', '1']:
-            force = True
-        else:
-            force = False
-
-        if is_priority in ['on', '1']:
-            is_priority = True
-        else:
-            is_priority = False
+                       force_replace=None, failed='0', type='auto', **kwargs):
 
         if not dir:
             self.redirect('/home/postprocess/')
         else:
-            result = processTV.processDir(dir, nzbName, process_method=process_method, force=force,
-                                          is_priority=is_priority, failed=failed, type=type)
-            if quiet is not None and int(quiet) == 1:
-                return result
+            result = processTV.processDir(dir, nzbName, process_method=process_method, type=type,
+                                          cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
+                                          force=force in ['on', '1'],
+                                          force_replace=force_replace in ['on', '1'],
+                                          failed=not '0' == failed)
 
-            result = result.replace('\n', '<br />\n')
-            return self._genericMessage('Postprocessing results', result)
+            result = re.sub(r'(?i)<br(?:[\s/]+)>', '\n', result)
+            if None is not quiet and 1 == int(quiet):
+                return u'%s' % re.sub('(?i)<a[^>]+>([^<]+)<[/]a>', r'\1', result)
+
+            return self._genericMessage('Postprocessing results', u'<pre>%s</pre>' % result)
 
 
 class NewHomeAddShows(Home):
@@ -2307,7 +2319,7 @@ class NewHomeAddShows(Home):
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
                    anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None):
+                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to newShow, if not it goes to /home.
@@ -2413,7 +2425,7 @@ class NewHomeAddShows(Home):
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
-                                                    wanted_begin, wanted_latest)  # @UndefinedVariable
+                                                    wanted_begin, wanted_latest, tag)  # @UndefinedVariable
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()
@@ -2505,6 +2517,7 @@ class Manage(MainHandler):
         manageMenu = [
             {'title': 'Backlog Overview', 'path': 'manage/backlogOverview/'},
             {'title': 'Manage Searches', 'path': 'manage/manageSearches/'},
+            {'title': 'Show Queue Overview', 'path': 'manage/showQueueOverview/'},
             {'title': 'Episode Status Management', 'path': 'manage/episodeStatuses/'}, ]
 
         if sickbeard.USE_TORRENTS and sickbeard.TORRENT_METHOD != 'blackhole' \
@@ -2820,6 +2833,9 @@ class Manage(MainHandler):
         paused_all_same = True
         last_paused = None
 
+        tag_all_same = True
+        last_tag = None
+
         anime_all_same = True
         last_anime = None
 
@@ -2860,6 +2876,13 @@ class Manage(MainHandler):
                     paused_all_same = False
                 else:
                     last_paused = curShow.paused
+
+            if tag_all_same:
+                # if we had a value already and this value is different then they're not all the same
+                if last_tag not in (None, curShow.tag):
+                    tag_all_same = False
+                else:
+                    last_tag = curShow.tag
 
             if anime_all_same:
                 # if we had a value already and this value is different then they're not all the same
@@ -2907,6 +2930,7 @@ class Manage(MainHandler):
         t.showList = toEdit
         t.archive_firstmatch_value = last_archive_firstmatch if archive_firstmatch_all_same else None
         t.paused_value = last_paused if paused_all_same else None
+        t.tag_value = last_tag if tag_all_same else None
         t.anime_value = last_anime if anime_all_same else None
         t.flatten_folders_value = last_flatten_folders if flatten_folders_all_same else None
         t.quality_value = last_quality if quality_all_same else None
@@ -2918,10 +2942,9 @@ class Manage(MainHandler):
 
         return t.respond()
 
-    def massEditSubmit(self, archive_firstmatch=None, paused=None, anime=None, sports=None, scene=None, flatten_folders=None,
-                       quality_preset=False,
-                       subtitles=None, air_by_date=None, anyQualities=[], bestQualities=[], toEdit=None, *args,
-                       **kwargs):
+    def massEditSubmit(self, archive_firstmatch=None, paused=None, anime=None, sports=None, scene=None,
+                       flatten_folders=None, quality_preset=False, subtitles=None, air_by_date=None, anyQualities=[],
+                       bestQualities=[], toEdit=None, tag=None, *args, **kwargs):
 
         dir_map = {}
         for cur_arg in kwargs:
@@ -2959,6 +2982,11 @@ class Manage(MainHandler):
             else:
                 new_paused = True if paused == 'enable' else False
             new_paused = 'on' if new_paused else 'off'
+
+            if tag == 'keep':
+                new_tag = showObj.tag
+            else:
+                new_tag = tag
 
             if anime == 'keep':
                 new_anime = showObj.anime
@@ -3009,7 +3037,7 @@ class Manage(MainHandler):
                                                                        paused=new_paused, sports=new_sports,
                                                                        subtitles=new_subtitles, anime=new_anime,
                                                                        scene=new_scene, air_by_date=new_air_by_date,
-                                                                       directCall=True)
+                                                                       tag=new_tag, directCall=True)
 
             if curErrors:
                 logger.log(u'Errors: ' + str(curErrors), logger.ERROR)
@@ -3177,7 +3205,8 @@ class Manage(MainHandler):
         toRemove = toRemove.split('|') if toRemove is not None else []
 
         for release in toRemove:
-            myDB.action('DELETE FROM failed WHERE release = ?', [release])
+            item = re.sub('_{3,}', '%', release)
+            myDB.action('DELETE FROM failed WHERE release like ?', [item])
 
         if toRemove:
             return self.redirect('/manage/failedDownloads/')
@@ -3196,8 +3225,10 @@ class ManageSearches(Manage):
         # t.backlogPI = sickbeard.backlogSearchScheduler.action.getProgressIndicator()
         t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
         t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
+        t.standardBacklogRunning = sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress()
+        t.backlogRunningType = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
         t.recentSearchStatus = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
-        t.findPropersStatus = sickbeard.properFinderScheduler.action.amActive
+        t.findPropersStatus = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
         t.queueLength = sickbeard.searchQueueScheduler.action.queue_length()
 
         t.submenu = self.ManageMenu()
@@ -3211,23 +3242,36 @@ class ManageSearches(Manage):
 
         self.redirect('/home/')
 
-    def forceBacklog(self, *args, **kwargs):
+    def forceLimitedBacklog(self, *args, **kwargs):
         # force it to run the next time it looks
-        result = sickbeard.backlogSearchScheduler.forceRun()
-        if result:
-            logger.log(u'Backlog search forced')
-            ui.notifications.message('Backlog search started')
+        if not sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress():
+            sickbeard.backlogSearchScheduler.forceSearch(force_type=LIMITED_BACKLOG)
+            logger.log(u'Limited Backlog search forced')
+            ui.notifications.message('Limited Backlog search started')
 
+            time.sleep(5)
+            self.redirect('/manage/manageSearches/')
+
+    def forceFullBacklog(self, *args, **kwargs):
+        # force it to run the next time it looks
+        if not sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress():
+            sickbeard.backlogSearchScheduler.forceSearch(force_type=FULL_BACKLOG)
+            logger.log(u'Full Backlog search forced')
+            ui.notifications.message('Full Backlog search started')
+
+        time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
     def forceSearch(self, *args, **kwargs):
 
         # force it to run the next time it looks
-        result = sickbeard.recentSearchScheduler.forceRun()
-        if result:
-            logger.log(u'Recent search forced')
-            ui.notifications.message('Recent search started')
+        if not sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress():
+            result = sickbeard.recentSearchScheduler.forceRun()
+            if result:
+                logger.log(u'Recent search forced')
+                ui.notifications.message('Recent search started')
 
+        time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
     def forceFindPropers(self, *args, **kwargs):
@@ -3238,6 +3282,7 @@ class ManageSearches(Manage):
             logger.log(u'Find propers search forced')
             ui.notifications.message('Find propers search started')
 
+        time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
     def pauseBacklog(self, paused=None):
@@ -3246,8 +3291,29 @@ class ManageSearches(Manage):
         else:
             sickbeard.searchQueueScheduler.action.unpause_backlog()  # @UndefinedVariable
 
+        time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
+class showQueueOverview(Manage):
+    def index(self, *args, **kwargs):
+        t = PageTemplate(headers=self.request.headers, file='manage_showQueueOverview.tmpl')
+        t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
+        t.showList = sickbeard.showList
+        t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning()
+
+        t.submenu = self.ManageMenu()
+
+        return t.respond()
+
+    def forceShowUpdate(self, *args, **kwargs):
+
+        result = sickbeard.showUpdateScheduler.forceRun()
+        if result:
+            logger.log(u'Show Update forced')
+            ui.notifications.message('Forced Show Update started')
+
+        time.sleep(5)
+        self.redirect('/manage/showQueueOverview/')
 
 class History(MainHandler):
     def index(self, limit=100):
@@ -3363,6 +3429,7 @@ class ConfigGeneral(Config):
 
         t = PageTemplate(headers=self.request.headers, file='config_general.tmpl')
         t.submenu = self.ConfigMenu
+        t.show_tags = ', '.join(sickbeard.SHOW_TAGS)
         return t.respond()
 
     def saveRootDirs(self, rootDirString=None):
@@ -3417,7 +3484,8 @@ class ConfigGeneral(Config):
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
-                    display_background=None, display_background_transparent=None, display_all_seasons=None):
+                    display_background=None, display_background_transparent=None, display_all_seasons=None,
+                    show_tags=None, showlist_tagview=None):
 
         results = []
 
@@ -3442,6 +3510,21 @@ class ConfigGeneral(Config):
         sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
         sickbeard.CPU_PRESET = cpu_preset
         sickbeard.FILE_LOGGING_PRESET = file_logging_preset
+        sickbeard.SHOWLIST_TAGVIEW = showlist_tagview
+
+        # 'Show List' is the must have default fallback. Tags in use that are removed from config ui are restored, not deleted.
+        # Deduped list order preservation is key to feature function.
+        myDB = db.DBConnection()
+        sql_results = myDB.select('SELECT DISTINCT tag FROM tv_shows')
+        new_names = [u'' + v.strip() for v in (show_tags.split(u','), [])[None is show_tags] if v.strip()]
+        orphans = [item for item in [v['tag'] for v in sql_results or []] if item not in new_names]
+        cleanser = []
+        if 0 < len(orphans):
+            cleanser = [item for item in sickbeard.SHOW_TAGS if item in orphans or item in new_names]
+            results += [u'An attempt was prevented to remove a show list group name still in use']
+        dedupe = {}
+        sickbeard.SHOW_TAGS = [dedupe.setdefault(item, item) for item in (cleanser + new_names + [u'Show List'])
+                               if item not in dedupe]
 
         logger.log_set_level()
 
@@ -3473,7 +3556,6 @@ class ConfigGeneral(Config):
 
         if date_preset:
             sickbeard.DATE_PRESET = date_preset
-            discarded_na_data = date_preset_na
 
         if indexer_default:
             sickbeard.INDEXER_DEFAULT = config.to_int(indexer_default)
@@ -3511,8 +3593,8 @@ class ConfigGeneral(Config):
         sickbeard.save_config()
 
         if len(results) > 0:
-            for x in results:
-                logger.log(x, logger.ERROR)
+            for v in results:
+                logger.log(v, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br />\n'.join(results))
         else:
@@ -3554,7 +3636,7 @@ class ConfigSearch(Config):
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
                    sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None,
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
-                   backlog_days=None, backlog_frequency=None, recentsearch_frequency=None,
+                   backlog_days=None, backlog_frequency=None, search_unaired=None, recentsearch_frequency=None,
                    nzb_method=None, torrent_method=None, usenet_retention=None,
                    download_propers=None, check_propers_interval=None, allow_high_priority=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
@@ -3586,6 +3668,8 @@ class ConfigSearch(Config):
 
         sickbeard.DOWNLOAD_PROPERS = config.checkbox_to_value(download_propers)
         sickbeard.CHECK_PROPERS_INTERVAL = check_propers_interval
+
+        sickbeard.SEARCH_UNAIRED = config.checkbox_to_value(search_unaired)
 
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 

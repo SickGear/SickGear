@@ -1,85 +1,105 @@
 #import sickbeard
-#set global $header="Post Processing"
-#set global $title="Post Processing"
-
-#set global $sbPath="../.."
-
-#set global $topmenu="home"#
+##
+#set global $header = 'Post Processing'
+#set global $title = $header
+#set global $topmenu = 'home'
+#set global $sbPath = '../..'
+##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
-<div id="content800">
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
 
-<div id="postProcess">
-	<form name="processForm" method="post" action="processEpisode" style="line-height: 40px;">
-	<table>
+#set selected = ' selected="selected"'
+
+	<form name="processForm" method="post" action="processEpisode">
 		<input type="hidden" id="type" name="type" value="manual">
-		<tr>
-			<td style="padding-right:10px;">
-				<b>Enter the folder containing the episode:</b>
-			</td>
-			<td>
-				<input type="text" name="dir" id="episodeDir" class="form-control form-control-inline input-sm input350" />
-			</td>
-		</tr>
-		<tr>
-			<td>
-				<b>Process Method to be used:</b>
-			</td>
-			<td>
-				<select name="process_method" id="process_method" class="form-control form-control-inline input-sm" >
-				#set $process_method_text = {'copy': "Copy", 'move': "Move", 'hardlink': "Hard Link", 'symlink' : "Symbolic Link"}
-				#for $curAction in ('copy', 'move', 'hardlink', 'symlink'):
-				#if $sickbeard.PROCESS_METHOD == $curAction:
-					#set $process_method = "selected=\"selected\""
-				#else
-					#set $process_method = ""
-				#end if
-				<option value="$curAction" $process_method>$process_method_text[$curAction]</option>
-				#end for
-				</select>
-			</td>
-		</tr>
-		<tr>
-			<td>
-				<b>Force already Post Processed Dir/Files:</b>
-			</td>
-			<td>
-				<input id="force" name="force" type="checkbox">
-			</td>
-		</tr>
-		<tr>
-			<td>
-				<b>Mark Dir/Files as priority download:</b>
-			</td>
-			<td>
-				<input id="is_priority" name="is_priority" type="checkbox">
-				<span style="line-height: 0; font-size: 12px;"><i>&nbsp;(Check it to replace the file even if it exists at higher quality)</i></span>
-			</td>
-		</tr>
-		#if $sickbeard.USE_FAILED_DOWNLOADS:
-		<tr>
-			<td>
-				<b>Mark download as failed:</b>
-			</td>
-			<td>
-				<input id="failed" name="failed" type="checkbox">
-			</td>
-		</tr>
-		#end if
-	</table>
-		<input id="submit" class="btn" type="submit" value="Process" />
+
+		<div id="postProcess" class="stepDiv">
+
+			<div class="field-pair">
+				<label for="episodeDir">
+					<span class="component-title input">Folder to process</span>
+					<span class="component-desc">
+						<input id="episodeDir" name="dir" type="text" class="form-control form-control-inline input-sm input350">
+						<p class="clear-left">select a folder containing episode files</p>
+					</span>
+				</label>
+			</div>
+
+			<div class="field-pair">
+				<label for="process_method">
+					<span class="component-title input">Process method to use</span>
+					<span class="component-desc">
+						<select id="process_method" name="process_method" class="form-control form-control-inline input-sm">
+#set $process_methods = {'copy': 'Copy', 'move': 'Move', 'hardlink': 'Hard Link', 'symlink': 'Symbolic Link'}
+#for $method in ('copy', 'move', 'hardlink', 'symlink'):
+							<option value="$method"#echo ('', $selected)[$method == $sickbeard.PROCESS_METHOD]#>$process_methods[$method]</option>
+#end for
+						</select>
+						<label for="cleanup">
+							<span id="move-and-trash" style="display:#echo ('none', 'block')['move' == $sickbeard.PROCESS_METHOD]#">
+								then trash left over subdirs/files<input id="cleanup" name="cleanup" type="checkbox" style="float:none;margin-left:10px">
+							</span>
+						</label>
+					</span>
+				</label>
+			</div>
+
+			<div class="field-pair">
+				<label for="force">
+					<span class="component-title">Force already processed</span>
+					<span class="component-desc">
+						<input id="force" name="force" type="checkbox">
+						<span>allow known post processed dirs/files to be processed again</span>
+					</span>
+				</label>
+			</div>
+
+			<div class="field-pair">
+				<label for="force_replace">
+					<span class="component-title">Force replace existing</span>
+					<span class="component-desc">
+						<input id="force_replace" name="force_replace" type="checkbox">
+						<span>replace existing files ignoring file size and video quality differences</span>
+					</span>
+				</label>
+			</div>
+
+#if $sickbeard.USE_FAILED_DOWNLOADS:
+			<div class="field-pair">
+				<label for="failed">
+					<span class="component-title">Mark as failed</span>
+					<span class="component-desc">
+						<input id="failed" name="failed" type="checkbox">
+						<span>queue a search to try find a different release for each processed item</span>
+					</span>
+				</label>
+			</div>
+#end if
+
+			<div class="field-pair" style="margin-top:12px">
+				<span class="component-title input">&nbsp;</span>
+				<span class="component-desc">
+					<input id="submit" class="btn" type="submit" value="Process">
+				</span>
+			</div>
+		</div><!-- /postProcess -->
 	</form>
 
 <script type="text/javascript" charset="utf-8">
 <!--
-    jQuery('#episodeDir').fileBrowser({ title: 'Select Unprocessed Episode Folder', key: 'postprocessPath' });
+#raw
+jQuery('#episodeDir').fileBrowser({title:'Select Unprocessed Episode Folder', key:'postprocessPath'});
+$('#process_method').change(function(){
+	$('#move-and-trash').css({'display':('move' == $(this).attr('value') ? 'block' : 'none')})
+});
+#end raw
 //-->
 </script>
-</div>
 
-#include $os.path.join($sickbeard.PROG_DIR,"gui/slick/interfaces/default/inc_bottom.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

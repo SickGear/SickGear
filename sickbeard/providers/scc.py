@@ -20,21 +20,17 @@
 import re
 import traceback
 import datetime
+
 import sickbeard
 import generic
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from sickbeard.common import Quality
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
 from sickbeard.exceptions import ex
+from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import sanitizeSceneName
 from lib import requests
 from lib.requests import exceptions
-from sickbeard.bs4_parser import BS4Parser
 from lib.unidecode import unidecode
-from sickbeard.helpers import sanitizeSceneName
 
 
 class SCCProvider(generic.TorrentProvider):
@@ -48,29 +44,15 @@ class SCCProvider(generic.TorrentProvider):
             'download': 'https://sceneaccess.eu/%s'}
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, 'SceneAccess')
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'SceneAccess', True, False)
         self.username = None
         self.password = None
         self.ratio = None
         self.minseed = None
         self.minleech = None
-
         self.cache = SCCCache(self)
-
         self.url = self.urls['base_url']
-
         self.categories = 'c27=27&c17=17&c11=11'
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'scc.png'
 
     def getQuality(self, item, anime=False):
 

@@ -17,40 +17,20 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import urllib
-import re
 import traceback
 
-import sickbeard
 import generic
-
-from sickbeard import show_name_helpers
-from sickbeard import logger
+from sickbeard import logger, tvcache, show_name_helpers
 from sickbeard.common import Quality
-from sickbeard import tvcache
-from sickbeard import show_name_helpers, helpers
 from sickbeard.bs4_parser import BS4Parser
 
 
 class TokyoToshokanProvider(generic.TorrentProvider):
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "TokyoToshokan")
-
-        self.supportsBacklog = True
-        self.supportsAbsoluteNumbering = True
-        self.anime_only = True
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'TokyoToshokan', True, True)
         self.ratio = None
-
         self.cache = TokyoToshokanCache(self)
-
         self.url = 'http://tokyotosho.info/'
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'tokyotoshokan.png'
 
     def _get_title_and_url(self, item):
 
@@ -105,19 +85,19 @@ class TokyoToshokanProvider(generic.TorrentProvider):
             with BS4Parser(data, features=["html5lib", "permissive"]) as soup:
                 torrent_table = soup.find('table', attrs={'class': 'listing'})
                 torrent_rows = torrent_table.find_all('tr') if torrent_table else []
-                if torrent_rows: 
+                if torrent_rows:
                     if torrent_rows[0].find('td', attrs={'class': 'centertext'}):
                         a = 1
                     else:
                         a = 0
-    
+
                     for top, bottom in zip(torrent_rows[a::2], torrent_rows[a::2]):
                         title = top.find('td', attrs={'class': 'desc-top'}).text
                         url = top.find('td', attrs={'class': 'desc-top'}).find('a')['href']
-    
+
                         if not title or not url:
                             continue
-    
+
                         item = title.lstrip(), url
                         results.append(item)
 

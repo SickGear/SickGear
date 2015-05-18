@@ -1,11 +1,13 @@
 #import sickbeard
 #from sickbeard import common
 #from sickbeard import exceptions
+##
 #set global $title = 'Test Rename ' + $show.name
 #set global $header = '<a href="' + $sbRoot + '/home/displayShow?show=%d">%s</a>' % ($show.indexerid, $show.name)
 #set global $sbPath = '..'
-
 #set global $topmenu = 'home'
+#set global $page_body_attr  = 'rename'
+##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
@@ -30,9 +32,9 @@
 #end if
 </blockquote>
 
+##
 #set $curSeason = -1
 #set $odd = False
-
 <div class="clearfix padbottom">
 	<button class="btn seriesCheck">Select All Episodes</button> 
 	<button class="btn clearAll">Clear All</button>
@@ -40,55 +42,57 @@
 
 <input type="submit" value="Rename Selected" class="btn btn-success"> <a href="/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
 
-<table id="testRenameTable" class="sickbeardTable" cellspacing="1" border="0" cellpadding="0">
+<table id="testRenameTable" class="sickbeardTable" border="0">
+##
+#for $cur_ep_obj in $ep_obj_list
+    #set $curLoc = $cur_ep_obj.location[len($cur_ep_obj.show.location)+1:]
+    #set $curExt = $curLoc.split('.')[-1]
+    #set $newLoc = $cur_ep_obj.proper_path() + '.' + $curExt
 
-#for $cur_ep_obj in $ep_obj_list:
-#set $curLoc = $cur_ep_obj.location[len($cur_ep_obj.show.location)+1:]
-#set $curExt = $curLoc.split('.')[-1]
-#set $newLoc = $cur_ep_obj.proper_path() + '.' + $curExt
+    #if int($cur_ep_obj.season) != $curSeason:
+	<thead>
+		<tr class="seasonheader" id="season-$cur_ep_obj.season">
+			<td colspan="4" class="text-left">
+				<h2>#if 0 == int($cur_ep_obj.season) then 'Specials' else 'Season %s' % $cur_ep_obj.season#</h2>
+			</td>
+		</tr>
+		<tr class="seasoncols" id="season-$cur_ep_obj.season-cols">
+			<th class="col-checkbox"><input type="checkbox" class="seasonCheck" id="$cur_ep_obj.season" /></th>
+			<th class="text-nowrap">Episode</th>
+			<th class="col-name">Old Location</th>
+			<th class="col-name">New Location</th>
+		</tr>
+	</thead>
+    #set $curSeason = int($cur_ep_obj.season)
 
-#if int($cur_ep_obj.season) != $curSeason:
-    <thead>
-        <tr class="seasonheader" id="season-$cur_ep_obj.season">
-            <td colspan="4">
-                <h2>#if int($cur_ep_obj.season) == 0 then "Specials" else "Season "+str($cur_ep_obj.season)#</h2>
-            </td>
-        </tr>
-        <tr class="seasoncols" id="season-$cur_ep_obj.season-cols">
-            <th class="col-checkbox"><input type="checkbox" class="seasonCheck" id="$cur_ep_obj.season" /></th>
-            <th class="nowrap">Episode</th>
-            <th class="col-name">Old Location</th>
-            <th class="col-name">New Location</th>
-        </tr>
-    </thead>
-#set $curSeason = int($cur_ep_obj.season)
-#end if
-    <tbody>
+    #end if
+##
 #set $odd = not $odd
-#set $epStr = str($cur_ep_obj.season) + "x" + str($cur_ep_obj.episode)
+#set $epStr = str($cur_ep_obj.season) + 'x' + str($cur_ep_obj.episode)
 #set $epList = sorted([cur_ep_obj.episode] + [x.episode for x in cur_ep_obj.relatedEps])
-#if len($epList) > 1:
+#if 1 < len($epList)
     #set $epList = [$min($epList), $max($epList)]
 #end if
-        <tr class="season-$curSeason 
-            #if $curLoc == $newLoc:
-                good
-            #else
-                wanted
-            #end if
-        seasonstyle">
-            <td class="col-checkbox">
-			#if $curLoc != $newLoc:
-                <input type="checkbox" class="epCheck" id="<%=str(cur_ep_obj.season) + 'x' + str(cur_ep_obj.episode)%>" name="<%=str(cur_ep_obj.season) + "x" + str(cur_ep_obj.episode) %>" />
-			#end if
-            </td>
-            <td align="center" valign="top" class="nowrap"><%= "-".join(map(str, epList)) %></td>
-            <td width="50%" class="col-name">$curLoc</td>
-            <td width="50%" class="col-name">$newLoc</td>
-        </tr>
-    </tbody>
-
+	<tbody>
+		<tr class="season-$curSeason #if $curLoc == $newLoc#good#else#wanted#end if# seasonstyle">
+    #if $curLoc != $newLoc
+			<td class="col-checkbox">
+				<input type="checkbox" class="epCheck" id="<%=str(cur_ep_obj.season) + 'x' + str(cur_ep_obj.episode)%>" name="<%=str(cur_ep_obj.season) + 'x' + str(cur_ep_obj.episode) %>">
+			</td>
+    #else
+			<td></td>
+    #end if
+			<td class="col-ep text-nowrap"><%= '-'.join(map(str, epList)) %></td>
+			<td class="col-name text-left">$curLoc</td>
+			<td class="col-name text-left">$newLoc</td>
+		</tr>
+	</tbody>
 #end for
-</table><br />
-<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
+
+</table>
+
+<div style="clear:both;margin-top:20px">
+	<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
+</div>
+
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -19,18 +19,12 @@
 import re
 import traceback
 import datetime
-import urlparse
+
 import sickbeard
 import generic
 from sickbeard.common import Quality
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from sickbeard.exceptions import ex
-from sickbeard import clients
 from lib import requests
 from lib.requests import exceptions
 from sickbeard.bs4_parser import BS4Parser
@@ -46,29 +40,15 @@ class TorrentBytesProvider(generic.TorrentProvider):
             'download': 'https://www.torrentbytes.net/download.php?id=%s&SSL=1&name=%s'}
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, 'TorrentBytes')
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'TorrentBytes', True, False)
         self.username = None
         self.password = None
         self.ratio = None
         self.minseed = None
         self.minleech = None
-
         self.cache = TorrentBytesCache(self)
-
         self.url = self.urls['base_url']
-
         self.categories = '&c41=1&c33=1&c38=1&c32=1&c37=1'
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'torrentbytes.png'
 
     def getQuality(self, item, anime=False):
 

@@ -19,15 +19,11 @@
 import re
 import traceback
 import datetime
+
 import sickbeard
 import generic
 from sickbeard.common import Quality
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from sickbeard.exceptions import ex, AuthException
 from lib import requests
 from lib.requests import exceptions
@@ -44,12 +40,7 @@ class FreshOnTVProvider(generic.TorrentProvider):
             'download': 'https://freshon.tv/download.php?id=%s&type=torrent'}
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, 'FreshOnTV')
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'FreshOnTV', True, False)
         self._uid = None
         self._hash = None
         self.username = None
@@ -58,17 +49,9 @@ class FreshOnTVProvider(generic.TorrentProvider):
         self.minseed = None
         self.minleech = None
         self.freeleech = False
-
         self.cache = FreshOnTVCache(self)
-
         self.url = self.urls['base_url']
         self.cookies = None
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'freshontv.png'
 
     def getQuality(self, item, anime=False):
 

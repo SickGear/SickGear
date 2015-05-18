@@ -21,7 +21,7 @@
 <div id="customQualityWrapper">
 	<div id="customQuality">
 		<div class="component-group-desc">
-			<p>One of the <em>Initial</em> quality selections must succeed before attempting to process <em>Archive</em> selections.</p>
+			<p>An <em>Initial</em> quality episode must be found before an <em>Upgrade to</em> selection is considered.</p>
 		</div>
 
 		<span class="component-desc">
@@ -36,7 +36,7 @@
 			</div>
 
 			<div style="float:left">
-				<h4 class="jumbo">Archive</h4>
+				<h4 class="jumbo">Upgrade to</h4>
 #set $bestQualityList = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
 				<select id="bestQualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)" class="form-control form-control-inline input-sm">
 #for $curQuality in sorted($bestQualityList):

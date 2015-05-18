@@ -1,13 +1,12 @@
-#import os.path
 #import sickbeard
 #from sickbeard.common import *
+##
 #set global $title = 'Existing Show'
 #set global $header = 'Existing Show'
-
 #set global $sbPath = '../..'
-
 #set global $statpath = '../..'
 #set global $topmenu = 'home'
+##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
@@ -80,4 +79,5 @@
 	<input class="btn btn-primary" type="button" value="Submit" id="submitShowDirs" />
 
 </form>
+
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

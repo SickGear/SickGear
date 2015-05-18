@@ -22,6 +22,7 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.TVRip.x264-GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.WEBRip.XViD-GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.WEBRip.x264-GROUP"))
+        self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.Web-Rip.x264.GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.WEB-DL.x264-GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.WEB-DL.AAC2.0.H.264-GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02 WEB-DL H 264-GROUP"))
@@ -35,6 +36,7 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(common.Quality.SDDVD, common.Quality.nameQuality("Test.Show.S01E02.DVDRip.WS.XViD-GROUP"))
         self.assertEqual(common.Quality.SDDVD, common.Quality.nameQuality("Test.Show.S01E02.DVDRip.WS.DiVX-GROUP"))
         self.assertEqual(common.Quality.SDDVD, common.Quality.nameQuality("Test.Show.S01E02.DVDRip.WS.x264-GROUP"))
+        self.assertEqual(common.Quality.SDDVD, common.Quality.nameQuality("Test.Show-S01E02-Test.Dvd Rip"))
         self.assertEqual(common.Quality.SDDVD, common.Quality.nameQuality("Test.Show.S01E02.BDRIP.XViD-GROUP"))
         self.assertEqual(common.Quality.SDDVD, common.Quality.nameQuality("Test.Show.S01E02.BDRIP.DiVX-GROUP"))
         self.assertEqual(common.Quality.SDDVD, common.Quality.nameQuality("Test.Show.S01E02.BDRIP.x264-GROUP"))
@@ -65,6 +67,10 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(common.Quality.HDWEBDL, common.Quality.nameQuality("Test_Show.S01E02_720p_WEB-DL_AAC2.0_H264-GROUP"))
         self.assertEqual(common.Quality.HDWEBDL, common.Quality.nameQuality("Test.Show.S01E02.720p.WEB-DL.AAC2.0.H264-GROUP"))
         self.assertEqual(common.Quality.HDWEBDL, common.Quality.nameQuality("Test.Show.S01E02.720p.iTunes.Rip.H264.AAC-GROUP"))
+        self.assertEqual(common.Quality.HDWEBDL, common.Quality.nameQuality("Test.Show.s01e02.WEBDL.720p.GROUP"))
+        self.assertEqual(common.Quality.HDWEBDL, common.Quality.nameQuality("Test Show s01e02 WEBDL 720p GROUP"))
+        self.assertEqual(common.Quality.HDWEBDL, common.Quality.nameQuality("Test Show S01E02 720p WEB-DL AVC-GROUP"))
+        self.assertEqual(common.Quality.HDWEBDL, common.Quality.nameQuality("Test.Show.S01E02.WEB-RIP.720p.GROUP"))
 
     def test_FULLHDWEBDL(self):
         self.assertEqual(common.Quality.FULLHDWEBDL, common.Quality.nameQuality("Test.Show.S01E02.1080p.WEB-DL-GROUP"))
@@ -74,14 +80,20 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(common.Quality.FULLHDWEBDL, common.Quality.nameQuality("Test.Show.S01E02.1080p.iTunes.H.264.AAC-GROUP"))
         self.assertEqual(common.Quality.FULLHDWEBDL, common.Quality.nameQuality("Test Show S01E02 1080p iTunes H 264 AAC-GROUP"))
         self.assertEqual(common.Quality.FULLHDWEBDL, common.Quality.nameQuality("Test_Show_S01E02_1080p_iTunes_H_264_AAC-GROUP"))
+        self.assertEqual(common.Quality.FULLHDWEBDL, common.Quality.nameQuality("Test.Show.s01e02.WEBDL.1080p.GROUP"))
+        self.assertEqual(common.Quality.FULLHDWEBDL, common.Quality.nameQuality("Test Show s01e02 WEBDL 1080p GROUP"))
+        self.assertEqual(common.Quality.FULLHDWEBDL, common.Quality.nameQuality("Test Show S01E02 1080p WEB-DL AVC-GROUP"))
+        self.assertEqual(common.Quality.FULLHDWEBDL, common.Quality.nameQuality("Test.Show.S01E02.WEB-RIP.1080p.GROUP"))
 
     def test_HDBLURAY(self):
         self.assertEqual(common.Quality.HDBLURAY, common.Quality.nameQuality("Test.Show.S01E02.720p.BluRay.x264-GROUP"))
         self.assertEqual(common.Quality.HDBLURAY, common.Quality.nameQuality("Test.Show.S01E02.720p.HDDVD.x264-GROUP"))
+        self.assertEqual(common.Quality.HDBLURAY, common.Quality.nameQuality("Test.Show.S01E02.720p.Blu-ray.x264-GROUP"))
 
     def test_FULLHDBLURAY(self):
         self.assertEqual(common.Quality.FULLHDBLURAY, common.Quality.nameQuality("Test.Show.S01E02.1080p.BluRay.x264-GROUP"))
         self.assertEqual(common.Quality.FULLHDBLURAY, common.Quality.nameQuality("Test.Show.S01E02.1080p.HDDVD.x264-GROUP"))
+        self.assertEqual(common.Quality.FULLHDBLURAY, common.Quality.nameQuality("Test.Show.S01E02.1080p.Blu-ray.x264-GROUP"))
 
     def test_UNKNOWN(self):
         self.assertEqual(common.Quality.UNKNOWN, common.Quality.nameQuality("Test.Show.S01E02-SiCKBEARD"))

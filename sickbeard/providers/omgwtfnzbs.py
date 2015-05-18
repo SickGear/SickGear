@@ -17,16 +17,13 @@
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
 import urllib
+from datetime import datetime
+
 import generic
 import sickbeard
+from sickbeard import tvcache, classes, logger, show_name_helpers
+from sickbeard.exceptions import AuthException
 
-from sickbeard import tvcache
-from sickbeard import helpers
-from sickbeard import classes
-from sickbeard import logger
-from sickbeard.exceptions import ex, AuthException
-from sickbeard import show_name_helpers
-from datetime import datetime
 
 try:
     import xml.etree.cElementTree as etree
@@ -41,16 +38,11 @@ except ImportError:
 
 class OmgwtfnzbsProvider(generic.NZBProvider):
     def __init__(self):
-        generic.NZBProvider.__init__(self, "omgwtfnzbs")
-        self.enabled = False
+        generic.NZBProvider.__init__(self, 'omgwtfnzbs', True, False)
         self.username = None
         self.api_key = None
         self.cache = OmgwtfnzbsCache(self)
         self.url = 'https://omgwtfnzbs.org/'
-        self.supportsBacklog = True
-
-    def isEnabled(self):
-        return self.enabled
 
     def _checkAuth(self):
 

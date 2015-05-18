@@ -121,6 +121,15 @@ $(document).ready(function () {
 
 	fetch_branches();
 	fetch_pullrequests();
+
+	$('#showlist_tagview').on('change', function() {
+		var selected = '#showlist_tagview_', target = $(selected + 'custom_config');
+		target.removeClass('hidden');
+		if ('custom' !== $(this).val())
+			target.addClass('hidden');
+		$(selected + 'standard,' + selected + 'anime,' + selected + 'custom').removeClass('hidden').addClass('hidden');
+		$(selected + $(this).val()).removeClass('hidden');
+	});
 });
 
 function config_success(response) {

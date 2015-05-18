@@ -1,12 +1,12 @@
 #import sickbeard
 #import datetime
 #from sickbeard import common
-
+##
 #set global $title = 'Episode Overview'
 #set global $header = 'Episode Overview'
 #set global $sbPath = '..'
 #set global $topmenu = 'manage'
-
+##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
@@ -15,9 +15,9 @@
 #else 
 	<h1 class="title">$title</h1>
 #end if
-
+##
 #if not $whichStatus or ($whichStatus and not $ep_counts)
-
+##
     #if $whichStatus:
 	<h3>no episodes have status <span class="grey-text">$common.statusStrings[$int($whichStatus)].lower()</span></h3>
     #end if
@@ -34,9 +34,8 @@
 		</select>
 		<input class="btn btn-inline" type="submit" value="Manage">
 	</form>
-
+##
 #else
-
     #if $whichStatus in ($common.ARCHIVED, $common.IGNORED, $common.SNATCHED):
         #set $row_class = 'good'
     #else
@@ -87,6 +86,7 @@
 		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
 			<thead></thead>
 			<tbody>
+    #set $row = 0
     #for $cur_indexer_id in $sorted_show_ids:
         #if 0 == int($never_counts[$cur_indexer_id])
             #set $output = '%d' % $ep_counts[$cur_indexer_id]
@@ -96,7 +96,7 @@
         #else
             #set $output = '%s never with an airdate' % (('all %s %ss', '%s %s')[1 == $ep_counts[$cur_indexer_id]] % ($ep_counts[$cur_indexer_id], 'episode'))
         #end if
-				<tr id="$cur_indexer_id" class="header">
+				<tr id="$cur_indexer_id" class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 					<td><input type="checkbox" class="allCheck" id="allCheck-$cur_indexer_id" name="$cur_indexer_id-all"></td>
 					<td colspan="2" style="width:100%;text-align:left">
 						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_indexer_id">$show_names[$cur_indexer_id]</a> <span style="color:#999">($output)</span><input type="button" class="pull-right get_more_eps btn" id="$cur_indexer_id-more" value="Expand"><input type="button" class="pull-right get_less_eps btn" id="$cur_indexer_id-less" value="Collapse">
@@ -108,5 +108,4 @@
 	</form>
 
 #end if
-
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -99,6 +99,7 @@ class TVShow(object):
         self._rls_ignore_words = ""
         self._rls_require_words = ""
         self._overview = ''
+        self._tag = ''
 
         self.dirty = True
 
@@ -143,6 +144,7 @@ class TVShow(object):
     rls_ignore_words = property(lambda self: self._rls_ignore_words, dirty_setter("_rls_ignore_words"))
     rls_require_words = property(lambda self: self._rls_require_words, dirty_setter("_rls_require_words"))
     overview = property(lambda self: self._overview, dirty_setter('_overview'))
+    tag = property(lambda self: self._tag, dirty_setter('_tag'))
 
     @property
     def is_anime(self):
@@ -287,48 +289,40 @@ class TVShow(object):
         # In some situations self.status = None.. need to figure out where that is!
         if not self.status:
             self.status = ''
-            logger.log("Status missing for showid: [%s] with status: [%s]" % 
+            logger.log('Status missing for showid: [%s] with status: [%s]' %
                        (cur_indexerid, self.status), logger.DEBUG)
-        
-        # if show is not 'Ended' always update (status 'Continuing' or '')
-        if 'Ended' not in self.status:
-            return True
 
-        # run logic against the current show latest aired and next unaired data to see if we should bypass 'Ended' status
-
-        graceperiod = datetime.timedelta(days=30)
-
-        last_airdate = datetime.date.fromordinal(1)
-
-        # get latest aired episode to compare against today - graceperiod and today + graceperiod
         myDB = db.DBConnection()
-        sql_result = myDB.select(
-            "SELECT * FROM tv_episodes WHERE showid = ? AND season > '0' AND airdate > '1' AND status > '1' ORDER BY airdate DESC LIMIT 1",
-            [cur_indexerid])
+        sql_result = myDB.mass_action(
+            [['SELECT airdate FROM [tv_episodes] WHERE showid = ? AND season > "0" ORDER BY season DESC, episode DESC LIMIT 1', [cur_indexerid]],
+             ['SELECT airdate FROM [tv_episodes] WHERE showid = ? AND season > "0" AND airdate > "1" ORDER BY airdate DESC LIMIT 1', [cur_indexerid]]])
 
-        if sql_result:
-            last_airdate = datetime.date.fromordinal(sql_result[0]['airdate'])
-            if last_airdate >= (update_date - graceperiod) and last_airdate <= (update_date + graceperiod):
-                return True
+        last_airdate_unknown = int(sql_result[0][0]['airdate']) <= 1 if sql_result and sql_result[0] else True
 
-        # get next upcoming UNAIRED episode to compare against today + graceperiod
-        sql_result = myDB.select(
-            "SELECT * FROM tv_episodes WHERE showid = ? AND season > '0' AND airdate > '1' AND status = '1' ORDER BY airdate ASC LIMIT 1",
-            [cur_indexerid])
-
-        if sql_result:
-            next_airdate = datetime.date.fromordinal(sql_result[0]['airdate'])
-            if next_airdate <= (update_date + graceperiod):
-                return True
+        last_airdate = datetime.date.fromordinal(sql_result[1][0]['airdate']) if sql_result and sql_result[1] else datetime.date.fromordinal(1)
 
         last_update_indexer = datetime.date.fromordinal(self.last_update_indexer)
 
-        # in the first year after ended (last airdate), update every 30 days
-        if (update_date - last_airdate) < datetime.timedelta(days=450) and (
-                    update_date - last_update_indexer) > datetime.timedelta(days=30):
+        # if show is not 'Ended' and last episode aired less then 460 days ago or don't have an airdate for the last episode always update (status 'Continuing' or '')
+        update_days_limit = 460
+        ended_limit = datetime.timedelta(days=update_days_limit)
+        if 'Ended' not in self.status and (last_airdate == datetime.date.fromordinal(1) or last_airdate_unknown or (update_date - last_airdate) <= ended_limit or (update_date - last_update_indexer) > ended_limit):
             return True
 
-        return False
+        # in the first 460 days (last airdate), update regularly
+        airdate_diff = update_date - last_airdate
+        last_update_diff = update_date - last_update_indexer
+
+        update_step_list = [[60, 1], [120, 3], [180, 7], [365, 15], [update_days_limit, 30]]
+        for date_diff, interval in update_step_list:
+            if airdate_diff <= datetime.timedelta(days=date_diff) and last_update_diff >= datetime.timedelta(days=interval):
+                return True
+
+        # update shows without an airdate for the last episode for 460 days every 7 days
+        if last_airdate_unknown and airdate_diff <= ended_limit and last_update_diff >= datetime.timedelta(days=7):
+            return True
+        else:
+            return False
 
     def writeShowNFO(self):
 
@@ -433,7 +427,7 @@ class TVShow(object):
 
             try:
                 parse_result = None
-                np = NameParser(False, showObj=self, tryIndexers=True)
+                np = NameParser(False, showObj=self, try_indexers=True)
                 parse_result = np.parse(ep_file_name)
             except (InvalidNameException, InvalidShowException):
                 pass
@@ -484,6 +478,10 @@ class TVShow(object):
 
         cachedShow = t[self.indexerid]
         cachedSeasons = {}
+
+        if None is cachedShow:
+            logger.log(u'No cache showdata to parse from %s' % sickbeard.indexerApi(self.indexer).name)
+            return scannedEps
 
         for curResult in sqlResults:
 
@@ -621,7 +619,7 @@ class TVShow(object):
         logger.log(str(self.indexerid) + u": Creating episode object from " + file, logger.DEBUG)
 
         try:
-            myParser = NameParser(showObj=self, tryIndexers=True)
+            myParser = NameParser(showObj=self, try_indexers=True)
             parse_result = myParser.parse(file)
         except InvalidNameException:
             logger.log(u"Unable to parse the filename " + file + " into a valid episode", logger.DEBUG)
@@ -844,6 +842,10 @@ class TVShow(object):
             if not self.overview:
                 self.overview = sqlResults[0]['overview']
 
+            self.tag = sqlResults[0]['tag']
+            if not self.tag:
+                self.tag = 'Show List'
+
         logger.log(str(self.indexerid) + u': Show info [%s] loaded from database' % self.name)
 
         # Get IMDb_info from database
@@ -999,22 +1001,22 @@ class TVShow(object):
         logger.log(str(self.indexerid) + u': Parsed latest IMDb show info for [%s]' % self.name)
 
     def nextEpisode(self):
-        logger.log(str(self.indexerid) + ": Finding the episode which airs next", logger.DEBUG)
+        logger.log(str(self.indexerid) + ': Finding the episode which airs next', logger.DEBUG)
 
         curDate = datetime.date.today().toordinal()
         if not self.nextaired or self.nextaired and curDate > self.nextaired:
             myDB = db.DBConnection()
             sqlResults = myDB.select(
-                "SELECT airdate, season, episode FROM tv_episodes WHERE showid = ? AND airdate >= ? AND status in (?,?) ORDER BY airdate ASC LIMIT 1",
-                [self.indexerid, datetime.date.today().toordinal(), UNAIRED, WANTED])
+                'SELECT airdate, season, episode FROM tv_episodes WHERE showid = ? AND airdate >= ? AND status in (?,?,?) ORDER BY airdate ASC LIMIT 1',
+                [self.indexerid, datetime.date.today().toordinal(), UNAIRED, WANTED, FAILED])
 
             if sqlResults == None or len(sqlResults) == 0:
-                logger.log(str(self.indexerid) + u": No episode found... need to implement a show status",
+                logger.log(str(self.indexerid) + u': No episode found... need to implement a show status',
                            logger.DEBUG)
-                self.nextaired = ""
+                self.nextaired = ''
             else:
-                logger.log(str(self.indexerid) + u": Found episode " + str(sqlResults[0]["season"]) + "x" + str(
-                    sqlResults[0]["episode"]), logger.DEBUG)
+                logger.log(str(self.indexerid) + u': Found episode ' + str(sqlResults[0]['season']) + 'x' + str(
+                    sqlResults[0]['episode']), logger.DEBUG)
                 self.nextaired = sqlResults[0]['airdate']
 
         return self.nextaired
@@ -1200,7 +1202,8 @@ class TVShow(object):
                         "last_update_indexer": self.last_update_indexer,
                         "rls_ignore_words": self.rls_ignore_words,
                         'rls_require_words': self.rls_require_words,
-                        'overview': self.overview
+                        'overview': self.overview,
+                        'tag': self.tag,
         }
 
         myDB = db.DBConnection()
@@ -1243,11 +1246,12 @@ class TVShow(object):
                    Quality.qualityStrings[quality], logger.DEBUG)
 
         # if the quality isn't one we want under any circumstances then just say no
-        anyQualities, bestQualities = Quality.splitQuality(self.quality)
-        logger.log(u"any,best = " + str(anyQualities) + " " + str(bestQualities) + " and found " + str(quality),
+        initialQualities, archiveQualities = Quality.splitQuality(self.quality)
+        allQualities = list(set(initialQualities + archiveQualities))
+        logger.log(u"initial + archive = (" + ",".join([Quality.qualityStrings[qual] for qual in initialQualities]) + ") + (" + ",".join([Quality.qualityStrings[qual] for qual in archiveQualities]) + ") and found " + Quality.qualityStrings[quality],
                    logger.DEBUG)
 
-        if quality not in anyQualities + bestQualities:
+        if quality not in allQualities:
             logger.log(u"Don't want this quality, ignoring found episode", logger.DEBUG)
             return False
 
@@ -1270,9 +1274,9 @@ class TVShow(object):
             return False
 
         # if it's one of these then we want it as long as it's in our allowed initial qualities
-        if quality in anyQualities + bestQualities:
-            if epStatus in (WANTED, UNAIRED, SKIPPED):
-                logger.log(u"Existing episode status is wanted/unaired/skipped, getting found episode", logger.DEBUG)
+        if quality in allQualities:
+            if epStatus in (WANTED, UNAIRED, SKIPPED, FAILED):
+                logger.log(u"Existing episode status is wanted/unaired/skipped/failed, getting found episode", logger.DEBUG)
                 return True
             elif manualSearch:
                 logger.log(
@@ -1284,9 +1288,15 @@ class TVShow(object):
                            logger.DEBUG)
 
         curStatus, curQuality = Quality.splitCompositeStatus(epStatus)
+        downloadedStatusList = (DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST)
+        # special case: already downloaded quality is not in any of the wanted Qualities
+        if curStatus in downloadedStatusList and curQuality not in allQualities:
+            wantedQualities = allQualities
+        else:
+            wantedQualities = archiveQualities
 
-        # if we are re-downloading then we only want it if it's in our bestQualities list and better than what we have
-        if curStatus in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST and quality in bestQualities and quality > curQuality:
+        # if we are re-downloading then we only want it if it's in our archiveQualities list and better than what we have
+        if curStatus in downloadedStatusList and quality in wantedQualities and quality > curQuality:
             logger.log(u"Episode already exists but the found episode has better quality, getting found episode",
                        logger.DEBUG)
             return True
@@ -1546,63 +1556,64 @@ class TVEpisode(object):
 
     def loadFromDB(self, season, episode):
         logger.log(
-            str(self.show.indexerid) + u": Loading episode details from DB for episode " + str(season) + "x" + str(
+            str(self.show.indexerid) + u': Loading episode details from DB for episode ' + str(season) + 'x' + str(
                 episode), logger.DEBUG)
 
         myDB = db.DBConnection()
-        sqlResults = myDB.select("SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?",
+        sql_results = myDB.select('SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
                                  [self.show.indexerid, season, episode])
 
-        if len(sqlResults) > 1:
-            raise exceptions.MultipleDBEpisodesException("Your DB has two records for the same show somehow.")
-        elif len(sqlResults) == 0:
-            logger.log(str(self.show.indexerid) + u": Episode " + str(self.season) + "x" + str(
-                self.episode) + " not found in the database", logger.DEBUG)
+        if len(sql_results) > 1:
+            raise exceptions.MultipleDBEpisodesException('Your DB has two records for the same show somehow.')
+        elif len(sql_results) == 0:
+            logger.log(str(self.show.indexerid) + u': Episode ' + str(self.season) + 'x' + str(
+                self.episode) + ' not found in the database', logger.DEBUG)
             return False
         else:
-            # NAMEIT logger.log(u"AAAAA from" + str(self.season)+"x"+str(self.episode) + " -" + self.name + " to " + str(sqlResults[0]["name"]))
-            if sqlResults[0]["name"]:
-                self.name = sqlResults[0]["name"]
+            # NAMEIT logger.log(u'AAAAA from' + str(self.season)+'x'+str(self.episode) + ' -' + self.name + ' to ' + str(sql_results[0]['name']))
+            if sql_results[0]['name']:
+                self.name = sql_results[0]['name']
 
             self.season = season
             self.episode = episode
-            self.absolute_number = sqlResults[0]["absolute_number"]
-            self.description = sqlResults[0]["description"]
+            self.absolute_number = sql_results[0]['absolute_number']
+            self.description = sql_results[0]['description']
             if not self.description:
-                self.description = ""
-            if sqlResults[0]["subtitles"] and sqlResults[0]["subtitles"]:
-                self.subtitles = sqlResults[0]["subtitles"].split(",")
-            self.subtitles_searchcount = sqlResults[0]["subtitles_searchcount"]
-            self.subtitles_lastsearch = sqlResults[0]["subtitles_lastsearch"]
-            self.airdate = datetime.date.fromordinal(int(sqlResults[0]["airdate"]))
-            # logger.log(u"1 Status changes from " + str(self.status) + " to " + str(sqlResults[0]["status"]), logger.DEBUG)
-            self.status = int(sqlResults[0]["status"])
+                self.description = ''
+            if sql_results[0]['subtitles'] and sql_results[0]['subtitles']:
+                self.subtitles = sql_results[0]['subtitles'].split(',')
+            self.subtitles_searchcount = sql_results[0]['subtitles_searchcount']
+            self.subtitles_lastsearch = sql_results[0]['subtitles_lastsearch']
+            self.airdate = datetime.date.fromordinal(int(sql_results[0]['airdate']))
+            # logger.log(u'1 Status changes from ' + str(self.status) + ' to ' + str(sql_results[0]['status']), logger.DEBUG)
+            if sql_results[0]['status'] is not None:
+                self.status = int(sql_results[0]['status'])
 
             # don't overwrite my location
-            if sqlResults[0]["location"] and sqlResults[0]["location"]:
-                self.location = os.path.normpath(sqlResults[0]["location"])
-            if sqlResults[0]["file_size"]:
-                self.file_size = int(sqlResults[0]["file_size"])
+            if sql_results[0]['location'] and sql_results[0]['location']:
+                self.location = os.path.normpath(sql_results[0]['location'])
+            if sql_results[0]['file_size']:
+                self.file_size = int(sql_results[0]['file_size'])
             else:
                 self.file_size = 0
 
-            self.indexerid = int(sqlResults[0]["indexerid"])
-            self.indexer = int(sqlResults[0]["indexer"])
+            self.indexerid = int(sql_results[0]['indexerid'])
+            self.indexer = int(sql_results[0]['indexer'])
 
             sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
 
             try:
-                self.scene_season = int(sqlResults[0]["scene_season"])
+                self.scene_season = int(sql_results[0]['scene_season'])
             except:
                 self.scene_season = 0
 
             try:
-                self.scene_episode = int(sqlResults[0]["scene_episode"])
+                self.scene_episode = int(sql_results[0]['scene_episode'])
             except:
                 self.scene_episode = 0
 
             try:
-                self.scene_absolute_number = int(sqlResults[0]["scene_absolute_number"])
+                self.scene_absolute_number = int(sql_results[0]['scene_absolute_number'])
             except:
                 self.scene_absolute_number = 0
 
@@ -1620,17 +1631,17 @@ class TVEpisode(object):
                     self.season, self.episode
                 )
 
-            if sqlResults[0]["release_name"] is not None:
-                self.release_name = sqlResults[0]["release_name"]
+            if sql_results[0]['release_name'] is not None:
+                self.release_name = sql_results[0]['release_name']
 
-            if sqlResults[0]["is_proper"]:
-                self.is_proper = int(sqlResults[0]["is_proper"])
+            if sql_results[0]['is_proper']:
+                self.is_proper = int(sql_results[0]['is_proper'])
 
-            if sqlResults[0]["version"]:
-                self.version = int(sqlResults[0]["version"])
+            if sql_results[0]['version']:
+                self.version = int(sql_results[0]['version'])
 
-            if sqlResults[0]["release_group"] is not None:
-                self.release_group = sqlResults[0]["release_group"]
+            if sql_results[0]['release_group'] is not None:
+                self.release_group = sql_results[0]['release_group']
 
             self.dirty = False
             return True
@@ -1767,7 +1778,7 @@ class TVEpisode(object):
 
             # if it hasn't aired yet set the status to UNAIRED
             if self.airdate >= datetime.date.today() and self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
-                logger.log(u"Episode airs in the future, marking it " + str(UNAIRED), logger.DEBUG)
+                logger.log(u"Episode airs in the future, marking it " + statusStrings[UNAIRED], logger.DEBUG)
                 self.status = UNAIRED
 
             # if there's no airdate then set it to skipped (and respect ignored)
@@ -2010,7 +2021,7 @@ class TVEpisode(object):
     def saveToDB(self, forceSave=False):
         """
         Saves this episode to the database if any of its data has been changed since the last save.
-        
+
         forceSave: If True it will save to the database even if no data has been changed since the
                     last save (aka if the record is not dirty).
         """
@@ -2081,7 +2092,7 @@ class TVEpisode(object):
         Returns the name of this episode in a "pretty" human-readable format. Used for logging
         and notifications and such.
 
-        Returns: A string representing the episode's name and season/ep numbers 
+        Returns: A string representing the episode's name and season/ep numbers
         """
 
         if self.show.anime and not self.show.scene:
@@ -2136,7 +2147,7 @@ class TVEpisode(object):
         """
         Generates a replacement map for this episode which maps all possible custom naming patterns to the correct
         value for this episode.
-        
+
         Returns: A dict with patterns as the keys and their replacement values as the values.
         """
 
@@ -2381,7 +2392,7 @@ class TVEpisode(object):
         return result_name
 
     def proper_path(self):
-        """    
+        """
         Figures out the path where this episode SHOULD live according to the renaming rules, relative from the show dir
         """
 

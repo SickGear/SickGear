@@ -25,7 +25,7 @@ import datetime
 
 import sickbeard
 from sickbeard import db, logger, common, exceptions, helpers, network_timezones, generic_queue, search, \
-    failed_history, history, ui
+    failed_history, history, ui, properFinder
 from sickbeard.search import wantedEpisodes
 
 
@@ -35,6 +35,7 @@ BACKLOG_SEARCH = 10
 RECENT_SEARCH = 20
 FAILED_SEARCH = 30
 MANUAL_SEARCH = 40
+PROPER_SEARCH = 50
 
 MANUAL_SEARCH_HISTORY = []
 MANUAL_SEARCH_HISTORY_SIZE = 100
@@ -42,81 +43,122 @@ MANUAL_SEARCH_HISTORY_SIZE = 100
 class SearchQueue(generic_queue.GenericQueue):
     def __init__(self):
         generic_queue.GenericQueue.__init__(self)
-        self.queue_name = "SEARCHQUEUE"
+        self.queue_name = 'SEARCHQUEUE'
 
     def is_in_queue(self, show, segment):
-        for cur_item in self.queue:
-            if isinstance(cur_item, BacklogQueueItem) and cur_item.show == show and cur_item.segment == segment:
-                return True
-        return False
+        with self.lock:
+            for cur_item in self.queue:
+                if isinstance(cur_item, BacklogQueueItem) and cur_item.show == show and cur_item.segment == segment:
+                    return True
+            return False
 
     def is_ep_in_queue(self, segment):
-        for cur_item in self.queue:
-            if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and cur_item.segment == segment:
-                return True
-        return False
+        with self.lock:
+            for cur_item in self.queue:
+                if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and cur_item.segment == segment:
+                    return True
+            return False
     
     def is_show_in_queue(self, show):
-        for cur_item in self.queue:
-            if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and cur_item.show.indexerid == show:
-                return True
-        return False
+        with self.lock:
+            for cur_item in self.queue:
+                if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and cur_item.show.indexerid == show:
+                    return True
+            return False
     
     def get_all_ep_from_queue(self, show):
-        ep_obj_list = []
-        for cur_item in self.queue:
-            if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and str(cur_item.show.indexerid) == show:
-                ep_obj_list.append(cur_item)
-        
-        if ep_obj_list:
-            return ep_obj_list
-        return False
+        with self.lock:
+            ep_obj_list = []
+            for cur_item in self.queue:
+                if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and str(cur_item.show.indexerid) == show:
+                    ep_obj_list.append(cur_item)
+
+            if ep_obj_list:
+                return ep_obj_list
+            return False
     
     def pause_backlog(self):
-        self.min_priority = generic_queue.QueuePriorities.HIGH
+        with self.lock:
+            self.min_priority = generic_queue.QueuePriorities.HIGH
 
     def unpause_backlog(self):
-        self.min_priority = 0
+        with self.lock:
+            self.min_priority = 0
 
     def is_backlog_paused(self):
         # backlog priorities are NORMAL, this should be done properly somewhere
-        return self.min_priority >= generic_queue.QueuePriorities.NORMAL
+        with self.lock:
+            return self.min_priority >= generic_queue.QueuePriorities.NORMAL
+
+    def _is_in_progress(self, itemType):
+        with self.lock:
+            for cur_item in self.queue + [self.currentItem]:
+                if isinstance(cur_item, itemType):
+                    return True
+            return False
 
     def is_manualsearch_in_progress(self):
         # Only referenced in webserve.py, only current running manualsearch or failedsearch is needed!!
-        if isinstance(self.currentItem, (ManualSearchQueueItem, FailedQueueItem)):
-            return True
-        return False
-    
+        return self._is_in_progress((ManualSearchQueueItem, FailedQueueItem))
+
     def is_backlog_in_progress(self):
-        for cur_item in self.queue + [self.currentItem]:
-            if isinstance(cur_item, BacklogQueueItem):
-                return True
-        return False
+        return self._is_in_progress(BacklogQueueItem)
 
     def is_recentsearch_in_progress(self):
-        for cur_item in self.queue + [self.currentItem]:
-            if isinstance(cur_item, RecentSearchQueueItem):
-                return True
-        return False
+        return self._is_in_progress(RecentSearchQueueItem)
+
+    def is_propersearch_in_progress(self):
+        return  self._is_in_progress(ProperSearchQueueItem)
+
+    def is_standard_backlog_in_progress(self):
+        with self.lock:
+            for cur_item in self.queue + [self.currentItem]:
+                if isinstance(cur_item, BacklogQueueItem) and cur_item.standard_backlog:
+                    return True
+            return False
+
+    def type_of_backlog_in_progress(self):
+        limited = full = other = False
+        with self.lock:
+            for cur_item in self.queue + [self.currentItem]:
+                if isinstance(cur_item, BacklogQueueItem):
+                    if cur_item.standard_backlog:
+                        if cur_item.limited_backlog:
+                            limited = True
+                        else:
+                            full = True
+                    else:
+                        other = True
+
+            types = []
+            for msg, variant in ['Limited', limited], ['Full', full], ['On Demand', other]:
+                if variant:
+                    types.append(msg)
+            message = 'None'
+            if types:
+                message = ', '.join(types)
+            return message
 
     def queue_length(self):
-        length = {'backlog': 0, 'recent': 0, 'manual': 0, 'failed': 0}
-        for cur_item in self.queue:
-            if isinstance(cur_item, RecentSearchQueueItem):
-                length['recent'] += 1
-            elif isinstance(cur_item, BacklogQueueItem):
-                length['backlog'] += 1
-            elif isinstance(cur_item, ManualSearchQueueItem):
-                length['manual'] += 1
-            elif isinstance(cur_item, FailedQueueItem):
-                length['failed'] += 1
-        return length
+        length = {'backlog': [], 'recent': 0, 'manual': [], 'failed': [], 'proper': 0}
+        with self.lock:
+            for cur_item in [self.currentItem] + self.queue:
+                if isinstance(cur_item, RecentSearchQueueItem):
+                    length['recent'] += 1
+                elif isinstance(cur_item, BacklogQueueItem):
+                    length['backlog'].append([cur_item.show.indexerid, cur_item.show.name, cur_item.segment, cur_item.standard_backlog, cur_item.limited_backlog, cur_item.forced])
+                elif isinstance(cur_item, ProperSearchQueueItem):
+                    length['proper'] += 1
+                elif isinstance(cur_item, ManualSearchQueueItem):
+                    length['manual'].append([cur_item.show.indexerid, cur_item.show.name, cur_item.segment])
+                elif isinstance(cur_item, FailedQueueItem):
+                    length['failed'].append([cur_item.show.indexerid, cur_item.show.name, cur_item.segment])
+            return length
 
 
     def add_item(self, item):
-        if isinstance(item, RecentSearchQueueItem):
-            # recent searches
+        if isinstance(item, (RecentSearchQueueItem, ProperSearchQueueItem)):
+            # recent and proper searches
             generic_queue.GenericQueue.add_item(self, item)
         elif isinstance(item, BacklogQueueItem) and not self.is_in_queue(item.show, item.segment):
             # backlog searches
@@ -125,7 +167,7 @@ class SearchQueue(generic_queue.GenericQueue):
             # manual and failed searches
             generic_queue.GenericQueue.add_item(self, item)
         else:
-            logger.log(u"Not adding item, it's already in the queue", logger.DEBUG)
+            logger.log(u'Not adding item, it\'s already in the queue', logger.DEBUG)
 
 
 class RecentSearchQueueItem(generic_queue.QueueItem):
@@ -137,49 +179,51 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
     def run(self):
         generic_queue.QueueItem.run(self)
 
-        self._change_missing_episodes()
+        try:
+            self._change_missing_episodes()
 
-        self.update_providers()
+            self.update_providers()
 
-        show_list = sickbeard.showList
-        fromDate = datetime.date.fromordinal(1)
-        for curShow in show_list:
-            if curShow.paused:
-                continue
+            show_list = sickbeard.showList
+            fromDate = datetime.date.fromordinal(1)
+            for curShow in show_list:
+                if curShow.paused:
+                    continue
 
-            self.episodes.extend(wantedEpisodes(curShow, fromDate))
+                self.episodes.extend(wantedEpisodes(curShow, fromDate))
 
-        if not self.episodes:
-            logger.log(u'No search of cache for episodes required')
-            self.success = True
-        else:
-            num_shows = len(set([ep.show.name for ep in self.episodes]))
-            logger.log(u'Found %d needed episode%s spanning %d show%s'
-                       % (len(self.episodes), helpers.maybe_plural(len(self.episodes)),
-                          num_shows, helpers.maybe_plural(num_shows)))
+            if not self.episodes:
+                logger.log(u'No search of cache for episodes required')
+                self.success = True
+            else:
+                num_shows = len(set([ep.show.name for ep in self.episodes]))
+                logger.log(u'Found %d needed episode%s spanning %d show%s'
+                           % (len(self.episodes), helpers.maybe_plural(len(self.episodes)),
+                              num_shows, helpers.maybe_plural(num_shows)))
 
-            try:
-                logger.log(u'Beginning recent search for episodes')
-                found_results = search.searchForNeededEpisodes(self.episodes)
+                try:
+                    logger.log(u'Beginning recent search for episodes')
+                    found_results = search.searchForNeededEpisodes(self.episodes)
 
-                if not len(found_results):
-                    logger.log(u'No needed episodes found')
-                else:
-                    for result in found_results:
-                        # just use the first result for now
-                        logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
-                        self.success = search.snatchEpisode(result)
+                    if not len(found_results):
+                        logger.log(u'No needed episodes found')
+                    else:
+                        for result in found_results:
+                            # just use the first result for now
+                            logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
+                            self.success = search.snatchEpisode(result)
 
-                        # give the CPU a break
-                        time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
+                            # give the CPU a break
+                            time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
 
-            except Exception:
-                logger.log(traceback.format_exc(), logger.DEBUG)
+                except Exception:
+                    logger.log(traceback.format_exc(), logger.DEBUG)
 
-            if self.success is None:
-                self.success = False
+                if self.success is None:
+                    self.success = False
 
-        self.finish()
+        finally:
+            self.finish()
 
     @staticmethod
     def _change_missing_episodes():
@@ -262,6 +306,21 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         logger.log('Finished updating provider caches')
 
 
+class ProperSearchQueueItem(generic_queue.QueueItem):
+    def __init__(self):
+        generic_queue.QueueItem.__init__(self, 'Proper Search', PROPER_SEARCH)
+        self.priority = generic_queue.QueuePriorities.HIGH
+        self.success = None
+
+    def run(self):
+        generic_queue.QueueItem.run(self)
+
+        try:
+            properFinder.searchPropers()
+        finally:
+            self.finish()
+
+
 class ManualSearchQueueItem(generic_queue.QueueItem):
     def __init__(self, show, segment):
         generic_queue.QueueItem.__init__(self, 'Manual Search', MANUAL_SEARCH)
@@ -276,14 +335,14 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
         generic_queue.QueueItem.run(self)
 
         try:
-            logger.log("Beginning manual search for: [" + self.segment.prettyName() + "]")
+            logger.log('Beginning manual search for: [' + self.segment.prettyName() + ']')
             self.started = True
             
             searchResult = search.searchProviders(self.show, [self.segment], True)
 
             if searchResult:
                 # just use the first result for now
-                logger.log(u"Downloading " + searchResult[0].name + " from " + searchResult[0].provider.name)
+                logger.log(u'Downloading ' + searchResult[0].name + ' from ' + searchResult[0].provider.name)
                 self.success = search.snatchEpisode(searchResult[0])
 
                 # give the CPU a break
@@ -291,52 +350,57 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
 
             else:
                 ui.notifications.message('No downloads were found',
-                                         "Couldn't find a download for <i>%s</i>" % self.segment.prettyName())
+                                         'Couldn\'t find a download for <i>%s</i>' % self.segment.prettyName())
 
-                logger.log(u"Unable to find a download for: [" + self.segment.prettyName() + "]")
+                logger.log(u'Unable to find a download for: [' + self.segment.prettyName() + ']')
 
         except Exception:
             logger.log(traceback.format_exc(), logger.DEBUG)
         
-        ### Keep a list with the 100 last executed searches
-        fifo(MANUAL_SEARCH_HISTORY, self, MANUAL_SEARCH_HISTORY_SIZE)
-        
-        if self.success is None:
-            self.success = False
+        finally:
+            ### Keep a list with the 100 last executed searches
+            fifo(MANUAL_SEARCH_HISTORY, self, MANUAL_SEARCH_HISTORY_SIZE)
 
-        self.finish()
+            if self.success is None:
+                self.success = False
+
+            self.finish()
 
 
 class BacklogQueueItem(generic_queue.QueueItem):
-    def __init__(self, show, segment):
+    def __init__(self, show, segment, standard_backlog=False, limited_backlog=False, forced=False):
         generic_queue.QueueItem.__init__(self, 'Backlog', BACKLOG_SEARCH)
         self.priority = generic_queue.QueuePriorities.LOW
         self.name = 'BACKLOG-' + str(show.indexerid)
         self.success = None
         self.show = show
         self.segment = segment
+        self.standard_backlog = standard_backlog
+        self.limited_backlog = limited_backlog
+        self.forced = forced
 
     def run(self):
         generic_queue.QueueItem.run(self)
 
         try:
-            logger.log("Beginning backlog search for: [" + self.show.name + "]")
+            logger.log('Beginning backlog search for: [' + self.show.name + ']')
             searchResult = search.searchProviders(self.show, self.segment, False)
 
             if searchResult:
                 for result in searchResult:
                     # just use the first result for now
-                    logger.log(u"Downloading " + result.name + " from " + result.provider.name)
+                    logger.log(u'Downloading ' + result.name + ' from ' + result.provider.name)
                     search.snatchEpisode(result)
 
                     # give the CPU a break
                     time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
             else:
-                logger.log(u"No needed episodes found during backlog search for: [" + self.show.name + "]")
+                logger.log(u'No needed episodes found during backlog search for: [' + self.show.name + ']')
         except Exception:
             logger.log(traceback.format_exc(), logger.DEBUG)
 
-        self.finish()
+        finally:
+            self.finish()
 
 
 class FailedQueueItem(generic_queue.QueueItem):
@@ -356,7 +420,7 @@ class FailedQueueItem(generic_queue.QueueItem):
         try:
             for epObj in self.segment:
             
-                logger.log(u"Marking episode as bad: [" + epObj.prettyName() + "]")
+                logger.log(u'Marking episode as bad: [' + epObj.prettyName() + ']')
                 
                 failed_history.markFailed(epObj)
     
@@ -366,14 +430,14 @@ class FailedQueueItem(generic_queue.QueueItem):
                     history.logFailed(epObj, release, provider)
     
                 failed_history.revertEpisode(epObj)
-                logger.log("Beginning failed download search for: [" + epObj.prettyName() + "]")
+                logger.log('Beginning failed download search for: [' + epObj.prettyName() + ']')
 
             searchResult = search.searchProviders(self.show, self.segment, True)
 
             if searchResult:
                 for result in searchResult:
                     # just use the first result for now
-                    logger.log(u"Downloading " + result.name + " from " + result.provider.name)
+                    logger.log(u'Downloading ' + result.name + ' from ' + result.provider.name)
                     search.snatchEpisode(result)
 
                     # give the CPU a break
@@ -384,13 +448,14 @@ class FailedQueueItem(generic_queue.QueueItem):
         except Exception:
             logger.log(traceback.format_exc(), logger.DEBUG)
             
-        ### Keep a list with the 100 last executed searches
-        fifo(MANUAL_SEARCH_HISTORY, self, MANUAL_SEARCH_HISTORY_SIZE)
+        finally:
+            ### Keep a list with the 100 last executed searches
+            fifo(MANUAL_SEARCH_HISTORY, self, MANUAL_SEARCH_HISTORY_SIZE)
 
-        if self.success is None:
-            self.success = False
+            if self.success is None:
+                self.success = False
 
-        self.finish()
+            self.finish()
         
 def fifo(myList, item, maxSize = 100):
     if len(myList) >= maxSize:

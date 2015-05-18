@@ -164,13 +164,9 @@ def change_RECENTSEARCH_FREQUENCY(freq):
 
 
 def change_BACKLOG_FREQUENCY(freq):
-    sickbeard.BACKLOG_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_BACKLOG_FREQUENCY)
+    sickbeard.BACKLOG_FREQUENCY = minimax(freq, sickbeard.DEFAULT_BACKLOG_FREQUENCY, sickbeard.MIN_BACKLOG_FREQUENCY, sickbeard.MAX_BACKLOG_FREQUENCY)
 
-    sickbeard.MIN_BACKLOG_FREQUENCY = sickbeard.get_backlog_cycle_time()
-    if sickbeard.BACKLOG_FREQUENCY < sickbeard.MIN_BACKLOG_FREQUENCY:
-        sickbeard.BACKLOG_FREQUENCY = sickbeard.MIN_BACKLOG_FREQUENCY
-
-    sickbeard.backlogSearchScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.BACKLOG_FREQUENCY)
+    sickbeard.backlogSearchScheduler.action.cycleTime = sickbeard.BACKLOG_FREQUENCY
 
 
 def change_UPDATE_FREQUENCY(freq):
@@ -445,7 +441,9 @@ class ConfigMigrator():
                                 6: 'Rename daily search to recent search',
                                 7: 'Rename coming episodes to episode view',
                                 8: 'Disable searches on start',
-                                9: 'Rename pushbullet variables'}
+                                9: 'Rename pushbullet variables',
+                                10: 'Reset backlog frequency to default',
+                                11: 'Migrate anime split view to new layout'}
 
     def migrate_config(self):
         """ Calls each successive migration until the config is the same version as SG expects """
@@ -741,3 +739,13 @@ class ConfigMigrator():
     def _migrate_v9(self):
         sickbeard.PUSHBULLET_ACCESS_TOKEN = check_setting_str(self.config_obj, 'Pushbullet', 'pushbullet_api', '')
         sickbeard.PUSHBULLET_DEVICE_IDEN = check_setting_str(self.config_obj, 'Pushbullet', 'pushbullet_device', '')
+
+    def _migrate_v10(self):
+        # reset backlog frequency to default
+        sickbeard.BACKLOG_FREQUENCY = sickbeard.DEFAULT_BACKLOG_FREQUENCY
+
+    def _migrate_v11(self):
+        if check_setting_int(self.config_obj, 'ANIME', 'anime_split_home', ''):
+            sickbeard.SHOWLIST_TAGVIEW = 'anime'
+        else:
+            sickbeard.SHOWLIST_TAGVIEW = 'default'

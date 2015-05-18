@@ -19,15 +19,18 @@ Unittest for the twisted-style reactor.
 
 from __future__ import absolute_import, division, print_function, with_statement
 
+import logging
 import os
 import shutil
 import signal
+import sys
 import tempfile
 import threading
+import warnings
 
 try:
     import fcntl
-    from twisted.internet.defer import Deferred
+    from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
     from twisted.internet.interfaces import IReadDescriptor, IWriteDescriptor
     from twisted.internet.protocol import Protocol
     from twisted.python import log
@@ -40,10 +43,12 @@ except ImportError:
 # The core of Twisted 12.3.0 is available on python 3, but twisted.web is not
 # so test for it separately.
 try:
-    from twisted.web.client import Agent
+    from twisted.web.client import Agent, readBody
     from twisted.web.resource import Resource
     from twisted.web.server import Site
-    have_twisted_web = True
+    # As of Twisted 15.0.0, twisted.web is present but fails our
+    # tests due to internal str/bytes errors.
+    have_twisted_web = sys.version_info < (3,)
 except ImportError:
     have_twisted_web = False
 
@@ -52,6 +57,8 @@ try:
 except ImportError:
     import _thread as thread  # py3
 
+from tornado.escape import utf8
+from tornado import gen
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
@@ -64,6 +71,9 @@ from tornado.web import RequestHandler, Application
 
 skipIfNoTwisted = unittest.skipUnless(have_twisted,
                                       "twisted module not present")
+
+skipIfNoSingleDispatch = unittest.skipIf(
+    gen.singledispatch is None, "singledispatch module not present")
 
 
 def save_signal_handlers():
@@ -407,7 +417,7 @@ class CompatibilityTests(unittest.TestCase):
         # http://twistedmatrix.com/documents/current/web/howto/client.html
         chunks = []
         client = Agent(self.reactor)
-        d = client.request('GET', url)
+        d = client.request(b'GET', utf8(url))
 
         class Accumulator(Protocol):
             def __init__(self, finished):
@@ -425,36 +435,97 @@ class CompatibilityTests(unittest.TestCase):
             return finished
         d.addCallback(callback)
 
-        def shutdown(ignored):
-            self.stop_loop()
+        def shutdown(failure):
+            if hasattr(self, 'stop_loop'):
+                self.stop_loop()
+            elif failure is not None:
+                # loop hasn't been initialized yet; try our best to
+                # get an error message out. (the runner() interaction
+                # should probably be refactored).
+                try:
+                    failure.raiseException()
+                except:
+                    logging.error('exception before starting loop', exc_info=True)
         d.addBoth(shutdown)
         runner()
         self.assertTrue(chunks)
         return ''.join(chunks)
 
+    def twisted_coroutine_fetch(self, url, runner):
+        body = [None]
+
+        @gen.coroutine
+        def f():
+            # This is simpler than the non-coroutine version, but it cheats
+            # by reading the body in one blob instead of streaming it with
+            # a Protocol.
+            client = Agent(self.reactor)
+            response = yield client.request(b'GET', utf8(url))
+            with warnings.catch_warnings():
+                # readBody has a buggy DeprecationWarning in Twisted 15.0:
+                # https://twistedmatrix.com/trac/changeset/43379
+                warnings.simplefilter('ignore', category=DeprecationWarning)
+                body[0] = yield readBody(response)
+            self.stop_loop()
+        self.io_loop.add_callback(f)
+        runner()
+        return body[0]
+
     def testTwistedServerTornadoClientIOLoop(self):
         self.start_twisted_server()
         response = self.tornado_fetch(
-            'http://localhost:%d' % self.twisted_port, self.run_ioloop)
+            'http://127.0.0.1:%d' % self.twisted_port, self.run_ioloop)
         self.assertEqual(response.body, 'Hello from twisted!')
 
     def testTwistedServerTornadoClientReactor(self):
         self.start_twisted_server()
         response = self.tornado_fetch(
-            'http://localhost:%d' % self.twisted_port, self.run_reactor)
+            'http://127.0.0.1:%d' % self.twisted_port, self.run_reactor)
         self.assertEqual(response.body, 'Hello from twisted!')
 
     def testTornadoServerTwistedClientIOLoop(self):
         self.start_tornado_server()
         response = self.twisted_fetch(
-            'http://localhost:%d' % self.tornado_port, self.run_ioloop)
+            'http://127.0.0.1:%d' % self.tornado_port, self.run_ioloop)
         self.assertEqual(response, 'Hello from tornado!')
 
     def testTornadoServerTwistedClientReactor(self):
         self.start_tornado_server()
         response = self.twisted_fetch(
-            'http://localhost:%d' % self.tornado_port, self.run_reactor)
+            'http://127.0.0.1:%d' % self.tornado_port, self.run_reactor)
         self.assertEqual(response, 'Hello from tornado!')
+
+    @skipIfNoSingleDispatch
+    def testTornadoServerTwistedCoroutineClientIOLoop(self):
+        self.start_tornado_server()
+        response = self.twisted_coroutine_fetch(
+            'http://127.0.0.1:%d' % self.tornado_port, self.run_ioloop)
+        self.assertEqual(response, 'Hello from tornado!')
+
+
+@skipIfNoTwisted
+@skipIfNoSingleDispatch
+class ConvertDeferredTest(unittest.TestCase):
+    def test_success(self):
+        @inlineCallbacks
+        def fn():
+            if False:
+                # inlineCallbacks doesn't work with regular functions;
+                # must have a yield even if it's unreachable.
+                yield
+            returnValue(42)
+        f = gen.convert_yielded(fn())
+        self.assertEqual(f.result(), 42)
+
+    def test_failure(self):
+        @inlineCallbacks
+        def fn():
+            if False:
+                yield
+            1 / 0
+        f = gen.convert_yielded(fn())
+        with self.assertRaises(ZeroDivisionError):
+            f.result()
 
 
 if have_twisted:
@@ -483,7 +554,7 @@ if have_twisted:
             'test_changeUID',
         ],
         # Process tests appear to work on OSX 10.7, but not 10.6
-        #'twisted.internet.test.test_process.PTYProcessTestsBuilder': [
+        # 'twisted.internet.test.test_process.PTYProcessTestsBuilder': [
         #    'test_systemCallUninterruptedByChildExit',
         #    ],
         'twisted.internet.test.test_tcp.TCPClientTestsBuilder': [
@@ -502,7 +573,7 @@ if have_twisted:
         'twisted.internet.test.test_threads.ThreadTestsBuilder': [],
         'twisted.internet.test.test_time.TimeTestsBuilder': [],
         # Extra third-party dependencies (pyOpenSSL)
-        #'twisted.internet.test.test_tls.SSLClientTestsMixin': [],
+        # 'twisted.internet.test.test_tls.SSLClientTestsMixin': [],
         'twisted.internet.test.test_udp.UDPServerTestsBuilder': [],
         'twisted.internet.test.test_unix.UNIXTestsBuilder': [
             # Platform-specific.  These tests would be skipped automatically
@@ -588,13 +659,13 @@ if have_twisted:
         correctly.  In some tests another TornadoReactor is layered on top
         of the whole stack.
         """
-        def initialize(self):
+        def initialize(self, **kwargs):
             # When configured to use LayeredTwistedIOLoop we can't easily
             # get the next-best IOLoop implementation, so use the lowest common
             # denominator.
             self.real_io_loop = SelectIOLoop()
             reactor = TornadoReactor(io_loop=self.real_io_loop)
-            super(LayeredTwistedIOLoop, self).initialize(reactor=reactor)
+            super(LayeredTwistedIOLoop, self).initialize(reactor=reactor, **kwargs)
             self.add_callback(self.make_current)
 
         def close(self, all_fds=False):

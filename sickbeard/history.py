@@ -94,3 +94,33 @@ def logFailed(epObj, release, provider=None):
     action = Quality.compositeStatus(FAILED, quality)
 
     _logHistoryItem(action, showid, season, epNum, quality, release, provider)
+
+
+def reset_status(indexerid, season, episode):
+    ''' Revert episode history to status from download history,
+        if history exists '''
+    my_db = db.DBConnection()
+
+    history_sql = 'SELECT h.action, h.showid, h.season, h.episode,'\
+        ' t.status FROM history AS h INNER JOIN tv_episodes AS t'\
+        ' ON h.showid = t.showid AND h.season = t.season'\
+        ' AND h.episode = t.episode WHERE t.showid = ? AND t.season = ?'\
+        ' AND t.episode = ? GROUP BY h.action ORDER BY h.date DESC limit 1'
+
+    sql_history = my_db.select(history_sql, [str(indexerid),
+                                             str(season),
+                                             str(episode)])
+    if len(sql_history) == 1:
+        history = sql_history[0]
+
+        # update status only if status differs
+        # FIXME: this causes issues if the user changed status manually
+        #        replicating refactored behavior anyway.
+        if history['status'] != history['action']:
+            undo_status = 'UPDATE tv_episodes SET status = ?'\
+                ' WHERE showid = ? AND season = ? AND episode = ?'
+
+            my_db.action(undo_status, [history['action'],
+                                       history['showid'],
+                                       history['season'],
+                                       history['episode']])

@@ -1,7 +1,6 @@
-#import os.path
+#import sickbeard
 #import datetime
 #import locale
-#import sickbeard
 #from sickbeard.common import *
 #from sickbeard.sbdatetime import *
 #from sickbeard import config
@@ -10,13 +9,13 @@
 #from sickbeard.helpers import anon_url
 #from sickbeard.logger import reverseNames as file_logging_presets
 #from sickbeard.helpers import maybe_plural
-
+##
 #set global $title  = 'Config - General'
 #set global $header = 'General Configuration'
-
 #set global $sbPath = '../..'
-
 #set global $topmenu = 'config'
+##
+#import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 #if $varExists('header')
@@ -24,9 +23,10 @@
 #else
 	<h1 class="title">$title</h1>
 #end if
+##
 #set $checked = ' checked="checked"'
 #set $selected = ' selected="selected"'
-
+##
 #set $indexer = 0
 #if $sickbeard.INDEXER_DEFAULT
     #set $indexer = $sickbeard.INDEXER_DEFAULT
@@ -174,14 +174,14 @@
 								<span class="component-desc">
 									<input type="checkbox" name="auto_update" id="auto_update"#echo ('', $checked)[$sickbeard.AUTO_UPDATE]#>
 									<p>fetch and install software updates.
-									Updates are run on startup and in the background at the frequency set below*</p>
+									Updates are run on startup and in the background at the frequency set below<sup>1</sup></p>
 								</span>
 							</label>
 						</div>
 
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Check the server every*</span>
+								<span class="component-title">Check the server every<sup>1</sup></span>
 								<span class="component-desc">
 									<input type="text" name="update_frequency" id="update_frequency" value="$sickbeard.UPDATE_FREQUENCY" class="form-control input-sm input75">
 									<p>hours for software updates (default:12)</p>
@@ -243,11 +243,29 @@
 						</div>
 
 						<div class="field-pair">
-							<label for="use_imdb_info">
-								<span class="component-title">Enable IMDb info</span>
+							<label for="showlist_tagview">
+								<span class="component-title">Group show list shows into:</span>
 								<span class="component-desc">
-									<input type="checkbox" name="use_imdb_info" id="use_imdb_info"#echo ('', $checked)[$sickbeard.USE_IMDB_INFO]#>
-									<p>for ui links, display show; ratings, country flag, year, runtime, and genre tags</p>
+									<select id="showlist_tagview" name="showlist_tagview" class="form-control input-sm">
+										<option value="standard"#echo ('', $selected)['standard' == $sickbeard.SHOWLIST_TAGVIEW]#>One Show List</option>
+										<option value="anime"#echo ('', $selected)['anime' == $sickbeard.SHOWLIST_TAGVIEW]#>Show / Anime Lists</option>
+										<option value="custom"#echo ('', $selected)['custom' == $sickbeard.SHOWLIST_TAGVIEW]#>Custom Lists</option>
+									</select>
+									#set $hidden = ' class="hidden"'
+									<span id="showlist_tagview_standard"#echo ('', $hidden)['standard' not in $sickbeard.SHOWLIST_TAGVIEW]#>that contains all shows (default)</span>
+                                    <span id="showlist_tagview_anime"#echo ('', $hidden)['anime' not in $sickbeard.SHOWLIST_TAGVIEW]#>two groups, the show list and anime</span>
+                                    <span id="showlist_tagview_custom"#echo ('', $hidden)['custom' not in $sickbeard.SHOWLIST_TAGVIEW]#>multiple custom<sup>1</sup> named groups and a "Show List"</span>
+								</span>
+							</label>
+						</div>
+
+						<div id="showlist_tagview_custom_config" class="field-pair#if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then ' hidden' else ''#">
+							<label for="show_tags">
+								<span class="component-title">Group names for show list<sup>1</sup></span>
+								<span class="component-desc">
+									<input type="text" name="show_tags" id="show_tags" value="$show_tags" class="form-control input-sm input300">
+									<span>comma separated names</span>
+                                    <p class="clear-left note">group shows to the order of this custom list (add shows to groups with <a href="/manage/">mass edit</a>)</p>
 								</span>
 							</label>
 						</div>
@@ -258,6 +276,16 @@
 								<span class="component-desc">
 									<input type="checkbox" name="home_search_focus" id="home_search_focus"#echo ('', $checked)[$sickbeard.HOME_SEARCH_FOCUS]#>
 									<p>page refresh on "Show List" will start search box focused</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="use_imdb_info">
+								<span class="component-title">Enable IMDb info</span>
+								<span class="component-desc">
+									<input type="checkbox" name="use_imdb_info" id="use_imdb_info"#echo ('', $checked)[$sickbeard.USE_IMDB_INFO]#>
+									<p>for ui links, display show; ratings, country flag, year, runtime, and genre tags</p>
 								</span>
 							</label>
 						</div>
@@ -504,7 +532,7 @@
 									<select id="branchVersion" class="form-control form-control-inline input-sm pull-left max300">
 										<option>Loading list from github</option>
 									</select>
-									<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="branchCheckout" value="Checkout Branch" disabled="disabled">
+									<input class="btn btn-inline" style="margin-left:6px" type="button" id="branchCheckout" value="Checkout Branch" disabled="disabled">
 									<div class="clear-left"><p>select branch to use (restart required)</p></div>
 								</span>
 							</label>

@@ -27,13 +27,14 @@ from sickbeard.exceptions import ex
 
 class Scheduler(threading.Thread):
     def __init__(self, action, cycleTime=datetime.timedelta(minutes=10), run_delay=datetime.timedelta(minutes=0),
-                 start_time=None, threadName="ScheduledThread", silent=True):
+                 start_time=None, threadName="ScheduledThread", silent=True, prevent_cycle_run=None):
         super(Scheduler, self).__init__()
 
         self.lastRun = datetime.datetime.now() + run_delay - cycleTime
         self.action = action
         self.cycleTime = cycleTime
         self.start_time = start_time
+        self.prevent_cycle_run = prevent_cycle_run
 
         self.name = threadName
         self.silent = silent
@@ -45,7 +46,6 @@ class Scheduler(threading.Thread):
 
     def forceRun(self):
         if not self.action.amActive:
-            self.lastRun = datetime.datetime.fromordinal(1)
             self.force = True
             return True
         return False
@@ -54,36 +54,47 @@ class Scheduler(threading.Thread):
 
         while not self.stop.is_set():
 
-            current_time = datetime.datetime.now()
-            should_run = False
+            try:
+                current_time = datetime.datetime.now()
+                should_run = False
 
-            # check if interval has passed
-            if current_time - self.lastRun >= self.cycleTime:
-                # check if wanting to start around certain time taking interval into account
-                if self.start_time:
-                    hour_diff = current_time.time().hour - self.start_time.hour
-                    if not hour_diff < 0 and hour_diff < self.cycleTime.seconds / 3600:
-                        should_run = True
+                # check if interval has passed
+                if current_time - self.lastRun >= self.cycleTime:
+                    # check if wanting to start around certain time taking interval into account
+                    if self.start_time:
+                        hour_diff = current_time.time().hour - self.start_time.hour
+                        if not hour_diff < 0 and hour_diff < self.cycleTime.seconds / 3600:
+                            should_run = True
+                        else:
+                            # set lastRun to only check start_time after another cycleTime
+                            self.lastRun = current_time
                     else:
-                        # set lastRun to only check start_time after another cycleTime
-                        self.lastRun = current_time
-                else:
+                        should_run = True
+
+                if self.force:
                     should_run = True
 
-            if should_run:
-                self.lastRun = current_time
+                if should_run and self.prevent_cycle_run is not None and self.prevent_cycle_run():
+                    logger.log(u'%s skipping this cycleTime' % self.name, logger.WARNING)
+                    # set lastRun to only check start_time after another cycleTime
+                    self.lastRun = current_time
+                    should_run = False
 
-                try:
-                    if not self.silent:
-                        logger.log(u"Starting new thread: " + self.name, logger.DEBUG)
+                if should_run:
+                    self.lastRun = current_time
 
-                    self.action.run()
-                except Exception, e:
-                    logger.log(u"Exception generated in thread " + self.name + ": " + ex(e), logger.ERROR)
-                    logger.log(repr(traceback.format_exc()), logger.DEBUG)
+                    try:
+                        if not self.silent:
+                            logger.log(u"Starting new thread: " + self.name, logger.DEBUG)
 
-            if self.force:
-                self.force = False
+                        self.action.run()
+                    except Exception, e:
+                        logger.log(u"Exception generated in thread " + self.name + ": " + ex(e), logger.ERROR)
+                        logger.log(repr(traceback.format_exc()), logger.DEBUG)
+
+            finally:
+                if self.force:
+                    self.force = False
 
             time.sleep(1)
 

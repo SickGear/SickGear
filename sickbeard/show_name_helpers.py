@@ -145,7 +145,7 @@ def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
             # for providers that don't allow multiple searches in one request we only search for Sxx style stuff
             else:
                 for cur_season in seasonStrings:
-                    if len(show.release_groups.whitelist) > 0:
+                    if show.is_anime and show.release_groups is not None and show.release_groups.whitelist:
                         for keyword in show.release_groups.whitelist:
                             toReturn.append(keyword + '.' + curShow+ "." + cur_season)
                     else:
@@ -182,7 +182,7 @@ def makeSceneSearchString(show, ep_obj):
 
     for curShow in showNames:
         for curEpString in epStrings:
-            if len(ep_obj.show.release_groups.whitelist) > 0:
+            if ep_obj.show.is_anime and ep_obj.show.release_groups is not None and ep_obj.show.release_groups.whitelist:
                 for keyword in ep_obj.show.release_groups.whitelist:
                     toReturn.append(keyword + '.' + curShow + '.' + curEpString)
             else:
@@ -237,7 +237,7 @@ def determineReleaseName(dir_name=None, nzb_name=None):
     """Determine a release name from an nzb and/or folder name"""
 
     if nzb_name is not None:
-        logger.log(u"Using nzb_name for release name.")
+        logger.log(u'Using nzb name for release name.')
         return nzb_name.rpartition('.')[0]
 
     if dir_name is None:

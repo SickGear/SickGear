@@ -23,39 +23,36 @@ import datetime
 import os
 import re
 import itertools
+from base64 import b16encode, b32decode
+
 import sickbeard
 import requests
-
-from sickbeard import helpers, classes, logger, db
+from sickbeard import helpers, classes, logger, db, tvcache
 from sickbeard.common import MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
-from sickbeard import tvcache
 from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard.common import Quality
-from sickbeard import clients
-
 from hachoir_parser import createParser
-from base64 import b16encode, b32decode
+
 
 class GenericProvider:
     NZB = "nzb"
     TORRENT = "torrent"
 
-    def __init__(self, name):
+    def __init__(self, name, supportsBacklog, anime_only):
         # these need to be set in the subclass
         self.providerType = None
         self.name = name
+        self.supportsBacklog = supportsBacklog
+        self.anime_only = anime_only
         self.url = ''
 
         self.show = None
 
-        self.supportsBacklog = False
-        self.supportsAbsoluteNumbering = False
-        self.anime_only = False
-
         self.search_mode = None
         self.search_fallback = False
+        self.enabled = False
         self.enable_recentsearch = False
         self.enable_backlog = False
 
@@ -97,7 +94,7 @@ class GenericProvider:
         """
         This should be overridden and should return the config setting eg. sickbeard.MYPROVIDER
         """
-        return False
+        return self.enabled
 
     def getResult(self, episodes):
         """
@@ -467,14 +464,12 @@ class GenericProvider:
 
 
 class NZBProvider(GenericProvider):
-    def __init__(self, name):
-        GenericProvider.__init__(self, name)
-
+    def __init__(self, name, supportsBacklog, anime_only):
+        GenericProvider.__init__(self, name, supportsBacklog, anime_only)
         self.providerType = GenericProvider.NZB
 
 
 class TorrentProvider(GenericProvider):
-    def __init__(self, name):
-        GenericProvider.__init__(self, name)
-
+    def __init__(self, name, supportsBacklog, anime_only):
+        GenericProvider.__init__(self, name, supportsBacklog, anime_only)
         self.providerType = GenericProvider.TORRENT

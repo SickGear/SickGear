@@ -31,20 +31,21 @@ import sys
 import os.path
 import uuid
 import base64
+import sickbeard
 sys.path.append(os.path.abspath('../lib'))
 from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
 from providers import ezrss, btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
     omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, nextgen, speedcd, nyaatorrents, torrentbytes, \
-    freshontv, bitsoup, tokyotoshokan, animenzb
+    freshontv, bitsoup, tokyotoshokan, animenzb, totv
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type, minimax
-from sickbeard import searchBacklog, showUpdater, versionChecker, properFinder, autoPostProcesser, \
+from sickbeard import searchBacklog, showUpdater, versionChecker, autoPostProcesser, \
     subtitles, traktChecker
 from sickbeard import helpers, db, exceptions, show_queue, search_queue, scheduler, show_name_helpers
 from sickbeard import logger
 from sickbeard import naming
-from sickbeard import searchRecent
+from sickbeard import searchRecent, searchProper
 from sickbeard import scene_numbering, scene_exceptions, name_cache
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, indexer_episodenotfound, \
@@ -60,7 +61,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 9
+CONFIG_VERSION = 11
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -157,6 +158,9 @@ DEBUG = False
 DISPLAY_BACKGROUND = False
 DISPLAY_BACKGROUND_TRANSPARENT = None
 DISPLAY_ALL_SEASONS = True
+SHOW_TAGS = []
+DEFAULT_SHOW_TAG = ''
+SHOWLIST_TAGVIEW = ''
 
 USE_LISTVIEW = False
 METADATA_XBMC = None
@@ -220,10 +224,12 @@ DEFAULT_UPDATE_FREQUENCY = 1
 
 MIN_AUTOPOSTPROCESSER_FREQUENCY = 1
 MIN_RECENTSEARCH_FREQUENCY = 10
-MIN_BACKLOG_FREQUENCY = 10
+MIN_BACKLOG_FREQUENCY = 2
+MAX_BACKLOG_FREQUENCY = 35
 MIN_UPDATE_FREQUENCY = 1
 
 BACKLOG_DAYS = 7
+SEARCH_UNAIRED = False
 
 ADD_SHOWS_WO_DIR = False
 CREATE_MISSING_SHOW_DIRS = False
@@ -496,7 +502,7 @@ def initialize(consoleLogging=True):
             USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
             USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_API, TRAKT_REMOVE_WATCHLIST, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
-            PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
+            PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, RECENTSEARCH_STARTUP, \
@@ -527,8 +533,9 @@ def initialize(consoleLogging=True):
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, LOCALHOST_IP, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
-            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, ANIME_TREAT_AS_HDTV, \
-            COOKIE_SECRET, USE_IMDB_INFO, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS
+            ANIME_SPLIT_HOME, SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, ANIME_TREAT_AS_HDTV, \
+            COOKIE_SECRET, USE_IMDB_INFO, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS, \
+            SHOW_TAGS, DEFAULT_SHOW_TAG, SHOWLIST_TAGVIEW
 
         if __INITIALIZED__:
             return False
@@ -602,6 +609,9 @@ def initialize(consoleLogging=True):
         DISPLAY_BACKGROUND = bool(check_setting_int(CFG, 'General', 'display_background', 0))
         DISPLAY_BACKGROUND_TRANSPARENT = check_setting_str(CFG, 'General', 'display_background_transparent', 'transparent')
         DISPLAY_ALL_SEASONS = bool(check_setting_int(CFG, 'General', 'display_all_seasons', 1))
+        SHOW_TAGS = check_setting_str(CFG, 'GUI', 'show_tags', 'Show List').split(',')
+        DEFAULT_SHOW_TAG = check_setting_str(CFG, 'GUI', 'default_show_tag', 'Show List')
+        SHOWLIST_TAGVIEW = check_setting_str(CFG, 'GUI', 'showlist_tagview', 'standard')
 
         ACTUAL_LOG_DIR = check_setting_str(CFG, 'General', 'log_dir', 'Logs')
         # put the log dir inside the data dir, unless an absolute path
@@ -727,16 +737,15 @@ def initialize(consoleLogging=True):
         if RECENTSEARCH_FREQUENCY < MIN_RECENTSEARCH_FREQUENCY:
             RECENTSEARCH_FREQUENCY = MIN_RECENTSEARCH_FREQUENCY
 
-        MIN_BACKLOG_FREQUENCY = get_backlog_cycle_time()
         BACKLOG_FREQUENCY = check_setting_int(CFG, 'General', 'backlog_frequency', DEFAULT_BACKLOG_FREQUENCY)
-        if BACKLOG_FREQUENCY < MIN_BACKLOG_FREQUENCY:
-            BACKLOG_FREQUENCY = MIN_BACKLOG_FREQUENCY
+        BACKLOG_FREQUENCY = minimax(BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY)
 
         UPDATE_FREQUENCY = check_setting_int(CFG, 'General', 'update_frequency', DEFAULT_UPDATE_FREQUENCY)
         if UPDATE_FREQUENCY < MIN_UPDATE_FREQUENCY:
             UPDATE_FREQUENCY = MIN_UPDATE_FREQUENCY
 
         BACKLOG_DAYS = check_setting_int(CFG, 'General', 'backlog_days', 7)
+        SEARCH_UNAIRED = bool(check_setting_int(CFG, 'General', 'search_unaired', 0))
 
         NZB_DIR = check_setting_str(CFG, 'Blackhole', 'nzb_dir', '')
         TORRENT_DIR = check_setting_str(CFG, 'Blackhole', 'torrent_dir', '')
@@ -1149,36 +1158,38 @@ def initialize(consoleLogging=True):
         update_now = datetime.timedelta(minutes=0)
         versionCheckScheduler = scheduler.Scheduler(versionChecker.CheckVersion(),
                                                     cycleTime=datetime.timedelta(hours=UPDATE_FREQUENCY),
-                                                    threadName="CHECKVERSION",
+                                                    threadName='CHECKVERSION',
                                                     silent=False)
 
         showQueueScheduler = scheduler.Scheduler(show_queue.ShowQueue(),
                                                  cycleTime=datetime.timedelta(seconds=3),
-                                                 threadName="SHOWQUEUE")
+                                                 threadName='SHOWQUEUE')
 
         showUpdateScheduler = scheduler.Scheduler(showUpdater.ShowUpdater(),
                                                   cycleTime=datetime.timedelta(hours=1),
-                                                  threadName="SHOWUPDATER",
-                                                  start_time=datetime.time(hour=SHOW_UPDATE_HOUR))  # 3 AM
+                                                  threadName='SHOWUPDATER',
+                                                  start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
+                                                  prevent_cycle_run=sickbeard.showQueueScheduler.action.isShowUpdateRunning)  # 3 AM
 
         # searchers
         searchQueueScheduler = scheduler.Scheduler(search_queue.SearchQueue(),
                                                    cycleTime=datetime.timedelta(seconds=3),
-                                                   threadName="SEARCHQUEUE")
+                                                   threadName='SEARCHQUEUE')
 
         update_interval = datetime.timedelta(minutes=RECENTSEARCH_FREQUENCY)
         recentSearchScheduler = scheduler.Scheduler(searchRecent.RecentSearcher(),
                                                    cycleTime=update_interval,
-                                                   threadName="RECENTSEARCHER",
+                                                   threadName='RECENTSEARCHER',
                                                    run_delay=update_now if RECENTSEARCH_STARTUP
-                                                   else datetime.timedelta(minutes=5))
+                                                   else datetime.timedelta(minutes=5),
+                                                   prevent_cycle_run=sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress)
 
-        update_interval = datetime.timedelta(minutes=BACKLOG_FREQUENCY)
         backlogSearchScheduler = searchBacklog.BacklogSearchScheduler(searchBacklog.BacklogSearcher(),
-                                                                      cycleTime=update_interval,
-                                                                      threadName="BACKLOG",
+                                                                      cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
+                                                                      threadName='BACKLOG',
                                                                       run_delay=update_now if BACKLOG_STARTUP
-                                                                      else datetime.timedelta(minutes=10))
+                                                                      else datetime.timedelta(minutes=10),
+                                                                      prevent_cycle_run=sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress)
 
         search_intervals = {'15m': 15, '45m': 45, '90m': 90, '4h': 4 * 60, 'daily': 24 * 60}
         if CHECK_PROPERS_INTERVAL in search_intervals:
@@ -1188,27 +1199,28 @@ def initialize(consoleLogging=True):
             update_interval = datetime.timedelta(hours=1)
             run_at = datetime.time(hour=1)  # 1 AM
 
-        properFinderScheduler = scheduler.Scheduler(properFinder.ProperFinder(),
+        properFinderScheduler = scheduler.Scheduler(searchProper.ProperSearcher(),
                                                     cycleTime=update_interval,
-                                                    threadName="FINDPROPERS",
+                                                    threadName='FINDPROPERS',
                                                     start_time=run_at,
-                                                    run_delay=update_interval)
+                                                    run_delay=update_interval,
+                                                    prevent_cycle_run=sickbeard.searchQueueScheduler.action.is_propersearch_in_progress)
 
         # processors
         autoPostProcesserScheduler = scheduler.Scheduler(autoPostProcesser.PostProcesser(),
                                                          cycleTime=datetime.timedelta(
-                                                             minutes=AUTOPOSTPROCESSER_FREQUENCY),
-                                                         threadName="POSTPROCESSER",
+                                                         minutes=AUTOPOSTPROCESSER_FREQUENCY),
+                                                         threadName='POSTPROCESSER',
                                                          silent=not PROCESS_AUTOMATICALLY)
 
         traktCheckerScheduler = scheduler.Scheduler(traktChecker.TraktChecker(),
                                                     cycleTime=datetime.timedelta(hours=1),
-                                                    threadName="TRAKTCHECKER",
+                                                    threadName='TRAKTCHECKER',
                                                     silent=not USE_TRAKT)
 
         subtitlesFinderScheduler = scheduler.Scheduler(subtitles.SubtitlesFinder(),
                                                        cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_FREQUENCY),
-                                                       threadName="FINDSUBTITLES",
+                                                       threadName='FINDSUBTITLES',
                                                        silent=not USE_SUBTITLES)
 
         showList = []
@@ -1497,6 +1509,7 @@ def save_config():
     new_config['General']['metadata_kodi'] = METADATA_KODI
 
     new_config['General']['backlog_days'] = int(BACKLOG_DAYS)
+    new_config['General']['search_unaired'] = int(SEARCH_UNAIRED)
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
     new_config['General']['root_dirs'] = ROOT_DIRS if ROOT_DIRS else ''
@@ -1838,6 +1851,9 @@ def save_config():
     new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
+    new_config['GUI']['show_tags'] = ','.join(SHOW_TAGS)
+    new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
+    new_config['GUI']['default_tag'] = DEFAULT_SHOW_TAG
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)
@@ -1860,7 +1876,6 @@ def save_config():
     new_config['ANIDB']['anidb_use_mylist'] = int(ANIDB_USE_MYLIST)
 
     new_config['ANIME'] = {}
-    new_config['ANIME']['anime_split_home'] = int(ANIME_SPLIT_HOME)
     new_config['ANIME']['anime_treat_as_hdtv'] = int(ANIME_TREAT_AS_HDTV)
 
     new_config.write()

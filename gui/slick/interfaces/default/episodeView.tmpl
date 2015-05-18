@@ -1,15 +1,15 @@
 #import sickbeard
 #import datetime
+#import re
 #from sickbeard.common import *
 #from sickbeard import sbdatetime
 #from sickbeard.helpers import anon_url
-
+##
 #set global $title = 'Episode View'
 #set global $header = 'Episode View'
-
 #set global $sbPath = '..'
-
 #set global $topmenu = 'episodeView'
+##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
@@ -41,7 +41,7 @@
 		jQuery.each(\$container, function(j) {
 			this.isotope({
 				itemSelector: '.daybyday-show',
-				sortBy : '$sort',
+				sortBy: '$sort',
 				layoutMode: 'vertical',
 				transitionDuration: 0,
 				getSortData: {
@@ -268,11 +268,11 @@
     #set $fuzzydate = 'airdate'
     #if $sickbeard.FUZZY_DATING:
 		fuzzyMoment({
-			containerClass : '.${fuzzydate}',
-			dateHasTime : true,
-			dateFormat : '${sickbeard.DATE_PRESET}',
-			timeFormat : '${sickbeard.TIME_PRESET}',
-			trimZero : #if $sickbeard.TRIM_ZERO then 'true' else 'false'#
+			containerClass: '.${fuzzydate}',
+			dateHasTime: !0,
+			dateFormat: '${sickbeard.DATE_PRESET}',
+			timeFormat: '${sickbeard.TIME_PRESET}',
+			trimZero: #echo ('!1', '!0')[$sickbeard.TRIM_ZERO]#
 		});
     #end if
 
@@ -331,7 +331,7 @@
 		<tr id="show-${show_id}" class="$show_div" data-rawname="$cur_result['show_name']">
 			## forced to use a div to wrap airdate, the column sort went crazy with a span
 			<td align="center" class="nowrap">
-				<div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</div><span class="sort_data">$time.mktime($cur_result['localtime'].timetuple())</span>
+				<div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</div><span class="sort-data">$cur_result['localtime'].strftime('%Y%m%d%H%M')</span>
 			</td>
 
 			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$cur_result['show_name']</a>
@@ -365,9 +365,9 @@
         #end if
 			</td>
 
-			<td align="center" style="vertical-align: middle;">
+			<td align="center" style="vertical-align:middle">
         #if sickbeard.USE_IMDB_INFO and $cur_result['imdb_id']:
-				<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" />
+				<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" /></a>
         #end if
 				<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'], cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="$sickbeard.indexerApi($cur_indexer).config['show_url']${cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
 			</td>
@@ -412,13 +412,13 @@
     #set $fuzzydate = 'airdate'
     #if $sickbeard.FUZZY_DATING:
 		fuzzyMoment({
-			dtInline : true,
-			dtGlue : ' at ',
-			containerClass : '.${fuzzydate}',
-			dateHasTime : true,
-			dateFormat : '${sickbeard.DATE_PRESET}',
-			timeFormat : '${sickbeard.TIME_PRESET}',
-			trimZero : #if $sickbeard.TRIM_ZERO then 'true' else 'false'#
+			dtInline: !0,
+			dtGlue: ' at ',
+			containerClass: '.${fuzzydate}',
+			dateHasTime: !0,
+			dateFormat: '${sickbeard.DATE_PRESET}',
+			timeFormat: '${sickbeard.TIME_PRESET}',
+			trimZero: #echo ('!1', '!0')[$sickbeard.TRIM_ZERO]#
 		});
     #end if
 	});
@@ -740,7 +740,7 @@
                         #set $img_id = ' id="plot-%s"' % $show_id
                         #set $plot_class = ' plot-daybyday'
 
-							<div id="show-${show_id}" class="daybyday-show" data-name="$cur_result['data_show_name']" data-season="$cur_result['season']" data-episode="$cur_result['episode']" data-network="$cur_result['data_network']" data-time="$time.mktime($cur_result['localtime'].timetuple())" data-rawname="$cur_result['show_name']">
+							<div id="show-${show_id}" class="daybyday-show" data-name="$cur_result['data_show_name']" data-season="$cur_result['season']" data-episode="$cur_result['episode']" data-network="$cur_result['data_network']" data-time="$cur_result['localtime'].strftime('%Y%m%d%H%M')" data-rawname="$cur_result['show_name']">
 								<div class="poster">
 									<a${title_text} href="$sbRoot/home/displayShow?show=${cur_result['showid']}">
 									<img${img_id} class="img-responsive${plot_class}" alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=poster_thumb" /></a>
@@ -748,7 +748,8 @@
 								<div class="state#if len($cur_result['state']) then ' %s" title="%s"' % ($cur_result['state'], $cur_result['state-title']) else '"' #></div>
 								<div class="text">
 									<div class="airtime">
-										<span class="time">${airtime}</span> <span class="network pull-right grey-text">$cur_result['network']</span>
+                        #set $match = None if not $cur_result['network'] else re.search(r'(.*)\s(\(\w+\))$', $cur_result['network'], re.I | re.M)
+										<span class="time">${airtime}</span> <span class="network pull-right grey-text"#echo '>%s' % $cur_result['network'] if None is $match else ' title="%s">%s' % ($match.group(2), $match.group(1))#</span>
 									</div>
 									<div class="episode" title="$cur_result['name']">
 										<span class="season"><%= '%i' % int(cur_result['season']) %></span>x<span class="number"><%= '%02i' % int(cur_result['episode']) %></span>

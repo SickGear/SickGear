@@ -19,18 +19,13 @@
 import re
 import traceback
 import datetime
+
 import sickbeard
 import generic
 import requests
 import requests.exceptions
-
 from sickbeard.common import Quality
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from sickbeard.exceptions import ex, AuthException
 from sickbeard.helpers import sanitizeSceneName
 from sickbeard.bs4_parser import BS4Parser
@@ -46,29 +41,15 @@ class BitSoupProvider(generic.TorrentProvider):
     }
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "BitSoup")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'BitSoup', True, False)
         self.username = None
         self.password = None
         self.ratio = None
         self.minseed = None
         self.minleech = None
-
         self.cache = BitSoupCache(self)
-
         self.url = self.urls['base_url']
-
-        self.categories = "&c42=1&c45=1&c49=1&c7=1"
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'bitsoup.png'
+        self.categories = '&c42=1&c45=1&c49=1&c7=1'
 
     def getQuality(self, item, anime=False):
 

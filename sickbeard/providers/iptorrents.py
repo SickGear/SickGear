@@ -19,18 +19,12 @@
 import re
 import traceback
 import datetime
-import urlparse
+
 import sickbeard
 import generic
 from sickbeard.common import Quality
-from sickbeard import logger
-from sickbeard import tvcache
-from sickbeard import db
-from sickbeard import classes
-from sickbeard import helpers
-from sickbeard import show_name_helpers
+from sickbeard import logger,tvcache,db,classes,helpers,show_name_helpers
 from sickbeard.exceptions import ex, AuthException
-from sickbeard import clients
 from lib import requests
 from lib.requests import exceptions
 from sickbeard.bs4_parser import BS4Parser
@@ -46,28 +40,14 @@ class IPTorrentsProvider(generic.TorrentProvider):
     }
 
     def __init__(self):
-
-        generic.TorrentProvider.__init__(self, "IPTorrents")
-
-        self.supportsBacklog = True
-
-        self.enabled = False
+        generic.TorrentProvider.__init__(self, 'IPTorrents', True, False)
         self.username = None
         self.password = None
         self.ratio = None
         self.freeleech = False
-
         self.cache = IPTorrentsCache(self)
-
         self.url = self.urls['base_url']
-
         self.categorie = 'l73=1&l78=1&l66=1&l65=1&l79=1&l5=1&l4=1'
-
-    def isEnabled(self):
-        return self.enabled
-
-    def imageName(self):
-        return 'iptorrents.png'
 
     def getQuality(self, item, anime=False):
 

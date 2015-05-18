@@ -29,6 +29,7 @@ import time
 
 from binascii import hexlify
 
+from tornado.concurrent import Future
 from tornado import ioloop
 from tornado.iostream import PipeIOStream
 from tornado.log import gen_log
@@ -46,6 +47,10 @@ try:
     long  # py2
 except NameError:
     long = int  # py3
+
+
+# Re-export this exception for convenience.
+CalledProcessError = subprocess.CalledProcessError
 
 
 def cpu_count():
@@ -191,6 +196,9 @@ class Subprocess(object):
       ``tornado.process.Subprocess.STREAM``, which will make the corresponding
       attribute of the resulting Subprocess a `.PipeIOStream`.
     * A new keyword argument ``io_loop`` may be used to pass in an IOLoop.
+
+    .. versionchanged:: 4.1
+       The ``io_loop`` argument is deprecated.
     """
     STREAM = object()
 
@@ -255,6 +263,33 @@ class Subprocess(object):
         Subprocess._waiting[self.pid] = self
         Subprocess._try_cleanup_process(self.pid)
 
+    def wait_for_exit(self, raise_error=True):
+        """Returns a `.Future` which resolves when the process exits.
+
+        Usage::
+
+            ret = yield proc.wait_for_exit()
+
+        This is a coroutine-friendly alternative to `set_exit_callback`
+        (and a replacement for the blocking `subprocess.Popen.wait`).
+
+        By default, raises `subprocess.CalledProcessError` if the process
+        has a non-zero exit status. Use ``wait_for_exit(raise_error=False)``
+        to suppress this behavior and return the exit status without raising.
+
+        .. versionadded:: 4.2
+        """
+        future = Future()
+
+        def callback(ret):
+            if ret != 0 and raise_error:
+                # Unfortunately we don't have the original args any more.
+                future.set_exception(CalledProcessError(ret, None))
+            else:
+                future.set_result(ret)
+        self.set_exit_callback(callback)
+        return future
+
     @classmethod
     def initialize(cls, io_loop=None):
         """Initializes the ``SIGCHLD`` handler.
@@ -263,6 +298,9 @@ class Subprocess(object):
         Note that the `.IOLoop` used for signal handling need not be the
         same one used by individual Subprocess objects (as long as the
         ``IOLoops`` are each running in separate threads).
+
+        .. versionchanged:: 4.1
+           The ``io_loop`` argument is deprecated.
         """
         if cls._initialized:
             return

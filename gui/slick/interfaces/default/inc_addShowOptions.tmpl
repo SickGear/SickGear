@@ -26,6 +26,7 @@
 #set global $bestQualities = $qualities[1]
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
 		</div>
+
 #try:
     #if True == $enable_default_wanted:
 		<div class="field-pair alt">
@@ -48,6 +49,20 @@
 #except (NameError, NotFound):
     #pass
 #end try
+
+		<div class="field-pair #if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then 'hidden' else ''#" style="margin-top:10px">
+			<label for="tag">
+				<span class="component-title">Place show in group</span>
+				<span class="component-desc">
+					<select name="tag" id="tag" class="form-control form-control-inline input-sm">
+#for $tag in $sickbeard.SHOW_TAGS:
+						<option value="$tag" #if $tag == $sickbeard.DEFAULT_SHOW_TAG then 'selected="selected"' else ''#>$tag</option>
+#end for
+					</select>
+					<span>and display on the show list page under this section</span>
+				</span>
+			</label>
+		</div>
 
 		<div class="field-pair alt">
 			<label for="flatten_folders">

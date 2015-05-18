@@ -1,15 +1,14 @@
-#from sickbeard import subtitles
 #import sickbeard
+#from sickbeard import subtitles
 #from sickbeard.helpers import anon_url
-
-#set global $title="Config - Subtitles"
-#set global $header="Subtitles"
-
-#set global $sbPath="../.."
-
-#set global $topmenu="config"
+##
+#set global $title = 'Config - Subtitles'
+#set global $header = 'Subtitles'
+#set global $sbPath = '../..'
+#set global $topmenu = 'config'
+##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/configSubtitles.js?$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/config.js"></script>
@@ -26,7 +25,7 @@
 	            	hintText: "Write to search a language and select it",
 					preventDuplicates: true,
 	            	prePopulate:
-	            		
+
 		            		[
 		            			<%=
 		            					",\r\n".join("{id: \"" + lang + "\", name: \"" + subtitles.getLanguageName(lang) + "\"}" for lang in sickbeard.SUBTITLES_LANGUAGES) if sickbeard.SUBTITLES_LANGUAGES != '' else ''
@@ -37,9 +36,9 @@
 	});
 </script>
 
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 
@@ -53,14 +52,14 @@
                 	<li><a href="#core-component-group4">Subtitles Search</a></li>
                 	<li><a href="#core-component-group2">Subtitles Plugin</a></li>
                 </ul>
-                
+
                 <div id="core-component-group4" class="component-group">
 
                     <div class="component-group-desc">
                         <h3>Subtitles Search</h3>
                         <p>Settings that dictate how SickGear handles subtitles search results.</p>
                     </div>
-                    
+
 					<fieldset class="component-group-list">
 			            <div class="field-pair">
                             <input type="checkbox" class="enabler" #if $sickbeard.USE_SUBTITLES then " checked=\"checked\"" else ""# id="use_subtitles" name="use_subtitles">
@@ -105,7 +104,7 @@
 		                                <span class="component-title">Subtitles History</span>
 		                                <span class="component-desc">Log downloaded Subtitle on History page?</span>
 		                            </label>
-		                        </div>                        		
+		                        </div>
 	                    <br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
                         </div>
                     </fieldset>
@@ -153,8 +152,9 @@
 <div class="clearfix"></div>
 <script type="text/javascript" charset="utf-8">
 <!--
-    jQuery('#config-components').tabs();
-	jQuery('#subtitles_dir').fileBrowser({ title: 'Select Subtitles Download Directory' });    
+jQuery('#config-components').tabs();
+jQuery('#subtitles_dir').fileBrowser({title: 'Select Subtitles Download Directory'});
 //-->
 </script>
-#include $os.path.join($sickbeard.PROG_DIR, "gui/slick/interfaces/default/inc_bottom.tmpl")
+
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

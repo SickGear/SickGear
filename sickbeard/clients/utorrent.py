@@ -42,12 +42,11 @@ class uTorrentAPI(GenericClient):
     def _get_auth(self):
 
         try:
-            self.response = self.session.get(self.url + 'token.html', verify=False)
-            self.auth = re.findall("<div.*?>(.*?)</", self.response.text)[0]
+            response = self.session.get(self.url + 'token.html', verify=False)
+            self.auth = re.findall('<div.*?>(.*?)</', response.text)[0]
+            return self.auth if not response.status_code == 404 else None
         except:
             return None
-
-        return self.auth if not self.response.status_code == 404 else None
 
     def _add_torrent_uri(self, result):
 
@@ -112,15 +111,15 @@ class uTorrentAPI(GenericClient):
             else:
                 return False
         else:
-            return True         
-        
+            return True
+
     def _set_torrent_priority(self, result):
 
         if result.priority == 1:
             params = {'action': 'queuetop', 'hash': result.hash}
             return self._request(params=params)
         else:
-            return True            
+            return True
 
     def _set_torrent_pause(self, result):
 
@@ -132,4 +131,4 @@ class uTorrentAPI(GenericClient):
         return self._request(params=params)
 
 
-api = uTorrentAPI()       
+api = uTorrentAPI()

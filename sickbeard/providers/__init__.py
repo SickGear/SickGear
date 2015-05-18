@@ -36,12 +36,14 @@ __all__ = ['ezrss',
            'bitsoup',
            'tokyotoshokan',
            'animenzb',
+           'totv',
 ]
+
+from os import sys
 
 import sickbeard
 import generic
 from sickbeard import logger
-from os import sys
 
 
 def sortedProviderList():

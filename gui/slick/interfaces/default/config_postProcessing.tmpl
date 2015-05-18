@@ -1,4 +1,3 @@
-#import os.path
 #import sickbeard
 #from sickbeard.common import *
 #from sickbeard.helpers import anon_url
@@ -6,13 +5,13 @@
 #from sickbeard import metadata
 #from sickbeard.metadata.generic import GenericMetadata
 #from sickbeard import naming
-
+##
 #set global $title = 'Config - Post Processing'
 #set global $header = 'Post Processing'
-
 #set global $sbPath = '../..'
-
 #set global $topmenu = 'config'
+##
+#import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/configPostProcessing.js?$sbPID"></script>
@@ -23,9 +22,10 @@
 #else 
 	<h1 class="title">$title</h1>
 #end if
+
+##
 #set $checked = 'checked="checked"'
 #set $selected = 'selected="selected" class="selected"'
-
 <div id="config" class="pp">
 	<div id="config-content" class="linefix">
 
@@ -1258,4 +1258,5 @@
 	jQuery('#tv_download_dir').fileBrowser({ title: 'Select completed TV downloads directory' });
 //-->
 </script>
+
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

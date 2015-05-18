@@ -1,3 +1,67 @@
+### 0.9.0 (2015-05-18 14:33:00 UTC)
+
+* Update Tornado webserver to 4.2.dev1 (609dbb9)
+* Update change to suppress reporting of Tornado exception error 1 to updated package as listed in hacks.txt
+* Update fix for API response header for JSON content type and the return of JSONP data to updated package as listed in hacks.txt
+* Change network names to only display on top line of Day by Day layout on Episode View
+* Reposition country part of network name into the hover over in Day by Day layout
+* Update Requests library 2.4.3 to 2.6.2 (ff71b25)
+* Update change to suppress HTTPS verification InsecureRequestWarning to updated package as listed in hacks.txt
+* Remove listed hacks.txt record for check that SSLv3 is available because issue was addressed by vendor
+* Update chardet packages 2.2.1 to 2.3.0 (ff40135)
+* Update cachecontrol library 0.9.3 to 0.11.2
+* Change prevent wasted API hit where show and exception names create a duplicate sanitised year
+* Add FAILED status indication to Snatched column of History compact
+* Add ARCHIVED status release groups to Downloaded column of History compact
+* Update root certificates to release dated 2015.04.28
+* Add ToTV provider
+* Fix poster URL on Add Show/Add From Trending page
+* Fix Backlog scheduler initialization and change backlog frequency from minutes to days
+* Change to consolidate and tidy some provider code
+* Fix restore table row colours on the Manage/Episode Status Management page
+* Add option "Unaired episodes" to config/Search Settings/Episode Search
+* Change reduce time to search recent result list by searching only once for a best result
+* Fix replacing episodes that have a lower quality than what is selected in the initial and archive quality list
+* Fix to include episodes marked Failed in the recent and backlog search processes
+* Fix display of search status for an alternative release after episode is manually set to "Failed" on the Display Show page
+* Change handle more varieties of media quality
+* Change to prevent another scheduled search when one of the same type is already running
+* Change travis to new container builds for faster unit testing
+* Add handling for shows that do not have a total number of episodes
+* Add support for country network image files to the Show List view
+* Add General Config/Interface/"Group show list shows into:"... to divide shows into groups on the Show List page
+* Change Show List progress bar code, smaller page load, efficient use of js render engine
+* Change values used for date sorting on home page and episode view for improved compatibility with posix systems
+* Change response handling in downloaders to simplify logic
+* Change reduce html payload across page template files
+* Change to post process files ordered largest to smallest and tidied PP logging output
+* Add "then trash subdirs and files" to the Process method "Move" on the manual post process page
+* Add using show scene exceptions with post processing
+* Change URL of scene exceptions file for TVRage indexer
+* Change overhaul processTV into a thread safe class
+* Change postProcessor and processTV to PEP8 standards
+* Change overhaul Manual Post-Processing page in line with layout style and improve texts
+* Change Force Processes enabled, only the largest video file of many will be processed instead of all files
+* Change visual ui of Postprocessing results to match the logs and errors view
+* Change remove ugly printing of episode object during PP seen in external apps like sabnzbd
+* Change to streamline output toward actual work done instead of showing all vars
+* Change pp report items from describing actions about to happen to instead detail the actual outcome of actions
+* Add clarity to the output of a successful post process but with some issues rather than "there were problems"
+* Add a conclusive bottom line to the pp result report
+* Change helpers doctests to unittests
+* Add Search Queue Overview page
+* Add expandable search queue details on the Manage Searches page
+* Fix failed status episodes not included in next_episode search function
+* Change prevent another show update from running if one is already running
+* Change split Force backlog button on the Manage Searches page into: Force Limited, Force Full
+* Change refactor properFinder to be part of the search
+* Change improve threading of generic_queue, show_queue and search_queue
+* Change disable the Force buttons on the Manage Searches page while a search is running
+* Change staggered periods of testing and updating of all shows "ended" status up to 460 days
+* Change "Archive" to "Upgrade to" in Edit show and other places and improve related texts for clarity
+* Fix history consolidation to only update an episode status if the history disagrees with the status.
+
+
 ### 0.8.3 (2015-04-25 08:48:00 UTC)
 
 * Fix clearing of the provider cache

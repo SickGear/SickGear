@@ -1,4 +1,4 @@
-# Author: Nic Wolfe <nic@wolfeden.ca>
+﻿# Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
@@ -18,7 +18,6 @@
 
 from __future__ import with_statement
 import getpass
-
 import os
 import re
 import shutil
@@ -27,13 +26,11 @@ import stat
 import tempfile
 import time
 import traceback
-import urllib
 import hashlib
 import httplib
 import urlparse
 import uuid
 import base64
-import zipfile
 import datetime
 
 import sickbeard
@@ -41,6 +38,7 @@ import subliminal
 import adba
 import requests
 import requests.exceptions
+
 
 try:
     import json
@@ -52,15 +50,10 @@ try:
 except ImportError:
     import elementtree.ElementTree as etree
 
-from xml.dom.minidom import Node
-
 from sickbeard.exceptions import MultipleShowObjectsException, ex
-from sickbeard import logger, classes
+from sickbeard import logger, classes, db, notifiers, clients
 from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions
-from sickbeard import db
 from sickbeard import encodingKludge as ek
-from sickbeard import notifiers
-from sickbeard import clients
 
 from lib.cachecontrol import CacheControl, caches
 from itertools import izip, cycle
@@ -115,18 +108,6 @@ def remove_non_release_groups(name):
 
 
 def replaceExtension(filename, newExt):
-    '''
-    >>> replaceExtension('foo.avi', 'mkv')
-    'foo.mkv'
-    >>> replaceExtension('.vimrc', 'arglebargle')
-    '.vimrc'
-    >>> replaceExtension('a.b.c', 'd')
-    'a.b.d'
-    >>> replaceExtension('', 'a')
-    ''
-    >>> replaceExtension('foo.bar', '')
-    'foo.'
-    '''
     sepFile = filename.rpartition(".")
     if sepFile[0] == "":
         return filename
@@ -172,17 +153,6 @@ def isRarFile(filename):
 
 
 def sanitizeFileName(name):
-    '''
-    >>> sanitizeFileName('a/b/c')
-    'a-b-c'
-    >>> sanitizeFileName('abc')
-    'abc'
-    >>> sanitizeFileName('a"b')
-    'ab'
-    >>> sanitizeFileName('.a.b..')
-    'a.b'
-    '''
-
     # remove bad chars from the filename
     name = re.sub(r'[\\/\*]', '-', name)
     name = re.sub(r'[:"<>|?]', '', name)
@@ -199,8 +169,8 @@ def _remove_file_failed(file):
     except:
         pass
 
-def findCertainShow(showList, indexerid):
 
+def findCertainShow(showList, indexerid):
     results = []
     if showList and indexerid:
         results = filter(lambda x: int(x.indexerid) == int(indexerid), showList)
@@ -209,6 +179,7 @@ def findCertainShow(showList, indexerid):
         return results[0]
     elif len(results) > 1:
         raise MultipleShowObjectsException()
+
 
 def makeDir(path):
     if not ek.ek(os.path.isdir, path):
@@ -232,50 +203,35 @@ def searchIndexerForShowID(regShowName, indexer=None, indexer_id=None, ui=None):
         t = sickbeard.indexerApi(i).indexer(**lINDEXER_API_PARMS)
 
         for name in showNames:
-            logger.log(u"Trying to find " + name + " on " + sickbeard.indexerApi(i).name, logger.DEBUG)
+            logger.log(u'Trying to find ' + name + ' on ' + sickbeard.indexerApi(i).name, logger.DEBUG)
 
             try:
-                search = t[indexer_id] if indexer_id else t[name]
+                result = t[indexer_id] if indexer_id else t[name]
             except:
                 continue
 
-            try:
-                seriesname = search.seriesname
-            except:
-                seriesname = None
-
-            try:
-                series_id = search.id
-            except:
-                series_id = None
+            seriesname = series_id = False
+            for search in result:
+                seriesname = search['seriesname']
+                series_id = search['id']
+                if seriesname and series_id:
+                    break
 
             if not (seriesname and series_id):
                 continue
 
-            if str(name).lower() == str(seriesname).lower and not indexer_id:
-                return (seriesname, i, int(series_id))
-            elif int(indexer_id) == int(series_id):
-                return (seriesname, i, int(indexer_id))
+            if None is indexer_id and str(name).lower() == str(seriesname).lower():
+                return seriesname, i, int(series_id)
+            elif None is not indexer_id and int(indexer_id) == int(series_id):
+                return seriesname, i, int(indexer_id)
 
         if indexer:
             break
 
-    return (None, None, None)
+    return None, None, None
 
 
 def sizeof_fmt(num):
-    '''
-    >>> sizeof_fmt(2)
-    '2.0 bytes'
-    >>> sizeof_fmt(1024)
-    '1.0 KB'
-    >>> sizeof_fmt(2048)
-    '2.0 KB'
-    >>> sizeof_fmt(2**20)
-    '1.0 MB'
-    >>> sizeof_fmt(1234567)
-    '1.2 MB'
-    '''
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
@@ -570,7 +526,7 @@ def get_absolute_number_from_season_and_episode(show, season, episode):
 
     if season and episode:
         myDB = db.DBConnection()
-        sql = "SELECT * FROM tv_episodes WHERE showid = ? and season = ? and episode = ?"
+        sql = 'SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?'
         sqlResults = myDB.select(sql, [show.indexerid, season, episode])
 
         if len(sqlResults) == 1:
@@ -600,7 +556,8 @@ def get_all_episodes_from_absolute_number(show, absolute_numbers, indexer_id=Non
                 ep = show.getEpisode(None, None, absolute_number=absolute_number)
                 if ep:
                     episodes.append(ep.episode)
-                    season = ep.season  # this will always take the last found seson so eps that cross the season border are not handeled well
+                    season = ep.season  # this will always take the last found season so eps that cross the season
+                                        # border are not handled well
 
     return (season, episodes)
 
@@ -866,8 +823,9 @@ def starify(text, verify=False):
     If verify is true, return true if text is a star block created text else return false.
     """
     return ((('%s%s' % (text[:len(text) / 2], '*' * (len(text) / 2))),
-            ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
+             ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
             set('*') == set((text[len(text) / 2:], text[4:-4])[12 <= len(text)]))[verify]
+
 
 """
 Encryption
@@ -909,31 +867,35 @@ def full_sanitizeSceneName(name):
     return re.sub('[. -]', ' ', sanitizeSceneName(name)).lower().lstrip()
 
 
-def get_show(name, tryIndexers=False):
+def get_show(name, try_indexers=False, try_scene_exceptions=False):
     if not sickbeard.showList or None is name:
         return
 
-    showObj = None
-    fromCache = False
+    show_obj = None
+    from_cache = False
 
     try:
-        # check cache for show
         cache = sickbeard.name_cache.retrieveNameFromCache(name)
         if cache:
-            fromCache = True
-            showObj = findCertainShow(sickbeard.showList, int(cache))
+            from_cache = True
+            show_obj = findCertainShow(sickbeard.showList, cache)
 
-        if not showObj and tryIndexers:
-            showObj = findCertainShow(sickbeard.showList,
-                                      searchIndexerForShowID(full_sanitizeSceneName(name), ui=classes.ShowListUI)[2])
+        if not show_obj and try_scene_exceptions:
+            indexer_id = sickbeard.scene_exceptions.get_scene_exception_by_name(name)[0]
+            if indexer_id:
+                show_obj = findCertainShow(sickbeard.showList, indexer_id)
+
+        if not show_obj and try_indexers:
+            show_obj = findCertainShow(sickbeard.showList,
+                                       searchIndexerForShowID(full_sanitizeSceneName(name), ui=classes.ShowListUI)[2])
 
         # add show to cache
-        if showObj and not fromCache:
-            sickbeard.name_cache.addNameToCache(name, showObj.indexerid)
+        if show_obj and not from_cache:
+            sickbeard.name_cache.addNameToCache(name, show_obj.indexerid)
     except Exception as e:
-        logger.log(u"Error when attempting to find show: " + name + " in SickGear: " + str(e), logger.DEBUG)
+        logger.log(u'Error when attempting to find show: ' + name + ' in SickGear: ' + str(e), logger.DEBUG)
 
-    return showObj
+    return show_obj
 
 
 def is_hidden_folder(folder):
@@ -1154,6 +1116,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     """
 
     # request session
+    if None is session:
+        session = requests.session()
     cache_dir = sickbeard.CACHE_DIR or _getTempDir()
     session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
 
@@ -1224,6 +1188,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
 def download_file(url, filename, session=None):
     # create session
+    if None is session:
+        session = requests.session()
     cache_dir = sickbeard.CACHE_DIR or _getTempDir()
     session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
 
@@ -1332,7 +1298,7 @@ def human(size):
         # because I really hate unnecessary plurals
         return "1 byte"
 
-    suffixes_table = [('bytes', 0), ('KB', 0), ('MB', 1), ('GB', 2),('TB', 2), ('PB', 2)]
+    suffixes_table = [('bytes', 0), ('KB', 0), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
 
     num = float(size)
     for suffix, precision in suffixes_table:
@@ -1349,7 +1315,6 @@ def human(size):
 
 
 def get_size(start_path='.'):
-
     total_size = 0
     for dirpath, dirnames, filenames in ek.ek(os.walk, start_path):
         for f in filenames:
@@ -1440,9 +1405,28 @@ def check_port(host, port, timeout=1.0):
             if s:
                 s.close()
 
+
 def clear_unused_providers():
     providers = [x.cache.providerID for x in sickbeard.providers.sortedProviderList() if x.isActive()]
 
     if providers:
         myDB = db.DBConnection('cache.db')
         myDB.action('DELETE FROM provider_cache WHERE provider NOT IN (%s)' % ','.join(['?'] * len(providers)), providers)
+
+def make_search_segment_html_string(segment, max_eps=5):
+    seg_str = ''
+    if segment and not isinstance(segment, list):
+        segment = [segment]
+    if segment and len(segment) > max_eps:
+        seasons = [x for x in set([x.season for x in segment])]
+        seg_str = u'Season' + maybe_plural(len(seasons)) + ': '
+        first_run = True
+        for x in seasons:
+            eps = [str(s.episode) for s in segment if s.season == x]
+            ep_c = len(eps)
+            seg_str += ('' if first_run else ' ,') + str(x) + ' <span title="Episode' + maybe_plural(ep_c) + ': ' + ', '.join(eps) + '">(' + str(ep_c) + ' Ep' + maybe_plural(ep_c) + ')</span>'
+            first_run = False
+    elif segment:
+        episodes = ['S' + str(x.season).zfill(2) + 'E' + str(x.episode).zfill(2) for x in segment]
+        seg_str = u'Episode' + maybe_plural(len(episodes)) + ': ' + ', '.join(episodes)
+    return seg_str

@@ -1,5 +1,5 @@
 Libs with customisations...
 
 /tornado
-/lib/requests/packages/urllib3/contrib/pyopenssl.py
 /lib/requests/packages/urllib3/connectionpool.py
+/lib/requests/packages/urllib3/util/ssl_.py
