@@ -648,7 +648,8 @@ class BaseIOStream(object):
         except UnsatisfiableReadError:
             raise
         except Exception as e:
-            gen_log.warning("error on read: %s" % e)
+            if 1 != e.errno:
+                gen_log.warning("error on read: %s" % e)
             self.close(exc_info=True)
             return
         if pos is not None:
