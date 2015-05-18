@@ -1,7 +1,7 @@
 ### 0.10.0 (2015-xx-xx xx:xx:xx UTC)
 
 
-### 0.9.0 (2015-xx-xx xx:xx:xx UTC)
+### 0.9.0 (2015-05-18 14:33:00 UTC)
 
 * Update Tornado webserver to 4.2.dev1 (609dbb9)
 * Update change to suppress reporting of Tornado exception error 1 to updated package as listed in hacks.txt
