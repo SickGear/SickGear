@@ -23,6 +23,7 @@
 * Update SimpleJSON library 3.7.3 to 3.8.0 (a37a9bd)
 * Update Tornado Web Server 4.2 to 4.3.dev1 (1b6157d)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
+* Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
