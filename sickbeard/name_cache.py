@@ -18,36 +18,30 @@
 import threading
 import sickbeard
 from sickbeard import db
-from sickbeard import logger
 
 nameCache = {}
 nameCacheLock = threading.Lock()
 
+
 def addNameToCache(name, indexer_id=0):
-    """
-    Adds the show & tvdb id to the scene_names table in cache.db.
-    
-    name: The show name to cache
-    indexer_id: the TVDB and TVRAGE id that this show should be cached with (can be None/0 for unknown)
+    """Adds the show & tvdb id to the namecache
+
+    :param name: the show name to cache
+    :param indexer_id: the TVDB and TVRAGE id that this show should be cached with (can be None/0 for unknown)
     """
     global nameCache
-
-    cacheDB = db.DBConnection('cache.db')
 
     # standardize the name we're using to account for small differences in providers
     name = sickbeard.helpers.full_sanitizeSceneName(name)
     if name not in nameCache:
         nameCache[name] = int(indexer_id)
-        cacheDB.action("INSERT OR REPLACE INTO scene_names (indexer_id, name) VALUES (?, ?)", [indexer_id, name])
 
 
 def retrieveNameFromCache(name):
-    """
-    Looks up the given name in the scene_names table in cache.db.
-    
-    name: The show name to look up.
-    
-    Returns: the TVDB and TVRAGE id that resulted from the cache lookup or None if the show wasn't found in the cache
+    """Looks up the given name in the name cache
+
+    :param name: The show name to look up.
+    :return: the TVDB and TVRAGE id that resulted from the cache lookup or None if the show wasn't found in the cache
     """
     global nameCache
 
@@ -55,78 +49,49 @@ def retrieveNameFromCache(name):
     if name in nameCache:
         return int(nameCache[name])
 
-def clearCache():
-    """
-    Deletes all "unknown" entries from the cache (names with indexer_id of 0).
-    """
-    global nameCache
-
-    # init name cache
-    if not nameCache:
-        nameCache = {}
-
-    cacheDB = db.DBConnection('cache.db')
-    cacheDB.action("DELETE FROM scene_names WHERE indexer_id = ?", [0])
-
-    toRemove = [key for key, value in nameCache.iteritems() if value == 0]
-    for key in toRemove:
-        del nameCache[key]
-
-
-def saveNameCacheToDb():
-    cacheDB = db.DBConnection('cache.db')
-
-    for name, indexer_id in nameCache.items():
-        cacheDB.action("INSERT OR REPLACE INTO scene_names (indexer_id, name) VALUES (?, ?)", [indexer_id, name])
-
 
 def buildNameCache(show=None):
-    global nameCache
+    """Adds all new name exceptions to the namecache memory and flushes any removed name exceptions
 
+    :param show (optional): Only update namecache for this show object
+    """
+    global nameCache
     with nameCacheLock:
 
-        # update scene exception names
-        sickbeard.scene_exceptions.retrieve_exceptions()
-
-        if not show:
-            # clear internal name cache
-            clearCache()
-
-            logger.log(u"Building internal name cache for all shows", logger.MESSAGE)
-
-            cacheDB = db.DBConnection('cache.db')
-            cache_results = cacheDB.select("SELECT * FROM scene_names")
-            for cache_result in cache_results:
-                name = sickbeard.helpers.full_sanitizeSceneName(cache_result["name"])
-                if name in nameCache:
-                    continue
-
-                indexer_id = int(cache_result["indexer_id"])
-                nameCache[name] = indexer_id
-
-            for show in sickbeard.showList:
-                for curSeason in [-1] + sickbeard.scene_exceptions.get_scene_seasons(show.indexerid):
-                    for name in list(set(
-                                    sickbeard.scene_exceptions.get_scene_exceptions(show.indexerid, season=curSeason) + [
-                                show.name])):
-                        name = sickbeard.helpers.full_sanitizeSceneName(name)
-                        if name in nameCache:
-                            continue
-
-                        nameCache[name] = int(show.indexerid)
-        else:
-            # remove old show cache entries
+        if show:
+            # search for only the requested show id and flush old show entries from namecache
+            indexer_ids = [show.indexerid]
             nameCache = dict((k, v) for k, v in nameCache.items() if v != show.indexerid)
 
-            logger.log(u"Building internal name cache for " + show.name, logger.MESSAGE)
+            # add standard indexer name to namecache
+            nameCache[show.name] = show.indexerid
+        else:
+            # generate list of indexer ids to look up in cache.db
+            indexer_ids = [x.indexerid for x in sickbeard.showList if x]
 
-            for curSeason in [-1] + sickbeard.scene_exceptions.get_scene_seasons(show.indexerid):
-                for name in list(set(sickbeard.scene_exceptions.get_scene_exceptions(show.indexerid, season=curSeason) + [
-                    show.name])):
-                    name = sickbeard.helpers.full_sanitizeSceneName(name)
-                    if name in nameCache:
-                        continue
+            # add all standard show indexer names to namecache
+            nameCache = dict(
+                (sickbeard.helpers.full_sanitizeSceneName(x.name), x.indexerid) for x in sickbeard.showList if x)
 
-                    nameCache[name] = int(show.indexerid)
+        cacheDB = db.DBConnection('cache.db')
 
-        logger.log(u"Internal name cache set to: " + str(nameCache), logger.DEBUG)
+        cache_results = cacheDB.select(
+            'SELECT show_name, indexer_id FROM scene_exceptions WHERE indexer_id IN (%s)' % ','.join(
+                ['?'] * len(indexer_ids)), indexer_ids)
+
+        if cache_results:
+            for cache_result in cache_results:
+                indexer_id = int(cache_result['indexer_id'])
+                name = sickbeard.helpers.full_sanitizeSceneName(cache_result['show_name'])
+                nameCache[name] = indexer_id
+
+
+def remove_from_namecache(indexer_id):
+    """Deletes all entries from the namecache for a particular show
+
+    :param indexer_id: tvdbid or rageid to be removed from the namecache
+    """
+    global nameCache
+
+    if nameCache:
+        nameCache = dict((k, v) for k, v in nameCache.items() if v != indexer_id)

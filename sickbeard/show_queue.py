@@ -396,9 +396,6 @@ class QueueItemAdd(ShowQueueItem):
                 logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
 
-        # update internal name cache
-        name_cache.buildNameCache()
-
         try:
             self.show.loadEpisodesFromDir()
         except Exception, e:
@@ -473,6 +470,9 @@ class QueueItemAdd(ShowQueueItem):
 
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
+
+        # update internal name cache
+        name_cache.buildNameCache(self.show)
 
         # check if show has XEM mapping so we can determine if searches should go by scene numbering or indexer numbering.
         if not self.scene and sickbeard.scene_numbering.get_xem_numbering_for_show(self.show.indexerid,

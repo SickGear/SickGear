@@ -457,9 +457,6 @@ def searchProviders(show, episodes, manualSearch=False):
 
     didSearch = False
 
-    # build name cache for show
-    sickbeard.name_cache.buildNameCache(show)
-
     origThreadName = threading.currentThread().name
 
     providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_backlog]
