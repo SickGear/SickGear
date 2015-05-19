@@ -854,7 +854,7 @@ def full_sanitizeSceneName(name):
     return re.sub('[. -]', ' ', sanitizeSceneName(name)).lower().lstrip()
 
 
-def get_show(name, try_indexers=False, try_scene_exceptions=False):
+def get_show(name, try_scene_exceptions=False):
     if not sickbeard.showList or None is name:
         return
 
@@ -871,10 +871,6 @@ def get_show(name, try_indexers=False, try_scene_exceptions=False):
             indexer_id = sickbeard.scene_exceptions.get_scene_exception_by_name(name)[0]
             if indexer_id:
                 show_obj = findCertainShow(sickbeard.showList, indexer_id)
-
-        if not show_obj and try_indexers:
-            show_obj = findCertainShow(sickbeard.showList,
-                                       searchIndexerForShowID(full_sanitizeSceneName(name), ui=classes.ShowListUI)[2])
 
         # add show to cache
         if show_obj and not from_cache:

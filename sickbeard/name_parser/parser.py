@@ -36,12 +36,11 @@ class NameParser(object):
     NORMAL_REGEX = 1
     ANIME_REGEX = 2
 
-    def __init__(self, file_name=True, showObj=None, try_indexers=False, try_scene_exceptions=False, convert=False,
+    def __init__(self, file_name=True, showObj=None, try_scene_exceptions=False, convert=False,
                  naming_pattern=False, testing=False):
 
         self.file_name = file_name
         self.showObj = showObj
-        self.try_indexers = try_indexers
         self.try_scene_exceptions = try_scene_exceptions
         self.convert = convert
         self.naming_pattern = naming_pattern
@@ -203,7 +202,7 @@ class NameParser(object):
                 show = None
                 if not self.naming_pattern:
                     # try and create a show object for this result
-                    show = helpers.get_show(best_result.series_name, self.try_indexers, self.try_scene_exceptions)
+                    show = helpers.get_show(best_result.series_name, self.try_scene_exceptions)
 
                 # confirm passed in show object indexer id matches result show object indexer id
                 if show and not self.testing:
