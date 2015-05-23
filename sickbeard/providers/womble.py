@@ -24,7 +24,7 @@ class WombleProvider(generic.NZBProvider):
     def __init__(self):
         generic.NZBProvider.__init__(self, "Womble's Index", False, False)
         self.cache = WombleCache(self)
-        self.url = 'http://newshost.co.za/'
+        self.url = 'https://newshost.co.za/'
 
 
 class WombleCache(tvcache.TVCache):
