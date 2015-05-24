@@ -1,3 +1,8 @@
+### 0.9.1 (2015-05-25 03:03:00 UTC)
+
+* Fix erroneous multiple downloads of torrent files which causes snatches to fail under certain conditions
+
+
 ### 0.9.0 (2015-05-18 14:33:00 UTC)
 
 * Update Tornado webserver to 4.2.dev1 (609dbb9)
