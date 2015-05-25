@@ -133,13 +133,11 @@ def snatchEpisode(result, endStatus=SNATCHED):
             dlResult = _downloadResult(result)
         else:
             # make sure we have the torrent file content
-            if not result.content:
-                if not result.url.startswith('magnet'):
-                    result.content = result.provider.getURL(result.url)
-                    if not result.content:
-                        logger.log(
-                            u"Torrent content failed to download from " + result.url, logger.ERROR
-                        )
+            if not result.content and not result.url.startswith('magnet'):
+                result.content = result.provider.getURL(result.url)
+                if not result.content:
+                    logger.log(u'Torrent content failed to download from ' + result.url, logger.ERROR)
+                    return False
             # Snatches torrent with client
             client = clients.getClientIstance(sickbeard.TORRENT_METHOD)()
             dlResult = client.sendTORRENT(result)
