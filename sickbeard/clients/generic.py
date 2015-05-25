@@ -151,7 +151,6 @@ class GenericClient(object):
             if len(result.hash) == 32:
                 result.hash = b16encode(b32decode(result.hash)).lower()
         else:
-            result.content = result.provider.getURL(result.url)
             info = bdecode(result.content)['info']
             result.hash = sha1(bencode(info)).hexdigest()
 
@@ -171,7 +170,6 @@ class GenericClient(object):
             # Sets per provider seed ratio
             result.ratio = result.provider.seedRatio()
 
-            # lazy fix for now, I'm sure we already do this somewhere else too
             result = self._get_torrent_hash(result)
 
             if result.url.startswith('magnet'):
