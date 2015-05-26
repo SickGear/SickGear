@@ -29,6 +29,7 @@ import sickbeard
 from sickbeard import logger, helpers, scene_numbering, common, scene_exceptions, encodingKludge as ek, db
 from dateutil import parser
 from sickbeard.exceptions import ex
+from sickbeard.common import cpu_presets
 
 
 class NameParser(object):
@@ -215,7 +216,7 @@ class NameParser(object):
                 if bestResult.show and bestResult.show.is_anime and len(self.compiled_regexes[1]) > 1 and regex != 1:
                     continue
 
-                # if this is a naming pattern test or result doesn't have a show object then return best result
+                # if this is a naming pattern test then return best result
                 if not bestResult.show or self.naming_pattern:
                     return bestResult
 
@@ -340,9 +341,9 @@ class NameParser(object):
                         logger.DEBUG)
 
                 # CPU sleep
-                time.sleep(0.02)
+                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
 
-            return bestResult
+                return bestResult
 
     def _combine_results(self, first, second, attr):
         # if the first doesn't exist then return the second or nothing

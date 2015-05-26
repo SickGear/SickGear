@@ -128,34 +128,11 @@ def get_scene_exception_by_name_multiple(show_name):
     Given a show name, return the indexerid of the exception, None if no exception
     is present.
     """
-
-    # try the obvious case first
-    myDB = db.DBConnection('cache.db')
-    exception_result = myDB.select(
-        "SELECT indexer_id, season FROM scene_exceptions WHERE LOWER(show_name) = ? ORDER BY season ASC",
-        [show_name.lower()])
-    if exception_result:
-        return [(int(x["indexer_id"]), int(x["season"])) for x in exception_result]
-
-    out = []
-    all_exception_results = myDB.select("SELECT show_name, indexer_id, season FROM scene_exceptions")
-
-    for cur_exception in all_exception_results:
-
-        cur_exception_name = cur_exception["show_name"]
-        cur_indexer_id = int(cur_exception["indexer_id"])
-        cur_season = int(cur_exception["season"])
-
-        if show_name.lower() in (
-                cur_exception_name.lower(),
-                sickbeard.helpers.sanitizeSceneName(cur_exception_name).lower().replace('.', ' ')):
-            logger.log(u"Scene exception lookup got indexer id " + str(cur_indexer_id) + u", using that", logger.DEBUG)
-            out.append((cur_indexer_id, cur_season))
-
-    if out:
-        return out
-    else:
-        return [(None, None)]
+    try:
+        exception_result = name_cache.nameCache[helpers.full_sanitizeSceneName(show_name)]
+        return [exception_result]
+    except:
+        return [[None, None]]
 
 
 def retrieve_exceptions():
