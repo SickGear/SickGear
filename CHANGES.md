@@ -7,6 +7,8 @@
 * Update Requests library 2.6.2 to 2.7.0 (ab1f493)
 * Update change to suppress HTTPS verification InsecureRequestWarning to updated package (ref:hacks.txt)
 * Change to consolidate cache database migration code
+* Change to only rebuild namecache on show update instead of on every search
+* Add removal of old entries from namecache on show deletion
 
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)

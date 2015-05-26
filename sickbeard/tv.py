@@ -43,7 +43,7 @@ except ImportError:
 from lib.imdb import imdb
 
 from sickbeard import db
-from sickbeard import helpers, exceptions, logger
+from sickbeard import helpers, exceptions, logger, name_cache
 from sickbeard.exceptions import ex
 from sickbeard import image_cache
 from sickbeard import notifiers
@@ -1033,6 +1033,8 @@ class TVShow(object):
 
         myDB = db.DBConnection()
         myDB.mass_action(sql_l)
+
+        name_cache.remove_from_namecache(self.indexerid)
 
         action = ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW]
 

@@ -45,6 +45,9 @@ class ShowUpdater():
             # refresh network timezones
             network_timezones.update_network_dict()
 
+            # update scene exceptions
+            sickbeard.scene_exceptions.retrieve_exceptions()
+
             # sure, why not?
             if sickbeard.USE_FAILED_DOWNLOADS:
                 failed_history.trimHistory()
