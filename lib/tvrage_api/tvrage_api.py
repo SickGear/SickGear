@@ -1,4 +1,4 @@
-# !/usr/bin/env python2
+﻿# !/usr/bin/env python2
 # encoding:utf-8
 #author:dbr/Ben (ripped from tvdb:echel0n)
 #project:tvrage_api
@@ -363,7 +363,7 @@ class TVRage:
 
         self.config['base_url'] = "http://services.tvrage.com"
 
-        self.config['url_getSeries'] = u"%(base_url)s/feeds/search.php" % self.config
+        self.config['url_getSeries'] = u"%(base_url)s/feeds/full_search.php" % self.config
         self.config['params_getSeries'] = {"show": ""}
 
         self.config['url_epInfo'] = u"%(base_url)s/myfeeds/episode_list.php" % self.config
@@ -605,7 +605,7 @@ class TVRage:
 
             self.config['params_epInfo']['sid'] = sid
             epsEt = self._getetsrc(self.config['url_epInfo'], self.config['params_epInfo'])
-            if 'episodelist' not in epsEt and 'season' not in epsEt['episodelist']:
+            if 'episodelist' not in epsEt or 'season' not in epsEt['episodelist']:
                 return False
 
             seasons = epsEt['episodelist']['season']
