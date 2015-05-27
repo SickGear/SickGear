@@ -9,6 +9,11 @@
 * Change to consolidate cache database migration code
 * Change to only rebuild namecache on show update instead of on every search
 * Add removal of old entries from namecache on show deletion
+* Fix provider SCC failing to find episodes of air by date shows
+* Fix provider SCC searching propers
+* Fix provider SCC stop snatching releases for episodes already completed
+* Fix provider SCC handle null server responses
+* Change provider SCC remove 1 of 3 requests per search to save 30% time
 
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)

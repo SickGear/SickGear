@@ -39,7 +39,6 @@ class SCCProvider(generic.TorrentProvider):
             'detail': 'https://sceneaccess.eu/details?id=%s',
             'search': 'https://sceneaccess.eu/browse?search=%s&method=1&%s',
             'nonscene': 'https://sceneaccess.eu/nonscene?search=%s&method=1&c44=44&c45=44',
-            'foreign': 'https://sceneaccess.eu/foreign?search=%s&method=1&c34=34&c33=33',
             'archive': 'https://sceneaccess.eu/archive?search=%s&method=1&c26=26',
             'download': 'https://sceneaccess.eu/%s'}
 
@@ -84,14 +83,14 @@ class SCCProvider(generic.TorrentProvider):
     def _get_season_search_strings(self, ep_obj):
 
         search_string = {'Season': []}
-        for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-            if ep_obj.show.air_by_date or ep_obj.show.sports:
-                ep_string = str(ep_obj.airdate).split('-')[0]
-            elif ep_obj.show.anime:
-                ep_string = '%d' % ep_obj.scene_absolute_number
-            else:
-                ep_string = 'S%02d' % int(ep_obj.scene_season)  # 1) showName SXX
+        if ep_obj.show.air_by_date or ep_obj.show.sports:
+            ep_string = str(ep_obj.airdate).split('-')[0]
+        elif ep_obj.show.anime:
+            ep_string = '%d' % ep_obj.scene_absolute_number
+        else:
+            ep_string = 'S%02d' % int(ep_obj.scene_season)  # 1) showName SXX
 
+        for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
             search_string['Season'].append('%s %s' % (show_name, ep_string))
 
         return [search_string]
@@ -103,29 +102,21 @@ class SCCProvider(generic.TorrentProvider):
         if not ep_obj:
             return []
 
+        airdate = str(ep_obj.airdate).replace('-', '.')
         if self.show.air_by_date:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                    str(ep_obj.airdate).replace('-', '|')
-                search_string['Episode'].append(ep_string)
+            ep_detail = airdate
         elif self.show.sports:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                    str(ep_obj.airdate).replace('-', '|') + '|' + \
-                    ep_obj.airdate.strftime('%b')
-                search_string['Episode'].append(ep_string)
+            ep_detail = '%s|%s' % (airdate, ep_obj.airdate.strftime('%b'))
         elif self.show.anime:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                    '%i' % int(ep_obj.scene_absolute_number)
-                search_string['Episode'].append(ep_string)
+            ep_detail = ep_obj.scene_absolute_number
         else:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = show_name_helpers.sanitizeSceneName(show_name) + ' ' + \
-                    sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                          'episodenumber': ep_obj.scene_episode}
+            ep_detail = sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
+                                                              'episodenumber': ep_obj.scene_episode}
+        if add_string and not self.show.anime:
+            ep_detail += ' ' + add_string
 
-                search_string['Episode'].append(re.sub('\s+', ' ', ep_string))
+        for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
+            search_string['Episode'].append(re.sub('\s+', ' ', '%s %s' % (sanitizeSceneName(show_name), ep_detail)))
 
         return [search_string]
 
@@ -151,37 +142,34 @@ class SCCProvider(generic.TorrentProvider):
                     search_string = unidecode(search_string)
 
                 nonsceneSearchURL = None
-                foreignSearchURL = None
                 if 'Season' == mode:
                     searchURL = self.urls['archive'] % search_string
-                    data = [self.getURL(searchURL)]
+                    response = [self.getURL(searchURL)]
                 else:
                     searchURL = self.urls['search'] % (search_string, self.categories)
                     nonsceneSearchURL = self.urls['nonscene'] % search_string
-                    foreignSearchURL = self.urls['foreign'] % search_string
-                    data = [self.getURL(searchURL),
-                            self.getURL(nonsceneSearchURL),
-                            self.getURL(foreignSearchURL)]
+                    response = [self.getURL(searchURL),
+                                self.getURL(nonsceneSearchURL)]
                     logger.log(u'Search string: ' + nonsceneSearchURL, logger.DEBUG)
-                    logger.log(u'Search string: ' + foreignSearchURL, logger.DEBUG)
 
                 logger.log(u'Search string: ' + searchURL, logger.DEBUG)
 
-                if not data:
+                response = [html for html in response if html is not None]
+                if not len(response):
                     continue
 
                 try:
-                    for dataItem in data:
-                        with BS4Parser(dataItem, features=['html5lib', 'permissive']) as html:
-                            torrent_table = html.find('table', attrs={'id': 'torrents-table'})
+                    for markup in response:
+                        with BS4Parser(markup, features=['html5lib', 'permissive']) as soup:
+                            torrent_table = soup.find('table', attrs={'id': 'torrents-table'})
                             torrent_rows = []
                             if torrent_table:
                                 torrent_rows = torrent_table.find_all('tr')
 
                             # Continue only if at least one Release is found
                             if 2 > len(torrent_rows):
-                                if html.title:
-                                    source = '%s (%s)' % (self.name, html.title.string)
+                                if soup.title:
+                                    source = '%s (%s)' % (self.name, soup.title.string)
                                 else:
                                     source = self.name
                                 logger.log(u'The data returned from %s does not contain any torrents' % source, logger.DEBUG)
@@ -192,18 +180,14 @@ class SCCProvider(generic.TorrentProvider):
                                 try:
                                     link = result.find('td', attrs={'class': 'ttr_name'}).find('a')
                                     all_urls = result.find('td', attrs={'class': 'td_dl'}).find_all('a', limit=2)
-                                    # Foreign section contain two links, the others one
-                                    if self._isSection('Foreign', dataItem):
-                                        url = all_urls[1]
-                                    else:
-                                        url = all_urls[0]
+                                    url = all_urls[0]
 
                                     title = link.string
                                     if re.search('\.\.\.', title):
-                                        data = self.getURL(self.url + '/' + link['href'])
-                                        if data:
-                                            with BS4Parser(data) as details_html:
-                                                title = re.search('(?<=").+(?<!")', details_html.title.string).group(0)
+                                        response = self.getURL(self.url + '/' + link['href'])
+                                        if response:
+                                            with BS4Parser(response) as soup_detail:
+                                                title = re.search('(?<=").+(?<!")', soup_detail.title.string).group(0)
                                     download_url = self.urls['download'] % url['href']
                                     id = int(link['href'].replace('details?id=', ''))
                                     seeders = int(result.find('td', attrs={'class': 'ttr_seeders'}).string)
@@ -219,10 +203,8 @@ class SCCProvider(generic.TorrentProvider):
 
                                 item = title, download_url, id, seeders, leechers
 
-                                if self._isSection('Non-Scene', dataItem):
+                                if self._isSection('Non-Scene', markup):
                                     logger.log(u'Found result: %s (%s)' % (title, nonsceneSearchURL), logger.DEBUG)
-                                elif self._isSection('Foreign', dataItem):
-                                    logger.log(u'Found result: %s (%s)' % (title, foreignSearchURL), logger.DEBUG)
                                 else:
                                     logger.log(u'Found result: %s (%s)' % (title, searchURL), logger.DEBUG)
 
@@ -255,8 +237,8 @@ class SCCProvider(generic.TorrentProvider):
 
         results = []
 
-        myDB = db.DBConnection()
-        sqlResults = myDB.select(
+        my_db = db.DBConnection()
+        sql_results = my_db.select(
             'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
             ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
             ' WHERE e.airdate >= ' + str(search_date.toordinal()) +
@@ -264,17 +246,20 @@ class SCCProvider(generic.TorrentProvider):
             ' OR (e.status IN (' + ','.join([str(x) for x in Quality.SNATCHED]) + ')))'
         )
 
-        if not sqlResults:
+        if not sql_results:
             return []
 
-        for sqlshow in sqlResults:
-            self.show = helpers.findCertainShow(sickbeard.showList, int(sqlshow['showid']))
-            if self.show:
-                curEp = self.show.getEpisode(int(sqlshow['season']), int(sqlshow['episode']))
+        for sqlshow in sql_results:
+            showid, season, episode = (int(sqlshow['showid']), int(sqlshow['season']), int(sqlshow['episode']))
+            self.show = helpers.findCertainShow(sickbeard.showList, showid)
+            if not self.show:
+                continue
+            cur_ep = self.show.getEpisode(season, episode)
 
-                searchString = self._get_episode_search_strings(curEp, add_string='PROPER|REPACK')
+            for search in ['.proper.', '.repack.']:
+                search_string = self._get_episode_search_strings(cur_ep, add_string=search)
 
-                for item in self._doSearch(searchString[0]):
+                for item in self._doSearch(search_string[0]):
                     title, url = self._get_title_and_url(item)
                     results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
 
