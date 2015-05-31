@@ -14,7 +14,7 @@
 * Fix provider SCC stop snatching releases for episodes already completed
 * Fix provider SCC handle null server responses
 * Change provider SCC remove 1 of 3 requests per search to save 30% time
-
+* Add regex to anime regex list to handle releases with group at the end of the release name
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)
 

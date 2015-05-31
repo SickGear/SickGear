@@ -190,6 +190,11 @@ simple_test_cases = {
         'Blue Submarine No. 6 104-105': parser.ParseResult(None, 'Blue Submarine No. 6', None, [], None, None, None, [104, 105]),
         'Samurai X: Trust & Betrayal (OVA) 001-002': parser.ParseResult(None, 'Samurai X: Trust & Betrayal (OVA)', None, [], None, None, None, [1, 2]),
         "[ACX]_Wolf's_Spirit_001.mkv": parser.ParseResult(None, "Wolf's Spirit", None, [], None, 'ACX', None, [1])
+    },
+
+    'anime_group_end':{
+        'Sword Art Online 2 02 [fff]': parser.ParseResult(None, "Sword Art Online 2", None, [], None, "fff", None, [2]),
+        'bleach.13.[agroup]': parser.ParseResult(None, "bleach", None, [], None, "agroup", None, [13])
     }
 
 }
@@ -459,7 +464,9 @@ class BasicTests(test.SickbeardTestDBCase):
     def test_anime_bare(self):
         np = parser.NameParser(False, TVShow(is_anime=True), testing=True)
         self._test_names(np, 'anime_bare')
-
+    def test_anime_group_end(self):
+        np = parser.NameParser(False, TVShow(is_anime=True), testing=True)
+        self._test_names(np, 'anime_group_end')
 
 class TVShow(object):
     def __init__(self, is_anime=False):

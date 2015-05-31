@@ -375,4 +375,20 @@ anime_regexes = [
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
     ),
+    ('anime_group_end',
+     #show.name 01 [group].mkv
+     #show name 01 [group].mkv
+     #show name - 01 - [group].mkv
+     #show.name.02.[group].mkv
+     #show name - s01e02 02[gop].mkv
+     '''
+     ^(?P<series_name>.+?)[ ._-]+
+     (?:S?(?P<season>(?<!\d)\d{1,2}(?!\d+))(?:(?:\-|[ex]|\w[ex])){1,2}
+     (?P<episode>\d{2}(?!\d))[ ._-]?)?(?:ep(?:\s)|(?:\s)e|)?
+     (?P<ep_ab_num>\d{2,3}(?!\d+))(?:-(?:ep|e)?
+     (?P<extra_ab_ep_num>\d{1,3}(?!\d+)))?
+     (?:v(?P<version>[0-9]))?.*
+     (?:\[(?P<release_group>.+?)\][ ._-]?.*)
+     '''
+     ),
 ]
