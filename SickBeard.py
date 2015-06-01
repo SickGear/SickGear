@@ -18,6 +18,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 # Check needed software dependencies to nudge users to fix their setup
+from __future__ import print_function
 from __future__ import with_statement
 
 import time
@@ -32,7 +33,7 @@ import threading
 import getopt
 
 if sys.version_info < (2, 6):
-    print 'Sorry, requires Python 2.6 or 2.7.'
+    print('Sorry, requires Python 2.6 or 2.7.')
     sys.exit(1)
 
 try:
@@ -41,10 +42,10 @@ try:
     if Cheetah.Version[0] != '2':
         raise ValueError
 except ValueError:
-    print 'Sorry, requires Python module Cheetah 2.1.0 or newer.'
+    print('Sorry, requires Python module Cheetah 2.1.0 or newer.')
     sys.exit(1)
 except:
-    print 'The Python module Cheetah is required'
+    print('The Python module Cheetah is required')
     sys.exit(1)
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
@@ -146,8 +147,8 @@ class SickGear(object):
             # On non-unicode builds this will raise an AttributeError, if encoding type is not valid it throws a LookupError
             sys.setdefaultencoding(sickbeard.SYS_ENCODING)
         except:
-            print 'Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable'
-            print 'or find another way to force Python to use %s for string encoding.' % sickbeard.SYS_ENCODING
+            print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
+            print('or find another way to force Python to use %s for string encoding.' % sickbeard.SYS_ENCODING)
             sys.exit(1)
 
         # Need console logging for SickBeard.py and SickBeard-console.exe
@@ -231,7 +232,7 @@ class SickGear(object):
 
             else:
                 if self.consoleLogging:
-                    print u'Not running in daemon mode. PID file creation disabled'
+                    print(u'Not running in daemon mode. PID file creation disabled')
 
                 self.CREATEPID = False
 
@@ -260,11 +261,11 @@ class SickGear(object):
         os.chdir(sickbeard.DATA_DIR)
 
         if self.consoleLogging:
-            print u'Starting up SickGear from %s' % sickbeard.CONFIG_FILE
+            print(u'Starting up SickGear from %s' % sickbeard.CONFIG_FILE)
 
         # Load the config and publish it to the sickbeard package
         if not os.path.isfile(sickbeard.CONFIG_FILE):
-            print u'Unable to find "%s", all settings will be default!' % sickbeard.CONFIG_FILE
+            print(u'Unable to find "%s", all settings will be default!' % sickbeard.CONFIG_FILE)
 
         sickbeard.CFG = ConfigObj(sickbeard.CONFIG_FILE)
 
@@ -272,12 +273,12 @@ class SickGear(object):
 
         if CUR_DB_VERSION > 0:
             if CUR_DB_VERSION < MIN_DB_VERSION:
-                print u'Your database version (%s) is too old to migrate from with this version of SickGear' \
-                      % CUR_DB_VERSION
+                print(u'Your database version (%s) is too old to migrate from with this version of SickGear' \
+                      % CUR_DB_VERSION)
                 sys.exit(u'Upgrade using a previous version of SG first, or start with no database file to begin fresh')
             if CUR_DB_VERSION > MAX_DB_VERSION:
-                print u'Your database version (%s) has been incremented past what this version of SickGear supports' \
-                      % CUR_DB_VERSION
+                print(u'Your database version (%s) has been incremented past what this version of SickGear supports' \
+                      % CUR_DB_VERSION)
                 sys.exit(
                     u'If you have used other forks of SG, your database may be unusable due to their modifications')
 

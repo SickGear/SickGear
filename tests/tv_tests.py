@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import unittest
 import test_lib as test
 
@@ -98,15 +99,15 @@ class TVTests(test.SickbeardTestDBCase):
 
 
 if __name__ == '__main__':
-    print "=================="
-    print "STARTING - TV TESTS"
-    print "=================="
-    print "######################################################################"
+    print('==================')
+    print('STARTING - TV TESTS')
+    print('==================')
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVShowTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
-    print "######################################################################"
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVEpisodeTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
-    print "######################################################################"
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

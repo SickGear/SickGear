@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from __future__ import with_statement
 import getpass
 import os
@@ -777,7 +778,7 @@ def get_lan_ip():
         for ifname in interfaces:
             try:
                 ip = get_interface_ip(ifname)
-                print ifname, ip
+                print(ifname, ip)
                 break
             except IOError:
                 pass
