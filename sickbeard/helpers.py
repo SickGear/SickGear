@@ -33,6 +33,7 @@ import urlparse
 import uuid
 import base64
 import datetime
+import io
 
 import sickbeard
 import subliminal
@@ -1024,7 +1025,7 @@ def mapIndexersToShow(showObj):
 def touchFile(fname, atime=None):
     if None != atime:
         try:
-            with file(fname, 'a'):
+            with io.open(fname, 'a'):
                 os.utime(fname, (atime, atime))
                 return True
         except:

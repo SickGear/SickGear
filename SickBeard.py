@@ -31,6 +31,7 @@ import locale
 import datetime
 import threading
 import getopt
+import io
 
 if sys.version_info < (2, 6):
     print('Sorry, requires Python 2.6 or 2.7.')
@@ -412,7 +413,7 @@ class SickGear(object):
             pid = str(os.getpid())
             logger.log(u'Writing PID: %s to %s' % (pid, self.PIDFILE))
             try:
-                file(self.PIDFILE, 'w').write('%s\n' % pid)
+                io.open(self.PIDFILE, 'w').write('%s\n' % pid)
             except IOError as e:
                 logger.log_error_and_exit(
                     u'Unable to write PID file: %s Error: %s [%s]' % (self.PIDFILE, e.strerror, e.errno))
@@ -422,9 +423,9 @@ class SickGear(object):
         sys.stderr.flush()
 
         devnull = getattr(os, 'devnull', '/dev/null')
-        stdin = file(devnull, 'r')
-        stdout = file(devnull, 'a+')
-        stderr = file(devnull, 'a+')
+        stdin = io.open(devnull, 'r')
+        stdout = io.open(devnull, 'a+')
+        stderr = io.open(devnull, 'a+')
         os.dup2(stdin.fileno(), sys.stdin.fileno())
         os.dup2(stdout.fileno(), sys.stdout.fileno())
         os.dup2(stderr.fileno(), sys.stderr.fileno())
