@@ -31,11 +31,11 @@ class TVShowTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_init_indexerid(self):
-        show = TVShow(1, 0001, "en")
-        self.assertEqual(show.indexerid, 0001)
+        show = TVShow(1, 1, "en")
+        self.assertEqual(show.indexerid, 1)
 
     def test_change_indexerid(self):
-        show = TVShow(1, 0001, "en")
+        show = TVShow(1, 1, "en")
         show.name = "show name"
         show.tvrname = "show name"
         show.network = "cbs"
@@ -48,14 +48,14 @@ class TVShowTests(test.SickbeardTestDBCase):
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
 
-        show.indexerid = 0002
+        show.indexerid = 2
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
 
-        self.assertEqual(show.indexerid, 0002)
+        self.assertEqual(show.indexerid, 2)
 
     def test_set_name(self):
-        show = TVShow(1, 0001, "en")
+        show = TVShow(1, 1, "en")
         show.name = "newName"
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
@@ -69,7 +69,7 @@ class TVEpisodeTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_init_empty_db(self):
-        show = TVShow(1, 0001, "en")
+        show = TVShow(1, 1, "en")
         ep = TVEpisode(show, 1, 1)
         ep.name = "asdasdasdajkaj"
         ep.saveToDB()
@@ -84,7 +84,7 @@ class TVTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_getEpisode(self):
-        show = TVShow(1, 0001, "en")
+        show = TVShow(1, 1, "en")
         show.name = "show name"
         show.tvrname = "show name"
         show.network = "cbs"
