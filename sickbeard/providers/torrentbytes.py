@@ -65,7 +65,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
         try:
             response = self.session.post(self.urls['login'], data=login_params, timeout=30, verify=False)
-        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError), e:
+        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError) as e:
             logger.log(u'Unable to connect to ' + self.name + ' provider: ' + ex(e), logger.ERROR)
             return False
 
@@ -190,7 +190,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
                             items[mode].append(item)
 
-                except Exception, e:
+                except Exception as e:
                     logger.log(u'Failed parsing ' + self.name + ' Traceback: ' + traceback.format_exc(), logger.ERROR)
 
             # For each search mode sort all the items by seeders

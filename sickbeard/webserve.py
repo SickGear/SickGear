@@ -1261,7 +1261,7 @@ class Home(MainHandler):
                     try:
                         anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=showObj.name)
                         t.groups = anime.get_groups()
-                    except Exception, e:
+                    except Exception as e:
                         t.groups.append(dict([('name', 'Fail:AniDB connect. Restart sg else check debug log'), ('rating', ''), ('range', '')]))
                 else:
                     t.groups.append(dict([('name', 'Did not initialise AniDB. Check debug log if reqd.'), ('rating', ''), ('range', '')]))
@@ -1343,7 +1343,7 @@ class Home(MainHandler):
                 showObj.flatten_folders = flatten_folders
                 try:
                     sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
-                except exceptions.CantRefreshException, e:
+                except exceptions.CantRefreshException as e:
                     errors.append('Unable to refresh this show: ' + ex(e))
 
             showObj.paused = paused
@@ -1373,7 +1373,7 @@ class Home(MainHandler):
                         showObj.location = location
                         try:
                             sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
-                        except exceptions.CantRefreshException, e:
+                        except exceptions.CantRefreshException as e:
                             errors.append('Unable to refresh this show:' + ex(e))
                             # grab updated info from TVDB
                             # showObj.loadEpisodesFromIndexer()
@@ -1390,7 +1390,7 @@ class Home(MainHandler):
             try:
                 sickbeard.showQueueScheduler.action.updateShow(showObj, True)  # @UndefinedVariable
                 time.sleep(cpu_presets[sickbeard.CPU_PRESET])
-            except exceptions.CantUpdateException, e:
+            except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on the show.')
 
         if do_update_exceptions:
@@ -1398,14 +1398,14 @@ class Home(MainHandler):
                 scene_exceptions.update_scene_exceptions(showObj.indexerid, exceptions_list)  # @UndefinedVdexerid)
                 buildNameCache(showObj)
                 time.sleep(cpu_presets[sickbeard.CPU_PRESET])
-            except exceptions.CantUpdateException, e:
+            except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on scene exceptions of the show.')
 
         if do_update_scene_numbering:
             try:
                 sickbeard.scene_numbering.xem_refresh(showObj.indexerid, showObj.indexer)  # @UndefinedVariable
                 time.sleep(cpu_presets[sickbeard.CPU_PRESET])
-            except exceptions.CantUpdateException, e:
+            except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on scene numbering of the show.')
 
         if directCall:
@@ -1455,7 +1455,7 @@ class Home(MainHandler):
         # force the update from the DB
         try:
             sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
-        except exceptions.CantRefreshException, e:
+        except exceptions.CantRefreshException as e:
             ui.notifications.error('Unable to refresh this show.',
                                    ex(e))
 
@@ -1476,7 +1476,7 @@ class Home(MainHandler):
         # force the update
         try:
             sickbeard.showQueueScheduler.action.updateShow(showObj, bool(force), bool(web))
-        except exceptions.CantUpdateException, e:
+        except exceptions.CantUpdateException as e:
             ui.notifications.error('Unable to update this show.',
                                    ex(e))
 
@@ -1985,7 +1985,7 @@ class Home(MainHandler):
             try:
                 anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=show_name)
                 groups = anime.get_groups()
-            except Exception, e:
+            except Exception as e:
                 logger.log(u'exception msg: ' + str(e), logger.DEBUG)
                 return json.dumps({'result': 'fail', 'resp': 'connect'})
 
@@ -2062,7 +2062,7 @@ class NewHomeAddShows(Home):
             try:
                 # add search results
                 results.setdefault(indexer, []).extend(t[search_term])
-            except Exception, e:
+            except Exception as e:
                 continue
 
         map(final_results.extend,
@@ -3117,7 +3117,7 @@ class Manage(MainHandler):
                 try:
                     sickbeard.showQueueScheduler.action.updateShow(showObj, True, True)  # @UndefinedVariable
                     updates.append(showObj.name)
-                except exceptions.CantUpdateException, e:
+                except exceptions.CantUpdateException as e:
                     errors.append('Unable to update show ' + showObj.name + ': ' + ex(e))
 
             # don't bother refreshing shows that were updated anyway
@@ -3125,7 +3125,7 @@ class Manage(MainHandler):
                 try:
                     sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
                     refreshes.append(showObj.name)
-                except exceptions.CantRefreshException, e:
+                except exceptions.CantRefreshException as e:
                     errors.append('Unable to refresh show ' + showObj.name + ': ' + ex(e))
 
             if curShowID in toRename:
@@ -3612,7 +3612,7 @@ class ConfigGeneral(Config):
             try:
                 pulls = sickbeard.versionCheckScheduler.action.list_remote_pulls()
                 return json.dumps({'result': 'success', 'pulls': pulls})
-            except Exception, e:
+            except Exception as e:
                 logger.log(u'exception msg: ' + str(e), logger.DEBUG)
                 return json.dumps({'result': 'fail'})
 
@@ -3621,7 +3621,7 @@ class ConfigGeneral(Config):
         try:
             branches = sickbeard.versionCheckScheduler.action.list_remote_branches()
             return json.dumps({'result': 'success', 'branches': branches})
-        except Exception, e:
+        except Exception as e:
             logger.log(u'exception msg: ' + str(e), logger.DEBUG)
             return json.dumps({'result': 'fail'})
 
@@ -3905,7 +3905,7 @@ class ConfigPostProcessing(Config):
                 return 'supported'
             logger.log(u'Rar Not Supported: Can not read the content of test file', logger.ERROR)
             return 'not supported'
-        except Exception, e:
+        except Exception as e:
             logger.log(u'Rar Not Supported: ' + ex(e), logger.ERROR)
             return 'not supported'
 

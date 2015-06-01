@@ -23,7 +23,7 @@ try:
     fp = open(configFilename, 'r')
     config.readfp(fp)
     fp.close()
-except IOError, e:
+except IOError as e:
     print('Could not find/read Sickbeard config.ini: ' + str(e))
     print(
         'Possibly wrong mediaToSickbeard.py location. Ensure the file is in the autoProcessTV subdir of your Sickbeard '
@@ -183,7 +183,7 @@ def main():
         sess = requests.Session()
         sess.post(login_url, data={'username': username, 'password': password}, stream=True, verify=False)
         response = sess.get(url, auth=(username, password), params=params, verify=False,  allow_redirects=False)
-    except Exception, e:
+    except Exception as e:
         scriptlogger.error(u': Unknown exception raised when opening url: ' + str(e))
         time.sleep(3)
         sys.exit()

@@ -526,7 +526,7 @@ def xem_refresh(indexer_id, indexer, force=False):
             else:
                 logger.log(u"Empty lookup result - no XEM data for show %s on %s" % (
                     indexer_id, sickbeard.indexerApi(indexer).name,), logger.DEBUG)
-        except Exception, e:
+        except Exception as e:
             logger.log(
                 u"Exception while refreshing XEM data for show " + str(indexer_id) + " on " + sickbeard.indexerApi(
                     indexer).name + ": " + ex(e), logger.WARNING)
