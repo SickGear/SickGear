@@ -1810,7 +1810,7 @@ class Home(MainHandler):
                                      'searchstatus' : searchstatus,
                                      'status' : statusStrings[searchThread.segment.status],
                                      'quality': self.getQualityClass(searchThread.segment)})
-                else:
+                elif hasattr(searchThread, 'segment'):
                     for epObj in searchThread.segment:
                         episodes.append({'episode': epObj.episode,
                              'episodeindexid': epObj.indexerid,
@@ -1833,7 +1833,7 @@ class Home(MainHandler):
                                  'searchstatus' : searchstatus,
                                  'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
-            else:
+            elif hasattr(searchThread, 'segment'):
                 for epObj in searchThread.segment:
                     episodes.append({'episode': epObj.episode,
                                      'episodeindexid': epObj.indexerid,
@@ -1853,18 +1853,17 @@ class Home(MainHandler):
                                  'searchstatus' : searchstatus,
                                  'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
-                else:
-                    ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
-                    if str(searchThread.show.indexerid) == show:
-                        for epObj in searchThread.segment:
-                            if not [x for x in episodes if x['episodeindexid'] == epObj.indexerid]:
-                                searchstatus = 'finished'
-                                episodes.append({'episode': epObj.episode,
-                                                 'episodeindexid': epObj.indexerid,
-                                         'season' : epObj.season,
-                                         'searchstatus' : searchstatus,
-                                         'status' : statusStrings[epObj.status],
-                                         'quality': self.getQualityClass(epObj)})
+                ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
+                elif hasattr(searchThread, 'segment') and str(searchThread.show.indexerid) == show:
+                    for epObj in searchThread.segment:
+                        if not [x for x in episodes if x['episodeindexid'] == epObj.indexerid]:
+                            searchstatus = 'finished'
+                            episodes.append({'episode': epObj.episode,
+                                             'episodeindexid': epObj.indexerid,
+                                     'season' : epObj.season,
+                                     'searchstatus' : searchstatus,
+                                     'status' : statusStrings[epObj.status],
+                                     'quality': self.getQualityClass(epObj)})
 
         return json.dumps({'show': show, 'episodes' : episodes})
 
