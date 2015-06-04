@@ -18,6 +18,7 @@
 * Fix getManualSearchStatus: object has no attribute 'segment'
 * Change handling of general HTTP error response codes to prevent issues
 * Add handling for CloudFlare custom HTTP response codes
+* Fix to correctly load local libraries instead of system installed libraries
 
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)

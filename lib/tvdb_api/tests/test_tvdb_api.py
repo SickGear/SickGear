@@ -17,7 +17,7 @@ import unittest
 # Force parent directory onto path
 #sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-sys.path.append(os.path.abspath('../../tests'))
+sys.path.insert(1, os.path.abspath('../../tests'))
 
 
 import sickbeard

@@ -24,8 +24,8 @@ import os.path
 import sys
 
 sickbeardPath = os.path.split(os.path.split(sys.argv[0])[0])[0]
-sys.path.append(os.path.join(sickbeardPath, 'lib'))
-sys.path.append(sickbeardPath)
+sys.path.insert(1, os.path.join(sickbeardPath, 'lib'))
+sys.path.insert(1, sickbeardPath)
 
 try:
     import requests

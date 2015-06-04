@@ -32,7 +32,7 @@ import os.path
 import uuid
 import base64
 import sickbeard
-sys.path.append(os.path.abspath('../lib'))
+sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
 from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
