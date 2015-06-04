@@ -1698,7 +1698,7 @@ class TVEpisode(object):
                 self.deleteEpisode()
             return
 
-        if getattr(myEp, 'episodename', None) is None:
+        if not sickbeard.ALLOW_INCOMPLETE_SHOWDATA and getattr(myEp, 'episodename', None) is None:
             logger.log(u"This episode (" + self.show.name + " - " + str(season) + "x" + str(
                 episode) + ") has no name on " + sickbeard.indexerApi(self.indexer).name + "")
             # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
