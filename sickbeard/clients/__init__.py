@@ -36,6 +36,7 @@ http_error_code = {
     304: 'Not Modified',
     305: 'Use Proxy',
     307: 'Temporary Redirect',
+    308: 'Permanent Redirect',
     400: 'Bad Request',
     401: 'Unauthorized',
     402: 'Payment Required',
@@ -54,13 +55,17 @@ http_error_code = {
     415: 'Unsupported Media Type',
     416: 'Requested Range Not Satisfiable',
     417: 'Expectation Failed',
+    429: 'Too Many Requests',
+    431: 'Request Header Fields Too Large',
+    444: 'No Response',
+    451: 'Unavailable For Legal Reasons',
     500: 'Internal Server Error',
     501: 'Not Implemented',
     502: 'Bad Gateway',
     503: 'Service Unavailable',
     504: 'Gateway Timeout',
     505: 'HTTP Version Not Supported',
-    524: 'Request to host timedout waiting for reply back'
+    511: 'Network Authentication Required',
 }
 
 default_host = {'utorrent': 'http://localhost:8000',
