@@ -4,7 +4,7 @@
 * Update Tornado webserver to 4.2b1 (61a16c9)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
-* Update Requests library 2.6.2 to 2.7.0 (ab1f493)
+* Update Requests library 2.6.2 to 2.7.0 (8b5e457)
 * Update change to suppress HTTPS verification InsecureRequestWarning to updated package (ref:hacks.txt)
 * Change to consolidate cache database migration code
 * Change to only rebuild namecache on show update instead of on every search
@@ -18,6 +18,9 @@
 * Fix getManualSearchStatus: object has no attribute 'segment'
 * Change handling of general HTTP error response codes to prevent issues
 * Add handling for CloudFlare custom HTTP response codes
+
+[develop changelog]
+* Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
 
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)
