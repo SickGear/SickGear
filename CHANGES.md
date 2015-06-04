@@ -10,6 +10,7 @@
 * Change to only rebuild namecache on show update instead of on every search
 * Add removal of old entries from namecache on show deletion
 * Add Hallmark and specific ITV logos, remove logo of non-english Comedy Central Family
+* Fix provider TD failing to find episodes of air by date shows
 * Fix provider SCC failing to find episodes of air by date shows
 * Fix provider SCC searching propers
 * Fix provider SCC stop snatching releases for episodes already completed
