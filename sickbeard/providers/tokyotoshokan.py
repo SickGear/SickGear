@@ -63,7 +63,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
     def _doSearch(self, search_string, search_mode='eponly', epcount=0, age=0):
         if self.show and not self.show.is_anime:
-            logger.log(u"" + str(self.show.name) + " is not an anime skiping " + str(self.name))
+            logger.log(u"" + str(self.show.name) + " is not an anime skipping " + str(self.name))
             return []
 
         params = {
