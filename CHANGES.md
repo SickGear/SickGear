@@ -16,6 +16,8 @@
 * Change provider SCC remove 1 of 3 requests per search to save 30% time
 * Change provider Womble's use SSL
 * Fix getManualSearchStatus: object has no attribute 'segment'
+* Change handling of general HTTP error response codes to prevent issues
+* Add handling for CloudFlare custom HTTP response codes
 
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)
@@ -84,7 +86,7 @@
 * Change disable the Force buttons on the Manage Searches page while a search is running
 * Change staggered periods of testing and updating of all shows "ended" status up to 460 days
 * Change "Archive" to "Upgrade to" in Edit show and other places and improve related texts for clarity
-* Fix history consolidation to only update an episode status if the history disagrees with the status.
+* Fix history consolidation to only update an episode status if the history disagrees with the status
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)

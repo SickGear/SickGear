@@ -1154,8 +1154,14 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             resp = session.get(url, timeout=timeout)
 
         if not resp.ok:
-            logger.log(u"Requested url " + url + " returned status code is " + str(
-                resp.status_code) + ': ' + clients.http_error_code[resp.status_code], logger.DEBUG)
+            if resp.status_code in clients.http_error_code:
+                http_err_text = clients.http_error_code[resp.status_code]
+            elif resp.status_code in range(520, 527):
+                http_err_text = 'CloudFlare to origin server connection failure'
+            else:
+                http_err_text = 'Custom HTTP error code'
+            logger.log(u'Requested url %s returned status code is %s: %s'
+                       % (url, resp.status_code, http_err_text), logger.DEBUG)
             return
 
     except requests.exceptions.HTTPError, e:
