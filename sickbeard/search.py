@@ -462,7 +462,7 @@ def searchProviders(show, episodes, manualSearch=False):
     providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_backlog]
     for providerNum, curProvider in enumerate(providers):
         if curProvider.anime_only and not show.is_anime:
-            logger.log(u"" + str(show.name) + " is not an anime, skiping", logger.DEBUG)
+            logger.log(u"" + str(show.name) + " is not an anime, skipping", logger.DEBUG)
             continue
 
         threading.currentThread().name = origThreadName + " :: [" + curProvider.name + "]"
