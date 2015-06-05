@@ -97,7 +97,7 @@ class ProcessTVShow(object):
         # try deleting folder
         try:
             shutil.rmtree(folder)
-        except (OSError, IOError), e:
+        except (OSError, IOError) as e:
             logger.log(u'Warning: unable to delete folder: %s: %s' % (folder, ex(e)), logger.WARNING)
             return False
 
@@ -128,14 +128,14 @@ class ProcessTVShow(object):
                 self._log_helper(u'Changing ReadOnly flag for file ' + cur_file)
                 try:
                     ek.ek(os.chmod, cur_file_path, stat.S_IWRITE)
-                except OSError, e:
+                except OSError as e:
                     self._log_helper(u'Cannot change permissions of %s: %s' % (cur_file_path, str(e.strerror)))
             try:
                 if use_trash:
                     ek.ek(send2trash, cur_file_path)
                 else:
                     ek.ek(os.remove, cur_file_path)
-            except OSError, e:
+            except OSError as e:
                 self._log_helper(u'Unable to delete file %s: %s' % (cur_file, str(e.strerror)))
 
             if True is not ek.ek(os.path.isfile, cur_file_path):
@@ -401,7 +401,7 @@ class ProcessTVShow(object):
                     rar_handle.extract(path=path, withSubpath=False, overwrite=False)
                     unpacked_files += [os.path.basename(x.filename) for x in rar_handle.infolist() if not x.isdir]
                     del rar_handle
-                except Exception, e:
+                except Exception as e:
                     self._log_helper(u'Failed to unpack archive %s: %s' % (archive, ex(e)), logger.ERROR)
                     self._set_process_success(False)
                     continue
@@ -509,7 +509,7 @@ class ProcessTVShow(object):
                 processor = postProcessor.PostProcessor(cur_video_file_path, nzb_name, process_method, force_replace, use_trash=use_trash)
                 file_success = processor.process()
                 process_fail_message = ''
-            except exceptions.PostProcessingFailed, e:
+            except exceptions.PostProcessingFailed as e:
                 file_success = False
                 process_fail_message = '<br />.. ' + ex(e)
 
@@ -560,7 +560,7 @@ class ProcessTVShow(object):
                 processor = failedProcessor.FailedProcessor(dir_name, nzb_name)
                 self._set_process_success(processor.process())
                 process_fail_message = ''
-            except exceptions.FailedProcessingFailed, e:
+            except exceptions.FailedProcessingFailed as e:
                 self._set_process_success(False)
                 process_fail_message = ex(e)
 

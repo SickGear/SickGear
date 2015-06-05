@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from __future__ import with_statement
 import getpass
 import os
@@ -32,6 +33,7 @@ import urlparse
 import uuid
 import base64
 import datetime
+import io
 
 import sickbeard
 import subliminal
@@ -286,7 +288,7 @@ def hardlinkFile(srcFile, destFile):
     try:
         ek.ek(link, srcFile, destFile)
         fixSetGroupID(destFile)
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Failed to create hardlink of " + srcFile + " at " + destFile + ": " + ex(e) + ". Copying instead",
                    logger.ERROR)
         copyFile(srcFile, destFile)
@@ -326,7 +328,7 @@ def make_dirs(path):
             try:
                 logger.log(u"Folder " + path + " doesn't exist, creating it", logger.DEBUG)
                 ek.ek(os.makedirs, path)
-            except (OSError, IOError), e:
+            except (OSError, IOError) as e:
                 logger.log(u"Failed creating " + path + " : " + ex(e), logger.ERROR)
                 return False
 
@@ -350,7 +352,7 @@ def make_dirs(path):
                     chmodAsParent(ek.ek(os.path.normpath, sofar))
                     # do the library update for synoindex
                     notifiers.synoindex_notifier.addFolder(sofar)
-                except (OSError, IOError), e:
+                except (OSError, IOError) as e:
                     logger.log(u"Failed creating " + sofar + " : " + ex(e), logger.ERROR)
                     return False
 
@@ -397,7 +399,7 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     try:
         logger.log(u"Renaming file from " + cur_path + " to " + new_path)
         ek.ek(os.rename, cur_path, new_path)
-    except (OSError, IOError), e:
+    except (OSError, IOError) as e:
         logger.log(u"Failed renaming " + cur_path + " to " + new_path + ": " + ex(e), logger.ERROR)
         return False
 
@@ -433,7 +435,7 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
                 ek.ek(os.rmdir, check_empty_dir)
                 # do the library update for synoindex
                 notifiers.synoindex_notifier.deleteFolder(check_empty_dir)
-            except OSError, e:
+            except OSError as e:
                 logger.log(u"Unable to delete " + check_empty_dir + ": " + repr(e) + " / " + str(e), logger.WARNING)
                 break
             check_empty_dir = ek.ek(os.path.dirname, check_empty_dir)
@@ -596,7 +598,7 @@ def create_https_certificates(ssl_cert, ssl_key):
         from OpenSSL import crypto  # @UnresolvedImport
         from lib.certgen import createKeyPair, createCertRequest, createCertificate, TYPE_RSA, \
             serial  # @UnresolvedImport
-    except Exception, e:
+    except Exception as e:
         logger.log(u"pyopenssl module missing, please install for https access", logger.WARNING)
         return False
 
@@ -642,7 +644,7 @@ def parse_xml(data, del_xmlns=False):
 
     try:
         parsedXML = etree.fromstring(data)
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Error trying to parse xml data. Error: " + ex(e), logger.DEBUG)
         parsedXML = None
 
@@ -664,7 +666,7 @@ def backupVersionedFile(old_file, version):
             shutil.copy(old_file, new_file)
             logger.log(u"Backup done", logger.DEBUG)
             break
-        except Exception, e:
+        except Exception as e:
             logger.log(u"Error while trying to back up " + old_file + " to " + new_file + " : " + ex(e), logger.WARNING)
             numTries += 1
             time.sleep(1)
@@ -692,7 +694,7 @@ def restoreVersionedFile(backup_file, version):
             u"Trying to backup " + new_file + " to " + new_file + "." + "r" + str(version) + " before restoring backup",
             logger.DEBUG)
         shutil.move(new_file, new_file + '.' + 'r' + str(version))
-    except Exception, e:
+    except Exception as e:
         logger.log(
             u"Error while trying to backup DB file " + restore_file + " before proceeding with restore: " + ex(e),
             logger.WARNING)
@@ -708,7 +710,7 @@ def restoreVersionedFile(backup_file, version):
             shutil.copy(restore_file, new_file)
             logger.log(u"Restore done", logger.DEBUG)
             break
-        except Exception, e:
+        except Exception as e:
             logger.log(u"Error while trying to restore " + restore_file + ": " + ex(e), logger.WARNING)
             numTries += 1
             time.sleep(1)
@@ -777,7 +779,7 @@ def get_lan_ip():
         for ifname in interfaces:
             try:
                 ip = get_interface_ip(ifname)
-                print ifname, ip
+                print(ifname, ip)
                 break
             except IOError:
                 pass
@@ -946,14 +948,14 @@ def set_up_anidb_connection():
     auth = False
     try:
         auth = sickbeard.ADBA_CONNECTION.authed()
-    except Exception, e:
+    except Exception as e:
         logger.log(u'exception msg: ' + str(e))
         pass
 
     if not auth:
         try:
             sickbeard.ADBA_CONNECTION.auth(sickbeard.ANIDB_USERNAME, sickbeard.ANIDB_PASSWORD)
-        except Exception, e:
+        except Exception as e:
             logger.log(u'exception msg: ' + str(e))
             return False
     else:
@@ -1023,7 +1025,7 @@ def mapIndexersToShow(showObj):
 def touchFile(fname, atime=None):
     if None != atime:
         try:
-            with file(fname, 'a'):
+            with io.open(fname, 'a'):
                 os.utime(fname, (atime, atime))
                 return True
         except:
@@ -1164,16 +1166,16 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                        % (url, resp.status_code, http_err_text), logger.DEBUG)
             return
 
-    except requests.exceptions.HTTPError, e:
+    except requests.exceptions.HTTPError as e:
         logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
         return
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return
-    except requests.exceptions.Timeout, e:
+    except requests.exceptions.Timeout as e:
         logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return
-    except requests.exceptions.ReadTimeout, e:
+    except requests.exceptions.ReadTimeout as e:
         logger.log(u'Read timed out ' + str(e.message) + ' while loading URL ' + url, logger.WARNING)
         return
     except Exception:
@@ -1230,19 +1232,19 @@ def download_file(url, filename, session=None):
                     fp.flush()
 
         chmodAsParent(filename)
-    except requests.exceptions.HTTPError, e:
+    except requests.exceptions.HTTPError as e:
         _remove_file_failed(filename)
         logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
         return False
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         _remove_file_failed(filename)
         logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return False
-    except requests.exceptions.Timeout, e:
+    except requests.exceptions.Timeout as e:
         _remove_file_failed(filename)
         logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return False
-    except EnvironmentError, e:
+    except EnvironmentError as e:
         _remove_file_failed(filename)
         logger.log(u"Unable to save the file: " + ex(e), logger.ERROR)
         return False
@@ -1282,7 +1284,7 @@ def clearCache(force=False):
                         if force or (update_datetime - cache_file_modified > max_age):
                             try:
                                 ek.ek(os.remove, cache_file)
-                            except OSError, e:
+                            except OSError as e:
                                 logger.log(u"Unable to clean " + cache_root + ": " + repr(e) + " / " + str(e),
                                            logger.WARNING)
                                 break

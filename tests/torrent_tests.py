@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from __future__ import with_statement
 
 import unittest
@@ -68,11 +69,11 @@ class TorrentBasicTests(test.SickbeardTestDBCase):
             except (AttributeError, TypeError):
                 continue
 
-            print title
+            print(title)
 
 if __name__ == "__main__":
-    print "=================="
-    print "STARTING - XEM Scene Numbering TESTS"
-    print "=================="
-    print "######################################################################"
+    print('==================')
+    print('STARTING - XEM Scene Numbering TESTS')
+    print('==================')
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TorrentBasicTests)

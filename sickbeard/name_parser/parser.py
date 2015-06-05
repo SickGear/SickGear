@@ -95,7 +95,7 @@ class NameParser(object):
             for cur_pattern_num, (cur_pattern_name, cur_pattern) in enumerate(regexItem):
                 try:
                     cur_regex = re.compile(cur_pattern, re.VERBOSE | re.IGNORECASE)
-                except re.error, errormsg:
+                except re.error as errormsg:
                     logger.log(u"WARNING: Invalid episode_pattern, %s. %s" % (errormsg, cur_pattern))
                 else:
                     self.compiled_regexes[index].append([cur_pattern_num, cur_pattern_name, cur_regex])
@@ -166,7 +166,7 @@ class NameParser(object):
                         day = tmp_month
                     try:
                         result.air_date = datetime.date(year, month, day)
-                    except ValueError, e:
+                    except ValueError as e:
                         raise InvalidNameException(ex(e))
 
                 if 'extra_info' in named_groups:
@@ -257,7 +257,7 @@ class NameParser(object):
                         except sickbeard.indexer_episodenotfound:
                             logger.log(u"Unable to find episode with date " + str(bestResult.air_date) + " for show " + bestResult.show.name + ", skipping", logger.WARNING)
                             episode_numbers = []
-                        except sickbeard.indexer_error, e:
+                        except sickbeard.indexer_error as e:
                             logger.log(u"Unable to contact " + sickbeard.indexerApi(bestResult.show.indexer).name + ": " + ex(e), logger.WARNING)
                             episode_numbers = []
 

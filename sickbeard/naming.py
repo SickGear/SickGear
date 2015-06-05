@@ -51,7 +51,7 @@ class TVShow():
     def __init__(self):
         self.name = "Show Name"
         self.genre = "Comedy"
-        self.indexerid = 00001
+        self.indexerid = 1
         self.air_by_date = 0
         self.sports = 0
         self.anime = 0
@@ -188,7 +188,7 @@ def validate_name(pattern, multi=None, anime_type=None, file_only=False, abd=Fal
 
     try:
         result = parser.parse(new_name)
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Unable to parse " + new_name + ", not valid", logger.DEBUG)
         return False
 

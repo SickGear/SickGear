@@ -123,7 +123,7 @@ class BTNProvider(generic.TorrentProvider):
         try:
             parsedJSON = server.getTorrents(apikey, params, int(results_per_page), int(offset))
 
-        except jsonrpclib.jsonrpc.ProtocolError, error:
+        except jsonrpclib.jsonrpc.ProtocolError as error:
             logger.log(u"JSON-RPC protocol error while accessing " + self.name + ": " + ex(error), logger.ERROR)
             parsedJSON = {'api-error': ex(error)}
             return parsedJSON
@@ -131,11 +131,11 @@ class BTNProvider(generic.TorrentProvider):
         except socket.timeout:
             logger.log(u"Timeout while accessing " + self.name, logger.WARNING)
 
-        except socket.error, error:
+        except socket.error as error:
             # Note that sometimes timeouts are thrown as socket errors
             logger.log(u"Socket error while accessing " + self.name + ": " + error[1], logger.ERROR)
 
-        except Exception, error:
+        except Exception as error:
             errorstring = str(error)
             if (errorstring.startswith('<') and errorstring.endswith('>')):
                 errorstring = errorstring[1:-1]

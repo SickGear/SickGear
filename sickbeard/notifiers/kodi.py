@@ -102,7 +102,7 @@ class KODINotifier:
 
             try:
                 response = urllib2.urlopen(req)
-            except urllib2.URLError, e:
+            except urllib2.URLError as e:
                 logger.log(u'KODI: Warning: Couldn\'t contact Kodi at ' + host + '- ' + ex(e), logger.WARNING)
                 return False
 
@@ -112,11 +112,11 @@ class KODINotifier:
                 response.close()
                 logger.log(u'KODI: JSON response: ' + str(result), logger.DEBUG)
                 return result  # need to return response for parsing
-            except ValueError, e:
+            except ValueError as e:
                 logger.log(u'KODI: Unable to decode JSON response: ' + response, logger.WARNING)
                 return False
 
-        except IOError, e:
+        except IOError as e:
             logger.log(u'KODI: Warning: Couldn\'t contact Kodi at ' + host + ' - ' + ex(e), logger.WARNING)
             return False
 

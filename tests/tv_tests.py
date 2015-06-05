@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import unittest
 import test_lib as test
 
@@ -30,11 +31,11 @@ class TVShowTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_init_indexerid(self):
-        show = TVShow(1, 0001, "en")
-        self.assertEqual(show.indexerid, 0001)
+        show = TVShow(1, 1, "en")
+        self.assertEqual(show.indexerid, 1)
 
     def test_change_indexerid(self):
-        show = TVShow(1, 0001, "en")
+        show = TVShow(1, 1, "en")
         show.name = "show name"
         show.tvrname = "show name"
         show.network = "cbs"
@@ -47,14 +48,14 @@ class TVShowTests(test.SickbeardTestDBCase):
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
 
-        show.indexerid = 0002
+        show.indexerid = 2
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
 
-        self.assertEqual(show.indexerid, 0002)
+        self.assertEqual(show.indexerid, 2)
 
     def test_set_name(self):
-        show = TVShow(1, 0001, "en")
+        show = TVShow(1, 1, "en")
         show.name = "newName"
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
@@ -68,7 +69,7 @@ class TVEpisodeTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_init_empty_db(self):
-        show = TVShow(1, 0001, "en")
+        show = TVShow(1, 1, "en")
         ep = TVEpisode(show, 1, 1)
         ep.name = "asdasdasdajkaj"
         ep.saveToDB()
@@ -83,7 +84,7 @@ class TVTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_getEpisode(self):
-        show = TVShow(1, 0001, "en")
+        show = TVShow(1, 1, "en")
         show.name = "show name"
         show.tvrname = "show name"
         show.network = "cbs"
@@ -98,15 +99,15 @@ class TVTests(test.SickbeardTestDBCase):
 
 
 if __name__ == '__main__':
-    print "=================="
-    print "STARTING - TV TESTS"
-    print "=================="
-    print "######################################################################"
+    print('==================')
+    print('STARTING - TV TESTS')
+    print('==================')
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVShowTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
-    print "######################################################################"
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVEpisodeTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
-    print "######################################################################"
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from __future__ import with_statement
 
 import unittest
@@ -149,7 +150,7 @@ class TestCacheDBConnection(TestDBConnection, object):
             sql = "CREATE TABLE " + providerName + " (name TEXT, season NUMERIC, episodes TEXT, indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT);"
             self.connection.execute(sql)
             self.connection.commit()
-        except sqlite3.OperationalError, e:
+        except sqlite3.OperationalError as e:
             if str(e) != "table " + providerName + " already exists":
                 raise
 
@@ -158,7 +159,7 @@ class TestCacheDBConnection(TestDBConnection, object):
             sql = "CREATE TABLE lastUpdate (provider TEXT, time NUMERIC);"
             self.connection.execute(sql)
             self.connection.commit()
-        except sqlite3.OperationalError, e:
+        except sqlite3.OperationalError as e:
             if str(e) != "table lastUpdate already exists":
                 raise
 
@@ -208,7 +209,7 @@ def setUp_test_episode_file():
         with open(FILEPATH, 'w') as f:
             f.write("foo bar")
     except EnvironmentError:
-        print "Unable to set up test episode"
+        print('Unable to set up test episode')
         raise
 
 
@@ -229,15 +230,15 @@ def tearDown_test_show_dir():
 tearDown_test_db()
 
 if __name__ == '__main__':
-    print "=================="
-    print "Dont call this directly"
-    print "=================="
-    print "you might want to call"
+    print('==================')
+    print('Dont call this directly')
+    print('==================')
+    print('you might want to call')
 
     dirList = os.listdir(TESTDIR)
     for fname in dirList:
         if (fname.find("_test") > 0) and (fname.find("pyc") < 0):
-            print "- " + fname
+            print('- ' + fname)
 
-    print "=================="
-    print "or just call all_tests.py"
+    print('==================')
+    print('or just call all_tests.py')

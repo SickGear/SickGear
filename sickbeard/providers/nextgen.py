@@ -230,7 +230,7 @@ class NextGenProvider(generic.TorrentProvider):
                                        logger.WARNING)
                             continue
 
-                except Exception, e:
+                except Exception as e:
                     logger.log(u"Failed parsing " + self.name + " Traceback: " + traceback.format_exc(),
                                logger.ERROR)
 

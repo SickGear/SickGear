@@ -308,7 +308,7 @@ class QueueItemAdd(ShowQueueItem):
                                            self.indexer).name) + ' but contains no season/episode data.')
                 self._finishEarly()
                 return
-        except Exception, e:
+        except Exception as e:
             logger.log(u'Unable to find show ID:' + str(self.indexer_id) + ' on Indexer: ' + str(
                 sickbeard.indexerApi(self.indexer).name), logger.ERROR)
             ui.notifications.error('Unable to add show',
@@ -349,7 +349,7 @@ class QueueItemAdd(ShowQueueItem):
             if self.show.classification and 'sports' in self.show.classification.lower():
                 self.show.sports = 1
 
-        except sickbeard.indexer_exception, e:
+        except sickbeard.indexer_exception as e:
             logger.log(
                 u'Unable to add show due to an error with ' + sickbeard.indexerApi(self.indexer).name + ': ' + ex(e),
                 logger.ERROR)
@@ -369,7 +369,7 @@ class QueueItemAdd(ShowQueueItem):
             self._finishEarly()
             return
 
-        except Exception, e:
+        except Exception as e:
             logger.log(u'Error trying to add show: ' + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
             self._finishEarly()
@@ -379,7 +379,7 @@ class QueueItemAdd(ShowQueueItem):
 
         try:
             self.show.saveToDB()
-        except Exception, e:
+        except Exception as e:
             logger.log(u'Error saving the show to the database: ' + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
             self._finishEarly()
@@ -390,7 +390,7 @@ class QueueItemAdd(ShowQueueItem):
 
         try:
             self.show.loadEpisodesFromIndexer()
-        except Exception, e:
+        except Exception as e:
             logger.log(
                 u'Error with ' + sickbeard.indexerApi(self.show.indexer).name + ', not creating episode list: ' + ex(e),
                 logger.ERROR)
@@ -398,7 +398,7 @@ class QueueItemAdd(ShowQueueItem):
 
         try:
             self.show.loadEpisodesFromDir()
-        except Exception, e:
+        except Exception as e:
             logger.log(u'Error searching directory for episodes: ' + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
 
@@ -587,11 +587,11 @@ class QueueItemUpdate(ShowQueueItem):
             result = self.show.loadFromIndexer(cache=not self.force)
             if None is not result:
                 return
-        except sickbeard.indexer_error, e:
+        except sickbeard.indexer_error as e:
             logger.log(u'Unable to contact ' + sickbeard.indexerApi(self.show.indexer).name + ', aborting: ' + ex(e),
                        logger.WARNING)
             return
-        except sickbeard.indexer_attributenotfound, e:
+        except sickbeard.indexer_attributenotfound as e:
             logger.log(u'Data retrieved from ' + sickbeard.indexerApi(
                 self.show.indexer).name + ' was incomplete, aborting: ' + ex(e), logger.ERROR)
             return
@@ -601,7 +601,7 @@ class QueueItemUpdate(ShowQueueItem):
 
         try:
             self.show.saveToDB()
-        except Exception, e:
+        except Exception as e:
             logger.log(u'Error saving the episode to the database: ' + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
 
@@ -613,7 +613,7 @@ class QueueItemUpdate(ShowQueueItem):
         logger.log(u'Loading all episodes from ' + sickbeard.indexerApi(self.show.indexer).name + '', logger.DEBUG)
         try:
             IndexerEpList = self.show.loadEpisodesFromIndexer(cache=not self.force)
-        except sickbeard.indexer_exception, e:
+        except sickbeard.indexer_exception as e:
             logger.log(u'Unable to get info from ' + sickbeard.indexerApi(
                 self.show.indexer).name + ', the show info will not be refreshed: ' + ex(e), logger.ERROR)
             IndexerEpList = None

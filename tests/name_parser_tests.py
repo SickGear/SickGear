@@ -1,3 +1,4 @@
+from __future__ import print_function
 import datetime
 import unittest
 import test_lib as test
@@ -126,8 +127,8 @@ simple_test_cases = {
         '[HorribleSubs] D Gray-Man - 312 (480p) [F501C9BE]': parser.ParseResult(None, 'D Gray-Man', None, [], '480p', 'HorribleSubs', None, [312]),
         '[SGKK] Tengen Toppa Gurren Lagann - 45-46 (720p h264) [F501C9BE]': parser.ParseResult(None, 'Tengen Toppa Gurren Lagann', None, [], '720p h264', 'SGKK', None, [45, 46]),
         '[Stratos-Subs]_Infinite_Stratos_-_12_(1280x720_H.264_AAC)_[379759DB]': parser.ParseResult(None, 'Infinite Stratos', None, [], '1280x720_H.264_AAC', 'Stratos-Subs', None, [12]),
-        '[ShinBunBu-Subs] Bleach - 02-03 (CX 1280x720 x264 AAC)': parser.ParseResult(None, 'Bleach', None, [], 'CX 1280x720 x264 AAC', 'ShinBunBu-Subs', None, [02, 03]),
-        '[Doki] Hanasaku Iroha - 03 (848x480 h264 AAC) [CB1AA73B]': parser.ParseResult(None, 'Hanasaku Iroha', None, [], '848x480 h264 AAC', 'Doki', None, [03]),
+        '[ShinBunBu-Subs] Bleach - 02-03 (CX 1280x720 x264 AAC)': parser.ParseResult(None, 'Bleach', None, [], 'CX 1280x720 x264 AAC', 'ShinBunBu-Subs', None, [2, 3]),
+        '[Doki] Hanasaku Iroha - 03 (848x480 h264 AAC) [CB1AA73B]': parser.ParseResult(None, 'Hanasaku Iroha', None, [], '848x480 h264 AAC', 'Doki', None, [3]),
         '[UTW]_Fractal_-_01_[h264-720p][96D3F1BF]': parser.ParseResult(None, 'Fractal', None, [], 'h264-720p', 'UTW', None, [1]),
         '[a-s]_inuyasha_-_028_rs2_[BFDDF9F2]': parser.ParseResult(None, 'inuyasha', None, [], 'BFDDF9F2', 'a-s', None, [28]),
         '[HorribleSubs] Fairy Tail S2 - 37 [1080p]': parser.ParseResult(None,'Fairy Tail S2', None, [], '1080p', 'HorribleSubs', None, [37]),
@@ -266,7 +267,7 @@ class FailureCaseTests(test.SickbeardTestDBCase):
             return True
 
         if VERBOSE:
-            print 'Actual: ', parse_result.which_regex, parse_result
+            print('Actual: ', parse_result.which_regex, parse_result)
         return False
 
     def test_failures(self):
@@ -278,8 +279,8 @@ class ComboTests(test.SickbeardTestDBCase):
     def _test_combo(self, name, result, which_regexes):
 
         if VERBOSE:
-            print
-            print 'Testing', name
+            print()
+            print('Testing', name)
 
         np = parser.NameParser(True)
 
@@ -289,8 +290,8 @@ class ComboTests(test.SickbeardTestDBCase):
             return False
 
         if DEBUG:
-            print test_result, test_result.which_regex
-            print result, which_regexes
+            print(test_result, test_result.which_regex)
+            print(result, which_regexes)
 
         self.assertEqual(test_result, result)
         for cur_regex in which_regexes:
@@ -309,15 +310,14 @@ class BasicTests(test.SickbeardTestDBCase):
     def _test_names(self, np, section, transform=None, verbose=False):
 
         if VERBOSE or verbose:
-            print
-            print 'Running', section, 'tests'
+            print('Running', section, 'tests')
         for cur_test_base in simple_test_cases[section]:
             if transform:
                 cur_test = transform(cur_test_base)
             else:
                 cur_test = cur_test_base
             if VERBOSE or verbose:
-                print 'Testing', cur_test
+                print('Testing', cur_test)
 
             result = simple_test_cases[section][cur_test_base]
             if not result:
@@ -330,10 +330,10 @@ class BasicTests(test.SickbeardTestDBCase):
                 # self.assertEqual(test_result.which_regex, [section])
                 self.assertEqual(test_result, result)
             except:
-                print 'air_by_date:', test_result.is_air_by_date, 'air_date:', test_result.air_date
-                print 'anime:', test_result.is_anime, 'ab_episode_numbers:', test_result.ab_episode_numbers
-                print test_result
-                print result
+                print('air_by_date:', test_result.is_air_by_date, 'air_date:', test_result.air_date)
+                print('anime:', test_result.is_anime, 'ab_episode_numbers:', test_result.ab_episode_numbers)
+                print(test_result)
+                print(result)
                 raise
 
 

@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 if __name__ == "__main__":
     import glob
     import unittest
@@ -28,12 +29,12 @@ if __name__ == "__main__":
     suites = [unittest.defaultTestLoader.loadTestsFromName(file_string) for file_string in module_strings]
     testSuite = unittest.TestSuite(suites)
 
-    print "=================="
-    print "STARTING - ALL TESTS"
-    print "=================="
-    print "this will include"
+    print('==================')
+    print('STARTING - ALL TESTS')
+    print('==================')
+    print('this will include')
     for includedfiles in test_file_strings:
-        print "- " + includedfiles
+        print('- ' + includedfiles)
 
     text_runner = unittest.TextTestRunner().run(testSuite)
     if not text_runner.wasSuccessful():
