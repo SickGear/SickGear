@@ -585,8 +585,9 @@ class Home(MainHandler):
                 index += 1
             if anime_results:
                 t.showlists.append(['container%s' % index, 'Anime List', anime_results])
-        else:
-            t.showlists.append(['container%s' % index, 'Show List', sickbeard.showList])
+
+        if 0 == len(t.showlists):
+            t.showlists.append(['container0', 'Show List', sickbeard.showList])
 
         if 'simple' != sickbeard.HOME_LAYOUT:
             t.network_images = {}

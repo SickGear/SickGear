@@ -507,6 +507,7 @@ inc_bottom.tmpl
 	width:100%;
 	padding:20px 0;
 	text-align:center;
+	clear:both;
 	font-size:12px
 }
 
