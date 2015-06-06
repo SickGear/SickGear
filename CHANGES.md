@@ -26,6 +26,8 @@
 * Change don't create a backup from an initial zero byte main database file, PEP8 and code tidy up
 * Fix show list view when no shows exist and "Group show lists shows into" is set to anything other than "One Show List"
 * Add coverage testing and coveralls support
+* Update feedparser library 5.1.3 to 5.2.0 (8c62940)
+* Remove feedcache implementation and library
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)

@@ -30,7 +30,7 @@ from sickbeard import helpers, show_name_helpers
 from sickbeard.exceptions import MultipleShowObjectsException
 from sickbeard.exceptions import AuthException
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard.rssfeeds import RSSFeeds
+from sickbeard.rssfeeds import getFeed
 from sickbeard import clients
 import itertools
 
@@ -104,7 +104,7 @@ class TVCache():
         return []
 
     def getRSSFeed(self, url, post_data=None, request_headers=None):
-        return RSSFeeds(self.providerID).getFeed(url, post_data, request_headers)
+        return getFeed(url, post_data, request_headers)
 
     def _translateTitle(self, title):
         return u'' + title.replace(' ', '.')
