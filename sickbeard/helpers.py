@@ -650,28 +650,28 @@ def parse_xml(data, del_xmlns=False):
 
 
 def backupVersionedFile(old_file, version):
-    numTries = 0
+    num_tries = 0
 
-    new_file = old_file + '.' + 'v' + str(version)
+    new_file = '%s.v%s' % (old_file, version)
 
     while not ek.ek(os.path.isfile, new_file):
-        if not ek.ek(os.path.isfile, old_file):
-            logger.log(u"Not creating backup, " + old_file + " doesn't exist", logger.DEBUG)
+        if not ek.ek(os.path.isfile, old_file) or 0 == get_size(old_file):
+            logger.log(u'No need to create backup', logger.DEBUG)
             break
 
         try:
-            logger.log(u"Trying to back up " + old_file + " to " + new_file, logger.DEBUG)
+            logger.log(u'Trying to back up %s to %s' % (old_file, new_file), logger.DEBUG)
             shutil.copy(old_file, new_file)
-            logger.log(u"Backup done", logger.DEBUG)
+            logger.log(u'Backup done', logger.DEBUG)
             break
         except Exception, e:
-            logger.log(u"Error while trying to back up " + old_file + " to " + new_file + " : " + ex(e), logger.WARNING)
-            numTries += 1
-            time.sleep(1)
-            logger.log(u"Trying again.", logger.DEBUG)
+            logger.log(u'Error while trying to back up %s to %s : %s' % (old_file, new_file, ex(e)), logger.WARNING)
+            num_tries += 1
+            time.sleep(3)
+            logger.log(u'Trying again.', logger.DEBUG)
 
-        if numTries >= 10:
-            logger.log(u"Unable to back up " + old_file + " to " + new_file + " please do it manually.", logger.ERROR)
+        if 3 <= num_tries:
+            logger.log(u'Unable to back up %s to %s please do it manually.' % (old_file, new_file), logger.ERROR)
             return False
 
     return True

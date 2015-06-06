@@ -21,6 +21,8 @@
 * Add handling for CloudFlare custom HTTP response codes
 * Fix to correctly load local libraries instead of system installed libraries
 * Update PyNMA to hybrid v1.0
+* Change first run after install to set up the main db to the current schema instead of upgrading
+* Change don't create a backup from an initial zero byte main database file, PEP8 and code tidy up
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
