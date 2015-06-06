@@ -37,7 +37,7 @@ from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
 from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
     omgwtfnzbs, scc, hdtorrents, torrentday, hdbits, nextgen, speedcd, nyaatorrents, torrentbytes, \
-    freshontv, bitsoup, tokyotoshokan, animenzb, totv
+    freshontv, bitsoup, tokyotoshokan, animenzb, totv, rarbg
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type, minimax
 from sickbeard import searchBacklog, showUpdater, versionChecker, autoPostProcesser, \
@@ -1209,7 +1209,7 @@ def initialize(consoleLogging=True):
         # processors
         autoPostProcesserScheduler = scheduler.Scheduler(autoPostProcesser.PostProcesser(),
                                                          cycleTime=datetime.timedelta(
-                                                         minutes=AUTOPOSTPROCESSER_FREQUENCY),
+                                                             minutes=AUTOPOSTPROCESSER_FREQUENCY),
                                                          threadName='POSTPROCESSER',
                                                          silent=not PROCESS_AUTOMATICALLY)
 
