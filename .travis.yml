@@ -6,6 +6,8 @@ python:
 
 install:
   - pip install cheetah
+  - pip install coveralls
  
 before_script: cd ./tests
-script: python all_tests.py
+script: coverage run --source=.. --omit=../lib/*,../tornado/* all_tests.py
+after_success: coveralls
