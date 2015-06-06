@@ -40,11 +40,11 @@ class GenericProvider:
     NZB = "nzb"
     TORRENT = "torrent"
 
-    def __init__(self, name, supportsBacklog, anime_only):
+    def __init__(self, name, supports_backlog=False, anime_only=False):
         # these need to be set in the subclass
         self.providerType = None
         self.name = name
-        self.supportsBacklog = supportsBacklog
+        self.supportsBacklog = supports_backlog
         self.anime_only = anime_only
         self.url = ''
 
@@ -226,9 +226,9 @@ class GenericProvider:
 
     def _get_title_and_url(self, item):
         """
-        Retrieves the title and URL data from the item XML node
+        Retrieves the title and URL data from the item
 
-        item: An elementtree.ElementTree element representing the <item> tag of the RSS feed
+        item: An elementtree.ElementTree element representing the <item> tag of the RSS feed, or a two part tup
 
         Returns: A tuple containing two strings representing title and URL respectively
         """
@@ -236,14 +236,21 @@ class GenericProvider:
         title = None
         url = None
 
-        if 'title' in item:
-            title = item.title
+        try:
+            if isinstance(item, tuple):
+                title = item[0]
+                url = item[1]
+            else:
+                if 'title' in item:
+                    title = item.title
+
+                if 'link' in item:
+                    url = item.link
+        except Exception:
+            pass
 
         if title:
-            title = title.replace(' ', '.')
-
-        if 'link' in item:
-            url = item.link
+            title = re.sub(r'\s+', '.', u'' + title)
 
         if url:
             url = url.replace('&amp;', '&')
@@ -464,12 +471,74 @@ class GenericProvider:
 
 
 class NZBProvider(GenericProvider):
-    def __init__(self, name, supportsBacklog, anime_only):
-        GenericProvider.__init__(self, name, supportsBacklog, anime_only)
+    def __init__(self, name, supports_backlog=True, anime_only=False):
+        GenericProvider.__init__(self, name, supports_backlog, anime_only)
         self.providerType = GenericProvider.NZB
 
 
 class TorrentProvider(GenericProvider):
-    def __init__(self, name, supportsBacklog, anime_only):
-        GenericProvider.__init__(self, name, supportsBacklog, anime_only)
+
+    def __init__(self, name, supports_backlog=True, anime_only=False):
+        GenericProvider.__init__(self, name, supports_backlog, anime_only)
         self.providerType = GenericProvider.TORRENT
+        self._seed_ratio = None
+
+    def get_cache_data(self):
+        search_params = {'RSS': ['']}
+        return self._doSearch(search_params)
+
+    def seedRatio(self):
+        return self._seed_ratio
+
+    def getQuality(self, item, anime=False):
+        if isinstance(item, tuple):
+            name = item[0]
+        else:
+            name = item.title
+        return Quality.sceneQuality(name, anime)
+
+    def _find_propers(self, search_date=datetime.datetime.today(), method=None):
+        """
+        Search for releases of type PROPER
+        :param search_date: Filter search on episodes since this date
+        :param method: String or list of strings that qualify PROPER release types
+        :return: list of Proper objects
+        """
+        results = []
+
+        my_db = db.DBConnection()
+        sql_results = my_db.select(
+            'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
+            ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
+            ' WHERE e.airdate >= ' + str(search_date.toordinal()) +
+            ' AND (e.status IN (%s)' % ','.join([str(x) for x in Quality.DOWNLOADED]) +
+            ' OR (e.status IN (%s)))' % ','.join([str(x) for x in Quality.SNATCHED])
+        )
+
+        if not sql_results:
+            return results
+
+        for sqlshow in sql_results:
+            showid, season, episode = (int(sqlshow['showid']), int(sqlshow['season']), int(sqlshow['episode']))
+
+            self.show = helpers.findCertainShow(sickbeard.showList, showid)
+            if not self.show:
+                continue
+
+            cur_ep = self.show.getEpisode(season, episode)
+
+            if not isinstance(method, list):
+                if None is method:
+                    method = 'PROPER|REPACK'
+                method = [method]
+
+            for proper_string in method:
+                search_string = self._get_episode_search_strings(cur_ep, add_string=proper_string)
+
+                for item in self._doSearch(search_string[0]):
+                    title, url = self._get_title_and_url(item)
+                    if not re.search('(?i)(?:%s)' % '|'.join(method), title):
+                        continue
+                    results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
+
+        return results

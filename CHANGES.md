@@ -16,6 +16,7 @@
 * Fix provider SCC handle null server responses
 * Change provider SCC remove 1 of 3 requests per search to save 30% time
 * Change provider Womble's use SSL
+* Change refactor and code simplification for torrent providers
 * Fix getManualSearchStatus: object has no attribute 'segment'
 * Change handling of general HTTP error response codes to prevent issues
 * Add handling for CloudFlare custom HTTP response codes
