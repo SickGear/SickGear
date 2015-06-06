@@ -1,7 +1,7 @@
 ### 0.10.0 (2015-xx-xx xx:xx:xx UTC)
 
 * Remove EZRSS provider
-* Update Tornado webserver to 4.2b1 (61a16c9)
+* Update Tornado webserver to 4.2 (fdfaf3d)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
 * Update Requests library 2.6.2 to 2.7.0 (8b5e457)
@@ -22,6 +22,7 @@
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
+* Update Tornado webserver from 4.2.dev1 (609dbb9) to 4.2b1 (61a16c9)
 
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)
