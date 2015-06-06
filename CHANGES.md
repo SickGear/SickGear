@@ -20,6 +20,7 @@
 * Change handling of general HTTP error response codes to prevent issues
 * Add handling for CloudFlare custom HTTP response codes
 * Fix to correctly load local libraries instead of system installed libraries
+* Update PyNMA to hybrid v1.0
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
