@@ -4,8 +4,8 @@ import test_lib as test
 
 import sys, os.path
 
-sys.path.append(os.path.abspath('..'))
-sys.path.append(os.path.abspath('../lib'))
+sys.path.insert(1, os.path.abspath('..'))
+sys.path.insert(1, os.path.abspath('../lib'))
 
 from sickbeard.name_parser import parser
 

@@ -2,7 +2,7 @@ import unittest
 
 import sys
 import os.path
-sys.path.append(os.path.abspath('..'))
+sys.path.insert(1, os.path.abspath('..'))
 
 from sickbeard import common
 

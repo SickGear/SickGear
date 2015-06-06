@@ -24,8 +24,8 @@ import sys, os.path
 import datetime
 import re
 
-sys.path.append(os.path.abspath('..'))
-sys.path.append(os.path.abspath('../lib'))
+sys.path.insert(1, os.path.abspath('..'))
+sys.path.insert(1, os.path.abspath('../lib'))
 
 import test_lib as test
 import sickbeard

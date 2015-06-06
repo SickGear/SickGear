@@ -7,8 +7,8 @@ import sickbeard
 from time import sleep
 from sickbeard import db
 
-sys.path.append(os.path.abspath('..'))
-sys.path.append(os.path.abspath('../lib'))
+sys.path.insert(1, os.path.abspath('..'))
+sys.path.insert(1, os.path.abspath('../lib'))
 
 sickbeard.SYS_ENCODING = 'UTF-8'
 
