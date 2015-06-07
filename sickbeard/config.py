@@ -443,7 +443,8 @@ class ConfigMigrator():
                                 8: 'Disable searches on start',
                                 9: 'Rename pushbullet variables',
                                 10: 'Reset backlog frequency to default',
-                                11: 'Migrate anime split view to new layout'}
+                                11: 'Migrate anime split view to new layout',
+                                12: 'Add "hevc" and some non-english languages to ignore words if not found'}
 
     def migrate_config(self):
         """ Calls each successive migration until the config is the same version as SG expects """
@@ -749,3 +750,21 @@ class ConfigMigrator():
             sickbeard.SHOWLIST_TAGVIEW = 'anime'
         else:
             sickbeard.SHOWLIST_TAGVIEW = 'default'
+
+    def _migrate_v12(self):
+        # add words to ignore list and insert spaces to improve the ui config readability
+        words_to_add = ['hevc', 'reenc', 'x265', 'danish', 'deutsch', 'flemish', 'italian', 'nordic', 'norwegian', 'portuguese', 'spanish', 'turkish']
+        config_words = sickbeard.IGNORE_WORDS.split(',')
+        new_list = []
+        for new_word in words_to_add:
+            add_word = True
+            for ignore_word in config_words:
+                ignored = ignore_word.strip().lower()
+                if ignored and ignored not in new_list:
+                    new_list += [ignored]
+                if re.search(r'(?i)%s' % new_word, ignored):
+                    add_word = False
+            if add_word:
+                new_list += [new_word]
+
+        sickbeard.IGNORE_WORDS = ', '.join(sorted(new_list))
