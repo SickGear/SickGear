@@ -61,7 +61,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 11
+CONFIG_VERSION = 12
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -473,8 +473,8 @@ EXTRA_SCRIPTS = []
 
 GIT_PATH = None
 
-IGNORE_WORDS = "german,french,core2hd,dutch,swedish,reenc,MrLss"
-REQUIRE_WORDS = ""
+IGNORE_WORDS = 'core2hd, hevc, MrLss, reenc, x265, danish, deutsch, dutch, flemish, french, german, italian, nordic, norwegian, portuguese, spanish, swedish, turkish'
+REQUIRE_WORDS = ''
 
 CALENDAR_UNPROTECTED = False
 
