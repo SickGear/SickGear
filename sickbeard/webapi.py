@@ -119,7 +119,7 @@ class Api(webserve.BaseHandler):
         else:  # if debug was not set we wrap the "call_dispatcher" in a try block to assure a json output
             try:
                 outDict = _call_dispatcher(self, args, kwargs)
-            except Exception, e:  # real internal error oohhh nooo :(
+            except Exception as e:  # real internal error oohhh nooo :(
                 logger.log(u"API :: " + ex(e), logger.ERROR)
                 errorData = {"error_msg": ex(e),
                              "args": args,
@@ -140,7 +140,7 @@ class Api(webserve.BaseHandler):
             if 'jsonp' in self.request.query_arguments:
                 out = self.request.arguments['jsonp'] + '(' + out + ');'  # wrap with JSONP call if requested
 
-        except Exception, e:  # if we fail to generate the output fake an error
+        except Exception as e:  # if we fail to generate the output fake an error
             logger.log(u'API :: ' + traceback.format_exc(), logger.DEBUG)
             out = '{"result":"' + result_type_map[RESULT_ERROR] + '", "message": "error while composing output: "' + ex(
                 e) + '"}'
@@ -205,7 +205,7 @@ def call_dispatcher(handler, args, kwargs):
                         curOutDict = TVDBShorthandWrapper(handler, curArgs, curKwargs, cmd).run()
                     else:
                         curOutDict = _responds(RESULT_ERROR, "No such cmd: '" + cmd + "'")
-                except ApiError, e:  # Api errors that we raised, they are harmless
+                except ApiError as e:  # Api errors that we raised, they are harmless
                     curOutDict = _responds(RESULT_ERROR, msg=ex(e))
             else:  # if someone chained one of the forbiden cmds they will get an error for this one cmd
                 curOutDict = _responds(RESULT_ERROR, msg="The cmd '" + cmd + "' is not supported while chaining")
@@ -1609,7 +1609,7 @@ class CMD_SickBeardSearchIndexers(ApiCall):
 
             try:
                 apiData = t[str(self.name).encode()]
-            except Exception, e:
+            except Exception as e:
                 pass
 
             if not apiData:
@@ -2537,7 +2537,7 @@ class CMD_ShowUpdate(ApiCall):
         try:
             sickbeard.showQueueScheduler.action.updateShow(showObj, True)  #@UndefinedVariable
             return _responds(RESULT_SUCCESS, msg=str(showObj.name) + " has queued to be updated")
-        except exceptions.CantUpdateException, e:
+        except exceptions.CantUpdateException as e:
             logger.log(u"API:: Unable to update " + str(showObj.name) + ". " + str(ex(e)), logger.ERROR)
             return _responds(RESULT_FAILURE, msg="Unable to update " + str(showObj.name))
 

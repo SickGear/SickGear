@@ -149,7 +149,7 @@ class TestCacheDBConnection(TestDBConnection, object):
             sql = "CREATE TABLE " + providerName + " (name TEXT, season NUMERIC, episodes TEXT, indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT);"
             self.connection.execute(sql)
             self.connection.commit()
-        except sqlite3.OperationalError, e:
+        except sqlite3.OperationalError as e:
             if str(e) != "table " + providerName + " already exists":
                 raise
 
@@ -158,7 +158,7 @@ class TestCacheDBConnection(TestDBConnection, object):
             sql = "CREATE TABLE lastUpdate (provider TEXT, time NUMERIC);"
             self.connection.execute(sql)
             self.connection.commit()
-        except sqlite3.OperationalError, e:
+        except sqlite3.OperationalError as e:
             if str(e) != "table lastUpdate already exists":
                 raise
 

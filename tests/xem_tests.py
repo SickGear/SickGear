@@ -61,7 +61,7 @@ class XEMBasicTests(test.SickbeardTestDBCase):
             try:
                 curShow = TVShow(int(sqlShow["indexer"]), int(sqlShow["indexer_id"]))
                 sickbeard.showList.append(curShow)
-            except Exception, e:
+            except Exception as e:
                 print "There was an error creating the show"
 
     def test_formating(self):

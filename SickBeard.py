@@ -387,7 +387,7 @@ class SickGear(object):
             pid = os.fork()  # @UndefinedVariable - only available in UNIX
             if pid != 0:
                 os._exit(0)
-        except OSError, e:
+        except OSError as e:
             sys.stderr.write('fork #1 failed: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1)
 
@@ -402,7 +402,7 @@ class SickGear(object):
             pid = os.fork()  # @UndefinedVariable - only available in UNIX
             if pid != 0:
                 os._exit(0)
-        except OSError, e:
+        except OSError as e:
             sys.stderr.write('fork #2 failed: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1)
 
@@ -412,7 +412,7 @@ class SickGear(object):
             logger.log(u'Writing PID: %s to %s' % (pid, self.PIDFILE))
             try:
                 file(self.PIDFILE, 'w').write('%s\n' % pid)
-            except IOError, e:
+            except IOError as e:
                 logger.log_error_and_exit(
                     u'Unable to write PID file: %s Error: %s [%s]' % (self.PIDFILE, e.strerror, e.errno))
 
@@ -456,7 +456,7 @@ class SickGear(object):
                 curShow = TVShow(int(sqlShow['indexer']), int(sqlShow['indexer_id']))
                 curShow.nextEpisode()
                 sickbeard.showList.append(curShow)
-            except Exception, e:
+            except Exception as e:
                 logger.log(
                     u'There was an error creating the show in %s: %s' % (sqlShow['location'], str(e).decode('utf-8',
                                                                                                             'replace')),

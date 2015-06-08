@@ -83,7 +83,7 @@ class FreshOnTVProvider(generic.TorrentProvider):
 
             try:
                 response = self.session.post(self.urls['login'], data=login_params, timeout=30, verify=False)
-            except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError), e:
+            except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError) as e:
                 logger.log(u'Unable to connect to %s provider: %s' % (self.name, ex(e)), logger.ERROR)
                 return False
 
@@ -232,7 +232,7 @@ class FreshOnTVProvider(generic.TorrentProvider):
 
                             items[mode].append(item)
 
-                except Exception, e:
+                except Exception as e:
                     logger.log(u'Failed parsing %s Traceback: %s' % (self.name, traceback.format_exc()), logger.ERROR)
 
             # For each search mode sort all the items by seeders
