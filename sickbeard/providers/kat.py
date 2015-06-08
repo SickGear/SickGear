@@ -139,7 +139,7 @@ class KATProvider(generic.TorrentProvider):
 
                 return title
 
-        except Exception, e:
+        except Exception as e:
             logger.log(u"Failed parsing " + self.name + " Traceback: " + traceback.format_exc(), logger.ERROR)
 
 
@@ -267,7 +267,7 @@ class KATProvider(generic.TorrentProvider):
 
                             items[mode].append(item)
 
-                except Exception, e:
+                except Exception as e:
                     logger.log(u"Failed to parsing " + self.name + " Traceback: " + traceback.format_exc(),
                                logger.ERROR)
 

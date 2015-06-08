@@ -92,7 +92,7 @@ def saveNZB(nzbName, nzbString):
         with ek.ek(open, nzbName + ".nzb", 'w') as nzb_fh:
             nzb_fh.write(nzbString)
 
-    except EnvironmentError, e:
+    except EnvironmentError as e:
         logger.log(u"Unable to save NZB: " + ex(e), logger.ERROR)
 
 

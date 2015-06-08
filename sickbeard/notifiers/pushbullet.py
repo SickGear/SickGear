@@ -74,7 +74,7 @@ class PushbulletNotifier:
             handle.close()
         except socket.timeout:
             return False
-        except urllib2.URLError, e:
+        except urllib2.URLError as e:
 
             if e.code == 404:
                 logger.log(u'PUSHBULLET: Access token is wrong/not associated to a device.', logger.ERROR)

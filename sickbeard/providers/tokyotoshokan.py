@@ -101,7 +101,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
                         item = title.lstrip(), url
                         results.append(item)
 
-        except Exception, e:
+        except Exception as e:
             logger.log(u"Failed to parsing " + self.name + " Traceback: " + traceback.format_exc(), logger.ERROR)
 
 

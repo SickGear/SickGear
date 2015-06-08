@@ -99,11 +99,11 @@ def sendNZB(nzb):
 
             f = opener.open(req)
 
-    except (EOFError, IOError), e:
+    except (EOFError, IOError) as e:
         logger.log(u"Unable to connect to SABnzbd: " + ex(e), logger.ERROR)
         return False
 
-    except httplib.InvalidURL, e:
+    except httplib.InvalidURL as e:
         logger.log(u"Invalid SABnzbd host, check your config: " + ex(e), logger.ERROR)
         return False
 
@@ -115,7 +115,7 @@ def sendNZB(nzb):
     # if we opened the URL connection then read the result from SAB
     try:
         result = f.readlines()
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Error trying to get result from SABnzbd, NZB not sent: " + ex(e), logger.ERROR)
         return False
 
@@ -144,7 +144,7 @@ def sendNZB(nzb):
 def _checkSabResponse(f):
     try:
         result = f.readlines()
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Error trying to get result from SABnzbd" + ex(e), logger.ERROR)
         return False, "Error from SABnzbd"
 
@@ -156,7 +156,7 @@ def _checkSabResponse(f):
     sabJson = {}
     try:
         sabJson = json.loads(sabText)
-    except ValueError, e:
+    except ValueError as e:
         pass
 
     if sabText == "Missing authentication":
@@ -172,10 +172,10 @@ def _checkSabResponse(f):
 def _sabURLOpenSimple(url):
     try:
         f = urllib.urlopen(url)
-    except (EOFError, IOError), e:
+    except (EOFError, IOError) as e:
         logger.log(u"Unable to connect to SABnzbd: " + ex(e), logger.ERROR)
         return False, "Unable to connect"
-    except httplib.InvalidURL, e:
+    except httplib.InvalidURL as e:
         logger.log(u"Invalid SABnzbd host, check your config: " + ex(e), logger.ERROR)
         return False, "Invalid SABnzbd host"
     if f is None:

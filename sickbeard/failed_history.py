@@ -132,7 +132,7 @@ def revertEpisode(epObj):
                 epObj.status = WANTED
                 epObj.saveToDB()
 
-    except EpisodeNotFoundException, e:
+    except EpisodeNotFoundException as e:
         logger.log(u"Unable to create episode, please set its status manually: " + ex(e),
                    logger.WARNING)
 
@@ -146,7 +146,7 @@ def markFailed(epObj):
             epObj.status = Quality.compositeStatus(FAILED, quality)
             epObj.saveToDB()
 
-    except EpisodeNotFoundException, e:
+    except EpisodeNotFoundException as e:
         logger.log(u"Unable to get episode, please set its status manually: " + ex(e), logger.WARNING)
 
     return log_str

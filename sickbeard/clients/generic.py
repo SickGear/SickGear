@@ -53,19 +53,19 @@ class GenericClient(object):
         try:
             response = self.session.__getattribute__(method)(self.url, params=params, data=data, files=files,
                                                                   timeout=120, verify=False)
-        except requests.exceptions.ConnectionError, e:
+        except requests.exceptions.ConnectionError as e:
             logger.log(self.name + u': Unable to connect ' + ex(e), logger.ERROR)
             return False
         except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL):
             logger.log(self.name + u': Invalid Host', logger.ERROR)
             return False
-        except requests.exceptions.HTTPError, e:
+        except requests.exceptions.HTTPError as e:
             logger.log(self.name + u': Invalid HTTP Request ' + ex(e), logger.ERROR)
             return False
-        except requests.exceptions.Timeout, e:
+        except requests.exceptions.Timeout as e:
             logger.log(self.name + u': Connection Timeout ' + ex(e), logger.ERROR)
             return False
-        except Exception, e:
+        except Exception as e:
             logger.log(self.name + u': Unknown exception raised when sending torrent to ' + self.name + ': ' + ex(e),
                        logger.ERROR)
             return False
@@ -199,7 +199,7 @@ class GenericClient(object):
             if result.priority != 0 and not self._set_torrent_priority(result):
                 logger.log(self.name + u': Unable to set priority for Torrent', logger.ERROR)
 
-        except Exception, e:
+        except Exception as e:
             logger.log(self.name + u': Failed Sending Torrent: ' + result.name + ' - ' + result.hash, logger.ERROR)
             logger.log(self.name + u': Exception raised when sending torrent: ' + ex(e), logger.DEBUG)
             return r_code

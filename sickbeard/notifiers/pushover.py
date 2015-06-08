@@ -97,7 +97,7 @@ class PushoverNotifier:
             handle = urllib2.urlopen(req, data)
             handle.close()
 
-        except urllib2.URLError, e:
+        except urllib2.URLError as e:
             # HTTP status 404 if the provided email address isn't a Pushover user.
             if e.code == 404:
                 logger.log(u'PUSHOVER: Username is wrong/not a Pushover email. Pushover will send an email to it', logger.WARNING)

@@ -29,6 +29,8 @@
 * Add coverage testing and coveralls support
 * Update feedparser library 5.1.3 to 5.2.0 (8c62940)
 * Remove feedcache implementation and library
+* Change py2 exception clauses to py2/3 compatible clauses
+* Add py2/3 regression testing for exception clauses
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
