@@ -35,6 +35,7 @@ __all__ = ['womble',
            'bitsoup',
            'tokyotoshokan',
            'animenzb',
+           'rarbg',
            'totv',
 ]
 

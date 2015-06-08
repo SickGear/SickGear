@@ -493,6 +493,8 @@ class TorrentProvider(GenericProvider):
     def getQuality(self, item, anime=False):
         if isinstance(item, tuple):
             name = item[0]
+        elif isinstance(item, dict):
+            name, url = self._get_title_and_url(item)
         else:
             name = item.title
         return Quality.sceneQuality(name, anime)
@@ -535,9 +537,10 @@ class TorrentProvider(GenericProvider):
             for proper_string in method:
                 search_string = self._get_episode_search_strings(cur_ep, add_string=proper_string)
 
+                proper_exp = re.sub(r'(?i)[^a-z\|\.]+', '', proper_string)
                 for item in self._doSearch(search_string[0]):
                     title, url = self._get_title_and_url(item)
-                    if not re.search('(?i)(?:%s)' % '|'.join(method), title):
+                    if not re.search('(?i)(?:%s)' % proper_exp, title):
                         continue
                     results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
 
