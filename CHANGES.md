@@ -20,6 +20,9 @@
 * Add new tld variants to provider TPB
 * Add test for authenticity to provider TPB to notify of 3rd party block
 * Change provider Womble's use SSL
+* Change provider KAT remove dead url
+* Change provider KAT to use mediaExtensions from common instead of private list
+* Change provider KAT provider PEP8 and code convention cleanup
 * Change refactor and code simplification for torrent providers
 * Add Rarbg torrent provider
 * Fix getManualSearchStatus: object has no attribute 'segment'
