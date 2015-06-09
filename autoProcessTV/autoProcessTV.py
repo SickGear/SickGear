@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from __future__ import with_statement
 
 import os.path
@@ -132,7 +133,7 @@ def processEpisode(dir_to_process, org_NZB_name=None, status=None):
         sess.post(login_url, data={'username': username, 'password': password}, stream=True, verify=False)
         result = sess.get(url, params=params, stream=True, verify=False)
         if result.status_code == 401:
-            print 'Verify and use correct username and password in autoProcessTV.cfg'
+            print('Verify and use correct username and password in autoProcessTV.cfg')
         else:
             for line in result.iter_lines():
                 if line:

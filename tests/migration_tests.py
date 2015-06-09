@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import os.path
 import glob
@@ -107,9 +108,9 @@ class AddDefaultEpStatusToTvShows(db.SchemaUpgrade):
 
 
 if __name__ == '__main__':
-    print '=================='
-    print 'Starting - Migration Tests'
-    print '=================='
-    print '######################################################################'
+    print('==================')
+    print('Starting - Migration Tests')
+    print('==================')
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(MigrationBasicTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

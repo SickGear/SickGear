@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import random
 import unittest
 
@@ -62,12 +63,12 @@ class PPBasicTests(test.SickbeardTestDBCase):
 
 
 if __name__ == '__main__':
-    print "=================="
-    print "STARTING - PostProcessor TESTS"
-    print "=================="
-    print "######################################################################"
+    print('==================')
+    print('STARTING - PostProcessor TESTS')
+    print('==================')
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(PPInitTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
-    print "######################################################################"
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(PPBasicTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
