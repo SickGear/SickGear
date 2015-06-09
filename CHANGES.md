@@ -26,12 +26,13 @@
 * Change first run after install to set up the main db to the current schema instead of upgrading
 * Change don't create a backup from an initial zero byte main database file, PEP8 and code tidy up
 * Fix show list view when no shows exist and "Group show lists shows into" is set to anything other than "One Show List"
-* Add coverage testing and coveralls support
+* Fix fault matching air by date shows by using correct episode/season strings in find search results
+* Change add 'hevc', 'x265' and some langs to Config Search/Episode Search/Ignore result with any word
 * Update feedparser library 5.1.3 to 5.2.0 (8c62940)
 * Remove feedcache implementation and library
-* Change py2 exception clauses to py2/3 compatible clauses
+* Add coverage testing and coveralls support
 * Add py2/3 regression testing for exception clauses
-* Change add 'hevc', 'x265' and some langs to Config Search/Episode Search/Ignore result with any word.
+* Change py2 exception clauses to py2/3 compatible clauses
 * Change py2 print statements to py2/3 compatible functions
 
 [develop changelog]
