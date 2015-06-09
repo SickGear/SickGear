@@ -285,7 +285,7 @@ class GenericProvider:
             # mark season searched for season pack searches so we can skip later on
             searched_scene_season = epObj.scene_season
 
-            if len(episodes) > 1:
+            if len(episodes) > 1 and 'eponly' != search_mode:
                 # get season search results
                 for curString in self._get_season_search_strings(epObj):
                     itemList += self._doSearch(curString, search_mode, len(episodes))
@@ -328,7 +328,7 @@ class GenericProvider:
                 logger.log(u"Unable to parse the filename " + title + " into a valid episode", logger.DEBUG)
                 continue
             except InvalidShowException:
-                logger.log(u"Unable to parse the filename " + title + " into a valid show", logger.DEBUG)
+                logger.log(u'No show name or scene exception matched the parsed filename ' + title, logger.DEBUG)
                 continue
 
             showObj = parse_result.show
