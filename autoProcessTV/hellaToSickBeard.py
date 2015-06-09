@@ -19,12 +19,13 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from __future__ import print_function
 import sys
 
 import autoProcessTV
 
 if len(sys.argv) < 4:
-    print 'No folder supplied - is this being called from HellaVCR?'
+    print('No folder supplied - is this being called from HellaVCR?')
     sys.exit()
 else:
     autoProcessTV.processEpisode(sys.argv[3], sys.argv[2])

@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+from __future__ import print_function
 import sys
 import os
 import time
@@ -23,8 +24,10 @@ try:
     config.readfp(fp)
     fp.close()
 except IOError as e:
-    print 'Could not find/read Sickbeard config.ini: ' + str(e)
-    print 'Possibly wrong mediaToSickbeard.py location. Ensure the file is in the autoProcessTV subdir of your Sickbeard installation'
+    print('Could not find/read Sickbeard config.ini: ' + str(e))
+    print(
+        'Possibly wrong mediaToSickbeard.py location. Ensure the file is in the autoProcessTV subdir of your Sickbeard '
+        'installation')
     time.sleep(3)
     sys.exit(1)
 
@@ -41,7 +44,7 @@ logfile = os.path.join(logdir, 'sickbeard.log')
 try:
     handler = logging.FileHandler(logfile)
 except:
-    print 'Unable to open/create the log file at ' + logfile
+    print('Unable to open/create the log file at ' + logfile)
     time.sleep(3)
     sys.exit()
 
@@ -53,7 +56,7 @@ def utorrent():
 #    print 'Calling utorrent'
     if len(sys.argv) < 2:
         scriptlogger.error('No folder supplied - is this being called from uTorrent?')
-        print 'No folder supplied - is this being called from uTorrent?'
+        print('No folder supplied - is this being called from uTorrent?')
         time.sleep(3)
         sys.exit()
 
@@ -73,7 +76,7 @@ def deluge():
 
     if len(sys.argv) < 4:
         scriptlogger.error('No folder supplied - is this being called from Deluge?')
-        print 'No folder supplied - is this being called from Deluge?'
+        print('No folder supplied - is this being called from Deluge?')
         time.sleep(3)
         sys.exit()
     
@@ -86,7 +89,7 @@ def blackhole():
 
     if None != os.getenv('TR_TORRENT_DIR'):
         scriptlogger.debug('Processing script triggered by Transmission')
-        print 'Processing script triggered by Transmission'
+        print('Processing script triggered by Transmission')
         scriptlogger.debug(u'TR_TORRENT_DIR: ' + os.getenv('TR_TORRENT_DIR'))
         scriptlogger.debug(u'TR_TORRENT_NAME: ' + os.getenv('TR_TORRENT_NAME'))
         dirName = os.getenv('TR_TORRENT_DIR')
@@ -94,7 +97,7 @@ def blackhole():
     else:
         if len(sys.argv) < 2:
             scriptlogger.error('No folder supplied - Your client should invoke the script with a Dir and a Relese Name')
-            print 'No folder supplied - Your client should invoke the script with a Dir and a Release Name'
+            print('No folder supplied - Your client should invoke the script with a Dir and a Release Name')
             time.sleep(3)
             sys.exit()
 
@@ -127,13 +130,13 @@ def main():
     
     if not use_torrents:
         scriptlogger.error(u'Enable Use Torrent on Sickbeard to use this Script. Aborting!')
-        print u'Enable Use Torrent on Sickbeard to use this Script. Aborting!'
+        print(u'Enable Use Torrent on Sickbeard to use this Script. Aborting!')
         time.sleep(3)
         sys.exit()
         
     if not torrent_method in ['utorrent', 'transmission', 'deluge', 'blackhole']:
         scriptlogger.error(u'Unknown Torrent Method. Aborting!')
-        print u'Unknown Torrent Method. Aborting!'
+        print(u'Unknown Torrent Method. Aborting!')
         time.sleep(3)
         sys.exit()
     
@@ -141,13 +144,13 @@ def main():
 
     if dirName is None:
         scriptlogger.error(u'MediaToSickbeard script need a dir to be run. Aborting!')
-        print u'MediaToSickbeard script need a dir to be run. Aborting!'
+        print(u'MediaToSickbeard script need a dir to be run. Aborting!')
         time.sleep(3)
         sys.exit()
 
     if not os.path.isdir(dirName):
         scriptlogger.error(u'Folder ' + dirName + ' does not exist. Aborting AutoPostProcess.')
-        print u'Folder ' + dirName + ' does not exist. Aborting AutoPostProcess.'
+        print(u'Folder ' + dirName + ' does not exist. Aborting AutoPostProcess.')
         time.sleep(3)
         sys.exit()
 
@@ -174,7 +177,7 @@ def main():
     login_url = protocol + host + ':' + port + web_root + '/login'
     
     scriptlogger.debug('Opening URL: ' + url + ' with params=' + str(params))
-    print 'Opening URL: ' + url + ' with params=' + str(params)
+    print('Opening URL: ' + url + ' with params=' + str(params))
     
     try:
         sess = requests.Session()
@@ -187,13 +190,13 @@ def main():
     
     if response.status_code == 401:
         scriptlogger.error(u'Verify and use correct username and password in autoProcessTV.cfg')
-        print 'Verify and use correct username and password in autoProcessTV.cfg'
+        print('Verify and use correct username and password in autoProcessTV.cfg')
         time.sleep(3)
         sys.exit()
     
     if response.status_code == 200:
         scriptlogger.info(u'Script ' + __file__ + ' Succesfull')
-        print 'Script ' + __file__ + ' Succesfull'
+        print('Script ' + __file__ + ' Succesfull')
         time.sleep(3)
         sys.exit()
         

@@ -32,6 +32,7 @@
 * Change py2 exception clauses to py2/3 compatible clauses
 * Add py2/3 regression testing for exception clauses
 * Change add 'hevc', 'x265' and some langs to Config Search/Episode Search/Ignore result with any word.
+* Change py2 print statements to py2/3 compatible functions
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)

@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import random
 import unittest
 
@@ -88,10 +89,10 @@ def test_generator(tvdbdid, show_name, curData, forceSearch):
     return test
 
 if __name__ == '__main__':
-    print "=================="
-    print "STARTING - Snatch TESTS"
-    print "=================="
-    print "######################################################################"
+    print('==================')
+    print('STARTING - Snatch TESTS')
+    print('==================')
+    print('######################################################################')
     # create the test methods
     tvdbdid = 1
     for forceSearch in (True, False):
