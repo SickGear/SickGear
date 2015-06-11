@@ -243,7 +243,7 @@ class SickGear(object):
         # Make sure that we can create the data dir
         if not os.access(sickbeard.DATA_DIR, os.F_OK):
             try:
-                os.makedirs(sickbeard.DATA_DIR, 0744)
+                os.makedirs(sickbeard.DATA_DIR, 0o744)
             except os.error:
                 sys.exit(u'Unable to create data directory: %s Exiting.' % sickbeard.DATA_DIR)
 

@@ -34,6 +34,7 @@
 * Add py2/3 regression testing for exception clauses
 * Change py2 exception clauses to py2/3 compatible clauses
 * Change py2 print statements to py2/3 compatible functions
+* Change py2 octal literals into the new py2/3 syntax
 * Change Kodi notifier to use requests as opposed to urllib
 * Change to consolidate scene exceptions and name cache code
 

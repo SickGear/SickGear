@@ -16,7 +16,10 @@ class CompatibilityTests(unittest.TestCase):
 
         pyfiles.append(os.path.join(path,'SickBeard.py'))
 
-        output = subprocess.Popen('2to3 -f except -f print -p %s' % ' '.join(pyfiles), shell=True, stdout=subprocess.PIPE,
+        output = subprocess.Popen('2to3'
+                                  ' -f except'
+                                  ' -f numliterals'
+                                  ' %s' % ' '.join(pyfiles), shell=True, stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE).communicate()[0]
         if output:
             print('Changes to be made for Python 2/3 compatibility as follows:')
