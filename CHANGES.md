@@ -35,6 +35,7 @@
 * Change py2 exception clauses to py2/3 compatible clauses
 * Change py2 print statements to py2/3 compatible functions
 * Change Kodi notifier to use requests as opposed to urllib
+* Change to consolidate scene exceptions and name cache code
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)

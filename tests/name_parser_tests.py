@@ -132,7 +132,12 @@ simple_test_cases = {
         '[UTW]_Fractal_-_01_[h264-720p][96D3F1BF]': parser.ParseResult(None, 'Fractal', None, [], 'h264-720p', 'UTW', None, [1]),
         '[a-s]_inuyasha_-_028_rs2_[BFDDF9F2]': parser.ParseResult(None, 'inuyasha', None, [], 'BFDDF9F2', 'a-s', None, [28]),
         '[HorribleSubs] Fairy Tail S2 - 37 [1080p]': parser.ParseResult(None,'Fairy Tail S2', None, [], '1080p', 'HorribleSubs', None, [37]),
-        '[HorribleSubs] Sword Art Online II - 23 [720p]': parser.ParseResult(None, 'Sword Art Online II', None, [], '720p', 'HorribleSubs', None, [23])
+        '[HorribleSubs] Sword Art Online II - 23 [720p]': parser.ParseResult(None, 'Sword Art Online II', None, [], '720p', 'HorribleSubs', None, [23]),
+    },
+
+    'anime_standard': {
+        '[Cthuko] Shirobako - 05v2 [720p H264 AAC][80C9B09B]': parser.ParseResult(None, 'Shirobako', None, [], '720p H264 AAC', 'Cthuko', None, [5]),
+        '[Ayako]_Minami-ke_Okaeri_-_01v2_[1024x576 H264+AAC][B1912CD8]': parser.ParseResult(None, 'Minami-ke Okaeri', None, [], '1024x576 H264+AAC', 'Ayako', None, [1]),
     },
 
     'anime_ep_name': {
@@ -431,6 +436,10 @@ class BasicTests(test.SickbeardTestDBCase):
     def test_anime_ultimate(self):
         np = parser.NameParser(False, TVShow(is_anime=True), testing=True)
         self._test_names(np, 'anime_ultimate')
+
+    def test_anime_standard(self):
+        np = parser.NameParser(False, TVShow(is_anime=True), testing=True)
+        self._test_names(np, 'anime_standard')
 
     def test_anime_ep_name(self):
         np = parser.NameParser(False, TVShow(is_anime=True), testing=True)

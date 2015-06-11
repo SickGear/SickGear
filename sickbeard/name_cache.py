@@ -23,18 +23,19 @@ nameCache = {}
 nameCacheLock = threading.Lock()
 
 
-def addNameToCache(name, indexer_id=0):
+def addNameToCache(name, indexer_id=0, season=-1):
     """Adds the show & tvdb id to the namecache
 
     :param name: the show name to cache
     :param indexer_id: the TVDB and TVRAGE id that this show should be cached with (can be None/0 for unknown)
+    :param season: the season the the name exception belongs to. -1 for generic exception
     """
     global nameCache
 
     # standardize the name we're using to account for small differences in providers
     name = sickbeard.helpers.full_sanitizeSceneName(name)
     if name not in nameCache:
-        nameCache[name] = int(indexer_id)
+        nameCache[name] = [int(indexer_id), season]
 
 
 def retrieveNameFromCache(name):
@@ -47,7 +48,7 @@ def retrieveNameFromCache(name):
 
     name = sickbeard.helpers.full_sanitizeSceneName(name)
     if name in nameCache:
-        return int(nameCache[name])
+        return int(nameCache[name][0])
 
 
 def buildNameCache(show=None):
@@ -64,26 +65,27 @@ def buildNameCache(show=None):
             nameCache = dict((k, v) for k, v in nameCache.items() if v != show.indexerid)
 
             # add standard indexer name to namecache
-            nameCache[show.name] = show.indexerid
+            nameCache[sickbeard.helpers.full_sanitizeSceneName(show.name)] = [show.indexerid, -1]
         else:
             # generate list of indexer ids to look up in cache.db
             indexer_ids = [x.indexerid for x in sickbeard.showList if x]
 
             # add all standard show indexer names to namecache
             nameCache = dict(
-                (sickbeard.helpers.full_sanitizeSceneName(x.name), x.indexerid) for x in sickbeard.showList if x)
+                (sickbeard.helpers.full_sanitizeSceneName(x.name), [x.indexerid, -1]) for x in sickbeard.showList if x)
 
         cacheDB = db.DBConnection('cache.db')
 
         cache_results = cacheDB.select(
-            'SELECT show_name, indexer_id FROM scene_exceptions WHERE indexer_id IN (%s)' % ','.join(
+            'SELECT show_name, indexer_id, season FROM scene_exceptions WHERE indexer_id IN (%s)' % ','.join(
                 ['?'] * len(indexer_ids)), indexer_ids)
 
         if cache_results:
             for cache_result in cache_results:
                 indexer_id = int(cache_result['indexer_id'])
+                season = int(cache_result['season'])
                 name = sickbeard.helpers.full_sanitizeSceneName(cache_result['show_name'])
-                nameCache[name] = indexer_id
+                nameCache[name] = [indexer_id, season]
 
 
 def remove_from_namecache(indexer_id):
