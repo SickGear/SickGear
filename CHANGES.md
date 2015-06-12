@@ -15,6 +15,7 @@
 * Fix provider SCC stop snatching releases for episodes already completed
 * Fix provider SCC handle null server responses
 * Change provider SCC remove 1 of 3 requests per search to save 30% time
+* Remove provider HDBits because we cannot test new code refactoring
 * Change provider Womble's use SSL
 * Change refactor and code simplification for torrent providers
 * Add Rarbg torrent provider
