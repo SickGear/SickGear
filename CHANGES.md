@@ -41,6 +41,7 @@
 * Change check_url function to use requests instead of httplib library
 * Update Six compatibility library 1.5.2 to 1.9.0 (8a545f4)
 * Update SimpleJSON library 2.0.9 to 3.7.3 (0bcdf20)
+* Update xmltodict library 0.9.0 to 0.9.2 (579a005)
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
