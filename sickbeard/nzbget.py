@@ -18,14 +18,14 @@
 
 
 
-import httplib
 import datetime
 import re
 
 import sickbeard
 
 from base64 import standard_b64encode
-import xmlrpclib
+from six.moves import xmlrpc_client
+from six.moves import http_client
 
 from sickbeard.providers.generic import GenericProvider
 
@@ -50,20 +50,20 @@ def sendNZB(nzb, proper=False):
     url = nzbgetXMLrpc % {"host": sickbeard.NZBGET_HOST, "username": sickbeard.NZBGET_USERNAME,
                           "password": sickbeard.NZBGET_PASSWORD}
 
-    nzbGetRPC = xmlrpclib.ServerProxy(url)
+    nzbGetRPC = xmlrpc_client.ServerProxy(url)
     try:
         if nzbGetRPC.writelog("INFO", "SickGear connected to drop off %s any moment now." % (nzb.name + ".nzb")):
             logger.log(u"Successfully connected to NZBget", logger.DEBUG)
         else:
             logger.log(u"Successfully connected to NZBget, but unable to send a message", logger.ERROR)
 
-    except httplib.socket.error:
+    except http_client.socket.error:
         logger.log(
             u"Please check your NZBget host and port (if it is running). NZBget is not responding to this combination",
             logger.ERROR)
         return False
 
-    except xmlrpclib.ProtocolError as e:
+    except xmlrpc_client.ProtocolError as e:
         if (e.errmsg == "Unauthorized"):
             logger.log(u"NZBget username or password is incorrect.", logger.ERROR)
         else:

@@ -17,7 +17,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import socket
-from httplib import HTTPSConnection, HTTPException
+from six.moves.http_client import HTTPSConnection, HTTPException
 from urllib import urlencode
 
 try:

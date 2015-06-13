@@ -1,5 +1,5 @@
 import threading
-from Queue import Queue, Empty
+from six.moves.queue import Queue, Empty
 
 class Event:
     def __init__(self, type):
