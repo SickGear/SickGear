@@ -42,6 +42,7 @@
 * Update Six compatibility library 1.5.2 to 1.9.0 (8a545f4)
 * Update SimpleJSON library 2.0.9 to 3.7.3 (0bcdf20)
 * Update xmltodict library 0.9.0 to 0.9.2 (579a005)
+* Update dateutil library 2.2 to 2.4.2 (a6b8925)
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
