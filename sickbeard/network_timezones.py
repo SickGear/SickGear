@@ -26,6 +26,7 @@ from os.path import basename, join, isfile
 import os
 import re
 import datetime
+from six import iteritems
 
 # regex to parse time (12/24 hour format)
 time_regex = re.compile(r'(\d{1,2})(([:.](\d{2,2}))? ?([PA][. ]? ?M)|[:.](\d{2,2}))\b', flags=re.IGNORECASE)
@@ -170,7 +171,7 @@ def update_network_dict():
 
     # list of sql commands to update the network_timezones table
     cl = []
-    for cur_d, cur_t in d.iteritems():
+    for cur_d, cur_t in iteritems(d):
         h_k = old_d.has_key(cur_d)
         if h_k and cur_t != old_d[cur_d]:
             # update old record

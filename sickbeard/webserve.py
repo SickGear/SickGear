@@ -28,6 +28,7 @@ import traceback
 
 from mimetypes import MimeTypes
 from Cheetah.Template import Template
+from six import iteritems
 
 import sickbeard
 from sickbeard import config, sab, clients, history, notifiers, processTV, ui, logger, helpers, exceptions, classes, \
@@ -1219,7 +1220,7 @@ class Home(MainHandler):
             return 'No scene exceptions'
 
         out = []
-        for season, names in iter(sorted(exceptionsList.iteritems())):
+        for season, names in iter(sorted(iteritems(exceptionsList))):
             if season == -1:
                 season = '*'
             out.append('S' + str(season) + ': ' + ', '.join(names))

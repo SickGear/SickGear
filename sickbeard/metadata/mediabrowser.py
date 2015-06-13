@@ -30,6 +30,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
 
 import xml.etree.cElementTree as etree
+from six import iteritems
 
 
 class MediaBrowserMetadata(generic.GenericMetadata):
@@ -536,7 +537,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 persons_dict['Writer'] += [x.strip() for x in myEp['writer'].split('|') if x]
 
         # fill in Persons section with collected directors, guest starts and writers
-        for person_type, names in persons_dict.iteritems():
+        for person_type, names in iteritems(persons_dict):
             # remove doubles
             names = list(set(names))
             for cur_name in names:
