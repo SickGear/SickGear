@@ -36,6 +36,7 @@
 * Change py2 print statements to py2/3 compatible functions
 * Change py2 octal literals into the new py2/3 syntax
 * Change py2 iteritems to py2/3 compatible statements using six library
+* Change py2 queue, httplib, cookielib and xmlrpclib to py2/3 compatible calls using six
 * Change Kodi notifier to use requests as opposed to urllib
 * Change to consolidate scene exceptions and name cache code
 * Change check_url function to use requests instead of httplib library

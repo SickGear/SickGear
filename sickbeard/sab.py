@@ -18,14 +18,14 @@
 
 
 import urllib
-import httplib
+from six.moves import http_client
 import datetime
 
 import sickbeard
 
 from lib import MultipartPostHandler
 import urllib2
-import cookielib
+from six.moves import http_cookiejar
 
 try:
     import json
@@ -90,7 +90,7 @@ def sendNZB(nzb):
 
         # if we are uploading the NZB data to SAB then we need to build a little POST form and send it
         elif nzb.resultType == "nzbdata":
-            cookies = cookielib.CookieJar()
+            cookies = http_cookiejar.CookieJar()
             opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookies),
                                           MultipartPostHandler.MultipartPostHandler)
             req = urllib2.Request(url,
@@ -103,7 +103,7 @@ def sendNZB(nzb):
         logger.log(u"Unable to connect to SABnzbd: " + ex(e), logger.ERROR)
         return False
 
-    except httplib.InvalidURL as e:
+    except http_client.InvalidURL as e:
         logger.log(u"Invalid SABnzbd host, check your config: " + ex(e), logger.ERROR)
         return False
 
@@ -175,7 +175,7 @@ def _sabURLOpenSimple(url):
     except (EOFError, IOError) as e:
         logger.log(u"Unable to connect to SABnzbd: " + ex(e), logger.ERROR)
         return False, "Unable to connect"
-    except httplib.InvalidURL as e:
+    except http_client.InvalidURL as e:
         logger.log(u"Invalid SABnzbd host, check your config: " + ex(e), logger.ERROR)
         return False, "Invalid SABnzbd host"
     if f is None:
