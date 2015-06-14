@@ -49,7 +49,7 @@ except:
     sys.exit(1)
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
-from six.moves import reload_module
+from lib.six import moves
 
 # We only need this for compiling an EXE and I will just always do that on 2.6+
 if sys.hexversion >= 0x020600F0:
@@ -141,7 +141,7 @@ class SickGear(object):
             sickbeard.SYS_ENCODING = 'UTF-8'
 
         if not hasattr(sys, 'setdefaultencoding'):
-            reload_module(sys)
+            moves.reload_module(sys)
 
         try:
             # pylint: disable=E1101
