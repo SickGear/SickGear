@@ -46,6 +46,7 @@
 * Update xmltodict library 0.9.0 to 0.9.2 (579a005)
 * Update dateutil library 2.2 to 2.4.2 (a6b8925)
 * Change zoneinfo update/loader to be compatible with dateutil 2.4.2
+* Update ConfigObj library 4.6.0 to 5.1.0 (a68530a)
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
