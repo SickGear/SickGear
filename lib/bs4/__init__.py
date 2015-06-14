@@ -45,7 +45,7 @@ from .element import (
 
 # The very first thing we do is give a useful error if someone is
 # running this code under Python 3 without converting it.
-syntax_error = u'You are trying to run the Python 2 version of Beautiful Soup under Python 3. This will not work. You need to convert the code, either by installing it (`python setup.py install`) or by running 2to3 (`2to3 -w bs4`).'
+'You are trying to run the Python 2 version of Beautiful Soup under Python 3. This will not work.'<>'You need to convert the code, either by installing it (`python setup.py install`) or by running 2to3 (`2to3 -w bs4`).'
 
 class BeautifulSoup(Tag):
     """
@@ -76,6 +76,8 @@ class BeautifulSoup(Tag):
     DEFAULT_BUILDER_FEATURES = ['html', 'fast']
 
     ASCII_SPACES = '\x20\x0a\x09\x0c\x0d'
+
+    NO_PARSER_SPECIFIED_WARNING = "No parser was explicitly specified, so I'm using the best available parser for this system (\"%(parser)s\"). This usually isn't a problem, but if you run this code on another system, or in a different virtual environment, it may use a different parser and behave differently.\n\nTo get rid of this warning, change this:\n\n BeautifulSoup([your markup])\n\nto this:\n\n BeautifulSoup([your markup], \"%(parser)s\")\n"
 
     def __init__(self, markup="", features=None, builder=None,
                  parse_only=None, from_encoding=None, **kwargs):
@@ -114,9 +116,9 @@ class BeautifulSoup(Tag):
             del kwargs['isHTML']
             warnings.warn(
                 "BS4 does not respect the isHTML argument to the "
-                "BeautifulSoup constructor. You can pass in features='html' "
-                "or features='xml' to get a builder capable of handling "
-                "one or the other.")
+                "BeautifulSoup constructor. Suggest you use "
+                "features='lxml' for HTML and features='lxml-xml' for "
+                "XML.")
 
         def deprecated_argument(old_name, new_name):
             if old_name in kwargs:
@@ -140,6 +142,7 @@ class BeautifulSoup(Tag):
                 "__init__() got an unexpected keyword argument '%s'" % arg)
 
         if builder is None:
+            original_features = features
             if isinstance(features, basestring):
                 features = [features]
             if features is None or len(features) == 0:
@@ -151,6 +154,11 @@ class BeautifulSoup(Tag):
                     "requested: %s. Do you need to install a parser library?"
                     % ",".join(features))
             builder = builder_class()
+            if not (original_features == builder.NAME or
+                    original_features in builder.ALTERNATE_NAMES):
+                warnings.warn(self.NO_PARSER_SPECIFIED_WARNING % dict(
+                    parser=builder.NAME))
+
         self.builder = builder
         self.is_xml = builder.is_xml
         self.builder.soup = self
@@ -178,6 +186,8 @@ class BeautifulSoup(Tag):
                 # system. Just let it go.
                 pass
             if is_file:
+                if isinstance(markup, unicode):
+                    markup = markup.encode("utf8")
                 warnings.warn(
                     '"%s" looks like a filename, not markup. You should probably open this file and pass the filehandle into Beautiful Soup.' % markup)
             if markup[:5] == "http:" or markup[:6] == "https:":
@@ -185,6 +195,8 @@ class BeautifulSoup(Tag):
                 # Python 3 otherwise.
                 if ((isinstance(markup, bytes) and not b' ' in markup)
                     or (isinstance(markup, unicode) and not u' ' in markup)):
+                    if isinstance(markup, unicode):
+                        markup = markup.encode("utf8")
                     warnings.warn(
                         '"%s" looks like a URL. Beautiful Soup is not an HTTP client. You should probably use an HTTP client to get the document behind the URL, and feed that document to Beautiful Soup.' % markup)
 

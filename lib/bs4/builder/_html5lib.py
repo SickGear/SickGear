@@ -22,7 +22,9 @@ from bs4.element import (
 class HTML5TreeBuilder(HTMLTreeBuilder):
     """Use html5lib to build a tree."""
 
-    features = ['html5lib', PERMISSIVE, HTML_5, HTML]
+    NAME = "html5lib"
+
+    features = [NAME, PERMISSIVE, HTML_5, HTML]
 
     def prepare_markup(self, markup, user_specified_encoding):
         # Store the user-specified encoding for use later on.
@@ -161,6 +163,12 @@ class Element(html5lib.treebuilders._base.Node):
             # immediately after the parent, if it has no children.)
             if self.element.contents:
                 most_recent_element = self.element._last_descendant(False)
+            elif self.element.next_element is not None:
+                # Something from further ahead in the parse tree is
+                # being inserted into this earlier element. This is
+                # very annoying because it means an expensive search
+                # for the last element in the tree.
+                most_recent_element = self.soup._last_descendant()
             else:
                 most_recent_element = self.element
 

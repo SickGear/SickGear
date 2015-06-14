@@ -7,7 +7,12 @@ from io import BytesIO
 from StringIO import StringIO
 import collections
 from lxml import etree
-from bs4.element import Comment, Doctype, NamespacedAttribute
+from bs4.element import (
+    Comment,
+    Doctype,
+    NamespacedAttribute,
+    ProcessingInstruction,
+)
 from bs4.builder import (
     FAST,
     HTML,
@@ -25,8 +30,10 @@ class LXMLTreeBuilderForXML(TreeBuilder):
 
     is_xml = True
 
+    NAME = "lxml-xml"
+
     # Well, it's permissive by XML parser standards.
-    features = [LXML, XML, FAST, PERMISSIVE]
+    features = [NAME, LXML, XML, FAST, PERMISSIVE]
 
     CHUNK_SIZE = 512
 
@@ -189,7 +196,9 @@ class LXMLTreeBuilderForXML(TreeBuilder):
             self.nsmaps.pop()
 
     def pi(self, target, data):
-        pass
+        self.soup.endData()
+        self.soup.handle_data(target + ' ' + data)
+        self.soup.endData(ProcessingInstruction)
 
     def data(self, content):
         self.soup.handle_data(content)
@@ -212,7 +221,10 @@ class LXMLTreeBuilderForXML(TreeBuilder):
 
 class LXMLTreeBuilder(HTMLTreeBuilder, LXMLTreeBuilderForXML):
 
-    features = [LXML, HTML, FAST, PERMISSIVE]
+    NAME = LXML
+    ALTERNATE_NAMES = ["lxml-html"]
+
+    features = ALTERNATE_NAMES + [NAME, HTML, FAST, PERMISSIVE]
     is_xml = False
 
     def default_parser(self, encoding):
