@@ -49,6 +49,7 @@ except:
     sys.exit(1)
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
+from six.moves import reload_module
 
 # We only need this for compiling an EXE and I will just always do that on 2.6+
 if sys.hexversion >= 0x020600F0:
@@ -140,7 +141,7 @@ class SickGear(object):
             sickbeard.SYS_ENCODING = 'UTF-8'
 
         if not hasattr(sys, 'setdefaultencoding'):
-            reload(sys)
+            reload_module(sys)
 
         try:
             # pylint: disable=E1101
@@ -412,7 +413,7 @@ class SickGear(object):
             pid = str(os.getpid())
             logger.log(u'Writing PID: %s to %s' % (pid, self.PIDFILE))
             try:
-                file(self.PIDFILE, 'w').write('%s\n' % pid)
+                open(self.PIDFILE, 'w').write('%s\n' % pid)
             except IOError as e:
                 logger.log_error_and_exit(
                     u'Unable to write PID file: %s Error: %s [%s]' % (self.PIDFILE, e.strerror, e.errno))
@@ -422,9 +423,9 @@ class SickGear(object):
         sys.stderr.flush()
 
         devnull = getattr(os, 'devnull', '/dev/null')
-        stdin = file(devnull, 'r')
-        stdout = file(devnull, 'a+')
-        stderr = file(devnull, 'a+')
+        stdin = open(devnull, 'r')
+        stdout = open(devnull, 'a+')
+        stderr = open(devnull, 'a+')
         os.dup2(stdin.fileno(), sys.stdin.fileno())
         os.dup2(stdout.fileno(), sys.stdout.fileno())
         os.dup2(stderr.fileno(), sys.stderr.fileno())
