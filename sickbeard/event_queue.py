@@ -13,7 +13,7 @@ class Event:
 class Events(threading.Thread):
     def __init__(self, callback):
         super(Events, self).__init__()
-        self.queue = moves.Queue()
+        self.queue = moves.queue.Queue()
         self.daemon = True
         self.callback = callback
         self.name = "EVENT-QUEUE"
@@ -33,7 +33,7 @@ class Events(threading.Thread):
 
                 # event completed
                 self.queue.task_done()
-            except moves.Empty:
+            except moves.queue.Empty:
                 type = None
 
         # exiting thread
