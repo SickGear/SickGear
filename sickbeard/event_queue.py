@@ -1,5 +1,6 @@
+from lib.six import moves
+
 import threading
-from six.moves.queue import Queue, Empty
 
 class Event:
     def __init__(self, type):
@@ -12,7 +13,7 @@ class Event:
 class Events(threading.Thread):
     def __init__(self, callback):
         super(Events, self).__init__()
-        self.queue = Queue()
+        self.queue = moves.Queue()
         self.daemon = True
         self.callback = callback
         self.name = "EVENT-QUEUE"
@@ -32,7 +33,7 @@ class Events(threading.Thread):
 
                 # event completed
                 self.queue.task_done()
-            except Empty:
+            except moves.Empty:
                 type = None
 
         # exiting thread
