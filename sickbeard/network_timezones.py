@@ -48,10 +48,10 @@ def _remove_zoneinfo_failed(filename):
 
 # helper to remove old unneeded zoneinfo files
 def _remove_old_zoneinfo():
-    if lib.dateutil.zoneinfo.ZONEINFOFILE is not None:
-        cur_zoneinfo = ek.ek(basename, lib.dateutil.zoneinfo.ZONEINFOFILE)
-    else:
+    zonefilename = lib.dateutil.zoneinfo._ZONEFILENAME
+    if None is zonefilename:
         return
+    cur_zoneinfo = ek.ek(basename, zonefilename)
 
     cur_file = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, lib.dateutil.zoneinfo.__file__), cur_zoneinfo))
 
@@ -83,10 +83,10 @@ def _update_zoneinfo():
                    logger.WARNING)
         return
 
-    if lib.dateutil.zoneinfo.ZONEINFOFILE is not None:
-        cur_zoneinfo = ek.ek(basename, lib.dateutil.zoneinfo.ZONEINFOFILE)
-    else:
-        cur_zoneinfo = None
+    zonefilename = lib.dateutil.zoneinfo._ZONEFILENAME
+    cur_zoneinfo = zonefilename
+    if None is not cur_zoneinfo:
+        cur_zoneinfo = ek.ek(basename, zonefilename)
     (new_zoneinfo, zoneinfo_md5) = url_data.decode('utf-8').strip().rsplit(u' ')
 
     if (cur_zoneinfo is not None) and (new_zoneinfo == cur_zoneinfo):
@@ -215,7 +215,7 @@ def get_network_timezone(network, network_dict):
         return sb_timezone
 
     try:
-        if lib.dateutil.zoneinfo.ZONEINFOFILE is not None:
+        if lib.dateutil.zoneinfo._ZONEFILENAME is not None:
             try:
                 n_t = tz.gettz(network_dict[network])
             except:
