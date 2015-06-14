@@ -154,7 +154,7 @@ class BaseHandler(RequestHandler):
         if api:
             mime_type, encoding = MimeTypes().guess_type(static_image_path)
             self.set_header('Content-Type', mime_type)
-            with file(static_image_path, 'rb') as img:
+            with open(static_image_path, 'rb') as img:
                 return img.read()
         else:
             static_image_path = os.path.normpath(static_image_path.replace(sickbeard.CACHE_DIR, '/cache'))

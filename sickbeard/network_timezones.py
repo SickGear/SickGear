@@ -27,6 +27,7 @@ import os
 import re
 import datetime
 from six import iteritems
+from six.moves import reload_module
 
 # regex to parse time (12/24 hour format)
 time_regex = re.compile(r'(\d{1,2})(([:.](\d{2,2}))? ?([PA][. ]? ?M)|[:.](\d{2,2}))\b', flags=re.IGNORECASE)
@@ -126,7 +127,7 @@ def _update_zoneinfo():
             # rename downloaded file
             ek.ek(os.rename, zonefile_tmp, zonefile)
             # load the new zoneinfo
-            reload(lib.dateutil.zoneinfo)
+            reload_module(lib.dateutil.zoneinfo)
             sb_timezone = tz.tzlocal()
         except:
             _remove_zoneinfo_failed(zonefile_tmp)
