@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from lib.six import moves
+
 import socket
-from six.moves.http_client import HTTPSConnection, HTTPException
 from urllib import urlencode
 
 try:
@@ -75,7 +76,7 @@ class ProwlNotifier:
 
         logger.log("PROWL: Sending notice with details: event=\"%s\", message=\"%s\", priority=%s, api=%s" % (event, message, prowl_priority, prowl_api), logger.DEBUG)
 
-        http_handler = HTTPSConnection("api.prowlapp.com")
+        http_handler = moves.http_client.HTTPSConnection("api.prowlapp.com")
 
         data = {'apikey': prowl_api,
                 'application': title,
@@ -88,7 +89,7 @@ class ProwlNotifier:
                                  "/publicapi/add",
                                  headers={'Content-type': "application/x-www-form-urlencoded"},
                                  body=urlencode(data))
-        except (SSLError, HTTPException, socket.error):
+        except (SSLError, moves.http_client.HTTPException, socket.error):
             logger.log(u"Prowl notification failed.", logger.ERROR)
             return False
         response = http_handler.getresponse()
