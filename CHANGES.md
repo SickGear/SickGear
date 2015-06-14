@@ -55,6 +55,7 @@
 * Change reload_module call to explicit import lib/six.moves
 * Change queue, httplib, cookielib and xmlrpclib to use explicit import lib/six.moves
 * Change zoneinfo update/loader to be compatible with dateutil 2.4.2
+* Change use metadata for zoneinfo files and remove hack of dateutil lib
 * Change param item "features" passed to Beautiful Soup to prevent false +ve warning in r353
 
 

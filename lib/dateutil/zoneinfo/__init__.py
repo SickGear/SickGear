@@ -16,17 +16,7 @@ from dateutil.tz import tzfile
 
 __all__ = ["gettz", "gettz_db_metadata", "rebuild"]
 
-
-def getzoneinfofile():
-    filenames = sorted(os.listdir(os.path.join(os.path.dirname(__file__))))
-    filenames.reverse()
-    for entry in filenames:
-        if entry.startswith("zoneinfo") and ".tar." in entry:
-            return os.path.join(os.path.dirname(__file__), entry)
-    return None
-
-_ZONEFILENAME = getzoneinfofile()
-# _ZONEFILENAME = "dateutil-zoneinfo.tar.gz"
+_ZONEFILENAME = "dateutil-zoneinfo.tar.gz"
 _METADATA_FN = 'METADATA'
 
 # python2.6 compatability. Note that TarFile.__exit__ != TarFile.close, but
