@@ -28,6 +28,7 @@
 * Fix show list view when no shows exist and "Group show lists shows into" is set to anything other than "One Show List"
 * Fix fault matching air by date shows by using correct episode/season strings in find search results
 * Change add 'hevc', 'x265' and some langs to Config Search/Episode Search/Ignore result with any word
+* Change NotifyMyAndroid to its new web location
 * Update feedparser library 5.1.3 to 5.2.0 (8c62940)
 * Remove feedcache implementation and library
 * Add coverage testing and coveralls support
@@ -45,7 +46,6 @@
 * Update SimpleJSON library 2.0.9 to 3.7.3 (0bcdf20)
 * Update xmltodict library 0.9.0 to 0.9.2 (579a005)
 * Update dateutil library 2.2 to 2.4.2 (a6b8925)
-* Change zoneinfo update/loader to be compatible with dateutil 2.4.2
 * Update ConfigObj library 4.6.0 to 5.1.0 (a68530a)
 * Update Beautiful Soup to 4.3.2 (r353)
 
@@ -54,6 +54,8 @@
 * Update Tornado webserver from 4.2.dev1 (609dbb9) to 4.2b1 (61a16c9)
 * Change reload_module call to explicit import lib/six.moves
 * Change queue, httplib, cookielib and xmlrpclib to use explicit import lib/six.moves
+* Change zoneinfo update/loader to be compatible with dateutil 2.4.2
+* Change param item "features" passed to Beautiful Soup to prevent false +ve warning in r353
 
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)
