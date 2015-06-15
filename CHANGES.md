@@ -59,6 +59,7 @@
 * Update ConfigObj library 4.6.0 to 5.1.0 (a68530a)
 * Update Beautiful Soup to 4.3.2 (r353)
 * Update jsonrpclib library r20 to (b59217c)
+* Change cachecontrol library to ensure cache file exists before attempting delete
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
