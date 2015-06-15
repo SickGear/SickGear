@@ -1830,7 +1830,7 @@ def save_config():
     new_config['Newznab']['newznab_data'] = NEWZNAB_DATA
 
     new_config['TorrentRss'] = {}
-    new_config['TorrentRss']['torrentrss_data'] = '!!!'.join([x.configStr() for x in torrentRssProviderList])
+    new_config['TorrentRss']['torrentrss_data'] = '!!!'.join([x.config_str() for x in torrentRssProviderList])
 
     new_config['GUI'] = {}
     new_config['GUI']['gui_name'] = GUI_NAME

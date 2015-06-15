@@ -29,7 +29,7 @@ from sickbeard.common import Quality
 from sickbeard import helpers, show_name_helpers
 from sickbeard.exceptions import AuthException, ex
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard.rssfeeds import getFeed
+from sickbeard.rssfeeds import RSSFeeds
 import itertools
 
 class CacheDBConnection(db.DBConnection):
@@ -44,7 +44,7 @@ class CacheDBConnection(db.DBConnection):
             if str(e) != 'table lastUpdate already exists':
                 raise
 
-class TVCache():
+class TVCache:
     def __init__(self, provider):
 
         self.provider = provider
@@ -107,8 +107,8 @@ class TVCache():
 
         return []
 
-    def getRSSFeed(self, url, post_data=None, request_headers=None):
-        return getFeed(url, post_data, request_headers)
+    def getRSSFeed(self, url):
+        return RSSFeeds(self.provider).get_feed(url)
 
     def _translateTitle(self, title):
         return u'' + title.replace(' ', '.')
@@ -132,7 +132,6 @@ class TVCache():
                 u'The data returned from the ' + self.provider.name + ' feed is incomplete, this result is unusable',
                 logger.DEBUG)
             return None
-
 
     def _getLastUpdate(self):
         myDB = self._getDB()
@@ -159,7 +158,6 @@ class TVCache():
             lastTime = 0
 
         return datetime.datetime.fromtimestamp(lastTime)
-
 
     def setLastUpdate(self, toDate=None):
         if not toDate:
@@ -250,7 +248,6 @@ class TVCache():
                 'INSERT OR IGNORE INTO provider_cache (provider, name, season, episodes, indexerid, url, time, quality, release_group, version) VALUES (?,?,?,?,?,?,?,?,?,?)',
                 [self.providerID, name, season, episodeText, parse_result.show.indexerid, url, curTimestamp, quality, release_group, version]]
 
-
     def searchCache(self, episode, manualSearch=False):
         neededEps = self.findNeededEpisodes(episode, manualSearch)
         if len(neededEps) > 0:
@@ -267,7 +264,6 @@ class TVCache():
 
         return filter(lambda x: x['indexerid'] != 0, myDB.select(sql, [self.providerID]))
 
-
     def findNeededEpisodes(self, episode, manualSearch=False):
         neededEps = {}
         cl = []
@@ -280,8 +276,8 @@ class TVCache():
         else:
             for epObj in episode:
                 cl.append([
-                    'SELECT * FROM provider_cache WHERE provider = ? AND indexerid = ? AND season = ? AND episodes LIKE ? '
-                    'AND quality IN (' + ','.join([str(x) for x in epObj.wantedQuality]) + ')',
+                    'SELECT * FROM provider_cache WHERE provider = ? AND indexerid = ? AND season = ?'
+                    + ' AND episodes LIKE ? AND quality IN (' + ','.join([str(x) for x in epObj.wantedQuality]) + ')',
                     [self.providerID, epObj.show.indexerid, epObj.season, '%|' + str(epObj.episode) + '|%']])
             sqlResults = myDB.mass_action(cl)
             if sqlResults:
@@ -354,4 +350,3 @@ class TVCache():
         self.setLastSearch()
 
         return neededEps
-
