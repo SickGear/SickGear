@@ -48,6 +48,7 @@
 * Change zoneinfo update/loader to be compatible with dateutil 2.4.2
 * Update ConfigObj library 4.6.0 to 5.1.0 (a68530a)
 * Update Beautiful Soup to 4.3.2 (r353)
+* Change to remove unclosed html tags from 404 page template
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
