@@ -41,7 +41,7 @@
 							<label class="cleafix" for="use_xbmc">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_xbmc" id="use_xbmc" #if $sickbeard.USE_XBMC then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_xbmc" id="use_xbmc" #if $sickbeard.USE_XBMC then 'checked="checked"' else ''# />
 									<p>should SickGear send XBMC commands ?</p>
 								</span>
 							</label>
@@ -52,7 +52,7 @@
 								<label for="xbmc_always_on">
 									<span class="component-title">Always on</span>
 									<span class="component-desc">
-										<input type="checkbox" name="xbmc_always_on" id="xbmc_always_on" #if $sickbeard.XBMC_ALWAYS_ON then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="xbmc_always_on" id="xbmc_always_on" #if $sickbeard.XBMC_ALWAYS_ON then 'checked="checked"' else ''# />
 										<p>log errors when unreachable ?</p>
 									</span>
 								</label>
@@ -61,7 +61,7 @@
 								<label for="xbmc_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="xbmc_notify_onsnatch" id="xbmc_notify_onsnatch" #if $sickbeard.XBMC_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="xbmc_notify_onsnatch" id="xbmc_notify_onsnatch" #if $sickbeard.XBMC_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -70,7 +70,7 @@
 								<label for="xbmc_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="xbmc_notify_ondownload" id="xbmc_notify_ondownload" #if $sickbeard.XBMC_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="xbmc_notify_ondownload" id="xbmc_notify_ondownload" #if $sickbeard.XBMC_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -79,7 +79,7 @@
 								<label for="xbmc_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="xbmc_notify_onsubtitledownload" id="xbmc_notify_onsubtitledownload" #if $sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="xbmc_notify_onsubtitledownload" id="xbmc_notify_onsubtitledownload" #if $sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -88,7 +88,7 @@
 								<label for="xbmc_update_library">
 									<span class="component-title">Update library</span>
 									<span class="component-desc">
-										<input type="checkbox" name="xbmc_update_library" id="xbmc_update_library" #if $sickbeard.XBMC_UPDATE_LIBRARY then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="xbmc_update_library" id="xbmc_update_library" #if $sickbeard.XBMC_UPDATE_LIBRARY then 'checked="checked"' else ''# />
 										<p>update XBMC library when a download finishes ?</p>
 									</span>
 								</label>
@@ -97,7 +97,7 @@
 								<label for="xbmc_update_full">
 									<span class="component-title">Full library update</span>
 									<span class="component-desc">
-										<input type="checkbox" name="xbmc_update_full" id="xbmc_update_full" #if $sickbeard.XBMC_UPDATE_FULL then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="xbmc_update_full" id="xbmc_update_full" #if $sickbeard.XBMC_UPDATE_FULL then 'checked="checked"' else ''# />
 										<p>perform a full library update if update per-show fails ?</p>
 									</span>
 								</label>
@@ -106,7 +106,7 @@
 								<label for="xbmc_update_onlyfirst">
 									<span class="component-title">Only update first host</span>
 									<span class="component-desc">
-										<input type="checkbox" name="xbmc_update_onlyfirst" id="xbmc_update_onlyfirst" #if $sickbeard.XBMC_UPDATE_ONLYFIRST then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="xbmc_update_onlyfirst" id="xbmc_update_onlyfirst" #if $sickbeard.XBMC_UPDATE_ONLYFIRST then 'checked="checked"' else ''# />
 										<p>only send library updates to the first active host ?</p>
 									</span>
 								</label>
@@ -165,7 +165,7 @@
 							<label class="cleafix" for="use_kodi">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_kodi" id="use_kodi" #if $sickbeard.USE_KODI then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_kodi" id="use_kodi" #if $sickbeard.USE_KODI then 'checked="checked"' else ''# />
 									<p>should SickGear send Kodi commands ?</p>
 								</span>
 							</label>
@@ -175,7 +175,7 @@
 								<label for="kodi_always_on">
 									<span class="component-title">Always on</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_always_on" id="kodi_always_on" #if $sickbeard.KODI_ALWAYS_ON then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="kodi_always_on" id="kodi_always_on" #if $sickbeard.KODI_ALWAYS_ON then 'checked="checked"' else ''# />
 										<p>log errors when unreachable ?</p>
 									</span>
 								</label>
@@ -184,7 +184,7 @@
 								<label for="kodi_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_onsnatch" id="kodi_notify_onsnatch" #if $sickbeard.KODI_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="kodi_notify_onsnatch" id="kodi_notify_onsnatch" #if $sickbeard.KODI_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -193,7 +193,7 @@
 								<label for="kodi_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_ondownload" id="kodi_notify_ondownload" #if $sickbeard.KODI_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="kodi_notify_ondownload" id="kodi_notify_ondownload" #if $sickbeard.KODI_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -202,7 +202,7 @@
 								<label for="kodi_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_onsubtitledownload" id="kodi_notify_onsubtitledownload" #if $sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="kodi_notify_onsubtitledownload" id="kodi_notify_onsubtitledownload" #if $sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -211,7 +211,7 @@
 								<label for="kodi_update_library">
 									<span class="component-title">Update library</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_library" id="kodi_update_library" #if $sickbeard.KODI_UPDATE_LIBRARY then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="kodi_update_library" id="kodi_update_library" #if $sickbeard.KODI_UPDATE_LIBRARY then 'checked="checked"' else ''# />
 										<p>update Kodi library when a download finishes ?</p>
 									</span>
 								</label>
@@ -220,7 +220,7 @@
 								<label for="kodi_update_full">
 									<span class="component-title">Full library update</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_full" id="kodi_update_full" #if $sickbeard.KODI_UPDATE_FULL then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="kodi_update_full" id="kodi_update_full" #if $sickbeard.KODI_UPDATE_FULL then 'checked="checked"' else ''# />
 										<p>perform a full library update if update per-show fails ?</p>
 									</span>
 								</label>
@@ -229,7 +229,7 @@
 								<label for="kodi_update_onlyfirst">
 									<span class="component-title">Only update first host</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_onlyfirst" id="kodi_update_onlyfirst" #if $sickbeard.KODI_UPDATE_ONLYFIRST then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="kodi_update_onlyfirst" id="kodi_update_onlyfirst" #if $sickbeard.KODI_UPDATE_ONLYFIRST then 'checked="checked"' else ''# />
 										<p>only send library updates to the first active host ?</p>
 									</span>
 								</label>
@@ -352,7 +352,7 @@
 									<label for="plex_notify_onsnatch">
 										<span class="component-title">Notify on snatch</span>
 										<span class="component-desc">
-											<input type="checkbox" name="plex_notify_onsnatch" id="plex_notify_onsnatch" #if $sickbeard.PLEX_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+											<input type="checkbox" name="plex_notify_onsnatch" id="plex_notify_onsnatch" #if $sickbeard.PLEX_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 											<p>download start notification</p>
 										</span>
 									</label>
@@ -361,7 +361,7 @@
 									<label for="plex_notify_ondownload">
 										<span class="component-title">Notify on download</span>
 										<span class="component-desc">
-											<input type="checkbox" name="plex_notify_ondownload" id="plex_notify_ondownload" #if $sickbeard.PLEX_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+											<input type="checkbox" name="plex_notify_ondownload" id="plex_notify_ondownload" #if $sickbeard.PLEX_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 											<p>download finish notification</p>
 										</span>
 									</label>
@@ -370,7 +370,7 @@
 									<label for="plex_notify_onsubtitledownload">
 										<span class="component-title">Notify on subtitle download</span>
 										<span class="component-desc">
-											<input type="checkbox" name="plex_notify_onsubtitledownload" id="plex_notify_onsubtitledownload" #if $sickbeard.PLEX_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+											<input type="checkbox" name="plex_notify_onsubtitledownload" id="plex_notify_onsubtitledownload" #if $sickbeard.PLEX_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 											<p>subtitle downloaded notification</p>
 										</span>
 									</label>
@@ -411,7 +411,7 @@
 							<label for="use_nmj">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_nmj" id="use_nmj" #if $sickbeard.USE_NMJ then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_nmj" id="use_nmj" #if $sickbeard.USE_NMJ then 'checked="checked"' else ''# />
 									<p>should SickGear send update commands to NMJ ?</p>
 								</span>
 							</label>
@@ -441,7 +441,7 @@
 							<div class="field-pair">
 								<label for="nmj_database">
 									<span class="component-title">NMJ database</span>
-									<input type="text" name="nmj_database" id="nmj_database" value="$sickbeard.NMJ_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJ_DATABASE then "readonly=\"readonly\"" else ""# />
+									<input type="text" name="nmj_database" id="nmj_database" value="$sickbeard.NMJ_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJ_DATABASE then "readonly=\"readonly\"" else ''# />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -451,7 +451,7 @@
 							<div class="field-pair">
 								<label for="nmj_mount">
 									<span class="component-title">NMJ mount url</span>
-									<input type="text" name="nmj_mount" id="nmj_mount" value="$sickbeard.NMJ_MOUNT" class="form-control input-sm input250" #if $sickbeard.NMJ_MOUNT then "readonly=\"readonly\"" else ""# />
+									<input type="text" name="nmj_mount" id="nmj_mount" value="$sickbeard.NMJ_MOUNT" class="form-control input-sm input250" #if $sickbeard.NMJ_MOUNT then "readonly=\"readonly\"" else ''# />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -477,7 +477,7 @@
 							<label for="use_nmjv2">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_nmjv2" id="use_nmjv2" #if $sickbeard.USE_NMJv2 then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_nmjv2" id="use_nmjv2" #if $sickbeard.USE_NMJv2 then 'checked="checked"' else ''# />
 									<p>should SickGear send update commands to NMJv2 ?</p>
 								</span>
 							</label>
@@ -498,10 +498,10 @@
 								<span class="component-title">Database location</span>
 								<span class="component-desc">
 									<label for="NMJV2_DBLOC_A" class="space-right">
-										<input type="radio" NAME="nmjv2_dbloc" VALUE="local" id="NMJV2_DBLOC_A" #if $sickbeard.NMJv2_DBLOC=="local" then "checked=\"checked\"" else ""# />PCH Local Media
+										<input type="radio" NAME="nmjv2_dbloc" VALUE="local" id="NMJV2_DBLOC_A" #if $sickbeard.NMJv2_DBLOC=='local' then 'checked="checked"' else ''# />PCH Local Media
 									</label>
 									<label for="NMJV2_DBLOC_B">
-										<input type="radio" NAME="nmjv2_dbloc" VALUE="network" id="NMJV2_DBLOC_B" #if $sickbeard.NMJv2_DBLOC=="network" then "checked=\"checked\"" else ""#/>PCH Network Media
+										<input type="radio" NAME="nmjv2_dbloc" VALUE="network" id="NMJV2_DBLOC_B" #if $sickbeard.NMJv2_DBLOC=='network' then 'checked="checked"' else ''#/>PCH Network Media
 									</label>
 								</span>
 							</div>
@@ -538,7 +538,7 @@
 							<div class="field-pair">
 								<label for="nmjv2_database">
 									<span class="component-title">NMJv2 database</span>
-									<input type="text" name="nmjv2_database" id="nmjv2_database" value="$sickbeard.NMJv2_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJv2_DATABASE then "readonly=\"readonly\"" else ""# />
+									<input type="text" name="nmjv2_database" id="nmjv2_database" value="$sickbeard.NMJv2_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJv2_DATABASE then "readonly=\"readonly\"" else ''# />
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -567,7 +567,7 @@
 							<label for="use_synoindex">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_synoindex" id="use_synoindex" #if $sickbeard.USE_SYNOINDEX then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_synoindex" id="use_synoindex" #if $sickbeard.USE_SYNOINDEX then 'checked="checked"' else ''# />
 									<p>should SickGear send Synology notifications ?</p>
 								</span>
 							</label>
@@ -597,7 +597,7 @@
 							<label for="use_synologynotifier">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_synologynotifier" id="use_synologynotifier" #if $sickbeard.USE_SYNOLOGYNOTIFIER then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_synologynotifier" id="use_synologynotifier" #if $sickbeard.USE_SYNOLOGYNOTIFIER then 'checked="checked"' else ''# />
 									<p>should SickGear send notifications to the Synology Notifier ?</p>
 								</span>
 							</label>
@@ -611,7 +611,7 @@
 								<label for="synologynotifier_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="synologynotifier_notify_onsnatch" id="synologynotifier_notify_onsnatch" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="synologynotifier_notify_onsnatch" id="synologynotifier_notify_onsnatch" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -620,7 +620,7 @@
 								<label for="synologynotifier_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="synologynotifier_notify_ondownload" id="synologynotifier_notify_ondownload" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="synologynotifier_notify_ondownload" id="synologynotifier_notify_ondownload" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -629,7 +629,7 @@
 								<label for="synologynotifier_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="synologynotifier_notify_onsubtitledownload" id="synologynotifier_notify_onsubtitledownload" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="synologynotifier_notify_onsubtitledownload" id="synologynotifier_notify_onsubtitledownload" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -651,7 +651,7 @@
 							<label for="use_pytivo">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_pytivo" id="use_pytivo" #if $sickbeard.USE_PYTIVO then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_pytivo" id="use_pytivo" #if $sickbeard.USE_PYTIVO then 'checked="checked"' else ''# />
 									<p>should SickGear send notifications to pyTivo ?</p>
 								</span>
 							</label>
@@ -713,7 +713,7 @@
 							<label for="use_growl">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_growl" id="use_growl" #if $sickbeard.USE_GROWL then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_growl" id="use_growl" #if $sickbeard.USE_GROWL then 'checked="checked"' else ''# />
 									<p>should SickGear send Growl notifications ?</p>
 								</span>
 							</label>
@@ -724,7 +724,7 @@
 								<label for="growl_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="growl_notify_onsnatch" id="growl_notify_onsnatch" #if $sickbeard.GROWL_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="growl_notify_onsnatch" id="growl_notify_onsnatch" #if $sickbeard.GROWL_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -733,7 +733,7 @@
 								<label for="growl_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="growl_notify_ondownload" id="growl_notify_ondownload" #if $sickbeard.GROWL_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="growl_notify_ondownload" id="growl_notify_ondownload" #if $sickbeard.GROWL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -742,7 +742,7 @@
 								<label for="growl_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="growl_notify_onsubtitledownload" id="growl_notify_onsubtitledownload" #if $sickbeard.GROWL_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="growl_notify_onsubtitledownload" id="growl_notify_onsubtitledownload" #if $sickbeard.GROWL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -791,7 +791,7 @@
 							<label for="use_prowl">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_prowl" id="use_prowl" #if $sickbeard.USE_PROWL then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_prowl" id="use_prowl" #if $sickbeard.USE_PROWL then 'checked="checked"' else ''# />
 									<p>should SickGear send Prowl notifications ?</p>
 								</span>
 							</label>
@@ -802,7 +802,7 @@
 								<label for="prowl_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="prowl_notify_onsnatch" id="prowl_notify_onsnatch" #if $sickbeard.PROWL_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="prowl_notify_onsnatch" id="prowl_notify_onsnatch" #if $sickbeard.PROWL_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -811,7 +811,7 @@
 								<label for="prowl_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="prowl_notify_ondownload" id="prowl_notify_ondownload" #if $sickbeard.PROWL_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="prowl_notify_ondownload" id="prowl_notify_ondownload" #if $sickbeard.PROWL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -820,7 +820,7 @@
 								<label for="prowl_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="prowl_notify_onsubtitledownload" id="prowl_notify_onsubtitledownload" #if $sickbeard.PROWL_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="prowl_notify_onsubtitledownload" id="prowl_notify_onsubtitledownload" #if $sickbeard.PROWL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -839,11 +839,11 @@
 								<label for="prowl_priority">
 									<span class="component-title">Prowl priority:</span>
 									<select id="prowl_priority" name="prowl_priority" class="form-control input-sm">
-										<option value="-2" #if $sickbeard.PROWL_PRIORITY == "-2" then 'selected="selected"' else ""#>Very Low</option>
-										<option value="-1" #if $sickbeard.PROWL_PRIORITY == "-1" then 'selected="selected"' else ""#>Moderate</option>
-										<option value="0" #if $sickbeard.PROWL_PRIORITY == "0" then 'selected="selected"' else ""#>Normal</option>
-										<option value="1" #if $sickbeard.PROWL_PRIORITY == "1" then 'selected="selected"' else ""#>High</option>
-										<option value="2" #if $sickbeard.PROWL_PRIORITY == "2" then 'selected="selected"' else ""#>Emergency</option>
+										<option value="-2" #if $sickbeard.PROWL_PRIORITY == '-2' then 'selected="selected"' else ''#>Very Low</option>
+										<option value="-1" #if $sickbeard.PROWL_PRIORITY == '-1' then 'selected="selected"' else ''#>Moderate</option>
+										<option value="0" #if $sickbeard.PROWL_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
+										<option value="1" #if $sickbeard.PROWL_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
+										<option value="2" #if $sickbeard.PROWL_PRIORITY == '2' then 'selected="selected"' else ''#>Emergency</option>
 									</select>
 								</label>
 								<label>
@@ -871,7 +871,7 @@
 							<label for="use_libnotify">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_libnotify" id="use_libnotify" #if $sickbeard.USE_LIBNOTIFY then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_libnotify" id="use_libnotify" #if $sickbeard.USE_LIBNOTIFY then 'checked="checked"' else ''# />
 									<p>should SickGear send Libnotify notifications ?</p>
 								</span>
 							</label>
@@ -882,7 +882,7 @@
 								<label for="libnotify_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="libnotify_notify_onsnatch" id="libnotify_notify_onsnatch" #if $sickbeard.LIBNOTIFY_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="libnotify_notify_onsnatch" id="libnotify_notify_onsnatch" #if $sickbeard.LIBNOTIFY_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -891,7 +891,7 @@
 								<label for="libnotify_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="libnotify_notify_ondownload" id="libnotify_notify_ondownload" #if $sickbeard.LIBNOTIFY_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="libnotify_notify_ondownload" id="libnotify_notify_ondownload" #if $sickbeard.LIBNOTIFY_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -900,7 +900,7 @@
 								<label for="libnotify_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="libnotify_notify_onsubtitledownload" id="libnotify_notify_onsubtitledownload" #if $sickbeard.LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="libnotify_notify_onsubtitledownload" id="libnotify_notify_onsubtitledownload" #if $sickbeard.LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -925,7 +925,7 @@
 							<label for="use_pushover">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_pushover" id="use_pushover" #if $sickbeard.USE_PUSHOVER then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_pushover" id="use_pushover" #if $sickbeard.USE_PUSHOVER then 'checked="checked"' else ''# />
 									<p>should SickGear send Pushover notifications ?</p>
 								</span>
 							</label>
@@ -936,7 +936,7 @@
 								<label for="pushover_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushover_notify_onsnatch" id="pushover_notify_onsnatch" #if $sickbeard.PUSHOVER_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushover_notify_onsnatch" id="pushover_notify_onsnatch" #if $sickbeard.PUSHOVER_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -945,7 +945,7 @@
 								<label for="pushover_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushover_notify_ondownload" id="pushover_notify_ondownload" #if $sickbeard.PUSHOVER_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushover_notify_ondownload" id="pushover_notify_ondownload" #if $sickbeard.PUSHOVER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -954,7 +954,7 @@
 								<label for="pushover_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushover_notify_onsubtitledownload" id="pushover_notify_onsubtitledownload" #if $sickbeard.PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushover_notify_onsubtitledownload" id="pushover_notify_onsubtitledownload" #if $sickbeard.PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -983,10 +983,10 @@
 								<label for="pushover_priority">
 									<span class="component-title">Pushover priority:</span>
 									<select id="pushover_priority" name="pushover_priority" class="form-control input-sm">
-										<option value="-2" #if $sickbeard.PUSHOVER_PRIORITY == -2 then 'selected="selected"' else ""#>Lowest</option>
-										<option value="-1" #if $sickbeard.PUSHOVER_PRIORITY == -1 then 'selected="selected"' else ""#>Low</option>
-										<option value="0" #if $sickbeard.PUSHOVER_PRIORITY == 0 then 'selected="selected"' else ""#>Normal</option>
-										<option value="1" #if $sickbeard.PUSHOVER_PRIORITY == 1 then 'selected="selected"' else ""#>High</option>
+										<option value="-2" #if $sickbeard.PUSHOVER_PRIORITY == '-2' then 'selected="selected"' else ''#>Lowest</option>
+										<option value="-1" #if $sickbeard.PUSHOVER_PRIORITY == '-1' then 'selected="selected"' else ''#>Low</option>
+										<option value="0" #if $sickbeard.PUSHOVER_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
+										<option value="1" #if $sickbeard.PUSHOVER_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
 									</select>
 								</label>
 								<label>
@@ -1015,28 +1015,28 @@
 								<label for="pushover_sound">
 									<span class="component-title">Pushover sound</span>
 									<select id="pushover_sound" name="pushover_sound" class="form-control input-sm">
-										<option value="pushover" #if $sickbeard.PUSHOVER_SOUND == "pushover" then 'selected="selected"' else ""#>Pushover (default)</option>
-										<option value="bike" #if $sickbeard.PUSHOVER_SOUND == "bike" then 'selected="selected"' else ""#>Bike</option>
-										<option value="bugle" #if $sickbeard.PUSHOVER_SOUND == "bugle" then 'selected="selected"' else ""#>Bugle</option>
-										<option value="cashregister" #if $sickbeard.PUSHOVER_SOUND == "cashregister" then 'selected="selected"' else ""#>Cash Register</option>
-										<option value="classical" #if $sickbeard.PUSHOVER_SOUND == "classical" then 'selected="selected"' else ""#>Classical</option>
-										<option value="cosmic" #if $sickbeard.PUSHOVER_SOUND == "cosmic" then 'selected="selected"' else ""#>Cosmic</option>
-										<option value="falling" #if $sickbeard.PUSHOVER_SOUND == "falling" then 'selected="selected"' else ""#>Falling</option>
-										<option value="gamelan" #if $sickbeard.PUSHOVER_SOUND == "gamelan" then 'selected="selected"' else ""#>Gamelan</option>
-										<option value="incoming" #if $sickbeard.PUSHOVER_SOUND == "incoming" then 'selected="selected"' else ""#>Incoming</option>
-										<option value="intermission" #if $sickbeard.PUSHOVER_SOUND == "intermission" then 'selected="selected"' else ""#>Intermission</option>
-										<option value="magic" #if $sickbeard.PUSHOVER_SOUND == "magic" then 'selected="selected"' else ""#>Magic</option>
-										<option value="mechanical" #if $sickbeard.PUSHOVER_SOUND == "mechanical" then 'selected="selected"' else ""#>Mechanical</option>
-										<option value="pianobar" #if $sickbeard.PUSHOVER_SOUND == "pianobar" then 'selected="selected"' else ""#>Piano Bar</option>
-										<option value="siren" #if $sickbeard.PUSHOVER_SOUND == "siren" then 'selected="selected"' else ""#>Siren</option>
-										<option value="spacealarm" #if $sickbeard.PUSHOVER_SOUND == "spacealarm" then 'selected="selected"' else ""#>Space Alarm</option>
-										<option value="tugboat" #if $sickbeard.PUSHOVER_SOUND == "tugboat" then 'selected="selected"' else ""#>Tug Boat</option>
-										<option value="alien" #if $sickbeard.PUSHOVER_SOUND == "alien" then 'selected="selected"' else ""#>Alien Alarm (long)</option>
-										<option value="climb" #if $sickbeard.PUSHOVER_SOUND == "climb" then 'selected="selected"' else ""#>Climb (long)</option>
-										<option value="persistent" #if $sickbeard.PUSHOVER_SOUND == "persistent" then 'selected="selected"' else ""#>Persistent (long)</option>
-										<option value="echo" #if $sickbeard.PUSHOVER_SOUND == "echo" then 'selected="selected"' else ""#>Pushover Echo (long)</option>
-										<option value="updown" #if $sickbeard.PUSHOVER_SOUND == "updown" then 'selected="selected"' else ""#>Up Down (long)</option>
-										<option value="none" #if $sickbeard.PUSHOVER_SOUND == "none" then 'selected="selected"' else ""#>None (silent)</option>
+										<option value="pushover" #if $sickbeard.PUSHOVER_SOUND == 'pushover' then 'selected="selected"' else ''#>Pushover (default)</option>
+										<option value="bike" #if $sickbeard.PUSHOVER_SOUND == 'bike' then 'selected="selected"' else ''#>Bike</option>
+										<option value="bugle" #if $sickbeard.PUSHOVER_SOUND == 'bugle' then 'selected="selected"' else ''#>Bugle</option>
+										<option value="cashregister" #if $sickbeard.PUSHOVER_SOUND == 'cashregister' then 'selected="selected"' else ''#>Cash Register</option>
+										<option value="classical" #if $sickbeard.PUSHOVER_SOUND == 'classical' then 'selected="selected"' else ''#>Classical</option>
+										<option value="cosmic" #if $sickbeard.PUSHOVER_SOUND == 'cosmic' then 'selected="selected"' else ''#>Cosmic</option>
+										<option value="falling" #if $sickbeard.PUSHOVER_SOUND == 'falling' then 'selected="selected"' else ''#>Falling</option>
+										<option value="gamelan" #if $sickbeard.PUSHOVER_SOUND == 'gamelan' then 'selected="selected"' else ''#>Gamelan</option>
+										<option value="incoming" #if $sickbeard.PUSHOVER_SOUND == 'incoming' then 'selected="selected"' else ''#>Incoming</option>
+										<option value="intermission" #if $sickbeard.PUSHOVER_SOUND == 'intermission' then 'selected="selected"' else ''#>Intermission</option>
+										<option value="magic" #if $sickbeard.PUSHOVER_SOUND == 'magic' then 'selected="selected"' else ''#>Magic</option>
+										<option value="mechanical" #if $sickbeard.PUSHOVER_SOUND == 'mechanical' then 'selected="selected"' else ''#>Mechanical</option>
+										<option value="pianobar" #if $sickbeard.PUSHOVER_SOUND == 'pianobar' then 'selected="selected"' else ''#>Piano Bar</option>
+										<option value="siren" #if $sickbeard.PUSHOVER_SOUND == 'siren' then 'selected="selected"' else ''#>Siren</option>
+										<option value="spacealarm" #if $sickbeard.PUSHOVER_SOUND == 'spacealarm' then 'selected="selected"' else ''#>Space Alarm</option>
+										<option value="tugboat" #if $sickbeard.PUSHOVER_SOUND == 'tugboat' then 'selected="selected"' else ''#>Tug Boat</option>
+										<option value="alien" #if $sickbeard.PUSHOVER_SOUND == 'alien' then 'selected="selected"' else ''#>Alien Alarm (long)</option>
+										<option value="climb" #if $sickbeard.PUSHOVER_SOUND == 'climb' then 'selected="selected"' else ''#>Climb (long)</option>
+										<option value="persistent" #if $sickbeard.PUSHOVER_SOUND == 'persistent' then 'selected="selected"' else ''#>Persistent (long)</option>
+										<option value="echo" #if $sickbeard.PUSHOVER_SOUND == 'echo' then 'selected="selected"' else ''#>Pushover Echo (long)</option>
+										<option value="updown" #if $sickbeard.PUSHOVER_SOUND == 'updown' then 'selected="selected"' else ''#>Up Down (long)</option>
+										<option value="none" #if $sickbeard.PUSHOVER_SOUND == 'none' then 'selected="selected"' else ''#>None (silent)</option>
 									</select>
 								</label>
 								<label>
@@ -1063,7 +1063,7 @@
 							<label for="use_boxcar2">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_boxcar2" id="use_boxcar2" #if $sickbeard.USE_BOXCAR2 then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_boxcar2" id="use_boxcar2" #if $sickbeard.USE_BOXCAR2 then 'checked="checked"' else ''# />
 									<p>should SickGear send Boxcar2 notifications ?</p>
 								</span>
 							</label>
@@ -1074,7 +1074,7 @@
 								<label for="boxcar2_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_onsnatch" id="boxcar2_notify_onsnatch" #if $sickbeard.BOXCAR2_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="boxcar2_notify_onsnatch" id="boxcar2_notify_onsnatch" #if $sickbeard.BOXCAR2_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -1083,7 +1083,7 @@
 								<label for="boxcar2_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_ondownload" id="boxcar2_notify_ondownload" #if $sickbeard.BOXCAR2_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="boxcar2_notify_ondownload" id="boxcar2_notify_ondownload" #if $sickbeard.BOXCAR2_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -1092,7 +1092,7 @@
 								<label for="boxcar2_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_onsubtitledownload" id="boxcar2_notify_onsubtitledownload" #if $sickbeard.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="boxcar2_notify_onsubtitledownload" id="boxcar2_notify_onsubtitledownload" #if $sickbeard.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -1111,36 +1111,36 @@
 								<label for="boxcar2_sound">
 									<span class="component-title">Custom sound</span>
 									<select id="boxcar2_sound" name="boxcar2_sound" class="form-control input-sm">
-										<option value="default" #if $sickbeard.BOXCAR2_SOUND == "default" then 'selected="selected"' else ""#>Default (General)</option>
-										<option value="no-sound" #if $sickbeard.BOXCAR2_SOUND == "no-sound" then 'selected="selected"' else ""#>Silent</option>
-										<option value="beep-crisp" #if $sickbeard.BOXCAR2_SOUND == "beep-crisp" then 'selected="selected"' else ""#>Beep Crisp</option>
-										<option value="beep-soft" #if $sickbeard.BOXCAR2_SOUND == "beep-soft" then 'selected="selected"' else ""#>Beep Soft</option>
-										<option value="bell-modern" #if $sickbeard.BOXCAR2_SOUND == "bell-modern" then 'selected="selected"' else ""#>Bell Modern</option>
-										<option value="bell-one-tone" #if $sickbeard.BOXCAR2_SOUND == "bell-one-tone" then 'selected="selected"' else ""#>Bell One Tone</option>
-										<option value="bell-simple" #if $sickbeard.BOXCAR2_SOUND == "bell-simple" then 'selected="selected"' else ""#>Bell Simple</option>
-										<option value="bell-triple" #if $sickbeard.BOXCAR2_SOUND == "bell-triple" then 'selected="selected"' else ""#>Bell Triple</option>
-										<option value="bird-1" #if $sickbeard.BOXCAR2_SOUND == "bird-1" then 'selected="selected"' else ""#>Bird 1</option>
-										<option value="bird-2" #if $sickbeard.BOXCAR2_SOUND == "bird-2" then 'selected="selected"' else ""#>Bird 2</option>
-										<option value="boing" #if $sickbeard.BOXCAR2_SOUND == "boing" then 'selected="selected"' else ""#>Boing</option>
-										<option value="cash" #if $sickbeard.BOXCAR2_SOUND == "cash" then 'selected="selected"' else ""#>Cash</option>
-										<option value="clanging" #if $sickbeard.BOXCAR2_SOUND == "clanging" then 'selected="selected"' else ""#>Clanging</option>
-										<option value="detonator-charge" #if $sickbeard.BOXCAR2_SOUND == "detonator-charge" then 'selected="selected"' else ""#>Detonator Charge</option>
-										<option value="digital-alarm" #if $sickbeard.BOXCAR2_SOUND == "digital-alarm" then 'selected="selected"' else ""#>Digital Alarm</option>
-										<option value="done" #if $sickbeard.BOXCAR2_SOUND == "done" then 'selected="selected"' else ""#>Done</option>
-										<option value="echo" #if $sickbeard.BOXCAR2_SOUND == "echo" then 'selected="selected"' else ""#>Echo</option>
-										<option value="flourish" #if $sickbeard.BOXCAR2_SOUND == "flourish" then 'selected="selected"' else ""#>Flourish</option>
-										<option value="harp" #if $sickbeard.BOXCAR2_SOUND == "harp" then 'selected="selected"' else ""#>Harp</option>
-										<option value="light" #if $sickbeard.BOXCAR2_SOUND == "light" then 'selected="selected"' else ""#>Light</option>
-										<option value="magic-chime" #if $sickbeard.BOXCAR2_SOUND == "magic-chime" then 'selected="selected"' else ""#>Magic Chime</option>
-										<option value="magic-coin" #if $sickbeard.BOXCAR2_SOUND == "magic-coin" then 'selected="selected"' else ""#>Magic Coin 1</option>
-										<option value="notifier-1" #if $sickbeard.BOXCAR2_SOUND == "notifier-1" then 'selected="selected"' else ""#>Notifier 1</option>
-										<option value="notifier-2" #if $sickbeard.BOXCAR2_SOUND == "notifier-2" then 'selected="selected"' else ""#>Notifier 2</option>
-										<option value="notifier-3" #if $sickbeard.BOXCAR2_SOUND == "notifier-3" then 'selected="selected"' else ""#>Notifier 3</option>
-										<option value="orchestral-long" #if $sickbeard.BOXCAR2_SOUND == "orchestral-long" then 'selected="selected"' else ""#>Orchestral Long</option>
-										<option value="orchestral-short" #if $sickbeard.BOXCAR2_SOUND == "orchestral-short" then 'selected="selected"' else ""#>Orchestral Short</option>
-										<option value="score" #if $sickbeard.BOXCAR2_SOUND == "score" then 'selected="selected"' else ""#>Score</option>
-										<option value="success" #if $sickbeard.BOXCAR2_SOUND == "success" then 'selected="selected"' else ""#>Success</option>
-										<option value="up" #if $sickbeard.BOXCAR2_SOUND == "up" then 'selected="selected"' else ""#>Up</option>
+										<option value="default" #if $sickbeard.BOXCAR2_SOUND == 'default' then 'selected="selected"' else ''#>Default (General)</option>
+										<option value="no-sound" #if $sickbeard.BOXCAR2_SOUND == 'no-sound' then 'selected="selected"' else ''#>Silent</option>
+										<option value="beep-crisp" #if $sickbeard.BOXCAR2_SOUND == 'beep-crisp' then 'selected="selected"' else ''#>Beep Crisp</option>
+										<option value="beep-soft" #if $sickbeard.BOXCAR2_SOUND == 'beep-soft' then 'selected="selected"' else ''#>Beep Soft</option>
+										<option value="bell-modern" #if $sickbeard.BOXCAR2_SOUND == 'bell-modern' then 'selected="selected"' else ''#>Bell Modern</option>
+										<option value="bell-one-tone" #if $sickbeard.BOXCAR2_SOUND == 'bell-one-tone' then 'selected="selected"' else ''#>Bell One Tone</option>
+										<option value="bell-simple" #if $sickbeard.BOXCAR2_SOUND == 'bell-simple' then 'selected="selected"' else ''#>Bell Simple</option>
+										<option value="bell-triple" #if $sickbeard.BOXCAR2_SOUND == 'bell-triple' then 'selected="selected"' else ''#>Bell Triple</option>
+										<option value="bird-1" #if $sickbeard.BOXCAR2_SOUND == 'bird-1' then 'selected="selected"' else ''#>Bird 1</option>
+										<option value="bird-2" #if $sickbeard.BOXCAR2_SOUND == 'bird-2' then 'selected="selected"' else ''#>Bird 2</option>
+										<option value="boing" #if $sickbeard.BOXCAR2_SOUND == 'boing' then 'selected="selected"' else ''#>Boing</option>
+										<option value="cash" #if $sickbeard.BOXCAR2_SOUND == 'cash' then 'selected="selected"' else ''#>Cash</option>
+										<option value="clanging" #if $sickbeard.BOXCAR2_SOUND == 'clanging' then 'selected="selected"' else ''#>Clanging</option>
+										<option value="detonator-charge" #if $sickbeard.BOXCAR2_SOUND == 'detonator-charge' then 'selected="selected"' else ''#>Detonator Charge</option>
+										<option value="digital-alarm" #if $sickbeard.BOXCAR2_SOUND == 'digital-alarm' then 'selected="selected"' else ''#>Digital Alarm</option>
+										<option value="done" #if $sickbeard.BOXCAR2_SOUND == 'done' then 'selected="selected"' else ''#>Done</option>
+										<option value="echo" #if $sickbeard.BOXCAR2_SOUND == 'echo' then 'selected="selected"' else ''#>Echo</option>
+										<option value="flourish" #if $sickbeard.BOXCAR2_SOUND == 'flourish' then 'selected="selected"' else ''#>Flourish</option>
+										<option value="harp" #if $sickbeard.BOXCAR2_SOUND == 'harp' then 'selected="selected"' else ''#>Harp</option>
+										<option value="light" #if $sickbeard.BOXCAR2_SOUND == 'light' then 'selected="selected"' else ''#>Light</option>
+										<option value="magic-chime" #if $sickbeard.BOXCAR2_SOUND == 'magic-chime' then 'selected="selected"' else ''#>Magic Chime</option>
+										<option value="magic-coin" #if $sickbeard.BOXCAR2_SOUND == 'magic-coin' then 'selected="selected"' else ''#>Magic Coin 1</option>
+										<option value="notifier-1" #if $sickbeard.BOXCAR2_SOUND == 'notifier-1' then 'selected="selected"' else ''#>Notifier 1</option>
+										<option value="notifier-2" #if $sickbeard.BOXCAR2_SOUND == 'notifier-2' then 'selected="selected"' else ''#>Notifier 2</option>
+										<option value="notifier-3" #if $sickbeard.BOXCAR2_SOUND == 'notifier-3' then 'selected="selected"' else ''#>Notifier 3</option>
+										<option value="orchestral-long" #if $sickbeard.BOXCAR2_SOUND == 'orchestral-long' then 'selected="selected"' else ''#>Orchestral Long</option>
+										<option value="orchestral-short" #if $sickbeard.BOXCAR2_SOUND == 'orchestral-short' then 'selected="selected"' else ''#>Orchestral Short</option>
+										<option value="score" #if $sickbeard.BOXCAR2_SOUND == 'score' then 'selected="selected"' else ''#>Score</option>
+										<option value="success" #if $sickbeard.BOXCAR2_SOUND == 'success' then 'selected="selected"' else ''#>Success</option>
+										<option value="up" #if $sickbeard.BOXCAR2_SOUND == 'up' then 'selected="selected"' else ''#>Up</option>
 									</select>
 								</label>
 								<label>
@@ -1167,7 +1167,7 @@
 							<label for="use_nma">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_nma" id="use_nma" #if $sickbeard.USE_NMA then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_nma" id="use_nma" #if $sickbeard.USE_NMA then 'checked="checked"' else ''# />
 									<p>should SickGear send NMA notifications ?</p>
 								</span>
 							</label>
@@ -1178,7 +1178,7 @@
 								<label for="nma_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_onsnatch" id="nma_notify_onsnatch" #if $sickbeard.NMA_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="nma_notify_onsnatch" id="nma_notify_onsnatch" #if $sickbeard.NMA_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -1187,7 +1187,7 @@
 								<label for="nma_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_ondownload" id="nma_notify_ondownload" #if $sickbeard.NMA_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="nma_notify_ondownload" id="nma_notify_ondownload" #if $sickbeard.NMA_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -1196,7 +1196,7 @@
 								<label for="nma_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_onsubtitledownload" id="nma_notify_onsubtitledownload" #if $sickbeard.NMA_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="nma_notify_onsubtitledownload" id="nma_notify_onsubtitledownload" #if $sickbeard.NMA_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -1215,11 +1215,11 @@
 								<label for="nma_priority">
 									<span class="component-title">NMA priority:</span>
 									   <select id="nma_priority" name="nma_priority" class="form-control input-sm">
-										<option value="-2" #if $sickbeard.NMA_PRIORITY == "-2" then 'selected="selected"' else ""#>Very Low</option>
-										<option value="-1" #if $sickbeard.NMA_PRIORITY == "-1" then 'selected="selected"' else ""#>Moderate</option>
-										<option value="0" #if $sickbeard.NMA_PRIORITY == "0" then 'selected="selected"' else ""#>Normal</option>
-										<option value="1" #if $sickbeard.NMA_PRIORITY == "1" then 'selected="selected"' else ""#>High</option>
-										<option value="2" #if $sickbeard.NMA_PRIORITY == "2" then 'selected="selected"' else ""#>Emergency</option>
+										<option value="-2" #if $sickbeard.NMA_PRIORITY == '-2' then 'selected="selected"' else ''#>Very Low</option>
+										<option value="-1" #if $sickbeard.NMA_PRIORITY == '-1' then 'selected="selected"' else ''#>Moderate</option>
+										<option value="0" #if $sickbeard.NMA_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
+										<option value="1" #if $sickbeard.NMA_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
+										<option value="2" #if $sickbeard.NMA_PRIORITY == '2' then 'selected="selected"' else ''#>Emergency</option>
 									</select>
 								</label>
 								<label>
@@ -1246,7 +1246,7 @@
 							<label for="use_pushalot">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_pushalot" id="use_pushalot" #if $sickbeard.USE_PUSHALOT then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_pushalot" id="use_pushalot" #if $sickbeard.USE_PUSHALOT then 'checked="checked"' else ''# />
 									<p>should SickGear send Pushalot notifications ?</p>
 								</span>
 							</label>
@@ -1257,7 +1257,7 @@
 								<label for="pushalot_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushalot_notify_onsnatch" id="pushalot_notify_onsnatch" #if $sickbeard.PUSHALOT_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushalot_notify_onsnatch" id="pushalot_notify_onsnatch" #if $sickbeard.PUSHALOT_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -1266,7 +1266,7 @@
 								<label for="pushalot_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushalot_notify_ondownload" id="pushalot_notify_ondownload" #if $sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushalot_notify_ondownload" id="pushalot_notify_ondownload" #if $sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -1275,7 +1275,7 @@
 								<label for="pushalot_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushalot_notify_onsubtitledownload" id="pushalot_notify_onsubtitledownload" #if $sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushalot_notify_onsubtitledownload" id="pushalot_notify_onsubtitledownload" #if $sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -1309,7 +1309,7 @@
 							<label for="use_pushbullet">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_pushbullet" id="use_pushbullet" #if $sickbeard.USE_PUSHBULLET then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_pushbullet" id="use_pushbullet" #if $sickbeard.USE_PUSHBULLET then 'checked="checked"' else ''# />
 									<p>should SickGear send Pushbullet notifications ?</p>
 								</span>
 							</label>
@@ -1320,7 +1320,7 @@
 								<label for="pushbullet_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushbullet_notify_onsnatch" id="pushbullet_notify_onsnatch" #if $sickbeard.PUSHBULLET_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushbullet_notify_onsnatch" id="pushbullet_notify_onsnatch" #if $sickbeard.PUSHBULLET_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -1329,7 +1329,7 @@
 								<label for="pushbullet_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushbullet_notify_ondownload" id="pushbullet_notify_ondownload" #if $sickbeard.PUSHBULLET_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushbullet_notify_ondownload" id="pushbullet_notify_ondownload" #if $sickbeard.PUSHBULLET_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -1338,7 +1338,7 @@
 								<label for="pushbullet_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushbullet_notify_onsubtitledownload" id="pushbullet_notify_onsubtitledownload" #if $sickbeard.PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="pushbullet_notify_onsubtitledownload" id="pushbullet_notify_onsubtitledownload" #if $sickbeard.PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -1388,7 +1388,7 @@
 							<label for="use_twitter">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_twitter" id="use_twitter" #if $sickbeard.USE_TWITTER then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_twitter" id="use_twitter" #if $sickbeard.USE_TWITTER then 'checked="checked"' else ''# />
 									<p>should SickGear post tweets on Twitter ?</p>
 								</span>
 							</label>
@@ -1403,7 +1403,7 @@
 								<label for="twitter_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="twitter_notify_onsnatch" id="twitter_notify_onsnatch" #if $sickbeard.TWITTER_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="twitter_notify_onsnatch" id="twitter_notify_onsnatch" #if $sickbeard.TWITTER_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -1412,7 +1412,7 @@
 								<label for="twitter_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="twitter_notify_ondownload" id="twitter_notify_ondownload" #if $sickbeard.TWITTER_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="twitter_notify_ondownload" id="twitter_notify_ondownload" #if $sickbeard.TWITTER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -1421,7 +1421,7 @@
 								<label for="twitter_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="twitter_notify_onsubtitledownload" id="twitter_notify_onsubtitledownload" #if $sickbeard.TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="twitter_notify_onsubtitledownload" id="twitter_notify_onsubtitledownload" #if $sickbeard.TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -1472,7 +1472,7 @@
 							<label for="use_trakt">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_trakt" id="use_trakt" #if $sickbeard.USE_TRAKT then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_trakt" id="use_trakt" #if $sickbeard.USE_TRAKT then 'checked="checked"' else ''# />
 									<p>should SickGear send Trakt.tv notifications ?</p>
 								</span>
 							</label>
@@ -1515,7 +1515,7 @@
 									<span class="component-desc">
 										<select id="trakt_default_indexer" name="trakt_default_indexer" class="form-control input-sm">
 											#for $indexer in $sickbeard.indexerApi().indexers
-											<option value="$indexer" #if $indexer == $sickbeard.TRAKT_DEFAULT_INDEXER then "selected=\"selected\"" else ""#>$sickbeard.indexerApi().indexers[$indexer]</option>
+											<option value="$indexer" #if $indexer == $sickbeard.TRAKT_DEFAULT_INDEXER then 'selected="selected"' else ''#>$sickbeard.indexerApi().indexers[$indexer]</option>
 											#end for
 										</select>
 									</span>
@@ -1525,7 +1525,7 @@
 								<label for="trakt_sync">
 									<span class="component-title">Sync libraries:</span>
 									<span class="component-desc">
-										<input type="checkbox" class="enabler" name="trakt_sync" id="trakt_sync" #if $sickbeard.TRAKT_SYNC then "checked=\"checked\"" else ""# />
+										<input type="checkbox" class="enabler" name="trakt_sync" id="trakt_sync" #if $sickbeard.TRAKT_SYNC then 'checked="checked"' else ''# />
 										<p>sync your SickGear show library with your trakt show library.</p>
 									</span>
 								</label>
@@ -1534,7 +1534,7 @@
 								<label for="trakt_use_watchlist">
 									<span class="component-title">Use watchlist:</span>
 									<span class="component-desc">
-										<input type="checkbox" class="enabler" name="trakt_use_watchlist" id="trakt_use_watchlist" #if $sickbeard.TRAKT_USE_WATCHLIST then "checked=\"checked\"" else ""# />
+										<input type="checkbox" class="enabler" name="trakt_use_watchlist" id="trakt_use_watchlist" #if $sickbeard.TRAKT_USE_WATCHLIST then 'checked="checked"' else ''# />
 										<p>get new shows from your trakt watchlist.</p>
 									</span>
 								</label>
@@ -1544,9 +1544,9 @@
 									<label for="trakt_method_add">
 										<span class="component-title">Watchlist add method:</span>
 										   <select id="trakt_method_add" name="trakt_method_add" class="form-control input-sm">
-											<option value="0" #if $sickbeard.TRAKT_METHOD_ADD == 0 then "selected=\"selected\"" else ""#>Skip All</option>
-											<option value="1" #if $sickbeard.TRAKT_METHOD_ADD == 1 then "selected=\"selected\"" else ""#>Download Pilot Only</option>
-											<option value="2" #if $sickbeard.TRAKT_METHOD_ADD == 2 then "selected=\"selected\"" else ""#>Get whole show</option>
+											<option value="0" #if $sickbeard.TRAKT_METHOD_ADD == 0 then 'selected="selected"' else ''#>Skip All</option>
+											<option value="1" #if $sickbeard.TRAKT_METHOD_ADD == 1 then 'selected="selected"' else ''#>Download Pilot Only</option>
+											<option value="2" #if $sickbeard.TRAKT_METHOD_ADD == 2 then 'selected="selected"' else ''#>Get whole show</option>
 										</select>
 									</label>
 									<label>
@@ -1558,7 +1558,7 @@
 									<label for="trakt_remove_watchlist">
 										<span class="component-title">Remove episode:</span>
 										<span class="component-desc">
-											<input type="checkbox" name="trakt_remove_watchlist" id="trakt_remove_watchlist" #if $sickbeard.TRAKT_REMOVE_WATCHLIST then "checked=\"checked\"" else ""# />
+											<input type="checkbox" name="trakt_remove_watchlist" id="trakt_remove_watchlist" #if $sickbeard.TRAKT_REMOVE_WATCHLIST then 'checked="checked"' else ''# />
 											<p>remove an episode from your watchlist after it is downloaded.</p>
 										</span>
 									</label>
@@ -1567,7 +1567,7 @@
 									<label for="trakt_remove_serieslist">
 										<span class="component-title">Remove series:</span>
 										<span class="component-desc">
-											<input type="checkbox" name="trakt_remove_serieslist" id="trakt_remove_serieslist" #if $sickbeard.TRAKT_REMOVE_SERIESLIST then "checked=\"checked\"" else ""# />
+											<input type="checkbox" name="trakt_remove_serieslist" id="trakt_remove_serieslist" #if $sickbeard.TRAKT_REMOVE_SERIESLIST then 'checked="checked"' else ''# />
 											<p>remove the whole series from your watchlist after any download.</p>
 										</span>
 									</label>
@@ -1576,7 +1576,7 @@
 									<label for="trakt_start_paused">
 										<span class="component-title">Start paused:</span>
 										<span class="component-desc">
-											<input type="checkbox" name="trakt_start_paused" id="trakt_start_paused" #if $sickbeard.TRAKT_START_PAUSED then "checked=\"checked\"" else ""# />
+											<input type="checkbox" name="trakt_start_paused" id="trakt_start_paused" #if $sickbeard.TRAKT_START_PAUSED then 'checked="checked"' else ''# />
 											<p>show's grabbed from your trakt watchlist start paused.</p>
 										</span>
 									</label>
@@ -1600,7 +1600,7 @@
 							<label for="use_email">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_email" id="use_email" #if $sickbeard.USE_EMAIL then "checked=\"checked\"" else ""# />
+									<input type="checkbox" class="enabler" name="use_email" id="use_email" #if $sickbeard.USE_EMAIL then 'checked="checked"' else ''# />
 									<p>should SickGear send email notifications ?</p>
 								</span>
 							</label>
@@ -1611,7 +1611,7 @@
 								<label for="email_notify_onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="email_notify_onsnatch" id="email_notify_onsnatch" #if $sickbeard.EMAIL_NOTIFY_ONSNATCH then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="email_notify_onsnatch" id="email_notify_onsnatch" #if $sickbeard.EMAIL_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
@@ -1620,7 +1620,7 @@
 								<label for="email_notify_ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="email_notify_ondownload" id="email_notify_ondownload" #if $sickbeard.EMAIL_NOTIFY_ONDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="email_notify_ondownload" id="email_notify_ondownload" #if $sickbeard.EMAIL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
@@ -1629,7 +1629,7 @@
 								<label for="email_notify_onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="email_notify_onsubtitledownload" id="email_notify_onsubtitledownload" #if $sickbeard.EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="email_notify_onsubtitledownload" id="email_notify_onsubtitledownload" #if $sickbeard.EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
@@ -1668,7 +1668,7 @@
 								<label for="email_tls">
 									<span class="component-title">Use TLS</span>
 									<span class="component-desc">
-										<input type="checkbox" name="email_tls" id="email_tls" #if $sickbeard.EMAIL_TLS then "checked=\"checked\"" else ""# />
+										<input type="checkbox" name="email_tls" id="email_tls" #if $sickbeard.EMAIL_TLS then 'checked="checked"' else ''# />
 										<p>check to use TLS encryption.</p>
 									</span>
 								</label>
