@@ -35,6 +35,7 @@
 * Change refactor SCC to use torrent provider simplification and PEP8
 * Change refactor SCD to use torrent provider simplification
 * Change refactor TB to use torrent provider simplification and PEP8
+* Change refactor TBP to use torrent provider simplification and PEP8
 * Change refactor TD to use torrent provider simplification and PEP8
 * Change refactor TL to use torrent provider simplification and PEP8
 * Remove HDTorrents torrent provider
