@@ -105,7 +105,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
                                 continue
 
                             if title and download_url:
-                                items[mode].append((title, download_url))
+                                items[mode].append((title, download_url, seeders))
 
                 except generic.HaltParseException:
                     pass
@@ -115,7 +115,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
                 self._log_result(mode, len(items[mode]) - cnt, search_url)
 
             # For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[3], reverse=True)
+            items[mode].sort(key=lambda tup: tup[2], reverse=True)
 
             results += items[mode]
 

@@ -97,7 +97,7 @@ class SpeedCDProvider(generic.TorrentProvider):
                         title = remove_tag.sub('', torrent['name'])
                         url = self.urls['get'] % (torrent['id'])
                         if title and url:
-                            items[mode].append((title, url))
+                            items[mode].append((title, url, seeders))
 
                 except Exception:
                     time.sleep(1.1)

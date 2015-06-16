@@ -22,6 +22,7 @@
 * Change provider IPT login process to use General Config/Advanced/Proxy host setting
 * Change provider TB PEP8 and code convention cleanup
 * Change provider TB login process to use General Config/Advanced/Proxy host setting
+* Change provider TD login process to use General Config/Advanced/Proxy host setting
 * Remove useless webproxies from provider TPB as they fail for one reason or another
 * Change provider TPB to use mediaExtensions from common instead of hard-coded private list
 * Add new tld variants to provider TPB
@@ -34,6 +35,7 @@
 * Change refactor SCC to use torrent provider simplification and PEP8
 * Change refactor SCD to use torrent provider simplification
 * Change refactor TB to use torrent provider simplification and PEP8
+* Change refactor TD to use torrent provider simplification and PEP8
 * Remove HDTorrents torrent provider
 * Remove NextGen torrent provider
 * Add Rarbg torrent provider
