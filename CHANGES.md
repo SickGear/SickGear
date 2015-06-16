@@ -27,6 +27,7 @@
 * Add new tld variants to provider TPB
 * Add test for authenticity to provider TPB to notify of 3rd party block
 * Change provider TD login process to use General Config/Advanced/Proxy host setting
+* Change provider BTN code simplify and PEP8
 * Change provider BTS login process to use General Config/Advanced/Proxy host setting
 * Change provider FSH login process to use General Config/Advanced/Proxy host setting
 * Change provider RSS torrent code to use General Config/Advanced/Proxy host setting, simplify and PEP8
