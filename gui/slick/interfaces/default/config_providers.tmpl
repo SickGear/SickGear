@@ -39,7 +39,7 @@
 
         #for $curNewznabProvider in $sickbeard.newznabProviderList:
 
-    \$(this).addProvider('$curNewznabProvider.getID()', '$curNewznabProvider.name', '$curNewznabProvider.url', '<%= starify(curNewznabProvider.key) %>', '$curNewznabProvider.catIDs', $int($curNewznabProvider.default), show_nzb_providers);
+    \$(this).addProvider('$curNewznabProvider.getID()', '$curNewznabProvider.name', '$curNewznabProvider.url', '<%= starify(curNewznabProvider.key) %>', '$curNewznabProvider.cat_ids', $int($curNewznabProvider.default), show_nzb_providers);
 
         #end for
 

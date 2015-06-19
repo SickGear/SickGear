@@ -37,7 +37,7 @@
 * Change provider KAT remove dead url
 * Change provider KAT to use mediaExtensions from common instead of private list
 * Change provider KAT provider PEP8 and code convention cleanup
-* Change refactor and code simplification for torrent providers
+* Change refactor and code simplification for torrent and newznab providers
 * Change refactor SCC to use torrent provider simplification and PEP8
 * Change refactor SCD to use torrent provider simplification
 * Change refactor TB to use torrent provider simplification and PEP8
