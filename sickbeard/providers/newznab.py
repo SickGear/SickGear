@@ -18,7 +18,6 @@
 
 import urllib
 import time
-import datetime
 import os
 
 try:
@@ -331,58 +330,7 @@ class NewznabProvider(generic.NZBProvider):
         return results
 
     def findPropers(self, search_date=None):
-
-        search_terms = ['.proper.', '.repack.']
-
-        cache_results = self.cache.listPropers(search_date)
-        results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show) for x in
-                   cache_results]
-
-        index = 0
-        alt_search = ('nzbs_org' == self.getID())
-        term_items_found = False
-        do_search_alt = False
-
-        while index < len(search_terms):
-            search_params = {'q': search_terms[index]}
-            if alt_search:
-
-                if do_search_alt:
-                    index += 1
-
-                if term_items_found:
-                    do_search_alt = True
-                    term_items_found = False
-                else:
-                    if do_search_alt:
-                        search_params['t'] = "search"
-
-                    do_search_alt = (True, False)[do_search_alt]
-
-            else:
-                index += 1
-
-            for item in self._doSearch(search_params, age=4):
-
-                (title, url) = self._get_title_and_url(item)
-
-                if item.has_key('published_parsed') and item['published_parsed']:
-                    result_date = item.published_parsed
-                    if result_date:
-                        result_date = datetime.datetime(*result_date[0:6])
-                else:
-                    logger.log(u"Unable to figure out the date for entry " + title + ", skipping it")
-                    continue
-
-                if not search_date or result_date > search_date:
-                    search_result = classes.Proper(title, url, result_date, self.show)
-                    results.append(search_result)
-                    term_items_found = True
-                    do_search_alt = False
-
-            time.sleep(0.2)
-
-        return results
+        return self._find_propers(search_date)
 
 
 class NewznabCache(tvcache.TVCache):

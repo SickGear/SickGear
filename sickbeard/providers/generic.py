@@ -19,6 +19,7 @@
 
 from __future__ import with_statement
 
+import time
 import datetime
 import os
 import re
@@ -27,13 +28,17 @@ from base64 import b16encode, b32decode
 
 import sickbeard
 import requests
-from sickbeard import helpers, classes, logger, db, tvcache
-from sickbeard.common import MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
-from sickbeard import encodingKludge as ek
-from sickbeard.exceptions import ex
+from sickbeard import helpers, classes, logger, db, tvcache, encodingKludge as ek
+from sickbeard.common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
+from sickbeard.exceptions import SickBeardException, AuthException, ex
+from sickbeard.helpers import maybe_plural
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard.common import Quality
+from sickbeard.show_name_helpers import allPossibleShowNames
 from hachoir_parser import createParser
+
+
+class HaltParseException(SickBeardException):
+    """Something requires the current processing to abort"""
 
 
 class GenericProvider:
@@ -73,8 +78,14 @@ class GenericProvider:
     def makeID(name):
         return re.sub("[^\w\d_]", "_", name.strip().lower())
 
-    def imageName(self):
-        return self.getID() + '.png'
+    def imageName(self, *default_name):
+
+        for name in ['%s.%s' % (self.getID(), image_ext) for image_ext in ['png', 'gif', 'jpg']]:
+            if ek.ek(os.path.isfile,
+                     ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', sickbeard.GUI_NAME, 'images', 'providers', name)):
+                return name
+
+        return '%s.png' % ('newznab', default_name[0])[any(default_name)]
 
     def _checkAuth(self):
         return True
@@ -136,20 +147,17 @@ class GenericProvider:
 
         if self.providerType == GenericProvider.TORRENT:
             try:
-                torrent_hash = re.findall('urn:btih:([\w]{32,40})', result.url)[0].upper()
+                torrent_hash = re.findall('urn:btih:([0-9a-f]{32,40})', result.url)[0].upper()
 
-                if len(torrent_hash) == 32:
+                if 32 == len(torrent_hash):
                     torrent_hash = b16encode(b32decode(torrent_hash)).lower()
 
                 if not torrent_hash:
                     logger.log("Unable to extract torrent hash from link: " + ex(result.url), logger.ERROR)
                     return False
 
-                urls = [
-                    'http://torcache.net/torrent/' + torrent_hash + '.torrent',
-                    'http://torrage.com/torrent/' + torrent_hash + '.torrent',
-                    'http://zoink.it/torrent/' + torrent_hash + '.torrent',
-                ]
+                urls = ['https://%s/%s.torrent' % (u, torrent_hash)
+                        for u in ('torcache.net/torrent', 'torrage.com/torrent', 'getstrike.net/torrents/api/download')]
             except:
                 urls = [result.url]
 
@@ -174,6 +182,8 @@ class GenericProvider:
 
                 if self._verify_download(filename):
                     return True
+                elif ek.ek(os.path.isfile, filename):
+                    ek.ek(os.remove, filename)
 
         logger.log(u"Failed to download result", logger.ERROR)
         return False
@@ -233,8 +243,7 @@ class GenericProvider:
         Returns: A tuple containing two strings representing title and URL respectively
         """
 
-        title = None
-        url = None
+        title, url = None, None
 
         try:
             if isinstance(item, tuple):
@@ -285,7 +294,7 @@ class GenericProvider:
             # mark season searched for season pack searches so we can skip later on
             searched_scene_season = epObj.scene_season
 
-            if len(episodes) > 1 and 'eponly' != search_mode:
+            if 'sponly' == search_mode:
                 # get season search results
                 for curString in self._get_season_search_strings(epObj):
                     itemList += self._doSearch(curString, search_mode, len(episodes))
@@ -469,28 +478,107 @@ class GenericProvider:
         '''
         return ''
 
+    @staticmethod
+    def _log_result(mode='cache', count=0, url='url missing'):
+        """
+        Simple function to log the result of a search
+        :param count: count of successfully processed items
+        :param url: source url of item(s)
+        """
+        mode = mode.lower()
+        logger.log(u'%s in response from %s' % (('No %s items' % mode,
+                                                 '%s %s item%s' % (count, mode, maybe_plural(count)))[0 < count], url))
+
 
 class NZBProvider(GenericProvider):
+
     def __init__(self, name, supports_backlog=True, anime_only=False):
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
+
         self.providerType = GenericProvider.NZB
+
+    def imageName(self):
+
+        return GenericProvider.imageName(self, 'newznab')
+
+    def _find_propers(self, search_date=None):
+
+        cache_results = self.cache.listPropers(search_date)
+        results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show) for x in
+                   cache_results]
+
+        index = 0
+        alt_search = ('nzbs_org' == self.getID())
+        term_items_found = False
+        do_search_alt = False
+
+        search_terms = ['.proper.', '.repack.']
+        proper_check = re.compile(r'(?i)\b(proper)|(repack)\b')
+
+        while index < len(search_terms):
+            search_params = {'q': search_terms[index]}
+            if alt_search:
+
+                if do_search_alt:
+                    index += 1
+
+                if term_items_found:
+                    do_search_alt = True
+                    term_items_found = False
+                else:
+                    if do_search_alt:
+                        search_params['t'] = 'search'
+
+                    do_search_alt = (True, False)[do_search_alt]
+
+            else:
+                index += 1
+
+            for item in self._doSearch(search_params, age=4):
+
+                (title, url) = self._get_title_and_url(item)
+
+                if not proper_check.search(title):
+                    continue
+
+                if 'published_parsed' in item and item['published_parsed']:
+                    result_date = item.published_parsed
+                    if result_date:
+                        result_date = datetime.datetime(*result_date[0:6])
+                else:
+                    logger.log(u'Unable to figure out the date for entry %s, skipping it', title)
+                    continue
+
+                if not search_date or result_date > search_date:
+                    search_result = classes.Proper(title, url, result_date, self.show)
+                    results.append(search_result)
+                    term_items_found = True
+                    do_search_alt = False
+
+            time.sleep(0.2)
+
+        return results
 
 
 class TorrentProvider(GenericProvider):
 
     def __init__(self, name, supports_backlog=True, anime_only=False):
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
+
         self.providerType = GenericProvider.TORRENT
+
         self._seed_ratio = None
 
-    def get_cache_data(self):
-        search_params = {'RSS': ['']}
-        return self._doSearch(search_params)
+    def imageName(self):
+
+        return GenericProvider.imageName(self, 'torrent')
 
     def seedRatio(self):
+
         return self._seed_ratio
 
     def getQuality(self, item, anime=False):
+
         if isinstance(item, tuple):
             name = item[0]
         elif isinstance(item, dict):
@@ -499,11 +587,98 @@ class TorrentProvider(GenericProvider):
             name = item.title
         return Quality.sceneQuality(name, anime)
 
-    def _find_propers(self, search_date=datetime.datetime.today(), method=None):
+    @staticmethod
+    def _reverse_quality(quality):
+
+        return {
+            Quality.SDTV: 'HDTV x264',
+            Quality.SDDVD: 'DVDRIP',
+            Quality.HDTV: '720p HDTV x264',
+            Quality.FULLHDTV: '1080p HDTV x264',
+            Quality.RAWHDTV: '1080i HDTV mpeg2',
+            Quality.HDWEBDL: '720p WEB-DL h264',
+            Quality.FULLHDWEBDL: '1080p WEB-DL h264',
+            Quality.HDBLURAY: '720p Bluray x264',
+            Quality.FULLHDBLURAY: '1080p Bluray x264'
+        }.get(quality, '')
+
+    def _get_season_search_strings(self, ep_obj, detail_only=False, scene=True):
+
+        if ep_obj.show.air_by_date or ep_obj.show.sports:
+            ep_detail = str(ep_obj.airdate).split('-')[0]
+        elif ep_obj.show.anime:
+            ep_detail = ep_obj.scene_absolute_number
+        else:
+            ep_detail = 'S%02d' % int(ep_obj.scene_season)
+
+        detail = ({}, {'Season_only': [ep_detail]})[detail_only and not self.show.sports and not self.show.anime]
+        return [dict({'Season': self._build_search_strings(ep_detail, scene)}.items() + detail.items())]
+
+    def _get_episode_search_strings(self, ep_obj, add_string='', detail_only=False, scene=True, sep_date=' ', use_or=True):
+
+        if not ep_obj:
+            return []
+
+        if self.show.air_by_date or self.show.sports:
+            ep_detail = str(ep_obj.airdate).replace('-', sep_date)
+            if self.show.sports:
+                month = ep_obj.airdate.strftime('%b')
+                ep_detail = ([ep_detail] + [month], '%s|%s' % (ep_detail, month))[use_or]
+        elif self.show.anime:
+            ep_detail = ep_obj.scene_absolute_number
+        else:
+            ep_detail = sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
+                                                              'episodenumber': ep_obj.scene_episode}
+        append = (add_string, '')[self.show.anime]
+        detail = ({}, {'Episode_only': [ep_detail]})[detail_only and not self.show.sports and not self.show.anime]
+        return [dict({'Episode': self._build_search_strings(ep_detail, scene, append)}.items() + detail.items())]
+
+    def _build_search_strings(self, ep_detail, process_name=True, append=''):
+        """
+        Build a list of search strings for querying a provider
+        :param ep_detail: String of episode detail or List of episode details
+        :param process_name: Bool Whether to call sanitizeSceneName() on show name
+        :param append: String to append to search strings
+        :return: List of search string parameters
+        """
+        if not isinstance(ep_detail, list):
+            ep_detail = [ep_detail]
+        if not isinstance(append, list):
+            append = [append]
+
+        search_params = []
+        crop = re.compile(r'([\.\s])(?:\1)+')
+        for name in set(allPossibleShowNames(self.show)):
+            if process_name:
+                name = helpers.sanitizeSceneName(name)
+            for detail in ep_detail:
+                search_params += [crop.sub(r'\1', '%s %s' % (name, detail) + ('', ' ' + x)[any(x)]) for x in append]
+        return search_params
+
+    def _checkAuth(self):
+
+        if hasattr(self, 'username') and hasattr(self, 'password'):
+            if self.username and self.password:
+                return True
+            setting = 'Password or Username'
+        elif hasattr(self, 'username') and hasattr(self, 'passkey'):
+            if self.username and self.passkey:
+                return True
+            setting = 'Passkey or Username'
+        elif hasattr(self, 'api_key'):
+            if self.api_key:
+                return True
+            setting = 'Apikey'
+        else:
+            return GenericProvider._checkAuth(self)
+
+        raise AuthException('%s for %s is empty in config provider options' % (setting, self.name))
+
+    def _find_propers(self, search_date=datetime.datetime.today(), search_terms=None):
         """
         Search for releases of type PROPER
         :param search_date: Filter search on episodes since this date
-        :param method: String or list of strings that qualify PROPER release types
+        :param search_terms: String or list of strings that qualify PROPER release types
         :return: list of Proper objects
         """
         results = []
@@ -520,8 +695,9 @@ class TorrentProvider(GenericProvider):
         if not sql_results:
             return results
 
+        clean_term = re.compile(r'(?i)[^a-z\|\.]+')
         for sqlshow in sql_results:
-            showid, season, episode = (int(sqlshow['showid']), int(sqlshow['season']), int(sqlshow['episode']))
+            showid, season, episode = [int(sqlshow[item]) for item in ('showid', 'season', 'episode')]
 
             self.show = helpers.findCertainShow(sickbeard.showList, showid)
             if not self.show:
@@ -529,19 +705,36 @@ class TorrentProvider(GenericProvider):
 
             cur_ep = self.show.getEpisode(season, episode)
 
-            if not isinstance(method, list):
-                if None is method:
-                    method = 'PROPER|REPACK'
-                method = [method]
+            if None is search_terms:
+                search_terms = ['proper', 'repack']
+            elif not isinstance(search_terms, list):
+                if '' == search_terms:
+                    search_terms = 'proper|repack'
+                search_terms = [search_terms]
 
-            for proper_string in method:
-                search_string = self._get_episode_search_strings(cur_ep, add_string=proper_string)
+            for proper_term in search_terms:
+                proper_check = re.compile(r'(?i)(?:%s)' % clean_term.sub('', proper_term))
 
-                proper_exp = re.sub(r'(?i)[^a-z\|\.]+', '', proper_string)
+                search_string = self._get_episode_search_strings(cur_ep, add_string=proper_term)
                 for item in self._doSearch(search_string[0]):
                     title, url = self._get_title_and_url(item)
-                    if not re.search('(?i)(?:%s)' % proper_exp, title):
+                    if not proper_check.search(title):
                         continue
                     results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
 
         return results
+
+    @staticmethod
+    def _has_no_results(*html):
+        return re.search(r'(?i)<(?:h\d|strong)[^>]*>(?:'
+                         + 'your\ssearch\sdid\snot\smatch|'
+                         + 'nothing\sfound|'
+                         + 'no\storrents\sfound|'
+                         + '.*?there\sare\sno\sresults|'
+                         + '.*?no\shits\.\sTry\sadding'
+                         + ')', html[0])
+
+    def get_cache_data(self, *args, **kwargs):
+
+        search_params = {'Cache': ['']}
+        return self._doSearch(search_params)

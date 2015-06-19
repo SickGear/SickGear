@@ -808,9 +808,10 @@ def starify(text, verify=False):
 
     If verify is true, return true if text is a star block created text else return false.
     """
-    return ((('%s%s' % (text[:len(text) / 2], '*' * (len(text) / 2))),
-             ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
-            set('*') == set((text[len(text) / 2:], text[4:-4])[12 <= len(text)]))[verify]
+    return '' if not text\
+        else ((('%s%s' % (text[:len(text) / 2], '*' * (len(text) / 2))),
+               ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
+              set('*') == set((text[len(text) / 2:], text[4:-4])[12 <= len(text)]))[verify]
 
 
 """
@@ -1162,11 +1163,11 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     except requests.exceptions.ConnectionError as e:
         logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return
-    except requests.exceptions.Timeout as e:
-        logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
-        return
     except requests.exceptions.ReadTimeout as e:
         logger.log(u'Read timed out ' + str(e.message) + ' while loading URL ' + url, logger.WARNING)
+        return
+    except requests.exceptions.Timeout as e:
+        logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return
     except Exception:
         logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)

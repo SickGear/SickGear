@@ -27,11 +27,9 @@ from sickbeard import logger
 from sickbeard.common import Quality
 
 from sickbeard import helpers, show_name_helpers
-from sickbeard.exceptions import MultipleShowObjectsException
-from sickbeard.exceptions import AuthException
+from sickbeard.exceptions import AuthException, ex
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard.rssfeeds import getFeed
-from sickbeard import clients
 import itertools
 
 class CacheDBConnection(db.DBConnection):
@@ -77,7 +75,13 @@ class TVCache():
         return True
 
     def updateCache(self):
-        if self.shouldUpdate() and self._checkAuth():
+        try:
+            self._checkAuth()
+        except AuthException as e:
+            logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
+            return []
+
+        if self.shouldUpdate():
             # as long as the http request worked we count this as an update
             data = self._getRSSData()
             if not data:
