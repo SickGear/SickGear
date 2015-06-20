@@ -24,6 +24,7 @@
 * Change provider KAT to use mediaExtensions from common instead of private list
 * Change provider KAT provider PEP8 and code convention cleanup
 * Change refactor and code simplification for torrent providers
+* Remove HDTorrents torrent provider
 * Remove NextGen torrent provider
 * Add Rarbg torrent provider
 * Fix getManualSearchStatus: object has no attribute 'segment'
