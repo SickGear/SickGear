@@ -51,6 +51,7 @@
 * Remove HDTorrents torrent provider
 * Remove NextGen torrent provider
 * Add Rarbg torrent provider
+* Add MoreThan torrent provider
 * Add AlphaRatio torrent provider
 * Fix getManualSearchStatus: object has no attribute 'segment'
 * Change handling of general HTTP error response codes to prevent issues
