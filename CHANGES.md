@@ -28,6 +28,7 @@
 * Add test for authenticity to provider TPB to notify of 3rd party block
 * Change provider TD login process to use General Config/Advanced/Proxy host setting
 * Change provider BTS login process to use General Config/Advanced/Proxy host setting
+* Change provider FSH login process to use General Config/Advanced/Proxy host setting
 * Change provider Womble's use SSL
 * Change provider KAT remove dead url
 * Change provider KAT to use mediaExtensions from common instead of private list
@@ -40,6 +41,7 @@
 * Change refactor TD to use torrent provider simplification and PEP8
 * Change refactor TL to use torrent provider simplification and PEP8
 * Change refactor BTS to use torrent provider simplification and PEP8
+* Change refactor FSH to use torrent provider simplification and PEP8
 * Remove HDTorrents torrent provider
 * Remove NextGen torrent provider
 * Add Rarbg torrent provider
