@@ -22,11 +22,12 @@
 * Change provider IPT login process to use General Config/Advanced/Proxy host setting
 * Change provider TB PEP8 and code convention cleanup
 * Change provider TB login process to use General Config/Advanced/Proxy host setting
-* Change provider TD login process to use General Config/Advanced/Proxy host setting
 * Remove useless webproxies from provider TPB as they fail for one reason or another
 * Change provider TPB to use mediaExtensions from common instead of hard-coded private list
 * Add new tld variants to provider TPB
 * Add test for authenticity to provider TPB to notify of 3rd party block
+* Change provider TD login process to use General Config/Advanced/Proxy host setting
+* Change provider BTS login process to use General Config/Advanced/Proxy host setting
 * Change provider Womble's use SSL
 * Change provider KAT remove dead url
 * Change provider KAT to use mediaExtensions from common instead of private list
@@ -38,6 +39,7 @@
 * Change refactor TBP to use torrent provider simplification and PEP8
 * Change refactor TD to use torrent provider simplification and PEP8
 * Change refactor TL to use torrent provider simplification and PEP8
+* Change refactor BTS to use torrent provider simplification and PEP8
 * Remove HDTorrents torrent provider
 * Remove NextGen torrent provider
 * Add Rarbg torrent provider
