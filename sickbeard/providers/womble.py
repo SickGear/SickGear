@@ -20,30 +20,33 @@ import generic
 
 from sickbeard import logger, tvcache
 
+
 class WombleProvider(generic.NZBProvider):
+
     def __init__(self):
-        generic.NZBProvider.__init__(self, "Womble's Index", False, False)
-        self.cache = WombleCache(self)
+        generic.NZBProvider.__init__(self, 'Womble\'s Index', supports_backlog=False)
+
         self.url = 'https://newshost.co.za/'
+        self.cache = WombleCache(self)
 
 
 class WombleCache(tvcache.TVCache):
-    def __init__(self, provider):
-        tvcache.TVCache.__init__(self, provider)
-        # only poll Womble's Index every 15 minutes max
-        self.minTime = 15
+
+    def __init__(self, this_provider):
+        tvcache.TVCache.__init__(self, this_provider)
+
+        self.minTime = 15  # cache update frequency
 
     def updateCache(self):
 
         # delete anything older then 7 days
         self._clearCache()
 
-        data = None
-
         if not self.shouldUpdate():
             return
 
         cl = []
+        data = None
         for url in [self.provider.url + 'rss/?sec=tv-x264&fr=false',
                     self.provider.url + 'rss/?sec=tv-sd&fr=false',
                     self.provider.url + 'rss/?sec=tv-dvd&fr=false',
@@ -63,15 +66,15 @@ class WombleCache(tvcache.TVCache):
                     cl.append(ci)
 
         if 0 < len(cl):
-            myDB = self._getDB()
-            myDB.mass_action(cl)
+            my_db = self._getDB()
+            my_db.mass_action(cl)
 
         # set last updated
         if data:
             self.setLastUpdate()
 
-    def _checkAuth(self, data):
-        return 'Invalid Link' != data
+    def _checkAuth(self, *data):
+        return 'Invalid Link' != data[0]
 
 
 provider = WombleProvider()

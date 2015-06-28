@@ -29,6 +29,7 @@
 * Change provider TD login process to use General Config/Advanced/Proxy host setting
 * Change provider BTS login process to use General Config/Advanced/Proxy host setting
 * Change provider FSH login process to use General Config/Advanced/Proxy host setting
+* Change provider Wombles's PEP8 and code convention cleanup
 * Change provider Womble's use SSL
 * Change provider KAT remove dead url
 * Change provider KAT to use mediaExtensions from common instead of private list
