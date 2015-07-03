@@ -18,6 +18,7 @@
 * Change provider SCC remove 1 of 3 requests per search to save 30% time
 * Change provider SCC login process to use General Config/Advanced/Proxy host setting
 * Change provider SCD PEP8 and code convention cleanup
+* Change provider HDB code simplify and PEP8
 * Change provider IPT only decode unicode search strings
 * Change provider IPT login process to use General Config/Advanced/Proxy host setting
 * Change provider TB PEP8 and code convention cleanup

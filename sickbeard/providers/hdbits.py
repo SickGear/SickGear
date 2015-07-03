@@ -1,4 +1,6 @@
-# This file is part of SickGear.
+# coding=utf-8
+#
+#  This file is part of SickGear.
 #
 # SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,13 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import datetime
 import urllib
 
-import generic
+from . import generic
 from sickbeard import classes, logger, tvcache
 from sickbeard.exceptions import AuthException
-
 
 try:
     import json
@@ -28,173 +30,137 @@ except ImportError:
 
 
 class HDBitsProvider(generic.TorrentProvider):
+
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'HDBits', True, False)
-        self.username = None
-        self.passkey = None
-        self.ratio = None
+        generic.TorrentProvider.__init__(self, 'HDBits')
+
+        # api_spec: https://hdbits.org/wiki/API
+        self.url_base = 'https://hdbits.org/'
+        self.urls = {'config_provider_home_uri': self.url_base,
+                     'search': self.url_base + 'api/torrents',
+                     'get': self.url_base + 'download.php?%s'}
+
+        self.categories = 2  # TV
+
+        self.url = self.urls['config_provider_home_uri']
+
+        self.username, self.passkey = 2 * [None]
         self.cache = HDBitsCache(self)
-        self.url = 'https://hdbits.org'
-        self.search_url = 'https://hdbits.org/api/torrents'
-        self.rss_url = 'https://hdbits.org/api/torrents'
-        self.download_url = 'https://hdbits.org/download.php?'
 
-    def _checkAuth(self):
+    def check_auth_from_data(self, parsed_json):
 
-        if not self.username or not self.passkey:
-            raise AuthException("Your authentication credentials for " + self.name + " are missing, check your config.")
+        if 'status' in parsed_json and 5 == parsed_json.get('status') and 'message' in parsed_json:
+            logger.log(u'Incorrect username or password for %s : %s' % (self.name, parsed_json['message']), logger.DEBUG)
+            raise AuthException('Your username or password for %s is incorrect, check your config.' % self.name)
 
         return True
 
-    def _checkAuthFromData(self, parsedJSON):
+    def _get_season_search_strings(self, ep_obj, **kwargs):
 
-        if 'status' in parsedJSON and 'message' in parsedJSON:
-            if parsedJSON.get('status') == 5:
-                logger.log(u"Incorrect authentication credentials for " + self.name + " : " + parsedJSON['message'],
-                           logger.DEBUG)
-                raise AuthException(
-                    "Your authentication credentials for " + self.name + " are incorrect, check your config.")
+        return [self._build_search_strings(show=ep_obj.show, season=ep_obj)]
 
-        return True
+    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
 
-    def _get_season_search_strings(self, ep_obj):
-        season_search_string = [self._make_post_data_JSON(show=ep_obj.show, season=ep_obj)]
-        return season_search_string
-
-    def _get_episode_search_strings(self, ep_obj, add_string=''):
-        episode_search_string = [self._make_post_data_JSON(show=ep_obj.show, episode=ep_obj)]
-        return episode_search_string
+        return [self._build_search_strings(show=ep_obj.show, episode=ep_obj)]
 
     def _get_title_and_url(self, item):
 
         title = item['name']
         if title:
-            title = u'' + title
-            title = title.replace(' ', '.')
+            title = u'' + title.replace(' ', '.')
 
-        url = self.download_url + urllib.urlencode({'id': item['id'], 'passkey': self.passkey})
+        url = self.urls['get'] % urllib.urlencode({'id': item['id'], 'passkey': self.passkey})
 
-        return (title, url)
+        return title, url
 
     def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
-        results = []
 
         self._checkAuth()
 
-        logger.log(u"Search url: " + self.search_url + " search_params: " + search_params, logger.DEBUG)
+        logger.log(u'Search url: %s search_params: %s' % (self.urls['search'], search_params), logger.DEBUG)
 
-        parsedJSON = self.getURL(self.search_url, post_data=search_params, json=True)
-        if not parsedJSON:
-            return []
+        response_json = self.getURL(self.urls['search'], post_data=search_params, json=True)
+        if response_json and 'data' in response_json and self.check_auth_from_data(response_json):
+            return response_json['data']
 
-        if self._checkAuthFromData(parsedJSON):
-            if parsedJSON and 'data' in parsedJSON:
-                items = parsedJSON['data']
-            else:
-                logger.log(u"Resulting JSON from " + self.name + " isn't correct, not parsing it", logger.ERROR)
-                items = []
-
-            for item in items:
-                results.append(item)
-
-        return results
+        logger.log(u'Resulting JSON from %s isn\'t correct, not parsing it' % self.name, logger.ERROR)
+        return []
 
     def findPropers(self, search_date=None):
+
         results = []
 
         search_terms = [' proper ', ' repack ']
 
         for term in search_terms:
-            for item in self._doSearch(self._make_post_data_JSON(search_term=term)):
+            for item in self._doSearch(self._build_search_strings(search_term=term)):
                 if item['utadded']:
                     try:
                         result_date = datetime.datetime.fromtimestamp(int(item['utadded']))
                     except:
                         result_date = None
 
-                    if result_date:
-                        if not search_date or result_date > search_date:
-                            title, url = self._get_title_and_url(item)
-                            results.append(classes.Proper(title, url, result_date, self.show))
-
+                    if result_date and (not search_date or result_date > search_date):
+                        title, url = self._get_title_and_url(item)
+                        if not re.search('(?i)(?:%s)' % term.strip(), title):
+                            continue
+                        results.append(classes.Proper(title, url, result_date, self.show))
         return results
 
-    def _make_post_data_JSON(self, show=None, episode=None, season=None, search_term=None):
+    def _build_search_strings(self, show=None, episode=None, season=None, search_term=None):
 
-        post_data = {
-            'username': self.username,
-            'passkey': self.passkey,
-            'category': [2],
-            # TV Category
-        }
+        request_params = {'username': self.username, 'passkey': self.passkey, 'category': [self.categories]}
 
-        if episode:
-            if show.air_by_date:
-                post_data['tvdb'] = {
-                    'id': show.indexerid,
-                    'episode': str(episode.airdate).replace('-', '|')
-                }
-            elif show.sports:
-                post_data['tvdb'] = {
-                    'id': show.indexerid,
-                    'episode': episode.airdate.strftime('%b')
-                }
-            elif show.anime:
-                post_data['tvdb'] = {
-                    'id': show.indexerid,
-                    'episode': "%i" % int(episode.scene_absolute_number)
-                }
-            else:
-                post_data['tvdb'] = {
-                    'id': show.indexerid,
-                    'season': episode.scene_season,
-                    'episode': episode.scene_episode
-                }
+        if episode or season:
+            param = {'id': show.indexerid}
 
-        if season:
-            if show.air_by_date or show.sports:
-                post_data['tvdb'] = {
-                    'id': show.indexerid,
-                    'season': str(season.airdate)[:7],
-                }
-            elif show.anime:
-                post_data['tvdb'] = {
-                    'id': show.indexerid,
-                    'season': "%d" % season.scene_absolute_number,
-                }
-            else:
-                post_data['tvdb'] = {
-                    'id': show.indexerid,
-                    'season': season.scene_season,
-                }
+            if episode:
+                if show.air_by_date:
+                    param['episode'] = str(episode.airdate).replace('-', '|')
+                elif show.sports:
+                    param['episode'] = episode.airdate.strftime('%b')
+                elif show.anime:
+                    param['episode'] = '%i' % int(episode.scene_absolute_number)
+                else:
+                    param['season'] = episode.scene_season
+                    param['episode'] = episode.scene_episode
+
+            if season:
+                if show.air_by_date or show.sports:
+                    param['season'] = str(season.airdate)[:7]
+                elif show.anime:
+                    param['season'] = '%d' % season.scene_absolute_number
+                else:
+                    param['season'] = season.scene_season
+
+            request_params['tvdb'] = param
 
         if search_term:
-            post_data['search'] = search_term
+            request_params['search'] = search_term
 
-        return json.dumps(post_data)
+        return json.dumps(request_params)
 
-    def seedRatio(self):
-        return self.ratio
+    def get_cache_data(self):
+
+        self._checkAuth()
+
+        response_json = self.getURL(self.urls['search'], post_data=self._build_search_strings(), json=True)
+        if response_json and 'data' in response_json and self.check_auth_from_data(response_json):
+            return response_json['data']
+
+        return []
 
 
 class HDBitsCache(tvcache.TVCache):
-    def __init__(self, provider):
 
-        tvcache.TVCache.__init__(self, provider)
+    def __init__(self, this_provider):
+        tvcache.TVCache.__init__(self, this_provider)
 
-        # only poll HDBits every 15 minutes max
-        self.minTime = 15
+        self.minTime = 15  # cache update frequency
 
     def _getRSSData(self):
-        parsedJSON = self.provider.getURL(self.provider.rss_url, post_data=self.provider._make_post_data_JSON(), json=True)
 
-        if not self.provider._checkAuthFromData(parsedJSON):
-            return []
-
-        if parsedJSON and 'data' in parsedJSON:
-            return parsedJSON['data']
-        else:
-            return []
+        return self.provider.get_cache_data()
 
 
 provider = HDBitsProvider()
