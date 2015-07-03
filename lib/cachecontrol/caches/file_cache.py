@@ -90,7 +90,7 @@ class FileCache(BaseCache):
 
     def delete(self, key):
         name = self._fn(key)
-        if not self.forever:
+        if not self.forever and os.path.exists(name):
             os.remove(name)
 
 
