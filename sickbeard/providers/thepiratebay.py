@@ -25,7 +25,7 @@ import datetime
 
 import sickbeard
 import generic
-from sickbeard.common import Quality
+from sickbeard.common import Quality, mediaExtensions
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard import db, classes, logger, tvcache, helpers
 from sickbeard.show_name_helpers import allPossibleShowNames, sanitizeSceneName
@@ -40,9 +40,11 @@ class ThePirateBayProvider(generic.TorrentProvider):
         self.minseed = None
         self.minleech = None
         self.cache = ThePirateBayCache(self)
-        self.proxy = ThePirateBayWebproxy()
-        self.url = 'https://thepiratebay.se/'
-        self.searchurl = self.url + 'search/%s/0/7/200'  # order by seed
+        # self.proxy = ThePirateBayWebproxy()
+        self.urls = {'base_url': ['https://thepiratebay.gd', 'https://thepiratebay.mn',
+                                  'https://thepiratebay.am', 'https://thepiratebay.vg', 'https://thepiratebay.la'],
+                     'search': '/search/%s/0/7/200'}  # order by seed
+        self.url = self.urls['base_url'][4]
         self.re_title_url = '/torrent/(?P<id>\d+)/(?P<title>.*?)//1".+?(?P<url>magnet.*?)//1".+?(?P<seeders>\d+)</td>.+?(?P<leechers>\d+)</td>'
 
     def getQuality(self, item, anime=False):
@@ -78,20 +80,31 @@ class ThePirateBayProvider(generic.TorrentProvider):
     def _find_season_quality(self, title, torrent_id, ep_number):
         """ Return the modified title of a Season Torrent with the quality found inspecting torrent file list """
 
-        mediaExtensions = ['avi', 'mkv', 'wmv', 'divx',
-                           'vob', 'dvr-ms', 'wtv', 'ts'
-                           'ogv', 'rar', 'zip', 'mp4']
-
         quality = Quality.UNKNOWN
 
         fileName = None
 
-        fileURL = self.proxy._buildURL(self.url + 'ajax_details_filelist.php?id=' + str(torrent_id))
+        data = None
+        has_signature = False
+        details_url = '/ajax_details_filelist.php?id=%s' % torrent_id
+        for idx, url in enumerate(self.urls['base_url']):
+            url += details_url
+            if hasattr(self, 'proxy'):
+                url = self.proxy._buildURL(url)
 
-        if self.proxy and self.proxy.isEnabled():
-            self.headers.update({'referer': self.proxy.getProxyURL()})
+                if self.proxy and self.proxy.isEnabled():
+                    self.headers.update({'referer': self.proxy.getProxyURL()})
 
-        data = self.getURL(fileURL)
+            data = self.getURL(url)
+            if data and re.search(r'<title>The\sPirate\sBay', data[33:200:]):
+                has_signature = True
+                break
+            else:
+                data = None
+
+        if not has_signature:
+            logger.log(u'Failed to identify a page from ThePirateBay at %s attempted urls (tpb blocked? general network issue or site dead)' % len(self.urls['base_url']), logger.ERROR)
+
         if not data:
             return None
 
@@ -198,27 +211,42 @@ class ThePirateBayProvider(generic.TorrentProvider):
         results = []
         items = {'Season': [], 'Episode': [], 'RSS': []}
 
-        if self.proxy and self.proxy.isEnabled():
+        if hasattr(self, 'proxy') and self.proxy and self.proxy.isEnabled():
             self.headers.update({'referer': self.proxy.getProxyURL()})
 
+        has_signature = False
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string, url = self._get_title_and_url([search_string, '', '', '', ''])
                 if isinstance(search_string, unicode):
                     search_string = unidecode(search_string)
 
-                if 'RSS' != mode:
-                    searchURL = self.proxy._buildURL(self.searchurl % (urllib.quote(search_string)))
-                else:
-                    searchURL = self.proxy._buildURL(self.url + 'tv/latest/')
+                for idx, url in enumerate(self.urls['base_url']):
+                    if 'RSS' == mode:
+                        url += '/tv/latest/'
+                    else:
+                        url += self.urls['search'] % (urllib.quote(search_string))
 
-                logger.log(u'Search string: ' + searchURL, logger.DEBUG)
+                    if hasattr(self, 'proxy'):
+                        url = self.proxy._buildURL(url)
 
-                data = self.getURL(searchURL)
+                    logger.log(u'Search string at server(%s/%s): %s' % (idx + 1, len(self.urls['base_url']), url),
+                               logger.DEBUG)
+
+                    data = self.getURL(url)
+                    if data and re.search(r'Pirate\sBay', data[33:7632:]):
+                        has_signature = True
+                        break
+                    else:
+                        data = None
+
                 if not data:
                     continue
 
-                re_title_url = self.proxy._buildRE(self.re_title_url)
+                if hasattr(self, 'proxy'):
+                    re_title_url = self.proxy._buildRE(self.re_title_url)
+                else:
+                    re_title_url = re.sub('//1', '', self.re_title_url)
 
                 # Extracting torrent information from data returned by searchURL
                 match = re.compile(re_title_url, re.DOTALL).finditer(urllib.unquote(data))
@@ -256,6 +284,9 @@ class ThePirateBayProvider(generic.TorrentProvider):
             items[mode].sort(key=lambda tup: tup[3], reverse=True)
 
             results += items[mode]
+
+        if not has_signature:
+            logger.log(u'Failed to identify a page from ThePirateBay at %s attempted urls (tpb blocked? general network issue or site dead)' % len(self.urls['base_url']), logger.ERROR)
 
         return results
 
