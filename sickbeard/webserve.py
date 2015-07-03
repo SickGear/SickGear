@@ -3950,12 +3950,12 @@ class ConfigProviders(Config):
             else:
                 providerDict[name].needs_auth = True
 
-            return providerDict[name].getID() + '|' + providerDict[name].configStr()
+            return providerDict[name].getID() + '|' + providerDict[name].config_str()
 
         else:
             newProvider = newznab.NewznabProvider(name, url, key=key)
             sickbeard.newznabProviderList.append(newProvider)
-            return newProvider.getID() + '|' + newProvider.configStr()
+            return newProvider.getID() + '|' + newProvider.config_str()
 
     def getNewznabCategories(self, name, url, key):
         '''
@@ -4090,7 +4090,7 @@ class ConfigProviders(Config):
                     newznabProviderDict[cur_id].url = cur_url
                     if cur_key:
                         newznabProviderDict[cur_id].key = cur_key
-                    newznabProviderDict[cur_id].catIDs = cur_cat
+                    newznabProviderDict[cur_id].cat_ids = cur_cat
                     # a 0 in the key spot indicates that no key is needed
                     if cur_key == '0':
                         newznabProviderDict[cur_id].needs_auth = False
@@ -4345,7 +4345,7 @@ class ConfigProviders(Config):
                 except:
                     curNzbProvider.enable_backlog = 0  # these exceptions are actually catching unselected checkboxes
 
-        sickbeard.NEWZNAB_DATA = '!!!'.join([x.configStr() for x in sickbeard.newznabProviderList])
+        sickbeard.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickbeard.newznabProviderList])
         sickbeard.PROVIDER_ORDER = provider_list
 
         helpers.clear_unused_providers()

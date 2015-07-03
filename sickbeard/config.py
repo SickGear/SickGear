@@ -436,7 +436,7 @@ class ConfigMigrator():
         self.migration_names = {1: 'Custom naming',
                                 2: 'Sync backup number with version number',
                                 3: 'Rename omgwtfnzb variables',
-                                4: 'Add newznab catIDs',
+                                4: 'Add newznab cat_ids',
                                 5: 'Metadata update',
                                 6: 'Rename daily search to recent search',
                                 7: 'Rename coming episodes to episode view',
@@ -602,7 +602,7 @@ class ConfigMigrator():
         sickbeard.OMGWTFNZBS_USERNAME = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_uid', '')
         sickbeard.OMGWTFNZBS_APIKEY = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_key', '')
 
-    # Migration v4: Add default newznab catIDs
+    # Migration v4: Add default newznab cat_ids
     def _migrate_v4(self):
         """ Update newznab providers so that the category IDs can be set independently via the config """
 
@@ -624,11 +624,11 @@ class ConfigMigrator():
                     key = '0'
 
                 if name == 'NZBs.org':
-                    catIDs = '5030,5040,5060,5070,5090'
+                    cat_ids = '5030,5040,5060,5070,5090'
                 else:
-                    catIDs = '5030,5040,5060'
+                    cat_ids = '5030,5040,5060'
 
-                cur_provider_data_list = [name, url, key, catIDs, enabled]
+                cur_provider_data_list = [name, url, key, cat_ids, enabled]
                 new_newznab_data.append('|'.join(cur_provider_data_list))
 
             sickbeard.NEWZNAB_DATA = '!!!'.join(new_newznab_data)
