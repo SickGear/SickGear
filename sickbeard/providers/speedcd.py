@@ -1,5 +1,4 @@
-# Author: Mr_Orange
-# URL: https://github.com/mr-orange/Sick-Beard
+# coding=utf-8
 #
 # This file is part of SickGear.
 #
@@ -18,154 +17,93 @@
 
 import re
 import datetime
+import time
 
-import sickbeard
-import generic
-from sickbeard.common import Quality
-from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
-from sickbeard.exceptions import ex
-from sickbeard.helpers import sanitizeSceneName
-from lib import requests
-from lib.requests import exceptions
+from . import generic
+from sickbeard import logger, tvcache, helpers
 
 
 class SpeedCDProvider(generic.TorrentProvider):
 
-    urls = {'base_url': 'http://speed.cd/',
-            'login': 'http://speed.cd/take_login.php',
-            'detail': 'http://speed.cd/t/%s',
-            'search': 'http://speed.cd/V3/API/API.php',
-            'download': 'http://speed.cd/download.php?torrent=%s'}
-
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'Speedcd', True, False)
-        self.username = None
-        self.password = None
-        self.ratio = None
+        generic.TorrentProvider.__init__(self, 'Speedcd')
+
+        self.url_base = 'http://speed.cd/'
+        self.urls = {'config_provider_home_uri': self.url_base,
+                     'login': self.url_base + 'take_login.php',
+                     'search': self.url_base + 'V3/API/API.php',
+                     'get': self.url_base + 'download.php?torrent=%s'}
+
+        self.categories = {'Season': {'c14': 1},
+                           'Episode': {'c2': 1, 'c49': 1},
+                           'Cache': {'c14': 1, 'c2': 1, 'c49': 1}}
+
+        self.url = self.urls['config_provider_home_uri']
+
+        self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.freeleech = False
-        self.minseed = None
-        self.minleech = None
         self.cache = SpeedCDCache(self)
-        self.url = self.urls['base_url']
-        self.categories = {'Season': {'c14': 1}, 'Episode': {'c2': 1, 'c49': 1}, 'RSS': {'c14': 1, 'c2': 1, 'c49': 1}}
-
-    def getQuality(self, item, anime=False):
-
-        quality = Quality.sceneQuality(item[0], anime)
-        return quality
 
     def _doLogin(self):
 
-        login_params = {'username': self.username,
-                        'password': self.password}
+        logged_in = lambda: 'inSpeed_speedian' in self.session.cookies
+        if logged_in():
+            return True
 
-        try:
-            response = self.session.post(self.urls['login'], data=login_params, timeout=30, verify=False)
-        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError) as e:
-            logger.log(u'Unable to connect to ' + self.name + ' provider: ' + ex(e), logger.ERROR)
-            return False
+        if self._checkAuth():
+            login_params = {'username': self.username, 'password': self.password}
+            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
+            if response and logged_in():
+                return True
 
-        if re.search('Incorrect username or Password. Please try again.', response.text) \
-                or response.status_code == 401:
-            logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
-            return False
+            msg = u'Failed to authenticate with %s, abort provider'
+            if response and re.search('Incorrect username or Password. Please try again.', response):
+                msg = u'Invalid username or password for %s. Check settings'
+            logger.log(msg % self.name, logger.ERROR)
 
-        return True
-
-    def _get_season_search_strings(self, ep_obj, **kwargs):
-
-        # If Every episode in Season is a wanted Episode then search for Season first
-        search_string = {'Season': []}
-        for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-            if ep_obj.show.air_by_date or ep_obj.show.sports:
-                ep_string = show_name + ' ' + str(ep_obj.airdate).split('-')[0]
-            elif ep_obj.show.anime:
-                ep_string = show_name + ' ' + '%d' % ep_obj.scene_absolute_number
-            else:
-                ep_string = show_name + ' S%02d' % int(ep_obj.scene_season)  # 1) showName SXX
-
-            search_string['Season'].append(ep_string)
-
-        return [search_string]
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        search_string = {'Episode': []}
-
-        if not ep_obj:
-            return []
-
-        if self.show.air_by_date:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) \
-                    + ' ' + str(ep_obj.airdate).replace('-', '|')
-                search_string['Episode'].append(ep_string)
-        elif self.show.sports:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) \
-                    + ' ' + str(ep_obj.airdate).replace('-', '|') + '|'\
-                    + ep_obj.airdate.strftime('%b')
-                search_string['Episode'].append(ep_string)
-        elif self.show.anime:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                    '%i' % int(ep_obj.scene_absolute_number)
-                search_string['Episode'].append(ep_string)
-        else:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = show_name_helpers.sanitizeSceneName(show_name) + ' ' + \
-                    sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                          'episodenumber': ep_obj.scene_episode}
-
-                search_string['Episode'].append(re.sub('\s+', ' ', ep_string))
-
-        return [search_string]
+        return False
 
     def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-        items = {'Season': [], 'Episode': [], 'RSS': []}
-
         if not self._doLogin():
-            return []
+            return results
 
+        items = {'Season': [], 'Episode': [], 'Cache': []}
+
+        remove_tag = re.compile(r'<[^>]*>')
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-
-                logger.log(u'Search string: ' + search_string, logger.DEBUG)
-
                 search_string = '+'.join(search_string.split())
-
                 post_data = dict({'/browse.php?': None, 'cata': 'yes', 'jxt': 4, 'jxw': 'b', 'search': search_string},
                                  **self.categories[mode])
 
-                parsed_json = self.getURL(self.urls['search'], post_data=post_data, json=True)
-                if not parsed_json:
-                    continue
-
+                data_json = self.getURL(self.urls['search'], post_data=post_data, json=True)
+                cnt = len(items[mode])
                 try:
-                    torrents = parsed_json.get('Fs', [])[0].get('Cn', {}).get('torrents', [])
-                except:
-                    continue
+                    if not data_json:
+                        raise generic.HaltParseException
+                    torrents = data_json.get('Fs', [])[0].get('Cn', {}).get('torrents', [])
 
-                for torrent in torrents:
+                    for torrent in torrents:
 
-                    if self.freeleech and not torrent['free']:
-                        continue
+                        if self.freeleech and not torrent['free']:
+                            continue
 
-                    title = re.sub('<[^>]*>', '', torrent['name'])
-                    url = self.urls['download'] % (torrent['id'])
-                    seeders = int(torrent['seed'])
-                    leechers = int(torrent['leech'])
+                        seeders, leechers = int(torrent['seed']), int(torrent['leech'])
+                        if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                            continue
 
-                    if 'RSS' != mode and (seeders < self.minseed or leechers < self.minleech):
-                        continue
+                        title = remove_tag.sub('', torrent['name'])
+                        url = self.urls['get'] % (torrent['id'])
+                        if title and url:
+                            items[mode].append((title, url))
 
-                    if not title or not url:
-                        continue
+                except Exception:
+                    time.sleep(1.1)
 
-                    item = title, url, seeders, leechers
-                    items[mode].append(item)
+                self._log_result(mode, len(items[mode]) - cnt,
+                                 ('search string: ' + search_string, self.name)['Cache' == mode])
 
             items[mode].sort(key=lambda tup: tup[2], reverse=True)
 
@@ -173,50 +111,13 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         return results
 
-    def _get_title_and_url(self, item):
-
-        title, url, seeders, leechers = item
-
-        if title:
-            title = u'' + title
-            title = title.replace(' ', '.')
-
-        if url:
-            url = str(url).replace('&amp;', '&')
-
-        return title, url
-
     def findPropers(self, search_date=datetime.datetime.today()):
 
-        results = []
+        return self._find_propers(search_date)
 
-        my_db = db.DBConnection()
-        sql_results = my_db.select(
-            'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
-            ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
-            ' WHERE e.airdate >= ' + str(search_date.toordinal()) +
-            ' AND (e.status IN (' + ','.join([str(x) for x in Quality.DOWNLOADED]) + ')' +
-            ' OR (e.status IN (' + ','.join([str(x) for x in Quality.SNATCHED]) + ')))'
-        )
+    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
 
-        if not sql_results:
-            return results
-
-        for sqlshow in sql_results:
-            self.show = helpers.findCertainShow(sickbeard.showList, int(sqlshow['showid']))
-            if self.show:
-                cur_ep = self.show.getEpisode(int(sqlshow['season']), int(sqlshow['episode']))
-
-                search_string = self._get_episode_search_strings(cur_ep, add_string='PROPER|REPACK')
-
-                for item in self._doSearch(search_string[0]):
-                    title, url = self._get_title_and_url(item)
-                    results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
-
-        return results
-
-    def seedRatio(self):
-        return self.ratio
+        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, sep_date='.', use_or=False)
 
 
 class SpeedCDCache(tvcache.TVCache):
@@ -228,8 +129,7 @@ class SpeedCDCache(tvcache.TVCache):
 
     def _getRSSData(self):
 
-        search_params = {'RSS': ['']}
-        return self.provider._doSearch(search_params)
+        return self.provider.get_cache_data()
 
 
 provider = SpeedCDProvider()
