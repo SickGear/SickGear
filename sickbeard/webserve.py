@@ -4014,7 +4014,7 @@ class ConfigProviders(Config):
         if tempProvider.getID() in providerDict:
             return json.dumps({'error': 'Exists as ' + providerDict[tempProvider.getID()].name})
         else:
-            (succ, errMsg) = tempProvider.validateRSS()
+            (succ, errMsg) = tempProvider.validate_feed()
             if succ:
                 return json.dumps({'success': tempProvider.getID()})
             else:
@@ -4032,12 +4032,12 @@ class ConfigProviders(Config):
             providerDict[name].url = config.clean_url(url)
             providerDict[name].cookies = cookies
 
-            return providerDict[name].getID() + '|' + providerDict[name].configStr()
+            return providerDict[name].getID() + '|' + providerDict[name].config_str()
 
         else:
             newProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
             sickbeard.torrentRssProviderList.append(newProvider)
-            return newProvider.getID() + '|' + newProvider.configStr()
+            return newProvider.getID() + '|' + newProvider.config_str()
 
     def deleteTorrentRssProvider(self, id):
 
