@@ -1,5 +1,4 @@
-# Author: Idan Gutman
-# URL: http://code.google.com/p/sickbeard/
+# coding=utf-8
 #
 # This file is part of SickGear.
 #
@@ -17,246 +16,131 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import traceback
 import datetime
+import traceback
 
-import sickbeard
-import generic
-from sickbeard.common import Quality
-from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
-from sickbeard.exceptions import ex
-from lib import requests
-from lib.requests import exceptions
+from . import generic
+from sickbeard import logger, tvcache, helpers
 from sickbeard.bs4_parser import BS4Parser
 from lib.unidecode import unidecode
-from sickbeard.helpers import sanitizeSceneName
 
 
 class TorrentLeechProvider(generic.TorrentProvider):
-    urls = {'base_url': 'https://torrentleech.org/',
-            'login': 'https://torrentleech.org/user/account/login/',
-            'detail': 'https://torrentleech.org/torrent/%s',
-            'search': 'https://torrentleech.org/torrents/browse/index/query/%s/categories/%s',
-            'download': 'https://torrentleech.org%s',
-            'index': 'https://torrentleech.org/torrents/browse/index/categories/%s',
-    }
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'TorrentLeech', True, False)
-        self.username = None
-        self.password = None
-        self.ratio = None
-        self.minseed = None
-        self.minleech = None
-        self.cache = TorrentLeechCache(self)
-        self.url = self.urls['base_url']
+        generic.TorrentProvider.__init__(self, 'TorrentLeech')
+
+        self.url_base = 'https://torrentleech.org/'
+        self.urls = {'config_provider_home_uri': self.url_base,
+                     'login': self.url_base + 'user/account/login/',
+                     'search': self.url_base + 'torrents/browse/index/query/%s/categories/%s',
+                     'cache': self.url_base + 'torrents/browse/index/categories/%s',
+                     'get': self.url_base + '%s'}
+
         self.categories = '2,26,27,32'
 
-    def getQuality(self, item, anime=False):
+        self.url = self.urls['config_provider_home_uri']
 
-        quality = Quality.sceneQuality(item[0], anime)
-        return quality
+        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.cache = TorrentLeechCache(self)
 
     def _doLogin(self):
 
-        login_params = {'username': self.username,
-                        'password': self.password,
-                        'remember_me': 'on',
-                        'login': 'submit',
-        }
+        logged_in = lambda: 'tluid' in self.session.cookies and 'tlpass' in self.session.cookies
+        if logged_in():
+            return True
 
-        self.session = requests.Session()
+        if self._checkAuth():
+            login_params = {'username': self.username, 'password': self.password, 'remember_me': 'on', 'login': 'submit'}
+            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
+            if response and logged_in():
+                return True
 
-        try:
-            response = self.session.post(self.urls['login'], data=login_params, timeout=30, verify=False)
-        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError) as e:
-            logger.log(u'Unable to connect to ' + self.name + ' provider: ' + ex(e), logger.ERROR)
-            return False
+            logger.log(u'Failed to authenticate with %s, abort provider.' % self.name, logger.ERROR)
 
-        if re.search('Invalid Username/password', response.text) \
-                or re.search('<title>Login :: TorrentLeech.org</title>', response.text) \
-                or response.status_code == 401:
-            logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
-            return False
-
-        return True
-
-    def _get_season_search_strings(self, ep_obj):
-
-        search_string = {'Season': []}
-        for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-            if ep_obj.show.air_by_date or ep_obj.show.sports:
-                ep_string = show_name + ' ' + str(ep_obj.airdate).split('-')[0]
-            elif ep_obj.show.anime:
-                ep_string = show_name + ' ' + "%d" % ep_obj.scene_absolute_number
-            else:
-                ep_string = show_name + ' S%02d' % int(ep_obj.scene_season)  #1) showName SXX
-
-            search_string['Season'].append(ep_string)
-
-        return [search_string]
-
-    def _get_episode_search_strings(self, ep_obj, add_string=''):
-
-        search_string = {'Episode': []}
-
-        if not ep_obj:
-            return []
-
-        if self.show.air_by_date:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|')
-                search_string['Episode'].append(ep_string)
-        elif self.show.sports:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            str(ep_obj.airdate).replace('-', '|') + '|' + \
-                            ep_obj.airdate.strftime('%b')
-                search_string['Episode'].append(ep_string)
-        elif self.show.anime:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = sanitizeSceneName(show_name) + ' ' + \
-                            "%i" % int(ep_obj.scene_absolute_number)
-                search_string['Episode'].append(ep_string)
-        else:
-            for show_name in set(show_name_helpers.allPossibleShowNames(self.show)):
-                ep_string = show_name_helpers.sanitizeSceneName(show_name) + ' ' + \
-                            sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                                  'episodenumber': ep_obj.scene_episode}
-
-                search_string['Episode'].append(re.sub('\s+', ' ', ep_string))
-
-        return [search_string]
+        return False
 
     def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-        items = {'Season': [], 'Episode': [], 'RSS': []}
-
         if not self._doLogin():
-            return []
+            return results
 
+        items = {'Season': [], 'Episode': [], 'Cache': []}
+
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'download'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
 
                 if isinstance(search_string, unicode):
                     search_string = unidecode(search_string)
 
-                if mode == 'RSS':
-                    searchURL = self.urls['index'] % self.categories
+                if 'Cache' == mode:
+                    search_url = self.urls['cache'] % self.categories
                 else:
-                    searchURL = self.urls['search'] % (search_string, self.categories)
+                    search_url = self.urls['search'] % (search_string, self.categories)
 
-                logger.log(u"Search string: " + searchURL, logger.DEBUG)
+                html = self.getURL(search_url)
 
-                data = self.getURL(searchURL)
-                if not data:
-                    continue
-
+                cnt = len(items[mode])
                 try:
-                    with BS4Parser(data, features=["html5lib", "permissive"]) as html:
-                        torrent_table = html.find('table', attrs={'id': 'torrenttable'})
-                        torrent_rows = torrent_table.find_all('tr') if torrent_table else []
+                    if not html or self._has_no_results(html):
+                        raise generic.HaltParseException
 
-                        #Continue only if one Release is found
-                        if len(torrent_rows) < 2:
-                            logger.log(u"The data returned from " + self.name + " does not contain any torrents",
-                                       logger.DEBUG)
-                            continue
+                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                        torrent_table = soup.find('table', attrs={'id': 'torrenttable'})
+                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
-                        for result in torrent_table.find_all('tr')[1:]:
+                        if 2 > len(torrent_rows):
+                            raise generic.HaltParseException
 
+                        for tr in torrent_rows[1:]:
                             try:
-                                link = result.find('td', attrs={'class': 'name'}).find('a')
-                                url = result.find('td', attrs={'class': 'quickdownload'}).find('a')
-                                title = link.string
-                                download_url = self.urls['download'] % url['href']
-                                id = int(link['href'].replace('/torrent/', ''))
-                                seeders = int(result.find('td', attrs={'class': 'seeders'}).string)
-                                leechers = int(result.find('td', attrs={'class': 'leechers'}).string)
+                                seeders, leechers = [int(tr.find('td', attrs={'class': x}).get_text().strip())
+                                                     for x in ('seeders', 'leechers')]
+                                if mode != 'Cache' and (seeders < self.minseed or leechers < self.minleech):
+                                    continue
+
+                                info = tr.find('td', {'class': 'name'}).a
+                                title = ('title' in info.attrs and info['title']) or info.get_text().strip()
+
+                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
                             except (AttributeError, TypeError):
                                 continue
 
-                            #Filter unseeded torrent
-                            if mode != 'RSS' and (seeders < self.minseed or leechers < self.minleech):
-                                continue
+                            if title and download_url:
+                                items[mode].append((title, download_url, seeders))
 
-                            if not title or not download_url:
-                                continue
+                except generic.HaltParseException:
+                    pass
+                except Exception:
+                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                self._log_result(mode, len(items[mode]) - cnt, search_url)
 
-                            item = title, download_url, id, seeders, leechers
-                            logger.log(u"Found result: " + title + "(" + download_url + ")", logger.DEBUG)
-
-                            items[mode].append(item)
-
-                except Exception as e:
-                    logger.log(u"Failed parsing " + self.name + " Traceback: " + traceback.format_exc(), logger.ERROR)
-
-            #For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[3], reverse=True)
+            items[mode].sort(key=lambda tup: tup[2], reverse=True)
 
             results += items[mode]
 
         return results
 
-    def _get_title_and_url(self, item):
-
-        title, url, id, seeders, leechers = item
-
-        if title:
-            title = u'' + title
-            title = title.replace(' ', '.')
-
-        if url:
-            url = str(url).replace('&amp;', '&')
-
-        return (title, url)
-
     def findPropers(self, search_date=datetime.datetime.today()):
 
-        results = []
+        return self._find_propers(search_date)
 
-        myDB = db.DBConnection()
-        sqlResults = myDB.select(
-            'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
-            ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
-            ' WHERE e.airdate >= ' + str(search_date.toordinal()) +
-            ' AND (e.status IN (' + ','.join([str(x) for x in Quality.DOWNLOADED]) + ')' +
-            ' OR (e.status IN (' + ','.join([str(x) for x in Quality.SNATCHED]) + ')))'
-        )
+    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
 
-        if not sqlResults:
-            return []
-
-        for sqlshow in sqlResults:
-            self.show = helpers.findCertainShow(sickbeard.showList, int(sqlshow["showid"]))
-            if self.show:
-                curEp = self.show.getEpisode(int(sqlshow["season"]), int(sqlshow["episode"]))
-
-                searchString = self._get_episode_search_strings(curEp, add_string='PROPER|REPACK')
-
-                for item in self._doSearch(searchString[0]):
-                    title, url = self._get_title_and_url(item)
-                    results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
-
-        return results
-
-    def seedRatio(self):
-        return self.ratio
+        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, sep_date='|', use_or=False)
 
 
 class TorrentLeechCache(tvcache.TVCache):
-    def __init__(self, provider):
 
-        tvcache.TVCache.__init__(self, provider)
+    def __init__(self, this_provider):
+        tvcache.TVCache.__init__(self, this_provider)
 
-        # only poll TorrentLeech every 20 minutes max
-        self.minTime = 20
+        self.minTime = 20  # cache update frequency
 
     def _getRSSData(self):
-        search_params = {'RSS': ['']}
-        return self.provider._doSearch(search_params)
 
+        return self.provider.get_cache_data()
 
 provider = TorrentLeechProvider()
