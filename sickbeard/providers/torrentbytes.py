@@ -137,29 +137,29 @@ class TorrentBytesProvider(generic.TorrentProvider):
                 if isinstance(search_string, unicode):
                     search_string = unidecode(search_string)
 
-                searchURL = self.urls['search'] % (search_string, self.categories)
+                search_url = self.urls['search'] % (search_string, self.categories)
 
-                logger.log(u'Search string: ' + searchURL, logger.DEBUG)
+                logger.log(u'Search string: ' + search_url, logger.DEBUG)
 
-                data = self.getURL(searchURL)
-                if not data:
+                html = self.getURL(search_url)
+                if not html:
                     continue
 
                 try:
-                    with BS4Parser(data, features=['html5lib', 'permissive']) as html:
-                        torrent_table = html.find('table', attrs={'border': '1'})
+                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                        torrent_table = soup.find('table', attrs={'border': '1'})
                         torrent_rows = []
                         if torrent_table:
                             torrent_rows = torrent_table.find_all('tr')
 
                         # Continue only if one Release is found
-                        if len(torrent_rows) < 2:
+                        if 2 > len(torrent_rows):
                             logger.log(u'The data returned from ' + self.name + ' does not contain any torrents',
                                        logger.DEBUG)
                             continue
 
-                        for result in torrent_rows[1:]:
-                            cells = result.find_all('td')
+                        for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
 
                             link = cells[1].find('a', attrs={'class': 'index'})
 
@@ -167,12 +167,12 @@ class TorrentBytesProvider(generic.TorrentProvider):
                             torrent_id = full_id.split('&')[0]
 
                             try:
-                                if link.has_key('title'):
+                                if 'title' in link:
                                     title = cells[1].find('a', {'class': 'index'})['title']
                                 else:
                                     title = link.contents[0]
                                 download_url = self.urls['download'] % (torrent_id, link.contents[0])
-                                id = int(torrent_id)
+                                tid = int(torrent_id)
                                 seeders = int(cells[8].find('span').contents[0])
                                 leechers = int(cells[9].find('span').contents[0])
                             except (AttributeError, TypeError):
@@ -185,12 +185,12 @@ class TorrentBytesProvider(generic.TorrentProvider):
                             if not title or not download_url:
                                 continue
 
-                            item = title, download_url, id, seeders, leechers
-                            logger.log(u'Found result: ' + title + '(' + searchURL + ')', logger.DEBUG)
+                            item = title, download_url, tid, seeders, leechers
+                            logger.log(u'Found result: ' + title + '(' + search_url + ')', logger.DEBUG)
 
                             items[mode].append(item)
 
-                except Exception as e:
+                except Exception:
                     logger.log(u'Failed parsing ' + self.name + ' Traceback: ' + traceback.format_exc(), logger.ERROR)
 
             # For each search mode sort all the items by seeders
@@ -202,7 +202,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
     def _get_title_and_url(self, item):
 
-        title, url, id, seeders, leechers = item
+        title, url, tid, seeders, leechers = item
 
         if title:
             title += u''
@@ -219,8 +219,8 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
         results = []
 
-        myDB = db.DBConnection()
-        sqlResults = myDB.select(
+        my_db = db.DBConnection()
+        sql_results = my_db.select(
             'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
             ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
             ' WHERE e.airdate >= ' + str(search_date.toordinal()) +
@@ -228,17 +228,17 @@ class TorrentBytesProvider(generic.TorrentProvider):
             ' OR (e.status IN (' + ','.join([str(x) for x in Quality.SNATCHED]) + ')))'
         )
 
-        if not sqlResults:
+        if not sql_results:
             return []
 
-        for sqlshow in sqlResults:
+        for sqlshow in sql_results:
             self.show = helpers.findCertainShow(sickbeard.showList, int(sqlshow['showid']))
             if self.show:
-                curEp = self.show.getEpisode(int(sqlshow['season']), int(sqlshow['episode']))
+                cur_ep = self.show.getEpisode(int(sqlshow['season']), int(sqlshow['episode']))
 
-                searchString = self._get_episode_search_strings(curEp, add_string='PROPER|REPACK')
+                search_string = self._get_episode_search_strings(cur_ep, add_string='PROPER|REPACK')
 
-                for item in self._doSearch(searchString[0]):
+                for item in self._doSearch(search_string[0]):
                     title, url = self._get_title_and_url(item)
                     results.append(classes.Proper(title, url, datetime.datetime.today(), self.show))
 
@@ -249,14 +249,14 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
 
 class TorrentBytesCache(tvcache.TVCache):
-    def __init__(self, provider):
 
-        tvcache.TVCache.__init__(self, provider)
+    def __init__(self, this_provider):
+        tvcache.TVCache.__init__(self, this_provider)
 
-        # only poll TorrentBytes every 20 minutes max
-        self.minTime = 20
+        self.minTime = 20  # cache update frequency
 
     def _getRSSData(self):
+
         search_params = {'RSS': ['']}
         return self.provider._doSearch(search_params)
 
