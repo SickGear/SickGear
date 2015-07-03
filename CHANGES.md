@@ -16,6 +16,8 @@
 * Fix provider SCC stop snatching releases for episodes already completed
 * Fix provider SCC handle null server responses
 * Change provider SCC remove 1 of 3 requests per search to save 30% time
+* Change provider IPT only decode unicode search strings
+* Change provider IPT login process to use General Config/Advanced/Proxy host setting
 * Remove useless webproxies from provider TPB as they fail for one reason or another
 * Change provider TPB to use mediaExtensions from common instead of hard-coded private list
 * Add new tld variants to provider TPB

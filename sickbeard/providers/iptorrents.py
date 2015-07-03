@@ -23,7 +23,7 @@ import datetime
 import sickbeard
 import generic
 from sickbeard.common import Quality
-from sickbeard import logger,tvcache,db,classes,helpers,show_name_helpers
+from sickbeard import logger, tvcache, db, classes, helpers, show_name_helpers
 from sickbeard.exceptions import ex, AuthException
 from lib import requests
 from lib.requests import exceptions
@@ -36,8 +36,7 @@ from sickbeard.show_name_helpers import allPossibleShowNames
 class IPTorrentsProvider(generic.TorrentProvider):
     urls = {'base_url': 'https://iptorrents.eu',
             'login': 'https://iptorrents.eu/torrents/',
-            'search': 'https://iptorrents.eu/t?%s%s&q=%s&qf=ti#torrents',
-    }
+            'search': 'https://iptorrents.eu/t?%s%s&q=%s&qf=ti#torrents'}
 
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'IPTorrents', True, False)
@@ -56,28 +55,22 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
     def _checkAuth(self):
 
-        if not self.username or not self.password:
-            raise AuthException("Your authentication credentials for " + self.name + " are missing, check your config.")
+        if not (self.username and self.password):
+            raise AuthException('Your authentication credentials for ' + self.name + ' are missing, check your config.')
 
         return True
 
     def _doLogin(self):
 
-        login_params = {'username': self.username,
-                        'password': self.password,
-                        'login': 'submit',
-        }
+        if any(self.session.cookies.values()):
+            return True
 
-        try:
-            response = self.session.post(self.urls['login'], data=login_params, timeout=30, verify=False)
-        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError) as e:
-            logger.log(u'Unable to connect to ' + self.name + ' provider: ' + ex(e), logger.ERROR)
-            return False
+        login_params = {'username': self.username, 'password': self.password, 'login': 'submit'}
 
-        if re.search('tries left', response.text) \
-                or re.search('<title>IPT</title>', response.text) \
-                or response.status_code == 401:
-            logger.log(u'Your authentication credentials for ' + self.name + ' are incorrect, check your config.', logger.ERROR)
+        response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
+
+        if not response or re.search('tries left', response) or re.search('<title>IPT</title>', response):
+            logger.log(u'Could not authenticate %s, abort provider.' % self.name, logger.ERROR)
             return False
 
         return True
@@ -144,8 +137,10 @@ class IPTorrentsProvider(generic.TorrentProvider):
             for search_string in search_params[mode]:
 
                 # URL with 50 tv-show results, or max 150 if adjusted in IPTorrents profile
-                searchURL = self.urls['search'] % (self.categorie, freeleech, unidecode(search_string))
-                searchURL += ';o=seeders' if mode != 'RSS' else ''
+                if isinstance(search_string, unicode):
+                    search_string = unidecode(search_string)
+                searchURL = '%s%s' % (self.urls['search'] % (self.categorie, freeleech, search_string),
+                                      (';o=seeders', '')['RSS' == mode])
 
                 logger.log(u"" + self.name + " search page URL: " + searchURL, logger.DEBUG)
 
