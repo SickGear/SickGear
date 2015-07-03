@@ -16,6 +16,7 @@
 * Fix provider SCC stop snatching releases for episodes already completed
 * Fix provider SCC handle null server responses
 * Change provider SCC remove 1 of 3 requests per search to save 30% time
+* Change provider SCC login process to use General Config/Advanced/Proxy host setting
 * Change provider IPT only decode unicode search strings
 * Change provider IPT login process to use General Config/Advanced/Proxy host setting
 * Change provider TB PEP8 and code convention cleanup
@@ -28,6 +29,7 @@
 * Change provider KAT to use mediaExtensions from common instead of private list
 * Change provider KAT provider PEP8 and code convention cleanup
 * Change refactor and code simplification for torrent providers
+* Change refactor SCC to use torrent provider simplification and PEP8
 * Change provider SCD PEP8 and code convention cleanup
 * Remove HDTorrents torrent provider
 * Remove NextGen torrent provider

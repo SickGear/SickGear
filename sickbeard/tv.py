@@ -1241,7 +1241,6 @@ class TVShow(object):
         toReturn += "anime: " + str(self.is_anime) + "\n"
         return toReturn
 
-
     def wantEpisode(self, season, episode, quality, manualSearch=False):
 
         logger.log(u"Checking if found episode " + str(season) + "x" + str(episode) + " is wanted at quality " +
@@ -1250,8 +1249,12 @@ class TVShow(object):
         # if the quality isn't one we want under any circumstances then just say no
         initialQualities, archiveQualities = Quality.splitQuality(self.quality)
         allQualities = list(set(initialQualities + archiveQualities))
-        logger.log(u"initial + archive = (" + ",".join([Quality.qualityStrings[qual] for qual in initialQualities]) + ") + (" + ",".join([Quality.qualityStrings[qual] for qual in archiveQualities]) + ") and found " + Quality.qualityStrings[quality],
-                   logger.DEBUG)
+
+        initial = u'= (%s)' % ','.join([Quality.qualityStrings[qual] for qual in initialQualities])
+        if 0 < len(archiveQualities):
+            initial = u'+ upgrade to %s + (%s)'\
+                      % (initial, ','.join([Quality.qualityStrings[qual] for qual in archiveQualities]))
+        logger.log(u'Want initial %s and found %s' % (initial, Quality.qualityStrings[quality]), logger.DEBUG)
 
         if quality not in allQualities:
             logger.log(u"Don't want this quality, ignoring found episode", logger.DEBUG)
