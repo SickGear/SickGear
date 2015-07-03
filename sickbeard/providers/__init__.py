@@ -38,6 +38,7 @@ __all__ = ['womble',
            'morethan',
            'alpharatio',
            'pisexy',
+           'strike'
 ]
 
 from os import sys
