@@ -42,6 +42,7 @@
 * Change refactor TL to use torrent provider simplification and PEP8
 * Change refactor BTS to use torrent provider simplification and PEP8
 * Change refactor FSH to use torrent provider simplification and PEP8
+* Change refactor IPT to use torrent provider simplification and PEP8
 * Remove HDTorrents torrent provider
 * Remove NextGen torrent provider
 * Add Rarbg torrent provider
