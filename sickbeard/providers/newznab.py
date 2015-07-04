@@ -286,6 +286,7 @@ class NewznabProvider(generic.NZBProvider):
             items = total - params['offset']
             logger.log('%s more item%s to fetch from a batch of up to %s items.'
                        % (items, helpers.maybe_plural(items), params['limit']), logger.DEBUG)
+        return results
 
     def findPropers(self, search_date=None):
         return self._find_propers(search_date)

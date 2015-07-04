@@ -21,12 +21,14 @@
 * Change provider HDB code simplify and PEP8
 * Change provider IPT only decode unicode search strings
 * Change provider IPT login process to use General Config/Advanced/Proxy host setting
+* Change provider TB logo icon used on Config/Search Providers
 * Change provider TB PEP8 and code convention cleanup
 * Change provider TB login process to use General Config/Advanced/Proxy host setting
 * Remove useless webproxies from provider TPB as they fail for one reason or another
 * Change provider TPB to use mediaExtensions from common instead of hard-coded private list
 * Add new tld variants to provider TPB
 * Add test for authenticity to provider TPB to notify of 3rd party block
+* Change provider TD logo icon used on Config/Search Providers
 * Change provider TD login process to use General Config/Advanced/Proxy host setting
 * Change provider BTN code simplify and PEP8
 * Change provider BTS login process to use General Config/Advanced/Proxy host setting
