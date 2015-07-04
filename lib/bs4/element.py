@@ -1,3 +1,4 @@
+from pdb import set_trace
 import collections
 import re
 import sys
@@ -185,24 +186,40 @@ class PageElement(object):
             return self.HTML_FORMATTERS.get(
                 name, HTMLAwareEntitySubstitution.substitute_xml)
 
-    def setup(self, parent=None, previous_element=None):
+    def setup(self, parent=None, previous_element=None, next_element=None,
+              previous_sibling=None, next_sibling=None):
         """Sets up the initial relations between this element and
         other elements."""
         self.parent = parent
+
         self.previous_element = previous_element
         if previous_element is not None:
             self.previous_element.next_element = self
-        self.next_element = None
-        self.previous_sibling = None
-        self.next_sibling = None
-        if self.parent is not None and self.parent.contents:
-            self.previous_sibling = self.parent.contents[-1]
+
+        self.next_element = next_element
+        if self.next_element:
+            self.next_element.previous_element = self
+
+        self.next_sibling = next_sibling
+        if self.next_sibling:
+            self.next_sibling.previous_sibling = self
+
+        if (not previous_sibling
+            and self.parent is not None and self.parent.contents):
+            previous_sibling = self.parent.contents[-1]
+
+        self.previous_sibling = previous_sibling
+        if previous_sibling:
             self.previous_sibling.next_sibling = self
 
     nextSibling = _alias("next_sibling")  # BS3
     previousSibling = _alias("previous_sibling")  # BS3
 
     def replace_with(self, replace_with):
+        if not self.parent:
+            raise ValueError(
+                "Cannot replace one element with another when the"
+                "element to be replaced is not part of a tree.")
         if replace_with is self:
             return
         if replace_with is self.parent:
@@ -216,6 +233,10 @@ class PageElement(object):
 
     def unwrap(self):
         my_parent = self.parent
+        if not self.parent:
+            raise ValueError(
+                "Cannot replace an element with its contents when that"
+                "element is not part of a tree.")
         my_index = self.parent.index(self)
         self.extract()
         for child in reversed(self.contents[:]):
@@ -240,17 +261,20 @@ class PageElement(object):
         last_child = self._last_descendant()
         next_element = last_child.next_element
 
-        if self.previous_element is not None:
+        if (self.previous_element is not None and
+            self.previous_element != next_element):
             self.previous_element.next_element = next_element
-        if next_element is not None:
+        if next_element is not None and next_element != self.previous_element:
             next_element.previous_element = self.previous_element
         self.previous_element = None
         last_child.next_element = None
 
         self.parent = None
-        if self.previous_sibling is not None:
+        if (self.previous_sibling is not None
+            and self.previous_sibling != self.next_sibling):
             self.previous_sibling.next_sibling = self.next_sibling
-        if self.next_sibling is not None:
+        if (self.next_sibling is not None
+            and self.next_sibling != self.previous_sibling):
             self.next_sibling.previous_sibling = self.previous_sibling
         self.previous_sibling = self.next_sibling = None
         return self
@@ -478,6 +502,10 @@ class PageElement(object):
     def _find_all(self, name, attrs, text, limit, generator, **kwargs):
         "Iterates over a generator looking for things that match."
 
+        if text is None and 'string' in kwargs:
+            text = kwargs['string']
+            del kwargs['string']
+
         if isinstance(name, SoupStrainer):
             strainer = name
         else:
@@ -558,7 +586,7 @@ class PageElement(object):
     #     |                           Attribute
     #    Tag
     attribselect_re = re.compile(
-        r'^(?P<tag>[a-zA-Z0-9][-.a-zA-Z0-9:_]*)?\[(?P<attribute>\w+)(?P<operator>[=~\|\^\$\*]?)' +
+        r'^(?P<tag>[a-zA-Z0-9][-.a-zA-Z0-9:_]*)?\[(?P<attribute>[\w-]+)(?P<operator>[=~\|\^\$\*]?)' +
         r'=?"?(?P<value>[^\]"]*)"?\]$'
         )
 
@@ -654,11 +682,17 @@ class NavigableString(unicode, PageElement):
         how to handle non-ASCII characters.
         """
         if isinstance(value, unicode):
-            return unicode.__new__(cls, value)
-        return unicode.__new__(cls, value, DEFAULT_OUTPUT_ENCODING)
+            u = unicode.__new__(cls, value)
+        else:
+            u = unicode.__new__(cls, value, DEFAULT_OUTPUT_ENCODING)
+        u.setup()
+        return u
 
     def __copy__(self):
-        return self
+        """A copy of a NavigableString has the same contents and class
+        as the original, but it is not connected to the parse tree.
+        """
+        return type(self)(self)
 
     def __getnewargs__(self):
         return (unicode(self),)
@@ -759,9 +793,12 @@ class Tag(PageElement):
         self.prefix = prefix
         if attrs is None:
             attrs = {}
-        elif attrs and builder.cdata_list_attributes:
-            attrs = builder._replace_cdata_list_attribute_values(
-                self.name, attrs)
+        elif attrs:
+            if builder is not None and builder.cdata_list_attributes:
+                attrs = builder._replace_cdata_list_attribute_values(
+                    self.name, attrs)
+            else:
+                attrs = dict(attrs)
         else:
             attrs = dict(attrs)
         self.attrs = attrs
@@ -777,6 +814,18 @@ class Tag(PageElement):
             self.can_be_empty_element = False
 
     parserClass = _alias("parser_class")  # BS3
+
+    def __copy__(self):
+        """A copy of a Tag is a new Tag, unconnected to the parse tree.
+        Its contents are a copy of the old Tag's contents.
+        """
+        clone = type(self)(None, self.builder, self.name, self.namespace,
+                           self.nsprefix, self.attrs)
+        for attr in ('can_be_empty_element', 'hidden'):
+            setattr(clone, attr, getattr(self, attr))
+        for child in self.contents:
+            clone.append(child.__copy__())
+        return clone
 
     @property
     def is_empty_element(self):
@@ -971,15 +1020,25 @@ class Tag(PageElement):
         as defined in __eq__."""
         return not self == other
 
-    def __repr__(self, encoding=DEFAULT_OUTPUT_ENCODING):
+    def __repr__(self, encoding="unicode-escape"):
         """Renders this tag as a string."""
-        return self.encode(encoding)
+        if PY3K:
+            # "The return value must be a string object", i.e. Unicode
+            return self.decode()
+        else:
+            # "The return value must be a string object", i.e. a bytestring.
+            # By convention, the return value of __repr__ should also be
+            # an ASCII string.
+            return self.encode(encoding)
 
     def __unicode__(self):
         return self.decode()
 
     def __str__(self):
-        return self.encode()
+        if PY3K:
+            return self.decode()
+        else:
+            return self.encode()
 
     if PY3K:
         __str__ = __repr__ = __unicode__
@@ -1103,12 +1162,18 @@ class Tag(PageElement):
                        formatter="minimal"):
         """Renders the contents of this tag as a Unicode string.
 
+        :param indent_level: Each line of the rendering will be
+           indented this many spaces.
+
         :param eventual_encoding: The tag is destined to be
            encoded into this encoding. This method is _not_
            responsible for performing that encoding. This information
            is passed in so that it can be substituted in if the
            document contains a <META> tag that mentions the document's
            encoding.
+
+        :param formatter: The output formatter responsible for converting
+           entities to Unicode characters.
         """
         # First off, turn a string formatter into a function. This
         # will stop the lookup from happening over and over again.
@@ -1137,7 +1202,17 @@ class Tag(PageElement):
     def encode_contents(
         self, indent_level=None, encoding=DEFAULT_OUTPUT_ENCODING,
         formatter="minimal"):
-        """Renders the contents of this tag as a bytestring."""
+        """Renders the contents of this tag as a bytestring.
+
+        :param indent_level: Each line of the rendering will be
+           indented this many spaces.
+
+        :param eventual_encoding: The bytestring will be in this encoding.
+
+        :param formatter: The output formatter responsible for converting
+           entities to Unicode characters.
+        """
+
         contents = self.decode_contents(indent_level, encoding, formatter)
         return contents.encode(encoding)
 
@@ -1201,7 +1276,14 @@ class Tag(PageElement):
 
     _selector_combinators = ['>', '+', '~']
     _select_debug = False
-    def select(self, selector, _candidate_generator=None):
+    def select_one(self, selector):
+        """Perform a CSS selection operation on the current element."""
+        value = self.select(selector, limit=1)
+        if value:
+            return value[0]
+        return None
+
+    def select(self, selector, _candidate_generator=None, limit=None):
         """Perform a CSS selection operation on the current element."""
 
         # Remove whitespace directly after the grouping operator ','
@@ -1272,35 +1354,38 @@ class Tag(PageElement):
                             "A pseudo-class must be prefixed with a tag name.")
                     pseudo_attributes = re.match('([a-zA-Z\d-]+)\(([a-zA-Z\d]+)\)', pseudo)
                     found = []
-                    if pseudo_attributes is not None:
+                    if pseudo_attributes is None:
+                        pseudo_type = pseudo
+                        pseudo_value = None
+                    else:
                         pseudo_type, pseudo_value = pseudo_attributes.groups()
-                        if pseudo_type == 'nth-of-type':
-                            try:
-                                pseudo_value = int(pseudo_value)
-                            except:
-                                raise NotImplementedError(
-                                    'Only numeric values are currently supported for the nth-of-type pseudo-class.')
-                            if pseudo_value < 1:
-                                raise ValueError(
-                                    'nth-of-type pseudo-class value must be at least 1.')
-                            class Counter(object):
-                                def __init__(self, destination):
-                                    self.count = 0
-                                    self.destination = destination
-
-                                def nth_child_of_type(self, tag):
-                                    self.count += 1
-                                    if self.count == self.destination:
-                                        return True
-                                    if self.count > self.destination:
-                                        # Stop the generator that's sending us
-                                        # these things.
-                                        raise StopIteration()
-                                    return False
-                            checker = Counter(pseudo_value).nth_child_of_type
-                        else:
+                    if pseudo_type == 'nth-of-type':
+                        try:
+                            pseudo_value = int(pseudo_value)
+                        except:
                             raise NotImplementedError(
-                                'Only the following pseudo-classes are implemented: nth-of-type.')
+                                'Only numeric values are currently supported for the nth-of-type pseudo-class.')
+                        if pseudo_value < 1:
+                            raise ValueError(
+                                'nth-of-type pseudo-class value must be at least 1.')
+                        class Counter(object):
+                            def __init__(self, destination):
+                                self.count = 0
+                                self.destination = destination
+
+                            def nth_child_of_type(self, tag):
+                                self.count += 1
+                                if self.count == self.destination:
+                                    return True
+                                if self.count > self.destination:
+                                    # Stop the generator that's sending us
+                                    # these things.
+                                    raise StopIteration()
+                                return False
+                        checker = Counter(pseudo_value).nth_child_of_type
+                    else:
+                        raise NotImplementedError(
+                            'Only the following pseudo-classes are implemented: nth-of-type.')
 
                 elif token == '*':
                     # Star selector -- matches everything
@@ -1376,6 +1461,7 @@ class Tag(PageElement):
                 else:
                     _use_candidate_generator = _candidate_generator
 
+                count = 0
                 for tag in current_context:
                     if self._select_debug:
                         print "    Running candidate generator on %s %s" % (
@@ -1400,6 +1486,8 @@ class Tag(PageElement):
                                 # don't include it in the context more than once.
                                 new_context.append(candidate)
                                 new_context_ids.add(id(candidate))
+                                if limit and len(new_context) >= limit:
+                                    break
                         elif self._select_debug:
                             print "     FAILURE %s %s" % (candidate.name, repr(candidate.attrs))
 
