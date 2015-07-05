@@ -3,15 +3,7 @@
 from . import __version__
 from xml.dom.minidom import parseString
 
-try:
-    from http.client import HTTPSConnection
-except ImportError:
-    from httplib import HTTPSConnection
-
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
+import requests
 
 
 class PyNMA(object):
@@ -126,12 +118,9 @@ class PyNMA(object):
         if 'POST' == method:
             headers['Content-type'] = 'application/x-www-form-urlencoded'
 
-        http_handler = HTTPSConnection(self.api_server)
-        http_handler.request(method, path, urlencode(args), headers)
-        resp = http_handler.getresponse()
-
         try:
-            res = self._parse_response(resp.read())
+            resp = requests.post('%s:443%s' % (self.api_server, path), data=args, headers=headers).text
+            res = self._parse_response(resp)
         except Exception as e:
             res = {'type': 'pynmaerror',
                    'code': 600,
