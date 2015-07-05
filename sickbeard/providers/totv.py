@@ -1,5 +1,4 @@
 # coding=utf-8
-# URL: http://code.google.com/p/sickbeard
 #
 # This file is part of SickGear.
 #
@@ -16,126 +15,115 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 import urllib
 
-import requests
-import generic
+from . import generic
 from sickbeard import logger, tvcache
 from sickbeard.helpers import mapIndexersToShow
 from sickbeard.exceptions import AuthException
 
 
 class ToTVProvider(generic.TorrentProvider):
+
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'ToTV', True, False)
-        self.api_key = None
-        self.ratio = None
+        generic.TorrentProvider.__init__(self, 'ToTV')
+
+        self.url_base = 'https://titansof.tv/'
+        self.urls = {'config_provider_home_uri': self.url_base,
+                     'search': self.url_base + 'api/torrents?%s',
+                     'get': self.url_base + 'api/torrents/%s/download?apikey=%s'}
+
+        self.url = self.urls['config_provider_home_uri']
+
+        self.api_key, self.minseed, self.minleech = 3 * [None]
         self.cache = ToTVCache(self)
-        self.url = 'https://titansof.tv/api/torrents'
-        self.download_url = 'http://titansof.tv/api/torrents/%s/download?apikey=%s'
-        self.session = requests.Session()
 
-    def _checkAuth(self):
-        if not self.api_key:
-            raise AuthException('Your authentication credentials for ' + self.name + ' are missing, check your config.')
+    def _check_auth_from_data(self, data_json):
 
-        return True
+        if 'error' not in data_json:
+            return True
 
-    def _checkAuthFromData(self, data):
+        logger.log(u'Incorrect authentication credentials for %s : %s' % (self.name, data_json['error']),
+                   logger.DEBUG)
+        raise AuthException('Your authentication credentials for %s are incorrect, check your config.' % self.name)
 
-        if 'error' in data:
-            logger.log(u'Incorrect authentication credentials for ' + self.name + ' : ' + data['error'],
-                       logger.DEBUG)
-            raise AuthException(
-                'Your authentication credentials for ' + self.name + ' are incorrect, check your config.')
+    def _doSearch(self, search_params, mode='eponly', epcount=0, age=0):
 
-        return True
-
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
         self._checkAuth()
-        results = []
-        params = {}
         self.headers.update({'X-Authorization': self.api_key})
+        results = []
+        params = {'limit': 100}
+        mode = ('season' in search_params.keys() and 'Season') or \
+               ('episode' in search_params.keys() and 'Episode') or 'Cache'
 
         if search_params:
             params.update(search_params)
 
-        search_url = self.url + '?' + urllib.urlencode(params)
-        logger.log(u'Search url: %s' % search_url)
+        search_url = self.urls['search'] % urllib.urlencode(params)
 
-        parsedJSON = self.getURL(search_url, json=True)  # do search
+        data_json = self.getURL(search_url, json=True)
 
-        if not parsedJSON:
-            logger.log(u'No data returned from ' + self.name, logger.ERROR)
-            return results
+        cnt = len(results)
+        if data_json and 'results' in data_json and self._check_auth_from_data(data_json):
+            for result in data_json['results']:
+                try:
+                    seeders, leechers = result['seeders'], result['leechers']
+                    if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                        continue
 
-        if self._checkAuthFromData(parsedJSON):
+                    title, download_url = result['release_name'], str(self.urls['get'] % (result['id'], self.api_key))
+                except (AttributeError, TypeError):
+                    continue
 
-            try:
-                found_torrents = parsedJSON['results']
-            except:
-                found_torrents = {}
+                if title and download_url:
+                    results.append((title, download_url))
 
-            for result in found_torrents:
-                (title, url) = self._get_title_and_url(result)
-
-                if title and url:
-                    results.append(result)
-
+        self._log_result(mode, len(results) - cnt, search_url)
         return results
 
-    def _get_title_and_url(self, parsedJSON):
+    def findPropers(self, search_date=datetime.datetime.today()):
 
-        title = parsedJSON['release_name']
-        id = parsedJSON['id']
-        url = self.download_url % (id, self.api_key)
+        return self._find_propers(search_date)
 
-        return title, url
+    def _get_season_search_strings(self, ep_obj, **kwargs):
 
-    def _get_season_search_strings(self, ep_obj):
-        search_params = {'limit': 100}
+        return self._build_search_str(ep_obj, {'season': 'Season %02d' % ep_obj.scene_season})
 
-        search_params['season'] = 'Season %02d' % ep_obj.scene_season
-
-        if ep_obj.show.indexer == 1:
-            search_params['series_id'] = ep_obj.show.indexerid
-        elif ep_obj.show.indexer == 2:
-            tvdbid = mapIndexersToShow(ep_obj.show)[1]
-            if tvdbid:
-                search_params['series_id'] = tvdbid
-
-        return [search_params]
-
-    def _get_episode_search_strings(self, ep_obj, add_string=''):
+    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
 
         if not ep_obj:
             return [{}]
 
-        search_params = {'limit': 100}
-
         # Do a general name search for the episode, formatted like SXXEYY
-        search_params['episode'] = 'S%02dE%02d' % (ep_obj.scene_season, ep_obj.scene_episode)
+        return self._build_search_str(ep_obj, {'episode': 'S%02dE%02d %s'
+                                                          % (ep_obj.scene_season, ep_obj.scene_episode, add_string)})
 
-        if ep_obj.show.indexer == 1:
+    @staticmethod
+    def _build_search_str(ep_obj, search_params):
+
+        if 1 == ep_obj.show.indexer:
             search_params['series_id'] = ep_obj.show.indexerid
-        elif ep_obj.show.indexer == 2:
+        elif 2 == ep_obj.show.indexer:
             tvdbid = mapIndexersToShow(ep_obj.show)[1]
             if tvdbid:
                 search_params['series_id'] = tvdbid
 
         return [search_params]
 
+    def get_cache_data(self, *args, **kwargs):
+
+        return self._doSearch({})
+
 
 class ToTVCache(tvcache.TVCache):
-    def __init__(self, provider):
-        tvcache.TVCache.__init__(self, provider)
 
-        # At least 10 minutes between queries
-        self.minTime = 10
+    def __init__(self, this_provider):
+        tvcache.TVCache.__init__(self, this_provider)
 
     def _getRSSData(self):
-        search_params = {'limit': 100}
-        return self.provider._doSearch(search_params)
+
+        return self.provider.get_cache_data()
 
 
 provider = ToTVProvider()
