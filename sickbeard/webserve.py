@@ -953,11 +953,7 @@ class Home(MainHandler):
         if None is not accessToken and starify(accessToken, True):
             accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
 
-        result = notifiers.pushbullet_notifier.test_notify(accessToken, device_iden)
-        if result:
-            return 'Pushbullet notification succeeded. Check your device to make sure it worked'
-        else:
-            return 'Error sending Pushbullet notification'
+        return notifiers.pushbullet_notifier.test_notify(accessToken, device_iden)
 
     def getPushbulletDevices(self, accessToken=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -965,11 +961,7 @@ class Home(MainHandler):
         if None is not accessToken and starify(accessToken, True):
             accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
 
-        result = notifiers.pushbullet_notifier.get_devices(accessToken)
-        if result:
-            return result
-        else:
-            return 'Error sending Pushbullet notification'
+        return notifiers.pushbullet_notifier.get_devices(accessToken)
 
     def shutdown(self, pid=None):
 

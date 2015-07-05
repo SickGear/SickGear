@@ -489,10 +489,11 @@ $(document).ready(function(){
 		$.get(sbRoot + '/home/getPushbulletDevices', {'accessToken': pushbullet_access_token})
 			.done(function (data) {
 				var devices = jQuery.parseJSON(data || '{}').devices;
+				var error = jQuery.parseJSON(data || '{}').error;
 				$('#pushbullet_device_list').html('');
+				if (devices) {
 				// add default option to send to all devices
 				$('#pushbullet_device_list').append('<option value="" selected="selected">-- All Devices --</option>');
-				if (devices) {
 					for (var i = 0; i < devices.length; i++) {
 						// only list active device targets
 						if (devices[i].active == true) {
@@ -507,7 +508,11 @@ $(document).ready(function(){
 				}
 				$('#getPushbulletDevices').prop('disabled', false);
 				if (msg) {
-					$('#testPushbullet-result').html(msg);
+					if (error.message) {
+						$('#testPushbullet-result').html(error.message);
+					} else {
+						$('#testPushbullet-result').html(msg);
+					}
 				}
 			});
 

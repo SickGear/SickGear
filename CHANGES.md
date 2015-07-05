@@ -91,6 +91,8 @@
 * Update jsonrpclib library r20 to (b59217c)
 * Change cachecontrol library to ensure cache file exists before attempting delete
 * Fix saving root dirs
+* Change pushbullet from urllib2 to requests
+* Change to make pushbullet error messages clearer
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)

@@ -16,16 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
-import urllib
-import urllib2
-import socket
 import base64
-
+import simplejson as json
 import sickbeard
 
 from sickbeard import logger
 from sickbeard.common import notifyStrings, NOTIFY_SNATCH, NOTIFY_DOWNLOAD, NOTIFY_SUBTITLE_DOWNLOAD, NOTIFY_GIT_UPDATE, NOTIFY_GIT_UPDATE_TEXT
-from sickbeard.exceptions import ex
+import requests
 
 PUSHAPI_ENDPOINT = 'https://api.pushbullet.com/v2/pushes'
 DEVICEAPI_ENDPOINT = 'https://api.pushbullet.com/v2/devices'
@@ -40,54 +37,38 @@ class PushbulletNotifier:
 
         # get devices from pushbullet
         try:
-            req = urllib2.Request(DEVICEAPI_ENDPOINT)
             base64string = base64.encodestring('%s:%s' % (accessToken, ''))[:-1]
-            req.add_header('Authorization', 'Basic %s' % base64string)
-            handle = urllib2.urlopen(req)
-            if handle:
-                result = handle.read()
-            handle.close()
-            return result
-        except urllib2.URLError:
-            return None
-        except socket.timeout:
-            return None
+            headers = {'Authorization': 'Basic %s' % base64string}
+            return requests.get(DEVICEAPI_ENDPOINT, headers=headers).text
+        except Exception as e:
+            return json.dumps({'error': {'message': 'Error failed to connect: %s' % e}})
 
     def _sendPushbullet(self, title, body, accessToken, device_iden):
 
         # build up the URL and parameters
-        body = body.strip().encode('utf-8')
-
-        data = urllib.urlencode({
+        payload = {
             'type': 'note',
             'title': title,
-            'body': body,
+            'body': body.strip().encode('utf-8'),
             'device_iden': device_iden
-            })
+            }
 
         # send the request to pushbullet
         try:
-            req = urllib2.Request(PUSHAPI_ENDPOINT)
             base64string = base64.encodestring('%s:%s' % (accessToken, ''))[:-1]
-            req.add_header('Authorization', 'Basic %s' % base64string)
-            handle = urllib2.urlopen(req, data)
-            handle.close()
-        except socket.timeout:
-            return False
-        except urllib2.URLError as e:
+            headers = {'Authorization': 'Basic %s' % base64string, 'Content-Type': 'application/json'}
+            result = requests.post(PUSHAPI_ENDPOINT, headers=headers, data=json.dumps(payload))
+            result.raise_for_status()
+        except Exception as e:
+            try:
+                e = result.json()['error']['message']
+            except:
+                pass
+            logger.log(u'PUSHBULLET: %s' % e, logger.WARNING)
+            return 'Error sending Pushbullet notification: %s' % e
 
-            if e.code == 404:
-                logger.log(u'PUSHBULLET: Access token is wrong/not associated to a device.', logger.ERROR)
-            elif e.code == 401:
-                logger.log(u'PUSHBULLET: Unauthorized, not a valid access token.', logger.ERROR)
-            elif e.code == 400:
-                logger.log(u'PUSHBULLET: Bad request, missing required parameter.', logger.ERROR)
-            elif e.code == 503:
-                logger.log(u'PUSHBULLET: Pushbullet server to busy to handle the request at this time.', logger.WARNING)
-            return False
-
-        logger.log(u'PUSHBULLET: Notification successful.', logger.MESSAGE)
-        return True
+        logger.log(u'PUSHBULLET: Pushbullet notification succeeded', logger.MESSAGE)
+        return 'Pushbullet notification succeeded'
 
     def _notifyPushbullet(self, title, body, accessToken=None, device_iden=None, force=False):
         """
