@@ -59,6 +59,7 @@
 * Add PiSexy torrent provider
 * Add Strike torrent provider
 * Add TorrentShack torrent provider
+* Add BeyondHD torrent provider
 * Fix getManualSearchStatus: object has no attribute 'segment'
 * Change handling of general HTTP error response codes to prevent issues
 * Add handling for CloudFlare custom HTTP response codes

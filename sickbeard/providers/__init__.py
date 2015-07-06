@@ -40,6 +40,7 @@ __all__ = ['womble',
            'pisexy',
            'strike',
            'torrentshack',
+           'beyondhd'
 ]
 
 from os import sys

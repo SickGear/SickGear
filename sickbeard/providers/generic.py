@@ -669,6 +669,10 @@ class TorrentProvider(GenericProvider):
             if self.api_key:
                 return True
             setting = 'Apikey'
+        elif hasattr(self, 'passkey'):
+            if self.passkey:
+                return True
+            setting = 'Passkey'
         else:
             return GenericProvider._checkAuth(self)
 
