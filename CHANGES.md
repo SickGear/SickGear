@@ -61,6 +61,7 @@
 * Add TorrentShack torrent provider
 * Add BeyondHD torrent provider
 * Add GFTracker torrent provider
+* Add TtN torrent provider
 * Fix getManualSearchStatus: object has no attribute 'segment'
 * Change handling of general HTTP error response codes to prevent issues
 * Add handling for CloudFlare custom HTTP response codes
