@@ -55,7 +55,7 @@ class KATProvider(generic.TorrentProvider):
 
         file_name = None
 
-        data = self.getURL(torrent_link)
+        data = self.get_url(torrent_link)
         if not data:
             return None
 
@@ -144,7 +144,7 @@ class KATProvider(generic.TorrentProvider):
 
         return [{'Episode': self._build_search_strings(ep_detail, append=(add_string, '')[self.show.anime])}]
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
         items = {'Season': [], 'Episode': [], 'Cache': []}
@@ -216,7 +216,7 @@ class KATProvider(generic.TorrentProvider):
 
         return results
 
-    def findPropers(self, search_date=datetime.datetime.today()):
+    def find_propers(self, search_date=datetime.datetime.today()):
 
         return self._find_propers(search_date, '')
 

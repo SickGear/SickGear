@@ -721,7 +721,7 @@ class ConfigMigrator():
         for curProvider in providers.sortedProviderList():
             if hasattr(curProvider, 'enable_recentsearch'):
                 curProvider.enable_recentsearch = bool(check_setting_int(
-                    self.config_obj, curProvider.getID().upper(), curProvider.getID() + '_enable_dailysearch', 1))
+                    self.config_obj, curProvider.get_id().upper(), curProvider.get_id() + '_enable_dailysearch', 1))
 
     def _migrate_v7(self):
         sickbeard.EPISODE_VIEW_LAYOUT = check_setting_str(self.config_obj, 'GUI', 'coming_eps_layout', 'banner')

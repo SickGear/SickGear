@@ -48,9 +48,9 @@ class ToTVProvider(generic.TorrentProvider):
                    logger.DEBUG)
         raise AuthException('Your authentication credentials for %s are incorrect, check your config.' % self.name)
 
-    def _doSearch(self, search_params, mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, mode='eponly', epcount=0, age=0):
 
-        self._checkAuth()
+        self._check_auth()
         self.headers.update({'X-Authorization': self.api_key})
         results = []
         params = {'limit': 100}
@@ -62,7 +62,7 @@ class ToTVProvider(generic.TorrentProvider):
 
         search_url = self.urls['search'] % urllib.urlencode(params)
 
-        data_json = self.getURL(search_url, json=True)
+        data_json = self.get_url(search_url, json=True)
 
         cnt = len(results)
         if data_json and 'results' in data_json and self._check_auth_from_data(data_json):
@@ -82,7 +82,7 @@ class ToTVProvider(generic.TorrentProvider):
         self._log_result(mode, len(results) - cnt, search_url)
         return results
 
-    def findPropers(self, search_date=datetime.datetime.today()):
+    def find_propers(self, search_date=datetime.datetime.today()):
 
         return self._find_propers(search_date)
 
@@ -113,7 +113,7 @@ class ToTVProvider(generic.TorrentProvider):
 
     def get_cache_data(self, *args, **kwargs):
 
-        return self._doSearch({})
+        return self._do_search({})
 
 
 class ToTVCache(tvcache.TVCache):

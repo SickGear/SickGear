@@ -66,14 +66,14 @@ def _getProperList():
 
     # for each provider get a list of the
     origThreadName = threading.currentThread().name
-    providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive()]
+    providers = [x for x in sickbeard.providers.sortedProviderList() if x.is_active()]
     for curProvider in providers:
         threading.currentThread().name = origThreadName + ' :: [' + curProvider.name + ']'
 
         logger.log(u'Searching for any new PROPER releases from ' + curProvider.name)
 
         try:
-            curPropers = curProvider.findPropers(search_date)
+            curPropers = curProvider.find_propers(search_date)
         except exceptions.AuthException as e:
             logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
             continue
@@ -243,8 +243,9 @@ def _downloadPropers(properList):
             epObj = showObj.getEpisode(curProper.season, curProper.episode)
 
             # make the result object
-            result = curProper.provider.getResult([epObj])
-            result.url = curProper.url
+            result = curProper.provider.get_result([epObj], curProper.url)
+            if None is result:
+                continue
             result.name = curProper.name
             result.quality = curProper.quality
             result.version = curProper.version

@@ -16,117 +16,202 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
-import urllib
+import re
 from datetime import datetime
+import time
+import traceback
 
 import generic
 import sickbeard
+import urllib
 from sickbeard import tvcache, classes, logger, show_name_helpers
 from sickbeard.exceptions import AuthException
-
-
-try:
-    import xml.etree.cElementTree as etree
-except ImportError:
-    import elementtree.ElementTree as etree
-
-try:
-    import json
-except ImportError:
-    from lib import simplejson as json
+from sickbeard.rssfeeds import RSSFeeds
+from sickbeard.bs4_parser import BS4Parser
 
 
 class OmgwtfnzbsProvider(generic.NZBProvider):
+
     def __init__(self):
-        generic.NZBProvider.__init__(self, 'omgwtfnzbs', True, False)
-        self.username = None
-        self.api_key = None
-        self.cache = OmgwtfnzbsCache(self)
+        generic.NZBProvider.__init__(self, 'omgwtfnzbs')
+
         self.url = 'https://omgwtfnzbs.org/'
 
-    def _checkAuth(self):
+        self.url_base = 'https://omgwtfnzbs.org/'
+        self.urls = {'config_provider_home_uri': self.url_base,
+                     'cache': 'https://rss.omgwtfnzbs.org/rss-download.php?%s',
+                     'search': self.url_base + 'json/?%s',
+                     'get': self.url_base + '%s',
+                     'cache_html': self.url_base + 'browse.php?cat=tv%s',
+                     'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}
 
-        if not self.username or not self.api_key:
-            raise AuthException("Your authentication credentials for " + self.name + " are missing, check your config.")
+        self.url = self.urls['config_provider_home_uri']
 
-        return True
+        self.needs_auth = True
+        self.username, self.api_key, self.cookies = 3 * [None]
+        self.cache = OmgwtfnzbsCache(self)
 
-    def _checkAuthFromData(self, parsed_data, is_XML=True):
+    def _check_auth_from_data(self, parsed_data, is_xml=True):
 
         if parsed_data is None:
-            return self._checkAuth()
+            return self._check_auth()
 
-        if is_XML:
+        if is_xml:
             # provider doesn't return xml on error
             return True
         else:
-            parsedJSON = parsed_data
+            data_json = parsed_data
 
-            if 'notice' in parsedJSON:
-                description_text = parsedJSON.get('notice')
+            if 'notice' in data_json:
+                description_text = data_json.get('notice')
 
-                if 'information is incorrect' in parsedJSON.get('notice'):
-                    logger.log(u"Incorrect authentication credentials for " + self.name + " : " + str(description_text),
+                if 'information is incorrect' in data_json.get('notice'):
+                    logger.log(u'Incorrect authentication credentials for ' + self.name + ' : ' + str(description_text),
                                logger.DEBUG)
                     raise AuthException(
-                        "Your authentication credentials for " + self.name + " are incorrect, check your config.")
+                        'Your authentication credentials for ' + self.name + ' are incorrect, check your config.')
 
-                elif '0 results matched your terms' in parsedJSON.get('notice'):
+                elif '0 results matched your terms' in data_json.get('notice'):
                     return True
 
                 else:
-                    logger.log(u"Unknown error given from " + self.name + " : " + str(description_text), logger.DEBUG)
+                    logger.log(u'Unknown error given from ' + self.name + ' : ' + str(description_text), logger.DEBUG)
                     return False
 
             return True
 
     def _get_season_search_strings(self, ep_obj):
+
         return [x for x in show_name_helpers.makeSceneSeasonSearchString(self.show, ep_obj)]
 
-    def _get_episode_search_strings(self, ep_obj, add_string=''):
+    def _get_episode_search_strings(self, ep_obj):
+
         return [x for x in show_name_helpers.makeSceneSearchString(self.show, ep_obj)]
 
     def _get_title_and_url(self, item):
-        return (item['release'], item['getnzb'])
 
-    def _doSearch(self, search, search_mode='eponly', epcount=0, retention=0):
+        return item['release'], item['getnzb']
 
-        self._checkAuth()
+    def get_result(self, episodes, url):
 
-        params = {'user': self.username,
-                  'api': self.api_key,
-                  'eng': 1,
-                  'catid': '19,20',  # SD,HD
-                  'retention': sickbeard.USENET_RETENTION,
-                  'search': search}
+        result = None
+        if url and False is self._init_api():
+            data = self.get_url(url)
+            if data:
+                if '</nzb>' not in data or 'seem to be logged in' in data:
+                    logger.log(u'Failed nzb data response: %s' % data, logger.DEBUG)
+                    return result
+                result = classes.NZBDataSearchResult(episodes)
+                result.extraInfo += [data]
 
-        if retention or not params['retention']:
-            params['retention'] = retention
+        if None is result:
+            result = classes.NZBSearchResult(episodes)
+            result.url = url
 
-        search_url = 'https://api.omgwtfnzbs.org/json/?' + urllib.urlencode(params)
-        logger.log(u"Search url: " + search_url, logger.DEBUG)
+        result.provider = self
 
-        parsedJSON = self.getURL(search_url, json=True)
-        if not parsedJSON:
-            return []
+        return result
 
-        if self._checkAuthFromData(parsedJSON, is_XML=False):
-            results = []
+    def get_cache_data(self):
 
-            for item in parsedJSON:
-                if 'release' in item and 'getnzb' in item:
-                    results.append(item)
+        api_key = self._init_api()
+        if False is api_key:
+            return self.search_html()
+        if None is not api_key:
+            params = {'user': self.username,
+                      'api': api_key,
+                      'eng': 1,
+                      'catid': '19,20'}  # SD,HD
 
-            return results
+            rss_url = self.urls['cache'] % urllib.urlencode(params)
 
+            logger.log(self.name + u' cache update URL: ' + rss_url, logger.DEBUG)
+
+            data = RSSFeeds(self).get_feed(rss_url)
+            if data and 'entries' in data:
+                return data.entries
         return []
 
-    def findPropers(self, search_date=None):
+    def _do_search(self, search, search_mode='eponly', epcount=0, retention=0):
+
+        api_key = self._init_api()
+        if False is api_key:
+            return self.search_html(search)
+        results = []
+        if None is not api_key:
+            params = {'user': self.username,
+                      'api': api_key,
+                      'eng': 1,
+                      'catid': '19,20',  # SD,HD
+                      'retention': (sickbeard.USENET_RETENTION, retention)[retention or not sickbeard.USENET_RETENTION],
+                      'search': search}
+
+            search_url = self.urls['search'] % urllib.urlencode(params)
+            logger.log(u'Search url: ' + search_url, logger.DEBUG)
+
+            data_json = self.get_url(search_url, json=True)
+            if data_json and self._check_auth_from_data(data_json, is_xml=False):
+                for item in data_json:
+                    if 'release' in item and 'getnzb' in item:
+                        results.append(item)
+        return results
+
+    def search_html(self, search=''):
+
+        results = []
+        if None is self.cookies:
+            return results
+
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': r'send\?', 'nuked': r'\bnuked',
+                                                             'cat': 'cat=(?:19|20)'}.items())
+        mode = ('search', 'cache')['' == search]
+        search_url = self.urls[mode + '_html'] % search
+        html = self.get_url(search_url)
+        cnt = len(results)
+        try:
+            if not html:
+                raise generic.HaltParseException
+
+            with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                torrent_table = soup.find('table', attrs={'id': 'table_table'})
+                torrent_rows = []
+                if torrent_table:
+                    torrent_rows = torrent_table.find('tbody').find_all('tr')
+
+                if 1 > len(torrent_rows):
+                    raise generic.HaltParseException
+
+                for tr in torrent_rows:
+                    try:
+                        if tr.find('img', src=rc['nuked']) or not tr.find('a', href=rc['cat']):
+                            continue
+
+                        title = tr.find('a', href=rc['info'])['title']
+                        download_url = tr.find('a', href=rc['get'])
+                        age = tr.find_all('td')[-1]['data-sort']
+                    except (AttributeError, TypeError):
+                        continue
+
+                    if title and download_url and age:
+                        results.append({'release': title, 'getnzb': self.urls['get'] % download_url['href'].lstrip('/'),
+                                        'usenetage': int(age.strip())})
+
+        except generic.HaltParseException:
+            time.sleep(1.1)
+            pass
+        except Exception:
+            logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+
+        self._log_result(mode, len(results) - cnt, search_url)
+        return results
+
+    def find_propers(self, search_date=None):
+
         search_terms = ['.PROPER.', '.REPACK.']
         results = []
 
         for term in search_terms:
-            for item in self._doSearch(term, retention=4):
+            for item in self._do_search(term, retention=4):
                 if 'usenetage' in item:
 
                     title, url = self._get_title_and_url(item)
@@ -140,47 +225,40 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         return results
 
+    def _init_api(self):
+
+        try:
+            api_key = self._check_auth()
+            if not api_key.startswith('cookie:'):
+                return api_key
+        except Exception:
+            return None
+
+        self.cookies = re.sub(r'(?i)([\s\']+|cookie\s*:)', '', api_key)
+        success, msg = self._check_cookie()
+        if not success:
+            logger.log(u'%s: %s' % (msg, self.cookies), logger.WARNING)
+            self.cookies = None
+            return None
+        return False
+
+    @staticmethod
+    def ui_string(key):
+        result = ''
+        if 'omgwtfnzbs_api_key' == key:
+            result = 'Or use... \'cookie: cookname=xx; cookpass=yy\''
+        return result
+
 
 class OmgwtfnzbsCache(tvcache.TVCache):
-    def __init__(self, provider):
-        tvcache.TVCache.__init__(self, provider)
+
+    def __init__(self, this_provider):
+        tvcache.TVCache.__init__(self, this_provider)
+
         self.minTime = 20
 
-    def _get_title_and_url(self, item):
-        """
-        Retrieves the title and URL data from the item XML node
-
-        item: An elementtree.ElementTree element representing the <item> tag of the RSS feed
-
-        Returns: A tuple containing two strings representing title and URL respectively
-        """
-
-        title = item.title if item.title else None
-        if title:
-            title = u'' + title
-            title = title.replace(' ', '.')
-
-        url = item.link if item.link else None
-        if url:
-            url = url.replace('&amp;', '&')
-
-        return (title, url)
-
     def _getRSSData(self):
-        params = {'user': provider.username,
-                  'api': provider.api_key,
-                  'eng': 1,
-                  'catid': '19,20'}  # SD,HD
 
-        rss_url = 'https://rss.omgwtfnzbs.org/rss-download.php?' + urllib.urlencode(params)
-
-        logger.log(self.provider.name + u" cache update URL: " + rss_url, logger.DEBUG)
-
-        data = self.getRSSFeed(rss_url)
-
-        if data and 'entries' in data:
-            return data.entries
-        else:
-            return []
+        return self.provider.get_cache_data()
 
 provider = OmgwtfnzbsProvider()

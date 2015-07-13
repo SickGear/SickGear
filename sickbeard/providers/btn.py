@@ -43,7 +43,7 @@ class BTNProvider(generic.TorrentProvider):
     def _check_auth_from_data(self, data_json):
 
         if data_json is None:
-            return self._checkAuth()
+            return self._check_auth()
 
         if 'api-error' not in data_json:
             return True
@@ -52,9 +52,9 @@ class BTNProvider(generic.TorrentProvider):
                    logger.DEBUG)
         raise AuthException('Your authentication credentials for %s are incorrect, check your config.' % self.name)
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
-        self._checkAuth()
+        self._check_auth()
 
         params = {}
 
@@ -236,14 +236,14 @@ class BTNProvider(generic.TorrentProvider):
 
         return to_return
 
-    def findPropers(self, search_date=None):
+    def find_propers(self, search_date=None):
 
         results = []
 
         search_terms = ['%.proper.%', '%.repack.%']
 
         for term in search_terms:
-            for item in self._doSearch({'release': term}, age=4 * 24 * 60 * 60):
+            for item in self._do_search({'release': term}, age=4 * 24 * 60 * 60):
                 if item['Time']:
                     try:
                         result_date = datetime.datetime.fromtimestamp(float(item['Time']))
@@ -273,7 +273,7 @@ class BTNProvider(generic.TorrentProvider):
                        % self.name, logger.WARNING)
             seconds_since_last_update = 86400
 
-        return self._doSearch(search_params=None, age=seconds_since_last_update)
+        return self._do_search(search_params=None, age=seconds_since_last_update)
 
 
 class BTNCache(tvcache.TVCache):

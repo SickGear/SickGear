@@ -36,8 +36,8 @@ class ThePirateBayProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay')
 
-        self.urls = {'config_provider_home_uri': ['https://thepiratebay.gd/', 'https://thepiratebay.mn/',
-                                                  'https://thepiratebay.am/', 'https://thepiratebay.vg/',
+        self.urls = {'config_provider_home_uri': ['https://thepiratebay.se/', 'https://thepiratebay.gd/',
+                                                  'https://thepiratebay.mn/', 'https://thepiratebay.vg/',
                                                   'https://thepiratebay.la/'],
                      'search': 'search/%s/0/7/200',
                      'cache': 'tv/latest/'}  # order by seed
@@ -57,7 +57,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
         has_signature = False
         details_url = '/ajax_details_filelist.php?id=%s' % torrent_id
         for idx, url in enumerate(self.urls['config_provider_home_uri']):
-            data = self.getURL(url + details_url)
+            data = self.get_url(url + details_url)
             if data and re.search(r'<title>The\sPirate\sBay', data[33:200:]):
                 has_signature = True
                 break
@@ -144,13 +144,13 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         return [{'Episode': self._build_search_strings(ep_detail, append=(add_string, '')[self.show.anime])}]
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
         items = {'Season': [], 'Episode': [], 'Cache': []}
 
         rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'info': 'detail', 'get': 'download[^"]+magnet', 'tid': '.*/(\d{5,}).*',
+                  for (k, v) in {'info': 'detail', 'get': 'download[^"]+magnet', 'tid': r'.*/(\d{5,}).*',
                                  'verify': '(?:helper|moderator|trusted|vip)'}.items())
         has_signature = False
         for mode in search_params.keys():
@@ -165,7 +165,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
                     log_url = u'(%s/%s): %s' % (idx + 1, len(self.urls['config_provider_home_uri']), search_url)
 
-                    html = self.getURL(search_url)
+                    html = self.get_url(search_url)
                     if html and re.search(r'Pirate\sBay', html[33:7632:]):
                         has_signature = True
                         break
@@ -227,7 +227,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         return results
 
-    def findPropers(self, search_date=datetime.datetime.today()):
+    def find_propers(self, search_date=datetime.datetime.today()):
 
         return self._find_propers(search_date, '')
 

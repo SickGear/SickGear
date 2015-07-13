@@ -168,7 +168,7 @@ class GenericClient(object):
 
         try:
             # Sets per provider seed ratio
-            result.ratio = result.provider.seedRatio()
+            result.ratio = result.provider.seed_ratio()
 
             result = self._get_torrent_hash(result)
 

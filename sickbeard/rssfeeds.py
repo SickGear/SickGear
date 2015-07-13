@@ -3,9 +3,6 @@
 # This file is part of SickGear.
 #
 
-import re
-import requests
-import requests.cookies
 from feedparser import feedparser
 
 from sickbeard import helpers, logger
@@ -20,27 +17,9 @@ class RSSFeeds:
 
     def _check_auth_cookie(self):
 
-        if self.provider and hasattr(self.provider, 'cookies'):
-            cookies = self.provider.cookies
-
-            if not re.match('^(\w+=\w+[;\s]*)+$', cookies):
-                return False
-
-            cj = requests.utils.add_dict_to_cookiejar(self.provider.session.cookies,
-                                                      dict([x.strip().split('=') for x in cookies.split(';')
-                                                            if x != ''])),
-            for item in cj:
-                if not isinstance(item, requests.cookies.RequestsCookieJar):
-                    return False
-
+        if self.provider:
+            return self.provider.check_auth_cookie()
         return True
-
-    def check_cookie(self):
-
-        if self._check_auth_cookie():
-            return True, None
-
-        return False, 'Cookies not correctly formatted key=value pairs e.g. uid=xx;pass=yy): ' + self.provider.cookies
 
     def get_feed(self, url, request_headers=None):
 

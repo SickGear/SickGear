@@ -100,10 +100,6 @@ class EpisodeNotFoundException(SickBeardException):
     "The episode wasn't found on the Indexer"
 
 
-class NewzbinAPIThrottled(SickBeardException):
-    "Newzbin has throttled us, deal with it"
-
-
 class ShowDirNotFoundException(SickBeardException):
     "The show dir doesn't exist"
 
