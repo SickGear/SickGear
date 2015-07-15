@@ -39,14 +39,14 @@ class PiSexyProvider(generic.TorrentProvider):
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.cache = PiSexyCache(self)
 
-    def _doLogin(self):
+    def _do_login(self):
 
         logged_in = lambda: 'uid' in self.session.cookies and 'pass' in self.session.cookies and\
                             'pcode' in self.session.cookies and 'pisexy' in self.session.cookies
         if logged_in():
             return True
 
-        if self._checkAuth():
+        if self._check_auth():
             login_params = {'username': self.username, 'password': self.password}
             response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
             if response and logged_in():
@@ -59,24 +59,24 @@ class PiSexyProvider(generic.TorrentProvider):
 
         return False
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-        if not self._doLogin():
+        if not self._do_login():
             return results
 
         items = {'Season': [], 'Episode': [], 'Cache': []}
 
         rc = dict((k, re.compile('(?i)' + v))
                   for (k, v) in {'info': 'download', 'get': 'download', 'valid_cat': 'cat=(?:0|50[12])',
-                                 'title': 'Download\s([^\s]+).*', 'seeders': '(^\d+)', 'leechers': '(\d+)$'}.items())
+                                 'title': r'Download\s([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 if isinstance(search_string, unicode):
                     search_string = unidecode(search_string)
 
                 search_url = self.urls['search'] % search_string
-                html = self.getURL(search_url)
+                html = self.get_url(search_url)
 
                 cnt = len(items[mode])
                 try:
@@ -129,7 +129,7 @@ class PiSexyProvider(generic.TorrentProvider):
 
         return results
 
-    def findPropers(self, search_date=datetime.datetime.today()):
+    def find_propers(self, search_date=datetime.datetime.today()):
 
         return self._find_propers(search_date)
 

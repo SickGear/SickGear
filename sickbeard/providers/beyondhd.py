@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import datetime
 import time
 
@@ -52,10 +53,10 @@ class BeyondHDProvider(generic.TorrentProvider):
         logger.log(u'Incorrect authentication credentials for %s : %s' % (self.name, data_json['error']), logger.DEBUG)
         raise AuthException('Authentication credentials for %s are incorrect, check your config' % self.name)
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-        if not self._checkAuth():
+        if not self._check_auth():
             return results
 
         for mode in search_params.keys():
@@ -72,9 +73,9 @@ class BeyondHDProvider(generic.TorrentProvider):
 
                 search_url = self.urls['cache'] % (self.passkey, self.categories[mode])
                 if 'Cache' != mode:
-                    search_url += self.urls['search'] % search_string
+                    search_url += self.urls['search'] % re.sub('[\.\s]+', ' ', search_string)
 
-                data_json = self.getURL(search_url, json=True)
+                data_json = self.get_url(search_url, json=True)
 
                 cnt = len(results)
                 if data_json and 'results' in data_json and self._check_auth_from_data(data_json):
@@ -97,7 +98,7 @@ class BeyondHDProvider(generic.TorrentProvider):
 
         return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, scene=False, use_or=False)
 
-    def findPropers(self, search_date=datetime.datetime.today()):
+    def find_propers(self, search_date=datetime.datetime.today()):
 
         return self._find_propers(search_date, ['proper', 'repack'])
 

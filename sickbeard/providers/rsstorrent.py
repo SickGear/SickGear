@@ -41,9 +41,9 @@ class TorrentRssProvider(generic.TorrentProvider):
         self.feeder = RSSFeeds(self)
         self.cache = TorrentRssCache(self)
 
-    def imageName(self):
+    def image_name(self):
 
-        return generic.GenericProvider.imageName(self, 'torrentrss')
+        return generic.GenericProvider.image_name(self, 'torrentrss')
 
     def config_str(self):
         return '%s|%s|%s|%d|%s|%d|%d|%d' % (self.name or '',
@@ -81,9 +81,9 @@ class TorrentRssProvider(generic.TorrentProvider):
 
     def validate_feed(self):
 
-        succ, err_msg = self.feeder.check_cookie()
-        if not succ:
-            return succ, err_msg
+        success, err_msg = self._check_cookie()
+        if not success:
+            return success, err_msg
 
         try:
             items = self.get_cache_data()
@@ -96,7 +96,7 @@ class TorrentRssProvider(generic.TorrentProvider):
                     if re.search('urn:btih:([0-9a-f]{32,40})', url):
                         break
                 else:
-                    torrent_file = self.getURL(url)
+                    torrent_file = self.get_url(url)
                     try:
                         bdecode(torrent_file)
                         break

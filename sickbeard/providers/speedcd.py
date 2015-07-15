@@ -44,13 +44,13 @@ class SpeedCDProvider(generic.TorrentProvider):
         self.freeleech = False
         self.cache = SpeedCDCache(self)
 
-    def _doLogin(self):
+    def _do_login(self):
 
         logged_in = lambda: 'inSpeed_speedian' in self.session.cookies
         if logged_in():
             return True
 
-        if self._checkAuth():
+        if self._check_auth():
             login_params = {'username': self.username, 'password': self.password}
             response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
             if response and logged_in():
@@ -63,10 +63,10 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         return False
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-        if not self._doLogin():
+        if not self._do_login():
             return results
 
         items = {'Season': [], 'Episode': [], 'Cache': []}
@@ -78,7 +78,7 @@ class SpeedCDProvider(generic.TorrentProvider):
                 post_data = dict({'/browse.php?': None, 'cata': 'yes', 'jxt': 4, 'jxw': 'b', 'search': search_string},
                                  **self.categories[mode])
 
-                data_json = self.getURL(self.urls['search'], post_data=post_data, json=True)
+                data_json = self.get_url(self.urls['search'], post_data=post_data, json=True)
                 cnt = len(items[mode])
                 try:
                     if not data_json:
@@ -111,7 +111,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         return results
 
-    def findPropers(self, search_date=datetime.datetime.today()):
+    def find_propers(self, search_date=datetime.datetime.today()):
 
         return self._find_propers(search_date)
 

@@ -60,7 +60,7 @@ def _downloadResult(result):
 
     # nzbs with an URL can just be downloaded from the provider
     if result.resultType == "nzb":
-        newResult = resProvider.downloadResult(result)
+        newResult = resProvider.download_result(result)
     # if it's an nzb data result
     elif result.resultType == "nzbdata":
 
@@ -82,7 +82,7 @@ def _downloadResult(result):
             logger.log(u"Error trying to save NZB to black hole: " + ex(e), logger.ERROR)
             newResult = False
     elif resProvider.providerType == "torrent":
-        newResult = resProvider.downloadResult(result)
+        newResult = resProvider.download_result(result)
     else:
         logger.log(u"Invalid provider type - this is a coding error, report it please", logger.ERROR)
         newResult = False
@@ -134,7 +134,7 @@ def snatchEpisode(result, endStatus=SNATCHED):
         else:
             # make sure we have the torrent file content
             if not result.content and not result.url.startswith('magnet'):
-                result.content = result.provider.getURL(result.url)
+                result.content = result.provider.get_url(result.url)
                 if not result.content:
                     logger.log(u'Torrent content failed to download from ' + result.url, logger.ERROR)
                     return False
@@ -401,12 +401,12 @@ def searchForNeededEpisodes(episodes):
 
     origThreadName = threading.currentThread().name
 
-    providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_recentsearch]
+    providers = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_recentsearch]
 
     for curProvider in providers:
         threading.currentThread().name = origThreadName + " :: [" + curProvider.name + "]"
 
-        curFoundResults = curProvider.searchRSS(episodes)
+        curFoundResults = curProvider.search_rss(episodes)
 
         didSearch = True
 
@@ -435,7 +435,7 @@ def searchForNeededEpisodes(episodes):
             if bestResult.resultType == "torrent" and sickbeard.TORRENT_METHOD != "blackhole":
                 bestResult.content = None
                 if not bestResult.url.startswith('magnet'):
-                    bestResult.content = bestResult.provider.getURL(bestResult.url)
+                    bestResult.content = bestResult.provider.get_url(bestResult.url)
                     if not bestResult.content:
                         continue
             
@@ -451,7 +451,7 @@ def searchForNeededEpisodes(episodes):
     return foundResults.values()
 
 
-def searchProviders(show, episodes, manualSearch=False):
+def searchProviders(show, episodes, manual_search=False):
     foundResults = {}
     finalResults = []
 
@@ -459,7 +459,7 @@ def searchProviders(show, episodes, manualSearch=False):
 
     origThreadName = threading.currentThread().name
 
-    providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_backlog]
+    providers = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog]
     for providerNum, curProvider in enumerate(providers):
         if curProvider.anime_only and not show.is_anime:
             logger.log(u"" + str(show.name) + " is not an anime, skipping", logger.DEBUG)
@@ -482,7 +482,7 @@ def searchProviders(show, episodes, manualSearch=False):
 
             try:
                 curProvider.cache._clearCache()
-                searchResults = curProvider.findSearchResults(show, episodes, search_mode, manualSearch)
+                searchResults = curProvider.find_search_results(show, episodes, search_mode, manual_search)
             except exceptions.AuthException as e:
                 logger.log(u"Authentication error: " + ex(e), logger.ERROR)
                 break
@@ -703,7 +703,7 @@ def searchProviders(show, episodes, manualSearch=False):
             if bestResult.resultType == "torrent" and sickbeard.TORRENT_METHOD != "blackhole":
                 bestResult.content = None
                 if not bestResult.url.startswith('magnet'):
-                    bestResult.content = bestResult.provider.getURL(bestResult.url)
+                    bestResult.content = bestResult.provider.get_url(bestResult.url)
                     if not bestResult.content:
                         continue
                     

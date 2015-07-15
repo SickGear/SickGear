@@ -3914,14 +3914,14 @@ class ConfigProviders(Config):
         if not name:
             return json.dumps({'error': 'No Provider Name specified'})
 
-        providerDict = dict(zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         tempProvider = newznab.NewznabProvider(name, '')
 
-        if tempProvider.getID() in providerDict:
-            return json.dumps({'error': 'Provider Name already exists as ' + providerDict[tempProvider.getID()].name})
+        if tempProvider.get_id() in providerDict:
+            return json.dumps({'error': 'Provider Name already exists as ' + providerDict[tempProvider.get_id()].name})
         else:
-            return json.dumps({'success': tempProvider.getID()})
+            return json.dumps({'success': tempProvider.get_id()})
 
     def saveNewznabProvider(self, name, url, key=''):
 
@@ -3942,12 +3942,12 @@ class ConfigProviders(Config):
             else:
                 providerDict[name].needs_auth = True
 
-            return providerDict[name].getID() + '|' + providerDict[name].config_str()
+            return providerDict[name].get_id() + '|' + providerDict[name].config_str()
 
         else:
             newProvider = newznab.NewznabProvider(name, url, key=key)
             sickbeard.newznabProviderList.append(newProvider)
-            return newProvider.getID() + '|' + newProvider.config_str()
+            return newProvider.get_id() + '|' + newProvider.config_str()
 
     def getNewznabCategories(self, name, url, key):
         '''
@@ -3969,7 +3969,7 @@ class ConfigProviders(Config):
             return json.dumps({'success' : False, 'error': error})
 
         #Get list with Newznabproviders
-        #providerDict = dict(zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        #providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         #Get newznabprovider obj with provided name
         tempProvider= newznab.NewznabProvider(name, url, key)
@@ -3980,7 +3980,7 @@ class ConfigProviders(Config):
 
     def deleteNewznabProvider(self, nnid):
 
-        providerDict = dict(zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         if nnid not in providerDict or providerDict[nnid].default:
             return '0'
@@ -3999,16 +3999,16 @@ class ConfigProviders(Config):
             return json.dumps({'error': 'Invalid name specified'})
 
         providerDict = dict(
-            zip([x.getID() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
+            zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
 
         tempProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
 
-        if tempProvider.getID() in providerDict:
-            return json.dumps({'error': 'Exists as ' + providerDict[tempProvider.getID()].name})
+        if tempProvider.get_id() in providerDict:
+            return json.dumps({'error': 'Exists as ' + providerDict[tempProvider.get_id()].name})
         else:
             (succ, errMsg) = tempProvider.validate_feed()
             if succ:
-                return json.dumps({'success': tempProvider.getID()})
+                return json.dumps({'success': tempProvider.get_id()})
             else:
                 return json.dumps({'error': errMsg})
 
@@ -4024,17 +4024,17 @@ class ConfigProviders(Config):
             providerDict[name].url = config.clean_url(url)
             providerDict[name].cookies = cookies
 
-            return providerDict[name].getID() + '|' + providerDict[name].config_str()
+            return providerDict[name].get_id() + '|' + providerDict[name].config_str()
 
         else:
             newProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
             sickbeard.torrentRssProviderList.append(newProvider)
-            return newProvider.getID() + '|' + newProvider.config_str()
+            return newProvider.get_id() + '|' + newProvider.config_str()
 
     def deleteTorrentRssProvider(self, id):
 
         providerDict = dict(
-            zip([x.getID() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
+            zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
 
         if id not in providerDict:
             return '0'
@@ -4055,7 +4055,7 @@ class ConfigProviders(Config):
         provider_list = []
 
         newznabProviderDict = dict(
-            zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+            zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         finishedNames = []
 
@@ -4074,7 +4074,7 @@ class ConfigProviders(Config):
 
                 newProvider = newznab.NewznabProvider(cur_name, cur_url, key=cur_key)
 
-                cur_id = newProvider.getID()
+                cur_id = newProvider.get_id()
 
                 # if it already exists then update it
                 if cur_id in newznabProviderDict:
@@ -4118,11 +4118,11 @@ class ConfigProviders(Config):
 
         # delete anything that is missing
         for curProvider in sickbeard.newznabProviderList:
-            if curProvider.getID() not in finishedNames:
+            if curProvider.get_id() not in finishedNames:
                 sickbeard.newznabProviderList.remove(curProvider)
 
         torrentRssProviderDict = dict(
-            zip([x.getID() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
+            zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
         finishedNames = []
 
         if torrentrss_string:
@@ -4139,7 +4139,7 @@ class ConfigProviders(Config):
 
                 newProvider = rsstorrent.TorrentRssProvider(curName, curURL, curCookies)
 
-                curID = newProvider.getID()
+                curID = newProvider.get_id()
 
                 # if it already exists then update it
                 if curID in torrentRssProviderDict:
@@ -4154,7 +4154,7 @@ class ConfigProviders(Config):
 
         # delete anything that is missing
         for curProvider in sickbeard.torrentRssProviderList:
-            if curProvider.getID() not in finishedNames:
+            if curProvider.get_id() not in finishedNames:
                 sickbeard.torrentRssProviderList.remove(curProvider)
 
         # do the enable/disable
@@ -4163,7 +4163,7 @@ class ConfigProviders(Config):
             curEnabled = config.to_int(curEnabled)
 
             curProvObj = [x for x in sickbeard.providers.sortedProviderList() if
-                          x.getID() == curProvider and hasattr(x, 'enabled')]
+                          x.get_id() == curProvider and hasattr(x, 'enabled')]
             if curProvObj:
                 curProvObj[0].enabled = bool(curEnabled)
 
@@ -4179,31 +4179,31 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'minseed'):
                 try:
-                    curTorrentProvider.minseed = int(str(kwargs[curTorrentProvider.getID() + '_minseed']).strip())
+                    curTorrentProvider.minseed = int(str(kwargs[curTorrentProvider.get_id() + '_minseed']).strip())
                 except:
                     curTorrentProvider.minseed = 0
 
             if hasattr(curTorrentProvider, 'minleech'):
                 try:
-                    curTorrentProvider.minleech = int(str(kwargs[curTorrentProvider.getID() + '_minleech']).strip())
+                    curTorrentProvider.minleech = int(str(kwargs[curTorrentProvider.get_id() + '_minleech']).strip())
                 except:
                     curTorrentProvider.minleech = 0
 
             if hasattr(curTorrentProvider, 'ratio'):
                 try:
-                    curTorrentProvider.ratio = str(kwargs[curTorrentProvider.getID() + '_ratio']).strip()
+                    curTorrentProvider.ratio = str(kwargs[curTorrentProvider.get_id() + '_ratio']).strip()
                 except:
                     curTorrentProvider.ratio = None
 
             if hasattr(curTorrentProvider, 'digest'):
                 try:
-                    curTorrentProvider.digest = str(kwargs[curTorrentProvider.getID() + '_digest']).strip()
+                    curTorrentProvider.digest = str(kwargs[curTorrentProvider.get_id() + '_digest']).strip()
                 except:
                     curTorrentProvider.digest = None
 
             if hasattr(curTorrentProvider, 'hash'):
                 try:
-                    key = str(kwargs[curTorrentProvider.getID() + '_hash']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_hash']).strip()
                     if not starify(key, True):
                         curTorrentProvider.hash = key
                 except:
@@ -4211,7 +4211,7 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'api_key'):
                 try:
-                    key = str(kwargs[curTorrentProvider.getID() + '_api_key']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_api_key']).strip()
                     if not starify(key, True):
                         curTorrentProvider.api_key = key
                 except:
@@ -4219,13 +4219,13 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'username'):
                 try:
-                    curTorrentProvider.username = str(kwargs[curTorrentProvider.getID() + '_username']).strip()
+                    curTorrentProvider.username = str(kwargs[curTorrentProvider.get_id() + '_username']).strip()
                 except:
                     curTorrentProvider.username = None
 
             if hasattr(curTorrentProvider, 'password'):
                 try:
-                    key = str(kwargs[curTorrentProvider.getID() + '_password']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_password']).strip()
                     if set('*') != set(key):
                         curTorrentProvider.password = key
                 except:
@@ -4233,7 +4233,7 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'passkey'):
                 try:
-                    key = str(kwargs[curTorrentProvider.getID() + '_passkey']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_passkey']).strip()
                     if not starify(key, True):
                         curTorrentProvider.passkey = key
                 except:
@@ -4242,54 +4242,54 @@ class ConfigProviders(Config):
             if hasattr(curTorrentProvider, 'confirmed'):
                 try:
                     curTorrentProvider.confirmed = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_confirmed'])
+                        kwargs[curTorrentProvider.get_id() + '_confirmed'])
                 except:
                     curTorrentProvider.confirmed = 0
 
             if hasattr(curTorrentProvider, 'proxy'):
                 try:
                     curTorrentProvider.proxy.enabled = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_proxy'])
+                        kwargs[curTorrentProvider.get_id() + '_proxy'])
                 except:
                     curTorrentProvider.proxy.enabled = 0
 
                 if hasattr(curTorrentProvider.proxy, 'url'):
                     try:
-                        curTorrentProvider.proxy.url = str(kwargs[curTorrentProvider.getID() + '_proxy_url']).strip()
+                        curTorrentProvider.proxy.url = str(kwargs[curTorrentProvider.get_id() + '_proxy_url']).strip()
                     except:
                         curTorrentProvider.proxy.url = None
 
             if hasattr(curTorrentProvider, 'freeleech'):
                 try:
                     curTorrentProvider.freeleech = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_freeleech'])
+                        kwargs[curTorrentProvider.get_id() + '_freeleech'])
                 except:
                     curTorrentProvider.freeleech = 0
 
             if hasattr(curTorrentProvider, 'search_mode'):
                 try:
-                    curTorrentProvider.search_mode = str(kwargs[curTorrentProvider.getID() + '_search_mode']).strip()
+                    curTorrentProvider.search_mode = str(kwargs[curTorrentProvider.get_id() + '_search_mode']).strip()
                 except:
                     curTorrentProvider.search_mode = 'eponly'
 
             if hasattr(curTorrentProvider, 'search_fallback'):
                 try:
                     curTorrentProvider.search_fallback = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_search_fallback'])
+                        kwargs[curTorrentProvider.get_id() + '_search_fallback'])
                 except:
                     curTorrentProvider.search_fallback = 0  # these exceptions are catching unselected checkboxes
 
             if hasattr(curTorrentProvider, 'enable_recentsearch'):
                 try:
                     curTorrentProvider.enable_recentsearch = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_enable_recentsearch'])
+                        kwargs[curTorrentProvider.get_id() + '_enable_recentsearch'])
                 except:
                     curTorrentProvider.enable_recentsearch = 0 # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curTorrentProvider, 'enable_backlog'):
                 try:
                     curTorrentProvider.enable_backlog = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_enable_backlog'])
+                        kwargs[curTorrentProvider.get_id() + '_enable_backlog'])
                 except:
                     curTorrentProvider.enable_backlog = 0 # these exceptions are actually catching unselected checkboxes
 
@@ -4298,7 +4298,7 @@ class ConfigProviders(Config):
 
             if hasattr(curNzbProvider, 'api_key'):
                 try:
-                    key = str(kwargs[curNzbProvider.getID() + '_api_key']).strip()
+                    key = str(kwargs[curNzbProvider.get_id() + '_api_key']).strip()
                     if not starify(key, True):
                         curNzbProvider.api_key = key
                 except:
@@ -4306,34 +4306,34 @@ class ConfigProviders(Config):
 
             if hasattr(curNzbProvider, 'username'):
                 try:
-                    curNzbProvider.username = str(kwargs[curNzbProvider.getID() + '_username']).strip()
+                    curNzbProvider.username = str(kwargs[curNzbProvider.get_id() + '_username']).strip()
                 except:
                     curNzbProvider.username = None
 
             if hasattr(curNzbProvider, 'search_mode'):
                 try:
-                    curNzbProvider.search_mode = str(kwargs[curNzbProvider.getID() + '_search_mode']).strip()
+                    curNzbProvider.search_mode = str(kwargs[curNzbProvider.get_id() + '_search_mode']).strip()
                 except:
                     curNzbProvider.search_mode = 'eponly'
 
             if hasattr(curNzbProvider, 'search_fallback'):
                 try:
                     curNzbProvider.search_fallback = config.checkbox_to_value(
-                        kwargs[curNzbProvider.getID() + '_search_fallback'])
+                        kwargs[curNzbProvider.get_id() + '_search_fallback'])
                 except:
                     curNzbProvider.search_fallback = 0  # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curNzbProvider, 'enable_recentsearch'):
                 try:
                     curNzbProvider.enable_recentsearch = config.checkbox_to_value(
-                        kwargs[curNzbProvider.getID() + '_enable_recentsearch'])
+                        kwargs[curNzbProvider.get_id() + '_enable_recentsearch'])
                 except:
                     curNzbProvider.enable_recentsearch = 0  # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curNzbProvider, 'enable_backlog'):
                 try:
                     curNzbProvider.enable_backlog = config.checkbox_to_value(
-                        kwargs[curNzbProvider.getID() + '_enable_backlog'])
+                        kwargs[curNzbProvider.get_id() + '_enable_backlog'])
                 except:
                     curNzbProvider.enable_backlog = 0  # these exceptions are actually catching unselected checkboxes
 

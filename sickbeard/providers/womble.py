@@ -66,7 +66,7 @@ class WombleCache(tvcache.TVCache):
                     cl.append(ci)
 
         if 0 < len(cl):
-            my_db = self._getDB()
+            my_db = self.get_db()
             my_db.mass_action(cl)
 
         # set last updated

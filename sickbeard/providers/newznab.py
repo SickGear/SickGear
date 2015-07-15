@@ -43,18 +43,10 @@ class NewznabProvider(generic.NZBProvider):
         self.default = False
         self.cache = NewznabCache(self)
 
-    def _checkAuth(self):
-
-        if self.needs_auth and not self.key:
-            logger.log(u'Incorrect authentication credentials for %s : API key is missing' % self.name, logger.DEBUG)
-            raise AuthException('Your authentication credentials for %s are missing, check your config.' % self.name)
-
-        return True
-
     def check_auth_from_data(self, data):
 
         if data is None:
-            return self._checkAuth()
+            return self._check_auth()
 
         if 'error' in data.feed:
             code = data.feed['error']['code']
@@ -84,22 +76,20 @@ class NewznabProvider(generic.NZBProvider):
         """
         return_categories = []
 
-        self._checkAuth()
+        api_key = self._check_auth()
 
         params = {'t': 'caps'}
-        if self.needs_auth and self.key:
-            params['apikey'] = self.key
+        if isinstance(api_key, basestring):
+            params['apikey'] = api_key
 
-        try:
-            categories = self.getURL('%s/api' % self.url, params=params, timeout=10)
-        except:
-            logger.log(u'Error getting html for [%s]' %
-                       ('%s/api?%s' % (self.url, '&'.join('%s=%s' % (x, y) for x, y in params.items()))), logger.DEBUG)
+        categories = self.get_url('%s/api' % self.url, params=params, timeout=10)
+        if not categories:
+            logger.log(u'Error getting html for [%s/api?%s]' %
+                       (self.url, '&'.join('%s=%s' % (x, y) for x, y in params.items())), logger.DEBUG)
             return (False, return_categories, 'Error getting html for [%s]' %
                     ('%s/api?%s' % (self.url, '&'.join('%s=%s' % (x, y) for x, y in params.items()))))
 
         xml_categories = helpers.parse_xml(categories)
-
         if not xml_categories:
             logger.log(u'Error parsing xml for [%s]' % self.name, logger.DEBUG)
             return False, return_categories, 'Error parsing xml for [%s]' % self.name
@@ -117,7 +107,7 @@ class NewznabProvider(generic.NZBProvider):
 
     def config_str(self):
         return '%s|%s|%s|%s|%i|%s|%i|%i|%i' \
-               % (self.name or '', self.url or '', self.key or '', self.cat_ids or '', self.enabled,
+               % (self.name or '', self.url or '', self.maybe_apikey() or '', self.cat_ids or '', self.enabled,
                   self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog)
 
     def _get_season_search_strings(self, ep_obj):
@@ -154,7 +144,7 @@ class NewznabProvider(generic.NZBProvider):
 
         return to_return
 
-    def _get_episode_search_strings(self, ep_obj, add_string=''):
+    def _get_episode_search_strings(self, ep_obj):
         to_return = []
         params = {}
 
@@ -169,8 +159,7 @@ class NewznabProvider(generic.NZBProvider):
             params['ep'] = '%i' % int(
                 ep_obj.scene_absolute_number if int(ep_obj.scene_absolute_number) > 0 else ep_obj.scene_episode)
         else:
-            params['season'] = ep_obj.scene_season
-            params['ep'] = ep_obj.scene_episode
+            params['season'], params['ep'] = ep_obj.scene_season, ep_obj.scene_episode
 
         # search
         rid = helpers.mapIndexersToShow(ep_obj.show)[2]
@@ -203,9 +192,9 @@ class NewznabProvider(generic.NZBProvider):
 
         return to_return
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
-        self._checkAuth()
+        api_key = self._check_auth()
 
         if 'rid' not in search_params and 'q' not in search_params:
             logger.log('Error no rid or search term given.')
@@ -233,8 +222,8 @@ class NewznabProvider(generic.NZBProvider):
         if search_params:
             params.update(search_params)
 
-        if self.needs_auth and self.key:
-            params['apikey'] = self.key
+        if isinstance(api_key, basestring):
+            params['apikey'] = api_key
 
         results = []
         offset = total = 0
@@ -288,7 +277,7 @@ class NewznabProvider(generic.NZBProvider):
                        % (items, helpers.maybe_plural(items), params['limit']), logger.DEBUG)
         return results
 
-    def findPropers(self, search_date=None):
+    def find_propers(self, search_date=None):
         return self._find_propers(search_date)
 
 
@@ -305,8 +294,9 @@ class NewznabCache(tvcache.TVCache):
                   'cat': self.provider.cat_ids + ',5060,5070',
                   'attrs': 'rageid'}
 
-        if self.provider.needs_auth and self.provider.key:
-            params['apikey'] = self.provider.key
+        has_apikey = self.provider.maybe_apikey()
+        if has_apikey:
+            params['apikey'] = has_apikey
 
         rss_url = '%sapi?%s' % (self.provider.url, urllib.urlencode(params))
 
@@ -314,13 +304,14 @@ class NewznabCache(tvcache.TVCache):
 
         return self.getRSSFeed(rss_url)
 
-    def _checkAuth(self, *data):
-
-        return self.provider.check_auth_from_data(data[0])
-
     def updateCache(self):
 
-        if self.shouldUpdate() and self._checkAuth(None):
+        if self.shouldUpdate():
+            try:
+                self._checkAuth()
+            except Exception:
+                return []
+
             data = self._getRSSData()
 
             # as long as the http request worked we count this as an update
@@ -332,7 +323,7 @@ class NewznabCache(tvcache.TVCache):
 
             self.setLastUpdate()
 
-            if self._checkAuth(data):
+            if self.provider.check_auth_from_data(data):
                 items = data.entries
                 cl = []
                 for item in items:
@@ -341,7 +332,7 @@ class NewznabCache(tvcache.TVCache):
                         cl.append(ci)
 
                 if 0 < len(cl):
-                    my_db = self._getDB()
+                    my_db = self.get_db()
                     my_db.mass_action(cl)
 
             else:
@@ -376,4 +367,4 @@ class NewznabCache(tvcache.TVCache):
         url = self._translateLinkURL(url)
 
         logger.log(u'Attempting to add item from RSS to cache: ' + title, logger.DEBUG)
-        return self._addCacheEntry(title, url, indexer_id=tvrageid)
+        return self.add_cache_entry(title, url, indexer_id=tvrageid)

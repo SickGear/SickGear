@@ -53,7 +53,7 @@ from sickbeard import logger
 
 def sortedProviderList():
     initialList = sickbeard.providerList + sickbeard.newznabProviderList + sickbeard.torrentRssProviderList
-    providerDict = dict(zip([x.getID() for x in initialList], initialList))
+    providerDict = dict(zip([x.get_id() for x in initialList], initialList))
 
     newList = []
 
@@ -207,7 +207,7 @@ def getProviderModule(name):
 def getProviderClass(id):
     providerMatch = [x for x in
                      sickbeard.providerList + sickbeard.newznabProviderList + sickbeard.torrentRssProviderList if
-                     x.getID() == id]
+                     x.get_id() == id]
 
     if len(providerMatch) != 1:
         return None

@@ -47,13 +47,13 @@ class AlphaRatioProvider(generic.TorrentProvider):
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.cache = AlphaRatioCache(self)
 
-    def _doLogin(self):
+    def _do_login(self):
 
         logged_in = lambda: 'session' in self.session.cookies
         if logged_in():
             return True
 
-        if self._checkAuth():
+        if self._check_auth():
             login_params = {'username': self.username, 'password': self.password, 'keeplogged': '1', 'login': 'Login'}
             response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
             if response and logged_in():
@@ -66,10 +66,10 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
         return False
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-        if not self._doLogin():
+        if not self._do_login():
             return results
 
         items = {'Season': [], 'Episode': [], 'Cache': []}
@@ -82,7 +82,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
                     search_string = unidecode(search_string)
 
                 search_url = self.urls['search'] % search_string
-                html = self.getURL(search_url)
+                html = self.get_url(search_url)
 
                 cnt = len(items[mode])
                 try:
@@ -124,7 +124,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
         return results
 
-    def findPropers(self, search_date=datetime.datetime.today()):
+    def find_propers(self, search_date=datetime.datetime.today()):
 
         return self._find_propers(search_date)
 

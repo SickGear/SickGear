@@ -1400,7 +1400,7 @@ def check_port(host, port, timeout=1.0):
 
 
 def clear_unused_providers():
-    providers = [x.cache.providerID for x in sickbeard.providers.sortedProviderList() if x.isActive()]
+    providers = [x.cache.providerID for x in sickbeard.providers.sortedProviderList() if x.is_active()]
 
     if providers:
         myDB = db.DBConnection('cache.db')

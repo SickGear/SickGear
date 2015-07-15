@@ -55,7 +55,7 @@ class RarbgProvider(generic.TorrentProvider):
         self.request_throttle = datetime.datetime.now()
         self.cache = RarbgCache(self)
 
-    def _doLogin(self, reset=False):
+    def _do_login(self, reset=False):
 
         if not reset and self.token and self.token_expiry and datetime.datetime.now() < self.token_expiry:
             return True
@@ -69,10 +69,10 @@ class RarbgProvider(generic.TorrentProvider):
         logger.log(u'No usable API token returned from: %s' % self.urls['api_token'], logger.ERROR)
         return False
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
         results = []
-        if not self._doLogin(reset=True):
+        if not self._do_login(reset=True):
             return results
 
         items = {'Season': [], 'Episode': [], 'Cache': []}
@@ -122,7 +122,7 @@ class RarbgProvider(generic.TorrentProvider):
                         time_out += 1
                         time.sleep(1)
 
-                    data = self.getURL(search_url % {'ranked': int(self.confirmed), 'token': self.token}, json=True)
+                    data = self.get_url(search_url % {'ranked': int(self.confirmed), 'token': self.token}, json=True)
                     self.token_expiry = datetime.datetime.now() + datetime.timedelta(minutes=14)
                     self.request_throttle = datetime.datetime.now() + datetime.timedelta(seconds=3)
 
@@ -131,7 +131,7 @@ class RarbgProvider(generic.TorrentProvider):
                             continue
 
                         elif 2 == data['error_code']:  # Invalid token set
-                            if self._doLogin(reset=True):
+                            if self._do_login(reset=True):
                                 continue
                             self._log_result(mode_base, len(items[mode_base]) - cnt, search_url)
                             return results
@@ -160,7 +160,7 @@ class RarbgProvider(generic.TorrentProvider):
 
         return results
 
-    def findPropers(self, search_date=datetime.datetime.today()):
+    def find_propers(self, search_date=datetime.datetime.today()):
 
         return self._find_propers(search_date, '{{.proper.|.repack.}}')
 

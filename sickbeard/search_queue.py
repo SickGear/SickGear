@@ -291,7 +291,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
         logger.log('Updating provider caches with recent upload data')
 
-        providers = [x for x in sickbeard.providers.sortedProviderList() if x.isActive() and x.enable_recentsearch]
+        providers = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_recentsearch]
         for curProvider in providers:
             # spawn separate threads for each provider so we don't need to wait for providers with slow network operation
             threads.append(threading.Thread(target=curProvider.cache.updateCache, name=origThreadName +

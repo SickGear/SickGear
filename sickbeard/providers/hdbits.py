@@ -73,27 +73,27 @@ class HDBitsProvider(generic.TorrentProvider):
 
         return title, url
 
-    def _doSearch(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 
-        self._checkAuth()
+        self._check_auth()
 
         logger.log(u'Search url: %s search_params: %s' % (self.urls['search'], search_params), logger.DEBUG)
 
-        response_json = self.getURL(self.urls['search'], post_data=search_params, json=True)
+        response_json = self.get_url(self.urls['search'], post_data=search_params, json=True)
         if response_json and 'data' in response_json and self.check_auth_from_data(response_json):
             return response_json['data']
 
         logger.log(u'Resulting JSON from %s isn\'t correct, not parsing it' % self.name, logger.ERROR)
         return []
 
-    def findPropers(self, search_date=None):
+    def find_propers(self, search_date=None):
 
         results = []
 
         search_terms = [' proper ', ' repack ']
 
         for term in search_terms:
-            for item in self._doSearch(self._build_search_strings(search_term=term)):
+            for item in self._do_search(self._build_search_strings(search_term=term)):
                 if item['utadded']:
                     try:
                         result_date = datetime.datetime.fromtimestamp(int(item['utadded']))
@@ -142,9 +142,9 @@ class HDBitsProvider(generic.TorrentProvider):
 
     def get_cache_data(self):
 
-        self._checkAuth()
+        self._check_auth()
 
-        response_json = self.getURL(self.urls['search'], post_data=self._build_search_strings(), json=True)
+        response_json = self.get_url(self.urls['search'], post_data=self._build_search_strings(), json=True)
         if response_json and 'data' in response_json and self.check_auth_from_data(response_json):
             return response_json['data']
 

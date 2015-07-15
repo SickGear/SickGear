@@ -48,16 +48,16 @@ class TVCache:
     def __init__(self, provider):
 
         self.provider = provider
-        self.providerID = self.provider.getID()
+        self.providerID = self.provider.get_id()
         self.providerDB = None
         self.minTime = 10
 
-    def _getDB(self):
+    def get_db(self):
         return CacheDBConnection(self.providerID)
 
     def _clearCache(self):
         if self.shouldClearCache():
-            myDB = self._getDB()
+            myDB = self.get_db()
             myDB.action('DELETE FROM provider_cache WHERE provider = ?', [self.providerID])
 
     def _get_title_and_url(self, item):
@@ -69,7 +69,7 @@ class TVCache:
         return data
 
     def _checkAuth(self):
-        return self.provider._checkAuth()
+        return self.provider._check_auth()
 
     def _checkItemAuth(self, title, url):
         return True
@@ -102,7 +102,7 @@ class TVCache:
                     cl.append(ci)
 
             if len(cl) > 0:
-                myDB = self._getDB()
+                myDB = self.get_db()
                 myDB.mass_action(cl)
 
         return []
@@ -125,7 +125,7 @@ class TVCache:
             url = self._translateLinkURL(url)
 
             logger.log(u'Attempting to add item to cache: ' + title, logger.DEBUG)
-            return self._addCacheEntry(title, url)
+            return self.add_cache_entry(title, url)
 
         else:
             logger.log(
@@ -134,7 +134,7 @@ class TVCache:
             return None
 
     def _getLastUpdate(self):
-        myDB = self._getDB()
+        myDB = self.get_db()
         sqlResults = myDB.select('SELECT time FROM lastUpdate WHERE provider = ?', [self.providerID])
 
         if sqlResults:
@@ -147,7 +147,7 @@ class TVCache:
         return datetime.datetime.fromtimestamp(lastTime)
 
     def _getLastSearch(self):
-        myDB = self._getDB()
+        myDB = self.get_db()
         sqlResults = myDB.select('SELECT time FROM lastSearch WHERE provider = ?', [self.providerID])
 
         if sqlResults:
@@ -163,7 +163,7 @@ class TVCache:
         if not toDate:
             toDate = datetime.datetime.today()
 
-        myDB = self._getDB()
+        myDB = self.get_db()
         myDB.upsert('lastUpdate',
                     {'time': int(time.mktime(toDate.timetuple()))},
                     {'provider': self.providerID})
@@ -172,7 +172,7 @@ class TVCache:
         if not toDate:
             toDate = datetime.datetime.today()
 
-        myDB = self._getDB()
+        myDB = self.get_db()
         myDB.upsert('lastSearch',
                     {'time': int(time.mktime(toDate.timetuple()))},
                     {'provider': self.providerID})
@@ -196,7 +196,7 @@ class TVCache:
 
         return True
 
-    def _addCacheEntry(self, name, url, parse_result=None, indexer_id=0):
+    def add_cache_entry(self, name, url, parse_result=None, indexer_id=0):
 
         # check if we passed in a parsed result or should we try and create one
         if not parse_result:
@@ -256,7 +256,7 @@ class TVCache:
             return []
 
     def listPropers(self, date=None, delimiter='.'):
-        myDB = self._getDB()
+        myDB = self.get_db()
         sql = "SELECT * FROM provider_cache WHERE name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%' AND provider = ?"
 
         if date != None:
@@ -268,7 +268,7 @@ class TVCache:
         neededEps = {}
         cl = []
 
-        myDB = self._getDB()
+        myDB = self.get_db()
         if type(episode) != list:
             sqlResults = myDB.select(
                 'SELECT * FROM provider_cache WHERE provider = ? AND indexerid = ? AND season = ? AND episodes LIKE ?',
@@ -331,9 +331,10 @@ class TVCache:
 
             logger.log(u'Found result ' + title + ' at ' + url)
 
-            result = self.provider.getResult([epObj])
+            result = self.provider.get_result([epObj], url)
+            if None is result:
+                continue
             result.show = showObj
-            result.url = url
             result.name = title
             result.quality = curQuality
             result.release_group = curReleaseGroup

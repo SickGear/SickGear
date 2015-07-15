@@ -59,7 +59,7 @@ class SearchTest(test.SickbeardTestDBCase):
 
     def __init__(self, something):
         for provider in sickbeard.providers.sortedProviderList():
-            provider.getURL = self._fake_getURL
+            provider.get_url = self._fake_getURL
             #provider.isActive = self._fake_isActive
 
         super(SearchTest, self).__init__(something)
