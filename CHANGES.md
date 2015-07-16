@@ -99,6 +99,7 @@
 * Change pushbullet from urllib2 to requests
 * Change to make pushbullet error messages clearer
 * Change pyNMA use of urllib to requests (ref:hacks.txt)
+* Change Trakt url to fix baseline uses (e.g. add from trending)
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
