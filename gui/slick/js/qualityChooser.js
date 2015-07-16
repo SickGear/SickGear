@@ -1,5 +1,5 @@
 function setFromPresets (preset) {
-	var elCustomQuality = $('#customQuality'),
+	var elCustomQuality = $('.show-if-quality-custom'),
 		selected = 'selected';
 	if (0 == preset) {
 		elCustomQuality.show();

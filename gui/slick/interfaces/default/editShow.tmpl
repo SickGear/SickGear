@@ -82,7 +82,7 @@
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
 
 #if $anyQualities + $bestQualities
-			<div class="field-pair">
+			<div class="field-pair show-if-quality-custom">
 				<label for="archive_firstmatch">
 					<span class="component-title">End upgrade on first match</span>
 					<span class="component-desc">
@@ -211,6 +211,20 @@
 			</label>
 		</div>
 
+		<div class="field-pair#if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then ' hidden' else ''#" style="margin-bottom:10px">
+			<label for="tag">
+				<span class="component-title">Show is in group</span>
+				<span class="component-desc">
+					<select name="tag" id="tag" class="form-control form-control-inline input-sm">
+#for $tag in $sickbeard.SHOW_TAGS:
+						<option value="$tag" #if $tag == $show.tag then 'selected="selected"' else ''#>$tag#echo ('', ' (default)')['Show List' == $tag]#</option>
+#end for
+					</select>
+					<span>and is displayed on the show list page under this section</span>
+				</span>
+			</label>
+		</div>
+
 		<div class="field-pair">
 			<label for="sports">
 				<span class="component-title">Show is sports</span>
@@ -227,20 +241,6 @@
 				<span class="component-desc">
 					<input type="checkbox" name="anime" id="anime"#if $show.is_anime then $html_checked else ''#>
 					<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair#if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then ' hidden' else ''#" style="margin-bottom:10px">
-			<label for="tag">
-				<span class="component-title">Show is grouped in</span>
-				<span class="component-desc">
-					<select name="tag" id="tag" class="form-control form-control-inline input-sm">
-#for $tag in $sickbeard.SHOW_TAGS:
-						<option value="$tag" #if $tag == $show.tag then 'selected="selected"' else ''#>$tag#echo ('', ' (default)')['Show List' == $tag]#</option>
-#end for
-					</select>
-					<span>and displays on the show list page under this section</span>
 				</span>
 			</label>
 		</div>
