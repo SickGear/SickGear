@@ -8,6 +8,7 @@
 * Update change to suppress HTTPS verification InsecureRequestWarning to updated package (ref:hacks.txt)
 * Change to consolidate cache database migration code
 * Change to only rebuild namecache on show update instead of on every search
+* Change to allow file moving across partition
 * Add removal of old entries from namecache on show deletion
 * Add Hallmark and specific ITV logos, remove logo of non-english Comedy Central Family
 * Fix provider TD failing to find episodes of air by date shows

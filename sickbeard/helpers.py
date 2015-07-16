@@ -266,7 +266,7 @@ def copyFile(srcFile, destFile):
 
 def moveFile(srcFile, destFile):
     try:
-        ek.ek(os.rename, srcFile, destFile)
+        ek.ek(shutil.move, srcFile, destFile)
         fixSetGroupID(destFile)
     except OSError:
         copyFile(srcFile, destFile)
@@ -304,7 +304,7 @@ def symlink(src, dst):
 
 def moveAndSymlinkFile(srcFile, destFile):
     try:
-        ek.ek(os.rename, srcFile, destFile)
+        ek.ek(shutil.move, srcFile, destFile)
         fixSetGroupID(destFile)
         ek.ek(symlink, destFile, srcFile)
     except:
@@ -396,7 +396,7 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     # move the file
     try:
         logger.log(u"Renaming file from " + cur_path + " to " + new_path)
-        ek.ek(os.rename, cur_path, new_path)
+        ek.ek(shutil.move, cur_path, new_path)
     except (OSError, IOError) as e:
         logger.log(u"Failed renaming " + cur_path + " to " + new_path + ": " + ex(e), logger.ERROR)
         return False
