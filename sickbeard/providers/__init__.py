@@ -23,7 +23,7 @@ import sickbeard
 from . import generic
 from sickbeard import logger
 # usenet
-from . import newznab, omgwtfnzbs, womble
+from . import newznab, omgwtfnzbs, oznzb, womble
 # torrent
 from . import alpharatio, beyondhd, bitmetv, bitsoup, btn, freshontv, funfile, gftracker, grabtheinfo, \
     hdbits, hdspace, iptorrents, kat, morethan, pisexy, pretome, rarbg, scc, scenetime, shazbat, speedcd, \
@@ -32,6 +32,7 @@ from . import alpharatio, beyondhd, bitmetv, bitsoup, btn, freshontv, funfile, g
 from . import nyaatorrents, tokyotoshokan
 
 __all__ = ['omgwtfnzbs',
+           'oznzb',
            'womble',
            'alpharatio',
            'beyondhd',

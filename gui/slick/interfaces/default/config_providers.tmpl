@@ -264,6 +264,17 @@
 ##
 #for $curNzbProvider in [$curProvider for $curProvider in $sickbeard.providers.sortedProviderList() if $curProvider.providerType == $GenericProvider.NZB and $curProvider not in $sickbeard.newznabProviderList]:
 					<div class="providerDiv" id="${curNzbProvider.get_id()}Div">
+
+    #if $hasattr($curNzbProvider, 'can_edit_url') and $curNzbProvider.can_edit_url:
+						<div class="field-pair">
+							<label for="${curNzbProvider.get_id()}_url">
+								<span class="component-title">URL</span>
+								<span class="component-desc">
+									<input type="text" name="${curNzbProvider.get_id()}_url" value="$curNzbProvider.api_url" class="form-control input-sm input350" />
+								</span>
+							</label>
+						</div>
+    #end if
     #if $hasattr($curNzbProvider, 'username'):
 						<div class="field-pair">
 							<label for="${curNzbProvider.get_id()}_username">
@@ -275,8 +286,9 @@
 						</div>
     #end if
     #if $hasattr($curNzbProvider, 'api_key'):
+        #set $field_name = curNzbProvider.get_id() + '_api_key'
 						<div class="field-pair">
-							<label for="${curNzbProvider.get_id()}_api_key">
+							<label for="${field_name}">
 								<span class="component-title">API key</span>
 								<span class="component-desc">
         #set $field_name = curNzbProvider.get_id() + '_api_key'
@@ -284,6 +296,40 @@
         #if callable(getattr(curNzbProvider, 'ui_string', None))
 									<div class="clear-left"><p>${curNzbProvider.ui_string($field_name)}</p></div>
         #end if
+								</span>
+							</label>
+						</div>
+    #end if
+    #if $hasattr($curNzbProvider, 'skip_passworded') and None is not $curNzbProvider.skip_passworded:
+    	#set $field_name = curNzbProvider.get_id() + '_skip_passworded'
+						<div class="field-pair">
+							<label for="${field_name}">
+								<span class="component-title">Avoid passworded</span>
+								<span class="component-desc">
+									<input type="checkbox" name="${field_name}" id="${field_name}" <%= html_checked if curNzbProvider.skip_passworded else '' %>/>
+        #try:
+            #set $tip = curNzbProvider.ui_string($field_name) % $curNzbProvider.name
+									<p>$tip</p>
+        #except (AttributeError, NotFound):
+            #pass
+        #end try
+								</span>
+							</label>
+						</div>
+    #end if
+    #if $hasattr($curNzbProvider, 'skip_spam') and None is not $curNzbProvider.skip_spam:
+    	#set $field_name = curNzbProvider.get_id() + '_skip_spam'
+						<div class="field-pair">
+							<label for="${field_name}">
+								<span class="component-title">Avoid spam</span>
+								<span class="component-desc">
+									<input type="checkbox" name="${field_name}" id="${field_name}" <%= html_checked if curNzbProvider.skip_spam else '' %>/>
+        #try:
+            #set $tip = curNzbProvider.ui_string($field_name) % $curNzbProvider.name
+									<p>$tip</p>
+        #except (AttributeError, NotFound):
+            #pass
+        #end try
 								</span>
 							</label>
 						</div>

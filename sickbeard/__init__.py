@@ -1073,10 +1073,22 @@ def initialize(consoleLogging=True):
             prov_id_uc = nzb_prov.get_id().upper()
             nzb_prov.enabled = bool(
                 check_setting_int(CFG, prov_id_uc, prov_id, 0))
+            if hasattr(nzb_prov, 'can_edit_url') and nzb_prov.can_edit_url:
+                api_url = check_setting_str(CFG, prov_id_uc, prov_id + '_api_url', None)
+                if None is not api_url:
+                    nzb_prov.api_url = api_url
             if hasattr(nzb_prov, 'api_key'):
                 nzb_prov.api_key = check_setting_str(CFG, prov_id_uc, prov_id + '_api_key', '')
             if hasattr(nzb_prov, 'username'):
                 nzb_prov.username = check_setting_str(CFG, prov_id_uc, prov_id + '_username', '')
+            if hasattr(nzb_prov, 'skip_passworded'):
+                default_use = False  # None = Disabled. Enable with False/True if API is fixed to reflect site UI data
+                v = check_setting_int(CFG, prov_id_uc, prov_id + '_skip_passworded', default_use)
+                nzb_prov.skip_passworded = (bool(v), default_use)[None is v]
+            if hasattr(nzb_prov, 'skip_spam'):
+                default_use = False  # None = Disabled. Enable with False/True if API is fixed to reflect site UI data
+                v = check_setting_int(CFG, prov_id_uc, prov_id + '_skip_spam', default_use)
+                nzb_prov.skip_spam = (bool(v), default_use)[None is v]
             if hasattr(nzb_prov, 'search_mode'):
                 nzb_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
             if hasattr(nzb_prov, 'search_fallback'):
@@ -1524,20 +1536,18 @@ def save_config():
         prov_id_uc = torrent_prov.get_id().upper()
         new_config[prov_id_uc] = {}
         new_config[prov_id_uc][prov_id] = int(torrent_prov.enabled)
+        if hasattr(torrent_prov, 'username'):
+            new_config[prov_id_uc][prov_id + '_username'] = torrent_prov.username
+        if hasattr(torrent_prov, 'api_key'):
+            new_config[prov_id_uc][prov_id + '_api_key'] = torrent_prov.api_key
         if hasattr(torrent_prov, 'digest'):
             new_config[prov_id_uc][prov_id + '_digest'] = torrent_prov.digest
         if hasattr(torrent_prov, 'hash'):
             new_config[prov_id_uc][prov_id + '_hash'] = torrent_prov.hash
-        if hasattr(torrent_prov, 'api_key'):
-            new_config[prov_id_uc][prov_id + '_api_key'] = torrent_prov.api_key
-        if hasattr(torrent_prov, 'username'):
-            new_config[prov_id_uc][prov_id + '_username'] = torrent_prov.username
-        if hasattr(torrent_prov, 'password'):
-            new_config[prov_id_uc][prov_id + '_password'] = helpers.encrypt(torrent_prov.password, ENCRYPTION_VERSION)
         if hasattr(torrent_prov, 'passkey'):
             new_config[prov_id_uc][prov_id + '_passkey'] = torrent_prov.passkey
-        if hasattr(torrent_prov, 'confirmed'):
-            new_config[prov_id_uc][prov_id + '_confirmed'] = int(torrent_prov.confirmed)
+        if hasattr(torrent_prov, 'password'):
+            new_config[prov_id_uc][prov_id + '_password'] = helpers.encrypt(torrent_prov.password, ENCRYPTION_VERSION)
         if hasattr(torrent_prov, '_seed_ratio'):
             new_config[prov_id_uc][prov_id + '_seed_ratio'] = torrent_prov.seed_ratio()
         if hasattr(torrent_prov, 'seed_time'):
@@ -1546,6 +1556,8 @@ def save_config():
             new_config[prov_id_uc][prov_id + '_minseed'] = int(torrent_prov.minseed)
         if hasattr(torrent_prov, 'minleech'):
             new_config[prov_id_uc][prov_id + '_minleech'] = int(torrent_prov.minleech)
+        if hasattr(torrent_prov, 'confirmed'):
+            new_config[prov_id_uc][prov_id + '_confirmed'] = int(torrent_prov.confirmed)
         if hasattr(torrent_prov, 'freeleech'):
             new_config[prov_id_uc][prov_id + '_freeleech'] = int(torrent_prov.freeleech)
         if hasattr(torrent_prov, 'reject_m2ts'):
@@ -1572,18 +1584,24 @@ def save_config():
         new_config[prov_id_uc] = {}
         new_config[prov_id_uc][prov_id] = int(nzb_prov.enabled)
 
-        if hasattr(nzb_prov, 'api_key'):
-            new_config[prov_id_uc][prov_id + '_api_key'] = nzb_prov.api_key
+        if hasattr(nzb_prov, 'can_edit_url') and nzb_prov.can_edit_url:
+            new_config[prov_id_uc][prov_id + '_api_url'] = nzb_prov.api_url
         if hasattr(nzb_prov, 'username'):
             new_config[prov_id_uc][prov_id + '_username'] = nzb_prov.username
-        if hasattr(nzb_prov, 'search_mode'):
-            new_config[prov_id_uc][prov_id + '_search_mode'] = nzb_prov.search_mode
-        if hasattr(nzb_prov, 'search_fallback'):
-            new_config[prov_id_uc][prov_id + '_search_fallback'] = int(nzb_prov.search_fallback)
+        if hasattr(nzb_prov, 'api_key'):
+            new_config[prov_id_uc][prov_id + '_api_key'] = nzb_prov.api_key
+        if hasattr(nzb_prov, 'skip_passworded'):
+            new_config[prov_id_uc][prov_id + '_skip_passworded'] = nzb_prov.skip_passworded
+        if hasattr(nzb_prov, 'skip_spam'):
+            new_config[prov_id_uc][prov_id + '_skip_spam'] = nzb_prov.skip_spam
         if hasattr(nzb_prov, 'enable_recentsearch'):
             new_config[prov_id_uc][prov_id + '_enable_recentsearch'] = int(nzb_prov.enable_recentsearch)
         if hasattr(nzb_prov, 'enable_backlog'):
             new_config[prov_id_uc][prov_id + '_enable_backlog'] = int(nzb_prov.enable_backlog)
+        if hasattr(nzb_prov, 'search_mode'):
+            new_config[prov_id_uc][prov_id + '_search_mode'] = nzb_prov.search_mode
+        if hasattr(nzb_prov, 'search_fallback'):
+            new_config[prov_id_uc][prov_id + '_search_fallback'] = int(nzb_prov.search_fallback)
 
     new_config['SABnzbd'] = {}
     new_config['SABnzbd']['sab_username'] = SAB_USERNAME

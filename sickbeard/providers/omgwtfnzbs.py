@@ -36,8 +36,6 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
     def __init__(self):
         generic.NZBProvider.__init__(self, 'omgwtfnzbs')
 
-        self.url = 'https://omgwtfnzbs.org/'
-
         self.url_base = 'https://omgwtfnzbs.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'cache': 'https://rss.omgwtfnzbs.org/rss-download.php?%s',

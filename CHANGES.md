@@ -115,6 +115,7 @@
 * Add PreToMe torrent provider
 * Add SceneTime torrent provider
 * Change TtN provider to parse new layout
+* Add OZnzb provider
 * Improve recognition of SD quality
 * Fix halting in mid flow of Add Existing Show which resulted in failure to scan statuses and filesizes
 * Change default de-referrer url to blank

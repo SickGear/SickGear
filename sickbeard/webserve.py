@@ -4827,6 +4827,20 @@ class ConfigProviders(Config):
         for curNzbProvider in [curProvider for curProvider in sickbeard.providers.sortedProviderList() if
                                curProvider.providerType == sickbeard.GenericProvider.NZB]:
 
+            if hasattr(curNzbProvider, 'can_edit_url') and curNzbProvider.can_edit_url:
+                try:
+                    url = config.clean_url(str(kwargs[curNzbProvider.get_id() + '_url']))
+                    if url:
+                        curNzbProvider.api_url = url
+                except:
+                    pass
+
+            if hasattr(curNzbProvider, 'username'):
+                try:
+                    curNzbProvider.username = str(kwargs[curNzbProvider.get_id() + '_username']).strip()
+                except:
+                    curNzbProvider.username = None
+
             if hasattr(curNzbProvider, 'api_key'):
                 try:
                     key = str(kwargs[curNzbProvider.get_id() + '_api_key']).strip()
@@ -4835,24 +4849,19 @@ class ConfigProviders(Config):
                 except:
                     curNzbProvider.api_key = None
 
-            if hasattr(curNzbProvider, 'username'):
+            if hasattr(curNzbProvider, 'skip_passworded') and curNzbProvider.get_id() + '_skip_passworded' in kwargs:
                 try:
-                    curNzbProvider.username = str(kwargs[curNzbProvider.get_id() + '_username']).strip()
+                    curNzbProvider.skip_passworded = config.checkbox_to_value(
+                        kwargs[curNzbProvider.get_id() + '_skip_passworded'])
                 except:
-                    curNzbProvider.username = None
+                    curNzbProvider.skip_passworded = 0  # these exceptions are actually catching unselected checkboxes
 
-            if hasattr(curNzbProvider, 'search_mode'):
+            if hasattr(curNzbProvider, 'skip_spam') and curNzbProvider.get_id() + '_skip_spam' in kwargs:
                 try:
-                    curNzbProvider.search_mode = str(kwargs[curNzbProvider.get_id() + '_search_mode']).strip()
+                    curNzbProvider.skip_spam = config.checkbox_to_value(
+                        kwargs[curNzbProvider.get_id() + '_skip_spam'])
                 except:
-                    curNzbProvider.search_mode = 'eponly'
-
-            if hasattr(curNzbProvider, 'search_fallback'):
-                try:
-                    curNzbProvider.search_fallback = config.checkbox_to_value(
-                        kwargs[curNzbProvider.get_id() + '_search_fallback'])
-                except:
-                    curNzbProvider.search_fallback = 0  # these exceptions are actually catching unselected checkboxes
+                    curNzbProvider.skip_spam = 0  # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curNzbProvider, 'enable_recentsearch'):
                 try:
@@ -4867,6 +4876,19 @@ class ConfigProviders(Config):
                         kwargs[curNzbProvider.get_id() + '_enable_backlog'])
                 except:
                     curNzbProvider.enable_backlog = 0  # these exceptions are actually catching unselected checkboxes
+
+            if hasattr(curNzbProvider, 'search_mode'):
+                try:
+                    curNzbProvider.search_mode = str(kwargs[curNzbProvider.get_id() + '_search_mode']).strip()
+                except:
+                    curNzbProvider.search_mode = 'eponly'
+
+            if hasattr(curNzbProvider, 'search_fallback'):
+                try:
+                    curNzbProvider.search_fallback = config.checkbox_to_value(
+                        kwargs[curNzbProvider.get_id() + '_search_fallback'])
+                except:
+                    curNzbProvider.search_fallback = 0  # these exceptions are actually catching unselected checkboxes
 
         sickbeard.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickbeard.newznabProviderList])
         sickbeard.PROVIDER_ORDER = provider_list
