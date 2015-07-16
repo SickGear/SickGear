@@ -34,7 +34,7 @@ import base64
 sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import providers, metadata, config, webserveInit
 from sickbeard.providers.generic import GenericProvider
-from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, \
+from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, grabtheinfo, \
     omgwtfnzbs, scc, torrentday, hdbits, speedcd, nyaatorrents, torrentbytes, beyondhd, gftracker, transmithe_net, \
     freshontv, bitsoup, tokyotoshokan, animenzb, totv, rarbg, morethan, alpharatio, pisexy, strike, torrentshack
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \

@@ -43,6 +43,7 @@ __all__ = ['womble',
            'beyondhd',
            'gftracker',
            'transmithe_net',
+           'grabtheinfo',
 ]
 
 from os import sys
