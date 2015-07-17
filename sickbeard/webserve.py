@@ -1247,6 +1247,8 @@ class Home(MainHandler):
             t.submenu = self.HomeMenu()
 
             if showObj.is_anime:
+                if not showObj.release_groups:
+                    showObj.release_groups = BlackAndWhiteList(showObj.indexerid)
                 t.whitelist = showObj.release_groups.whitelist
                 t.blacklist = showObj.release_groups.blacklist
 
