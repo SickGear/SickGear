@@ -102,6 +102,7 @@
 * Change pyNMA use of urllib to requests (ref:hacks.txt)
 * Change Trakt url to fix baseline uses (e.g. add from trending)
 * Fix edit on show page for shows that have anime enabled in mass edit
+* Fix issue parsing items in ToktoToshokan provider
 * Change to only show option "End upgrade on first match" on edit show page if quality custom is selected
 * Change label "Show is grouped in" in edit show page to "Show is in group" and move the section higher
 

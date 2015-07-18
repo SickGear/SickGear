@@ -52,7 +52,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
                     torrent_table = soup.find('table', attrs={'class': 'listing'})
                     torrent_rows = torrent_table.find_all('tr') if torrent_table else []
                     if torrent_rows:
-                        a = (0, 1)[torrent_rows[0].find('td', attrs={'class': 'centertext'})]
+                        a = (0, 1)[None is not torrent_rows[0].find('td', attrs={'class': 'centertext'})]
 
                         for top, bottom in zip(torrent_rows[a::2], torrent_rows[a::2]):
                             title = top.find('td', attrs={'class': 'desc-top'}).text
