@@ -1010,6 +1010,10 @@ div.formpaginate{
 	font-weight:900
 }
 
+#addShowForm #blackwhitelist{
+	padding:0 0 0 15px
+}
+
 #addShowForm #blackwhitelist,
 #addShowForm #blackwhitelist h4,
 #addShowForm #blackwhitelist p{
