@@ -882,7 +882,7 @@ class PostProcessor(object):
             ep_obj.show.writeMetadata(True)
 
         # if we're processing an episode of type anime, get the anime version
-        anime_version = (-1, self.anime_version)[ep_obj.show.is_anime and None is not self.anime_version and self.anime_version]
+        anime_version = (-1, self.anime_version)[ep_obj.show.is_anime and None is not self.anime_version]
 
         # update the ep info before we rename so the quality & release name go into the name properly
         sql_l = []
