@@ -28,6 +28,10 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02 WEB-DL H 264-GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02_WEB-DL_H_264-GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.WEB-DL.AAC2.0.H264-GROUP"))
+        self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.HDTV.AAC.2.0.x264-GROUP"))
+        self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.HDTV.DD5.1.XViD-GROUP"))
+        self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.HDTV.DD7.1.h.264-GROUP"))
+        self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.WEB-DL.DD5.1.h.264-GROUP"))
 
     def test_SDDVD(self):
         self.assertEqual(common.Quality.SDDVD, common.Quality.nameQuality("Test.Show.S01E02.DVDRiP.XViD-GROUP"))
