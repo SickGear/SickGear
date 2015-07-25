@@ -107,6 +107,7 @@
 * Change label "Show is grouped in" in edit show page to "Show is in group" and move the section higher
 * Fix post processing of anime with version tags
 * Change accept SD titles that contain audio quality
+* Change readme.md
 
 [develop changelog]
 * Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
