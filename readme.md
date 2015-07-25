@@ -18,7 +18,7 @@ SickGear provides management of TV shows and/or Anime, can detect wanted or epis
   * Uses well known established index sites to gather show information
   * Searches for known alternatively named shows with a fallback to user edited names
   * Searches for known alternatively numbered episodes with a fallback to user edited numbers
-  * Forward search results to a downloader program (e.g. SABNZBd, NZBGet, uTorrent, and others)
+  * Forward search results to a downloader (e.g. SABNZBd, NZBGet, uTorrent, and others)
   * Save search results to a "blackhole" folder that can be periodically scanned for taking action
   * Post-process downloaded episodes into customisable layouts, with or without extra metadata
   * Advanced Failed Download Handling (FDH)
