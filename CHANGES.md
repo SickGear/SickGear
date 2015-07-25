@@ -109,15 +109,6 @@
 * Change accept SD titles that contain audio quality
 * Change readme.md
 
-[develop changelog]
-* Update Requests library 2.7.0 (ab1f493) to 2.7.0 (8b5e457)
-* Update Tornado webserver from 4.2.dev1 (609dbb9) to 4.2b1 (61a16c9)
-* Change reload_module call to explicit import lib/six.moves
-* Change queue, httplib, cookielib and xmlrpclib to use explicit import lib/six.moves
-* Change zoneinfo update/loader to be compatible with dateutil 2.4.2
-* Change use metadata for zoneinfo files and remove hack of dateutil lib
-* Change param item "features" passed to Beautiful Soup to prevent false +ve warning in r353
-
 
 ### 0.9.1 (2015-05-25 03:03:00 UTC)
 

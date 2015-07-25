@@ -45,6 +45,9 @@ class ShowUpdater():
             # refresh network timezones
             network_timezones.update_network_dict()
 
+            # update xem id lists
+            sickbeard.scene_exceptions.get_xem_ids()
+
             # update scene exceptions
             sickbeard.scene_exceptions.retrieve_exceptions()
 

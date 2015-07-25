@@ -18,7 +18,7 @@ SickGear provides management of TV shows and/or Anime, can detect wanted or epis
   * Uses well known established index sites to gather show information
   * Searches for known alternatively named shows with a fallback to user edited names
   * Searches for known alternatively numbered episodes with a fallback to user edited numbers
-  * Forward search results to a downloader program (e.g. SABNZBd, NZBGet, uTorrent, and others)
+  * Forward search results to a downloader (e.g. SABNZBd, NZBGet, uTorrent, and others)
   * Save search results to a "blackhole" folder that can be periodically scanned for taking action
   * Post-process downloaded episodes into customisable layouts, with or without extra metadata
   * Advanced Failed Download Handling (FDH)
@@ -105,9 +105,9 @@ Finally, a massive thanks to all those that remain in the shadows, the quiet one
 <tr align="center">
   <td>Show List: Simple<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-simple.jpg">Dark</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-simple-light.jpg">Light</a></td>
   <td>Show List: Banner<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-banner.jpg">Dark</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-banner-light.jpg">Light</a></td>
-  <td>Show List: Poster<br />Theme: <a title="Theme Dark - Anime" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-poster.jpg">Dark 1</a>, <a title="Theme Dark 2" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-poster2.jpg">Dark 2</a></td>
+  <td>Show List: Poster<br />Theme: <a title="Theme Dark - Anime" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-poster.jpg">Dark</a>, <a title="Theme Dark 2" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-poster2.jpg">Dark 2</a></td>
   <td>Episode View: Day by Day<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-day-by-day.jpg">Dark</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-day-by-day-light.jpg">Light</a></td>
-  <td>Episode View: List<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list.jpg">Dark 1</a>, <a title="Theme Dark - Anime" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list2.jpg">Dark 2</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list-light.jpg">Light</a></td>
+  <td>Episode View: List<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list.jpg">Dark</a>, <a title="Theme Dark - Anime" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list2.jpg">Dark 2</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list-light.jpg">Light</a></td>
   <td>Display Show<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/displayshow.jpg">Dark</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/displayshow-light.jpg">Light</a></td>
 </tr>
 </tbody>
