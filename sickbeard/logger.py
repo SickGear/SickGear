@@ -31,6 +31,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 import sickbeard
 from sickbeard import classes
+import sickbeard.helpers
 
 try:
     from lib.send2trash import send2trash
@@ -268,15 +269,18 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         file_name = self.baseFilename.rpartition('.')[0]
         dfn = '%s_%s.log' % (file_name, time.strftime(self.suffix, timeTuple))
         if os.path.exists(dfn):
-            os.remove(dfn)
-        os.rename(self.baseFilename, dfn)
+            sickbeard.helpers._remove_file_failed(dfn)
+        try:
+            os.rename(self.baseFilename, dfn)
+        except:
+            pass
         if self.backupCount > 0:
             # find the oldest log file and delete it
             s = glob.glob(file_name + '_*')
             if len(s) > self.backupCount:
                 s.sort()
-                os.remove(s[0])
-        #print "%s -> %s" % (self.baseFilename, dfn)
+                sickbeard.helpers._remove_file_failed(s[0])
+        # print "%s -> %s" % (self.baseFilename, dfn)
         if self.encoding:
             self.stream = codecs.open(self.baseFilename, 'w', self.encoding)
         else:
@@ -284,11 +288,11 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         self.rolloverAt = self.rolloverAt + self.interval
         zip_name = dfn.rpartition('.')[0] + '.zip'
         if os.path.exists(zip_name):
-            os.remove(zip_name)
+            sickbeard.helpers._remove_file_failed(zip_name)
         file = zipfile.ZipFile(zip_name, 'w')
         file.write(dfn, os.path.basename(dfn), zipfile.ZIP_DEFLATED)
         file.close()
-        os.remove(dfn)
+        sickbeard.helpers._remove_file_failed(dfn)
 
 
 sb_log_instance = SBRotatingLogHandler('sickbeard.log')

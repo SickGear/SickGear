@@ -2040,7 +2040,7 @@ class NewHomeAddShows(Home):
         if not lang or lang == 'null':
             lang = 'en'
 
-        search_term = search_term.encode('utf-8')
+        search_term = search_term.strip().encode('utf-8')
 
         results = {}
         final_results = []
@@ -3294,7 +3294,7 @@ class showQueueOverview(Manage):
         t = PageTemplate(headers=self.request.headers, file='manage_showQueueOverview.tmpl')
         t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
         t.showList = sickbeard.showList
-        t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning()
+        t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
 
         t.submenu = self.ManageMenu()
 

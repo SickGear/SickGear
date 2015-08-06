@@ -29,6 +29,7 @@ from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
 from sickbeard.blackandwhitelist import BlackAndWhiteList
+from sickbeard.indexers.indexer_config import INDEXER_TVDB
 
 
 class ShowQueue(generic_queue.GenericQueue):
@@ -131,12 +132,12 @@ class ShowQueue(generic_queue.GenericQueue):
 
         return queueItemObj
 
-    def refreshShow(self, show, force=False, scheduled_update=False):
+    def refreshShow(self, show, force=False, scheduled_update=False, after_update=False):
 
         if self.isBeingRefreshed(show) and not force:
             raise exceptions.CantRefreshException('This show is already being refreshed, not refreshing again.')
 
-        if (self.isBeingUpdated(show) or self.isInUpdateQueue(show)) and not force:
+        if ((not after_update and self.isBeingUpdated(show)) or self.isInUpdateQueue(show)) and not force:
             logger.log(
                 u'A refresh was attempted but there is already an update queued or in progress. Since updates do a refresh at the end anyway I\'m skipping this request.',
                 logger.DEBUG)
@@ -510,7 +511,8 @@ class QueueItemRefresh(ShowQueueItem):
         self.show.populateCache()
 
         # Load XEM data to DB for show
-        sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
+        if self.show.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list if INDEXER_TVDB == self.show.indexer else sickbeard.scene_exceptions.xem_rage_ids_list:
+            sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
 
         self.inProgress = False
 
@@ -641,7 +643,7 @@ class QueueItemUpdate(ShowQueueItem):
                     except exceptions.EpisodeDeletedException:
                         pass
 
-        sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force)
+        sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True)
 
 
 class QueueItemForceUpdate(QueueItemUpdate):

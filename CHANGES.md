@@ -3,8 +3,7 @@
 *
 
 
-### 0.10.0 (2015-xx-xx xx:xx:xx UTC)
-
+### 0.10.0 (2015-08-06 11:05:00 UTC)
 * Remove EZRSS provider
 * Update Tornado webserver to 4.2 (fdfaf3d)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
