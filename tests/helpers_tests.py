@@ -5,7 +5,7 @@ import os.path
 from sickbeard import helpers
 
 
-sys.path.append(os.path.abspath('..'))
+sys.path.insert(1, os.path.abspath('..'))
 
 
 class HelpersTests(unittest.TestCase):

@@ -234,7 +234,7 @@ class PostProcessor(object):
                         ek.ek(send2trash, cur_file)
                     else:
                         ek.ek(os.remove, cur_file)
-                except OSError, e:
+                except OSError as e:
                     self._log(u'Unable to delete file %s: %s' % (cur_file, str(e.strerror)), logger.DEBUG)
 
                 if True is not ek.ek(os.path.isfile, cur_file):
@@ -329,7 +329,7 @@ class PostProcessor(object):
                 helpers.moveFile(cur_file_path, new_file_path)
                 helpers.chmodAsParent(new_file_path)
                 self._log(u'Moved file from' + (success_tmpl % (cur_file_path, new_file_path)), logger.DEBUG)
-            except (IOError, OSError), e:
+            except (IOError, OSError) as e:
                 self._log(u'Unable to move file %s<br />.. %s' % (success_tmpl % (cur_file_path, new_file_path), str(e)), logger.ERROR)
                 raise e
 
@@ -350,7 +350,7 @@ class PostProcessor(object):
                 helpers.copyFile(cur_file_path, new_file_path)
                 helpers.chmodAsParent(new_file_path)
                 self._log(u'Copied file from' + (success_tmpl % (cur_file_path, new_file_path)), logger.DEBUG)
-            except (IOError, OSError), e:
+            except (IOError, OSError) as e:
                 self._log(u'Unable to copy %s<br />.. %s' % (success_tmpl % (cur_file_path, new_file_path), str(e)), logger.ERROR)
                 raise e
 
@@ -371,7 +371,7 @@ class PostProcessor(object):
                 helpers.hardlinkFile(cur_file_path, new_file_path)
                 helpers.chmodAsParent(new_file_path)
                 self._log(u'Hard linked file from' + (success_tmpl % (cur_file_path, new_file_path)), logger.DEBUG)
-            except (IOError, OSError), e:
+            except (IOError, OSError) as e:
                 self._log(u'Unable to link file %s<br />.. %s' % (success_tmpl % (cur_file_path, new_file_path), str(e)), logger.ERROR)
                 raise e
 
@@ -393,7 +393,7 @@ class PostProcessor(object):
                 helpers.chmodAsParent(new_file_path)
                 self._log(u'Moved then symbolic linked file from' + (success_tmpl % (cur_file_path, new_file_path)),
                           logger.DEBUG)
-            except (IOError, OSError), e:
+            except (IOError, OSError) as e:
                 self._log(u'Unable to link file %s<br />.. %s' % (success_tmpl % (cur_file_path, new_file_path), str(e)), logger.ERROR)
                 raise e
 
@@ -543,7 +543,7 @@ class PostProcessor(object):
 
             try:
                 (cur_show, cur_season, cur_episodes, cur_quality) = cur_attempt()
-            except (InvalidNameException, InvalidShowException), e:
+            except (InvalidNameException, InvalidShowException) as e:
                 logger.log(u'Unable to parse, skipping: ' + ex(e), logger.DEBUG)
                 continue
 
@@ -621,7 +621,7 @@ class PostProcessor(object):
             # now that we've figured out which episode this file is just load it manually
             try:
                 cur_ep = show.getEpisode(season, episode)
-            except exceptions.EpisodeNotFoundException, e:
+            except exceptions.EpisodeNotFoundException as e:
                 self._log(u'Unable to create episode: ' + ex(e), logger.DEBUG)
                 raise exceptions.PostProcessingFailed()
 
@@ -706,10 +706,10 @@ class PostProcessor(object):
                 out, err = p.communicate()  # @UnusedVariable
                 self._log(u'Script result: ' + str(out), logger.DEBUG)
 
-            except OSError, e:
+            except OSError as e:
                 self._log(u'Unable to run extra_script: ' + ex(e))
 
-            except Exception, e:
+            except Exception as e:
                 self._log(u'Unable to run extra_script: ' + ex(e))
 
     def _safe_replace(self, ep_obj, new_ep_quality):
@@ -882,7 +882,7 @@ class PostProcessor(object):
             ep_obj.show.writeMetadata(True)
 
         # if we're processing an episode of type anime, get the anime version
-        anime_version = (-1, self.anime_version)[ep_obj.show.is_anime and None is not self.anime_version and self.anime_version]
+        anime_version = (-1, self.anime_version)[ep_obj.show.is_anime and None is not self.anime_version]
 
         # update the ep info before we rename so the quality & release name go into the name properly
         sql_l = []
@@ -1048,5 +1048,5 @@ class PostProcessor(object):
             self._log(u'Adding the file to the anidb mylist', logger.DEBUG)
             try:
                 self.anidbEpisode.add_to_mylist(status=1)  # status = 1 sets the status of the file to "internal HDD"
-            except Exception, e:
+            except Exception as e:
                 self._log(u'exception msg: ' + str(e))

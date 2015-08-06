@@ -32,6 +32,7 @@ from sickbeard import logger
 from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
 from sickbeard.show_name_helpers import allPossibleShowNames
+from six import iteritems
 
 from lib.tmdb_api.tmdb_api import TMDB
 
@@ -305,7 +306,7 @@ class GenericMetadata():
                 helpers.chmodAsParent(nfo_file_path)
 
                 return True
-            except IOError, e:
+            except IOError as e:
                 logger.log(
                     u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),
                     logger.ERROR)
@@ -338,7 +339,7 @@ class GenericMetadata():
     def create_season_posters(self, show_obj):
         if self.season_posters and show_obj:
             result = []
-            for season, episodes in show_obj.episodes.iteritems():  # @UnusedVariable
+            for season, episodes in iteritems(show_obj.episodes):  # @UnusedVariable
                 if not self._has_season_poster(show_obj, season):
                     logger.log(u"Metadata provider " + self.name + " creating season posters for " + show_obj.name,
                                logger.DEBUG)
@@ -349,7 +350,7 @@ class GenericMetadata():
     def create_season_banners(self, show_obj):
         if self.season_banners and show_obj:
             result = []
-            for season, episodes in show_obj.episodes.iteritems():  # @UnusedVariable
+            for season, episodes in iteritems(show_obj.episodes):  # @UnusedVariable
                 if not self._has_season_banner(show_obj, season):
                     logger.log(u"Metadata provider " + self.name + " creating season banners for " + show_obj.name,
                                logger.DEBUG)
@@ -432,7 +433,7 @@ class GenericMetadata():
             data.write(nfo_file, encoding="utf-8")
             nfo_file.close()
             helpers.chmodAsParent(nfo_file_path)
-        except IOError, e:
+        except IOError as e:
             logger.log(u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),
                        logger.ERROR)
             return False
@@ -477,7 +478,7 @@ class GenericMetadata():
             data.write(nfo_file, encoding="utf-8")
             nfo_file.close()
             helpers.chmodAsParent(nfo_file_path)
-        except IOError, e:
+        except IOError as e:
             logger.log(u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),
                        logger.ERROR)
             return False
@@ -725,7 +726,7 @@ class GenericMetadata():
             outFile.write(image_data)
             outFile.close()
             helpers.chmodAsParent(image_path)
-        except IOError, e:
+        except IOError as e:
             logger.log(
                 u"Unable to write image to " + image_path + " - are you sure the show folder is writable? " + ex(e),
                 logger.ERROR)
@@ -761,7 +762,7 @@ class GenericMetadata():
 
             t = sickbeard.indexerApi(show_obj.indexer).indexer(**lINDEXER_API_PARMS)
             indexer_show_obj = t[show_obj.indexerid]
-        except (sickbeard.indexer_error, IOError), e:
+        except (sickbeard.indexer_error, IOError) as e:
             logger.log(u"Unable to look up show on " + sickbeard.indexerApi(
                 show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
             return None
@@ -822,7 +823,7 @@ class GenericMetadata():
 
             t = sickbeard.indexerApi(show_obj.indexer).indexer(**lINDEXER_API_PARMS)
             indexer_show_obj = t[show_obj.indexerid]
-        except (sickbeard.indexer_error, IOError), e:
+        except (sickbeard.indexer_error, IOError) as e:
             logger.log(u"Unable to look up show on " + sickbeard.indexerApi(
                 show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
             return result
@@ -875,7 +876,7 @@ class GenericMetadata():
 
             t = sickbeard.indexerApi(show_obj.indexer).indexer(**lINDEXER_API_PARMS)
             indexer_show_obj = t[show_obj.indexerid]
-        except (sickbeard.indexer_error, IOError), e:
+        except (sickbeard.indexer_error, IOError) as e:
             logger.log(u"Unable to look up show on " + sickbeard.indexerApi(
                 show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
             return result
@@ -953,7 +954,7 @@ class GenericMetadata():
                 logger.log(u"Invalid Indexer ID (" + str(indexer_id) + "), not using metadata file", logger.WARNING)
                 return empty_return
 
-        except Exception, e:
+        except Exception as e:
             logger.log(
                 u"There was an error parsing your existing metadata file: '" + metadata_path + "' error: " + ex(e),
                 logger.WARNING)
@@ -984,7 +985,7 @@ class GenericMetadata():
                     elif poster and result['poster_path']:
                         return "{0}{1}{2}".format(base_url, max_size, result['poster_path'])
 
-        except Exception, e:
+        except Exception as e:
             pass
 
         logger.log(u"Could not find any posters or background for " + show.name, logger.DEBUG)

@@ -48,7 +48,7 @@ def getSeasonNZBs(name, urlData, season):
     if sceneNameMatch:
         showName, qualitySection, groupName = sceneNameMatch.groups()  # @UnusedVariable
     else:
-        logger.log(u"Unable to parse " + name + " into a scene name. If it's a valid one log a bug.", logger.ERROR)
+        logger.log(u"Unable to parse " + name + " into a scene name. If it's a valid one, log a bug.", logger.ERROR)
         return ({}, '')
 
     regex = '(' + re.escape(showName) + '\.S%02d(?:[E0-9]+)\.[\w\._]+\-\w+' % season + ')'
@@ -92,7 +92,7 @@ def saveNZB(nzbName, nzbString):
         with ek.ek(open, nzbName + ".nzb", 'w') as nzb_fh:
             nzb_fh.write(nzbString)
 
-    except EnvironmentError, e:
+    except EnvironmentError as e:
         logger.log(u"Unable to save NZB: " + ex(e), logger.ERROR)
 
 

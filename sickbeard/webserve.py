@@ -28,6 +28,7 @@ import traceback
 
 from mimetypes import MimeTypes
 from Cheetah.Template import Template
+from six import iteritems
 
 import sickbeard
 from sickbeard import config, sab, clients, history, notifiers, processTV, ui, logger, helpers, exceptions, classes, \
@@ -153,7 +154,7 @@ class BaseHandler(RequestHandler):
         if api:
             mime_type, encoding = MimeTypes().guess_type(static_image_path)
             self.set_header('Content-Type', mime_type)
-            with file(static_image_path, 'rb') as img:
+            with open(static_image_path, 'rb') as img:
                 return img.read()
         else:
             static_image_path = os.path.normpath(static_image_path.replace(sickbeard.CACHE_DIR, '/cache'))
@@ -585,8 +586,9 @@ class Home(MainHandler):
                 index += 1
             if anime_results:
                 t.showlists.append(['container%s' % index, 'Anime List', anime_results])
-        else:
-            t.showlists.append(['container%s' % index, 'Show List', sickbeard.showList])
+
+        if 0 == len(t.showlists):
+            t.showlists.append(['container0', 'Show List', sickbeard.showList])
 
         if 'simple' != sickbeard.HOME_LAYOUT:
             t.network_images = {}
@@ -951,11 +953,7 @@ class Home(MainHandler):
         if None is not accessToken and starify(accessToken, True):
             accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
 
-        result = notifiers.pushbullet_notifier.test_notify(accessToken, device_iden)
-        if result:
-            return 'Pushbullet notification succeeded. Check your device to make sure it worked'
-        else:
-            return 'Error sending Pushbullet notification'
+        return notifiers.pushbullet_notifier.test_notify(accessToken, device_iden)
 
     def getPushbulletDevices(self, accessToken=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -963,11 +961,7 @@ class Home(MainHandler):
         if None is not accessToken and starify(accessToken, True):
             accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
 
-        result = notifiers.pushbullet_notifier.get_devices(accessToken)
-        if result:
-            return result
-        else:
-            return 'Error sending Pushbullet notification'
+        return notifiers.pushbullet_notifier.get_devices(accessToken)
 
     def shutdown(self, pid=None):
 
@@ -1218,7 +1212,7 @@ class Home(MainHandler):
             return 'No scene exceptions'
 
         out = []
-        for season, names in iter(sorted(exceptionsList.iteritems())):
+        for season, names in iter(sorted(iteritems(exceptionsList))):
             if season == -1:
                 season = '*'
             out.append('S' + str(season) + ': ' + ', '.join(names))
@@ -1253,6 +1247,8 @@ class Home(MainHandler):
             t.submenu = self.HomeMenu()
 
             if showObj.is_anime:
+                if not showObj.release_groups:
+                    showObj.release_groups = BlackAndWhiteList(showObj.indexerid)
                 t.whitelist = showObj.release_groups.whitelist
                 t.blacklist = showObj.release_groups.blacklist
 
@@ -1261,7 +1257,7 @@ class Home(MainHandler):
                     try:
                         anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=showObj.name)
                         t.groups = anime.get_groups()
-                    except Exception, e:
+                    except Exception as e:
                         t.groups.append(dict([('name', 'Fail:AniDB connect. Restart sg else check debug log'), ('rating', ''), ('range', '')]))
                 else:
                     t.groups.append(dict([('name', 'Did not initialise AniDB. Check debug log if reqd.'), ('rating', ''), ('range', '')]))
@@ -1343,7 +1339,7 @@ class Home(MainHandler):
                 showObj.flatten_folders = flatten_folders
                 try:
                     sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
-                except exceptions.CantRefreshException, e:
+                except exceptions.CantRefreshException as e:
                     errors.append('Unable to refresh this show: ' + ex(e))
 
             showObj.paused = paused
@@ -1373,7 +1369,7 @@ class Home(MainHandler):
                         showObj.location = location
                         try:
                             sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
-                        except exceptions.CantRefreshException, e:
+                        except exceptions.CantRefreshException as e:
                             errors.append('Unable to refresh this show:' + ex(e))
                             # grab updated info from TVDB
                             # showObj.loadEpisodesFromIndexer()
@@ -1390,7 +1386,7 @@ class Home(MainHandler):
             try:
                 sickbeard.showQueueScheduler.action.updateShow(showObj, True)  # @UndefinedVariable
                 time.sleep(cpu_presets[sickbeard.CPU_PRESET])
-            except exceptions.CantUpdateException, e:
+            except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on the show.')
 
         if do_update_exceptions:
@@ -1398,14 +1394,14 @@ class Home(MainHandler):
                 scene_exceptions.update_scene_exceptions(showObj.indexerid, exceptions_list)  # @UndefinedVdexerid)
                 buildNameCache(showObj)
                 time.sleep(cpu_presets[sickbeard.CPU_PRESET])
-            except exceptions.CantUpdateException, e:
+            except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on scene exceptions of the show.')
 
         if do_update_scene_numbering:
             try:
                 sickbeard.scene_numbering.xem_refresh(showObj.indexerid, showObj.indexer)  # @UndefinedVariable
                 time.sleep(cpu_presets[sickbeard.CPU_PRESET])
-            except exceptions.CantUpdateException, e:
+            except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on scene numbering of the show.')
 
         if directCall:
@@ -1455,7 +1451,7 @@ class Home(MainHandler):
         # force the update from the DB
         try:
             sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
-        except exceptions.CantRefreshException, e:
+        except exceptions.CantRefreshException as e:
             ui.notifications.error('Unable to refresh this show.',
                                    ex(e))
 
@@ -1476,7 +1472,7 @@ class Home(MainHandler):
         # force the update
         try:
             sickbeard.showQueueScheduler.action.updateShow(showObj, bool(force), bool(web))
-        except exceptions.CantUpdateException, e:
+        except exceptions.CantUpdateException as e:
             ui.notifications.error('Unable to update this show.',
                                    ex(e))
 
@@ -1810,7 +1806,7 @@ class Home(MainHandler):
                                      'searchstatus' : searchstatus,
                                      'status' : statusStrings[searchThread.segment.status],
                                      'quality': self.getQualityClass(searchThread.segment)})
-                else:
+                elif hasattr(searchThread, 'segment'):
                     for epObj in searchThread.segment:
                         episodes.append({'episode': epObj.episode,
                              'episodeindexid': epObj.indexerid,
@@ -1833,7 +1829,7 @@ class Home(MainHandler):
                                  'searchstatus' : searchstatus,
                                  'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
-            else:
+            elif hasattr(searchThread, 'segment'):
                 for epObj in searchThread.segment:
                     episodes.append({'episode': epObj.episode,
                                      'episodeindexid': epObj.indexerid,
@@ -1853,18 +1849,17 @@ class Home(MainHandler):
                                  'searchstatus' : searchstatus,
                                  'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
-                else:
-                    ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
-                    if str(searchThread.show.indexerid) == show:
-                        for epObj in searchThread.segment:
-                            if not [x for x in episodes if x['episodeindexid'] == epObj.indexerid]:
-                                searchstatus = 'finished'
-                                episodes.append({'episode': epObj.episode,
-                                                 'episodeindexid': epObj.indexerid,
-                                         'season' : epObj.season,
-                                         'searchstatus' : searchstatus,
-                                         'status' : statusStrings[epObj.status],
-                                         'quality': self.getQualityClass(epObj)})
+                ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
+                elif hasattr(searchThread, 'segment') and str(searchThread.show.indexerid) == show:
+                    for epObj in searchThread.segment:
+                        if not [x for x in episodes if x['episodeindexid'] == epObj.indexerid]:
+                            searchstatus = 'finished'
+                            episodes.append({'episode': epObj.episode,
+                                             'episodeindexid': epObj.indexerid,
+                                     'season' : epObj.season,
+                                     'searchstatus' : searchstatus,
+                                     'status' : statusStrings[epObj.status],
+                                     'quality': self.getQualityClass(epObj)})
 
         return json.dumps({'show': show, 'episodes' : episodes})
 
@@ -1985,7 +1980,7 @@ class Home(MainHandler):
             try:
                 anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=show_name)
                 groups = anime.get_groups()
-            except Exception, e:
+            except Exception as e:
                 logger.log(u'exception msg: ' + str(e), logger.DEBUG)
                 return json.dumps({'result': 'fail', 'resp': 'connect'})
 
@@ -2045,7 +2040,7 @@ class NewHomeAddShows(Home):
         if not lang or lang == 'null':
             lang = 'en'
 
-        search_term = search_term.encode('utf-8')
+        search_term = search_term.strip().encode('utf-8')
 
         results = {}
         final_results = []
@@ -2062,7 +2057,7 @@ class NewHomeAddShows(Home):
             try:
                 # add search results
                 results.setdefault(indexer, []).extend(t[search_term])
-            except Exception, e:
+            except Exception as e:
                 continue
 
         map(final_results.extend,
@@ -3117,7 +3112,7 @@ class Manage(MainHandler):
                 try:
                     sickbeard.showQueueScheduler.action.updateShow(showObj, True, True)  # @UndefinedVariable
                     updates.append(showObj.name)
-                except exceptions.CantUpdateException, e:
+                except exceptions.CantUpdateException as e:
                     errors.append('Unable to update show ' + showObj.name + ': ' + ex(e))
 
             # don't bother refreshing shows that were updated anyway
@@ -3125,7 +3120,7 @@ class Manage(MainHandler):
                 try:
                     sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
                     refreshes.append(showObj.name)
-                except exceptions.CantRefreshException, e:
+                except exceptions.CantRefreshException as e:
                     errors.append('Unable to refresh show ' + showObj.name + ': ' + ex(e))
 
             if curShowID in toRename:
@@ -3299,7 +3294,7 @@ class showQueueOverview(Manage):
         t = PageTemplate(headers=self.request.headers, file='manage_showQueueOverview.tmpl')
         t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
         t.showList = sickbeard.showList
-        t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning()
+        t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
 
         t.submenu = self.ManageMenu()
 
@@ -3612,7 +3607,7 @@ class ConfigGeneral(Config):
             try:
                 pulls = sickbeard.versionCheckScheduler.action.list_remote_pulls()
                 return json.dumps({'result': 'success', 'pulls': pulls})
-            except Exception, e:
+            except Exception as e:
                 logger.log(u'exception msg: ' + str(e), logger.DEBUG)
                 return json.dumps({'result': 'fail'})
 
@@ -3621,7 +3616,7 @@ class ConfigGeneral(Config):
         try:
             branches = sickbeard.versionCheckScheduler.action.list_remote_branches()
             return json.dumps({'result': 'success', 'branches': branches})
-        except Exception, e:
+        except Exception as e:
             logger.log(u'exception msg: ' + str(e), logger.DEBUG)
             return json.dumps({'result': 'fail'})
 
@@ -3905,7 +3900,7 @@ class ConfigPostProcessing(Config):
                 return 'supported'
             logger.log(u'Rar Not Supported: Can not read the content of test file', logger.ERROR)
             return 'not supported'
-        except Exception, e:
+        except Exception as e:
             logger.log(u'Rar Not Supported: ' + ex(e), logger.ERROR)
             return 'not supported'
 
@@ -3921,14 +3916,14 @@ class ConfigProviders(Config):
         if not name:
             return json.dumps({'error': 'No Provider Name specified'})
 
-        providerDict = dict(zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         tempProvider = newznab.NewznabProvider(name, '')
 
-        if tempProvider.getID() in providerDict:
-            return json.dumps({'error': 'Provider Name already exists as ' + providerDict[tempProvider.getID()].name})
+        if tempProvider.get_id() in providerDict:
+            return json.dumps({'error': 'Provider Name already exists as ' + providerDict[tempProvider.get_id()].name})
         else:
-            return json.dumps({'success': tempProvider.getID()})
+            return json.dumps({'success': tempProvider.get_id()})
 
     def saveNewznabProvider(self, name, url, key=''):
 
@@ -3949,12 +3944,12 @@ class ConfigProviders(Config):
             else:
                 providerDict[name].needs_auth = True
 
-            return providerDict[name].getID() + '|' + providerDict[name].configStr()
+            return providerDict[name].get_id() + '|' + providerDict[name].config_str()
 
         else:
             newProvider = newznab.NewznabProvider(name, url, key=key)
             sickbeard.newznabProviderList.append(newProvider)
-            return newProvider.getID() + '|' + newProvider.configStr()
+            return newProvider.get_id() + '|' + newProvider.config_str()
 
     def getNewznabCategories(self, name, url, key):
         '''
@@ -3976,7 +3971,7 @@ class ConfigProviders(Config):
             return json.dumps({'success' : False, 'error': error})
 
         #Get list with Newznabproviders
-        #providerDict = dict(zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        #providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         #Get newznabprovider obj with provided name
         tempProvider= newznab.NewznabProvider(name, url, key)
@@ -3987,7 +3982,7 @@ class ConfigProviders(Config):
 
     def deleteNewznabProvider(self, nnid):
 
-        providerDict = dict(zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         if nnid not in providerDict or providerDict[nnid].default:
             return '0'
@@ -4006,16 +4001,16 @@ class ConfigProviders(Config):
             return json.dumps({'error': 'Invalid name specified'})
 
         providerDict = dict(
-            zip([x.getID() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
+            zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
 
         tempProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
 
-        if tempProvider.getID() in providerDict:
-            return json.dumps({'error': 'Exists as ' + providerDict[tempProvider.getID()].name})
+        if tempProvider.get_id() in providerDict:
+            return json.dumps({'error': 'Exists as ' + providerDict[tempProvider.get_id()].name})
         else:
-            (succ, errMsg) = tempProvider.validateRSS()
+            (succ, errMsg) = tempProvider.validate_feed()
             if succ:
-                return json.dumps({'success': tempProvider.getID()})
+                return json.dumps({'success': tempProvider.get_id()})
             else:
                 return json.dumps({'error': errMsg})
 
@@ -4031,17 +4026,17 @@ class ConfigProviders(Config):
             providerDict[name].url = config.clean_url(url)
             providerDict[name].cookies = cookies
 
-            return providerDict[name].getID() + '|' + providerDict[name].configStr()
+            return providerDict[name].get_id() + '|' + providerDict[name].config_str()
 
         else:
             newProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
             sickbeard.torrentRssProviderList.append(newProvider)
-            return newProvider.getID() + '|' + newProvider.configStr()
+            return newProvider.get_id() + '|' + newProvider.config_str()
 
     def deleteTorrentRssProvider(self, id):
 
         providerDict = dict(
-            zip([x.getID() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
+            zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
 
         if id not in providerDict:
             return '0'
@@ -4062,7 +4057,7 @@ class ConfigProviders(Config):
         provider_list = []
 
         newznabProviderDict = dict(
-            zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+            zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         finishedNames = []
 
@@ -4081,7 +4076,7 @@ class ConfigProviders(Config):
 
                 newProvider = newznab.NewznabProvider(cur_name, cur_url, key=cur_key)
 
-                cur_id = newProvider.getID()
+                cur_id = newProvider.get_id()
 
                 # if it already exists then update it
                 if cur_id in newznabProviderDict:
@@ -4089,7 +4084,7 @@ class ConfigProviders(Config):
                     newznabProviderDict[cur_id].url = cur_url
                     if cur_key:
                         newznabProviderDict[cur_id].key = cur_key
-                    newznabProviderDict[cur_id].catIDs = cur_cat
+                    newznabProviderDict[cur_id].cat_ids = cur_cat
                     # a 0 in the key spot indicates that no key is needed
                     if cur_key == '0':
                         newznabProviderDict[cur_id].needs_auth = False
@@ -4125,11 +4120,11 @@ class ConfigProviders(Config):
 
         # delete anything that is missing
         for curProvider in sickbeard.newznabProviderList:
-            if curProvider.getID() not in finishedNames:
+            if curProvider.get_id() not in finishedNames:
                 sickbeard.newznabProviderList.remove(curProvider)
 
         torrentRssProviderDict = dict(
-            zip([x.getID() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
+            zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
         finishedNames = []
 
         if torrentrss_string:
@@ -4146,7 +4141,7 @@ class ConfigProviders(Config):
 
                 newProvider = rsstorrent.TorrentRssProvider(curName, curURL, curCookies)
 
-                curID = newProvider.getID()
+                curID = newProvider.get_id()
 
                 # if it already exists then update it
                 if curID in torrentRssProviderDict:
@@ -4161,7 +4156,7 @@ class ConfigProviders(Config):
 
         # delete anything that is missing
         for curProvider in sickbeard.torrentRssProviderList:
-            if curProvider.getID() not in finishedNames:
+            if curProvider.get_id() not in finishedNames:
                 sickbeard.torrentRssProviderList.remove(curProvider)
 
         # do the enable/disable
@@ -4170,7 +4165,7 @@ class ConfigProviders(Config):
             curEnabled = config.to_int(curEnabled)
 
             curProvObj = [x for x in sickbeard.providers.sortedProviderList() if
-                          x.getID() == curProvider and hasattr(x, 'enabled')]
+                          x.get_id() == curProvider and hasattr(x, 'enabled')]
             if curProvObj:
                 curProvObj[0].enabled = bool(curEnabled)
 
@@ -4186,31 +4181,31 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'minseed'):
                 try:
-                    curTorrentProvider.minseed = int(str(kwargs[curTorrentProvider.getID() + '_minseed']).strip())
+                    curTorrentProvider.minseed = int(str(kwargs[curTorrentProvider.get_id() + '_minseed']).strip())
                 except:
                     curTorrentProvider.minseed = 0
 
             if hasattr(curTorrentProvider, 'minleech'):
                 try:
-                    curTorrentProvider.minleech = int(str(kwargs[curTorrentProvider.getID() + '_minleech']).strip())
+                    curTorrentProvider.minleech = int(str(kwargs[curTorrentProvider.get_id() + '_minleech']).strip())
                 except:
                     curTorrentProvider.minleech = 0
 
             if hasattr(curTorrentProvider, 'ratio'):
                 try:
-                    curTorrentProvider.ratio = str(kwargs[curTorrentProvider.getID() + '_ratio']).strip()
+                    curTorrentProvider.ratio = str(kwargs[curTorrentProvider.get_id() + '_ratio']).strip()
                 except:
                     curTorrentProvider.ratio = None
 
             if hasattr(curTorrentProvider, 'digest'):
                 try:
-                    curTorrentProvider.digest = str(kwargs[curTorrentProvider.getID() + '_digest']).strip()
+                    curTorrentProvider.digest = str(kwargs[curTorrentProvider.get_id() + '_digest']).strip()
                 except:
                     curTorrentProvider.digest = None
 
             if hasattr(curTorrentProvider, 'hash'):
                 try:
-                    key = str(kwargs[curTorrentProvider.getID() + '_hash']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_hash']).strip()
                     if not starify(key, True):
                         curTorrentProvider.hash = key
                 except:
@@ -4218,7 +4213,7 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'api_key'):
                 try:
-                    key = str(kwargs[curTorrentProvider.getID() + '_api_key']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_api_key']).strip()
                     if not starify(key, True):
                         curTorrentProvider.api_key = key
                 except:
@@ -4226,13 +4221,13 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'username'):
                 try:
-                    curTorrentProvider.username = str(kwargs[curTorrentProvider.getID() + '_username']).strip()
+                    curTorrentProvider.username = str(kwargs[curTorrentProvider.get_id() + '_username']).strip()
                 except:
                     curTorrentProvider.username = None
 
             if hasattr(curTorrentProvider, 'password'):
                 try:
-                    key = str(kwargs[curTorrentProvider.getID() + '_password']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_password']).strip()
                     if set('*') != set(key):
                         curTorrentProvider.password = key
                 except:
@@ -4240,7 +4235,7 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'passkey'):
                 try:
-                    key = str(kwargs[curTorrentProvider.getID() + '_passkey']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_passkey']).strip()
                     if not starify(key, True):
                         curTorrentProvider.passkey = key
                 except:
@@ -4249,54 +4244,54 @@ class ConfigProviders(Config):
             if hasattr(curTorrentProvider, 'confirmed'):
                 try:
                     curTorrentProvider.confirmed = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_confirmed'])
+                        kwargs[curTorrentProvider.get_id() + '_confirmed'])
                 except:
                     curTorrentProvider.confirmed = 0
 
             if hasattr(curTorrentProvider, 'proxy'):
                 try:
                     curTorrentProvider.proxy.enabled = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_proxy'])
+                        kwargs[curTorrentProvider.get_id() + '_proxy'])
                 except:
                     curTorrentProvider.proxy.enabled = 0
 
                 if hasattr(curTorrentProvider.proxy, 'url'):
                     try:
-                        curTorrentProvider.proxy.url = str(kwargs[curTorrentProvider.getID() + '_proxy_url']).strip()
+                        curTorrentProvider.proxy.url = str(kwargs[curTorrentProvider.get_id() + '_proxy_url']).strip()
                     except:
                         curTorrentProvider.proxy.url = None
 
             if hasattr(curTorrentProvider, 'freeleech'):
                 try:
                     curTorrentProvider.freeleech = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_freeleech'])
+                        kwargs[curTorrentProvider.get_id() + '_freeleech'])
                 except:
                     curTorrentProvider.freeleech = 0
 
             if hasattr(curTorrentProvider, 'search_mode'):
                 try:
-                    curTorrentProvider.search_mode = str(kwargs[curTorrentProvider.getID() + '_search_mode']).strip()
+                    curTorrentProvider.search_mode = str(kwargs[curTorrentProvider.get_id() + '_search_mode']).strip()
                 except:
                     curTorrentProvider.search_mode = 'eponly'
 
             if hasattr(curTorrentProvider, 'search_fallback'):
                 try:
                     curTorrentProvider.search_fallback = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_search_fallback'])
+                        kwargs[curTorrentProvider.get_id() + '_search_fallback'])
                 except:
                     curTorrentProvider.search_fallback = 0  # these exceptions are catching unselected checkboxes
 
             if hasattr(curTorrentProvider, 'enable_recentsearch'):
                 try:
                     curTorrentProvider.enable_recentsearch = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_enable_recentsearch'])
+                        kwargs[curTorrentProvider.get_id() + '_enable_recentsearch'])
                 except:
                     curTorrentProvider.enable_recentsearch = 0 # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curTorrentProvider, 'enable_backlog'):
                 try:
                     curTorrentProvider.enable_backlog = config.checkbox_to_value(
-                        kwargs[curTorrentProvider.getID() + '_enable_backlog'])
+                        kwargs[curTorrentProvider.get_id() + '_enable_backlog'])
                 except:
                     curTorrentProvider.enable_backlog = 0 # these exceptions are actually catching unselected checkboxes
 
@@ -4305,7 +4300,7 @@ class ConfigProviders(Config):
 
             if hasattr(curNzbProvider, 'api_key'):
                 try:
-                    key = str(kwargs[curNzbProvider.getID() + '_api_key']).strip()
+                    key = str(kwargs[curNzbProvider.get_id() + '_api_key']).strip()
                     if not starify(key, True):
                         curNzbProvider.api_key = key
                 except:
@@ -4313,38 +4308,38 @@ class ConfigProviders(Config):
 
             if hasattr(curNzbProvider, 'username'):
                 try:
-                    curNzbProvider.username = str(kwargs[curNzbProvider.getID() + '_username']).strip()
+                    curNzbProvider.username = str(kwargs[curNzbProvider.get_id() + '_username']).strip()
                 except:
                     curNzbProvider.username = None
 
             if hasattr(curNzbProvider, 'search_mode'):
                 try:
-                    curNzbProvider.search_mode = str(kwargs[curNzbProvider.getID() + '_search_mode']).strip()
+                    curNzbProvider.search_mode = str(kwargs[curNzbProvider.get_id() + '_search_mode']).strip()
                 except:
                     curNzbProvider.search_mode = 'eponly'
 
             if hasattr(curNzbProvider, 'search_fallback'):
                 try:
                     curNzbProvider.search_fallback = config.checkbox_to_value(
-                        kwargs[curNzbProvider.getID() + '_search_fallback'])
+                        kwargs[curNzbProvider.get_id() + '_search_fallback'])
                 except:
                     curNzbProvider.search_fallback = 0  # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curNzbProvider, 'enable_recentsearch'):
                 try:
                     curNzbProvider.enable_recentsearch = config.checkbox_to_value(
-                        kwargs[curNzbProvider.getID() + '_enable_recentsearch'])
+                        kwargs[curNzbProvider.get_id() + '_enable_recentsearch'])
                 except:
                     curNzbProvider.enable_recentsearch = 0  # these exceptions are actually catching unselected checkboxes
 
             if hasattr(curNzbProvider, 'enable_backlog'):
                 try:
                     curNzbProvider.enable_backlog = config.checkbox_to_value(
-                        kwargs[curNzbProvider.getID() + '_enable_backlog'])
+                        kwargs[curNzbProvider.get_id() + '_enable_backlog'])
                 except:
                     curNzbProvider.enable_backlog = 0  # these exceptions are actually catching unselected checkboxes
 
-        sickbeard.NEWZNAB_DATA = '!!!'.join([x.configStr() for x in sickbeard.newznabProviderList])
+        sickbeard.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickbeard.newznabProviderList])
         sickbeard.PROVIDER_ORDER = provider_list
 
         helpers.clear_unused_providers()

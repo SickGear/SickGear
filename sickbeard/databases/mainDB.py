@@ -21,7 +21,7 @@ import datetime
 import sickbeard
 import os.path
 
-from sickbeard import db, common, helpers, logger
+from sickbeard import db, common, logger
 
 from sickbeard import encodingKludge as ek
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
@@ -145,34 +145,36 @@ class MainSanityCheck(db.DBSanityCheck):
             logger.log(u'No UNAIRED episodes, check passed')
 
 
-
 # ======================
 # = Main DB Migrations =
 # ======================
 # Add new migrations at the bottom of the list; subclass the previous migration.
-
-
-# 0 -> 31
+# 0 -> 20003
 class InitialSchema(db.SchemaUpgrade):
     def execute(self):
         db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasTable('tv_shows') and not self.hasTable('db_version'):
             queries = [
+                # original sick beard tables
                 'CREATE TABLE db_version (db_version INTEGER);',
-                'CREATE TABLE history (action NUMERIC, date NUMERIC, showid NUMERIC, season NUMERIC, episode NUMERIC, quality NUMERIC, resource TEXT, provider TEXT)',
-                'CREATE TABLE imdb_info (indexer_id INTEGER PRIMARY KEY, imdb_id TEXT, title TEXT, year NUMERIC, akas TEXT, runtimes NUMERIC, genres TEXT, countries TEXT, country_codes TEXT, certificates TEXT, rating TEXT, votes INTEGER, last_update NUMERIC)',
+                'CREATE TABLE history (action NUMERIC, date NUMERIC, showid NUMERIC, season NUMERIC, episode NUMERIC, quality NUMERIC, resource TEXT, provider TEXT, version NUMERIC)',
                 'CREATE TABLE info (last_backlog NUMERIC, last_indexer NUMERIC, last_proper_search NUMERIC)',
-                'CREATE TABLE scene_numbering(indexer TEXT, indexer_id INTEGER, season INTEGER, episode INTEGER,scene_season INTEGER, scene_episode INTEGER, PRIMARY KEY(indexer_id, season, episode))',
-                'CREATE TABLE tv_shows (show_id INTEGER PRIMARY KEY, indexer_id NUMERIC, indexer NUMERIC, show_name TEXT, location TEXT, network TEXT, genre TEXT, classification TEXT, runtime NUMERIC, quality NUMERIC, airs TEXT, status TEXT, flatten_folders NUMERIC, paused NUMERIC, startyear NUMERIC, air_by_date NUMERIC, lang TEXT, subtitles NUMERIC, notify_list TEXT, imdb_id TEXT, last_update_indexer NUMERIC, dvdorder NUMERIC, archive_firstmatch NUMERIC, rls_require_words TEXT, rls_ignore_words TEXT, sports NUMERIC);',
-                'CREATE TABLE tv_episodes (episode_id INTEGER PRIMARY KEY, showid NUMERIC, indexerid NUMERIC, indexer NUMERIC, name TEXT, season NUMERIC, episode NUMERIC, description TEXT, airdate NUMERIC, hasnfo NUMERIC, hastbn NUMERIC, status NUMERIC, location TEXT, file_size NUMERIC, release_name TEXT, subtitles TEXT, subtitles_searchcount NUMERIC, subtitles_lastsearch TIMESTAMP, is_proper NUMERIC, scene_season NUMERIC, scene_episode NUMERIC);',
+                'CREATE TABLE tv_episodes (episode_id INTEGER PRIMARY KEY, showid NUMERIC, indexerid NUMERIC, indexer NUMERIC, name TEXT, season NUMERIC, episode NUMERIC, description TEXT, airdate NUMERIC, hasnfo NUMERIC, hastbn NUMERIC, status NUMERIC, location TEXT, file_size NUMERIC, release_name TEXT, subtitles TEXT, subtitles_searchcount NUMERIC, subtitles_lastsearch TIMESTAMP, is_proper NUMERIC, scene_season NUMERIC, scene_episode NUMERIC, absolute_number NUMERIC, scene_absolute_number NUMERIC, version NUMERIC, release_group TEXT, trakt_watched NUMERIC)',
+                'CREATE TABLE tv_shows (show_id INTEGER PRIMARY KEY, indexer_id NUMERIC, indexer NUMERIC, show_name TEXT, location TEXT, network TEXT, genre TEXT, classification TEXT, runtime NUMERIC, quality NUMERIC, airs TEXT, status TEXT, flatten_folders NUMERIC, paused NUMERIC, startyear NUMERIC, air_by_date NUMERIC, lang TEXT, subtitles NUMERIC, notify_list TEXT, imdb_id TEXT, last_update_indexer NUMERIC, dvdorder NUMERIC, archive_firstmatch NUMERIC, rls_require_words TEXT, rls_ignore_words TEXT, sports NUMERIC, anime NUMERIC, scene NUMERIC, overview TEXT, tag TEXT)',
+                'CREATE INDEX idx_showid ON tv_episodes (showid)',
+                'CREATE INDEX idx_tv_episodes_showid_airdate ON tv_episodes (showid,airdate)',
+                'CREATE TABLE blacklist (show_id INTEGER, range TEXT, keyword TEXT)',
+                'CREATE TABLE indexer_mapping (indexer_id INTEGER, indexer NUMERIC, mindexer_id INTEGER, mindexer NUMERIC, PRIMARY KEY (indexer_id, indexer))',
+                'CREATE TABLE imdb_info (indexer_id INTEGER PRIMARY KEY, imdb_id TEXT, title TEXT, year NUMERIC, akas TEXT, runtimes NUMERIC, genres TEXT, countries TEXT, country_codes TEXT, certificates TEXT, rating TEXT, votes INTEGER, last_update NUMERIC)',
+                'CREATE TABLE scene_numbering (indexer TEXT, indexer_id INTEGER, season INTEGER, episode INTEGER, scene_season INTEGER, scene_episode INTEGER, absolute_number NUMERIC, scene_absolute_number NUMERIC, PRIMARY KEY (indexer_id, season, episode))',
+                'CREATE TABLE whitelist (show_id INTEGER, range TEXT, keyword TEXT)',
+                'CREATE TABLE xem_refresh (indexer TEXT, indexer_id INTEGER PRIMARY KEY, last_refreshed INTEGER)',
                 'CREATE UNIQUE INDEX idx_indexer_id ON tv_shows (indexer_id)',
-                'CREATE INDEX idx_showid ON tv_episodes (showid);',
-                'CREATE INDEX idx_sta_epi_air ON tv_episodes (status,episode, airdate);',
-                'CREATE INDEX idx_sta_epi_sta_air ON tv_episodes (season,episode, status, airdate);',
-                'CREATE INDEX idx_status ON tv_episodes (status,season,episode,airdate);',
-                'CREATE INDEX idx_tv_episodes_showid_airdate ON tv_episodes(showid,airdate)',
-                'INSERT INTO db_version (db_version) VALUES (31);'
+                'CREATE INDEX idx_sta_epi_air ON tv_episodes (status,episode, airdate)',
+                'CREATE INDEX idx_sta_epi_sta_air ON tv_episodes (season,episode, status, airdate)',
+                'CREATE INDEX idx_status ON tv_episodes (status,season,episode,airdate)',
+                'INSERT INTO db_version (db_version) VALUES (20003)'
             ]
             for query in queries:
                 self.connection.action(query)
@@ -964,7 +966,7 @@ class BumpDatabaseVersion(db.SchemaUpgrade):
         return self.checkDBVersion()
 
 
-# 41 -> 10001
+# 41,42 -> 10001
 class Migrate41(db.SchemaUpgrade):
     def execute(self):
         db.backup_database('sickbeard.db', self.checkDBVersion())
@@ -1033,6 +1035,7 @@ class AddTvShowOverview(db.SchemaUpgrade):
 
         self.setDBVersion(20002)
         return self.checkDBVersion()
+
 
 # 20002 -> 20003
 class AddTvShowTags(db.SchemaUpgrade):

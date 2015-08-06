@@ -1,3 +1,115 @@
+### 0.10.0 (2015-08-06 11:05:00 UTC)
+
+* Remove EZRSS provider
+* Update Tornado webserver to 4.2 (fdfaf3d)
+* Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
+* Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
+* Update Requests library 2.6.2 to 2.7.0 (8b5e457)
+* Update change to suppress HTTPS verification InsecureRequestWarning to updated package (ref:hacks.txt)
+* Change to consolidate cache database migration code
+* Change to only rebuild namecache on show update instead of on every search
+* Change to allow file moving across partition
+* Add removal of old entries from namecache on show deletion
+* Add Hallmark and specific ITV logos, remove logo of non-english Comedy Central Family
+* Fix provider TD failing to find episodes of air by date shows
+* Fix provider SCC failing to find episodes of air by date shows
+* Fix provider SCC searching propers
+* Fix provider SCC stop snatching releases for episodes already completed
+* Fix provider SCC handle null server responses
+* Change provider SCC remove 1 of 3 requests per search to save 30% time
+* Change provider SCC login process to use General Config/Advanced/Proxy host setting
+* Change provider SCD PEP8 and code convention cleanup
+* Change provider HDB code simplify and PEP8
+* Change provider IPT only decode unicode search strings
+* Change provider IPT login process to use General Config/Advanced/Proxy host setting
+* Change provider TB logo icon used on Config/Search Providers
+* Change provider TB PEP8 and code convention cleanup
+* Change provider TB login process to use General Config/Advanced/Proxy host setting
+* Remove useless webproxies from provider TPB as they fail for one reason or another
+* Change provider TPB to use mediaExtensions from common instead of hard-coded private list
+* Add new tld variants to provider TPB
+* Add test for authenticity to provider TPB to notify of 3rd party block
+* Change provider TD logo icon used on Config/Search Providers
+* Change provider TD login process to use General Config/Advanced/Proxy host setting
+* Change provider BTN code simplify and PEP8
+* Change provider BTS login process to use General Config/Advanced/Proxy host setting
+* Change provider FSH login process to use General Config/Advanced/Proxy host setting
+* Change provider RSS torrent code to use General Config/Advanced/Proxy host setting, simplify and PEP8
+* Change provider Wombles's PEP8 and code convention cleanup
+* Change provider Womble's use SSL
+* Change provider KAT remove dead url
+* Change provider KAT to use mediaExtensions from common instead of private list
+* Change provider KAT provider PEP8 and code convention cleanup
+* Change refactor and code simplification for torrent and newznab providers
+* Change refactor SCC to use torrent provider simplification and PEP8
+* Change refactor SCD to use torrent provider simplification
+* Change refactor TB to use torrent provider simplification and PEP8
+* Change refactor TBP to use torrent provider simplification and PEP8
+* Change refactor TD to use torrent provider simplification and PEP8
+* Change refactor TL to use torrent provider simplification and PEP8
+* Change refactor BTS to use torrent provider simplification and PEP8
+* Change refactor FSH to use torrent provider simplification and PEP8
+* Change refactor IPT to use torrent provider simplification and PEP8
+* Change refactor KAT to use torrent provider simplification and PEP8
+* Change refactor TOTV to use torrent provider simplification and PEP8
+* Remove HDTorrents torrent provider
+* Remove NextGen torrent provider
+* Add Rarbg torrent provider
+* Add MoreThan torrent provider
+* Add AlphaRatio torrent provider
+* Add PiSexy torrent provider
+* Add Strike torrent provider
+* Add TorrentShack torrent provider
+* Add BeyondHD torrent provider
+* Add GFTracker torrent provider
+* Add TtN torrent provider
+* Add GTI torrent provider
+* Fix getManualSearchStatus: object has no attribute 'segment'
+* Change handling of general HTTP error response codes to prevent issues
+* Add handling for CloudFlare custom HTTP response codes
+* Fix to correctly load local libraries instead of system installed libraries
+* Update PyNMA to hybrid v1.0
+* Change first run after install to set up the main db to the current schema instead of upgrading
+* Change don't create a backup from an initial zero byte main database file, PEP8 and code tidy up
+* Fix show list view when no shows exist and "Group show lists shows into" is set to anything other than "One Show List"
+* Fix fault matching air by date shows by using correct episode/season strings in find search results
+* Change add 'hevc', 'x265' and some langs to Config Search/Episode Search/Ignore result with any word
+* Change NotifyMyAndroid to its new web location
+* Update feedparser library 5.1.3 to 5.2.0 (8c62940)
+* Remove feedcache implementation and library
+* Add coverage testing and coveralls support
+* Add py2/3 regression testing for exception clauses
+* Change py2 exception clauses to py2/3 compatible clauses
+* Change py2 print statements to py2/3 compatible functions
+* Change py2 octal literals into the new py2/3 syntax
+* Change py2 iteritems to py2/3 compatible statements using six library
+* Change py2 queue, httplib, cookielib and xmlrpclib to py2/3 compatible calls using six
+* Change py2 file and reload functions to py2/3 compatible open and reload_module functions
+* Change Kodi notifier to use requests as opposed to urllib
+* Change to consolidate scene exceptions and name cache code
+* Change check_url function to use requests instead of httplib library
+* Update Six compatibility library 1.5.2 to 1.9.0 (8a545f4)
+* Update SimpleJSON library 2.0.9 to 3.7.3 (0bcdf20)
+* Update xmltodict library 0.9.0 to 0.9.2 (579a005)
+* Update dateutil library 2.2 to 2.4.2 (a6b8925)
+* Update ConfigObj library 4.6.0 to 5.1.0 (a68530a)
+* Update Beautiful Soup to 4.3.2 (r353)
+* Update jsonrpclib library r20 to (b59217c)
+* Change cachecontrol library to ensure cache file exists before attempting delete
+* Fix saving root dirs
+* Change pushbullet from urllib2 to requests
+* Change to make pushbullet error messages clearer
+* Change pyNMA use of urllib to requests (ref:hacks.txt)
+* Change Trakt url to fix baseline uses (e.g. add from trending)
+* Fix edit on show page for shows that have anime enabled in mass edit
+* Fix issue parsing items in ToktoToshokan provider
+* Change to only show option "End upgrade on first match" on edit show page if quality custom is selected
+* Change label "Show is grouped in" in edit show page to "Show is in group" and move the section higher
+* Fix post processing of anime with version tags
+* Change accept SD titles that contain audio quality
+* Change readme.md
+
+
 ### 0.9.1 (2015-05-25 03:03:00 UTC)
 
 * Fix erroneous multiple downloads of torrent files which causes snatches to fail under certain conditions
@@ -64,7 +176,7 @@
 * Change disable the Force buttons on the Manage Searches page while a search is running
 * Change staggered periods of testing and updating of all shows "ended" status up to 460 days
 * Change "Archive" to "Upgrade to" in Edit show and other places and improve related texts for clarity
-* Fix history consolidation to only update an episode status if the history disagrees with the status.
+* Fix history consolidation to only update an episode status if the history disagrees with the status
 
 
 ### 0.8.3 (2015-04-25 08:48:00 UTC)

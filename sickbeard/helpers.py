@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from __future__ import with_statement
 import getpass
 import os
@@ -27,7 +28,6 @@ import tempfile
 import time
 import traceback
 import hashlib
-import httplib
 import urlparse
 import uuid
 import base64
@@ -266,7 +266,7 @@ def copyFile(srcFile, destFile):
 
 def moveFile(srcFile, destFile):
     try:
-        ek.ek(os.rename, srcFile, destFile)
+        ek.ek(shutil.move, srcFile, destFile)
         fixSetGroupID(destFile)
     except OSError:
         copyFile(srcFile, destFile)
@@ -286,7 +286,7 @@ def hardlinkFile(srcFile, destFile):
     try:
         ek.ek(link, srcFile, destFile)
         fixSetGroupID(destFile)
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Failed to create hardlink of " + srcFile + " at " + destFile + ": " + ex(e) + ". Copying instead",
                    logger.ERROR)
         copyFile(srcFile, destFile)
@@ -304,7 +304,7 @@ def symlink(src, dst):
 
 def moveAndSymlinkFile(srcFile, destFile):
     try:
-        ek.ek(os.rename, srcFile, destFile)
+        ek.ek(shutil.move, srcFile, destFile)
         fixSetGroupID(destFile)
         ek.ek(symlink, destFile, srcFile)
     except:
@@ -326,7 +326,7 @@ def make_dirs(path):
             try:
                 logger.log(u"Folder " + path + " doesn't exist, creating it", logger.DEBUG)
                 ek.ek(os.makedirs, path)
-            except (OSError, IOError), e:
+            except (OSError, IOError) as e:
                 logger.log(u"Failed creating " + path + " : " + ex(e), logger.ERROR)
                 return False
 
@@ -350,7 +350,7 @@ def make_dirs(path):
                     chmodAsParent(ek.ek(os.path.normpath, sofar))
                     # do the library update for synoindex
                     notifiers.synoindex_notifier.addFolder(sofar)
-                except (OSError, IOError), e:
+                except (OSError, IOError) as e:
                     logger.log(u"Failed creating " + sofar + " : " + ex(e), logger.ERROR)
                     return False
 
@@ -396,8 +396,8 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     # move the file
     try:
         logger.log(u"Renaming file from " + cur_path + " to " + new_path)
-        ek.ek(os.rename, cur_path, new_path)
-    except (OSError, IOError), e:
+        ek.ek(shutil.move, cur_path, new_path)
+    except (OSError, IOError) as e:
         logger.log(u"Failed renaming " + cur_path + " to " + new_path + ": " + ex(e), logger.ERROR)
         return False
 
@@ -433,7 +433,7 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
                 ek.ek(os.rmdir, check_empty_dir)
                 # do the library update for synoindex
                 notifiers.synoindex_notifier.deleteFolder(check_empty_dir)
-            except OSError, e:
+            except OSError as e:
                 logger.log(u"Unable to delete " + check_empty_dir + ": " + repr(e) + " / " + str(e), logger.WARNING)
                 break
             check_empty_dir = ek.ek(os.path.dirname, check_empty_dir)
@@ -562,21 +562,15 @@ def get_all_episodes_from_absolute_number(show, absolute_numbers, indexer_id=Non
     return (season, episodes)
 
 
-def sanitizeSceneName(name, ezrss=False):
+def sanitizeSceneName(name):
     """
     Takes a show name and returns the "scenified" version of it.
-
-    ezrss: If true the scenified version will follow EZRSS's cracksmoker rules as best as possible
 
     Returns: A string containing the scene version of the show name given.
     """
 
     if name:
-        if not ezrss:
-            bad_chars = u",:()'!?\u2019"
-        # ezrss leaves : and ! in their show names as far as I can tell
-        else:
-            bad_chars = u",()'?\u2019"
+        bad_chars = u",:()'!?\u2019"
 
         # strip out any bad chars
         for x in bad_chars:
@@ -602,7 +596,7 @@ def create_https_certificates(ssl_cert, ssl_key):
         from OpenSSL import crypto  # @UnresolvedImport
         from lib.certgen import createKeyPair, createCertRequest, createCertificate, TYPE_RSA, \
             serial  # @UnresolvedImport
-    except Exception, e:
+    except Exception as e:
         logger.log(u"pyopenssl module missing, please install for https access", logger.WARNING)
         return False
 
@@ -648,7 +642,7 @@ def parse_xml(data, del_xmlns=False):
 
     try:
         parsedXML = etree.fromstring(data)
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Error trying to parse xml data. Error: " + ex(e), logger.DEBUG)
         parsedXML = None
 
@@ -656,28 +650,28 @@ def parse_xml(data, del_xmlns=False):
 
 
 def backupVersionedFile(old_file, version):
-    numTries = 0
+    num_tries = 0
 
-    new_file = old_file + '.' + 'v' + str(version)
+    new_file = '%s.v%s' % (old_file, version)
 
     while not ek.ek(os.path.isfile, new_file):
-        if not ek.ek(os.path.isfile, old_file):
-            logger.log(u"Not creating backup, " + old_file + " doesn't exist", logger.DEBUG)
+        if not ek.ek(os.path.isfile, old_file) or 0 == get_size(old_file):
+            logger.log(u'No need to create backup', logger.DEBUG)
             break
 
         try:
-            logger.log(u"Trying to back up " + old_file + " to " + new_file, logger.DEBUG)
+            logger.log(u'Trying to back up %s to %s' % (old_file, new_file), logger.DEBUG)
             shutil.copy(old_file, new_file)
-            logger.log(u"Backup done", logger.DEBUG)
+            logger.log(u'Backup done', logger.DEBUG)
             break
-        except Exception, e:
-            logger.log(u"Error while trying to back up " + old_file + " to " + new_file + " : " + ex(e), logger.WARNING)
-            numTries += 1
-            time.sleep(1)
-            logger.log(u"Trying again.", logger.DEBUG)
+        except Exception as e:
+            logger.log(u'Error while trying to back up %s to %s : %s' % (old_file, new_file, ex(e)), logger.WARNING)
+            num_tries += 1
+            time.sleep(3)
+            logger.log(u'Trying again.', logger.DEBUG)
 
-        if numTries >= 10:
-            logger.log(u"Unable to back up " + old_file + " to " + new_file + " please do it manually.", logger.ERROR)
+        if 3 <= num_tries:
+            logger.log(u'Unable to back up %s to %s please do it manually.' % (old_file, new_file), logger.ERROR)
             return False
 
     return True
@@ -698,7 +692,7 @@ def restoreVersionedFile(backup_file, version):
             u"Trying to backup " + new_file + " to " + new_file + "." + "r" + str(version) + " before restoring backup",
             logger.DEBUG)
         shutil.move(new_file, new_file + '.' + 'r' + str(version))
-    except Exception, e:
+    except Exception as e:
         logger.log(
             u"Error while trying to backup DB file " + restore_file + " before proceeding with restore: " + ex(e),
             logger.WARNING)
@@ -714,7 +708,7 @@ def restoreVersionedFile(backup_file, version):
             shutil.copy(restore_file, new_file)
             logger.log(u"Restore done", logger.DEBUG)
             break
-        except Exception, e:
+        except Exception as e:
             logger.log(u"Error while trying to restore " + restore_file + ": " + ex(e), logger.WARNING)
             numTries += 1
             time.sleep(1)
@@ -783,7 +777,7 @@ def get_lan_ip():
         for ifname in interfaces:
             try:
                 ip = get_interface_ip(ifname)
-                print ifname, ip
+                print(ifname, ip)
                 break
             except IOError:
                 pass
@@ -793,19 +787,11 @@ def get_lan_ip():
 def check_url(url):
     """
     Check if a URL exists without downloading the whole file.
-    We only check the URL header.
     """
-    # see also http://stackoverflow.com/questions/2924422
-    # http://stackoverflow.com/questions/1140661
-    good_codes = [httplib.OK, httplib.FOUND, httplib.MOVED_PERMANENTLY]
-
-    host, path = urlparse.urlparse(url)[1:3]  # elems [1] and [2]
     try:
-        conn = httplib.HTTPConnection(host)
-        conn.request('HEAD', path)
-        return conn.getresponse().status in good_codes
-    except StandardError:
-        return None
+        return requests.head(url).ok
+    except:
+        return False
 
 
 def anon_url(*url):
@@ -822,9 +808,10 @@ def starify(text, verify=False):
 
     If verify is true, return true if text is a star block created text else return false.
     """
-    return ((('%s%s' % (text[:len(text) / 2], '*' * (len(text) / 2))),
-             ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
-            set('*') == set((text[len(text) / 2:], text[4:-4])[12 <= len(text)]))[verify]
+    return '' if not text\
+        else ((('%s%s' % (text[:len(text) / 2], '*' * (len(text) / 2))),
+               ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
+              set('*') == set((text[len(text) / 2:], text[4:-4])[12 <= len(text)]))[verify]
 
 
 """
@@ -952,14 +939,14 @@ def set_up_anidb_connection():
     auth = False
     try:
         auth = sickbeard.ADBA_CONNECTION.authed()
-    except Exception, e:
+    except Exception as e:
         logger.log(u'exception msg: ' + str(e))
         pass
 
     if not auth:
         try:
             sickbeard.ADBA_CONNECTION.auth(sickbeard.ANIDB_USERNAME, sickbeard.ANIDB_PASSWORD)
-        except Exception, e:
+        except Exception as e:
             logger.log(u'exception msg: ' + str(e))
             return False
     else:
@@ -1029,7 +1016,7 @@ def mapIndexersToShow(showObj):
 def touchFile(fname, atime=None):
     if None != atime:
         try:
-            with file(fname, 'a'):
+            with open(fname, 'a'):
                 os.utime(fname, (atime, atime))
                 return True
         except:
@@ -1160,21 +1147,27 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             resp = session.get(url, timeout=timeout)
 
         if not resp.ok:
-            logger.log(u"Requested url " + url + " returned status code is " + str(
-                resp.status_code) + ': ' + clients.http_error_code[resp.status_code], logger.DEBUG)
+            if resp.status_code in clients.http_error_code:
+                http_err_text = clients.http_error_code[resp.status_code]
+            elif resp.status_code in range(520, 527):
+                http_err_text = 'CloudFlare to origin server connection failure'
+            else:
+                http_err_text = 'Custom HTTP error code'
+            logger.log(u'Requested url %s returned status code is %s: %s'
+                       % (url, resp.status_code, http_err_text), logger.DEBUG)
             return
 
-    except requests.exceptions.HTTPError, e:
+    except requests.exceptions.HTTPError as e:
         logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
         return
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return
-    except requests.exceptions.Timeout, e:
-        logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
-        return
-    except requests.exceptions.ReadTimeout, e:
+    except requests.exceptions.ReadTimeout as e:
         logger.log(u'Read timed out ' + str(e.message) + ' while loading URL ' + url, logger.WARNING)
+        return
+    except requests.exceptions.Timeout as e:
+        logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return
     except Exception:
         logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)
@@ -1230,19 +1223,19 @@ def download_file(url, filename, session=None):
                     fp.flush()
 
         chmodAsParent(filename)
-    except requests.exceptions.HTTPError, e:
+    except requests.exceptions.HTTPError as e:
         _remove_file_failed(filename)
         logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
         return False
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         _remove_file_failed(filename)
         logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return False
-    except requests.exceptions.Timeout, e:
+    except requests.exceptions.Timeout as e:
         _remove_file_failed(filename)
         logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return False
-    except EnvironmentError, e:
+    except EnvironmentError as e:
         _remove_file_failed(filename)
         logger.log(u"Unable to save the file: " + ex(e), logger.ERROR)
         return False
@@ -1282,7 +1275,7 @@ def clearCache(force=False):
                         if force or (update_datetime - cache_file_modified > max_age):
                             try:
                                 ek.ek(os.remove, cache_file)
-                            except OSError, e:
+                            except OSError as e:
                                 logger.log(u"Unable to clean " + cache_root + ": " + repr(e) + " / " + str(e),
                                            logger.WARNING)
                                 break
@@ -1407,7 +1400,7 @@ def check_port(host, port, timeout=1.0):
 
 
 def clear_unused_providers():
-    providers = [x.cache.providerID for x in sickbeard.providers.sortedProviderList() if x.isActive()]
+    providers = [x.cache.providerID for x in sickbeard.providers.sortedProviderList() if x.is_active()]
 
     if providers:
         myDB = db.DBConnection('cache.db')

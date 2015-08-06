@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from __future__ import with_statement
 
 import unittest
@@ -24,8 +25,8 @@ import sys, os.path
 import datetime
 import re
 
-sys.path.append(os.path.abspath('..'))
-sys.path.append(os.path.abspath('../lib'))
+sys.path.insert(1, os.path.abspath('..'))
+sys.path.insert(1, os.path.abspath('../lib'))
 
 import test_lib as test
 import sickbeard
@@ -61,8 +62,8 @@ class XEMBasicTests(test.SickbeardTestDBCase):
             try:
                 curShow = TVShow(int(sqlShow["indexer"]), int(sqlShow["indexer_id"]))
                 sickbeard.showList.append(curShow)
-            except Exception, e:
-                print "There was an error creating the show"
+            except Exception as e:
+                print('There was an error creating the show')
 
     def test_formating(self):
         name = "Game.of.Thrones.S03.720p.HDTV.x264-CtrlHD"
@@ -80,8 +81,8 @@ class XEMBasicTests(test.SickbeardTestDBCase):
 
 
 if __name__ == "__main__":
-    print "=================="
-    print "STARTING - XEM Scene Numbering TESTS"
-    print "=================="
-    print "######################################################################"
+    print('==================')
+    print('STARTING - XEM Scene Numbering TESTS')
+    print('==================')
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(XEMBasicTests)

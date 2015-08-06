@@ -17,8 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from lib.six import moves
+
 import socket
-from httplib import HTTPSConnection, HTTPException
 from urllib import urlencode
 from ssl import SSLError
 
@@ -67,7 +68,7 @@ class PushalotNotifier:
         logger.log(u"Pushalot message: " + message, logger.DEBUG)
         logger.log(u"Pushalot api: " + pushalot_authorizationtoken, logger.DEBUG)
 
-        http_handler = HTTPSConnection("pushalot.com")
+        http_handler = moves.http_client.HTTPSConnection("pushalot.com")
 
         data = {'AuthorizationToken': pushalot_authorizationtoken,
                 'Title': event.encode('utf-8'),
@@ -78,7 +79,7 @@ class PushalotNotifier:
                                  "/api/sendmessage",
                                  headers={'Content-type': "application/x-www-form-urlencoded"},
                                  body=urlencode(data))
-        except (SSLError, HTTPException, socket.error):
+        except (SSLError, moves.http_client.HTTPException, socket.error):
             logger.log(u"Pushalot notification failed.", logger.ERROR)
             return False
         response = http_handler.getresponse()

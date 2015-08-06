@@ -30,7 +30,7 @@ def TraktCall(method, api, username=None, password=None, data={}):
     method = method.replace("%API%", api)
 
     # make the full url
-    url = 'https://api.trakt.tv/' + method
+    url = 'https://api-v2launch.trakt.tv/' + method
     
     # take the URL params and make a json object out of them
     encoded_data = json.JSONEncoder().encode(data)

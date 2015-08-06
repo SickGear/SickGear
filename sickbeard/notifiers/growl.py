@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import socket
 
 import sickbeard
@@ -80,7 +81,7 @@ class GrowlNotifier:
         return False
 
     def _send(self, host, port, data, debug=False):
-        if debug: print '<Sending>\n', data, '\n</Sending>'
+        if debug: print('<Sending>\n', data, '\n</Sending>')
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((host, port))
@@ -88,7 +89,7 @@ class GrowlNotifier:
         response = gntp.parse_gntp(s.recv(1024))
         s.close()
 
-        if debug: print '<Recieved>\n', response, '\n</Recieved>'
+        if debug: print('<Recieved>\n', response, '\n</Recieved>')
 
         return response
 
@@ -142,7 +143,7 @@ class GrowlNotifier:
                         return self._send_growl(opts, message)
                     else:
                         return False
-            except Exception, e:
+            except Exception as e:
                 logger.log(u"GROWL: Unable to send growl to " + opts['host'] + ":" + str(opts['port']) + " - " + ex(e), logger.WARNING)
                 return False
 
@@ -186,7 +187,7 @@ class GrowlNotifier:
 
         try:
             return self._send(opts['host'], opts['port'], register.encode(), opts['debug'])
-        except Exception, e:
+        except Exception as e:
             logger.log(u"GROWL: Unable to send growl to " + opts['host'] + ":" + str(opts['port']) + " - " + ex(e), logger.WARNING)
             return False
 

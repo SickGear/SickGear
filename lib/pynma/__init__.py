@@ -1,4 +1,5 @@
 #!/usr/bin/python
 
-from pynma import PyNMA 
+__version__ = '1.01'
 
+from .pynma import PyNMA

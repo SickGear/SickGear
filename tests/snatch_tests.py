@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import random
 import unittest
 
@@ -58,7 +59,7 @@ class SearchTest(test.SickbeardTestDBCase):
 
     def __init__(self, something):
         for provider in sickbeard.providers.sortedProviderList():
-            provider.getURL = self._fake_getURL
+            provider.get_url = self._fake_getURL
             #provider.isActive = self._fake_isActive
 
         super(SearchTest, self).__init__(something)
@@ -88,10 +89,10 @@ def test_generator(tvdbdid, show_name, curData, forceSearch):
     return test
 
 if __name__ == '__main__':
-    print "=================="
-    print "STARTING - Snatch TESTS"
-    print "=================="
-    print "######################################################################"
+    print('==================')
+    print('STARTING - Snatch TESTS')
+    print('==================')
+    print('######################################################################')
     # create the test methods
     tvdbdid = 1
     for forceSearch in (True, False):

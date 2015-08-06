@@ -16,19 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-__all__ = ['ezrss',
-           'womble',
+__all__ = ['womble',
            'btn',
            'thepiratebay',
            'kat',
            'torrentleech',
            'scc',
-           'hdtorrents',
            'torrentday',
            'hdbits',
            'iptorrents',
            'omgwtfnzbs',
-           'nextgen',
            'speedcd',
            'nyaatorrents',
            'torrentbytes',
@@ -36,7 +33,17 @@ __all__ = ['ezrss',
            'bitsoup',
            'tokyotoshokan',
            'animenzb',
+           'rarbg',
            'totv',
+           'morethan',
+           'alpharatio',
+           'pisexy',
+           'strike',
+           'torrentshack',
+           'beyondhd',
+           'gftracker',
+           'transmithe_net',
+           'grabtheinfo',
 ]
 
 from os import sys
@@ -48,7 +55,7 @@ from sickbeard import logger
 
 def sortedProviderList():
     initialList = sickbeard.providerList + sickbeard.newznabProviderList + sickbeard.torrentRssProviderList
-    providerDict = dict(zip([x.getID() for x in initialList], initialList))
+    providerDict = dict(zip([x.get_id() for x in initialList], initialList))
 
     newList = []
 
@@ -116,12 +123,12 @@ def makeNewznabProvider(configString):
     try:
         values = configString.split('|')
         if len(values) == 9:
-            name, url, key, catIDs, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog = values
+            name, url, key, cat_ids, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog = values
         else:
             name = values[0]
             url = values[1]
             key = values[2]
-            catIDs = values[3]
+            cat_ids = values[3]
             enabled = values[4]
     except ValueError:
         logger.log(u"Skipping Newznab provider string: '" + configString + "', incorrect format", logger.ERROR)
@@ -129,7 +136,7 @@ def makeNewznabProvider(configString):
 
     newznab = sys.modules['sickbeard.providers.newznab']
 
-    newProvider = newznab.NewznabProvider(name, url, key=key, catIDs=catIDs, search_mode=search_mode,
+    newProvider = newznab.NewznabProvider(name, url, key=key, cat_ids=cat_ids, search_mode=search_mode,
                                           search_fallback=search_fallback, enable_recentsearch=enable_recentsearch,
                                           enable_backlog=enable_backlog)
     newProvider.enabled = enabled == '1'
@@ -202,7 +209,7 @@ def getProviderModule(name):
 def getProviderClass(id):
     providerMatch = [x for x in
                      sickbeard.providerList + sickbeard.newznabProviderList + sickbeard.torrentRssProviderList if
-                     x.getID() == id]
+                     x.get_id() == id]
 
     if len(providerMatch) != 1:
         return None

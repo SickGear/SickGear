@@ -45,6 +45,12 @@ class ShowUpdater():
             # refresh network timezones
             network_timezones.update_network_dict()
 
+            # update xem id lists
+            sickbeard.scene_exceptions.get_xem_ids()
+
+            # update scene exceptions
+            sickbeard.scene_exceptions.retrieve_exceptions()
+
             # sure, why not?
             if sickbeard.USE_FAILED_DOWNLOADS:
                 failed_history.trimHistory()
@@ -91,7 +97,7 @@ class ShowUpdater():
 
                     piList.append(curQueueItem)
 
-                except (exceptions.CantUpdateException, exceptions.CantRefreshException), e:
+                except (exceptions.CantUpdateException, exceptions.CantRefreshException) as e:
                     logger.log(u'Automatic update failed: ' + ex(e), logger.ERROR)
 
             ui.ProgressIndicators.setIndicator('dailyUpdate', ui.QueueProgressIndicator('Daily Update', piList))

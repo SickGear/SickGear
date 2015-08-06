@@ -247,7 +247,7 @@ class XBMCNotifier:
             logger.log(u"XBMC HTTP response: " + result.replace('\n', ''), logger.DEBUG)
             return result
 
-        except (urllib2.URLError, IOError), e:
+        except (urllib2.URLError, IOError) as e:
             logger.log(u"Warning: Couldn't contact XBMC HTTP at " + fixStupidEncodings(url) + " " + ex(e),
                        logger.WARNING)
             return False
@@ -304,7 +304,7 @@ class XBMCNotifier:
             encSqlXML = urllib.quote(sqlXML, ':\\/<>')
             try:
                 et = etree.fromstring(encSqlXML)
-            except SyntaxError, e:
+            except SyntaxError as e:
                 logger.log(u"Unable to parse XML returned from XBMC: " + ex(e), logger.ERROR)
                 return False
 
@@ -385,7 +385,7 @@ class XBMCNotifier:
 
             try:
                 response = urllib2.urlopen(req)
-            except urllib2.URLError, e:
+            except urllib2.URLError as e:
                 logger.log(u"Error while trying to retrieve XBMC API version for " + host + ": " + ex(e),
                            logger.WARNING)
                 return False
@@ -396,11 +396,11 @@ class XBMCNotifier:
                 response.close()
                 logger.log(u"XBMC JSON response: " + str(result), logger.DEBUG)
                 return result  # need to return response for parsing
-            except ValueError, e:
+            except ValueError as e:
                 logger.log(u"Unable to decode JSON: " + response, logger.WARNING)
                 return False
 
-        except IOError, e:
+        except IOError as e:
             logger.log(u"Warning: Couldn't contact XBMC JSON API at " + fixStupidEncodings(url) + " " + ex(e),
                        logger.WARNING)
             return False

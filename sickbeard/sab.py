@@ -16,16 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from six import moves
 
 import urllib
-import httplib
-import datetime
 
 import sickbeard
 
 from lib import MultipartPostHandler
 import urllib2
-import cookielib
 
 try:
     import json
@@ -61,17 +59,8 @@ def sendNZB(nzb):
 
     # if it's a normal result we just pass SAB the URL
     if nzb.resultType == "nzb":
-        # for newzbin results send the ID to sab specifically
-        if nzb.provider.getID() == 'newzbin':
-            id = nzb.provider.getIDFromURL(nzb.url)
-            if not id:
-                logger.log("Unable to send NZB to SABnzbd, can't find ID in URL " + str(nzb.url), logger.ERROR)
-                return False
-            params['mode'] = 'addid'
-            params['name'] = id
-        else:
-            params['mode'] = 'addurl'
-            params['name'] = nzb.url
+        params['mode'] = 'addurl'
+        params['name'] = nzb.url
 
     # if we get a raw data result we want to upload it to SAB
     elif nzb.resultType == "nzbdata":
@@ -90,7 +79,7 @@ def sendNZB(nzb):
 
         # if we are uploading the NZB data to SAB then we need to build a little POST form and send it
         elif nzb.resultType == "nzbdata":
-            cookies = cookielib.CookieJar()
+            cookies = moves.http_cookiejar.CookieJar()
             opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookies),
                                           MultipartPostHandler.MultipartPostHandler)
             req = urllib2.Request(url,
@@ -99,11 +88,11 @@ def sendNZB(nzb):
 
             f = opener.open(req)
 
-    except (EOFError, IOError), e:
+    except (EOFError, IOError) as e:
         logger.log(u"Unable to connect to SABnzbd: " + ex(e), logger.ERROR)
         return False
 
-    except httplib.InvalidURL, e:
+    except moves.http_client.InvalidURL as e:
         logger.log(u"Invalid SABnzbd host, check your config: " + ex(e), logger.ERROR)
         return False
 
@@ -115,7 +104,7 @@ def sendNZB(nzb):
     # if we opened the URL connection then read the result from SAB
     try:
         result = f.readlines()
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Error trying to get result from SABnzbd, NZB not sent: " + ex(e), logger.ERROR)
         return False
 
@@ -144,7 +133,7 @@ def sendNZB(nzb):
 def _checkSabResponse(f):
     try:
         result = f.readlines()
-    except Exception, e:
+    except Exception as e:
         logger.log(u"Error trying to get result from SABnzbd" + ex(e), logger.ERROR)
         return False, "Error from SABnzbd"
 
@@ -156,7 +145,7 @@ def _checkSabResponse(f):
     sabJson = {}
     try:
         sabJson = json.loads(sabText)
-    except ValueError, e:
+    except ValueError as e:
         pass
 
     if sabText == "Missing authentication":
@@ -172,10 +161,10 @@ def _checkSabResponse(f):
 def _sabURLOpenSimple(url):
     try:
         f = urllib.urlopen(url)
-    except (EOFError, IOError), e:
+    except (EOFError, IOError) as e:
         logger.log(u"Unable to connect to SABnzbd: " + ex(e), logger.ERROR)
         return False, "Unable to connect"
-    except httplib.InvalidURL, e:
+    except moves.http_client.InvalidURL as e:
         logger.log(u"Invalid SABnzbd host, check your config: " + ex(e), logger.ERROR)
         return False, "Invalid SABnzbd host"
     if f is None:

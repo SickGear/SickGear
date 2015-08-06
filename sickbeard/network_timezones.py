@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from lib.dateutil import tz
-import lib.dateutil.zoneinfo
+from lib.six import iteritems
+
+from lib.dateutil import tz, zoneinfo
 from sickbeard import db
 from sickbeard import helpers
 from sickbeard import logger
@@ -28,9 +29,9 @@ import re
 import datetime
 
 # regex to parse time (12/24 hour format)
-time_regex = re.compile(r'(\d{1,2})(([:.](\d{2,2}))? ?([PA][. ]? ?M)|[:.](\d{2,2}))\b', flags=re.IGNORECASE)
-am_regex = re.compile(r'(A[. ]? ?M)', flags=re.IGNORECASE)
-pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.IGNORECASE)
+time_regex = re.compile(r'(\d{1,2})(([:.](\d{2}))? ?([PA][. ]? ?M)|[:.](\d{2}))\b', flags=re.I)
+am_regex = re.compile(r'(A[. ]? ?M)', flags=re.I)
+pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
 
 network_dict = None
 
@@ -47,15 +48,15 @@ def _remove_zoneinfo_failed(filename):
 
 # helper to remove old unneeded zoneinfo files
 def _remove_old_zoneinfo():
-    if lib.dateutil.zoneinfo.ZONEINFOFILE is not None:
-        cur_zoneinfo = ek.ek(basename, lib.dateutil.zoneinfo.ZONEINFOFILE)
-    else:
+    zonefilename = zoneinfo._ZONEFILENAME
+    if None is zonefilename:
         return
+    cur_zoneinfo = ek.ek(basename, zonefilename)
 
-    cur_file = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, lib.dateutil.zoneinfo.__file__), cur_zoneinfo))
+    cur_file = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
 
     for (path, dirs, files) in ek.ek(os.walk,
-                                     helpers.real_path(ek.ek(os.path.dirname, lib.dateutil.zoneinfo.__file__))):
+                                     helpers.real_path(ek.ek(os.path.dirname, zoneinfo.__file__))):
         for filename in files:
             if filename.endswith('.tar.gz'):
                 file_w_path = ek.ek(join, path, filename)
@@ -82,19 +83,24 @@ def _update_zoneinfo():
                    logger.WARNING)
         return
 
-    if lib.dateutil.zoneinfo.ZONEINFOFILE is not None:
-        cur_zoneinfo = ek.ek(basename, lib.dateutil.zoneinfo.ZONEINFOFILE)
-    else:
-        cur_zoneinfo = None
+    zonefilename = zoneinfo._ZONEFILENAME
+    cur_zoneinfo = zonefilename
+    if None is not cur_zoneinfo:
+        cur_zoneinfo = ek.ek(basename, zonefilename)
+    zonefile = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
+    zonemetadata = zoneinfo.gettz_db_metadata() if ek.ek(os.path.isfile, zonefile) else None
     (new_zoneinfo, zoneinfo_md5) = url_data.decode('utf-8').strip().rsplit(u' ')
+    newtz_regex = re.search(r'(\d{4}[^.]+)', new_zoneinfo)
+    if not newtz_regex or len(newtz_regex.groups()) != 1:
+        return
+    newtzversion = newtz_regex.group(1)
 
-    if (cur_zoneinfo is not None) and (new_zoneinfo == cur_zoneinfo):
+    if cur_zoneinfo is not None and zonemetadata is not None and 'tzversion' in zonemetadata and zonemetadata['tzversion'] == newtzversion:
         return
 
     # now load the new zoneinfo
     url_tar = u'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/%s' % new_zoneinfo
 
-    zonefile = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, lib.dateutil.zoneinfo.__file__), new_zoneinfo))
     zonefile_tmp = re.sub(r'\.tar\.gz$', '.tmp', zonefile)
 
     if ek.ek(os.path.exists, zonefile_tmp):
@@ -119,13 +125,15 @@ def _update_zoneinfo():
             # remove the old zoneinfo file
             if cur_zoneinfo is not None:
                 old_file = helpers.real_path(
-                    ek.ek(join, ek.ek(os.path.dirname, lib.dateutil.zoneinfo.__file__), cur_zoneinfo))
+                    ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
                 if ek.ek(os.path.exists, old_file):
                     ek.ek(os.remove, old_file)
             # rename downloaded file
             ek.ek(os.rename, zonefile_tmp, zonefile)
-            # load the new zoneinfo
-            reload(lib.dateutil.zoneinfo)
+            from dateutil.zoneinfo import gettz
+            if '_CLASS_ZONE_INSTANCE' in gettz.func_globals:
+                gettz.func_globals.__setitem__('_CLASS_ZONE_INSTANCE', list())
+
             sb_timezone = tz.tzlocal()
         except:
             _remove_zoneinfo_failed(zonefile_tmp)
@@ -170,8 +178,8 @@ def update_network_dict():
 
     # list of sql commands to update the network_timezones table
     cl = []
-    for cur_d, cur_t in d.iteritems():
-        h_k = old_d.has_key(cur_d)
+    for cur_d, cur_t in iteritems(d):
+        h_k = cur_d in old_d
         if h_k and cur_t != old_d[cur_d]:
             # update old record
             cl.append(
@@ -214,7 +222,7 @@ def get_network_timezone(network, network_dict):
         return sb_timezone
 
     try:
-        if lib.dateutil.zoneinfo.ZONEINFOFILE is not None:
+        if zoneinfo._ZONEFILENAME is not None:
             try:
                 n_t = tz.gettz(network_dict[network])
             except:
@@ -282,11 +290,11 @@ def test_timeformat(t):
 
 
 def standardize_network(network, country):
-    myDB = db.DBConnection('cache.db')
-    sqlResults = myDB.select('SELECT * FROM network_conversions WHERE tvrage_network = ? and tvrage_country = ?',
-                             [network, country])
-    if len(sqlResults) == 1:
-        return sqlResults[0]['tvdb_network']
+    my_db = db.DBConnection('cache.db')
+    sql_results = my_db.select('SELECT * FROM network_conversions WHERE tvrage_network = ? and tvrage_country = ?',
+                               [network, country])
+    if len(sql_results) == 1:
+        return sql_results[0]['tvdb_network']
     else:
         return network
 
@@ -323,7 +331,7 @@ def load_network_conversions():
 
     for n_w in conversions:
         cl.append(['INSERT OR REPLACE INTO network_conversions (tvdb_network, tvrage_network, tvrage_country)'
-                       'VALUES (?,?,?)', [n_w['tvdb_network'], n_w['tvrage_network'], n_w['tvrage_country']]])
+                   'VALUES (?,?,?)', [n_w['tvdb_network'], n_w['tvrage_network'], n_w['tvrage_country']]])
         try:
             del old_d[n_w['tvdb_network']]
         except:

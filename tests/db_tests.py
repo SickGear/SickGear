@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import unittest
 import test_lib as test
 
@@ -32,9 +33,9 @@ class DBBasicTests(test.SickbeardTestDBCase):
         self.db.close()
 
 if __name__ == '__main__':
-    print "=================="
-    print "STARTING - DB TESTS"
-    print "=================="
-    print "######################################################################"
+    print('==================')
+    print('STARTING - DB TESTS')
+    print('==================')
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(DBBasicTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

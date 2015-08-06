@@ -507,6 +507,7 @@ inc_bottom.tmpl
 	width:100%;
 	padding:20px 0;
 	text-align:center;
+	clear:both;
 	font-size:12px
 }
 
@@ -1007,6 +1008,10 @@ div.formpaginate{
 
 #addRootDirTable td label .filepath{
 	font-weight:900
+}
+
+#addShowForm #blackwhitelist{
+	padding:0 0 0 15px
 }
 
 #addShowForm #blackwhitelist,

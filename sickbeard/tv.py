@@ -43,7 +43,7 @@ except ImportError:
 from lib.imdb import imdb
 
 from sickbeard import db
-from sickbeard import helpers, exceptions, logger
+from sickbeard import helpers, exceptions, logger, name_cache
 from sickbeard.exceptions import ex
 from sickbeard import image_cache
 from sickbeard import notifiers
@@ -412,7 +412,7 @@ class TVShow(object):
             logger.log(str(self.indexerid) + u": Creating episode from " + mediaFile, logger.DEBUG)
             try:
                 curEpisode = self.makeEpFromFile(ek.ek(os.path.join, self._location, mediaFile))
-            except (exceptions.ShowNotFoundException, exceptions.EpisodeNotFoundException), e:
+            except (exceptions.ShowNotFoundException, exceptions.EpisodeNotFoundException) as e:
                 logger.log(u"Episode " + mediaFile + " returned an exception: " + ex(e), logger.ERROR)
                 continue
             except exceptions.EpisodeDeletedException:
@@ -493,7 +493,7 @@ class TVShow(object):
             if curSeason not in cachedSeasons:
                 try:
                     cachedSeasons[curSeason] = cachedShow[curSeason]
-                except sickbeard.indexer_seasonnotfound, e:
+                except sickbeard.indexer_seasonnotfound as e:
                     logger.log(u"Error when trying to load the episode from " + sickbeard.indexerApi(
                         self.indexer).name + ": " + e.message, logger.WARNING)
                     deleteEp = True
@@ -921,9 +921,9 @@ class TVShow(object):
         logger.log(u'Retrieving show info from IMDb', logger.DEBUG)
         try:
             self._get_imdb_info()
-        except imdb_exceptions.IMDbError, e:
+        except imdb_exceptions.IMDbError as e:
             logger.log(u'Something is wrong with IMDb api: ' + ex(e), logger.WARNING)
-        except Exception, e:
+        except Exception as e:
             logger.log(u'Error loading IMDb info: ' + ex(e), logger.ERROR)
             logger.log(u'' + traceback.format_exc(), logger.DEBUG)
 
@@ -1034,6 +1034,8 @@ class TVShow(object):
         myDB = db.DBConnection()
         myDB.mass_action(sql_l)
 
+        name_cache.remove_from_namecache(self.indexerid)
+
         action = ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW]
 
         # remove self from show list
@@ -1049,7 +1051,7 @@ class TVShow(object):
                 else:
                     os.remove(cache_file)
 
-            except OSError, e:
+            except OSError as e:
                 logger.log(u'Unable to %s %s: %s / %s' % (action, cache_file, repr(e), str(e)), logger.WARNING)
 
         # remove entire show folder
@@ -1077,7 +1079,7 @@ class TVShow(object):
 
             except exceptions.ShowDirNotFoundException:
                 logger.log(u"Show folder does not exist, no need to %s %s" % (action, self._location), logger.WARNING)
-            except OSError, e:
+            except OSError as e:
                 logger.log(u'Unable to %s %s: %s / %s' % (action, self._location, repr(e), str(e)), logger.WARNING)
 
     def populateCache(self):
@@ -1239,7 +1241,6 @@ class TVShow(object):
         toReturn += "anime: " + str(self.is_anime) + "\n"
         return toReturn
 
-
     def wantEpisode(self, season, episode, quality, manualSearch=False):
 
         logger.log(u"Checking if found episode " + str(season) + "x" + str(episode) + " is wanted at quality " +
@@ -1248,8 +1249,12 @@ class TVShow(object):
         # if the quality isn't one we want under any circumstances then just say no
         initialQualities, archiveQualities = Quality.splitQuality(self.quality)
         allQualities = list(set(initialQualities + archiveQualities))
-        logger.log(u"initial + archive = (" + ",".join([Quality.qualityStrings[qual] for qual in initialQualities]) + ") + (" + ",".join([Quality.qualityStrings[qual] for qual in archiveQualities]) + ") and found " + Quality.qualityStrings[quality],
-                   logger.DEBUG)
+
+        initial = u'= (%s)' % ','.join([Quality.qualityStrings[qual] for qual in initialQualities])
+        if 0 < len(archiveQualities):
+            initial = u'+ upgrade to %s + (%s)'\
+                      % (initial, ','.join([Quality.qualityStrings[qual] for qual in archiveQualities]))
+        logger.log(u'Want initial %s and found %s' % (initial, Quality.qualityStrings[quality]), logger.DEBUG)
 
         if quality not in allQualities:
             logger.log(u"Don't want this quality, ignoring found episode", logger.DEBUG)
@@ -1679,7 +1684,7 @@ class TVEpisode(object):
             else:
                 myEp = cachedSeason[episode]
 
-        except (sickbeard.indexer_error, IOError), e:
+        except (sickbeard.indexer_error, IOError) as e:
             logger.log(u"" + sickbeard.indexerApi(self.indexer).name + " threw up an error: " + ex(e), logger.DEBUG)
             # if the episode is already valid just log it, if not throw it up
             if self.name:
@@ -1844,12 +1849,12 @@ class TVEpisode(object):
             if ek.ek(os.path.isfile, nfoFile):
                 try:
                     showXML = etree.ElementTree(file=nfoFile)
-                except (SyntaxError, ValueError), e:
+                except (SyntaxError, ValueError) as e:
                     logger.log(u"Error loading the NFO, backing up the NFO and skipping for now: " + ex(e),
                                logger.ERROR)  # TODO: figure out what's wrong and fix it
                     try:
                         ek.ek(os.rename, nfoFile, nfoFile + ".old")
-                    except Exception, e:
+                    except Exception as e:
                         logger.log(
                             u"Failed to rename your episode's NFO file - you need to delete it or fix it: " + ex(e),
                             logger.ERROR)
@@ -2173,7 +2178,7 @@ class TVEpisode(object):
             try:
                 np = NameParser(name, showObj=show, naming_pattern=True)
                 parse_result = np.parse(name)
-            except (InvalidNameException, InvalidShowException), e:
+            except (InvalidNameException, InvalidShowException) as e:
                 logger.log(u"Unable to get parse release_group: " + ex(e), logger.DEBUG)
                 return ''
 

@@ -15,35 +15,38 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import os
 import re
 
-import sickbeard
-import generic
-from sickbeard import helpers, logger, tvcache
-from sickbeard import encodingKludge as ek
+from . import generic
+from sickbeard import logger, tvcache
+from sickbeard.rssfeeds import RSSFeeds
 from sickbeard.exceptions import ex
-from lib import requests
 from lib.bencode import bdecode
 
 
 class TorrentRssProvider(generic.TorrentProvider):
-    def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False, enable_recentsearch=False,
-                 enable_backlog=False):
-        generic.TorrentProvider.__init__(self, name, False, False)
-        self.cache = TorrentRssCache(self)
-        self.url = re.sub('\/$', '', url)
-        self.url = url
-        self.ratio = None
-        self.search_mode = search_mode
-        self.search_fallback = search_fallback
-        self.enable_recentsearch = enable_recentsearch
-        self.enable_backlog = enable_backlog
+
+    def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False,
+                 enable_recentsearch=False, enable_backlog=False):
+        generic.TorrentProvider.__init__(self, name)
+
+        self.url = url.rstrip('/')
         self.cookies = cookies
 
-    def configStr(self):
-        return "%s|%s|%s|%d|%s|%d|%d|%d" % (self.name or '',
+        self.enable_recentsearch = enable_recentsearch
+        self.enable_backlog = enable_backlog
+        self.search_mode = search_mode
+        self.search_fallback = search_fallback
+
+        self.feeder = RSSFeeds(self)
+        self.cache = TorrentRssCache(self)
+
+    def image_name(self):
+
+        return generic.GenericProvider.image_name(self, 'torrentrss')
+
+    def config_str(self):
+        return '%s|%s|%s|%d|%s|%d|%d|%d' % (self.name or '',
                                             self.url or '',
                                             self.cookies or '',
                                             self.enabled,
@@ -52,22 +55,12 @@ class TorrentRssProvider(generic.TorrentProvider):
                                             self.enable_recentsearch,
                                             self.enable_backlog)
 
-    def imageName(self):
-        if ek.ek(os.path.isfile,
-                 ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', sickbeard.GUI_NAME, 'images', 'providers',
-                       self.getID() + '.png')):
-            return self.getID() + '.png'
-        return 'torrentrss.png'
-
     def _get_title_and_url(self, item):
 
         title, url = None, None
 
-        title = item.title
-
-        if title:
-            title = u'' + title
-            title = title.replace(' ', '.')
+        if item.title:
+            title = re.sub(r'\s+', '.', u'' + item.title)
 
         attempt_list = [lambda: item.torrent_magneturi,
 
@@ -82,83 +75,58 @@ class TorrentRssProvider(generic.TorrentProvider):
                 continue
 
             if title and url:
-                return (title, url)
+                break
 
-        return (title, url)
+        return title, url
 
-    def validateRSS(self):
+    def validate_feed(self):
+
+        success, err_msg = self._check_cookie()
+        if not success:
+            return success, err_msg
 
         try:
-            if self.cookies:
-                cookie_validator = re.compile("^(\w+=\w+)(;\w+=\w+)*$")
-                if not cookie_validator.match(self.cookies):
-                    return (False, 'Cookie is not correctly formatted: ' + self.cookies)
+            items = self.get_cache_data()
 
-            items = self.cache._getRSSData()
-
-            if not len(items) > 0:
-                return (False, 'No items found in the RSS feed ' + self.url)
-
-            (title, url) = self._get_title_and_url(items[0])
-
-            if not title:
-                return (False, 'Unable to get title from first item')
-
-            if not url:
-                return (False, 'Unable to get torrent url from first item')
-
-            if url.startswith('magnet:') and re.search('urn:btih:([\w]{32,40})', url):
-                return (True, 'RSS feed Parsed correctly')
+            for item in items:
+                title, url = self._get_title_and_url(item)
+                if not (title and url):
+                    continue
+                if url.startswith('magnet:'):
+                    if re.search('urn:btih:([0-9a-f]{32,40})', url):
+                        break
+                else:
+                    torrent_file = self.get_url(url)
+                    try:
+                        bdecode(torrent_file)
+                        break
+                    except Exception:
+                        pass
             else:
-                if self.cookies:
-                    requests.utils.add_dict_to_cookiejar(self.session.cookies,
-                                                         dict(x.rsplit('=', 1) for x in (self.cookies.split(';'))))
-                torrent_file = self.getURL(url)
-                try:
-                    bdecode(torrent_file)
-                except Exception, e:
-                    self.dumpHTML(torrent_file)
-                    return (False, 'Torrent link is not a valid torrent file: ' + ex(e))
+                return False, '%s fetched RSS feed data: %s' % \
+                              (('Fail to validate', 'No items found in the')[0 == len(items)], self.url)
 
-            return (True, 'RSS feed Parsed correctly')
+            return True, None
 
-        except Exception, e:
-            return (False, 'Error when trying to load RSS: ' + ex(e))
+        except Exception as e:
+            return False, 'Error when trying to load RSS: ' + ex(e)
 
-    def dumpHTML(self, data):
+    def get_cache_data(self):
 
-        dumpName = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'custom_torrent.html')
+        logger.log(u'TorrentRssCache cache update URL: ' + self.url, logger.DEBUG)
 
-        try:
-            fileOut = open(dumpName, 'wb')
-            fileOut.write(data)
-            fileOut.close()
-            helpers.chmodAsParent(dumpName)
-        except IOError, e:
-            logger.log("Unable to save the file: " + ex(e), logger.ERROR)
-            return False
-        logger.log(u"Saved custom_torrent html dump " + dumpName + " ", logger.MESSAGE)
-        return True
+        data = self.feeder.get_feed(self.url)
 
-    def seedRatio(self):
-        return self.ratio
+        return [] if not (data and 'entries' in data) else data.entries
 
 
 class TorrentRssCache(tvcache.TVCache):
+
     def __init__(self, provider):
         tvcache.TVCache.__init__(self, provider)
+
         self.minTime = 15
 
     def _getRSSData(self):
-        logger.log(u"TorrentRssCache cache update URL: " + self.provider.url, logger.DEBUG)
 
-        request_headers = None
-        if self.provider.cookies:
-            request_headers = {'Cookie': self.provider.cookies}
-
-        data = self.getRSSFeed(self.provider.url, request_headers=request_headers)
-
-        if data and 'entries' in data:
-            return data.entries
-        else:
-            return []
+        return self.provider.get_cache_data()

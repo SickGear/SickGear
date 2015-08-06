@@ -16,16 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from lib.six import moves
 
-
-import httplib
 import datetime
-import re
 
 import sickbeard
 
 from base64 import standard_b64encode
-import xmlrpclib
 
 from sickbeard.providers.generic import GenericProvider
 
@@ -50,20 +47,20 @@ def sendNZB(nzb, proper=False):
     url = nzbgetXMLrpc % {"host": sickbeard.NZBGET_HOST, "username": sickbeard.NZBGET_USERNAME,
                           "password": sickbeard.NZBGET_PASSWORD}
 
-    nzbGetRPC = xmlrpclib.ServerProxy(url)
+    nzbGetRPC = moves.xmlrpc_client.ServerProxy(url)
     try:
         if nzbGetRPC.writelog("INFO", "SickGear connected to drop off %s any moment now." % (nzb.name + ".nzb")):
             logger.log(u"Successfully connected to NZBget", logger.DEBUG)
         else:
             logger.log(u"Successfully connected to NZBget, but unable to send a message", logger.ERROR)
 
-    except httplib.socket.error:
+    except moves.http_client.socket.error:
         logger.log(
             u"Please check your NZBget host and port (if it is running). NZBget is not responding to this combination",
             logger.ERROR)
         return False
 
-    except xmlrpclib.ProtocolError, e:
+    except moves.xmlrpc_client.ProtocolError as e:
         if (e.errmsg == "Unauthorized"):
             logger.log(u"NZBget username or password is incorrect.", logger.ERROR)
         else:
@@ -107,7 +104,7 @@ def sendNZB(nzb, proper=False):
             else:
                 if nzb.resultType == "nzb":
                     genProvider = GenericProvider("")
-                    data = genProvider.getURL(nzb.url)
+                    data = genProvider.get_url(nzb.url)
                     if (data == None):
                         return False
                     nzbcontent64 = standard_b64encode(data)

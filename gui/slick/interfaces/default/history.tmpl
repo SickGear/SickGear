@@ -139,9 +139,9 @@
         #else
             #if 0 < $hItem['provider']
                 #if $curStatus in [SNATCHED, FAILED]
-                    #set $provider = $providers.getProviderClass($generic.GenericProvider.makeID($hItem['provider']))
+                    #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
                     #if None is not $provider
-					<img src="$sbRoot/images/providers/<%= provider.imageName() %>" width="16" height="16" /><span>$provider.name</span>
+					<img src="$sbRoot/images/providers/<%= provider.image_name() %>" width="16" height="16" /><span>$provider.name</span>
                     #else
 					<img src="$sbRoot/images/providers/missing.png" width="16" height="16" title="missing provider" /><span>Missing Provider</span>
                     #end if
@@ -186,10 +186,10 @@
             #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
             #set $basename = $os.path.basename($action['resource'])
             #if $curStatus in [SNATCHED, FAILED]
-                #set $provider = $providers.getProviderClass($generic.GenericProvider.makeID($action['provider']))
+                #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($action['provider']))
                 #if None is not $provider
                     #set $prov_list += ['<span%s><img class="help" src="%s/images/providers/%s" width="16" height="16" alt="%s" title="%s.. %s: %s" /></span>'\
-                        % (('', ' class="fail"')[FAILED == $curStatus], $sbRoot, $provider.imageName(), $provider.name,
+                        % (('', ' class="fail"')[FAILED == $curStatus], $sbRoot, $provider.image_name(), $provider.name,
                         ('%s%s' % ($order, 'th' if $order in [11, 12, 13] or str($order)[-1] not in $ordinal_indicators else $ordinal_indicators[str($order)[-1]]), 'Snatch failed')[FAILED == $curStatus],
                         $provider.name, $basename)]
                     #set $order += (0, 1)[SNATCHED == $curStatus]
