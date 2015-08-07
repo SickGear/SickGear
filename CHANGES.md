@@ -2,6 +2,7 @@
 
 * Change to only refresh scene exception data for shows that need it
 * Fix small cosmetic issue to correctly display "full backlog" date
+* Add search crawler exclusions
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

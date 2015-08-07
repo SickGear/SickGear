@@ -49,7 +49,7 @@ from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
 from sickbeard.searchBacklog import FULL_BACKLOG, LIMITED_BACKLOG
 from tornado import gen
-from tornado.web import RequestHandler, authenticated
+from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from lib import adba
 from lib import subliminal
 from lib.dateutil import tz
@@ -111,9 +111,15 @@ class PageTemplate(Template):
         return super(PageTemplate, self).compile(*args, **kwargs)
 
 
+class BaseStaticFileHandler(StaticFileHandler):
+    def set_extra_headers(self, path):
+        self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
+
+
 class BaseHandler(RequestHandler):
     def set_default_headers(self):
         self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
 
     def redirect(self, url, permanent=False, status=None):
         if not url.startswith(sickbeard.WEB_ROOT):
