@@ -1792,7 +1792,7 @@ def save_config():
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
     new_config['GUI']['show_tags'] = ','.join(SHOW_TAGS)
     new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
-    new_config['GUI']['default_tag'] = DEFAULT_SHOW_TAG
+    new_config['GUI']['default_show_tag'] = DEFAULT_SHOW_TAG
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)
