@@ -4,6 +4,7 @@
 * Fix small cosmetic issue to correctly display "full backlog" date
 * Add search crawler exclusions
 * Fix saving default show list group on add new show options page
+* Remove legacy anime split home option from anime settings tab (new option located in general/interface tab)
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
