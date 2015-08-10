@@ -3438,7 +3438,7 @@ class ConfigGeneral(Config):
 
     def saveAddShowDefaults(self, default_status, any_qualities='', best_qualities='', default_wanted_begin=None,
                             default_wanted_latest=None, default_flatten_folders=False, default_scene=False,
-                            default_subtitles=False, default_anime=False):
+                            default_subtitles=False, default_anime=False, default_tag=''):
 
         any_qualities = ([], any_qualities.split(','))[any(any_qualities)]
         best_qualities = ([], best_qualities.split(','))[any(best_qualities)]
@@ -3451,6 +3451,7 @@ class ConfigGeneral(Config):
         sickbeard.SCENE_DEFAULT = config.checkbox_to_value(default_scene)
         sickbeard.SUBTITLES_DEFAULT = config.checkbox_to_value(default_subtitles)
         sickbeard.ANIME_DEFAULT = config.checkbox_to_value(default_anime)
+        sickbeard.DEFAULT_SHOW_TAG = default_tag
 
         sickbeard.save_config()
 
@@ -4670,7 +4671,7 @@ class ConfigAnime(Config):
         return t.respond()
 
     def saveAnime(self, use_anidb=None, anidb_username=None, anidb_password=None, anidb_use_mylist=None,
-                  split_home=None, anime_treat_as_hdtv=None):
+                  anime_treat_as_hdtv=None):
 
         results = []
 
@@ -4679,7 +4680,6 @@ class ConfigAnime(Config):
         if set('*') != set(anidb_password):
             sickbeard.ANIDB_PASSWORD = anidb_password
         sickbeard.ANIDB_USE_MYLIST = config.checkbox_to_value(anidb_use_mylist)
-        sickbeard.ANIME_SPLIT_HOME = config.checkbox_to_value(split_home)
         sickbeard.ANIME_TREAT_AS_HDTV = config.checkbox_to_value(anime_treat_as_hdtv)
 
         sickbeard.save_config()
