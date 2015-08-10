@@ -126,6 +126,7 @@ class BacklogSearcher:
         # or if we only did certain shows
         if fromDate == datetime.date.fromordinal(1) and not which_shows:
             self._set_lastBacklog(curDate)
+            self._get_lastBacklog()
 
         self.amActive = False
         self._resetPI()
