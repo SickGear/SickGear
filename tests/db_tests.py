@@ -29,7 +29,7 @@ class DBBasicTests(test.SickbeardTestDBCase):
         self.db = test.db.DBConnection()
 
     def test_select(self):
-        self.db.select("SELECT * FROM tv_episodes WHERE showid = ? AND location != ''", [0000])
+        self.db.select('SELECT * FROM tv_episodes WHERE showid = ? AND location != ""', [0000])
         self.db.close()
 
 if __name__ == '__main__':
