@@ -518,7 +518,6 @@ class Home(MainHandler):
             {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
             {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
             {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX},
-            {'title': 'Manage Torrents', 'path': 'manage/manageTorrents', 'requires': self.haveTORRENT},
             {'title': 'Restart', 'path': 'home/restart/?pid=' + str(sickbeard.PID), 'confirm': True},
             {'title': 'Shutdown', 'path': 'home/shutdown/?pid=' + str(sickbeard.PID), 'confirm': True},
         ]
@@ -534,15 +533,6 @@ class Home(MainHandler):
     @staticmethod
     def havePLEX():
         return sickbeard.USE_PLEX and sickbeard.PLEX_UPDATE_LIBRARY
-
-    @staticmethod
-    def haveTORRENT():
-        if sickbeard.USE_TORRENTS and sickbeard.TORRENT_METHOD != 'blackhole' \
-                and (sickbeard.ENABLE_HTTPS and sickbeard.TORRENT_HOST[:5] == 'https'
-                     or not sickbeard.ENABLE_HTTPS and sickbeard.TORRENT_HOST[:5] == 'http:'):
-            return True
-        else:
-            return False
 
     @staticmethod
     def _getEpisode(show, season=None, episode=None, absolute=None):
@@ -2518,11 +2508,6 @@ class Manage(MainHandler):
             {'title': 'Show Queue Overview', 'path': 'manage/showQueueOverview/'},
             {'title': 'Episode Status Management', 'path': 'manage/episodeStatuses/'}, ]
 
-        if sickbeard.USE_TORRENTS and sickbeard.TORRENT_METHOD != 'blackhole' \
-                and (sickbeard.ENABLE_HTTPS and sickbeard.TORRENT_HOST[:5] == 'https'
-                     or not sickbeard.ENABLE_HTTPS and sickbeard.TORRENT_HOST[:5] == 'http:'):
-            manageMenu.append({'title': 'Manage Torrents', 'path': 'manage/manageTorrents/'})
-
         if sickbeard.USE_SUBTITLES:
             manageMenu.append({'title': 'Missed Subtitle Management', 'path': 'manage/subtitleMissed/'})
 
@@ -3165,31 +3150,6 @@ class Manage(MainHandler):
                                      messageDetail)
 
         self.redirect('/manage/')
-
-    def manageTorrents(self, *args, **kwargs):
-
-        t = PageTemplate(headers=self.request.headers, file='manage_torrents.tmpl')
-        t.info_download_station = ''
-        t.submenu = self.ManageMenu()
-
-        if re.search('localhost', sickbeard.TORRENT_HOST):
-
-            if sickbeard.LOCALHOST_IP == '':
-                t.webui_url = re.sub('localhost', helpers.get_lan_ip(), sickbeard.TORRENT_HOST)
-            else:
-                t.webui_url = re.sub('localhost', sickbeard.LOCALHOST_IP, sickbeard.TORRENT_HOST)
-        else:
-            t.webui_url = sickbeard.TORRENT_HOST
-
-        if sickbeard.TORRENT_METHOD == 'utorrent':
-            t.webui_url = '/'.join(s.strip('/') for s in (t.webui_url, 'gui/'))
-        if sickbeard.TORRENT_METHOD == 'download_station':
-            if helpers.check_url(t.webui_url + 'download/'):
-                t.webui_url = t.webui_url + 'download/'
-            else:
-                t.info_download_station = '<p>To have a better experience please set the Download Station alias as <code>download</code>, you can check this setting in the Synology DSM <b>Control Panel</b> > <b>Application Portal</b>. Make sure you allow DSM to be embedded with iFrames too in <b>Control Panel</b> > <b>DSM Settings</b> > <b>Security</b>.</p><br/><p>There is more information about this available <a href="https://github.com/midgetspy/Sick-Beard/pull/338">here</a>.</p><br/>'
-
-        return t.respond()
 
     def failedDownloads(self, limit=100, toRemove=None):
 

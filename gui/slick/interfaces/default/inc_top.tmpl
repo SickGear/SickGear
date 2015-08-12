@@ -179,11 +179,6 @@
 #if $sickbeard.USE_KODI and $sickbeard.KODI_HOST != ''
 							<li><a href="$sbRoot/home/updateKODI/" tabindex="$tab#set $tab += 1#"><i class="sgicon-kodi"></i>Update Kodi</a></li>
 #end if
-#if $sickbeard.USE_TORRENTS and $sickbeard.TORRENT_METHOD != 'blackhole' \
-    and ($sickbeard.ENABLE_HTTPS and $sickbeard.TORRENT_HOST[:5] == 'https' \
-    or not $sickbeard.ENABLE_HTTPS and $sickbeard.TORRENT_HOST[:5] == 'http:')
-							<li><a href="$sbRoot/manage/manageTorrents/" tabindex="$tab#set $tab += 1#"><i class="sgicon-bittorrent"></i>Manage Torrents</a></li>
-#end if
 #if $sickbeard.USE_FAILED_DOWNLOADS
 							<li><a href="$sbRoot/manage/failedDownloads/" tabindex="$tab#set $tab += 1#"><i class="sgicon-failed"></i>Failed Downloads</a></li>
 #end if
