@@ -62,7 +62,7 @@ class BeyondHDProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             if 'Cache' != mode:
                 show_type = self.show.air_by_date and 'Air By Date' \
-                    or self.show.sports and 'Sports' or self.show.anime and 'Anime' or None
+                    or self.show.is_sports and 'Sports' or self.show.is_anime and 'Anime' or None
                 if show_type:
                     logger.log(u'Provider does not carry shows of type: [%s], skipping' % show_type, logger.DEBUG)
                     return results

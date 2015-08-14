@@ -921,7 +921,7 @@ home_newShow.tmpl
 #newShowPortal,
 fieldset.sectionwrap,
 div.formpaginate{
-	width:801px
+	width:831px
 }
 
 #addShowForm{
@@ -1664,6 +1664,10 @@ td.col-search{
 	margin-right:auto;
 	margin-left:auto;
 	padding:15px 0 0
+}
+
+#addShowForm #editShow.stepDiv span.component-desc{
+	width:639px
 }
 
 /* =======================================================================
@@ -3486,7 +3490,7 @@ div.stepsguide{
 
 div.stepsguide .step{
 	float:left;
-	width:267px;
+	width:277px;
 	font:bold 24px Arial
 }
 

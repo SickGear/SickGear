@@ -88,7 +88,8 @@ class ToTVProvider(generic.TorrentProvider):
 
     def _get_season_search_strings(self, ep_obj, **kwargs):
 
-        return self._build_search_str(ep_obj, {'season': 'Season %02d' % ep_obj.scene_season})
+        return self._build_search_str(ep_obj, {'season': 'Season %02d' %
+                                               int((ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show.is_scene)])})
 
     def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
 
@@ -96,8 +97,9 @@ class ToTVProvider(generic.TorrentProvider):
             return [{}]
 
         # Do a general name search for the episode, formatted like SXXEYY
-        return self._build_search_str(ep_obj, {'episode': 'S%02dE%02d %s'
-                                                          % (ep_obj.scene_season, ep_obj.scene_episode, add_string)})
+        season, episode = ((ep_obj.season, ep_obj.episode),
+                           (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show.is_scene)]
+        return self._build_search_str(ep_obj, {'episode': 'S%02dE%02d %s' % (season, episode, add_string)})
 
     @staticmethod
     def _build_search_str(ep_obj, search_params):

@@ -117,18 +117,18 @@ class HDBitsProvider(generic.TorrentProvider):
             if episode:
                 if show.air_by_date:
                     param['episode'] = str(episode.airdate).replace('-', '|')
-                elif show.sports:
+                elif show.is_sports:
                     param['episode'] = episode.airdate.strftime('%b')
-                elif show.anime:
+                elif show.is_anime:
                     param['episode'] = '%i' % int(episode.scene_absolute_number)
                 else:
                     param['season'] = episode.scene_season
                     param['episode'] = episode.scene_episode
 
             if season:
-                if show.air_by_date or show.sports:
+                if show.air_by_date or show.is_sports:
                     param['season'] = str(season.airdate)[:7]
-                elif show.anime:
+                elif show.is_anime:
                     param['season'] = '%d' % season.scene_absolute_number
                 else:
                     param['season'] = season.scene_season
