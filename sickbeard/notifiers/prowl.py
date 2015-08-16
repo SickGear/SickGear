@@ -36,8 +36,8 @@ from sickbeard import logger, common
 
 class ProwlNotifier:
     def test_notify(self, prowl_api, prowl_priority):
-        return self._sendProwl(prowl_api, prowl_priority, event="Test",
-                               message="Testing Prowl settings from SickGear", force=True)
+        return self._sendProwl(prowl_api, prowl_priority, event='Test',
+                               message='Testing Prowl settings from SickGear', force=True)
 
     def notify_snatch(self, ep_name):
         if sickbeard.PROWL_NOTIFY_ONSNATCH:
@@ -52,9 +52,9 @@ class ProwlNotifier:
     def notify_subtitle_download(self, ep_name, lang):
         if sickbeard.PROWL_NOTIFY_ONSUBTITLEDOWNLOAD:
             self._sendProwl(prowl_api=None, prowl_priority=None,
-                            event=common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD], message=ep_name + ": " + lang)
+                            event=common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD], message=ep_name + ': ' + lang)
                             
-    def notify_git_update(self, new_version = "??"):
+    def notify_git_update(self, new_version = '??'):
         if sickbeard.USE_PROWL:
             update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
             title=common.notifyStrings[common.NOTIFY_GIT_UPDATE]
@@ -72,11 +72,11 @@ class ProwlNotifier:
         if prowl_priority == None:
             prowl_priority = sickbeard.PROWL_PRIORITY
 
-        title = "SickGear"
+        title = 'SickGear'
 
-        logger.log("PROWL: Sending notice with details: event=\"%s\", message=\"%s\", priority=%s, api=%s" % (event, message, prowl_priority, prowl_api), logger.DEBUG)
+        logger.log('PROWL: Sending notice with details: event="%s", message="%s", priority=%s, api=%s' % (event, message, prowl_priority, prowl_api), logger.DEBUG)
 
-        http_handler = moves.http_client.HTTPSConnection("api.prowlapp.com")
+        http_handler = moves.http_client.HTTPSConnection('api.prowlapp.com')
 
         data = {'apikey': prowl_api,
                 'application': title,
@@ -85,24 +85,24 @@ class ProwlNotifier:
                 'priority': prowl_priority}
 
         try:
-            http_handler.request("POST",
-                                 "/publicapi/add",
-                                 headers={'Content-type': "application/x-www-form-urlencoded"},
+            http_handler.request('POST',
+                                 '/publicapi/add',
+                                 headers={'Content-type': 'application/x-www-form-urlencoded'},
                                  body=urlencode(data))
         except (SSLError, moves.http_client.HTTPException, socket.error):
-            logger.log(u"Prowl notification failed.", logger.ERROR)
+            logger.log(u'Prowl notification failed.', logger.ERROR)
             return False
         response = http_handler.getresponse()
         request_status = response.status
 
         if request_status == 200:
-            logger.log(u"Prowl notifications sent.", logger.MESSAGE)
+            logger.log(u'Prowl notifications sent.', logger.MESSAGE)
             return True
         elif request_status == 401:
-            logger.log(u"Prowl authentication failed: %s" % response.reason, logger.ERROR)
+            logger.log(u'Prowl authentication failed: %s' % response.reason, logger.ERROR)
             return False
         else:
-            logger.log(u"Prowl notification failed.", logger.ERROR)
+            logger.log(u'Prowl notification failed.', logger.ERROR)
             return False
 
 

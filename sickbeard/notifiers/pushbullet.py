@@ -91,7 +91,7 @@ class PushbulletNotifier:
         if not device_iden:
             device_iden = sickbeard.PUSHBULLET_DEVICE_IDEN
 
-        logger.log(u'PUSHBULLET: Sending notice with details: \"%s - %s\", device_iden: %s' % (title, body, device_iden), logger.DEBUG)
+        logger.log(u'PUSHBULLET: Sending notice with details: "%s - %s", device_iden: %s' % (title, body, device_iden), logger.DEBUG)
 
         return self._sendPushbullet(title, body, accessToken, device_iden)
 

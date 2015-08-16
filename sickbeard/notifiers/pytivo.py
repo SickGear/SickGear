@@ -73,19 +73,19 @@ class pyTivoNotifier:
 
         # Some show names have colons in them which are illegal in a path location, so strip them out.
         # (Are there other characters?)
-        showName = showName.replace(":", "")
+        showName = showName.replace(':', '')
 
-        root = showPath.replace(showName, "")
-        showAndSeason = rootShowAndSeason.replace(root, "")
+        root = showPath.replace(showName, '')
+        showAndSeason = rootShowAndSeason.replace(root, '')
 
-        container = shareName + "/" + showAndSeason
-        file = "/" + absPath.replace(root, "")
+        container = shareName + '/' + showAndSeason
+        file = '/' + absPath.replace(root, '')
 
         # Finally create the url and make request
-        requestUrl = "http://" + host + "/TiVoConnect?" + urlencode(
+        requestUrl = 'http://' + host + '/TiVoConnect?' + urlencode(
             {'Command': 'Push', 'Container': container, 'File': file, 'tsn': tsn})
 
-        logger.log(u"pyTivo notification: Requesting " + requestUrl, logger.DEBUG)
+        logger.log(u'pyTivo notification: Requesting ' + requestUrl, logger.DEBUG)
 
         request = Request(requestUrl)
 
@@ -93,16 +93,16 @@ class pyTivoNotifier:
             response = urlopen(request)  #@UnusedVariable
         except HTTPError as e:
             if hasattr(e, 'reason'):
-                logger.log(u"pyTivo notification: Error, failed to reach a server - " + e.reason, logger.ERROR)
+                logger.log(u'pyTivo notification: Error, failed to reach a server - ' + e.reason, logger.ERROR)
                 return False
             elif hasattr(e, 'code'):
                 logger.log(u"pyTivo notification: Error, the server couldn't fulfill the request - " + e.code, logger.ERROR)
             return False
         except Exception as e:
-            logger.log(u"PYTIVO: Unknown exception: " + ex(e), logger.ERROR)
+            logger.log(u'PYTIVO: Unknown exception: ' + ex(e), logger.ERROR)
             return False
         else:
-            logger.log(u"pyTivo notification: Successfully requested transfer of file")
+            logger.log(u'pyTivo notification: Successfully requested transfer of file')
             return True
 
 

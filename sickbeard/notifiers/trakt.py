@@ -59,9 +59,9 @@ class TraktNotifier:
             }
 
             if data is not None:
-                TraktCall("show/episode/library/%API%", self._api(), self._username(), self._password(), data)
+                TraktCall('show/episode/library/%API%', self._api(), self._username(), self._password(), data)
                 if sickbeard.TRAKT_REMOVE_WATCHLIST:
-                    TraktCall("show/episode/unwatchlist/%API%", self._api(), self._username(), self._password(), data)
+                    TraktCall('show/episode/unwatchlist/%API%', self._api(), self._username(), self._password(), data)
 
                 if sickbeard.TRAKT_REMOVE_SERIESLIST:
                     data_show = None
@@ -77,11 +77,11 @@ class TraktNotifier:
                         ]
                     }
                     
-                    TraktCall("show/unwatchlist/%API%", self._api(), self._username(), self._password(), data)
+                    TraktCall('show/unwatchlist/%API%', self._api(), self._username(), self._password(), data)
 
                     # Remove all episodes from episode watchlist
                     # Start by getting all episodes in the watchlist
-                    watchlist = TraktCall("user/watchlist/episodes.json/%API%/" + sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
+                    watchlist = TraktCall('user/watchlist/episodes.json/%API%/' + sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
 
                     if watchlist is not None:
                         # Convert watchlist to only contain current show
@@ -100,7 +100,7 @@ class TraktNotifier:
                                         ep = {'season': episodes['season'], 'episode': episodes['number']}
                                         data_show['episodes'].append(ep)
                         if data_show is not None:
-                            TraktCall("show/episode/unwatchlist/%API%", sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD, data_show)
+                            TraktCall('show/episode/unwatchlist/%API%', sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD, data_show)
                     else:
                         logger.log('Failed to get watchlist from trakt. Unable to remove episode from watchlist',
                                    logger.ERROR)
@@ -117,8 +117,8 @@ class TraktNotifier:
         Returns: True if the request succeeded, False otherwise
         """
 
-        data = TraktCall("account/test/%API%", api, username, password)
-        if data and data["status"] == "success":
+        data = TraktCall('account/test/%API%', api, username, password)
+        if data and data['status'] == 'success':
             return True
 
     def _username(self):

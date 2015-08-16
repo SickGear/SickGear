@@ -32,8 +32,8 @@ import lib.pythontwitter as twitter
 
 
 class TwitterNotifier:
-    consumer_key = "vHHtcB6WzpWDG6KYlBMr8g"
-    consumer_secret = "zMqq5CB3f8cWKiRO2KzWPTlBanYmV0VYxSXZ0Pxds0E"
+    consumer_key = 'vHHtcB6WzpWDG6KYlBMr8g'
+    consumer_secret = 'zMqq5CB3f8cWKiRO2KzWPTlBanYmV0VYxSXZ0Pxds0E'
 
     REQUEST_TOKEN_URL = 'https://api.twitter.com/oauth/request_token'
     ACCESS_TOKEN_URL = 'https://api.twitter.com/oauth/access_token'
@@ -50,16 +50,16 @@ class TwitterNotifier:
 
     def notify_subtitle_download(self, ep_name, lang):
         if sickbeard.TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD:
-            self._notifyTwitter(common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD] + ' ' + ep_name + ": " + lang)
+            self._notifyTwitter(common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD] + ' ' + ep_name + ': ' + lang)
             
-    def notify_git_update(self, new_version = "??"):
+    def notify_git_update(self, new_version = '??'):
         if sickbeard.USE_TWITTER:
             update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
             title=common.notifyStrings[common.NOTIFY_GIT_UPDATE]
-            self._notifyTwitter(title + " - " + update_text + new_version)
+            self._notifyTwitter(title + ' - ' + update_text + new_version)
 
     def test_notify(self):
-        return self._notifyTwitter("This is a test notification from SickGear", force=True)
+        return self._notifyTwitter('This is a test notification from SickGear', force=True)
 
     def _get_authorization(self):
 
@@ -79,7 +79,7 @@ class TwitterNotifier:
             sickbeard.TWITTER_USERNAME = request_token['oauth_token']
             sickbeard.TWITTER_PASSWORD = request_token['oauth_token_secret']
 
-            return self.AUTHORIZATION_URL + "?oauth_token=" + request_token['oauth_token']
+            return self.AUTHORIZATION_URL + '?oauth_token=' + request_token['oauth_token']
 
     def _get_credentials(self, key):
         request_token = {}
@@ -123,14 +123,14 @@ class TwitterNotifier:
         access_token_key = sickbeard.TWITTER_USERNAME
         access_token_secret = sickbeard.TWITTER_PASSWORD
 
-        logger.log(u"Sending tweet: " + message, logger.DEBUG)
+        logger.log(u'Sending tweet: ' + message, logger.DEBUG)
 
         api = twitter.Api(username, password, access_token_key, access_token_secret)
 
         try:
             api.PostUpdate(message.encode('utf8'))
         except Exception as e:
-            logger.log(u"Error Sending Tweet: " + ex(e), logger.ERROR)
+            logger.log(u'Error Sending Tweet: ' + ex(e), logger.ERROR)
             return False
 
         return True
@@ -141,7 +141,7 @@ class TwitterNotifier:
         if not sickbeard.USE_TWITTER and not force:
             return False
 
-        return self._send_tweet(prefix + ": " + message)
+        return self._send_tweet(prefix + ': ' + message)
 
 
 notifier = TwitterNotifier

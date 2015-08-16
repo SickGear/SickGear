@@ -30,7 +30,7 @@ from lib.growl import gntp
 class GrowlNotifier:
     def test_notify(self, host, password):
         self._sendRegistration(host, password, 'Test')
-        return self._sendGrowl("Test Growl", "Testing Growl settings from SickGear", "Test", host, password,
+        return self._sendGrowl('Test Growl', 'Testing Growl settings from SickGear', 'Test', host, password,
                                force=True)
 
     def notify_snatch(self, ep_name):
@@ -43,9 +43,9 @@ class GrowlNotifier:
 
     def notify_subtitle_download(self, ep_name, lang):
         if sickbeard.GROWL_NOTIFY_ONSUBTITLEDOWNLOAD:
-            self._sendGrowl(common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD], ep_name + ": " + lang)
+            self._sendGrowl(common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD], ep_name + ': ' + lang)
             
-    def notify_git_update(self, new_version = "??"):
+    def notify_git_update(self, new_version = '??'):
         if sickbeard.USE_GROWL:
             update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
             title=common.notifyStrings[common.NOTIFY_GIT_UPDATE]
@@ -93,7 +93,7 @@ class GrowlNotifier:
 
         return response
 
-    def _sendGrowl(self, title="SickGear Notification", message=None, name=None, host=None, password=None,
+    def _sendGrowl(self, title='SickGear Notification', message=None, name=None, host=None, password=None,
                    force=False):
         if not sickbeard.USE_GROWL and not force:
             return False
@@ -134,7 +134,7 @@ class GrowlNotifier:
         for pc in growlHosts:
             opts['host'] = pc[0]
             opts['port'] = pc[1]
-            logger.log(u"GROWL: Sending message '" + message + "' to " + opts['host'] + ":" + str(opts['port']), logger.DEBUG)
+            logger.log(u'GROWL: Sending message "' + message + '" to ' + opts['host'] + ':' + str(opts['port']), logger.DEBUG)
             try:
                 if self._send_growl(opts, message):
                     return True
@@ -144,7 +144,7 @@ class GrowlNotifier:
                     else:
                         return False
             except Exception as e:
-                logger.log(u"GROWL: Unable to send growl to " + opts['host'] + ":" + str(opts['port']) + " - " + ex(e), logger.WARNING)
+                logger.log(u'GROWL: Unable to send growl to ' + opts['host'] + ':' + str(opts['port']) + ' - ' + ex(e), logger.WARNING)
                 return False
 
     def _sendRegistration(self, host=None, password=None, name='SickGear Notification'):
@@ -188,7 +188,7 @@ class GrowlNotifier:
         try:
             return self._send(opts['host'], opts['port'], register.encode(), opts['debug'])
         except Exception as e:
-            logger.log(u"GROWL: Unable to send growl to " + opts['host'] + ":" + str(opts['port']) + " - " + ex(e), logger.WARNING)
+            logger.log(u'GROWL: Unable to send growl to ' + opts['host'] + ':' + str(opts['port']) + ' - ' + ex(e), logger.WARNING)
             return False
 
 
