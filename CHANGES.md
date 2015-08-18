@@ -1,6 +1,14 @@
 ### 0.11.0 (2015-xx-xx xx:xx:xx UTC)
 
 * Change to only refresh scene exception data for shows that need it
+* Change reduce aggressive use of scene numbering that was overriding user preference where not needed
+* Change set "Scene numbering" checkbox and add text to the label tip in third step of add "New Show" if scene numbers
+  are found for the selected show in the search results of the first step
+* Change label text on edit show page to highlight when manual numbering and scene numbers are available
+* Fix disabling "Scene numbering" of step three in add "New Show" was ignored when scene episode number mappings exist
+* Fix don't use scene episode number mappings everywhere when "Scene numbering" is disabled for a show
+* Fix width of legend underlining on the third step used to bring other display elements into alignment
+* Change when downloading magnet or nzb files, verify the file in cache dir and then move to blackhole
 * Fix small cosmetic issue to correctly display "full backlog" date
 * Add search crawler exclusions
 * Fix saving default show list group on add new show options page

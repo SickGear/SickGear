@@ -186,7 +186,7 @@
 				<span class="component-title">Scene numbering</span>
 				<span class="component-desc">
 					<input type="checkbox" name="scene" id="scene"#if $show.scene == 1 then $html_checked else ''#>
-					<p>search for episodes that are numbered by scene groups instead of by the TV network</p>
+					<p>search for episodes numbered by scene groups instead of by the TV network <em class="grey-text">(#if $show_has_scene_map then 'scene/manual numbers' else 'manual numbers only '# available)</em></p>
 				</span>
 			</label>
 		</div>

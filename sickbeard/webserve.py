@@ -1091,7 +1091,7 @@ class Home(MainHandler):
                 t.submenu.append({'title': 'Update show in Kodi',
                                   'path': 'home/updateKODI?showName=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveKODI})
-                t.submenu.append({'title': 'Preview Rename', 'path': 'home/testRename?show=%d' % showObj.indexerid})
+                t.submenu.append({'title': 'Media Renamer', 'path': 'home/testRename?show=%d' % showObj.indexerid})
                 if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
                         showObj) and showObj.subtitles:
                     t.submenu.append(
@@ -1271,6 +1271,7 @@ class Home(MainHandler):
             with showObj.lock:
                 t.show = showObj
                 t.scene_exceptions = get_scene_exceptions(showObj.indexerid)
+                t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list + sickbeard.scene_exceptions.xem_rage_ids_list
 
             return t.respond()
 
@@ -2172,14 +2173,6 @@ class NewHomeAddShows(Home):
 
         indexer, show_dir, indexer_id, show_name = self.split_extra_show(show_to_add)
 
-        if indexer_id and indexer and show_name:
-            use_provided_info = True
-        else:
-            use_provided_info = False
-
-        # tell the template whether we're giving it show name & Indexer ID
-        t.use_provided_info = use_provided_info
-
         # use the given show_dir for the indexer search if available
         if use_show_name:
             t.default_show_name = show_name
@@ -2196,7 +2189,9 @@ class NewHomeAddShows(Home):
         elif type(other_shows) != list:
             other_shows = [other_shows]
 
-        if use_provided_info:
+        # tell the template whether we're giving it show name & Indexer ID
+        t.use_provided_info = bool(indexer_id and indexer and show_name)
+        if t.use_provided_info:
             t.provided_indexer_id = int(indexer_id or 0)
             t.provided_indexer_name = show_name
 
@@ -2207,6 +2202,8 @@ class NewHomeAddShows(Home):
         t.whitelist = []
         t.blacklist = []
         t.groups = []
+
+        t.show_scene_maps = sickbeard.scene_exceptions.xem_tvdb_ids_list + sickbeard.scene_exceptions.xem_rage_ids_list
 
         return t.respond()
 
