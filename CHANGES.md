@@ -13,6 +13,7 @@
 * Add search crawler exclusions
 * Fix saving default show list group on add new show options page
 * Remove legacy anime split home option from anime settings tab (new option located in general/interface tab)
+* Remove "Manage Torrents"
 * Update Beautiful Soup 4.3.2 to 4.4.0 (r390)
 
 
