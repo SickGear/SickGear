@@ -41,18 +41,18 @@ from sickbeard.databases import cache_db, failed_db
 # test globals
 #=================
 TESTDIR = os.path.abspath('.')
-TESTDBNAME = "sickbeard.db"
-TESTCACHEDBNAME = "cache.db"
-TESTFAILEDDBNAME = "failed.db"
+TESTDBNAME = 'sickbeard.db'
+TESTCACHEDBNAME = 'cache.db'
+TESTFAILEDDBNAME = 'failed.db'
 
-SHOWNAME = u"show name"
+SHOWNAME = u'show name'
 SEASON = 4
 EPISODE = 2
-FILENAME = u"show name - s0" + str(SEASON) + "e0" + str(EPISODE) + ".mkv"
+FILENAME = u'show name - s0' + str(SEASON) + 'e0' + str(EPISODE) + '.mkv'
 FILEDIR = os.path.join(TESTDIR, SHOWNAME)
 FILEPATH = os.path.join(FILEDIR, FILENAME)
 
-SHOWDIR = os.path.join(TESTDIR, SHOWNAME + " final")
+SHOWDIR = os.path.join(TESTDIR, SHOWNAME + ' final')
 
 #sickbeard.logger.sb_log_instance = sickbeard.logger.SBRotatingLogHandler(os.path.join(TESTDIR, 'sickbeard.log'), sickbeard.logger.NUM_LOGS, sickbeard.logger.LOG_SIZE)
 sickbeard.logger.SBRotatingLogHandler.log_file = os.path.join(os.path.join(TESTDIR, 'Logs'), 'test_sickbeard.log')
@@ -85,7 +85,7 @@ sickbeard.NAMING_SPORTS_PATTERN = ''
 sickbeard.NAMING_MULTI_EP = 1
 
 
-sickbeard.PROVIDER_ORDER = ["sick_beard_index"]
+sickbeard.PROVIDER_ORDER = ['sick_beard_index']
 sickbeard.newznabProviderList = providers.getNewznabProviderList("'Sick Beard Index|http://lolo.sickbeard.com/|0|5030,5040,5060|0|eponly|0!!!NZBs.org|https://nzbs.org/||5030,5040,5060,5070,5090|0|eponly|0!!!Usenet-Crawler|https://www.usenet-crawler.com/||5030,5040,5060|0|eponly|0'")
 sickbeard.providerList = providers.makeProviderList()
 
@@ -147,20 +147,20 @@ class TestCacheDBConnection(TestDBConnection, object):
 
         # Create the table if it's not already there
         try:
-            sql = "CREATE TABLE " + providerName + " (name TEXT, season NUMERIC, episodes TEXT, indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT);"
+            sql = 'CREATE TABLE ' + providerName + ' (name TEXT, season NUMERIC, episodes TEXT, indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT);'
             self.connection.execute(sql)
             self.connection.commit()
         except sqlite3.OperationalError as e:
-            if str(e) != "table " + providerName + " already exists":
+            if str(e) != 'table ' + providerName + ' already exists':
                 raise
 
         # Create the table if it's not already there
         try:
-            sql = "CREATE TABLE lastUpdate (provider TEXT, time NUMERIC);"
+            sql = 'CREATE TABLE lastUpdate (provider TEXT, time NUMERIC);'
             self.connection.execute(sql)
             self.connection.commit()
         except sqlite3.OperationalError as e:
-            if str(e) != "table lastUpdate already exists":
+            if str(e) != 'table lastUpdate already exists':
                 raise
 
 # this will override the normal db connection
@@ -180,10 +180,10 @@ def setUp_test_db():
     db.sanityCheckDatabase(db.DBConnection(), mainDB.MainSanityCheck)
 
     # and for cachedb too
-    db.upgradeDatabase(db.DBConnection("cache.db"), cache_db.InitialSchema)
+    db.upgradeDatabase(db.DBConnection('cache.db'), cache_db.InitialSchema)
 
     # and for faileddb too
-    db.upgradeDatabase(db.DBConnection("failed.db"), failed_db.InitialSchema)
+    db.upgradeDatabase(db.DBConnection('failed.db'), failed_db.InitialSchema)
 
 
 def tearDown_test_db():
@@ -207,7 +207,7 @@ def setUp_test_episode_file():
 
     try:
         with open(FILEPATH, 'w') as f:
-            f.write("foo bar")
+            f.write('foo bar')
     except EnvironmentError:
         print('Unable to set up test episode')
         raise
@@ -237,7 +237,7 @@ if __name__ == '__main__':
 
     dirList = os.listdir(TESTDIR)
     for fname in dirList:
-        if (fname.find("_test") > 0) and (fname.find("pyc") < 0):
+        if (fname.find('_test') > 0) and (fname.find('pyc') < 0):
             print('- ' + fname)
 
     print('==================')

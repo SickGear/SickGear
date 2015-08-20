@@ -103,6 +103,6 @@ def notify_snatch(ep_name):
         n.notify_snatch(ep_name)
 
 
-def notify_git_update(new_version=""):
+def notify_git_update(new_version=''):
     for n in notifiers:
         n.notify_git_update(new_version)

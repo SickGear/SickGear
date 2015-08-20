@@ -52,7 +52,7 @@ class PPBasicTests(test.SickbeardTestDBCase):
 
         sickbeard.showList = [show]
         ep = TVEpisode(show, test.SEASON, test.EPISODE)
-        ep.name = "some ep name"
+        ep.name = 'some ep name'
         ep.saveToDB()
 
         addNameToCache('show name', 3)
