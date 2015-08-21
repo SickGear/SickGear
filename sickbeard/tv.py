@@ -613,141 +613,137 @@ class TVShow(object):
     def makeEpFromFile(self, file):
 
         if not ek.ek(os.path.isfile, file):
-            logger.log(str(self.indexerid) + u": That isn't even a real file dude... " + file)
+            logger.log(u'%s: Not a real file... %s' % (self.indexerid, file))
             return None
 
-        logger.log(str(self.indexerid) + u": Creating episode object from " + file, logger.DEBUG)
+        logger.log(u'%s: Creating episode object from %s' % (self.indexerid, file), logger.DEBUG)
 
         try:
-            myParser = NameParser(showObj=self, try_indexers=True)
-            parse_result = myParser.parse(file)
+            my_parser = NameParser(showObj=self, try_indexers=True)
+            parse_result = my_parser.parse(file)
         except InvalidNameException:
-            logger.log(u"Unable to parse the filename " + file + " into a valid episode", logger.DEBUG)
+            logger.log(u'Unable to parse the filename %s into a valid episode' % file, logger.DEBUG)
             return None
         except InvalidShowException:
-            logger.log(u"Unable to parse the filename " + file + " into a valid show", logger.DEBUG)
+            logger.log(u'Unable to parse the filename %s into a valid show' % file, logger.DEBUG)
             return None
 
         if not len(parse_result.episode_numbers):
-            logger.log("parse_result: " + str(parse_result))
-            logger.log(u"No episode number found in " + file + ", ignoring it", logger.ERROR)
+            logger.log(u'parse_result: %s' % parse_result)
+            logger.log(u'No episode number found in %s, ignoring it' % file, logger.ERROR)
             return None
 
         # for now lets assume that any episode in the show dir belongs to that show
-        season = parse_result.season_number if parse_result.season_number != None else 1
+        season = parse_result.season_number if None is not parse_result.season_number else 1
         episodes = parse_result.episode_numbers
-        rootEp = None
+        root_ep = None
 
         sql_l = []
-        for curEpNum in episodes:
+        for cur_ep_num in episodes:
 
-            episode = int(curEpNum)
+            episode = int(cur_ep_num)
 
-            logger.log(
-                str(self.indexerid) + ": " + file + " parsed to " + self.name + " " + str(season) + "x" + str(episode),
-                logger.DEBUG)
+            logger.log(u'%s: %s parsed to %s %sx%s' % (self.indexerid, file, self.name, season, episode), logger.DEBUG)
 
-            checkQualityAgain = False
+            check_quality_again = False
             same_file = False
-            curEp = self.getEpisode(season, episode)
+            cur_ep = self.getEpisode(season, episode)
 
-            if curEp == None:
+            if None is cur_ep:
                 try:
-                    curEp = self.getEpisode(season, episode, file)
+                    cur_ep = self.getEpisode(season, episode, file)
                 except exceptions.EpisodeNotFoundException:
-                    logger.log(str(self.indexerid) + u": Unable to figure out what this file is, skipping",
-                               logger.ERROR)
+                    logger.log(u'%s: Unable to figure out what this file is, skipping' % self.indexerid, logger.ERROR)
                     continue
 
             else:
                 # if there is a new file associated with this ep then re-check the quality
-                if curEp.location and ek.ek(os.path.normpath, curEp.location) != ek.ek(os.path.normpath, file):
+                if cur_ep.location and ek.ek(os.path.normpath, cur_ep.location) != ek.ek(os.path.normpath, file):
                     logger.log(
-                        u"The old episode had a different file associated with it, I will re-check the quality based on the new filename " + file,
+                        u'The old episode had a different file associated with it, re-checking the quality based on the new filename ' + file,
                         logger.DEBUG)
-                    checkQualityAgain = True
+                    check_quality_again = True
 
-                with curEp.lock:
-                    old_size = curEp.file_size
-                    curEp.location = file
+                with cur_ep.lock:
+                    old_size = cur_ep.file_size
+                    cur_ep.location = file
                     # if the sizes are the same then it's probably the same file
-                    if old_size and curEp.file_size == old_size:
+                    if old_size and cur_ep.file_size == old_size:
                         same_file = True
                     else:
                         same_file = False
 
-                    curEp.checkForMetaFiles()
+                    cur_ep.checkForMetaFiles()
 
-            if rootEp == None:
-                rootEp = curEp
+            if None is root_ep:
+                root_ep = cur_ep
             else:
-                if curEp not in rootEp.relatedEps:
-                    rootEp.relatedEps.append(curEp)
+                if cur_ep not in root_ep.relatedEps:
+                    root_ep.relatedEps.append(cur_ep)
 
             # if it's a new file then
             if not same_file:
-                curEp.release_name = ''
+                cur_ep.release_name = ''
 
             # if they replace a file on me I'll make some attempt at re-checking the quality unless I know it's the same file
-            if checkQualityAgain and not same_file:
-                newQuality = Quality.nameQuality(file, self.is_anime)
-                logger.log(u"Since this file has been renamed, I checked " + file + " and found quality " +
-                           Quality.qualityStrings[newQuality], logger.DEBUG)
-                if newQuality != Quality.UNKNOWN:
-                    curEp.status = Quality.compositeStatus(DOWNLOADED, newQuality)
-
+            if check_quality_again and not same_file:
+                new_quality = Quality.nameQuality(file, self.is_anime)
+                if Quality.UNKNOWN == new_quality:
+                    new_quality = Quality.fileQuality(file)
+                logger.log(u'Since this file was renamed, file %s was checked and quality "%s" found'
+                           % (file, Quality.qualityStrings[new_quality]), logger.DEBUG)
+                if Quality.UNKNOWN != new_quality:
+                    cur_ep.status = Quality.compositeStatus(DOWNLOADED, new_quality)
 
             # check for status/quality changes as long as it's a new file
-            elif not same_file and sickbeard.helpers.isMediaFile(file) and curEp.status not in Quality.DOWNLOADED + [
-                ARCHIVED, IGNORED]:
+            elif not same_file and sickbeard.helpers.isMediaFile(file)\
+                    and cur_ep.status not in Quality.DOWNLOADED + [ARCHIVED, IGNORED]:
 
-                oldStatus, oldQuality = Quality.splitCompositeStatus(curEp.status)
-                newQuality = Quality.nameQuality(file, self.is_anime)
-                if newQuality == Quality.UNKNOWN:
-                    newQuality = Quality.assumeQuality(file)
+                old_status, old_quality = Quality.splitCompositeStatus(cur_ep.status)
+                new_quality = Quality.nameQuality(file, self.is_anime)
+                if Quality.UNKNOWN == new_quality:
+                    new_quality = Quality.fileQuality(file)
+                    if Quality.UNKNOWN == new_quality:
+                        new_quality = Quality.assumeQuality(file)
 
-                newStatus = None
+                new_status = None
 
                 # if it was snatched and now exists then set the status correctly
-                if oldStatus == SNATCHED and oldQuality <= newQuality:
-                    logger.log(u"STATUS: this episode used to be snatched with quality " + Quality.qualityStrings[
-                        oldQuality] + u" but a file exists with quality " + Quality.qualityStrings[
-                                   newQuality] + u" so I'm setting the status to DOWNLOADED", logger.DEBUG)
-                    newStatus = DOWNLOADED
+                if SNATCHED == old_status and old_quality <= new_quality:
+                    logger.log(u'STATUS: this episode used to be snatched with quality %s but a file exists with quality %s so setting the status to DOWNLOADED'
+                               % (Quality.qualityStrings[old_quality], Quality.qualityStrings[new_quality]), logger.DEBUG)
+                    new_status = DOWNLOADED
 
                 # if it was snatched proper and we found a higher quality one then allow the status change
-                elif oldStatus == SNATCHED_PROPER and oldQuality < newQuality:
-                    logger.log(u"STATUS: this episode used to be snatched proper with quality " + Quality.qualityStrings[
-                        oldQuality] + u" but a file exists with quality " + Quality.qualityStrings[
-                                   newQuality] + u" so I'm setting the status to DOWNLOADED", logger.DEBUG)
-                    newStatus = DOWNLOADED
+                elif SNATCHED_PROPER == old_status and old_quality < new_quality:
+                    logger.log(u'STATUS: this episode used to be snatched proper with quality %s but a file exists with quality %s so setting the status to DOWNLOADED'
+                               % (Quality.qualityStrings[old_quality], Quality.qualityStrings[new_quality]), logger.DEBUG)
+                    new_status = DOWNLOADED
 
-                elif oldStatus not in (SNATCHED, SNATCHED_PROPER):
-                    newStatus = DOWNLOADED
+                elif old_status not in (SNATCHED, SNATCHED_PROPER):
+                    new_status = DOWNLOADED
 
-                if newStatus != None:
-                    with curEp.lock:
-                        logger.log(u"STATUS: we have an associated file, so setting the status from " + str(
-                            curEp.status) + u" to DOWNLOADED/" + str(Quality.statusFromName(file, anime=self.is_anime)),
-                                   logger.DEBUG)
-                        curEp.status = Quality.compositeStatus(newStatus, newQuality)
+                if None is not new_status:
+                    with cur_ep.lock:
+                        logger.log(u'STATUS: we have an associated file, so setting the status from %s to DOWNLOADED/%s'
+                                   % (cur_ep.status, Quality.compositeStatus(Quality.DOWNLOADED, new_quality)), logger.DEBUG)
+                        cur_ep.status = Quality.compositeStatus(new_status, new_quality)
 
-            with curEp.lock:
-                result = curEp.get_sql()
+            with cur_ep.lock:
+                result = cur_ep.get_sql()
                 if None is not result:
                     sql_l.append(result)
 
         if 0 < len(sql_l):
-            myDB = db.DBConnection()
-            myDB.mass_action(sql_l)
-
+            my_db = db.DBConnection()
+            my_db.mass_action(sql_l)
 
         # creating metafiles on the root should be good enough
-        if sickbeard.USE_FAILED_DOWNLOADS and rootEp is not None:
-            with rootEp.lock:
-                rootEp.createMetaFiles()
+        if sickbeard.USE_FAILED_DOWNLOADS and root_ep is not None:
+            with root_ep.lock:
+                root_ep.createMetaFiles()
 
-        return rootEp
+        return root_ep
 
     def loadFromDB(self, skipNFO=False):
 
@@ -1812,14 +1808,13 @@ class TVEpisode(object):
         elif sickbeard.helpers.isMediaFile(self.location):
             # leave propers alone, you have to either post-process them or manually change them back
             if self.status not in Quality.SNATCHED_PROPER + Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED]:
-                logger.log(
-                    u"5 Status changes from " + str(self.status) + " to " + str(Quality.statusFromName(self.location)),
-                    logger.DEBUG)
-                self.status = Quality.statusFromName(self.location, anime=self.show.is_anime)
+                status_quality = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
+                logger.log(u'(1) Status changes from %s to %s' % (self.status, status_quality), logger.DEBUG)
+                self.status = status_quality
 
         # shouldn't get here probably
         else:
-            logger.log(u"6 Status changes from " + str(self.status) + " to " + str(UNKNOWN), logger.DEBUG)
+            logger.log(u"(2) Status changes from " + str(self.status) + " to " + str(UNKNOWN), logger.DEBUG)
             self.status = UNKNOWN
 
     def loadFromNFO(self, location):
@@ -1837,11 +1832,10 @@ class TVEpisode(object):
 
         if self.location != "":
 
-            if self.status == UNKNOWN:
-                if sickbeard.helpers.isMediaFile(self.location):
-                    logger.log(u"7 Status changes from " + str(self.status) + " to " + str(
-                        Quality.statusFromName(self.location, anime=self.show.is_anime)), logger.DEBUG)
-                    self.status = Quality.statusFromName(self.location, anime=self.show.is_anime)
+            if UNKNOWN == self.status and sickbeard.helpers.isMediaFile(self.location):
+                status_quality = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
+                logger.log(u'(3) Status changes from %s to %s' % (self.status, status_quality), logger.DEBUG)
+                self.status = status_quality
 
             nfoFile = sickbeard.helpers.replaceExtension(self.location, "nfo")
             logger.log(str(self.show.indexerid) + u": Using NFO name " + nfoFile, logger.DEBUG)

@@ -662,7 +662,7 @@ class PostProcessor(object):
                 continue
 
             ep_quality = common.Quality.nameQuality(cur_name, ep_obj.show.is_anime)
-            quality_log = u' "%s" quality from the %s %s' % (common.Quality.qualityStrings[ep_quality], thing, cur_name)
+            quality_log = u' "%s" quality parsed from the %s %s' % (common.Quality.qualityStrings[ep_quality], thing, cur_name)
 
             # if we find a good one then use it
             if common.Quality.UNKNOWN != ep_quality:
@@ -670,6 +670,12 @@ class PostProcessor(object):
                 return ep_quality
             else:
                 self._log(u'Found' + quality_log, logger.DEBUG)
+
+        ep_quality = common.Quality.fileQuality(self.file_path)
+        if common.Quality.UNKNOWN != ep_quality:
+            self._log(u'Using "%s" quality parsed from the metadata file content of %s'
+                      % (common.Quality.qualityStrings[ep_quality], self.file_name), logger.DEBUG)
+            return ep_quality
 
         # Try guessing quality from the file name
         ep_quality = common.Quality.assumeQuality(self.file_name)
