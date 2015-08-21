@@ -15,6 +15,7 @@
 * Remove legacy anime split home option from anime settings tab (new option located in general/interface tab)
 * Remove "Manage Torrents"
 * Update Beautiful Soup 4.3.2 to 4.4.0 (r390)
+* Update init scripts to use sickgear when possible while maintaining backwards compatibility
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

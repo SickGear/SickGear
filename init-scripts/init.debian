@@ -1,0 +1,145 @@
+#!/bin/sh
+#
+### BEGIN INIT INFO
+# Provides:          sickgear
+# Required-Start:    $local_fs $network $remote_fs
+# Required-Stop:     $local_fs $network $remote_fs
+# Should-Start:      $NetworkManager
+# Should-Stop:       $NetworkManager
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts instance of SickGear
+# Description:       starts instance of SickGear using start-stop-daemon
+### END INIT INFO
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
+. /lib/lsb/init-functions
+
+# Source SickGear configuration
+if [ -f /etc/default/sickgear ]; then
+    . /etc/default/sickgear
+elif [ -f /etc/default/sickbeard ]; then
+    . /etc/default/sickbeard
+else
+    [ "${VERBOSE}" != no ] && echo "/etc/default/sickgear not found. Using default settings.";
+fi
+
+## Don't edit this file!
+## Edit user configuation in /etc/default/sickgear to change
+##
+## SG_USER=         #$SG_USER, username to run sickgear under, the default is sickgear
+## SG_GROUP=        #$SG_GROUP, group to run sickgear under, the default is sickgear
+## SG_HOME=         #$SG_HOME, the location of SickGear.py, the default is /opt/sickgear
+## SG_DATA=         #$SG_DATA, the location of sickgear.db, cache, logs, the default is /opt/sickgear
+## SG_PIDFILE=      #$SG_PIDFILE, the location of sickgear.pid, the default is /var/run/sickgear/sickgear.pid
+## PYTHON_BIN=      #$PYTHON_BIN, the location of the python binary, the default is /usr/bin/python
+## SG_OPTS=         #$SG_OPTS, extra cli option for sickgear, i.e. " --config=/home/sickgear/config.ini"
+## SSD_OPTS=        #$SSD_OPTS, extra start-stop-daemon option like " --group=users"
+##
+## EXAMPLE if want to run as different user
+## add SG_USER=username to /etc/default/sickgear
+## otherwise default sickgear is used
+
+# Script name
+NAME=$(basename "$0")
+
+# App name
+DESC=SickGear
+
+## The defaults
+: ${SG_USER:=${SB_USER-sickgear}}
+: ${SG_GROUP:=${SB_GROUP-sickgear}}
+: ${SG_HOME:=${SB_HOME-/opt/sickgear}}
+: ${SG_DATA:=${SB_DATA-/opt/sickgear}}
+: ${SG_PIDFILE:=${SB_PIDFILE-/var/run/sickgear/sickgear.pid}}
+: ${PYTHON_BIN:=/usr/bin/python}
+: ${SG_OPTS:=${SB_OPTS}}
+
+## Computed variables
+PID_PATH=$(dirname $SG_PIDFILE)
+DAEMON_OPTS=" SickBeard.py -q --daemon --nolaunch --pidfile=${SG_PIDFILE} --datadir=${SG_DATA} ${SG_OPTS}"
+
+##
+
+test -x $PYTHON_BIN || exit 0
+
+# Create PID directory if not exist and ensure the SickGear user can write to it
+if [ ! -d $PID_PATH ]; then
+    mkdir -p $PID_PATH
+    chown $SG_USER $PID_PATH
+fi
+
+if [ ! -d $SG_DATA ]; then
+    mkdir -p $SG_DATA
+    chown $SG_USER $SG_DATA
+fi
+
+if [ -e $SG_PIDFILE ]; then
+    PID=`cat $SG_PIDFILE`
+    if ! kill -0 $PID > /dev/null 2>&1; then
+        [ "$VERBOSE" != no ] && echo "Removing stale $SG_PIDFILE"
+        rm -f $SG_PIDFILE
+    fi
+fi
+
+start_sickgear() {
+    [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+    start-stop-daemon -d $SG_HOME -c $SG_USER --group=${SG_GROUP} $SSD_OPTS --start --quiet --pidfile $SG_PIDFILE --exec $PYTHON_BIN -- $DAEMON_OPTS
+    RETVAL="$?"
+    case "${RETVAL}" in
+        # Service was started or was running already
+        0|1) [ "${VERBOSE}" != no ] && log_end_msg 0 ;;
+        # Service couldn't be started
+        2) [ "${VERBOSE}" != no ] && log_end_msg 1 ;;
+    esac
+    [ "${RETVAL}" = 2 ] && return 2
+    return 0
+}
+
+stop_sickgear() {
+    [ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+    start-stop-daemon --stop --pidfile $SG_PIDFILE --quiet --retry TERM/30/KILL/5
+    RETVAL="$?"
+    case "${RETVAL}" in
+        # Service was stopped or wasn't running
+        0|1) [ "${VERBOSE}" != no ] && log_end_msg 0 ;;
+        # Service couldn't be stopped
+        2) [ "${VERBOSE}" != no ] && log_end_msg 1 ;;
+    esac
+    [ "${RETVAL}" = 2 ] && return 2
+    [ -f "${SG_PIDFILE}" ] && rm -f ${SG_PIDFILE}
+    return 0
+}
+
+case "$1" in
+    start)
+        start_sickgear
+        exit $?
+        ;;
+    stop)
+        stop_sickgear
+        exit $?
+        ;;
+
+    restart|force-reload)
+        stop_sickgear
+        sleep 2
+        start_sickgear
+        return $?
+        ;;
+    status)
+        status_of_proc -p "$SG_PIDFILE" "$PYTHON_BIN" "$DESC"
+        exit 0
+        ;;
+    *)
+        N=/etc/init.d/$NAME
+        echo "Usage: $N {start|stop|restart|force-reload}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
