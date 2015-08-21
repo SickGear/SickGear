@@ -21,11 +21,12 @@
 * Add a postprocess folder name validation
 * Update Requests library to 2.7.0 (5d6d1bc)
 * Update SimpleJSON library 3.7.3 to 3.8.0 (a37a9bd)
+* Update Tornado Web Server 4.2 to 4.3.dev1 (1b6157d)
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
 * Remove EZRSS provider
-* Update Tornado webserver to 4.2 (fdfaf3d)
+* Update Tornado Web Server to 4.2 (fdfaf3d)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
 * Update Requests library 2.6.2 to 2.7.0 (8b5e457)
@@ -141,7 +142,7 @@
 
 ### 0.9.0 (2015-05-18 14:33:00 UTC)
 
-* Update Tornado webserver to 4.2.dev1 (609dbb9)
+* Update Tornado Web Server to 4.2.dev1 (609dbb9)
 * Update change to suppress reporting of Tornado exception error 1 to updated package as listed in hacks.txt
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package as listed in hacks.txt
 * Change network names to only display on top line of Day by Day layout on Episode View
@@ -655,7 +656,7 @@
 * Add return code from hardlinking error to log
 * Fix ABD regex for certain filenames
 * Change miscellaneous UI fixes
-* Update Tornado webserver to 4.1dev1 and add the certifi lib dependency
+* Update Tornado Web Server to 4.1dev1 and add the certifi lib dependency
 * Fix trending shows page from loading full size poster images
 * Add "Archive on first match" to Manage, Mass Update, Edit Selected page
 * Fix searching IPTorrentsProvider

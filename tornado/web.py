@@ -362,10 +362,8 @@ class RequestHandler(object):
         else:
             raise TypeError("Unsupported header value %r" % value)
         # If \n is allowed into the header, it is possible to inject
-        # additional headers or split the request. Also cap length to
-        # prevent obviously erroneous values.
-        if (len(value) > 4000 or
-                RequestHandler._INVALID_HEADER_CHAR_RE.search(value)):
+        # additional headers or split the request.
+        if RequestHandler._INVALID_HEADER_CHAR_RE.search(value):
             raise ValueError("Unsafe header value %r", value)
         return value
 
@@ -694,10 +692,7 @@ class RequestHandler(object):
                 message += ". Lists not accepted for security reasons; see http://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write"
             raise TypeError(message)
         if isinstance(chunk, dict):
-            if 'unwrap_json' in chunk:
-                chunk = chunk['unwrap_json']
-            else:
-                chunk = escape.json_encode(chunk)
+            chunk = escape.json_encode(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         chunk = utf8(chunk)
         self._write_buffer.append(chunk)
@@ -841,8 +836,9 @@ class RequestHandler(object):
 
         May be overridden by subclasses.  By default returns a
         directory-based loader on the given path, using the
-        ``autoescape`` application setting.  If a ``template_loader``
-        application setting is supplied, uses that instead.
+        ``autoescape`` and ``template_whitespace`` application
+        settings.  If a ``template_loader`` application setting is
+        supplied, uses that instead.
         """
         settings = self.application.settings
         if "template_loader" in settings:
@@ -852,6 +848,8 @@ class RequestHandler(object):
             # autoescape=None means "no escaping", so we have to be sure
             # to only pass this kwarg if the user asked for it.
             kwargs["autoescape"] = settings["autoescape"]
+        if "template_whitespace" in settings:
+            kwargs["whitespace"] = settings["template_whitespace"]
         return template.Loader(template_path, **kwargs)
 
     def flush(self, include_footers=False, callback=None):
@@ -1391,10 +1389,8 @@ class RequestHandler(object):
                 self.check_xsrf_cookie()
 
             result = self.prepare()
-            if is_future(result):
-                result = yield result
             if result is not None:
-                raise TypeError("Expected None, got %r" % result)
+                result = yield result
             if self._prepared_future is not None:
                 # Tell the Application we've finished with prepare()
                 # and are ready for the body to arrive.
@@ -1414,10 +1410,8 @@ class RequestHandler(object):
 
             method = getattr(self, self.request.method.lower())
             result = method(*self.path_args, **self.path_kwargs)
-            if is_future(result):
-                result = yield result
             if result is not None:
-                raise TypeError("Expected None, got %r" % result)
+                result = yield result
             if self._auto_finish and not self._finished:
                 self.finish()
         except Exception as e:
@@ -2151,6 +2145,11 @@ class StaticFileHandler(RequestHandler):
     the ``path`` argument to the get() method (different than the constructor
     argument above); see `URLSpec` for details.
 
+    To serve a file like ``index.html`` automatically when a directory is
+    requested, set ``static_handler_args=dict(default_filename="index.html")``
+    in your application settings, or add ``default_filename`` as an initializer
+    argument for your ``StaticFileHandler``.
+
     To maximize the effectiveness of browser caching, this class supports
     versioned urls (by default using the argument ``?v=``).  If a version
     is given, we instruct the browser to cache this file indefinitely.
@@ -2162,8 +2161,7 @@ class StaticFileHandler(RequestHandler):
     a dedicated static file server (such as nginx or Apache).  We support
     the HTTP ``Accept-Ranges`` mechanism to return partial content (because
     some browsers require this functionality to be present to seek in
-    HTML5 audio or video), but this handler should not be used with
-    files that are too large to fit comfortably in memory.
+    HTML5 audio or video).
 
     **Subclassing notes**
 
@@ -2379,9 +2377,13 @@ class StaticFileHandler(RequestHandler):
 
         .. versionadded:: 3.1
         """
-        root = os.path.abspath(root)
-        # os.path.abspath strips a trailing /
-        # it needs to be temporarily added back for requests to root/
+        # os.path.abspath strips a trailing /.
+        # We must add it back to `root` so that we only match files
+        # in a directory named `root` instead of files starting with
+        # that prefix.
+        root = os.path.abspath(root) + os.path.sep
+        # The trailing slash also needs to be temporarily added back
+        # the requested path so a request to root/ will match.
         if not (absolute_path + os.path.sep).startswith(root):
             raise HTTPError(403, "%s is not in root static directory",
                             self.path)
@@ -2493,7 +2495,19 @@ class StaticFileHandler(RequestHandler):
         .. versionadded:: 3.1
         """
         mime_type, encoding = mimetypes.guess_type(self.absolute_path)
-        return mime_type
+        # per RFC 6713, use the appropriate type for a gzip compressed file
+        if encoding == "gzip":
+            return "application/gzip"
+        # As of 2015-07-21 there is no bzip2 encoding defined at
+        # http://www.iana.org/assignments/media-types/media-types.xhtml
+        # So for that (and any other encoding), use octet-stream.
+        elif encoding is not None:
+            return "application/octet-stream"
+        elif mime_type is not None:
+            return mime_type
+        # if mime_type not detected, use application/octet-stream
+        else:
+            return "application/octet-stream"
 
     def set_extra_headers(self, path):
         """For subclass to add extra headers to the response"""
@@ -2644,7 +2658,16 @@ class GZipContentEncoding(OutputTransform):
     CONTENT_TYPES = set(["application/javascript", "application/x-javascript",
                          "application/xml", "application/atom+xml",
                          "application/json", "application/xhtml+xml"])
-    MIN_LENGTH = 5
+    # Python's GzipFile defaults to level 9, while most other gzip
+    # tools (including gzip itself) default to 6, which is probably a
+    # better CPU/size tradeoff.
+    GZIP_LEVEL = 6
+    # Responses that are too short are unlikely to benefit from gzipping
+    # after considering the "Content-Encoding: gzip" header and the header
+    # inside the gzip encoding.
+    # Note that responses written in multiple chunks will be compressed
+    # regardless of size.
+    MIN_LENGTH = 1024
 
     def __init__(self, request):
         self._gzipping = "gzip" in request.headers.get("Accept-Encoding", "")
@@ -2665,7 +2688,8 @@ class GZipContentEncoding(OutputTransform):
         if self._gzipping:
             headers["Content-Encoding"] = "gzip"
             self._gzip_value = BytesIO()
-            self._gzip_file = gzip.GzipFile(mode="w", fileobj=self._gzip_value)
+            self._gzip_file = gzip.GzipFile(mode="w", fileobj=self._gzip_value,
+                                            compresslevel=self.GZIP_LEVEL)
             chunk = self.transform_chunk(chunk, finishing)
             if "Content-Length" in headers:
                 # The original content length is no longer correct.
