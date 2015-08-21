@@ -17,6 +17,8 @@
 * Update Beautiful Soup 4.3.2 to 4.4.0 (r390)
 * Update Hachoir library 1.3.3 to 1.3.4 (r1383)
 * Change configure quiet option in Hachoir to suppress warnings (add ref:hacks.txt)
+* Add parse media content to determine quality before making final assumptions during re-scan, update, pp  
+* Add a postprocess folder name validation
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

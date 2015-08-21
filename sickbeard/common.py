@@ -231,6 +231,45 @@ class Quality:
             return Quality.UNKNOWN
 
     @staticmethod
+    def fileQuality(filename):
+
+        from sickbeard import encodingKludge as ek
+        if ek.ek(os.path.isfile, filename):
+
+            from hachoir_parser import createParser
+            from hachoir_metadata import extractMetadata
+            from hachoir_core.stream import InputStreamError
+
+            parser = height = None
+            try:
+                parser = createParser(filename)
+            except InputStreamError as e:
+                logger.log('Hachoir can\'t parse file content quality because it found error: %s' % e.text, logger.WARNING)
+
+            if parser:
+                extract = extractMetadata(parser)
+                if extract:
+                    try:
+                        height = extract.get('height')
+                    except (AttributeError, ValueError):
+                        try:
+                            for metadata in extract.iterGroups():
+                                if re.search('(?i)video', metadata.header):
+                                    height = metadata.get('height')
+                                    break
+                        except (AttributeError, ValueError):
+                            pass
+
+                    parser.stream._input.close()
+
+                    tolerance = lambda value, percent: int(round(value - (value * percent / 100.0)))
+                    if height >= tolerance(352, 5):
+                        if height <= tolerance(720, 2):
+                            return Quality.SDTV
+                        return (Quality.HDTV, Quality.FULLHDTV)[height >= tolerance(1080, 1)]
+        return Quality.UNKNOWN
+
+    @staticmethod
     def assumeQuality(name):
         if name.lower().endswith(('.avi', '.mp4')):
             return Quality.SDTV
@@ -262,8 +301,17 @@ class Quality:
     @staticmethod
     def statusFromName(name, assume=True, anime=False):
         quality = Quality.nameQuality(name, anime)
-        if assume and quality == Quality.UNKNOWN:
+        if assume and Quality.UNKNOWN == quality:
             quality = Quality.assumeQuality(name)
+        return Quality.compositeStatus(DOWNLOADED, quality)
+
+    @staticmethod
+    def statusFromNameOrFile(file_path, assume=True, anime=False):
+        quality = Quality.nameQuality(file_path, anime)
+        if Quality.UNKNOWN == quality:
+            quality = Quality.fileQuality(file_path)
+            if assume and Quality.UNKNOWN == quality:
+                quality = Quality.assumeQuality(file_path)
         return Quality.compositeStatus(DOWNLOADED, quality)
 
     DOWNLOADED = None

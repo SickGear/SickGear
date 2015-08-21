@@ -434,6 +434,10 @@ class ProcessTVShow(object):
                                           try_scene_exceptions=True,
                                           convert=True).parse(
                                               dir_name, cache_result=False)
+                # check we parsed id, ep and season
+                if not (0 < len(parse_result.episode_numbers) and isinstance(parse_result.show.indexerid, int)
+                        and isinstance(parse_result.season_number, int)):
+                    return False
             except (InvalidNameException, InvalidShowException):
                 # If the filename doesn't parse, then return false as last
                 # resort. We can assume that unparseable filenames are not
