@@ -169,6 +169,7 @@ typedef struct _PyEncoderObject {
     int use_decimal;
     int namedtuple_as_object;
     int tuple_as_array;
+    int iterable_as_array;
     PyObject *max_long_size;
     PyObject *min_long_size;
     PyObject *item_sort_key;
@@ -2581,7 +2582,6 @@ encoder_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 encoder_init(PyObject *self, PyObject *args, PyObject *kwds)
 {
-    /* initialize Encoder object */
     static char *kwlist[] = {
         "markers",
         "default",
@@ -2596,30 +2596,32 @@ encoder_init(PyObject *self, PyObject *args, PyObject *kwds)
         "use_decimal",
         "namedtuple_as_object",
         "tuple_as_array",
+        "iterable_as_array"
         "int_as_string_bitcount",
         "item_sort_key",
         "encoding",
         "for_json",
         "ignore_nan",
         "Decimal",
+        "iterable_as_array",
         NULL};
 
     PyEncoderObject *s;
     PyObject *markers, *defaultfn, *encoder, *indent, *key_separator;
     PyObject *item_separator, *sort_keys, *skipkeys, *allow_nan, *key_memo;
-    PyObject *use_decimal, *namedtuple_as_object, *tuple_as_array;
+    PyObject *use_decimal, *namedtuple_as_object, *tuple_as_array, *iterable_as_array;
     PyObject *int_as_string_bitcount, *item_sort_key, *encoding, *for_json;
     PyObject *ignore_nan, *Decimal;
 
     assert(PyEncoder_Check(self));
     s = (PyEncoderObject *)self;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOOOOOOOOOOOOOOOOOO:make_encoder", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOOOOOOOOOOOOOOOOOOO:make_encoder", kwlist,
         &markers, &defaultfn, &encoder, &indent, &key_separator, &item_separator,
         &sort_keys, &skipkeys, &allow_nan, &key_memo, &use_decimal,
         &namedtuple_as_object, &tuple_as_array,
         &int_as_string_bitcount, &item_sort_key, &encoding, &for_json,
-        &ignore_nan, &Decimal))
+        &ignore_nan, &Decimal, &iterable_as_array))
         return -1;
 
     Py_INCREF(markers);
@@ -2649,6 +2651,7 @@ encoder_init(PyObject *self, PyObject *args, PyObject *kwds)
     s->use_decimal = PyObject_IsTrue(use_decimal);
     s->namedtuple_as_object = PyObject_IsTrue(namedtuple_as_object);
     s->tuple_as_array = PyObject_IsTrue(tuple_as_array);
+    s->iterable_as_array = PyObject_IsTrue(iterable_as_array);
     if (PyInt_Check(int_as_string_bitcount) || PyLong_Check(int_as_string_bitcount)) {
         static const unsigned int long_long_bitsize = SIZEOF_LONG_LONG * 8;
         int int_as_string_bitcount_val = (int)PyLong_AsLong(int_as_string_bitcount);
@@ -2936,6 +2939,16 @@ encoder_listencode_obj(PyEncoderObject *s, JSON_Accu *rval, PyObject *obj, Py_ss
         else {
             PyObject *ident = NULL;
             PyObject *newobj;
+            if (s->iterable_as_array) {
+                newobj = PyObject_GetIter(obj);
+                if (newobj == NULL)
+                    PyErr_Clear();
+                else {
+                    rv = encoder_listencode_list(s, rval, newobj, indent_level);
+                    Py_DECREF(newobj);
+                    break;
+                }
+            }
             if (s->markers != Py_None) {
                 int has_key;
                 ident = PyLong_FromVoidPtr(obj);
