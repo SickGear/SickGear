@@ -19,6 +19,7 @@
 * Change configure quiet option in Hachoir to suppress warnings (add ref:hacks.txt)
 * Add parse media content to determine quality before making final assumptions during re-scan, update, pp  
 * Add a postprocess folder name validation
+* Update Requests library to 2.7.0 (5d6d1bc)
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
