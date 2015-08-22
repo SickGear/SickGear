@@ -20,6 +20,7 @@
 * Add parse media content to determine quality before making final assumptions during re-scan, update, pp  
 * Add a postprocess folder name validation
 * Update Requests library to 2.7.0 (5d6d1bc)
+* Update SimpleJSON library 3.7.3 to 3.8.0 (a37a9bd)
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
