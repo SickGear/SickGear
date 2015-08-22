@@ -470,8 +470,9 @@ class PostProcessor(object):
         name = helpers.remove_non_release_groups(helpers.remove_extension(name))
 
         # parse the name to break it into show name, season, and episode
-        np = NameParser(resource, try_indexers=True, try_scene_exceptions=True, convert=True)
-        parse_result = np.parse(name)
+        parse_result = NameParser(resource,
+                                  try_scene_exceptions=True,
+                                  convert=True).parse(name)
         self._log(u'Parsed %s<br />.. into %s' % (name, str(parse_result).decode('utf-8', 'xmlcharrefreplace')), logger.DEBUG)
 
         if parse_result.is_air_by_date:
@@ -983,7 +984,7 @@ class PostProcessor(object):
                 raise exceptions.PostProcessingFailed(u'Unable to move the files to the new location')
         except (OSError, IOError):
             raise exceptions.PostProcessingFailed(u'Unable to move the files to the new location')
-                
+
         # download subtitles
         dosubs = sickbeard.USE_SUBTITLES and ep_obj.show.subtitles
 

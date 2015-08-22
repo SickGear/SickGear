@@ -25,6 +25,7 @@
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
 * Fix post processing season pack folders
+* Change Nameparser to be fully offline
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

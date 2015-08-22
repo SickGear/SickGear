@@ -421,8 +421,7 @@ class ProcessTVShow(object):
 
         parse_result = None
         try:
-            parse_result = NameParser(try_indexers=True,
-                                      try_scene_exceptions=True,
+            parse_result = NameParser(try_scene_exceptions=True,
                                       convert=True).parse(videofile,
                                                           cache_result=False)
         except (InvalidNameException, InvalidShowException):
@@ -430,8 +429,7 @@ class ProcessTVShow(object):
             pass
         if None is parse_result:
             try:
-                parse_result = NameParser(try_indexers=True,
-                                          try_scene_exceptions=True,
+                parse_result = NameParser(try_scene_exceptions=True,
                                           convert=True).parse(
                                               dir_name, cache_result=False)
             except (InvalidNameException, InvalidShowException):
