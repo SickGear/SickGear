@@ -1034,23 +1034,23 @@ def initialize(consoleLogging=True):
                 torrent_prov.confirmed = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_confirmed', 0))
             if hasattr(torrent_prov, 'options'):
                 torrent_prov.options = check_setting_str(CFG, prov_id_uc, prov_id + '_options', '')
-            if hasattr(torrent_prov, 'ratio'):
-                torrent_prov.ratio = check_setting_str(CFG, prov_id_uc, prov_id + '_ratio', '')
+            if hasattr(torrent_prov, '_seed_ratio'):
+                torrent_prov._seed_ratio = check_setting_str(CFG, prov_id_uc, prov_id + '_seed_ratio', '')
             if hasattr(torrent_prov, 'minseed'):
                 torrent_prov.minseed = check_setting_int(CFG, prov_id_uc, prov_id + '_minseed', 0)
             if hasattr(torrent_prov, 'minleech'):
                 torrent_prov.minleech = check_setting_int(CFG, prov_id_uc, prov_id + '_minleech', 0)
             if hasattr(torrent_prov, 'freeleech'):
                 torrent_prov.freeleech = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_freeleech', 0))
-            if hasattr(torrent_prov, 'search_mode'):
-                torrent_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
-            if hasattr(torrent_prov, 'search_fallback'):
-                torrent_prov.search_fallback = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_search_fallback', 0))
             if hasattr(torrent_prov, 'enable_recentsearch'):
                 torrent_prov.enable_recentsearch = bool(check_setting_int(CFG, prov_id_uc,
                                                                           prov_id + '_enable_recentsearch', 1))
             if hasattr(torrent_prov, 'enable_backlog'):
                 torrent_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
+            if hasattr(torrent_prov, 'search_mode'):
+                torrent_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
+            if hasattr(torrent_prov, 'search_fallback'):
+                torrent_prov.search_fallback = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_search_fallback', 0))
 
         for nzb_prov in [curProvider for curProvider in providers.sortedProviderList()
                          if GenericProvider.NZB == curProvider.providerType]:
@@ -1519,28 +1519,28 @@ def save_config():
             new_config[prov_id_uc][prov_id + '_passkey'] = torrent_prov.passkey
         if hasattr(torrent_prov, 'confirmed'):
             new_config[prov_id_uc][prov_id + '_confirmed'] = int(torrent_prov.confirmed)
-        if hasattr(torrent_prov, 'ratio'):
-            new_config[prov_id_uc][prov_id + '_ratio'] = torrent_prov.ratio
+        if hasattr(torrent_prov, '_seed_ratio'):
+            new_config[prov_id_uc][prov_id + '_seed_ratio'] = torrent_prov.seed_ratio()
         if hasattr(torrent_prov, 'minseed'):
             new_config[prov_id_uc][prov_id + '_minseed'] = int(torrent_prov.minseed)
         if hasattr(torrent_prov, 'minleech'):
             new_config[prov_id_uc][prov_id + '_minleech'] = int(torrent_prov.minleech)
+        if hasattr(torrent_prov, 'freeleech'):
+            new_config[prov_id_uc][prov_id + '_freeleech'] = int(torrent_prov.freeleech)
+        if hasattr(torrent_prov, 'enable_recentsearch'):
+            new_config[prov_id_uc][prov_id + '_enable_recentsearch'] = int(torrent_prov.enable_recentsearch)
+        if hasattr(torrent_prov, 'enable_backlog'):
+            new_config[prov_id_uc][prov_id + '_enable_backlog'] = int(torrent_prov.enable_backlog)
+        if hasattr(torrent_prov, 'search_mode'):
+            new_config[prov_id_uc][prov_id + '_search_mode'] = torrent_prov.search_mode
+        if hasattr(torrent_prov, 'search_fallback'):
+            new_config[prov_id_uc][prov_id + '_search_fallback'] = int(torrent_prov.search_fallback)
         if hasattr(torrent_prov, 'options'):
             new_config[prov_id_uc][prov_id + '_options'] = torrent_prov.options
         if hasattr(torrent_prov, 'proxy'):
             new_config[prov_id_uc][prov_id + '_proxy'] = int(torrent_prov.proxy.enabled)
             if hasattr(torrent_prov.proxy, 'url'):
                 new_config[prov_id_uc][prov_id + '_proxy_url'] = torrent_prov.proxy.url
-        if hasattr(torrent_prov, 'freeleech'):
-            new_config[prov_id_uc][prov_id + '_freeleech'] = int(torrent_prov.freeleech)
-        if hasattr(torrent_prov, 'search_mode'):
-            new_config[prov_id_uc][prov_id + '_search_mode'] = torrent_prov.search_mode
-        if hasattr(torrent_prov, 'search_fallback'):
-            new_config[prov_id_uc][prov_id + '_search_fallback'] = int(torrent_prov.search_fallback)
-        if hasattr(torrent_prov, 'enable_recentsearch'):
-            new_config[prov_id_uc][prov_id + '_enable_recentsearch'] = int(torrent_prov.enable_recentsearch)
-        if hasattr(torrent_prov, 'enable_backlog'):
-            new_config[prov_id_uc][prov_id + '_enable_backlog'] = int(torrent_prov.enable_backlog)
 
     for nzb_prov in [curProvider for curProvider in providers.sortedProviderList()
                      if GenericProvider.NZB == curProvider.providerType]:

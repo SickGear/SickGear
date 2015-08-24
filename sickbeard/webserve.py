@@ -4155,11 +4155,11 @@ class ConfigProviders(Config):
                 except:
                     curTorrentProvider.minleech = 0
 
-            if hasattr(curTorrentProvider, 'ratio'):
+            if hasattr(curTorrentProvider, '_seed_ratio'):
                 try:
-                    curTorrentProvider.ratio = str(kwargs[curTorrentProvider.get_id() + '_ratio']).strip()
+                    curTorrentProvider._seed_ratio = str(kwargs[curTorrentProvider.get_id() + '_ratio']).strip()
                 except:
-                    curTorrentProvider.ratio = None
+                    curTorrentProvider._seed_ratio = None
 
             if hasattr(curTorrentProvider, 'digest'):
                 try:
