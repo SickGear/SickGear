@@ -32,23 +32,18 @@ import os.path
 import uuid
 import base64
 sys.path.insert(1, os.path.abspath('../lib'))
-from sickbeard import providers, metadata, config, webserveInit
+from sickbeard import providers, metadata, config, webserveInit, searchBacklog, showUpdater, versionChecker, \
+    autoPostProcesser, subtitles, traktChecker, helpers, db, exceptions, show_queue, search_queue, scheduler, \
+    show_name_helpers, logger, naming, searchRecent, searchProper, scene_numbering, scene_exceptions, name_cache
 from sickbeard.providers.generic import GenericProvider
 from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, grabtheinfo, \
     omgwtfnzbs, scc, torrentday, hdbits, speedcd, nyaatorrents, torrentbytes, beyondhd, gftracker, transmithe_net, \
     freshontv, bitsoup, tokyotoshokan, animenzb, totv, rarbg, morethan, alpharatio, pisexy, strike, torrentshack
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type, minimax
-from sickbeard import searchBacklog, showUpdater, versionChecker, autoPostProcesser, \
-    subtitles, traktChecker
-from sickbeard import helpers, db, exceptions, show_queue, search_queue, scheduler, show_name_helpers
-from sickbeard import logger
-from sickbeard import naming
-from sickbeard import searchRecent, searchProper
-from sickbeard import scene_numbering, scene_exceptions, name_cache
 from indexers.indexer_api import indexerApi
-from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, indexer_episodenotfound, \
-    indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
+from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
+    indexer_episodenotfound, indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
 from sickbeard.common import SD, SKIPPED, NAMING_REPEAT
 from sickbeard.databases import mainDB, cache_db, failed_db
 
@@ -71,11 +66,6 @@ MY_NAME = None
 MY_ARGS = []
 SYS_ENCODING = ''
 DATA_DIR = ''
-CREATEPID = False
-PIDFILE = ''
-
-DAEMON = None
-NO_RESIZE = False
 
 # system events
 events = None
@@ -92,7 +82,6 @@ subtitlesFinderScheduler = None
 traktCheckerScheduler = None
 
 showList = None
-loadingShowList = None
 UPDATE_SHOWS_ON_START = False
 SHOW_UPDATE_HOUR = 3
 
@@ -101,7 +90,6 @@ newznabProviderList = []
 torrentRssProviderList = []
 metadata_provider_dict = {}
 
-NEWEST_VERSION = None
 NEWEST_VERSION_STRING = None
 VERSION_NOTIFY = False
 AUTO_UPDATE = False
@@ -132,8 +120,6 @@ HANDLE_REVERSE_PROXY = False
 PROXY_SETTING = None
 PROXY_INDEXERS = True
 
-LOCALHOST_IP = None
-
 CPU_PRESET = 'NORMAL'
 
 ANON_REDIRECT = None
@@ -161,7 +147,6 @@ SHOW_TAGS = []
 DEFAULT_SHOW_TAG = ''
 SHOWLIST_TAGVIEW = ''
 
-USE_LISTVIEW = False
 METADATA_XBMC = None
 METADATA_XBMC_12PLUS = None
 METADATA_MEDIABROWSER = None
@@ -243,16 +228,6 @@ NFO_RENAME = True
 TV_DOWNLOAD_DIR = None
 UNPACK = False
 SKIP_REMOVED_FILES = False
-
-NZBS = False
-NZBS_UID = None
-NZBS_HASH = None
-
-WOMBLE = False
-
-OMGWTFNZBS = False
-OMGWTFNZBS_USERNAME = None
-OMGWTFNZBS_APIKEY = None
 
 SAB_USERNAME = None
 SAB_PASSWORD = None
@@ -500,7 +475,7 @@ def initialize(consoleLogging=True):
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
-            NEWZNAB_DATA, NZBS, NZBS_UID, NZBS_HASH, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
+            NEWZNAB_DATA, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, RECENTSEARCH_STARTUP, \
             GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_GROWL, GROWL_HOST, GROWL_PASSWORD, USE_PROWL, PROWL_NOTIFY_ONSNATCH, PROWL_NOTIFY_ONDOWNLOAD, PROWL_NOTIFY_ONSUBTITLEDOWNLOAD, PROWL_API, PROWL_PRIORITY, PROG_DIR, \
@@ -513,20 +488,20 @@ def initialize(consoleLogging=True):
             showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, TIMEZONE_DISPLAY, \
             NAMING_PATTERN, NAMING_MULTI_EP, NAMING_ANIME_MULTI_EP, NAMING_FORCE_FOLDERS, NAMING_ABD_PATTERN, NAMING_CUSTOM_ABD, NAMING_SPORTS_PATTERN, NAMING_CUSTOM_SPORTS, NAMING_ANIME_PATTERN, NAMING_CUSTOM_ANIME, NAMING_STRIP_YEAR, \
             RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcesserScheduler, \
-            WOMBLE, OMGWTFNZBS, OMGWTFNZBS_USERNAME, OMGWTFNZBS_APIKEY, providerList, newznabProviderList, torrentRssProviderList, \
+            providerList, newznabProviderList, torrentRssProviderList, \
             EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, RECENTSEARCH_FREQUENCY, \
             USE_BOXCAR2, BOXCAR2_ACCESSTOKEN, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_SOUND, \
             USE_PUSHOVER, PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHOVER_NOTIFY_ONSNATCH, PUSHOVER_PRIORITY, PUSHOVER_DEVICE, PUSHOVER_SOUND, \
             USE_LIBNOTIFY, LIBNOTIFY_NOTIFY_ONSNATCH, LIBNOTIFY_NOTIFY_ONDOWNLOAD, LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD, USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, USE_SYNOINDEX, \
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_EMAIL, EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_LIST, \
-            USE_LISTVIEW, METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, METADATA_KODI, metadata_provider_dict, \
+            METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, METADATA_KODI, metadata_provider_dict, \
             GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, recentSearchScheduler, NFO_RENAME, \
             GUI_NAME, DEFAULT_HOME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, EPISODE_VIEW_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
             POSTER_SORTBY, POSTER_SORTDIR, \
             METADATA_WDTV, METADATA_TIVO, METADATA_MEDE8ER, IGNORE_WORDS, REQUIRE_WORDS, CALENDAR_UNPROTECTED, CREATE_MISSING_SHOW_DIRS, \
             ADD_SHOWS_WO_DIR, USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_HISTORY, SUBTITLES_FINDER_FREQUENCY, subtitlesFinderScheduler, \
-            USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, LOCALHOST_IP, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
+            USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, ANIME_TREAT_AS_HDTV, \
@@ -636,8 +611,6 @@ def initialize(consoleLogging=True):
         WEB_USERNAME = check_setting_str(CFG, 'General', 'web_username', '')
         WEB_PASSWORD = check_setting_str(CFG, 'General', 'web_password', '')
         LAUNCH_BROWSER = bool(check_setting_int(CFG, 'General', 'launch_browser', 1))
-
-        LOCALHOST_IP = check_setting_str(CFG, 'General', 'localhost_ip', '')
 
         CPU_PRESET = check_setting_str(CFG, 'General', 'cpu_preset', 'NORMAL')
 
@@ -757,10 +730,6 @@ def initialize(consoleLogging=True):
         NFO_RENAME = bool(check_setting_int(CFG, 'General', 'nfo_rename', 1))
         CREATE_MISSING_SHOW_DIRS = bool(check_setting_int(CFG, 'General', 'create_missing_show_dirs', 0))
         ADD_SHOWS_WO_DIR = bool(check_setting_int(CFG, 'General', 'add_shows_wo_dir', 0))
-
-        NZBS = bool(check_setting_int(CFG, 'NZBs', 'nzbs', 0))
-        NZBS_UID = check_setting_str(CFG, 'NZBs', 'nzbs_uid', '')
-        NZBS_HASH = check_setting_str(CFG, 'NZBs', 'nzbs_hash', '')
 
         SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '')
         SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '')
@@ -969,8 +938,6 @@ def initialize(consoleLogging=True):
 
         EXTRA_SCRIPTS = [x.strip() for x in check_setting_str(CFG, 'General', 'extra_scripts', '').split('|') if
                          x.strip()]
-
-        USE_LISTVIEW = bool(check_setting_int(CFG, 'General', 'use_listview', 0))
 
         USE_ANIDB = bool(check_setting_int(CFG, 'ANIDB', 'use_anidb', 0))
         ANIDB_USERNAME = check_setting_str(CFG, 'ANIDB', 'anidb_username', '')
@@ -1398,7 +1365,6 @@ def save_config():
     new_config['General']['web_root'] = WEB_ROOT
     new_config['General']['web_username'] = WEB_USERNAME
     new_config['General']['web_password'] = helpers.encrypt(WEB_PASSWORD, ENCRYPTION_VERSION)
-    new_config['General']['localhost_ip'] = LOCALHOST_IP
     new_config['General']['cpu_preset'] = CPU_PRESET
     new_config['General']['anon_redirect'] = ANON_REDIRECT
     new_config['General']['use_api'] = int(USE_API)
@@ -1460,7 +1426,6 @@ def save_config():
     new_config['General']['display_background_transparent'] = DISPLAY_BACKGROUND_TRANSPARENT
     new_config['General']['display_all_seasons'] = int(DISPLAY_ALL_SEASONS)
 
-    new_config['General']['use_listview'] = int(USE_LISTVIEW)
     new_config['General']['metadata_xbmc'] = METADATA_XBMC
     new_config['General']['metadata_xbmc_12plus'] = METADATA_XBMC_12PLUS
     new_config['General']['metadata_mediabrowser'] = METADATA_MEDIABROWSER
@@ -1561,11 +1526,6 @@ def save_config():
             new_config[prov_id_uc][prov_id + '_enable_recentsearch'] = int(nzb_prov.enable_recentsearch)
         if hasattr(nzb_prov, 'enable_backlog'):
             new_config[prov_id_uc][prov_id + '_enable_backlog'] = int(nzb_prov.enable_backlog)
-
-    new_config['NZBs'] = {}
-    new_config['NZBs']['nzbs'] = int(NZBS)
-    new_config['NZBs']['nzbs_uid'] = NZBS_UID
-    new_config['NZBs']['nzbs_hash'] = NZBS_HASH
 
     new_config['SABnzbd'] = {}
     new_config['SABnzbd']['sab_username'] = SAB_USERNAME
@@ -1832,27 +1792,3 @@ def launchBrowser(start_port=None):
             webbrowser.open(browser_url, 1, 1)
         except:
             logger.log(u'Unable to launch a browser', logger.ERROR)
-
-
-def getEpList(ep_ids, showid=None):
-    if None is ep_ids or 0 == len(ep_ids):
-        return []
-
-    query = 'SELECT * FROM tv_episodes WHERE indexerid in (%s)' % (','.join(['?'] * len(ep_ids)),)
-    params = ep_ids
-
-    if None is not showid:
-        query += ' AND showid = ?'
-        params.append(showid)
-
-    my_db = db.DBConnection()
-    sql_results = my_db.select(query, params)
-
-    ep_list = []
-
-    for curEp in sql_results:
-        cur_show_obj = helpers.findCertainShow(showList, int(curEp['showid']))
-        cur_ep_obj = cur_show_obj.getEpisode(int(curEp['season']), int(curEp['episode']))
-        ep_list.append(cur_ep_obj)
-
-    return ep_list

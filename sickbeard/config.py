@@ -600,8 +600,9 @@ class ConfigMigrator():
         Reads in the old naming settings from your config and generates a new config template from them.
         """
         # get the old settings from the file and store them in the new variable names
-        sickbeard.OMGWTFNZBS_USERNAME = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_uid', '')
-        sickbeard.OMGWTFNZBS_APIKEY = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_key', '')
+        for prov in [curProvider for curProvider in providers.sortedProviderList() if curProvider.name == 'omgwtfnzbs']:
+            prov.username = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_uid', '')
+            prov.api_key = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_key', '')
 
     # Migration v4: Add default newznab cat_ids
     def _migrate_v4(self):
