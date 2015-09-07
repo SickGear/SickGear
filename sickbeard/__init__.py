@@ -60,7 +60,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 12
+CONFIG_VERSION = 13
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -641,7 +641,7 @@ def initialize(consoleLogging=True):
 
         CPU_PRESET = check_setting_str(CFG, 'General', 'cpu_preset', 'NORMAL')
 
-        ANON_REDIRECT = check_setting_str(CFG, 'General', 'anon_redirect', 'http://dereferer.org/?')
+        ANON_REDIRECT = check_setting_str(CFG, 'General', 'anon_redirect', '')
         PROXY_SETTING = check_setting_str(CFG, 'General', 'proxy_setting', '')
         PROXY_INDEXERS = bool(check_setting_int(CFG, 'General', 'proxy_indexers', 1))
         # attempt to help prevent users from breaking links by using a bad url
