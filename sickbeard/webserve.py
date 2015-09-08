@@ -63,7 +63,7 @@ except ImportError:
 
 
 class PageTemplate(Template):
-    def __init__(self, headers, *args, **KWs):
+    def __init__(self, static_url, headers, *args, **KWs):
         KWs['file'] = os.path.join(sickbeard.PROG_DIR, 'gui/' + sickbeard.GUI_NAME + '/interfaces/default/',
                                    KWs['file'])
         super(PageTemplate, self).__init__(*args, **KWs)
@@ -74,6 +74,7 @@ class PageTemplate(Template):
         self.sbHttpsEnabled = sickbeard.ENABLE_HTTPS
         self.sbHandleReverseProxy = sickbeard.HANDLE_REVERSE_PROXY
         self.sbThemeName = sickbeard.THEME_NAME
+        self.static_url = static_url
 
         if headers['Host'][0] == '[':
             self.sbHost = re.match('^\[.*\]', headers['Host'], re.X | re.M | re.S).group(0)
@@ -118,7 +119,7 @@ class BaseStaticFileHandler(StaticFileHandler):
 
 class BaseHandler(RequestHandler):
     def set_default_headers(self):
-        self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        #self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
         self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
 
     def redirect(self, url, permanent=False, status=None):
@@ -173,7 +174,7 @@ class LoginHandler(BaseHandler):
         if self.get_current_user():
             self.redirect(self.get_argument('next', '/home/'))
         else:
-            t = PageTemplate(headers=self.request.headers, file='login.tmpl')
+            t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='login.tmpl')
             t.resp = self.get_argument('resp', '')
             self.set_status(401)
             self.finish(t.respond())
@@ -281,7 +282,7 @@ class IsAliveHandler(BaseHandler):
 
 class WebHandler(BaseHandler):
     def page_not_found(self):
-        t = PageTemplate(headers=self.request.headers, file='404.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='404.tmpl')
         return t.respond()
 
     @authenticated
@@ -489,7 +490,7 @@ class MainHandler(WebHandler):
 
         sql_results.sort(sorts[sickbeard.EPISODE_VIEW_SORT])
 
-        t = PageTemplate(headers=self.request.headers, file='episodeView.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='episodeView.tmpl')
         t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
         t.today = datetime.datetime.now(network_timezones.sb_timezone)
         t.sql_results = sql_results
@@ -503,7 +504,7 @@ class MainHandler(WebHandler):
         return t.respond()
 
     def _genericMessage(self, subject, message):
-        t = PageTemplate(headers=self.request.headers, file='genericMessage.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='genericMessage.tmpl')
         t.submenu = self.HomeMenu()
         t.subject = subject
         t.message = message
@@ -565,7 +566,7 @@ class Home(MainHandler):
             self.redirect('/home/showlistView/')
 
     def showlistView(self):
-        t = PageTemplate(headers=self.request.headers, file='home.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='home.tmpl')
         t.showlists = []
         index = 0
         if sickbeard.SHOWLIST_TAGVIEW == 'custom':
@@ -976,7 +977,7 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
-        t = PageTemplate(headers=self.request.headers, file='restart.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='restart.tmpl')
         t.submenu = self.HomeMenu()
 
         # restart
@@ -994,7 +995,7 @@ class Home(MainHandler):
             # do a hard restart
             sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
 
-            t = PageTemplate(headers=self.request.headers, file='restart_bare.tmpl')
+            t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='restart_bare.tmpl')
             return t.respond()
         else:
             return self._genericMessage('Update Failed',
@@ -1037,7 +1038,7 @@ class Home(MainHandler):
             [showObj.indexerid]
         )
 
-        t = PageTemplate(headers=self.request.headers, file='displayShow.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='displayShow.tmpl')
         t.submenu = [{'title': 'Edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
 
         try:
@@ -1239,7 +1240,7 @@ class Home(MainHandler):
         showObj.exceptions = scene_exceptions.get_scene_exceptions(showObj.indexerid)
 
         if not location and not anyQualities and not bestQualities and not flatten_folders:
-            t = PageTemplate(headers=self.request.headers, file='editShow.tmpl')
+            t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='editShow.tmpl')
             t.submenu = self.HomeMenu()
 
             if showObj.is_anime:
@@ -1699,7 +1700,7 @@ class Home(MainHandler):
             # present season DESC episode DESC on screen
             ep_obj_rename_list.reverse()
 
-        t = PageTemplate(headers=self.request.headers, file='testRename.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='testRename.tmpl')
         t.submenu = [{'title': 'Edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
         t.ep_obj_list = ep_obj_rename_list
         t.show = showObj
@@ -1989,7 +1990,7 @@ class Home(MainHandler):
 class HomePostProcess(Home):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='home_postprocess.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='home_postprocess.tmpl')
         t.submenu = self.HomeMenu()
         return t.respond()
 
@@ -2015,7 +2016,7 @@ class HomePostProcess(Home):
 class NewHomeAddShows(Home):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='home_addShows.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='home_addShows.tmpl')
         t.submenu = self.HomeMenu()
         return t.respond()
 
@@ -2065,7 +2066,7 @@ class NewHomeAddShows(Home):
         return json.dumps({'results': final_results, 'langid': lang_id})
 
     def massAddTable(self, rootDir=None):
-        t = PageTemplate(headers=self.request.headers, file='home_massAddTable.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='home_massAddTable.tmpl')
         t.submenu = self.HomeMenu()
 
         if not rootDir:
@@ -2156,7 +2157,7 @@ class NewHomeAddShows(Home):
         self.set_header('Pragma', 'no-cache')
         self.set_header('Expires', '0')
 
-        t = PageTemplate(headers=self.request.headers, file='home_newShow.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='home_newShow.tmpl')
         t.submenu = self.HomeMenu()
         t.enable_anime_options = True
         t.enable_default_wanted = True
@@ -2206,7 +2207,7 @@ class NewHomeAddShows(Home):
         self.set_header('Pragma', 'no-cache')
         self.set_header('Expires', '0')
 
-        t = PageTemplate(headers=self.request.headers, file='home_recommendedShows.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='home_recommendedShows.tmpl')
         t.submenu = self.HomeMenu()
         t.enable_anime_options = False
 
@@ -2267,7 +2268,7 @@ class NewHomeAddShows(Home):
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
         """
-        t = PageTemplate(headers=self.request.headers, file='home_trendingShows.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='home_trendingShows.tmpl')
         t.submenu = self.HomeMenu()
 
         t.trending_shows = TraktCall('shows/trending.json/%API%', sickbeard.TRAKT_API_KEY)
@@ -2293,7 +2294,7 @@ class NewHomeAddShows(Home):
         """
         Prints out the page to add existing shows from a root dir
         """
-        t = PageTemplate(headers=self.request.headers, file='home_addExistingShow.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='home_addExistingShow.tmpl')
         t.submenu = self.HomeMenu()
         t.enable_anime_options = False
 
@@ -2517,7 +2518,7 @@ class Manage(MainHandler):
         return manageMenu
 
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='manage.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='manage.tmpl')
         t.submenu = self.ManageMenu()
         return t.respond()
 
@@ -2553,7 +2554,7 @@ class Manage(MainHandler):
         else:
             status_list = []
 
-        t = PageTemplate(headers=self.request.headers, file='manage_episodeStatuses.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='manage_episodeStatuses.tmpl')
         t.submenu = self.ManageMenu()
         t.whichStatus = whichStatus
 
@@ -2670,7 +2671,7 @@ class Manage(MainHandler):
 
     def subtitleMissed(self, whichSubs=None):
 
-        t = PageTemplate(headers=self.request.headers, file='manage_subtitleMissed.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='manage_subtitleMissed.tmpl')
         t.submenu = self.ManageMenu()
         t.whichSubs = whichSubs
 
@@ -2752,7 +2753,7 @@ class Manage(MainHandler):
 
     def backlogOverview(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='manage_backlogOverview.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='manage_backlogOverview.tmpl')
         t.submenu = self.ManageMenu()
 
         showCounts = {}
@@ -2793,7 +2794,7 @@ class Manage(MainHandler):
 
     def massEdit(self, toEdit=None):
 
-        t = PageTemplate(headers=self.request.headers, file='manage_massEdit.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='manage_massEdit.tmpl')
         t.submenu = self.ManageMenu()
 
         if not toEdit:
@@ -3169,7 +3170,7 @@ class Manage(MainHandler):
         if toRemove:
             return self.redirect('/manage/failedDownloads/')
 
-        t = PageTemplate(headers=self.request.headers, file='manage_failedDownloads.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='manage_failedDownloads.tmpl')
         t.failedResults = sqlResults
         t.limit = limit
         t.submenu = self.ManageMenu()
@@ -3179,7 +3180,7 @@ class Manage(MainHandler):
 
 class ManageSearches(Manage):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='manage_manageSearches.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='manage_manageSearches.tmpl')
         # t.backlogPI = sickbeard.backlogSearchScheduler.action.getProgressIndicator()
         t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
         t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
@@ -3254,7 +3255,7 @@ class ManageSearches(Manage):
 
 class showQueueOverview(Manage):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='manage_showQueueOverview.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='manage_showQueueOverview.tmpl')
         t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
         t.showList = sickbeard.showList
         t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
@@ -3333,7 +3334,7 @@ class History(MainHandler):
                 history['actions'].append(action)
                 history['actions'].sort(key=lambda x: x['time'], reverse=True)
 
-        t = PageTemplate(headers=self.request.headers, file='history.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='history.tmpl')
         t.historyResults = sqlResults
         t.compactResults = compact
         t.limit = limit
@@ -3376,7 +3377,7 @@ class Config(MainHandler):
         ]
 
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='config.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='config.tmpl')
         t.submenu = self.ConfigMenu
 
         return t.respond()
@@ -3385,7 +3386,7 @@ class Config(MainHandler):
 class ConfigGeneral(Config):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='config_general.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='config_general.tmpl')
         t.submenu = self.ConfigMenu
         t.show_tags = ', '.join(sickbeard.SHOW_TAGS)
         return t.respond()
@@ -3588,7 +3589,7 @@ class ConfigGeneral(Config):
 class ConfigSearch(Config):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='config_search.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='config_search.tmpl')
         t.submenu = self.ConfigMenu
         return t.respond()
 
@@ -3676,7 +3677,7 @@ class ConfigSearch(Config):
 class ConfigPostProcessing(Config):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='config_postProcessing.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='config_postProcessing.tmpl')
         t.submenu = self.ConfigMenu
         return t.respond()
 
@@ -3871,7 +3872,7 @@ class ConfigPostProcessing(Config):
 
 class ConfigProviders(Config):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='config_providers.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='config_providers.tmpl')
         t.submenu = self.ConfigMenu
         return t.respond()
 
@@ -4323,7 +4324,7 @@ class ConfigProviders(Config):
 
 class ConfigNotifications(Config):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='config_notifications.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='config_notifications.tmpl')
         t.submenu = self.ConfigMenu
         return t.respond()
 
@@ -4565,7 +4566,7 @@ class ConfigNotifications(Config):
 
 class ConfigSubtitles(Config):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='config_subtitles.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='config_subtitles.tmpl')
         t.submenu = self.ConfigMenu
         return t.respond()
 
@@ -4623,7 +4624,7 @@ class ConfigSubtitles(Config):
 class ConfigAnime(Config):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='config_anime.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='config_anime.tmpl')
         t.submenu = self.ConfigMenu
         return t.respond()
 
@@ -4678,7 +4679,7 @@ class ErrorLogs(MainHandler):
 
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='errorlogs.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='errorlogs.tmpl')
         t.submenu = self.ErrorLogsMenu
 
         return t.respond()
@@ -4689,7 +4690,7 @@ class ErrorLogs(MainHandler):
 
     def viewlog(self, minLevel=logger.MESSAGE, maxLines=500):
 
-        t = PageTemplate(headers=self.request.headers, file='viewlogs.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='viewlogs.tmpl')
         t.submenu = self.ErrorLogsMenu
 
         minLevel = int(minLevel)
@@ -4755,7 +4756,7 @@ class WebFileBrowser(MainHandler):
 class ApiBuilder(MainHandler):
     def index(self):
         """ expose the api-builder template """
-        t = PageTemplate(headers=self.request.headers, file='apiBuilder.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='apiBuilder.tmpl')
 
         def titler(x):
             return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
@@ -4795,7 +4796,7 @@ class Cache(MainHandler):
 
 
 
-        t = PageTemplate(headers=self.request.headers, file='cache.tmpl')
+        t = PageTemplate(static_url=self.static_url,  headers=self.request.headers, file='cache.tmpl')
         t.cacheResults = sql_results
 
         return t.respond()

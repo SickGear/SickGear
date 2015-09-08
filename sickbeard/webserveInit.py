@@ -34,6 +34,8 @@ class WebServer(threading.Thread):
         self.options['web_root'] = ('/' + self.options['web_root'].lstrip('/')) if self.options[
             'web_root'] else ''
 
+        self.options['static_path'] = os.path.join(sickbeard.PROG_DIR, 'gui/%s/' % sickbeard.GUI_NAME)
+
         # tornado setup
         self.enable_https = self.options['enable_https']
         self.https_cert = self.options['https_cert']
@@ -60,7 +62,9 @@ class WebServer(threading.Thread):
                                gzip=True,
                                xheaders=sickbeard.HANDLE_REVERSE_PROXY,
                                cookie_secret=sickbeard.COOKIE_SECRET,
-                               login_url='%s/login/' % self.options['web_root']
+                               login_url='%s/login/' % self.options['web_root'],
+                               static_path=self.options['static_path'],
+                               static_url_prefix='%s/gui/%s/' % (sickbeard.WEB_ROOT, sickbeard.GUI_NAME)
                                )
 
         # Main Handler
@@ -87,6 +91,7 @@ class WebServer(threading.Thread):
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
             (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
             (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
+            (r'%s/gui/%s/(/?.*)' % (self.options['web_root'], sickbeard.GUI_NAME), webserve.StaticFileHandler, dict(path=self.options['static_path'])),
             (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
 
@@ -102,27 +107,12 @@ class WebServer(threading.Thread):
         ])
 
         # Static File Handlers
-        self.app.add_handlers('.*$', [
-            # favicon
-            (r'%s/(favicon\.ico)' % self.options['web_root'], webserve.BaseStaticFileHandler,
-             {'path': os.path.join(self.options['data_root'], 'images/ico/favicon.ico')}),
+        '''self.app.add_handlers('.*$', [
 
-            # images
-            (r'%s/images/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
-             {'path': os.path.join(self.options['data_root'], 'images')}),
+            (r'%s/static/images/(.*)' % self.options['web_root'], webserve.StaticFileHandler,
+             {'path': os.path.join(sickbeard.PROG_DIR, 'static/images/')}),
 
-            # cached images
-            (r'%s/cache/images/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
-             {'path': os.path.join(sickbeard.CACHE_DIR, 'images')}),
-
-            # css
-            (r'%s/css/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
-             {'path': os.path.join(self.options['data_root'], 'css')}),
-
-            # javascript
-            (r'%s/js/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
-             {'path': os.path.join(self.options['data_root'], 'js')}),
-        ])
+        ])'''
 
     def run(self):
         if self.enable_https:

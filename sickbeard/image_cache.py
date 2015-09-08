@@ -40,7 +40,7 @@ class ImageCache:
         """
         Builds up the full path to the image cache directory
         """
-        return ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images'))
+        return ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui/%s/images/show/' % sickbeard.GUI_NAME))
 
     def _thumbnails_dir(self):
         """
@@ -123,6 +123,13 @@ class ImageCache:
         banner_thumb_path = self.banner_thumb_path(indexer_id)
         logger.log(u"Checking if file " + str(banner_thumb_path) + " exists", logger.DEBUG)
         return ek.ek(os.path.isfile, banner_thumb_path)
+
+    def poster_thumb_url(self, indexer_id):
+        if self.has_poster_thumbnail(indexer_id):
+            return 'images/show/thumbnails/%s.poster.jpg' % indexer_id
+        else:
+            return 'images/poster.png'
+
 
 
     BANNER = 1

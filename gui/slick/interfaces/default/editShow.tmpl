@@ -13,7 +13,7 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js"></script>
 <script type="text/javascript" charset="utf-8">
 <!--
 \$(document).ready(function(){
@@ -248,7 +248,7 @@
 #if $show.is_anime:
     #import sickbeard.blackandwhitelist
     #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
-		<script type="text/javascript" src="$sbRoot/js/blackwhite.js?$sbPID"></script>
+		<script type="text/javascript" src="$sbRoot/js/blackwhite.js"></script>
 #end if
 		<input type="submit" id="submit" value="Submit" class="btn btn-primary" />
 	</form>

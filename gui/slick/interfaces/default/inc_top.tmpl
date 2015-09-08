@@ -1,5 +1,6 @@
 #import sickbeard
 #import urllib
+#from sickbeard import WEB_ROOT
 #slurp
 <!DOCTYPE html>
 <html>
@@ -16,64 +17,64 @@
 	<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 	<![endif]-->
 
-	<link rel="shortcut icon" href="$sbRoot/images/ico/favicon.ico">
-	<link rel="apple-touch-icon" sizes="180x180" href="$sbRoot/images/ico/apple-touch-icon-180x180.png">
-	<link rel="apple-touch-icon" sizes="152x152" href="$sbRoot/images/ico/apple-touch-icon-152x152.png">
-	<link rel="apple-touch-icon" sizes="144x144" href="$sbRoot/images/ico/apple-touch-icon-144x144.png">
-	<link rel="apple-touch-icon" sizes="120x120" href="$sbRoot/images/ico/apple-touch-icon-120x120.png">
-	<link rel="apple-touch-icon" sizes="114x114" href="$sbRoot/images/ico/apple-touch-icon-114x114.png">
-	<link rel="apple-touch-icon" sizes="76x76" href="$sbRoot/images/ico/apple-touch-icon-76x76.png">
-	<link rel="apple-touch-icon" sizes="72x72" href="$sbRoot/images/ico/apple-touch-icon-72x72.png">
-	<link rel="apple-touch-icon" sizes="60x60" href="$sbRoot/images/ico/apple-touch-icon-60x60.png">
-	<link rel="apple-touch-icon" sizes="57x57" href="$sbRoot/images/ico/apple-touch-icon-57x57.png">		
-	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-192x192.png" sizes="192x192">
-	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-160x160.png" sizes="160x160">
-	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-96x96.png" sizes="96x96">
-	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-32x32.png" sizes="32x32">
-	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-16x16.png" sizes="16x16">
+	<link rel="shortcut icon" href="$static_url('images/ico/favicon.ico')">
+	<link rel="apple-touch-icon" sizes="180x180" href="$static_url('images/ico/apple-touch-icon-180x180.png')">
+	<link rel="apple-touch-icon" sizes="152x152" href="$static_url('images/ico/apple-touch-icon-152x152.png')">
+	<link rel="apple-touch-icon" sizes="144x144" href="$static_url('images/ico/apple-touch-icon-144x144.png')">
+	<link rel="apple-touch-icon" sizes="120x120" href="$static_url('images/ico/apple-touch-icon-120x120.png')">
+	<link rel="apple-touch-icon" sizes="114x114" href="$static_url('images/ico/apple-touch-icon-114x114.png')">
+	<link rel="apple-touch-icon" sizes="76x76" href="$static_url('images/ico/apple-touch-icon-76x76.png')">
+	<link rel="apple-touch-icon" sizes="72x72" href="$static_url('images/ico/apple-touch-icon-72x72.png')">
+	<link rel="apple-touch-icon" sizes="60x60" href="$static_url('images/ico/apple-touch-icon-60x60.png')">
+	<link rel="apple-touch-icon" sizes="57x57" href="$static_url('images/ico/apple-touch-icon-57x57.png')">
+	<link rel="icon" type="image/png" href="$static_url('images/ico/favicon-192x192.png')" sizes="192x192">
+	<link rel="icon" type="image/png" href="$static_url('images/ico/favicon-160x160.png')" sizes="160x160">
+	<link rel="icon" type="image/png" href="$static_url('images/ico/favicon-96x96.png')" sizes="96x96">
+	<link rel="icon" type="image/png" href="$static_url('images/ico/favicon-32x32.png')" sizes="32x32">
+	<link rel="icon" type="image/png" href="$static_url('images/ico/favicon-16x16.png')" sizes="16x16">
 	<meta name="msapplication-TileColor" content="#2b5797">
-	<meta name="msapplication-TileImage" content="$sbRoot/images/ico/mstile-144x144.png">
-	<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
+	<meta name="msapplication-TileImage" content="$static_url('images/ico/mstile-144x144.png')">
+	<meta name="msapplication-config" content="$static_url('css/browserconfig.xml')">
 
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap.css?v=$sbPID"/>
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/browser.css?v=$sbPID" />
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/jquery-ui-1.10.4.custom.css?v=$sbPID" />
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/jquery.qtip-2.2.1.min.css?v=$sbPID"/>
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/pnotify.custom.min.css?v=$sbPID" />
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID"/>
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/${sickbeard.THEME_NAME}.css?v=$sbPID" />
+	<link rel="stylesheet" type="text/css" href="$static_url('css/lib/bootstrap.css')"/>
+	<link rel="stylesheet" type="text/css" href="$static_url('css/browser.css')" />
+	<link rel="stylesheet" type="text/css" href="$static_url('css/lib/jquery-ui-1.10.4.custom.css')" />
+	<link rel="stylesheet" type="text/css" href="$static_url('css/lib/jquery.qtip-2.2.1.min.css')"/>
+	<link rel="stylesheet" type="text/css" href="$static_url('css/lib/pnotify.custom.min.css')" />
+	<link rel="stylesheet" type="text/css" href="$static_url('css/style.css')"/>
+	<link rel="stylesheet" type="text/css" href="$static_url('css/' + sickbeard.THEME_NAME + '.css')" />
 
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery-1.8.3.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/bootstrap.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/bootstrap-hover-dropdown.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery-ui-1.10.4.custom.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.cookie.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.cookiejar.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.json-2.2.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.selectboxes.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.tablesorter-2.17.7.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.tablesorter.widgets-2.17.7.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.qtip-2.2.1.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/pnotify.custom.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.form-3.35.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.ui.touch-punch-0.2.2.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/isotope.pkgd.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/imagesloaded.pkgd.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.confirm.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/script.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery-1.8.3.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/bootstrap.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/bootstrap-hover-dropdown.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery-ui-1.10.4.custom.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.cookie.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.cookiejar.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.json-2.2.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.selectboxes.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.tablesorter-2.17.7.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.tablesorter.widgets-2.17.7.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.qtip-2.2.1.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/pnotify.custom.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.form-3.35.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.ui.touch-punch-0.2.2.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/isotope.pkgd.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/imagesloaded.pkgd.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.confirm.js')"></script>
+	<script type="text/javascript" src="$static_url('js/script.js')"></script>
 #if $sickbeard.FUZZY_DATING
-	<script type="text/javascript" src="$sbRoot/js/moment/moment.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/fuzzyMoment.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$static_url('js/moment/moment.min.js')"></script>
+	<script type="text/javascript" src="$static_url('js/fuzzyMoment.js')"></script>
 #end if
 	<script type="text/javascript" charset="utf-8">
 	<!--
 		var sbRoot = '$sbRoot', anonURL = '$sickbeard.ANON_REDIRECT', themeSpinner = '#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#',
-			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top" />';
+			top_image_html = '<img src="$static_url('images/top.gif')" width="31" height="11" alt="Jump to top" />';
 	//-->
 	</script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.scrolltopcontrol-1.1.js"></script>
-	<script type="text/javascript" src="$sbRoot/js/browser.js"></script>
-	<script type="text/javascript" src="$sbRoot/js/ajaxNotifications.js"></script>
+	<script type="text/javascript" src="$static_url('js/lib/jquery.scrolltopcontrol-1.1.js')"></script>
+	<script type="text/javascript" src="$static_url('js/browser.js')"></script>
+	<script type="text/javascript" src="$static_url('js/ajaxNotifications.js')"></script>
 	<script type="text/javascript">
 	<!--
 #raw
@@ -111,7 +112,7 @@
 			$('#SubMenu a:contains("Update show in Kodi")').addClass('btn').html('<i class="sgicon-kodi"></i>Update show in Kodi');
 			$('#SubMenu a[href$="/home/updateKODI/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
 		}
-#end raw	
+#end raw
 
 		\$(document).ready(function(){
 			initActions();
@@ -120,7 +121,7 @@
 		});
 	//-->
 	</script>
-	<script type="text/javascript" src="$sbRoot/js/confirmations.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$static_url('js/confirmations.js')"></script>
 </head>
 #set $tab = 4
 #set $body_attr = ''
@@ -140,7 +141,7 @@
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 				</button>
-				<a href="$sbRoot/home/" class="navbar-brand" tabindex="-1" title="SickGear"><img alt="SickGear" src="$sbRoot/images/sickgear.png" style="height: 50px;" class="img-responsive pull-left" /></a>
+				<a href="$sbRoot/home/" class="navbar-brand" tabindex="-1" title="SickGear"><img alt="SickGear" src="$static_url('images/sickgear.png')" style="height: 50px;" class="img-responsive pull-left" /></a>
 			</div>
 
 			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -197,7 +198,7 @@
 					</li>
 
 					<li id="NAVconfig" class="dropdown">
-						<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
+						<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$static_url('images/menu/system18.png')" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>Help &amp; Info</a></li>
 							<li><a href="$sbRoot/config/general/" tabindex="$tab#set $tab += 1#"><i class="sgicon-config"></i>General</a></li>
@@ -211,7 +212,7 @@
 					</li>
 
 					<li class="dropdown">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span></a>
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$static_url('images/menu/system18-2.png')" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/manage/manageSearches/forceVersionCheck" tabindex="$tab#set $tab += 1#"><i class="sgicon-updatecheck"></i>Force Version Check</a></li>
 #if $sickbeard.WEB_USERNAME or $sickbeard.WEB_PASSWORD
