@@ -350,7 +350,7 @@
 						<td class="show-table">
             #if 'simple' != $layout
                 #set $img_text = ($curShow.network, 'No Network')[None is $curShow.network]
-							<img class="show-network-image" src="$static_url($sbRoot + 'images/network/' + $network_images[curShow.indexerid])" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
+							<img class="show-network-image" src="$static_url('images/network/' + $network_images[curShow.indexerid])" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
             #else
 							$curShow.network
             #end if
