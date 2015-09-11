@@ -93,6 +93,8 @@ class TransmithenetProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            if tr.find('td', class_='header'):
+                                continue
                             downlink = tr.find('a', href=rc['get'])
                             if None is downlink:
                                 continue
@@ -102,7 +104,8 @@ class TransmithenetProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = ('title' in info.attrs and info['title']) or info.get_text().strip()
+                                title = ('data-src' in info.attrs and info['data-src']) or\
+                                        ('title' in info.attrs and info['title']) or info.get_text().strip()
 
                                 download_url = self.urls['get'] % str(downlink['href']).lstrip('/')
                             except (AttributeError, TypeError):
