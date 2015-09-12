@@ -48,7 +48,7 @@ def _remove_zoneinfo_failed(filename):
 
 # helper to remove old unneeded zoneinfo files
 def _remove_old_zoneinfo():
-    zonefilename = zoneinfo._ZONEFILENAME
+    zonefilename = zoneinfo.ZONEFILENAME
     if None is zonefilename:
         return
     cur_zoneinfo = ek.ek(basename, zonefilename)
@@ -83,7 +83,7 @@ def _update_zoneinfo():
                    logger.WARNING)
         return
 
-    zonefilename = zoneinfo._ZONEFILENAME
+    zonefilename = zoneinfo.ZONEFILENAME
     cur_zoneinfo = zonefilename
     if None is not cur_zoneinfo:
         cur_zoneinfo = ek.ek(basename, zonefilename)
@@ -222,7 +222,7 @@ def get_network_timezone(network, network_dict):
         return sb_timezone
 
     try:
-        if zoneinfo._ZONEFILENAME is not None:
+        if zoneinfo.ZONEFILENAME is not None:
             try:
                 n_t = tz.gettz(network_dict[network])
             except:
