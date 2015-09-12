@@ -27,6 +27,7 @@
 * Fix post processing season pack folders
 * Fix saving torrent provider option "Seed until ratio" after recent refactor
 * Change white text in light theme on Manage / Episode Status Management page to black for better readability
+* Add SceneTime torrent provider
 * Change TtN provider to parse new layout
 * Improve recognition of SD quality
 * Fix halting in mid flow of Add Existing Show which resulted in failure to scan statuses and filesizes 

@@ -36,7 +36,7 @@ from sickbeard import providers, metadata, config, webserveInit, searchBacklog, 
     autoPostProcesser, subtitles, traktChecker, helpers, db, exceptions, show_queue, search_queue, scheduler, \
     show_name_helpers, logger, naming, searchRecent, searchProper, scene_numbering, scene_exceptions, name_cache
 from sickbeard.providers.generic import GenericProvider
-from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, grabtheinfo, \
+from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, grabtheinfo, scenetime, \
     omgwtfnzbs, scc, torrentday, hdbits, speedcd, nyaatorrents, torrentbytes, beyondhd, gftracker, transmithe_net, \
     freshontv, bitsoup, tokyotoshokan, animenzb, totv, rarbg, morethan, alpharatio, pisexy, strike, torrentshack
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
