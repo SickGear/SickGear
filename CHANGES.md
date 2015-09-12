@@ -29,6 +29,7 @@
 * Change white text in light theme on Manage / Episode Status Management page to black for better readability
 * Change TtN provider to parse new layout
 * Improve recognition of SD quality
+* Fix halting in mid flow of Add Existing Show which resulted in failure to scan statuses and filesizes 
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
