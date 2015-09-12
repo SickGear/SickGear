@@ -726,7 +726,7 @@ class TVShow(object):
                 if None is not new_status:
                     with cur_ep.lock:
                         logger.log(u'STATUS: we have an associated file, so setting the status from %s to DOWNLOADED/%s'
-                                   % (cur_ep.status, Quality.compositeStatus(Quality.DOWNLOADED, new_quality)), logger.DEBUG)
+                                   % (cur_ep.status, Quality.compositeStatus(new_status, new_quality)), logger.DEBUG)
                         cur_ep.status = Quality.compositeStatus(new_status, new_quality)
 
             with cur_ep.lock:
