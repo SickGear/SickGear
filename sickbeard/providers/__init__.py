@@ -44,6 +44,7 @@ __all__ = ['womble',
            'gftracker',
            'transmithe_net',
            'grabtheinfo',
+           'scenetime',
 ]
 
 from os import sys
