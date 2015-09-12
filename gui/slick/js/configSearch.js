@@ -80,7 +80,6 @@ $(document).ready(function(){
                 $(torrent_seed_time_option).show();
             } else if ('transmission' == selectedProvider){
                 client = 'Transmission';
-                $(torrent_seed_time_option).show();
                 $(torrent_high_bandwidth_option).show();
                 $(torrent_label_option).hide();
                 //$('#directory_title').text(client + directory);

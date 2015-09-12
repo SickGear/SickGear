@@ -3655,7 +3655,7 @@ class ConfigSearch(Config):
         sickbeard.TORRENT_LABEL = torrent_label
         sickbeard.TORRENT_VERIFY_CERT = config.checkbox_to_value(torrent_verify_cert)
         sickbeard.TORRENT_PATH = torrent_path
-        sickbeard.TORRENT_SEED_TIME = torrent_seed_time
+        sickbeard.TORRENT_SEED_TIME = config.to_int(torrent_seed_time, 0)
         sickbeard.TORRENT_PAUSED = config.checkbox_to_value(torrent_paused)
         sickbeard.TORRENT_HIGH_BANDWIDTH = config.checkbox_to_value(torrent_high_bandwidth)
         sickbeard.TORRENT_HOST = config.clean_url(torrent_host)
@@ -4143,6 +4143,15 @@ class ConfigProviders(Config):
         for curTorrentProvider in [curProvider for curProvider in sickbeard.providers.sortedProviderList() if
                                    curProvider.providerType == sickbeard.GenericProvider.TORRENT]:
 
+            if hasattr(curTorrentProvider, '_seed_ratio'):
+                try:
+                    curTorrentProvider._seed_ratio = str(kwargs[curTorrentProvider.get_id() + '_ratio']).strip()
+                except:
+                    curTorrentProvider._seed_ratio = None
+
+            if hasattr(curTorrentProvider, 'seed_time') and curTorrentProvider.get_id() + '_seed_time' in kwargs:
+                curTorrentProvider.seed_time = config.to_int(str(kwargs[curTorrentProvider.get_id() + '_seed_time']).strip(), 0)
+
             if hasattr(curTorrentProvider, 'minseed'):
                 try:
                     curTorrentProvider.minseed = int(str(kwargs[curTorrentProvider.get_id() + '_minseed']).strip())
@@ -4154,12 +4163,6 @@ class ConfigProviders(Config):
                     curTorrentProvider.minleech = int(str(kwargs[curTorrentProvider.get_id() + '_minleech']).strip())
                 except:
                     curTorrentProvider.minleech = 0
-
-            if hasattr(curTorrentProvider, '_seed_ratio'):
-                try:
-                    curTorrentProvider._seed_ratio = str(kwargs[curTorrentProvider.get_id() + '_ratio']).strip()
-                except:
-                    curTorrentProvider._seed_ratio = None
 
             if hasattr(curTorrentProvider, 'digest'):
                 try:
