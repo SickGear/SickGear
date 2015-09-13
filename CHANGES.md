@@ -30,7 +30,9 @@
 * Add SceneTime torrent provider
 * Change TtN provider to parse new layout
 * Improve recognition of SD quality
-* Fix halting in mid flow of Add Existing Show which resulted in failure to scan statuses and filesizes 
+* Fix halting in mid flow of Add Existing Show which resulted in failure to scan statuses and filesizes
+* Change default de-referrer url to blank
+* Change javascript urls in templates to allow proper caching
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
