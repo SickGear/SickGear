@@ -30,9 +30,9 @@ import sickbeard
 from sickbeard.tv import TVEpisode, TVShow
 import sickbeard.common as c
 
-tests = {"Dexter": {"a": 1, "q": c.HD, "s": 5, "e": [7], "b": 'Dexter.S05E07.720p.BluRay.X264-REWARD', "i": ['Dexter.S05E07.720p.BluRay.X264-REWARD', 'Dexter.S05E07.720p.X264-REWARD']},
-         "House": {"a": 1, "q": c.HD, "s": 4, "e": [5], "b": 'House.4x5.720p.BluRay.X264-REWARD', "i": ['Dexter.S05E04.720p.X264-REWARD', 'House.4x5.720p.BluRay.X264-REWARD']},
-         "Hells Kitchen": {"a": 1, "q": c.SD, "s": 6, "e": [14, 15], "b": 'Hells.Kitchen.s6e14e15.HDTV.XviD-ASAP', "i": ['Hells.Kitchen.S06E14.HDTV.XviD-ASAP', 'Hells.Kitchen.6x14.HDTV.XviD-ASAP', 'Hells.Kitchen.s6e14e15.HDTV.XviD-ASAP']}
+tests = {'Dexter': {'a': 1, 'q': c.HD, 's': 5, 'e': [7], 'b': 'Dexter.S05E07.720p.BluRay.X264-REWARD', 'i': ['Dexter.S05E07.720p.BluRay.X264-REWARD', 'Dexter.S05E07.720p.X264-REWARD']},
+         'House': {'a': 1, 'q': c.HD, 's': 4, 'e': [5], 'b': 'House.4x5.720p.BluRay.X264-REWARD', 'i': ['Dexter.S05E04.720p.X264-REWARD', 'House.4x5.720p.BluRay.X264-REWARD']},
+         'Hells Kitchen': {'a': 1, 'q': c.SD, 's': 6, 'e': [14, 15], 'b': 'Hells.Kitchen.s6e14e15.HDTV.XviD-ASAP', 'i': ['Hells.Kitchen.S06E14.HDTV.XviD-ASAP', 'Hells.Kitchen.6x14.HDTV.XviD-ASAP', 'Hells.Kitchen.s6e14e15.HDTV.XviD-ASAP']}
        }
 
 
@@ -69,23 +69,23 @@ def test_generator(tvdbdid, show_name, curData, forceSearch):
 
     def test(self):
         global searchItems
-        searchItems = curData["i"]
+        searchItems = curData['i']
         show = TVShow(1, tvdbdid)
         show.name = show_name
-        show.quality = curData["q"]
+        show.quality = curData['q']
         show.saveToDB()
         sickbeard.showList.append(show)
         episode = None
 
-        for epNumber in curData["e"]:
-            episode = TVEpisode(show, curData["s"], epNumber)
+        for epNumber in curData['e']:
+            episode = TVEpisode(show, curData['s'], epNumber)
             episode.status = c.WANTED
             episode.saveToDB()
 
         bestResult = search.searchProviders(show, episode.season, episode.episode, forceSearch)
         if not bestResult:
-            self.assertEqual(curData["b"], bestResult)
-        self.assertEqual(curData["b"], bestResult.name) #first is expected, second is choosen one
+            self.assertEqual(curData['b'], bestResult)
+        self.assertEqual(curData['b'], bestResult.name) #first is expected, second is choosen one
     return test
 
 if __name__ == '__main__':
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     tvdbdid = 1
     for forceSearch in (True, False):
         for name, curData in tests.items():
-            if not curData["a"]:
+            if not curData['a']:
                 continue
             fname = name.replace(' ', '_')
             if forceSearch:

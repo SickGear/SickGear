@@ -86,7 +86,7 @@ class OldInitialSchema(db.SchemaUpgrade):
                 logger.log_error_and_exit(u'Your database version ('
                                           + str(cur_db_version)
                                           + ') is too old to migrate from what this version of SickGear supports ('
-                                          + str(MIN_DB_VERSION) + ').' + "\n"
+                                          + str(MIN_DB_VERSION) + ').' + '\n'
                                           + 'Upgrade using a previous version (tag) build 496 to build 501 of SickGear first or remove database file to begin fresh.'
                                           )
 
@@ -94,7 +94,7 @@ class OldInitialSchema(db.SchemaUpgrade):
                 logger.log_error_and_exit(u'Your database version ('
                                           + str(cur_db_version)
                                           + ') has been incremented past what this version of SickGear supports ('
-                                          + str(MAX_DB_VERSION) + ').' + "\n"
+                                          + str(MAX_DB_VERSION) + ').' + '\n'
                                           + 'If you have used other forks of SickGear, your database may be unusable due to their modifications.'
                                           )
 

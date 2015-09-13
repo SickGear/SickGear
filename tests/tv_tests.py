@@ -31,18 +31,18 @@ class TVShowTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_init_indexerid(self):
-        show = TVShow(1, 1, "en")
+        show = TVShow(1, 1, 'en')
         self.assertEqual(show.indexerid, 1)
 
     def test_change_indexerid(self):
-        show = TVShow(1, 1, "en")
-        show.name = "show name"
-        show.tvrname = "show name"
-        show.network = "cbs"
-        show.genre = "crime"
+        show = TVShow(1, 1, 'en')
+        show.name = 'show name'
+        show.tvrname = 'show name'
+        show.network = 'cbs'
+        show.genre = 'crime'
         show.runtime = 40
-        show.status = "5"
-        show.airs = "monday"
+        show.status = '5'
+        show.airs = 'monday'
         show.startyear = 1987
 
         show.saveToDB()
@@ -55,11 +55,11 @@ class TVShowTests(test.SickbeardTestDBCase):
         self.assertEqual(show.indexerid, 2)
 
     def test_set_name(self):
-        show = TVShow(1, 1, "en")
-        show.name = "newName"
+        show = TVShow(1, 1, 'en')
+        show.name = 'newName'
         show.saveToDB()
         show.loadFromDB(skipNFO=True)
-        self.assertEqual(show.name, "newName")
+        self.assertEqual(show.name, 'newName')
 
 
 class TVEpisodeTests(test.SickbeardTestDBCase):
@@ -69,12 +69,12 @@ class TVEpisodeTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_init_empty_db(self):
-        show = TVShow(1, 1, "en")
+        show = TVShow(1, 1, 'en')
         ep = TVEpisode(show, 1, 1)
-        ep.name = "asdasdasdajkaj"
+        ep.name = 'asdasdasdajkaj'
         ep.saveToDB()
         ep.loadFromDB(1, 1)
-        self.assertEqual(ep.name, "asdasdasdajkaj")
+        self.assertEqual(ep.name, 'asdasdasdajkaj')
 
 
 class TVTests(test.SickbeardTestDBCase):
@@ -84,14 +84,14 @@ class TVTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_getEpisode(self):
-        show = TVShow(1, 1, "en")
-        show.name = "show name"
-        show.tvrname = "show name"
-        show.network = "cbs"
-        show.genre = "crime"
+        show = TVShow(1, 1, 'en')
+        show.name = 'show name'
+        show.tvrname = 'show name'
+        show.network = 'cbs'
+        show.genre = 'crime'
         show.runtime = 40
-        show.status = "5"
-        show.airs = "monday"
+        show.status = '5'
+        show.airs = 'monday'
         show.startyear = 1987
         show.saveToDB()
         sickbeard.showList = [show]

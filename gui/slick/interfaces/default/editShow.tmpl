@@ -13,7 +13,7 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
 <script type="text/javascript" charset="utf-8">
 <!--
 \$(document).ready(function(){
@@ -186,7 +186,7 @@
 				<span class="component-title">Scene numbering</span>
 				<span class="component-desc">
 					<input type="checkbox" name="scene" id="scene"#if $show.scene == 1 then $html_checked else ''#>
-					<p>search for episodes that are numbered by scene groups instead of by the TV network</p>
+					<p>search for episodes numbered by scene groups instead of by the TV network <em class="grey-text">(#if $show_has_scene_map then 'scene/manual numbers' else 'manual numbers only '# available)</em></p>
 				</span>
 			</label>
 		</div>
@@ -248,7 +248,7 @@
 #if $show.is_anime:
     #import sickbeard.blackandwhitelist
     #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
-		<script type="text/javascript" src="$sbRoot/js/blackwhite.js?$sbPID"></script>
+		<script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
 #end if
 		<input type="submit" id="submit" value="Submit" class="btn btn-primary" />
 	</form>

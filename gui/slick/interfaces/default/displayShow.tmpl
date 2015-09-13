@@ -15,19 +15,19 @@
 #import os.path, os
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/lib/jquery.bookmarkscroll.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/lib/jquery.bookmarkscroll.js?v=$sbPID"></script>
 
 <input type="hidden" id="sbRoot" value="$sbRoot">
 
-<script type="text/javascript" src="$sbRoot/js/displayShow.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/sceneExceptionsTooltip.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/displayShow.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/sceneExceptionsTooltip.js?v=$sbPID"></script>
 #if $sickbeard.USE_IMDB_INFO
-<script type="text/javascript" src="$sbRoot/js/ratingTooltip.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/ratingTooltip.js?v=$sbPID"></script>
 #end if
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSubtitles.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/lib/jquery.collapser.min.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/ajaxEpSubtitles.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/lib/jquery.collapser.min.js?v=$sbPID"></script>
 <script type="text/javascript" charset="utf-8">
 <!--
 \$(document).ready(function(){

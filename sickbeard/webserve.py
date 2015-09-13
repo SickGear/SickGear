@@ -49,7 +49,7 @@ from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
 from sickbeard.searchBacklog import FULL_BACKLOG, LIMITED_BACKLOG
 from tornado import gen
-from tornado.web import RequestHandler, authenticated
+from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from lib import adba
 from lib import subliminal
 from lib.dateutil import tz
@@ -111,9 +111,15 @@ class PageTemplate(Template):
         return super(PageTemplate, self).compile(*args, **kwargs)
 
 
+class BaseStaticFileHandler(StaticFileHandler):
+    def set_extra_headers(self, path):
+        self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
+
+
 class BaseHandler(RequestHandler):
     def set_default_headers(self):
         self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
 
     def redirect(self, url, permanent=False, status=None):
         if not url.startswith(sickbeard.WEB_ROOT):
@@ -512,7 +518,6 @@ class Home(MainHandler):
             {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
             {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
             {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX},
-            {'title': 'Manage Torrents', 'path': 'manage/manageTorrents', 'requires': self.haveTORRENT},
             {'title': 'Restart', 'path': 'home/restart/?pid=' + str(sickbeard.PID), 'confirm': True},
             {'title': 'Shutdown', 'path': 'home/shutdown/?pid=' + str(sickbeard.PID), 'confirm': True},
         ]
@@ -528,15 +533,6 @@ class Home(MainHandler):
     @staticmethod
     def havePLEX():
         return sickbeard.USE_PLEX and sickbeard.PLEX_UPDATE_LIBRARY
-
-    @staticmethod
-    def haveTORRENT():
-        if sickbeard.USE_TORRENTS and sickbeard.TORRENT_METHOD != 'blackhole' \
-                and (sickbeard.ENABLE_HTTPS and sickbeard.TORRENT_HOST[:5] == 'https'
-                     or not sickbeard.ENABLE_HTTPS and sickbeard.TORRENT_HOST[:5] == 'http:'):
-            return True
-        else:
-            return False
 
     @staticmethod
     def _getEpisode(show, season=None, episode=None, absolute=None):
@@ -1085,7 +1081,7 @@ class Home(MainHandler):
                 t.submenu.append({'title': 'Update show in Kodi',
                                   'path': 'home/updateKODI?showName=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveKODI})
-                t.submenu.append({'title': 'Preview Rename', 'path': 'home/testRename?show=%d' % showObj.indexerid})
+                t.submenu.append({'title': 'Media Renamer', 'path': 'home/testRename?show=%d' % showObj.indexerid})
                 if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
                         showObj) and showObj.subtitles:
                     t.submenu.append(
@@ -1265,6 +1261,7 @@ class Home(MainHandler):
             with showObj.lock:
                 t.show = showObj
                 t.scene_exceptions = get_scene_exceptions(showObj.indexerid)
+                t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list + sickbeard.scene_exceptions.xem_rage_ids_list
 
             return t.respond()
 
@@ -2166,14 +2163,6 @@ class NewHomeAddShows(Home):
 
         indexer, show_dir, indexer_id, show_name = self.split_extra_show(show_to_add)
 
-        if indexer_id and indexer and show_name:
-            use_provided_info = True
-        else:
-            use_provided_info = False
-
-        # tell the template whether we're giving it show name & Indexer ID
-        t.use_provided_info = use_provided_info
-
         # use the given show_dir for the indexer search if available
         if use_show_name:
             t.default_show_name = show_name
@@ -2190,7 +2179,9 @@ class NewHomeAddShows(Home):
         elif type(other_shows) != list:
             other_shows = [other_shows]
 
-        if use_provided_info:
+        # tell the template whether we're giving it show name & Indexer ID
+        t.use_provided_info = bool(indexer_id and indexer and show_name)
+        if t.use_provided_info:
             t.provided_indexer_id = int(indexer_id or 0)
             t.provided_indexer_name = show_name
 
@@ -2201,6 +2192,8 @@ class NewHomeAddShows(Home):
         t.whitelist = []
         t.blacklist = []
         t.groups = []
+
+        t.show_scene_maps = sickbeard.scene_exceptions.xem_tvdb_ids_list + sickbeard.scene_exceptions.xem_rage_ids_list
 
         return t.respond()
 
@@ -2514,11 +2507,6 @@ class Manage(MainHandler):
             {'title': 'Manage Searches', 'path': 'manage/manageSearches/'},
             {'title': 'Show Queue Overview', 'path': 'manage/showQueueOverview/'},
             {'title': 'Episode Status Management', 'path': 'manage/episodeStatuses/'}, ]
-
-        if sickbeard.USE_TORRENTS and sickbeard.TORRENT_METHOD != 'blackhole' \
-                and (sickbeard.ENABLE_HTTPS and sickbeard.TORRENT_HOST[:5] == 'https'
-                     or not sickbeard.ENABLE_HTTPS and sickbeard.TORRENT_HOST[:5] == 'http:'):
-            manageMenu.append({'title': 'Manage Torrents', 'path': 'manage/manageTorrents/'})
 
         if sickbeard.USE_SUBTITLES:
             manageMenu.append({'title': 'Missed Subtitle Management', 'path': 'manage/subtitleMissed/'})
@@ -3163,31 +3151,6 @@ class Manage(MainHandler):
 
         self.redirect('/manage/')
 
-    def manageTorrents(self, *args, **kwargs):
-
-        t = PageTemplate(headers=self.request.headers, file='manage_torrents.tmpl')
-        t.info_download_station = ''
-        t.submenu = self.ManageMenu()
-
-        if re.search('localhost', sickbeard.TORRENT_HOST):
-
-            if sickbeard.LOCALHOST_IP == '':
-                t.webui_url = re.sub('localhost', helpers.get_lan_ip(), sickbeard.TORRENT_HOST)
-            else:
-                t.webui_url = re.sub('localhost', sickbeard.LOCALHOST_IP, sickbeard.TORRENT_HOST)
-        else:
-            t.webui_url = sickbeard.TORRENT_HOST
-
-        if sickbeard.TORRENT_METHOD == 'utorrent':
-            t.webui_url = '/'.join(s.strip('/') for s in (t.webui_url, 'gui/'))
-        if sickbeard.TORRENT_METHOD == 'download_station':
-            if helpers.check_url(t.webui_url + 'download/'):
-                t.webui_url = t.webui_url + 'download/'
-            else:
-                t.info_download_station = '<p>To have a better experience please set the Download Station alias as <code>download</code>, you can check this setting in the Synology DSM <b>Control Panel</b> > <b>Application Portal</b>. Make sure you allow DSM to be embedded with iFrames too in <b>Control Panel</b> > <b>DSM Settings</b> > <b>Security</b>.</p><br/><p>There is more information about this available <a href="https://github.com/midgetspy/Sick-Beard/pull/338">here</a>.</p><br/>'
-
-        return t.respond()
-
     def failedDownloads(self, limit=100, toRemove=None):
 
         myDB = db.DBConnection('failed.db')
@@ -3432,7 +3395,7 @@ class ConfigGeneral(Config):
 
     def saveAddShowDefaults(self, default_status, any_qualities='', best_qualities='', default_wanted_begin=None,
                             default_wanted_latest=None, default_flatten_folders=False, default_scene=False,
-                            default_subtitles=False, default_anime=False):
+                            default_subtitles=False, default_anime=False, default_tag=''):
 
         any_qualities = ([], any_qualities.split(','))[any(any_qualities)]
         best_qualities = ([], best_qualities.split(','))[any(best_qualities)]
@@ -3445,6 +3408,7 @@ class ConfigGeneral(Config):
         sickbeard.SCENE_DEFAULT = config.checkbox_to_value(default_scene)
         sickbeard.SUBTITLES_DEFAULT = config.checkbox_to_value(default_subtitles)
         sickbeard.ANIME_DEFAULT = config.checkbox_to_value(default_anime)
+        sickbeard.DEFAULT_SHOW_TAG = default_tag
 
         sickbeard.save_config()
 
@@ -3691,7 +3655,7 @@ class ConfigSearch(Config):
         sickbeard.TORRENT_LABEL = torrent_label
         sickbeard.TORRENT_VERIFY_CERT = config.checkbox_to_value(torrent_verify_cert)
         sickbeard.TORRENT_PATH = torrent_path
-        sickbeard.TORRENT_SEED_TIME = torrent_seed_time
+        sickbeard.TORRENT_SEED_TIME = config.to_int(torrent_seed_time, 0)
         sickbeard.TORRENT_PAUSED = config.checkbox_to_value(torrent_paused)
         sickbeard.TORRENT_HIGH_BANDWIDTH = config.checkbox_to_value(torrent_high_bandwidth)
         sickbeard.TORRENT_HOST = config.clean_url(torrent_host)
@@ -4179,6 +4143,15 @@ class ConfigProviders(Config):
         for curTorrentProvider in [curProvider for curProvider in sickbeard.providers.sortedProviderList() if
                                    curProvider.providerType == sickbeard.GenericProvider.TORRENT]:
 
+            if hasattr(curTorrentProvider, '_seed_ratio'):
+                try:
+                    curTorrentProvider._seed_ratio = str(kwargs[curTorrentProvider.get_id() + '_ratio']).strip()
+                except:
+                    curTorrentProvider._seed_ratio = None
+
+            if hasattr(curTorrentProvider, 'seed_time') and curTorrentProvider.get_id() + '_seed_time' in kwargs:
+                curTorrentProvider.seed_time = config.to_int(str(kwargs[curTorrentProvider.get_id() + '_seed_time']).strip(), 0)
+
             if hasattr(curTorrentProvider, 'minseed'):
                 try:
                     curTorrentProvider.minseed = int(str(kwargs[curTorrentProvider.get_id() + '_minseed']).strip())
@@ -4190,12 +4163,6 @@ class ConfigProviders(Config):
                     curTorrentProvider.minleech = int(str(kwargs[curTorrentProvider.get_id() + '_minleech']).strip())
                 except:
                     curTorrentProvider.minleech = 0
-
-            if hasattr(curTorrentProvider, 'ratio'):
-                try:
-                    curTorrentProvider.ratio = str(kwargs[curTorrentProvider.get_id() + '_ratio']).strip()
-                except:
-                    curTorrentProvider.ratio = None
 
             if hasattr(curTorrentProvider, 'digest'):
                 try:
@@ -4664,7 +4631,7 @@ class ConfigAnime(Config):
         return t.respond()
 
     def saveAnime(self, use_anidb=None, anidb_username=None, anidb_password=None, anidb_use_mylist=None,
-                  split_home=None, anime_treat_as_hdtv=None):
+                  anime_treat_as_hdtv=None):
 
         results = []
 
@@ -4673,7 +4640,6 @@ class ConfigAnime(Config):
         if set('*') != set(anidb_password):
             sickbeard.ANIDB_PASSWORD = anidb_password
         sickbeard.ANIDB_USE_MYLIST = config.checkbox_to_value(anidb_use_mylist)
-        sickbeard.ANIME_SPLIT_HOME = config.checkbox_to_value(split_home)
         sickbeard.ANIME_TREAT_AS_HDTV = config.checkbox_to_value(anime_treat_as_hdtv)
 
         sickbeard.save_config()

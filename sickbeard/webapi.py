@@ -75,6 +75,7 @@ class Api(webserve.BaseHandler):
 
     def set_default_headers(self):
         self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
 
     def get(self, route, *args, **kwargs):
         route = route.strip('/') or 'index'

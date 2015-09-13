@@ -171,7 +171,7 @@ class RarbgProvider(generic.TorrentProvider):
     def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
 
         search_params = generic.TorrentProvider._get_episode_search_strings(self, ep_obj, detail_only=True)
-        if self.show.air_by_date and self.show.sports:
+        if self.show.air_by_date and self.show.is_sports:
             for x, types in enumerate(search_params):
                 for y, ep_type in enumerate(types):
                     search_params[x][ep_type][y] = '{{%s}}' % search_params[x][ep_type][y]

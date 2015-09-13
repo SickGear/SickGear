@@ -149,7 +149,7 @@ class GenericProvider:
 
         if GenericProvider.TORRENT == self.providerType:
             try:
-                torrent_hash = re.findall('urn:btih:([0-9a-f]{32,40})', result.url)[0].upper()
+                torrent_hash = re.findall('(?i)urn:btih:([0-9a-f]{32,40})', result.url)[0].upper()
 
                 if 32 == len(torrent_hash):
                     torrent_hash = b16encode(b32decode(torrent_hash)).lower()
@@ -158,34 +158,40 @@ class GenericProvider:
                     logger.log('Unable to extract torrent hash from link: ' + ex(result.url), logger.ERROR)
                     return False
 
-                urls = ['https://%s/%s.torrent' % (u, torrent_hash)
-                        for u in ('torcache.net/torrent', 'torrage.com/torrent', 'getstrike.net/torrents/api/download')]
+                urls = ['http%s://%s/%s.torrent' % (u + (torrent_hash,))
+                        for u in (('s', 'torcache.net/torrent'), ('s', 'getstrike.net/torrents/api/download'),
+                                  ('', 'thetorrent.org'))]
             except:
                 urls = [result.url]
 
-            filename = ek.ek(os.path.join, sickbeard.TORRENT_DIR,
-                             helpers.sanitizeFileName(result.name) + '.' + self.providerType)
         elif GenericProvider.NZB == self.providerType:
             urls = [result.url]
 
-            filename = ek.ek(os.path.join, sickbeard.NZB_DIR,
-                             helpers.sanitizeFileName(result.name) + '.' + self.providerType)
         else:
             return
 
         for url in urls:
-            if helpers.download_file(url, filename, session=self.session):
-                logger.log(u'Downloading a result from ' + self.name + ' at ' + url)
+            cache_dir = sickbeard.CACHE_DIR or helpers._getTempDir()
+            base_name = '%s.%s' % (helpers.sanitizeFileName(result.name), self.providerType)
+            cache_file = ek.ek(os.path.join, cache_dir, base_name)
 
-                if GenericProvider.TORRENT == self.providerType:
-                    logger.log(u'Saved magnet link to ' + filename, logger.MESSAGE)
-                else:
-                    logger.log(u'Saved result to ' + filename, logger.MESSAGE)
+            if helpers.download_file(url, cache_file, session=self.session):
+                logger.log(u'Downloaded a result from %s at %s' % (self.name, url))
 
-                if self._verify_download(filename):
-                    return True
-                elif ek.ek(os.path.isfile, filename):
-                    ek.ek(os.remove, filename)
+                if self._verify_download(cache_file):
+                    if GenericProvider.TORRENT == self.providerType:
+                        final_dir, link_type = (sickbeard.TORRENT_DIR, 'magnet')
+                    else:
+                        final_dir, link_type = (sickbeard.NZB_DIR, 'nzb')
+                    final_file = ek.ek(os.path.join, final_dir, base_name)
+
+                    helpers.moveFile(cache_file, final_file)
+                    if not ek.ek(os.path.isfile, cache_file) and ek.ek(os.path.isfile, final_file):
+                        logger.log(u'Saved %s link to %s' % (link_type, final_file), logger.MESSAGE)
+                        return True
+
+                if ek.ek(os.path.isfile, cache_file):
+                    ek.ek(os.remove, cache_file)
 
         logger.log(u'Failed to download result', logger.ERROR)
         return False
@@ -348,7 +354,7 @@ class GenericProvider:
             version = parse_result.version
 
             add_cache_entry = False
-            if not (show_obj.air_by_date or show_obj.sports):
+            if not (show_obj.air_by_date or show_obj.is_sports):
                 if 'sponly' == search_mode:
                     if len(parse_result.episode_numbers):
                         logger.log(u'This is supposed to be a season pack search but the result ' + title
@@ -608,6 +614,7 @@ class TorrentProvider(GenericProvider):
         self.providerType = GenericProvider.TORRENT
 
         self._seed_ratio = None
+        self.seed_time = None
 
     def image_name(self):
 
@@ -644,14 +651,14 @@ class TorrentProvider(GenericProvider):
 
     def _get_season_search_strings(self, ep_obj, detail_only=False, scene=True):
 
-        if ep_obj.show.air_by_date or ep_obj.show.sports:
+        if ep_obj.show.air_by_date or ep_obj.show.is_sports:
             ep_detail = str(ep_obj.airdate).split('-')[0]
-        elif ep_obj.show.anime:
+        elif ep_obj.show.is_anime:
             ep_detail = ep_obj.scene_absolute_number
         else:
-            ep_detail = 'S%02d' % int(ep_obj.scene_season)
+            ep_detail = 'S%02d' % int((ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show.is_scene)])
 
-        detail = ({}, {'Season_only': [ep_detail]})[detail_only and not self.show.sports and not self.show.anime]
+        detail = ({}, {'Season_only': [ep_detail]})[detail_only and not self.show.is_sports and not self.show.is_anime]
         return [dict({'Season': self._build_search_strings(ep_detail, scene)}.items() + detail.items())]
 
     def _get_episode_search_strings(self, ep_obj, add_string='', detail_only=False, scene=True, sep_date=' ', use_or=True):
@@ -659,18 +666,20 @@ class TorrentProvider(GenericProvider):
         if not ep_obj:
             return []
 
-        if self.show.air_by_date or self.show.sports:
+        if self.show.air_by_date or self.show.is_sports:
             ep_detail = str(ep_obj.airdate).replace('-', sep_date)
-            if self.show.sports:
+            if self.show.is_sports:
                 month = ep_obj.airdate.strftime('%b')
                 ep_detail = ([ep_detail] + [month], '%s|%s' % (ep_detail, month))[use_or]
-        elif self.show.anime:
+        elif self.show.is_anime:
             ep_detail = ep_obj.scene_absolute_number
         else:
-            ep_detail = sickbeard.config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                              'episodenumber': ep_obj.scene_episode}
-        append = (add_string, '')[self.show.anime]
-        detail = ({}, {'Episode_only': [ep_detail]})[detail_only and not self.show.sports and not self.show.anime]
+            season, episode = ((ep_obj.season, ep_obj.episode),
+                               (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show.is_scene)]
+            ep_dict = {'seasonnumber': season, 'episodenumber': episode}
+            ep_detail = sickbeard.config.naming_ep_type[2] % ep_dict
+        append = (add_string, '')[self.show.is_anime]
+        detail = ({}, {'Episode_only': [ep_detail]})[detail_only and not self.show.is_sports and not self.show.is_anime]
         return [dict({'Episode': self._build_search_strings(ep_detail, scene, append)}.items() + detail.items())]
 
     def _build_search_strings(self, ep_detail, process_name=True, append=''):

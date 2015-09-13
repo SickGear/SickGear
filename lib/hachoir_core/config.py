@@ -14,7 +14,7 @@ unicode_stdout = True     # Replace stdout and stderr with Unicode compatible ob
 # Global options
 debug = False             # Display many informations usefull to debug
 verbose = False           # Display more informations
-quiet = False             # Don't display warnings
+quiet = True              # Don't display warnings
 
 # Use internationalization and localization (gettext)?
 if os.name == "nt":

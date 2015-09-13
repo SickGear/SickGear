@@ -444,7 +444,8 @@ class ConfigMigrator():
                                 9: 'Rename pushbullet variables',
                                 10: 'Reset backlog frequency to default',
                                 11: 'Migrate anime split view to new layout',
-                                12: 'Add "hevc" and some non-english languages to ignore words if not found'}
+                                12: 'Add "hevc" and some non-english languages to ignore words if not found',
+                                13: 'Change default dereferrer url to blank'}
 
     def migrate_config(self):
         """ Calls each successive migration until the config is the same version as SG expects """
@@ -599,8 +600,9 @@ class ConfigMigrator():
         Reads in the old naming settings from your config and generates a new config template from them.
         """
         # get the old settings from the file and store them in the new variable names
-        sickbeard.OMGWTFNZBS_USERNAME = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_uid', '')
-        sickbeard.OMGWTFNZBS_APIKEY = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_key', '')
+        for prov in [curProvider for curProvider in providers.sortedProviderList() if curProvider.name == 'omgwtfnzbs']:
+            prov.username = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_uid', '')
+            prov.api_key = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_key', '')
 
     # Migration v4: Add default newznab cat_ids
     def _migrate_v4(self):
@@ -768,3 +770,8 @@ class ConfigMigrator():
                 new_list += [new_word]
 
         sickbeard.IGNORE_WORDS = ', '.join(sorted(new_list))
+
+    def _migrate_v13(self):
+        # change dereferrer.org urls to blank, but leave any other url untouched
+        if sickbeard.ANON_REDIRECT == 'http://dereferer.org/?':
+            sickbeard.ANON_REDIRECT = ''
