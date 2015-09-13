@@ -1310,37 +1310,33 @@ class TVShow(object):
 
     def getOverview(self, epStatus):
 
-        if epStatus == WANTED:
-            return Overview.WANTED
-        elif epStatus in (UNAIRED, UNKNOWN):
-            return Overview.UNAIRED
-        elif epStatus in (SKIPPED, IGNORED):
-            return Overview.SKIPPED
-        elif epStatus == ARCHIVED:
+        if ARCHIVED == epStatus:
             return Overview.GOOD
-        elif epStatus in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
+        if WANTED == epStatus:
+            return Overview.WANTED
+        if epStatus in (SKIPPED, IGNORED):
+            return Overview.SKIPPED
+        if epStatus in (UNAIRED, UNKNOWN):
+            return Overview.UNAIRED
+        if epStatus in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
 
-            anyQualities, bestQualities = Quality.splitQuality(self.quality)  # @UnusedVariable
-            if bestQualities:
-                maxBestQuality = max(bestQualities)
-            else:
-                maxBestQuality = None
-
-            epStatus, curQuality = Quality.splitCompositeStatus(epStatus)
-
-            if epStatus == FAILED:
+            status, quality = Quality.splitCompositeStatus(epStatus)
+            if FAILED == status:
                 return Overview.WANTED
-            elif epStatus in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST):
+            if status in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST):
                 return Overview.SNATCHED
-            # if they don't want re-downloads then we call it good if they have anything
-            elif maxBestQuality == None:
+
+            void, best_qualities = Quality.splitQuality(self.quality)
+            # if re-downloads aren't wanted then mark it "good" if there is anything
+            if not len(best_qualities):
                 return Overview.GOOD
-            # if they have one but it's not the best they want then mark it as qual
-            elif curQuality < maxBestQuality:
-                return Overview.QUAL
-            # if it's >= maxBestQuality then it's good
-            else:
+
+            min_best, max_best = min(best_qualities), max(best_qualities)
+            if quality >= max_best \
+                    or (self.archive_firstmatch and
+                        (quality in best_qualities or (None is not min_best and quality > min_best))):
                 return Overview.GOOD
+            return Overview.QUAL
 
     def __getstate__(self):
         d = dict(self.__dict__)
