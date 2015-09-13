@@ -28,6 +28,8 @@
 * Fix saving torrent provider option "Seed until ratio" after recent refactor
 * Change white text in light theme on Manage / Episode Status Management page to black for better readability
 * Change displayShow page episode colours when a minimum quality is met with "End upgrade on first match"
+* Add seed time per provider for torrent clients that support seed time per torrent, i.e. currently only uTorrent
+* Remove seed time display for Transmission in config/Torrent Search page because the torrent client doesn't support it
 * Add SceneTime torrent provider
 * Change TtN provider to parse new layout
 * Improve recognition of SD quality

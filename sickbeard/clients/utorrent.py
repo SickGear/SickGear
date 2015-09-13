@@ -95,19 +95,17 @@ class uTorrentAPI(GenericClient):
 
     def _set_torrent_seed_time(self, result):
 
-        if sickbeard.TORRENT_SEED_TIME:
-            time = 3600 * float(sickbeard.TORRENT_SEED_TIME)
+        seed_time = result.provider.seed_time or sickbeard.TORRENT_SEED_TIME
+        if seed_time:
             params = {'action': 'setprops',
                       'hash': result.hash,
                       's': 'seed_override',
-                      'v': '1'
-            }
+                      'v': '1'}
             if self._request(params=params):
                 params = {'action': 'setprops',
                           'hash': result.hash,
                           's': 'seed_time',
-                          'v': time
-                }
+                          'v': int(seed_time) * 60}
                 return self._request(params=params)
             else:
                 return False

@@ -1003,6 +1003,8 @@ def initialize(consoleLogging=True):
                 torrent_prov.options = check_setting_str(CFG, prov_id_uc, prov_id + '_options', '')
             if hasattr(torrent_prov, '_seed_ratio'):
                 torrent_prov._seed_ratio = check_setting_str(CFG, prov_id_uc, prov_id + '_seed_ratio', '')
+            if hasattr(torrent_prov, 'seed_time'):
+                torrent_prov.seed_time = check_setting_int(CFG, prov_id_uc, prov_id + '_seed_time', '')
             if hasattr(torrent_prov, 'minseed'):
                 torrent_prov.minseed = check_setting_int(CFG, prov_id_uc, prov_id + '_minseed', 0)
             if hasattr(torrent_prov, 'minleech'):
@@ -1486,6 +1488,8 @@ def save_config():
             new_config[prov_id_uc][prov_id + '_confirmed'] = int(torrent_prov.confirmed)
         if hasattr(torrent_prov, '_seed_ratio'):
             new_config[prov_id_uc][prov_id + '_seed_ratio'] = torrent_prov.seed_ratio()
+        if hasattr(torrent_prov, 'seed_time'):
+            new_config[prov_id_uc][prov_id + '_seed_time'] = torrent_prov.seed_time
         if hasattr(torrent_prov, 'minseed'):
             new_config[prov_id_uc][prov_id + '_minseed'] = int(torrent_prov.minseed)
         if hasattr(torrent_prov, 'minleech'):

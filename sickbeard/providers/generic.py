@@ -614,6 +614,7 @@ class TorrentProvider(GenericProvider):
         self.providerType = GenericProvider.TORRENT
 
         self._seed_ratio = None
+        self.seed_time = None
 
     def image_name(self):
 
