@@ -30,8 +30,6 @@ class SceneTimeProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'SceneTime')
 
-# https://www.scenetime.com/download.php/860856/Whose.Line.is.it.Anyway.US.S11E13.HDTV.x264-BAJSKORV.torrent
-# Whose Line is it Anyway US S11E13 HDTV x264-BAJSKORV
         self.url_base = 'https://www.scenetime.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'takelogin.php',
