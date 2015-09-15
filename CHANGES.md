@@ -38,6 +38,7 @@
 * Fix halting in mid flow of Add Existing Show which resulted in failure to scan statuses and filesizes
 * Change default de-referrer url to blank
 * Change javascript urls in templates to allow proper caching
+* Change downloads to prevent cache misfiring with "Result is not a valid torrent file"
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
