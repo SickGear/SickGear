@@ -32,10 +32,11 @@ import requests.cookies
 from sickbeard import helpers, classes, logger, db, tvcache, encodingKludge as ek
 from sickbeard.common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
 from sickbeard.exceptions import SickBeardException, AuthException, ex
-from sickbeard.helpers import maybe_plural
+from sickbeard.helpers import maybe_plural, _remove_file_failed as remove_file_failed
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard.show_name_helpers import allPossibleShowNames
-from hachoir_parser import createParser
+from hachoir_parser import guessParser
+from hachoir_core.stream import FileInputStream
 
 
 class HaltParseException(SickBeardException):
@@ -160,7 +161,7 @@ class GenericProvider:
 
                 urls = ['http%s://%s/%s.torrent' % (u + (torrent_hash,))
                         for u in (('s', 'torcache.net/torrent'), ('s', 'getstrike.net/torrents/api/download'),
-                                  ('', 'thetorrent.org'))]
+                                  ('s', 'itorrents.org/torrent'))]
             except:
                 urls = [result.url]
 
@@ -170,53 +171,64 @@ class GenericProvider:
         else:
             return
 
+        ref_state = 'Referer' in self.session.headers and self.session.headers['Referer']
+        saved = False
         for url in urls:
             cache_dir = sickbeard.CACHE_DIR or helpers._getTempDir()
             base_name = '%s.%s' % (helpers.sanitizeFileName(result.name), self.providerType)
             cache_file = ek.ek(os.path.join, cache_dir, base_name)
 
+            self.session.headers['Referer'] = url
             if helpers.download_file(url, cache_file, session=self.session):
-                logger.log(u'Downloaded a result from %s at %s' % (self.name, url))
 
                 if self._verify_download(cache_file):
-                    if GenericProvider.TORRENT == self.providerType:
-                        final_dir, link_type = (sickbeard.TORRENT_DIR, 'magnet')
-                    else:
-                        final_dir, link_type = (sickbeard.NZB_DIR, 'nzb')
+                    logger.log(u'Downloaded %s result from %s' % (self.name, url))
+                    final_dir, link_type = ((sickbeard.TORRENT_DIR, 'magnet'), (sickbeard.NZB_DIR, 'nzb')
+                                            )[GenericProvider.NZB == self.providerType]
                     final_file = ek.ek(os.path.join, final_dir, base_name)
+                    try:
+                        helpers.moveFile(cache_file, final_file)
+                        msg = 'moved'
+                    except:
+                        msg = 'copied cached file'
+                    logger.log(u'Saved %s link and %s to %s' % (link_type, msg, final_file))
+                    saved = True
+                    break
 
-                    helpers.moveFile(cache_file, final_file)
-                    if not ek.ek(os.path.isfile, cache_file) and ek.ek(os.path.isfile, final_file):
-                        logger.log(u'Saved %s link to %s' % (link_type, final_file), logger.MESSAGE)
-                        return True
+                remove_file_failed(cache_file)
 
-                if ek.ek(os.path.isfile, cache_file):
-                    ek.ek(os.remove, cache_file)
+        if 'Referer' in self.session.headers:
+            if ref_state:
+                self.session.headers['Referer'] = ref_state
+            else:
+                del(self.session.headers['Referer'])
 
-        logger.log(u'Failed to download result', logger.ERROR)
-        return False
+        if not saved:
+            logger.log(u'All torrent cache servers failed to return a downloadable result', logger.ERROR)
+
+        return saved
 
     def _verify_download(self, file_name=None):
         """
         Checks the saved file to see if it was actually valid, if not then consider the download a failure.
         """
-
+        result = True
         # primitive verification of torrents, just make sure we didn't get a text file or something
         if GenericProvider.TORRENT == self.providerType:
-            parser = createParser(file_name)
-            if parser:
-                mime_type = parser._getMimeType()
-                try:
-                    parser.stream._input.close()
-                except:
-                    pass
-                if 'application/x-bittorrent' == mime_type:
-                    return True
+            parser = stream = None
+            try:
+                stream = FileInputStream(file_name)
+                parser = guessParser(stream)
+            except:
+                pass
+            result = parser and 'application/x-bittorrent' == parser.mime_type
 
-            logger.log(u'Result is not a valid torrent file', logger.WARNING)
-            return False
+            try:
+                stream._input.close()
+            except:
+                pass
 
-        return True
+        return result
 
     def search_rss(self, episodes):
         return self.cache.findNeededEpisodes(episodes)
