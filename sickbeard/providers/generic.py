@@ -149,6 +149,8 @@ class GenericProvider:
             return False
 
         if GenericProvider.TORRENT == self.providerType:
+            final_dir = sickbeard.TORRENT_DIR
+            link_type = 'magnet'
             try:
                 torrent_hash = re.findall('(?i)urn:btih:([0-9a-f]{32,40})', result.url)[0].upper()
 
@@ -163,9 +165,12 @@ class GenericProvider:
                         for u in (('s', 'torcache.net/torrent'), ('s', 'getstrike.net/torrents/api/download'),
                                   ('s', 'itorrents.org/torrent'))]
             except:
+                link_type = 'torrent'
                 urls = [result.url]
 
         elif GenericProvider.NZB == self.providerType:
+            final_dir = sickbeard.NZB_DIR
+            link_type = 'nzb'
             urls = [result.url]
 
         else:
@@ -183,8 +188,6 @@ class GenericProvider:
 
                 if self._verify_download(cache_file):
                     logger.log(u'Downloaded %s result from %s' % (self.name, url))
-                    final_dir, link_type = ((sickbeard.TORRENT_DIR, 'magnet'), (sickbeard.NZB_DIR, 'nzb')
-                                            )[GenericProvider.NZB == self.providerType]
                     final_file = ek.ek(os.path.join, final_dir, base_name)
                     try:
                         helpers.moveFile(cache_file, final_file)
