@@ -360,9 +360,13 @@
     #if $hasattr($curTorrentProvider, 'digest'):
 						<div class="field-pair">
 							<label for="${curTorrentProvider.get_id()}_digest">
-								<span class="component-title">Digest:</span>
+								<span class="component-title">Cookies:</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.get_id()}_digest" id="${curTorrentProvider.get_id()}_digest" value="$curTorrentProvider.digest" class="form-control input-sm input350" />
+        #set $field_name = curTorrentProvider.get_id() + '_digest'
+									<input type="text" name="$field_name" id="$field_name" value="<%= starify(curTorrentProvider.digest) %>" class="form-control input-sm input350" />
+        #if callable(getattr(curTorrentProvider, 'ui_string'))
+									<div class="clear-left"><p>${curTorrentProvider.ui_string($field_name)}</p></div>
+        #end if
 								</span>
 							</label>
 						</div>

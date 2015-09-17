@@ -917,6 +917,8 @@ class TVShow(object):
         logger.log(u'Retrieving show info from IMDb', logger.DEBUG)
         try:
             self._get_imdb_info()
+        except imdb_exceptions.IMDbDataAccessError as e:
+            logger.log(u'Timeout waiting for IMDb api: ' + ex(e), logger.WARNING)
         except imdb_exceptions.IMDbError as e:
             logger.log(u'Something is wrong with IMDb api: ' + ex(e), logger.WARNING)
         except Exception as e:

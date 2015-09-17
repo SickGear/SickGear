@@ -40,6 +40,7 @@
 * Change javascript urls in templates to allow proper caching
 * Change downloads to prevent cache misfiring with "Result is not a valid torrent file"
 * Change remove AlphaRatio until their secure login page over https is fixed
+* Add Torrenting provider
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

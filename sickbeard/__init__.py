@@ -38,7 +38,7 @@ from sickbeard import providers, metadata, config, webserveInit, searchBacklog, 
 from sickbeard.providers.generic import GenericProvider
 from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, grabtheinfo, scenetime, pretome, \
     omgwtfnzbs, scc, torrentday, hdbits, speedcd, nyaatorrents, torrentbytes, beyondhd, gftracker, transmithe_net, \
-    freshontv, bitsoup, tokyotoshokan, animenzb, totv, rarbg, morethan, pisexy, strike, torrentshack
+    freshontv, bitsoup, tokyotoshokan, animenzb, totv, rarbg, morethan, pisexy, strike, torrentshack, torrenting
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
     naming_ep_type, minimax
 from indexers.indexer_api import indexerApi

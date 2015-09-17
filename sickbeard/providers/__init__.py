@@ -45,6 +45,7 @@ __all__ = ['womble',
            'grabtheinfo',
            'scenetime',
            'pretome',
+           'torrenting',
 ]
 
 from os import sys
