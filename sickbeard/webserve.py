@@ -4166,7 +4166,9 @@ class ConfigProviders(Config):
 
             if hasattr(curTorrentProvider, 'digest'):
                 try:
-                    curTorrentProvider.digest = str(kwargs[curTorrentProvider.get_id() + '_digest']).strip()
+                    key = str(kwargs[curTorrentProvider.get_id() + '_digest']).strip()
+                    if not starify(key, True):
+                        curTorrentProvider.digest = key
                 except:
                     curTorrentProvider.digest = None
 
