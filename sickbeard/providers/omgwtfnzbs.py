@@ -16,18 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
-import re
 from datetime import datetime
+import re
 import time
 import traceback
-
-import generic
-import sickbeard
 import urllib
-from sickbeard import tvcache, classes, logger, show_name_helpers
+
+import sickbeard
+
+from . import generic
+from sickbeard import classes, logger, show_name_helpers, tvcache
+from sickbeard.bs4_parser import BS4Parser
 from sickbeard.exceptions import AuthException
 from sickbeard.rssfeeds import RSSFeeds
-from sickbeard.bs4_parser import BS4Parser
 
 
 class OmgwtfnzbsProvider(generic.NZBProvider):
@@ -80,15 +81,15 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
             return True
 
-    def _get_season_search_strings(self, ep_obj):
+    def _season_strings(self, ep_obj):
 
         return [x for x in show_name_helpers.makeSceneSeasonSearchString(self.show, ep_obj)]
 
-    def _get_episode_search_strings(self, ep_obj):
+    def _episode_strings(self, ep_obj):
 
         return [x for x in show_name_helpers.makeSceneSearchString(self.show, ep_obj)]
 
-    def _get_title_and_url(self, item):
+    def _title_and_url(self, item):
 
         return item['release'], item['getnzb']
 
@@ -112,7 +113,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         return result
 
-    def get_cache_data(self):
+    def cache_data(self):
 
         api_key = self._init_api()
         if False is api_key:
@@ -132,11 +133,11 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                 return data.entries
         return []
 
-    def _do_search(self, search, search_mode='eponly', epcount=0, retention=0):
+    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0):
 
         api_key = self._init_api()
         if False is api_key:
-            return self.search_html(search)
+            return self.search_html(search, search_mode)
         results = []
         if None is not api_key:
             params = {'user': self.username,
@@ -156,7 +157,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         results.append(item)
         return results
 
-    def search_html(self, search=''):
+    def search_html(self, search='', search_mode=''):
 
         results = []
         if None is self.cookies:
@@ -189,7 +190,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         title = tr.find('a', href=rc['info'])['title']
                         download_url = tr.find('a', href=rc['get'])
                         age = tr.find_all('td')[-1]['data-sort']
-                    except (AttributeError, TypeError):
+                    except (AttributeError, TypeError, ValueError):
                         continue
 
                     if title and download_url and age:
@@ -202,19 +203,20 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         except Exception:
             logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
-        self._log_result(mode, len(results) - cnt, search_url)
+        mode = (mode, search_mode)['Propers' == search_mode]
+        self._log_search(mode, len(results) - cnt, search_url)
         return results
 
-    def find_propers(self, search_date=None):
+    def find_propers(self, **kwargs):
 
         search_terms = ['.PROPER.', '.REPACK.']
         results = []
 
         for term in search_terms:
-            for item in self._do_search(term, retention=4):
+            for item in self._search_provider(term, search_mode='Propers', retention=4):
                 if 'usenetage' in item:
 
-                    title, url = self._get_title_and_url(item)
+                    title, url = self._title_and_url(item)
                     try:
                         result_date = datetime.fromtimestamp(int(item['usenetage']))
                     except:
@@ -244,10 +246,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
     @staticmethod
     def ui_string(key):
-        result = ''
-        if 'omgwtfnzbs_api_key' == key:
-            result = 'Or use... \'cookie: cookname=xx; cookpass=yy\''
-        return result
+
+        return 'omgwtfnzbs_api_key' == key and 'Or use... \'cookie: cookname=xx; cookpass=yy\'' or ''
 
 
 class OmgwtfnzbsCache(tvcache.TVCache):
@@ -255,10 +255,11 @@ class OmgwtfnzbsCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 20
+        self.update_freq = 20
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
+
 
 provider = OmgwtfnzbsProvider()

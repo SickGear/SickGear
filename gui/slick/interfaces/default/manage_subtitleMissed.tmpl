@@ -3,8 +3,8 @@
 #from lib import subliminal
 #from sickbeard import common
 ##
-#set global $title = 'Episode Overview'
-#set global $header = 'Episode Overview'
+#set global $title = 'Missing Subtitles'
+#set global $header = 'Missing Subtitles'
 #set global $sbPath = '..'
 #set global $topmenu = 'manage'
 ##
@@ -12,9 +12,9 @@
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <div id="content960">
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 ##

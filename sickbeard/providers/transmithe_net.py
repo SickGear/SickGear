@@ -16,12 +16,11 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
-from sickbeard.bs4_parser import BS4Parser
+from sickbeard import helpers, logger, tvcache
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -32,111 +31,92 @@ class TransmithenetProvider(generic.TorrentProvider):
 
         self.url_base = 'https://transmithe.net/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'index.php?page=login',
-                     'cache': self.url_base + 'index.php?page=torrents&options=0&active=1',
-                     'search': '&search=%s',
-                     'get': self.url_base + '%s'}
+                     'login_action': self.url_base + 'login.php',
+                     'user': self.url_base + 'ajax.php?action=index',
+                     'browse': self.url_base + 'ajax.php?action=browse&auth=%s&passkey=%s',
+                     'search': '&searchstr=%s',
+                     'get': self.url_base + 'torrents.php?action=download&authkey=%s&torrent_pass=%s&id=%s'}
 
         self.url = self.urls['config_provider_home_uri']
+        self.user_authkey, self.user_passkey = 2 * [None]
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.freeleech = False
         self.cache = TransmithenetCache(self)
 
-    def _do_login(self):
+    def _authorised(self, **kwargs):
 
-        logged_in = lambda: 'uid' in self.session.cookies and 'pass' in self.session.cookies
-        if logged_in():
-            return True
+        if not super(TransmithenetProvider, self)._authorised(
+                logged_in=(lambda x=None: self.has_all_cookies('session')),
+                post_params={'keeplogged': '1', 'login': 'Login'}):
+            return False
+        if not self.user_authkey:
+            response = helpers.getURL(self.urls['user'], session=self.session, json=True)
+            if 'response' in response:
+                self.user_authkey, self.user_passkey = [response['response'].get(v) for v in 'authkey', 'passkey']
+        return self.user_authkey
 
-        if self._check_auth():
-            login_params = {'uid': self.username, 'pwd': self.password, 'remember_me': 'on', 'login': 'submit'}
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
-            if response and logged_in():
-                return True
-
-            logger.log(u'Failed to authenticate with %s, abort provider.' % self.name, logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._do_login():
+        if not self._authorised():
             return results
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'torrent-details', 'get': 'download',
-                                                             'peers': 'page=peers', 'nodots': '[\.\s]+'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'nodots': '[\.\s]+'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
-
-                search_url = self.urls['cache']
+                search_url = self.urls['browse'] % (self.user_authkey, self.user_passkey)
                 if 'Cache' != mode:
-                    search_url += self.urls['search'] % rc['nodots'].sub(' ', search_string)
+                    search_url += self.urls['search'] % rc['nodots'].sub('+', search_string)
 
-                html = self.get_url(search_url)
+                data_json = self.get_url(search_url, json=True)
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html):
-                        raise generic.HaltParseException
+                    for item in data_json['response']['results']:
+                        if self.freeleech and not item.get('isFreeleech'):
+                            continue
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find_all('table', 'lista')[-1]
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                        seeders, leechers, group_name, torrent_id, size = [tryInt(n, n) for n in [item.get(x) for x in [
+                            'seeders', 'leechers', 'groupName', 'torrentId', 'size']]]
+                        if self._peers_fail(mode, seeders, leechers):
+                            continue
 
-                        if 2 > len(torrent_rows):
-                            raise generic.HaltParseException
+                        try:
+                            title_parts = group_name.split('[')
+                            maybe_res = re.findall('((?:72|108)0\w)', title_parts[1])
+                            detail = title_parts[1].split('/')
+                            detail[1] = detail[1].strip().lower().replace('mkv', 'x264')
+                            title = '%s.%s' % (title_parts[0].strip(), '.'.join(
+                                (len(maybe_res) and [maybe_res[0]] or []) + [detail[0].strip(), detail[1]]))
+                        except (IndexError, KeyError):
+                            title = group_name
+                        download_url = self.urls['get'] % (self.user_authkey, self.user_passkey, torrent_id)
 
-                        for tr in torrent_rows[1:]:
-                            if tr.find('td', class_='header'):
-                                continue
-                            downlink = tr.find('a', href=rc['get'])
-                            if None is downlink:
-                                continue
-                            try:
-                                seeders, leechers = [int(x.get_text().strip()) for x in tr.find_all('a', href=rc['peers'])]
-                                if mode != 'Cache' and (seeders < self.minseed or leechers < self.minleech):
-                                    continue
+                        if title and download_url:
+                            items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
-                                info = tr.find('a', href=rc['info'])
-                                title = ('data-src' in info.attrs and info['data-src']) or\
-                                        ('title' in info.attrs and info['title']) or info.get_text().strip()
-
-                                download_url = self.urls['get'] % str(downlink['href']).lstrip('/')
-                            except (AttributeError, TypeError):
-                                continue
-
-                            if title and download_url:
-                                items[mode].append((title, download_url, seeders))
-
-                except generic.HaltParseException:
-                    pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
 
-    def find_propers(self, search_date=datetime.datetime.today()):
+    def _season_strings(self, ep_obj, **kwargs):
 
-        return self._find_propers(search_date)
+        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False)
 
-    def _get_season_search_strings(self, ep_obj, **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._get_season_search_strings(self, ep_obj, scene=False)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, scene=False, use_or=False)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
 
 class TransmithenetCache(tvcache.TVCache):
@@ -144,10 +124,11 @@ class TransmithenetCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 17  # cache update frequency
+        self.update_freq = 17
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
+
 
 provider = TransmithenetProvider()

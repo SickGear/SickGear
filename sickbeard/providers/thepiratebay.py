@@ -19,15 +19,14 @@ from __future__ import with_statement
 
 import os
 import re
-import datetime
-import urllib
 import traceback
+import urllib
 
 from . import generic
 from sickbeard import config, logger, tvcache, show_name_helpers
+from sickbeard.bs4_parser import BS4Parser
 from sickbeard.common import Quality, mediaExtensions
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard.bs4_parser import BS4Parser
 from lib.unidecode import unidecode
 
 
@@ -40,8 +39,9 @@ class ThePirateBayProvider(generic.TorrentProvider):
                                                   'https://thepiratebay.mn/', 'https://thepiratebay.vg/',
                                                   'https://thepiratebay.la/'],
                      'search': 'search/%s/0/7/200',
-                     'cache': 'tv/latest/'}  # order by seed
+                     'browse': 'tv/latest/'}  # order by seed
 
+        self.proper_search_terms = None
         self.url = self.urls['config_provider_home_uri'][0]
 
         self.minseed, self.minleech = 2 * [None]
@@ -115,7 +115,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         return title
 
-    def _get_season_search_strings(self, ep_obj, **kwargs):
+    def _season_strings(self, ep_obj, **kwargs):
 
         if ep_obj.show.air_by_date or ep_obj.show.sports:
             airdate = str(ep_obj.airdate).split('-')[0]
@@ -128,26 +128,17 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         return [{'Season': self._build_search_strings(ep_detail)}]
 
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        if self.show.air_by_date or self.show.is_sports:
-            ep_detail = str(ep_obj.airdate).replace('-', ' ')
-            if self.show.is_sports:
-                ep_detail += '|' + ep_obj.airdate.strftime('%b')
-        elif self.show.is_anime:
-            ep_detail = '%02i' % ep_obj.scene_absolute_number
-        else:
-            season, episode = ((ep_obj.season, ep_obj.episode),
-                               (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show.is_scene)]
-            ep_dict = {'seasonnumber': season, 'episodenumber': episode}
-            ep_detail = '%s|%s' % (config.naming_ep_type[2] % ep_dict, config.naming_ep_type[0] % ep_dict)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, date_or=True,
+                                                        ep_detail=lambda x: '%s|%s' % (config.naming_ep_type[2] % x,
+                                                                                       config.naming_ep_type[0] % x),
+                                                        ep_detail_anime=lambda x: '%02i' % x, **kwargs)
 
-        return [{'Episode': self._build_search_strings(ep_detail, append=(add_string, '')[self.show.is_anime])}]
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, search_mode='eponly', epcount=0, **kwargs):
 
         results = []
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v))
                   for (k, v) in {'info': 'detail', 'get': 'download[^"]+magnet', 'tid': r'.*/(\d{5,}).*',
@@ -155,17 +146,17 @@ class ThePirateBayProvider(generic.TorrentProvider):
         has_signature = False
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 log_url = '%s %s' % (self.name, search_string)   # placebo value
                 for idx, search_url in enumerate(self.urls['config_provider_home_uri']):
-                    search_url += self.urls['cache'] if 'Cache' == mode\
+                    search_url += self.urls['browse'] if 'Cache' == mode\
                         else self.urls['search'] % (urllib.quote(search_string))
 
                     log_url = u'(%s/%s): %s' % (idx + 1, len(self.urls['config_provider_home_uri']), search_url)
 
                     html = self.get_url(search_url)
+
                     if html and re.search(r'Pirate\sBay', html[33:7632:]):
                         has_signature = True
                         break
@@ -177,7 +168,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='id="searchResult"') as soup:
                         torrent_table = soup.find('table', attrs={'id': 'searchResult'})
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
@@ -187,7 +178,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                         for tr in torrent_table.find_all('tr')[1:]:
                             try:
                                 seeders, leechers = [int(tr.find_all('td')[x].get_text().strip()) for x in (-2, -1)]
-                                if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                                if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', title=rc['info'])
@@ -195,7 +186,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                                 tid = rc['tid'].sub(r'\1', str(info['href']))
 
                                 download_magnet = tr.find('a', title=rc['get'])['href']
-                            except (AttributeError, TypeError):
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if self.confirmed and not tr.find('img', title=rc['verify']):
@@ -209,27 +200,29 @@ class ThePirateBayProvider(generic.TorrentProvider):
                                 title = self._find_season_quality(title, tid, ep_number)
 
                             if title and download_magnet:
-                                items[mode].append((title, download_magnet, seeders))
+                                size = None
+                                try:
+                                    size = re.findall('(?i)size[^\d]+(\d+(?:[\.,]\d+)?\W*[bkmgt]\w+)',
+                                                      tr.find_all(class_='detDesc')[0].get_text())[0]
+                                except Exception:
+                                    pass
+
+                                items[mode].append((title, download_magnet, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_result(mode, len(items[mode]) - cnt, log_url)
+                self._log_search(mode, len(items[mode]) - cnt, log_url)
 
-            # For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         if not has_signature:
             logger.log(u'Failed to identify a page from ThePirateBay at %s attempted urls (tpb blocked? general network issue or site dead)' % len(self.urls['config_provider_home_uri']), logger.ERROR)
 
         return results
-
-    def find_propers(self, search_date=datetime.datetime.today()):
-
-        return self._find_propers(search_date, '')
 
 
 class ThePirateBayCache(tvcache.TVCache):
@@ -237,11 +230,11 @@ class ThePirateBayCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 20  # cache update frequency
+        self.update_freq = 20  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = ThePirateBayProvider()

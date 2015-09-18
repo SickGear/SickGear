@@ -10,45 +10,43 @@
 # SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#  GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import ast
 import re
 import traceback
 
 from . import generic
 from sickbeard import logger, tvcache
 from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
-class SceneTimeProvider(generic.TorrentProvider):
+class HDSpaceProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SceneTime')
+        generic.TorrentProvider.__init__(self, 'HDSpace')
 
-        self.url_base = 'https://www.scenetime.com/'
+        self.url_base = 'https://hd-space.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
-                     'browse': self.url_base + 'browse_API.php',
-                     'params': {'sec': 'jax', 'cata': 'yes'},
-                     'get': self.url_base + 'download.php/%(id)s/%(title)s.torrent'}
+                     'login': self.url_base + 'index.php?page=login',
+                     'browse': self.url_base + 'index.php?page=torrents&' + '&'.join(['options=0', 'active=1', 'category=']),
+                     'search': '&search=%s',
+                     'get': self.url_base + '%s'}
 
-        self.categories = {'shows': [2, 43, 9, 63, 77, 79, 101]}
+        self.categories = {'shows': [21, 22, 24, 25, 27, 28]}
 
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.freeleech = False
-        self.cache = SceneTimeCache(self)
+        self.cache = HDSpaceCache(self)
 
     def _authorised(self, **kwargs):
 
-        return super(SceneTimeProvider, self)._authorised(post_params={'submit': 'Log in'})
+        return super(HDSpaceProvider, self)._authorised(post_params={'uid': self.username, 'pwd': self.password})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -58,50 +56,47 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': '.*id=(\d+).*', 'fl': '\[freeleech\]',
-                                                             'cats': 'cat=(?:%s)' % self._categories_string(template='', delimiter='|')
-                                                             }.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'torrent-details', 'get': 'download', 'fl': 'free',
+                                                             'peers': 'page=peers', 'nodots': '[\.\s]+'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                post_data = self.urls['params'].copy()
-                post_data.update(ast.literal_eval('{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
+                search_url = self.urls['browse'] + self._categories_string(template='', delimiter=';')
                 if 'Cache' != mode:
-                    post_data['search'] = '+'.join(search_string.split())
+                    search_url += self.urls['search'] % rc['nodots'].sub(' ', search_string)
 
-                if self.freeleech:
-                    post_data.update({'freeleech': 'on'})
-
-                self.session.headers.update({'Referer': self.url + 'browse.php', 'X-Requested-With': 'XMLHttpRequest'})
-                html = self.get_url(self.urls['browse'], post_data=post_data)
+                html = self.get_url(search_url)
 
                 cnt = len(items[mode])
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'cellpadding': 5})
+                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='width="100%"\Wclass="lista"') as soup:
+                        torrent_table = soup.find_all('table', attrs={'class': 'lista'})[-1]
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            if tr.find('td', class_='header'):
+                                continue
+                            downlink = tr.find('a', href=rc['get'])
+                            if None is downlink:
+                                continue
                             try:
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -3)]]
-                                if None is tr.find('a', href=rc['cats'])\
-                                        or self.freeleech and None is rc['fl'].search(tr.find_all('td')[1].get_text())\
-                                        or self._peers_fail(mode, seeders, leechers):
+                                seeders, leechers = [int(x.get_text().strip()) for x in tr.find_all('a', href=rc['peers'])]
+                                if self._peers_fail(mode, seeders, leechers)\
+                                        or self.freeleech and None is tr.find('img', title=rc['fl']):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
+                                title = ('title' in info.attrs and info['title']) or info.get_text().strip()
+                                size = tr.find_all('td')[-5].get_text().strip()
 
-                                download_url = self.urls['get'] % {'id': re.sub(rc['get'], r'\1', str(info.attrs['href'])),
-                                                                   'title': str(title).replace(' ', '.')}
+                                download_url = self.urls['get'] % str(downlink['href']).lstrip('/')
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -112,9 +107,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-
-                self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string, self.name)['Cache' == mode])
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
             self._sort_seeders(mode, items)
 
@@ -122,17 +115,25 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         return results
 
+    def _season_strings(self, ep_obj, **kwargs):
 
-class SceneTimeCache(tvcache.TVCache):
+        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False)
+
+    def _episode_strings(self, ep_obj, **kwargs):
+
+        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
+
+
+class HDSpaceCache(tvcache.TVCache):
 
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 15  # cache update frequency
+        self.update_freq = 17  # cache update frequency
 
     def _cache_data(self):
 
         return self.provider.cache_data()
 
 
-provider = SceneTimeProvider()
+provider = HDSpaceProvider()

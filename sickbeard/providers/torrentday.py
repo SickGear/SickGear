@@ -16,11 +16,11 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import time
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
+from sickbeard import tvcache
+from sickbeard.helpers import (has_anime, tryInt)
 
 
 class TorrentDayProvider(generic.TorrentProvider):
@@ -34,90 +34,82 @@ class TorrentDayProvider(generic.TorrentProvider):
                      'search': self.url_base + 'V3/API/API.php',
                      'get': self.url_base + 'download.php/%s/%s'}
 
-        self.categories = {'Season': {'c14': 1},
-                           'Episode': {'c2': 1, 'c26': 1, 'c7': 1, 'c24': 1},
-                           'Cache': {'c2': 1, 'c26': 1, 'c7': 1, 'c24': 1, 'c14': 1}}
+        self.categories = {'Season': {'c31': 1, 'c33': 1, 'c14': 1},
+                           'Episode': {'c32': 1, 'c26': 1, 'c7': 1, 'c2': 1},
+                           'Cache': {'c31': 1, 'c33': 1, 'c14': 1, 'c32': 1, 'c26': 1, 'c7': 1, 'c2': 1}}
 
+        self.proper_search_terms = None
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.freeleech = False
         self.cache = TorrentDayCache(self)
 
-    def _do_login(self):
+    def _authorised(self, **kwargs):
 
-        logged_in = lambda: 'uid' in self.session.cookies and 'pass' in self.session.cookies
-        if logged_in():
-            return True
+        return super(TorrentDayProvider, self)._authorised(
+            post_params={'submit.x': 0, 'submit.y': 0},
+            failed_msg=(lambda x=None: re.search(r'(?i)tried((<[^>]+>)|\W)*too((<[^>]+>)|\W)*often', x) and
+                        u'Abort %s, Too many login attempts. Settings must be checked' or (
+                re.search(r'(?i)username((<[^>]+>)|\W)*or((<[^>]+>)|\W)*password', x) and
+                u'Invalid username or password for %s. Check settings' or
+                u'Failed to authenticate with %s, abort provider')))
 
-        if self._check_auth():
-            login_params = {'username': self.username, 'password': self.password, 'submit.x': 0, 'submit.y': 0}
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
-            if response and logged_in():
-                return True
-
-            msg = u'Failed to authenticate'
-            if response and 'tried too often' in response:
-                msg = u'Too many login attempts'
-            logger.log(u'%s, abort provider %s' % (msg, self.name), logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._do_login():
+        if not self._authorised():
             return results
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = '+'.join(search_string.split())
                 post_data = dict({'/browse.php?': None, 'cata': 'yes', 'jxt': 8, 'jxw': 'b', 'search': search_string},
-                                 **self.categories[mode])
+                                 **self.categories[(mode, 'Episode')['Propers' == mode]])
+                if ('Cache' == mode and has_anime()) or (
+                        mode in ['Season', 'Episode'] and self.show and self.show.is_anime):
+                    post_data.update({'c29': 1})
 
                 if self.freeleech:
                     post_data.update({'free': 'on'})
 
                 data_json = self.get_url(self.urls['search'], post_data=post_data, json=True)
+
                 cnt = len(items[mode])
                 try:
                     if not data_json:
                         raise generic.HaltParseException
-                    torrents = data_json.get('Fs', [])[0].get('Cn', {}).get('torrents', [])
+                    torrents = data_json.get('Fs')[0].get('Cn').get('torrents')
 
-                    for torrent in torrents:
-                        seeders, leechers = int(torrent['seed']), int(torrent['leech'])
-                        if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                    for item in torrents:
+                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in 'seed', 'leech', 'size']]
+                        if self._peers_fail(mode, seeders, leechers):
                             continue
 
-                        title = re.sub(r'\[.*=.*\].*\[/.*\]', '', torrent['name'])
+                        title = re.sub(r'\[.*=.*\].*\[/.*\]', '', item['name'])
 
-                        download_url = self.urls['get'] % (torrent['id'], torrent['fname'])
+                        download_url = self.urls['get'] % (item['id'], item['fname'])
 
                         if title and download_url:
-                            items[mode].append((title, download_url, seeders))
+                            items[mode].append((title, download_url, seeders, self._bytesizer(size)))
+
                 except Exception:
                     time.sleep(1.1)
 
-                self._log_result(mode, len(items[mode]) - cnt,
+                self._log_search(mode, len(items[mode]) - cnt,
                                  ('search string: ' + search_string, self.name)['Cache' == mode])
 
-            # For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
 
-    def find_propers(self, search_date=datetime.datetime.today()):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return self._find_propers(search_date, '')
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, sep_date='.')
+        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', date_or=True, **kwargs)
 
 
 class TorrentDayCache(tvcache.TVCache):
@@ -125,9 +117,9 @@ class TorrentDayCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = TorrentDayProvider()

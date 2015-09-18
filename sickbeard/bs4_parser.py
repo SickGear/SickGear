@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+import re
 
 
 class BS4Parser:
@@ -11,6 +12,11 @@ class BS4Parser:
                 v = [item for item in v if item in ['html5lib', 'html.parser', 'html', 'lxml', 'xml']][0]
 
             kwargs_new[k] = v
+
+        tag, attr = [x in kwargs_new and kwargs_new.pop(x) or y for (x, y) in [('tag', 'table'), ('attr', '')]]
+        if attr:
+            args = (re.sub(r'(?is).*(<%(tag)s[^>]+%(attr)s[^>]*>.*</%(tag)s>).*' % {'tag': tag, 'attr': attr},
+                           r'<html><head></head><body>\1</body></html>', args[0]).strip(),) + args[1:]
 
         self.soup = BeautifulSoup(*args, **kwargs_new)
 

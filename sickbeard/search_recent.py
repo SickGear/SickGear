@@ -19,11 +19,10 @@
 from __future__ import with_statement
 
 import threading
-
 import sickbeard
 
 
-class ProperSearcher():
+class RecentSearcher():
     def __init__(self):
         self.lock = threading.Lock()
         self.amActive = False
@@ -32,7 +31,7 @@ class ProperSearcher():
 
         self.amActive = True
 
-        propersearch_queue_item = sickbeard.search_queue.ProperSearchQueueItem()
-        sickbeard.searchQueueScheduler.action.add_item(propersearch_queue_item)
+        recentsearch_queue_item = sickbeard.search_queue.RecentSearchQueueItem()
+        sickbeard.searchQueueScheduler.action.add_item(recentsearch_queue_item)
 
         self.amActive = False

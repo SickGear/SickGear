@@ -276,9 +276,9 @@ class GitUpdateManager(UpdateManager):
             branch = branch_info.strip().replace('refs/heads/', '', 1)
             if branch:
                 return branch
-                
+
         return ""
-        
+
     def _check_github_for_update(self):
         """
         Uses git commands to check if there is a newer version that the provided
@@ -459,7 +459,7 @@ class SourceUpdateManager(UpdateManager):
             return "master"
         else:
             return sickbeard.CUR_COMMIT_BRANCH
-        
+
     def need_update(self):
         # need this to run first to set self._newest_commit_hash
         try:
@@ -622,7 +622,7 @@ class SourceUpdateManager(UpdateManager):
 
             sickbeard.CUR_COMMIT_HASH = self._newest_commit_hash
             sickbeard.CUR_COMMIT_BRANCH = self.branch
-            
+
         except Exception as e:
             logger.log(u"Error while trying to update: " + ex(e), logger.ERROR)
             logger.log(u"Traceback: " + traceback.format_exc(), logger.DEBUG)

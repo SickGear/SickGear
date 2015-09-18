@@ -42,8 +42,12 @@
 * Change default de-referrer url to blank
 * Change javascript urls in templates to allow proper caching
 * Change downloads to prevent cache misfiring with "Result is not a valid torrent file"
+* Add BitMeTV torrent provider
 * Add Torrenting provider
 * Add FunFile torrent provider
+* Add TVChaosUK torrent provider
+* Add HD-Space torrent provider
+* Add Shazbat torrent provider
 * Remove unnecessary call to indexers during nameparsing
 * Change disable ToTV due to non-deletable yet reported hacker BTC inbox scam and also little to no new content listings
 * Fix Episode View KeyError: 'state-title' failure for shows without a runtime
@@ -53,8 +57,7 @@
 * Fix add existing shows from folders that contain a plus char
 * Fix post process issue where items in history were processed out of turn
 * Change increase frequency of updating show data
-* Remove FreshOnTV (TvT) torrent provider
-* Remove Strike torrent provider
+* Remove Animenzb provider
 * Change increase the scope and number of non release group text that is identified and removed
 * Add a general config setting to allow adding incomplete show data
 * Change to throttle connection rate on thread initiation for adba library
@@ -74,12 +77,21 @@
 * Add IMDb Popular to Add Show page
 * Add version to anime renaming pattern
 * Add Code Climate configuration files
-* Change to move init-scripts to single folder
+* Change move init-scripts to single folder
 * Change sickbeard variables to sickgear variables in init-scripts
 * Change improve the use of multiple plex servers
-* Change to move JS code out of home template and into dedicated file
-* Change to remove branch from window title
-* Change to move JS code out of inc_top template and into dedicated file
+* Change move JS code out of home template and into dedicated file
+* Change remove branch from window title
+* Change move JS code out of inc_top template and into dedicated file
+* Change cleanup torrent providers
+* Change utilise tvdbid for searching usenet providers
+* Add setting to provider BTN to Reject Blu-ray M2TS releases
+* Remove jsonrpclib library
+* Change consolidate global and per show ignore and require words functions
+* Change "Require word" title and notes on Config Search page to properly describe its functional logic
+* Add regular expression capability to ignore and require words by starting wordlist with "regex:"
+* Add list shows with custom ignore and require words under the global counterparts on the Search Settings page
+* Fix failure to search for more than one selected wanted episode
 * Add notice for users with Python 2.7.8 or below to update to latest Python
 
 [develop changelog]
@@ -87,6 +99,8 @@
 * Add ability to parse command line output from unix unrar version 4 and below
 * Fix show search box on non-poster show list views
 * Fix removal of non-release groups such that anime qualities are not trimmed from name
+* Change readd Strike torrent provider
+* Change readd FreshOnTV (TvT) torrent provider
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

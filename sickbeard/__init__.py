@@ -32,21 +32,16 @@ import os.path
 import uuid
 import base64
 sys.path.insert(1, os.path.abspath('../lib'))
-from sickbeard import providers, metadata, config, webserveInit, searchBacklog, showUpdater, versionChecker, \
-    autoPostProcesser, subtitles, traktChecker, helpers, db, exceptions, show_queue, search_queue, scheduler, \
-    show_name_helpers, logger, naming, searchRecent, searchProper, scene_numbering, scene_exceptions, name_cache
-from sickbeard.providers.generic import GenericProvider
-from providers import btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, grabtheinfo, scenetime, pretome, \
-    omgwtfnzbs, scc, torrentday, hdbits, speedcd, nyaatorrents, torrentbytes, beyondhd, gftracker, transmithe_net, \
-    bitsoup, tokyotoshokan, animenzb, rarbg, morethan, alpharatio, pisexy, torrentshack, torrenting, funfile
-from sickbeard.config import CheckSection, check_setting_int, check_setting_str, check_setting_float, ConfigMigrator, \
-    naming_ep_type, minimax
+from sickbeard import helpers, logger, db, naming, metadata, providers, scene_exceptions, scene_numbering, \
+    scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
+    show_queue, show_updater, subtitles, traktChecker, version_checker
+from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
+from sickbeard.common import SD, SKIPPED
+from sickbeard.databases import mainDB, cache_db, failed_db
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
     indexer_episodenotfound, indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
-from sickbeard.common import SD, SKIPPED, NAMING_REPEAT
-from sickbeard.databases import mainDB, cache_db, failed_db
-
+from sickbeard.providers.generic import GenericProvider
 from lib.configobj import ConfigObj
 
 PID = None
@@ -1020,7 +1015,7 @@ def initialize(consoleLogging=True):
             if hasattr(torrent_prov, 'options'):
                 torrent_prov.options = check_setting_str(CFG, prov_id_uc, prov_id + '_options', '')
             if hasattr(torrent_prov, '_seed_ratio'):
-                torrent_prov._seed_ratio = check_setting_str(CFG, prov_id_uc, prov_id + '_seed_ratio', '')
+                torrent_prov._seed_ratio = check_setting_str(CFG, prov_id_uc, prov_id + '_seed_ratio', '').replace('None', '')
             if hasattr(torrent_prov, 'seed_time'):
                 torrent_prov.seed_time = check_setting_int(CFG, prov_id_uc, prov_id + '_seed_time', '')
             if hasattr(torrent_prov, 'minseed'):
@@ -1029,6 +1024,8 @@ def initialize(consoleLogging=True):
                 torrent_prov.minleech = check_setting_int(CFG, prov_id_uc, prov_id + '_minleech', 0)
             if hasattr(torrent_prov, 'freeleech'):
                 torrent_prov.freeleech = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_freeleech', 0))
+            if hasattr(torrent_prov, 'reject_m2ts'):
+                torrent_prov.reject_m2ts = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_reject_m2ts', 0))
             if hasattr(torrent_prov, 'enable_recentsearch'):
                 torrent_prov.enable_recentsearch = bool(check_setting_int(CFG, prov_id_uc,
                                                                           prov_id + '_enable_recentsearch', 1))
@@ -1105,7 +1102,7 @@ def initialize(consoleLogging=True):
         # initialize schedulers
         # updaters
         update_now = datetime.timedelta(minutes=0)
-        versionCheckScheduler = scheduler.Scheduler(versionChecker.CheckVersion(),
+        versionCheckScheduler = scheduler.Scheduler(version_checker.CheckVersion(),
                                                     cycleTime=datetime.timedelta(hours=UPDATE_FREQUENCY),
                                                     threadName='CHECKVERSION',
                                                     silent=False)
@@ -1114,7 +1111,7 @@ def initialize(consoleLogging=True):
                                                  cycleTime=datetime.timedelta(seconds=3),
                                                  threadName='SHOWQUEUE')
 
-        showUpdateScheduler = scheduler.Scheduler(showUpdater.ShowUpdater(),
+        showUpdateScheduler = scheduler.Scheduler(show_updater.ShowUpdater(),
                                                   cycleTime=datetime.timedelta(hours=1),
                                                   threadName='SHOWUPDATER',
                                                   start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
@@ -1126,19 +1123,19 @@ def initialize(consoleLogging=True):
                                                    threadName='SEARCHQUEUE')
 
         update_interval = datetime.timedelta(minutes=RECENTSEARCH_FREQUENCY)
-        recentSearchScheduler = scheduler.Scheduler(searchRecent.RecentSearcher(),
+        recentSearchScheduler = scheduler.Scheduler(search_recent.RecentSearcher(),
                                                     cycleTime=update_interval,
                                                     threadName='RECENTSEARCHER',
                                                     run_delay=update_now if RECENTSEARCH_STARTUP
                                                     else datetime.timedelta(minutes=5),
                                                     prevent_cycle_run=searchQueueScheduler.action.is_recentsearch_in_progress)
 
-        backlogSearchScheduler = searchBacklog.BacklogSearchScheduler(searchBacklog.BacklogSearcher(),
-                                                                      cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
-                                                                      threadName='BACKLOG',
-                                                                      run_delay=update_now if BACKLOG_STARTUP
-                                                                      else datetime.timedelta(minutes=10),
-                                                                      prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
+        backlogSearchScheduler = search_backlog.BacklogSearchScheduler(search_backlog.BacklogSearcher(),
+                                                                       cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
+                                                                       threadName='BACKLOG',
+                                                                       run_delay=update_now if BACKLOG_STARTUP
+                                                                       else datetime.timedelta(minutes=10),
+                                                                       prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
 
         search_intervals = {'15m': 15, '45m': 45, '90m': 90, '4h': 4 * 60, 'daily': 24 * 60}
         if CHECK_PROPERS_INTERVAL in search_intervals:
@@ -1148,7 +1145,7 @@ def initialize(consoleLogging=True):
             update_interval = datetime.timedelta(hours=1)
             run_at = datetime.time(hour=1)  # 1 AM
 
-        properFinderScheduler = scheduler.Scheduler(searchProper.ProperSearcher(),
+        properFinderScheduler = scheduler.Scheduler(search_propers.ProperSearcher(),
                                                     cycleTime=update_interval,
                                                     threadName='FINDPROPERS',
                                                     start_time=run_at,
@@ -1156,7 +1153,7 @@ def initialize(consoleLogging=True):
                                                     prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
 
         # processors
-        autoPostProcesserScheduler = scheduler.Scheduler(autoPostProcesser.PostProcesser(),
+        autoPostProcesserScheduler = scheduler.Scheduler(auto_post_processer.PostProcesser(),
                                                          cycleTime=datetime.timedelta(
                                                              minutes=AUTOPOSTPROCESSER_FREQUENCY),
                                                          threadName='POSTPROCESSER',
@@ -1335,12 +1332,12 @@ def halt():
 
 
 def sig_handler(signum=None, frame=None):
-    if type(signum) != type(None):
+    if isinstance(signum, type(None)):
         logger.log(u'Signal %i caught, saving and exiting...' % int(signum))
         events.put(events.SystemEvent.SHUTDOWN)
 
 
-def saveAll():
+def save_all():
     global showList
 
     # write all shows
@@ -1356,7 +1353,7 @@ def saveAll():
 def restart(soft=True):
     if soft:
         halt()
-        saveAll()
+        save_all()
         logger.log(u'Re-initializing all data')
         initialize()
     else:
@@ -1515,6 +1512,8 @@ def save_config():
             new_config[prov_id_uc][prov_id + '_minleech'] = int(torrent_prov.minleech)
         if hasattr(torrent_prov, 'freeleech'):
             new_config[prov_id_uc][prov_id + '_freeleech'] = int(torrent_prov.freeleech)
+        if hasattr(torrent_prov, 'reject_m2ts'):
+            new_config[prov_id_uc][prov_id + '_reject_m2ts'] = int(torrent_prov.reject_m2ts)
         if hasattr(torrent_prov, 'enable_recentsearch'):
             new_config[prov_id_uc][prov_id + '_enable_recentsearch'] = int(torrent_prov.enable_recentsearch)
         if hasattr(torrent_prov, 'enable_backlog'):
@@ -1799,7 +1798,7 @@ def save_config():
     new_config.write()
 
 
-def launchBrowser(start_port=None):
+def launch_browser(start_port=None):
     if not start_port:
         start_port = WEB_PORT
     if ENABLE_HTTPS:

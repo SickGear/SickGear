@@ -16,12 +16,12 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
+from sickbeard import logger, tvcache
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -33,54 +33,33 @@ class GrabTheInfoProvider(generic.TorrentProvider):
         self.url_base = 'http://grabthe.info/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'takelogin.php',
-                     'cache': self.url_base + 'browse.php?%s',
+                     'browse': self.url_base + 'browse.php?%s&incldead=%s&blah=0%s',
                      'search': '&search=%s',
                      'get': self.url_base + '%s'}
 
-        self.categories = 'c56=1&c8=1&c61=1&c10=1&incldead=0&blah=0'
+        self.categories = {'shows': [36, 32, 43, 56, 8, 10, 61]}
 
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.freeleech = False
         self.cache = GrabTheInfoCache(self)
 
-    def _do_login(self):
-
-        logged_in = lambda: 'uid' in self.session.cookies and 'pass' in self.session.cookies
-        if logged_in():
-            return True
-
-        if self._check_auth():
-            login_params = {'username': self.username, 'password': self.password}
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
-            if response and logged_in():
-                return True
-
-            msg = u'Failed to authenticate with %s, abort provider'
-            if response and 'Username or password incorrect' in response:
-                msg = u'Invalid username or password for %s. Check settings'
-            logger.log(msg % self.name, logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._do_login():
+        if not self._authorised():
             return results
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_url = self.urls['browse'] % (self._categories_string(), ('0', '3')[self.freeleech],
+                                                    (self.urls['search'] % search_string, '')['Cache' == mode])
 
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
-
-                search_url = self.urls['cache'] % self.categories
-                if 'cache' != mode.lower():
-                    search_url += self.urls['search'] % search_string
                 html = self.get_url(search_url)
 
                 cnt = len(items[mode])
@@ -113,36 +92,32 @@ class GrabTheInfoProvider(generic.TorrentProvider):
                                 if None is download_url:
                                     continue
 
-                                seeders, leechers = [int(tr.find_all('td')[x].get_text().strip()) for x in (-2, -1)]
-                                if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                                seeders, leechers, size = [tryInt(n, n) for n in [
+                                    (tr.find_all('td')[x].get_text().strip()) for x in (-2, -1, -3)]]
+                                if self._peers_fail(mode, seeders, leechers):
                                     continue
-                            except (AttributeError, TypeError, KeyError):
+                            except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
                             if title:
-                                items[mode].append((title, self.urls['get']
-                                                    % str(download_url['href'].lstrip('/')), seeders))
+                                items[mode].append((title, self.urls['get'] % str(download_url['href'].lstrip('/')),
+                                                    seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            # for each search mode sort all the items by seeders
-            'Cache' != mode and items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
 
-    def find_propers(self, search_date=datetime.datetime.today()):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return self._find_propers(search_date)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, sep_date='|', use_or=False)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
 
 
 class GrabTheInfoCache(tvcache.TVCache):
@@ -150,11 +125,11 @@ class GrabTheInfoCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 20  # cache update frequency
+        self.update_freq = 20  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = GrabTheInfoProvider()

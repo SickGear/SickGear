@@ -139,7 +139,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
         if ((not after_update and self.isBeingUpdated(show)) or self.isInUpdateQueue(show)) and not force:
             logger.log(
-                u'A refresh was attempted but there is already an update queued or in progress. Since updates do a refresh at the end anyway I\'m skipping this request.',
+                u'Skipping this refresh as there is already an update queued or in progress and a refresh is done at the end of an update anyway.',
                 logger.DEBUG)
             return
 
@@ -449,7 +449,7 @@ class QueueItemAdd(ShowQueueItem):
         # if started with WANTED eps then run the backlog
         if WANTED == self.default_status or items_wanted:
             logger.log(u'Launching backlog for this show since episodes are WANTED')
-            sickbeard.backlogSearchScheduler.action.searchBacklog([self.show])  #@UndefinedVariable
+            sickbeard.backlogSearchScheduler.action.search_backlog([self.show])  #@UndefinedVariable
             ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
         else:
             ui.notifications.message('Show added', 'Adding' + msg)

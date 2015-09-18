@@ -17,15 +17,15 @@
 
 from __future__ import with_statement
 
-import re
 import os
-import datetime
+import re
 import traceback
 import urllib
 
 from . import generic
-from sickbeard import config, logger, tvcache, show_name_helpers, helpers
+from sickbeard import config, logger, show_name_helpers, tvcache
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import (has_anime, tryInt)
 from sickbeard.common import Quality, mediaExtensions
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from lib.unidecode import unidecode
@@ -38,10 +38,11 @@ class KATProvider(generic.TorrentProvider):
 
         self.url_base = 'https://kat.ph/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': [self.url_base, 'http://katproxy.com/'],
-                     'cache_params': 'tv/?field=time_add&sorder=desc',
-                     'search_params': 'usearch/%s/?field=seeders&sorder=desc'}
+                     'base': [self.url_base, 'http://katproxy.com/'],
+                     'search': 'usearch/%s/',
+                     'sorted': '?field=time_add&sorder=desc'}
 
+        self.proper_search_terms = None
         self.url = self.urls['config_provider_home_uri']
 
         self.minseed, self.minleech = 2 * [None]
@@ -108,7 +109,7 @@ class KATProvider(generic.TorrentProvider):
         except Exception:
             logger.log(u'Failed to quality parse ' + self.name + ' Traceback: ' + traceback.format_exc(), logger.ERROR)
 
-    def _get_season_search_strings(self, ep_obj, **kwargs):
+    def _season_strings(self, ep_obj, **kwargs):
 
         if ep_obj.show.air_by_date or ep_obj.show.is_sports:
             airdate = str(ep_obj.airdate).split('-')[0]
@@ -119,54 +120,44 @@ class KATProvider(generic.TorrentProvider):
             season = (ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show.is_scene)]
             ep_detail = ['S%(s)02i -S%(s)02iE' % {'s': season}, 'Season %s -Ep*' % season]
 
-        return [{'Season': self._build_search_strings(ep_detail, append=(' category:tv', '')[self.show.is_anime])}]
+        return [{'Season': self._build_search_strings(ep_detail)}]
 
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        if not ep_obj:
-            return []
+        return generic.TorrentProvider._episode_strings(self, ep_obj, date_or=True,
+                                                        ep_detail=lambda x: '%s|%s' % (config.naming_ep_type[2] % x,
+                                                                                       config.naming_ep_type[0] % x),
+                                                        ep_detail_anime=lambda x: '%02i' % x, **kwargs)
 
-        if self.show.air_by_date or self.show.is_sports:
-            ep_detail = str(ep_obj.airdate).replace('-', ' ')
-            if self.show.is_sports:
-                ep_detail += '|' + ep_obj.airdate.strftime('%b')
-        elif self.show.is_anime:
-            ep_detail = '%02i' % ep_obj.scene_absolute_number
-        else:
-            season, episode = ((ep_obj.season, ep_obj.episode),
-                               (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show.is_scene)]
-            ep_dict = {'seasonnumber': season, 'episodenumber': episode}
-            ep_detail = '%s|%s' % (config.naming_ep_type[2] % ep_dict, config.naming_ep_type[0] % ep_dict)
-        # include provider specific appends
-        if not isinstance(add_string, list):
-            add_string = [add_string]
-        add_string = [x + ' category:tv' for x in add_string]
-
-        return [{'Episode': self._build_search_strings(ep_detail, append=(add_string, '')[self.show.is_anime])}]
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, search_mode='eponly', epcount=0, **kwargs):
 
         results = []
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'link': 'normal'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'link': 'normal', 'get': '^magnet', 'verif': 'verif'}.items())
         url = 0
         for mode in search_params.keys():
-            for search_string in search_params[mode]:
+            search_show = mode in ['Season', 'Episode']
+            if not search_show and has_anime():
+                search_params[mode] *= (1, 2)['Cache' == mode]
+                'Propers' == mode and search_params[mode].append('v1|v2|v3|v4|v5')
 
-                self.url = self.urls['search'][url]
-                search_args = ('search_params', 'cache_params')['Cache' == mode]
-                search_url = self.url + self.urls[search_args]
-                if 'Cache' != mode:
-                    search_url %= urllib.quote(unidecode(search_string))
+            for enum, search_string in enumerate(search_params[mode]):
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                html = helpers.getURL(search_url)
+                self.url = self.urls['base'][url]
+                search_url = self.url + (self.urls['search'] % urllib.quote('%scategory:%s' % (
+                    ('', '%s ' % search_string)['Cache' != mode],
+                    ('tv', 'anime')[(search_show and bool(self.show and self.show.is_anime)) or bool(enum)])))
+
+                self.session.headers.update({'Referer': search_url})
+                html = self.get_url(search_url + self.urls['sorted'])
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html) or re.search(r'did not match any documents', html):
+                    if not html or 'kastatic' not in html or self._has_no_results(html) or re.search(r'(?is)<(?:h\d)[^>]*>.*?(?:did\snot\smatch)', html):
                         if html and 'kastatic' not in html:
-                            url += (1, 0)[url == len(self.urls['search'])]
+                            url += (1, 0)[url == len(self.urls['base'])]
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
@@ -178,8 +169,9 @@ class KATProvider(generic.TorrentProvider):
 
                         for tr in torrent_rows[1:]:
                             try:
-                                seeders, leechers = [int(tr.find_all('td')[x].get_text().strip()) for x in (-2, -1)]
-                                if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                                seeders, leechers, size = [tryInt(n, n) for n in [
+                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -5)]]
+                                if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('div', {'class': 'torrentname'})
@@ -187,11 +179,11 @@ class KATProvider(generic.TorrentProvider):
                                     .strip()
                                 link = self.url + info.find('a', {'class': rc['link']})['href'].lstrip('/')
 
-                                download_magnet = tr.find('a', 'imagnet')['href']
-                            except (AttributeError, TypeError):
+                                download_magnet = tr.find('a', href=rc['get'])['href']
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
-                            if self.confirmed and not tr.find('a', 'iverify'):
+                            if self.confirmed and not (tr.find('a', title=rc['verif']) or tr.find('i', title=rc['verif'])):
                                 logger.log(u'Skipping untrusted non-verified result: %s' % title, logger.DEBUG)
                                 continue
 
@@ -201,24 +193,19 @@ class KATProvider(generic.TorrentProvider):
                                 title = self._find_season_quality(title, link, ep_number)
 
                             if title and download_magnet:
-                                items[mode].append((title, download_magnet, seeders))
+                                items[mode].append((title, download_magnet, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            # For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
-
-    def find_propers(self, search_date=datetime.datetime.today()):
-
-        return self._find_propers(search_date, '')
 
 
 class KATCache(tvcache.TVCache):
@@ -226,11 +213,11 @@ class KATCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 20  # cache update frequency
+        self.update_freq = 20  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = KATProvider()
