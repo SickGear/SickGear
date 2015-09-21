@@ -1,5 +1,6 @@
 #import sickbeard
 #import re
+#from lib.libtrakt import TraktAPI
 #from sickbeard.helpers import anon_url, starify
 ##
 #set global $title = 'Config - Notifications'
@@ -1480,33 +1481,15 @@
 
 						<div id="content_use_trakt">
 							<div class="field-pair">
-								<label for="trakt_username">
-									<span class="component-title">Trakt username</span>
-									<input type="text" name="trakt_username" id="trakt_username" value="$sickbeard.TRAKT_USERNAME" class="form-control input-sm input250" />
+								<label for="trakt_pin">
+									<span class="component-title">Trakt PIN:</span>
+									<input type="text" name="trakt_pin" id="trakt_pin" value="" class="form-control input-sm input250" />
+									<input type="button" class="btn" value="Connect" id="pinTrakt" />
 								</label>
+								<div class="testNotification" id="pinTrakt-result"></div>
 								<label>
 									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">username of your Trakt account.</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="trakt_password">
-									<span class="component-title">Trakt password</span>
-									<input type="password" name="trakt_password" id="trakt_password" value="#echo '*' * len($sickbeard.TRAKT_PASSWORD)#" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">password of your Trakt account.</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="trakt_api">
-									<span class="component-title">Trakt API key:</span>
-									<input type="text" name="trakt_api" id="trakt_api" value="<%= starify(sickbeard.TRAKT_API) %>" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">get your key at: <a href="<%= anon_url('http://trakt.tv/settings/api') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>http://trakt.tv/settings/api</b></a></span>
+									<span class="component-desc">get your PIN at: <a href="<%= anon_url(sickbeard.TRAKT_PIN_URL) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>$sickbeard.TRAKT_PIN_URL</b></a></span>
 								</label>
 							</div>
 							<div class="field-pair">
@@ -1582,8 +1565,6 @@
 									</label>
 								</div>
 							</div>
-							<div class="testNotification" id="testTrakt-result">Click below to test.</div>
-							<input type="button" class="btn" value="Test Trakt" id="testTrakt" />
 							<input type="submit" class="btn config_submitter" value="Save Changes" />
 						</div><!-- /content_use_trakt //-->
 					</fieldset>

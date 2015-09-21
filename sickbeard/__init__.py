@@ -356,9 +356,8 @@ SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD = False
 SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = False
 
 USE_TRAKT = False
-TRAKT_USERNAME = None
-TRAKT_PASSWORD = None
-TRAKT_API = ''
+TRAKT_TOKEN = ''
+TRAKT_REFRESH_TOKEN = ''
 TRAKT_REMOVE_WATCHLIST = False
 TRAKT_REMOVE_SERIESLIST = False
 TRAKT_USE_WATCHLIST = False
@@ -449,7 +448,26 @@ REQUIRE_WORDS = ''
 CALENDAR_UNPROTECTED = False
 
 TMDB_API_KEY = 'edc5f123313769de83a71e157758030b'
-TRAKT_API_KEY = 'abd806c54516240c76e4ebc9c5ccf394'
+
+# to switch between staging and production TRAKT environment
+TRAKT_STAGING = False
+
+TRAKT_TIMEOUT = 60
+TRAKT_VERIFY = True
+TRAKT_CONNECTED_ACCOUNT = None
+
+if TRAKT_STAGING:
+    # staging trakt values:
+    TRAKT_CLIENT_ID = '2aae3052f90b14235d184cc8f709b12b4fd8ae35f339a060a890c70db92be87a'
+    TRAKT_CLIENT_SECRET = '900e03471220503843d4a856bfbef17080cddb630f2b7df6a825e96e3ff3c39e'
+    TRAKT_PIN_URL = 'https://staging.trakt.tv/pin/638'
+    TRAKT_BASE_URL = 'http://api.staging.trakt.tv/'
+else:
+    # production trakt values:
+    TRAKT_CLIENT_ID = 'f1c453c67d81f1307f9118172c408a883eb186b094d5ea33080d59ddedb7fc7c'
+    TRAKT_CLIENT_SECRET = '12efb6fb6e863a08934d9904032a90008325df7e23514650cade55e7e7c118c5'
+    TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
+    TRAKT_BASE_URL = 'https://api-v2launch.trakt.tv/'
 
 COOKIE_SECRET = base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
@@ -472,7 +490,7 @@ def initialize(consoleLogging=True):
             USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, \
             XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, BACKLOG_FREQUENCY, \
             USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
-            USE_TRAKT, TRAKT_USERNAME, TRAKT_PASSWORD, TRAKT_API, TRAKT_REMOVE_WATCHLIST, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
+            USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_VERIFY, TRAKT_REMOVE_WATCHLIST, TRAKT_TOKEN, TRAKT_TIMEOUT, TRAKT_REFRESH_TOKEN, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_USE_RECOMMENDED, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, ALLOW_INCOMPLETE_SHOWDATA, \
@@ -860,9 +878,8 @@ def initialize(consoleLogging=True):
             check_setting_int(CFG, 'SynologyNotifier', 'synologynotifier_notify_onsubtitledownload', 0))
 
         USE_TRAKT = bool(check_setting_int(CFG, 'Trakt', 'use_trakt', 0))
-        TRAKT_USERNAME = check_setting_str(CFG, 'Trakt', 'trakt_username', '')
-        TRAKT_PASSWORD = check_setting_str(CFG, 'Trakt', 'trakt_password', '')
-        TRAKT_API = check_setting_str(CFG, 'Trakt', 'trakt_api', '')
+        TRAKT_TOKEN = check_setting_str(CFG, 'Trakt', 'trakt_token', '')
+        TRAKT_REFRESH_TOKEN = check_setting_str(CFG, 'Trakt', 'trakt_refresh_token', '')
         TRAKT_REMOVE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_watchlist', 0))
         TRAKT_REMOVE_SERIESLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_serieslist', 0))
         TRAKT_USE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_use_watchlist', 0))
@@ -1673,9 +1690,8 @@ def save_config():
 
     new_config['Trakt'] = {}
     new_config['Trakt']['use_trakt'] = int(USE_TRAKT)
-    new_config['Trakt']['trakt_username'] = TRAKT_USERNAME
-    new_config['Trakt']['trakt_password'] = helpers.encrypt(TRAKT_PASSWORD, ENCRYPTION_VERSION)
-    new_config['Trakt']['trakt_api'] = TRAKT_API
+    new_config['Trakt']['trakt_token'] = TRAKT_TOKEN
+    new_config['Trakt']['trakt_refresh_token'] = TRAKT_REFRESH_TOKEN
     new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
     new_config['Trakt']['trakt_remove_serieslist'] = int(TRAKT_REMOVE_SERIESLIST)
     new_config['Trakt']['trakt_use_watchlist'] = int(TRAKT_USE_WATCHLIST)

@@ -60,6 +60,7 @@
 * Change to throttle connection rate on thread initiation for adba library
 * Change default manage episodes selector to Snatched episodes if items exist else Wanted on Episode Status Manage page
 * Change snatched row colour on Episode Status Manage page to match colour used on the show details page
+* Change replace trakt with libtrakt for API v2
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed

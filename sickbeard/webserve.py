@@ -54,7 +54,8 @@ from lib import adba
 from lib import subliminal
 from lib.dateutil import tz
 from lib.unrar2 import RarFile
-from lib.trakt import TraktCall
+from lib.libtrakt import TraktAPI
+from lib.libtrakt.exceptions import traktException
 
 try:
     import json
@@ -879,19 +880,23 @@ class Home(MainHandler):
             return '{"message": "Unable to find NMJ Database at location: %(dbloc)s. Is the right location selected and PCH running?", "database": ""}' % {
                 "dbloc": dbloc}
 
-    def testTrakt(self, api=None, username=None, password=None):
+    def pinTrakt(self, pin=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        if None is not api and starify(api, True):
-            api = sickbeard.TRAKT_API
-        if None is not password and set('*') == set(password):
-            password = sickbeard.TRAKT_PASSWORD
+        if None is pin:
+            return 'Enter PIN'
 
-        result = notifiers.trakt_notifier.test_notify(api, username, password)
+        result = TraktAPI(ssl_verify=False, timeout=sickbeard.TRAKT_TIMEOUT).trakt_token(pin)
+
         if result:
-            return 'Test notice sent successfully to Trakt'
+            sickbeard.USE_TRAKT = 1
+            sickbeard.save_config()
+            return 'Trakt Authorized'
         else:
-            return 'Test notice failed to Trakt'
+            return 'Trakt NOT Authorized'
+
+    def get_connected_Trakt_Account(self):
+        return TraktAPI(ssl_verify=sickbeard.TRAKT_VERIFY, timeout=sickbeard.TRAKT_TIMEOUT).get_connected_user()
 
     def loadShowNotifyLists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -2273,22 +2278,27 @@ class NewHomeAddShows(Home):
         t = PageTemplate(headers=self.request.headers, file='home_trendingShows.tmpl')
         t.submenu = self.HomeMenu()
 
-        t.trending_shows = TraktCall('shows/trending.json/%API%', sickbeard.TRAKT_API_KEY)
-        t.trending_inlibrary = 0
-        if None is not t.trending_shows:
-            for item in t.trending_shows:
-                tvdbs = ['tvdb_id', 'tvrage_id']
-                for index, tvdb in enumerate(tvdbs):
-                    try:
-                        item[u'show_id'] = str(item[tvdb])
-                        tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
-                    except:
-                        continue
-                    # check tvshow indexer is not using the same id from another indexer
-                    if tvshow and (index + 1) == tvshow.indexer:
-                        item[u'show_id'] = u'%s:%s' % (tvshow.indexer, item[tvdb])
-                        t.trending_inlibrary += 1
-                        break
+        trakt_api = TraktAPI(ssl_verify=sickbeard.TRAKT_VERIFY, timeout=sickbeard.TRAKT_TIMEOUT)
+        limit_show = 50
+        try:
+            t.trending_shows = trakt_api.trakt_request("shows/trending?limit=" + str(limit_show) + "&extended=full,images") or []
+            t.trending_inlibrary = 0
+            if None is not t.trending_shows:
+                for item in t.trending_shows:
+                    tvdbs = ['tvdb_id', 'tvrage_id']
+                    for index, tvdb in enumerate(tvdbs):
+                        try:
+                            item[u'show_id'] = str(item[tvdb])
+                            tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
+                        except:
+                            continue
+                        # check tvshow indexer is not using the same id from another indexer
+                        if tvshow and (index + 1) == tvshow.indexer:
+                            item[u'show_id'] = u'%s:%s' % (tvshow.indexer, item[tvdb])
+                            t.trending_inlibrary += 1
+                            break
+        except traktException as e:
+            logger.log(u"Could not connect to Trakt service: %s" % ex(e), logger.WARNING)
 
         return t.respond()
 
@@ -4368,7 +4378,7 @@ class ConfigNotifications(Config):
                           libnotify_notify_onsubtitledownload=None,
                           use_nmj=None, nmj_host=None, nmj_database=None, nmj_mount=None, use_synoindex=None,
                           use_nmjv2=None, nmjv2_host=None, nmjv2_dbloc=None, nmjv2_database=None,
-                          use_trakt=None, trakt_username=None, trakt_password=None, trakt_api=None,
+                          use_trakt=None, trakt_pin=None,
                           trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
                           trakt_start_paused=None, trakt_use_recommended=None, trakt_sync=None,
                           trakt_default_indexer=None, trakt_remove_serieslist=None,
@@ -4497,12 +4507,6 @@ class ConfigNotifications(Config):
             synologynotifier_notify_onsubtitledownload)
 
         sickbeard.USE_TRAKT = config.checkbox_to_value(use_trakt)
-        sickbeard.TRAKT_USERNAME = trakt_username
-        if set('*') != set(trakt_password):
-            sickbeard.TRAKT_PASSWORD = trakt_password
-        key = trakt_api.strip()
-        if not starify(key, True):
-            sickbeard.TRAKT_API = key
         sickbeard.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
         sickbeard.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
         sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
