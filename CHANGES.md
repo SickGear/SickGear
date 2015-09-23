@@ -77,6 +77,7 @@
 * Change to move init-scripts to single folder
 * Change sickbeard variables to sickgear variables in init-scripts
 * Change improve the use of multiple plex servers
+* Change to move JS code out of home template and into dedicated file
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed
