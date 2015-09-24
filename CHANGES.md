@@ -65,6 +65,10 @@
 * Remove all other Trakt deprecated API V1 service features pending reconsideration
 * Change increase show search capability when using plain text and also add TVDB id, IMDb id and IMDb url search
 * Change improve existing show page and the handling when an attempt to add a show to an existing location
+* Change consolidate Trakt Trending and Recommended views into an "Add From Trakt" view which defaults to trending
+* Change Trakt view drop down "Show" to reveal Brand-new Shows, Season Premieres, Recommendations and Trending views
+* Change increase number of displayed Trakt shows to 100
+* Add genres and rating to all Trakt shows
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed

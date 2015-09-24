@@ -1054,25 +1054,25 @@ ul#rootDirStaticList li input[type="checkbox"]{
 }
 
 /* =======================================================================
-home_trendingShows.tmpl
+home_browseShows.tmpl
 ========================================================================== */
 
-.traktShowTitleIcons{
+.browse-add-show-holder{
 	float:right;
 	padding-right:4px;
 	padding-bottom:4px
 }
 
-.traktContainer p{
+.browse-container p{
 	padding-top:2px
 }
 
-.traktContainer p img{
+.browse-container p img{
 	position:relative;
 	top:-2px
 }
 
-.traktContainer p, .traktContainer i{
+.browse-container p, .browse-container i{
 	white-space:nowrap;
 	font-size:12px;
 	overflow:hidden;
@@ -1080,15 +1080,16 @@ home_trendingShows.tmpl
 	margin:0
 }
 
-.traktContainer{
-	margin:12px;
+.browse-container{
+	margin:12px 12px 12px 0;
 	width:188px;
 	background-color:#DFDACF;
 	border:1px solid #111;
 	border-radius:6px
 }
 
-.trakt-image{
+.browse-image{
+	display:block;
 	overflow:hidden;
 	height:273px;
 	width:186px;

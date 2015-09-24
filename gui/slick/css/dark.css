@@ -326,15 +326,15 @@ ul#rootDirStaticList li{
 }
 
 /* =======================================================================
-home_trendingShows.tmpl
+home_browseShows.tmpl
 ========================================================================== */
 
-.traktContainer{
+.browse-container{
 	background-color:#333;
 	border:1px solid #111
 }
 
-.trakt-image{
+.browse-image{
 	border-bottom:1px solid #111
 }
 

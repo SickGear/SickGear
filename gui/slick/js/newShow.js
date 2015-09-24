@@ -77,40 +77,38 @@ $(document).ready(function () {
 				if (0 === data.results.length) {
 					resultStr += '<span class="boldest">Sorry, no results found. Try a different search.</span>';
 				} else {
+					var idxSrcDB = 0, idxSrcDBId = 1, idxSrcUrl = 2, idxShowID = 3, idxTitle = 4, idxDate = 5;
 					$.each(data.results, function (index, obj) {
 						checked = (0 == row ? ' checked' : '');
 						rowType = (0 == row % 2 ? '' : ' class="alt"');
 						row++;
 
-						var whichSeries = cleanseText(obj.join('|'), !0),
-							display_show_name = cleanseText(obj[4], !0),
-							showstartdate = '';
+						var display_show_name = cleanseText(obj[idxTitle], !0), showstartdate = '';
 
-						if (null !== obj[5]) {
-							var startDate = new Date(obj[5]);
+						if (null !== obj[idxDate]) {
+							var startDate = new Date(obj[idxDate]);
 							var today = new Date();
 							showstartdate = '&nbsp;<span class="stepone-result-date">('
 								+ (startDate > today ? 'will debut' : 'started')
-								+ ' on ' + obj[5] + ')</span>';
+								+ ': ' + obj[idxDate] + ')</span>';
 						}
-
 						resultStr += '<div' + rowType + '>'
 							+ '<input id="whichSeries" type="radio"'
 							+ ' class="stepone-result-radio"'
 							+ ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + display_show_name + '</span>"'
 							+ ' name="whichSeries"'
-							+ ' value="' + whichSeries + '"'
+							+ ' value="' + cleanseText([obj[idxSrcDBId], obj[idxSrcDB], obj[idxShowID], obj[idxTitle]].join('|'), !0) + '"'
 							+ checked
 							+ ' />'
 							+ '<a'
 							+ ' class="stepone-result-title"'
 							+ ' title="View detail for <span style=\'color: rgb(66, 139, 202)\'>' + display_show_name + '</span>"'
-							+ ' href="' + anonURL + obj[2] + obj[3] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
+							+ ' href="' + anonURL + obj[idxSrcUrl] + obj[idxShowID] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return false;"'
 							+ '>' + display_show_name + '</a>'
 							+ showstartdate
-							+ (null == obj[0] ? ''
-								: '&nbsp;<span class="stepone-result-db grey-text">' + '[' + obj[0] + ']' + '</span>')
+							+ (null == obj[idxSrcDB] ? ''
+								: '&nbsp;<span class="stepone-result-db grey-text">' + '[' + obj[idxSrcDB] + ']' + '</span>')
 							+ '</div>' + "\n";
 					});
 				}
@@ -195,12 +193,13 @@ $(document).ready(function () {
 			elInput = $('input:hidden[name="whichSeries"]'),
 			elScene = $('#scene'),
 			elRootDirs = $('#rootDirs'),
-			elFullShowPath = $('#fullShowPath');
+			elFullShowPath = $('#fullShowPath'),
+			idxWhichShowID = 2, idxWhichTitle = 3;
 
 		// if they've picked a radio button then use that
 		if (elRadio.length) {
-			show_name = elRadio.val().split('|')[4];
-			elScene[0].checked = 0 <= show_scene_maps.indexOf(parseInt(elRadio.val().split('|')[3], 10));
+			show_name = elRadio.val().split('|')[idxWhichTitle];
+			elScene[0].checked = 0 <= show_scene_maps.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
 			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'inline' : 'None');
 		}
 		// if we provided a show in the hidden field, use that

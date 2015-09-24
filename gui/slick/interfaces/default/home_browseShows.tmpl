@@ -1,0 +1,230 @@
+#import sickbeard
+#import datetime
+#import re
+#import urllib
+#from sickbeard.common import *
+#from sickbeard import sbdatetime
+#from sickbeard.helpers import anon_url
+##
+#set global $title='Browse Shows'
+#set global $header='Browse Shows'
+#set global $sbPath='..'
+#set global $topmenu='home'
+##
+#import os.path
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
+
+<script type="text/javascript" charset="utf-8">
+<!--
+#raw
+	var addQTip = (function(){
+		$(this).css('cursor', 'help');
+		$(this).qtip({
+			show: {solo:true},
+			position: {viewport:$(window), my:'left center', adjust:{y: -10,x: 2 }},
+			style: {tip: {corner:true, method:'polygon'}, classes:'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'}
+		});
+	});
+#end raw
+
+\$(document).ready(function(){
+	// initialise combos for dirty page refreshes
+	\$('#showsort').val('original');
+	\$('#showsortdirection').val('asc');
+	\$('#showfilter').val('*');
+
+	var \$container = [\$('#container')];
+	jQuery.each(\$container, function (j) {
+		this.isotope({
+			itemSelector: '.browse-show',
+			sortBy: 'original-order',
+			layoutMode: 'masonry',
+			masonry: {
+				columnWidth: 12,
+				isFitWidth: true
+			},
+			getSortData: {
+				premiered: '[data-premiered] parseInt',
+				name: function( itemElem ) {
+					var name = \$( itemElem ).attr('data-name') || '';
+#if not $sickbeard.SORT_ARTICLE:
+					name = name.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
+#end if
+					return name.toLowerCase();
+				},
+				rating: '[data-rating] parseInt',
+				votes: '[data-votes] parseInt',
+			}
+		});
+	});
+
+	\$('#showsort').on( 'change', function() {
+		var sortCriteria;
+		switch (this.value) {
+			case 'original':
+				sortCriteria = 'original-order'
+				break;
+			case 'rating':
+				/* randomise, else the rating_votes can already
+				 * have sorted leaving this with nothing to do.
+				 */
+				\$('#container').isotope({sortBy: 'random'});
+				sortCriteria = 'rating';
+				break;
+			case 'rating_votes':
+				sortCriteria = ['rating', 'votes'];
+				break;
+			case 'votes':
+				sortCriteria = 'votes';
+				break;
+			case 'premiered':
+				sortCriteria = 'premiered';
+				break;
+			default:
+				sortCriteria = 'name'
+				break;
+		}
+		\$('#container').isotope({sortBy: sortCriteria});
+	});
+
+	\$('#showsortdirection').on( 'change', function() {
+		\$('#container').isotope({sortAscending: ('asc' == this.value)});
+	});
+
+	\$('#showfilter').on( 'change', function() {
+		var filterValue = this.value;
+		if (-1 == filterValue.indexOf('trakt')) {
+			\$('#container').isotope({ filter: filterValue });
+		} else {
+			location = '$sbRoot/home/addShows/' + filterValue;
+		}
+	});
+
+#raw
+	$('.service, .browse-image').each(addQTip);
+#end raw
+});
+
+//-->
+</script>
+#if $varExists('header')
+    #set $heading = ('header', $header)
+#else
+    #set $heading = ('title', $title)
+#end if
+	<h1 style="margin-bottom:0" class="grey-text #echo '%s">%s' % $heading#</h1>
+
+#if $all_shows or ($kwargs and $kwargs.get('show_header', None))
+<div class="pull-right" style="margin-top:-35px">
+	<span>Show:</span>
+	<select id="showfilter" class="form-control form-control-inline input-sm">
+    #set $count_all_shows = len($all_shows)
+    #set $count_inlibrary = $all_shows_inlibrary
+		<option value="*" selected="selected">All<%= ' (%d)' % count_all_shows %></option>
+		<option value=".notinlibrary">Not In Library<%= ' (%d)' % (count_all_shows - count_inlibrary) %></option>
+		<option value=".inlibrary">In Library<%= ' (%d)' % count_inlibrary %></option>
+    #if 'Trakt' == $browse_type
+        #set $mode = $kwargs and $kwargs.get('mode', None)
+        #set $selected = ' class="selected"'
+		<option value="traktTrending"#echo ('', selected)['trending' == $mode]#>Trakt Trending</option>
+		<option value="traktNewShows"#echo ('', selected)['newshows' == $mode]#>Trakt New Shows</option>
+		<option value="traktNewSeasons"#echo ('', selected)['newseasons' == $mode]#>Trakt New Seasons</option>
+		<option value="traktRecommended"#echo ('', selected)['recommended' == $mode]#>Trakt Recommended</option>
+    #end if
+	</select>
+
+	<span style="margin-left:12px">Sort By:</span>
+	<select id="showsort" class="form-control form-control-inline input-sm">
+		<option value="name">Name</option>
+		<option value="original" selected="selected">Original</option>
+		<option value="premiered">First aired</option>
+		<option value="votes">Votes</option>
+		<option value="rating">% Rating</option>
+		<option value="rating_votes">% Rating > Votes</option>
+	</select>
+
+	<span style="margin-left:12px">Sort Order:</span>
+	<select id="showsortdirection" class="form-control form-control-inline input-sm">
+		<option value="asc" selected="selected">Asc</option>
+		<option value="desc">Desc</option>
+	</select>
+</div>
+<h4 style="float:left;margin:0 0 0 2px">$browse_title</h4>
+    #if $kwargs and $kwargs.get('oldest', None):
+<div class="grey-text" style="clear:both;margin-left:2px;font-size:0.85em">
+	First aired from $kwargs['oldest'] until $kwargs['newest']
+</div>
+    #end if
+#end if
+
+<div id="container">
+#if $all_shows
+    #for $this_show in $all_shows:
+        #set $title_html = $this_show['title'].replace('"', '&quot;').replace("'", '&#39;')
+
+	<div class="browse-show <%= ('notinlibrary', 'inlibrary')[':' in this_show['show_id']] %>" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data-rating="$this_show['rating']" data-votes="$this_show['votes']" data-premiered="$this_show['premiered']">
+		<div class="browse-container">
+			<div class="browse-image">
+				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
+					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>#if $this_show['genres']#<br /><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#<p style='margin:0 0 2px'><%= re.sub(r'([,\.!][^,\.!]*?)$', '...', this_show['overview']) %></p><p><span style='font-weight:bold;font-size:0.9em;color:#888'><em>First aired: $this_show['premiered_str']</em></span></p><span style='float:right'>Click for more at <span class='boldest'>$browse_type</span></span>">
+        #if 'poster' in $this_show['images']:
+            #set $image = $this_show['images']['poster']['thumb']
+					<img alt="" class="browse-image" src="#if $image and 'http' != $image[:4]#$sbRoot/#end if#$image" />
+        #else:
+					<span>&nbsp;</span>
+        #end if
+				</a>
+			</div>
+
+			<div class="show-title">
+				<%= (this_show['title'], '<span>&nbsp;</span>')['' == this_show['title']] %>
+			</div>
+
+			<div class="clearfix">
+				<p>$this_show['rating']% <img src="$sbRoot/images/heart.png"><i>$this_show['votes'] votes</i></p>
+        #if 'url_tvdb' in $this_show and $this_show['url_tvdb']:
+				<a class="service" href="<%= anon_url(this_show['url_tvdb']) %>" onclick="window.open(this.href, '_blank'); return false;"
+				title="View <span class='boldest'>tvdb</span> detail for <span style='color: rgb(66, 139, 202)'>$title_html</span>">
+				<i><img style="margin-top:5px" alt="tvdb" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($sickbeard.indexers.indexer_config.INDEXER_TVDB).config['icon']" /></i></a>
+        #end if
+
+				<div class="browse-add-show-holder">
+        #if ':' in $this_show['show_id']:
+					<p style="line-height: 1.5; padding: 2px 5px 3px" title="<%= '%s added' % ('TVRage', 'theTVDB')['1' == this_show['show_id'][:1]] %>">In library</p>
+        #else
+					<a href="$sbRoot/home/addShows/add${browse_type}Show?indexer_id=${this_show['show_id']}&amp;showName=${urllib.quote($this_show['title'].encode("utf-8"))}" class="btn btn-xs">Add Show</a>
+        #end if
+				</div>
+			</div>
+		</div>
+	</div>
+    #end for
+</div>
+    #if $kwargs and $kwargs.get('footnote', None):
+<div>
+    $kwargs['footnote']
+</div>
+    #end if
+#else
+	<div class="browse-show" style="width:100%; margin-top:20px">
+		<p class="red-text">
+    #if $kwargs and $kwargs.get('error_msg', None):
+			$kwargs['error_msg']
+	#else
+			$browse_type API did not return results, this can happen from time to time.
+			<br /><br />This view should auto refresh every 10 mins.
+	#end if
+		</p>
+	</div>
+</div>
+#end if
+
+<script type="text/javascript" charset="utf-8">
+<!--
+window.setInterval('location.reload(true)', 600000); // Refresh every 10 minutes
+//-->
+</script>
+
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

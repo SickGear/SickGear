@@ -35,7 +35,7 @@
 	<form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
 
 		<fieldset class="sectionwrap step-one">
-			<legend class="legendStep"><p>Find show at a TV database</p></legend>
+			<legend class="legendStep"><p>#if $use_provided_info#Using known show information#else#Find show at TV info source#end if#</p></legend>
 
 			<div class="stepDiv">
 				<input type="hidden" id="indexer_timeout" value="$sickbeard.INDEXER_TIMEOUT" />
@@ -43,9 +43,9 @@
 #if $use_provided_info
     #set $provided_indexer_local = $provided_indexer
     #set $provided_indexer_id_local = $provided_indexer_id
-				Show retrieved from existing metadata: <a href="<%= anon_url(sickbeard.indexerApi(provided_indexer_local).config['show_url'], provided_indexer_id_local) %>">$provided_indexer_name</a>
+				Show: <a href="<%= anon_url(sickbeard.indexerApi(provided_indexer_local).config['show_url'], provided_indexer_id_local) %>">$provided_indexer_name</a>
 				<input type="hidden" name="indexerLang" value="en" />
-				<input type="hidden" name="whichSeries" value="$provided_indexer_id" />
+				<input type="hidden" name="whichSeries" value="#echo '|'.join([str($provided_indexer), '', str($provided_indexer_id), $provided_indexer_name])#" />
 				<input type="hidden" id="providedName" value="$provided_indexer_name" />
 				<input type="hidden" id="providedIndexer" value="$provided_indexer" />
 #else
