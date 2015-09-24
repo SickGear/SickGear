@@ -42,6 +42,7 @@
 * Change remove AlphaRatio until their secure login page over https is fixed
 * Add Torrenting provider
 * Add FunFile torrent provider
+* Remove unnecessary call to indexers during nameparsing
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

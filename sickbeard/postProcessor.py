@@ -470,7 +470,7 @@ class PostProcessor(object):
         name = helpers.remove_non_release_groups(helpers.remove_extension(name))
 
         # parse the name to break it into show name, season, and episode
-        np = NameParser(resource, try_indexers=True, try_scene_exceptions=True, convert=True)
+        np = NameParser(resource, try_scene_exceptions=True, convert=True)
         parse_result = np.parse(name)
         self._log(u'Parsed %s<br />.. into %s' % (name, str(parse_result).decode('utf-8', 'xmlcharrefreplace')), logger.DEBUG)
 
