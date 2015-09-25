@@ -42,6 +42,7 @@
 * Add Torrenting provider
 * Add FunFile torrent provider
 * Remove unnecessary call to indexers during nameparsing
+* Change disable ToTV due to non-deletable yet reported hacker BTC inbox scam and also little to no new content listings
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed
