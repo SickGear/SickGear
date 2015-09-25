@@ -52,6 +52,7 @@
 * Change increase frequency of updating show data
 * Remove FreshOnTV (TvT) torrent provider
 * Remove Strike torrent provider
+* Change increase the scope and number of non release group text that is identified and removed
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed

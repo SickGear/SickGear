@@ -99,10 +99,18 @@ def remove_non_release_groups(name):
     Remove non release groups from name
     """
 
-    if name and "-" in name:
-        name_group = name.rsplit('-', 1)
-        if name_group[-1].upper() in ["RP", "NZBGEEK"]:
-            name = name_group[0]
+    if name:
+        rc = [re.compile(r'(?i)' + v) for v in
+              '([\s\.\-_\[\{\(]*(no-rar|nzbgeek|ripsalot|rp|siklopentan)[\s\.\-_\]\}\)]*)$',
+              '(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*(www\.\w+.\w+)[\s\.\-_]*[\]\}\)][\s\.\-_]*)$',
+              '(?<=\w)([\s\.\-_]*[\[\{\(]\s*(rar(bg|tv)|((e[tz]|v)tv))[\s\.\-_]*[\]\}\)][\s\.\-_]*)$',
+              '(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*[\w\s\.\-\_]+[\s\.\-_]*[\]\}\)][\s\.\-_]*)$'
+              ]
+        rename = name
+        while rename:
+            for regex in rc:
+                name = regex.sub('', name)
+            rename = (name, False)[name == rename]
 
     return name
 
