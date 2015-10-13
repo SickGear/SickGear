@@ -178,7 +178,7 @@ class RarFileImplementation(object):
             
     @staticmethod
     def rarcmd_dt(param_date=time.strftime('%Y-%m-%d'), param_time=time.strftime('%H:%M')):
-        for str_fmt in '%Y-%m-%d %H:%M', '%Y-%m-%d %H:%M':
+        for str_fmt in '%Y-%m-%d %H:%M', '%d-%m-%y %H:%M':
             try:
                 return time.strptime('%s %s' % (param_date, param_time), str_fmt)
             except ValueError:
