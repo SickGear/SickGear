@@ -730,8 +730,7 @@ class PostProcessor(object):
         """
 
         # if SickGear snatched this then assume it's safe
-        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER\
-                + common.Quality.SNATCHED_BEST or self.in_history:
+        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
             self._log(u'SickGear snatched this episode, marking it safe to replace', logger.DEBUG)
             return True
 
@@ -806,6 +805,10 @@ class PostProcessor(object):
             # Episode already exists in database and processed episode has lower quality, marking it unsafe to replace
             self._log(u'Marking it unsafe to replace the episode that already exists in database with a file of lower quality', logger.DEBUG)
             return False
+
+        if self.in_history:
+            self._log(u'SickGear snatched this episode, marking it safe to replace', logger.DEBUG)
+            return True
 
         # None of the conditions were met, marking it unsafe to replace
         self._log(u'Marking it unsafe to replace because no positive condition is met, you may force replace but it would be better to examine the files', logger.DEBUG)
