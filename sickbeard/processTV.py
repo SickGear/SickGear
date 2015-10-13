@@ -448,7 +448,7 @@ class ProcessTVShow(object):
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM tv_episodes WHERE release_name = ?', [dir_name])
         if sql_result:
-            self._log_helper(u'Found a release directory%s that has already been processed,<br />.. skipping: %s'
+            self._log_helper(u'Found a release directory %s that has already been processed,<br />.. skipping: %s'
                              % (showlink, dir_name))
             if ep_detail_sql:
                 reset_status(parse_result.show.indexerid,
@@ -463,7 +463,7 @@ class ProcessTVShow(object):
 
             sql_result = my_db.select('SELECT * FROM tv_episodes WHERE release_name = ?', [videofile.rpartition('.')[0]])
             if sql_result:
-                self._log_helper(u'Found a video, but that release%s was already processed,<br />.. skipping: %s'
+                self._log_helper(u'Found a video, but that release %s was already processed,<br />.. skipping: %s'
                                  % (showlink, videofile))
                 if ep_detail_sql:
                     reset_status(parse_result.show.indexerid,
@@ -481,7 +481,7 @@ class ProcessTVShow(object):
 
             sql_result = my_db.select(search_sql, [u'%' + videofile])
             if sql_result:
-                self._log_helper(u'Found a video, but the episode%s is already processed,<br />.. skipping: %s'
+                self._log_helper(u'Found a video, but the episode %s is already processed,<br />.. skipping: %s'
                                  % (showlink, videofile))
                 if ep_detail_sql:
                     reset_status(parse_result.show.indexerid,

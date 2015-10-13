@@ -1218,7 +1218,7 @@ class Home(MainHandler):
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, archive_firstmatch=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                 scene=None, tag=None):
+                 scene=None, tag=None, quality_preset=None):
 
         if show is None:
             errString = 'Invalid show ID: ' + str(show)
@@ -1237,6 +1237,9 @@ class Home(MainHandler):
                 return self._genericMessage('Error', errString)
 
         showObj.exceptions = scene_exceptions.get_scene_exceptions(showObj.indexerid)
+
+        if None is not quality_preset and int(quality_preset):
+            bestQualities = []
 
         if not location and not anyQualities and not bestQualities and not flatten_folders:
             t = PageTemplate(headers=self.request.headers, file='editShow.tmpl')
@@ -2305,7 +2308,7 @@ class NewHomeAddShows(Home):
         return self.newShow('|'.join(['', '', indexer_id, showName]), use_show_name=True)
 
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
-                   anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
+                   quality_preset=None, anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
                    scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None):
         """
@@ -2398,7 +2401,7 @@ class NewHomeAddShows(Home):
 
         if not anyQualities:
             anyQualities = []
-        if not bestQualities:
+        if not bestQualities or int(quality_preset):
             bestQualities = []
         if type(anyQualities) != list:
             anyQualities = [anyQualities]
@@ -2444,8 +2447,6 @@ class NewHomeAddShows(Home):
             shows_to_add = []
         elif type(shows_to_add) != list:
             shows_to_add = [shows_to_add]
-
-        shows_to_add = [urllib.unquote_plus(x) for x in shows_to_add]
 
         promptForSettings = config.checkbox_to_value(promptForSettings)
 
@@ -3010,6 +3011,8 @@ class Manage(MainHandler):
 
             if quality_preset == 'keep':
                 anyQualities, bestQualities = Quality.splitQuality(showObj.quality)
+            elif int(quality_preset):
+                 bestQualities = []
 
             exceptions_list = []
 
