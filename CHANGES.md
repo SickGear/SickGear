@@ -44,6 +44,7 @@
 * Remove unnecessary call to indexers during nameparsing
 * Change disable ToTV due to non-deletable yet reported hacker BTC inbox scam and also little to no new content listings
 * Fix Episode View KeyError: 'state-title' failure for shows without a runtime
+* Update py-unrar2 library 99.3 to 99.6 (2fe1e98)
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed
