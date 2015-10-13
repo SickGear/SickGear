@@ -74,13 +74,13 @@ class RarFileImplementation(object):
         accum = []
         source = iter(stdoutdata.splitlines())
         line = ''
-        while not (line.startswith('UNRAR')):
+        while (line.find('RAR ') == -1):
             line = source.next()
         signature = line
         # The code below is mighty flaky
         # and will probably crash on localized versions of RAR
         # but I see no safe way to rewrite it using a CLI tool
-        if signature.startswith("UNRAR 4"):
+        if signature.find("RAR 4") > -1:
             rar_executable_version = 4
             while not (line.startswith('Comment:') or line.startswith('Pathname/Comment')):
                 if line.strip().endswith('is not RAR archive'):
@@ -94,7 +94,7 @@ class RarFileImplementation(object):
                 self.comment = '\n'.join(accum[:-1])
             else:
                 self.comment = None
-        elif signature.startswith("UNRAR 5"):
+        elif signature.find("RAR 5") > -1:
             rar_executable_version = 5
             line = source.next()
             while not line.startswith('Archive:'):
@@ -153,8 +153,9 @@ class RarFileImplementation(object):
                     data['size'] = int(fields[0])
                     attr = fields[5]
                     data['isdir'] = 'd' in attr.lower()
-                    data['datetime'] = time.strptime(fields[3]+" "+fields[4], '%d-%m-%y %H:%M')
+                    data['datetime'] = self.rarcmd_dt(fields[3], fields[4])
                     data['comment'] = None
+                    data['volume'] = None
                     yield data
                     accum = []
                     i += 1
@@ -168,12 +169,21 @@ class RarFileImplementation(object):
                 data['size'] = int(fields[1])
                 attr = fields[0]
                 data['isdir'] = 'd' in attr.lower()
-                data['datetime'] = time.strptime(fields[2]+" "+fields[3], '%d-%m-%y %H:%M')
+                data['datetime'] = self.rarcmd_dt(fields[2], fields[3])
                 data['comment'] = None
+                data['volume'] = None
                 yield data
                 i += 1
                 line = source.next()
             
+    @staticmethod
+    def rarcmd_dt(param_date=time.strftime('%Y-%m-%d'), param_time=time.strftime('%H:%M')):
+        for str_fmt in '%Y-%m-%d %H:%M', '%Y-%m-%d %H:%M':
+            try:
+                return time.strptime('%s %s' % (param_date, param_time), str_fmt)
+            except ValueError:
+                pass
+        return time.strptime('%s %s' % (time.strftime('%Y-%m-%d'), time.strftime('%H:%M')), '%Y-%m-%d %H:%M')
 
     def read_files(self, checker):
         res = []
@@ -214,5 +224,42 @@ class RarFileImplementation(object):
             
     def destruct(self):
         pass
+        
+    def get_volume(self):
+        command = "v" if rar_executable_version == 4 else "l"
+        stdoutdata, stderrdata = self.call(command, ['c-']).communicate()
+        
+        for line in stderrdata.splitlines():
+            if line.strip().startswith("Cannot open"):
+                raise FileOpenError
+            
+        source = iter(stdoutdata.splitlines())
+        line = ''
+        while not line.startswith('-----------'):
+            if line.strip().endswith('is not RAR archive'):
+                raise InvalidRARArchive
+            if line.startswith("CRC failed") or line.startswith("Checksum error"):
+                raise IncorrectRARPassword  
+            line = source.next()
+        line = source.next()
+        if rar_executable_version == 4:
+            while not line.startswith('-----------'):
+                line = source.next()
+            line = source.next()
+            items = line.strip().split()
+            if len(items)>4 and items[4]=="volume":
+                return int(items[5]) - 1
+            else:
+                return None
+                
+        elif rar_executable_version == 5:
+            while not line.startswith('-----------'):
+                line = source.next()
+            line = source.next()
+            items = line.strip().split()
+            if items[1]=="volume":
+                return int(items[2]) - 1
+            else:
+                return None
 
     
