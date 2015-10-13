@@ -153,7 +153,7 @@ class RarFileImplementation(object):
                     data['size'] = int(fields[0])
                     attr = fields[5]
                     data['isdir'] = 'd' in attr.lower()
-                    data['datetime'] = time.strptime(fields[3]+" "+fields[4], '%d-%m-%y %H:%M')
+                    data['datetime'] = self.rarcmd_dt(fields[3], fields[4])
                     data['comment'] = None
                     data['volume'] = None
                     yield data
@@ -169,13 +169,21 @@ class RarFileImplementation(object):
                 data['size'] = int(fields[1])
                 attr = fields[0]
                 data['isdir'] = 'd' in attr.lower()
-                data['datetime'] = time.strptime(fields[2]+" "+fields[3], '%d-%m-%y %H:%M')
+                data['datetime'] = self.rarcmd_dt(fields[2], fields[3])
                 data['comment'] = None
-		data['volume'] = None
+                data['volume'] = None
                 yield data
                 i += 1
                 line = source.next()
             
+    @staticmethod
+    def rarcmd_dt(param_date=time.strftime('%Y-%m-%d'), param_time=time.strftime('%H:%M')):
+        for str_fmt in '%Y-%m-%d %H:%M', '%Y-%m-%d %H:%M':
+            try:
+                return time.strptime('%s %s' % (param_date, param_time), str_fmt)
+            except ValueError:
+                pass
+        return time.strptime('%s %s' % (time.strftime('%Y-%m-%d'), time.strftime('%H:%M')), '%Y-%m-%d %H:%M')
 
     def read_files(self, checker):
         res = []
