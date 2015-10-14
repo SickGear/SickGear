@@ -304,7 +304,7 @@ class TVShow(object):
         last_update_indexer = datetime.date.fromordinal(self.last_update_indexer)
 
         # if show is not 'Ended' and last episode aired less then 460 days ago or don't have an airdate for the last episode always update (status 'Continuing' or '')
-        update_days_limit = 460
+        update_days_limit = 2013
         ended_limit = datetime.timedelta(days=update_days_limit)
         if 'Ended' not in self.status and (last_airdate == datetime.date.fromordinal(1) or last_airdate_unknown or (update_date - last_airdate) <= ended_limit or (update_date - last_update_indexer) > ended_limit):
             return True
@@ -313,12 +313,12 @@ class TVShow(object):
         airdate_diff = update_date - last_airdate
         last_update_diff = update_date - last_update_indexer
 
-        update_step_list = [[60, 1], [120, 3], [180, 7], [365, 15], [update_days_limit, 30]]
+        update_step_list = [[60, 1], [120, 3], [180, 7], [1281, 15], [update_days_limit, 30]]
         for date_diff, interval in update_step_list:
             if airdate_diff <= datetime.timedelta(days=date_diff) and last_update_diff >= datetime.timedelta(days=interval):
                 return True
 
-        # update shows without an airdate for the last episode for 460 days every 7 days
+        # update shows without an airdate for the last episode for update_days_limit days every 7 days
         if last_airdate_unknown and airdate_diff <= ended_limit and last_update_diff >= datetime.timedelta(days=7):
             return True
         else:
