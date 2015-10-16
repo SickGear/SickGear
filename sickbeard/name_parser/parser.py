@@ -180,7 +180,7 @@ class NameParser(object):
                     result.score += 1
 
                 if 'release_group' in named_groups:
-                    result.release_group = match.group('release_group')
+                    result.release_group = helpers.remove_non_release_groups(match.group('release_group'))
                     result.score += 1
 
                 if 'version' in named_groups:
