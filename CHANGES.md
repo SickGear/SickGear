@@ -48,9 +48,10 @@
 * Fix py-unrar2 on unix to handle different date formats output by different unrar command line versions
 * Fix Add and Edit show quality selection when Quality 'Custom' is used
 * Fix add existing shows from folders that contain a plus char
-* Fix post process issue where items in history was processed out of turn
+* Fix post process issue where items in history were processed out of turn
 * Change increase frequency of updating show data
 * Remove FreshOnTV (TvT) torrent provider
+* Remove Strike torrent provider
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed

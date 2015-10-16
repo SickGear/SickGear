@@ -162,7 +162,7 @@ class GenericProvider:
                     return False
 
                 urls = ['http%s://%s/%s.torrent' % (u + (torrent_hash,))
-                        for u in (('s', 'torcache.net/torrent'), ('s', 'getstrike.net/torrents/api/download'),
+                        for u in (('s', 'torcache.net/torrent'), ('', 'thetorrent.org/torrent'),
                                   ('s', 'itorrents.org/torrent'))]
             except:
                 link_type = 'torrent'
