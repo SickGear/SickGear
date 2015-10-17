@@ -7,3 +7,4 @@ Libs with customisations...
 /lib/requests/packages/urllib3/util/ssl_.py
 /tornado
 /lib/unrar2/unix.py
+/lib/tvdb/tvdb_api.py

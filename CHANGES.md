@@ -25,6 +25,7 @@
 * Update Tornado Web Server 4.2 to 4.3.dev1 (1b6157d)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
+* Update TvDB API library 1.09 with changes up to (35732c9) and some pep8 and code cleanups
 * Fix post processing season pack folders
 * Fix saving torrent provider option "Seed until ratio" after recent refactor
 * Change white text in light theme on Manage / Episode Status Management page to black for better readability
