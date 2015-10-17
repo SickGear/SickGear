@@ -301,12 +301,11 @@ class QueueItemAdd(ShowQueueItem):
                 self._finishEarly()
                 return
             # if the show has no episodes/seasons
-            if not s:
-                logger.log(u'Show ' + str(s['seriesname']) + ' is on ' + str(
-                    sickbeard.indexerApi(self.indexer).name) + ' but contains no season/episode data.', logger.ERROR)
-                ui.notifications.error('Unable to add show',
-                                       'Show ' + str(s['seriesname']) + ' is on ' + str(sickbeard.indexerApi(
-                                           self.indexer).name) + ' but contains no season/episode data.')
+            if not sickbeard.ALLOW_INCOMPLETE_SHOWDATA and not s:
+                msg = u'Show %s is on %s but contains no season/episode data. Only the show folder was created.'\
+                      % (s['seriesname'], sickbeard.indexerApi(self.indexer).name)
+                logger.log(msg, logger.ERROR)
+                ui.notifications.error('Unable to add show', msg)
                 self._finishEarly()
                 return
         except Exception as e:
