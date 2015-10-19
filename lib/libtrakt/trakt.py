@@ -9,10 +9,12 @@ from exceptions import traktException, traktAuthException  # , traktServerBusy
 
 
 class TraktAPI:
-    def __init__(self, ssl_verify=True, timeout=30):
+
+    def __init__(self, ssl_verify=True, timeout=None):
+
         self.session = requests.Session()
-        self.verify = certifi.where() if ssl_verify else False
-        self.timeout = timeout if timeout else None
+        self.verify = ssl_verify and sickbeard.TRAKT_VERIFY and certifi.where()
+        self.timeout = timeout or sickbeard.TRAKT_TIMEOUT
         self.auth_url = sickbeard.TRAKT_BASE_URL
         self.api_url = sickbeard.TRAKT_BASE_URL
         self.headers = {
@@ -23,11 +25,11 @@ class TraktAPI:
 
     def trakt_token(self, trakt_pin=None, refresh=False, count=0):
    
-        if count > 3:
+        if 3 <= count:
             sickbeard.TRAKT_ACCESS_TOKEN = ''
             return False
-        elif count > 0:
-            time.sleep(2)
+        elif 0 < count:
+            time.sleep(3)
 
         data = {
             'client_id': sickbeard.TRAKT_CLIENT_ID,
@@ -40,9 +42,9 @@ class TraktAPI:
             data['refresh_token'] = sickbeard.TRAKT_REFRESH_TOKEN
         else:
             data['grant_type'] = 'authorization_code'
-            if None is not trakt_pin:
+            if trakt_pin:
                 data['code'] = trakt_pin
-       
+
         headers = {
             'Content-Type': 'application/json'
         }
@@ -57,38 +59,35 @@ class TraktAPI:
         return False
 
     def validate_account(self):
-           
+
         resp = self.trakt_request('users/settings')
-       
-        if 'account' in resp:
-            return True
-        return False
+
+        return 'account' in resp
 
     def get_connected_user(self):
 
         if sickbeard.TRAKT_TOKEN:
+            response = 'Connected to Trakt user account: %s'
+
             if sickbeard.TRAKT_CONNECTED_ACCOUNT and sickbeard.TRAKT_TOKEN == sickbeard.TRAKT_CONNECTED_ACCOUNT[1] and sickbeard.TRAKT_CONNECTED_ACCOUNT[0]:
-                return 'Connected to Trakt user account: ' + str(sickbeard.TRAKT_CONNECTED_ACCOUNT[0])
+                return response % sickbeard.TRAKT_CONNECTED_ACCOUNT[0]
 
             resp = self.trakt_request('users/settings')
-
             if 'user' in resp:
                 sickbeard.TRAKT_CONNECTED_ACCOUNT = [resp['user']['username'], sickbeard.TRAKT_TOKEN]
-                return 'Connected to Trakt user account: ' + str(sickbeard.TRAKT_CONNECTED_ACCOUNT[0])
-        return 'Not Connected to Trakt'
+                return response % sickbeard.TRAKT_CONNECTED_ACCOUNT[0]
+
+        return 'Not connected to Trakt'
 
     def trakt_request(self, path, data=None, headers=None, url=None, method='GET', count=0):
-        if None is url:
-            url = self.api_url
 
-        count += 1
-       
-        if None is headers:
-            headers = self.headers
-       
         if None is sickbeard.TRAKT_TOKEN:
-            logger.log(u'You must get a Trakt TOKEN. Check your Trakt settings', logger.WARNING)
+            logger.log(u'You must get a Trakt token. Check your Trakt settings', logger.WARNING)
             return {}
+
+        headers = headers or self.headers
+        url = url or self.api_url
+        count += 1
 
         headers['Authorization'] = 'Bearer ' + sickbeard.TRAKT_TOKEN
 
@@ -111,13 +110,13 @@ class TraktAPI:
                 else:
                     logger.log(u'Could not connect to Trakt. Error: {0}'.format(e), logger.WARNING)                
             elif 502 == code:
-                # Retry the request, cloudflare had a proxying issue
+                # Retry the request, Cloudflare had a proxying issue
                 logger.log(u'Retrying trakt api request: %s' % path, logger.WARNING)
-                return self.trakt_request(path, data, headers, url, method)
+                return self.trakt_request(path, data, headers, url, method, count=count)
             elif 401 == code:
                 if self.trakt_token(refresh=True, count=count):
                     sickbeard.save_config()
-                    return self.trakt_request(path, data, headers, url, method)
+                    return self.trakt_request(path, data, headers, url, method, count=count)
                 else:
                     logger.log(u'Unauthorized. Please check your Trakt settings', logger.WARNING)
                     raise traktAuthException()
@@ -130,8 +129,8 @@ class TraktAPI:
                 logger.log(u'Could not connect to Trakt. Code error: {0}'.format(code), logger.ERROR)
             return {}
 
-        # check and confirm trakt call did not fail
-        if isinstance(resp, dict) and 'failure' == resp.get('status', False):
+        # check and confirm Trakt call did not fail
+        if isinstance(resp, dict) and 'failure' == resp.get('status', None):
             if 'message' in resp:
                 raise traktException(resp['message'])
             if 'error' in resp:

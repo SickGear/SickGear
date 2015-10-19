@@ -352,22 +352,29 @@ $(document).ready(function(){
 			});
 	});
 
-	$('#pinTrakt').click(function () {
-		var trakt_pin = $.trim($('#trakt_pin').val());
-		if (!trakt_pin) {
-			$('#testTrakt-result').html('Please fill out the necessary fields above.');
-			$('#trakt_pin').addClass('warning');
-			return;
+	var elTraktAuth = $('#trakt-authenticate'), elTraktAuthResult = $('#trakt-authentication-result');
+	elTraktAuth.click(function() {
+		var elTrakt = $('#trakt_pin'), traktPin = $.trim(elTrakt.val());
+		if(!traktPin) {
+			elTrakt.addClass('warning');
+			elTraktAuthResult.html('Please enter a required PIN above.');
+		} else {
+			elTrakt.removeClass('warning');
+			$(this).prop('disabled', true);
+			elTraktAuthResult.html(loading);
+			$.get(sbRoot + '/home/trakt_authenticate', {'pin': traktPin})
+				.done(function(data) {
+					elTraktAuthResult.html(data);
+					elTraktAuth.prop('disabled', false);
+				});
 		}
-		$('#trakt_pin').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testTrakt-result').html(loading);
-		$.get(sbRoot + '/home/pinTrakt', {'pin': trakt_pin})
-			.done(function (data) {
-				$('#pinTrakt-result').html(data);
-				$('#pinTrakt').prop('disabled', false);
-			});
 	});
+
+	elTraktAuthResult.html(loading);
+	$.get(sbRoot + '/home/trakt_get_connected_account')
+		.done(function(data) {
+			elTraktAuthResult.html(data);
+		});
 
 	$('#testEmail').click(function () {
 		var status, host, port, tls, from, user, pwd, err, to;
@@ -552,10 +559,4 @@ $(document).ready(function(){
 		}
 	});
 	if ($('input[id="use_plex"]').is(':checked')) {$('.plexinfo').removeClass('hide')}
-
-	$('#testTrakt-result').html(loading);
-	$.get(sbRoot + '/home/get_connected_Trakt_Account')
-		.done(function (data) {
-			$('#pinTrakt-result').html(data);
-		});
 });

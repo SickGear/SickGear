@@ -1466,7 +1466,7 @@
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/trakt.png" alt="" title="Trakt"/>
 						<h3><a href="<%= anon_url('http://trakt.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Trakt</a></h3>
-						<p>trakt helps keep a record of what TV shows and movies you are watching. Based on your favorites, trakt recommends additional shows and movies you'll enjoy!</p>
+						<p>Trakt can keep a record of what TV shows you are watching and recommend additional shows based on your show data.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
@@ -1474,7 +1474,7 @@
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
 									<input type="checkbox" class="enabler" name="use_trakt" id="use_trakt" #if $sickbeard.USE_TRAKT then 'checked="checked"' else ''# />
-									<p>should SickGear send Trakt.tv notifications ?</p>
+									<p>should SickGear use Trakt.tv ?</p>
 								</span>
 							</label>
 						</div>
@@ -1483,15 +1483,15 @@
 							<div class="field-pair">
 								<label for="trakt_pin">
 									<span class="component-title">Trakt PIN:</span>
-									<input type="text" name="trakt_pin" id="trakt_pin" value="" class="form-control input-sm input250" />
-									<input type="button" class="btn" value="Connect" id="pinTrakt" />
+									<span class="component-desc">
+										<input type="text" name="trakt_pin" id="trakt_pin" value="" class="form-control input-sm input250" />
+										<input type="button" class="btn" value="Connect" id="trakt-authenticate" />
+										<div class="clear-left"><p>get your PIN at: <a href="<%= anon_url(sickbeard.TRAKT_PIN_URL) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>$sickbeard.TRAKT_PIN_URL</b></a></p></div>
+									</span>
 								</label>
-								<div class="testNotification" id="pinTrakt-result"></div>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">get your PIN at: <a href="<%= anon_url(sickbeard.TRAKT_PIN_URL) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>$sickbeard.TRAKT_PIN_URL</b></a></span>
-								</label>
+								<div class="testNotification" id="trakt-authentication-result"></div>
 							</div>
+							<!--
 							<div class="field-pair">
 								<label for="trakt_default_indexer">
 									<span class="component-title">Default indexer:</span>
@@ -1565,6 +1565,7 @@
 									</label>
 								</div>
 							</div>
+							-->
 							<input type="submit" class="btn config_submitter" value="Save Changes" />
 						</div><!-- /content_use_trakt //-->
 					</fieldset>

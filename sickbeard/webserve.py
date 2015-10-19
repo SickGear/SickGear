@@ -55,7 +55,8 @@ from lib import subliminal
 from lib.dateutil import tz
 from lib.unrar2 import RarFile
 from lib.libtrakt import TraktAPI
-from lib.libtrakt.exceptions import traktException
+from lib.libtrakt.exceptions import traktException, traktAuthException
+
 
 try:
     import json
@@ -880,23 +881,24 @@ class Home(MainHandler):
             return '{"message": "Unable to find NMJ Database at location: %(dbloc)s. Is the right location selected and PCH running?", "database": ""}' % {
                 "dbloc": dbloc}
 
-    def pinTrakt(self, pin=None):
+    def trakt_authenticate(self, pin=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         if None is pin:
-            return 'Enter PIN'
+            return 'Trakt PIN required for authentication'
 
-        result = TraktAPI(ssl_verify=False, timeout=sickbeard.TRAKT_TIMEOUT).trakt_token(pin)
+        try:
+            TraktAPI().trakt_token(pin)
+        except traktAuthException:
+            return 'Fail: Trakt NOT authenticated'
 
-        if result:
-            sickbeard.USE_TRAKT = 1
-            sickbeard.save_config()
-            return 'Trakt Authorized'
-        else:
-            return 'Trakt NOT Authorized'
+        sickbeard.USE_TRAKT = True
+        sickbeard.save_config()
+        return '%s %s' % ('Success: Trakt authenticated.', self.trakt_get_connected_account())
 
-    def get_connected_Trakt_Account(self):
-        return TraktAPI(ssl_verify=sickbeard.TRAKT_VERIFY, timeout=sickbeard.TRAKT_TIMEOUT).get_connected_user()
+    @staticmethod
+    def trakt_get_connected_account():
+        return TraktAPI().get_connected_user()
 
     def loadShowNotifyLists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -2278,7 +2280,7 @@ class NewHomeAddShows(Home):
         t = PageTemplate(headers=self.request.headers, file='home_trendingShows.tmpl')
         t.submenu = self.HomeMenu()
 
-        trakt_api = TraktAPI(ssl_verify=sickbeard.TRAKT_VERIFY, timeout=sickbeard.TRAKT_TIMEOUT)
+        trakt_api = TraktAPI()
         limit_show = 50
         try:
             t.trending_shows = trakt_api.trakt_request("shows/trending?limit=" + str(limit_show) + "&extended=full,images") or []
@@ -4380,7 +4382,7 @@ class ConfigNotifications(Config):
                           use_nmjv2=None, nmjv2_host=None, nmjv2_dbloc=None, nmjv2_database=None,
                           use_trakt=None, trakt_pin=None,
                           trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
-                          trakt_start_paused=None, trakt_use_recommended=None, trakt_sync=None,
+                          trakt_start_paused=None, trakt_sync=None,
                           trakt_default_indexer=None, trakt_remove_serieslist=None,
                           use_synologynotifier=None, synologynotifier_notify_onsnatch=None,
                           synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
@@ -4507,19 +4509,14 @@ class ConfigNotifications(Config):
             synologynotifier_notify_onsubtitledownload)
 
         sickbeard.USE_TRAKT = config.checkbox_to_value(use_trakt)
-        sickbeard.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
-        sickbeard.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
-        sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
-        sickbeard.TRAKT_METHOD_ADD = int(trakt_method_add)
-        sickbeard.TRAKT_START_PAUSED = config.checkbox_to_value(trakt_start_paused)
-        sickbeard.TRAKT_USE_RECOMMENDED = config.checkbox_to_value(trakt_use_recommended)
-        sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
-        sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
-
-        if sickbeard.USE_TRAKT:
-            sickbeard.traktCheckerScheduler.silent = False
-        else:
-            sickbeard.traktCheckerScheduler.silent = True
+        sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
+        # sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
+        # sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
+        # sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
+        # sickbeard.TRAKT_METHOD_ADD = int(trakt_method_add)
+        # sickbeard.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
+        # sickbeard.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
+        # sickbeard.TRAKT_START_PAUSED = config.checkbox_to_value(trakt_start_paused)
 
         sickbeard.USE_EMAIL = config.checkbox_to_value(use_email)
         sickbeard.EMAIL_NOTIFY_ONSNATCH = config.checkbox_to_value(email_notify_onsnatch)
