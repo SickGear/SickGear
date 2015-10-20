@@ -16,6 +16,7 @@
 * Remove "Manage Torrents"
 * Update Beautiful Soup 4.3.2 to 4.4.0 (r390)
 * Update dateutil library to 2.4.2 (083f666)
+* Update chardet packages to 2.3.0 (26982c5)
 * Update Hachoir library 1.3.3 to 1.3.4 (r1383)
 * Change configure quiet option in Hachoir to suppress warnings (add ref:hacks.txt)
 * Add parse media content to determine quality before making final assumptions during re-scan, update, pp  
