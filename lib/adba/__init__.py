@@ -61,8 +61,9 @@ class Connection(threading.Thread):
 
         self._iamALIVE = False
 
-        self.counter = 0
-        self.counterAge = 0
+        # start with a throttled connection
+        self.counter = 6
+        self.counterAge = time()
 
     def print_log(self, data):
         print(strftime("%Y-%m-%d %H:%M:%S", localtime(time())) + ": " + str(data))
