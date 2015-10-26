@@ -30,6 +30,7 @@ import sickbeard
 from sickbeard import logger
 from sickbeard import db
 from sickbeard.exceptions import ex
+from sickbeard.indexers.indexer_config import INDEXER_TVDB
 
 
 def get_scene_numbering(indexer_id, indexer, season, episode, fallback_to_xem=True):
@@ -459,6 +460,9 @@ def xem_refresh(indexer_id, indexer, force=False):
 
     indexer_id = int(indexer_id)
     indexer = int(indexer)
+
+    if not (indexer_id in sickbeard.scene_exceptions.xem_tvdb_ids_list if INDEXER_TVDB == indexer else sickbeard.scene_exceptions.xem_rage_ids_list):
+        return
 
     # XEM API URL
     url = 'http://thexem.de/map/all?id=%s&origin=%s&destination=scene' % (

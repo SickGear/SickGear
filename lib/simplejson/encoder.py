@@ -124,7 +124,7 @@ class JSONEncoder(object):
                  use_decimal=True, namedtuple_as_object=True,
                  tuple_as_array=True, bigint_as_string=False,
                  item_sort_key=None, for_json=False, ignore_nan=False,
-                 int_as_string_bitcount=None):
+                 int_as_string_bitcount=None, iterable_as_array=False):
         """Constructor for JSONEncoder, with sensible defaults.
 
         If skipkeys is false, then it is a TypeError to attempt
@@ -179,6 +179,10 @@ class JSONEncoder(object):
         If tuple_as_array is true (the default), tuple (and subclasses) will
         be encoded as JSON arrays.
 
+        If *iterable_as_array* is true (default: ``False``),
+        any object not in the above table that implements ``__iter__()``
+        will be encoded as a JSON array.
+
         If bigint_as_string is true (not the default), ints 2**53 and higher
         or lower than -2**53 will be encoded as strings. This is to avoid the
         rounding that happens in Javascript otherwise.
@@ -210,6 +214,7 @@ class JSONEncoder(object):
         self.use_decimal = use_decimal
         self.namedtuple_as_object = namedtuple_as_object
         self.tuple_as_array = tuple_as_array
+        self.iterable_as_array = iterable_as_array
         self.bigint_as_string = bigint_as_string
         self.item_sort_key = item_sort_key
         self.for_json = for_json
@@ -338,7 +343,7 @@ class JSONEncoder(object):
                 self.namedtuple_as_object, self.tuple_as_array,
                 int_as_string_bitcount,
                 self.item_sort_key, self.encoding, self.for_json,
-                self.ignore_nan, decimal.Decimal)
+                self.ignore_nan, decimal.Decimal, self.iterable_as_array)
         else:
             _iterencode = _make_iterencode(
                 markers, self.default, _encoder, self.indent, floatstr,
@@ -347,7 +352,7 @@ class JSONEncoder(object):
                 self.namedtuple_as_object, self.tuple_as_array,
                 int_as_string_bitcount,
                 self.item_sort_key, self.encoding, self.for_json,
-                Decimal=decimal.Decimal)
+                self.iterable_as_array, Decimal=decimal.Decimal)
         try:
             return _iterencode(o, 0)
         finally:
@@ -386,6 +391,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         _use_decimal, _namedtuple_as_object, _tuple_as_array,
         _int_as_string_bitcount, _item_sort_key,
         _encoding,_for_json,
+        _iterable_as_array,
         ## HACK: hand-optimized bytecode; turn globals into locals
         _PY3=PY3,
         ValueError=ValueError,
@@ -399,6 +405,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         list=list,
         str=str,
         tuple=tuple,
+        iter=iter,
     ):
     if _use_decimal and Decimal is None:
         Decimal = decimal.Decimal
@@ -646,6 +653,16 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 elif _use_decimal and isinstance(o, Decimal):
                     yield str(o)
                 else:
+                    while _iterable_as_array:
+                        # Markers are not checked here because it is valid for
+                        # an iterable to return self.
+                        try:
+                            o = iter(o)
+                        except TypeError:
+                            break
+                        for chunk in _iterencode_list(o, _current_indent_level):
+                            yield chunk
+                        return
                     if markers is not None:
                         markerid = id(o)
                         if markerid in markers:

@@ -6,7 +6,7 @@ from lib.pynma import pynma
 
 class NMA_Notifier:
     def test_notify(self, nma_api, nma_priority):
-        return self._sendNMA(nma_api, nma_priority, event="Test", message="Testing NMA settings from SickGear",
+        return self._sendNMA(nma_api, nma_priority, event='Test', message='Testing NMA settings from SickGear',
                              force=True)
 
     def notify_snatch(self, ep_name):
@@ -22,9 +22,9 @@ class NMA_Notifier:
     def notify_subtitle_download(self, ep_name, lang):
         if sickbeard.NMA_NOTIFY_ONSUBTITLEDOWNLOAD:
             self._sendNMA(nma_api=None, nma_priority=None, event=common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD],
-                          message=ep_name + ": " + lang)
+                          message=ep_name + ': ' + lang)
                           
-    def notify_git_update(self, new_version = "??"):
+    def notify_git_update(self, new_version = '??'):
         if sickbeard.USE_NMA:
             update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
             title=common.notifyStrings[common.NOTIFY_GIT_UPDATE]
@@ -51,14 +51,14 @@ class NMA_Notifier:
 
         if len(keys) > 1: batch = True
 
-        logger.log("NMA: Sending notice with details: event=\"%s\", message=\"%s\", priority=%s, batch=%s" % (event, message, nma_priority, batch), logger.DEBUG)
+        logger.log('NMA: Sending notice with details: event="%s", message="%s", priority=%s, batch=%s' % (event, message, nma_priority, batch), logger.DEBUG)
         response = p.push(title, event, message, priority=nma_priority, batch_mode=batch)
 
         if not response[nma_api][u'code'] == u'200':
             logger.log(u'Could not send notification to NotifyMyAndroid', logger.ERROR)
             return False
         else:
-            logger.log(u"NMA: Notification sent to NotifyMyAndroid", logger.MESSAGE)
+            logger.log(u'NMA: Notification sent to NotifyMyAndroid', logger.MESSAGE)
             return True
 
 

@@ -17,8 +17,8 @@ http://www.crummy.com/software/BeautifulSoup/bs4/doc/
 """
 
 __author__ = "Leonard Richardson (leonardr@segfault.org)"
-__version__ = "4.3.2"
-__copyright__ = "Copyright (c) 2004-2013 Leonard Richardson"
+__version__ = "4.4.0"
+__copyright__ = "Copyright (c) 2004-2015 Leonard Richardson"
 __license__ = "MIT"
 
 __all__ = ['BeautifulSoup']
@@ -77,10 +77,11 @@ class BeautifulSoup(Tag):
 
     ASCII_SPACES = '\x20\x0a\x09\x0c\x0d'
 
-    NO_PARSER_SPECIFIED_WARNING = "No parser was explicitly specified, so I'm using the best available parser for this system (\"%(parser)s\"). This usually isn't a problem, but if you run this code on another system, or in a different virtual environment, it may use a different parser and behave differently.\n\nTo get rid of this warning, change this:\n\n BeautifulSoup([your markup])\n\nto this:\n\n BeautifulSoup([your markup], \"%(parser)s\")\n"
+    NO_PARSER_SPECIFIED_WARNING = "No parser was explicitly specified, so I'm using the best available %(markup_type)s parser for this system (\"%(parser)s\"). This usually isn't a problem, but if you run this code on another system, or in a different virtual environment, it may use a different parser and behave differently.\n\nTo get rid of this warning, change this:\n\n BeautifulSoup([your markup])\n\nto this:\n\n BeautifulSoup([your markup], \"%(parser)s\")\n"
 
     def __init__(self, markup="", features=None, builder=None,
-                 parse_only=None, from_encoding=None, **kwargs):
+                 parse_only=None, from_encoding=None, exclude_encodings=None,
+                 **kwargs):
         """The Soup object is initialized as the 'root tag', and the
         provided markup (which can be a string or a file-like object)
         is fed into the underlying parser."""
@@ -156,8 +157,13 @@ class BeautifulSoup(Tag):
             builder = builder_class()
             if not (original_features == builder.NAME or
                     original_features in builder.ALTERNATE_NAMES):
+                if builder.is_xml:
+                    markup_type = "XML"
+                else:
+                    markup_type = "HTML"
                 warnings.warn(self.NO_PARSER_SPECIFIED_WARNING % dict(
-                    parser=builder.NAME))
+                    parser=builder.NAME,
+                    markup_type=markup_type))
 
         self.builder = builder
         self.is_xml = builder.is_xml
@@ -202,7 +208,8 @@ class BeautifulSoup(Tag):
 
         for (self.markup, self.original_encoding, self.declared_html_encoding,
          self.contains_replacement_characters) in (
-            self.builder.prepare_markup(markup, from_encoding)):
+             self.builder.prepare_markup(
+                 markup, from_encoding, exclude_encodings=exclude_encodings)):
             self.reset()
             try:
                 self._feed()
@@ -214,6 +221,16 @@ class BeautifulSoup(Tag):
         # reference to this object.
         self.markup = None
         self.builder.soup = None
+
+    def __copy__(self):
+        return type(self)(self.encode(), builder=self.builder)
+
+    def __getstate__(self):
+        # Frequently a tree builder can't be pickled.
+        d = dict(self.__dict__)
+        if 'builder' in d and not self.builder.picklable:
+            del d['builder']
+        return d
 
     def _feed(self):
         # Convert the document to Unicode.
@@ -241,9 +258,7 @@ class BeautifulSoup(Tag):
 
     def new_string(self, s, subclass=NavigableString):
         """Create a new NavigableString associated with this soup."""
-        navigable = subclass(s)
-        navigable.setup()
-        return navigable
+        return subclass(s)
 
     def insert_before(self, successor):
         raise NotImplementedError("BeautifulSoup objects don't support insert_before().")
@@ -302,13 +317,48 @@ class BeautifulSoup(Tag):
     def object_was_parsed(self, o, parent=None, most_recent_element=None):
         """Add an object to the parse tree."""
         parent = parent or self.currentTag
-        most_recent_element = most_recent_element or self._most_recent_element
-        o.setup(parent, most_recent_element)
+        previous_element = most_recent_element or self._most_recent_element
 
-        if most_recent_element is not None:
-            most_recent_element.next_element = o
+        next_element = previous_sibling = next_sibling = None
+        if isinstance(o, Tag):
+            next_element = o.next_element
+            next_sibling = o.next_sibling
+            previous_sibling = o.previous_sibling
+            if not previous_element:
+                previous_element = o.previous_element
+
+        o.setup(parent, previous_element, next_element, previous_sibling, next_sibling)
+
         self._most_recent_element = o
         parent.contents.append(o)
+
+        if parent.next_sibling:
+            # This node is being inserted into an element that has
+            # already been parsed. Deal with any dangling references.
+            index = parent.contents.index(o)
+            if index == 0:
+                previous_element = parent
+                previous_sibling = None
+            else:
+                previous_element = previous_sibling = parent.contents[index-1]
+            if index == len(parent.contents)-1:
+                next_element = parent.next_sibling
+                next_sibling = None
+            else:
+                next_element = next_sibling = parent.contents[index+1]
+
+            o.previous_element = previous_element
+            if previous_element:
+                previous_element.next_element = o
+            o.next_element = next_element
+            if next_element:
+                next_element.previous_element = o
+            o.next_sibling = next_sibling
+            if next_sibling:
+                next_sibling.previous_sibling = o
+            o.previous_sibling = previous_sibling
+            if previous_sibling:
+                previous_sibling.next_sibling = o
 
     def _popToTag(self, name, nsprefix=None, inclusivePop=True):
         """Pops the tag stack up to and including the most recent

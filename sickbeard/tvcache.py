@@ -207,13 +207,13 @@ class TVCache:
                 showObj = helpers.findCertainShow(sickbeard.showList, indexer_id)
 
             try:
-                myParser = NameParser(showObj=showObj, convert=True)
-                parse_result = myParser.parse(name)
+                np = NameParser(showObj=showObj, convert=True)
+                parse_result = np.parse(name)
             except InvalidNameException:
                 logger.log(u'Unable to parse the filename ' + name + ' into a valid episode', logger.DEBUG)
                 return None
             except InvalidShowException:
-                logger.log(u'Unable to parse the filename ' + name + ' into a valid show', logger.DEBUG)
+                logger.log(u'No show in the db matches filename ' + name + ' not cached', logger.DEBUG)
                 return None
 
             if not parse_result or not parse_result.series_name:

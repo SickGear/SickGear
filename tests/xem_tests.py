@@ -41,11 +41,11 @@ class XEMBasicTests(test.SickbeardTestDBCase):
         """
 
         myDB = test.db.DBConnection()
-        sqlResults = myDB.select("SELECT * FROM tv_shows")
+        sqlResults = myDB.select('SELECT * FROM tv_shows')
 
         for sqlShow in sqlResults:
             try:
-                curShow = TVShow(int(sqlShow["indexer"]), int(sqlShow["indexer_id"]))
+                curShow = TVShow(int(sqlShow['indexer']), int(sqlShow['indexer_id']))
                 sickbeard.showList.append(curShow)
             except Exception:
                 pass
@@ -56,18 +56,18 @@ class XEMBasicTests(test.SickbeardTestDBCase):
         """
 
         myDB = test.db.DBConnection()
-        sqlResults = myDB.select("SELECT * FROM tv_shows")
+        sqlResults = myDB.select('SELECT * FROM tv_shows')
 
         for sqlShow in sqlResults:
             try:
-                curShow = TVShow(int(sqlShow["indexer"]), int(sqlShow["indexer_id"]))
+                curShow = TVShow(int(sqlShow['indexer']), int(sqlShow['indexer_id']))
                 sickbeard.showList.append(curShow)
             except Exception as e:
                 print('There was an error creating the show')
 
     def test_formating(self):
-        name = "Game.of.Thrones.S03.720p.HDTV.x264-CtrlHD"
-        release = "Game of Thrones"
+        name = 'Game.of.Thrones.S03.720p.HDTV.x264-CtrlHD'
+        release = 'Game of Thrones'
 
         # m = re.match('(?P<ep_ab_num>(?>\d{1,3})(?![ip])).+', name)
 
@@ -80,7 +80,7 @@ class XEMBasicTests(test.SickbeardTestDBCase):
         #     print(u"Matched " + curRegex + " to " + name)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print('==================')
     print('STARTING - XEM Scene Numbering TESTS')
     print('==================')

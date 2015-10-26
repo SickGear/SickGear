@@ -16,8 +16,8 @@
     #set $initial_quality = $common.SD
 #end if
 #set $anyQualities, $bestQualities = $common.Quality.splitQuality($initial_quality)
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/massEdit.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/massEdit.js?v=$sbPID"></script>
 
 <form action="massEditSubmit" method="post">
 	<input type="hidden" name="toEdit" value="$showList">
@@ -60,11 +60,11 @@
 			</select>
 		</div><br />
 
-		<div id="customQuality">
+		<div id="customQuality" class="show-if-quality-custom">
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Initial</h4>
 #set $anyQualityList = filter(lambda x: x > $common.Quality.NONE, $common.Quality.qualityStrings)
-				<select id="anyQualities" name="anyQualities" multiple="multiple" size="len($anyQualityList)">
+				<select id="anyQualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)">
 #for $curQuality in sorted($anyQualityList):
 					<option value="$curQuality" #if $curQuality in $anyQualities then $selected else ''#>$common.Quality.qualityStrings[$curQuality]</option>
 #end for
@@ -73,7 +73,7 @@
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Upgrade to</h4>
 #set $bestQualityList = filter(lambda x: x > $common.Quality.SDTV, $common.Quality.qualityStrings)
-				<select id="bestQualities" name="bestQualities" multiple="multiple" size="len($bestQualityList)">
+				<select id="bestQualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)">
 #for $curQuality in sorted($bestQualityList):
 					<option value="$curQuality" #if $curQuality in $bestQualities then $selected else ''#>$common.Quality.qualityStrings[$curQuality]</option>
 #end for

@@ -17,8 +17,8 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<script type="text/javascript" src="$sbRoot/js/configProviders.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/configProviders.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #set $methods_notused = []
 #if not $sickbeard.USE_NZBS
@@ -360,9 +360,13 @@
     #if $hasattr($curTorrentProvider, 'digest'):
 						<div class="field-pair">
 							<label for="${curTorrentProvider.get_id()}_digest">
-								<span class="component-title">Digest:</span>
+								<span class="component-title">Cookies:</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.get_id()}_digest" id="${curTorrentProvider.get_id()}_digest" value="$curTorrentProvider.digest" class="form-control input-sm input350" />
+        #set $field_name = curTorrentProvider.get_id() + '_digest'
+									<input type="text" name="$field_name" id="$field_name" value="<%= starify(curTorrentProvider.digest) %>" class="form-control input-sm input350" />
+        #if callable(getattr(curTorrentProvider, 'ui_string'))
+									<div class="clear-left"><p>${curTorrentProvider.ui_string($field_name)}</p></div>
+        #end if
 								</span>
 							</label>
 						</div>
@@ -408,14 +412,28 @@
 						</div>
     #end if
     #if $hasattr($curTorrentProvider, '_seed_ratio') and 'blackhole' != $sickbeard.TORRENT_METHOD:
-        #set $torrent_method_text = {'blackhole': 'Black hole', 'utorrent': 'uTorrent', 'transmission': 'Transmission', 'deluge': 'Deluge', 'download_station': 'Synology DS', 'rtorrent': 'rTorrent'}
+        #set $torrent_method_text = {'utorrent': 'uTorrent', 'transmission': 'Transmission', 'deluge': 'Deluge', 'download_station': 'Synology DS', 'rtorrent': 'rTorrent'}
 						<div class="field-pair">
 							<label for="${curTorrentProvider.get_id()}_ratio">
 								<span class="component-title" id="${curTorrentProvider.get_id()}_ratio_desc">Seed until ratio (the goal)</span>
 								<span class="component-desc">
-									<input type="number" step="0.1" name="${curTorrentProvider.get_id()}_ratio" id="${curTorrentProvider.get_id()}_ratio" value="$curTorrentProvider._seed_ratio" class="form-control input-sm input75" />
-									<p>this ratio is requested of each download sent to $torrent_method_text[$sickbeard.TORRENT_METHOD]</p>
-									<div class="clear-left"><p>(set -1 to seed forever, or leave blank for the $torrent_method_text[$sickbeard.TORRENT_METHOD] default)</p></div>
+									<input type="number" name="${curTorrentProvider.get_id()}_ratio" id="${curTorrentProvider.get_id()}_ratio" value="$curTorrentProvider._seed_ratio" class="form-control input-sm input75" />
+									<p>this ratio is requested of each item sent to $torrent_method_text[$sickbeard.TORRENT_METHOD]</p>
+									<div class="clear-left"><p>(set -1 to seed forever, or leave blank for the $torrent_method_text[$sickbeard.TORRENT_METHOD] setting)</p></div>
+								</span>
+							</label>
+						</div>
+    #end if
+    #if $hasattr($curTorrentProvider, 'seed_time') and 'utorrent' == $sickbeard.TORRENT_METHOD:
+        #set $torrent_method_text = {'utorrent': 'uTorrent'}
+        #set $use_default = 'to use the %s min <a href="%s/config/search/#core-component-group3">torrent search setting minumum default</a>' % ($sickbeard.TORRENT_SEED_TIME, $sbRoot) if $sickbeard.TORRENT_SEED_TIME else 'for the %s setting' % $torrent_method_text[$sickbeard.TORRENT_METHOD]
+						<div class="field-pair">
+							<label for="${curTorrentProvider.get_id()}_seed_time">
+								<span class="component-title" id="${curTorrentProvider.get_id()}_seed_time_desc">Seed time (provider default)</span>
+								<span class="component-desc">
+									<input type="number" name="${curTorrentProvider.get_id()}_seed_time" id="${curTorrentProvider.get_id()}_seed_time" value="$curTorrentProvider.seed_time" class="form-control input-sm input75" />
+									<p>set 1 or more minimum minutes for each item sent to $torrent_method_text[$sickbeard.TORRENT_METHOD]</p>
+									<div class="clear-left"><p>(leave blank $use_default)</p></div>
 								</span>
 							</label>
 						</div>

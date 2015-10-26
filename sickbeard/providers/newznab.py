@@ -116,14 +116,14 @@ class NewznabProvider(generic.NZBProvider):
         cur_params = {}
 
         # season
-        if ep_obj.show.air_by_date or ep_obj.show.sports:
+        if ep_obj.show.air_by_date or ep_obj.show.is_sports:
             date_str = str(ep_obj.airdate).split('-')[0]
             cur_params['season'] = date_str
             cur_params['q'] = date_str.replace('-', '.')
         elif ep_obj.show.is_anime:
             cur_params['season'] = '%d' % ep_obj.scene_absolute_number
         else:
-            cur_params['season'] = str(ep_obj.scene_season)
+            cur_params['season'] = str((ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show.is_scene)])
 
         # search
         rid = helpers.mapIndexersToShow(ep_obj.show)[2]
@@ -151,15 +151,16 @@ class NewznabProvider(generic.NZBProvider):
         if not ep_obj:
             return [params]
 
-        if ep_obj.show.air_by_date or ep_obj.show.sports:
+        if ep_obj.show.air_by_date or ep_obj.show.is_sports:
             date_str = str(ep_obj.airdate)
             params['season'] = date_str.partition('-')[0]
             params['ep'] = date_str.partition('-')[2].replace('-', '/')
-        elif ep_obj.show.anime:
+        elif ep_obj.show.is_anime:
             params['ep'] = '%i' % int(
                 ep_obj.scene_absolute_number if int(ep_obj.scene_absolute_number) > 0 else ep_obj.scene_episode)
         else:
-            params['season'], params['ep'] = ep_obj.scene_season, ep_obj.scene_episode
+            params['season'], params['ep'] = ((ep_obj.season, ep_obj.episode),
+                                              (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show.is_scene)]
 
         # search
         rid = helpers.mapIndexersToShow(ep_obj.show)[2]
@@ -177,7 +178,7 @@ class NewznabProvider(generic.NZBProvider):
             cur_return['q'] = cur_exception
             to_return.append(cur_return)
 
-            if ep_obj.show.anime:
+            if ep_obj.show.is_anime:
                 # Experimental, add a searchstring without search explicitly for the episode!
                 # Remove the ?ep=e46 paramater and use add the episode number to the query paramater.
                 # Can be usefull for newznab indexers that do not have the episodes 100% parsed.

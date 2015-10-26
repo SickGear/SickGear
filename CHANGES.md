@@ -1,7 +1,71 @@
-### 0.10.0 (2015-08-06 11:05:00 UTC)
+### 0.11.0 (2015-xx-xx xx:xx:xx UTC)
 
+* Change to only refresh scene exception data for shows that need it
+* Change reduce aggressive use of scene numbering that was overriding user preference where not needed
+* Change set "Scene numbering" checkbox and add text to the label tip in third step of add "New Show" if scene numbers
+  are found for the selected show in the search results of the first step
+* Change label text on edit show page to highlight when manual numbering and scene numbers are available
+* Fix disabling "Scene numbering" of step three in add "New Show" was ignored when scene episode number mappings exist
+* Fix don't use scene episode number mappings everywhere when "Scene numbering" is disabled for a show
+* Fix width of legend underlining on the third step used to bring other display elements into alignment
+* Change when downloading magnet or nzb files, verify the file in cache dir and then move to blackhole
+* Fix small cosmetic issue to correctly display "full backlog" date
+* Add search crawler exclusions
+* Fix saving default show list group on add new show options page
+* Remove legacy anime split home option from anime settings tab (new option located in general/interface tab)
+* Remove "Manage Torrents"
+* Update Beautiful Soup 4.3.2 to 4.4.0 (r390)
+* Update dateutil library to 2.4.2 (083f666)
+* Update chardet packages to 2.3.0 (26982c5)
+* Update Hachoir library 1.3.3 to 1.3.4 (r1383)
+* Change configure quiet option in Hachoir to suppress warnings (add ref:hacks.txt)
+* Add parse media content to determine quality before making final assumptions during re-scan, update, pp  
+* Add a postprocess folder name validation
+* Update Requests library to 2.7.0 (5d6d1bc)
+* Update SimpleJSON library 3.7.3 to 3.8.0 (a37a9bd)
+* Update Tornado Web Server 4.2 to 4.3.dev1 (1b6157d)
+* Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
+* Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
+* Update TvDB API library 1.09 with changes up to (35732c9) and some pep8 and code cleanups
+* Fix post processing season pack folders
+* Fix saving torrent provider option "Seed until ratio" after recent refactor
+* Change white text in light theme on Manage / Episode Status Management page to black for better readability
+* Change displayShow page episode colours when a minimum quality is met with "End upgrade on first match"
+* Add seed time per provider for torrent clients that support seed time per torrent, i.e. currently only uTorrent
+* Remove seed time display for Transmission in config/Torrent Search page because the torrent client doesn't support it
+* Add PreToMe torrent provider
+* Add SceneTime torrent provider
+* Change TtN provider to parse new layout
+* Improve recognition of SD quality
+* Fix halting in mid flow of Add Existing Show which resulted in failure to scan statuses and filesizes
+* Change default de-referrer url to blank
+* Change javascript urls in templates to allow proper caching
+* Change downloads to prevent cache misfiring with "Result is not a valid torrent file"
+* Add Torrenting provider
+* Add FunFile torrent provider
+* Remove unnecessary call to indexers during nameparsing
+* Change disable ToTV due to non-deletable yet reported hacker BTC inbox scam and also little to no new content listings
+* Fix Episode View KeyError: 'state-title' failure for shows without a runtime
+* Update py-unrar2 library 99.3 to 99.6 (2fe1e98)
+* Fix py-unrar2 on unix to handle different date formats output by different unrar command line versions
+* Fix Add and Edit show quality selection when Quality 'Custom' is used
+* Fix add existing shows from folders that contain a plus char
+* Fix post process issue where items in history were processed out of turn
+* Change increase frequency of updating show data
+* Remove FreshOnTV (TvT) torrent provider
+* Remove Strike torrent provider
+* Change increase the scope and number of non release group text that is identified and removed
+* Add a general config setting to allow adding incomplete show data
+* Change to throttle connection rate on thread initiation for adba library
+
+[develop changelog]
+Enable Alpha Ratio again now that the secure login page over https is fixed
+Add ability to parse command line output from unix unrar version 4 and below
+
+
+### 0.10.0 (2015-08-06 11:05:00 UTC)
 * Remove EZRSS provider
-* Update Tornado webserver to 4.2 (fdfaf3d)
+* Update Tornado Web Server to 4.2 (fdfaf3d)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
 * Update Requests library 2.6.2 to 2.7.0 (8b5e457)
@@ -117,7 +181,7 @@
 
 ### 0.9.0 (2015-05-18 14:33:00 UTC)
 
-* Update Tornado webserver to 4.2.dev1 (609dbb9)
+* Update Tornado Web Server to 4.2.dev1 (609dbb9)
 * Update change to suppress reporting of Tornado exception error 1 to updated package as listed in hacks.txt
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package as listed in hacks.txt
 * Change network names to only display on top line of Day by Day layout on Episode View
@@ -631,7 +695,7 @@
 * Add return code from hardlinking error to log
 * Fix ABD regex for certain filenames
 * Change miscellaneous UI fixes
-* Update Tornado webserver to 4.1dev1 and add the certifi lib dependency
+* Update Tornado Web Server to 4.1dev1 and add the certifi lib dependency
 * Fix trending shows page from loading full size poster images
 * Add "Archive on first match" to Manage, Mass Update, Edit Selected page
 * Fix searching IPTorrentsProvider

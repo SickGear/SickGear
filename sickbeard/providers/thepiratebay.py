@@ -123,26 +123,26 @@ class ThePirateBayProvider(generic.TorrentProvider):
         elif ep_obj.show.anime:
             ep_detail = '%02i' % ep_obj.scene_absolute_number
         else:
-            ep_detail = ['S%02d' % int(ep_obj.scene_season),
-                         'Season %s -Ep*' % ep_obj.scene_season]
+            season = (ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show.is_scene)]
+            ep_detail = ['S%02d' % int(season), 'Season %s -Ep*' % season]
 
         return [{'Season': self._build_search_strings(ep_detail)}]
 
     def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
 
-        if self.show.air_by_date or self.show.sports:
+        if self.show.air_by_date or self.show.is_sports:
             ep_detail = str(ep_obj.airdate).replace('-', ' ')
-            if self.show.sports:
+            if self.show.is_sports:
                 ep_detail += '|' + ep_obj.airdate.strftime('%b')
-        elif self.show.anime:
+        elif self.show.is_anime:
             ep_detail = '%02i' % ep_obj.scene_absolute_number
         else:
-            ep_detail = '%s|%s' % (config.naming_ep_type[2] % {'seasonnumber': ep_obj.scene_season,
-                                                               'episodenumber': ep_obj.scene_episode},
-                                   config.naming_ep_type[0] % {'seasonnumber': ep_obj.scene_season,
-                                                               'episodenumber': ep_obj.scene_episode})
+            season, episode = ((ep_obj.season, ep_obj.episode),
+                               (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show.is_scene)]
+            ep_dict = {'seasonnumber': season, 'episodenumber': episode}
+            ep_detail = '%s|%s' % (config.naming_ep_type[2] % ep_dict, config.naming_ep_type[0] % ep_dict)
 
-        return [{'Episode': self._build_search_strings(ep_detail, append=(add_string, '')[self.show.anime])}]
+        return [{'Episode': self._build_search_strings(ep_detail, append=(add_string, '')[self.show.is_anime])}]
 
     def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
 

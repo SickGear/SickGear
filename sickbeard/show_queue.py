@@ -301,12 +301,11 @@ class QueueItemAdd(ShowQueueItem):
                 self._finishEarly()
                 return
             # if the show has no episodes/seasons
-            if not s:
-                logger.log(u'Show ' + str(s['seriesname']) + ' is on ' + str(
-                    sickbeard.indexerApi(self.indexer).name) + ' but contains no season/episode data.', logger.ERROR)
-                ui.notifications.error('Unable to add show',
-                                       'Show ' + str(s['seriesname']) + ' is on ' + str(sickbeard.indexerApi(
-                                           self.indexer).name) + ' but contains no season/episode data.')
+            if not sickbeard.ALLOW_INCOMPLETE_SHOWDATA and not s:
+                msg = u'Show %s is on %s but contains no season/episode data. Only the show folder was created.'\
+                      % (s['seriesname'], sickbeard.indexerApi(self.indexer).name)
+                logger.log(msg, logger.ERROR)
+                ui.notifications.error('Unable to add show', msg)
                 self._finishEarly()
                 return
         except Exception as e:
@@ -471,14 +470,13 @@ class QueueItemAdd(ShowQueueItem):
 
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
+        # check if show has XEM mapping and if user disabled scene numbering during add show, output availability to log
+        if not self.scene and self.show.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list\
+                + sickbeard.scene_exceptions.xem_rage_ids_list:
+            logger.log(u'Alternative scene episode numbers were disabled during add show. Edit show to enable them for searching.')
 
         # update internal name cache
         name_cache.buildNameCache(self.show)
-
-        # check if show has XEM mapping so we can determine if searches should go by scene numbering or indexer numbering.
-        if not self.scene and sickbeard.scene_numbering.get_xem_numbering_for_show(self.show.indexerid,
-                                                                                   self.show.indexer):
-            self.show.scene = 1
 
         self.finish()
 

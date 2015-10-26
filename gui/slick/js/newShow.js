@@ -189,22 +189,23 @@ $(document).ready(function () {
 	function updateSampleText() {
 		// if something's selected then we have some behavior to figure out
 
-		var show_name,
+		var show_name = '',
 			sep_char,
 			elRadio = $('input:radio[name="whichSeries"]:checked'),
 			elInput = $('input:hidden[name="whichSeries"]'),
+			elScene = $('#scene'),
 			elRootDirs = $('#rootDirs'),
 			elFullShowPath = $('#fullShowPath');
 
 		// if they've picked a radio button then use that
 		if (elRadio.length) {
 			show_name = elRadio.val().split('|')[4];
+			elScene[0].checked = 0 <= show_scene_maps.indexOf(parseInt(elRadio.val().split('|')[3], 10));
+			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'inline' : 'None');
 		}
 		// if we provided a show in the hidden field, use that
 		else if (elInput.length && elInput.val().length) {
 			show_name = $('#providedName').val();
-		} else {
-			show_name = '';
 		}
 		update_bwlist(show_name);
 		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(show_name, !0) + '</span>'
