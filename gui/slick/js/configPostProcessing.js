@@ -11,7 +11,7 @@ $(document).ready(function () {
 
 	function israr_supported() {
 		var pattern = $('#naming_pattern').val();
-		$.get(sbRoot + '/config/postProcessing/isRarSupported', 
+		$.get(sbRoot + '/config/postProcessing/isRarSupported',
 			function (data) {
 				if (data == "supported") {
 				} else {
@@ -21,11 +21,11 @@ $(document).ready(function () {
 					});
 					$('#unpack').qtip('toggle', true);
 					$('#unpack').css('background-color', '#FFFFDD');
-					
+
 				}
 			});
 	}
-	
+
 	function fill_examples() {
 		var pattern = $('#naming_pattern').val();
 		var multi = $('#naming_multi_ep :selected').val();
@@ -207,7 +207,7 @@ $(document).ready(function () {
 		var multi = $('#naming_anime_multi_ep :selected').val();
 		var anime_type = $('input[name="naming_anime"]:checked').val();
 
-		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, anime_type: anime_type},
+		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, anime: 'True', anime_type: anime_type},
 			function (data) {
 				if (data) {
 					$('#naming_example_anime').text(data + '.ext');
@@ -217,7 +217,7 @@ $(document).ready(function () {
 				}
 			});
 
-		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, multi: multi, anime_type: anime_type},
+		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, multi: multi, anime: 'True', anime_type: anime_type},
 			function (data) {
 				if (data) {
 					$('#naming_example_multi_anime').text(data + '.ext');
@@ -227,7 +227,7 @@ $(document).ready(function () {
 				}
 			});
 
-		$.get(sbRoot + '/config/postProcessing/isNamingValid', {pattern: pattern, multi: multi, anime_type: anime_type},
+		$.get(sbRoot + '/config/postProcessing/isNamingValid', {pattern: pattern, multi: multi, anime: 'True', anime_type: anime_type},
 			function (data) {
 				if (data == "invalid") {
 					$('#naming_anime_pattern').qtip('option', {

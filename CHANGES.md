@@ -72,6 +72,7 @@
 * Add genres and rating to all Trakt shows
 * Add AniDb Random and Hot to Add Show page
 * Add IMDb Popular to Add Show page
+* Add version to anime renaming pattern
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed

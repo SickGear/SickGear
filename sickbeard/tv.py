@@ -2217,6 +2217,7 @@ class TVEpisode(object):
             '%0M': '%02d' % self.airdate.month,
             '%0D': '%02d' % self.airdate.day,
             '%RT': "PROPER" if self.is_proper else "",
+            '%V': 'v%s' % self.version if self.show.is_anime and self.version > 1 else '',
         }
 
     def _format_string(self, pattern, replace_map):

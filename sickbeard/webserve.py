@@ -4122,7 +4122,7 @@ class ConfigPostProcessing(Config):
 
         self.redirect('/config/postProcessing/')
 
-    def testNaming(self, pattern=None, multi=None, abd=False, sports=False, anime_type=None):
+    def testNaming(self, pattern=None, multi=None, abd=False, sports=False, anime=False, anime_type=None):
 
         if multi is not None:
             multi = int(multi)
@@ -4130,13 +4130,13 @@ class ConfigPostProcessing(Config):
         if anime_type is not None:
             anime_type = int(anime_type)
 
-        result = naming.test_name(pattern, multi, abd, sports, anime_type)
+        result = naming.test_name(pattern, multi, abd, sports, anime, anime_type)
 
         result = ek.ek(os.path.join, result['dir'], result['name'])
 
         return result
 
-    def isNamingValid(self, pattern=None, multi=None, abd=False, sports=False, anime_type=None):
+    def isNamingValid(self, pattern=None, multi=None, abd=False, sports=False, anime=False, anime_type=None):
         if pattern is None:
             return 'invalid'
 
