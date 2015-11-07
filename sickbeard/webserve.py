@@ -2558,12 +2558,17 @@ class Manage(MainHandler):
         t.submenu = self.ManageMenu()
         t.whichStatus = whichStatus
 
+        my_db = db.DBConnection()
+        sql_result = my_db.select(
+            'SELECT COUNT(*) AS snatched FROM [tv_episodes] WHERE season > 0 AND episode > 0 AND airdate > 1 AND ' +
+            'status IN (%s)' % ','.join([str(quality) for quality in Quality.SNATCHED + Quality.SNATCHED_PROPER]))
+        t.default_manage = sql_result and sql_result[0]['snatched'] and SNATCHED or WANTED
+
         # if we have no status then this is as far as we need to go
         if not status_list:
             return t.respond()
 
-        myDB = db.DBConnection()
-        status_results = myDB.select(
+        status_results = my_db.select(
             'SELECT show_name, tv_shows.indexer_id as indexer_id, airdate FROM tv_episodes, tv_shows WHERE tv_episodes.status IN (' + ','.join(
                 ['?'] * len(
                     status_list)) + ') AND season != 0 AND tv_episodes.showid = tv_shows.indexer_id ORDER BY show_name',
