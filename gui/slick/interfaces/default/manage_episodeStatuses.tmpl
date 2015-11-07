@@ -10,9 +10,9 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 ##
@@ -28,7 +28,7 @@
 		<select name="whichStatus" class="form-control form-control-inline input-sm" style="margin:0 10px">
 
     #for $curStatus in [$common.SKIPPED, $common.UNKNOWN, $common.SNATCHED, $common.WANTED, $common.ARCHIVED, $common.IGNORED]:
-			<option value="$curStatus">$common.statusStrings[$curStatus]</option>
+			<option value="$curStatus"#echo ('', ' selected="selected"')[$curStatus == $default_manage]#>$common.statusStrings[$curStatus]</option>
     #end for
 
 		</select>
@@ -36,8 +36,10 @@
 	</form>
 ##
 #else
-    #if $whichStatus in ($common.ARCHIVED, $common.IGNORED, $common.SNATCHED):
+    #if $whichStatus in ($common.ARCHIVED, $common.IGNORED):
         #set $row_class = 'good'
+    #elif $whichStatus == $common.SNATCHED:
+        #set $row_class = 'snatched'
     #else
         #set $row_class = $common.Overview.overviewStrings[$whichStatus]
     #end if
