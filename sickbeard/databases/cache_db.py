@@ -64,3 +64,52 @@ class ConsolidateProviders(InitialSchema):
             self.connection.action('DROP TABLE [%s]' % table)
 
         self.incDBVersion()
+class AddNetworkTimezones(AddSceneNameCache):
+    def test(self):
+        return self.hasTable("network_timezones")
+
+    def execute(self):
+        self.connection.action("CREATE TABLE network_timezones (network_name TEXT PRIMARY KEY, timezone TEXT)")
+
+class AddLastSearch(AddNetworkTimezones):
+    def test(self):
+        return self.hasTable("lastSearch")
+
+    def execute(self):
+        self.connection.action("CREATE TABLE lastSearch (provider TEXT, time NUMERIC)")
+
+class AddSceneExceptionsSeasons(AddSceneNameCache):
+    def test(self):
+        return self.hasColumn("scene_exceptions", "season")
+
+    def execute(self):
+        self.addColumn("scene_exceptions", "season", "NUMERIC", -1)
+
+class AddSceneExceptionsCustom(AddSceneExceptionsSeasons):
+    def test(self):
+        return self.hasColumn("scene_exceptions", "custom")
+
+    def execute(self):
+        self.addColumn("scene_exceptions", "custom", "NUMERIC", 0)
+
+class AddSceneExceptionsRefresh(AddSceneExceptionsCustom):
+    def test(self):
+        return self.hasTable("scene_exceptions_refresh")
+
+    def execute(self):
+        self.connection.action(
+            "CREATE TABLE scene_exceptions_refresh (list TEXT PRIMARY KEY, last_refreshed INTEGER)")
+
+class AddAnimeTitles(AddSceneExceptionsRefresh):
+    def test(self):
+        return self.hasTable("AnimeTitles")
+
+    def execute(self):
+        self.connection.action("CREATE TABLE AnimeTitles (anime TEXT, aid NUMERIC, lang TEXT)")
+
+class AddAniDBCache(AddAnimeTitles):
+    def test(self):
+        return self.hasTable("AniDBCache")
+
+    def execute(self):
+        self.connection.action("CREATE TABLE AniDBCache (url TEXT, lastfetched NUMERIC, response TEXT)")

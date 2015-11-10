@@ -55,8 +55,8 @@ def shouldRefresh(list):
 def setLastRefresh(list):
     my_db = db.DBConnection('cache.db')
     my_db.upsert('scene_exceptions_refresh',
-                 {'last_refreshed': int(time.mktime(datetime.datetime.today().timetuple()))},
-                 {'list': list})
+                {'last_refreshed': int(time.mktime(datetime.datetime.today().timetuple()))},
+                {'list': list})
 
 
 def get_scene_exceptions(indexer_id, season=-1):
@@ -69,7 +69,7 @@ def get_scene_exceptions(indexer_id, season=-1):
     if indexer_id not in exceptionsCache or season not in exceptionsCache[indexer_id]:
         my_db = db.DBConnection('cache.db')
         exceptions = my_db.select('SELECT show_name FROM scene_exceptions WHERE indexer_id = ? and season = ?',
-                                  [indexer_id, season])
+                                 [indexer_id, season])
         if exceptions:
             exceptions_list = list(set([cur_exception['show_name'] for cur_exception in exceptions]))
 
@@ -110,7 +110,7 @@ def get_scene_seasons(indexer_id):
     if indexer_id not in exceptionsSeasonCache:
         my_db = db.DBConnection('cache.db')
         sql_results = my_db.select('SELECT DISTINCT(season) as season FROM scene_exceptions WHERE indexer_id = ?',
-                                   [indexer_id])
+                                 [indexer_id])
         if sql_results:
             exception_sseason_list = list(set([int(x['season']) for x in sql_results]))
 
@@ -258,7 +258,7 @@ def update_scene_exceptions(indexer_id, scene_exceptions, season=-1):
             cur_exception = unicode(cur_exception, 'utf-8', 'replace')
 
         my_db.action('INSERT INTO scene_exceptions (indexer_id, show_name, season) VALUES (?,?,?)',
-                     [indexer_id, cur_exception, season])
+                    [indexer_id, cur_exception, season])
 
 
 def _anidb_exceptions_fetcher():
@@ -306,6 +306,7 @@ def _xem_exceptions_fetcher():
                 continue
 
             for indexerid, names in parsed_json['data'].items():
+                try:
                 try:
                     xem_exception_dict[int(indexerid)] = names
                 except:
