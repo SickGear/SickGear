@@ -2234,7 +2234,7 @@ class NewHomeAddShows(Home):
 
         return t.respond()
 
-    def newShow(self, show_to_add=None, other_shows=None, use_show_name=None):
+    def newShow(self, show_to_add=None, other_shows=None, use_show_name=None, **kwargs):
         """
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
@@ -2247,6 +2247,7 @@ class NewHomeAddShows(Home):
         t.submenu = self.HomeMenu()
         t.enable_anime_options = True
         t.enable_default_wanted = True
+        t.kwargs = kwargs
 
         indexer, show_dir, indexer_id, show_name = self.split_extra_show(show_to_add)
 
@@ -2283,6 +2284,93 @@ class NewHomeAddShows(Home):
         t.show_scene_maps = sickbeard.scene_exceptions.xem_tvdb_ids_list + sickbeard.scene_exceptions.xem_rage_ids_list
 
         return t.respond()
+
+    def randomhot_anidb(self, *args, **kwargs):
+
+        try:
+            import xml.etree.cElementTree as etree
+        except ImportError:
+            import elementtree.ElementTree as etree
+
+        browse_type = 'AniDB'
+        filtered = []
+
+        xref_src = 'https://raw.githubusercontent.com/ScudLee/anime-lists/master/anime-list.xml'
+        xml_data = helpers.getURL(xref_src)
+        xref_root = xml_data and etree.fromstring(xml_data) or None
+
+        url = 'http://api.anidb.net:9001/httpapi?client=sickgear&clientver=1&protover=1&request=main'
+        response = helpers.getURL(url)
+        if response and xref_root:
+            oldest, newest = None, None
+            try:
+                anime_root = etree.fromstring(response)
+                hot_anime, random_rec = [anime_root.find(node) for node in ['hotanime', 'randomrecommendation']]
+                random_rec = [item.find('./anime') for item in random_rec]
+                oldest_dt, newest_dt = 9999999, 0
+                for list_type, items in [('hot', hot_anime.getchildren()), ('recommended', random_rec)]:
+                    for anime in items:
+                        ids = dict(anidb=config.to_int(anime.get('id'), None))
+                        xref_node = xref_root.find('./anime[@anidbid="%s"]' % ids['anidb'])
+                        if not xref_node:
+                            continue
+                        tvdbid = config.to_int(xref_node.get('tvdbid'), None)
+                        if None is tvdbid:
+                            continue
+                        ids.update(dict(tvdb=tvdbid))
+                        first_aired, title, image = [None is not y and y.text or y for y in [
+                            anime.find(node) for node in ['startdate', 'title', 'picture']]]
+
+                        dt = dateutil.parser.parse(first_aired)
+                        dt_ordinal = dt.toordinal()
+                        dt_string = sbdatetime.sbdatetime.sbfdate(dt)
+                        if dt_ordinal < oldest_dt:
+                            oldest_dt = dt_ordinal
+                            oldest = dt_string
+                        if dt_ordinal > newest_dt:
+                            newest_dt = dt_ordinal
+                            newest = dt_string
+
+                        img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
+                        path = ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'anidb'))
+                        helpers.make_dirs(path)
+                        file_name = ek.ek(os.path.basename, img_uri)
+                        cached_name = ek.ek(os.path.join, path, file_name)
+                        if not ek.ek(os.path.isfile, cached_name):
+                            helpers.download_file(img_uri, cached_name)
+                        images = dict(poster=dict(thumb='cache/images/anidb/%s' % file_name))
+
+                        votes = rating = 0
+                        counts = anime.find('./ratings/permanent')
+                        if isinstance(counts, object):
+                            votes = counts.get('count')
+                            rated = float(counts.text)
+                            rating = 100 < rated and rated / 10 or 10 > rated and 10 * rated or rated
+
+                        filtered.append(dict(
+                            type=list_type,
+                            ids=ids,
+                            premiered=dt_ordinal,
+                            premiered_str=dt_string,
+                            title=title.strip(),
+                            images=images,
+                            url_src_db='http://anidb.net/perl-bin/animedb.pl?show=anime&aid=%s' % ids['anidb'],
+                            url_tvdb='%s%s' % (sickbeard.indexerApi(INDEXER_TVDB).config['show_url'], ids['tvdb']),
+                            votes=votes, rating=rating,
+                            genres='', overview=''
+                        ))
+            except:
+                pass
+
+            kwargs.update(dict(oldest=oldest, newest=newest))
+
+        return self.browse_shows(browse_type, 'Random and Hot at AniDB', filtered, **kwargs)
+
+    def addAniDBShow(self, indexer_id, showName):
+
+        if helpers.findCertainShow(sickbeard.showList, config.to_int(indexer_id, '')):
+            return
+        return self.newShow('|'.join(['', '', '', indexer_id or showName]), use_show_name=True, is_anime=True)
 
     def traktTrending(self, *args, **kwargs):
 

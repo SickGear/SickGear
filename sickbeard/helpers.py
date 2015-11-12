@@ -1162,19 +1162,19 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             return
 
     except requests.exceptions.HTTPError as e:
-        logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
+        logger.log(u'HTTP error %s while loading URL %s' % (e.errno, url), logger.WARNING)
         return
     except requests.exceptions.ConnectionError as e:
-        logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
+        logger.log(u'Connection error msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
         return
     except requests.exceptions.ReadTimeout as e:
-        logger.log(u'Read timed out ' + str(e.message) + ' while loading URL ' + url, logger.WARNING)
+        logger.log(u'Read timed out msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
         return
-    except requests.exceptions.Timeout as e:
-        logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
+    except (requests.exceptions.Timeout, socket.timeout) as e:
+        logger.log(u'Connection timed out msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
         return
     except Exception:
-        logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)
+        logger.log(u'Exception caught while loading URL %s Detail... %s' % (url, traceback.format_exc()), logger.WARNING)
         return
 
     if json:
