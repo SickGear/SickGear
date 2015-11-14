@@ -28,6 +28,7 @@ $(document).ready(function(){
 
 		window.location.href = sbRoot + '/home/addShows/addExistingShows'
 			+ '?promptForSettings=' + ($('#promptForSettings').prop('checked') ? 'on' : 'off')
+			+ (undefined !== $.sgSid && 0 < $.sgSid.length ? '&sid=' + $.sgSid : '')
 			+ '&shows_to_add=' + dirArr.join('&shows_to_add=');
 	});
 
@@ -47,7 +48,7 @@ $(document).ready(function(){
 			+ ' height="32" width="32" />'
 			+ ' scanning parent folders...');
 
-		$.get(sbRoot + '/home/addShows/massAddTable',
+		$.get(sbRoot + '/home/addShows/massAddTable' + (undefined !== $.sgHashDir && 0 < $.sgHashDir.length ? '?hash_dir=' + $.sgHashDir : ''),
 			url,
 			function(data){
 				$('#tableDiv').html(data);

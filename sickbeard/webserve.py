@@ -40,6 +40,7 @@ from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILE
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
 from sickbeard.helpers import remove_article, starify
+from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE
 from sickbeard.scene_exceptions import get_scene_exceptions
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
@@ -2052,6 +2053,16 @@ class NewHomeAddShows(Home):
         results = {}
         final_results = []
 
+        search_id, indexer_id = '', None
+        search_id = ''
+        try:
+            search_id = re.search(r'(?m)((?:tt\d{4,})|^\d{4,}$)', search_term).group(1)
+            resp = self.getTrakt('/search?id_type=%s&id=%s' % (('tvdb', 'imdb')['tt' in search_id], search_id))[0]
+            search_term = resp['show']['title']
+            indexer_id = resp['show']['ids']['tvdb']
+        except:
+            search_term = (search_term, '')['tt' in search_id]
+
         # Query Indexers for each search term and build the list of results
         for indexer in sickbeard.indexerApi().indexers if not int(indexer) else [int(indexer)]:
             lINDEXER_API_PARMS = sickbeard.indexerApi(indexer).api_params.copy()
@@ -2059,24 +2070,64 @@ class NewHomeAddShows(Home):
             lINDEXER_API_PARMS['custom_ui'] = classes.AllShowsListUI
             t = sickbeard.indexerApi(indexer).indexer(**lINDEXER_API_PARMS)
 
-            logger.log('Searching for Show with searchterm: %s on Indexer: %s' % (
-                search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
             try:
                 # add search results
-                results.setdefault(indexer, []).extend(t[search_term])
+                if bool(indexer_id):
+                    logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
+                        search_id, search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
+                    results.setdefault('tt' in search_id and 3 or indexer, []).extend(
+                        [{'id': indexer_id, 'seriesname': t[indexer_id]['seriesname'], 'firstaired': t[indexer_id]['firstaired']}])
+                    break
+                else:
+                    logger.log('Searching for shows using search term: %s from tv datasource %s' % (
+                        search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
+                    results.setdefault(indexer, []).extend(t[search_term])
             except Exception as e:
-                continue
+                pass
 
+            # Query trakt for tvdb ids
+            try:
+                logger.log('Searching for show using search term: %s from tv datasource Trakt' % search_term, logger.DEBUG)
+                resp = self.getTrakt('/search?query=%s&type=show' % search_term)
+                tvdb_ids = []
+                for tvdb_item in results[INDEXER_TVDB]:
+                    tvdb_ids.append(int(tvdb_item['id']))
+                results_trakt = []
+                for item in resp:
+                    if 'tvdb' in item['show']['ids'] and item['show']['ids']['tvdb'] and \
+                                    item['show']['ids']['tvdb'] not in tvdb_ids:
+                        results_trakt.append({'id': item['show']['ids']['tvdb'], 'seriesname': item['show']['title'],
+                                              'firstaired': item['show']['year']})
+                results.update({3: results_trakt})
+            except:
+                pass
+
+        id_names = [None, sickbeard.indexerApi(INDEXER_TVDB).name, sickbeard.indexerApi(INDEXER_TVRAGE).name,
+                    '%s via Trakt' % sickbeard.indexerApi(INDEXER_TVDB).name]
         map(final_results.extend,
-            ([[sickbeard.indexerApi(id).name, id, sickbeard.indexerApi(id).config['show_url'], int(show['id']),
+            ([['%s%s' % (id_names[id], helpers.findCertainShow(sickbeard.showList, int(show['id'])) and ' - exists in db' or ''),
+               (id, INDEXER_TVDB)[id == 3], sickbeard.indexerApi((id, INDEXER_TVDB)[id == 3]).config['show_url'], int(show['id']),
                show['seriesname'], show['firstaired']] for show in shows] for id, shows in results.items()))
 
         lang_id = sickbeard.indexerApi().config['langabbv_to_id'][lang]
         return json.dumps({'results': final_results, 'langid': lang_id})
 
-    def massAddTable(self, rootDir=None):
+    def getTrakt(self, url, *args, **kwargs):
+
+        filtered = []
+        try:
+            resp = TraktAPI(ssl_verify=sickbeard.TRAKT_VERIFY, timeout=sickbeard.TRAKT_TIMEOUT).trakt_request(url)
+            if len(resp):
+                filtered = resp
+        except traktException as e:
+            logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
+
+        return filtered
+
+    def massAddTable(self, rootDir=None, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='home_massAddTable.tmpl')
         t.submenu = self.HomeMenu()
+        t.kwargs = kwargs
 
         if not rootDir:
             return 'No folders selected.'
@@ -2100,12 +2151,34 @@ class NewHomeAddShows(Home):
 
         dir_list = []
 
+        display_one_dir = file_list = None
+        if kwargs.get('hash_dir'):
+            try:
+                for root_dir in sickbeard.ROOT_DIRS.split('|')[1:]:
+                    try:
+                        file_list = ek.ek(os.listdir, root_dir)
+                    except:
+                        continue
+
+                    for cur_file in file_list:
+
+                        cur_path = ek.ek(os.path.normpath, ek.ek(os.path.join, root_dir, cur_file))
+                        if not ek.ek(os.path.isdir, cur_path):
+                            continue
+
+                        display_one_dir = kwargs.get('hash_dir') == str(abs(hash(cur_path)))
+                        if display_one_dir:
+                            raise ValueError('hash matched')
+            except ValueError:
+                pass
+
         myDB = db.DBConnection()
         for root_dir in root_dirs:
-            try:
-                file_list = ek.ek(os.listdir, root_dir)
-            except:
-                continue
+            if not file_list:
+                try:
+                    file_list = ek.ek(os.listdir, root_dir)
+                except:
+                    continue
 
             for cur_file in file_list:
 
@@ -2113,11 +2186,14 @@ class NewHomeAddShows(Home):
                 if not ek.ek(os.path.isdir, cur_path):
                     continue
 
+                highlight = kwargs.get('hash_dir') == str(abs(hash(cur_path)))
+                if display_one_dir and not highlight:
+                    continue
                 cur_dir = {
                     'dir': cur_path,
-                    'display_dir': '<span class="filepath">' + ek.ek(os.path.dirname, cur_path) + os.sep + '</span>' + ek.ek(
-                        os.path.basename,
-                        cur_path),
+                    'highlight': highlight,
+                    'name': ek.ek(os.path.basename, cur_path),
+                    'path': '%s%s' % (ek.ek(os.path.dirname, cur_path), os.sep)
                 }
 
                 # see if the folder is in XBMC already
@@ -2311,6 +2387,8 @@ class NewHomeAddShows(Home):
         t = PageTemplate(headers=self.request.headers, file='home_addExistingShow.tmpl')
         t.submenu = self.HomeMenu()
         t.enable_anime_options = False
+        t.kwargs = kwargs
+        t.multi_parents = helpers.maybe_plural(len(sickbeard.ROOT_DIRS.split('|')[1:])) and 's are' or ' is'
 
         return t.respond()
 
@@ -2385,7 +2463,7 @@ class NewHomeAddShows(Home):
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
         if ek.ek(os.path.isdir, show_dir) and not fullShowPath:
             ui.notifications.error('Unable to add show', u'Found existing folder: ' + show_dir)
-            return self.redirect('/home/addShows/existingShows/')
+            return self.redirect('/home/addShows/existingShows?sid=%s&hash_dir=%s' % (indexer_id, abs(hash(show_dir))))
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:
@@ -2448,11 +2526,15 @@ class NewHomeAddShows(Home):
 
         return (indexer, show_dir, indexer_id, show_name)
 
-    def addExistingShows(self, shows_to_add=None, promptForSettings=None):
+    def addExistingShows(self, shows_to_add=None, promptForSettings=None, **kwargs):
         """
         Receives a dir list and add them. Adds the ones with given TVDB IDs first, then forwards
         along to the newShow page.
         """
+
+        if kwargs.get('sid', None):
+            return self.redirect('/home/addShows/newShow?show_to_add=%s&use_show_name=True' %
+                                 '|'.join(['', '', '', kwargs.get('sid', '')]))
 
         # grab a list of other shows to add, if provided
         if not shows_to_add:
@@ -2470,7 +2552,7 @@ class NewHomeAddShows(Home):
                 split_vals = cur_dir.split('|')
                 if len(split_vals) < 3:
                     dirs_only.append(cur_dir)
-            if not '|' in cur_dir:
+            if '|' not in cur_dir:
                 dirs_only.append(cur_dir)
             else:
                 indexer, show_dir, indexer_id, show_name = self.split_extra_show(cur_dir)
@@ -2479,7 +2561,6 @@ class NewHomeAddShows(Home):
                     continue
 
                 indexer_id_given.append((int(indexer), show_dir, int(indexer_id), show_name))
-
 
         # if they want me to prompt for settings then I will just carry on to the newShow page
         if promptForSettings and shows_to_add:
