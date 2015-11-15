@@ -246,7 +246,7 @@ def update_scene_exceptions(indexer_id, scene_exceptions, season=-1):
     my_db.action('DELETE FROM scene_exceptions WHERE indexer_id=? and season=?', [indexer_id, season])
 
     logger.log(u'Updating scene exceptions', logger.MESSAGE)
-    
+
     # A change has been made to the scene exception list. Let's clear the cache, to make this visible
     if indexer_id in exceptionsCache:
         exceptionsCache[indexer_id] = {}
@@ -306,7 +306,6 @@ def _xem_exceptions_fetcher():
                 continue
 
             for indexerid, names in parsed_json['data'].items():
-                try:
                 try:
                     xem_exception_dict[int(indexerid)] = names
                 except:
