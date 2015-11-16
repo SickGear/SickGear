@@ -10,55 +10,42 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 
 	<div id="addShowPortal">
-
 		<a class="btn btn-large" href="$sbRoot/home/addShows/newShow/">
 			<div class="button"><div class="icon-addnewshow"></div></div>
 			<div class="buttontext">
 				<h3>Add New Show</h3>
-				<p>Search a TV database for a show to add. A new folder will be created for episodes</p>
+				<p>Search a TV database for a show to add.</p>
 			</div>
 		</a>
 
-		<a class="btn btn-large" href="$sbRoot/home/addShows/trendingShows/">
-			<div class="button"><div class="icon-addtrendingshow"></div></div>
+		<a class="btn btn-large" href="$sbRoot/home/addShows/traktTrending/">
+			<div class="button"><div class="icon-addrecommendedshow"></div></div>
 			<div class="buttontext">
-				<h3>Add From Trending</h3>
-				<p>Browse a current trending show list to add from. A folder for episodes will be created</p>
+				<h3>Add From Trakt</h3>
+				<p>Browse trends, recommended and more.</p>
 			</div>
 		</a>
+
+		<div style="clear:both;font-size:2px">&nbsp;</div>
 
 		<a class="btn btn-large" href="$sbRoot/home/addShows/existingShows/">
 			<div class="button"><div class="icon-addexistingshow"></div></div>
 			<div class="buttontext">
 				<h3>Add Existing Shows</h3>
-				<p>Scan parent folders for shows and episode metadata to import into SickGear</p>
+				<p>Scan parent folders to import into SickGear.</p>
 			</div>
 		</a>
 
-#if True == $sickbeard.USE_TRAKT:
-		<a class="btn btn-large" href="$sbRoot/home/addShows/recommendedShows/">
-			<div class="button"><div class="icon-addrecommendedshow"></div></div>
-			<div class="buttontext">
-				<h3>Add Recommended</h3>
-				<p>Browse recommendations based on your Trakt.tv show library to add to SickGear</p>
-			</div>
-		</a>
-#else
-		<div class="buttontext" style="padding:10px 5px">
-			<p>There's more... unlock another button to browse<br />
-			recommended shows based on your Trakt.tv show<br />
-			library by enabling Trakt in Config/Notifications/Social</p>
-		</div>
-#end if
+		<div style="clear:both;font-size:2px">&nbsp;</div>
+
 	</div>
 
-	<div style="clear:both">&nbsp;</div>
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

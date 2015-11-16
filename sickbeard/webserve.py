@@ -23,6 +23,7 @@ import time
 import urllib
 import re
 import datetime
+import dateutil.parser
 import random
 import traceback
 
@@ -2283,100 +2284,129 @@ class NewHomeAddShows(Home):
 
         return t.respond()
 
-    def recommendedShows(self, *args, **kwargs):
-        """
-        Display the new show page which collects a tvdb id, folder, and extra options and
-        posts them to addNewShow
-        """
-        self.set_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        self.set_header('Pragma', 'no-cache')
-        self.set_header('Expires', '0')
+    def traktTrending(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='home_recommendedShows.tmpl')
-        t.submenu = self.HomeMenu()
-        t.enable_anime_options = False
+        return self.browse_trakt('shows/trending?limit=%s&' % 100, 'Trending at Trakt', mode='trending')
 
-        return t.respond()
+    def traktRecommended(self, *args, **kwargs):
 
-    def getRecommendedShows(self, *args, **kwargs):
-        final_results = []
+        return self.browse_trakt('recommendations/shows?limit=%s&' % 100,
+                                 'Recommended for <b class="grey-text">you</b> by Trakt', mode='recommended')
 
-        logger.log(u'Getting recommended shows from Trakt.tv', logger.DEBUG)
-        recommendedlist = TraktCall('recommendations/shows.json/%API%', sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME,
-                                    sickbeard.TRAKT_PASSWORD)
+    def traktNewShows(self, *args, **kwargs):
 
-        if recommendedlist == 'NULL':
-            logger.log(u'No shows found in your recommendedlist, aborting recommendedlist update', logger.DEBUG)
-            return
+        return self.browse_trakt('/calendars/all/shows/new/%s/%s?' % (sbdatetime.sbdatetime.sbfdate(
+            dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32), 'Brand-new shows at Trakt',
+            mode='newshows', footnote='Note; Expect default placeholder images in this list')
 
-        if recommendedlist is None:
-            logger.log(u'Could not connect to trakt service, aborting recommended list update', logger.ERROR)
-            return
+    def traktNewSeasons(self, *args, **kwargs):
 
-        map(final_results.append,
-            ([show['url'],
-              show['title'],
-              show['overview'],
-              sbdatetime.sbdatetime.sbfdate(datetime.date.fromtimestamp(int(show['first_aired']))),
-              sickbeard.indexerApi(1).name,
-              sickbeard.indexerApi(1).config['icon'],
-              int(show['tvdb_id'] or 0),
-              '%s%s' % (sickbeard.indexerApi(1).config['show_url'], int(show['tvdb_id'] or 0)),
-              sickbeard.indexerApi(2).name,
-              sickbeard.indexerApi(2).config['icon'],
-              int(show['tvrage_id'] or 0),
-              '%s%s' % (sickbeard.indexerApi(2).config['show_url'], int(show['tvrage_id'] or 0))
-             ] for show in recommendedlist if not helpers.findCertainShow(sickbeard.showList, indexerid=int(show['tvdb_id']))))
+        return self.browse_trakt('/calendars/all/shows/premieres/%s/%s?' % (sbdatetime.sbdatetime.sbfdate(
+            dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32), 'Season premieres at Trakt',
+            mode='newseasons', footnote='Note; Expect default placeholder images in this list')
 
-        self.set_header('Content-Type', 'application/json')
-        return json.dumps({'results': final_results})
+    def browse_trakt(self, url, browse_title, *args, **kwargs):
 
-    def addRecommendedShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
-                           anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
-                           fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                           scene=None):
+        browse_type = 'Trakt'
+        normalised, filtered = ([], [])
 
-        indexer = 1
-        indexer_name = sickbeard.indexerApi(int(indexer)).name
-        show_url = whichSeries.split('|')[1]
-        indexer_id = whichSeries.split('|')[0]
-        show_name = whichSeries.split('|')[2]
+        if 'recommended' == kwargs.get('mode', None) and not sickbeard.USE_TRAKT:
+            error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
-        return self.addNewShow('|'.join([indexer_name, str(indexer), show_url, indexer_id, show_name, '']),
-                               indexerLang, rootDir,
-                               defaultStatus,
-                               anyQualities, bestQualities, flatten_folders, subtitles, fullShowPath, other_shows,
-                               skipShow, providedIndexer, anime, scene)
-
-    def trendingShows(self, *args, **kwargs):
-        """
-        Display the new show page which collects a tvdb id, folder, and extra options and
-        posts them to addNewShow
-        """
-        t = PageTemplate(headers=self.request.headers, file='home_trendingShows.tmpl')
-        t.submenu = self.HomeMenu()
-
-        trakt_api = TraktAPI()
-        limit_show = 50
+        error_msg = None
         try:
-            t.trending_shows = trakt_api.trakt_request("shows/trending?limit=" + str(limit_show) + "&extended=full,images") or []
-            t.trending_inlibrary = 0
-            if None is not t.trending_shows:
-                for item in t.trending_shows:
-                    tvdbs = ['tvdb_id', 'tvrage_id']
-                    for index, tvdb in enumerate(tvdbs):
-                        try:
-                            item[u'show_id'] = str(item[tvdb])
-                            tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
-                        except:
-                            continue
-                        # check tvshow indexer is not using the same id from another indexer
-                        if tvshow and (index + 1) == tvshow.indexer:
-                            item[u'show_id'] = u'%s:%s' % (tvshow.indexer, item[tvdb])
-                            t.trending_inlibrary += 1
-                            break
+            resp = TraktAPI(ssl_verify=sickbeard.TRAKT_VERIFY, timeout=sickbeard.TRAKT_TIMEOUT).trakt_request('%sextended=full,images' % url)
+            if resp:
+                if 'show' in resp[0]:
+                    if 'first_aired' in resp[0]:
+                        for item in resp:
+                            item['show']['first_aired'] = item['first_aired']
+                            del item['first_aired']
+                    normalised = resp
+                else:
+                    for item in resp:
+                        normalised.append({u'show': item})
+                del resp
+        except traktAuthException as e:
+            logger.log(u'Pin authorisation needed to connect to Trakt service: %s' % ex(e), logger.WARNING)
+            error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
         except traktException as e:
-            logger.log(u"Could not connect to Trakt service: %s" % ex(e), logger.WARNING)
+            logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
+        except (IndexError, KeyError):
+            pass
+
+        oldest_dt = 9999999
+        newest_dt = 0
+        oldest = None
+        newest = None
+        for item in normalised:
+            try:
+                dt = dateutil.parser.parse(item['show']['first_aired'])
+                dt_ordinal = dt.toordinal()
+                dt_string = sbdatetime.sbdatetime.sbfdate(dt)
+                if dt_ordinal < oldest_dt:
+                    oldest_dt = dt_ordinal
+                    oldest = dt_string
+                if dt_ordinal > newest_dt:
+                    newest_dt = dt_ordinal
+                    newest = dt_string
+                filtered.append(dict(
+                    premiered=dt_ordinal,
+                    premiered_str=dt_string,
+                    genres='' if 'genres' not in item['show'] else ', '.join(['%s' % v for v in item['show']['genres']]),
+                    ids=item['show']['ids'],
+                    images='' if 'images' not in item['show'] else item['show']['images'],
+                    overview='' if 'overview' not in item['show'] or None is item['show']['overview'] else re.sub(
+                        r'[\"\']+', '', item['show']['overview'][:250:].strip()),
+                    rating='0' if 'rating' not in item['show'] else '%.2f' % (item['show']['rating'] * 10),
+                    title=item['show']['title'].strip(),
+                    url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
+                    url_tvdb=('', '%s%s' % (sickbeard.indexerApi(INDEXER_TVDB).config['show_url'],
+                                            item['show']['ids']['tvdb']))[isinstance(item['show']['ids']['tvdb'], (int, long))
+                                                                          and 0 < item['show']['ids']['tvdb']],
+                    votes='0' if 'votes' not in item['show'] else item['show']['votes']))
+            except:
+                pass
+
+        kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    def addTraktShow(self, indexer_id, showName):
+
+        if not helpers.findCertainShow(sickbeard.showList, config.to_int(indexer_id, '')):
+            return self.newShow('|'.join(['', '', '', config.to_int(indexer_id, None) and indexer_id or showName]),
+                                use_show_name=True)
+
+    def browse_shows(self, browse_type, browse_title, shows, *args, **kwargs):
+        """
+        Display the new show page which collects a tvdb id, folder, and extra options and
+        posts them to addNewShow
+        """
+        t = PageTemplate(headers=self.request.headers, file='home_browseShows.tmpl')
+        t.submenu = self.HomeMenu()
+        t.browse_type = browse_type
+        t.browse_title = browse_title
+        t.all_shows = shows
+        t.kwargs = kwargs
+
+        t.all_shows_inlibrary = 0
+        for item in t.all_shows:
+            item['show_id'] = ''
+            for index, tvdb in enumerate(['tvdb', 'tvrage']):
+                try:
+                    item['show_id'] = str(item['ids'][tvdb])
+                    tvshow = helpers.findCertainShow(sickbeard.showList, item['show_id'])
+                except:
+                    continue
+                # check tvshow indexer is not using the same id from another indexer
+                if tvshow and (index + 1) == tvshow.indexer:
+                    item['show_id'] = u'%s:%s' % (tvshow.indexer, tvshow.indexerid)
+                    t.all_shows_inlibrary += 1
+                    break
+
+                if None is not config.to_int(item['show_id'], None):
+                    break
 
         return t.respond()
 
@@ -2391,11 +2421,6 @@ class NewHomeAddShows(Home):
         t.multi_parents = helpers.maybe_plural(len(sickbeard.ROOT_DIRS.split('|')[1:])) and 's are' or ' is'
 
         return t.respond()
-
-    def addTraktShow(self, indexer_id, showName):
-        if helpers.findCertainShow(sickbeard.showList, config.to_int(indexer_id, '')):
-            return
-        return self.newShow('|'.join(['', '', indexer_id, showName]), use_show_name=True)
 
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
                    quality_preset=None, anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
@@ -2436,15 +2461,15 @@ class NewHomeAddShows(Home):
         # figure out what show we're adding and where
         series_pieces = whichSeries.split('|')
         if (whichSeries and rootDir) or (whichSeries and fullShowPath and len(series_pieces) > 1):
-            if len(series_pieces) < 6:
+            if len(series_pieces) < 4:
                 logger.log('Unable to add show due to show selection. Not enough arguments: %s' % (repr(series_pieces)),
                            logger.ERROR)
                 ui.notifications.error('Unknown error. Unable to add show due to problem with show selection.')
                 return self.redirect('/home/addShows/existingShows/')
 
-            indexer = int(series_pieces[1])
-            indexer_id = int(series_pieces[3])
-            show_name = series_pieces[4]
+            indexer = int(series_pieces[0])
+            indexer_id = int(series_pieces[2])
+            show_name = series_pieces[3]
         else:
             # if no indexer was provided use the default indexer set in General settings
             if not providedIndexer:
