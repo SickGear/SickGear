@@ -43,6 +43,21 @@
 			</div>
 		</a>
 
+#if $sickbeard.USE_ANIDB
+		<a class="btn btn-large" href="$sbRoot/home/addShows/randomhot_anidb/" style="float:right">
+			<div class="button"><div class="icon-addtrendingshow"></div></div>
+			<div class="buttontext">
+				<h3>Add from AniDB</h3>
+				<p>Browse what's hot and recommnended.</p>
+			</div>
+		</a>
+#else
+		<div class="buttontext" style="padding:10px 5px 10px 30px">
+			<h3>Add Random/Hot AniDB</h3>
+			<p>To use, enable AniDB in Config/Anime.</p>
+		</div>
+#end if
+
 		<div style="clear:both;font-size:2px">&nbsp;</div>
 
 	</div>
