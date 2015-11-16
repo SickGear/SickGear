@@ -58,6 +58,7 @@ from lib.dateutil import tz
 from lib.unrar2 import RarFile
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import traktException, traktAuthException
+from sickbeard.bs4_parser import BS4Parser
 
 
 try:
@@ -2372,6 +2373,99 @@ class NewHomeAddShows(Home):
             return
         return self.newShow('|'.join(['', '', '', indexer_id or showName]), use_show_name=True, is_anime=True)
 
+    def popular_imdb(self, *args, **kwargs):
+
+        browse_type = 'IMDb'
+
+        filtered = []
+        footnote = None
+        start_year, end_year = (datetime.date.today().year - 10, datetime.date.today().year)
+        url = 'http://www.imdb.com/search/title?at=0&sort=moviemeter&title_type=tv_series&year=%s,%s' % (start_year, end_year)
+        html = helpers.getURL(url)
+        if html:
+            img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)(.*?)$')
+            vote_value = re.compile(r'(?i).*\((\d*).?(\d*)\svotes\).*')
+            imdb_id = re.compile(r'(?i).*(tt\d+)$')
+
+            with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                torrent_table = soup.find('table', {'class': 'results'})
+                torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+
+                for tr in torrent_rows[1:]:
+                    try:
+                        url_path = tr.select('td.title a[href*=title]')[0]['href'].strip('/')
+                        ids = dict(imdb=imdb_id.sub(r'\1', url_path))
+                        first_aired = tr.select('td.title span.year_type')
+                        year = None if not len(first_aired) else re.sub(r'.*(\d{4}).*', r'\1', first_aired[0].get_text())
+                        dt_ordinal = 0
+                        if year:
+                            dt = dateutil.parser.parse('01-01-%s' % year)
+                            dt_ordinal = dt.toordinal()
+                            if dt_ordinal < oldest_dt:
+                                oldest_dt = dt_ordinal
+                                oldest = year
+                            if dt_ordinal > newest_dt:
+                                newest_dt = dt_ordinal
+                                newest = year
+
+                        genres = tr.select('td.title span.genre')
+                        images = tr.select('td.image img')
+                        overview = tr.select('td.title span.outline')
+                        rating = tr.select('td.title span.rating-rating span.value')
+                        voting = tr.select('td.title div.rating-list')
+                        if len(images) and 'tv_series.gif' not in images[0].get('src'):
+                            img_uri = images[0].get('src')
+                            images = {}
+                            match = img_size.search(img_uri)
+                            if match:
+                                scale = lambda low1, high1: int((float(450) / high1) * low1)
+                                high = int(max([match.group(9), match.group(11)]))
+                                scaled = [scale(x, high) for x in [(int(match.group(n)), high)[high == int(match.group(n))] for n in 3, 5, 7, 9, 11]]
+                                parts = [match.group(1), match.group(4), match.group(6), match.group(8), match.group(10), match.group(12)]
+                                img_uri = img_uri.replace(match.group(), ''.join([str(y) for x in map(None, parts, scaled) for y in x if y is not None]))
+                                path = ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'imdb'))
+                                helpers.make_dirs(path)
+                                file_name = ek.ek(os.path.basename, img_uri)
+                                cached_name = ek.ek(os.path.join, path, file_name)
+                                if not ek.ek(os.path.isfile, cached_name):
+                                    helpers.download_file(img_uri, cached_name)
+                                images = dict(poster=dict(thumb='cache/images/imdb/%s' % file_name))
+                        else:
+                            images = {}
+
+                        filtered.append(dict(
+                            premiered=dt_ordinal,
+                            premiered_str=year or 'No year',
+                            genres='No genre yet' if not len(genres) else genres[0].get_text().lower().replace(' |', ','),
+                            ids=ids,
+                            images=images,
+                            overview='No overview yet' if not len(overview) else re.sub(r'[\"\']+', r'', overview[0].get_text()[:250:].strip()),
+                            rating=0 if not len(rating) else int(float(rating[0].get_text()) * 10),
+                            title=tr.select('td.title a')[0].get_text().strip(),
+                            url_src_db='http://www.imdb.com/%s/' % url_path,
+                            votes=0 if not len(voting) else vote_value.sub(r'\1\2', voting[0].get('title'))))
+
+                        tvshow = filter(lambda x: x.imdbid == ids['imdb'], sickbeard.showList)[0]
+                        src = ((None, 'tvrage')[INDEXER_TVRAGE == tvshow.indexer], 'tvdb')[INDEXER_TVDB == tvshow.indexer]
+                        if src:
+                            filtered[-1]['ids'][src] = tvshow.indexerid
+                            filtered[-1]['url_' + src] = '%s%s' % (sickbeard.indexerApi(tvshow.indexer).config['show_url'], tvshow.indexerid)
+                    except (AttributeError, TypeError, KeyError, IndexError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest))
+
+            if len(filtered):
+                footnote = 'Note; Some images on this page may be cropped at source: <a target="_blank" href="%s">IMDb</a>' % helpers.anon_url(url)
+
+        kwargs.update(dict(footnote=footnote))
+        return self.browse_shows(browse_type, 'Most Popular IMDb TV', filtered, **kwargs)
+
+    def addIMDbShow(self, indexer_id, showName):
+        return self.newShow('|'.join(['', '', '', re.search('(?i)tt\d+$', indexer_id) and indexer_id or showName]),
+                            use_show_name=True)
+
     def traktTrending(self, *args, **kwargs):
 
         return self.browse_trakt('shows/trending?limit=%s&' % 100, 'Trending at Trakt', mode='trending')
@@ -2495,6 +2589,9 @@ class NewHomeAddShows(Home):
 
                 if None is not config.to_int(item['show_id'], None):
                     break
+
+            if not item['show_id'] and 'tt' in item['ids'].get('imdb', ''):
+                item['show_id'] = item['ids']['imdb']
 
         return t.respond()
 
