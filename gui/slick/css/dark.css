@@ -526,7 +526,7 @@ h2.day, h2.network{
 .carousel-indicators .active{
 	background:#8DBEEE;
 	border-color:#8DBEEE
-} 
+}
 
 /* =======================================================================
 config*.tmpl
@@ -655,6 +655,7 @@ span.path{
 	background-color:#333
 }
 
+#addRootDirTable td label .filepath.red-text,
 .red-text{
 	color:#d33
 }

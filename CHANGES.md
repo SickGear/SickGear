@@ -63,6 +63,8 @@
 * Change replace trakt with libtrakt for API v2
 * Change Trakt notification config to only handle PIN authentication with the service
 * Remove all other Trakt deprecated API V1 service features pending reconsideration
+* Change increase show search capability when using plain text and also add TVDB id, IMDb id and IMDb url search
+* Change improve existing show page and the handling when an attempt to add a show to an existing location
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed
