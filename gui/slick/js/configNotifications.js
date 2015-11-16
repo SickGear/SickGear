@@ -352,38 +352,29 @@ $(document).ready(function(){
 			});
 	});
 
-	$('#testTrakt').click(function () {
-		var trakt_api = $.trim($('#trakt_api').val());
-		var trakt_username = $.trim($('#trakt_username').val());
-		var trakt_password = $.trim($('#trakt_password').val());
-		if (!trakt_api || !trakt_username || !trakt_password) {
-			$('#testTrakt-result').html('Please fill out the necessary fields above.');
-			if (!trakt_api) {
-				$('#trakt_api').addClass('warning');
-			} else {
-				$('#trakt_api').removeClass('warning');
-			}
-			if (!trakt_username) {
-				$('#trakt_username').addClass('warning');
-			} else {
-				$('#trakt_username').removeClass('warning');
-			}
-			if (!trakt_password) {
-				$('#trakt_password').addClass('warning');
-			} else {
-				$('#trakt_password').removeClass('warning');
-			}
-			return;
+	var elTraktAuth = $('#trakt-authenticate'), elTraktAuthResult = $('#trakt-authentication-result');
+	elTraktAuth.click(function() {
+		var elTrakt = $('#trakt_pin'), traktPin = $.trim(elTrakt.val());
+		if(!traktPin) {
+			elTrakt.addClass('warning');
+			elTraktAuthResult.html('Please enter a required PIN above.');
+		} else {
+			elTrakt.removeClass('warning');
+			$(this).prop('disabled', true);
+			elTraktAuthResult.html(loading);
+			$.get(sbRoot + '/home/trakt_authenticate', {'pin': traktPin})
+				.done(function(data) {
+					elTraktAuthResult.html(data);
+					elTraktAuth.prop('disabled', false);
+				});
 		}
-		$('#trakt_api,#trakt_username,#trakt_password').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testTrakt-result').html(loading);
-		$.get(sbRoot + '/home/testTrakt', {'api': trakt_api, 'username': trakt_username, 'password': trakt_password})
-			.done(function (data) {
-				$('#testTrakt-result').html(data);
-				$('#testTrakt').prop('disabled', false);
-			});
 	});
+
+	elTraktAuthResult.html(loading);
+	$.get(sbRoot + '/home/trakt_get_connected_account')
+		.done(function(data) {
+			elTraktAuthResult.html(data);
+		});
 
 	$('#testEmail').click(function () {
 		var status, host, port, tls, from, user, pwd, err, to;

@@ -54,7 +54,9 @@ from lib import adba
 from lib import subliminal
 from lib.dateutil import tz
 from lib.unrar2 import RarFile
-from lib.trakt import TraktCall
+from lib.libtrakt import TraktAPI
+from lib.libtrakt.exceptions import traktException, traktAuthException
+
 
 try:
     import json
@@ -879,19 +881,24 @@ class Home(MainHandler):
             return '{"message": "Unable to find NMJ Database at location: %(dbloc)s. Is the right location selected and PCH running?", "database": ""}' % {
                 "dbloc": dbloc}
 
-    def testTrakt(self, api=None, username=None, password=None):
+    def trakt_authenticate(self, pin=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        if None is not api and starify(api, True):
-            api = sickbeard.TRAKT_API
-        if None is not password and set('*') == set(password):
-            password = sickbeard.TRAKT_PASSWORD
+        if None is pin:
+            return 'Trakt PIN required for authentication'
 
-        result = notifiers.trakt_notifier.test_notify(api, username, password)
-        if result:
-            return 'Test notice sent successfully to Trakt'
-        else:
-            return 'Test notice failed to Trakt'
+        try:
+            TraktAPI().trakt_token(pin)
+        except traktAuthException:
+            return 'Fail: Trakt NOT authenticated'
+
+        sickbeard.USE_TRAKT = True
+        sickbeard.save_config()
+        return '%s %s' % ('Success: Trakt authenticated.', self.trakt_get_connected_account())
+
+    @staticmethod
+    def trakt_get_connected_account():
+        return TraktAPI().get_connected_user()
 
     def loadShowNotifyLists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -2273,22 +2280,27 @@ class NewHomeAddShows(Home):
         t = PageTemplate(headers=self.request.headers, file='home_trendingShows.tmpl')
         t.submenu = self.HomeMenu()
 
-        t.trending_shows = TraktCall('shows/trending.json/%API%', sickbeard.TRAKT_API_KEY)
-        t.trending_inlibrary = 0
-        if None is not t.trending_shows:
-            for item in t.trending_shows:
-                tvdbs = ['tvdb_id', 'tvrage_id']
-                for index, tvdb in enumerate(tvdbs):
-                    try:
-                        item[u'show_id'] = str(item[tvdb])
-                        tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
-                    except:
-                        continue
-                    # check tvshow indexer is not using the same id from another indexer
-                    if tvshow and (index + 1) == tvshow.indexer:
-                        item[u'show_id'] = u'%s:%s' % (tvshow.indexer, item[tvdb])
-                        t.trending_inlibrary += 1
-                        break
+        trakt_api = TraktAPI()
+        limit_show = 50
+        try:
+            t.trending_shows = trakt_api.trakt_request("shows/trending?limit=" + str(limit_show) + "&extended=full,images") or []
+            t.trending_inlibrary = 0
+            if None is not t.trending_shows:
+                for item in t.trending_shows:
+                    tvdbs = ['tvdb_id', 'tvrage_id']
+                    for index, tvdb in enumerate(tvdbs):
+                        try:
+                            item[u'show_id'] = str(item[tvdb])
+                            tvshow = helpers.findCertainShow(sickbeard.showList, int(item[tvdb]))
+                        except:
+                            continue
+                        # check tvshow indexer is not using the same id from another indexer
+                        if tvshow and (index + 1) == tvshow.indexer:
+                            item[u'show_id'] = u'%s:%s' % (tvshow.indexer, item[tvdb])
+                            t.trending_inlibrary += 1
+                            break
+        except traktException as e:
+            logger.log(u"Could not connect to Trakt service: %s" % ex(e), logger.WARNING)
 
         return t.respond()
 
@@ -4368,9 +4380,9 @@ class ConfigNotifications(Config):
                           libnotify_notify_onsubtitledownload=None,
                           use_nmj=None, nmj_host=None, nmj_database=None, nmj_mount=None, use_synoindex=None,
                           use_nmjv2=None, nmjv2_host=None, nmjv2_dbloc=None, nmjv2_database=None,
-                          use_trakt=None, trakt_username=None, trakt_password=None, trakt_api=None,
+                          use_trakt=None, trakt_pin=None,
                           trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
-                          trakt_start_paused=None, trakt_use_recommended=None, trakt_sync=None,
+                          trakt_start_paused=None, trakt_sync=None,
                           trakt_default_indexer=None, trakt_remove_serieslist=None,
                           use_synologynotifier=None, synologynotifier_notify_onsnatch=None,
                           synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
@@ -4497,25 +4509,14 @@ class ConfigNotifications(Config):
             synologynotifier_notify_onsubtitledownload)
 
         sickbeard.USE_TRAKT = config.checkbox_to_value(use_trakt)
-        sickbeard.TRAKT_USERNAME = trakt_username
-        if set('*') != set(trakt_password):
-            sickbeard.TRAKT_PASSWORD = trakt_password
-        key = trakt_api.strip()
-        if not starify(key, True):
-            sickbeard.TRAKT_API = key
-        sickbeard.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
-        sickbeard.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
-        sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
-        sickbeard.TRAKT_METHOD_ADD = int(trakt_method_add)
-        sickbeard.TRAKT_START_PAUSED = config.checkbox_to_value(trakt_start_paused)
-        sickbeard.TRAKT_USE_RECOMMENDED = config.checkbox_to_value(trakt_use_recommended)
-        sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
-        sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
-
-        if sickbeard.USE_TRAKT:
-            sickbeard.traktCheckerScheduler.silent = False
-        else:
-            sickbeard.traktCheckerScheduler.silent = True
+        sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
+        # sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
+        # sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
+        # sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
+        # sickbeard.TRAKT_METHOD_ADD = int(trakt_method_add)
+        # sickbeard.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
+        # sickbeard.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
+        # sickbeard.TRAKT_START_PAUSED = config.checkbox_to_value(trakt_start_paused)
 
         sickbeard.USE_EMAIL = config.checkbox_to_value(use_email)
         sickbeard.EMAIL_NOTIFY_ONSNATCH = config.checkbox_to_value(email_notify_onsnatch)

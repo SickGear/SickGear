@@ -26,7 +26,7 @@ from sickbeard import logger
 from sickbeard import helpers
 from sickbeard import search_queue
 from sickbeard.common import SKIPPED, WANTED
-from lib.trakt import *
+from lib import libtrakt
 
 
 class TraktChecker():

@@ -18,7 +18,7 @@
 
 import sickbeard
 from sickbeard import logger
-from lib.trakt import *
+from lib.libtrakt import TraktAPI
 
 
 class TraktNotifier:

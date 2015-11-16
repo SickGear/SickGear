@@ -37,7 +37,7 @@ import pushalot
 import pushbullet
 
 import tweet
-import trakt
+from lib import libtrakt
 import emailnotify
 
 from sickbeard.common import *
@@ -62,7 +62,7 @@ pushalot_notifier = pushalot.PushalotNotifier()
 pushbullet_notifier = pushbullet.PushbulletNotifier()
 # social
 twitter_notifier = tweet.TwitterNotifier()
-trakt_notifier = trakt.TraktNotifier()
+#trakt_notifier = trakt.TraktNotifier()
 email_notifier = emailnotify.EmailNotifier()
 
 notifiers = [
@@ -83,7 +83,7 @@ notifiers = [
     pushalot_notifier,
     pushbullet_notifier,
     twitter_notifier,
-    trakt_notifier,
+#    trakt_notifier,
     email_notifier,
 ]
 
