@@ -67,6 +67,7 @@
 * Change improve existing show page and the handling when an attempt to add a show to an existing location
 * Change consolidate Trakt Trending and Recommended views into an "Add From Trakt" view which defaults to trending
 * Change Trakt view drop down "Show" to reveal Brand-new Shows, Season Premieres, Recommendations and Trending views
+* Change add season info to "Show: Trakt New Seasons" view on the Add from Trakt page
 * Change increase number of displayed Trakt shows to 100
 * Add genres and rating to all Trakt shows
 * Add AniDb Random and Hot to Add Show page

@@ -2353,6 +2353,7 @@ class NewHomeAddShows(Home):
                             ids=ids,
                             premiered=dt_ordinal,
                             premiered_str=dt_string,
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
                             title=title.strip(),
                             images=images,
                             url_src_db='http://anidb.net/perl-bin/animedb.pl?show=anime&aid=%s' % ids['anidb'],
@@ -2379,7 +2380,7 @@ class NewHomeAddShows(Home):
 
         filtered = []
         footnote = None
-        start_year, end_year = (datetime.date.today().year - 10, datetime.date.today().year)
+        start_year, end_year = (datetime.date.today().year - 10, datetime.date.today().year + 1)
         url = 'http://www.imdb.com/search/title?at=0&sort=moviemeter&title_type=tv_series&year=%s,%s' % (start_year, end_year)
         html = helpers.getURL(url)
         if html:
@@ -2437,6 +2438,7 @@ class NewHomeAddShows(Home):
                         filtered.append(dict(
                             premiered=dt_ordinal,
                             premiered_str=year or 'No year',
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
                             genres='No genre yet' if not len(genres) else genres[0].get_text().lower().replace(' |', ','),
                             ids=ids,
                             images=images,
@@ -2536,6 +2538,10 @@ class NewHomeAddShows(Home):
                 filtered.append(dict(
                     premiered=dt_ordinal,
                     premiered_str=dt_string,
+                    when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
+                    episode_number='' if 'episode' not in item else item['episode']['number'] or 1,
+                    episode_overview='' if 'episode' not in item else item['episode']['overview'] or '',
+                    episode_season='' if 'episode' not in item else item['episode']['season'] or 1,
                     genres='' if 'genres' not in item['show'] else ', '.join(['%s' % v for v in item['show']['genres']]),
                     ids=item['show']['ids'],
                     images='' if 'images' not in item['show'] else item['show']['images'],

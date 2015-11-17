@@ -163,12 +163,22 @@
 #if $all_shows
     #for $this_show in $all_shows:
         #set $title_html = $this_show['title'].replace('"', '&quot;').replace("'", '&#39;')
+        #if 'newseasons' == $kwargs.get('mode', '')
+            #set $overview = '%s: %s' % (
+            	('Season %s' % $this_show['episode_season'], 'Brand-new')[1 == $this_show['episode_season']],
+                ($this_show['overview'], $this_show['episode_overview'])[any($this_show['episode_overview']) and 1 != $this_show['episode_season']])
+        #else
+            #set $overview = $this_show['overview']
+        #end if
 
 	<div class="browse-show <%= ('notinlibrary', 'inlibrary')[':' in this_show['show_id']] %>" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data-rating="$this_show['rating']" data-votes="$this_show['votes']" data-premiered="$this_show['premiered']">
 		<div class="browse-container">
 			<div class="browse-image">
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
-					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>#if $this_show['genres']#<br /><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#<p style='margin:0 0 2px'><%= re.sub(r'([,\.!][^,\.!]*?)$', '...', this_show['overview']) %></p><p><span style='font-weight:bold;font-size:0.9em;color:#888'><em>First aired: $this_show['premiered_str']</em></span></p><span style='float:right'>Click for more at <span class='boldest'>$browse_type</span></span>">
+					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>#if $this_show['genres']#<br /><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
+					<p style='margin:0 0 2px'>#echo re.sub(r'([,\.!][^,\.!]*?)$', '...', re.sub(r'([!\?\.])(?=\w)', r'\1 ', $overview))#</p>
+					<p><span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if $kwargs and 'newseasons' == $kwargs.get('mode', None)#Air#else#First air#end if##echo ('s', 'ed')[$this_show['when_past']]#: $this_show['premiered_str']</em></span></p>
+					<span style='float:right'>Click for more at <span class='boldest'>$browse_type</span></span>">
         #if 'poster' in $this_show['images']:
             #set $image = $this_show['images']['poster']['thumb']
 					<img alt="" class="browse-image" src="#if $image and 'http' != $image[:4]#$sbRoot/#end if#$image" />
