@@ -97,13 +97,14 @@ class TVEpisode(tv.TVEpisode):
         self._status = Quality.compositeStatus(common.DOWNLOADED, common.Quality.SDTV)
         self._release_name = 'Show.Name.S02E03.HDTV.XviD-RLSGROUP'
         self._is_proper = True
+        self._version = 2
 
 
 def check_force_season_folders(pattern=None, multi=None, anime_type=None):
     """
     Checks if the name can still be parsed if you strip off the folders to determine if we need to force season folders
     to be enabled or not.
-    
+
     Returns true if season folders need to be forced on or false otherwise.
     """
     if pattern == None:
@@ -123,7 +124,7 @@ def check_force_season_folders(pattern=None, multi=None, anime_type=None):
 def check_valid_naming(pattern=None, multi=None, anime_type=None):
     """
     Checks if the name is can be parsed back to its original form for both single and multi episodes.
-    
+
     Returns true if the naming is valid, false if not.
     """
     if pattern == None:
@@ -145,7 +146,7 @@ def check_valid_naming(pattern=None, multi=None, anime_type=None):
 def check_valid_abd_naming(pattern=None):
     """
     Checks if the name is can be parsed back to its original form for an air-by-date format.
-    
+
     Returns true if the naming is valid, false if not.
     """
     if pattern == None:
@@ -213,12 +214,15 @@ def validate_name(pattern, multi=None, anime_type=None, file_only=False, abd=Fal
     return True
 
 
-def generate_sample_ep(multi=None, abd=False, sports=False, anime_type=None):
+def generate_sample_ep(multi=None, abd=False, sports=False, anime=False, anime_type=None):
     # make a fake episode object
     ep = TVEpisode(2, 3, 3, "Ep Name")
 
     ep._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
     ep._airdate = datetime.date(2011, 3, 9)
+
+    if anime:
+        ep.show.anime = 1
 
     if abd:
         ep._release_name = 'Show.Name.2011.03.09.HDTV.XviD-RLSGROUP'
@@ -263,7 +267,7 @@ def generate_sample_ep(multi=None, abd=False, sports=False, anime_type=None):
     return ep
 
 
-def test_name(pattern, multi=None, abd=False, sports=False, anime_type=None):
-    ep = generate_sample_ep(multi, abd, sports, anime_type)
+def test_name(pattern, multi=None, abd=False, sports=False, anime=False, anime_type=None):
+    ep = generate_sample_ep(multi, abd, sports, anime, anime_type)
 
     return {'name': ep.formatted_filename(pattern, multi, anime_type), 'dir': ep.formatted_dir(pattern, multi)}
