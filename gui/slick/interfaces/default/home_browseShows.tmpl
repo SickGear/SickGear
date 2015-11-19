@@ -128,10 +128,18 @@
     #if 'Trakt' == $browse_type
         #set $mode = $kwargs and $kwargs.get('mode', None)
         #set $selected = ' class="selected"'
-		<option value="traktTrending"#echo ('', selected)['trending' == $mode]#>Trakt Trending</option>
-		<option value="traktNewShows"#echo ('', selected)['newshows' == $mode]#>Trakt New Shows</option>
+		<option value="traktAnticipated"#echo ('', selected)['anticipated' == $mode]#>Trakt Anticipating</option>
 		<option value="traktNewSeasons"#echo ('', selected)['newseasons' == $mode]#>Trakt New Seasons</option>
-		<option value="traktRecommended"#echo ('', selected)['recommended' == $mode]#>Trakt Recommended</option>
+		<option value="traktNewShows"#echo ('', selected)['newshows' == $mode]#>Trakt New Shows</option>
+		<option value="traktPopular"#echo ('', selected)['popular' == $mode]#>Trakt Popular</option>
+		<option value="traktTrending"#echo ('', selected)['trending' == $mode]#>Trakt Trending</option>
+		<option value="traktWatched"#echo ('', selected)['watched' == $mode]#>Trakt Most Watched (Last Month)</option>
+		<option value="traktCollected"#echo ('', selected)['collected' == $mode]#>Trakt Most Collected (Last Month)</option>
+		#for $account in $sickbeard.TRAKT_ACCOUNTS
+			#if $sickbeard.TRAKT_ACCOUNTS[$account].active and $sickbeard.TRAKT_ACCOUNTS[$account].name
+				<option value="traktRecommended?account=$account"#echo ('', selected)['recommended-%s' % $account == $mode]#>Trakt Recommended for $sickbeard.TRAKT_ACCOUNTS[$account].name</option>
+			#end if
+		#end for
     #end if
 	</select>
 

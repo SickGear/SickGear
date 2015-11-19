@@ -2559,6 +2559,32 @@ div.metadataDiv .disabled{
 	margin:6px 4px 0 0
 }
 
+#trakt-collection th,#trakt-collection td{
+	padding:3px 5px
+}
+
+#trakt-collection .col-1{
+	text-align:left
+}
+
+#trakt-collection th,#trakt-collection td.opt{
+	text-align:center
+}
+
+#trakt-collection .col-1{
+	width:192px
+}
+
+#config #trakt-collection input{
+	float:none;
+	margin:0;
+	vertical-align:middle
+}
+
+#config .trakt.component-desc{
+	margin-left:0
+}
+
 /* =======================================================================
 manage*.tmpl
 ========================================================================== */

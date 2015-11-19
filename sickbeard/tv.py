@@ -1312,17 +1312,17 @@ class TVShow(object):
 
     def getOverview(self, epStatus):
 
-        if ARCHIVED == epStatus:
+        status, quality = Quality.splitCompositeStatus(epStatus)
+        if ARCHIVED == status:
             return Overview.GOOD
-        if WANTED == epStatus:
+        if WANTED == status:
             return Overview.WANTED
-        if epStatus in (SKIPPED, IGNORED):
+        if status in (SKIPPED, IGNORED):
             return Overview.SKIPPED
-        if epStatus in (UNAIRED, UNKNOWN):
+        if status in (UNAIRED, UNKNOWN):
             return Overview.UNAIRED
-        if epStatus in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
+        if status in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
 
-            status, quality = Quality.splitCompositeStatus(epStatus)
             if FAILED == status:
                 return Overview.WANTED
             if status in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST):

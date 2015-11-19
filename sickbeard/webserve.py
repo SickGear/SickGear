@@ -18,15 +18,16 @@
 
 from __future__ import with_statement
 
-import os
-import time
-import urllib
-import re
+import base64
 import datetime
 import dateutil.parser
-import random
-import traceback
 import itertools
+import os
+import random
+import re
+import time
+import traceback
+import urllib
 
 from mimetypes import MimeTypes
 from Cheetah.Template import Template
@@ -57,7 +58,8 @@ from lib import subliminal
 from lib.dateutil import tz
 from lib.unrar2 import RarFile
 from lib.libtrakt import TraktAPI
-from lib.libtrakt.exceptions import traktException, traktAuthException
+from lib.libtrakt.exceptions import TraktException, TraktAuthException
+from trakt_helpers import build_config, trakt_collection_remove_account
 from sickbeard.bs4_parser import BS4Parser
 
 
@@ -883,24 +885,54 @@ class Home(MainHandler):
             return '{"message": "Unable to find NMJ Database at location: %(dbloc)s. Is the right location selected and PCH running?", "database": ""}' % {
                 "dbloc": dbloc}
 
-    def trakt_authenticate(self, pin=None):
+    def trakt_authenticate(self, pin=None, account=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         if None is pin:
-            return 'Trakt PIN required for authentication'
+            return json.dumps({'result': 'Fail', 'error_message': 'Trakt PIN required for authentication'})
 
+        if account and 'new' == account:
+            account = None
+
+        acc = None
+        if account:
+            acc = sickbeard.helpers.tryInt(account, -1)
+            if 0 < acc and acc not in sickbeard.TRAKT_ACCOUNTS:
+                return json.dumps({'result': 'Fail', 'error_message': 'Fail: cannot update non-existing account'})
+
+        json_fail_auth = json.dumps({'result': 'Fail', 'error_message': 'Trakt NOT authenticated'})
         try:
-            TraktAPI().trakt_token(pin)
-        except traktAuthException:
-            return 'Fail: Trakt NOT authenticated'
+            resp = TraktAPI().trakt_token(pin, account=acc)
+        except TraktAuthException:
+            return json_fail_auth
+        if not account and isinstance(resp, bool) and not resp:
+            return json_fail_auth
 
-        sickbeard.USE_TRAKT = True
-        sickbeard.save_config()
-        return '%s %s' % ('Success: Trakt authenticated.', self.trakt_get_connected_account())
+        if not sickbeard.USE_TRAKT:
+            sickbeard.USE_TRAKT = True
+            sickbeard.save_config()
+        pick = resp if not account else acc
+        return json.dumps({'result': 'Success',
+                           'account_id': sickbeard.TRAKT_ACCOUNTS[pick].account_id,
+                           'account_name': sickbeard.TRAKT_ACCOUNTS[pick].name})
 
-    @staticmethod
-    def trakt_get_connected_account():
-        return TraktAPI().get_connected_user()
+    def trakt_delete(self, accountid=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if accountid:
+            aid = sickbeard.helpers.tryInt(accountid, None)
+            if None is not aid:
+                if aid in sickbeard.TRAKT_ACCOUNTS:
+                    account = {'result': 'Success',
+                               'account_id': sickbeard.TRAKT_ACCOUNTS[aid].account_id,
+                               'account_name': sickbeard.TRAKT_ACCOUNTS[aid].name}
+                    if TraktAPI.delete_account(aid):
+                        trakt_collection_remove_account(aid)
+                        account['num_accounts'] = len(sickbeard.TRAKT_ACCOUNTS)
+                        return json.dumps(account)
+
+                return json.dumps({'result': 'Not found: Account to delete'})
+        return json.dumps({'result': 'Not found: Invalid account id'})
 
     def loadShowNotifyLists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1476,9 +1508,9 @@ class Home(MainHandler):
                 showObj) or sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
             return self._genericMessage("Error", "Shows can't be deleted while they're being added or updated.")
 
-        if sickbeard.USE_TRAKT and sickbeard.TRAKT_SYNC:
-            # remove show from trakt.tv library
-            sickbeard.traktCheckerScheduler.action.removeShowFromTraktLibrary(showObj)
+        # if sickbeard.USE_TRAKT and sickbeard.TRAKT_SYNC:
+        #     # remove show from trakt.tv library
+        #     sickbeard.traktCheckerScheduler.action.removeShowFromTraktLibrary(showObj)
 
         showObj.deleteShow(bool(full))
 
@@ -2157,10 +2189,10 @@ class NewHomeAddShows(Home):
 
         filtered = []
         try:
-            resp = TraktAPI(ssl_verify=sickbeard.TRAKT_VERIFY, timeout=sickbeard.TRAKT_TIMEOUT).trakt_request(url)
+            resp = TraktAPI().trakt_request(url)
             if len(resp):
                 filtered = resp
-        except traktException as e:
+        except TraktException as e:
             logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
 
         return filtered
@@ -2512,10 +2544,31 @@ class NewHomeAddShows(Home):
 
         return self.browse_trakt('shows/trending?limit=%s&' % 100, 'Trending at Trakt', mode='trending')
 
+    def traktPopular(self, *args, **kwargs):
+
+        return self.browse_trakt('shows/popular?limit=%s&' % 100, 'Popular at Trakt', mode='popular')
+
+    def traktWatched(self, *args, **kwargs):
+
+        return self.browse_trakt('shows/watched/monthly?limit=%s&' % 100, 'Most watched at Trakt during the last month', mode='watched')
+
+    def traktCollected(self, *args, **kwargs):
+
+        return self.browse_trakt('shows/collected/monthly?limit=%s&' % 100, 'Most collected at Trakt during the last month', mode='collected')
+
+    def traktAnticipated(self, *args, **kwargs):
+
+        return self.browse_trakt('shows/anticipated?limit=%s&' % 100, 'Anticipated at Trakt', mode='anticipated')
+
     def traktRecommended(self, *args, **kwargs):
 
+        account = sickbeard.helpers.tryInt(kwargs.get('account'), None)
+        try:
+            name = sickbeard.TRAKT_ACCOUNTS[account].name
+        except KeyError:
+            return self.traktDefault()
         return self.browse_trakt('recommendations/shows?limit=%s&' % 100,
-                                 'Recommended for <b class="grey-text">you</b> by Trakt', mode='recommended')
+                                 'Recommended for <b class="grey-text">%s</b> by Trakt' % name, mode='recommended-%s' % account, send_oauth=account)
 
     def traktNewShows(self, *args, **kwargs):
 
@@ -2529,18 +2582,25 @@ class NewHomeAddShows(Home):
             dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32), 'Season premieres at Trakt',
             mode='newseasons', footnote='Note; Expect default placeholder images in this list')
 
-    def browse_trakt(self, url, browse_title, *args, **kwargs):
+    def traktDefault(self):
+
+        return self.redirect('/home/addShows/traktTrending/')
+
+    def browse_trakt(self, url_path, browse_title, *args, **kwargs):
 
         browse_type = 'Trakt'
         normalised, filtered = ([], [])
 
-        if 'recommended' == kwargs.get('mode', None) and not sickbeard.USE_TRAKT:
+        if not sickbeard.USE_TRAKT and 'recommended' in kwargs.get('mode', ''):
             error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
         error_msg = None
         try:
-            resp = TraktAPI(ssl_verify=sickbeard.TRAKT_VERIFY, timeout=sickbeard.TRAKT_TIMEOUT).trakt_request('%sextended=full,images' % url)
+            account = kwargs.get('send_oauth', None)
+            if account:
+                account = sickbeard.helpers.tryInt(account)
+            resp = TraktAPI().trakt_request('%sextended=full,images' % url_path, send_oauth=account)
             if resp:
                 if 'show' in resp[0]:
                     if 'first_aired' in resp[0]:
@@ -2552,10 +2612,10 @@ class NewHomeAddShows(Home):
                     for item in resp:
                         normalised.append({u'show': item})
                 del resp
-        except traktAuthException as e:
+        except TraktAuthException as e:
             logger.log(u'Pin authorisation needed to connect to Trakt service: %s' % ex(e), logger.WARNING)
             error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
-        except traktException as e:
+        except TraktException as e:
             logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
         except (IndexError, KeyError):
             pass
@@ -4695,9 +4755,18 @@ class ConfigProviders(Config):
 
 
 class ConfigNotifications(Config):
+
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='config_notifications.tmpl')
         t.submenu = self.ConfigMenu
+        t.root_dirs = []
+        if sickbeard.ROOT_DIRS:
+            root_pieces = sickbeard.ROOT_DIRS.split('|')
+            root_default = helpers.tryInt(root_pieces[0], None)
+            for i, location in enumerate(root_pieces[1:]):
+                t.root_dirs.append({'root_def': root_default and i == root_default,
+                                    'loc': location,
+                                    'b64': base64.urlsafe_b64encode(location)})
         return t.respond()
 
     def saveNotifications(self, use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None,
@@ -4729,7 +4798,7 @@ class ConfigNotifications(Config):
                           use_trakt=None, trakt_pin=None,
                           trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
                           trakt_start_paused=None, trakt_sync=None,
-                          trakt_default_indexer=None, trakt_remove_serieslist=None,
+                          trakt_default_indexer=None, trakt_remove_serieslist=None, trakt_collection=None, trakt_accounts=None,
                           use_synologynotifier=None, synologynotifier_notify_onsnatch=None,
                           synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
                           use_pytivo=None, pytivo_notify_onsnatch=None, pytivo_notify_ondownload=None,
@@ -4745,7 +4814,7 @@ class ConfigNotifications(Config):
                           use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
                           email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
                           email_tls=None, email_user=None, email_password=None, email_list=None, email_show_list=None,
-                          email_show=None):
+                          email_show=None, **kwargs):
 
         results = []
 
@@ -4855,7 +4924,8 @@ class ConfigNotifications(Config):
             synologynotifier_notify_onsubtitledownload)
 
         sickbeard.USE_TRAKT = config.checkbox_to_value(use_trakt)
-        sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
+        # sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
+        sickbeard.TRAKT_UPDATE_COLLECTION = build_config(**kwargs)
         # sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
         # sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
         # sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)

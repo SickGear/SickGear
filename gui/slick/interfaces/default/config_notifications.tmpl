@@ -1,3 +1,4 @@
+#import base64
 #import sickbeard
 #import re
 #from lib.libtrakt import TraktAPI
@@ -13,9 +14,9 @@
 <script type="text/javascript" src="$sbRoot/js/configNotifications.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
 
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 
@@ -155,7 +156,7 @@
 
 				</div><!-- /xbmc component-group //-->
 
-				<div class="component-group">				
+				<div class="component-group">
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/kodi.png" alt="" title="Kodi" />
 						<h3><a href="<%= anon_url('http://kodi.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Kodi</a></h3>
@@ -275,7 +276,7 @@
 						</div><!-- /content_use_kodi //-->
 					</fieldset>
 				</div><!-- /kodi component-group //-->
-				
+
 				<div class="component-group">
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/plex.png" alt="" title="Plex Media Server" />
@@ -1481,15 +1482,76 @@
 
 						<div id="content_use_trakt">
 							<div class="field-pair">
+								<label for="trakt_accounts">
+									<span class="component-title">Trakt account (status):</span>
+									<span class="component-desc">
+									<select name="trakt_accounts" id="trakt_accounts" class="pull-left form-control input-sm">
+										<option value="new" selected="selected">Add account</option>
+#set $trakt_accounts = $sickbeard.TRAKT_ACCOUNTS
+#for $void, $account in $trakt_accounts.items()
+											<option value="$account.account_id">$account.account_id - $account.name #if $account.active then '(ok)' else '(inactive)'#</option>
+#end for
+									</select>
+									<input type="button" class="btn" value="Delete" id="trakt-delete" disabled="disabled" />
+									</span>
+								</label>
 								<label for="trakt_pin">
 									<span class="component-title">Trakt PIN:</span>
 									<span class="component-desc">
 										<input type="text" name="trakt_pin" id="trakt_pin" value="" class="form-control input-sm input250" />
 										<input type="button" class="btn" value="Connect" id="trakt-authenticate" />
-										<div class="clear-left"><p>get your PIN at: <a href="<%= anon_url(sickbeard.TRAKT_PIN_URL) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>$sickbeard.TRAKT_PIN_URL</b></a></p></div>
+										<div class="clear-left"><p>get an active PIN using: <a href="<%= anon_url(sickbeard.TRAKT_PIN_URL) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>$sickbeard.TRAKT_PIN_URL</b></a>
+										<br />tip: easily add accounts by using the link in other browsers "signed in" to Trakt
+										</p></div>
 									</span>
 								</label>
 								<div class="testNotification" id="trakt-authentication-result"></div>
+							</div>
+
+							<div class="field-pair">
+								<span class="trakt component-desc" style="width:100%">
+#set num_accounts = len($trakt_accounts)
+#set $num_columns = (1, num_accounts)[1 < num_accounts]
+									<table id="trakt-collection" class="solid-border" cellpadding="0" cellspacing="0" border="0">
+										<thead>
+											<tr>
+												<th class="col-1" style="font-size:12px;font-weight:normal" rowspan="2"><i>Update multiple accounts with downloaded episode info</i></th>
+												<th colspan="$num_columns">#echo not len($trakt_accounts) and '<i>Connect New Pin</i>' or 1 < len($trakt_accounts) and 'Trakt accounts' or 'Account'#</th>
+											</tr>
+											<tr>
+#if not len($trakt_accounts)
+												<th>..</th>
+#end if
+#for $void, $account in $trakt_accounts.items()
+												<th class="tid-$account.account_id">$account.name#if $account.active then '' else '<br />(inactive)'#</th>
+#end for
+											</tr>
+										</thead>
+										<tbody>
+#if not $root_dirs:
+    #set $root_dirs = [{'root_def': False, 'loc': 'all folders. Multiple parent folders will appear here.', 'b64': ''}]
+#end if
+#for $root_info in $root_dirs:
+											<tr class="solid-border-top">
+												<td class="col-1"><span style="font-size:13px;font-weight:bold" data-loc="$root_info['b64']">Update collection</span></td>
+    #if not len($trakt_accounts)
+												<td class="opt">..</td>
+    #end if
+    #for $void, $account in $trakt_accounts.items()
+        #set $cur_selected = ('', ' checked="checked"')[$root_info['loc'] in $sickbeard.TRAKT_UPDATE_COLLECTION.get($account.account_id, '')]
+        #set $id_loc = "update_trakt_%s_%s" % ($account.account_id, $root_info['b64'])
+												<td class="opt">
+													<input type="checkbox" id="$id_loc" name="$id_loc"$cur_selected />
+												</td>
+    #end for
+												</tr>
+											<tr>
+												<td colspan="${1 + $num_columns}">for #if $root_info['root_def'] then '*' else ''#$root_info['loc']</td>
+											</tr>
+#end for
+										</tbody>
+									</table>
+								</span>
 							</div>
 							<!--
 							<div class="field-pair">

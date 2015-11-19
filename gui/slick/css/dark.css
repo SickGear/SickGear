@@ -635,6 +635,14 @@ div.metadataDiv .disabled{
 	background:url("../images/warning16.png") no-repeat right 5px center #fff
 }
 
+.solid-border{
+	border:1px solid #555
+}
+
+.solid-border-top{
+	border-top:1px solid #555
+}
+
 /* =======================================================================
 manage*.tmpl
 ========================================================================== */
@@ -1190,7 +1198,7 @@ browser.css
 
 #fileBrowserDialog ul li a:hover{
 	color:#09a2ff;
-	background:none
+	background: rgb(61, 61, 61) none
 }
 
 .ui-menu .ui-menu-item{
@@ -1222,6 +1230,10 @@ div.stepsguide .step p{
 
 .disabledstep{
 	color:#646464
+}
+
+#newShowPortal #addShowForm .stepsguide .disabledstep:hover > .smalltext{
+	color:#ccc;
 }
 
 div.stepsguide .disabledstep p{

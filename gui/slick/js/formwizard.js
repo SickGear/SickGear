@@ -191,8 +191,9 @@ FormToWizard.prototype = {
 				$section.data('elements', []);
 
 				//create each 'step' DIV and add it to main Steps Container:
-				var $stepwords = ['first', 'second', 'third'], $thestep = $('<div class="step disabledstep" />').data('section', i).html(($stepwords[i]
-					+ ' step') + '<div class="smalltext">' + $section.find('legend:eq(0)').text() + '<p></p></div>').appendTo($stepsguide);
+				var $stepwords = ['first', 'then', 'finally'],
+					$thestep = $('<div class="step disabledstep" />').data('section', i).html(($stepwords[i]) +
+						'<div class="smalltext">' + $section.find('legend:eq(0)').text() + '<p></p></div>').appendTo($stepsguide);
 
 				//assign behavior to each step div
 				$thestep.click(function(){
