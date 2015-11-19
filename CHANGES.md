@@ -75,6 +75,7 @@
 * Add version to anime renaming pattern
 * Add Code Climate configuration files
 * Change to move init-scripts to single folder
+* Change sickbeard variables to sickgear variables in init-scripts
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed
