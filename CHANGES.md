@@ -76,6 +76,7 @@
 * Add Code Climate configuration files
 * Change to move init-scripts to single folder
 * Change sickbeard variables to sickgear variables in init-scripts
+* Change improve the use of multiple plex servers
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed
