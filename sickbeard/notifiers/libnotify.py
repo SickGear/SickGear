@@ -70,15 +70,15 @@ class LibnotifyNotifier:
             logger.log(u"Unable to import pynotify. libnotify notifications won't work.", logger.ERROR)
             return False
         try:
-            import gobject
+            from gi.repository import GObject
         except ImportError:
-            logger.log(u"Unable to import gobject. We can't catch a GError in display.", logger.ERROR)
+            logger.log(u"Unable to import GObject from gi.repository. We can't catch a GError in display.", logger.ERROR)
             return False
         if not pynotify.init('SickGear'):
             logger.log(u"Initialization of pynotify failed. libnotify notifications won't work.", logger.ERROR)
             return False
         self.pynotify = pynotify
-        self.gobject = gobject
+        self.gobject = GObject
         return True
 
     def notify_snatch(self, ep_name):
@@ -92,7 +92,7 @@ class LibnotifyNotifier:
     def notify_subtitle_download(self, ep_name, lang):
         if sickbeard.LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD:
             self._notify(common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD], ep_name + ": " + lang)
-            
+
     def notify_git_update(self, new_version = "??"):
         if sickbeard.USE_LIBNOTIFY:
             update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]

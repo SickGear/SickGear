@@ -1,3 +1,4 @@
+# coding=utf-8
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
@@ -791,20 +792,15 @@ class Home(MainHandler):
     def testKODI(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        host = config.clean_hosts(host)
+        hosts = config.clean_hosts(host)
+        if not hosts:
+            return 'Fail: At least one invalid host'
+
         if None is not password and set('*') == set(password):
             password = sickbeard.KODI_PASSWORD
 
-        finalResult = ''
-        for curHost in [x.strip() for x in host.split(',')]:
-            curResult = notifiers.kodi_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
-            if len(curResult.split(':')) > 2 and 'OK' in curResult.split(':')[2]:
-                finalResult += 'Test Kodi notice sent successfully to ' + urllib.unquote_plus(curHost)
-            else:
-                finalResult += 'Test Kodi notice failed to ' + urllib.unquote_plus(curHost)
-            finalResult += '<br />\n'
-
-        return finalResult
+        total_success, cur_message = notifiers.kodi_notifier.test_notify(hosts, username, password)
+        return (cur_message, u'Success. All Kodi hosts tested.')[total_success]
 
     def testPMC(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')

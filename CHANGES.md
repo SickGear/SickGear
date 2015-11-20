@@ -30,6 +30,8 @@
 * Allow episode status "Skipped" to be changed to "Downloaded"
 * Allow found "Skipped" episode files to be set "Unknown" quality
 * Add CPU throttling preset "Disabled" to config/General/Advanced Settings
+* Change overhaul Kodi notifier and tidy up config/notification/KodiNotifier ui
+* Add passthru of param "post_json" to Requests() "json" in helpers.getURL
 
 
 ### 0.11.6 (2016-02-18 23:10:00 UTC)
