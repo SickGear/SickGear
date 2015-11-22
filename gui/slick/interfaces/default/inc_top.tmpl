@@ -9,8 +9,8 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-	<title>SickGear - BRANCH:[$sickbeard.BRANCH] - $title</title>
-	
+	<title>SickGear - $title</title>
+
 	<!--[if lt IE 9]>
 	<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
 	<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
@@ -25,7 +25,7 @@
 	<link rel="apple-touch-icon" sizes="76x76" href="$sbRoot/images/ico/apple-touch-icon-76x76.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="$sbRoot/images/ico/apple-touch-icon-72x72.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="$sbRoot/images/ico/apple-touch-icon-60x60.png">
-	<link rel="apple-touch-icon" sizes="57x57" href="$sbRoot/images/ico/apple-touch-icon-57x57.png">		
+	<link rel="apple-touch-icon" sizes="57x57" href="$sbRoot/images/ico/apple-touch-icon-57x57.png">
 	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-192x192.png" sizes="192x192">
 	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-160x160.png" sizes="160x160">
 	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-96x96.png" sizes="96x96">
@@ -61,6 +61,7 @@
 	<script type="text/javascript" src="$sbRoot/js/lib/imagesloaded.pkgd.min.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/lib/jquery.confirm.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/script.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/inc_top.js?v=$sbPID"></script>
 #if $sickbeard.FUZZY_DATING
 	<script type="text/javascript" src="$sbRoot/js/moment/moment.min.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/fuzzyMoment.js?v=$sbPID"></script>
@@ -68,58 +69,12 @@
 	<script type="text/javascript" charset="utf-8">
 	<!--
 		var sbRoot = '$sbRoot', anonURL = '$sickbeard.ANON_REDIRECT', themeSpinner = '#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#',
-			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top" />';
+			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top" />', topmenu = '$topmenu';
 	//-->
 	</script>
 	<script type="text/javascript" src="$sbRoot/js/lib/jquery.scrolltopcontrol-1.1.js"></script>
 	<script type="text/javascript" src="$sbRoot/js/browser.js"></script>
 	<script type="text/javascript" src="$sbRoot/js/ajaxNotifications.js"></script>
-	<script type="text/javascript">
-	<!--
-#raw
-		function initActions(){
-			$('#SubMenu a[href*="/home/restart/"]').addClass('btn restart').html('<i class="sgicon-restart"></i>Restart');
-			$('#SubMenu a[href*="/home/shutdown/"]').addClass('btn shutdown').html('<i class="sgicon-shutdown"></i>Shutdown');
-			$('#SubMenu a[href*="/home/logout/"]').addClass('btn').html('<i class="sgicon-logout"></i>Logout');
-			$('#SubMenu a:contains("Edit")').addClass('btn').html('<i class="sgicon-edit"></i>Edit');
-			$('#SubMenu a:contains("Remove")').addClass('btn remove').html('<i class="sgicon-delete"></i>Remove');
-			$('#SubMenu a:contains("Clear History")').addClass('btn clearhistory').html('<i class="sgicon-delete"></i>Clear History');
-			$('#SubMenu a:contains("Trim History")').addClass('btn trimhistory').html('<i class="sgicon-trim"></i>Trim History');
-			$('#SubMenu a[href$="/errorlogs/clearerrors/"]').addClass('btn').html('<i class="sgicon-delete"></i>Clear Errors');
-			$('#SubMenu a:contains("Re-scan")').addClass('btn').html('<i class="sgicon-refresh"></i>Re-scan');
-			$('#SubMenu a:contains("Backlog Overview")').addClass('btn').html('<i class="sgicon-backlog"></i>Backlog Overview');
-			$('#SubMenu a[href$="/home/updatePLEX/"]').addClass('btn').html('<i class="sgicon-plex"></i>Update PLEX');
-			$('#SubMenu a:contains("Force")').addClass('btn').html('<i class="sgicon-fullupdate"></i>Force Full Update');
-			$('#SubMenu a:contains("Rename")').addClass('btn').html('<i class="sgicon-rename"></i>Media Renamer');
-			$('#SubMenu a[href$="/config/subtitles/"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Search Subtitles');
-			$('#SubMenu a[href*="/home/subtitleShow"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Download Subtitles');
-			$('#SubMenu a:contains("Anime")').addClass('btn').html('<i class="sgicon-anime"></i>Anime');
-			$('#SubMenu a:contains("Settings")').addClass('btn').html('<i class="sgicon-search"></i>Search Settings');
-			$('#SubMenu a:contains("Provider")').addClass('btn').html('<i class="sgicon-search"></i>Search Providers');
-			$('#SubMenu a:contains("General")').addClass('btn').html('<i class="sgicon-config"></i>General');
-			$('#SubMenu a:contains("Episode Status")').addClass('btn').html('<i class="sgicon-episodestatus"></i>Episode Status Management');
-			$('#SubMenu a:contains("Missed Subtitle")').addClass('btn').html('<i class="sgicon-subtitles"></i>Missed Subtitles');
-			$('#SubMenu a[href$="/home/addShows/"]').addClass('btn').html('<i class="sgicon-addshow"></i>Add Show');
-			$('#SubMenu a:contains("Processing")').addClass('btn').html('<i class="sgicon-postprocess"></i>Post-Processing');
-			$('#SubMenu a:contains("Manage Searches")').addClass('btn').html('<i class="sgicon-search"></i>Manage Searches');
-			$('#SubMenu a:contains("Manage Torrents")').addClass('btn').html('<i class="sgicon-bittorrent"></i>Manage Torrents');
-			$('#SubMenu a:contains("Show Queue Overview")').addClass('btn').html('<i class="sgicon-showqueue"></i>Show Queue Overview');
-			$('#SubMenu a[href$="/manage/failedDownloads/"]').addClass('btn').html('<i class="sgicon-failed"></i>Failed Downloads');
-			$('#SubMenu a:contains("Notification")').addClass('btn').html('<i class="sgicon-notification"></i>Notifications');
-			$('#SubMenu a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
-			$('#SubMenu a[href$="/home/updateXBMC/"]').addClass('btn').html('<i class="sgicon-xbmc"></i>Update XBMC');
-			$('#SubMenu a:contains("Update show in Kodi")').addClass('btn').html('<i class="sgicon-kodi"></i>Update show in Kodi');
-			$('#SubMenu a[href$="/home/updateKODI/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
-		}
-#end raw	
-
-		\$(document).ready(function(){
-			initActions();
-			\$('#NAV$topmenu').addClass('active');
-			\$('.dropdown-toggle').dropdownHover();
-		});
-	//-->
-	</script>
 	<script type="text/javascript" src="$sbRoot/js/confirmations.js?v=$sbPID"></script>
 </head>
 #set $tab = 4

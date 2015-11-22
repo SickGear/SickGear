@@ -78,6 +78,8 @@
 * Change sickbeard variables to sickgear variables in init-scripts
 * Change improve the use of multiple plex servers
 * Change to move JS code out of home template and into dedicated file
+* Change to remove branch from window title
+* Change to move JS code out of inc_top template and into dedicated file
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed
