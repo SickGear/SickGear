@@ -14,43 +14,13 @@
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
-<script type="text/javascript" charset="utf-8">
-<!--
-\$(document).ready(function(){
-
-	\$.getJSON('$sbRoot/home/addShows/getIndexerLanguages', {}, function(data) {
-		var resultStr = '';
-
-		if (data.results.length == 0) {
-			flag = ' class="flag" style="background-image:url($sbRoot/images/flags/${show.lang}.png)"';
-			resultStr = '<option value="$show.lang" selected="selected" + flag>$show.lang</option>';
-		} else {
-			var current_lang_added = false;
-			\$.each(data.results, function(index, obj) {
-
-				if (obj == '$show.lang') {
-					selected = ' selected="selected"';
-					current_lang_added = true;
-				}
-				else {
-					selected = '';
-				}
-
-				flag = ' class="flag" style="background-image:url($sbRoot/images/flags/' + obj + '.png);"';
-				resultStr += '<option value="' + obj + '"' + selected + flag + '>' + obj + '</option>';
-			});
-
-			if (!current_lang_added)
-				resultStr += '<option value="$show.lang" selected="selected">$show.lang</option>';
-
-		}
-		\$('#indexerLangSelectEdit').html(resultStr)
-
-	});
-});
-//-->
+<script type="text/javascript" src="$sbRoot/js/editShow.js?v=$sbPID"></script>
+<script>
+	var config = {
+		show_lang: "$show.lang",
+		show_isanime: #echo ['!1','!0'][$show.is_anime]#
+	}
 </script>
-
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else
@@ -252,69 +222,6 @@
 #end if
 		<input type="submit" id="submit" value="Submit" class="btn btn-primary" />
 	</form>
-
-<script type="text/javascript" charset="utf-8">
-<!--
-	var all_exceptions = new Array;
-
-	jQuery('#location').fileBrowser({ title: 'Select Show Location' });
-
-	\$('#submit').click(function(){
-		all_exceptions = []
-
-		\$('#exceptions_list option').each  ( function() {
-			all_exceptions.push( \$(this).val() );
-		});
-
-		\$('#exceptions_list').val(all_exceptions);
-#if $show.is_anime:
-		generate_bwlist()
-#end if
-	});
-
-	\$('#addSceneName').click(function() {
-		var scene_ex = \$('#SceneName').val()
-		var option = \$('<option>')
-		all_exceptions = []
-
-		\$('#exceptions_list option').each  ( function() {
-		   all_exceptions.push( \$(this).val() )
-		});
-
-		\$('#SceneName').val('')
-
-		if (jQuery.inArray(scene_ex, all_exceptions) > -1 || (scene_ex == ''))
-			return
-
-		\$('#SceneException').show()
-
-		option.attr('value',scene_ex)
-		option.html(scene_ex)
-		return option.appendTo('#exceptions_list');
-	});
-
-	\$('#removeSceneName').click(function() {
-		\$('#exceptions_list option:selected').remove();
-
-		\$(this).toggle_SceneException()
-	});
-
-	$.fn.toggle_SceneException = function() {
-		all_exceptions = []
-
-		\$('#exceptions_list option').each  ( function() {
-			all_exceptions.push( \$(this).val() );
-		});
-
-		if ('' == all_exceptions)
-			\$('#SceneException').hide();
-		else
-			\$('#SceneException').show();
-	}
-
-	\$(this).toggle_SceneException();
-//-->
-</script>
 </div>
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
