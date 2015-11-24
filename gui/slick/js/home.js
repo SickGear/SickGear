@@ -135,6 +135,7 @@ $(document).ready(function () {
 				},
 				sortStable: true
 			});
+			$.tablesorter.filter.bindSearch($(obj), $('.search'));
 		});
 	}
 });

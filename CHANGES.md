@@ -80,8 +80,9 @@
 * Change to move JS code out of home template and into dedicated file
 
 [develop changelog]
-Enable Alpha Ratio again now that the secure login page over https is fixed
-Add ability to parse command line output from unix unrar version 4 and below
+* Enable Alpha Ratio again now that the secure login page over https is fixed
+* Add ability to parse command line output from unix unrar version 4 and below
+* Fix show search box on non-poster show list views
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
