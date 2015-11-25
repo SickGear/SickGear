@@ -29,6 +29,14 @@ class HelpersTests(unittest.TestCase):
         self.assertEqual(helpers.sizeof_fmt(2 ** 20), '1.0 MB')
         self.assertEqual(helpers.sizeof_fmt(1234567), '1.2 MB')
 
+    def test_remove_non_release_groups(self):
+        test_names = {
+            '[HorribleSubs] Hidan no Aria AA - 08 [1080p]': '[HorribleSubs] Hidan no Aria AA - 08 [1080p]',
+            'The.Last.Man.On.Earth.S02E08.No.Bull.1080p.WEB-DL.DD5.1.H264-BTN[rartv]': 'The.Last.Man.On.Earth.S02E08.No.Bull.1080p.WEB-DL.DD5.1.H264-BTN'
+        }
+        for test_name, test_result in test_names.items():
+            self.assertEqual(helpers.remove_non_release_groups(test_name), test_result)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(HelpersTests)
