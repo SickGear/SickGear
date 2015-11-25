@@ -85,6 +85,7 @@
 * Enable Alpha Ratio again now that the secure login page over https is fixed
 * Add ability to parse command line output from unix unrar version 4 and below
 * Fix show search box on non-poster show list views
+* Fix removal of non-release groups such that anime qualities are not trimmed from name
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
