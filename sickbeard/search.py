@@ -190,10 +190,10 @@ def filter_release_name(name, filter_words):
     Returns: False if the release name is OK, True if it contains one of the filter_words
     """
     if filter_words:
-        filters = [re.compile('.*%s.*' % filter.strip(), re.I) for filter in filter_words.split(',')]
+        filters = [filter.strip() for filter in filter_words.split(',')]
         for regfilter in filters:
-            if regfilter.search(name):
-                logger.log(u"" + name + " contains pattern: " + regfilter.pattern, logger.DEBUG)
+            if regfilter in name:
+                logger.log(u"" + name + " contains pattern: " + regfilter, logger.DEBUG)
                 return True
 
     return False
@@ -205,7 +205,7 @@ def pickBestResult(results, show, quality_list=None):
     # find the best result for the current episode
     bestResult = None
     for cur_result in results:
-            
+
         logger.log("Quality of " + cur_result.name + " is " + Quality.qualityStrings[cur_result.quality])
 
         if show.is_anime:
@@ -438,7 +438,7 @@ def searchForNeededEpisodes(episodes):
                     bestResult.content = bestResult.provider.get_url(bestResult.url)
                     if not bestResult.content:
                         continue
-            
+
             foundResults[curEp] = bestResult
 
     threading.currentThread().name = origThreadName
@@ -549,10 +549,10 @@ def searchProviders(show, episodes, manual_search=False):
                     seasonQual], logger.DEBUG)
 
             myDB = db.DBConnection()
-            allEps = [int(x["episode"]) 
-                      for x in myDB.select("SELECT episode FROM tv_episodes WHERE showid = ? AND ( season IN ( " + ','.join(searchedSeasons) + " ) )", 
+            allEps = [int(x["episode"])
+                      for x in myDB.select("SELECT episode FROM tv_episodes WHERE showid = ? AND ( season IN ( " + ','.join(searchedSeasons) + " ) )",
                                            [show.indexerid])]
-            
+
             logger.log(u"Executed query: [SELECT episode FROM tv_episodes WHERE showid = %s AND season in  %s]" % (show.indexerid, ','.join(searchedSeasons)))
             logger.log(u"Episode list: " + str(allEps), logger.DEBUG)
 
@@ -706,7 +706,7 @@ def searchProviders(show, episodes, manual_search=False):
                     bestResult.content = bestResult.provider.get_url(bestResult.url)
                     if not bestResult.content:
                         continue
-                    
+
             # add result if its not a duplicate and
             found = False
             for i, result in enumerate(finalResults):

@@ -80,6 +80,7 @@
 * Change to move JS code out of home template and into dedicated file
 * Change to remove branch from window title
 * Change to move JS code out of inc_top template and into dedicated file
+* Fix square brackets in ignore/require words causing false positive matches
 
 [develop changelog]
 * Enable Alpha Ratio again now that the secure login page over https is fixed
