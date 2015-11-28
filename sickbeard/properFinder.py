@@ -222,8 +222,15 @@ def _downloadPropers(properList):
 
         else:
 
+            # get the show object
+            showObj = helpers.findCertainShow(sickbeard.showList, curProper.indexerid)
+            if showObj == None:
+                logger.log(u'Unable to find the show with indexerid ' + str(
+                    curProper.indexerid) + ' so unable to download the proper', logger.ERROR)
+                continue
+
             # make sure that none of the existing history downloads are the same proper we're trying to download
-            clean_proper_name = _genericName(helpers.remove_non_release_groups(curProper.name))
+            clean_proper_name = _genericName(helpers.remove_non_release_groups(curProper.name, showObj.anime))
             isSame = False
             for curResult in historyResults:
                 # if the result exists in history already we need to skip it
@@ -234,12 +241,8 @@ def _downloadPropers(properList):
                 logger.log(u'This proper is already in history, skipping it', logger.DEBUG)
                 continue
 
-            # get the episode object
-            showObj = helpers.findCertainShow(sickbeard.showList, curProper.indexerid)
-            if showObj == None:
-                logger.log(u'Unable to find the show with indexerid ' + str(
-                    curProper.indexerid) + ' so unable to download the proper', logger.ERROR)
-                continue
+
+
             epObj = showObj.getEpisode(curProper.season, curProper.episode)
 
             # make the result object

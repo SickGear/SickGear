@@ -2156,14 +2156,14 @@ class TVEpisode(object):
         def us(name):
             return re.sub('[ -]', '_', name)
 
-        def release_name(name):
+        def release_name(show, name):
             if name:
-                name = helpers.remove_non_release_groups(helpers.remove_extension(name))
+                name = helpers.remove_non_release_groups(helpers.remove_extension(name), show.anime)
             return name
 
         def release_group(show, name):
             if name:
-                name = helpers.remove_non_release_groups(helpers.remove_extension(name))
+                name = helpers.remove_non_release_groups(helpers.remove_extension(name), show.anime)
             else:
                 return ""
 
@@ -2205,7 +2205,7 @@ class TVEpisode(object):
             '%0XE': '%02d' % self.scene_episode,
             '%AB': '%(#)03d' % {'#': self.absolute_number},
             '%XAB': '%(#)03d' % {'#': self.scene_absolute_number},
-            '%RN': release_name(self.release_name),
+            '%RN': release_name(self.show, self.release_name),
             '%RG': release_group(self.show, self.release_name),
             '%AD': str(self.airdate).replace('-', ' '),
             '%A.D': str(self.airdate).replace('-', '.'),
