@@ -210,6 +210,14 @@
 
 #end if
 ##
+#if sys.version_info < (2, 7, 9):
+	<div class="alert alert-danger upgrade-notification" role="alert">
+		<span>
+			SickGear will be dropping support for Python 2.7.8 and below. We recommend updating to latest version:
+			<a href="https://www.python.org/downloads/" onclick="window.open(this.href); return false;">Download here</a>
+		</span>
+	</div>
+#end if
 #if $sickbeard.NEWEST_VERSION_STRING
 	<div class="alert alert-success upgrade-notification" role="alert">
 		<span>$sickbeard.NEWEST_VERSION_STRING</span>

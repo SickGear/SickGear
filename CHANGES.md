@@ -80,6 +80,7 @@
 * Change to move JS code out of home template and into dedicated file
 * Change to remove branch from window title
 * Change to move JS code out of inc_top template and into dedicated file
+* Add notice for users with Python 2.7.8 or below to update to latest Python
 
 [develop changelog]
 Enable Alpha Ratio again now that the secure login page over https is fixed
