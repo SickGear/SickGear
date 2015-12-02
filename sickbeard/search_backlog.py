@@ -28,7 +28,7 @@ from sickbeard import search_queue
 from sickbeard import logger
 from sickbeard import ui
 from sickbeard import common
-from sickbeard.search import wantedEpisodes
+from sickbeard.search import wanted_episodes
 
 NORMAL_BACKLOG = 0
 LIMITED_BACKLOG = 10
@@ -75,7 +75,7 @@ class BacklogSearcher:
         logger.log(u'amWaiting: ' + str(self.amWaiting) + ', amActive: ' + str(self.amActive), logger.DEBUG)
         return (not self.amWaiting) and self.amActive
 
-    def searchBacklog(self, which_shows=None, force_type=NORMAL_BACKLOG):
+    def search_backlog(self, which_shows=None, force_type=NORMAL_BACKLOG):
 
         if self.amActive:
             logger.log(u'Backlog is still running, not starting it again', logger.DEBUG)
@@ -112,7 +112,7 @@ class BacklogSearcher:
             if curShow.paused:
                 continue
 
-            segments = wantedEpisodes(curShow, fromDate, make_dict=True)
+            segments = wanted_episodes(curShow, fromDate, make_dict=True)
 
             for season, segment in segments.items():
                 self.currentSearchInfo = {'title': curShow.name + ' Season ' + str(season)}
@@ -166,7 +166,7 @@ class BacklogSearcher:
         try:
             force_type = self.forcetype
             self.forcetype = NORMAL_BACKLOG
-            self.searchBacklog(force_type=force_type)
+            self.search_backlog(force_type=force_type)
         except:
             self.amActive = False
             raise

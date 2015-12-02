@@ -23,8 +23,8 @@ class SceneTests(test.SickbeardTestDBCase):
         result = show_name_helpers.allPossibleShowNames(s)
         self.assertTrue(len(set(expected).intersection(set(result))) == len(expected))
 
-    def _test_filterBadReleases(self, name, expected):
-        result = show_name_helpers.filterBadReleases(name)
+    def _test_pass_wordlist_checks(self, name, expected):
+        result = show_name_helpers.pass_wordlist_checks(name)
         self.assertEqual(result, expected)
 
     def test_allPossibleShowNames(self):
@@ -40,12 +40,12 @@ class SceneTests(test.SickbeardTestDBCase):
         self._test_allPossibleShowNames('Show Name Full Country Name', expected=['Show Name Full Country Name', 'Show Name (FCN)'])
         self._test_allPossibleShowNames('Show Name (Full Country Name)', expected=['Show Name (Full Country Name)', 'Show Name (FCN)'])
 
-    def test_filterBadReleases(self):
-        self._test_filterBadReleases('Show.S02.German.Stuff-Grp', False)
-        self._test_filterBadReleases('Show.S02.Some.Stuff-Core2HD', False)
-        self._test_filterBadReleases('Show.S02.Some.German.Stuff-Grp', False)
-        # self._test_filterBadReleases('German.Show.S02.Some.Stuff-Grp', True)
-        self._test_filterBadReleases('Show.S02.This.Is.German', False)
+    def test_pass_wordlist_checks(self):
+        self._test_pass_wordlist_checks('Show.S02.German.Stuff-Grp', False)
+        self._test_pass_wordlist_checks('Show.S02.Some.Stuff-Core2HD', False)
+        self._test_pass_wordlist_checks('Show.S02.Some.German.Stuff-Grp', False)
+        # self._test_pass_wordlist_checks('German.Show.S02.Some.Stuff-Grp', True)
+        self._test_pass_wordlist_checks('Show.S02.This.Is.German', False)
 
 
 class SceneExceptionTestCase(test.SickbeardTestDBCase):

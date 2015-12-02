@@ -16,12 +16,12 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
+from sickbeard import logger, tvcache
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -33,51 +33,39 @@ class FunFileProvider(generic.TorrentProvider):
         self.url_base = 'https://www.funfile.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'takelogin.php',
-                     'search': self.url_base + 'browse.php?%ssearch=%s',
+                     'search': self.url_base + 'browse.php?%s&search=%s&incldead=0&showspam=1&',
                      'get': self.url_base + '%s'}
 
-        self.categories = 'cat=7&incldead=0&s_title=1&showspam=1&'
+        self.categories = {'shows': [7], 'anime': [44]}
 
         self.url = self.urls['config_provider_home_uri']
         self.url_timeout = 90
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.cache = FunFileCache(self)
 
-    def _do_login(self):
+    def _authorised(self, **kwargs):
 
-        logged_in = lambda: None is not self.session.cookies.get('uid', domain='.funfile.org') and None is not self.session.cookies.get('pass', domain='.funfile.org')
-        if logged_in():
-            return True
+        return super(FunFileProvider, self)._authorised(
+            logged_in=(lambda x=None: None is not self.session.cookies.get('uid', domain='.funfile.org') and
+                       None is not self.session.cookies.get('pass', domain='.funfile.org')),
+            post_params={'login': 'Login', 'returnto': '/'}, timeout=self.url_timeout)
 
-        if self._check_auth():
-            login_params = {'username': self.username, 'password': self.password, 'submit': 'Log in'}
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session, timeout=self.url_timeout)
-            if response and logged_in():
-                return True
-
-            msg = u'Failed to authenticate with %s, abort provider'
-            if response and 'Username or password incorrect' in response:
-                msg = u'Invalid username or password for %s. Check settings'
-            logger.log(msg % self.name, logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._do_login():
+        if not self._authorised():
             return results
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download',
-                                                             'cats': 'cat=(?:7)'}.items())
+                                                             'cats': 'cat=(?:%s)' % self._categories_string(template='', delimiter='|')
+                                                             }.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_url = self.urls['search'] % (self._categories_string(mode), search_string)
 
-                search_url = self.urls['search'] % (self.categories, search_string)
                 html = self.get_url(search_url, timeout=self.url_timeout)
 
                 cnt = len(items[mode])
@@ -98,41 +86,32 @@ class FunFileProvider(generic.TorrentProvider):
                                 if not info:
                                     continue
 
-                                seeders, leechers = [int(tr.find_all('td')[x].get_text().strip()) for x in (-2, -1)]
-                                if None is tr.find('a', href=rc['cats'])\
-                                        or ('Cache' != mode and (seeders < self.minseed or leechers < self.minleech)):
+                                seeders, leechers, size = [tryInt(n, n) for n in [
+                                    (tr.find_all('td')[x].get_text().strip()) for x in (-2, -1, -4)]]
+                                if None is tr.find('a', href=rc['cats']) or self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
                                 download_url = self.urls['get'] % tr.find('a', href=rc['get']).get('href')
 
-                            except (AttributeError, TypeError):
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if title and download_url:
-                                items[mode].append((title, download_url, seeders))
+                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except (generic.HaltParseException, AttributeError):
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            # For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
-
-    def find_propers(self, search_date=datetime.datetime.today()):
-
-        return self._find_propers(search_date)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, use_or=False)
 
 
 class FunFileCache(tvcache.TVCache):
@@ -140,11 +119,11 @@ class FunFileCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 15  # cache update frequency
+        self.update_freq = 15  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = FunFileProvider()

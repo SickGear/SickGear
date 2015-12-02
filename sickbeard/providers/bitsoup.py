@@ -16,12 +16,12 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
+from sickbeard import logger, tvcache
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -33,51 +33,30 @@ class BitSoupProvider(generic.TorrentProvider):
         self.url_base = 'https://www.bitsoup.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'takelogin.php',
-                     'search': self.url_base + 'browse.php?search=%s%s',
+                     'search': self.url_base + 'browse.php?search=%s&%s&incldead=0&blah=0',
                      'get': self.url_base + '%s'}
 
-        self.categories = '&c42=1&c45=1&c49=1&c7=1&incldead=0&blah=0'
+        self.categories = {'shows': [42, 45, 49, 32, 7], 'anime': [23]}
 
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.cache = BitSoupCache(self)
 
-    def _do_login(self):
-
-        logged_in = lambda: 'uid' in self.session.cookies and 'pass' in self.session.cookies
-        if logged_in():
-            return True
-
-        if self._check_auth():
-            login_params = {'username': self.username, 'password': self.password, 'ssl': 'yes'}
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
-            if response and logged_in():
-                return True
-
-            msg = u'Failed to authenticate with %s, abort provider'
-            if response and 'Username or password incorrect' in response:
-                msg = u'Invalid username or password for %s. Check settings'
-            logger.log(msg % self.name, logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._do_login():
+        if not self._authorised():
             return results
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_url = self.urls['search'] % (search_string, self._categories_string(mode))
 
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
-
-                search_url = self.urls['search'] % (search_string, self.categories)
                 html = self.get_url(search_url)
 
                 cnt = len(items[mode])
@@ -85,7 +64,7 @@ class BitSoupProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, 'html.parser') as soup:
+                    with BS4Parser(html, 'html.parser', attr='class="koptekst"') as soup:
                         torrent_table = soup.find('table', attrs={'class': 'koptekst'})
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
@@ -94,40 +73,36 @@ class BitSoupProvider(generic.TorrentProvider):
 
                         for tr in torrent_rows[1:]:
                             try:
-                                seeders, leechers = [int(tr.find_all('td')[x].get_text().strip()) for x in (-3, -2)]
-                                if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                                seeders, leechers, size = [tryInt(n, n) for n in [
+                                    (tr.find_all('td')[x].get_text().strip()) for x in (-3, -2, -5)]]
+                                if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
                                 title = info.get_text().strip()
 
                                 download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-                            except (AttributeError, TypeError):
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if title and download_url:
-                                items[mode].append((title, download_url, seeders))
+                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            # for each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
 
-    def find_propers(self, search_date=datetime.datetime.today()):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return self._find_propers(search_date)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, sep_date='|', use_or=False)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
 
 
 class BitSoupCache(tvcache.TVCache):
@@ -135,11 +110,11 @@ class BitSoupCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 20  # cache update frequency
+        self.update_freq = 20  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = BitSoupProvider()

@@ -20,7 +20,7 @@ import traceback
 import urllib
 
 from . import generic
-from sickbeard import logger, tvcache, show_name_helpers
+from sickbeard import logger, show_name_helpers, tvcache
 from sickbeard.bs4_parser import BS4Parser
 
 
@@ -33,7 +33,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
         self.cache = TokyoToshokanCache(self)
 
-    def _do_search(self, search_string, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_string, search_mode='eponly', **kwargs):
 
         results = []
         if self.show and not self.show.is_anime:
@@ -70,11 +70,11 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
         return generic.TorrentProvider.find_search_results(self, show, episodes, search_mode, manual_search)
 
-    def _get_season_search_strings(self, ep_obj, **kwargs):
+    def _season_strings(self, ep_obj, **kwargs):
 
         return [x.replace('.', ' ') for x in show_name_helpers.makeSceneSeasonSearchString(self.show, ep_obj)]
 
-    def _get_episode_search_strings(self, ep_obj, **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
         return [x.replace('.', ' ') for x in show_name_helpers.makeSceneSearchString(self.show, ep_obj)]
 
@@ -84,9 +84,9 @@ class TokyoToshokanCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 15  # cache update frequency
+        self.update_freq = 15  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
         params = {'filter': '1'}
 
         url = self.provider.url + 'rss.php?' + urllib.urlencode(params)

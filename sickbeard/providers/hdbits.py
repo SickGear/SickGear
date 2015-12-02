@@ -16,12 +16,13 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import urllib
 
 from . import generic
-from sickbeard import classes, logger, tvcache
+from sickbeard import logger, tvcache
 from sickbeard.exceptions import AuthException
+from sickbeard.helpers import tryInt
+from sickbeard.indexers import indexer_config
 
 try:
     import json
@@ -40,11 +41,13 @@ class HDBitsProvider(generic.TorrentProvider):
                      'search': self.url_base + 'api/torrents',
                      'get': self.url_base + 'download.php?%s'}
 
-        self.categories = 2  # TV
+        self.categories = [3, 5, 2]
 
+        self.proper_search_terms = [' proper ', ' repack ']
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.passkey = 2 * [None]
+        self.username, self.passkey, self.minseed, self.minleech = 4 * [None]
+        self.freeleech = False
         self.cache = HDBitsCache(self)
 
     def check_auth_from_data(self, parsed_json):
@@ -55,100 +58,93 @@ class HDBitsProvider(generic.TorrentProvider):
 
         return True
 
-    def _get_season_search_strings(self, ep_obj, **kwargs):
+    def _season_strings(self, ep_obj, **kwargs):
 
-        return [self._build_search_strings(show=ep_obj.show, season=ep_obj)]
+        params = super(HDBitsProvider, self)._season_strings(ep_obj)
 
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
+        show = ep_obj.show
+        if indexer_config.INDEXER_TVDB == show.indexer and show.indexerid:
+            params[0]['Season'].insert(0, dict(tvdb=dict(
+                id=show.indexerid,
+                season=(show.air_by_date or show.is_sports) and str(ep_obj.airdate)[:7] or
+                (show.is_anime and ('%d' % ep_obj.scene_absolute_number) or
+                 (ep_obj.season, ep_obj.scene_season)[bool(show.is_scene)]))))
 
-        return [self._build_search_strings(show=ep_obj.show, episode=ep_obj)]
+        return params
 
-    def _get_title_and_url(self, item):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        title = item['name']
-        if title:
-            title = u'' + title.replace(' ', '.')
+        params = super(HDBitsProvider, self)._episode_strings(ep_obj, sep_date='|')
 
-        url = self.urls['get'] % urllib.urlencode({'id': item['id'], 'passkey': self.passkey})
+        show = ep_obj.show
+        if indexer_config.INDEXER_TVDB == show.indexer and show.indexerid:
+            id_param = dict(
+                id=show.indexerid,
+                episode=show.air_by_date and str(ep_obj.airdate).replace('-', ' ') or
+                (show.is_sports and ep_obj.airdate.strftime('%b') or
+                 (show.is_anime and ('%i' % int(ep_obj.scene_absolute_number)) or
+                  (ep_obj.episode, ep_obj.scene_episode)[bool(show.is_scene)])))
+            if not(show.air_by_date and show.is_sports and show.is_anime):
+                id_param['season'] = (ep_obj.season, ep_obj.scene_season)[bool(show.is_scene)]
+            params[0]['Episode'].insert(0, dict(tvdb=id_param))
 
-        return title, url
+        return params
 
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         self._check_auth()
-
-        logger.log(u'Search url: %s search_params: %s' % (self.urls['search'], search_params), logger.DEBUG)
-
-        response_json = self.get_url(self.urls['search'], post_data=search_params, json=True)
-        if response_json and 'data' in response_json and self.check_auth_from_data(response_json):
-            return response_json['data']
-
-        logger.log(u'Resulting JSON from %s isn\'t correct, not parsing it' % self.name, logger.ERROR)
-        return []
-
-    def find_propers(self, search_date=None):
 
         results = []
+        api_data = {'username': self.username, 'passkey': self.passkey, 'category': self.categories}
 
-        search_terms = [' proper ', ' repack ']
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        for term in search_terms:
-            for item in self._do_search(self._build_search_strings(search_term=term)):
-                if item['utadded']:
+        for mode in search_params.keys():
+            for search_string in search_params[mode]:
+
+                post_data = api_data.copy()
+                if isinstance(search_string, dict):
+                    post_data.update(search_string)
+                    id_search = True
+                else:
+                    post_data['search'] = search_string
+                    id_search = False
+
+                post_data = json.dumps(post_data)
+                search_url = self.urls['search']
+
+                json_resp = self.get_url(search_url, post_data=post_data, json=True)
+                if not (json_resp and 'data' in json_resp and self.check_auth_from_data(json_resp)):
+                    logger.log(u'Response from %s does not contain any json data, abort' % self.name, logger.ERROR)
+                    return results
+
+                cnt = len(items[mode])
+                for item in json_resp['data']:
                     try:
-                        result_date = datetime.datetime.fromtimestamp(int(item['utadded']))
-                    except:
-                        result_date = None
-
-                    if result_date and (not search_date or result_date > search_date):
-                        title, url = self._get_title_and_url(item)
-                        if not re.search('(?i)(?:%s)' % term.strip(), title):
+                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in 'seed', 'leech', 'size']]
+                        if self._peers_fail(mode, seeders, leechers)\
+                                or self.freeleech and re.search('(?i)no', item.get('freeleech', 'no')):
                             continue
-                        results.append(classes.Proper(title, url, result_date, self.show))
+                        title = item['name']
+                        download_url = self.urls['get'] % urllib.urlencode({'id': item['id'], 'passkey': self.passkey})
+
+                    except (AttributeError, TypeError, ValueError):
+                        continue
+
+                    if title and download_url:
+                        items[mode].append((title, download_url, item.get('seeders', 0), self._bytesizer(size)))
+
+                self._log_search(mode, len(items[mode]) - cnt,
+                                 ('search_string: ' + search_string, self.name)['Cache' == mode])
+
+                self._sort_seeders(mode, items)
+
+                if id_search and len(items[mode]):
+                    return items[mode]
+
+            results = list(set(results + items[mode]))
+
         return results
-
-    def _build_search_strings(self, show=None, episode=None, season=None, search_term=None):
-
-        request_params = {'username': self.username, 'passkey': self.passkey, 'category': [self.categories]}
-
-        if episode or season:
-            param = {'id': show.indexerid}
-
-            if episode:
-                if show.air_by_date:
-                    param['episode'] = str(episode.airdate).replace('-', '|')
-                elif show.is_sports:
-                    param['episode'] = episode.airdate.strftime('%b')
-                elif show.is_anime:
-                    param['episode'] = '%i' % int(episode.scene_absolute_number)
-                else:
-                    param['season'] = episode.scene_season
-                    param['episode'] = episode.scene_episode
-
-            if season:
-                if show.air_by_date or show.is_sports:
-                    param['season'] = str(season.airdate)[:7]
-                elif show.is_anime:
-                    param['season'] = '%d' % season.scene_absolute_number
-                else:
-                    param['season'] = season.scene_season
-
-            request_params['tvdb'] = param
-
-        if search_term:
-            request_params['search'] = search_term
-
-        return json.dumps(request_params)
-
-    def get_cache_data(self):
-
-        self._check_auth()
-
-        response_json = self.get_url(self.urls['search'], post_data=self._build_search_strings(), json=True)
-        if response_json and 'data' in response_json and self.check_auth_from_data(response_json):
-            return response_json['data']
-
-        return []
 
 
 class HDBitsCache(tvcache.TVCache):
@@ -156,11 +152,11 @@ class HDBitsCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 15  # cache update frequency
+        self.update_freq = 15  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = HDBitsProvider()

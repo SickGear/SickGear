@@ -16,13 +16,13 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import time
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
+from sickbeard import logger, tvcache
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -44,37 +44,23 @@ class SCCProvider(generic.TorrentProvider):
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.cache = SCCCache(self)
 
-    def _do_login(self):
+    def _authorised(self, **kwargs):
 
-        logged_in = lambda: 'uid' in self.session.cookies and 'pass' in self.session.cookies
-        if logged_in():
-            return True
+        return super(SCCProvider, self)._authorised(post_params={'submit': 'come+on+in'})
 
-        if self._check_auth():
-            login_params = {'username': self.username, 'password': self.password, 'submit': 'come on in'}
-
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
-            if response and logged_in():
-                return True
-
-            logger.log(u'Failed to authenticate with %s, abort provider.' % self.name, logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        if not self._do_login():
+        if not self._authorised():
             return results
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                search_string, void = self._get_title_and_url((search_string, None))
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
+                search_string, void = self._title_and_url((search_string, None))
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 if 'Season' == mode:
                     searches = [self.urls['archive'] % search_string]
@@ -83,6 +69,7 @@ class SCCProvider(generic.TorrentProvider):
                                 self.urls['nonscene'] % search_string]
 
                 for search_url in searches:
+
                     html = self.get_url(search_url)
 
                     cnt = len(items[mode])
@@ -99,9 +86,10 @@ class SCCProvider(generic.TorrentProvider):
 
                             for tr in torrent_table.find_all('tr')[1:]:
                                 try:
-                                    seeders, leechers = [int(tr.find('td', attrs={'class': x}).get_text().strip())
-                                                         for x in ('ttr_seeders', 'ttr_leechers')]
-                                    if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                                    seeders, leechers, size = [tryInt(n, n) for n in [
+                                        tr.find('td', attrs={'class': x}).get_text().strip()
+                                        for x in ('ttr_seeders', 'ttr_leechers', 'ttr_size')]]
+                                    if self._peers_fail(mode, seeders, leechers):
                                         continue
 
                                     info = tr.find('a', href=rc['info'])
@@ -109,32 +97,28 @@ class SCCProvider(generic.TorrentProvider):
 
                                     link = str(tr.find('a', href=rc['get'])['href']).lstrip('/')
                                     download_url = self.urls['get'] % link
-                                except (AttributeError, TypeError):
+
+                                except (AttributeError, TypeError, ValueError):
                                     continue
 
                                 if title and download_url:
-                                    items[mode].append((title, download_url, seeders))
+                                    items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                     except generic.HaltParseException:
                         time.sleep(1.1)
                     except Exception:
                         logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                    self._log_result(mode, len(items[mode]) - cnt, search_url)
+                    self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            # For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
 
-    def find_propers(self, search_date=datetime.datetime.today()):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return self._find_propers(search_date)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, sep_date='.', use_or=False)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
 
 
 class SCCCache(tvcache.TVCache):
@@ -142,11 +126,11 @@ class SCCCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 20  # cache update frequency
+        self.update_freq = 20  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = SCCProvider()

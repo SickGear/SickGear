@@ -22,8 +22,9 @@ import re
 import urlparse
 
 import sickbeard
+import sickbeard.providers
 from sickbeard import encodingKludge as ek
-from sickbeard import helpers, logger, naming, db, providers
+from sickbeard import helpers, logger, naming, db
 
 
 naming_ep_type = ('%(seasonnumber)dx%(episodenumber)02d',

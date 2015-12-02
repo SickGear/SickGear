@@ -94,18 +94,17 @@ def remove_extension(name):
     return name
 
 
-def remove_non_release_groups(name, anime=False):
+def remove_non_release_groups(name, is_anime=False):
     """
     Remove non release groups from name
     """
 
     if name:
         rc = [re.compile(r'(?i)' + v) for v in [
-            '([\s\.\-_\[\{\(]*(no-rar|nzbgeek|ripsalot|rp|siklopentan)[\s\.\-_\]\}\)]*)$',
-            '(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*(www\.\w+.\w+)[\s\.\-_]*[\]\}\)][\s\.\-_]*)$',
-            '(?<=\w)([\s\.\-_]*[\[\{\(]\s*(rar(bg|tv)|((e[tz]|v)tv))[\s\.\-_]*[\]\}\)][\s\.\-_]*)$'] +
-            (['(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*[\w\s\.\-\_]+[\s\.\-_]*[\]\}\)][\s\.\-_]*)$'], [])[anime]
-        ]
+              '([\s\.\-_\[\{\(]*(no-rar|nzbgeek|ripsalot|rp|siklopentan)[\s\.\-_\]\}\)]*)$',
+              '(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*(www\.\w+.\w+)[\s\.\-_]*[\]\}\)][\s\.\-_]*)$',
+              '(?<=\w)([\s\.\-_]*[\[\{\(]\s*(rar(bg|tv)|((e[tz]|v)tv))[\s\.\-_]*[\]\}\)][\s\.\-_]*)$'] +
+              (['(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*[\w\s\.\-\_]+[\s\.\-_]*[\]\}\)][\s\.\-_]*)$'], [])[is_anime]]
         rename = name
         while rename:
             for regex in rc:
@@ -1165,7 +1164,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         logger.log(u'HTTP error %s while loading URL %s' % (e.errno, url), logger.WARNING)
         return
     except requests.exceptions.ConnectionError as e:
-        logger.log(u'Connection error msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
+        logger.log(u'Internet connection error msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
         return
     except requests.exceptions.ReadTimeout as e:
         logger.log(u'Read timed out msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
@@ -1173,8 +1172,11 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     except (requests.exceptions.Timeout, socket.timeout) as e:
         logger.log(u'Connection timed out msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
         return
-    except Exception:
-        logger.log(u'Exception caught while loading URL %s Detail... %s' % (url, traceback.format_exc()), logger.WARNING)
+    except Exception as e:
+        if e.message:
+            logger.log(u'Exception caught while loading URL %s\r\nDetail... %s\r\n%s' % (url, str(e.message), traceback.format_exc()), logger.WARNING)
+        else:
+            logger.log(u'Unknown exception while loading URL %s\r\nDetail... %s' % (url, traceback.format_exc()), logger.WARNING)
         return
 
     if json:
@@ -1410,6 +1412,7 @@ def clear_unused_providers():
         myDB = db.DBConnection('cache.db')
         myDB.action('DELETE FROM provider_cache WHERE provider NOT IN (%s)' % ','.join(['?'] * len(providers)), providers)
 
+
 def make_search_segment_html_string(segment, max_eps=5):
     seg_str = ''
     if segment and not isinstance(segment, list):
@@ -1427,3 +1430,7 @@ def make_search_segment_html_string(segment, max_eps=5):
         episodes = ['S' + str(x.season).zfill(2) + 'E' + str(x.episode).zfill(2) for x in segment]
         seg_str = u'Episode' + maybe_plural(len(episodes)) + ': ' + ', '.join(episodes)
     return seg_str
+
+
+def has_anime():
+    return False if not sickbeard.showList else any(filter(lambda show: show.is_anime, sickbeard.showList))

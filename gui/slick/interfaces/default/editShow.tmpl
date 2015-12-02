@@ -125,8 +125,8 @@
 				<span class="component-title">Ignore result with any word</span>
 				<span class="component-desc">
 					<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="$show.rls_ignore_words" class="form-control form-control-inline input-sm input350">
-					<p>e.g. [word1,word2, ... ,word_n]</p>
-					<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words</p>
+					<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
+					<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words or regular expressions</p>
 				</span>
 			</label>
 		</div>
@@ -136,8 +136,8 @@
 				<span class="component-title">Require at least one word</span>
 				<span class="component-desc">
 					<input type="text" name="rls_require_words" id="rls_require_words" value="$show.rls_require_words" class="form-control form-control-inline input-sm input350">
-					<p>e.g. [word1,word2, ... ,word_n]</p>
-					<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words</p>
+					<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
+					<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words or regular expressions</p>
 				</span>
 			</label>
 		</div>
@@ -276,7 +276,7 @@
 		var scene_ex = \$('#SceneName').val()
 		var option = \$('<option>')
 		all_exceptions = []
-			
+
 		\$('#exceptions_list option').each  ( function() {
 		   all_exceptions.push( \$(this).val() )
 		});
@@ -295,7 +295,7 @@
 
 	\$('#removeSceneName').click(function() {
 		\$('#exceptions_list option:selected').remove();
-		
+
 		\$(this).toggle_SceneException()
 	});
 

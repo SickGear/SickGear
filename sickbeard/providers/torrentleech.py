@@ -16,69 +16,51 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
+from sickbeard import logger, tvcache
 from sickbeard.bs4_parser import BS4Parser
 from lib.unidecode import unidecode
 
 
 class TorrentLeechProvider(generic.TorrentProvider):
-
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorrentLeech')
 
         self.url_base = 'https://torrentleech.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'user/account/login/',
-                     'search': self.url_base + 'torrents/browse/index/query/%s/categories/%s',
-                     'cache': self.url_base + 'torrents/browse/index/categories/%s',
+                     'browse': self.url_base + 'torrents/browse/index/categories/%(cats)s',
+                     'search': self.url_base + 'torrents/browse/index/query/%(query)s/categories/%(cats)s',
                      'get': self.url_base + '%s'}
 
-        self.categories = '2,26,27,32'
+        self.categories = {'shows': [2, 26, 27, 32], 'anime': [7, 34, 35]}
 
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.cache = TorrentLeechCache(self)
 
-    def _do_login(self):
+    def _authorised(self, **kwargs):
 
-        logged_in = lambda: 'tluid' in self.session.cookies and 'tlpass' in self.session.cookies
-        if logged_in():
-            return True
+        return super(TorrentLeechProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies(pre='tl')),
+                                                             post_params={'remember_me': 'on', 'login': 'submit'})
 
-        if self._check_auth():
-            login_params = {'username': self.username, 'password': self.password, 'remember_me': 'on', 'login': 'submit'}
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
-            if response and logged_in():
-                return True
-
-            logger.log(u'Failed to authenticate with %s, abort provider.' % self.name, logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._do_login():
+        if not self._authorised():
             return results
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'download'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
-
-                if 'Cache' == mode:
-                    search_url = self.urls['cache'] % self.categories
-                else:
-                    search_url = self.urls['search'] % (search_string, self.categories)
+                search_url = self.urls[('search', 'browse')['Cache' == mode]] % {
+                    'cats': self._categories_string(mode, '', ','),
+                    'query': isinstance(search_string, unicode) and unidecode(search_string) or search_string}
 
                 html = self.get_url(search_url)
 
@@ -98,49 +80,45 @@ class TorrentLeechProvider(generic.TorrentProvider):
                             try:
                                 seeders, leechers = [int(tr.find('td', attrs={'class': x}).get_text().strip())
                                                      for x in ('seeders', 'leechers')]
-                                if mode != 'Cache' and (seeders < self.minseed or leechers < self.minleech):
+                                if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('td', {'class': 'name'}).a
                                 title = ('title' in info.attrs and info['title']) or info.get_text().strip()
+                                size = tr.find_all('td')[-5].get_text().strip()
 
                                 download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-                            except (AttributeError, TypeError):
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if title and download_url:
-                                items[mode].append((title, download_url, seeders))
+                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
 
-    def find_propers(self, search_date=datetime.datetime.today()):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return self._find_propers(search_date)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, sep_date='|', use_or=False)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
 
 
 class TorrentLeechCache(tvcache.TVCache):
-
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 20  # cache update frequency
+        self.update_freq = 20  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
+        return self.provider.cache_data()
 
-        return self.provider.get_cache_data()
 
 provider = TorrentLeechProvider()

@@ -49,7 +49,7 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
 from sickbeard.name_cache import buildNameCache
 from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
-from sickbeard.searchBacklog import FULL_BACKLOG, LIMITED_BACKLOG
+from sickbeard.search_backlog import FULL_BACKLOG, LIMITED_BACKLOG
 from tornado import gen
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from lib import adba
@@ -3061,7 +3061,7 @@ class Manage(MainHandler):
         show_obj = helpers.findCertainShow(sickbeard.showList, int(indexer_id))
 
         if show_obj:
-            sickbeard.backlogSearchScheduler.action.searchBacklog([show_obj])  # @UndefinedVariable
+            sickbeard.backlogSearchScheduler.action.search_backlog([show_obj])  # @UndefinedVariable
 
         self.redirect('/manage/backlogOverview/')
 
@@ -3909,6 +3909,12 @@ class ConfigSearch(Config):
 
         t = PageTemplate(headers=self.request.headers, file='config_search.tmpl')
         t.submenu = self.ConfigMenu
+        t.using_rls_ignore_words = [(show.indexerid, show.name)
+                                    for show in sickbeard.showList if show.rls_ignore_words.strip()]
+        t.using_rls_ignore_words.sort(lambda x, y: cmp(x[1], y[1]), reverse=False)
+        t.using_rls_require_words = [(show.indexerid, show.name)
+                                     for show in sickbeard.showList if show.rls_require_words.strip()]
+        t.using_rls_require_words.sort(lambda x, y: cmp(x[1], y[1]), reverse=False)
         return t.respond()
 
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
@@ -4555,6 +4561,13 @@ class ConfigProviders(Config):
                         kwargs[curTorrentProvider.get_id() + '_freeleech'])
                 except:
                     curTorrentProvider.freeleech = 0
+
+            if hasattr(curTorrentProvider, 'reject_m2ts'):
+                try:
+                    curTorrentProvider.reject_m2ts = config.checkbox_to_value(
+                        kwargs[curTorrentProvider.get_id() + '_reject_m2ts'])
+                except:
+                    curTorrentProvider.reject_m2ts = 0
 
             if hasattr(curTorrentProvider, 'search_mode'):
                 try:

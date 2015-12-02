@@ -340,7 +340,7 @@ class SickGear(object):
                        logger.ERROR)
             if sickbeard.LAUNCH_BROWSER and not self.runAsDaemon:
                 logger.log(u'Launching browser and exiting', logger.ERROR)
-                sickbeard.launchBrowser(self.startPort)
+                sickbeard.launch_browser(self.startPort)
             os._exit(1)
 
         # Check if we need to perform a restore first
@@ -377,7 +377,7 @@ class SickGear(object):
 
         # Launch browser
         if sickbeard.LAUNCH_BROWSER and not (self.noLaunch or self.runAsDaemon):
-            sickbeard.launchBrowser(self.startPort)
+            sickbeard.launch_browser(self.startPort)
 
         # main loop
         while True:
@@ -488,7 +488,7 @@ class SickGear(object):
             sickbeard.halt()
 
             # save all shows to DB
-            sickbeard.saveAll()
+            sickbeard.save_all()
 
             # shutdown web server
             if self.webserver:

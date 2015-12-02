@@ -55,7 +55,7 @@ Some of our innovative features;
 </table>
 
 ## Required software
-* Python 2.6+
+* Python 2.7.9+ (earlier versions must be used with a current version of openssl)
 * Cheetah 2.1.0+
 
 ## Howto
@@ -90,7 +90,6 @@ Finally, a massive thanks to all those that remain in the shadows, the quiet one
 * Support
   * Please note that, aside from bug reports, we do *not* offer support.  We can offer some help, but we really need you to understand the basics of your Linux or Windows OS.  If you do not understand basics such as locating a database file, not running as root, setting up file permissions, or claiming a user derp, then we really cannot help you!
   * IRC: `irc.freenode.net` channel `#SickGear`
-  * Webchat IRC: [webchat link](http://webchat.freenode.net/?channels=SickGear)
 
 ## Screenies
 <table><thead></thead><tbody>

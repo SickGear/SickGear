@@ -14,12 +14,12 @@
 # along with Sick Beard.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
+from sickbeard import logger, tvcache
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -39,43 +39,26 @@ class PiSexyProvider(generic.TorrentProvider):
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
         self.cache = PiSexyCache(self)
 
-    def _do_login(self):
+    def _authorised(self, **kwargs):
 
-        logged_in = lambda: 'uid' in self.session.cookies and 'pass' in self.session.cookies and\
-                            'pcode' in self.session.cookies and 'pisexy' in self.session.cookies
-        if logged_in():
-            return True
+        return super(PiSexyProvider, self)._authorised(logged_in=lambda x=None: self.has_all_cookies(['uid', 'pass', 'pcode', 'pisexy']))
 
-        if self._check_auth():
-            login_params = {'username': self.username, 'password': self.password}
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
-            if response and logged_in():
-                return True
-
-            msg = u'Failed to authenticate with %s, abort provider'
-            if response and 'Username or password incorrect' in response:
-                msg = u'Invalid username or password for %s. Check settings'
-            logger.log(msg % self.name, logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._do_login():
+        if not self._authorised():
             return results
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v))
                   for (k, v) in {'info': 'download', 'get': 'download', 'valid_cat': 'cat=(?:0|50[12])',
                                  'title': r'Download\s([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
-
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                 search_url = self.urls['search'] % search_string
+
                 html = self.get_url(search_url)
 
                 cnt = len(items[mode])
@@ -93,49 +76,36 @@ class PiSexyProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers = 2 * [tr.find_all('td')[-4].get_text().strip()]
-                                seeders = int(rc['seeders'].findall(seeders)[0])
-                                leechers = int(rc['leechers'].findall(leechers)[0])
-
-                                if 'Cache' != mode:
-                                    if not tr.find('a', href=rc['valid_cat']):
-                                        continue
-
-                                    if seeders < self.minseed or leechers < self.minleech:
-                                        continue
+                                seeders, leechers = [tryInt(n) for n in [
+                                    rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
+                                if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['valid_cat']):
+                                    continue
 
                                 info = tr.find('a', href=rc['info'])
                                 title = 'title' in info.attrs and rc['title'].sub('', info.attrs['title'])\
                                         or info.get_text().strip()
+                                size = tr.find_all('td')[3].get_text().strip()
 
                                 download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
 
-                            except (AttributeError, TypeError):
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if title and download_url:
-                                items[mode].append((title, download_url, seeders))
+                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            # For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
-
-    def find_propers(self, search_date=datetime.datetime.today()):
-
-        return self._find_propers(search_date)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, use_or=False)
 
 
 class PiSexyCache(tvcache.TVCache):
@@ -143,11 +113,9 @@ class PiSexyCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 10  # cache update frequency
+    def _cache_data(self):
 
-    def _getRSSData(self):
-
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = PiSexyProvider()

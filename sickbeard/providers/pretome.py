@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import datetime
-
 from . import generic
 from sickbeard import tvcache
 from sickbeard.rssfeeds import RSSFeeds
@@ -31,7 +29,7 @@ class PreToMeProvider(generic.TorrentProvider):
         self.url_base = 'https://pretome.info/'
 
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'cache': self.url_base + 'rss.php?cat[]=7&sort=0&type=d&key=%s',
+                     'browse': self.url_base + 'rss.php?cat[]=7&sort=0&type=d&key=%s',
                      'search': '&st=1&tf=all&search=%s'}
 
         self.url = self.urls['config_provider_home_uri']
@@ -39,24 +37,23 @@ class PreToMeProvider(generic.TorrentProvider):
         self.passkey = None
         self.cache = PreToMeCache(self)
 
-    def _do_login(self):
+    def _authorised(self, **kwargs):
 
         return self._check_auth()
 
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
-        self._do_login()
+        self._authorised()
         results = []
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        url = self.urls['cache'] % self.passkey
+        url = self.urls['browse'] % self.passkey
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_url = url + (self.urls['search'] % search_string, '')['Cache' == mode]
 
-                search_url = (url + self.urls['search'] % search_string, url)['Cache' == mode]
                 data = RSSFeeds(self).get_feed(search_url)
 
                 cnt = len(items[mode])
@@ -64,23 +61,15 @@ class PreToMeProvider(generic.TorrentProvider):
                     for entry in data['entries']:
                         try:
                             if entry['title'] and 'download' in entry['link']:
-                                items[mode].append((entry['title'], entry['link']))
+                                items[mode].append((entry['title'], entry['link'], None, None))
                         except KeyError:
                             continue
 
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
-
-    def find_propers(self, search_date=datetime.datetime.today()):
-
-        return self._find_propers(search_date)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, use_or=False)
 
 
 class PreToMeCache(tvcache.TVCache):
@@ -88,11 +77,11 @@ class PreToMeCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 6  # cache update frequency
+        self.update_freq = 6  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = PreToMeProvider()

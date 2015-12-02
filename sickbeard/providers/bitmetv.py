@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import ast
 import re
 import traceback
 
@@ -26,29 +25,31 @@ from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
-class SceneTimeProvider(generic.TorrentProvider):
+class BitmetvProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SceneTime')
+        generic.TorrentProvider.__init__(self, 'BitMeTV')
 
-        self.url_base = 'https://www.scenetime.com/'
+        self.url_base = 'http://www.bitmetv.org/'
+
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
-                     'browse': self.url_base + 'browse_API.php',
-                     'params': {'sec': 'jax', 'cata': 'yes'},
-                     'get': self.url_base + 'download.php/%(id)s/%(title)s.torrent'}
+                     'login': self.url_base + 'links.php',
+                     'search': self.url_base + 'browse.php?%s&search=%s',
+                     'get': self.url_base + '%s'}
 
-        self.categories = {'shows': [2, 43, 9, 63, 77, 79, 101]}
+        self.categories = {'shows': 0, 'anime': 86}  # exclusively one cat per key
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = SceneTimeCache(self)
+        self.digest, self.minseed, self.minleech = 3 * [None]
+        self.cache = BitmetvCache(self)
 
     def _authorised(self, **kwargs):
 
-        return super(SceneTimeProvider, self)._authorised(post_params={'submit': 'Log in'})
+        return super(BitmetvProvider, self)._authorised(
+            logged_in=(lambda x=None: (None is x or 'Other Links' in x) and self.has_all_cookies() and
+                       self.session.cookies['uid'] in self.digest and self.session.cookies['pass'] in self.digest),
+            failed_msg=(lambda x=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -58,30 +59,22 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': '.*id=(\d+).*', 'fl': '\[freeleech\]',
-                                                             'cats': 'cat=(?:%s)' % self._categories_string(template='', delimiter='|')
-                                                             }.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                category = 'cat=%s' % self.categories[
+                    (mode in ['Season', 'Episode'] and self.show and self.show.is_anime) and 'anime' or 'shows']
+                search_url = self.urls['search'] % (category, search_string)
 
-                post_data = self.urls['params'].copy()
-                post_data.update(ast.literal_eval('{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
-                if 'Cache' != mode:
-                    post_data['search'] = '+'.join(search_string.split())
-
-                if self.freeleech:
-                    post_data.update({'freeleech': 'on'})
-
-                self.session.headers.update({'Referer': self.url + 'browse.php', 'X-Requested-With': 'XMLHttpRequest'})
-                html = self.get_url(self.urls['browse'], post_data=post_data)
+                html = self.get_url(search_url)
 
                 cnt = len(items[mode])
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='cellpadding="5"') as soup:
                         torrent_table = soup.find('table', attrs={'cellpadding': 5})
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
@@ -91,17 +84,13 @@ class SceneTimeProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -3)]]
-                                if None is tr.find('a', href=rc['cats'])\
-                                        or self.freeleech and None is rc['fl'].search(tr.find_all('td')[1].get_text())\
-                                        or self._peers_fail(mode, seeders, leechers):
+                                    (tr.find_all('td')[x].get_text().strip()) for x in (-3, -2, -5)]]
+                                if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
                                 title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
-
-                                download_url = self.urls['get'] % {'id': re.sub(rc['get'], r'\1', str(info.attrs['href'])),
-                                                                   'title': str(title).replace(' ', '.')}
+                                download_url = self.urls['get'] % tr.find('a', href=rc['get']).get('href')
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -113,8 +102,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
-                self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string, self.name)['Cache' == mode])
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
             self._sort_seeders(mode, items)
 
@@ -122,17 +110,22 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         return results
 
+    @staticmethod
+    def ui_string(key):
 
-class SceneTimeCache(tvcache.TVCache):
+        return 'bitmetv_digest' == key and 'use... \'uid=xx; pass=yy\'' or ''
+
+
+class BitmetvCache(tvcache.TVCache):
 
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 15  # cache update frequency
+        self.update_freq = 7  # cache update frequency
 
     def _cache_data(self):
 
         return self.provider.cache_data()
 
 
-provider = SceneTimeProvider()
+provider = BitmetvProvider()

@@ -19,7 +19,7 @@
 import urllib
 
 from . import generic
-from sickbeard import logger, tvcache, show_name_helpers
+from sickbeard import logger, show_name_helpers, tvcache
 
 
 class NyaaProvider(generic.TorrentProvider):
@@ -31,7 +31,7 @@ class NyaaProvider(generic.TorrentProvider):
 
         self.cache = NyaaCache(self)
 
-    def _do_search(self, search_string, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_string, **kwargs):
 
         results = []
         if self.show and not self.show.is_anime:
@@ -51,7 +51,7 @@ class NyaaProvider(generic.TorrentProvider):
             items = data.entries
             for curItem in items:
 
-                title, url = self._get_title_and_url(curItem)
+                title, url = self._title_and_url(curItem)
 
                 if title and url:
                     results.append(curItem)
@@ -65,13 +65,13 @@ class NyaaProvider(generic.TorrentProvider):
 
         return generic.TorrentProvider.find_search_results(self, show, episodes, search_mode, manual_search)
 
-    def _get_season_search_strings(self, ep_obj, **kwargs):
+    def _season_strings(self, ep_obj, **kwargs):
 
         return show_name_helpers.makeSceneShowSearchStrings(self.show)
 
-    def _get_episode_search_strings(self, ep_obj, **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return self._get_season_search_strings(ep_obj)
+        return self._season_strings(ep_obj)
 
 
 class NyaaCache(tvcache.TVCache):
@@ -79,9 +79,9 @@ class NyaaCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 15  # cache update frequency
+        self.update_freq = 15  # cache update frequency
 
-    def _getRSSData(self):
+    def _cache_data(self):
         params = {'page': 'rss',   # Use RSS page
                   'order': '1',    # Sort Descending By Date
                   'cats': '1_37'}  # Limit to English-translated Anime (for now)
