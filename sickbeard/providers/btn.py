@@ -126,7 +126,8 @@ class BTNProvider(generic.TorrentProvider):
                         if title and url:
                             results.append(torrent_info)
 
-                    self._log_search(mode, len(results) - cnt, self.name)
+                    self._log_search(mode, len(results) - cnt,
+                                     ('search_param: ' + str(search_param), self.name)['Cache' == mode])
 
         return results
 

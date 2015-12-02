@@ -60,7 +60,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
     def _season_strings(self, ep_obj, **kwargs):
 
-        params = super(HDBitsProvider, self)._season_strings(ep_obj)
+        params = super(HDBitsProvider, self)._season_strings(ep_obj, scene=False)
 
         show = ep_obj.show
         if indexer_config.INDEXER_TVDB == show.indexer and show.indexerid:
@@ -74,7 +74,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        params = super(HDBitsProvider, self)._episode_strings(ep_obj, sep_date='|')
+        params = super(HDBitsProvider, self)._episode_strings(ep_obj, scene=False, sep_date='|')
 
         show = ep_obj.show
         if indexer_config.INDEXER_TVDB == show.indexer and show.indexerid:
@@ -100,20 +100,21 @@ class HDBitsProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         for mode in search_params.keys():
-            for search_string in search_params[mode]:
+            for search_param in search_params[mode]:
 
                 post_data = api_data.copy()
-                if isinstance(search_string, dict):
-                    post_data.update(search_string)
+                if isinstance(search_param, dict):
+                    post_data.update(search_param)
                     id_search = True
                 else:
-                    post_data['search'] = search_string
+                    post_data['search'] = search_param
                     id_search = False
 
                 post_data = json.dumps(post_data)
                 search_url = self.urls['search']
 
                 json_resp = self.get_url(search_url, post_data=post_data, json=True)
+
                 if not (json_resp and 'data' in json_resp and self.check_auth_from_data(json_resp)):
                     logger.log(u'Response from %s does not contain any json data, abort' % self.name, logger.ERROR)
                     return results
@@ -121,7 +122,7 @@ class HDBitsProvider(generic.TorrentProvider):
                 cnt = len(items[mode])
                 for item in json_resp['data']:
                     try:
-                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in 'seed', 'leech', 'size']]
+                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in 'seeders', 'leechers', 'size']]
                         if self._peers_fail(mode, seeders, leechers)\
                                 or self.freeleech and re.search('(?i)no', item.get('freeleech', 'no')):
                             continue
@@ -135,7 +136,7 @@ class HDBitsProvider(generic.TorrentProvider):
                         items[mode].append((title, download_url, item.get('seeders', 0), self._bytesizer(size)))
 
                 self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search_string: ' + search_string, self.name)['Cache' == mode])
+                                 ('search_param: ' + str(search_param), self.name)['Cache' == mode])
 
                 self._sort_seeders(mode, items)
 

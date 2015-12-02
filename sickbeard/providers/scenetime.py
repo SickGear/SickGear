@@ -68,7 +68,8 @@ class SceneTimeProvider(generic.TorrentProvider):
                 post_data = self.urls['params'].copy()
                 post_data.update(ast.literal_eval('{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
                 if 'Cache' != mode:
-                    post_data['search'] = '+'.join(search_string.split())
+                    search_string = '+'.join(search_string.split())
+                    post_data['search'] = search_string
 
                 if self.freeleech:
                     post_data.update({'freeleech': 'on'})

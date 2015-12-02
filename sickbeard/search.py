@@ -186,7 +186,7 @@ def pick_best_result(results, show, quality_list=None):
     best_result = None
     for cur_result in results:
 
-        logger.log(u'Quality of %s is %s' % (cur_result.name, Quality.qualityStrings[cur_result.quality]))
+        logger.log(u'Quality is %s for %s' % (Quality.qualityStrings[cur_result.quality], cur_result.name))
 
         if show.is_anime and not show.release_groups.is_valid(cur_result):
             continue
@@ -515,15 +515,15 @@ def search_providers(show, episodes, manual_search=False):
             for cur_result in found_results[provider_id][cur_episode]:
                 if Quality.UNKNOWN != cur_result.quality and highest_quality_overall < cur_result.quality:
                     highest_quality_overall = cur_result.quality
-        logger.log(u'The highest quality of any match is %s' % Quality.qualityStrings[highest_quality_overall],
+        logger.log(u'%s is the highest quality of any match' % Quality.qualityStrings[highest_quality_overall],
                    logger.DEBUG)
 
         # see if every episode is wanted
         if best_season_result:
             # get the quality of the season nzb
             season_qual = best_season_result.quality
-            logger.log(u'The quality of the season %s is %s' % (best_season_result.provider.providerType,
-                                                                Quality.qualityStrings[season_qual]), logger.DEBUG)
+            logger.log(u'%s is the quality of the season %s' % (Quality.qualityStrings[season_qual],
+                                                                best_season_result.provider.providerType), logger.DEBUG)
 
             my_db = db.DBConnection()
             sql = 'SELECT episode FROM tv_episodes WHERE showid = %s AND (season IN (%s))' %\

@@ -93,6 +93,7 @@
 * Add list shows with custom ignore and require words under the global counterparts on the Search Settings page
 * Fix failure to search for more than one selected wanted episode
 * Add notice for users with Python 2.7.8 or below to update to latest Python
+* Change position of parsed qualities to the start of log lines
 
 [develop changelog]
 * Enable Alpha Ratio again now that the secure login page over https is fixed
