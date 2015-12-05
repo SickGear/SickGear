@@ -22,11 +22,13 @@ import threading
 import datetime
 import sickbeard
 
+from collections import defaultdict
 from lib import adba
 from sickbeard import helpers
 from sickbeard import name_cache
 from sickbeard import logger
 from sickbeard import db
+from sickbeard.classes import OrderedDefaultdict
 
 exception_dict = {}
 anidb_exception_dict = {}
@@ -86,15 +88,13 @@ def get_scene_exceptions(indexer_id, season=-1):
 
 
 def get_all_scene_exceptions(indexer_id):
-    exceptions_dict = {}
+    exceptions_dict = OrderedDefaultdict(list)
 
     my_db = db.DBConnection('cache.db')
-    exceptions = my_db.select('SELECT show_name,season FROM scene_exceptions WHERE indexer_id = ?', [indexer_id])
+    exceptions = my_db.select('SELECT show_name,season FROM scene_exceptions WHERE indexer_id = ? ORDER BY season', [indexer_id])
 
     if exceptions:
         for cur_exception in exceptions:
-            if not cur_exception['season'] in exceptions_dict:
-                exceptions_dict[cur_exception['season']] = []
             exceptions_dict[cur_exception['season']].append(cur_exception['show_name'])
 
     return exceptions_dict
@@ -237,28 +237,28 @@ def retrieve_exceptions():
     xem_exception_dict.clear()
 
 
-def update_scene_exceptions(indexer_id, scene_exceptions, season=-1):
+def update_scene_exceptions(indexer_id, scene_exceptions):
     """
     Given a indexer_id, and a list of all show scene exceptions, update the db.
     """
     global exceptionsCache
     my_db = db.DBConnection('cache.db')
-    my_db.action('DELETE FROM scene_exceptions WHERE indexer_id=? and season=?', [indexer_id, season])
+    my_db.action('DELETE FROM scene_exceptions WHERE indexer_id=?', [indexer_id])
+
+    # A change has been made to the scene exception list. Let's clear the cache, to make this visible
+    exceptionsCache[indexer_id] = defaultdict(list)
 
     logger.log(u'Updating scene exceptions', logger.MESSAGE)
-    
-    # A change has been made to the scene exception list. Let's clear the cache, to make this visible
-    if indexer_id in exceptionsCache:
-        exceptionsCache[indexer_id] = {}
-        exceptionsCache[indexer_id][season] = scene_exceptions
+    for exception in scene_exceptions:
+        cur_season, cur_exception = exception.split('|', 1)
 
-    for cur_exception in scene_exceptions:
+        exceptionsCache[indexer_id][cur_season].append(cur_exception)
 
         if not isinstance(cur_exception, unicode):
             cur_exception = unicode(cur_exception, 'utf-8', 'replace')
 
         my_db.action('INSERT INTO scene_exceptions (indexer_id, show_name, season) VALUES (?,?,?)',
-                     [indexer_id, cur_exception, season])
+                     [indexer_id, cur_exception, cur_season])
 
 
 def _anidb_exceptions_fetcher():
