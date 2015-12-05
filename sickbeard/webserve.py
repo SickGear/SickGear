@@ -641,13 +641,13 @@ class Home(MainHandler):
 
         connection, accesMsg = sab.getSabAccesMethod(host, username, password, apikey)
         if connection:
-            authed, authMsg = sab.testAuthentication(host, username, password, apikey)  # @UnusedVariable
+            authed, authMsg = sab.testAuthentication(host, username, password, apikey)
             if authed:
-                return 'Success. Connected and authenticated'
+                return u'Success. Connected and authenticated'
             else:
-                return "Authentication failed. SABnzbd expects '" + accesMsg + "' as authentication method"
+                return u'Authentication failed. %s' % authMsg
         else:
-            return 'Unable to connect to host'
+            return u'Unable to connect to host'
 
     def testTorrent(self, torrent_method=None, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
