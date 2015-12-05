@@ -96,6 +96,7 @@
 * Change position of parsed qualities to the start of log lines
 * Change to always display branch and commit hash on 'Help & Info' page
 * Add option to create season search exceptions from editShow page
+* Change sab to use requests library
 
 [develop changelog]
 * Enable Alpha Ratio again now that the secure login page over https is fixed
@@ -104,6 +105,7 @@
 * Fix removal of non-release groups such that anime qualities are not trimmed from name
 * Change readd Strike torrent provider
 * Change readd FreshOnTV (TvT) torrent provider
+* Change sab to use requests library
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
