@@ -95,6 +95,7 @@
 * Add notice for users with Python 2.7.8 or below to update to latest Python
 * Change position of parsed qualities to the start of log lines
 * Change to always display branch and commit hash on 'Help & Info' page
+* Add option to create season search exceptions from editShow page
 
 [develop changelog]
 * Enable Alpha Ratio again now that the secure login page over https is fixed

@@ -69,15 +69,25 @@
 				<span class="component-title">Scene exception</span>
 				<span class="component-desc">
 					<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200">
+					<select id="SceneNameSeason" class="form-control form-control-inline input-sm input100" style="float:left">
+						<option value="-1">Series</option>
+#if $show.anime:
+	#for $season in $seasonResults:
+						<option value="$season[0]">Season $season[0]</option>
+	#end for
+#end if
+					</select>
 					<input class="btn btn-inline" type="button" value="Add" id="addSceneName">
 					<p class="clear-left note">add alternative release names found on search providers for <b class="boldest grey-text">$show.name</b></p>
 				</span>
 				<span class="component-desc">
 					<div id="SceneException">
 						<h4 class="grey-text">Exceptions list (multi-selectable)</h4>
-						<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="input200" style="min-height:90px; float:left" >
-#for $cur_exception in $show.exceptions:
-							<option value="$cur_exception">$cur_exception</option>
+						<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="input350" style="min-height:90px; float:left" >
+#for $cur_exception_season in $show.exceptions:
+	#for $cur_exception in $show.exceptions[$cur_exception_season]:
+							<option value="$cur_exception_season|$cur_exception">S#echo ($cur_exception_season, '*')[$cur_exception_season == -1]#: $cur_exception</option>
+	#end for
 #end for
 						</select>
 						<span><p class="note">this list overrides the original name<br />to search, it doesn't append to it</p></span>

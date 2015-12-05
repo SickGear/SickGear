@@ -53,6 +53,7 @@ $(document).ready(function () {
 
 	$('#addSceneName').click(function () {
 		var scene_ex = $('#SceneName').val();
+		var scene_ex_season = $('#SceneNameSeason').val();
 		var option = $('<option>');
 		all_exceptions = [];
 
@@ -61,14 +62,20 @@ $(document).ready(function () {
 		});
 
 		$('#SceneName').val('');
+		$('#SceneNameSeason').val('');
 
-		if ($.inArray(scene_ex, all_exceptions) > -1 || (scene_ex === '')) {
+		if ($.inArray(scene_ex_season + '|' + scene_ex, all_exceptions) > -1 || (scene_ex === '')) {
 			return;
 		}
 		$('#SceneException').show();
 
-		option.attr('value', scene_ex);
-		option.html(scene_ex);
+		option.attr('value', scene_ex_season + '|' + scene_ex);
+		if (scene_ex_season === "-1") {
+			option.html('S*: ' + scene_ex);
+		}
+		else {
+			option.html('S' + scene_ex_season + ': ' + scene_ex);
+		}
 		return option.appendTo('#exceptions_list');
 	});
 
@@ -94,4 +101,6 @@ $(document).ready(function () {
 	};
 
 	$(this).toggle_SceneException();
+
+
 });

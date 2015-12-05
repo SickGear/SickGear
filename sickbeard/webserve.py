@@ -42,7 +42,6 @@ from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
 from sickbeard.helpers import remove_article, starify
 from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE
-from sickbeard.scene_exceptions import get_scene_exceptions
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
     get_scene_absolute_numbering
@@ -1246,7 +1245,7 @@ class Home(MainHandler):
             else:
                 return self._genericMessage('Error', errString)
 
-        showObj.exceptions = scene_exceptions.get_scene_exceptions(showObj.indexerid)
+        showObj.exceptions = scene_exceptions.get_all_scene_exceptions(showObj.indexerid)
 
         if None is not quality_preset and int(quality_preset):
             bestQualities = []
@@ -1254,6 +1253,10 @@ class Home(MainHandler):
         if not location and not anyQualities and not bestQualities and not flatten_folders:
             t = PageTemplate(headers=self.request.headers, file='editShow.tmpl')
             t.submenu = self.HomeMenu()
+
+            myDB = db.DBConnection()
+            t.seasonResults = myDB.select(
+                'SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season asc', [showObj.indexerid])
 
             if showObj.is_anime:
                 if not showObj.release_groups:
@@ -1273,7 +1276,6 @@ class Home(MainHandler):
 
             with showObj.lock:
                 t.show = showObj
-                t.scene_exceptions = get_scene_exceptions(showObj.indexerid)
                 t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list + sickbeard.scene_exceptions.xem_rage_ids_list
 
             return t.respond()
@@ -1317,10 +1319,7 @@ class Home(MainHandler):
         if directCall:
             do_update_exceptions = False
         else:
-            if set(exceptions_list) == set(showObj.exceptions):
-                do_update_exceptions = False
-            else:
-                do_update_exceptions = True
+            do_update_exceptions = True  # TODO make this smarter and only update on changes
 
             with showObj.lock:
                 if anime:
