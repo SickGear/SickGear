@@ -1,3 +1,8 @@
+### 0.12.0 (2015-xx-xx xx:xx:xx UTC)
+
+*
+
+
 ### 0.11.0 (2015-xx-xx xx:xx:xx UTC)
 
 * Change to only refresh scene exception data for shows that need it
@@ -98,17 +103,9 @@
 * Add option to create season search exceptions from editShow page
 * Change sab to use requests library
 
-[develop changelog]
-* Enable Alpha Ratio again now that the secure login page over https is fixed
-* Add ability to parse command line output from unix unrar version 4 and below
-* Fix show search box on non-poster show list views
-* Fix removal of non-release groups such that anime qualities are not trimmed from name
-* Change readd Strike torrent provider
-* Change readd FreshOnTV (TvT) torrent provider
-* Change sab to use requests library
-
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
+
 * Remove EZRSS provider
 * Update Tornado Web Server to 4.2 (fdfaf3d)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
