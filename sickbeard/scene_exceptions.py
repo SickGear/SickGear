@@ -29,12 +29,12 @@ from sickbeard import name_cache
 from sickbeard import logger
 from sickbeard import db
 from sickbeard.classes import OrderedDefaultdict
+from sickbeard.indexers.indexer_api import get_xem_supported_indexers
 
 exception_dict = {}
 anidb_exception_dict = {}
 xem_exception_dict = {}
-xem_tvdb_ids_list = []
-xem_rage_ids_list = []
+xem_ids_list = defaultdict(list)
 
 exceptionsCache = {}
 exceptionsSeasonCache = {}
@@ -346,12 +346,9 @@ def _xem_get_ids(indexer_name, xem_origin):
 
 
 def get_xem_ids():
-    global xem_tvdb_ids_list
-    global xem_rage_ids_list
+    global xem_ids_list
 
-    xem_ids = _xem_get_ids('TheTVDB', 'tvdb')
-    if len(xem_ids):
-        xem_tvdb_ids_list = xem_ids
-    xem_ids = _xem_get_ids('TVRage', 'rage')
-    if len(xem_ids):
-        xem_rage_ids_list = xem_ids
+    for indexer in get_xem_supported_indexers().values():
+        xem_ids = _xem_get_ids(indexer['name'], indexer['xem_origin'])
+        if len(xem_ids):
+            xem_ids_list[indexer['id']] = xem_ids

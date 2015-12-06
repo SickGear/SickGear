@@ -29,7 +29,6 @@ from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
 from sickbeard.blackandwhitelist import BlackAndWhiteList
-from sickbeard.indexers.indexer_config import INDEXER_TVDB
 
 
 class ShowQueue(generic_queue.GenericQueue):
@@ -471,8 +470,7 @@ class QueueItemAdd(ShowQueueItem):
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
         # check if show has XEM mapping and if user disabled scene numbering during add show, output availability to log
-        if not self.scene and self.show.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list\
-                + sickbeard.scene_exceptions.xem_rage_ids_list:
+        if not self.scene and self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
             logger.log(u'Alternative scene episode numbers were disabled during add show. Edit show to enable them for searching.')
 
         # update internal name cache
@@ -509,7 +507,7 @@ class QueueItemRefresh(ShowQueueItem):
         self.show.populateCache()
 
         # Load XEM data to DB for show
-        if self.show.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list if INDEXER_TVDB == self.show.indexer else sickbeard.scene_exceptions.xem_rage_ids_list:
+        if self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
             sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
 
         self.inProgress = False
