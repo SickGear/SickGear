@@ -69,7 +69,7 @@
 				<span class="component-title">Scene exception</span>
 				<span class="component-desc">
 					<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200">
-					<select id="SceneNameSeason" class="form-control form-control-inline input-sm input100" style="float:left">
+					<select id="SceneNameSeason" class="form-control form-control-inline input-sm input100" style="#echo ('visibility:hidden','float:left')[$show.anime]#">
 						<option value="-1">Series</option>
 #if $show.anime:
 	#for $season in $seasonResults:
@@ -78,7 +78,8 @@
 #end if
 					</select>
 					<input class="btn btn-inline" type="button" value="Add" id="addSceneName">
-					<p class="clear-left note">add alternative release names found on search providers for <b class="boldest grey-text">$show.name</b></p>
+#set $addSceneNameText = ('', ' or seasons')[$show.anime]
+					<p class="clear-left note">add alternative release names$addSceneNameText found on search providers for <b class="boldest grey-text">$show.name</b></p>
 				</span>
 				<span class="component-desc">
 					<div id="SceneException">
