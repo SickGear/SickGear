@@ -1,6 +1,6 @@
 ### 0.12.0 (2015-xx-xx xx:xx:xx UTC)
 
-*
+* Change to generalize xem id fetching
 
 
 ### 0.11.0 (2015-xx-xx xx:xx:xx UTC)

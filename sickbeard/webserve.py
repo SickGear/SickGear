@@ -26,6 +26,7 @@ import datetime
 import dateutil.parser
 import random
 import traceback
+import itertools
 
 from mimetypes import MimeTypes
 from Cheetah.Template import Template
@@ -1276,7 +1277,7 @@ class Home(MainHandler):
 
             with showObj.lock:
                 t.show = showObj
-                t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list + sickbeard.scene_exceptions.xem_rage_ids_list
+                t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_ids_list[showObj.indexer]
 
             return t.respond()
 
@@ -2281,7 +2282,7 @@ class NewHomeAddShows(Home):
         t.blacklist = []
         t.groups = []
 
-        t.show_scene_maps = sickbeard.scene_exceptions.xem_tvdb_ids_list + sickbeard.scene_exceptions.xem_rage_ids_list
+        t.show_scene_maps = list(itertools.chain(*sickbeard.scene_exceptions.xem_ids_list.values()))
 
         return t.respond()
 

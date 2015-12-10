@@ -63,3 +63,7 @@ class indexerApi(object):
     @property
     def indexers(self):
         return dict((int(x['id']), x['name']) for x in indexerConfig.values())
+
+
+def get_xem_supported_indexers():
+    return dict((key, value) for (key, value) in indexerConfig.items() if value['xem_origin'])
