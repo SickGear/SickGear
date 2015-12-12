@@ -958,27 +958,26 @@ def set_up_anidb_connection():
     return sickbeard.ADBA_CONNECTION.authed()
 
 
-def mapIndexersToShow(showObj):
+def mapIndexersToShow(showObj, update=False):
     mapped = {}
 
     # init mapped indexers object
     for indexer in sickbeard.indexerApi().indexers:
         mapped[indexer] = showObj.indexerid if int(indexer) == int(showObj.indexer) else 0
 
-    myDB = db.DBConnection()
-    sqlResults = myDB.select(
-        "SELECT * FROM indexer_mapping WHERE indexer_id = ? AND indexer = ?",
-        [showObj.indexerid, showObj.indexer])
+    if not update:
+        myDB = db.DBConnection()
+        sqlResults = myDB.select(
+            "SELECT * FROM indexer_mapping WHERE indexer_id = ? AND indexer = ?", [showObj.indexerid, showObj.indexer])
 
-    # for each mapped entry
-    for curResult in sqlResults:
-        nlist = [i for i in curResult if None is not i]
-        # Check if its mapped with both tvdb and tvrage.
-        if 4 <= len(nlist):
-            logger.log(u"Found indexer mapping in cache for show: " + showObj.name, logger.DEBUG)
-            mapped[int(curResult['mindexer'])] = int(curResult['mindexer_id'])
-            break
-
+        # for each mapped entry
+        for curResult in sqlResults:
+            nlist = [i for i in curResult if None is not i]
+            # Check if its mapped with both tvdb and tvrage.
+            if 4 <= len(nlist):
+                logger.log(u"Found indexer mapping in cache for show: " + showObj.name, logger.DEBUG)
+                mapped[int(curResult['mindexer'])] = int(curResult['mindexer_id'])
+                return mapped
     else:
         sql_l = []
         for indexer in sickbeard.indexerApi().indexers:

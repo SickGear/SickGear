@@ -98,6 +98,7 @@
 * Add option to create season search exceptions from editShow page
 * Change editshow scene exceptions description
 * Change sab to use requests library
+* Change only used cached indexer mappings during searches
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
