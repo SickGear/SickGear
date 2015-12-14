@@ -64,7 +64,7 @@ class ConsolidateProviders(InitialSchema):
             self.connection.action('DROP TABLE [%s]' % table)
 
         self.incDBVersion()
-class AddNetworkTimezones(AddSceneNameCache):
+class AddNetworkTimezones(ConsolidateProviders):
     def test(self):
         return self.hasTable("network_timezones")
 
@@ -78,7 +78,7 @@ class AddLastSearch(AddNetworkTimezones):
     def execute(self):
         self.connection.action("CREATE TABLE lastSearch (provider TEXT, time NUMERIC)")
 
-class AddSceneExceptionsSeasons(AddSceneNameCache):
+class AddSceneExceptionsSeasons(AddLastSearch):
     def test(self):
         return self.hasColumn("scene_exceptions", "season")
 
