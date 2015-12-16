@@ -31,13 +31,16 @@
         #set $indexer = $curDir['existing_info'][2]
     #end if
 
+	#set $indexer = $sickbeard.INDEXER_DEFAULT
+
+#*
     #set $indexer = 0
     #if $curDir['existing_info'][0]
         #set $indexer = $curDir['existing_info'][2]
     #elif 0 < $sickbeard.INDEXER_DEFAULT
         #set $indexer = $sickbeard.INDEXER_DEFAULT
     #end if
-
+*#
 		<tr>
 			<td class="col-checkbox">
 				<input type="checkbox" id="$show_id" class="dirCheck" checked=checked>
@@ -58,7 +61,9 @@
 			<td align="center">
 				<select name="indexer">
     #for $curIndexer in $sickbeard.indexerApi().indexers.items()
+					#if $curIndexer[0] == $sickbeard.INDEXER_DEFAULT
 					<option value="$curIndexer[0]" #if $curIndexer[0] == $indexer then 'selected="selected"' else ''#>$curIndexer[1]</option>
+					#end if
     #end for
 				</select>
 			</td>

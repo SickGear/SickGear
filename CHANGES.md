@@ -103,6 +103,7 @@
 * Add option to create season search exceptions from editShow page
 * Change sab to use requests library
 * Add "View Changes" to tools menu
+* Change disable connection attempts and remove UI references to the TVRage info source
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

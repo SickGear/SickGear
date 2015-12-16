@@ -38,6 +38,7 @@ from sickbeard import helpers, logger, db, naming, metadata, providers, scene_ex
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
+from indexers.indexer_config import INDEXER_TVDB
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
     indexer_episodenotfound, indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
@@ -667,6 +668,8 @@ def initialize(consoleLogging=True):
         NOTIFY_ON_UPDATE = bool(check_setting_int(CFG, 'General', 'notify_on_update', 1))
         FLATTEN_FOLDERS_DEFAULT = bool(check_setting_int(CFG, 'General', 'flatten_folders_default', 0))
         INDEXER_DEFAULT = check_setting_int(CFG, 'General', 'indexer_default', 0)
+        if INDEXER_DEFAULT and not indexerApi(INDEXER_DEFAULT).config['active']:
+            INDEXER_DEFAULT = INDEXER_TVDB
         INDEXER_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
         ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
         SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))

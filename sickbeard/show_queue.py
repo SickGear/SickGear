@@ -578,6 +578,11 @@ class QueueItemUpdate(ShowQueueItem):
 
         ShowQueueItem.run(self)
 
+        if not sickbeard.indexerApi(self.show.indexer).config['active']:
+            logger.log(u'Indexer %s is marked inactive, aborting update for show %s and continue with refresh.' % (sickbeard.indexerApi(self.show.indexer).config['name'], self.show.name))
+            sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True)
+            return
+
         logger.log(u'Beginning update of ' + self.show.name)
 
         logger.log(u'Retrieving show info from ' + sickbeard.indexerApi(self.show.indexer).name + '', logger.DEBUG)

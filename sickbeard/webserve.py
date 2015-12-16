@@ -2316,7 +2316,8 @@ class NewHomeAddShows(Home):
         t.provided_show_dir = show_dir
         t.other_shows = other_shows
         t.provided_indexer = int(indexer or sickbeard.INDEXER_DEFAULT)
-        t.indexers = sickbeard.indexerApi().indexers
+        t.indexers = dict([(i, sickbeard.indexerApi().indexers[i]) for i in sickbeard.indexerApi().indexers
+                           if sickbeard.indexerApi(i).config['active']])
         t.whitelist = []
         t.blacklist = []
         t.groups = []
@@ -3744,6 +3745,8 @@ class ConfigGeneral(Config):
         t = PageTemplate(headers=self.request.headers, file='config_general.tmpl')
         t.submenu = self.ConfigMenu
         t.show_tags = ', '.join(sickbeard.SHOW_TAGS)
+        t.indexers = dict([(i, sickbeard.indexerApi().indexers[i]) for i in sickbeard.indexerApi().indexers
+                           if sickbeard.indexerApi(i).config['active']])
         return t.respond()
 
     def saveRootDirs(self, rootDirString=None):
@@ -3876,6 +3879,8 @@ class ConfigGeneral(Config):
 
         if indexer_default:
             sickbeard.INDEXER_DEFAULT = config.to_int(indexer_default)
+            if not sickbeard.indexerApi(sickbeard.INDEXER_DEFAULT).config['active']:
+                sickbeard.INDEXER_DEFAULT = INDEXER_TVDB
 
         if indexer_timeout:
             sickbeard.INDEXER_TIMEOUT = config.to_int(indexer_timeout)
