@@ -4240,33 +4240,25 @@ class ConfigProviders(Config):
             return newProvider.get_id() + '|' + newProvider.config_str()
 
     def getNewznabCategories(self, name, url, key):
-        '''
+        """
         Retrieves a list of possible categories with category id's
         Using the default url/api?cat
         http://yournewznaburl.com/api?t=caps&apikey=yourapikey
-        '''
-        error = ''
-        success = False
+        """
 
-        if not name:
-            error += '\nNo Provider Name specified'
-        if not url:
-            error += '\nNo Provider Url specified'
-        if not key:
-            error += '\nNo Provider Api key specified'
+        error = not name and 'Name' or not url and 'Url' or not key and 'Apikey' or ''
+        if error:
+            error = '\nNo provider %s specified' % error
+            return json.dumps({'success': False, 'error': error})
 
-        if error <> '':
-            return json.dumps({'success' : False, 'error': error})
+        providers = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        temp_provider = newznab.NewznabProvider(name, url, key)
+        if None is not key and starify(key, True):
+            temp_provider.key = providers[temp_provider.get_id()].key
 
-        #Get list with Newznabproviders
-        #providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        success, tv_categories, error = temp_provider.get_newznab_categories()
 
-        #Get newznabprovider obj with provided name
-        tempProvider= newznab.NewznabProvider(name, url, key)
-
-        success, tv_categories, error = tempProvider.get_newznab_categories()
-
-        return json.dumps({'success' : success,'tv_categories' : tv_categories, 'error' : error})
+        return json.dumps({'success': success, 'tv_categories': tv_categories, 'error': error})
 
     def deleteNewznabProvider(self, nnid):
 

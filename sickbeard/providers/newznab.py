@@ -224,7 +224,7 @@ class NewznabProvider(generic.NZBProvider):
             base_params['apikey'] = api_key
 
         results = []
-        total = 0
+        total, cnt, search_url, exit_log = 0, len(results), '', False
 
         for mode in search_params.keys():
             for i, params in enumerate(search_params[mode]):
@@ -285,8 +285,13 @@ class NewznabProvider(generic.NZBProvider):
                     except AttributeError:
                         break
 
-                    # No items found or cache mode, prevent from doing another search
-                    if 0 == total or 'Cache' == mode:
+                    # No items found, prevent from doing another search
+                    if 0 == total:
+                        break
+
+                    # Cache mode, prevent from doing another search
+                    if 'Cache' == mode:
+                        exit_log = True
                         break
 
                     if offset != request_params['offset']:
@@ -295,6 +300,7 @@ class NewznabProvider(generic.NZBProvider):
 
                     request_params['offset'] += request_params['limit']
                     if total <= request_params['offset']:
+                        exit_log = True
                         logger.log('%s item%s found that will be used for episode matching' % (total, helpers.maybe_plural(total)),
                                    logger.DEBUG)
                         break
@@ -304,14 +310,22 @@ class NewznabProvider(generic.NZBProvider):
                     logger.log('%s more item%s to fetch from a batch of up to %s items.'
                                % (items, helpers.maybe_plural(items), request_params['limit']), logger.DEBUG)
 
-                    batch_count = len(results) - cnt
-                    if batch_count:
-                        self._log_search(mode, batch_count, search_url)
+                    batch_count = self._log_result(results, mode, cnt, search_url)
+
+                if exit_log:
+                    self._log_result(results, mode, cnt, search_url)
+                    exit_log = False
 
                 if 'tvdbid' in request_params and len(results):
                     break
 
         return results
+
+    def _log_result(self, results, mode, cnt, url):
+        count = len(results) - cnt
+        if count:
+            self._log_search(mode, count, url)
+        return count
 
 
 class NewznabCache(tvcache.TVCache):
