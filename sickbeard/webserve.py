@@ -634,20 +634,19 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_url(host)
-        if None is not password and set('*') == set(password):
-            password = sickbeard.SAB_PASSWORD
-        if None is not apikey and starify(apikey, True):
-            apikey = sickbeard.SAB_APIKEY
-
-        connection, accesMsg = sab.getSabAccesMethod(host, username, password, apikey)
+        connection, access_msg = sab.access_method(host)
         if connection:
-            authed, authMsg = sab.testAuthentication(host, username, password, apikey)
+            if None is not password and set('*') == set(password):
+                password = sickbeard.SAB_PASSWORD
+            if None is not apikey and starify(apikey, True):
+                apikey = sickbeard.SAB_APIKEY
+
+            authed, auth_msg = sab.test_authentication(host, username, password, apikey)
             if authed:
-                return u'Success. Connected and authenticated'
-            else:
-                return u'Authentication failed. %s' % authMsg
-        else:
-            return u'Unable to connect to host'
+                return u'Success. Connected %s authentication' % \
+                       ('using %s' % access_msg, 'with no')['None' == auth_msg.lower()]
+            return u'Authentication failed. %s' % auth_msg
+        return u'Unable to connect to host'
 
     def testTorrent(self, torrent_method=None, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
