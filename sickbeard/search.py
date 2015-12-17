@@ -117,7 +117,7 @@ def snatch_episode(result, end_status=SNATCHED):
         if 'blackhole' == sickbeard.NZB_METHOD:
             dl_result = _download_result(result)
         elif 'sabnzbd' == sickbeard.NZB_METHOD:
-            dl_result = sab.sendNZB(result)
+            dl_result = sab.send_nzb(result)
         elif 'nzbget' == sickbeard.NZB_METHOD:
             is_proper = True if SNATCHED_PROPER == end_status else False
             dl_result = nzbget.sendNZB(result, is_proper)
