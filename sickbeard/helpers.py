@@ -1100,7 +1100,7 @@ def proxy_setting(proxy_setting, request_url, force=False):
     return (False, proxy_address)[request_url_match], True
 
 
-def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False):
+def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False, **kwargs):
     """
     Returns a byte-string retrieved from the url provider.
     """
@@ -1145,9 +1145,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
         # decide if we get or post data to server
         if post_data:
-            resp = session.post(url, data=post_data, timeout=timeout)
+            resp = session.post(url, data=post_data, timeout=timeout, **kwargs)
         else:
-            resp = session.get(url, timeout=timeout)
+            resp = session.get(url, timeout=timeout, **kwargs)
 
         if not resp.ok:
             if resp.status_code in clients.http_error_code:

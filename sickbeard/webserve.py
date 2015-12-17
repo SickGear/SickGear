@@ -635,20 +635,19 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_url(host)
-        if None is not password and set('*') == set(password):
-            password = sickbeard.SAB_PASSWORD
-        if None is not apikey and starify(apikey, True):
-            apikey = sickbeard.SAB_APIKEY
-
-        connection, accesMsg = sab.getSabAccesMethod(host, username, password, apikey)
+        connection, access_msg = sab.access_method(host)
         if connection:
-            authed, authMsg = sab.testAuthentication(host, username, password, apikey)
+            if None is not password and set('*') == set(password):
+                password = sickbeard.SAB_PASSWORD
+            if None is not apikey and starify(apikey, True):
+                apikey = sickbeard.SAB_APIKEY
+
+            authed, auth_msg = sab.test_authentication(host, username, password, apikey)
             if authed:
-                return u'Success. Connected and authenticated'
-            else:
-                return u'Authentication failed. %s' % authMsg
-        else:
-            return u'Unable to connect to host'
+                return u'Success. Connected %s authentication' % \
+                       ('using %s' % access_msg, 'with no')['None' == auth_msg.lower()]
+            return u'Authentication failed. %s' % auth_msg
+        return u'Unable to connect to host'
 
     def testTorrent(self, torrent_method=None, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -4241,33 +4240,25 @@ class ConfigProviders(Config):
             return newProvider.get_id() + '|' + newProvider.config_str()
 
     def getNewznabCategories(self, name, url, key):
-        '''
+        """
         Retrieves a list of possible categories with category id's
         Using the default url/api?cat
         http://yournewznaburl.com/api?t=caps&apikey=yourapikey
-        '''
-        error = ''
-        success = False
+        """
 
-        if not name:
-            error += '\nNo Provider Name specified'
-        if not url:
-            error += '\nNo Provider Url specified'
-        if not key:
-            error += '\nNo Provider Api key specified'
+        error = not name and 'Name' or not url and 'Url' or not key and 'Apikey' or ''
+        if error:
+            error = '\nNo provider %s specified' % error
+            return json.dumps({'success': False, 'error': error})
 
-        if error <> '':
-            return json.dumps({'success' : False, 'error': error})
+        providers = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        temp_provider = newznab.NewznabProvider(name, url, key)
+        if None is not key and starify(key, True):
+            temp_provider.key = providers[temp_provider.get_id()].key
 
-        #Get list with Newznabproviders
-        #providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        success, tv_categories, error = temp_provider.get_newznab_categories()
 
-        #Get newznabprovider obj with provided name
-        tempProvider= newznab.NewznabProvider(name, url, key)
-
-        success, tv_categories, error = tempProvider.get_newznab_categories()
-
-        return json.dumps({'success' : success,'tv_categories' : tv_categories, 'error' : error})
+        return json.dumps({'success': success, 'tv_categories': tv_categories, 'error': error})
 
     def deleteNewznabProvider(self, nnid):
 

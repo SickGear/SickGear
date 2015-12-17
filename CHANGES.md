@@ -1,4 +1,4 @@
-### 0.12.0 (2015-xx-xx xx:xx:xx UTC)
+﻿### 0.12.0 (2015-xx-xx xx:xx:xx UTC)
 
 * Change to generalize xem id fetching
 
@@ -101,7 +101,6 @@
 * Change position of parsed qualities to the start of log lines
 * Change to always display branch and commit hash on 'Help & Info' page
 * Add option to create season search exceptions from editShow page
-* Change editshow scene exceptions description
 * Change sab to use requests library
 
 
