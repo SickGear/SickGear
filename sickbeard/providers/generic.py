@@ -556,7 +556,7 @@ class GenericProvider:
             value *= 1024 ** ['b', 'k', 'm', 'g', 't'].index(re.findall('(t|g|m|k)[i]?b', size_dim.lower())[0])
         except IndexError:
             pass
-        return int(math.ceil(value))
+        return long(math.ceil(value))
 
 
 class NZBProvider(object, GenericProvider):

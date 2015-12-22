@@ -25,6 +25,7 @@ indexerConfig[INDEXER_TVDB] = {
                    'language': 'en',
                    'useZip': True,
     },
+    'active': True,
 }
 
 indexerConfig[INDEXER_TVRAGE] = {
@@ -34,6 +35,7 @@ indexerConfig[INDEXER_TVRAGE] = {
     'api_params': {'apikey': 'Uhewg1Rr0o62fvZvUIZt',
                    'language': 'en',
     },
+    'active': False,
 }
 
 # TVDB Indexer Settings

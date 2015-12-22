@@ -459,13 +459,13 @@ class QueueItemAdd(ShowQueueItem):
 
         self.show.flushEpisodes()
 
-        if sickbeard.USE_TRAKT:
-            # if there are specific episodes that need to be added by trakt
-            sickbeard.traktCheckerScheduler.action.manageNewShow(self.show)
-
-            # add show to trakt.tv library
-            if sickbeard.TRAKT_SYNC:
-                sickbeard.traktCheckerScheduler.action.addShowToTraktLibrary(self.show)
+        # if sickbeard.USE_TRAKT:
+        #     # if there are specific episodes that need to be added by trakt
+        #     sickbeard.traktCheckerScheduler.action.manageNewShow(self.show)
+        #
+        #     # add show to trakt.tv library
+        #     if sickbeard.TRAKT_SYNC:
+        #         sickbeard.traktCheckerScheduler.action.addShowToTraktLibrary(self.show)
 
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
@@ -577,6 +577,11 @@ class QueueItemUpdate(ShowQueueItem):
     def run(self):
 
         ShowQueueItem.run(self)
+
+        if not sickbeard.indexerApi(self.show.indexer).config['active']:
+            logger.log(u'Indexer %s is marked inactive, aborting update for show %s and continue with refresh.' % (sickbeard.indexerApi(self.show.indexer).config['name'], self.show.name))
+            sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True)
+            return
 
         logger.log(u'Beginning update of ' + self.show.name)
 

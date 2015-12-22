@@ -38,11 +38,14 @@ from sickbeard import helpers, logger, db, naming, metadata, providers, scene_ex
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
+from indexers.indexer_config import INDEXER_TVDB
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
     indexer_episodenotfound, indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
 from sickbeard.providers.generic import GenericProvider
 from lib.configobj import ConfigObj
+from lib.libtrakt import TraktAPI
+import trakt_helpers
 
 PID = None
 
@@ -50,7 +53,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 13
+CONFIG_VERSION = 14
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -351,8 +354,6 @@ SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD = False
 SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = False
 
 USE_TRAKT = False
-TRAKT_TOKEN = ''
-TRAKT_REFRESH_TOKEN = ''
 TRAKT_REMOVE_WATCHLIST = False
 TRAKT_REMOVE_SERIESLIST = False
 TRAKT_USE_WATCHLIST = False
@@ -360,6 +361,7 @@ TRAKT_METHOD_ADD = 0
 TRAKT_START_PAUSED = False
 TRAKT_SYNC = False
 TRAKT_DEFAULT_INDEXER = None
+TRAKT_UPDATE_COLLECTION = {}
 
 USE_PYTIVO = False
 PYTIVO_NOTIFY_ONSNATCH = False
@@ -449,6 +451,7 @@ TRAKT_STAGING = False
 TRAKT_TIMEOUT = 60
 TRAKT_VERIFY = True
 TRAKT_CONNECTED_ACCOUNT = None
+TRAKT_ACCOUNTS = {}
 
 if TRAKT_STAGING:
     # staging trakt values:
@@ -484,7 +487,7 @@ def initialize(consoleLogging=True):
             USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, \
             XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, BACKLOG_FREQUENCY, \
             USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
-            USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_VERIFY, TRAKT_REMOVE_WATCHLIST, TRAKT_TOKEN, TRAKT_TIMEOUT, TRAKT_REFRESH_TOKEN, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, \
+            USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_VERIFY, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
             PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, ALLOW_INCOMPLETE_SHOWDATA, \
@@ -667,6 +670,8 @@ def initialize(consoleLogging=True):
         NOTIFY_ON_UPDATE = bool(check_setting_int(CFG, 'General', 'notify_on_update', 1))
         FLATTEN_FOLDERS_DEFAULT = bool(check_setting_int(CFG, 'General', 'flatten_folders_default', 0))
         INDEXER_DEFAULT = check_setting_int(CFG, 'General', 'indexer_default', 0)
+        if INDEXER_DEFAULT and not indexerApi(INDEXER_DEFAULT).config['active']:
+            INDEXER_DEFAULT = INDEXER_TVDB
         INDEXER_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
         ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
         SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
@@ -872,8 +877,6 @@ def initialize(consoleLogging=True):
             check_setting_int(CFG, 'SynologyNotifier', 'synologynotifier_notify_onsubtitledownload', 0))
 
         USE_TRAKT = bool(check_setting_int(CFG, 'Trakt', 'use_trakt', 0))
-        TRAKT_TOKEN = check_setting_str(CFG, 'Trakt', 'trakt_token', '')
-        TRAKT_REFRESH_TOKEN = check_setting_str(CFG, 'Trakt', 'trakt_refresh_token', '')
         TRAKT_REMOVE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_watchlist', 0))
         TRAKT_REMOVE_SERIESLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_serieslist', 0))
         TRAKT_USE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_use_watchlist', 0))
@@ -881,6 +884,8 @@ def initialize(consoleLogging=True):
         TRAKT_START_PAUSED = bool(check_setting_int(CFG, 'Trakt', 'trakt_start_paused', 0))
         TRAKT_SYNC = bool(check_setting_int(CFG, 'Trakt', 'trakt_sync', 0))
         TRAKT_DEFAULT_INDEXER = check_setting_int(CFG, 'Trakt', 'trakt_default_indexer', 1)
+        TRAKT_UPDATE_COLLECTION = trakt_helpers.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_update_collection', ''))
+        TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
 
         CheckSection(CFG, 'pyTivo')
         USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
@@ -1219,8 +1224,8 @@ def start():
                 subtitlesFinderScheduler.start()
 
             # start the trakt checker
-            if USE_TRAKT:
-                traktCheckerScheduler.start()
+            #if USE_TRAKT:
+                #traktCheckerScheduler.start()
 
             started = True
 
@@ -1295,13 +1300,13 @@ def halt():
                 except:
                     pass
 
-            if USE_TRAKT:
-                traktCheckerScheduler.stop.set()
-                logger.log(u'Waiting for the TRAKTCHECKER thread to exit')
-                try:
-                    traktCheckerScheduler.join(10)
-                except:
-                    pass
+            # if USE_TRAKT:
+            #     traktCheckerScheduler.stop.set()
+            #     logger.log(u'Waiting for the TRAKTCHECKER thread to exit')
+            #     try:
+            #         traktCheckerScheduler.join(10)
+            #     except:
+            #         pass
 
             if DOWNLOAD_PROPERS:
                 properFinderScheduler.stop.set()
@@ -1687,8 +1692,6 @@ def save_config():
 
     new_config['Trakt'] = {}
     new_config['Trakt']['use_trakt'] = int(USE_TRAKT)
-    new_config['Trakt']['trakt_token'] = TRAKT_TOKEN
-    new_config['Trakt']['trakt_refresh_token'] = TRAKT_REFRESH_TOKEN
     new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
     new_config['Trakt']['trakt_remove_serieslist'] = int(TRAKT_REMOVE_SERIESLIST)
     new_config['Trakt']['trakt_use_watchlist'] = int(TRAKT_USE_WATCHLIST)
@@ -1696,6 +1699,8 @@ def save_config():
     new_config['Trakt']['trakt_start_paused'] = int(TRAKT_START_PAUSED)
     new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
     new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
+    new_config['Trakt']['trakt_update_collection'] = trakt_helpers.build_config_string(TRAKT_UPDATE_COLLECTION)
+    new_config['Trakt']['trakt_accounts'] = TraktAPI.build_config_string(TRAKT_ACCOUNTS)
 
     new_config['pyTivo'] = {}
     new_config['pyTivo']['use_pytivo'] = int(USE_PYTIVO)

@@ -26,6 +26,7 @@ import nmjv2
 import synoindex
 import synologynotifier
 import pytivo
+import trakt
 
 import growl
 import prowl
@@ -62,7 +63,7 @@ pushalot_notifier = pushalot.PushalotNotifier()
 pushbullet_notifier = pushbullet.PushbulletNotifier()
 # social
 twitter_notifier = tweet.TwitterNotifier()
-#trakt_notifier = trakt.TraktNotifier()
+trakt_notifier = trakt.TraktNotifier()
 email_notifier = emailnotify.EmailNotifier()
 
 notifiers = [
@@ -83,7 +84,7 @@ notifiers = [
     pushalot_notifier,
     pushbullet_notifier,
     twitter_notifier,
-#    trakt_notifier,
+    trakt_notifier,
     email_notifier,
 ]
 

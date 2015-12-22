@@ -511,6 +511,15 @@ h2.day, h2.network{
 }
 
 /* =======================================================================
+viewchanges.tmpl
+========================================================================== */
+#changes{
+	color:rgb(51,51,51);
+	background-color:rgb(245,245,245);
+	border:1px solid rgb(204,204,204)
+}
+
+/* =======================================================================
 config*.tmpl
 ========================================================================== */
 
@@ -599,6 +608,14 @@ div.metadataDiv .disabled{
 .warning{
 	border-color:#F89406;
 	background:url("../images/warning16.png") no-repeat right 5px center #fff
+}
+
+.solid-border{
+	border:1px solid #ccc
+}
+
+.solid-border-top{
+	border-top:1px solid #ccc
 }
 
 /* =======================================================================
@@ -1143,7 +1160,7 @@ browser.css
 
 #fileBrowserDialog ul li a:hover{
 	color:#00f;
-	background:none
+	background: rgb(220, 220, 220) none
 }
 
 .ui-menu .ui-menu-item{
@@ -1179,6 +1196,10 @@ div.stepsguide .step p{
 
 div.stepsguide .disabledstep p{
 	border-color:#8a775e
+}
+
+#newShowPortal #addShowForm .stepsguide .disabledstep:hover > .smalltext{
+	color:#8a775e;
 }
 
 div.formpaginate .prev, div.formpaginate .next{

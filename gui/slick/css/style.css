@@ -2103,6 +2103,36 @@ td.col-cache{
 	width:20px
 }
 
+/* =======================================================================
+viewchanges.tmpl
+========================================================================== */
+#changes{
+	display:block;
+	padding:9.5px;
+	border-radius:4px 4px 4px 4px;
+	font:12px/13px "Open Sans",verdana,sans-serif
+}
+
+#changes .release{
+	margin:15px 5px 6px 0;
+	padding-bottom:3px;
+	border-bottom:1px solid gray
+}
+
+#changes .ver{font:16px/17px "Open Sans",verdana,sans-serif;margin-right:0.2em;}
+#changes .old{padding-top:15px}
+
+#changes div{margin:0 0 8px}
+#changes .btn-text{width:5em;margin-right:0.2em;float:left}
+#changes .change-text{display:block;margin-left:5.5em;padding-top:2px}
+
+.change-add{background-color:rgb(63,127,0)}
+.change-change{background-color:rgb(91,153,13)}
+.change-fix{background-color:rgb(38,114,182)}
+.change-port{background-color:rgb(102,102,102)}
+.change-remove{}
+.change-update{background-color:rgb(98,25,147)}
+
 
 /* =======================================================================
 config*.tmpl
@@ -2529,6 +2559,32 @@ div.metadataDiv .disabled{
 	margin:6px 4px 0 0
 }
 
+#trakt-collection th,#trakt-collection td{
+	padding:3px 5px
+}
+
+#trakt-collection .col-1{
+	text-align:left
+}
+
+#trakt-collection th,#trakt-collection td.opt{
+	text-align:center
+}
+
+#trakt-collection .col-1{
+	width:192px
+}
+
+#config #trakt-collection input{
+	float:none;
+	margin:0;
+	vertical-align:middle
+}
+
+#config .trakt.component-desc{
+	margin-left:0
+}
+
 /* =======================================================================
 manage*.tmpl
 ========================================================================== */
@@ -2630,6 +2686,7 @@ span.path{
 	line-height:18px
 }
 
+span.btn-text,
 span.quality{
 	font:12px/13px "Open Sans", verdana, sans-serif;
 	background-image:-webkit-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));

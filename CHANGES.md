@@ -64,17 +64,22 @@
 * Change increase frequency of updating show data
 * Remove Animenzb provider
 * Change increase the scope and number of non release group text that is identified and removed
-* Add a general config setting to allow adding incomplete show data
+* Add general config setting to allow adding incomplete show data
 * Change to throttle connection rate on thread initiation for adba library
 * Change default manage episodes selector to Snatched episodes if items exist else Wanted on Episode Status Manage page
 * Change snatched row colour on Episode Status Manage page to match colour used on the show details page
 * Change replace trakt with libtrakt for API v2
-* Change Trakt notification config to only handle PIN authentication with the service
+* Change improve robustness of Trakt communications
+* Change Trakt notification config to use PIN authentication with the service
+* Add multiple Trakt account support to Config/Notifications/Social
+* Add setting to Trakt notification to update collection with downloaded episode info
+* Change trakt notifier logo
 * Remove all other Trakt deprecated API V1 service features pending reconsideration
 * Change increase show search capability when using plain text and also add TVDB id, IMDb id and IMDb url search
 * Change improve existing show page and the handling when an attempt to add a show to an existing location
 * Change consolidate Trakt Trending and Recommended views into an "Add From Trakt" view which defaults to trending
-* Change Trakt view drop down "Show" to reveal Brand-new Shows, Season Premieres, Recommendations and Trending views
+* Change Add from Trakt/"Shows:" with Anticipated, New Seasons, New Shows, Popular, Recommendations, and Trending views
+* Change Add from Trakt/"Shows:" with Most Watched, Collected during the last month on Trakt
 * Change add season info to "Show: Trakt New Seasons" view on the Add from Trakt page
 * Change increase number of displayed Trakt shows to 100
 * Add genres and rating to all Trakt shows
@@ -102,6 +107,8 @@
 * Change to always display branch and commit hash on 'Help & Info' page
 * Add option to create season search exceptions from editShow page
 * Change sab to use requests library
+* Add "View Changes" to tools menu
+* Change disable connection attempts and remove UI references to the TVRage info source
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

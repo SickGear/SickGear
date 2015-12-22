@@ -49,20 +49,29 @@
 				<input type="hidden" id="providedName" value="$provided_indexer_name" />
 				<input type="hidden" id="providedIndexer" value="$provided_indexer" />
 #else
+    #if 2 > $len($indexers)
+<style>
+	#addShowForm input#nameToSearch{width:611px}
+</style>
+				<input type="hidden" id="providedIndexer" value="$provided_indexer" />
+    #end if
 				<input type="text" id="nameToSearch" value="$default_show_name" class="form-control form-control-inline input-sm input350" />
 				&nbsp;
 				<span style="float:right">
-				<select name="indexerLang" id="indexerLangSelect" class="form-control form-control-inline input-sm">
-					<option value="en" selected="selected">en</option>
-				</select><b>&nbsp;*</b>
-				<select name="providedIndexer" id="providedIndexer" class="form-control form-control-inline input-sm">
-					<option value="0" #if $provided_indexer == 0 then "selected=\"selected\"" else ""#>All Indexers</option>
-    #for $indexer in $indexers
-					<option value="$indexer" #if $provided_indexer == $indexer then "selected=\"selected\"" else ""#>$indexers[$indexer]</option>
-    #end for
-				</select>
-				&nbsp;
-				<input class="btn btn-inline" type="button" id="searchName" value="Search" />
+					<select name="indexerLang" id="indexerLangSelect" class="form-control form-control-inline input-sm">
+						<option value="en" selected="selected">en</option>
+					</select><b>&nbsp;*</b>
+
+    #if 1 < $len($indexers)
+					<select name="providedIndexer" id="providedIndexer" class="form-control form-control-inline input-sm">
+						<option value="0" #if $provided_indexer == 0 then "selected=\"selected\"" else ""#>All Indexers</option>
+        #for $indexer in $indexers
+						<option value="$indexer" #if $provided_indexer == $indexer then "selected=\"selected\"" else ""#>$indexers[$indexer]</option>
+        #end for
+					</select>
+    #end if
+					&nbsp;
+					<input class="btn btn-inline" type="button" id="searchName" value="Search" />
 				</span>
 				<br />
 				<p style="margin:5px 0 15px">Enter show name, TVDB ID, IMDb Url, or IMDb ID.&nbsp;&nbsp;<b>*</b>SickGear supports english, language is used for show/episode data</p>

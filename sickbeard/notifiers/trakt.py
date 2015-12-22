@@ -18,10 +18,13 @@
 
 import sickbeard
 from sickbeard import logger
-from lib.libtrakt import TraktAPI
+from lib.libtrakt import TraktAPI, exceptions
 
 
 class TraktNotifier:
+    def __init__(self):
+        pass
+
     """
     A "notifier" for trakt.tv which keeps track of what has and hasn't been added to your library.
     """
@@ -34,103 +37,71 @@ class TraktNotifier:
 
     def notify_subtitle_download(self, ep_name, lang):
         pass
-        
+
     def notify_git_update(self, new_version):
         pass
 
-    def update_library(self, ep_obj):
+    @staticmethod
+    def update_collection(ep_obj):
         """
-        Sends a request to trakt indicating that the given episode is part of our library.
-        
-        ep_obj: The TVEpisode object to add to trakt
+        Sends a request to trakt indicating that the given episode is part of our collection.
+
+        :param ep_obj: The TVEpisode object to add to trakt
         """
 
-        if sickbeard.USE_TRAKT:
+        if sickbeard.USE_TRAKT and sickbeard.TRAKT_ACCOUNTS:
 
             # URL parameters
             data = {
-                'tvdb_id': ep_obj.show.indexerid,
-                'title': ep_obj.show.name,
-                'year': ep_obj.show.startyear,
-                'episodes': [{
-                                 'season': ep_obj.season,
-                                 'episode': ep_obj.episode
-                             }]
+                'shows': [
+                    {
+                        'title': ep_obj.show.name,
+                        'year': ep_obj.show.startyear,
+                        'ids': {},
+                    }
+                ]
             }
 
-            if data is not None:
-                TraktCall('show/episode/library/%API%', self._api(), self._username(), self._password(), data)
-                if sickbeard.TRAKT_REMOVE_WATCHLIST:
-                    TraktCall('show/episode/unwatchlist/%API%', self._api(), self._username(), self._password(), data)
+            indexer = ('tvrage', 'tvdb')[1 == ep_obj.show.indexer]
+            data['shows'][0]['ids'][indexer] = ep_obj.show.indexerid
 
-                if sickbeard.TRAKT_REMOVE_SERIESLIST:
-                    data_show = None
+            # Add Season and Episode + Related Episodes
+            data['shows'][0]['seasons'] = [{'number': ep_obj.season, 'episodes': []}]
 
-                    # URL parameters, should not need to recheck data (done above)
-                    data = {
-                        'shows': [
-                            {
-                                'tvdb_id': ep_obj.show.indexerid,
-                                'title': ep_obj.show.name,
-                                'year': ep_obj.show.startyear
-                            }
-                        ]
-                    }
-                    
-                    TraktCall('show/unwatchlist/%API%', self._api(), self._username(), self._password(), data)
+            for relEp_Obj in [ep_obj] + ep_obj.relatedEps:
+                data['shows'][0]['seasons'][0]['episodes'].append({'number': relEp_Obj.episode})
 
-                    # Remove all episodes from episode watchlist
-                    # Start by getting all episodes in the watchlist
-                    watchlist = TraktCall('user/watchlist/episodes.json/%API%/' + sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
+            for tid, locations in sickbeard.TRAKT_UPDATE_COLLECTION.items():
+                if tid not in sickbeard.TRAKT_ACCOUNTS.keys():
+                    continue
+                for loc in locations:
+                    if not ep_obj.location.startswith('%s\\' % loc.rstrip('\\')):
+                        continue
 
-                    if watchlist is not None:
-                        # Convert watchlist to only contain current show
-                        for show in watchlist:
-                            # Check if tvdb_id exists
-                            if 'tvdb_id' in show:
-                                if unicode(data['shows'][0]['tvdb_id']) == show['tvdb_id']:
-                                    data_show = {
-                                        'title': show['title'],
-                                        'tvdb_id': show['tvdb_id'],
-                                        'episodes': []
-                                    }
-                                
-                                    # Add series and episode (number) to the arry
-                                    for episodes in show['episodes']:
-                                        ep = {'season': episodes['season'], 'episode': episodes['number']}
-                                        data_show['episodes'].append(ep)
-                        if data_show is not None:
-                            TraktCall('show/episode/unwatchlist/%API%', sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD, data_show)
+                    warn, msg = False, ''
+                    try:
+                        resp = TraktAPI().trakt_request('sync/collection', data, send_oauth=tid)
+                        if 'added' in resp and 'episodes' in resp['added'] and 0 < sickbeard.helpers.tryInt(resp['added']['episodes']):
+                            msg = 'Added episode to'
+                        elif 'updated' in resp and 'episodes' in resp['updated'] and 0 < sickbeard.helpers.tryInt(resp['updated']['episodes']):
+                            msg = 'Updated episode in'
+                        elif 'existing' in resp and 'episodes' in resp['existing'] and 0 < sickbeard.helpers.tryInt(resp['existing']['episodes']):
+                            msg = 'Episode is already in'
+                        elif 'not_found' in resp and 'episodes' in resp['not_found'] and 0 < sickbeard.helpers.tryInt(resp['not_found']['episodes']):
+                            msg = 'Episode not found on Trakt, not adding to'
+                        else:
+                            warn, msg = True, 'Could not add episode to'
+                    except exceptions.TraktAuthException, exceptions.TraktException:
+                        warn, msg = True, 'Error adding episode to'
+                    msg = 'Trakt: %s your %s collection' % (msg, sickbeard.TRAKT_ACCOUNTS[tid].name)
+                    if not warn:
+                        logger.log(msg)
                     else:
-                        logger.log('Failed to get watchlist from trakt. Unable to remove episode from watchlist',
-                                   logger.ERROR)
+                        logger.log(msg, logger.WARNING)
 
-    def test_notify(self, api, username, password):
-        """
-        Sends a test notification to trakt with the given authentication info and returns a boolean
-        representing success.
-        
-        api: The api string to use
-        username: The username to use
-        password: The password to use
-        
-        Returns: True if the request succeeded, False otherwise
-        """
 
-        data = TraktCall('account/test/%API%', api, username, password)
-        if data and data['status'] == 'success':
-            return True
-
-    def _username(self):
-        return sickbeard.TRAKT_USERNAME
-
-    def _password(self):
-        return sickbeard.TRAKT_PASSWORD
-
-    def _api(self):
-        return sickbeard.TRAKT_API
-
-    def _use_me(self):
+    @staticmethod
+    def _use_me():
         return sickbeard.USE_TRAKT
 
 
