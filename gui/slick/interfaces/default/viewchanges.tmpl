@@ -1,0 +1,20 @@
+#import sickbeard
+##
+#set global $header = 'Changes'
+#set global $title = 'Changes'
+#set global $topmenu = ''
+##
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+	<h1 class="header">$header</h1>
+
+	<div class="align-left" style="margin:30px 0">
+		<div id="changes">
+#for $i, $change in $enumerate($changelist)##if 'rel' == $change['type']#
+			<div class="release#echo ('', ' old')[bool($i)]#"><span class="ver">$change['ver']</span> <span class="change-date grey-text">$change['date']</span></div>
+#else#			<div><span class="btn-text change-$change['type'].lower()">$change['type']</span> <span class="change-text">$change['text']</span></div>
+#end if##end for#
+		</div>
+	</div>
+
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

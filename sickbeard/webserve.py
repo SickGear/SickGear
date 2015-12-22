@@ -968,6 +968,46 @@ class Home(MainHandler):
 
         return notifiers.pushbullet_notifier.get_devices(accessToken)
 
+    def viewchanges(self):
+
+        t = PageTemplate(headers=self.request.headers, file='viewchanges.tmpl')
+
+        t.changelist = [{'type': 'rel', 'ver': '', 'date': 'Nothing to display at this time'}]
+        url = 'https://raw.githubusercontent.com/wiki/SickGear/SickGear/sickgear/CHANGES.md'
+        response = helpers.getURL(url)
+        if not response:
+            return t.respond()
+
+        data = response.replace('\xef\xbb\xbf', '').splitlines()
+
+        output, change, max_rel = [], {}, 5
+        for line in data:
+            if not line.strip():
+                continue
+            if line.startswith('  '):
+                change_parts = re.findall('^[\W]+(.*)$', line)
+                change['text'] += change_parts and (' %s' % change_parts[0].strip()) or ''
+            else:
+                if change:
+                    output.append(change)
+                if line.startswith('* '):
+                    change_parts = re.findall(r'^[\*\W]+(Add|Change|Fix|Port|Remove|Update)\W(.*)', line)
+                    change = change_parts and {'type': change_parts[0][0], 'text': change_parts[0][1].strip()} or {}
+                elif line.startswith('### '):
+                    rel_data = re.findall(r'(?im)^###\W*([^\s]+)\W\(([^\)]+)\)', line)
+                    rel_data and output.append({'type': 'rel', 'ver': rel_data[0][0], 'date': rel_data[0][1]})
+                    max_rel -= 1
+                elif line.startswith('# '):
+                    max_data = re.findall(r'^#\W*([\d]+)\W*$', line)
+                    max_rel = max_data and helpers.tryInt(max_data[0], None) or 5
+            if not max_rel:
+                break
+        if change:
+            output.append(change)
+
+        t.changelist = output
+        return t.respond()
+
     def shutdown(self, pid=None):
 
         if str(pid) != str(sickbeard.PID):
