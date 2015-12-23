@@ -177,6 +177,15 @@ class Future(object):
         def __await__(self):
             return (yield self)
         """))
+    else:
+        # Py2-compatible version for use with cython.
+        def __await__(self):
+            result = yield self
+            # StopIteration doesn't take args before py33,
+            # but Cython recognizes the args tuple.
+            e = StopIteration()
+            e.args = (result,)
+            raise e
 
     def cancel(self):
         """Cancel the operation, if possible.
@@ -373,6 +382,7 @@ def run_on_executor(*args, **kwargs):
     def run_on_executor_decorator(fn):
         executor = kwargs.get("executor", "executor")
         io_loop = kwargs.get("io_loop", "io_loop")
+
         @functools.wraps(fn)
         def wrapper(self, *args, **kwargs):
             callback = kwargs.pop("callback", None)

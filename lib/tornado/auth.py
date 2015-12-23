@@ -75,14 +75,14 @@ import hmac
 import time
 import uuid
 
-from tornado.concurrent import TracebackFuture, return_future
+from tornado.concurrent import TracebackFuture, return_future, chain_future
 from tornado import gen
 from tornado import httpclient
 from tornado import escape
 from tornado.httputil import url_concat
 from tornado.log import gen_log
 from tornado.stack_context import ExceptionStackContext
-from tornado.util import u, unicode_type, ArgReplacer
+from tornado.util import unicode_type, ArgReplacer
 
 try:
     import urlparse  # py2
@@ -188,7 +188,7 @@ class OpenIdMixin(object):
         """
         # Verify the OpenID response via direct request to the OP
         args = dict((k, v[-1]) for k, v in self.request.arguments.items())
-        args["openid.mode"] = u("check_authentication")
+        args["openid.mode"] = u"check_authentication"
         url = self._OPENID_ENDPOINT
         if http_client is None:
             http_client = self.get_auth_http_client()
@@ -255,13 +255,13 @@ class OpenIdMixin(object):
         ax_ns = None
         for name in self.request.arguments:
             if name.startswith("openid.ns.") and \
-                    self.get_argument(name) == u("http://openid.net/srv/ax/1.0"):
+                    self.get_argument(name) == u"http://openid.net/srv/ax/1.0":
                 ax_ns = name[10:]
                 break
 
         def get_ax_arg(uri):
             if not ax_ns:
-                return u("")
+                return u""
             prefix = "openid." + ax_ns + ".type."
             ax_name = None
             for name in self.request.arguments.keys():
@@ -270,8 +270,8 @@ class OpenIdMixin(object):
                     ax_name = "openid." + ax_ns + ".value." + part
                     break
             if not ax_name:
-                return u("")
-            return self.get_argument(ax_name, u(""))
+                return u""
+            return self.get_argument(ax_name, u"")
 
         email = get_ax_arg("http://axschema.org/contact/email")
         name = get_ax_arg("http://axschema.org/namePerson")
@@ -985,7 +985,7 @@ class FacebookGraphMixin(OAuth2Mixin):
             future.set_exception(AuthError('Facebook auth error: %s' % str(response)))
             return
 
-        args = escape.parse_qs_bytes(escape.native_str(response.body))
+        args = urlparse.parse_qs(escape.native_str(response.body))
         session = {
             "access_token": args["access_token"][-1],
             "expires": args.get("expires")
@@ -1062,8 +1062,13 @@ class FacebookGraphMixin(OAuth2Mixin):
            Added the ability to override ``self._FACEBOOK_BASE_URL``.
         """
         url = self._FACEBOOK_BASE_URL + path
-        return self.oauth2_request(url, callback, access_token,
-                                   post_args, **args)
+        # Thanks to the _auth_return_future decorator, our "callback"
+        # argument is a Future, which we cannot pass as a callback to
+        # oauth2_request. Instead, have oauth2_request return a
+        # future and chain them together.
+        oauth_future = self.oauth2_request(url, access_token=access_token,
+                                           post_args=post_args, **args)
+        chain_future(oauth_future, callback)
 
 
 def _oauth_signature(consumer_token, method, url, parameters={}, token=None):

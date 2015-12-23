@@ -211,10 +211,12 @@ class AsyncHTTPClient(Configurable):
         kwargs: ``HTTPRequest(request, **kwargs)``
 
         This method returns a `.Future` whose result is an
-        `HTTPResponse`.  By default, the ``Future`` will raise an `HTTPError`
-        if the request returned a non-200 response code. Instead, if
-        ``raise_error`` is set to False, the response will always be
-        returned regardless of the response code.
+        `HTTPResponse`. By default, the ``Future`` will raise an
+        `HTTPError` if the request returned a non-200 response code
+        (other errors may also be raised if the server could not be
+        contacted). Instead, if ``raise_error`` is set to False, the
+        response will always be returned regardless of the response
+        code.
 
         If a ``callback`` is given, it will be invoked with the `HTTPResponse`.
         In the callback interface, `HTTPError` is not automatically raised.
@@ -603,9 +605,12 @@ class HTTPError(Exception):
     """
     def __init__(self, code, message=None, response=None):
         self.code = code
-        message = message or httputil.responses.get(code, "Unknown")
+        self.message = message or httputil.responses.get(code, "Unknown")
         self.response = response
-        Exception.__init__(self, "HTTP %d: %s" % (self.code, message))
+        super(HTTPError, self).__init__(code, message, response)
+
+    def __str__(self):
+        return "HTTP %d: %s" % (self.code, self.message)
 
 
 class _RequestProxy(object):
