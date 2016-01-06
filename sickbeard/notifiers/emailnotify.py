@@ -176,7 +176,12 @@ class EmailNotifier:
     def _sendmail(self, host, port, smtp_from, use_tls, user, pwd, to, msg, smtpDebug=False):
         logger.log('HOST: %s; PORT: %s; FROM: %s, TLS: %s, USER: %s, PWD: %s, TO: %s' % (
             host, port, smtp_from, use_tls, user, pwd, to), logger.DEBUG)
-        srv = smtplib.SMTP(host, int(port))
+        try:
+            srv = smtplib.SMTP(host, int(port))
+        except Exception as e:
+            self.last_err = '%s' % e
+            return False
+            
         if smtpDebug:
             srv.set_debuglevel(1)
         try:
