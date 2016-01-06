@@ -21,7 +21,7 @@
 	</tfoot>
 	<tbody>
 #for $curDir in $dirList
-    #if $curDir['added_already'] and None is $curDir.get('highlight')
+    #if $curDir['added_already'] and (None is $curDir.get('highlight') or not $kwargs.get('hash_dir'))
         #continue
     #end if
 
