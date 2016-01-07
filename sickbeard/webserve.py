@@ -2302,6 +2302,8 @@ class NewHomeAddShows(Home):
                 if indexer_id and helpers.findCertainShow(sickbeard.showList, indexer_id):
                     cur_dir['added_already'] = True
 
+            file_list = None
+
         t.dirList = dir_list
 
         return t.respond()

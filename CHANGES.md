@@ -1,9 +1,4 @@
-﻿### 0.12.0 (2015-xx-xx xx:xx:xx UTC)
-
-* Change to generalize xem id fetching
-
-
-### 0.11.0 (2015-xx-xx xx:xx:xx UTC)
+﻿### 0.11.0 (2016-xx-xx xx:xx:xx UTC)
 
 * Change to only refresh scene exception data for shows that need it
 * Change reduce aggressive use of scene numbering that was overriding user preference where not needed
@@ -24,7 +19,7 @@
 * Update chardet packages to 2.3.0 (26982c5)
 * Update Hachoir library 1.3.3 to 1.3.4 (r1383)
 * Change configure quiet option in Hachoir to suppress warnings (add ref:hacks.txt)
-* Add parse media content to determine quality before making final assumptions during re-scan, update, pp  
+* Add parse media content to determine quality before making final assumptions during re-scan, update, pp
 * Add a postprocess folder name validation
 * Update Requests library to 2.7.0 (5d6d1bc)
 * Update SimpleJSON library 3.7.3 to 3.8.0 (a37a9bd)
@@ -109,6 +104,8 @@
 * Change sab to use requests library
 * Add "View Changes" to tools menu
 * Change disable connection attempts and remove UI references to the TVRage info source
+* Change to simplify xem id fetching
+* Fix issue on Add Existing Shows page where shows were listed that should not have been
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
@@ -347,7 +344,7 @@
 * Hide year, runtime, genre tags, country flag, or status if lacking valid data to display
 * Remove redundant CSS color use (all browsers treat 3 identical digits as 6, except for possibly in gradients)
 * Remove whitespace and semi-colon redundancy from CSS shedding 4.5kb
-* Add show names to items listed during startup in the loading from database phase 
+* Add show names to items listed during startup in the loading from database phase
 * Add "Enable IMDb info" option to config/General/Interface
 * Change to not display IMDb info on UI when "Enable IMDb info" is disabled
 * Change genre tags on displayShow page to link to IMDb instead of Trakt
@@ -434,7 +431,7 @@
 * Change anime release groups to in memory storage for lowered latency
 * Change adjust menu delay and hover styling
 * Fix provider list color
-* Add handling of exceptional case with missing network name (NoneType) in Episode View 
+* Add handling of exceptional case with missing network name (NoneType) in Episode View
 * Fix black and white list initialization on new show creation
 * Add select all and clear all buttons to testRename template
 * Fix displayShow topmenu variable to point to a valid menu item
@@ -590,7 +587,7 @@
 * Change Display Show next/previous when show list is not split to loop around
 * Fix SQL statements that have dynamic table names to use proper syntax
 * Fix port checking code preventing startup directly after a SG restart
-* Add a link from the footer number of snatched to episode snatched overview page. The link to the 
+* Add a link from the footer number of snatched to episode snatched overview page. The link to the
   Episode Overview page is available on all pages except on the Episode Overview page
 * Change the default state for all check boxes on the Episode Overview page to not checked
 * Add validation to Go button to ensure at least one item is checked on Episode Overview page

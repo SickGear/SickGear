@@ -116,7 +116,7 @@ def compile_word_list(lookup_words, re_prefix='(^|[\W_])', re_suffix='($|[\W_])'
                 # !0 == regex and subject = s / 'what\'s the "time"' / what\'s\ the\ \"time\"
                 subject = search_raw and re.escape(word) or re.sub(r'([\" \'])', r'\\\1', word)
                 result.append(re.compile('(?i)%s%s%s' % (re_prefix, subject, re_suffix)))
-            except Exception as e:
+            except re.error as e:
                 logger.log(u'Failure to compile filter expression: %s ... Reason: %s' % (word, e.message), logger.DEBUG)
 
         diff = len(lookup_words) - len(result)

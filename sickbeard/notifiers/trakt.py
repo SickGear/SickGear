@@ -91,7 +91,7 @@ class TraktNotifier:
                             msg = 'Episode not found on Trakt, not adding to'
                         else:
                             warn, msg = True, 'Could not add episode to'
-                    except exceptions.TraktAuthException, exceptions.TraktException:
+                    except (exceptions.TraktAuthException, exceptions.TraktException):
                         warn, msg = True, 'Error adding episode to'
                     msg = 'Trakt: %s your %s collection' % (msg, sickbeard.TRAKT_ACCOUNTS[tid].name)
                     if not warn:
