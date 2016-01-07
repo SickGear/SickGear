@@ -97,13 +97,14 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         result = None
         if url and False is self._init_api():
-            data = self.get_url(url)
-            if data:
-                if '</nzb>' not in data or 'seem to be logged in' in data:
-                    logger.log(u'Failed nzb data response: %s' % data, logger.DEBUG)
-                    return result
-                result = classes.NZBDataSearchResult(episodes)
-                result.extraInfo += [data]
+            data = self.get_url(url, timeout=90)
+            if not data:
+                return result
+            if '</nzb>' not in data or 'seem to be logged in' in data:
+                logger.log(u'Failed nzb data response: %s' % data, logger.DEBUG)
+                return result
+            result = classes.NZBDataSearchResult(episodes)
+            result.extraInfo += [data]
 
         if None is result:
             result = classes.NZBSearchResult(episodes)

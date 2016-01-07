@@ -108,6 +108,7 @@
 * Fix issue on Add Existing Shows page where shows were listed that should not have been
 * Change get_size helper to also handle files
 * Change improve handling of a bad email notify setting
+* Change give OMGWTFNZBS provider more time to respond
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
