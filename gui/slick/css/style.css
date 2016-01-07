@@ -175,7 +175,7 @@ inc_top.tmpl
 	background:url("../css/lib/images/animated-overlay.gif")
 }
 
-.ui-dialog, 
+.ui-dialog,
 .ui-dialog-buttonpane{
 	background:#eceadf url("../css/lib/images/ui-bg_fine-grain_10_eceadf_60x60.png") 50% 50% repeat !important
 }
@@ -3032,6 +3032,10 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	display:inline
 }
 
+#fileBrowserDialog .form-control{background-color:#f5f1e4}
+#fileBrowserDialog .form-control:active,
+#fileBrowserDialog .form-control:hover{background-color:#ffffca}
+
 .btn{
 	display:inline-block;
 	*display:inline;
@@ -3942,7 +3946,7 @@ jquery.confirm.css
 	box-shadow:inset 0 1px rgba(255, 255, 255, 0.1),inset 0 -1px 3px rgba(0, 0, 0, 0.3),inset 0 0 0 1px rgba(255, 255, 255, 0.08),0 1px 2px rgba(0, 0, 0, 0.15)
 }
 
-#confirmBox .button:last-child{	
+#confirmBox .button:last-child{
 	margin-right:0
 }
 

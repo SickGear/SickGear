@@ -3366,6 +3366,13 @@ class Manage(MainHandler):
             cur_show_dir = ek.ek(os.path.basename, showObj._location)
             if cur_root_dir in dir_map and cur_root_dir != dir_map[cur_root_dir]:
                 new_show_dir = ek.ek(os.path.join, dir_map[cur_root_dir], cur_show_dir)
+                if 'nt' != os.name and ':\\' in cur_show_dir:
+                    cur_show_dir = showObj._location.split('\\')[-1]
+                    try:
+                        base_dir = dir_map[cur_root_dir].rsplit(cur_show_dir)[0].rstrip('/')
+                    except IndexError:
+                        base_dir = dir_map[cur_root_dir]
+                    new_show_dir = ek.ek(os.path.join, base_dir, cur_show_dir)
                 logger.log(
                     u'For show ' + showObj.name + ' changing dir from ' + showObj._location + ' to ' + new_show_dir)
             else:
