@@ -46,7 +46,7 @@ class EmailNotifier:
     def notify_snatch(self, ep_name, title='Snatched:'):
         """
         Send a notification that an episode was snatched
-        
+
         ep_name: The name of the episode that was snatched
         title: The title of the notification (optional)
         """
@@ -81,7 +81,7 @@ class EmailNotifier:
     def notify_download(self, ep_name, title='Completed:'):
         """
         Send a notification that an episode was downloaded
-        
+
         ep_name: The name of the episode that was downloaded
         title: The title of the notification (optional)
         """
@@ -116,7 +116,7 @@ class EmailNotifier:
     def notify_subtitle_download(self, ep_name, lang, title='Downloaded subtitle:'):
         """
         Send a notification that an subtitle was downloaded
-        
+
         ep_name: The name of the episode that was downloaded
         lang: Subtitle language wanted
         """
@@ -176,10 +176,11 @@ class EmailNotifier:
     def _sendmail(self, host, port, smtp_from, use_tls, user, pwd, to, msg, smtpDebug=False):
         logger.log('HOST: %s; PORT: %s; FROM: %s, TLS: %s, USER: %s, PWD: %s, TO: %s' % (
             host, port, smtp_from, use_tls, user, pwd, to), logger.DEBUG)
-        srv = smtplib.SMTP(host, int(port))
-        if smtpDebug:
-            srv.set_debuglevel(1)
+
         try:
+            srv = smtplib.SMTP(host, int(port))
+            if smtpDebug:
+                srv.set_debuglevel(1)
             if (use_tls == '1' or use_tls == True) or (len(user) > 0 and len(pwd) > 0):
                 srv.ehlo()
                 logger.log('Sent initial EHLO command!', logger.DEBUG)
