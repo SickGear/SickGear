@@ -96,7 +96,7 @@ class MoreThanProvider(generic.TorrentProvider):
                                                        title)
 
                                 link = str(tr.find('a', title=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
-                                download_url = self.urls['get'] + link
+                                download_url = self.urls['get'] % link
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
