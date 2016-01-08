@@ -74,7 +74,7 @@
 * Change improve existing show page and the handling when an attempt to add a show to an existing location
 * Change consolidate Trakt Trending and Recommended views into an "Add From Trakt" view which defaults to trending
 * Change Add from Trakt/"Shows:" with Anticipated, New Seasons, New Shows, Popular, Recommendations, and Trending views
-* Change Add from Trakt/"Shows:" with Most Watched, Collected during the last month on Trakt
+* Change Add from Trakt/"Shows:" with Most Watched, Played, and Collected during the last month and year on Trakt
 * Change add season info to "Show: Trakt New Seasons" view on the Add from Trakt page
 * Change increase number of displayed Trakt shows to 100
 * Add genres and rating to all Trakt shows

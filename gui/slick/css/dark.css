@@ -1179,12 +1179,14 @@ input sizing (for config pages)
 ========================================================================== */
 
 #pickShow optgroup,
+#showfilter optgroup,
 #editAProvider optgroup{
 	color:#eee;
 	background-color:rgb(51, 51, 51)
 }
 
 #pickShow optgroup option,
+#showfilter optgroup option,
 #editAProvider optgroup option{
 	color:#222;
 	background-color:#fff

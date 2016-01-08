@@ -2130,7 +2130,8 @@ class NewHomeAddShows(Home):
         search_id = ''
         try:
             search_id = re.search(r'(?m)((?:tt\d{4,})|^\d{4,}$)', search_term).group(1)
-            resp = self.getTrakt('/search?id_type=%s&id=%s' % (('tvdb', 'imdb')['tt' in search_id], search_id))[0]
+            resp = [r for r in self.getTrakt('/search?id_type=%s&id=%s' % (('tvdb', 'imdb')['tt' in search_id],
+                                                                           search_id)) if 'show' == r['type']][0]
             search_term = resp['show']['title']
             indexer_id = resp['show']['ids']['tvdb']
         except:
@@ -2427,7 +2428,7 @@ class NewHomeAddShows(Home):
                             ids=ids,
                             premiered=dt_ordinal,
                             premiered_str=dt_string,
-                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not poss. 16.11.2015
                             title=title.strip(),
                             images=images,
                             url_src_db='http://anidb.net/perl-bin/animedb.pl?show=anime&aid=%s' % ids['anidb'],
@@ -2512,11 +2513,13 @@ class NewHomeAddShows(Home):
                         filtered.append(dict(
                             premiered=dt_ordinal,
                             premiered_str=year or 'No year',
-                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
-                            genres='No genre yet' if not len(genres) else genres[0].get_text().lower().replace(' |', ','),
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not poss. 16.11.2015
+                            genres=('No genre yet' if not len(genres) else
+                                    genres[0].get_text().lower().replace(' |', ',')),
                             ids=ids,
                             images=images,
-                            overview='No overview yet' if not len(overview) else re.sub(r'[\"\']+', r'', overview[0].get_text()[:250:].strip()),
+                            overview=('No overview yet' if not len(overview) else
+                                      self.encode_html(overview[0].get_text()[:250:].strip())),
                             rating=0 if not len(rating) else int(float(rating[0].get_text()) * 10),
                             title=tr.select('td.title a')[0].get_text().strip(),
                             url_src_db='http://www.imdb.com/%s/' % url_path,
@@ -2542,51 +2545,71 @@ class NewHomeAddShows(Home):
         return self.newShow('|'.join(['', '', '', re.search('(?i)tt\d+$', indexer_id) and indexer_id or showName]),
                             use_show_name=True)
 
-    def traktTrending(self, *args, **kwargs):
-
-        return self.browse_trakt('shows/trending?limit=%s&' % 100, 'Trending at Trakt', mode='trending')
-
-    def traktPopular(self, *args, **kwargs):
-
-        return self.browse_trakt('shows/popular?limit=%s&' % 100, 'Popular at Trakt', mode='popular')
-
-    def traktWatched(self, *args, **kwargs):
-
-        return self.browse_trakt('shows/watched/monthly?limit=%s&' % 100, 'Most watched at Trakt during the last month', mode='watched')
-
-    def traktCollected(self, *args, **kwargs):
-
-        return self.browse_trakt('shows/collected/monthly?limit=%s&' % 100, 'Most collected at Trakt during the last month', mode='collected')
-
-    def traktAnticipated(self, *args, **kwargs):
+    def trakt_anticipated(self, *args, **kwargs):
 
         return self.browse_trakt('shows/anticipated?limit=%s&' % 100, 'Anticipated at Trakt', mode='anticipated')
 
-    def traktRecommended(self, *args, **kwargs):
+    def trakt_newseasons(self, *args, **kwargs):
+
+        return self.browse_trakt(
+                '/calendars/all/shows/premieres/%s/%s?' % (sbdatetime.sbdatetime.sbfdate(
+                        dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32),
+                'Season premieres at Trakt',
+                mode='newseasons', footnote='Note; Expect default placeholder images in this list')
+
+    def trakt_newshows(self, *args, **kwargs):
+
+        return self.browse_trakt(
+                '/calendars/all/shows/new/%s/%s?' % (sbdatetime.sbdatetime.sbfdate(
+                        dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32),
+                'Brand-new shows at Trakt',
+                mode='newshows', footnote='Note; Expect default placeholder images in this list')
+
+    def trakt_popular(self, *args, **kwargs):
+
+        return self.browse_trakt('shows/popular?limit=%s&' % 100, 'Popular at Trakt', mode='popular')
+
+    def trakt_trending(self, *args, **kwargs):
+
+        return self.browse_trakt('shows/trending?limit=%s&' % 100, 'Trending at Trakt', mode='trending',
+                                 footnote='Tip: For more Trakt, use "Show" near the top of this view')
+
+    def trakt_watched(self, *args, **kwargs):
+
+        return self.trakt_action('watch', args, **kwargs)
+
+    def trakt_played(self, *args, **kwargs):
+
+        return self.trakt_action('play', args, **kwargs)
+
+    def trakt_collected(self, *args, **kwargs):
+
+        return self.trakt_action('collect', args, **kwargs)
+
+    def trakt_action(self, action, *args, **kwargs):
+
+        cycle, desc, ext = (('month', 'month', ''), ('year', '12 months', '-year'))['year' == kwargs.get('period', '')]
+        return self.browse_trakt('shows/%sed/%sly?limit=%s&' % (action, cycle, 100),
+                                 'Most %sed at Trakt during the last %s' % (action, desc),
+                                 mode='%sed%s' % (action, ext))
+
+    def trakt_recommended(self, *args, **kwargs):
+
+        if 'add' == kwargs.get('action'):
+            return self.redirect('/config/notifications/#tabs-3')
 
         account = sickbeard.helpers.tryInt(kwargs.get('account'), None)
         try:
             name = sickbeard.TRAKT_ACCOUNTS[account].name
         except KeyError:
-            return self.traktDefault()
-        return self.browse_trakt('recommendations/shows?limit=%s&' % 100,
-                                 'Recommended for <b class="grey-text">%s</b> by Trakt' % name, mode='recommended-%s' % account, send_oauth=account)
+            return self.trakt_default()
+        return self.browse_trakt(
+                'recommendations/shows?limit=%s&' % 100, 'Recommended for <b class="grey-text">%s</b> by Trakt' % name,
+                mode='recommended-%s' % account, send_oauth=account)
 
-    def traktNewShows(self, *args, **kwargs):
+    def trakt_default(self):
 
-        return self.browse_trakt('/calendars/all/shows/new/%s/%s?' % (sbdatetime.sbdatetime.sbfdate(
-            dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32), 'Brand-new shows at Trakt',
-            mode='newshows', footnote='Note; Expect default placeholder images in this list')
-
-    def traktNewSeasons(self, *args, **kwargs):
-
-        return self.browse_trakt('/calendars/all/shows/premieres/%s/%s?' % (sbdatetime.sbdatetime.sbfdate(
-            dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32), 'Season premieres at Trakt',
-            mode='newseasons', footnote='Note; Expect default placeholder images in this list')
-
-    def traktDefault(self):
-
-        return self.redirect('/home/addShows/traktTrending/')
+        return self.redirect('/home/addShows/%s' % ('trakt_trending', sickbeard.TRAKT_MRU)[any(sickbeard.TRAKT_MRU)])
 
     def browse_trakt(self, url_path, browse_title, *args, **kwargs):
 
@@ -2627,6 +2650,11 @@ class NewHomeAddShows(Home):
         oldest = None
         newest = None
         for item in normalised:
+            ignore = '''
+            ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
+            '''
+            if re.search(ignore, item['show']['title'].strip(), re.I | re.X):
+                continue
             try:
                 dt = dateutil.parser.parse(item['show']['first_aired'])
                 dt_ordinal = dt.toordinal()
@@ -2642,14 +2670,17 @@ class NewHomeAddShows(Home):
                     premiered_str=dt_string,
                     when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
                     episode_number='' if 'episode' not in item else item['episode']['number'] or 1,
-                    episode_overview='' if 'episode' not in item else item['episode']['overview'] or '',
+                    episode_overview=('' if 'episode' not in item else
+                                      self.encode_html(item['episode']['overview'][:250:].strip()) or ''),
                     episode_season='' if 'episode' not in item else item['episode']['season'] or 1,
-                    genres='' if 'genres' not in item['show'] else ', '.join(['%s' % v for v in item['show']['genres']]),
+                    genres=('' if 'genres' not in item['show'] else
+                            ', '.join(['%s' % v for v in item['show']['genres']])),
                     ids=item['show']['ids'],
                     images='' if 'images' not in item['show'] else item['show']['images'],
-                    overview='' if 'overview' not in item['show'] or None is item['show']['overview'] else re.sub(
-                        r'[\"\']+', '', item['show']['overview'][:250:].strip()),
-                    rating='0' if 'rating' not in item['show'] else '%.2f' % (item['show']['rating'] * 10),
+                    overview=('' if 'overview' not in item['show'] or None is item['show']['overview'] else
+                              self.encode_html(item['show']['overview'][:250:].strip())),
+                    rating=0 < item['show'].get('rating', 0) and
+                           ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
                     title=item['show']['title'].strip(),
                     url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
                     url_tvdb=('', '%s%s' % (sickbeard.indexerApi(INDEXER_TVDB).config['show_url'],
@@ -2660,7 +2691,23 @@ class NewHomeAddShows(Home):
                 pass
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
+
+        if 'recommended' not in kwargs.get('mode', ''):
+            mode = kwargs.get('mode', '').split('-')
+            if mode:
+                func = 'trakt_%s' % mode[0]
+                if callable(getattr(self, func, None)):
+                    param = '' if 1 == len(mode) or mode[1] not in ['year', 'month', 'week', 'all'] else \
+                        '?period=' + mode[1]
+                    sickbeard.TRAKT_MRU = '%s%s' % (func, param)
+                    sickbeard.save_config()
         return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    @staticmethod
+    def encode_html(text):
+
+        return re.sub(r'\r?\n', '<br />', text.replace('"', '&quot;').replace("'", '&#39;').replace('&', '&amp;')
+                      .replace('<', '&lt;').replace('>', '&gt;'))
 
     def addTraktShow(self, indexer_id, showName):
 
