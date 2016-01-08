@@ -20,7 +20,7 @@ inc_top.tmpl
 }
 
 .browserDialog.busy .ui-dialog-buttonpane{
-	background:url("../images/loading.gif") 10px 50% no-repeat !important
+	background:url("../images/loading32-dark.gif") 10px 50% no-repeat !important
 }
 
 .ui-progressbar .ui-progressbar-overlay{
@@ -61,6 +61,8 @@ inc_top.tmpl
 .ui-state-default,
 .ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default{
+	background:#3d3d3d;
+	color:#fff;
 	border:1px solid #111
 }
 

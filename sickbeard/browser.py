@@ -30,17 +30,18 @@ except ImportError:
     from lib import simplejson as json
 
 # this is for the drive letter code, it only works on windows
-if os.name == 'nt':
+if 'nt' == os.name:
     from ctypes import windll
 
 
-# adapted from http://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python/827490
+# adapted from
+# http://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python/827490
 def getWinDrives():
     """ Return list of detected drives """
-    assert os.name == 'nt'
+    assert 'nt' == os.name
 
     drives = []
-    bitmask = windll.kernel32.GetLogicalDrives()  #@UndefinedVariable
+    bitmask = windll.kernel32.GetLogicalDrives()
     for letter in string.uppercase:
         if bitmask & 1:
             drives.append(letter)
@@ -56,54 +57,67 @@ def foldersAtPath(path, includeParent=False, includeFiles=False):
     """
 
     # walk up the tree until we find a valid path
-    while path and not os.path.isdir(path):
-        if path == os.path.dirname(path):
+    while path and not ek.ek(os.path.isdir, path):
+        if path == ek.ek(os.path.dirname, path):
             path = ''
             break
         else:
-            path = os.path.dirname(path)
+            path = ek.ek(os.path.dirname, path)
 
-    if path == '':
-        if os.name == 'nt':
-            entries = [{'current_path': 'Root'}]
+    if '' == path:
+        if 'nt' == os.name:
+            entries = [{'currentPath': '\My Computer'}]
             for letter in getWinDrives():
-                letterPath = '%s:\\' % letter
-                entries.append({'name': letterPath, 'path': letterPath})
+                letter_path = '%s:\\' % letter
+                entries.append({'name': letter_path, 'path': letter_path})
             return entries
         else:
             path = '/'
 
     # fix up the path and find the parent
-    path = os.path.abspath(os.path.normpath(path))
-    parentPath = os.path.dirname(path)
+    path = ek.ek(os.path.abspath, ek.ek(os.path.normpath, path))
+    parent_path = ek.ek(os.path.dirname, path)
 
     # if we're at the root then the next step is the meta-node showing our drive letters
-    if path == parentPath and os.name == 'nt':
-        parentPath = ''
+    if 'nt' == os.name and path == parent_path:
+        parent_path = ''
 
     try:
-        fileList = [{'name': filename, 'path': ek.ek(os.path.join, path, filename)} for filename in
-                    ek.ek(os.listdir, path)]
+        file_list = get_file_list(path, includeFiles)
     except OSError as e:
         logger.log(u'Unable to open %s: %r / %s' % (path, e, e), logger.WARNING)
-        fileList = [{'name': filename, 'path': ek.ek(os.path.join, parentPath, filename)} for filename in
-                    ek.ek(os.listdir, parentPath)]
+        file_list = get_file_list(parent_path, includeFiles)
 
-    if not includeFiles:
-        fileList = filter(lambda entry: ek.ek(os.path.isdir, entry['path']), fileList)
+    file_list = sorted(file_list, lambda x, y: cmp(ek.ek(os.path.basename, x['name']).lower(),
+                                                   ek.ek(os.path.basename, y['path']).lower()))
 
-    # prune out directories to proect the user from doing stupid things (already lower case the dir to reduce calls)
-    hideList = ['boot', 'bootmgr', 'cache', 'msocache', 'recovery', '$recycle.bin', 'recycler',
-                'system volume information', 'temporary internet files']  # windows specific
-    hideList += ['.fseventd', '.spotlight', '.trashes', '.vol', 'cachedmessages', 'caches', 'trash']  # osx specific
-    fileList = filter(lambda entry: entry['name'].lower() not in hideList, fileList)
-
-    fileList = sorted(fileList,
-                      lambda x, y: cmp(os.path.basename(x['name']).lower(), os.path.basename(y['path']).lower()))
-
-    entries = [{'current_path': path}]
-    if includeParent and parentPath != path:
-        entries.append({'name': '..', 'path': parentPath})
-    entries.extend(fileList)
+    entries = [{'currentPath': path}]
+    if includeParent and path != parent_path:
+        entries.append({'name': '..', 'path': parent_path})
+    entries.extend(file_list)
 
     return entries
+
+
+def get_file_list(path, include_files):
+
+    result = []
+
+    hide_names = [
+        # windows specific
+        'boot', 'bootmgr', 'cache', 'config.msi', 'msocache', 'recovery', '$recycle.bin', 'recycler',
+        'system volume information', 'temporary internet files',
+        # osx specific
+        '.fseventd', '.spotlight', '.trashes', '.vol', 'cachedmessages', 'caches', 'trash',
+        # general
+        '.git']
+
+    # filter directories to protect
+    for name in ek.ek(os.listdir, path):
+        if name.lower() not in hide_names:
+            path_file = ek.ek(os.path.join, path, name)
+            is_dir = ek.ek(os.path.isdir, path_file)
+            if include_files or is_dir:
+                result.append({'name': name, 'path': path_file, 'isFile': (1, 0)[is_dir]})
+
+    return result
