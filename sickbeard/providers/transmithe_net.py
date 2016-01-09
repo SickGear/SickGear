@@ -77,7 +77,7 @@ class TransmithenetProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    for item in data_json['response']['results']:
+                    for item in data_json['response'].get('results', []):
                         if self.freeleech and not item.get('isFreeleech'):
                             continue
 
