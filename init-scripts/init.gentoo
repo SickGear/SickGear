@@ -1,0 +1,78 @@
+#!/sbin/runscript
+# Copyright 1999-2013 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+# History
+# -------
+# 1/29 Created          Richard Powell          richard@powell.ws
+
+# You will need to create a configuration file in order for this script
+# to work properly. Please create /etc/conf.d/sickbeard with the following:
+#
+# SICKGEAR_USER=<user you want sickgear to run under>
+# SICKGEAR_GROUP=<group you want sickgear to run under>
+# SICKGEAR_DIR=<path to Sickbeard.py>
+# PATH_TO_PYTHON_2=/usr/bin/python2
+# SICKGEAR_DATADIR=<directory that contains sickbeard.db file>
+# SICKGEAR_CONFDIR=<directory that contains SickGear's config.ini file>
+#
+
+RUNDIR=/var/run/sickgear
+
+depend() {
+    need net
+}
+
+get_pidfile() {
+    # Parse the config.ini file for the value of web_port in the General section
+    eval `sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
+        -e 's/;.*$//' \
+        -e 's/[[:space:]]*$//' \
+        -e 's/^[[:space:]]*//' \
+        -e "s/^\(.*\)=\([^\"']*\)$/\1=\"\2\"/" \
+       <  ${SICKGEAR_CONFDIR}/config.ini \
+        | sed -n -e "/^\[General\]/,/^\s*\[/{/^[^;].*\=.*/p;}"`
+
+    echo "${RUNDIR}/sickgear-${web_port}.pid"
+}
+
+start() {
+    ebegin "Starting SickGear"
+
+    checkpath -q -d -o ${SICKGEAR_USER}:${SICKGEAR_GROUP} -m 0770 "${RUNDIR}"
+
+    start-stop-daemon \
+        --quiet \
+        --start \
+        --user ${SICKGEAR_USER} \
+        --group ${SICKGEAR_GROUP} \
+        --name sickgear \
+        --background \
+        --pidfile $(get_pidfile) \
+        --exec ${PATH_TO_PYTHON_2} \
+        -- \
+        ${SICKGEAR_DIR}/SickBeard.py \
+        -d \
+        --pidfile $(get_pidfile) \
+        --config ${SICKGEAR_CONFDIR}/config.ini \
+        --datadir ${SICKGEAR_DATADIR}
+    eend $?
+}
+
+start_pre() {
+    if [ "$RC_CMD" == "restart" ]; then
+        local pidfile=$(get_pidfile)
+        while [ -e ${pidfile} ]; do
+            sleep 1
+        done
+    fi
+
+    return 0
+}
+
+stop() {
+    local pidfile=$(get_pidfile)
+    local rc
+
+    ebegin "Stopping SickGear"
+}

@@ -43,10 +43,10 @@ class EmailNotifier:
         msg['To'] = to
         return self._sendmail(host, port, smtp_from, use_tls, user, pwd, [to], msg, True)
 
-    def notify_snatch(self, ep_name, title="Snatched:"):
+    def notify_snatch(self, ep_name, title='Snatched:'):
         """
         Send a notification that an episode was snatched
-        
+
         ep_name: The name of the episode that was snatched
         title: The title of the notification (optional)
         """
@@ -62,8 +62,8 @@ class EmailNotifier:
                     msg = MIMEMultipart('alternative')
                     msg.attach(MIMEText(
                         "<body style='font-family:Helvetica, Arial, sans-serif;'><h3>SickGear Notification - Snatched</h3>\n<p>Show: <b>" + re.search(
-                            "(.+?) -.+", ep_name).group(1) + "</b></p>\n<p>Episode: <b>" + re.search(
-                            ".+ - (.+?-.+) -.+", ep_name).group(
+                            '(.+?) -.+', ep_name).group(1) + '</b></p>\n<p>Episode: <b>' + re.search(
+                            '.+ - (.+?-.+) -.+', ep_name).group(
                             1) + "</b></p>\n\n<footer style='margin-top: 2.5em; padding: .7em 0; color: #777; border-top: #BBB solid 1px;'>Powered by SickGear.</footer></body>",
                         'html'))
                 except:
@@ -74,14 +74,14 @@ class EmailNotifier:
                 msg['To'] = ','.join(to)
                 if self._sendmail(sickbeard.EMAIL_HOST, sickbeard.EMAIL_PORT, sickbeard.EMAIL_FROM, sickbeard.EMAIL_TLS,
                                   sickbeard.EMAIL_USER, sickbeard.EMAIL_PASSWORD, to, msg):
-                    logger.log("Snatch notification sent to [%s] for '%s'" % (to, ep_name), logger.DEBUG)
+                    logger.log('Snatch notification sent to [%s] for "%s"' % (to, ep_name), logger.DEBUG)
                 else:
-                    logger.log("Snatch notification ERROR: %s" % self.last_err, logger.ERROR)
+                    logger.log('Snatch notification ERROR: %s' % self.last_err, logger.ERROR)
 
-    def notify_download(self, ep_name, title="Completed:"):
+    def notify_download(self, ep_name, title='Completed:'):
         """
         Send a notification that an episode was downloaded
-        
+
         ep_name: The name of the episode that was downloaded
         title: The title of the notification (optional)
         """
@@ -97,8 +97,8 @@ class EmailNotifier:
                     msg = MIMEMultipart('alternative')
                     msg.attach(MIMEText(
                         "<body style='font-family:Helvetica, Arial, sans-serif;'><h3>SickGear Notification - Downloaded</h3>\n<p>Show: <b>" + re.search(
-                            "(.+?) -.+", ep_name).group(1) + "</b></p>\n<p>Episode: <b>" + re.search(
-                            ".+ - (.+?-.+) -.+", ep_name).group(
+                            '(.+?) -.+', ep_name).group(1) + '</b></p>\n<p>Episode: <b>' + re.search(
+                            '.+ - (.+?-.+) -.+', ep_name).group(
                             1) + "</b></p>\n\n<footer style='margin-top: 2.5em; padding: .7em 0; color: #777; border-top: #BBB solid 1px;'>Powered by SickGear.</footer></body>",
                         'html'))
                 except:
@@ -109,14 +109,14 @@ class EmailNotifier:
                 msg['To'] = ','.join(to)
                 if self._sendmail(sickbeard.EMAIL_HOST, sickbeard.EMAIL_PORT, sickbeard.EMAIL_FROM, sickbeard.EMAIL_TLS,
                                   sickbeard.EMAIL_USER, sickbeard.EMAIL_PASSWORD, to, msg):
-                    logger.log("Download notification sent to [%s] for '%s'" % (to, ep_name), logger.DEBUG)
+                    logger.log('Download notification sent to [%s] for "%s"' % (to, ep_name), logger.DEBUG)
                 else:
-                    logger.log("Download notification ERROR: %s" % self.last_err, logger.ERROR)
+                    logger.log('Download notification ERROR: %s' % self.last_err, logger.ERROR)
 
-    def notify_subtitle_download(self, ep_name, lang, title="Downloaded subtitle:"):
+    def notify_subtitle_download(self, ep_name, lang, title='Downloaded subtitle:'):
         """
         Send a notification that an subtitle was downloaded
-        
+
         ep_name: The name of the episode that was downloaded
         lang: Subtitle language wanted
         """
@@ -132,24 +132,24 @@ class EmailNotifier:
                     msg = MIMEMultipart('alternative')
                     msg.attach(MIMEText(
                         "<body style='font-family:Helvetica, Arial, sans-serif;'><h3>SickGear Notification - Subtitle Downloaded</h3>\n<p>Show: <b>" + re.search(
-                            "(.+?) -.+", ep_name).group(1) + "</b></p>\n<p>Episode: <b>" + re.search(
-                            ".+ - (.+?-.+) -.+", ep_name).group(
-                            1) + "</b></p>\n<p>Language: <b>" + lang + "</b></p>\n\n<footer style='margin-top: 2.5em; padding: .7em 0; color: #777; border-top: #BBB solid 1px;'>Powered by SickGear.</footer></body>",
+                            '(.+?) -.+', ep_name).group(1) + '</b></p>\n<p>Episode: <b>' + re.search(
+                            '.+ - (.+?-.+) -.+', ep_name).group(
+                            1) + '</b></p>\n<p>Language: <b>' + lang + "</b></p>\n\n<footer style='margin-top: 2.5em; padding: .7em 0; color: #777; border-top: #BBB solid 1px;'>Powered by SickGear.</footer></body>",
                         'html'))
                 except:
-                    msg = MIMEText(ep_name + ": " + lang)
+                    msg = MIMEText(ep_name + ': ' + lang)
 
                 msg['Subject'] = lang + ' Subtitle Downloaded: ' + ep_name
                 msg['From'] = sickbeard.EMAIL_FROM
                 msg['To'] = ','.join(to)
                 if self._sendmail(sickbeard.EMAIL_HOST, sickbeard.EMAIL_PORT, sickbeard.EMAIL_FROM, sickbeard.EMAIL_TLS,
                                   sickbeard.EMAIL_USER, sickbeard.EMAIL_PASSWORD, to, msg):
-                    logger.log("Download notification sent to [%s] for '%s'" % (to, ep_name), logger.DEBUG)
+                    logger.log('Download notification sent to [%s] for "%s"' % (to, ep_name), logger.DEBUG)
                 else:
-                    logger.log("Download notification ERROR: %s" % self.last_err, logger.ERROR)
+                    logger.log('Download notification ERROR: %s' % self.last_err, logger.ERROR)
 
 
-    def notify_git_update(self, new_version="??"):
+    def notify_git_update(self, new_version='??'):
         pass
 
     def _generate_recepients(self, show):
@@ -163,7 +163,7 @@ class EmailNotifier:
         # Grab the recipients for the show
         myDB = db.DBConnection()
         for s in show:
-            for subs in myDB.select("SELECT notify_list FROM tv_shows WHERE show_name = ?", (s,)):
+            for subs in myDB.select('SELECT notify_list FROM tv_shows WHERE show_name = ?', (s,)):
                 if subs['notify_list']:
                     for addr in subs['notify_list'].split(','):
                         if (len(addr.strip()) > 0):
@@ -176,10 +176,11 @@ class EmailNotifier:
     def _sendmail(self, host, port, smtp_from, use_tls, user, pwd, to, msg, smtpDebug=False):
         logger.log('HOST: %s; PORT: %s; FROM: %s, TLS: %s, USER: %s, PWD: %s, TO: %s' % (
             host, port, smtp_from, use_tls, user, pwd, to), logger.DEBUG)
-        srv = smtplib.SMTP(host, int(port))
-        if smtpDebug:
-            srv.set_debuglevel(1)
+
         try:
+            srv = smtplib.SMTP(host, int(port))
+            if smtpDebug:
+                srv.set_debuglevel(1)
             if (use_tls == '1' or use_tls == True) or (len(user) > 0 and len(pwd) > 0):
                 srv.ehlo()
                 logger.log('Sent initial EHLO command!', logger.DEBUG)
@@ -199,10 +200,10 @@ class EmailNotifier:
     def _parseEp(self, ep_name):
         ep_name = ep_name.encode('utf-8', 'replace')
 
-        sep = " - "
+        sep = ' - '
         titles = ep_name.split(sep)
         titles.sort(key=len, reverse=True)
-        logger.log("TITLES: %s" % titles, logger.DEBUG)
+        logger.log('TITLES: %s' % titles, logger.DEBUG)
         return titles
 
 

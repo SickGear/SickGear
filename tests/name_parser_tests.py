@@ -146,7 +146,7 @@ simple_test_cases = {
         '[ACX]Black Lagoon - 02v2 - Mangrove Heaven [SaintDeath] [7481F875]': parser.ParseResult(None, 'Black Lagoon', None, [], 'SaintDeath', 'ACX', None, [2]),
     },
 
-    "anime_standard_round": {
+    'anime_standard_round': {
         '[SGKK] Bleach - 312v2 (1280x720 h264 AAC) [F501C9BE]': parser.ParseResult(None, 'Bleach', None, [], '1280x720 h264 AAC', 'SGKK', None, [312]),
     },
 
@@ -160,7 +160,7 @@ simple_test_cases = {
         '[Ayako] Infinite Stratos - IS - 07v2 [H264][720p][44419534]': parser.ParseResult(None, 'Infinite Stratos', None, [], '720p', 'Ayako', None, [7]),
         '[Ayako-Shikkaku] Oniichan no Koto Nanka Zenzen Suki Janain Dakara ne - 10 [LQ][h264][720p] [8853B21C]': parser.ParseResult(None, 'Oniichan no Koto Nanka Zenzen Suki Janain Dakara ne', None, [], '720p', 'Ayako-Shikkaku', None, [10]),
         '[Tsuki] Fairy Tail - 72 [XviD][C4807111]': parser.ParseResult(None, 'Fairy Tail', None, [], 'C4807111', 'Tsuki', None, [72]),
-        'Bubblegum Crisis Tokyo 2040 - 25 [aX] [F4E2E558]': parser.ParseResult(None, 'Bubblegum Crisis Tokyo 2040', None, [], "aX", None, None, [25]),
+        'Bubblegum Crisis Tokyo 2040 - 25 [aX] [F4E2E558]': parser.ParseResult(None, 'Bubblegum Crisis Tokyo 2040', None, [], 'aX', None, None, [25]),
 
     },
 

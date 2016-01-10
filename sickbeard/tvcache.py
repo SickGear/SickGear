@@ -50,7 +50,7 @@ class TVCache:
         self.provider = provider
         self.providerID = self.provider.get_id()
         self.providerDB = None
-        self.minTime = 10
+        self.update_freq = 10
 
     def get_db(self):
         return CacheDBConnection(self.providerID)
@@ -60,11 +60,11 @@ class TVCache:
             myDB = self.get_db()
             myDB.action('DELETE FROM provider_cache WHERE provider = ?', [self.providerID])
 
-    def _get_title_and_url(self, item):
+    def _title_and_url(self, item):
         # override this in the provider if recent search has a different data layout to backlog searches
-        return self.provider._get_title_and_url(item)
+        return self.provider._title_and_url(item)
 
-    def _getRSSData(self):
+    def _cache_data(self):
         data = None
         return data
 
@@ -83,7 +83,7 @@ class TVCache:
 
         if self.shouldUpdate():
             # as long as the http request worked we count this as an update
-            data = self._getRSSData()
+            data = self._cache_data()
             if not data:
                 return []
 
@@ -96,7 +96,7 @@ class TVCache:
             # parse data
             cl = []
             for item in data:
-                title, url = self._get_title_and_url(item)
+                title, url = self._title_and_url(item)
                 ci = self._parseItem(title, url)
                 if ci is not None:
                     cl.append(ci)
@@ -182,9 +182,9 @@ class TVCache:
 
     def shouldUpdate(self):
         # if we've updated recently then skip the update
-        if datetime.datetime.today() - self.lastUpdate < datetime.timedelta(minutes=self.minTime):
+        if datetime.datetime.today() - self.lastUpdate < datetime.timedelta(minutes=self.update_freq):
             logger.log(u'Last update was too soon, using old cache: today()-' + str(self.lastUpdate) + '<' + str(
-                datetime.timedelta(minutes=self.minTime)), logger.DEBUG)
+                datetime.timedelta(minutes=self.update_freq)), logger.DEBUG)
             return False
 
         return True
@@ -207,13 +207,13 @@ class TVCache:
                 showObj = helpers.findCertainShow(sickbeard.showList, indexer_id)
 
             try:
-                myParser = NameParser(showObj=showObj, convert=True)
-                parse_result = myParser.parse(name)
+                np = NameParser(showObj=showObj, convert=True)
+                parse_result = np.parse(name)
             except InvalidNameException:
                 logger.log(u'Unable to parse the filename ' + name + ' into a valid episode', logger.DEBUG)
                 return None
             except InvalidShowException:
-                logger.log(u'Unable to parse the filename ' + name + ' into a valid show', logger.DEBUG)
+                logger.log(u'No show in the db matches filename ' + name + ' not cached', logger.DEBUG)
                 return None
 
             if not parse_result or not parse_result.series_name:
@@ -255,11 +255,11 @@ class TVCache:
         else:
             return []
 
-    def listPropers(self, date=None, delimiter='.'):
+    def listPropers(self, date=None):
         myDB = self.get_db()
         sql = "SELECT * FROM provider_cache WHERE name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%' AND provider = ?"
 
-        if date != None:
+        if date:
             sql += ' AND time >= ' + str(int(time.mktime(date.timetuple())))
 
         return filter(lambda x: x['indexerid'] != 0, myDB.select(sql, [self.providerID]))
@@ -291,7 +291,7 @@ class TVCache:
         for curResult in sqlResults:
 
             # skip non-tv crap
-            if not show_name_helpers.filterBadReleases(curResult['name'], parse=False):
+            if not show_name_helpers.pass_wordlist_checks(curResult['name'], parse=False):
                 continue
 
             # get the show object, or if it's not one of our shows then ignore it

@@ -91,7 +91,7 @@ class Quality:
     RAWHDTV = 1 << 3  # 8  -- 720p/1080i mpeg2 (trollhd releases)
     FULLHDTV = 1 << 4  # 16 -- 1080p HDTV (QCF releases)
     HDWEBDL = 1 << 5  # 32
-    FULLHDWEBDL = 1 << 6  # 64 -- 1080p web-dl                        
+    FULLHDWEBDL = 1 << 6  # 64 -- 1080p web-dl
     HDBLURAY = 1 << 7  # 128
     FULLHDBLURAY = 1 << 8  # 256
 
@@ -171,7 +171,7 @@ class Quality:
     @staticmethod
     def sceneQuality(name, anime=False):
         """
-        Return The quality from the scene episode File 
+        Return The quality from the scene episode File
         """
 
         name = os.path.basename(name)
@@ -205,15 +205,15 @@ class Quality:
             else:
                 return Quality.UNKNOWN
 
-        if checkName(['(pdtv|hdtv|dsr|tvrip).((aac|ac3|dd).?\d\.?\d.)*(xvid|x264|h.?264)'], all) and not checkName(['(720|1080)[pi]'], all) \
+        if checkName(['(pdtv|hdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|x264|h.?264))'], all) and not checkName(['(720|1080|2160)[pi]'], all) \
                 and not checkName(['hr.ws.pdtv.(x264|h.?264)'], any):
             return Quality.SDTV
-        elif checkName(['web.?dl|web.?rip', 'xvid|x264|h.?264'], all) and not checkName(['(720|1080)[pi]'], all):
+        elif checkName(['web.?dl|web.?rip', 'xvid|x264|h.?264'], all) and not checkName(['(720|1080|2160)[pi]'], all):
             return Quality.SDTV
-        elif checkName(['(dvd.?rip|b[r|d]rip)(.ws)?(.(xvid|divx|x264|h.?264))?'], any) and not checkName(['(720|1080)[pi]'], all):
+        elif checkName(['(dvd.?rip|b[r|d]rip)(.ws)?(.(xvid|divx|x264|h.?264))?'], any) and not checkName(['(720|1080|2160)[pi]'], all):
             return Quality.SDDVD
         elif checkName(['720p', 'hdtv', 'x264|h.?264'], all) or checkName(['hr.ws.pdtv.(x264|h.?264)'], any) \
-                and not checkName(['(1080)[pi]'], all):
+                and not checkName(['(1080|2160)[pi]'], all):
             return Quality.HDTV
         elif checkName(['720p|1080i', 'hdtv', 'mpeg-?2'], all) or checkName(['1080[pi].hdtv', 'h.?264'], all):
             return Quality.RAWHDTV
@@ -229,6 +229,45 @@ class Quality:
             return Quality.FULLHDBLURAY
         else:
             return Quality.UNKNOWN
+
+    @staticmethod
+    def fileQuality(filename):
+
+        from sickbeard import encodingKludge as ek
+        if ek.ek(os.path.isfile, filename):
+
+            from hachoir_parser import createParser
+            from hachoir_metadata import extractMetadata
+            from hachoir_core.stream import InputStreamError
+
+            parser = height = None
+            try:
+                parser = createParser(filename)
+            except InputStreamError as e:
+                logger.log('Hachoir can\'t parse file content quality because it found error: %s' % e.text, logger.WARNING)
+
+            if parser:
+                extract = extractMetadata(parser)
+                if extract:
+                    try:
+                        height = extract.get('height')
+                    except (AttributeError, ValueError):
+                        try:
+                            for metadata in extract.iterGroups():
+                                if re.search('(?i)video', metadata.header):
+                                    height = metadata.get('height')
+                                    break
+                        except (AttributeError, ValueError):
+                            pass
+
+                    parser.stream._input.close()
+
+                    tolerance = lambda value, percent: int(round(value - (value * percent / 100.0)))
+                    if height >= tolerance(352, 5):
+                        if height <= tolerance(720, 2):
+                            return Quality.SDTV
+                        return (Quality.HDTV, Quality.FULLHDTV)[height >= tolerance(1080, 1)]
+        return Quality.UNKNOWN
 
     @staticmethod
     def assumeQuality(name):
@@ -262,8 +301,17 @@ class Quality:
     @staticmethod
     def statusFromName(name, assume=True, anime=False):
         quality = Quality.nameQuality(name, anime)
-        if assume and quality == Quality.UNKNOWN:
+        if assume and Quality.UNKNOWN == quality:
             quality = Quality.assumeQuality(name)
+        return Quality.compositeStatus(DOWNLOADED, quality)
+
+    @staticmethod
+    def statusFromNameOrFile(file_path, assume=True, anime=False):
+        quality = Quality.nameQuality(file_path, anime)
+        if Quality.UNKNOWN == quality:
+            quality = Quality.fileQuality(file_path)
+            if assume and Quality.UNKNOWN == quality:
+                quality = Quality.assumeQuality(file_path)
         return Quality.compositeStatus(DOWNLOADED, quality)
 
     DOWNLOADED = None
@@ -289,7 +337,7 @@ ANY = Quality.combineQualities(
     [Quality.SDTV, Quality.SDDVD, Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
      Quality.HDBLURAY, Quality.FULLHDBLURAY, Quality.UNKNOWN], [])  # SD + HD
 
-# legacy template, cant remove due to reference in mainDB upgrade?                                                                                                                                        
+# legacy template, cant remove due to reference in mainDB upgrade?
 BEST = Quality.combineQualities([Quality.SDTV, Quality.HDTV, Quality.HDWEBDL], [Quality.HDTV])
 
 qualityPresets = (SD, HD, HD720p, HD1080p, ANY)

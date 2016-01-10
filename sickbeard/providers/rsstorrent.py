@@ -1,4 +1,4 @@
-# Author: Mr_Orange
+# coding=utf-8
 #
 # This file is part of SickGear.
 #
@@ -19,8 +19,8 @@ import re
 
 from . import generic
 from sickbeard import logger, tvcache
-from sickbeard.rssfeeds import RSSFeeds
 from sickbeard.exceptions import ex
+from sickbeard.rssfeeds import RSSFeeds
 from lib.bencode import bdecode
 
 
@@ -55,7 +55,7 @@ class TorrentRssProvider(generic.TorrentProvider):
                                             self.enable_recentsearch,
                                             self.enable_backlog)
 
-    def _get_title_and_url(self, item):
+    def _title_and_url(self, item):
 
         title, url = None, None
 
@@ -86,10 +86,10 @@ class TorrentRssProvider(generic.TorrentProvider):
             return success, err_msg
 
         try:
-            items = self.get_cache_data()
+            items = self.cache_data()
 
             for item in items:
-                title, url = self._get_title_and_url(item)
+                title, url = self._title_and_url(item)
                 if not (title and url):
                     continue
                 if url.startswith('magnet:'):
@@ -111,7 +111,7 @@ class TorrentRssProvider(generic.TorrentProvider):
         except Exception as e:
             return False, 'Error when trying to load RSS: ' + ex(e)
 
-    def get_cache_data(self):
+    def cache_data(self):
 
         logger.log(u'TorrentRssCache cache update URL: ' + self.url, logger.DEBUG)
 
@@ -125,8 +125,8 @@ class TorrentRssCache(tvcache.TVCache):
     def __init__(self, provider):
         tvcache.TVCache.__init__(self, provider)
 
-        self.minTime = 15
+        self.update_freq = 15
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()

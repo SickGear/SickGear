@@ -16,7 +16,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import time
 
 from . import generic
@@ -32,13 +31,12 @@ class BeyondHDProvider(generic.TorrentProvider):
 
         self.url_base = 'https://beyondhd.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'cache': self.url_base + 'api_tv.php?passkey=%s&cats=%s',
-                     'search': '&search=%s',
-                     }
+                     'browse': self.url_base + 'api_tv.php?passkey=%s&cats=%s',
+                     'search': '&search=%s'}
 
         self.categories = {'Season': '89',
-                           'Episode': '40,44,48,46,43,45',
-                           'Cache': '40,44,48,89,46,43,45'}
+                           'Episode': '40,44,48,43,45',
+                           'Cache': '40,44,48,89,43,45'}
 
         self.url = self.urls['config_provider_home_uri']
 
@@ -53,54 +51,54 @@ class BeyondHDProvider(generic.TorrentProvider):
         logger.log(u'Incorrect authentication credentials for %s : %s' % (self.name, data_json['error']), logger.DEBUG)
         raise AuthException('Authentication credentials for %s are incorrect, check your config' % self.name)
 
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
         if not self._check_auth():
             return results
 
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
+
         for mode in search_params.keys():
-            if 'Cache' != mode:
+            if mode in ['Season', 'Episode']:
                 show_type = self.show.air_by_date and 'Air By Date' \
-                    or self.show.sports and 'Sports' or self.show.anime and 'Anime' or None
+                    or self.show.is_sports and 'Sports' or self.show.is_anime and 'Anime' or None
                 if show_type:
                     logger.log(u'Provider does not carry shows of type: [%s], skipping' % show_type, logger.DEBUG)
                     return results
 
+            mode_cats = (mode, 'Cache')['Propers' == mode]
             for search_string in search_params[mode]:
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
-
-                search_url = self.urls['cache'] % (self.passkey, self.categories[mode])
+                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_url = self.urls['browse'] % (self.passkey, self.categories[mode_cats])
                 if 'Cache' != mode:
                     search_url += self.urls['search'] % re.sub('[\.\s]+', ' ', search_string)
 
                 data_json = self.get_url(search_url, json=True)
 
-                cnt = len(results)
+                cnt = len(items[mode])
                 if data_json and 'results' in data_json and self._check_auth_from_data(data_json):
                     for item in data_json['results']:
 
-                        seeders, leechers = item['seeders'], item['leechers']
-                        if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                        seeders, leechers = item.get('seeders', 0), item.get('leechers', 0)
+                        if self._peers_fail(mode, seeders, leechers):
                             continue
-                        title, download_url = item['file'], item['get']
+                        title, download_url = item.get('file'), item.get('get')
                         if title and download_url:
-                            results.append((title, download_url, seeders))
+                            items[mode].append((title, download_url, seeders, self._bytesizer(item.get('size'))))
 
-                self._log_result(mode, len(results) - cnt, search_url)
                 time.sleep(1.1)
-            # Sort items by seeders
-            results.sort(key=lambda tup: tup[2], reverse=True)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
+
+            self._sort_seeders(mode, items)
+
+            results = list(set(results + items[mode]))
+
         return results
 
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, scene=False, use_or=False)
-
-    def find_propers(self, search_date=datetime.datetime.today()):
-
-        return self._find_propers(search_date, ['proper', 'repack'])
+        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
 
 class BeyondHDCache(tvcache.TVCache):
@@ -108,11 +106,9 @@ class BeyondHDCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 10  # cache update frequency
+    def _cache_data(self):
 
-    def _getRSSData(self):
-
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = BeyondHDProvider()

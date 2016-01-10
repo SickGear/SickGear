@@ -13,44 +13,14 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
-<script type="text/javascript" charset="utf-8">
-<!--
-\$(document).ready(function(){
-
-	\$.getJSON('$sbRoot/home/addShows/getIndexerLanguages', {}, function(data) {
-		var resultStr = '';
-
-		if (data.results.length == 0) {
-			flag = ' class="flag" style="background-image:url($sbRoot/images/flags/${show.lang}.png)"';
-			resultStr = '<option value="$show.lang" selected="selected" + flag>$show.lang</option>';
-		} else {
-			var current_lang_added = false;
-			\$.each(data.results, function(index, obj) {
-
-				if (obj == '$show.lang') {
-					selected = ' selected="selected"';
-					current_lang_added = true;
-				}
-				else {
-					selected = '';
-				}
-
-				flag = ' class="flag" style="background-image:url($sbRoot/images/flags/' + obj + '.png);"';
-				resultStr += '<option value="' + obj + '"' + selected + flag + '>' + obj + '</option>';
-			});
-
-			if (!current_lang_added)
-				resultStr += '<option value="$show.lang" selected="selected">$show.lang</option>';
-
-		}
-		\$('#indexerLangSelectEdit').html(resultStr)
-
-	});
-});
-//-->
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/editShow.js?v=$sbPID"></script>
+<script>
+	var config = {
+		show_lang: "$show.lang",
+		show_isanime: #echo ['!1','!0'][$show.is_anime]#
+	}
 </script>
-
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else
@@ -99,15 +69,26 @@
 				<span class="component-title">Scene exception</span>
 				<span class="component-desc">
 					<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200">
+					<select id="SceneNameSeason" class="form-control form-control-inline input-sm input100" style="#echo ('visibility:hidden','float:left')[$show.anime]#">
+						<option value="-1">Series</option>
+#if $show.anime:
+	#for $season in $seasonResults:
+						<option value="$season[0]">Season $season[0]</option>
+	#end for
+#end if
+					</select>
 					<input class="btn btn-inline" type="button" value="Add" id="addSceneName">
-					<p class="clear-left note">add alternative release names found on search providers for <b class="boldest grey-text">$show.name</b></p>
+#set $addSceneNameText = ('', ' or seasons')[$show.anime]
+					<p class="clear-left note">add alternative release names$addSceneNameText found on search providers for <b class="boldest grey-text">$show.name</b></p>
 				</span>
 				<span class="component-desc">
 					<div id="SceneException">
 						<h4 class="grey-text">Exceptions list (multi-selectable)</h4>
-						<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="input200" style="min-height:90px; float:left" >
-#for $cur_exception in $show.exceptions:
-							<option value="$cur_exception">$cur_exception</option>
+						<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="input350" style="min-height:90px; float:left" >
+#for $cur_exception_season in $show.exceptions:
+	#for $cur_exception in $show.exceptions[$cur_exception_season]:
+							<option value="$cur_exception_season|$cur_exception">S#echo ($cur_exception_season, '*')[$cur_exception_season == -1]#: $cur_exception</option>
+	#end for
 #end for
 						</select>
 						<span><p class="note">this list overrides the original name<br />to search, it doesn't append to it</p></span>
@@ -125,8 +106,8 @@
 				<span class="component-title">Ignore result with any word</span>
 				<span class="component-desc">
 					<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="$show.rls_ignore_words" class="form-control form-control-inline input-sm input350">
-					<p>e.g. [word1,word2, ... ,word_n]</p>
-					<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words</p>
+					<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
+					<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words or regular expressions</p>
 				</span>
 			</label>
 		</div>
@@ -136,8 +117,8 @@
 				<span class="component-title">Require at least one word</span>
 				<span class="component-desc">
 					<input type="text" name="rls_require_words" id="rls_require_words" value="$show.rls_require_words" class="form-control form-control-inline input-sm input350">
-					<p>e.g. [word1,word2, ... ,word_n]</p>
-					<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words</p>
+					<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
+					<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words or regular expressions</p>
 				</span>
 			</label>
 		</div>
@@ -186,7 +167,7 @@
 				<span class="component-title">Scene numbering</span>
 				<span class="component-desc">
 					<input type="checkbox" name="scene" id="scene"#if $show.scene == 1 then $html_checked else ''#>
-					<p>search for episodes that are numbered by scene groups instead of by the TV network</p>
+					<p>search for episodes numbered by scene groups instead of by the TV network <em class="grey-text">(#if $show_has_scene_map then 'scene/manual numbers' else 'manual numbers only '# available)</em></p>
 				</span>
 			</label>
 		</div>
@@ -248,73 +229,10 @@
 #if $show.is_anime:
     #import sickbeard.blackandwhitelist
     #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
-		<script type="text/javascript" src="$sbRoot/js/blackwhite.js?$sbPID"></script>
+		<script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
 #end if
 		<input type="submit" id="submit" value="Submit" class="btn btn-primary" />
 	</form>
-
-<script type="text/javascript" charset="utf-8">
-<!--
-	var all_exceptions = new Array;
-
-	jQuery('#location').fileBrowser({ title: 'Select Show Location' });
-
-	\$('#submit').click(function(){
-		all_exceptions = []
-
-		\$('#exceptions_list option').each  ( function() {
-			all_exceptions.push( \$(this).val() );
-		});
-
-		\$('#exceptions_list').val(all_exceptions);
-#if $show.is_anime:
-		generate_bwlist()
-#end if
-	});
-
-	\$('#addSceneName').click(function() {
-		var scene_ex = \$('#SceneName').val()
-		var option = \$('<option>')
-		all_exceptions = []
-			
-		\$('#exceptions_list option').each  ( function() {
-		   all_exceptions.push( \$(this).val() )
-		});
-
-		\$('#SceneName').val('')
-
-		if (jQuery.inArray(scene_ex, all_exceptions) > -1 || (scene_ex == ''))
-			return
-
-		\$('#SceneException').show()
-
-		option.attr('value',scene_ex)
-		option.html(scene_ex)
-		return option.appendTo('#exceptions_list');
-	});
-
-	\$('#removeSceneName').click(function() {
-		\$('#exceptions_list option:selected').remove();
-		
-		\$(this).toggle_SceneException()
-	});
-
-	$.fn.toggle_SceneException = function() {
-		all_exceptions = []
-
-		\$('#exceptions_list option').each  ( function() {
-			all_exceptions.push( \$(this).val() );
-		});
-
-		if ('' == all_exceptions)
-			\$('#SceneException').hide();
-		else
-			\$('#SceneException').show();
-	}
-
-	\$(this).toggle_SceneException();
-//-->
-</script>
 </div>
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

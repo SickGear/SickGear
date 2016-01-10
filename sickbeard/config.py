@@ -22,8 +22,10 @@ import re
 import urlparse
 
 import sickbeard
+import sickbeard.providers
 from sickbeard import encodingKludge as ek
-from sickbeard import helpers, logger, naming, db, providers
+from sickbeard import helpers, logger, naming, db
+from lib.libtrakt import TraktAPI
 
 
 naming_ep_type = ('%(seasonnumber)dx%(episodenumber)02d',
@@ -211,15 +213,15 @@ def change_USE_TRAKT(use_trakt):
         return
 
     sickbeard.USE_TRAKT = use_trakt
-    if sickbeard.USE_TRAKT:
-        sickbeard.traktCheckerScheduler.start()
-    else:
-        sickbeard.traktCheckerScheduler.stop.set()
-        logger.log(u'Waiting for the TRAKTCHECKER thread to exit')
-        try:
-            sickbeard.traktCheckerScheduler.join(10)
-        except:
-            pass
+    # if sickbeard.USE_TRAKT:
+    #     sickbeard.traktCheckerScheduler.start()
+    # else:
+    #     sickbeard.traktCheckerScheduler.stop.set()
+    #     logger.log(u'Waiting for the TRAKTCHECKER thread to exit')
+    #     try:
+    #         sickbeard.traktCheckerScheduler.join(10)
+    #     except:
+    #         pass
 
 
 def change_USE_SUBTITLES(use_subtitles):
@@ -444,7 +446,9 @@ class ConfigMigrator():
                                 9: 'Rename pushbullet variables',
                                 10: 'Reset backlog frequency to default',
                                 11: 'Migrate anime split view to new layout',
-                                12: 'Add "hevc" and some non-english languages to ignore words if not found'}
+                                12: 'Add "hevc" and some non-english languages to ignore words if not found',
+                                13: 'Change default dereferrer url to blank',
+                                14: 'Convert Trakt to multi-account'}
 
     def migrate_config(self):
         """ Calls each successive migration until the config is the same version as SG expects """
@@ -599,8 +603,9 @@ class ConfigMigrator():
         Reads in the old naming settings from your config and generates a new config template from them.
         """
         # get the old settings from the file and store them in the new variable names
-        sickbeard.OMGWTFNZBS_USERNAME = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_uid', '')
-        sickbeard.OMGWTFNZBS_APIKEY = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_key', '')
+        for prov in [curProvider for curProvider in sickbeard.providers.sortedProviderList() if curProvider.name == 'omgwtfnzbs']:
+            prov.username = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_uid', '')
+            prov.api_key = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_key', '')
 
     # Migration v4: Add default newznab cat_ids
     def _migrate_v4(self):
@@ -718,7 +723,7 @@ class ConfigMigrator():
         if sickbeard.RECENTSEARCH_FREQUENCY < sickbeard.MIN_RECENTSEARCH_FREQUENCY:
             sickbeard.RECENTSEARCH_FREQUENCY = sickbeard.MIN_RECENTSEARCH_FREQUENCY
 
-        for curProvider in providers.sortedProviderList():
+        for curProvider in sickbeard.providers.sortedProviderList():
             if hasattr(curProvider, 'enable_recentsearch'):
                 curProvider.enable_recentsearch = bool(check_setting_int(
                     self.config_obj, curProvider.get_id().upper(), curProvider.get_id() + '_enable_dailysearch', 1))
@@ -768,3 +773,14 @@ class ConfigMigrator():
                 new_list += [new_word]
 
         sickbeard.IGNORE_WORDS = ', '.join(sorted(new_list))
+
+    def _migrate_v13(self):
+        # change dereferrer.org urls to blank, but leave any other url untouched
+        if sickbeard.ANON_REDIRECT == 'http://dereferer.org/?':
+            sickbeard.ANON_REDIRECT = ''
+
+    def _migrate_v14(self):
+        old_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_token', '')
+        old_refresh_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_refresh_token', '')
+        if old_token and old_refresh_token:
+            TraktAPI.add_account(old_token, old_refresh_token, None)

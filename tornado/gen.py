@@ -80,8 +80,8 @@ import collections
 import functools
 import itertools
 import sys
+import textwrap
 import types
-import weakref
 
 from tornado.concurrent import Future, TracebackFuture, is_future, chain_future
 from tornado.ioloop import IOLoop
@@ -96,6 +96,22 @@ except ImportError as e:
         from singledispatch import singledispatch  # backport
     except ImportError:
         singledispatch = None
+
+
+try:
+    from collections.abc import Generator as GeneratorType  # py35+
+except ImportError:
+    from types import GeneratorType
+
+try:
+    from inspect import isawaitable  # py35+
+except ImportError:
+    def isawaitable(x): return False
+
+try:
+    import builtins  # py3
+except ImportError:
+    import __builtin__ as builtins
 
 
 class KeyReuseError(Exception):
@@ -202,6 +218,10 @@ def _make_coroutine_wrapper(func, replace_callback):
     argument, so we cannot simply implement ``@engine`` in terms of
     ``@coroutine``.
     """
+    # On Python 3.5, set the coroutine flag on our generator, to allow it
+    # to be used with 'await'.
+    if hasattr(types, 'coroutine'):
+        func = types.coroutine(func)
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         future = TracebackFuture()
@@ -219,7 +239,7 @@ def _make_coroutine_wrapper(func, replace_callback):
             future.set_exc_info(sys.exc_info())
             return future
         else:
-            if isinstance(result, types.GeneratorType):
+            if isinstance(result, GeneratorType):
                 # Inline the first iteration of Runner.run.  This lets us
                 # avoid the cost of creating a Runner when the coroutine
                 # never actually yields, which in turn allows us to
@@ -318,7 +338,22 @@ class WaitIterator(object):
     arguments were used in the construction of the `WaitIterator`,
     ``current_index`` will use the corresponding keyword).
 
+    On Python 3.5, `WaitIterator` implements the async iterator
+    protocol, so it can be used with the ``async for`` statement (note
+    that in this version the entire iteration is aborted if any value
+    raises an exception, while the previous example can continue past
+    individual errors)::
+
+      async for result in gen.WaitIterator(future1, future2):
+          print("Result {} received from {} at {}".format(
+              result, wait_iterator.current_future,
+              wait_iterator.current_index))
+
     .. versionadded:: 4.1
+
+    .. versionchanged:: 4.3
+       Added ``async for`` support in Python 3.5.
+
     """
     def __init__(self, *args, **kwargs):
         if args and kwargs:
@@ -374,6 +409,16 @@ class WaitIterator(object):
 
         self.current_future = done
         self.current_index = self._unfinished.pop(done)
+
+    @coroutine
+    def __aiter__(self):
+        raise Return(self)
+
+    def __anext__(self):
+        if self.done():
+            # Lookup by name to silence pyflakes on older versions.
+            raise getattr(builtins, 'StopAsyncIteration')()
+        return self.next()
 
 
 class YieldPoint(object):
@@ -609,11 +654,12 @@ class Multi(YieldPoint):
 def multi_future(children, quiet_exceptions=()):
     """Wait for multiple asynchronous futures in parallel.
 
-    Takes a list of ``Futures`` (but *not* other ``YieldPoints``) and returns
-    a new Future that resolves when all the other Futures are done.
-    If all the ``Futures`` succeeded, the returned Future's result is a list
-    of their results.  If any failed, the returned Future raises the exception
-    of the first one to fail.
+    Takes a list of ``Futures`` or other yieldable objects (with the
+    exception of the legacy `.YieldPoint` interfaces) and returns a
+    new Future that resolves when all the other Futures are done. If
+    all the ``Futures`` succeeded, the returned Future's result is a
+    list of their results. If any failed, the returned Future raises
+    the exception of the first one to fail.
 
     Instead of a list, the argument may also be a dictionary whose values are
     Futures, in which case a parallel dictionary is returned mapping the same
@@ -634,12 +680,16 @@ def multi_future(children, quiet_exceptions=()):
        If multiple ``Futures`` fail, any exceptions after the first (which is
        raised) will be logged. Added the ``quiet_exceptions``
        argument to suppress this logging for selected exception types.
+
+    .. versionchanged:: 4.3
+       Added support for other yieldable objects.
     """
     if isinstance(children, dict):
         keys = list(children.keys())
         children = children.values()
     else:
         keys = None
+    children = list(map(convert_yielded, children))
     assert all(is_future(i) for i in children)
     unfinished_children = set(children)
 
@@ -1001,6 +1051,16 @@ def _argument_adapter(callback):
             callback(None)
     return wrapper
 
+if sys.version_info >= (3, 3):
+    exec(textwrap.dedent("""
+    @coroutine
+    def _wrap_awaitable(x):
+        return (yield from x)
+    """))
+else:
+    def _wrap_awaitable(x):
+        raise NotImplementedError()
+
 
 def convert_yielded(yielded):
     """Convert a yielded object into a `.Future`.
@@ -1022,6 +1082,8 @@ def convert_yielded(yielded):
         return multi_future(yielded)
     elif is_future(yielded):
         return yielded
+    elif isawaitable(yielded):
+        return _wrap_awaitable(yielded)
     else:
         raise BadYieldError("yielded unknown object %r" % (yielded,))
 

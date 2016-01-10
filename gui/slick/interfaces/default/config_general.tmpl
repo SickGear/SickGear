@@ -32,8 +32,8 @@
     #set $indexer = $sickbeard.INDEXER_DEFAULT
 #end if
 
-<script type="text/javascript" src="$sbRoot/js/config.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/rootDirs.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
 
 <div id="config">
 	<div id="config-content">
@@ -72,7 +72,7 @@
 								<span class="component-title">Update shows on startup</span>
 								<span class="component-desc">
 									<input type="checkbox" name="update_shows_on_start" id="update_shows_on_start"#echo ('', $checked)[$sickbeard.UPDATE_SHOWS_ON_START]#>
-									<p>with show data; episode plot, images, air and end dates, etc. Disable for a quicker startup. Show data is scheduled to update during hour <span class="show_update_hour_value">$sickbeard.SHOW_UPDATE_HOUR</span>.</p>
+									<p>with show data; episode plot, images, air and end dates, etc. Disable for a quicker startup. Show data is scheduled to update during hour <span class="show_update_hour_value">$sickbeard.SHOW_UPDATE_HOUR</span></p>
 								</span>
 							</label>
 						</div>
@@ -86,7 +86,19 @@
 								</span>
 							</label>
 						</div>
-						
+
+#if hasattr($sickbeard, 'ALLOW_INCOMPLETE_SHOWDATA')
+						<div class="field-pair">
+							<label for="allow_incomplete_showdata">
+								<span class="component-title">Allow incomplete show data</span>
+								<span class="component-desc">
+									<input type="checkbox" name="allow_incomplete_showdata" id="allow_incomplete_showdata"#echo ('', $checked)[$sickbeard.ALLOW_INCOMPLETE_SHOWDATA]#>
+									<p>add partial show data for future updates to complete</p>
+								</span>
+							</label>
+						</div>
+#end if
+
 						<div class="field-pair">
 							<span class="component-title">Send to trash for actions</span>
 							<span class="component-desc">
@@ -110,22 +122,22 @@
 								</span>
 							</label>
 						</div>
-
+#if 1 < $len($indexers)
 						<div class="field-pair">
 							<label for="indexer_default">
 								<span class="component-title">Use initial indexer set to</span>
 								<span class="component-desc">
 									<select id="indexer_default" name="indexer_default" class="form-control input-sm">
 										<option value="0"#echo ('', $selected)[0 == $indexer]#>All Indexers</option>
-#for $indexer in $sickbeard.indexerApi().indexers
+    #for $indexer in $indexers
 										<option value="$indexer"#echo ('', $selected)[$indexer == $sickbeard.INDEXER_DEFAULT]#>$sickbeard.indexerApi().indexers[$indexer]</option>
-#end for
+    #end for
 									</select>
 									<span>as the default selection when adding new shows</span>
 								</span>
 							</label>
 						</div>
-
+#end if
 						<div class="field-pair">
 							<label for="indexer_timeout">
 								<span class="component-title">Timeout show indexer at</span>
@@ -624,7 +636,7 @@
 								<span class="component-title">Use proxy for indexers</span>
 								<span class="component-desc">
 									<input type="checkbox" name="proxy_indexers" id="proxy_indexers"#echo ('', $checked)[True == $sickbeard.PROXY_INDEXERS]#>
-									<p>use proxy host for connecting to indexers (thetvdb, tvrage)</p>
+									<p>use proxy host for TV info source connections</p>
 								</span>
 							</label>
 						</div>

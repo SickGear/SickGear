@@ -32,22 +32,30 @@ from sickbeard import history
 
 from sickbeard.common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, Quality
 
-from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
+from name_parser.parser import NameParser
 
 
-def searchPropers():
+def search_propers():
 
     if not sickbeard.DOWNLOAD_PROPERS:
         return
 
-    logger.log(u'Beginning the search for new propers')
+    logger.log(u'Beginning search for new propers')
 
-    propers = _getProperList()
+    age_shows, age_anime = 2, 14
+    aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
+    aired_since_anime = datetime.datetime.today() - datetime.timedelta(days=age_anime)
+    recent_shows, recent_anime = _recent_history(aired_since_shows, aired_since_anime)
+    if recent_shows or recent_anime:
+        propers = _get_proper_list(aired_since_shows, recent_shows, recent_anime)
 
-    if propers:
-        _downloadPropers(propers)
+        if propers:
+            _download_propers(propers)
+    else:
+        logger.log(u'No downloads or snatches found for the last %s%s days to use for a propers search' %
+                   (age_shows, ('', ' (%s for anime)' % age_anime)[helpers.has_anime()]))
 
-    _set_lastProperSearch(datetime.datetime.today().toordinal())
+    _set_last_proper_search(datetime.datetime.today().toordinal())
 
     run_at = ''
     if None is sickbeard.properFinderScheduler.start_time:
@@ -59,223 +67,242 @@ def searchPropers():
 
     logger.log(u'Completed the search for new propers%s' % run_at)
 
-def _getProperList():
+
+def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
     propers = {}
 
-    search_date = datetime.datetime.today() - datetime.timedelta(days=2)
-
     # for each provider get a list of the
-    origThreadName = threading.currentThread().name
+    orig_thread_name = threading.currentThread().name
     providers = [x for x in sickbeard.providers.sortedProviderList() if x.is_active()]
-    for curProvider in providers:
-        threading.currentThread().name = origThreadName + ' :: [' + curProvider.name + ']'
+    for cur_provider in providers:
+        if not recent_anime and cur_provider.anime_only:
+            continue
+        threading.currentThread().name = orig_thread_name + ' :: [' + cur_provider.name + ']'
 
-        logger.log(u'Searching for any new PROPER releases from ' + curProvider.name)
+        logger.log(u'Searching for new PROPER releases')
 
         try:
-            curPropers = curProvider.find_propers(search_date)
+            found_propers = cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows, anime=recent_anime)
         except exceptions.AuthException as e:
             logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
             continue
         except Exception as e:
-            logger.log(u'Error while searching ' + curProvider.name + ', skipping: ' + ex(e), logger.ERROR)
+            logger.log(u'Error while searching ' + cur_provider.name + ', skipping: ' + ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
             continue
         finally:
-            threading.currentThread().name = origThreadName
+            threading.currentThread().name = orig_thread_name
 
         # if they haven't been added by a different provider than add the proper to the list
-        for x in curPropers:
-            name = _genericName(x.name)
-            if not name in propers:
-                logger.log(u'Found new proper: ' + x.name, logger.DEBUG)
-                x.provider = curProvider
-                propers[name] = x
+        count = 0
+        np = NameParser(False, try_scene_exceptions=True)
+        for x in found_propers:
+            name = _generic_name(x.name)
+            if name not in propers:
+                try:
+                    parse_result = np.parse(x.title)
+                    if parse_result.series_name and parse_result.episode_numbers and \
+                            parse_result.show.indexerid in recent_shows + recent_anime:
+                        logger.log(u'Found new proper: ' + x.name, logger.DEBUG)
+                        x.show = parse_result.show.indexerid
+                        x.provider = cur_provider
+                        propers[name] = x
+                        count += 1
+                except Exception:
+                    continue
+
+        cur_provider.log_result('Propers', count, '%s' % cur_provider.name)
 
     # take the list of unique propers and get it sorted by
-    sortedPropers = sorted(propers.values(), key=operator.attrgetter('date'), reverse=True)
-    finalPropers = []
+    sorted_propers = sorted(propers.values(), key=operator.attrgetter('date'), reverse=True)
+    verified_propers = []
 
-    for curProper in sortedPropers:
-
-        try:
-            myParser = NameParser(False)
-            parse_result = myParser.parse(curProper.name)
-        except InvalidNameException:
-            logger.log(u'Unable to parse the filename ' + curProper.name + ' into a valid episode', logger.DEBUG)
-            continue
-        except InvalidShowException:
-            logger.log(u'Unable to parse the filename ' + curProper.name + ' into a valid show', logger.DEBUG)
-            continue
-
-        if not parse_result.series_name:
-            continue
-
-        if not parse_result.episode_numbers:
-            logger.log(
-                u'Ignoring ' + curProper.name + ' because it\'s for a full season rather than specific episode',
-                logger.DEBUG)
-            continue
-
-        logger.log(
-            u'Successful match! Result ' + parse_result.original_name + ' matched to show ' + parse_result.show.name,
-            logger.DEBUG)
+    for cur_proper in sorted_propers:
 
         # set the indexerid in the db to the show's indexerid
-        curProper.indexerid = parse_result.show.indexerid
+        cur_proper.indexerid = parse_result.show.indexerid
 
         # set the indexer in the db to the show's indexer
-        curProper.indexer = parse_result.show.indexer
+        cur_proper.indexer = parse_result.show.indexer
 
         # populate our Proper instance
-        curProper.season = parse_result.season_number if parse_result.season_number != None else 1
-        curProper.episode = parse_result.episode_numbers[0]
-        curProper.release_group = parse_result.release_group
-        curProper.version = parse_result.version
-        curProper.quality = Quality.nameQuality(curProper.name, parse_result.is_anime)
+        cur_proper.season = parse_result.season_number if None is not parse_result.season_number else 1
+        cur_proper.episode = parse_result.episode_numbers[0]
+        cur_proper.release_group = parse_result.release_group
+        cur_proper.version = parse_result.version
+        cur_proper.quality = Quality.nameQuality(cur_proper.name, parse_result.is_anime)
 
         # only get anime proper if it has release group and version
         if parse_result.is_anime:
-            if not curProper.release_group and curProper.version == -1:
-                logger.log(u'Proper ' + curProper.name + ' doesn\'t have a release group and version, ignoring it',
+            if not cur_proper.release_group and -1 == cur_proper.version:
+                logger.log(u'Proper %s doesn\'t have a release group and version, ignoring it' % cur_proper.name,
                            logger.DEBUG)
                 continue
 
-        if not show_name_helpers.filterBadReleases(curProper.name, parse=False):
-            logger.log(u'Proper ' + curProper.name + ' isn\'t a valid scene release that we want, ignoring it',
+        if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False):
+            logger.log(u'Proper %s isn\'t a valid scene release that we want, ignoring it' % cur_proper.name,
                        logger.DEBUG)
             continue
 
-        if parse_result.show.rls_ignore_words and search.filter_release_name(curProper.name,
-                                                                             parse_result.show.rls_ignore_words):
-            logger.log(
-                u'Ignoring ' + curProper.name + ' based on ignored words filter: ' + parse_result.show.rls_ignore_words,
-                logger.MESSAGE)
+        re_extras = dict(re_prefix='.*', re_suffix='.*')
+        result = show_name_helpers.contains_any(cur_proper.name, parse_result.show.rls_ignore_words, **re_extras)
+        if None is not result and result:
+            logger.log(u'Ignored: %s for containing ignore word' % cur_proper.name)
             continue
 
-        if parse_result.show.rls_require_words and not search.filter_release_name(curProper.name,
-                                                                                  parse_result.show.rls_require_words):
-            logger.log(
-                u'Ignoring ' + curProper.name + ' based on required words filter: ' + parse_result.show.rls_require_words,
-                logger.MESSAGE)
+        result = show_name_helpers.contains_any(cur_proper.name, parse_result.show.rls_require_words, **re_extras)
+        if None is not result and not result:
+            logger.log(u'Ignored: %s for not containing any required word match' % cur_proper.name)
             continue
 
         # check if we actually want this proper (if it's the right quality)
-        myDB = db.DBConnection()
-        sqlResults = myDB.select('SELECT status FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
-                                 [curProper.indexerid, curProper.season, curProper.episode])
-        if not sqlResults:
+        my_db = db.DBConnection()
+        sql_results = my_db.select('SELECT status FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
+                                   [cur_proper.indexerid, cur_proper.season, cur_proper.episode])
+        if not sql_results:
             continue
 
         # only keep the proper if we have already retrieved the same quality ep (don't get better/worse ones)
-        oldStatus, oldQuality = Quality.splitCompositeStatus(int(sqlResults[0]['status']))
-        if oldStatus not in (DOWNLOADED, SNATCHED) or oldQuality != curProper.quality:
+        old_status, old_quality = Quality.splitCompositeStatus(int(sql_results[0]['status']))
+        if old_status not in (DOWNLOADED, SNATCHED) or cur_proper.quality != old_quality:
             continue
 
         # check if we actually want this proper (if it's the right release group and a higher version)
         if parse_result.is_anime:
-            myDB = db.DBConnection()
-            sqlResults = myDB.select(
+            my_db = db.DBConnection()
+            sql_results = my_db.select(
                 'SELECT release_group, version FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
-                [curProper.indexerid, curProper.season, curProper.episode])
+                [cur_proper.indexerid, cur_proper.season, cur_proper.episode])
 
-            oldVersion = int(sqlResults[0]['version'])
-            oldRelease_group = (sqlResults[0]['release_group'])
+            old_version = int(sql_results[0]['version'])
+            old_release_group = (sql_results[0]['release_group'])
 
-            if oldVersion > -1 and oldVersion < curProper.version:
-                logger.log('Found new anime v' + str(curProper.version) + ' to replace existing v' + str(oldVersion))
+            if -1 < old_version < cur_proper.version:
+                logger.log(u'Found new anime v%s to replace existing v%s' % (cur_proper.version, old_version))
             else:
                 continue
 
-            if oldRelease_group != curProper.release_group:
-                logger.log('Skipping proper from release group: ' + curProper.release_group + ', does not match existing release group: ' + oldRelease_group)
+            if cur_proper.release_group != old_release_group:
+                logger.log(u'Skipping proper from release group: %s, does not match existing release group: %s' %
+                           (cur_proper.release_group, old_release_group))
                 continue
 
-        # if the show is in our list and there hasn't been a proper already added for that particular episode then add it to our list of propers
-        if curProper.indexerid != -1 and (curProper.indexerid, curProper.season, curProper.episode) not in map(
-                operator.attrgetter('indexerid', 'season', 'episode'), finalPropers):
-            logger.log(u'Found a proper that we need: ' + str(curProper.name))
-            finalPropers.append(curProper)
+        # if the show is in our list and there hasn't been a proper already added for that particular episode
+        # then add it to our list of propers
+        if cur_proper.indexerid != -1 and (cur_proper.indexerid, cur_proper.season, cur_proper.episode) not in map(
+                operator.attrgetter('indexerid', 'season', 'episode'), verified_propers):
+            logger.log(u'Found a proper that may be useful: %s' % cur_proper.name)
+            verified_propers.append(cur_proper)
 
-    return finalPropers
+    return verified_propers
 
-def _downloadPropers(properList):
 
-    for curProper in properList:
+def _download_propers(proper_list):
 
-        historyLimit = datetime.datetime.today() - datetime.timedelta(days=30)
+    for cur_proper in proper_list:
+
+        history_limit = datetime.datetime.today() - datetime.timedelta(days=30)
 
         # make sure the episode has been downloaded before
-        myDB = db.DBConnection()
-        historyResults = myDB.select(
-            'SELECT resource FROM history '
-            'WHERE showid = ? AND season = ? AND episode = ? AND quality = ? AND date >= ? '
+        my_db = db.DBConnection()
+        history_results = my_db.select(
+            'SELECT resource FROM history ' +
+            'WHERE showid = ? AND season = ? AND episode = ? AND quality = ? AND date >= ? ' +
             'AND action IN (' + ','.join([str(x) for x in Quality.SNATCHED]) + ')',
-            [curProper.indexerid, curProper.season, curProper.episode, curProper.quality,
-             historyLimit.strftime(history.dateFormat)])
+            [cur_proper.indexerid, cur_proper.season, cur_proper.episode, cur_proper.quality,
+             history_limit.strftime(history.dateFormat)])
 
-        # if we didn't download this episode in the first place we don't know what quality to use for the proper so we can't do it
-        if len(historyResults) == 0:
-            logger.log(
-                u'Unable to find an original history entry for proper ' + curProper.name + ' so I\'m not downloading it.')
+        # if we didn't download this episode in the first place we don't know what quality to use for the proper = skip
+        if 0 == len(history_results):
+            logger.log(u'Skipping download because cannot find an original history entry for proper ' + cur_proper.name)
             continue
 
         else:
 
+            # get the show object
+            show_obj = helpers.findCertainShow(sickbeard.showList, cur_proper.indexerid)
+            if None is show_obj:
+                logger.log(u'Unable to find the show with indexerid ' + str(
+                    cur_proper.indexerid) + ' so unable to download the proper', logger.ERROR)
+                continue
+
             # make sure that none of the existing history downloads are the same proper we're trying to download
-            clean_proper_name = _genericName(helpers.remove_non_release_groups(curProper.name))
-            isSame = False
-            for curResult in historyResults:
+            clean_proper_name = _generic_name(helpers.remove_non_release_groups(cur_proper.name, show_obj.is_anime()))
+            is_same = False
+            for result in history_results:
                 # if the result exists in history already we need to skip it
-                if _genericName(helpers.remove_non_release_groups(curResult['resource'])) == clean_proper_name:
-                    isSame = True
+                if clean_proper_name == _generic_name(helpers.remove_non_release_groups(result['resource'])):
+                    is_same = True
                     break
-            if isSame:
+            if is_same:
                 logger.log(u'This proper is already in history, skipping it', logger.DEBUG)
                 continue
 
-            # get the episode object
-            showObj = helpers.findCertainShow(sickbeard.showList, curProper.indexerid)
-            if showObj == None:
-                logger.log(u'Unable to find the show with indexerid ' + str(
-                    curProper.indexerid) + ' so unable to download the proper', logger.ERROR)
-                continue
-            epObj = showObj.getEpisode(curProper.season, curProper.episode)
+            ep_obj = show_obj.getEpisode(cur_proper.season, cur_proper.episode)
 
             # make the result object
-            result = curProper.provider.get_result([epObj], curProper.url)
+            result = cur_proper.provider.get_result([ep_obj], cur_proper.url)
             if None is result:
                 continue
-            result.name = curProper.name
-            result.quality = curProper.quality
-            result.version = curProper.version
+            result.name = cur_proper.name
+            result.quality = cur_proper.quality
+            result.version = cur_proper.version
 
             # snatch it
-            search.snatchEpisode(result, SNATCHED_PROPER)
+            search.snatch_episode(result, SNATCHED_PROPER)
 
-def _genericName(name):
+
+def _recent_history(aired_since_shows, aired_since_anime):
+
+    recent_shows, recent_anime = [], []
+
+    aired_since_shows = aired_since_shows.toordinal()
+    aired_since_anime = aired_since_anime.toordinal()
+
+    my_db = db.DBConnection()
+    sql_results = my_db.select(
+        'SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.airdate FROM tv_episodes AS e' +
+        ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
+        ' WHERE e.airdate >= %s' % min(aired_since_shows, aired_since_anime) +
+        ' AND (e.status IN (%s))' % ','.join([str(x) for x in Quality.DOWNLOADED + Quality.SNATCHED])
+    )
+
+    for sqlshow in sql_results:
+        show = helpers.findCertainShow(sickbeard.showList, sqlshow['showid'])
+        if show:
+            if sqlshow['airdate'] >= aired_since_shows and not show.is_anime:
+                sqlshow['showid'] not in recent_shows and recent_shows.append(sqlshow['showid'])
+            else:
+                sqlshow['showid'] not in recent_anime and show.is_anime and recent_anime.append(sqlshow['showid'])
+
+    return recent_shows, recent_anime
+
+
+def _generic_name(name):
     return name.replace('.', ' ').replace('-', ' ').replace('_', ' ').lower()
 
-def _set_lastProperSearch(when):
 
-    logger.log(u'Setting the last Proper search in the DB to ' + str(when), logger.DEBUG)
+def _set_last_proper_search(when):
 
-    myDB = db.DBConnection()
-    sqlResults = myDB.select('SELECT * FROM info')
+    logger.log(u'Setting the last Proper search in the DB to %s' % when, logger.DEBUG)
 
-    if len(sqlResults) == 0:
-        myDB.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
-                    [0, 0, str(when)])
+    my_db = db.DBConnection()
+    sql_results = my_db.select('SELECT * FROM info')
+
+    if 0 == len(sql_results):
+        my_db.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
+                     [0, 0, str(when)])
     else:
-        myDB.action('UPDATE info SET last_proper_search=' + str(when))
+        my_db.action('UPDATE info SET last_proper_search=%s' % when)
 
-def _get_lastProperSearch():
 
-    myDB = db.DBConnection()
-    sqlResults = myDB.select('SELECT * FROM info')
+def _get_last_proper_search():
+
+    my_db = db.DBConnection()
+    sql_results = my_db.select('SELECT * FROM info')
 
     try:
-        last_proper_search = datetime.date.fromordinal(int(sqlResults[0]['last_proper_search']))
+        last_proper_search = datetime.date.fromordinal(int(sql_results[0]['last_proper_search']))
     except:
         return datetime.date.fromordinal(1)
 

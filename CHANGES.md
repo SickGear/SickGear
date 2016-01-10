@@ -1,7 +1,122 @@
+﻿### 0.11.0 (2016-01-10 22:30:00 UTC)
+
+* Change to only refresh scene exception data for shows that need it
+* Change reduce aggressive use of scene numbering that was overriding user preference where not needed
+* Change set "Scene numbering" checkbox and add text to the label tip in third step of add "New Show" if scene numbers
+  are found for the selected show in the search results of the first step
+* Change label text on edit show page to highlight when manual numbering and scene numbers are available
+* Fix disabling "Scene numbering" of step three in add "New Show" was ignored when scene episode number mappings exist
+* Fix don't use scene episode number mappings everywhere when "Scene numbering" is disabled for a show
+* Fix width of legend underlining on the third step used to bring other display elements into alignment
+* Change when downloading magnet or nzb files, verify the file in cache dir and then move to blackhole
+* Fix small cosmetic issue to correctly display "full backlog" date
+* Add search crawler exclusions
+* Fix saving default show list group on add new show options page
+* Remove legacy anime split home option from anime settings tab (new option located in general/interface tab)
+* Remove "Manage Torrents"
+* Update Beautiful Soup 4.3.2 to 4.4.0 (r390)
+* Update dateutil library to 2.4.2 (083f666)
+* Update chardet packages to 2.3.0 (26982c5)
+* Update Hachoir library 1.3.3 to 1.3.4 (r1383)
+* Change configure quiet option in Hachoir to suppress warnings (add ref:hacks.txt)
+* Add parse media content to determine quality before making final assumptions during re-scan, update, pp
+* Add a postprocess folder name validation
+* Update Requests library to 2.7.0 (5d6d1bc)
+* Update SimpleJSON library 3.7.3 to 3.8.0 (a37a9bd)
+* Update Tornado Web Server 4.2 to 4.3.dev1 (1b6157d)
+* Update isotope library 2.0.1 to 2.2.2
+* Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
+* Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
+* Update TvDB API library 1.09 with changes up to (35732c9) and some pep8 and code cleanups
+* Fix post processing season pack folders
+* Fix saving torrent provider option "Seed until ratio" after recent refactor
+* Change white text in light theme on Manage / Episode Status Management page to black for better readability
+* Change displayShow page episode colours when a minimum quality is met with "End upgrade on first match"
+* Add seed time per provider for torrent clients that support seed time per torrent, i.e. currently only uTorrent
+* Remove seed time display for Transmission in config/Torrent Search page because the torrent client doesn't support it
+* Add PreToMe torrent provider
+* Add SceneTime torrent provider
+* Change TtN provider to parse new layout
+* Improve recognition of SD quality
+* Fix halting in mid flow of Add Existing Show which resulted in failure to scan statuses and filesizes
+* Change default de-referrer url to blank
+* Change javascript urls in templates to allow proper caching
+* Change downloads to prevent cache misfiring with "Result is not a valid torrent file"
+* Add BitMeTV torrent provider
+* Add Torrenting provider
+* Add FunFile torrent provider
+* Add TVChaosUK torrent provider
+* Add HD-Space torrent provider
+* Add Shazbat torrent provider
+* Remove unnecessary call to indexers during nameparsing
+* Change disable ToTV due to non-deletable yet reported hacker BTC inbox scam and also little to no new content listings
+* Fix Episode View KeyError: 'state-title' failure for shows without a runtime
+* Update py-unrar2 library 99.3 to 99.6 (2fe1e98)
+* Fix py-unrar2 on unix to handle different date formats output by different unrar command line versions
+* Fix Add and Edit show quality selection when Quality 'Custom' is used
+* Fix add existing shows from folders that contain a plus char
+* Fix post process issue where items in history were processed out of turn
+* Change increase frequency of updating show data
+* Remove Animenzb provider
+* Change increase the scope and number of non release group text that is identified and removed
+* Add general config setting to allow adding incomplete show data
+* Change to throttle connection rate on thread initiation for adba library
+* Change default manage episodes selector to Snatched episodes if items exist else Wanted on Episode Status Manage page
+* Change snatched row colour on Episode Status Manage page to match colour used on the show details page
+* Change replace trakt with libtrakt for API v2
+* Change improve robustness of Trakt communications
+* Change Trakt notification config to use PIN authentication with the service
+* Add multiple Trakt account support to Config/Notifications/Social
+* Add setting to Trakt notification to update collection with downloaded episode info
+* Change trakt notifier logo
+* Remove all other Trakt deprecated API V1 service features pending reconsideration
+* Change increase show search capability when using plain text and also add TVDB id, IMDb id and IMDb url search
+* Change improve existing show page and the handling when an attempt to add a show to an existing location
+* Change consolidate Trakt Trending and Recommended views into an "Add From Trakt" view which defaults to trending
+* Change Add from Trakt/"Shows:" with Anticipated, New Seasons, New Shows, Popular, Recommendations, and Trending views
+* Change Add from Trakt/"Shows:" with Most Watched, Played, and Collected during the last month and year on Trakt
+* Change add season info to "Show: Trakt New Seasons" view on the Add from Trakt page
+* Change increase number of displayed Trakt shows to 100
+* Add genres and rating to all Trakt shows
+* Add AniDb Random and Hot to Add Show page
+* Add IMDb Popular to Add Show page
+* Add version to anime renaming pattern
+* Add Code Climate configuration files
+* Change move init-scripts to single folder
+* Change sickbeard variables to sickgear variables in init-scripts
+* Change improve the use of multiple plex servers
+* Change move JS code out of home template and into dedicated file
+* Change remove branch from window title
+* Change move JS code out of inc_top template and into dedicated file
+* Change cleanup torrent providers
+* Change utilise tvdbid for searching usenet providers
+* Add setting to provider BTN to Reject Blu-ray M2TS releases
+* Remove jsonrpclib library
+* Change consolidate global and per show ignore and require words functions
+* Change "Require word" title and notes on Config Search page to properly describe its functional logic
+* Add regular expression capability to ignore and require words by starting wordlist with "regex:"
+* Add list shows with custom ignore and require words under the global counterparts on the Search Settings page
+* Fix failure to search for more than one selected wanted episode
+* Add notice for users with Python 2.7.8 or below to update to latest Python
+* Change position of parsed qualities to the start of log lines
+* Change to always display branch and commit hash on 'Help & Info' page
+* Add option to create season search exceptions from editShow page
+* Change sab to use requests library
+* Add "View Changes" to tools menu
+* Change disable connection attempts and remove UI references to the TVRage info source
+* Change to simplify xem id fetching
+* Fix issue on Add Existing Shows page where shows were listed that should not have been
+* Change get_size helper to also handle files
+* Change improve handling of a bad email notify setting
+* Fix provider MTV download URL
+* Change give provider OMGWTFNZBS more time to respond
+* Change file browser to permit manually entering a path
+
+
 ### 0.10.0 (2015-08-06 11:05:00 UTC)
 
 * Remove EZRSS provider
-* Update Tornado webserver to 4.2 (fdfaf3d)
+* Update Tornado Web Server to 4.2 (fdfaf3d)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package (ref:hacks.txt)
 * Update Requests library 2.6.2 to 2.7.0 (8b5e457)
@@ -117,7 +232,7 @@
 
 ### 0.9.0 (2015-05-18 14:33:00 UTC)
 
-* Update Tornado webserver to 4.2.dev1 (609dbb9)
+* Update Tornado Web Server to 4.2.dev1 (609dbb9)
 * Update change to suppress reporting of Tornado exception error 1 to updated package as listed in hacks.txt
 * Update fix for API response header for JSON content type and the return of JSONP data to updated package as listed in hacks.txt
 * Change network names to only display on top line of Day by Day layout on Episode View
@@ -234,7 +349,7 @@
 * Hide year, runtime, genre tags, country flag, or status if lacking valid data to display
 * Remove redundant CSS color use (all browsers treat 3 identical digits as 6, except for possibly in gradients)
 * Remove whitespace and semi-colon redundancy from CSS shedding 4.5kb
-* Add show names to items listed during startup in the loading from database phase 
+* Add show names to items listed during startup in the loading from database phase
 * Add "Enable IMDb info" option to config/General/Interface
 * Change to not display IMDb info on UI when "Enable IMDb info" is disabled
 * Change genre tags on displayShow page to link to IMDb instead of Trakt
@@ -321,7 +436,7 @@
 * Change anime release groups to in memory storage for lowered latency
 * Change adjust menu delay and hover styling
 * Fix provider list color
-* Add handling of exceptional case with missing network name (NoneType) in Episode View 
+* Add handling of exceptional case with missing network name (NoneType) in Episode View
 * Fix black and white list initialization on new show creation
 * Add select all and clear all buttons to testRename template
 * Fix displayShow topmenu variable to point to a valid menu item
@@ -477,7 +592,7 @@
 * Change Display Show next/previous when show list is not split to loop around
 * Fix SQL statements that have dynamic table names to use proper syntax
 * Fix port checking code preventing startup directly after a SG restart
-* Add a link from the footer number of snatched to episode snatched overview page. The link to the 
+* Add a link from the footer number of snatched to episode snatched overview page. The link to the
   Episode Overview page is available on all pages except on the Episode Overview page
 * Change the default state for all check boxes on the Episode Overview page to not checked
 * Add validation to Go button to ensure at least one item is checked on Episode Overview page
@@ -631,7 +746,7 @@
 * Add return code from hardlinking error to log
 * Fix ABD regex for certain filenames
 * Change miscellaneous UI fixes
-* Update Tornado webserver to 4.1dev1 and add the certifi lib dependency
+* Update Tornado Web Server to 4.1dev1 and add the certifi lib dependency
 * Fix trending shows page from loading full size poster images
 * Add "Archive on first match" to Manage, Mass Update, Edit Selected page
 * Fix searching IPTorrentsProvider

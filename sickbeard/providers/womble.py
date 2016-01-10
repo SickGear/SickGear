@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import generic
-
+from . import generic
 from sickbeard import logger, tvcache
 
 
@@ -35,7 +34,7 @@ class WombleCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 15  # cache update frequency
+        self.update_freq = 15  # cache update frequency
 
     def updateCache(self):
 
@@ -60,7 +59,7 @@ class WombleCache(tvcache.TVCache):
 
             # By now we know we've got data and no auth errors, all we need to do is put it in the database
             for item in data.entries:
-                title, url = self._get_title_and_url(item)
+                title, url = self._title_and_url(item)
                 ci = self._parseItem(title, url)
                 if None is not ci:
                     cl.append(ci)

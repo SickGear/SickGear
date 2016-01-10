@@ -11,14 +11,14 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 
-<script type="text/javascript" src="$sbRoot/js/configProviders.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/configProviders.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #set $methods_notused = []
 #if not $sickbeard.USE_NZBS
@@ -281,7 +281,7 @@
 								<span class="component-desc">
         #set $field_name = curNzbProvider.get_id() + '_api_key'
 									<input type="text" name="$field_name" value="<%= starify(curNzbProvider.api_key) %>" class="form-control input-sm input350" />
-        #if callable(getattr(curNzbProvider, 'ui_string'))
+        #if callable(getattr(curNzbProvider, 'ui_string', None))
 									<div class="clear-left"><p>${curNzbProvider.ui_string($field_name)}</p></div>
         #end if
 								</span>
@@ -347,6 +347,17 @@
 ##
 #for $curTorrentProvider in [$curProvider for $curProvider in $sickbeard.providers.sortedProviderList() if $curProvider.providerType == $GenericProvider.TORRENT]:
 					<div class="providerDiv" id="${curTorrentProvider.get_id()}Div">
+    #if callable(getattr(curTorrentProvider, 'ui_string', None))
+        #set $field_name = curTorrentProvider.get_id() + '_tip'
+        #set $tip_text = curTorrentProvider.ui_string($field_name)
+        #if $tip_text
+						<div class="field-pair">
+							<span class="component-desc" style="margin:0;width:100%">
+								<div class="clear-left"><p class="grey-text"><span class="red-text">Important! ${curTorrentProvider.name}</span> $tip_text</p></div>
+							</span>
+						</div>
+        #end if
+    #end if
     #if $hasattr($curTorrentProvider, 'api_key'):
 						<div class="field-pair">
 							<label for="${curTorrentProvider.get_id()}_api_key">
@@ -360,9 +371,13 @@
     #if $hasattr($curTorrentProvider, 'digest'):
 						<div class="field-pair">
 							<label for="${curTorrentProvider.get_id()}_digest">
-								<span class="component-title">Digest:</span>
+								<span class="component-title">Cookies:</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.get_id()}_digest" id="${curTorrentProvider.get_id()}_digest" value="$curTorrentProvider.digest" class="form-control input-sm input350" />
+        #set $field_name = curTorrentProvider.get_id() + '_digest'
+									<input type="text" name="$field_name" id="$field_name" value="<%= starify(curTorrentProvider.digest) %>" class="form-control input-sm input350" />
+        #if callable(getattr(curTorrentProvider, 'ui_string', None))
+									<div class="clear-left"><p>${curTorrentProvider.ui_string($field_name)}</p></div>
+        #end if
 								</span>
 							</label>
 						</div>
@@ -392,7 +407,7 @@
 							<label for="${curTorrentProvider.get_id()}_password">
 								<span class="component-title">Password:</span>
 								<span class="component-desc">
-									<input type="password" name="${curTorrentProvider.get_id()}_password" id="${curTorrentProvider.get_id()}_password" value="#echo '*' * len($curTorrentProvider.password)#" class="form-control input-sm input350" />
+									<input type="password" name="${curTorrentProvider.get_id()}_password" id="${curTorrentProvider.get_id()}_password" value="#echo $curTorrentProvider.password and '*' * len($curTorrentProvider.password) or ''#" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
@@ -408,14 +423,28 @@
 						</div>
     #end if
     #if $hasattr($curTorrentProvider, '_seed_ratio') and 'blackhole' != $sickbeard.TORRENT_METHOD:
-        #set $torrent_method_text = {'blackhole': 'Black hole', 'utorrent': 'uTorrent', 'transmission': 'Transmission', 'deluge': 'Deluge', 'download_station': 'Synology DS', 'rtorrent': 'rTorrent'}
+        #set $torrent_method_text = {'utorrent': 'uTorrent', 'transmission': 'Transmission', 'deluge': 'Deluge', 'download_station': 'Synology DS', 'rtorrent': 'rTorrent'}
 						<div class="field-pair">
 							<label for="${curTorrentProvider.get_id()}_ratio">
 								<span class="component-title" id="${curTorrentProvider.get_id()}_ratio_desc">Seed until ratio (the goal)</span>
 								<span class="component-desc">
-									<input type="number" step="0.1" name="${curTorrentProvider.get_id()}_ratio" id="${curTorrentProvider.get_id()}_ratio" value="$curTorrentProvider._seed_ratio" class="form-control input-sm input75" />
-									<p>this ratio is requested of each download sent to $torrent_method_text[$sickbeard.TORRENT_METHOD]</p>
-									<div class="clear-left"><p>(set -1 to seed forever, or leave blank for the $torrent_method_text[$sickbeard.TORRENT_METHOD] default)</p></div>
+									<input type="number" name="${curTorrentProvider.get_id()}_ratio" id="${curTorrentProvider.get_id()}_ratio" value="$curTorrentProvider._seed_ratio" class="form-control input-sm input75" />
+									<p>this ratio is requested of each item sent to $torrent_method_text[$sickbeard.TORRENT_METHOD]</p>
+									<div class="clear-left"><p>(#if 'Transmission' in $torrent_method_text[$sickbeard.TORRENT_METHOD]#set -1 to seed forever, or #end if#leave blank for the $torrent_method_text[$sickbeard.TORRENT_METHOD] setting)</p></div>
+								</span>
+							</label>
+						</div>
+    #end if
+    #if $hasattr($curTorrentProvider, 'seed_time') and 'utorrent' == $sickbeard.TORRENT_METHOD:
+        #set $torrent_method_text = {'utorrent': 'uTorrent'}
+        #set $use_default = 'to use the %s min <a href="%s/config/search/#core-component-group3">torrent search setting minumum default</a>' % ($sickbeard.TORRENT_SEED_TIME, $sbRoot) if $sickbeard.TORRENT_SEED_TIME else 'for the %s setting' % $torrent_method_text[$sickbeard.TORRENT_METHOD]
+						<div class="field-pair">
+							<label for="${curTorrentProvider.get_id()}_seed_time">
+								<span class="component-title" id="${curTorrentProvider.get_id()}_seed_time_desc">Seed time (provider default)</span>
+								<span class="component-desc">
+									<input type="number" name="${curTorrentProvider.get_id()}_seed_time" id="${curTorrentProvider.get_id()}_seed_time" value="$curTorrentProvider.seed_time" class="form-control input-sm input75" />
+									<p>set 1 or more minimum minutes for each item sent to $torrent_method_text[$sickbeard.TORRENT_METHOD]</p>
+									<div class="clear-left"><p>(leave blank $use_default)</p></div>
 								</span>
 							</label>
 						</div>
@@ -485,6 +514,17 @@
 								<span class="component-desc">
 									<input type="checkbox" name="${curTorrentProvider.get_id()}_freeleech" id="${curTorrentProvider.get_id()}_freeleech" <%= html_checked if curTorrentProvider.freeleech else '' %>/>
 									<p>only download <b>[FreeLeech]</b> torrents.</p>
+								</span>
+							</label>
+						</div>
+    #end if
+    #if $hasattr($curTorrentProvider, 'reject_m2ts'):
+						<div class="field-pair">
+							<label for="${curTorrentProvider.get_id()}_reject_m2ts">
+								<span class="component-title">Reject Blu-ray M2TS releases</span>
+								<span class="component-desc">
+									<input type="checkbox" name="${curTorrentProvider.get_id()}_reject_m2ts" id="${curTorrentProvider.get_id()}_reject_m2ts" <%= html_checked if curTorrentProvider.reject_m2ts else '' %>/>
+									<p>enable to ignore Blu-ray MPEG-2 Transport Stream container releases</p>
 								</span>
 							</label>
 						</div>

@@ -1,22 +1,24 @@
 function setFromPresets (preset) {
 	var elCustomQuality = $('.show-if-quality-custom'),
 		selected = 'selected';
-	if (0 == preset) {
+	if (preset = parseInt(preset)) {
+		elCustomQuality.hide();
+
+		var upgrade = !0;
+		$('#anyQualities, #bestQualities').find('option').each(function() {
+			if (upgrade && 'bestQualities' === $(this).parent().attr('id')) {
+				upgrade = !1;
+				switch (preset) {
+					case 3: preset = 128 + 32 + 4; break;
+					case 164: preset = 256 + 64 + 16 + 4; break;
+					case 336: preset = 256; break;
+					default: preset = 0;
+				}
+			}
+			$(this).attr(selected, ((preset & parseInt($(this).val())) ? selected : false));
+		});
+	} else
 		elCustomQuality.show();
-		return;
-	}
-
-	elCustomQuality.hide();
-
-	$('#anyQualities').find('option').each(function() {
-		var result = preset & $(this).val();
-		$(this).attr(selected, (0 < result ? selected : false));
-	});
-
-	$('#bestQualities').find('option').each(function() {
-		var result = preset & ($(this).val() << 16);
-		$(this).attr(selected, (result > 0 ? selected: false));
-	});
 }
 
 $(document).ready(function() {
@@ -24,7 +26,7 @@ $(document).ready(function() {
 		selected = ':selected';
 
 	elQualityPreset.change(function() {
-		setFromPresets($('#qualityPreset').find(selected).val());
+		setFromPresets($(this).find(selected).val());
 	});
 
 	setFromPresets(elQualityPreset.find(selected).val());

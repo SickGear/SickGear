@@ -467,12 +467,10 @@ class PostProcessor(object):
         if not name:
             return to_return
 
-        name = helpers.remove_non_release_groups(helpers.remove_extension(name))
-
         # parse the name to break it into show name, season, and episode
-        np = NameParser(resource, try_indexers=True, try_scene_exceptions=True, convert=True)
+        np = NameParser(resource, try_scene_exceptions=True, convert=True)
         parse_result = np.parse(name)
-        self._log(u'Parsed %s<br />.. into %s' % (name, str(parse_result).decode('utf-8', 'xmlcharrefreplace')), logger.DEBUG)
+        self._log(u'Parsed %s<br />.. from %s' % (str(parse_result).decode('utf-8', 'xmlcharrefreplace'), name), logger.DEBUG)
 
         if parse_result.is_air_by_date:
             season = -1
@@ -662,7 +660,7 @@ class PostProcessor(object):
                 continue
 
             ep_quality = common.Quality.nameQuality(cur_name, ep_obj.show.is_anime)
-            quality_log = u' "%s" quality from the %s %s' % (common.Quality.qualityStrings[ep_quality], thing, cur_name)
+            quality_log = u' "%s" quality parsed from the %s %s' % (common.Quality.qualityStrings[ep_quality], thing, cur_name)
 
             # if we find a good one then use it
             if common.Quality.UNKNOWN != ep_quality:
@@ -670,6 +668,12 @@ class PostProcessor(object):
                 return ep_quality
             else:
                 self._log(u'Found' + quality_log, logger.DEBUG)
+
+        ep_quality = common.Quality.fileQuality(self.file_path)
+        if common.Quality.UNKNOWN != ep_quality:
+            self._log(u'Using "%s" quality parsed from the metadata file content of %s'
+                      % (common.Quality.qualityStrings[ep_quality], self.file_name), logger.DEBUG)
+            return ep_quality
 
         # Try guessing quality from the file name
         ep_quality = common.Quality.assumeQuality(self.file_name)
@@ -724,8 +728,7 @@ class PostProcessor(object):
         """
 
         # if SickGear snatched this then assume it's safe
-        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER\
-                + common.Quality.SNATCHED_BEST or self.in_history:
+        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
             self._log(u'SickGear snatched this episode, marking it safe to replace', logger.DEBUG)
             return True
 
@@ -800,6 +803,10 @@ class PostProcessor(object):
             # Episode already exists in database and processed episode has lower quality, marking it unsafe to replace
             self._log(u'Marking it unsafe to replace the episode that already exists in database with a file of lower quality', logger.DEBUG)
             return False
+
+        if self.in_history:
+            self._log(u'SickGear snatched this episode, marking it safe to replace', logger.DEBUG)
+            return True
 
         # None of the conditions were met, marking it unsafe to replace
         self._log(u'Marking it unsafe to replace because no positive condition is met, you may force replace but it would be better to examine the files', logger.DEBUG)
@@ -1027,7 +1034,7 @@ class PostProcessor(object):
         notifiers.pytivo_notifier.update_library(ep_obj)
 
         # do the library update for Trakt
-        notifiers.trakt_notifier.update_library(ep_obj)
+        notifiers.trakt_notifier.update_collection(ep_obj)
 
         self._run_extra_scripts(ep_obj)
 

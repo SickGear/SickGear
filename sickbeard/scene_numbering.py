@@ -30,20 +30,21 @@ import sickbeard
 from sickbeard import logger
 from sickbeard import db
 from sickbeard.exceptions import ex
+from sickbeard.scene_exceptions import xem_ids_list
 
 
 def get_scene_numbering(indexer_id, indexer, season, episode, fallback_to_xem=True):
     """
     Returns a tuple, (season, episode), with the scene numbering (if there is one),
-    otherwise returns the xem numbering (if fallback_to_xem is set), otherwise 
+    otherwise returns the xem numbering (if fallback_to_xem is set), otherwise
     returns the TVDB and TVRAGE numbering.
     (so the return values will always be set)
-    
+
     @param indexer_id: int
     @param season: int
     @param episode: int
     @param fallback_to_xem: bool If set (the default), check xem for matches if there is no local scene numbering
-    @return: (int, int) a tuple with (season, episode)   
+    @return: (int, int) a tuple with (season, episode)
     """
     if None is indexer_id or None is season or None is episode:
         return season, episode
@@ -192,7 +193,7 @@ def set_scene_numbering(indexer_id, indexer, season=None, episode=None, absolute
     """
     Set scene numbering for a season/episode.
     To clear the scene numbering, leave both sceneSeason and sceneEpisode as None.
-    
+
     """
     if None is indexer_id:
         return
@@ -223,7 +224,7 @@ def find_xem_numbering(indexer_id, indexer, season, episode):
     """
     Returns the scene numbering, as retrieved from xem.
     Refreshes/Loads as needed.
-    
+
     @param indexer_id: int
     @param season: int
     @param episode: int
@@ -275,11 +276,11 @@ def find_xem_absolute_numbering(indexer_id, indexer, absolute_number):
 def get_indexer_numbering_for_xem(indexer_id, indexer, sceneSeason, sceneEpisode):
     """
     Reverse of find_xem_numbering: lookup a tvdb season and episode using scene numbering
-    
+
     @param indexer_id: int
     @param sceneSeason: int
     @param sceneEpisode: int
-    @return: (int, int) a tuple of (season, episode)   
+    @return: (int, int) a tuple of (season, episode)
     """
     if None is indexer_id or None is sceneSeason or None is sceneEpisode:
         return sceneSeason, sceneEpisode
@@ -451,7 +452,7 @@ def get_xem_absolute_numbering_for_show(indexer_id, indexer):
 def xem_refresh(indexer_id, indexer, force=False):
     """
     Refresh data from xem for a tv show
-    
+
     @param indexer_id: int
     """
     if None is indexer_id:
@@ -459,6 +460,9 @@ def xem_refresh(indexer_id, indexer, force=False):
 
     indexer_id = int(indexer_id)
     indexer = int(indexer)
+
+    if indexer_id not in xem_ids_list[indexer]:
+        return
 
     # XEM API URL
     url = 'http://thexem.de/map/all?id=%s&origin=%s&destination=scene' % (

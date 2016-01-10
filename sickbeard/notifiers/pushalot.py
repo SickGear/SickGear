@@ -29,8 +29,8 @@ from sickbeard import logger, common
 
 class PushalotNotifier:
     def test_notify(self, pushalot_authorizationtoken):
-        return self._sendPushalot(pushalot_authorizationtoken, event="Test",
-                                  message="Testing Pushalot settings from SickGear", force=True)
+        return self._sendPushalot(pushalot_authorizationtoken, event='Test',
+                                  message='Testing Pushalot settings from SickGear', force=True)
 
     def notify_snatch(self, ep_name):
         if sickbeard.PUSHALOT_NOTIFY_ONSNATCH:
@@ -46,9 +46,9 @@ class PushalotNotifier:
         if sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD:
             self._sendPushalot(pushalot_authorizationtoken=None,
                                event=common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD],
-                               message=ep_name + ": " + lang)
+                               message=ep_name + ': ' + lang)
                                
-    def notify_git_update(self, new_version = "??"):
+    def notify_git_update(self, new_version = '??'):
         if sickbeard.USE_PUSHALOT:
             update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
             title=common.notifyStrings[common.NOTIFY_GIT_UPDATE]
@@ -64,35 +64,35 @@ class PushalotNotifier:
         if pushalot_authorizationtoken == None:
             pushalot_authorizationtoken = sickbeard.PUSHALOT_AUTHORIZATIONTOKEN
 
-        logger.log(u"Pushalot event: " + event, logger.DEBUG)
-        logger.log(u"Pushalot message: " + message, logger.DEBUG)
-        logger.log(u"Pushalot api: " + pushalot_authorizationtoken, logger.DEBUG)
+        logger.log(u'Pushalot event: ' + event, logger.DEBUG)
+        logger.log(u'Pushalot message: ' + message, logger.DEBUG)
+        logger.log(u'Pushalot api: ' + pushalot_authorizationtoken, logger.DEBUG)
 
-        http_handler = moves.http_client.HTTPSConnection("pushalot.com")
+        http_handler = moves.http_client.HTTPSConnection('pushalot.com')
 
         data = {'AuthorizationToken': pushalot_authorizationtoken,
                 'Title': event.encode('utf-8'),
                 'Body': message.encode('utf-8')}
 
         try:
-            http_handler.request("POST",
-                                 "/api/sendmessage",
-                                 headers={'Content-type': "application/x-www-form-urlencoded"},
+            http_handler.request('POST',
+                                 '/api/sendmessage',
+                                 headers={'Content-type': 'application/x-www-form-urlencoded'},
                                  body=urlencode(data))
         except (SSLError, moves.http_client.HTTPException, socket.error):
-            logger.log(u"Pushalot notification failed.", logger.ERROR)
+            logger.log(u'Pushalot notification failed.', logger.ERROR)
             return False
         response = http_handler.getresponse()
         request_status = response.status
 
         if request_status == 200:
-            logger.log(u"Pushalot notifications sent.", logger.DEBUG)
+            logger.log(u'Pushalot notifications sent.', logger.DEBUG)
             return True
         elif request_status == 410:
-            logger.log(u"Pushalot authentication failed: %s" % response.reason, logger.ERROR)
+            logger.log(u'Pushalot authentication failed: %s' % response.reason, logger.ERROR)
             return False
         else:
-            logger.log(u"Pushalot notification failed.", logger.ERROR)
+            logger.log(u'Pushalot notification failed.', logger.ERROR)
             return False
 
 

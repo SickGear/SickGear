@@ -247,7 +247,7 @@ class PLEXNotifier:
                             if section_path in location_path:
                                 hosts_match.update(keyed_host)
 
-            hosts_try = (hosts_all.copy(), hosts_match.copy())[len(hosts_match)]
+            hosts_try = (hosts_all.copy(), hosts_match.copy())[any(hosts_match)]
             host_list = []
             for section_key, cur_host in hosts_try.items():
 

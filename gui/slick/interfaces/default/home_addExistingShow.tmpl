@@ -10,14 +10,11 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/addExistingShow.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/rootDirs.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/addShowOptions.js?$sbPID"></script> 
-
 <script type="text/javascript" charset="utf-8">
 <!--
-\$(document).ready(function(){ 
+\$.sgSid = '$kwargs.get('sid', '')';
+\$.sgHashDir = '$kwargs.get('hash_dir', '')';
+\$(document).ready(function(){
     \$( '#tabs' ).tabs({
         collapsible: true,
         selected: #if $sickbeard.ROOT_DIRS then '-1' else '0'#
@@ -25,6 +22,10 @@
 });
 //-->
 </script>
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/addExistingShow.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/addShowOptions.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -36,47 +37,55 @@
 
 <form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
 
-	<p>Tip: shows are added quicker when usable show nfo and xml metadata is found</p>
+	<span#if $kwargs.get('hash_dir', None)# style="display:none"#end if>
+		<p>Tip: shows are added quicker when usable show nfo and xml metadata is found</p>
 
-	<p style="margin-top:15px">
-		<input type="checkbox" id="promptForSettings" name="promptForSettings" style="vertical-align: top;" />
-		<label for="promptForSettings">Enable to change the following options per show, otherwise use these options with all shows added below</label>
-	</p>
+		<p style="margin-top:15px">
+			<input type="checkbox" id="promptForSettings" name="promptForSettings" style="vertical-align: top;" />
+			<label for="promptForSettings">Enable to change the following options per show, otherwise use these options with all shows added below</label>
+		</p>
 
-	<div id="tabs">
-		<ul>
-			<li><a href="#tabs-1">Manage parent folders</a></li>
-			<li><a href="#tabs-2">Custom options</a></li>
-		</ul>
-		<div id="tabs-1" class="existingtabs">
-			<div style="width: 430px; margin: 0px auto">
+		<div id="tabs">
+			<ul>
+				<li><a href="#tabs-1">Manage parent folders</a></li>
+				<li><a href="#tabs-2">Custom options</a></li>
+			</ul>
+			<div id="tabs-1" class="existingtabs">
+				<div style="width: 430px; margin: 0px auto">
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
+				</div>
 			</div>
-		</div>
-		<div id="tabs-2">
-			<div class="stepDiv">
+			<div id="tabs-2">
+				<div class="stepDiv">
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
+				</div>
 			</div>
 		</div>
-	</div>
 
-	<br />
-	<hr />
+		<br />
+		<hr />
+	</span>
 
-	<p>The following parent folder(s) are scanned for existing shows. Toggle a folder to display shows</p>
+	<p>The following parent folder$multi_parents scanned for
+		#if not $kwargs.get('hash_dir', None)#existing shows. Toggle a folder to display shows#else#the existing show...#end if#
+	</p>
 
 	<ul id="rootDirStaticList">
 		<li></li>
 	</ul>
 
+#if not $kwargs.get('hash_dir', None)
 	<p>shows <span class="boldest">not known</span> to SickGear are listed below...</p>
+#end if
 
 	<div id="tableDiv"></div>
 
 	<br />
+#if not $kwargs.get('hash_dir', None)
 	<p>If you tried to add a show, arrived here and can't see the folder, then that show may already be in your show list.</p>
+#end if
 
-	<input class="btn btn-primary" type="button" value="Submit" id="submitShowDirs" />
+	<input class="btn btn-primary" type="button" value="#if $kwargs.get('hash_dir', None)#Redo Search#else#Submit#end if#" id="submitShowDirs" />
 
 </form>
 

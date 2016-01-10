@@ -29,56 +29,101 @@ from sickbeard import logger
 from sickbeard import db
 from sickbeard import encodingKludge as ek
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from lib.unidecode import unidecode
-from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 
-def filterBadReleases(name, parse=True):
+def pass_wordlist_checks(name, parse=True):
     """
-    Filters out non-english and just all-around stupid releases by comparing them
-    to the resultFilters contents.
-    
+    Filters out non-english and just all-around stupid releases by comparing
+    the word list contents at boundaries or the end of name.
+
     name: the release name to check
-    
+
     Returns: True if the release name is OK, False if it's bad.
     """
 
-    try:
-        if parse:
+    if parse:
+        err_msg = u'Unable to parse the filename %s into a valid ' % name
+        try:
             NameParser().parse(name)
-    except InvalidNameException:
-        logger.log(u"Unable to parse the filename " + name + " into a valid episode", logger.DEBUG)
-        return False
-    except InvalidShowException:
-        logger.log(u"Unable to parse the filename " + name + " into a valid show", logger.DEBUG)
-        return False
+        except InvalidNameException:
+            logger.log(err_msg + 'episode', logger.DEBUG)
+            return False
+        except InvalidShowException:
+            logger.log(err_msg + 'show', logger.DEBUG)
+            return False
 
-    resultFilters = ['sub(bed|ed|pack|s)', '(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?',
-                     '(dir|sample|sub|nfo)fix', 'sample', '(dvd)?extras',
-                     'dub(bed)?']
+    word_list = ['sub(bed|ed|pack|s)', '(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?',
+                 '(dir|sample|sub|nfo)fix', 'sample', '(dvd)?extras',
+                 'dub(bed)?']
 
     # if any of the bad strings are in the name then say no
     if sickbeard.IGNORE_WORDS:
-        resultFilters.extend(sickbeard.IGNORE_WORDS.split(','))
-    filters = [re.compile('(^|[\W_])%s($|[\W_])' % re.escape(filter.strip()), re.I) for filter in resultFilters]
-    for regfilter in filters:
-        if regfilter.search(name):
-            logger.log(u"Invalid scene release: " + name + " contained: " + regfilter.pattern + ", ignoring it",
-                       logger.DEBUG)
-            return False
+        word_list = ','.join([sickbeard.IGNORE_WORDS] + word_list)
+
+    result = contains_any(name, word_list)
+    if None is not result and result:
+        logger.log(u'Ignored: %s for containing ignore word' % name, logger.DEBUG)
+        return False
 
     # if any of the good strings aren't in the name then say no
-    if sickbeard.REQUIRE_WORDS:
-        require_words = sickbeard.REQUIRE_WORDS.split(',')
-        filters = [re.compile('(^|[\W_])%s($|[\W_])' % re.escape(filter.strip()), re.I) for filter in require_words]
-        for regfilter in filters:
-            if not regfilter.search(name):
-                logger.log(u"Invalid scene release: " + name + " didn't contain: " + regfilter.pattern + ", ignoring it",
-                           logger.DEBUG)
-                return False
+    result = not_contains_any(name, sickbeard.REQUIRE_WORDS)
+    if None is not result and result:
+        logger.log(u'Ignored: %s for not containing required word match' % name, logger.DEBUG)
+        return False
 
     return True
 
+def not_contains_any(subject, lookup_words, **kwargs):
+
+    return contains_any(subject, lookup_words, invert=True, **kwargs)
+
+def contains_any(subject, lookup_words, invert=False, **kwargs):
+    """
+    Check if subject does or does not contain a match from a list or string of regular expression lookup words
+
+    word: word to test existence of
+    lookup_words: List or comma separated string of words to search
+    re_prefix: insert string to all lookup words
+    re_suffix: append string to all lookup words
+    invert: invert function logic "contains any" into "does not contain any"
+
+    Returns: None if no checking was done. True for first match found, or if invert is False,
+             then True for first pattern that does not match, or False
+    """
+    compiled_words = compile_word_list(lookup_words, **kwargs)
+    if subject and compiled_words:
+        for rc_filter in compiled_words:
+            match = rc_filter.search(subject)
+            if (match and not invert) or (not match and invert):
+                msg = match and not invert and 'Found match' or ''
+                msg = not match and invert and 'No match found' or msg
+                logger.log(u'%s from pattern: %s in text: %s ' % (msg, rc_filter.pattern, subject), logger.DEBUG)
+                return True
+        return False
+    return None
+
+def compile_word_list(lookup_words, re_prefix='(^|[\W_])', re_suffix='($|[\W_])'):
+
+    result = []
+    if lookup_words:
+        search_raw = isinstance(lookup_words, list)
+        if not search_raw:
+            search_raw = not lookup_words.startswith('regex:')
+            lookup_words = lookup_words[(6, 0)[search_raw]:].split(',')
+        lookup_words = [x.strip() for x in lookup_words]
+        for word in [x for x in lookup_words if x]:
+            try:
+                # !0 == regex and subject = s / 'what\'s the "time"' / what\'s\ the\ \"time\"
+                subject = search_raw and re.escape(word) or re.sub(r'([\" \'])', r'\\\1', word)
+                result.append(re.compile('(?i)%s%s%s' % (re_prefix, subject, re_suffix)))
+            except re.error as e:
+                logger.log(u'Failure to compile filter expression: %s ... Reason: %s' % (word, e.message), logger.DEBUG)
+
+        diff = len(lookup_words) - len(result)
+        if diff:
+            logger.log(u'From %s expressions, %s was discarded during compilation' % (len(lookup_words), diff), logger.DEBUG)
+
+    return result
 
 def makeSceneShowSearchStrings(show, season=-1):
     showNames = allPossibleShowNames(show, season=season)
@@ -195,9 +240,9 @@ def allPossibleShowNames(show, season=-1):
     """
     Figures out every possible variation of the name for a particular show. Includes TVDB name, TVRage name,
     country codes on the end, eg. "Show Name (AU)", and any scene exception names.
-    
+
     show: a TVShow object that we should get the names of
-    
+
     Returns: a list of all the possible show names
     """
 
@@ -256,13 +301,13 @@ def determineReleaseName(dir_name=None, nzb_name=None):
         if len(results) == 1:
             found_file = ek.ek(os.path.basename, results[0])
             found_file = found_file.rpartition('.')[0]
-            if filterBadReleases(found_file):
+            if pass_wordlist_checks(found_file):
                 logger.log(u"Release name (" + found_file + ") found from file (" + results[0] + ")")
                 return found_file.rpartition('.')[0]
 
     # If that fails, we try the folder
     folder = ek.ek(os.path.basename, dir_name)
-    if filterBadReleases(folder):
+    if pass_wordlist_checks(folder):
         # NOTE: Multiple failed downloads will change the folder name.
         # (e.g., appending #s)
         # Should we handle that?

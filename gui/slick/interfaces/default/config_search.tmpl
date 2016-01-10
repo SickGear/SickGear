@@ -10,8 +10,8 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/configSearch.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/configSearch.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -113,18 +113,42 @@
 							<label>
 								<span class="component-title">Ignore result with any word</span>
 								<span class="component-desc">
-									<input type="text" name="ignore_words" value="$sickbeard.IGNORE_WORDS" class="form-control input-sm input350">
+									<input type="text" name="ignore_words" value="$sickbeard.IGNORE_WORDS" class="form-control input-sm input350"><p>(opt: start "regex:")</p>
 									<p class="clear-left note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words</p>
+								</span>
+								<span class="component-title">Shows with custom ignores</span>
+								<span class="component-desc">
+#set $shows = []
+#for $show in $using_rls_ignore_words
+	#set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+#end for
+#if len($using_rls_ignore_words)
+									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
+#else
+									<p style="line-height:1.2em;margin-top:7px">...will list here when in use</p>
+#end if
 								</span>
 							</label>
 						</div>
 
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Require at least one word</span>
+								<span class="component-title">Require all these words</span>
 								<span class="component-desc">
-									<input type="text" name="require_words" value="$sickbeard.REQUIRE_WORDS" class="form-control input-sm input350">
-									<p class="clear-left note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words</p>
+									<input type="text" name="require_words" value="$sickbeard.REQUIRE_WORDS" class="form-control input-sm input350"><p>(opt: start "regex:")</p>
+									<p class="clear-left note">ignore search result <em class="grey-text">unless its title contains all</em> of these comma seperated words</p>
+								</span>
+								<span class="component-title">Shows with custom requires</span>
+								<span class="component-desc">
+#set $shows = []
+#for $show in $using_rls_require_words
+	#set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+#end for
+#if len($using_rls_require_words)
+									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
+#else
+									<p style="line-height:1.2em;margin-top:7px">...will list here when in use</p>
+#end if
 								</span>
 							</label>
 						</div>
@@ -473,9 +497,9 @@
 
 							<div class="field-pair" id="torrent_seed_time_option">
 								<label>
-									<span class="component-title">Minimum seeding time is</span>
+									<span class="component-title">Seed time (minimum default)</span>
 									<span class="component-desc"><input type="number" step="0.1" name="torrent_seed_time" id="torrent_seed_time" value="$sickbeard.TORRENT_SEED_TIME" class="form-control input-sm input100">
-									<p>hours. (default:'0' passes blank to client and '-1' passes nothing)</p></span>
+									<p>1 or more minutes. (0 or blank to use the client setting)</p></span>
 								</label>
 							</div>
 

@@ -17,9 +17,62 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import sickbeard
+import time
 
 from indexer_config import initConfig, indexerConfig
 from sickbeard.helpers import proxy_setting
+
+
+class ShowContainer(dict):
+    """Simple dict that holds a series of Show instances
+    """
+
+    def __init__(self):
+        self._stack = []
+        self._lastgc = time.time()
+
+    def __setitem__(self, key, value):
+        self._stack.append(key)
+
+        # keep only the 100th latest results
+        if time.time() - self._lastgc > 20:
+            for o in self._stack[:-100]:
+                del self[o]
+
+            self._stack = self._stack[-100:]
+
+            self._lastgc = time.time()
+
+        super(ShowContainer, self).__setitem__(key, value)
+
+
+class DummyIndexer:
+    def __init__(self, *args, **kwargs):
+        self.config = {
+            'apikey': '',
+            'debug_enabled': False,
+            'custom_ui': None,
+            'proxy': None,
+            'cache_enabled': False,
+            'cache_location': '',
+            'valid_languages': [],
+            'langabbv_to_id': {},
+            'language': 'en',
+            'base_url': '',
+        }
+
+        self.corrections = {}
+        self.shows = ShowContainer()
+
+    def __getitem__(self, key):
+        return None
+
+    def __repr__(self):
+        return str(self.shows)
+
+    def search(self, series):
+        return []
+
 
 class indexerApi(object):
     def __init__(self, indexerID=None):
@@ -30,7 +83,10 @@ class indexerApi(object):
 
     def indexer(self, *args, **kwargs):
         if self.indexerID:
-            return indexerConfig[self.indexerID]['module'](*args, **kwargs)
+            if indexerConfig[self.indexerID]['active']:
+                return indexerConfig[self.indexerID]['module'](*args, **kwargs)
+            else:
+                return DummyIndexer(*args, **kwargs)
 
     @property
     def config(self):
@@ -63,3 +119,7 @@ class indexerApi(object):
     @property
     def indexers(self):
         return dict((int(x['id']), x['name']) for x in indexerConfig.values())
+
+
+def get_xem_supported_indexers():
+    return dict((key, value) for (key, value) in indexerConfig.items() if value['xem_origin'])

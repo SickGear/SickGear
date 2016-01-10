@@ -16,41 +16,56 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-__all__ = ['womble',
-           'btn',
-           'thepiratebay',
-           'kat',
-           'torrentleech',
-           'scc',
-           'torrentday',
-           'hdbits',
-           'iptorrents',
-           'omgwtfnzbs',
-           'speedcd',
-           'nyaatorrents',
-           'torrentbytes',
-           'freshontv',
-           'bitsoup',
-           'tokyotoshokan',
-           'animenzb',
-           'rarbg',
-           'totv',
-           'morethan',
-           'alpharatio',
-           'pisexy',
-           'strike',
-           'torrentshack',
-           'beyondhd',
-           'gftracker',
-           'transmithe_net',
-           'grabtheinfo',
-]
-
 from os import sys
 
 import sickbeard
-import generic
+
+from . import generic
 from sickbeard import logger
+# usenet
+from . import newznab, omgwtfnzbs, womble
+# torrent
+from . import alpharatio, beyondhd, bitmetv, bitsoup, btn, freshontv, funfile, gftracker, grabtheinfo, \
+    hdbits, hdspace, iptorrents, kat, morethan, pisexy, pretome, rarbg, scc, scenetime, shazbat, speedcd, strike, \
+    thepiratebay, torrentbytes, torrentday, torrenting, torrentleech, torrentshack, transmithe_net, tvchaosuk
+# anime
+from . import nyaatorrents, tokyotoshokan
+
+__all__ = ['omgwtfnzbs',
+           'womble',
+           'alpharatio',
+           'beyondhd',
+           'bitmetv',
+           'bitsoup',
+           'btn',
+           'freshontv',
+           'funfile',
+           'gftracker',
+           'grabtheinfo',
+           'hdbits',
+           'hdspace',
+           'iptorrents',
+           'kat',
+           'morethan',
+           'pisexy',
+           'pretome',
+           'rarbg',
+           'scc',
+           'scenetime',
+           'shazbat',
+           'speedcd',
+           'strike',
+           'thepiratebay',
+           'torrentbytes',
+           'torrentday',
+           'torrenting',
+           'torrentleech',
+           'torrentshack',
+           'transmithe_net',
+           'tvchaosuk',
+           'nyaatorrents',
+           'tokyotoshokan',
+           ]
 
 
 def sortedProviderList():

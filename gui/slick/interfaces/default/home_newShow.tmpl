@@ -10,10 +10,14 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/formwizard.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/newShow.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/addShowOptions.js?$sbPID"></script>
+<script>
+	var show_scene_maps = ${show_scene_maps}
+</script>
+
+<script type="text/javascript" src="$sbRoot/js/formwizard.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/newShow.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/addShowOptions.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -31,7 +35,7 @@
 	<form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
 
 		<fieldset class="sectionwrap step-one">
-			<legend class="legendStep"><p>Find show at a TV database</p></legend>
+			<legend class="legendStep"><p>#if $use_provided_info#Using known show information#else#Find show at TV info source#end if#</p></legend>
 
 			<div class="stepDiv">
 				<input type="hidden" id="indexer_timeout" value="$sickbeard.INDEXER_TIMEOUT" />
@@ -39,29 +43,38 @@
 #if $use_provided_info
     #set $provided_indexer_local = $provided_indexer
     #set $provided_indexer_id_local = $provided_indexer_id
-				Show retrieved from existing metadata: <a href="<%= anon_url(sickbeard.indexerApi(provided_indexer_local).config['show_url'], provided_indexer_id_local) %>">$provided_indexer_name</a>
+				Show: <a href="<%= anon_url(sickbeard.indexerApi(provided_indexer_local).config['show_url'], provided_indexer_id_local) %>">$provided_indexer_name</a>
 				<input type="hidden" name="indexerLang" value="en" />
-				<input type="hidden" name="whichSeries" value="$provided_indexer_id" />
+				<input type="hidden" name="whichSeries" value="#echo '|'.join([str($provided_indexer), '', str($provided_indexer_id), $provided_indexer_name])#" />
 				<input type="hidden" id="providedName" value="$provided_indexer_name" />
 				<input type="hidden" id="providedIndexer" value="$provided_indexer" />
 #else
+    #if 2 > $len($indexers)
+<style>
+	#addShowForm input#nameToSearch{width:611px}
+</style>
+				<input type="hidden" id="providedIndexer" value="$provided_indexer" />
+    #end if
 				<input type="text" id="nameToSearch" value="$default_show_name" class="form-control form-control-inline input-sm input350" />
 				&nbsp;
 				<span style="float:right">
-				<select name="indexerLang" id="indexerLangSelect" class="form-control form-control-inline input-sm">
-					<option value="en" selected="selected">en</option>
-				</select><b>&nbsp;*</b>
-				<select name="providedIndexer" id="providedIndexer" class="form-control form-control-inline input-sm">
-					<option value="0" #if $provided_indexer == 0 then "selected=\"selected\"" else ""#>All Indexers</option>
-    #for $indexer in $indexers
-					<option value="$indexer" #if $provided_indexer == $indexer then "selected=\"selected\"" else ""#>$indexers[$indexer]</option>
-    #end for
-				</select>
-				&nbsp;
-				<input class="btn btn-inline" type="button" id="searchName" value="Search" />
+					<select name="indexerLang" id="indexerLangSelect" class="form-control form-control-inline input-sm">
+						<option value="en" selected="selected">en</option>
+					</select><b>&nbsp;*</b>
+
+    #if 1 < $len($indexers)
+					<select name="providedIndexer" id="providedIndexer" class="form-control form-control-inline input-sm">
+						<option value="0" #if $provided_indexer == 0 then "selected=\"selected\"" else ""#>All Indexers</option>
+        #for $indexer in $indexers
+						<option value="$indexer" #if $provided_indexer == $indexer then "selected=\"selected\"" else ""#>$indexers[$indexer]</option>
+        #end for
+					</select>
+    #end if
+					&nbsp;
+					<input class="btn btn-inline" type="button" id="searchName" value="Search" />
 				</span>
 				<br />
-				<p style="margin:5px 0 15px"><b>*</b> SickGear supports english episodes. The language choice is used for fetching show data and episode filenames</p>
+				<p style="margin:5px 0 15px">Enter show name, TVDB ID, IMDb Url, or IMDb ID.&nbsp;&nbsp;<b>*</b>SickGear supports english, language is used for show/episode data</p>
 
 				<div id="searchResults" style="height: 100%"></div>
 #end if
@@ -107,8 +120,8 @@
 #end if
 	</div>
 
-<script type="text/javascript" src="$sbRoot/js/rootDirs.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/blackwhite.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
 
 </div></div>
 

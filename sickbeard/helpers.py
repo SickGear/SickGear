@@ -94,15 +94,22 @@ def remove_extension(name):
     return name
 
 
-def remove_non_release_groups(name):
+def remove_non_release_groups(name, is_anime=False):
     """
     Remove non release groups from name
     """
 
-    if name and "-" in name:
-        name_group = name.rsplit('-', 1)
-        if name_group[-1].upper() in ["RP", "NZBGEEK"]:
-            name = name_group[0]
+    if name:
+        rc = [re.compile(r'(?i)' + v) for v in [
+              '([\s\.\-_\[\{\(]*(no-rar|nzbgeek|ripsalot|rp|siklopentan)[\s\.\-_\]\}\)]*)$',
+              '(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*(www\.\w+.\w+)[\s\.\-_]*[\]\}\)][\s\.\-_]*)$',
+              '(?<=\w)([\s\.\-_]*[\[\{\(]\s*(rar(bg|tv)|((e[tz]|v)tv))[\s\.\-_]*[\]\}\)][\s\.\-_]*)$'] +
+              (['(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*[\w\s\.\-\_]+[\s\.\-_]*[\]\}\)][\s\.\-_]*)$'], [])[is_anime]]
+        rename = name
+        while rename:
+            for regex in rc:
+                name = regex.sub('', name)
+            rename = (name, False)[name == rename]
 
     return name
 
@@ -854,7 +861,7 @@ def full_sanitizeSceneName(name):
     return re.sub('[. -]', ' ', sanitizeSceneName(name)).lower().lstrip()
 
 
-def get_show(name, try_indexers=False, try_scene_exceptions=False):
+def get_show(name, try_scene_exceptions=False):
     if not sickbeard.showList or None is name:
         return
 
@@ -871,10 +878,6 @@ def get_show(name, try_indexers=False, try_scene_exceptions=False):
             indexer_id = sickbeard.scene_exceptions.get_scene_exception_by_name(name)[0]
             if indexer_id:
                 show_obj = findCertainShow(sickbeard.showList, indexer_id)
-
-        if not show_obj and try_indexers:
-            show_obj = findCertainShow(sickbeard.showList,
-                                       searchIndexerForShowID(full_sanitizeSceneName(name), ui=classes.ShowListUI)[2])
 
         # add show to cache
         if show_obj and not from_cache:
@@ -1097,7 +1100,7 @@ def proxy_setting(proxy_setting, request_url, force=False):
     return (False, proxy_address)[request_url_match], True
 
 
-def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False):
+def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False, **kwargs):
     """
     Returns a byte-string retrieved from the url provider.
     """
@@ -1142,9 +1145,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
         # decide if we get or post data to server
         if post_data:
-            resp = session.post(url, data=post_data, timeout=timeout)
+            resp = session.post(url, data=post_data, timeout=timeout, **kwargs)
         else:
-            resp = session.get(url, timeout=timeout)
+            resp = session.get(url, timeout=timeout, **kwargs)
 
         if not resp.ok:
             if resp.status_code in clients.http_error_code:
@@ -1158,19 +1161,22 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             return
 
     except requests.exceptions.HTTPError as e:
-        logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
+        logger.log(u'HTTP error %s while loading URL %s' % (e.errno, url), logger.WARNING)
         return
     except requests.exceptions.ConnectionError as e:
-        logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
+        logger.log(u'Internet connection error msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
         return
     except requests.exceptions.ReadTimeout as e:
-        logger.log(u'Read timed out ' + str(e.message) + ' while loading URL ' + url, logger.WARNING)
+        logger.log(u'Read timed out msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
         return
-    except requests.exceptions.Timeout as e:
-        logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
+    except (requests.exceptions.Timeout, socket.timeout) as e:
+        logger.log(u'Connection timed out msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
         return
-    except Exception:
-        logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)
+    except Exception as e:
+        if e.message:
+            logger.log(u'Exception caught while loading URL %s\r\nDetail... %s\r\n%s' % (url, str(e.message), traceback.format_exc()), logger.WARNING)
+        else:
+            logger.log(u'Unknown exception while loading URL %s\r\nDetail... %s' % (url, traceback.format_exc()), logger.WARNING)
         return
 
     if json:
@@ -1308,6 +1314,8 @@ def human(size):
 
 
 def get_size(start_path='.'):
+    if ek.ek(os.path.isfile, start_path):
+        return ek.ek(os.path.getsize, start_path)
     total_size = 0
     for dirpath, dirnames, filenames in ek.ek(os.walk, start_path):
         for f in filenames:
@@ -1406,6 +1414,7 @@ def clear_unused_providers():
         myDB = db.DBConnection('cache.db')
         myDB.action('DELETE FROM provider_cache WHERE provider NOT IN (%s)' % ','.join(['?'] * len(providers)), providers)
 
+
 def make_search_segment_html_string(segment, max_eps=5):
     seg_str = ''
     if segment and not isinstance(segment, list):
@@ -1423,3 +1432,7 @@ def make_search_segment_html_string(segment, max_eps=5):
         episodes = ['S' + str(x.season).zfill(2) + 'E' + str(x.episode).zfill(2) for x in segment]
         seg_str = u'Episode' + maybe_plural(len(episodes)) + ': ' + ', '.join(episodes)
     return seg_str
+
+
+def has_anime():
+    return False if not sickbeard.showList else any(filter(lambda show: show.is_anime, sickbeard.showList))

@@ -41,7 +41,7 @@ class TorrentBasicTests(test.SickbeardTestDBCase):
         if not html:
             return
 
-        soup = BeautifulSoup(html, features=["html5lib", "permissive"])
+        soup = BeautifulSoup(html, features=['html5lib', 'permissive'])
 
         torrent_table = soup.find('table', attrs={'class': 'data'})
         torrent_rows = torrent_table.find_all('tr') if torrent_table else []
@@ -51,7 +51,7 @@ class TorrentBasicTests(test.SickbeardTestDBCase):
 
         #Continue only if one Release is found
         if len(torrent_rows) < 2:
-            print(u"The data returned does not contain any torrents")
+            print(u'The data returned does not contain any torrents')
             return
 
         for tr in torrent_rows[1:]:
@@ -71,7 +71,7 @@ class TorrentBasicTests(test.SickbeardTestDBCase):
 
             print(title)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print('==================')
     print('STARTING - XEM Scene Numbering TESTS')
     print('==================')

@@ -8,36 +8,23 @@
 #set global $sbPath = '..'
 #set global $topmenu = 'config'
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
-
+##
 #if $varExists('header')
 	<h1 class='header'>$header</h1>
 #else
 	<h1 class='title'>$title</h1>
 #end if
-
-##set cpu_usage = $psutil.cpu_percent()
-##set ram = $psutil.phymem_usage()
-##set ram_total = $ram.total / 2**20
-##set ram_used = $ram.used / 2**20
-##set ram_free = $ram.free / 2**20
-##set ram_percent_used = $ram.percent
-##set disk = $psutil.disk_usage('/')
-##set disk_total = $disk.total / 2**30
-##set disk_used = $disk.used / 2**30
-##set disk_free = $disk.free / 2**30
-##set disk_percent_used = $disk.percent
 ##
 <div id="config-content">
 	<table class="infoTable" cellspacing="1" border="0" cellpadding="0" width="100%">
 		<tr>
 			<td class="infoTableHeader">Version: </td>
 			<td class="infoTableCell">
-#if $sickbeard.VERSION_NOTIFY
-				BRANCH: ($sickbeard.BRANCH) / COMMIT: ($sickbeard.CUR_COMMIT_HASH) <!-- &ndash; build.date //--><br />
-#else
-				You don't have version checking turned on, see "Check software updates" in Config > General.<br />
+				BRANCH: #echo $sickbeard.BRANCH or 'UNKNOWN'# / COMMIT: #echo $sickbeard.CUR_COMMIT_HASH or 'UNKNOWN'#<br />
+				<em class="red-text">This is BETA software</em><br />
+#if not $sickbeard.VERSION_NOTIFY:
+				You don't have version checking turned on, see "Check software updates" in Config > General.
 #end if
-				<em class="red-text">This is BETA software.</em>
 			</td>
 		</tr>
 		<tr><td class="infoTableHeader">Config file:</td><td class="infoTableCell">$sickbeard.CONFIG_FILE</td></tr>

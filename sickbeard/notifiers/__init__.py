@@ -26,6 +26,7 @@ import nmjv2
 import synoindex
 import synologynotifier
 import pytivo
+import trakt
 
 import growl
 import prowl
@@ -37,7 +38,7 @@ import pushalot
 import pushbullet
 
 import tweet
-import trakt
+from lib import libtrakt
 import emailnotify
 
 from sickbeard.common import *
@@ -103,6 +104,6 @@ def notify_snatch(ep_name):
         n.notify_snatch(ep_name)
 
 
-def notify_git_update(new_version=""):
+def notify_git_update(new_version=''):
     for n in notifiers:
         n.notify_git_update(new_version)

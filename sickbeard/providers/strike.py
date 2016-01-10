@@ -16,9 +16,9 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
-
 from . import generic
+from sickbeard import helpers
+from sickbeard.helpers import tryInt
 
 
 class StrikeProvider(generic.TorrentProvider):
@@ -28,56 +28,57 @@ class StrikeProvider(generic.TorrentProvider):
 
         self.url_base = 'https://getstrike.net/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': self.url_base + 'api/v2/torrents/search/?category=TV&phrase=%s'}
+                     'search': self.url_base + 'api/v2/torrents/search/?category=%s&phrase=%s'}
 
         self.url = self.urls['config_provider_home_uri']
 
         self.minseed, self.minleech = 2 * [None]
 
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._check_auth():
-            return results
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         for mode in search_params.keys():
-            for search_string in search_params[mode]:
+            search_show = mode in ['Season', 'Episode']
+            if not search_show and helpers.has_anime():
+                search_params[mode] *= (1, 2)['Cache' == mode]
 
-                search_url = self.urls['search'] % re.sub('[\.\s]+', ' ', search_string)
+            for enum, search_string in enumerate(search_params[mode]):
+                search_url = self.urls['search'] % \
+                    (('tv', 'anime')[(search_show and bool(self.show and self.show.is_anime)) or bool(enum)],
+                     (re.sub('[\.\s]+', ' ', search_string), 'x264')['Cache' == mode])
+
                 data_json = self.get_url(search_url, json=True)
 
-                cnt = len(results)
+                cnt = len(items[mode])
                 try:
                     for item in data_json['torrents']:
-                        seeders = ('seeds' in item and item['seeds']) or 0
-                        leechers = ('leeches' in item and item['leeches']) or 0
-                        if seeders < self.minseed or leechers < self.minleech:
+                        seeders, leechers, title, download_magnet, size = [tryInt(n, n) for n in [item.get(x) for x in [
+                            'seeds', 'leeches', 'torrent_title', 'magnet_uri', 'size']]]
+                        if self._peers_fail(mode, seeders, leechers):
                             continue
 
-                        title = ('torrent_title' in item and item['torrent_title']) or ''
-                        download_url = ('magnet_uri' in item and item['magnet_uri']) or ''
-                        if title and download_url:
-                            results.append((title, download_url, seeders))
+                        if title and download_magnet:
+                            items[mode].append((title, download_magnet, seeders, self._bytesizer(size)))
+
                 except Exception:
                     pass
-                self._log_result(mode, len(results) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-        # Sort results by seeders
-        results.sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
+
+            results = list(set(results + items[mode]))
 
         return results
 
-    def find_propers(self, search_date=datetime.datetime.today()):
+    def _season_strings(self, ep_obj, **kwargs):
 
-        return self._find_propers(search_date)
+        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False)
 
-    def _get_season_search_strings(self, ep_obj, **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._get_season_search_strings(self, ep_obj, scene=False)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, scene=False, use_or=False)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
 
 provider = StrikeProvider()

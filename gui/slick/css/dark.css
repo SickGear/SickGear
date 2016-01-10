@@ -20,7 +20,7 @@ inc_top.tmpl
 }
 
 .browserDialog.busy .ui-dialog-buttonpane{
-	background:url("../images/loading.gif") 10px 50% no-repeat !important
+	background:url("../images/loading32-dark.gif") 10px 50% no-repeat !important
 }
 
 .ui-progressbar .ui-progressbar-overlay{
@@ -61,6 +61,8 @@ inc_top.tmpl
 .ui-state-default,
 .ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default{
+	background:#3d3d3d;
+	color:#fff;
 	border:1px solid #111
 }
 
@@ -326,15 +328,15 @@ ul#rootDirStaticList li{
 }
 
 /* =======================================================================
-home_trendingShows.tmpl
+home_browseShows.tmpl
 ========================================================================== */
 
-.traktContainer{
+.browse-container{
 	background-color:#333;
 	border:1px solid #111
 }
 
-.trakt-image{
+.browse-image{
 	border-bottom:1px solid #111
 }
 
@@ -526,7 +528,16 @@ h2.day, h2.network{
 .carousel-indicators .active{
 	background:#8DBEEE;
 	border-color:#8DBEEE
-} 
+}
+
+/* =======================================================================
+viewchanges.tmpl
+========================================================================== */
+#changes{
+	color:rgb(255,255,255);
+	background-color:rgb(61,61,61);
+	border:1px solid rgb(17,17,17)
+}
 
 /* =======================================================================
 config*.tmpl
@@ -626,6 +637,14 @@ div.metadataDiv .disabled{
 	background:url("../images/warning16.png") no-repeat right 5px center #fff
 }
 
+.solid-border{
+	border:1px solid #555
+}
+
+.solid-border-top{
+	border-top:1px solid #555
+}
+
 /* =======================================================================
 manage*.tmpl
 ========================================================================== */
@@ -655,6 +674,7 @@ span.path{
 	background-color:#333
 }
 
+#addRootDirTable td label .filepath.red-text,
 .red-text{
 	color:#d33
 }
@@ -1159,12 +1179,14 @@ input sizing (for config pages)
 ========================================================================== */
 
 #pickShow optgroup,
+#showfilter optgroup,
 #editAProvider optgroup{
 	color:#eee;
 	background-color:rgb(51, 51, 51)
 }
 
 #pickShow optgroup option,
+#showfilter optgroup option,
 #editAProvider optgroup option{
 	color:#222;
 	background-color:#fff
@@ -1180,7 +1202,7 @@ browser.css
 
 #fileBrowserDialog ul li a:hover{
 	color:#09a2ff;
-	background:none
+	background: rgb(61, 61, 61) none
 }
 
 .ui-menu .ui-menu-item{
@@ -1212,6 +1234,10 @@ div.stepsguide .step p{
 
 .disabledstep{
 	color:#646464
+}
+
+#newShowPortal #addShowForm .stepsguide .disabledstep:hover > .smalltext{
+	color:#ccc;
 }
 
 div.stepsguide .disabledstep p{

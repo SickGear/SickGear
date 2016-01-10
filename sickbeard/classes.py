@@ -22,6 +22,11 @@ import sickbeard
 from lib.dateutil import parser
 from sickbeard.common import Quality
 
+try:
+    from collections import OrderedDict
+except ImportError:
+    from requests.compat import OrderedDict
+
 
 class SearchResult:
     """
@@ -151,7 +156,7 @@ class ShowListUI:
     """
     This class is for tvdb-api. Instead of prompting with a UI to pick the
     desired result out of a list of shows it tries to be smart about it
-    based on what shows are in SB. 
+    based on what shows are in SB.
     """
 
     def __init__(self, config, log=None):
@@ -222,3 +227,24 @@ class UIError():
     def __init__(self, message):
         self.message = message
         self.time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+class OrderedDefaultdict(OrderedDict):
+    def __init__(self, *args, **kwargs):
+        if not args:
+            self.default_factory = None
+        else:
+            if not (args[0] is None or callable(args[0])):
+                raise TypeError('first argument must be callable or None')
+            self.default_factory = args[0]
+            args = args[1:]
+        super(OrderedDefaultdict, self).__init__(*args, **kwargs)
+
+    def __missing__ (self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        self[key] = default = self.default_factory()
+        return default
+
+    def __reduce__(self):  # optional, for pickle support
+        args = (self.default_factory,) if self.default_factory else ()
+        return self.__class__, args, None, None, self.iteritems()

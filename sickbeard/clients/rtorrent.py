@@ -16,12 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from base64 import b64encode
-
 import sickbeard
 from sickbeard.clients.generic import GenericClient
 from lib.rtorrent import RTorrent
-from lib.rtorrent.err import MethodError
 
 
 class rTorrentAPI(GenericClient):
@@ -45,7 +42,6 @@ class rTorrentAPI(GenericClient):
         return self.auth
 
     def _add_torrent_uri(self, result):
-        filedata = None
 
         if not self.auth:
             return False
@@ -62,7 +58,7 @@ class rTorrentAPI(GenericClient):
 
             # Set label
             if sickbeard.TORRENT_LABEL:
-                torrent.set_custom(1, sickbeard.TORRENT_LABEL.lower())
+                torrent.set_custom(1, sickbeard.TORRENT_LABEL)
 
             if sickbeard.TORRENT_PATH:
                 torrent.set_directory(sickbeard.TORRENT_PATH)
@@ -76,7 +72,6 @@ class rTorrentAPI(GenericClient):
             return False
 
     def _add_torrent_file(self, result):
-        filedata = None
 
         if not self.auth:
             return False
@@ -84,7 +79,7 @@ class rTorrentAPI(GenericClient):
         if not result:
             return False
 
-            # group_name = 'sb_test'.lower() ##### Use provider instead of _test
+            # group_name = 'sb_test' ##### Use provider instead of _test
             # if not self._set_torrent_ratio(group_name):
             # return False
 
@@ -98,7 +93,7 @@ class rTorrentAPI(GenericClient):
 
             # Set label
             if sickbeard.TORRENT_LABEL:
-                torrent.set_custom(1, sickbeard.TORRENT_LABEL.lower())
+                torrent.set_custom(1, sickbeard.TORRENT_LABEL)
 
             if sickbeard.TORRENT_PATH:
                 torrent.set_directory(sickbeard.TORRENT_PATH)

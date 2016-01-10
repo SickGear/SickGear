@@ -14,12 +14,12 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/configPostProcessing.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/configPostProcessing.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
 
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 
@@ -1072,6 +1072,11 @@
 													<td class="align-right"><i class="sgicon-info" title="Add 'proper' to name if episode is a proper or repack"></i> <b>Release Type:</b></td>
 													<td>%RT</td>
 													<td>PROPER</td>
+												</tr>
+												<tr class="even">
+													<td class="align-right"><b>Version:</b></td>
+													<td>%V</td>
+													<td>2</td>
 												</tr>
 											</tbody>
 										</table>

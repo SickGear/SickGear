@@ -7,7 +7,7 @@
 		<span class="component-title input">Quality</span>
 		<span class="component-desc">
 #set $selected = None
-			<select id="qualityPreset" class="form-control form-control-inline input-sm">
+			<select id="qualityPreset" name="quality_preset" class="form-control form-control-inline input-sm">
 				<option value="0">Custom</option>
 #for $curPreset in sorted($qualityPresets):
 				<option value="$curPreset" #if $curPreset == $overall_quality then "selected=\"selected\"" else ""# #if $qualityPresetStrings[$curPreset].endswith("0p") then "style=\"padding-left: 15px;\"" else ""#>$qualityPresetStrings[$curPreset]</option>

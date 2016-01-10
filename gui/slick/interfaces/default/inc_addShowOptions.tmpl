@@ -79,7 +79,7 @@
 				<span class="component-title">Scene numbering</span>
 				<span class="component-desc">
 					<input type="checkbox" name="scene" id="scene" #if $sickbeard.SCENE_DEFAULT then "checked=\"checked\"" else ""# />
-					<p>search for episodes that are numbered by scene groups instead of by the TV network</p>
+					<p>search for episodes numbered by scene groups instead of by the TV network<span id="scene-maps-found" style="display:none" class="grey-text"> (scene numbers found)</span></p>
 				</span>
 			</label>
 		</div>
@@ -101,7 +101,7 @@
 			<label for="anime">
 				<span class="component-title">Show is anime</span>
 				<span class="component-desc">
-					<input type="checkbox" name="anime" id="anime" #if $sickbeard.ANIME_DEFAULT then "checked=\"checked\"" else ""# />
+					<input type="checkbox" name="anime" id="anime" #if $sickbeard.ANIME_DEFAULT or $kwargs.get('is_anime') then "checked=\"checked\"" else ""# />
 					<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
 				</span>
 			</label>

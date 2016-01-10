@@ -16,19 +16,19 @@ inc_top.tmpl
 }
 
 .browserDialog.busy .ui-dialog-buttonpane{
-	background:url("../images/loading.gif") 10px 50% no-repeat !important
+	background:url("../images/loading32.gif") 10px 50% no-repeat !important
 }
 
 .ui-progressbar .ui-progressbar-overlay{
 	background:url("../css/lib/images/animated-overlay.gif")
 }
 
-.ui-dialog, 
+.ui-dialog,
 .ui-dialog-buttonpane{
 	background:#eceadf url("../css/lib/images/ui-bg_fine-grain_10_eceadf_60x60.png") 50% 50% repeat !important
 }
 
-.ui-accordion-content, 
+.ui-accordion-content,
 .ui-tabs-panel{
 	background:#ededed !important;
 	background-image:none !important
@@ -50,41 +50,41 @@ inc_top.tmpl
 	background:#fff url("../css/lib/images/ui-bg_flat_0_ffffff_40x100.png") 50% 50% repeat-x
 }
 
-.ui-state-default, 
-.ui-widget-content .ui-state-default, 
+.ui-state-default,
+.ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default{
 	background:#fff;
 	border:1px solid #CCC
 }
 
-.ui-state-hover, 
-.ui-widget-content .ui-state-hover, 
-.ui-widget-header .ui-state-hover, 
-.ui-state-focus, 
-.ui-widget-content .ui-state-focus, 
+.ui-state-hover,
+.ui-widget-content .ui-state-hover,
+.ui-widget-header .ui-state-hover,
+.ui-state-focus,
+.ui-widget-content .ui-state-focus,
 .ui-widget-header .ui-state-focus{
 	background:#fff
 }
 
-.ui-state-active, 
-.ui-widget-content .ui-state-active, 
+.ui-state-active,
+.ui-widget-content .ui-state-active,
 .ui-widget-header .ui-state-active{
 	background:#F7F7F7
 }
 
-.ui-state-highlight, 
-.ui-widget-content .ui-state-highlight, 
+.ui-state-highlight,
+.ui-widget-content .ui-state-highlight,
 .ui-widget-header .ui-state-highlight{
 	background:#fbf9ee url("../css/lib/images/ui-bg_glass_55_fbf9ee_1x400.png") 50% 50% repeat-x
 }
 
-.ui-state-error, 
-.ui-widget-content .ui-state-error, 
+.ui-state-error,
+.ui-widget-content .ui-state-error,
 .ui-widget-header .ui-state-error{
 	background:#fef1ec url("../css/lib/images/ui-bg_glass_95_fef1ec_1x400.png") 50% 50% repeat-x
 }
 
-.ui-icon, 
+.ui-icon,
 .ui-widget-content .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_222222_256x240.png")
 }
@@ -97,7 +97,7 @@ inc_top.tmpl
 	background-image:url("../css/lib/images/ui-icons_8c291d_256x240.png")
 }
 
-.ui-state-hover .ui-icon, 
+.ui-state-hover .ui-icon,
 .ui-state-focus .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_222222_256x240.png")
 }
@@ -110,7 +110,7 @@ inc_top.tmpl
 	background-image:url("../css/lib/images/ui-icons_2e83ff_256x240.png")
 }
 
-.ui-state-error .ui-icon, 
+.ui-state-error .ui-icon,
 .ui-state-error-text .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_cd0a0a_256x240.png")
 }
@@ -327,15 +327,15 @@ ul#rootDirStaticList li{
 }
 
 /* =======================================================================
-home_trendingShows.tmpl
+home_browseShows.tmpl
 ========================================================================== */
 
-.traktContainer{
+.browse-container{
 	background-color:#DFDACF;
 	border:1px solid #111
 }
 
-.trakt-image{
+.browse-image{
 	border-bottom:1px solid #111
 }
 
@@ -345,7 +345,7 @@ home_postprocess.tmpl
 
 
 /* =======================================================================
-displayShow.tmpl 
+displayShow.tmpl
 ========================================================================== */
 
 tr.seasonheader{
@@ -508,7 +508,16 @@ h2.day, h2.network{
 .carousel-indicators .active{
 	background:#C7DB40;
 	border-color:#C7DB40
-} 
+}
+
+/* =======================================================================
+viewchanges.tmpl
+========================================================================== */
+#changes{
+	color:rgb(51,51,51);
+	background-color:rgb(245,245,245);
+	border:1px solid rgb(204,204,204)
+}
 
 /* =======================================================================
 config*.tmpl
@@ -601,6 +610,14 @@ div.metadataDiv .disabled{
 	background:url("../images/warning16.png") no-repeat right 5px center #fff
 }
 
+.solid-border{
+	border:1px solid #ccc
+}
+
+.solid-border-top{
+	border-top:1px solid #ccc
+}
+
 /* =======================================================================
 manage*.tmpl
 ========================================================================== */
@@ -610,7 +627,7 @@ manage*.tmpl
 }
 
 a.whitelink{
-	color:#fff
+	color:#000
 }
 
 /* =======================================================================
@@ -630,6 +647,7 @@ span.path{
 	background-color:#f5f1e4
 }
 
+#addRootDirTable td label .filepath.red-text,
 .red-text{
 	color:#d33
 }
@@ -1125,12 +1143,14 @@ input sizing (for config pages)
 ========================================================================== */
 
 #pickShow optgroup,
+#showfilter optgroup,
 #editAProvider optgroup{
 	color:#eee;
 	background-color:#888
 }
 
 #pickShow optgroup option,
+#showfilter optgroup option,
 #editAProvider optgroup option{
 	color:#222;
 	background-color:#fff
@@ -1142,7 +1162,7 @@ browser.css
 
 #fileBrowserDialog ul li a:hover{
 	color:#00f;
-	background:none
+	background: rgb(220, 220, 220) none
 }
 
 .ui-menu .ui-menu-item{
@@ -1178,6 +1198,10 @@ div.stepsguide .step p{
 
 div.stepsguide .disabledstep p{
 	border-color:#8a775e
+}
+
+#newShowPortal #addShowForm .stepsguide .disabledstep:hover > .smalltext{
+	color:#8a775e;
 }
 
 div.formpaginate .prev, div.formpaginate .next{

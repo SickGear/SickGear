@@ -31,6 +31,7 @@ class LXMLTreeBuilderForXML(TreeBuilder):
     is_xml = True
 
     NAME = "lxml-xml"
+    ALTERNATE_NAMES = ["xml"]
 
     # Well, it's permissive by XML parser standards.
     features = [NAME, LXML, XML, FAST, PERMISSIVE]
@@ -77,6 +78,7 @@ class LXMLTreeBuilderForXML(TreeBuilder):
             return (None, tag)
 
     def prepare_markup(self, markup, user_specified_encoding=None,
+                       exclude_encodings=None,
                        document_declared_encoding=None):
         """
         :yield: A series of 4-tuples.
@@ -102,7 +104,8 @@ class LXMLTreeBuilderForXML(TreeBuilder):
         # the document as each one in turn.
         is_html = not self.is_xml
         try_encodings = [user_specified_encoding, document_declared_encoding]
-        detector = EncodingDetector(markup, try_encodings, is_html)
+        detector = EncodingDetector(
+            markup, try_encodings, is_html, exclude_encodings)
         for encoding in detector.encodings:
             yield (detector.markup, encoding, document_declared_encoding, False)
 

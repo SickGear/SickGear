@@ -421,19 +421,13 @@ class ProcessTVShow(object):
 
         parse_result = None
         try:
-            parse_result = NameParser(try_indexers=True,
-                                      try_scene_exceptions=True,
-                                      convert=True).parse(videofile,
-                                                          cache_result=False)
+            parse_result = NameParser(try_scene_exceptions=True, convert=True).parse(videofile, cache_result=False)
         except (InvalidNameException, InvalidShowException):
             # Does not parse, move on to directory check
             pass
         if None is parse_result:
             try:
-                parse_result = NameParser(try_indexers=True,
-                                          try_scene_exceptions=True,
-                                          convert=True).parse(
-                                              dir_name, cache_result=False)
+                parse_result = NameParser(try_scene_exceptions=True,convert=True).parse(dir_name, cache_result=False)
             except (InvalidNameException, InvalidShowException):
                 # If the filename doesn't parse, then return false as last
                 # resort. We can assume that unparseable filenames are not
@@ -444,7 +438,7 @@ class ProcessTVShow(object):
                     parse_result.show.name)[self.any_vid_processed]
 
         ep_detail_sql = ''
-        if parse_result.show.indexerid and parse_result.episode_numbers and parse_result.season_number:
+        if parse_result.show.indexerid and 0 < len(parse_result.episode_numbers) and parse_result.season_number:
             ep_detail_sql = " and tv_episodes.showid='%s' and tv_episodes.season='%s' and tv_episodes.episode='%s'"\
                             % (str(parse_result.show.indexerid),
                                 str(parse_result.season_number),
@@ -454,11 +448,12 @@ class ProcessTVShow(object):
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM tv_episodes WHERE release_name = ?', [dir_name])
         if sql_result:
-            self._log_helper(u'Found a release directory%s that has already been processed,<br />.. skipping: %s'
+            self._log_helper(u'Found a release directory %s that has already been processed,<br />.. skipping: %s'
                              % (showlink, dir_name))
-            reset_status(parse_result.show.indexerid,
-                         parse_result.season_number,
-                         parse_result.episode_numbers[0])
+            if ep_detail_sql:
+                reset_status(parse_result.show.indexerid,
+                             parse_result.season_number,
+                             parse_result.episode_numbers[0])
             return True
 
         else:
@@ -468,11 +463,12 @@ class ProcessTVShow(object):
 
             sql_result = my_db.select('SELECT * FROM tv_episodes WHERE release_name = ?', [videofile.rpartition('.')[0]])
             if sql_result:
-                self._log_helper(u'Found a video, but that release%s was already processed,<br />.. skipping: %s'
+                self._log_helper(u'Found a video, but that release %s was already processed,<br />.. skipping: %s'
                                  % (showlink, videofile))
-                reset_status(parse_result.show.indexerid,
-                             parse_result.season_number,
-                             parse_result.episode_numbers[0])
+                if ep_detail_sql:
+                    reset_status(parse_result.show.indexerid,
+                                 parse_result.season_number,
+                                 parse_result.episode_numbers[0])
                 return True
 
             # Needed if we have downloaded the same episode @ different quality
@@ -485,11 +481,12 @@ class ProcessTVShow(object):
 
             sql_result = my_db.select(search_sql, [u'%' + videofile])
             if sql_result:
-                self._log_helper(u'Found a video, but the episode%s is already processed,<br />.. skipping: %s'
+                self._log_helper(u'Found a video, but the episode %s is already processed,<br />.. skipping: %s'
                                  % (showlink, videofile))
-                reset_status(parse_result.show.indexerid,
-                             parse_result.season_number,
-                             parse_result.episode_numbers[0])
+                if ep_detail_sql:
+                    reset_status(parse_result.show.indexerid,
+                                 parse_result.season_number,
+                                 parse_result.episode_numbers[0])
                 return True
 
         return False

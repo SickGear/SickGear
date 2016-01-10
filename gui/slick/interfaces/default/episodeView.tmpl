@@ -20,7 +20,7 @@
 #end if
 
 #if 'daybyday' != $layout:
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
 #end if
 
 #if $varExists('header')
@@ -30,7 +30,7 @@
 #end if
 
 #if 'daybyday' == $layout:
-<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
 <script type="text/javascript" charset="utf-8">
 <!--
     \$(document).ready(function(){
@@ -201,7 +201,7 @@
 #if 'list' == $layout:
 <!-- start list view //-->
 
-<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
 <script type="text/javascript" charset="utf-8">
 <!--
 	\$.tablesorter.addParser({
@@ -643,6 +643,7 @@
             #end if
         #else
             #set $cur_result['state'] = $state_soon
+            #set $cur_result['state-title'] = ''
             $shows_soon.append($cur_result)
         #end if
     #end for

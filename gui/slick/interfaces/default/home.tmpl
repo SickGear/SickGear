@@ -8,158 +8,26 @@
 #set global $sbPath = '..'
 #set global $topmenu = 'home'
 #set global $page_body_attr = 'show-list'
+#set fuzzydate = 'airdate'
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
-
-<script type="text/javascript" charset="utf-8">
-<!--
-
-\$.tablesorter.addParser({
-	id: 'loadingNames',
-	is: function(s) {
-		return false;
-	},
-	format: function(s) {
-		if (s.indexOf('Loading...') == 0)
-			return s.replace('Loading...', '000');
-		else
-		#if not $sickbeard.SORT_ARTICLE
-			return (s || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
-		#else
-			return (s || '');
-		#end if
-	},
-	type: 'text'
-});
-
-\$.tablesorter.addParser({
-	id: 'quality',
-	is: function(s) {
-		return false;
-	},
-	format: function(s) {
-		return s.replace('hd1080p',5).replace('hd720p',4).replace('hd',3).replace('sd',2).replace('any',1).replace('custom',7);
-	},
-	type: 'numeric'
-});
-
-\$(document).ready(function(){
-##
-#for $curShowlist in $showlists
-    #set $curListID = $curShowlist[0]
-    #if 'poster' != $layout
-
-	\$('#$curListID:has(tbody tr)').tablesorter({
-		sortList: [[5,1],[1,0]],
-		textExtraction: {
-			0: function(node) { return \$(node).find('span').text().toLowerCase(); },
-			2: function(node) { return \$(node).find('span').text().toLowerCase(); },
-			3: function(node) { return \$(node).find('span').text().toLowerCase(); },
-			4: function(node) { return \$(node).find('span').attr('data-progress'); },
-			5: function(node) { return \$(node).find('i').attr('alt'); }
-		},
-		widgets: ['saveSort', 'zebra', 'stickyHeaders', 'filter'],
-		headers: {
-			0: { sorter: 'isoDate' },
-			1: { sorter: 'loadingNames' },
-			3: { sorter: 'quality' },
-			4: { sorter: 'eps' }
-		},
-		widgetOptions: {
-			filter_columnFilters: false,
-			filter_reset: '.resetshows'
-		},
-		sortStable: true
-	});
-
-	\$.tablesorter.filter.bindSearch( '#$curListID', \$('.search') );
-    #else
-
-	var \$container = [\$('#$curListID')]
-
-	jQuery.each(\$container, function (j) {
-		this.isotope({
-			itemSelector: '.show',
-			sortBy: '$sickbeard.POSTER_SORTBY',
-			sortAscending: $sickbeard.POSTER_SORTDIR,
-			layoutMode: 'masonry',
-			masonry: {
-				columnWidth: 12,
-				isFitWidth: true
-			},
-			getSortData: {
-				name: function( itemElem ) {
-					var name = \$( itemElem ).attr('data-name');
-        #if not $sickbeard.SORT_ARTICLE
-						return (name || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
-        #else
-						return (name || '');
-        #end if
-				},
-				date: function( itemElem ) {
-					var date = \$( itemElem ).attr('data-date');
-					return date.length && parseInt( date, 10 ) || Number.POSITIVE_INFINITY;
-				},
-				network: '[data-network]',
-				progress: function( itemElem ) {
-					var progress = \$( itemElem ).children('.sort-data').attr('data-progress');
-					return progress.length && parseInt( progress, 10 ) || Number.NEGATIVE_INFINITY;
-				}
-			}
-		});
-	});
-
-	\$('#postersort').on( 'change', function() {
-		var sortValue = this.value;
-		\$('#$curListID').isotope({ sortBy: sortValue });
-		\$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
-	});
-
-	\$('#postersortdirection').on( 'change', function() {
-		var sortDirection = this.value;
-		sortDirection = sortDirection == 'true';
-		\$('#$curListID').isotope({ sortAscending: sortDirection });
-		\$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
-	});
-	#end if
-#end for
-
-#raw
-	$('img#network').on('error', function(){
-		$(this).parent().text($(this).attr('alt'));
-		$(this).remove();
-	});
-#end raw
-##
-#set $fuzzydate = 'airdate'
-#if $sickbeard.FUZZY_DATING
-	fuzzyMoment({
-		dtInline: #echo ('!1', '!0')['poster' == $layout]#,
-		containerClass: '.${fuzzydate}',
-		dateHasTime: !1,
-		dateFormat: '${sickbeard.DATE_PRESET}',
-		timeFormat: '${sickbeard.TIME_PRESET}',
-		trimZero: #echo ('!1', '!0')[$sickbeard.TRIM_ZERO]#
-	});
-#end if
-#if $sickbeard.HOME_SEARCH_FOCUS
-
-	\$('#search_show_name').focus();
-
-#end if
-});
-
-//-->
-</script>
-##
-#if $varExists('header')
-
+	<script>
+		var config = {
+			isPoster: #echo ['!1','!0']['poster' == $sickbeard.HOME_LAYOUT]#,
+			sortArticle: #echo ['!1','!0'][$sickbeard.SORT_ARTICLE]#,
+			homeSearchFocus: #echo ['!1','!0'][$sickbeard.HOME_SEARCH_FOCUS]#,
+			fuzzyDating: #echo ['!1','!0'][$sickbeard.FUZZY_DATING]#,
+			timeZero: #echo ['!1','!0'][$sickbeard.TRIM_ZERO]#,
+			datePreset: "$sickbeard.DATE_PRESET",
+			timePreset: "$sickbeard.TIME_PRESET",
+			posterSortby: "$sickbeard.POSTER_SORTBY",
+			posterSortdir: #echo ['!1','!0'][$sickbeard.POSTER_SORTDIR]#,
+			fuzzydate: ".$fuzzydate",
+			};
+	</script>
+	<script type="text/javascript" src="$sbRoot/js/home.js?v=$sbPID"></script>
 	<h1 class="header" style="margin-bottom:0">$showlists[0][1]</h1>
-#else
-
-	<h1 class="title" style="margin-bottom:0">$title</h1>
-#end if
 #set $tab = 1
 #if 'poster' != $layout
 
@@ -324,7 +192,7 @@
 				<div class="show-date">
             #if $cur_airs_next
                 #set $ldatetime = $sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next,$curShow.airs,$curShow.network))
-					<span class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdate($ldatetime)</span>
+					<span class="$fuzzydate">$sbdatetime.sbdatetime.sbfdate($ldatetime)</span>
             #else
                 #set $output_html = '?'
                 #if None is not $display_status
@@ -471,7 +339,7 @@
 			<tr>
             #if $cur_airs_next
                 #set $ldatetime = $sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next,$curShow.airs,$curShow.network))
-				<td class="text-nowrap"><div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdate($ldatetime)</div><span class="sort-data">$ldatetime.strftime('%Y%m%d%H%M')</span></td>
+				<td class="text-nowrap"><div class="$fuzzydate">$sbdatetime.sbdatetime.sbfdate($ldatetime)</div><span class="sort-data">$ldatetime.strftime('%Y%m%d%H%M')</span></td>
             #else
 				<td></td>
             #end if
@@ -550,21 +418,6 @@
     #end if
 #end for
 ##
-<script type="text/javascript">
-<!--
-#raw
-$(document).ready(function(){
-	$('div[id^="progressbar"]').each(function(k, v){
-		var progress = parseInt($(this).siblings('span[class="sort-data"]').attr('data-progress'), 10) , elId = '#' + $(this).attr('id'), v = 80;
-		$(elId).progressbar({value:progress});
-		if (progress < 80) {
-			v = progress >= 40 ? 60 : (progress >= 20 ? 40 : 20);
-		}
-		$(elId + ' > .ui-progressbar-value').addClass('progress-' + v);
-	});
-});
-#end raw
-//-->
-</script>
+
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

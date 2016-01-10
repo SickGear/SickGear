@@ -29,7 +29,6 @@ from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
 from sickbeard.blackandwhitelist import BlackAndWhiteList
-from sickbeard.indexers.indexer_config import INDEXER_TVDB
 
 
 class ShowQueue(generic_queue.GenericQueue):
@@ -139,7 +138,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
         if ((not after_update and self.isBeingUpdated(show)) or self.isInUpdateQueue(show)) and not force:
             logger.log(
-                u'A refresh was attempted but there is already an update queued or in progress. Since updates do a refresh at the end anyway I\'m skipping this request.',
+                u'Skipping this refresh as there is already an update queued or in progress and a refresh is done at the end of an update anyway.',
                 logger.DEBUG)
             return
 
@@ -301,12 +300,11 @@ class QueueItemAdd(ShowQueueItem):
                 self._finishEarly()
                 return
             # if the show has no episodes/seasons
-            if not s:
-                logger.log(u'Show ' + str(s['seriesname']) + ' is on ' + str(
-                    sickbeard.indexerApi(self.indexer).name) + ' but contains no season/episode data.', logger.ERROR)
-                ui.notifications.error('Unable to add show',
-                                       'Show ' + str(s['seriesname']) + ' is on ' + str(sickbeard.indexerApi(
-                                           self.indexer).name) + ' but contains no season/episode data.')
+            if not sickbeard.ALLOW_INCOMPLETE_SHOWDATA and not s:
+                msg = u'Show %s is on %s but contains no season/episode data. Only the show folder was created.'\
+                      % (s['seriesname'], sickbeard.indexerApi(self.indexer).name)
+                logger.log(msg, logger.ERROR)
+                ui.notifications.error('Unable to add show', msg)
                 self._finishEarly()
                 return
         except Exception as e:
@@ -450,7 +448,7 @@ class QueueItemAdd(ShowQueueItem):
         # if started with WANTED eps then run the backlog
         if WANTED == self.default_status or items_wanted:
             logger.log(u'Launching backlog for this show since episodes are WANTED')
-            sickbeard.backlogSearchScheduler.action.searchBacklog([self.show])  #@UndefinedVariable
+            sickbeard.backlogSearchScheduler.action.search_backlog([self.show])  #@UndefinedVariable
             ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
         else:
             ui.notifications.message('Show added', 'Adding' + msg)
@@ -461,24 +459,22 @@ class QueueItemAdd(ShowQueueItem):
 
         self.show.flushEpisodes()
 
-        if sickbeard.USE_TRAKT:
-            # if there are specific episodes that need to be added by trakt
-            sickbeard.traktCheckerScheduler.action.manageNewShow(self.show)
-
-            # add show to trakt.tv library
-            if sickbeard.TRAKT_SYNC:
-                sickbeard.traktCheckerScheduler.action.addShowToTraktLibrary(self.show)
+        # if sickbeard.USE_TRAKT:
+        #     # if there are specific episodes that need to be added by trakt
+        #     sickbeard.traktCheckerScheduler.action.manageNewShow(self.show)
+        #
+        #     # add show to trakt.tv library
+        #     if sickbeard.TRAKT_SYNC:
+        #         sickbeard.traktCheckerScheduler.action.addShowToTraktLibrary(self.show)
 
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
+        # check if show has XEM mapping and if user disabled scene numbering during add show, output availability to log
+        if not self.scene and self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
+            logger.log(u'Alternative scene episode numbers were disabled during add show. Edit show to enable them for searching.')
 
         # update internal name cache
         name_cache.buildNameCache(self.show)
-
-        # check if show has XEM mapping so we can determine if searches should go by scene numbering or indexer numbering.
-        if not self.scene and sickbeard.scene_numbering.get_xem_numbering_for_show(self.show.indexerid,
-                                                                                   self.show.indexer):
-            self.show.scene = 1
 
         self.finish()
 
@@ -511,7 +507,7 @@ class QueueItemRefresh(ShowQueueItem):
         self.show.populateCache()
 
         # Load XEM data to DB for show
-        if self.show.indexerid in sickbeard.scene_exceptions.xem_tvdb_ids_list if INDEXER_TVDB == self.show.indexer else sickbeard.scene_exceptions.xem_rage_ids_list:
+        if self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
             sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
 
         self.inProgress = False
@@ -581,6 +577,11 @@ class QueueItemUpdate(ShowQueueItem):
     def run(self):
 
         ShowQueueItem.run(self)
+
+        if not sickbeard.indexerApi(self.show.indexer).config['active']:
+            logger.log(u'Indexer %s is marked inactive, aborting update for show %s and continue with refresh.' % (sickbeard.indexerApi(self.show.indexer).config['name'], self.show.name))
+            sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True)
+            return
 
         logger.log(u'Beginning update of ' + self.show.name)
 

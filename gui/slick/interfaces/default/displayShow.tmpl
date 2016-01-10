@@ -15,19 +15,19 @@
 #import os.path, os
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/lib/jquery.bookmarkscroll.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/lib/jquery.bookmarkscroll.js?v=$sbPID"></script>
 
 <input type="hidden" id="sbRoot" value="$sbRoot">
 
-<script type="text/javascript" src="$sbRoot/js/displayShow.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/sceneExceptionsTooltip.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/displayShow.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/sceneExceptionsTooltip.js?v=$sbPID"></script>
 #if $sickbeard.USE_IMDB_INFO
-<script type="text/javascript" src="$sbRoot/js/ratingTooltip.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/ratingTooltip.js?v=$sbPID"></script>
 #end if
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSubtitles.js?$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/lib/jquery.collapser.min.js?$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/ajaxEpSubtitles.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/lib/jquery.collapser.min.js?v=$sbPID"></script>
 <script type="text/javascript" charset="utf-8">
 <!--
 \$(document).ready(function(){
@@ -116,7 +116,7 @@
 #end if
 			<div id="details-wrapper">
 				<div id="details-right">
-#if $seasonResults
+#if 0 < len($seasonResults)
     ##There is a special/season_0?##
     #set $season_special = (0, 1)[0 == int($seasonResults[-1]['season'])]
     ##
@@ -397,7 +397,11 @@
 #end if
 ##
 #if 0 == len($sqlResults)
-    <div style="margin-top:50px"><h3>Episodes no longer exist for this show at the associated indexer</h3></div>
+	<div style="margin-top:50px">
+		<h3>Episodes do not exist for this show at the associated indexer
+			<a class="service" href="<%= anon_url(sickbeard.indexerApi(_show.indexer).config['show_url'], _show.indexerid) %>" onclick="window.open(this.href, '_blank'); return false;" title="Show $sickbeard.indexerApi($show.indexer).name info in new tab">$sickbeard.indexerApi($show.indexer).name</a>
+		</h3>
+	</div>
 #else:
 #for $epResult in $sqlResults
     #set $epStr = '%sx%s' % ($epResult['season'], $epResult['episode'])
@@ -518,7 +522,7 @@
 		<td class="col-name">
 			<img src="$sbRoot/images/info32.png" width="16" height="16" alt="" class="plotInfo#echo '%s" />' %\
                 ('None', ('" id="plot_info_%s_%s_%s' % ($show.indexerid, $epResult['season'], $epResult['episode'])))[None is not $epResult['description'] and '' != $epResult['description']]#
-			$epResult['name']
+			<%= '<em class="tba grey-text">TBA</em>' if not epResult['name'] or 'TBA' == epResult['name'] else epResult['name'] %>
 		</td>
 
 		<td class="col-airdate">

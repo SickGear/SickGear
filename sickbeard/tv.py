@@ -304,7 +304,7 @@ class TVShow(object):
         last_update_indexer = datetime.date.fromordinal(self.last_update_indexer)
 
         # if show is not 'Ended' and last episode aired less then 460 days ago or don't have an airdate for the last episode always update (status 'Continuing' or '')
-        update_days_limit = 460
+        update_days_limit = 2013
         ended_limit = datetime.timedelta(days=update_days_limit)
         if 'Ended' not in self.status and (last_airdate == datetime.date.fromordinal(1) or last_airdate_unknown or (update_date - last_airdate) <= ended_limit or (update_date - last_update_indexer) > ended_limit):
             return True
@@ -313,12 +313,12 @@ class TVShow(object):
         airdate_diff = update_date - last_airdate
         last_update_diff = update_date - last_update_indexer
 
-        update_step_list = [[60, 1], [120, 3], [180, 7], [365, 15], [update_days_limit, 30]]
+        update_step_list = [[60, 1], [120, 3], [180, 7], [1281, 15], [update_days_limit, 30]]
         for date_diff, interval in update_step_list:
             if airdate_diff <= datetime.timedelta(days=date_diff) and last_update_diff >= datetime.timedelta(days=interval):
                 return True
 
-        # update shows without an airdate for the last episode for 460 days every 7 days
+        # update shows without an airdate for the last episode for update_days_limit days every 7 days
         if last_airdate_unknown and airdate_diff <= ended_limit and last_update_diff >= datetime.timedelta(days=7):
             return True
         else:
@@ -427,7 +427,7 @@ class TVShow(object):
 
             try:
                 parse_result = None
-                np = NameParser(False, showObj=self, try_indexers=True)
+                np = NameParser(False, showObj=self)
                 parse_result = np.parse(ep_file_name)
             except (InvalidNameException, InvalidShowException):
                 pass
@@ -613,141 +613,137 @@ class TVShow(object):
     def makeEpFromFile(self, file):
 
         if not ek.ek(os.path.isfile, file):
-            logger.log(str(self.indexerid) + u": That isn't even a real file dude... " + file)
+            logger.log(u'%s: Not a real file... %s' % (self.indexerid, file))
             return None
 
-        logger.log(str(self.indexerid) + u": Creating episode object from " + file, logger.DEBUG)
+        logger.log(u'%s: Creating episode object from %s' % (self.indexerid, file), logger.DEBUG)
 
         try:
-            myParser = NameParser(showObj=self, try_indexers=True)
-            parse_result = myParser.parse(file)
+            my_parser = NameParser(showObj=self)
+            parse_result = my_parser.parse(file)
         except InvalidNameException:
-            logger.log(u"Unable to parse the filename " + file + " into a valid episode", logger.DEBUG)
+            logger.log(u'Unable to parse the filename %s into a valid episode' % file, logger.DEBUG)
             return None
         except InvalidShowException:
-            logger.log(u"Unable to parse the filename " + file + " into a valid show", logger.DEBUG)
+            logger.log(u'Unable to parse the filename %s into a valid show' % file, logger.DEBUG)
             return None
 
         if not len(parse_result.episode_numbers):
-            logger.log("parse_result: " + str(parse_result))
-            logger.log(u"No episode number found in " + file + ", ignoring it", logger.ERROR)
+            logger.log(u'parse_result: %s' % parse_result)
+            logger.log(u'No episode number found in %s, ignoring it' % file, logger.ERROR)
             return None
 
         # for now lets assume that any episode in the show dir belongs to that show
-        season = parse_result.season_number if parse_result.season_number != None else 1
+        season = parse_result.season_number if None is not parse_result.season_number else 1
         episodes = parse_result.episode_numbers
-        rootEp = None
+        root_ep = None
 
         sql_l = []
-        for curEpNum in episodes:
+        for cur_ep_num in episodes:
 
-            episode = int(curEpNum)
+            episode = int(cur_ep_num)
 
-            logger.log(
-                str(self.indexerid) + ": " + file + " parsed to " + self.name + " " + str(season) + "x" + str(episode),
-                logger.DEBUG)
+            logger.log(u'%s: %s parsed to %s %sx%s' % (self.indexerid, file, self.name, season, episode), logger.DEBUG)
 
-            checkQualityAgain = False
+            check_quality_again = False
             same_file = False
-            curEp = self.getEpisode(season, episode)
+            cur_ep = self.getEpisode(season, episode)
 
-            if curEp == None:
+            if None is cur_ep:
                 try:
-                    curEp = self.getEpisode(season, episode, file)
+                    cur_ep = self.getEpisode(season, episode, file)
                 except exceptions.EpisodeNotFoundException:
-                    logger.log(str(self.indexerid) + u": Unable to figure out what this file is, skipping",
-                               logger.ERROR)
+                    logger.log(u'%s: Unable to figure out what this file is, skipping' % self.indexerid, logger.ERROR)
                     continue
 
             else:
                 # if there is a new file associated with this ep then re-check the quality
-                if curEp.location and ek.ek(os.path.normpath, curEp.location) != ek.ek(os.path.normpath, file):
+                if cur_ep.location and ek.ek(os.path.normpath, cur_ep.location) != ek.ek(os.path.normpath, file):
                     logger.log(
-                        u"The old episode had a different file associated with it, I will re-check the quality based on the new filename " + file,
+                        u'The old episode had a different file associated with it, re-checking the quality based on the new filename ' + file,
                         logger.DEBUG)
-                    checkQualityAgain = True
+                    check_quality_again = True
 
-                with curEp.lock:
-                    old_size = curEp.file_size
-                    curEp.location = file
+                with cur_ep.lock:
+                    old_size = cur_ep.file_size
+                    cur_ep.location = file
                     # if the sizes are the same then it's probably the same file
-                    if old_size and curEp.file_size == old_size:
+                    if old_size and cur_ep.file_size == old_size:
                         same_file = True
                     else:
                         same_file = False
 
-                    curEp.checkForMetaFiles()
+                    cur_ep.checkForMetaFiles()
 
-            if rootEp == None:
-                rootEp = curEp
+            if None is root_ep:
+                root_ep = cur_ep
             else:
-                if curEp not in rootEp.relatedEps:
-                    rootEp.relatedEps.append(curEp)
+                if cur_ep not in root_ep.relatedEps:
+                    root_ep.relatedEps.append(cur_ep)
 
             # if it's a new file then
             if not same_file:
-                curEp.release_name = ''
+                cur_ep.release_name = ''
 
             # if they replace a file on me I'll make some attempt at re-checking the quality unless I know it's the same file
-            if checkQualityAgain and not same_file:
-                newQuality = Quality.nameQuality(file, self.is_anime)
-                logger.log(u"Since this file has been renamed, I checked " + file + " and found quality " +
-                           Quality.qualityStrings[newQuality], logger.DEBUG)
-                if newQuality != Quality.UNKNOWN:
-                    curEp.status = Quality.compositeStatus(DOWNLOADED, newQuality)
-
+            if check_quality_again and not same_file:
+                new_quality = Quality.nameQuality(file, self.is_anime)
+                if Quality.UNKNOWN == new_quality:
+                    new_quality = Quality.fileQuality(file)
+                logger.log(u'Since this file was renamed, file %s was checked and quality "%s" found'
+                           % (file, Quality.qualityStrings[new_quality]), logger.DEBUG)
+                if Quality.UNKNOWN != new_quality:
+                    cur_ep.status = Quality.compositeStatus(DOWNLOADED, new_quality)
 
             # check for status/quality changes as long as it's a new file
-            elif not same_file and sickbeard.helpers.isMediaFile(file) and curEp.status not in Quality.DOWNLOADED + [
-                ARCHIVED, IGNORED]:
+            elif not same_file and sickbeard.helpers.isMediaFile(file)\
+                    and cur_ep.status not in Quality.DOWNLOADED + [ARCHIVED, IGNORED]:
 
-                oldStatus, oldQuality = Quality.splitCompositeStatus(curEp.status)
-                newQuality = Quality.nameQuality(file, self.is_anime)
-                if newQuality == Quality.UNKNOWN:
-                    newQuality = Quality.assumeQuality(file)
+                old_status, old_quality = Quality.splitCompositeStatus(cur_ep.status)
+                new_quality = Quality.nameQuality(file, self.is_anime)
+                if Quality.UNKNOWN == new_quality:
+                    new_quality = Quality.fileQuality(file)
+                    if Quality.UNKNOWN == new_quality:
+                        new_quality = Quality.assumeQuality(file)
 
-                newStatus = None
+                new_status = None
 
                 # if it was snatched and now exists then set the status correctly
-                if oldStatus == SNATCHED and oldQuality <= newQuality:
-                    logger.log(u"STATUS: this episode used to be snatched with quality " + Quality.qualityStrings[
-                        oldQuality] + u" but a file exists with quality " + Quality.qualityStrings[
-                                   newQuality] + u" so I'm setting the status to DOWNLOADED", logger.DEBUG)
-                    newStatus = DOWNLOADED
+                if SNATCHED == old_status and old_quality <= new_quality:
+                    logger.log(u'STATUS: this episode used to be snatched with quality %s but a file exists with quality %s so setting the status to DOWNLOADED'
+                               % (Quality.qualityStrings[old_quality], Quality.qualityStrings[new_quality]), logger.DEBUG)
+                    new_status = DOWNLOADED
 
                 # if it was snatched proper and we found a higher quality one then allow the status change
-                elif oldStatus == SNATCHED_PROPER and oldQuality < newQuality:
-                    logger.log(u"STATUS: this episode used to be snatched proper with quality " + Quality.qualityStrings[
-                        oldQuality] + u" but a file exists with quality " + Quality.qualityStrings[
-                                   newQuality] + u" so I'm setting the status to DOWNLOADED", logger.DEBUG)
-                    newStatus = DOWNLOADED
+                elif SNATCHED_PROPER == old_status and old_quality < new_quality:
+                    logger.log(u'STATUS: this episode used to be snatched proper with quality %s but a file exists with quality %s so setting the status to DOWNLOADED'
+                               % (Quality.qualityStrings[old_quality], Quality.qualityStrings[new_quality]), logger.DEBUG)
+                    new_status = DOWNLOADED
 
-                elif oldStatus not in (SNATCHED, SNATCHED_PROPER):
-                    newStatus = DOWNLOADED
+                elif old_status not in (SNATCHED, SNATCHED_PROPER):
+                    new_status = DOWNLOADED
 
-                if newStatus != None:
-                    with curEp.lock:
-                        logger.log(u"STATUS: we have an associated file, so setting the status from " + str(
-                            curEp.status) + u" to DOWNLOADED/" + str(Quality.statusFromName(file, anime=self.is_anime)),
-                                   logger.DEBUG)
-                        curEp.status = Quality.compositeStatus(newStatus, newQuality)
+                if None is not new_status:
+                    with cur_ep.lock:
+                        logger.log(u'STATUS: we have an associated file, so setting the status from %s to DOWNLOADED/%s'
+                                   % (cur_ep.status, Quality.compositeStatus(new_status, new_quality)), logger.DEBUG)
+                        cur_ep.status = Quality.compositeStatus(new_status, new_quality)
 
-            with curEp.lock:
-                result = curEp.get_sql()
+            with cur_ep.lock:
+                result = cur_ep.get_sql()
                 if None is not result:
                     sql_l.append(result)
 
         if 0 < len(sql_l):
-            myDB = db.DBConnection()
-            myDB.mass_action(sql_l)
-
+            my_db = db.DBConnection()
+            my_db.mass_action(sql_l)
 
         # creating metafiles on the root should be good enough
-        if sickbeard.USE_FAILED_DOWNLOADS and rootEp is not None:
-            with rootEp.lock:
-                rootEp.createMetaFiles()
+        if sickbeard.USE_FAILED_DOWNLOADS and root_ep is not None:
+            with root_ep.lock:
+                root_ep.createMetaFiles()
 
-        return rootEp
+        return root_ep
 
     def loadFromDB(self, skipNFO=False):
 
@@ -921,6 +917,8 @@ class TVShow(object):
         logger.log(u'Retrieving show info from IMDb', logger.DEBUG)
         try:
             self._get_imdb_info()
+        except imdb_exceptions.IMDbDataAccessError as e:
+            logger.log(u'Timeout waiting for IMDb api: ' + ex(e), logger.WARNING)
         except imdb_exceptions.IMDbError as e:
             logger.log(u'Something is wrong with IMDb api: ' + ex(e), logger.WARNING)
         except Exception as e:
@@ -1314,37 +1312,33 @@ class TVShow(object):
 
     def getOverview(self, epStatus):
 
-        if epStatus == WANTED:
-            return Overview.WANTED
-        elif epStatus in (UNAIRED, UNKNOWN):
-            return Overview.UNAIRED
-        elif epStatus in (SKIPPED, IGNORED):
-            return Overview.SKIPPED
-        elif epStatus == ARCHIVED:
+        status, quality = Quality.splitCompositeStatus(epStatus)
+        if ARCHIVED == status:
             return Overview.GOOD
-        elif epStatus in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
+        if WANTED == status:
+            return Overview.WANTED
+        if status in (SKIPPED, IGNORED):
+            return Overview.SKIPPED
+        if status in (UNAIRED, UNKNOWN):
+            return Overview.UNAIRED
+        if status in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
 
-            anyQualities, bestQualities = Quality.splitQuality(self.quality)  # @UnusedVariable
-            if bestQualities:
-                maxBestQuality = max(bestQualities)
-            else:
-                maxBestQuality = None
-
-            epStatus, curQuality = Quality.splitCompositeStatus(epStatus)
-
-            if epStatus == FAILED:
+            if FAILED == status:
                 return Overview.WANTED
-            elif epStatus in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST):
+            if status in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST):
                 return Overview.SNATCHED
-            # if they don't want re-downloads then we call it good if they have anything
-            elif maxBestQuality == None:
+
+            void, best_qualities = Quality.splitQuality(self.quality)
+            # if re-downloads aren't wanted then mark it "good" if there is anything
+            if not len(best_qualities):
                 return Overview.GOOD
-            # if they have one but it's not the best they want then mark it as qual
-            elif curQuality < maxBestQuality:
-                return Overview.QUAL
-            # if it's >= maxBestQuality then it's good
-            else:
+
+            min_best, max_best = min(best_qualities), max(best_qualities)
+            if quality >= max_best \
+                    or (self.archive_firstmatch and
+                        (quality in best_qualities or (None is not min_best and quality > min_best))):
                 return Overview.GOOD
+            return Overview.QUAL
 
     def __getstate__(self):
         d = dict(self.__dict__)
@@ -1704,7 +1698,7 @@ class TVEpisode(object):
                 self.deleteEpisode()
             return
 
-        if getattr(myEp, 'episodename', None) is None:
+        if not sickbeard.ALLOW_INCOMPLETE_SHOWDATA and getattr(myEp, 'episodename', None) is None:
             logger.log(u"This episode (" + self.show.name + " - " + str(season) + "x" + str(
                 episode) + ") has no name on " + sickbeard.indexerApi(self.indexer).name + "")
             # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
@@ -1812,14 +1806,13 @@ class TVEpisode(object):
         elif sickbeard.helpers.isMediaFile(self.location):
             # leave propers alone, you have to either post-process them or manually change them back
             if self.status not in Quality.SNATCHED_PROPER + Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED]:
-                logger.log(
-                    u"5 Status changes from " + str(self.status) + " to " + str(Quality.statusFromName(self.location)),
-                    logger.DEBUG)
-                self.status = Quality.statusFromName(self.location, anime=self.show.is_anime)
+                status_quality = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
+                logger.log(u'(1) Status changes from %s to %s' % (self.status, status_quality), logger.DEBUG)
+                self.status = status_quality
 
         # shouldn't get here probably
         else:
-            logger.log(u"6 Status changes from " + str(self.status) + " to " + str(UNKNOWN), logger.DEBUG)
+            logger.log(u"(2) Status changes from " + str(self.status) + " to " + str(UNKNOWN), logger.DEBUG)
             self.status = UNKNOWN
 
     def loadFromNFO(self, location):
@@ -1837,11 +1830,10 @@ class TVEpisode(object):
 
         if self.location != "":
 
-            if self.status == UNKNOWN:
-                if sickbeard.helpers.isMediaFile(self.location):
-                    logger.log(u"7 Status changes from " + str(self.status) + " to " + str(
-                        Quality.statusFromName(self.location, anime=self.show.is_anime)), logger.DEBUG)
-                    self.status = Quality.statusFromName(self.location, anime=self.show.is_anime)
+            if UNKNOWN == self.status and sickbeard.helpers.isMediaFile(self.location):
+                status_quality = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
+                logger.log(u'(3) Status changes from %s to %s' % (self.status, status_quality), logger.DEBUG)
+                self.status = status_quality
 
             nfoFile = sickbeard.helpers.replaceExtension(self.location, "nfo")
             logger.log(str(self.show.indexerid) + u": Using NFO name " + nfoFile, logger.DEBUG)
@@ -2164,14 +2156,14 @@ class TVEpisode(object):
         def us(name):
             return re.sub('[ -]', '_', name)
 
-        def release_name(name):
+        def release_name(name, is_anime=False):
             if name:
-                name = helpers.remove_non_release_groups(helpers.remove_extension(name))
+                name = helpers.remove_non_release_groups(helpers.remove_extension(name), is_anime)
             return name
 
         def release_group(show, name):
             if name:
-                name = helpers.remove_non_release_groups(helpers.remove_extension(name))
+                name = helpers.remove_non_release_groups(helpers.remove_extension(name), show.is_anime)
             else:
                 return ""
 
@@ -2213,7 +2205,7 @@ class TVEpisode(object):
             '%0XE': '%02d' % self.scene_episode,
             '%AB': '%(#)03d' % {'#': self.absolute_number},
             '%XAB': '%(#)03d' % {'#': self.scene_absolute_number},
-            '%RN': release_name(self.release_name),
+            '%RN': release_name(self.release_name, self.show.is_anime),
             '%RG': release_group(self.show, self.release_name),
             '%AD': str(self.airdate).replace('-', ' '),
             '%A.D': str(self.airdate).replace('-', '.'),
@@ -2225,6 +2217,7 @@ class TVEpisode(object):
             '%0M': '%02d' % self.airdate.month,
             '%0D': '%02d' % self.airdate.day,
             '%RT': "PROPER" if self.is_proper else "",
+            '%V': 'v%s' % self.version if self.show.is_anime and self.version > 1 else '',
         }
 
     def _format_string(self, pattern, replace_map):

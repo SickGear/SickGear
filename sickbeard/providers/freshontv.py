@@ -16,12 +16,12 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import datetime
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache, helpers
+from sickbeard import logger, tvcache
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -42,47 +42,35 @@ class FreshOnTVProvider(generic.TorrentProvider):
         self.freeleech = False
         self.cache = FreshOnTVCache(self)
 
-    def _do_login(self):
+    def _authorised(self, **kwargs):
 
-        logged_in = lambda: 'uid' in self.session.cookies and 'pass' in self.session.cookies
-        if logged_in():
-            return True
+        return super(FreshOnTVProvider, self)._authorised(
+            post_params={'login': 'Do it!'},
+            failed_msg=(lambda x=None: 'DDoS protection by CloudFlare' in x and
+                                       u'Unable to login to %s due to CloudFlare DDoS javascript check' or
+                                       'Username does not exist' in x and
+                                       u'Invalid username or password for %s. Check settings' or
+                                       u'Failed to authenticate or parse a response from %s, abort provider'))
 
-        if self._check_auth():
-            login_params = {'username': self.username, 'password': self.password, 'login': 'Do it!'}
-            response = helpers.getURL(self.urls['login'], post_data=login_params, session=self.session)
-            if response and logged_in():
-                return True
-
-            msg = u'Failed to authenticate with %s, abort provider'
-            if response:
-                if 'Username does not exist in the userbase or the account is not confirmed' in response:
-                    msg = u'Invalid username or password for %s, check your config'
-                if 'DDoS protection by CloudFlare' in response:
-                    msg = u'Unable to login to %s due to CloudFlare DDoS javascript check'
-            logger.log(msg % self.name, logger.ERROR)
-
-        return False
-
-    def _do_search(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self._do_login():
+        if not self._authorised():
             return results
 
-        items = {'Season': [], 'Episode': [], 'Cache': []}
-        freeleech = '3' if self.freeleech else '0'
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
+        freeleech = (0, 3)[self.freeleech]
 
         rc = dict((k, re.compile('(?i)' + v))
                   for (k, v) in {'info': 'detail', 'get': 'download', 'name': '_name'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                search_string, url = self._get_title_and_url((search_string, self.urls['search']))
-                if isinstance(search_string, unicode):
-                    search_string = unidecode(search_string)
+
+                search_string, search_url = self._title_and_url((
+                    isinstance(search_string, unicode) and unidecode(search_string) or search_string,
+                    self.urls['search'] % (freeleech, search_string)))
 
                 # returns top 15 results by default, expandable in user profile to 100
-                search_url = self.urls['search'] % (freeleech, search_string)
                 html = self.get_url(search_url)
 
                 cnt = len(items[mode])
@@ -102,40 +90,36 @@ class FreshOnTVProvider(generic.TorrentProvider):
                                 if tr.find('img', alt='Nuked'):
                                     continue
 
-                                seeders, leechers = [int(tr.find_all('td')[x].get_text().strip()) for x in (-2, -1)]
-                                if 'Cache' != mode and (seeders < self.minseed or leechers < self.minleech):
+                                seeders, leechers, size = [tryInt(n, n) for n in [
+                                    (tr.find_all('td')[x].get_text().strip()) for x in (-2, -1, -4)]]
+                                if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'], attrs={'class': rc['name']})
                                 title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
 
                                 download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-                            except (AttributeError, TypeError):
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if title and download_url:
-                                items[mode].append((title, download_url, seeders))
+                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_result(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            # For each search mode sort all the items by seeders
-            items[mode].sort(key=lambda tup: tup[2], reverse=True)
+            self._sort_seeders(mode, items)
 
-            results += items[mode]
+            results = list(set(results + items[mode]))
 
         return results
 
-    def find_propers(self, search_date=datetime.datetime.today()):
+    def _get_episode_search_strings(self, ep_obj, **kwargs):
 
-        return self._find_propers(search_date)
-
-    def _get_episode_search_strings(self, ep_obj, add_string='', **kwargs):
-
-        return generic.TorrentProvider._get_episode_search_strings(self, ep_obj, add_string, sep_date='|', use_or=False)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
 
 
 class FreshOnTVCache(tvcache.TVCache):
@@ -143,11 +127,11 @@ class FreshOnTVCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.minTime = 20  # cache update frequency
+        self.update_freq = 20
 
-    def _getRSSData(self):
+    def _cache_data(self):
 
-        return self.provider.get_cache_data()
+        return self.provider.cache_data()
 
 
 provider = FreshOnTVProvider()
