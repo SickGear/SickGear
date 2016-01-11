@@ -1,4 +1,9 @@
-﻿### 0.11.0 (2016-xx-xx xx:xx:xx UTC)
+﻿### 0.12.0 (2016-xx-xx xx:xx:xx UTC)
+
+*
+
+
+### 0.11.0 (2016-01-10 22:30:00 UTC)
 
 * Change to only refresh scene exception data for shows that need it
 * Change reduce aggressive use of scene numbering that was overriding user preference where not needed
