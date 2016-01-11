@@ -6,6 +6,7 @@
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Change API response header for JSON content type and the return of JSONP data
 * Remove redundant MultipartPostHandler
+* Update Beautiful Soup 4.4.0 (r390) to 4.4.0 (r397)
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)

@@ -6,6 +6,7 @@ necessary. It is heavily based on code from Mark Pilgrim's Universal
 Feed Parser. It works best on XML and HTML, but it does not rewrite the
 XML or HTML to reflect a new encoding; that's the tree builder's job.
 """
+__license__ = "MIT"
 
 from pdb import set_trace
 import codecs

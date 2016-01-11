@@ -120,7 +120,10 @@ class AttrList(object):
         if (name in list_attr['*']
             or (self.element.name in list_attr
                 and name in list_attr[self.element.name])):
-            value = whitespace_re.split(value)
+            # A node that is being cloned may have already undergone
+            # this procedure.
+            if not isinstance(value, list):
+                value = whitespace_re.split(value)
         self.element[name] = value
     def items(self):
         return list(self.attrs.items())
