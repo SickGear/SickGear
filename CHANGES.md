@@ -7,6 +7,7 @@
 * Change API response header for JSON content type and the return of JSONP data
 * Remove redundant MultipartPostHandler
 * Update Beautiful Soup 4.4.0 (r390) to 4.4.0 (r397)
+* Update backports/ssl_match_hostname 3.4.0.2 to 3.5.0.1 (r18)
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)
