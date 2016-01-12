@@ -41,6 +41,12 @@ either::
     # or
     tornado.options.parse_config_file("/etc/server.conf")
 
+.. note:
+
+   When using tornado.options.parse_command_line or 
+   tornado.options.parse_config_file, the only options that are set are 
+   ones that were previously defined with tornado.options.define.
+
 Command line formats are what you would expect (``--myoption=myvalue``).
 Config files are just Python files. Global names become options, e.g.::
 
@@ -132,8 +138,10 @@ class OptionParser(object):
         return name in self._options
 
     def __getitem__(self, name):
-        name = self._normalize_name(name)
-        return self._options[name].value()
+        return self.__getattr__(name)
+
+    def __setitem__(self, name, value):
+        return self.__setattr__(name, value)
 
     def items(self):
         """A sequence of (name, value) pairs.
@@ -487,19 +495,17 @@ class _Option(object):
                 pass
         raise Error('Unrecognized date/time format: %r' % value)
 
-    _TIMEDELTA_ABBREVS = [
-        ('hours', ['h']),
-        ('minutes', ['m', 'min']),
-        ('seconds', ['s', 'sec']),
-        ('milliseconds', ['ms']),
-        ('microseconds', ['us']),
-        ('days', ['d']),
-        ('weeks', ['w']),
-    ]
-
-    _TIMEDELTA_ABBREV_DICT = dict(
-        (abbrev, full) for full, abbrevs in _TIMEDELTA_ABBREVS
-        for abbrev in abbrevs)
+    _TIMEDELTA_ABBREV_DICT = {
+        'h': 'hours',
+        'm': 'minutes',
+        'min': 'minutes',
+        's': 'seconds',
+        'sec': 'seconds',
+        'ms': 'milliseconds',
+        'us': 'microseconds',
+        'd': 'days',
+        'w': 'weeks',
+    }
 
     _FLOAT_PATTERN = r'[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?'
 

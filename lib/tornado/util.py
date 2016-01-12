@@ -84,19 +84,10 @@ class GzipDecompressor(object):
         return self.decompressobj.flush()
 
 
-# Fake unicode literal support:  Python 3.2 doesn't have the u'' marker for
-# literal strings, and alternative solutions like "from __future__ import
-# unicode_literals" have other problems (see PEP 414).  u() can be applied
-# to ascii strings that include \u escapes (but they must not contain
-# literal non-ascii characters).
 if not isinstance(b'', type('')):
-    def u(s):
-        return s
     unicode_type = str
     basestring_type = str
 else:
-    def u(s):
-        return s.decode('unicode_escape')
     # These names don't exist in py3, so use noqa comments to disable
     # warnings in flake8.
     unicode_type = unicode  # noqa
@@ -290,10 +281,25 @@ class ArgReplacer(object):
     def __init__(self, func, name):
         self.name = name
         try:
-            self.arg_pos = getargspec(func).args.index(self.name)
+            self.arg_pos = self._getargnames(func).index(name)
         except ValueError:
             # Not a positional parameter
             self.arg_pos = None
+
+    def _getargnames(self, func):
+        try:
+            return getargspec(func).args
+        except TypeError:
+            if hasattr(func, 'func_code'):
+                # Cython-generated code has all the attributes needed
+                # by inspect.getargspec, but the inspect module only
+                # works with ordinary functions. Inline the portion of
+                # getargspec that we need here. Note that for static
+                # functions the @cython.binding(True) decorator must
+                # be used (for methods it works out of the box).
+                code = func.func_code
+                return code.co_varnames[:code.co_argcount]
+            raise
 
     def get_old_value(self, args, kwargs, default=None):
         """Returns the old value of the named argument without replacing it.

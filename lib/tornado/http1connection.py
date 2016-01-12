@@ -342,7 +342,7 @@ class HTTP1Connection(httputil.HTTPConnection):
                 'Transfer-Encoding' not in headers)
         else:
             self._response_start_line = start_line
-            lines.append(utf8('HTTP/1.1 %s %s' % (start_line[1], start_line[2])))
+            lines.append(utf8('HTTP/1.1 %d %s' % (start_line[1], start_line[2])))
             self._chunking_output = (
                 # TODO: should this use
                 # self._request_start_line.version or
@@ -515,6 +515,12 @@ class HTTP1Connection(httputil.HTTPConnection):
 
     def _read_body(self, code, headers, delegate):
         if "Content-Length" in headers:
+            if "Transfer-Encoding" in headers:
+                # Response cannot contain both Content-Length and
+                # Transfer-Encoding headers.
+                # http://tools.ietf.org/html/rfc7230#section-3.3.3
+                raise httputil.HTTPInputError(
+                    "Response with both Transfer-Encoding and Content-Length")
             if "," in headers["Content-Length"]:
                 # Proxies sometimes cause Content-Length headers to get
                 # duplicated.  If all the values are identical then we can
@@ -558,7 +564,9 @@ class HTTP1Connection(httputil.HTTPConnection):
             content_length -= len(body)
             if not self._write_finished or self.is_client:
                 with _ExceptionLoggingContext(app_log):
-                    yield gen.maybe_future(delegate.data_received(body))
+                    ret = delegate.data_received(body)
+                    if ret is not None:
+                        yield ret
 
     @gen.coroutine
     def _read_chunked_body(self, delegate):
@@ -579,7 +587,9 @@ class HTTP1Connection(httputil.HTTPConnection):
                 bytes_to_read -= len(chunk)
                 if not self._write_finished or self.is_client:
                     with _ExceptionLoggingContext(app_log):
-                        yield gen.maybe_future(delegate.data_received(chunk))
+                        ret = delegate.data_received(chunk)
+                        if ret is not None:
+                            yield ret
             # chunk ends with \r\n
             crlf = yield self.stream.read_bytes(2)
             assert crlf == b"\r\n"
@@ -619,11 +629,14 @@ class _GzipMessageDelegate(httputil.HTTPMessageDelegate):
                 decompressed = self._decompressor.decompress(
                     compressed_data, self._chunk_size)
                 if decompressed:
-                    yield gen.maybe_future(
-                        self._delegate.data_received(decompressed))
+                    ret = self._delegate.data_received(decompressed)
+                    if ret is not None:
+                        yield ret
                 compressed_data = self._decompressor.unconsumed_tail
         else:
-            yield gen.maybe_future(self._delegate.data_received(chunk))
+            ret = self._delegate.data_received(chunk)
+            if ret is not None:
+                yield ret
 
     def finish(self):
         if self._decompressor is not None:
