@@ -21,6 +21,11 @@
 * Update Six compatibility library 1.9.0 (r400) to 1.10.0 (r405)
 
 
+### 0.11.1 (2016-01-12 22:20:00 UTC)
+
+* Fix handling non-numeric IMDb popular ratings
+
+
 ### 0.11.0 (2016-01-10 22:30:00 UTC)
 
 * Change to only refresh scene exception data for shows that need it
