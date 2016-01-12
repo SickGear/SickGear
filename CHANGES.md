@@ -13,6 +13,7 @@
 * Update chardet packages 2.3.0 (26982c5) to 2.3.0 (d7fae98)
 * Update dateutil library 2.4.2 (083f666) to 2.4.2 (d4baf97)
 * Update Hachoir library 1.3.4 (r1383) to 1.3.4 (r1435)
+* Update html5lib 0.999 to 0.99999999/1.0b9 (46dae3d)
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)
