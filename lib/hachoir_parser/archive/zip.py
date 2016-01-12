@@ -329,6 +329,9 @@ class ZipFile(Parser):
         u"application/x-jar": "jar",
         u"application/java-archive": "jar",
 
+        # Android APK
+        u"application/vnd.android.package-archive": "apk",
+
         # OpenOffice 1.0
         u"application/vnd.sun.xml.calc": "sxc",
         u"application/vnd.sun.xml.draw": "sxd",

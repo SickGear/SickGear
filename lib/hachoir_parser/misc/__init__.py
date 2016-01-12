@@ -15,4 +15,5 @@ from hachoir_parser.misc.dsstore import DSStore
 from hachoir_parser.misc.word_doc import WordDocumentParser
 from hachoir_parser.misc.word_2 import Word2DocumentParser
 from hachoir_parser.misc.mstask import MSTaskFile
+from hachoir_parser.misc.androidxml import AndroidXMLFile
 from hachoir_parser.misc.mapsforge_map import MapsforgeMapFile
