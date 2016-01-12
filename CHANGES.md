@@ -5,6 +5,7 @@
 * Update Tornado Web Server 4.3.dev1 (1b6157d) to 4.4.dev1 (c2b4d05)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Change API response header for JSON content type and the return of JSONP data
+* Remove redundant MultipartPostHandler
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)
