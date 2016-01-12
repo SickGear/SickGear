@@ -17,6 +17,7 @@
 * Update PNotify library 2.0.1 to 2.1.0
 * Update profilehooks 1.4 to 1.8.2.dev0 (ee3f1a8)
 * Update Requests library 2.7.0 (5d6d1bc) to 2.9.1 (a1c9b84)
+* Update SimpleJSON library 3.8.0 (a37a9bd) to 3.8.1 (6022794)
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)
