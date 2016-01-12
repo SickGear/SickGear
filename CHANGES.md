@@ -18,6 +18,7 @@
 * Update profilehooks 1.4 to 1.8.2.dev0 (ee3f1a8)
 * Update Requests library 2.7.0 (5d6d1bc) to 2.9.1 (a1c9b84)
 * Update SimpleJSON library 3.8.0 (a37a9bd) to 3.8.1 (6022794)
+* Update Six compatibility library 1.9.0 (r400) to 1.10.0 (r405)
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)
