@@ -2,7 +2,7 @@
 iPod iTunesDB parser.
 
 Documentation:
-- http://ipodlinux.org/ITunesDB
+- http://ipl.derpapst.org/wiki/ITunesDB/iTunesDB_File
 
 Author: Romain HERAULT
 Creation date: 19 august 2006
@@ -71,13 +71,27 @@ class DataObject(FieldSet):
         19:"Show (for TV Shows only)",
         20:"Episode",
         21:"TV Network",
+        22:"Album-Artist",
+        23:"Artist for Sorting",
+        24:"List of keywords pretaining track",
+        25:"Locale for TV show(?)",
+        27:"Title for Sorting",
+        28:"Album for Sorting",
+        29:"Album-Artist for Sorting",
+        30:"Composer for Sorting",
+        31:"Show for Sorting",
+        # 32:"Unknown binary field for video tracks",
         50:"Smart Playlist Data",
         51:"Smart Playlist Rules",
         52:"Library Playlist Index",
-        100:"Column info",
+        53:"Library Playlist Index letter in jump table",
+        100:"Ccolumn Sizing Info as well as an order indicator in playlists.",
+        102:"For iPhone",
         200:"Album name (for album descriptions)",
         201:"Album artist (for album descriptions)",
-        202:"Album sort artist (for album descriptions)"
+        202:"Album sort artist (for album descriptions)",
+        203:"Podcast URL in Album List",
+        204:"TV Show in Album List"
     }
 
     mhod52_sort_index_type_name={
@@ -97,15 +111,7 @@ class DataObject(FieldSet):
         yield UInt32(self, "header_length", "Header Length")
         yield UInt32(self, "entry_length", "Entry Length")
         yield Enum(UInt32(self, "type", "type"),self.type_name)
-        if(self["type"].value<15) or (self["type"].value >= 200):
-            yield UInt32(self, "unknown[]")
-            yield UInt32(self, "unknown[]")
-            yield UInt32(self, "position", "Position")
-            yield UInt32(self, "length", "String Length in bytes")
-            yield UInt32(self, "unknown[]")
-            yield UInt32(self, "unknown[]")
-            yield String(self, "string", self["length"].value, "String Data", charset="UTF-16-LE")
-        elif (self["type"].value<17):
+        if (self["type"].value == 15) or (self["type"].value == 16):
             yield UInt32(self, "unknown[]")
             yield UInt32(self, "unknown[]")
             yield String(self, "string", self._size/8-self["header_length"].value, "String Data", charset="UTF-8")
@@ -121,6 +127,14 @@ class DataObject(FieldSet):
                 yield padding
             for i in xrange(self["entry_count"].value):
                 yield UInt32(self, "index["+str(i)+"]", "Index of the "+str(i)+"nth mhit")
+        elif(self["type"].value<15) or (self["type"].value>17) or (self["type"].value >= 200):
+            yield UInt32(self, "unknown[]")
+            yield UInt32(self, "unknown[]")
+            yield UInt32(self, "position", "Position")
+            yield UInt32(self, "length", "String Length in bytes")
+            yield UInt32(self, "unknown[]")
+            yield UInt32(self, "unknown[]")
+            yield String(self, "string", self["length"].value, "String Data", charset="UTF-16-LE")
         else:
             padding = self.seekByte(self["header_length"].value, "header padding")
             if padding:
@@ -178,8 +192,8 @@ class TrackItem(FieldSet):
         yield UInt32(self, "stop_time", "Stop playing at,  in milliseconds")
         yield UInt32(self, "soundcheck", "SoundCheck preamp")
         yield UInt32(self, "playcount_1", "Play count of the track")
-        yield UInt32(self, "playcount_2", "Play count of the track (identical to playcount_1)")
-        yield UInt32(self, "last_played_time", "Time the song was last played")
+        yield UInt32(self, "playcount_2", "Play count of the track when last synced")
+        yield TimestampMac32(self, "last_played_time", "Time the song was last played")
         yield UInt32(self, "disc_number", "disc number in multi disc sets")
         yield UInt32(self, "total_discs", "Total number of discs in the disc set")
         yield UInt32(self, "userid", "User ID in the DRM scheme")

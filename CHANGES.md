@@ -12,6 +12,7 @@
 * Update Certifi to 2015.11.20.1 (385476b)
 * Update chardet packages 2.3.0 (26982c5) to 2.3.0 (d7fae98)
 * Update dateutil library 2.4.2 (083f666) to 2.4.2 (d4baf97)
+* Update Hachoir library 1.3.4 (r1383) to 1.3.4 (r1435)
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)

@@ -102,6 +102,23 @@ def registerAllItems(meta):
     meta.register(Data("bit_rate", 604, _("Bit rate"), text_handler=humanBitRate,
         filter=NumberFilter(1, MAX_BIT_RATE), type=(int, long, float)))
     meta.register(Data("aspect_ratio", 604, _("Aspect ratio"), type=(int, long, float)))
+    meta.register(Data("thumbnail_size", 604, _("Thumbnail size"), text_handler=humanFilesize, type=(int, long, float)))
+
+    meta.register(Data("iso_speed_ratings", 800, _("ISO speed rating")))
+    meta.register(Data("exif_version", 801, _("EXIF version")))
+    meta.register(Data("date_time_original", 802, _("Date-time original"), text_handler=humanDatetime,
+        filter=DATETIME_FILTER, type=(datetime, date), conversion=setDatetime))
+    meta.register(Data("date_time_digitized", 803, _("Date-time digitized"), text_handler=humanDatetime,
+        filter=DATETIME_FILTER, type=(datetime, date), conversion=setDatetime))
+    meta.register(Data("compressed_bits_per_pixel", 804, _("Compressed bits per pixel"), type=(int, long, float)))
+    meta.register(Data("shutter_speed_value", 805, _("Shutter speed"), type=(int, long, float)))
+    meta.register(Data("aperture_value", 806, _("Aperture")))
+    meta.register(Data("exposure_bias_value", 807, _("Exposure bias")))
+    meta.register(Data("focal_length", 808, _("Focal length")))
+    meta.register(Data("flashpix_version", 809, _("Flashpix version")))
+    meta.register(Data("focal_plane_x_resolution", 810, _("Focal plane width")))
+    meta.register(Data("focal_plane_y_resolution", 811, _("Focal plane height"), type=float))
+    meta.register(Data("focal_length_in_35mm_film", 812, _("Focal length in 35mm film")))
 
     meta.register(Data("os", 900, _("OS"), type=unicode))
     meta.register(Data("producer", 901, _("Producer"), type=unicode))

@@ -24,6 +24,19 @@ class JpegMetadata(RootMetadata):
         "FNumber": "camera_focal",
         "BrightnessValue": "camera_brightness",
         "MaxApertureValue": "camera_aperture",
+        "ISOSpeedRatings": "iso_speed_ratings",
+        "ExifVersion": "exif_version",
+        "DateTimeOriginal": "date_time_original",
+        "DateTimeDigitized": "date_time_digitized",
+        "CompressedBitsPerPixel": "compressed_bits_per_pixel",
+        "ShutterSpeedValue": "shutter_speed_value",
+        "ApertureValue": "aperture_value",
+        "ExposureBiasValue": "exposure_bias_value",
+        "FocalLength": "focal_length",
+        "FlashpixVersion": "flashpix_version",
+        "FocalPlaneXResolution": "focal_plane_x_resolution",
+        "FocalPlaneYResolution": "focal_plane_y_resolution",
+        "FocalLengthIn35mmFilm": "focal_length_in_35mm_film",
 
         # Generic metadatas
         "ImageDescription": "title",
@@ -32,6 +45,7 @@ class JpegMetadata(RootMetadata):
         "PixelXDimension": "width",
         "PixelYDimension": "height",
         "UserComment": "comment",
+        "JPEGInterchangeFormatLength": "thumbnail_size",
     }
 
     IPTC_KEY = {
