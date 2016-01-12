@@ -1,5 +1,3 @@
-"""Utilities for writing code that runs on Python 2 and 3"""
-
 # Copyright (c) 2010-2015 Benjamin Peterson
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""Utilities for writing code that runs on Python 2 and 3"""
+
 from __future__ import absolute_import
 
 import functools
@@ -29,7 +29,7 @@ import sys
 import types
 
 __author__ = "Benjamin Peterson <benjamin@python.org>"
-__version__ = "1.9.0"
+__version__ = "1.10.0"
 
 
 # Useful for very coarse version differentiation.
