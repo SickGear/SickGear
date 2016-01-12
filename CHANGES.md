@@ -14,6 +14,7 @@
 * Update dateutil library 2.4.2 (083f666) to 2.4.2 (d4baf97)
 * Update Hachoir library 1.3.4 (r1383) to 1.3.4 (r1435)
 * Update html5lib 0.999 to 0.99999999/1.0b9 (46dae3d)
+* Update PNotify library 2.0.1 to 2.1.0
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)
