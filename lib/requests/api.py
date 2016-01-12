@@ -33,7 +33,7 @@ def request(method, url, **kwargs):
     :param allow_redirects: (optional) Boolean. Set to True if POST/PUT/DELETE redirect following is allowed.
     :type allow_redirects: bool
     :param proxies: (optional) Dictionary mapping protocol to the URL of the proxy.
-    :param verify: (optional) if ``True``, the SSL cert will be verified. A CA_BUNDLE path can also be provided.
+    :param verify: (optional) whether the SSL cert will be verified. A CA_BUNDLE path can also be provided. Defaults to ``True``.
     :param stream: (optional) if ``False``, the response content will be immediately downloaded.
     :param cert: (optional) if String, path to ssl client cert file (.pem). If Tuple, ('cert', 'key') pair.
     :return: :class:`Response <Response>` object
@@ -46,13 +46,11 @@ def request(method, url, **kwargs):
       <Response [200]>
     """
 
-    session = sessions.Session()
-    response = session.request(method=method, url=url, **kwargs)
-    # By explicitly closing the session, we avoid leaving sockets open which
-    # can trigger a ResourceWarning in some cases, and look like a memory leak
-    # in others.
-    session.close()
-    return response
+    # By using the 'with' statement we are sure the session is closed, thus we
+    # avoid leaving sockets open which can trigger a ResourceWarning in some
+    # cases, and look like a memory leak in others.
+    with sessions.Session() as session:
+        return session.request(method=method, url=url, **kwargs)
 
 
 def get(url, params=None, **kwargs):
