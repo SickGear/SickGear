@@ -1,6 +1,6 @@
 ﻿### 0.12.0 (2016-xx-xx xx:xx:xx UTC)
 
-*
+* Update xmltodict library 0.9.2 (579a005) to 0.9.2 (eac0031)
 
 
 ### 0.11.0 (2016-01-10 22:30:00 UTC)
