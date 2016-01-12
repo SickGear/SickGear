@@ -737,6 +737,14 @@ def tryInt(s, s_default=0):
         return s_default
 
 
+# try to convert to float, return default on failure
+def tryFloat(s, s_default=0.0):
+    try:
+        return float(s)
+    except:
+        return float(s_default)
+
+
 # generates a md5 hash of a file
 def md5_for_file(filename, block_size=2 ** 16):
     try:

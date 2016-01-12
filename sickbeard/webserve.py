@@ -2464,11 +2464,11 @@ class NewHomeAddShows(Home):
             imdb_id = re.compile(r'(?i).*(tt\d+)$')
 
             with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                torrent_table = soup.find('table', {'class': 'results'})
-                torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                show_list = soup.find('table', {'class': 'results'})
+                shows = [] if not show_list else show_list.find_all('tr')
                 oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
 
-                for tr in torrent_rows[1:]:
+                for tr in shows[1:]:
                     try:
                         url_path = tr.select('td.title a[href*=title]')[0]['href'].strip('/')
                         ids = dict(imdb=imdb_id.sub(r'\1', url_path))
@@ -2486,15 +2486,15 @@ class NewHomeAddShows(Home):
                                 newest = year
 
                         genres = tr.select('td.title span.genre')
-                        images = tr.select('td.image img')
+                        images = {}
+                        img = tr.select('td.image img')
                         overview = tr.select('td.title span.outline')
                         rating = tr.select('td.title span.rating-rating span.value')
                         voting = tr.select('td.title div.rating-list')
-                        if len(images) and 'tv_series.gif' not in images[0].get('src'):
-                            img_uri = images[0].get('src')
-                            images = {}
+                        if len(img):
+                            img_uri = img[0].get('src')
                             match = img_size.search(img_uri)
-                            if match:
+                            if match and 'tv_series.gif' not in img_uri:
                                 scale = lambda low1, high1: int((float(450) / high1) * low1)
                                 high = int(max([match.group(9), match.group(11)]))
                                 scaled = [scale(x, high) for x in [(int(match.group(n)), high)[high == int(match.group(n))] for n in 3, 5, 7, 9, 11]]
@@ -2507,8 +2507,6 @@ class NewHomeAddShows(Home):
                                 if not ek.ek(os.path.isfile, cached_name):
                                     helpers.download_file(img_uri, cached_name)
                                 images = dict(poster=dict(thumb='cache/images/imdb/%s' % file_name))
-                        else:
-                            images = {}
 
                         filtered.append(dict(
                             premiered=dt_ordinal,
@@ -2520,7 +2518,7 @@ class NewHomeAddShows(Home):
                             images=images,
                             overview=('No overview yet' if not len(overview) else
                                       self.encode_html(overview[0].get_text()[:250:].strip())),
-                            rating=0 if not len(rating) else int(float(rating[0].get_text()) * 10),
+                            rating=0 if not len(rating) else int(helpers.tryFloat(rating[0].get_text()) * 10),
                             title=tr.select('td.title a')[0].get_text().strip(),
                             url_src_db='http://www.imdb.com/%s/' % url_path,
                             votes=0 if not len(voting) else vote_value.sub(r'\1\2', voting[0].get('title'))))
