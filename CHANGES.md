@@ -1,5 +1,6 @@
 ﻿### 0.12.0 (2016-xx-xx xx:xx:xx UTC)
 
+* Update unidecode library 0.04.11 to 0.04.18 (fd57cbf)
 * Update xmltodict library 0.9.2 (579a005) to 0.9.2 (eac0031)
 
 
