@@ -226,7 +226,7 @@ class DOMHTMLMovieParser(DOMParserBase):
                             Attribute(key="countries",
                                 path="./h5[starts-with(text(), " \
                             "'Countr')]/../div[@class='info-content']//text()",
-                            postprocess=makeSplitter('|')),
+                                postprocess=makeSplitter('|')),
                             Attribute(key="language",
                                 path="./h5[starts-with(text(), " \
                                         "'Language')]/..//text()",
@@ -234,7 +234,7 @@ class DOMHTMLMovieParser(DOMParserBase):
                             Attribute(key='color info',
                                 path="./h5[starts-with(text(), " \
                                         "'Color')]/..//text()",
-                                postprocess=makeSplitter('Color:')),
+                                postprocess=makeSplitter('|')),
                             Attribute(key='sound mix',
                                 path="./h5[starts-with(text(), " \
                                         "'Sound Mix')]/..//text()",
@@ -462,6 +462,8 @@ class DOMHTMLMovieParser(DOMParserBase):
                 del data['other akas']
             if nakas:
                 data['akas'] = nakas
+        if 'color info' in data:
+            data['color info'] = [x.replace('Color:', '', 1) for x in data['color info']]
         if 'runtimes' in data:
             data['runtimes'] = [x.replace(' min', u'')
                                 for x in data['runtimes']]
@@ -1177,7 +1179,7 @@ class DOMHTMLCriticReviewsParser(DOMParserBase):
                 path="//div[@class='article']/div[@class='see-more']/a",
                 attrs=Attribute(key='metacritic url',
                                 path="./@href")) ]
-    
+
 class DOMHTMLOfficialsitesParser(DOMParserBase):
     """Parser for the "official sites", "external reviews", "newsgroup
     reviews", "miscellaneous links", "sound clips", "video clips" and
@@ -1534,7 +1536,7 @@ class DOMHTMLSeasonEpisodesParser(DOMParserBase):
                                             '').strip()
             episode_title = episode.get('title', '').strip()
             episode_plot = episode.get('plot', '')
-            if not (episode_nr and episode_id and episode_title):
+            if not (episode_nr is not None and episode_id and episode_title):
                 continue
             ep_obj = Movie(movieID=episode_id, title=episode_title,
                         accessSystem=self._as, modFunct=self._modFunct)

@@ -441,12 +441,6 @@ class DOMParserBase(object):
         self._useModule = useModule
         nrMods = len(useModule)
         _gotError = False
-
-        # Force warnings.warn() to omit the source code line in the message
-        formatwarning_orig = warnings.formatwarning
-        warnings.formatwarning = lambda message, category, filename, lineno, line=None: \
-            formatwarning_orig(message, category, filename, lineno, line='')
-
         for idx, mod in enumerate(useModule):
             mod = mod.strip().lower()
             try:
