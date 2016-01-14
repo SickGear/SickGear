@@ -1,4 +1,9 @@
-﻿### 0.11.1 (2016-01-12 20:00:00 UTC)
+﻿### 0.11.2 (2016-01-14 21:10:00 UTC)
+
+* Fix issue with "Add Existing Shows" on new installations
+
+
+### 0.11.1 (2016-01-12 20:00:00 UTC)
 
 * Fix handling non-numeric IMDb popular ratings
 

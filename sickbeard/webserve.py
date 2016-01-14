@@ -2878,16 +2878,14 @@ class NewHomeAddShows(Home):
         if not extra_show:
             return (None, None, None, None)
         split_vals = extra_show.split('|')
-        if len(split_vals) < 4:
-            indexer = split_vals[0]
-            show_dir = split_vals[1]
-            return (indexer, show_dir, None, None)
-        indexer = split_vals[0]
+        indexer = helpers.tryInt(split_vals[0], 1)
         show_dir = split_vals[1]
+        if len(split_vals) < 4:
+            return indexer, show_dir, None, None
         indexer_id = split_vals[2]
         show_name = '|'.join(split_vals[3:])
 
-        return (indexer, show_dir, indexer_id, show_name)
+        return indexer, show_dir, indexer_id, show_name
 
     def addExistingShows(self, shows_to_add=None, promptForSettings=None, **kwargs):
         """
@@ -2923,7 +2921,7 @@ class NewHomeAddShows(Home):
                 if not show_dir or not indexer_id or not show_name:
                     continue
 
-                indexer_id_given.append((int(indexer), show_dir, int(indexer_id), show_name))
+                indexer_id_given.append((indexer, show_dir, int(indexer_id), show_name))
 
         # if they want me to prompt for settings then I will just carry on to the newShow page
         if promptForSettings and shows_to_add:
