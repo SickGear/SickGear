@@ -21,6 +21,11 @@
 * Update Six compatibility library 1.9.0 (r400) to 1.10.0 (r405)
 
 
+### 0.11.2 (2016-01-14 21:10:00 UTC)
+
+* Fix issue with "Add Existing Shows" on new installations
+
+
 ### 0.11.1 (2016-01-12 22:20:00 UTC)
 
 * Fix handling non-numeric IMDb popular ratings
