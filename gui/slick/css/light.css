@@ -1142,6 +1142,7 @@ pre{
 input sizing (for config pages)
 ========================================================================== */
 
+.showlist-select optgroup,
 #pickShow optgroup,
 #showfilter optgroup,
 #editAProvider optgroup{
@@ -1149,6 +1150,7 @@ input sizing (for config pages)
 	background-color:#888
 }
 
+.showlist-select optgroup option,
 #pickShow optgroup option,
 #showfilter optgroup option,
 #editAProvider optgroup option{
