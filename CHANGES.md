@@ -21,6 +21,16 @@
 * Update Six compatibility library 1.9.0 (r400) to 1.10.0 (r405)
 
 
+### 0.11.3 (2016-01-16 20:00:00 UTC)
+
+* Fix Search Settings display fail
+* Add Audience, Channel 5 (UK), Five US, Fox Channel, FreeForm, Global, HBO Canada, Keshet, More4, Rooster Teeth, TF1,
+  Toon Disney, WE tv, XBox Video
+* Change BET network logo
+* Change provider TB icon
+* Delete 3fm and redundant network logo
+
+
 ### 0.11.2 (2016-01-14 21:10:00 UTC)
 
 * Fix issue with "Add Existing Shows" on new installations
