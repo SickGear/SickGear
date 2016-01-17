@@ -3577,6 +3577,7 @@ div.formpaginate{
 }
 
 .step-outer{
+	padding-top:10px;
 	overflow:hidden
 }
 

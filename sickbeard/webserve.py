@@ -4066,10 +4066,12 @@ class ConfigSearch(Config):
         t = PageTemplate(headers=self.request.headers, file='config_search.tmpl')
         t.submenu = self.ConfigMenu
         t.using_rls_ignore_words = [(show.indexerid, show.name)
-                                    for show in sickbeard.showList if show.rls_ignore_words.strip()]
+                                    for show in sickbeard.showList if show.rls_ignore_words and
+                                    show.rls_ignore_words.strip()]
         t.using_rls_ignore_words.sort(lambda x, y: cmp(x[1], y[1]), reverse=False)
         t.using_rls_require_words = [(show.indexerid, show.name)
-                                     for show in sickbeard.showList if show.rls_require_words.strip()]
+                                     for show in sickbeard.showList if show.rls_require_words and
+                                     show.rls_require_words.strip()]
         t.using_rls_require_words.sort(lambda x, y: cmp(x[1], y[1]), reverse=False)
         return t.respond()
 
