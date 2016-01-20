@@ -937,16 +937,38 @@ class Home(MainHandler):
     def loadShowNotifyLists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        myDB = db.DBConnection()
-        rows = myDB.select('SELECT show_id, show_name, notify_list FROM tv_shows ORDER BY show_name ASC')
+        my_db = db.DBConnection()
+        rows = my_db.select('SELECT indexer_id, indexer, notify_list FROM tv_shows ' +
+                            'WHERE notify_list NOTNULL and notify_list != ""')
+        notify_lists = {}
+        for r in filter(lambda x: x['notify_list'].strip(), rows):
+            notify_lists['%s_%s' % (r['indexer'], r['indexer_id'])] = r['notify_list']
 
-        data = {}
-        size = 0
-        for r in rows:
-            data[r['show_id']] = {'id': r['show_id'], 'name': r['show_name'], 'list': r['notify_list']}
-            size += 1
-        data['_size'] = size
-        return json.dumps(data)
+        sorted_show_lists = self.sorted_show_lists()
+        response = []
+        for current_group in sorted_show_lists:
+            data = []
+            for current_show in current_group[1]:
+                uid = '%s_%s' % (current_show.indexer, current_show.indexerid)
+                data.append({'id': uid, 'name': current_show.name,
+                             'list': '' if uid not in notify_lists else notify_lists[uid]})
+            if data:
+                response.append({current_group[0]: data})
+
+        return json.dumps(response)
+
+    @staticmethod
+    def save_show_email(show=None, emails=None):
+        # self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        my_db = db.DBConnection()
+        success = False
+        parse = show.split('_')
+        if 1 < len(parse) and \
+                my_db.action('UPDATE tv_shows SET notify_list = ? WHERE indexer = ? AND indexer_id = ?',
+                             [emails, parse[0], parse[1]]):
+            success = True
+        return json.dumps({'id': show, 'success': success})
 
     def testEmail(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -956,9 +978,8 @@ class Home(MainHandler):
         host = config.clean_host(host)
 
         if notifiers.email_notifier.test_notify(host, port, smtp_from, use_tls, user, pwd, to):
-            return 'Test email sent successfully! Check inbox.'
-        else:
-            return 'ERROR: %s' % notifiers.email_notifier.last_err
+            return 'Success. Test email sent. Check inbox.'
+        return 'ERROR: %s' % notifiers.email_notifier.last_err
 
     def testNMA(self, nma_api=None, nma_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1217,32 +1238,11 @@ class Home(MainHandler):
             display_seasons += [1]
         display_seasons += [highest_season]
 
-        def titler(x):
-            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
-
-        if sickbeard.SHOWLIST_TAGVIEW == 'custom':
-            t.sortedShowLists = []
-            for tag in sickbeard.SHOW_TAGS:
-                results = filter(lambda x: x.tag == tag, sickbeard.showList)
-                if results:
-                    t.sortedShowLists.append([tag, sorted(results, lambda x, y: cmp(titler(x.name), titler(y.name)))])
-        elif sickbeard.SHOWLIST_TAGVIEW == 'anime':
-            shows = []
-            anime = []
-            for show in sickbeard.showList:
-                if show.is_anime:
-                    anime.append(show)
-                else:
-                    shows.append(show)
-            t.sortedShowLists = [['Shows', sorted(shows, lambda x, y: cmp(titler(x.name), titler(y.name)))],
-                                 ['Anime', sorted(anime, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
-
-        else:
-            t.sortedShowLists = [
-                ['Show List', sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+        t.sortedShowLists = self.sorted_show_lists()
 
         tvshows = []
         tvshow_names = []
+        cur_sel = None
         for tvshow_types in t.sortedShowLists:
             for tvshow in tvshow_types[1]:
                 tvshows.append(tvshow.indexerid)
@@ -1252,8 +1252,11 @@ class Home(MainHandler):
         t.tvshow_id_csv = ','.join(str(x) for x in tvshows)
 
         last_item = len(tvshow_names)
-        t.prev_title = 'Prev show, %s' % tvshow_names[(cur_sel - 2, last_item - 1)[1 == cur_sel]]
-        t.next_title = 'Next show, %s' % tvshow_names[(cur_sel, 0)[last_item == cur_sel]]
+        t.prev_title = ''
+        t.next_title = ''
+        if cur_sel:
+            t.prev_title = 'Prev show, %s' % tvshow_names[(cur_sel - 2, last_item - 1)[1 == cur_sel]]
+            t.next_title = 'Next show, %s' % tvshow_names[(cur_sel, 0)[last_item == cur_sel]]
 
         t.bwl = None
         if showObj.is_anime:
@@ -1275,6 +1278,35 @@ class Home(MainHandler):
         t.xem_absolute_numbering = get_xem_absolute_numbering_for_show(indexerid, indexer)
 
         return t.respond()
+
+    @staticmethod
+    def sorted_show_lists():
+
+        def titler(x):
+            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
+
+        if 'custom' == sickbeard.SHOWLIST_TAGVIEW:
+            sorted_show_lists = []
+            for tag in sickbeard.SHOW_TAGS:
+                results = filter(lambda x: x.tag == tag, sickbeard.showList)
+                if results:
+                    sorted_show_lists.append([tag, sorted(results, lambda x, y: cmp(titler(x.name), titler(y.name)))])
+        elif 'anime' == sickbeard.SHOWLIST_TAGVIEW:
+            shows = []
+            anime = []
+            for show in sickbeard.showList:
+                if show.is_anime:
+                    anime.append(show)
+                else:
+                    shows.append(show)
+            sorted_show_lists = [['Shows', sorted(shows, lambda x, y: cmp(titler(x.name), titler(y.name)))],
+                                 ['Anime', sorted(anime, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+
+        else:
+            sorted_show_lists = [
+                ['Show List', sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+
+        return sorted_show_lists
 
     def plotDetails(self, show, season, episode):
         myDB = db.DBConnection()

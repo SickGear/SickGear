@@ -1637,7 +1637,7 @@
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/email.png" alt="" title="Email" />
 						<h3><a href="<%= anon_url('http://en.wikipedia.org/wiki/Comparison_of_webmail_providers') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Email</a></h3>
-						<p>Allows configuration of email notifications on a per show basis.</p>
+						<p>Email notification settings.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
@@ -1679,94 +1679,70 @@
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_host">
-									<span class="component-title">SMTP host</span>
-									<input type="text" name="email_host" id="email_host" value="$sickbeard.EMAIL_HOST" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">hostname of your SMTP email server.</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="email_port">
-									<span class="component-title">SMTP port</span>
-									<input type="text" name="email_port" id="email_port" value="$sickbeard.EMAIL_PORT" class="form-control input-sm input75" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">port number used to connect to your SMTP host.</span>
-								</label>
-							</div>
-							<div class="field-pair">
 								<label for="email_from">
-									<span class="component-title">SMTP from</span>
-									<input type="text" name="email_from" id="email_from" value="$sickbeard.EMAIL_FROM" class="form-control input-sm input250" />
+									<span class="component-title">SMTP sender email address</span>
+									<span class="component-desc">
+										<input type="text" name="email_from" id="email_from" value="$sickbeard.EMAIL_FROM" class="form-control input-sm input250" />
+										<div class="clear-left"><p>some recipient hosts require a real address</p></div>
+									</span>
 								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">sender email address, some hosts require a real address.</span>
-								</label>
-							</div>
-							<div class="field-pair">
+								<div style="margin-bottom:5px;display:inline-block">
+									<span class="component-title">SMTP server hostname</span>
+									<span class="component-desc">
+										<input type="text" name="email_host" id="email_host" value="$sickbeard.EMAIL_HOST" class="form-control input-sm input250" />
+										<span style="float:left;margin-right:6px">and port</span><input type="text" name="email_port" id="email_port" value="$sickbeard.EMAIL_PORT" class="form-control input-sm input75" style="width:60px" />
+									</span>
+								</div>
 								<label for="email_tls">
-									<span class="component-title">Use TLS</span>
+									<span class="component-title">Enable TLS encryption</span>
 									<span class="component-desc">
 										<input type="checkbox" name="email_tls" id="email_tls" #if $sickbeard.EMAIL_TLS then 'checked="checked"' else ''# />
-										<p>check to use TLS encryption.</p>
+									</span>
+								</label>
+								<label for="email_user">
+									<span class="component-title">SMTP server username</span>
+									<span class="component-desc">
+										<input type="text" name="email_user" id="email_user" value="$sickbeard.EMAIL_USER" class="form-control input-sm input250" />
+										<p>(optional)</p>
+									</span>
+								</label>
+								<label for="email_password">
+									<span class="component-title">SMTP server password</span>
+									<span class="component-desc">
+										<input type="password" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250" />
+										<p>(optional)</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_user">
-									<span class="component-title">SMTP user</span>
-									<input type="text" name="email_user" id="email_user" value="$sickbeard.EMAIL_USER" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(optional) your SMTP server username.</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="email_password">
-									<span class="component-title">SMTP password</span>
-									<input type="password" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(optional) your SMTP server password.</span>
-								</label>
-							</div>
-							<div class="field-pair">
 								<label for="email_list">
-									<span class="component-title">Global email list</span>
-									<input type="text" name="email_list" id="email_list" value="$sickbeard.EMAIL_LIST" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">all emails here receive notifications for <b>all</b> shows.</span>
+									<span class="component-title">Notify for every show</span>
+									<span class="component-desc">
+										<input type="text" name="email_list" id="email_list" value="$sickbeard.EMAIL_LIST" class="form-control input-sm input350" />
+										<div class="clear-left"><p>comma separated email list</p></div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
 								<label for="email_show">
-									<span class="component-title">Show notification list</span>
-									<select name="email_show" id="email_show" class="form-control input-sm">
-										<option value="-1">-- Select a Show --</option>
+									<span class="component-title">Notify on a per show basis</span>
+									<select name="email_show" id="email_show" class="showlist-select form-control input-sm">
+										<option value="-1">-- Shows appear here --</option>
 									</select>
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
-									<input type="text" name="email_show_list" id="email_show_list" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">configure per show notifications here.</span>
+									<span class="component-desc">
+										<input type="text" name="show_email_list" id="show_email_list" class="form-control input-sm input350" />
+										<input type="button" value="Save Show" id="save_show_email" class="btn" />
+										<div class="clear-left"><p>comma separated email list for each show</p></div>
+									</span>
 								</label>
 							</div>
 
 							<div class="testNotification" id="testEmail-result">Click below to test.</div>
-							<input class="btn" type="button" value="Test Email" id="testEmail" />
-							<input class="btn" type="submit" class="config_submitter" value="Save Changes" />
+							<input type="button" class="btn" value="Test Email" id="testEmail" />
+							<input type="submit" class="btn config_submitter" value="Save Changes" />
 						</div><!-- /content_use_email //-->
 					</fieldset>
 				</div><!-- /email component-group //-->
