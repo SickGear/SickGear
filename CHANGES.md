@@ -20,6 +20,7 @@
 * Update SimpleJSON library 3.8.0 (a37a9bd) to 3.8.1 (6022794)
 * Update Six compatibility library 1.9.0 (r400) to 1.10.0 (r405)
 * Change refactor email notifier
+* Change emails to Unicode aware
 
 
 ### 0.11.3 (2016-01-16 20:00:00 UTC)

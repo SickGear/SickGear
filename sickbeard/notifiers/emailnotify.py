@@ -54,20 +54,22 @@ class EmailNotifier:
         if not sickbeard.USE_EMAIL and not force:
             return
 
-        ep_name = ep_name.encode('utf-8', 'replace')
-        show = self._parse_ep(ep_name)
-        to = self._generate_recipients(show)
+        show = ep_name.split(' - ')[0]
+        to = self._get_recipients(show)
         if not any(to):
             logger.log(u'No email recipients to notify, skipping', logger.WARNING)
             return
+
+        logger.log(u'Email recipients to notify: %s' % to, logger.DEBUG)
 
         try:
             msg = MIMEMultipart('alternative')
             msg.attach(MIMEText(
                 '<body style="font-family:Helvetica, Arial, sans-serif;">' +
                 '<h3>SickGear Notification - %s</h3>\n' % title +
-                '<p>Show: <b>' + re.search('(.+?) -.+', ep_name).group(1) +
-                '</b></p>\n<p>Episode: <b>' + re.search('.+ - (.+?-.+) -.+', ep_name).group(1) +
+                '<p>Show: <b>' + show.encode('ascii', 'xmlcharrefreplace') +
+                '</b></p>\n<p>Episode: <b>' +
+                unicode(re.search('.+ - (.+?-.+) -.+', ep_name).group(1)).encode('ascii', 'xmlcharrefreplace') +
                 extra +
                 '</b></p>\n\n' +
                 '<footer style="margin-top:2.5em;padding:.7em 0;color:#777;border-top:#BBB solid 1px;">' +
@@ -131,30 +133,26 @@ class EmailNotifier:
         pass
 
     @staticmethod
-    def _generate_recipients(show):
+    def _get_recipients(show_name=None):
 
-        addrs = []
+        email_list = []
 
         # Grab the global recipients
         if sickbeard.EMAIL_LIST:
-            for addr in sickbeard.EMAIL_LIST.split(','):
-                if any(addr.strip()):
-                    addrs.append(addr)
+            for email_address in sickbeard.EMAIL_LIST.split(','):
+                if any(email_address.strip()):
+                    email_list.append(email_address)
 
         # Grab the recipients for the show
-        if None is not show:
+        if None is not show_name:
             my_db = db.DBConnection()
-            for name in show:
-                for subs in my_db.select('SELECT notify_list FROM tv_shows WHERE show_name = ?', (name,)):
-                    if subs['notify_list']:
-                        for addr in subs['notify_list'].split(','):
-                            if any(addr.strip()):
-                                addrs.append(addr)
+            for result in my_db.select('SELECT notify_list FROM tv_shows WHERE show_name = ?', (show_name,)):
+                if result['notify_list']:
+                    for email_address in result['notify_list'].split(','):
+                        if any(email_address.strip()):
+                            email_list.append(email_address)
 
-        addrs = set(addrs)
-        logger.log(u'Email recipients to notify: %s' % addrs, logger.DEBUG)
-
-        return addrs
+        return list(set(email_list))
 
     def _sendmail(self, host, port, smtp_from, use_tls, user, pwd, to, msg, smtp_debug=False):
 
@@ -189,17 +187,6 @@ class EmailNotifier:
             return False
 
         return True
-
-    @staticmethod
-    def _parse_ep(ep_name):
-
-        ep_name = ep_name.encode('utf-8', 'replace')
-        sep = ' - '
-        titles = ep_name.split(sep)
-        titles.sort(key=len, reverse=True)
-        logger.log(u'TITLES: %s' % titles, logger.DEBUG)
-
-        return titles
 
 
 notifier = EmailNotifier
