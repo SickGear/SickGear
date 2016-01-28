@@ -23,6 +23,7 @@
 * Add singledispatch 3.4.0.3
 * Change refactor email notifier
 * Change emails to Unicode aware
+* Fix refresh handling of Skipped and Ignored items
 
 
 ### 0.11.4 (2016-01-31 11:30:00 UTC)
