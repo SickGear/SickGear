@@ -1,4 +1,11 @@
-﻿### 0.11.3 (2016-01-16 20:00:00 UTC)
+﻿### 0.11.4 (2016-01-31 11:30:00 UTC)
+
+* Fix issue setting some custom name patterns on the "Config/Post Processing/Episode Naming" tab
+* Remove Strike torrent provider
+* Add network icons
+
+
+### 0.11.3 (2016-01-16 20:00:00 UTC)
 
 * Fix Search Settings display fail
 * Add Audience, Channel 5 (UK), Five US, Fox Channel, FreeForm, Global, HBO Canada, Keshet, More4, Rooster Teeth, TF1,
