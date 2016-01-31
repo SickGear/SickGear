@@ -25,6 +25,13 @@
 * Change emails to Unicode aware
 
 
+### 0.11.4 (2016-01-31 11:30:00 UTC)
+
+* Fix issue setting some custom name patterns on the "Config/Post Processing/Episode Naming" tab
+* Remove Strike torrent provider
+* Add network icons
+
+
 ### 0.11.3 (2016-01-16 20:00:00 UTC)
 
 * Fix Search Settings display fail
