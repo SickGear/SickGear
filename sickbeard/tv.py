@@ -395,10 +395,10 @@ class TVShow(object):
     def loadEpisodesFromDir(self):
 
         if not ek.ek(os.path.isdir, self._location):
-            logger.log(str(self.indexerid) + u": Show directory doesn't exist, not loading episodes from disk")
+            logger.log('%s: Show directory doesn\'t exist, not loading episodes from disk' % self.indexerid)
             return
 
-        logger.log(str(self.indexerid) + u": Loading all episodes from the show directory " + self._location)
+        logger.log('%s: Loading all episodes from the show directory %s' % (self.indexerid, self._location))
 
         # get file list
         mediaFiles = helpers.listMediaFiles(self._location)
@@ -409,14 +409,14 @@ class TVShow(object):
             parse_result = None
             curEpisode = None
 
-            logger.log(str(self.indexerid) + u": Creating episode from " + mediaFile, logger.DEBUG)
+            logger.log('%s: Creating episode from %s' % (self.indexerid, mediaFile), logger.DEBUG)
             try:
                 curEpisode = self.makeEpFromFile(ek.ek(os.path.join, self._location, mediaFile))
             except (exceptions.ShowNotFoundException, exceptions.EpisodeNotFoundException) as e:
-                logger.log(u"Episode " + mediaFile + " returned an exception: " + ex(e), logger.ERROR)
+                logger.log('Episode %s returned an exception: %s' % (mediaFile, ex(e)), logger.ERROR)
                 continue
             except exceptions.EpisodeDeletedException:
-                logger.log(u"The episode deleted itself when I tried making an object for it", logger.DEBUG)
+                logger.log('The episode deleted itself when I tried making an object for it', logger.DEBUG)
 
             if curEpisode is None:
                 continue
@@ -434,7 +434,7 @@ class TVShow(object):
 
             if ep_file_name and parse_result and None is not parse_result.release_group:
                 logger.log(
-                    u"Name " + ep_file_name + u" gave release group of " + parse_result.release_group + ", seems valid",
+                    'Name %s gave release group of %s, seems valid' % (ep_file_name ,parse_result.release_group),
                     logger.DEBUG)
                 curEpisode.release_name = ep_file_name
 
@@ -444,7 +444,7 @@ class TVShow(object):
                     try:
                         curEpisode.refreshSubtitles()
                     except:
-                        logger.log(str(self.indexerid) + ": Could not refresh subtitles", logger.ERROR)
+                        logger.log('%s: Could not refresh subtitles' % self.indexerid, logger.ERROR)
                         logger.log(traceback.format_exc(), logger.DEBUG)
 
                 result = curEpisode.get_sql()
@@ -658,14 +658,20 @@ class TVShow(object):
 
             else:
                 # if there is a new file associated with this ep then re-check the quality
-                if cur_ep.location and ek.ek(os.path.normpath, cur_ep.location) != ek.ek(os.path.normpath, file):
-                    logger.log(
-                        u'The old episode had a different file associated with it, re-checking the quality based on the new filename ' + file,
-                        logger.DEBUG)
+                status, quality = sickbeard.common.Quality.splitCompositeStatus(cur_ep.status)
+
+                if IGNORED == status:
+                    continue
+
+                if (cur_ep.location and ek.ek(os.path.normpath, cur_ep.location) != ek.ek(os.path.normpath, file)) or \
+                        (not cur_ep.location and file) or \
+                        (SKIPPED == status):
+                    logger.log(u'The old episode had a different file associated with it, re-checking the quality ' +
+                               u'based on the new filename %s' % file, logger.DEBUG)
                     check_quality_again = True
 
                 with cur_ep.lock:
-                    old_size = cur_ep.file_size
+                    old_size = cur_ep.file_size if cur_ep.location and status != SKIPPED else 0
                     cur_ep.location = file
                     # if the sizes are the same then it's probably the same file
                     if old_size and cur_ep.file_size == old_size:
@@ -1096,7 +1102,7 @@ class TVShow(object):
         self.loadEpisodesFromDir()
 
         # run through all locations from DB, check that they exist
-        logger.log(str(self.indexerid) + u": Loading all episodes with a location from the database")
+        logger.log('%s: Loading all episodes with a location from the database' % self.indexerid)
 
         myDB = db.DBConnection()
         sqlResults = myDB.select("SELECT * FROM tv_episodes WHERE showid = ? AND location != ''", [self.indexerid])
@@ -1208,6 +1214,7 @@ class TVShow(object):
 
         myDB = db.DBConnection()
         myDB.upsert("tv_shows", newValueDict, controlValueDict)
+        self.dirty = False
 
         if sickbeard.USE_IMDB_INFO and len(self.imdb_info):
             controlValueDict = {'indexer_id': self.indexerid}
@@ -1988,6 +1995,7 @@ class TVEpisode(object):
         if rows:
             epID = int(rows[0]['episode_id'])
 
+        self.dirty = False
         if epID:
             # use a custom update method to get the data into the DB for existing records.
             return [
@@ -2057,6 +2065,7 @@ class TVEpisode(object):
         # use a custom update/insert method to get the data into the DB
         myDB = db.DBConnection()
         myDB.upsert("tv_episodes", newValueDict, controlValueDict)
+        self.dirty = False
 
     def fullPath(self):
         if self.location == None or self.location == "":

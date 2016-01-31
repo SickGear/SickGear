@@ -498,7 +498,7 @@ class QueueItemRefresh(ShowQueueItem):
     def run(self):
         ShowQueueItem.run(self)
 
-        logger.log(u'Performing refresh on ' + self.show.name)
+        logger.log('Performing refresh on %s' % self.show.name)
 
         self.show.refreshDir()
         self.show.writeMetadata()
