@@ -26,7 +26,7 @@ from sickbeard import logger
 from . import newznab, omgwtfnzbs, womble
 # torrent
 from . import alpharatio, beyondhd, bitmetv, bitsoup, btn, freshontv, funfile, gftracker, grabtheinfo, \
-    hdbits, hdspace, iptorrents, kat, morethan, pisexy, pretome, rarbg, scc, scenetime, shazbat, speedcd, strike, \
+    hdbits, hdspace, iptorrents, kat, morethan, pisexy, pretome, rarbg, scc, scenetime, shazbat, speedcd, \
     thepiratebay, torrentbytes, torrentday, torrenting, torrentleech, torrentshack, transmithe_net, tvchaosuk
 # anime
 from . import nyaatorrents, tokyotoshokan
@@ -54,7 +54,6 @@ __all__ = ['omgwtfnzbs',
            'scenetime',
            'shazbat',
            'speedcd',
-           'strike',
            'thepiratebay',
            'torrentbytes',
            'torrentday',
