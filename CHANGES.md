@@ -25,6 +25,12 @@
 * Change emails to Unicode aware
 
 
+### 0.11.5 (2016-02-01 19:40:00 UTC)
+
+* Fix refresh handling of Skipped and Ignored items
+* Fix issue entering scene numbers
+
+
 ### 0.11.4 (2016-01-31 11:30:00 UTC)
 
 * Fix issue setting some custom name patterns on the "Config/Post Processing/Episode Naming" tab

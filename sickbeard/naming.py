@@ -244,17 +244,16 @@ def generate_sample_ep(multi=None, abd=False, sports=False, anime=False, anime_t
         ep._name = 'Ep Name (1)'
         second_ep = TVEpisode(2, 4, 4, 'Ep Name (2)')
         second_ep._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
-        second_ep._release_name = ep._release_name
+        normal_naming = not anime or 3 == anime_type
+        release_name = ep._release_name = second_ep._release_name = \
+            ('Show.Name.003-004.HDTV.XviD-RLSGROUP', 'Show.Name.S02E03E04E05.HDTV.XviD-RLSGROUP')[normal_naming]
         ep.relatedEps.append(second_ep)
-        if not anime or 3 == anime_type:
-            ep._release_name = 'Show.Name.S02E03E04E05.HDTV.XviD-RLSGROUP'
-
+        if normal_naming:
             third_ep = TVEpisode(2, 5, 5, 'Ep Name (3)')
             third_ep._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
-            third_ep._release_name = ep._release_name
+            third_ep._release_name = release_name
             ep.relatedEps.append(third_ep)
         else:
-            ep._release_name = 'Show.Name.003-004.HDTV.XviD-RLSGROUP'
             ep.show.anime = 1
 
     return ep
