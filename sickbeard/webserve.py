@@ -553,7 +553,7 @@ class Home(MainHandler):
 
         if absolute:
             epObj = showObj.getEpisode(absolute_number=int(absolute))
-        elif season and episode:
+        elif None is not season and None is not episode:
             epObj = showObj.getEpisode(int(season), int(episode))
         else:
             return 'Invalid paramaters'

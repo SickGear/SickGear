@@ -202,7 +202,7 @@ def set_scene_numbering(indexer_id, indexer, season=None, episode=None, absolute
     indexer = int(indexer)
 
     my_db = db.DBConnection()
-    if season and episode:
+    if None is not season and None is not episode:
         my_db.action(
             'INSERT OR IGNORE INTO scene_numbering (indexer, indexer_id, season, episode) VALUES (?,?,?,?)',
             [indexer, indexer_id, season, episode])
