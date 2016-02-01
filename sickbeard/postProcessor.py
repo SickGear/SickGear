@@ -23,6 +23,7 @@ import os
 import re
 import subprocess
 import stat
+import threading
 
 import sickbeard
 
@@ -60,7 +61,7 @@ class PostProcessor(object):
 
     IGNORED_FILESTRINGS = ['/.AppleDouble/', '.DS_Store']
 
-    def __init__(self, file_path, nzb_name=None, process_method=None, force_replace=None, use_trash=None):
+    def __init__(self, file_path, nzb_name=None, process_method=None, force_replace=None, use_trash=None, webhandler=None):
         """
         Creates a new post processor with the given file path and optionally an NZB name.
 
@@ -85,6 +86,8 @@ class PostProcessor(object):
         self.force_replace = force_replace
 
         self.use_trash = use_trash
+
+        self.webhandler = webhandler
 
         self.in_history = False
 
@@ -817,7 +820,7 @@ class PostProcessor(object):
         Post-process a given file
         """
 
-        self._log(u'Processing %s%s' % (self.file_path, (u'<br />.. from nzb %s' % str(self.nzb_name), u'')[None is self.nzb_name]))
+        self._log(u'Processing %s%s' % (self.file_path, (u'<br />.. from nzb %s' % self.nzb_name, u'')[None is self.nzb_name]))
 
         if ek.ek(os.path.isdir, self.file_path):
             self._log(u'File %s<br />.. seems to be a directory' % self.file_path)
@@ -963,6 +966,16 @@ class PostProcessor(object):
         if sickbeard.ANIDB_USE_MYLIST and ep_obj.show.is_anime:
             self._add_to_anidb_mylist(self.file_path)
 
+        if self.webhandler:
+            def keep_alive(webh, stop_event):
+                while not stop_event.is_set():
+                    stop_event.wait(60)
+                    webh('.')
+                webh(u'\n')
+
+            keepalive_stop = threading.Event()
+            keepalive = threading.Thread(target=keep_alive,  args=(self.webhandler, keepalive_stop))
+
         try:
             # move the episode and associated files to the show dir
             args_link = {'file_path': self.file_path, 'new_path': dest_path,
@@ -971,6 +984,9 @@ class PostProcessor(object):
             args_cpmv = {'subtitles': sickbeard.USE_SUBTITLES and ep_obj.show.subtitles,
                          'action_tmpl': u' %s<br />.. to %s'}
             args_cpmv.update(args_link)
+            if self.webhandler:
+                self.webhandler('Processing method is "%s"' % self.process_method)
+                keepalive.start()
             if 'copy' == self.process_method:
                 self._copy(**args_cpmv)
             elif 'move' == self.process_method:
@@ -984,7 +1000,11 @@ class PostProcessor(object):
                 raise exceptions.PostProcessingFailed(u'Unable to move the files to the new location')
         except (OSError, IOError):
             raise exceptions.PostProcessingFailed(u'Unable to move the files to the new location')
-                
+        finally:
+            if self.webhandler:
+                #stop the keep_alive
+                keepalive_stop.set()
+
         # download subtitles
         dosubs = sickbeard.USE_SUBTITLES and ep_obj.show.subtitles
 

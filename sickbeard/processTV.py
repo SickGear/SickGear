@@ -47,10 +47,11 @@ except ImportError:
 class ProcessTVShow(object):
     """ Process a TV Show """
 
-    def __init__(self):
+    def __init__(self, webhandler=None):
         self.files_passed = 0
         self.files_failed = 0
         self._output = []
+        self.webhandler = webhandler
 
     @property
     def any_vid_processed(self):
@@ -63,6 +64,10 @@ class ProcessTVShow(object):
     def _buffer(self, text=None):
         if None is not text:
             self._output.append(text)
+            if self.webhandler:
+                logger_msg = re.sub(r'(?i)<br(?:[\s/]+)>', '\n', text)
+                logger_msg = re.sub('(?i)<a[^>]+>([^<]+)<[/]a>', r'\1', logger_msg)
+                self.webhandler('%s%s' % (logger_msg, u'\n'))
 
     def _log_helper(self, message, log_level=logger.DEBUG):
         logger_msg = re.sub(r'(?i)<br(?:[\s/]+)>\.*', '', message)
@@ -153,22 +158,26 @@ class ProcessTVShow(object):
         """
 
         # if they passed us a real directory then assume it's the one we want
-        if ek.ek(os.path.isdir, dir_name):
+        if dir_name and ek.ek(os.path.isdir, dir_name):
             self._log_helper(u'Processing folder... ' + dir_name)
             dir_name = ek.ek(os.path.realpath, dir_name)
 
         # if the client and SickGear are not on the same machine translate the directory in a network directory
-        elif sickbeard.TV_DOWNLOAD_DIR and ek.ek(os.path.isdir, sickbeard.TV_DOWNLOAD_DIR)\
+        elif dir_name and sickbeard.TV_DOWNLOAD_DIR and ek.ek(os.path.isdir, sickbeard.TV_DOWNLOAD_DIR)\
                 and ek.ek(os.path.normpath, dir_name) != ek.ek(os.path.normpath, sickbeard.TV_DOWNLOAD_DIR):
             dir_name = ek.ek(os.path.join, sickbeard.TV_DOWNLOAD_DIR, ek.ek(os.path.abspath, dir_name).split(os.path.sep)[-1])
             self._log_helper(u'SickGear PP Config, completed TV downloads folder: ' + sickbeard.TV_DOWNLOAD_DIR)
             self._log_helper(u'Trying to use folder... ' + dir_name)
 
         # if we didn't find a real directory then quit
-        if not ek.ek(os.path.isdir, dir_name):
-            self._log_helper(
-                u'Unable to figure out what folder to process. If your downloader and SickGear aren\'t on the same PC then make sure you fill out your completed TV download folder in the PP config.')
-            return self.result
+        if not dir_name or not ek.ek(os.path.isdir, dir_name):
+            if nzb_name and failed:
+                self._process_failed(dir_name, nzb_name)
+                return self.result
+            else:
+                self._log_helper(
+                    u'Unable to figure out what folder to process. If your downloader and SickGear aren\'t on the same PC then make sure you fill out your completed TV download folder in the PP config.')
+                return self.result
 
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
 
@@ -503,7 +512,7 @@ class ProcessTVShow(object):
             cur_video_file_path = ek.ek(os.path.join, process_path, cur_video_file)
 
             try:
-                processor = postProcessor.PostProcessor(cur_video_file_path, nzb_name, process_method, force_replace, use_trash=use_trash)
+                processor = postProcessor.PostProcessor(cur_video_file_path, nzb_name, process_method, force_replace, use_trash=use_trash, webhandler=self.webhandler)
                 file_success = processor.process()
                 process_fail_message = ''
             except exceptions.PostProcessingFailed as e:
@@ -577,6 +586,6 @@ class ProcessTVShow(object):
 
 
 # backward compatibility prevents the case of this function name from being updated to PEP8
-def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, type='auto', cleanup=False):
+def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, type='auto', cleanup=False, webhandler=None):
     # backward compatibility prevents the case of this function name from being updated to PEP8
-    return ProcessTVShow().process_dir(dir_name, nzb_name, process_method, force, force_replace, failed, type, cleanup)
+    return ProcessTVShow(webhandler).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed, type, cleanup)
