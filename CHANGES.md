@@ -23,6 +23,7 @@
 * Add singledispatch 3.4.0.3
 * Change refactor email notifier
 * Change emails to Unicode aware
+* Add force episode recent search to API
 
 
 ### 0.11.5 (2016-02-01 19:40:00 UTC)
