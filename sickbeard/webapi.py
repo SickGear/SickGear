@@ -728,7 +728,7 @@ class CMD_ComingEpisodes(ApiCall):
 
         # make a dict out of the sql results
         sql_results = [dict(row) for row in sql_results]
-                
+
         # multi dimension sort
         sorts = {
             'date': (lambda a, b: cmp(
@@ -1463,6 +1463,24 @@ class CMD_SickBeardDeleteRootDir(ApiCall):
         sickbeard.ROOT_DIRS = root_dirs_new
         # what if the root dir was not found?
         return _responds(RESULT_SUCCESS, _getRootDirs(), msg="Root directory deleted")
+
+
+class CMD_SickBeardForceSearch(ApiCall):
+    _help = {'desc': 'force the episode recent search early'}
+
+    def __init__(self, handler, args, kwargs):
+        # required
+        # optional
+        # super, missing, help
+        ApiCall.__init__(self, handler, args, kwargs)
+
+    def run(self):
+        """ force the episode search early """
+        # Searching all providers for any needed episodes
+        result = sickbeard.recentSearchScheduler.forceRun()
+        if result:
+            return _responds(RESULT_SUCCESS, msg='Episode recent search successfully forced')
+        return _responds(RESULT_FAILURE, msg='Can not force the episode recent search because it\'s already active')
 
 
 class CMD_SickBeardGetDefaults(ApiCall):
@@ -2651,6 +2669,7 @@ _functionMaper = {"help": CMD_Help,
                   "sb.addrootdir": CMD_SickBeardAddRootDir,
                   "sb.checkscheduler": CMD_SickBeardCheckScheduler,
                   "sb.deleterootdir": CMD_SickBeardDeleteRootDir,
+                  "sb.forcesearch": CMD_SickBeardForceSearch,
                   "sb.getdefaults": CMD_SickBeardGetDefaults,
                   "sb.getmessages": CMD_SickBeardGetMessages,
                   "sb.getrootdirs": CMD_SickBeardGetRootDirs,
