@@ -28,6 +28,7 @@ import re
 import time
 import traceback
 import urllib
+import threading
 
 from mimetypes import MimeTypes
 from Cheetah.Template import Template
@@ -287,6 +288,10 @@ class IsAliveHandler(BaseHandler):
 
 
 class WebHandler(BaseHandler):
+    def __init__(self, *arg, **kwargs):
+        super(BaseHandler, self).__init__(*arg, **kwargs)
+        self.lock = threading.Lock()
+
     def page_not_found(self):
         t = PageTemplate(headers=self.request.headers, file='404.tmpl')
         return t.respond()
@@ -307,6 +312,11 @@ class WebHandler(BaseHandler):
             result = method(**kwargss)
             if result:
                 self.finish(result)
+
+    def send_message(self, message):
+        with self.lock:
+            self.write(message)
+            self.flush()
 
     post = get
 
@@ -1043,9 +1053,12 @@ class Home(MainHandler):
             else:
                 if change:
                     output.append(change)
+                    change = None
                 if line.startswith('* '):
                     change_parts = re.findall(r'^[\*\W]+(Add|Change|Fix|Port|Remove|Update)\W(.*)', line)
                     change = change_parts and {'type': change_parts[0][0], 'text': change_parts[0][1].strip()} or {}
+                elif not max_rel:
+                    break
                 elif line.startswith('### '):
                     rel_data = re.findall(r'(?im)^###\W*([^\s]+)\W\(([^\)]+)\)', line)
                     rel_data and output.append({'type': 'rel', 'ver': rel_data[0][0], 'date': rel_data[0][1]})
@@ -1053,8 +1066,6 @@ class Home(MainHandler):
                 elif line.startswith('# '):
                     max_data = re.findall(r'^#\W*([\d]+)\W*$', line)
                     max_rel = max_data and helpers.tryInt(max_data[0], None) or 5
-            if not max_rel:
-                break
         if change:
             output.append(change)
 
@@ -2110,17 +2121,21 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       force_replace=None, failed='0', type='auto', **kwargs):
+                       force_replace=None, failed='0', type='auto', stream='0', **kwargs):
 
-        if not dir:
+        if not dir and ('0' == failed or not nzbName):
             self.redirect('/home/postprocess/')
         else:
-            result = processTV.processDir(dir, nzbName, process_method=process_method, type=type,
+            result = processTV.processDir(dir.decode('utf-8') if dir else None, nzbName.decode('utf-8') if nzbName else None,
+                                          process_method=process_method, type=type,
                                           cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
                                           force=force in ['on', '1'],
                                           force_replace=force_replace in ['on', '1'],
-                                          failed=not '0' == failed)
+                                          failed='0' != failed,
+                                          webhandler=self.send_message if stream != '0' else None)
 
+            if '0' != stream:
+                return
             result = re.sub(r'(?i)<br(?:[\s/]+)>', '\n', result)
             if None is not quiet and 1 == int(quiet):
                 return u'%s' % re.sub('(?i)<a[^>]+>([^<]+)<[/]a>', r'\1', result)

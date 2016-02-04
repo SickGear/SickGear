@@ -285,7 +285,7 @@ def determineReleaseName(dir_name=None, nzb_name=None):
         logger.log(u'Using nzb name for release name.')
         return nzb_name.rpartition('.')[0]
 
-    if dir_name is None:
+    if not dir_name or not ek.ek(os.path.isdir, dir_name):
         return None
 
     # try to get the release name from nzb/nfo
