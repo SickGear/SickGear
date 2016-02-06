@@ -25,6 +25,7 @@
 * Change emails to Unicode aware
 * Add force episode recent search to API
 * Change process episodes with utf8 dir and nzb names, handle failed episodes without a dir, add log output streaming
+* Change move dateutil-zoneinfo.tar.gz file to data files /cache
 
 
 ### 0.11.5 (2016-02-01 19:40:00 UTC)

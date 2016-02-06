@@ -24,9 +24,11 @@ from sickbeard import helpers
 from sickbeard import logger
 from sickbeard import encodingKludge as ek
 from os.path import basename, join, isfile
+from itertools import chain
 import os
 import re
 import datetime
+import sickbeard
 
 # regex to parse time (12/24 hour format)
 time_regex = re.compile(r'(\d{1,2})(([:.](\d{2}))? ?([PA][. ]? ?M)|[:.](\d{2}))\b', flags=re.I)
@@ -53,10 +55,10 @@ def _remove_old_zoneinfo():
         return
     cur_zoneinfo = ek.ek(basename, zonefilename)
 
-    cur_file = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
+    cur_file = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
 
-    for (path, dirs, files) in ek.ek(os.walk,
-                                     helpers.real_path(ek.ek(os.path.dirname, zoneinfo.__file__))):
+    for (path, dirs, files) in chain.from_iterable(ek.ek(os.walk,
+                                     helpers.real_path(di)) for di in (sickbeard.ZONEINFO_DIR, ek.ek(os.path.dirname, zoneinfo.__file__))):
         for filename in files:
             if filename.endswith('.tar.gz'):
                 file_w_path = ek.ek(join, path, filename)
@@ -87,7 +89,7 @@ def _update_zoneinfo():
     cur_zoneinfo = zonefilename
     if None is not cur_zoneinfo:
         cur_zoneinfo = ek.ek(basename, zonefilename)
-    zonefile = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
+    zonefile = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
     zonemetadata = zoneinfo.gettz_db_metadata() if ek.ek(os.path.isfile, zonefile) else None
     (new_zoneinfo, zoneinfo_md5) = url_data.decode('utf-8').strip().rsplit(u' ')
     newtz_regex = re.search(r'(\d{4}[^.]+)', new_zoneinfo)
@@ -125,7 +127,7 @@ def _update_zoneinfo():
             # remove the old zoneinfo file
             if cur_zoneinfo is not None:
                 old_file = helpers.real_path(
-                    ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
+                    ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
                 if ek.ek(os.path.exists, old_file):
                     ek.ek(os.remove, old_file)
             # rename downloaded file
