@@ -210,17 +210,21 @@ def searchIndexerForShowID(regShowName, indexer=None, indexer_id=None, ui=None):
         t = sickbeard.indexerApi(i).indexer(**lINDEXER_API_PARMS)
 
         for name in showNames:
-            logger.log(u'Trying to find ' + name + ' on ' + sickbeard.indexerApi(i).name, logger.DEBUG)
+            logger.log('Trying to find %s on %s' % (name, sickbeard.indexerApi(i).name), logger.DEBUG)
 
             try:
                 result = t[indexer_id] if indexer_id else t[name]
             except:
                 continue
 
-            seriesname = series_id = False
-            for search in result:
-                seriesname = search['seriesname']
-                series_id = search['id']
+            seriesname = series_id = None
+            for search in result if isinstance(result, list) else [result]:
+                try:
+                    seriesname = search['seriesname']
+                    series_id = search['id']
+                except:
+                    series_id = seriesname = None
+                    continue
                 if seriesname and series_id:
                     break
 
@@ -869,7 +873,7 @@ def full_sanitizeSceneName(name):
     return re.sub('[. -]', ' ', sanitizeSceneName(name)).lower().lstrip()
 
 
-def get_show(name, try_scene_exceptions=False):
+def get_show(name, try_scene_exceptions=False, use_cache=True):
     if not sickbeard.showList or None is name:
         return
 
@@ -888,7 +892,7 @@ def get_show(name, try_scene_exceptions=False):
                 show_obj = findCertainShow(sickbeard.showList, indexer_id)
 
         # add show to cache
-        if show_obj and not from_cache:
+        if use_cache and show_obj and not from_cache:
             sickbeard.name_cache.addNameToCache(name, show_obj.indexerid)
     except Exception as e:
         logger.log(u'Error when attempting to find show: ' + name + ' in SickGear: ' + str(e), logger.DEBUG)

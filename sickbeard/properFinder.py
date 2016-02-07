@@ -227,7 +227,7 @@ def _download_propers(proper_list):
                 continue
 
             # make sure that none of the existing history downloads are the same proper we're trying to download
-            clean_proper_name = _generic_name(helpers.remove_non_release_groups(cur_proper.name, show_obj.is_anime()))
+            clean_proper_name = _generic_name(helpers.remove_non_release_groups(cur_proper.name, show_obj.is_anime))
             is_same = False
             for result in history_results:
                 # if the result exists in history already we need to skip it
