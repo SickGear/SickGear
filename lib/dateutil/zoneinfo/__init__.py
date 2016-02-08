@@ -14,6 +14,9 @@ from contextlib import closing
 
 from dateutil.tz import tzfile
 
+from sickbeard import encodingKludge as ek
+import sickbeard
+
 __all__ = ["gettz", "gettz_db_metadata", "rebuild"]
 
 ZONEFILENAME = "dateutil-zoneinfo.tar.gz"
@@ -34,7 +37,9 @@ class tzfile(tzfile):
 
 def getzoneinfofile_stream():
     try:
-        return BytesIO(get_data(__name__, ZONEFILENAME))
+        # return BytesIO(get_data(__name__, ZONEFILENAME))
+        with open(ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, ZONEFILENAME), 'rb') as f:
+            return BytesIO(f.read())
     except IOError as e:  # TODO  switch to FileNotFoundError?
         warnings.warn("I/O error({0}): {1}".format(e.errno, e.strerror))
         return None

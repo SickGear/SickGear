@@ -43,6 +43,7 @@ from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
     indexer_episodenotfound, indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
 from sickbeard.providers.generic import GenericProvider
+from sickbeard import encodingKludge as ek
 from lib.configobj import ConfigObj
 from lib.libtrakt import TraktAPI
 import trakt_helpers
@@ -133,6 +134,7 @@ HTTPS_KEY = None
 LAUNCH_BROWSER = False
 CACHE_DIR = None
 ACTUAL_CACHE_DIR = None
+ZONEINFO_DIR = None
 ROOT_DIRS = None
 TRASH_REMOVE_SHOW = False
 TRASH_ROTATE_LOGS = False
@@ -503,7 +505,7 @@ def initialize(consoleLogging=True):
             USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN, \
             versionCheckScheduler, VERSION_NOTIFY, AUTO_UPDATE, NOTIFY_ON_UPDATE, PROCESS_AUTOMATICALLY, UNPACK, CPU_PRESET, \
             KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, MIN_RECENTSEARCH_FREQUENCY, DEFAULT_UPDATE_FREQUENCY, MIN_UPDATE_FREQUENCY, UPDATE_FREQUENCY, \
-            showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, TIMEZONE_DISPLAY, \
+            showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, ZONEINFO_DIR, TIMEZONE_DISPLAY, \
             NAMING_PATTERN, NAMING_MULTI_EP, NAMING_ANIME_MULTI_EP, NAMING_FORCE_FOLDERS, NAMING_ABD_PATTERN, NAMING_CUSTOM_ABD, NAMING_SPORTS_PATTERN, NAMING_CUSTOM_SPORTS, NAMING_ANIME_PATTERN, NAMING_CUSTOM_ANIME, NAMING_STRIP_YEAR, \
             RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcesserScheduler, \
             providerList, newznabProviderList, torrentRssProviderList, \
@@ -581,6 +583,9 @@ def initialize(consoleLogging=True):
         # clean cache folders
         if CACHE_DIR:
             helpers.clearCache()
+            ZONEINFO_DIR = ek.ek(os.path.join, CACHE_DIR, 'zoneinfo')
+            if not ek.ek(os.path.isdir, ZONEINFO_DIR) and not helpers.make_dirs(ZONEINFO_DIR):
+                logger.log(u'!!! Creating local zoneinfo dir failed', logger.ERROR)
 
         THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
         GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
