@@ -21,6 +21,7 @@ import operator
 import platform
 import re
 import uuid
+import traceback
 
 import sickbeard
 import logger
@@ -234,6 +235,7 @@ class Quality:
     def fileQuality(filename):
 
         from sickbeard import encodingKludge as ek
+        from sickbeard.exceptions import ex
         if ek.ek(os.path.isfile, filename):
 
             from hachoir_parser import createParser
@@ -241,10 +243,14 @@ class Quality:
             from hachoir_core.stream import InputStreamError
 
             parser = height = None
+            msg = u'Hachoir can\'t parse file "%s" content quality because it found error: %s'
             try:
-                parser = createParser(filename)
+                parser = ek.ek(createParser, filename)
             except InputStreamError as e:
-                logger.log('Hachoir can\'t parse file content quality because it found error: %s' % e.text, logger.WARNING)
+                logger.log(msg % (filename, e.text), logger.WARNING)
+            except Exception as e:
+                logger.log(msg % (filename, ex(e)), logger.ERROR)
+                logger.log(traceback.format_exc(), logger.DEBUG)
 
             if parser:
                 extract = extractMetadata(parser)

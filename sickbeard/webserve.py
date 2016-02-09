@@ -1719,7 +1719,7 @@ class Home(MainHandler):
 
                     if int(
                             status) in Quality.DOWNLOADED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.DOWNLOADED + [
-                        IGNORED] and not ek.ek(os.path.isfile, epObj.location):
+                        IGNORED, SKIPPED] and not ek.ek(os.path.isfile, epObj.location):
                         logger.log(
                             u'Refusing to change status of ' + curEp + " to DOWNLOADED because it's not SNATCHED/DOWNLOADED",
                             logger.ERROR)
