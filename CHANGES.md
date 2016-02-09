@@ -19,6 +19,7 @@
 * Update Requests library 2.7.0 (5d6d1bc) to 2.9.1 (a1c9b84)
 * Update SimpleJSON library 3.8.0 (a37a9bd) to 3.8.1 (6022794)
 * Update Six compatibility library 1.9.0 (r400) to 1.10.0 (r405)
+* Update Windows UnRAR libraries 3.93.100.73 to 5.31.100.1864
 * Add backports_abc 0.4
 * Add singledispatch 3.4.0.3
 * Change refactor email notifier
