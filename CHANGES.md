@@ -26,6 +26,9 @@
 * Add force episode recent search to API
 * Change process episodes with utf8 dir and nzb names, handle failed episodes without a dir, add log output streaming
 * Change move dateutil-zoneinfo.tar.gz file to data files /cache
+* Change handle all Hachoir library parser errors and replace its Unicode enforcement
+* Allow episode status "Skipped" to be changed to "Downloaded"
+* Allow found "Skipped" episode files to be set "Unknown" quality
 
 
 ### 0.11.5 (2016-02-01 19:40:00 UTC)

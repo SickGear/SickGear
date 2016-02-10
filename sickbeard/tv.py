@@ -698,7 +698,8 @@ class TVShow(object):
                     new_quality = Quality.fileQuality(file)
                 logger.log(u'Since this file was renamed, file %s was checked and quality "%s" found'
                            % (file, Quality.qualityStrings[new_quality]), logger.DEBUG)
-                if Quality.UNKNOWN != new_quality:
+                status, quality = sickbeard.common.Quality.splitCompositeStatus(cur_ep.status)
+                if Quality.UNKNOWN != new_quality or SKIPPED == status:
                     cur_ep.status = Quality.compositeStatus(DOWNLOADED, new_quality)
 
             # check for status/quality changes as long as it's a new file
