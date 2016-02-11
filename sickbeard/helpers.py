@@ -52,7 +52,7 @@ except ImportError:
 
 from sickbeard.exceptions import MultipleShowObjectsException, ex
 from sickbeard import logger, classes, db, notifiers, clients
-from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions
+from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions, cpu_presets
 from sickbeard import encodingKludge as ek
 
 from lib.cachecontrol import CacheControl, caches
@@ -1444,3 +1444,8 @@ def make_search_segment_html_string(segment, max_eps=5):
 
 def has_anime():
     return False if not sickbeard.showList else any(filter(lambda show: show.is_anime, sickbeard.showList))
+
+
+def cpu_sleep():
+    if cpu_presets[sickbeard.CPU_PRESET]:
+        time.sleep(cpu_presets[sickbeard.CPU_PRESET])

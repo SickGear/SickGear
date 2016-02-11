@@ -39,7 +39,7 @@ from sickbeard import config, sab, clients, history, notifiers, processTV, ui, l
     db, search_queue, image_cache, naming, scene_exceptions, subtitles, network_timezones, sbdatetime
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
-from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings, cpu_presets
+from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
 from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
@@ -1509,7 +1509,7 @@ class Home(MainHandler):
         if do_update:
             try:
                 sickbeard.showQueueScheduler.action.updateShow(showObj, True)  # @UndefinedVariable
-                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
             except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on the show.')
 
@@ -1517,14 +1517,14 @@ class Home(MainHandler):
             try:
                 scene_exceptions.update_scene_exceptions(showObj.indexerid, exceptions_list)  # @UndefinedVdexerid)
                 buildNameCache(showObj)
-                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
             except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on scene exceptions of the show.')
 
         if do_update_scene_numbering:
             try:
                 sickbeard.scene_numbering.xem_refresh(showObj.indexerid, showObj.indexer)  # @UndefinedVariable
-                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
             except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on scene numbering of the show.')
 
@@ -1579,7 +1579,7 @@ class Home(MainHandler):
             ui.notifications.error('Unable to refresh this show.',
                                    ex(e))
 
-        time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+        helpers.cpu_sleep()
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 
@@ -1600,8 +1600,7 @@ class Home(MainHandler):
             ui.notifications.error('Unable to update this show.',
                                    ex(e))
 
-        # just give it some time
-        time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+        helpers.cpu_sleep()
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 
@@ -1618,7 +1617,7 @@ class Home(MainHandler):
         # search and download subtitles
         sickbeard.showQueueScheduler.action.downloadSubtitles(showObj, bool(force))  # @UndefinedVariable
 
-        time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+        helpers.cpu_sleep()
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 

@@ -28,7 +28,6 @@ import sickbeard
 
 from sickbeard import logger, helpers, scene_numbering, common, scene_exceptions, encodingKludge as ek, db
 from sickbeard.exceptions import ex
-from sickbeard.common import cpu_presets
 
 
 class NameParser(object):
@@ -338,8 +337,7 @@ class NameParser(object):
                                % (best_result.original_name, str(best_result).decode('utf-8', 'xmlcharrefreplace')),
                                logger.DEBUG)
 
-                # CPU sleep
-                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
 
                 return best_result
 
