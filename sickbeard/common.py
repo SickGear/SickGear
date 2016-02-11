@@ -36,7 +36,7 @@ mediaExtensions = ['avi', 'mkv', 'mpg', 'mpeg', 'wmv', 'ogm', 'mp4', 'iso', 'img
 
 subtitleExtensions = ['srt', 'sub', 'ass', 'idx', 'ssa']
 
-cpu_presets = {'LOW': 0.01, 'NORMAL': 0.05, 'HIGH': 0.1}
+cpu_presets = {'DISABLED': 0, 'LOW': 0.01, 'NORMAL': 0.05, 'HIGH': 0.1}
 
 # Other constants
 MULTI_EP_RESULT = -1

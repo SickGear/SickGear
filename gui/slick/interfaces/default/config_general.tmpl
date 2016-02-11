@@ -1,6 +1,7 @@
 #import sickbeard
 #import datetime
 #import locale
+#import operator
 #from sickbeard.common import *
 #from sickbeard.sbdatetime import *
 #from sickbeard import config
@@ -590,8 +591,8 @@
 								<span class="component-title">CPU throttling:</span>
 								<span class="component-desc">
 									<select id="cpu_presets" name="cpu_preset" class="form-control input-sm">
-#for $cur_preset in $cpu_presets
-										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sickbeard.CPU_PRESET]#>$cur_preset.capitalize()</option>
+#for $cur_preset in $sorted($cpu_presets.items(), key=$operator.itemgetter(1), reverse=True)
+										<option value="$cur_preset[0]"#echo ('', $selected)[$cur_preset[0] == $sickbeard.CPU_PRESET]#>$cur_preset[0].capitalize()</option>
 #end for
 									</select>
 									<span>Normal (default). High is lower and Low is higher CPU use</span>
