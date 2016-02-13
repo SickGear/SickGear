@@ -1044,6 +1044,9 @@ class PostProcessor(object):
         # do the library update for Plex
         notifiers.plex_notifier.update_library(ep_obj)
 
+        # do the library update for Emby
+        notifiers.emby_notifier.update_library()
+
         # do the library update for NMJ
         # nmj_notifier kicks off its library update when the notify_download is issued (inside notifiers)
 

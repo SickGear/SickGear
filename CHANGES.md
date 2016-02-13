@@ -30,6 +30,7 @@
 * Allow episode status "Skipped" to be changed to "Downloaded"
 * Allow found "Skipped" episode files to be set "Unknown" quality
 * Add CPU throttling preset "Disabled" to config/General/Advanced Settings
+* Add Emby notifier
 
 
 ### 0.11.5 (2016-02-01 19:40:00 UTC)

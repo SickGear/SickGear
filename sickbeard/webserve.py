@@ -535,6 +535,7 @@ class Home(MainHandler):
             {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
             {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
             {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX},
+            {'title': 'Update Emby', 'path': 'home/updateEMBY/', 'requires': self.haveEMBY},
             {'title': 'Restart', 'path': 'home/restart/?pid=' + str(sickbeard.PID), 'confirm': True},
             {'title': 'Shutdown', 'path': 'home/shutdown/?pid=' + str(sickbeard.PID), 'confirm': True},
         ]
@@ -550,6 +551,10 @@ class Home(MainHandler):
     @staticmethod
     def havePLEX():
         return sickbeard.USE_PLEX and sickbeard.PLEX_UPDATE_LIBRARY
+
+    @staticmethod
+    def haveEMBY():
+        return sickbeard.USE_EMBY
 
     @staticmethod
     def _getEpisode(show, season=None, episode=None, absolute=None):
@@ -843,6 +848,19 @@ class Home(MainHandler):
         ui.notifications.message('Tested Plex Media Server host(s): ', urllib.unquote_plus(host.replace(',', ', ')))
 
         return finalResult
+
+    def testEMBY(self, host=None, emby_apikey=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not emby_apikey and starify(emby_apikey, True):
+            emby_apikey = sickbeard.EMBY_APIKEY
+
+        host = config.clean_host(host)
+        result = notifiers.emby_notifier.test_notify(urllib.unquote_plus(host), emby_apikey)
+        if result:
+            return 'Test Emby notice sent successfully to ' + urllib.unquote_plus(host)
+        else:
+            return 'Test Emby notice failed to ' + urllib.unquote_plus(host)
 
     def testLibnotify(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1658,6 +1676,15 @@ class Home(MainHandler):
                 'Library update command sent to', 'Plex Media Server host(s): ' + sickbeard.PLEX_SERVER_HOST.replace(',', ', '))
         else:
             ui.notifications.error('Unable to contact', 'Plex Media Server host(s): ' + result.replace(',', ', '))
+        self.redirect('/home/')
+
+    def updateEMBY(self):
+        
+        if notifiers.emby_notifier.update_library():
+            ui.notifications.message(
+                'Library update command sent to Emby host: ' + sickbeard.EMBY_HOST)
+        else:
+            ui.notifications.error('Unable to contact Emby host: ' + sickbeard.EMBY_HOST)
         self.redirect('/home/')
 
     def setStatus(self, show=None, eps=None, status=None, direct=False):
@@ -4880,6 +4907,7 @@ class ConfigNotifications(Config):
                           use_plex=None, plex_notify_onsnatch=None, plex_notify_ondownload=None,
                           plex_notify_onsubtitledownload=None, plex_update_library=None,
                           plex_server_host=None, plex_host=None, plex_username=None, plex_password=None,
+                          use_emby=None, emby_host=None, emby_apikey=None,
                           use_growl=None, growl_notify_onsnatch=None, growl_notify_ondownload=None,
                           growl_notify_onsubtitledownload=None, growl_host=None, growl_password=None,
                           use_prowl=None, prowl_notify_onsnatch=None, prowl_notify_ondownload=None,
@@ -4954,6 +4982,12 @@ class ConfigNotifications(Config):
         sickbeard.PLEX_USERNAME = plex_username
         if set('*') != set(plex_password):
             sickbeard.PLEX_PASSWORD = plex_password
+
+        sickbeard.USE_EMBY = config.checkbox_to_value(use_emby)
+        sickbeard.EMBY_HOST = config.clean_host(emby_host)
+        key = emby_apikey.strip()
+        if not starify(key, True):
+            sickbeard.EMBY_APIKEY = key
 
         sickbeard.USE_GROWL = config.checkbox_to_value(use_growl)
         sickbeard.GROWL_NOTIFY_ONSNATCH = config.checkbox_to_value(growl_notify_onsnatch)

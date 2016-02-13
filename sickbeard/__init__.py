@@ -287,6 +287,10 @@ PLEX_HOST = None
 PLEX_USERNAME = None
 PLEX_PASSWORD = None
 
+USE_EMBY = False
+EMBY_HOST = None
+EMBY_APIKEY = None
+
 USE_GROWL = False
 GROWL_NOTIFY_ONSNATCH = False
 GROWL_NOTIFY_ONDOWNLOAD = False
@@ -492,8 +496,8 @@ def initialize(consoleLogging=True):
             XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, BACKLOG_FREQUENCY, \
             USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
             USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
-            USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
-            PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
+            USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, \
+            USE_EMBY, EMBY_HOST, EMBY_APIKEY, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, ALLOW_INCOMPLETE_SHOWDATA, \
             NEWZNAB_DATA, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, RECENTSEARCH_STARTUP, \
@@ -538,6 +542,7 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'XBMC')
         CheckSection(CFG, 'Kodi')
         CheckSection(CFG, 'PLEX')
+        CheckSection(CFG, 'Emby')
         CheckSection(CFG, 'Growl')
         CheckSection(CFG, 'Prowl')
         CheckSection(CFG, 'Twitter')
@@ -814,6 +819,10 @@ def initialize(consoleLogging=True):
         PLEX_HOST = check_setting_str(CFG, 'Plex', 'plex_host', '')
         PLEX_USERNAME = check_setting_str(CFG, 'Plex', 'plex_username', '')
         PLEX_PASSWORD = check_setting_str(CFG, 'Plex', 'plex_password', '')
+
+        USE_EMBY = bool(check_setting_int(CFG, 'Emby', 'use_emby', 0))
+        EMBY_HOST = check_setting_str(CFG, 'Emby', 'emby_host', '')
+        EMBY_APIKEY = check_setting_str(CFG, 'Emby', 'emby_apikey', '')
 
         USE_GROWL = bool(check_setting_int(CFG, 'Growl', 'use_growl', 0))
         GROWL_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Growl', 'growl_notify_onsnatch', 0))
@@ -1627,6 +1636,11 @@ def save_config():
     new_config['Plex']['plex_host'] = PLEX_HOST
     new_config['Plex']['plex_username'] = PLEX_USERNAME
     new_config['Plex']['plex_password'] = helpers.encrypt(PLEX_PASSWORD, ENCRYPTION_VERSION)
+
+    new_config['Emby'] = {}
+    new_config['Emby']['use_emby'] = int(USE_EMBY)
+    new_config['Emby']['emby_host'] = EMBY_HOST
+    new_config['Emby']['emby_apikey'] = EMBY_APIKEY
 
     new_config['Growl'] = {}
     new_config['Growl']['use_growl'] = int(USE_GROWL)
