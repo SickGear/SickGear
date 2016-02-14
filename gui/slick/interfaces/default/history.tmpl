@@ -39,7 +39,7 @@
 #if ('detailed' == $layout)
 			4: function(node) { return \$(node).find('span').text().toLowerCase(); }
 #else
-			1: function(node) { return \$(node).find('span').text().toLowerCase(); },
+			1: function(node) { return \$(node).find('span[data-name]').attr('data-name').toLowerCase(); },
 			2: function(node) { return \$(node).attr('provider').toLowerCase(); },
 			5: function(node) { return \$(node).attr('quality').toLowerCase(); }
 #end if
@@ -111,7 +111,7 @@
 				<th>Quality</th>
 			</tr>
 		</thead>
-		
+
 		<tfoot>
 			<tr>
 				<th class="nowrap" colspan="5">&nbsp;</th>
@@ -121,11 +121,16 @@
 		<tbody>
     #for $hItem in $historyResults
         #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($hItem['action']))
+        #set $data_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'\2', $hItem['show_name']), $hItem['show_name'])[$sickbeard.SORT_ARTICLE]
+        #set $display_name = '<span data-name="%s">%s - S%02iE%02i</span>' % (
+            $data_name,
+            (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $hItem['show_name']), $hItem['show_name'])[$sickbeard.SORT_ARTICLE],
+            int(hItem['season']), int(hItem['episode']))
 			<tr>
         #set $curdatetime = $datetime.datetime.strptime(str($hItem['date']), $history.dateFormat)
 				<td><div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($curdatetime, show_seconds=True)</div><span class="sort-data">$time.mktime($curdatetime.timetuple())</span></td>
-				<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$hItem['showid']#season-$hItem['season']">$hItem['show_name'] - <%= 'S%02i' % int(hItem['season']) + 'E%02i' % int(hItem['episode']) %>#if 'proper' in $hItem['resource'].lower or 'repack' in $hItem['resource'].lower then ' <span class="quality Proper">Proper</span>' else ''#</a></td>
-				<td#echo ('', ' class="subtitles_column"')[$curStatus == SUBTITLED]#>
+				<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$hItem['showid']#season-$hItem['season']">$display_name#if 'proper' in $hItem['resource'].lower or 'repack' in $hItem['resource'].lower then ' <span class="quality Proper">Proper</span>' else ''#</a></td>
+				<td#echo ('', ' class="subtitles_column"')[SUBTITLED == $curStatus]#>
         #if SUBTITLED == $curStatus
 					<img width="16" height="11" src="$sbRoot/images/flags/<%= hItem["resource"][len(hItem["resource"])-6:len(hItem["resource"])-4] + '.png' %>">
         #end if
@@ -151,7 +156,7 @@
             #end if
         #end if
 				</td>
-				<td><span style="display:none">$curQuality</span><span class="quality $Quality.qualityStrings[$curQuality].replace('720p', 'HD720p').replace('1080p', 'HD1080p').replace('RawHD TV', 'RawHD').replace('HD TV', 'HD720p')">$Quality.qualityStrings[$curQuality]</span></td>
+				<td><span class="hide">$curQuality</span><span class="quality $Quality.qualityStrings[$curQuality].replace('720p', 'HD720p').replace('1080p', 'HD1080p').replace('RawHD TV', 'RawHD').replace('HD TV', 'HD720p')">$Quality.qualityStrings[$curQuality]</span></td>
 			</tr>
     #end for
 
@@ -178,6 +183,11 @@
 		<tbody>
     #for $hItem in $compactResults
         #set $curdatetime = $datetime.datetime.strptime(str($hItem['actions'][0]['time']), $history.dateFormat)
+        #set $data_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'\2', $hItem['show_name']), $hItem['show_name'])[$sickbeard.SORT_ARTICLE]
+        #set $display_name = '<span data-name="%s">%s - S%02iE%02i</span>' % (
+            $data_name,
+            (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $hItem['show_name']), $hItem['show_name'])[$sickbeard.SORT_ARTICLE],
+            int(hItem['season']), int(hItem['episode']))
         #set $prov_list = []
         #set $down_list = []
         #set $order = 1
@@ -227,7 +237,7 @@
 			<tr>
 				<td><div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($curdatetime, show_seconds=True)</div><span class="sort-data">$time.mktime($curdatetime.timetuple())</span></td>
 				<td class="tvShow">
-					<span><a href="$sbRoot/home/displayShow?show=$hItem['show_id']#season-$hItem['season']">$hItem['show_name'] - <%= 'S%02i' % int(hItem['season']) + 'E%02i' % int(hItem['episode']) %>#if 'proper' in $hItem['resource'].lower or 'repack' in $hItem['resource'].lower then ' <span class="quality Proper">Proper</span>' else ''#</a></span>
+					<span><a href="$sbRoot/home/displayShow?show=$hItem['show_id']#season-$hItem['season']">$display_name#if 'proper' in $hItem['resource'].lower or 'repack' in $hItem['resource'].lower then ' <span class="quality Proper">Proper</span>' else ''#</a></span>
 				</td>
 				<td class="provider" provider="<%= str(sorted(hItem['actions'])[0]['provider']) %>">
 					#echo ''.join($prov_list)#

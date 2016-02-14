@@ -32,6 +32,9 @@
 * Add CPU throttling preset "Disabled" to config/General/Advanced Settings
 * Change overhaul Kodi notifier and tidy up config/notification/KodiNotifier ui
 * Add passthru of param "post_json" to Requests() "json" in helpers.getURL
+* Add search show Name to Show List Layout: Poster
+* Change indicate when not sorting with article by dimming ("The", "A", "An") on Show List, Episode, History,
+  Mass Update, Add with Browse and from Existing views
 
 
 ### 0.11.6 (2016-02-18 23:10:00 UTC)

@@ -52,11 +52,21 @@ $(document).ready(function(){
 			url,
 			function(data){
 				$('#tableDiv').html(data);
+				$.tablesorter.addParser({
+					id: 'showNames',
+					is: function(s) { return !1; },
+					format: function(s) {
+						var name = (s || '');
+						return config.sortArticle ? name : name.replace(/(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
+					},
+					type: 'text'
+				});
 				$('#addRootDirTable').tablesorter({
 					sortList: [[1,0]],
 					widgets: ['zebra'],
 					headers: {
-						0: { sorter: false }
+						0: { sorter: false },
+						1: { sorter: 'showNames' }
 					}
 				});
 			});
