@@ -1,4 +1,9 @@
-﻿### 0.11.5 (2016-02-01 19:40:00 UTC)
+﻿### 0.11.6 (2016-02-18 23:10:00 UTC)
+
+* Fix saving config General/Interface/Date style (save again to repopulate blank dates on the Showlist view)
+
+
+### 0.11.5 (2016-02-01 19:40:00 UTC)
 
 * Fix refresh handling of Skipped and Ignored items
 * Fix issue entering scene numbers
