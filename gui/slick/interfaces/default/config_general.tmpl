@@ -341,7 +341,7 @@
 #end for
 									</select>
 
-									<select class="form-control input-sm#echo ('', ' metadataDiv')[$sickbeard.FUZZY_DATING]#" id="date_presets#echo (', ''_na')[$sickbeard.FUZZY_DATING]#" name="date_preset#echo ('', '_na')[$sickbeard.FUZZY_DATING]#">
+									<select class="form-control input-sm#echo ('', ' metadataDiv')[$sickbeard.FUZZY_DATING]#" id="date_presets#echo ('', '_na')[$sickbeard.FUZZY_DATING]#" name="date_preset#echo ('', '_na')[$sickbeard.FUZZY_DATING]#">
 										<option value="%x"#echo ('', $selected)['%x' == $sickbeard.DATE_PRESET]#>Use System Default</option>
 #for $cur_preset in $date_presets
 										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sickbeard.DATE_PRESET]#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
