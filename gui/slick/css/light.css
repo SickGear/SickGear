@@ -217,12 +217,13 @@ home.tmpl
 	color:#000
 }
 
-.show{
+#show-list .show-card{
 	background-color:#DFDACF;
+	color:#666;
 	border:1px solid #111
 }
 
-.show .ui-widget-content{
+#show-list .show-card .ui-widget-content{
 	border-top:1px solid #111;
 	border-bottom:1px solid #111;
 	border-left:0;
@@ -264,6 +265,7 @@ td.tvShow a{
 	text-decoration:none
 }
 
+td.tvShow a:hover span,
 td.tvShow a:hover{
 	cursor:pointer;
 	color:#428BCA
@@ -273,21 +275,10 @@ td.tvShow a:hover{
 home_addShows.tmpl
 ========================================================================== */
 
-.icon-addnewshow{
-	background-image:url("../images/addshows/add-new32-black.png")
-}
-
-.icon-addtrendingshow{
-	background-image:url("../images/addshows/add-trending32-black.png")
-}
-
-.icon-addrecommendedshow{
-	background-image:url("../images/addshows/add-trakt32-black.png")
-}
-
-.icon-addexistingshow{
-	background-image:url("../images/addshows/add-existing32-black.png")
-}
+.icon-addnewshow{background-image:url("../images/addshows/add-new32-black.png")}
+.icon-addexistingshow{background-image:url("../images/addshows/add-existing32-black.png")}
+.icon-addrecommendedshow{background-image:url("../images/addshows/add-trakt32-black.png")}
+.icon-addtrendingshow{background-image:url("../images/addshows/add-trending32-black.png")}
 
 /* =======================================================================
 home_newShow.tmpl
@@ -300,6 +291,10 @@ home_newShow.tmpl
 
 .step-one #searchResults .alt{
 	background-color:rgb(245, 245, 245)
+}
+
+.article{
+	color:#909090
 }
 
 #addRootDirTable td label .filepath,
@@ -330,7 +325,7 @@ ul#rootDirStaticList li{
 home_browseShows.tmpl
 ========================================================================== */
 
-.browse-container{
+#browse-list .show-card{
 	background-color:#DFDACF;
 	border:1px solid #111
 }
@@ -656,7 +651,8 @@ span.path{
 bootstrap Overrides
 ========================================================================== */
 
-body{
+body,
+.show-date{
 	color:#000
 }
 

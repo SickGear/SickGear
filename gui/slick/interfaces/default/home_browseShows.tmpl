@@ -10,6 +10,7 @@
 #set global $header='Browse Shows'
 #set global $sbPath='..'
 #set global $topmenu='home'
+#set global $page_body_attr = 'browse-list'
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
@@ -38,12 +39,13 @@
 	var \$container = [\$('#container')];
 	jQuery.each(\$container, function (j) {
 		this.isotope({
-			itemSelector: '.browse-show',
+			itemSelector: '.show-card',
 			sortBy: 'original-order',
 			layoutMode: 'masonry',
 			masonry: {
-				columnWidth: 12,
-				isFitWidth: true
+				columnWidth: 188,
+				isFitWidth: !0,
+				gutter: 12
 			},
 			getSortData: {
 				premiered: '[data-premiered] parseInt',
@@ -196,8 +198,8 @@
             #set $overview = $this_show['overview']
         #end if
 
-	<div class="browse-show <%= ('notinlibrary', 'inlibrary')[':' in this_show['show_id']] %>" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data-rating="$this_show['rating']" data-votes="$this_show['votes']" data-premiered="$this_show['premiered']">
-		<div class="browse-container">
+	<div class="show-card <%= ('notinlibrary', 'inlibrary')[':' in this_show['show_id']] %>" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data-rating="$this_show['rating']" data-votes="$this_show['votes']" data-premiered="$this_show['premiered']">
+		<div class="show-card-inner">
 			<div class="browse-image">
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
 					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>#if $this_show['genres']#<br /><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
@@ -214,7 +216,7 @@
 			</div>
 
 			<div class="show-title">
-				<%= (this_show['title'], '<span>&nbsp;</span>')['' == this_show['title']] %>
+				<%= ((re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', this_show['title']), this_show['title'])[sickbeard.SORT_ARTICLE], '<span>&nbsp;</span>')['' == this_show['title']] %>
 			</div>
 
 			<div class="clearfix">
@@ -243,7 +245,7 @@
 </div>
     #end if
 #else
-	<div class="browse-show" style="width:100%; margin-top:20px">
+	<div class="show-card" style="width:100%; margin-top:20px">
 		<p class="red-text">
     #if $kwargs and $kwargs.get('error_msg', None):
 			$kwargs['error_msg']

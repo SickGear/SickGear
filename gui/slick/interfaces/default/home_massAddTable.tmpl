@@ -1,3 +1,4 @@
+#import re
 #import sickbeard
 #from sickbeard.helpers import anon_url
 
@@ -47,7 +48,8 @@
 			</td>
 			<td>
 				<label for="$show_id">
-					<span class="filepath#echo ('', ' red-text')[$curDir['highlight']]#">$curDir['path']</span>$curDir['name']
+    #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curDir['name']), $curDir['name'])[$sickbeard.SORT_ARTICLE]
+					<span class="filepath#echo ('', ' red-text')[$curDir['highlight']]#">$curDir['path']</span>$display_name
 					#echo ('', '<br />^ <span class="red-text">... (cannot add, this location is in use)</span>')[$curDir['highlight']]#
 				</label>
 			</td>

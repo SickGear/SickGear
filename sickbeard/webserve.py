@@ -2351,7 +2351,7 @@ class NewHomeAddShows(Home):
 
         return t.respond()
 
-    def newShow(self, show_to_add=None, other_shows=None, use_show_name=None, **kwargs):
+    def new_show(self, show_to_add=None, other_shows=None, use_show_name=None, **kwargs):
         """
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
@@ -2485,11 +2485,15 @@ class NewHomeAddShows(Home):
 
         return self.browse_shows(browse_type, 'Random and Hot at AniDB', filtered, **kwargs)
 
+    def anime_default(self):
+
+        return self.redirect('/home/addShows/randomhot_anidb')
+
     def addAniDBShow(self, indexer_id, showName):
 
         if helpers.findCertainShow(sickbeard.showList, config.to_int(indexer_id, '')):
             return
-        return self.newShow('|'.join(['', '', '', indexer_id or showName]), use_show_name=True, is_anime=True)
+        return self.new_show('|'.join(['', '', '', indexer_id or showName]), use_show_name=True, is_anime=True)
 
     def popular_imdb(self, *args, **kwargs):
 
@@ -2581,8 +2585,12 @@ class NewHomeAddShows(Home):
         kwargs.update(dict(footnote=footnote))
         return self.browse_shows(browse_type, 'Most Popular IMDb TV', filtered, **kwargs)
 
+    def imdb_default(self):
+
+        return self.redirect('/home/addShows/popular_imdb')
+
     def addIMDbShow(self, indexer_id, showName):
-        return self.newShow('|'.join(['', '', '', re.search('(?i)tt\d+$', indexer_id) and indexer_id or showName]),
+        return self.new_show('|'.join(['', '', '', re.search('(?i)tt\d+$', indexer_id) and indexer_id or showName]),
                             use_show_name=True)
 
     def trakt_anticipated(self, *args, **kwargs):
@@ -2752,7 +2760,7 @@ class NewHomeAddShows(Home):
     def addTraktShow(self, indexer_id, showName):
 
         if not helpers.findCertainShow(sickbeard.showList, config.to_int(indexer_id, '')):
-            return self.newShow('|'.join(['', '', '', config.to_int(indexer_id, None) and indexer_id or showName]),
+            return self.new_show('|'.join(['', '', '', config.to_int(indexer_id, None) and indexer_id or showName]),
                                 use_show_name=True)
 
     def browse_shows(self, browse_type, browse_title, shows, *args, **kwargs):
@@ -2790,7 +2798,7 @@ class NewHomeAddShows(Home):
 
         return t.respond()
 
-    def existingShows(self, *args, **kwargs):
+    def existing_shows(self, *args, **kwargs):
         """
         Prints out the page to add existing shows from a root dir
         """
@@ -2808,7 +2816,7 @@ class NewHomeAddShows(Home):
                    scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
-        provided then it forwards back to newShow, if not it goes to /home.
+        provided then it forwards back to new_show, if not it goes to /home.
         """
 
         # grab our list of other dirs if given
@@ -2827,7 +2835,7 @@ class NewHomeAddShows(Home):
             rest_of_show_dirs = other_shows[1:]
 
             # go to add the next show
-            return self.newShow(next_show_dir, rest_of_show_dirs)
+            return self.new_show(next_show_dir, rest_of_show_dirs)
 
         # if we're skipping then behave accordingly
         if skipShow:
@@ -2845,7 +2853,7 @@ class NewHomeAddShows(Home):
                 logger.log('Unable to add show due to show selection. Not enough arguments: %s' % (repr(series_pieces)),
                            logger.ERROR)
                 ui.notifications.error('Unknown error. Unable to add show due to problem with show selection.')
-                return self.redirect('/home/addShows/existingShows/')
+                return self.redirect('/home/addShows/existing_shows/')
 
             indexer = int(series_pieces[0])
             indexer_id = int(series_pieces[2])
@@ -2868,7 +2876,7 @@ class NewHomeAddShows(Home):
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
         if ek.ek(os.path.isdir, show_dir) and not fullShowPath:
             ui.notifications.error('Unable to add show', u'Found existing folder: ' + show_dir)
-            return self.redirect('/home/addShows/existingShows?sid=%s&hash_dir=%s' % (indexer_id, abs(hash(show_dir))))
+            return self.redirect('/home/addShows/existing_shows?sid=%s&hash_dir=%s' % (indexer_id, abs(hash(show_dir))))
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:
@@ -2932,11 +2940,11 @@ class NewHomeAddShows(Home):
     def addExistingShows(self, shows_to_add=None, promptForSettings=None, **kwargs):
         """
         Receives a dir list and add them. Adds the ones with given TVDB IDs first, then forwards
-        along to the newShow page.
+        along to the new_show page.
         """
 
         if kwargs.get('sid', None):
-            return self.redirect('/home/addShows/newShow?show_to_add=%s&use_show_name=True' %
+            return self.redirect('/home/addShows/new_show?show_to_add=%s&use_show_name=True' %
                                  '|'.join(['', '', '', kwargs.get('sid', '')]))
 
         # grab a list of other shows to add, if provided
@@ -2965,9 +2973,9 @@ class NewHomeAddShows(Home):
 
                 indexer_id_given.append((indexer, show_dir, int(indexer_id), show_name))
 
-        # if they want me to prompt for settings then I will just carry on to the newShow page
+        # if they want me to prompt for settings then I will just carry on to the new_show page
         if promptForSettings and shows_to_add:
-            return self.newShow(shows_to_add[0], shows_to_add[1:])
+            return self.new_show(shows_to_add[0], shows_to_add[1:])
 
         # if they don't want me to prompt for settings then I can just add all the nfo shows now
         num_added = 0
@@ -2993,8 +3001,8 @@ class NewHomeAddShows(Home):
         if not dirs_only:
             return self.redirect('/home/')
 
-        # for the remaining shows we need to prompt for each one, so forward this on to the newShow page
-        return self.newShow(dirs_only[0], dirs_only[1:])
+        # for the remaining shows we need to prompt for each one, so forward this on to the new_show page
+        return self.new_show(dirs_only[0], dirs_only[1:])
 
 
 class Manage(MainHandler):

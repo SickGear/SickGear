@@ -17,36 +17,36 @@
 #end if
 
 	<div id="addShowPortal">
-		<a class="btn btn-large" href="$sbRoot/home/addShows/newShow/">
-			<div class="button"><div class="icon-addnewshow"></div></div>
+		<a class="btn btn-large" href="$sbRoot/home/addShows/new_show/">
+			<div class="button"><div class="icon-addnewshow square-32"></div></div>
 			<div class="buttontext">
-				<h3>Add New Show</h3>
-				<p>Search a TV database for a show to add.</p>
+				<h3>Add new show</h3>
+				<p>Search a TV database for a show.</p>
 			</div>
 		</a>
 
 		<a class="btn btn-large" href="$sbRoot/home/addShows/trakt_default/">
-			<div class="button"><div class="icon-addrecommendedshow"></div></div>
+			<div class="button"><div class="icon-addrecommendedshow square-32"></div></div>
 			<div class="buttontext">
-				<h3>Add From Trakt</h3>
+				<h3>Add from Trakt</h3>
 				<p>Browse trends, recommended and more.</p>
 			</div>
 		</a>
 
 		<div style="clear:both;font-size:2px">&nbsp;</div>
 
-		<a class="btn btn-large" href="$sbRoot/home/addShows/existingShows/">
-			<div class="button"><div class="icon-addexistingshow"></div></div>
+		<a class="btn btn-large" href="$sbRoot/home/addShows/existing_shows/">
+			<div class="button"><div class="icon-addexistingshow square-32"></div></div>
 			<div class="buttontext">
-				<h3>Add Existing Shows</h3>
+				<h3>Add existing shows</h3>
 				<p>Scan parent folders to import into SickGear.</p>
 			</div>
 		</a>
 
-		<a class="btn btn-large" href="$sbRoot/home/addShows/popular_imdb/">
-			<div class="button"><div class="icon-addtrendingshow"></div></div>
+		<a class="btn btn-large" href="$sbRoot/home/addShows/imdb_default/">
+			<div class="button"><div class="img-imdb square-32"></div></div>
 			<div class="buttontext">
-				<h3>Add From IMDb</h3>
+				<h3>Add from IMDb</h3>
 				<p>Browse popular for a show to add.</p>
 			</div>
 		</a>
@@ -54,17 +54,20 @@
 		<div style="clear:both;font-size:2px">&nbsp;</div>
 
 #if $sickbeard.USE_ANIDB
-		<a class="btn btn-large" href="$sbRoot/home/addShows/randomhot_anidb/" style="float:right">
-			<div class="button"><div class="icon-addtrendingshow"></div></div>
+		<a class="btn btn-large" href="$sbRoot/home/addShows/anime_default/">
+			<div class="button"><div class="img-anime square-32"></div></div>
 			<div class="buttontext">
-				<h3>Add from AniDB</h3>
-				<p>Browse what's hot and recommnended.</p>
+				<h3>Add anime show</h3>
+				<p>Browse anime to add.</p>
 			</div>
 		</a>
 #else
-		<div class="buttontext" style="padding:10px 5px 10px 30px">
-			<h3>Add Random/Hot AniDB</h3>
-			<p>To use, enable AniDB in Config/Anime.</p>
+		<div class="buttontext" style="margin:0px 7px 14px;padding:0 5px 0 28px">
+			<div class="button"><div class="img-anime square-32"></div></div>
+			<div class="buttontext">
+				<h3>Add anime show</h3>
+				<p>To use, enable AniDB in <a href="$sbRoot/config/anime/">Config/Anime</a>.</p>
+			</div>
 		</div>
 #end if
 
