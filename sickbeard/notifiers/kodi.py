@@ -48,6 +48,26 @@ class KodiNotifier:
         self.prefix = ''
         self.test_mode = False
 
+    @staticmethod
+    def _log(msg, log_level=logger.WARNING):
+
+        logger.log(u'Kodi: %s' % msg, log_level)
+
+    def _maybe_log(self, msg, log_level=logger.WARNING):
+
+        if msg and (sickbeard.KODI_ALWAYS_ON or self.test_mode):
+            self._log(msg + (not sickbeard.KODI_ALWAYS_ON and self.test_mode and
+                             ' (Test mode ignores "Always On")' or ''), log_level)
+
+    def _maybe_log_failed_detection(self, host, msg='connect to'):
+
+        self._maybe_log(u'Failed to %s %s, check device(s) and config.' % (msg, host), logger.ERROR)
+
+    # noinspection PyUnusedLocal
+    def cb_response(self, r, *args, **kwargs):
+        self.response = dict(status_code=r.status_code)
+        return r
+
     def _get_kodi_version(self, host):
         """ Return Kodi JSON-RPC API version (odd # = dev, even # = stable)
 
@@ -67,7 +87,8 @@ class KodiNotifier:
                  6  | v12 (Frodo) / v13 (Gotham)
         """
 
-        response = self._send_to_kodi_json(host, dict(method='JSONRPC.Version'), 10)
+        timeout = 10
+        response = self._send_to_kodi_json(host, dict(method='JSONRPC.Version'), timeout)
         if self.response and 401 == self.response.get('status_code'):
             return False
 
@@ -77,13 +98,13 @@ class KodiNotifier:
 
         # fallback to legacy HTTPAPI method
         test_command = {'command': 'Help'}
-        if self._send_to_kodi(host, test_command):
+        if self._send_to_kodi(host, test_command, timeout):
             # return fake version number to use the legacy method
             return 1
 
         if self.response and 404 == self.response.get('status_code'):
             self.prefix = 'xbmc'
-            if self._send_to_kodi(host, test_command):
+            if self._send_to_kodi(host, test_command, timeout):
                 # return fake version number to use the legacy method
                 return 1
 
@@ -125,7 +146,7 @@ class KodiNotifier:
             elif not api_version:
                 total_success = False
                 message += ['Fail: No supported Kodi found at %s' % cur_host]
-                self._maybe_log_failed_detection(cur_host)
+                self._maybe_log_failed_detection(cur_host, 'connect and detect version for')
             else:
                 if 4 >= api_version:
                     self._log(u'Detected %sversion <= 11, using HTTP API'
@@ -141,11 +162,61 @@ class KodiNotifier:
                                            'message': '%s' % msg,
                                            'image': '%s' % self.sg_logo_url})
 
-                response_notify = __method_send(cur_host, command)
+                response_notify = __method_send(cur_host, command, 10)
                 if response_notify:
                     message += ['%s: %s' % ((response_notify, 'OK')['OK' in response_notify], cur_host)]
 
         return total_success, '<br />\n'.join(message)
+
+    def _update_library(self, show_name=None):
+        """ Wrapper for the update library functions
+
+        Call either the JSON-RPC over HTTP or the legacy HTTP API methods depending on the Kodi API version.
+
+        Uses a list of comma delimited hosts where only one is updated, the first to respond with success. This is a
+        workaround for SQL backend users because updating multiple clients causes duplicate entries.
+
+        Future plan is to revisit how host/ip/username/pw/options are stored so that this may become more flexible.
+
+        Args:
+            show_name: Name of a TV show to target for a library update
+
+        Returns: True if processing succeeded with no issues else False if any issues found
+        """
+        if not sickbeard.KODI_HOST:
+            self._log(u'No Kodi hosts specified, check your settings')
+            return False
+
+        # either update each host, or only attempt to update until one successful result
+        result = 0
+        only_first = dict(show='', first='', first_note='')
+        show_name and only_first.update(show=' for show;"%s"' % show_name)
+        sickbeard.KODI_UPDATE_ONLYFIRST and only_first.update(dict(
+            first=' first', first_note=' in line with the "Only update first host"%s' % ' setting'))
+
+        for cur_host in [x.strip() for x in sickbeard.KODI_HOST.split(',')]:
+
+            response = self._send_to_kodi_json(cur_host, dict(method='Profiles.GetCurrentProfile'))
+            if self.response and 401 == self.response.get('status_code'):
+                self._log(u'Failed to authenticate with %s' % cur_host, logger.DEBUG)
+                continue
+            if not response:
+                self._maybe_log_failed_detection(cur_host)
+                continue
+
+            if self._send_update_library(cur_host, show_name):
+                only_first.update(dict(profile=response.get('label') or 'Master', host=cur_host))
+                self._log('Success: profile;' +
+                          u'"%(profile)s" at%(first)s host;%(host)s updated%(show)s%(first_note)s' % only_first)
+            else:
+                self._maybe_log_failed_detection(cur_host)
+                result += 1
+
+            if sickbeard.KODI_UPDATE_ONLYFIRST:
+                return True
+
+        # needed for the 'update kodi' submenu command as it only cares of the final result vs the individual ones
+        return 0 == result
 
     def _send_update_library(self, host, show_name=None):
         """ Internal wrapper for the update library function
@@ -164,7 +235,7 @@ class KodiNotifier:
         api_version = self._get_kodi_version(host)
         if api_version:
             # try to update just the show, if it fails, do full update if enabled
-            __method_update = (self._update_library, self._update_library_json)[4 < api_version]
+            __method_update = (self._update, self._update_json)[4 < api_version]
             if __method_update(host, show_name):
                 return True
 
@@ -181,7 +252,7 @@ class KodiNotifier:
     # Legacy HTTP API (pre Kodi 12) methods
     ##############################################################################
 
-    def _send_to_kodi(self, host, command):
+    def _send_to_kodi(self, host, command, timeout=30):
         """ Handle communication to Kodi servers via HTTP API
 
         Args:
@@ -203,11 +274,12 @@ class KodiNotifier:
             args['auth'] = (self.username or sickbeard.KODI_USERNAME, self.password or sickbeard.KODI_PASSWORD)
 
         url = 'http://%s/%sCmds/%sHttp' % (host, self.prefix or 'kodi', self.prefix or 'kodi')
-        response = sickbeard.helpers.getURL(url=url, params=command, hooks=dict(response=self.cb_response), **args)
+        response = sickbeard.helpers.getURL(url=url, params=command,
+                                            timeout=timeout, hooks=dict(response=self.cb_response), **args)
 
         return response or False
 
-    def _update_library(self, host=None, show_name=None):
+    def _update(self, host=None, show_name=None):
         """ Handle updating Kodi host via HTTP API
 
         Update the video library for a specific tv show if passed, otherwise update the whole library if option enabled.
@@ -323,12 +395,7 @@ class KodiNotifier:
                       % (json.dumps(response['error']), host, json.dumps(command)), logger.ERROR)
         return result
 
-    # noinspection PyUnusedLocal
-    def cb_response(self, r, *args, **kwargs):
-        self.response = dict(status_code=r.status_code)
-        return r
-
-    def _update_library_json(self, host=None, show_name=None):
+    def _update_json(self, host=None, show_name=None):
         """ Handle updating Kodi host via HTTP JSON-RPC
 
         Update the video library for a specific tv show if passed, otherwise update the whole library if option enabled.
@@ -410,99 +477,49 @@ class KodiNotifier:
 
         return True
 
-    def _maybe_log_failed_detection(self, host):
-
-        self._maybe_log(u'Failed to detect version for %s, check configuration.' % host)
-
-    def _maybe_log(self, msg, log_level=None):
-
-        if msg and (sickbeard.KODI_ALWAYS_ON or self.test_mode):
-            self._log(msg + (not sickbeard.KODI_ALWAYS_ON and self.test_mode and ' (Test mode always logs)' or ''),
-                      log_level)
-
-    @staticmethod
-    def _log(msg, log_level=logger.WARNING):
-
-        logger.log(u'Kodi: %s' % msg, log_level)
-
     ##############################################################################
     # Public functions which will call the JSON or Legacy HTTP API methods
     ##############################################################################
 
     def notify_snatch(self, ep_name):
+
         if sickbeard.KODI_NOTIFY_ONSNATCH:
             self._notify_kodi(ep_name, common.notifyStrings[common.NOTIFY_SNATCH])
 
     def notify_download(self, ep_name):
+
         if sickbeard.KODI_NOTIFY_ONDOWNLOAD:
             self._notify_kodi(ep_name, common.notifyStrings[common.NOTIFY_DOWNLOAD])
 
     def notify_subtitle_download(self, ep_name, lang):
+
         if sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD:
             self._notify_kodi('%s: %s' % (ep_name, lang), common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD])
 
     def notify_git_update(self, new_version='??'):
+
         if sickbeard.USE_KODI:
             update_text = common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
             title = common.notifyStrings[common.NOTIFY_GIT_UPDATE]
             self._notify_kodi('%s %s' % (update_text, new_version), title)
 
     def test_notify(self, host, username, password):
-        self.test_mode, self.username, self.password = True, username, password
-        return self._notify_kodi('Testing SickGear Kodi notifier', 'Test Notification', kodi_hosts=host)
 
-    def update_library(self, showName=None):
+        self.test_mode, self.username, self.password = True, username, password
+        result = self._notify_kodi('Testing SickGear Kodi notifier', 'Test Notification', kodi_hosts=host)
+        self.test_mode = False
+        return result
+
+    def update_library(self, showName=None, force=False):
         """ Wrapper for the update library functions
 
-        Call either the JSON-RPC over HTTP or the legacy HTTP API methods depending on the Kodi API version.
+        :param showName: Name of a TV show
+        :param force: True force update process
 
-        Uses a list of comma delimited hosts where only one is updated, the first to respond with success. This is a
-        workaround for SQL backend users because updating multiple clients causes duplicate entries.
-
-        Future plan is to revisit how host/ip/username/pw/options are stored so that this may become more flexible.
-
-        Args:
-            showName: Name of a TV show to target for a library update
-
-        Returns:
-            True or False
+        Returns: None if no processing done, True if processing succeeded with no issues else False if any issues found
         """
-
-        if sickbeard.USE_KODI and sickbeard.KODI_UPDATE_LIBRARY:
-            if not sickbeard.KODI_HOST:
-                self._log(u'No Kodi hosts specified, check your settings', logger.DEBUG)
-                return False
-
-            # either update each host, or only attempt to update until one successful result
-            result = 0
-            only_first = dict(show='', first='', first_note='')
-            showName and only_first.update(show=' for show;"%s"' % showName)
-            sickbeard.KODI_UPDATE_ONLYFIRST and only_first.update(dict(
-                first=' first', first_note=' in line with the "Only update first host"%s' % ' setting'))
-
-            for cur_host in [x.strip() for x in sickbeard.KODI_HOST.split(',')]:
-
-                response = self._send_to_kodi_json(cur_host, dict(method='Profiles.GetCurrentProfile'))
-                if self.response and 401 == self.response.get('status_code'):
-                    self._log(u'Failed to authenticate with %s' % cur_host, logger.DEBUG)
-                    continue
-                if not response:
-                    self._maybe_log_failed_detection(cur_host)
-                    continue
-
-                if self._send_update_library(cur_host, showName):
-                    only_first.update(dict(profile=response.get('label') or 'Master', host=cur_host))
-                    self._log('Success: profile;' +
-                              u'"%(profile)s" at%(first)s host;%(host)s updated%(show)s%(first_note)s' % only_first)
-                else:
-                    self._maybe_log_failed_detection(cur_host)
-                    result += 1
-
-                if sickbeard.KODI_UPDATE_ONLYFIRST:
-                    return True
-
-            # needed for the 'update kodi' submenu command as it only cares of the final result vs the individual ones
-            return 0 == result
+        if sickbeard.USE_KODI and (sickbeard.KODI_UPDATE_LIBRARY or force):
+            return self._update_library(showName)
 
 
 notifier = KodiNotifier

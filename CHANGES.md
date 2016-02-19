@@ -35,6 +35,7 @@
 * Add search show Name to Show List Layout: Poster
 * Change indicate when not sorting with article by dimming ("The", "A", "An") on Show List, Episode, History,
   Mass Update, Add with Browse and from Existing views
+* Add Emby notifier to config/Notifications
 
 
 ### 0.11.6 (2016-02-18 23:10:00 UTC)

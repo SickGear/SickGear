@@ -37,22 +37,30 @@
 			});
 	});
 
-	$('#testXBMC').click(function () {
-		var xbmc_host = $.trim($('#xbmc_host').val());
-		var xbmc_username = $.trim($('#xbmc_username').val());
-		var xbmc_password = $.trim($('#xbmc_password').val());
-		if (!xbmc_host) {
-			$('#testXBMC-result').html('Please fill out the necessary fields above.');
-			$('#xbmc_host').addClass('warning');
+	$('#testEMBY').click(function () {
+		var emby_host = $('#emby_host').val();
+		var emby_apikey = $('#emby_apikey').val();
+		if (!emby_host || !emby_apikey) {
+			$('#testEMBY-result').html('Please fill out the necessary fields above.');
+			if (!emby_host) {
+				$('#emby_host').addClass('warning');
+			} else {
+				$('#emby_host').removeClass('warning');
+			}
+			if (!emby_apikey) {
+				$('#emby_apikey').addClass('warning');
+			} else {
+				$('#emby_apikey').removeClass('warning');
+			}
 			return;
 		}
-		$('#xbmc_host').removeClass('warning');
+		$('#emby_host, #emby_apikey').removeClass('warning');
 		$(this).prop('disabled', true);
-		$('#testXBMC-result').html(loading);
-		$.get(sbRoot + '/home/testXBMC', {'host': xbmc_host, 'username': xbmc_username, 'password': xbmc_password})
+		$('#testEMBY-result').html(loading);
+		$.get(sbRoot + '/home/testEMBY', {'host': emby_host, 'apikey': emby_apikey})
 			.done(function (data) {
-				$('#testXBMC-result').html(data);
-				$('#testXBMC').prop('disabled', false);
+				$('#testEMBY-result').html(data);
+				$('#testEMBY').prop('disabled', false);
 			});
 	});
 
@@ -72,6 +80,25 @@
 			.done(function (data) {
 				$('#testKODI-result').html(data);
 				$('#testKODI').prop('disabled', false);
+			});
+	});
+
+	$('#testXBMC').click(function () {
+		var xbmc_host = $.trim($('#xbmc_host').val());
+		var xbmc_username = $.trim($('#xbmc_username').val());
+		var xbmc_password = $.trim($('#xbmc_password').val());
+		if (!xbmc_host) {
+			$('#testXBMC-result').html('Please fill out the necessary fields above.');
+			$('#xbmc_host').addClass('warning');
+			return;
+		}
+		$('#xbmc_host').removeClass('warning');
+		$(this).prop('disabled', true);
+		$('#testXBMC-result').html(loading);
+		$.get(sbRoot + '/home/testXBMC', {'host': xbmc_host, 'username': xbmc_username, 'password': xbmc_password})
+			.done(function (data) {
+				$('#testXBMC-result').html(data);
+				$('#testXBMC').prop('disabled', false);
 			});
 	});
 
