@@ -401,6 +401,47 @@
 					</fieldset>
 				</div><!-- /plex component-group -->
 
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/emby.png" alt="" title="Emby" />
+						<h3><a href="<%= anon_url('http://emby.media/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Emby</a></h3>
+						<p>Emby is a home media server built using other popular open source technologies.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label class="cleafix" for="use_emby">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_emby" id="use_emby" #if $sickbeard.USE_EMBY then 'checked="checked"' else ''#>
+									<p>should SickGear send update commands to Emby ?</p>
+								</span>
+							</label>
+						</div>
+						<div id="content_use_emby">
+							<div class="field-pair">
+								<label for="emby_host">
+									<span class="component-title">Emby server IP:Port</span>
+									<span class="component-desc">
+										<input type="text" name="emby_host" id="emby_host" value="$sickbeard.EMBY_HOST" class="form-control input-sm input250">
+										<div class="clear-left"><p>host running Emby server (e.g. 192.168.0.1:8096)</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="emby_apikey">
+									<span class="component-title">Emby API key</span>
+									<span class="component-desc">
+										<input type="text" name="emby_apikey" id="emby_apikey" value="<%= starify(sickbeard.EMBY_APIKEY) %>" class="form-control input-sm input250">
+										<div class="clear-left"><p>(Emby server > Advanced > Security)</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="testNotification" id="testEMBY-result">Click below to test.</div>
+							<input  class="btn" type="button" value="Test Emby" id="testEMBY">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use_emby //-->
+					</fieldset>
+				</div><!-- /emby component-group //-->
 
 				<div class="component-group">
 					<div class="component-group-desc">

@@ -126,14 +126,14 @@ fonts
 	font-style:italic
 }
 
-/* Droid Sans */
+/* SickGear Icons */
 @font-face{
 	font-family:'sgicons';
-	src:url('fonts/sgicons.eot');
-	src:url('fonts/sgicons.eot?#iefix') format('embedded-opentype'),
-		url('fonts/sgicons.woff') format('woff'),
-		url('fonts/sgicons.ttf') format('truetype'),
-		url('fonts/sgicons.svg#sgicons') format('svg');
+	src:url('fonts/sgicons.eot?v1');
+	src:url('fonts/sgicons.eot?v1#iefix') format('embedded-opentype'),
+		url('fonts/sgicons.woff?v1') format('woff'),
+		url('fonts/sgicons.ttf?v1') format('truetype'),
+		url('fonts/sgicons.svg?v1#sgicons') format('svg');
 	font-weight:normal;
 	font-style:normal
 }
@@ -497,6 +497,10 @@ inc_top.tmpl
 
 .sgicon-xbmc:before{
 	content:"\e621"
+}
+
+.sgicon-emby:before {
+	content: "\e900"
 }
 
 /* =======================================================================

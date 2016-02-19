@@ -31,6 +31,7 @@ function initActions() {
 	$('#SubMenu a[href$="/home/updateXBMC/"]').addClass('btn').html('<i class="sgicon-xbmc"></i>Update XBMC');
 	$('#SubMenu a:contains("Update show in Kodi")').addClass('btn').html('<i class="sgicon-kodi"></i>Update show in Kodi');
 	$('#SubMenu a[href$="/home/updateKODI/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
+	$('#SubMenu a[href$="/home/updateEMBY/"]').addClass('btn').html('<i class="sgicon-emby"></i>Update Emby');
 }
 
 $(document).ready(function(){
