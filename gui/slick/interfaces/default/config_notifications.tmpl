@@ -211,19 +211,19 @@
 							</div>
 							<div class="field-pair">
 								<label for="kodi_update_library">
-									<span class="component-title">Update library</span>
+									<span class="component-title">Update shows known to Kodi</span>
 									<span class="component-desc">
 										<input type="checkbox" name="kodi_update_library" id="kodi_update_library" #if $sickbeard.KODI_UPDATE_LIBRARY then 'checked="checked"' else ''# />
-										<p>update Kodi library when a download finishes ?</p>
+										<p>with changes under the path of processed shows ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
 								<label for="kodi_update_full">
-									<span class="component-title">Full library update</span>
+									<span class="component-title">Perform full library update</span>
 									<span class="component-desc">
 										<input type="checkbox" name="kodi_update_full" id="kodi_update_full" #if $sickbeard.KODI_UPDATE_FULL then 'checked="checked"' else ''# />
-										<p>perform a full library update if update per-show fails ?</p>
+										<p>if "Update shows" fails (e.g. to have Kodi find newly added shows)</p>
 									</span>
 								</label>
 							</div>
@@ -238,36 +238,31 @@
 							</div>
 							<div class="field-pair">
 								<label for="kodi_host">
-									<span class="component-title">Kodi IP:Port</span>
-									<input type="text" name="kodi_host" id="kodi_host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">host running Kodi (eg. 192.168.1.100:8080)</span>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(multiple host strings must be separated by commas)</span>
+									<span class="component-title">Host(s) running Kodi</span>
+									<span class="component-desc">
+										<input type="text" name="kodi_host" id="kodi_host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350" />
+										<div class="clear-left"><p>IP:Port [, IP:Port] (e.g. 192.168.0.1:8080, 192.168.1.2:8080)</p></div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
 								<label for="kodi_username">
-									<span class="component-title">Kodi username</span>
-									<input type="text" name="kodi_username" id="kodi_username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">username for your KODI server (blank for none)</span>
+									<span class="component-title">Kodi web server username</span>
+									<span class="component-desc">
+										<input type="text" name="kodi_username" id="kodi_username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250" />
+										<p>(blank for none)</p>
+										<div class="clear-left"><p>in Kodi System/Settings/Services/Web server</p></div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
 								<label for="kodi_password">
-									<span class="component-title">Kodi password</span>
-									<input type="password" name="kodi_password" id="kodi_password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">password for your KODI server (blank for none)</span>
+									<span class="component-title">Kodi web server password</span>
+									<span class="component-desc">
+										<input type="password" name="kodi_password" id="kodi_password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250" />
+										<p>(blank for none)</p>
+										<div class="clear-left"><p>in Kodi System/Settings/Services/Web server</p></div>
+									</span>
 								</label>
 							</div>
 							<div class="testNotification" id="testKODI-result">Click below to test.</div>

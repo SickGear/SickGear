@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import sickbeard
-
 import xbmc
 import kodi
 import plex
@@ -41,11 +39,9 @@ import tweet
 from lib import libtrakt
 import emailnotify
 
-from sickbeard.common import *
-
 # home theater / nas
 xbmc_notifier = xbmc.XBMCNotifier()
-kodi_notifier = kodi.KODINotifier()
+kodi_notifier = kodi.KodiNotifier()
 plex_notifier = plex.PLEXNotifier()
 nmj_notifier = nmj.NMJNotifier()
 nmjv2_notifier = nmjv2.NMJv2Notifier()
