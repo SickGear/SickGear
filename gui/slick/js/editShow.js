@@ -2,81 +2,72 @@
 
 $(document).ready(function () {
 
-	$.getJSON(sbRoot + '/home/addShows/getIndexerLanguages', {}, function (data) {
-		var resultStr, flag, selected, current_lang_added = '';
-
-		if (data.results.length === 0) {
-			flag = ' class="flag" style="background-image:url(' + sbRoot + '/images/flags/' + config.show_lang + '.png)"';
-			resultStr = '<option value="' + config.show_lang + '" selected="selected"' + flag + '>' + config.show_lang + '</option>';
-		} else {
-			current_lang_added = false;
-			$.each(data.results, function (index, obj) {
-
-				if (obj === config.show_lang) {
-					selected = ' selected="selected"';
-					current_lang_added = true;
-				}
-				else {
-					selected = '';
-				}
-
-				flag = ' class="flag" style="background-image:url(' + sbRoot + '/images/flags/' + obj + '.png);"';
-				resultStr += '<option value="' + obj + '"' + selected + flag + '>' + obj + '</option>';
-			});
-
-			if (!current_lang_added) {
-				resultStr += '<option value=" ' + config.show_lang + '" selected="selected"> ' + config.show_lang + '</option>';
-			}
-
-		}
-		$('#indexerLangSelectEdit').html(resultStr);
-
-	});
-
-
-	var all_exceptions = [];
-
 	$('#location').fileBrowser({title: 'Select Show Location'});
 
-	$('#submit').click(function () {
-		all_exceptions = [];
+	function htmlFlag(lang) {
+		return ' class="flag" style="background-image:url(' + sbRoot + '/images/flags/' + lang + '.png)"'
+	}
 
-		$('#exceptions_list').find('option').each  (function () {
-			all_exceptions.push($(this).val());
+	$.getJSON(sbRoot + '/home/addShows/getIndexerLanguages', {}, function (data) {
+		var result = '', currentLangAdded = '', selected = ' selected="selected"';
+
+		if (0 == data.results.length) {
+			result = '<option value="' + config.showLang + '"' + selected + htmlFlag(config.showLang) + '>'
+				+ config.showLang + '</option>';
+		} else {
+			currentLangAdded = !1;
+			$.each(data.results, function (index, strLang) {
+
+				var htmlSelected = '';
+				if (strLang === config.showLang) {
+					currentLangAdded = !0;
+					htmlSelected = selected;
+				}
+
+				result += '<option value="' + strLang + '"' + htmlSelected + htmlFlag(strLang) + '>'
+					+ strLang + '</option>';
+			});
+
+			if (!currentLangAdded)
+				result += '<option value="' + config.showLang + '" ' + selected + '>' + config.showLang + '</option>';
+		}
+
+		$('#indexerLangSelectEdit').html(result);
+	});
+
+	function getExceptions() {
+		var allExceptions = [];
+
+		$('#exceptions_list').find('option').each(function () {
+			allExceptions.push($(this).val());
 		});
 
-		$('#exceptions_list').val(all_exceptions);
-		if (config.show_isanime) {
+		return allExceptions
+	}
+
+	$('#submit').click(function () {
+		$('#exceptions_list').val(getExceptions());
+		if (config.showIsAnime)
 			generate_bwlist();
-		}
 	});
 
 	$('#addSceneName').click(function () {
-		var scene_ex = $('#SceneName').val();
-		var scene_ex_season = $('#SceneNameSeason').val();
-		var option = $('<option>');
-		all_exceptions = [];
+		var elSceneName = $('#SceneName'), elSceneNameSeason = $('#SceneNameSeason'),
+			sceneEx = elSceneName.val(), sceneExSeason = elSceneNameSeason.val();
 
-		$('#exceptions_list').find('option').each  (function () {
-			all_exceptions.push($(this).val());
-		});
+		elSceneName.val('');
+		elSceneNameSeason.val('');
 
-		$('#SceneName').val('');
-		$('#SceneNameSeason').val('');
-
-		if ($.inArray(scene_ex_season + '|' + scene_ex, all_exceptions) > -1 || (scene_ex === '')) {
+		if (-1 < $.inArray(sceneExSeason + '|' + sceneEx, getExceptions()) || ('' === sceneEx))
 			return;
-		}
-		$('#SceneException').show();
 
-		option.attr('value', scene_ex_season + '|' + scene_ex);
-		if (scene_ex_season === "-1") {
-			option.html('S*: ' + scene_ex);
-		}
-		else {
-			option.html('S' + scene_ex_season + ': ' + scene_ex);
-		}
-		return option.appendTo('#exceptions_list');
+		$('#SceneException').fadeIn('fast', 'linear');
+
+		var option = $('<option>');
+		option.attr('value', sceneExSeason + '|' + sceneEx);
+		option.html((config.showIsAnime ? 'S' + ('-1' === sceneExSeason ? '*' : sceneExSeason) + ': ' : '') + sceneEx);
+
+		return option.appendTo($('#exceptions_list'));
 	});
 
 	$('#removeSceneName').click(function () {
@@ -86,21 +77,41 @@ $(document).ready(function () {
 	});
 
 	$.fn.toggle_SceneException = function () {
-		all_exceptions = [];
+		var elSceneException = $('#SceneException');
 
-		$('#exceptions_list').find('option').each  (function () {
-			all_exceptions.push($(this).val());
-		});
-
-		if ('' === all_exceptions) {
-			$('#SceneException').hide();
-		}
-		else {
-			$('#SceneException').show();
-		}
+		if (0 == getExceptions().length)
+			elSceneException.fadeOut('fast', 'linear');
+		else
+			elSceneException.fadeIn('fast', 'linear');
 	};
 
 	$(this).toggle_SceneException();
 
+	var elABD = $('#air_by_date'), elScene = $('#scene'), elSports = $('#sports'), elAnime = $('#anime');
+
+	function uncheck(el){el.prop('checked', !1)}
+	function checked(el){return el.prop('checked')}
+
+	function isAnime(){
+		uncheck(elABD); uncheck(elSports);
+		if (config.showIsAnime){ $('#blackwhitelist').fadeIn('fast', 'linear'); } return !0; }
+	function isScene(){ uncheck(elABD); uncheck(elSports); }
+	function isABD(){ uncheck(elAnime); uncheck(elScene); $('#blackwhitelist').fadeOut('fast', 'linear'); }
+	function isSports(){ uncheck(elAnime); uncheck(elScene); $('#blackwhitelist').fadeOut('fast', 'linear'); }
+
+	if (checked(elAnime)) { isAnime(); }
+	if (checked(elScene)) { isScene(); }
+	if (checked(elABD)) { isABD(); }
+	if (checked(elSports)) { isSports() }
+
+	elAnime.on('click', function() {
+		if (checked(elAnime))
+			isAnime() && !config.showIsAnime && $('#anime-options').fadeIn('fast', 'linear');
+		else
+			$('#blackwhitelist, #anime-options').fadeOut('fast', 'linear');
+	});
+	elScene.on('click', function() { isScene(); });
+	elABD.on('click', function() { isABD(); });
+	elSports.on('click', function() { isSports() });
 
 });

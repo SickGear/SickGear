@@ -126,14 +126,14 @@ fonts
 	font-style:italic
 }
 
-/* Droid Sans */
+/* SickGear Icons */
 @font-face{
 	font-family:'sgicons';
-	src:url('fonts/sgicons.eot');
-	src:url('fonts/sgicons.eot?#iefix') format('embedded-opentype'),
-		url('fonts/sgicons.woff') format('woff'),
-		url('fonts/sgicons.ttf') format('truetype'),
-		url('fonts/sgicons.svg#sgicons') format('svg');
+	src:url('fonts/sgicons.eot?v1');
+	src:url('fonts/sgicons.eot?v1#iefix') format('embedded-opentype'),
+		url('fonts/sgicons.woff?v1') format('woff'),
+		url('fonts/sgicons.ttf?v1') format('truetype'),
+		url('fonts/sgicons.svg?v1#sgicons') format('svg');
 	font-weight:normal;
 	font-style:normal
 }
@@ -298,15 +298,18 @@ inc_top.tmpl
 
 .ui-tabs .ui-tabs-panel{
 	background-color:#F7F7F7 !important;
-	border:1px solid #CCC !important
+	border:1px solid #CCC !important;
+	border-top-width:0 !important
 }
 
 .ui-tabs .ui-tabs-nav li.ui-tabs-active{
+	border-bottom:1px solid #F7F7F7 !important;
 	border-top-left-radius:5px;
 	border-top-right-radius:5px
 }
 
 .ui-tabs-nav > :not(.ui-tabs-active){
+	border-bottom:1px solid transparent !important;
 	border-top-left-radius:5px;
 	border-top-right-radius:5px
 }
@@ -497,6 +500,10 @@ inc_top.tmpl
 
 .sgicon-xbmc:before{
 	content:"\e621"
+}
+
+.sgicon-emby:before {
+	content: "\e900"
 }
 
 /* =======================================================================
@@ -946,6 +953,7 @@ div.formpaginate{
 	margin-right:6px
 }
 
+#edit-show #customQualityWrapper div.component-group-desc p,
 #addShowForm #customQualityWrapper div.component-group-desc p{
 	font-size:14px
 }
@@ -1007,6 +1015,9 @@ div.formpaginate{
 	padding:0 0 0 15px
 }
 
+#edit-show #blackwhitelist,
+#edit-show #blackwhitelist h4,
+#edit-show #blackwhitelist p,
 #addShowForm #blackwhitelist,
 #addShowForm #blackwhitelist h4,
 #addShowForm #blackwhitelist p{
@@ -1662,6 +1673,7 @@ td.col-search{
 	padding:15px 0 0
 }
 
+#edit-show #config span.component-desc,
 #addShowForm #editShow.stepDiv span.component-desc{
 	width:639px
 }
@@ -2152,6 +2164,10 @@ config*.tmpl
 	min-height:200px
 }
 
+#edit-show .component-group{
+	padding:25px 30px
+}
+
 .component-item{
 	border-bottom:1px dotted #666;
 	min-height:200px
@@ -2289,6 +2305,10 @@ select .selected:before{
 #editShow .field-pair #customQuality h4{
 	font-size:13px !important;
 	margin-bottom:10px
+}
+
+#editShow .field-pair #SceneException h4{
+	margin-bottom:5px
 }
 
 #editShow .field-pair #customQuality h4{
@@ -2816,6 +2836,13 @@ div.blackwhitelist.white select,
 div.blackwhitelist.black select{
 	height:110px
 }
+#edit-show div.blackwhitelist.pool{
+	width:330px;
+	height:265px;
+	margin-left:248px;
+	float:none
+}
+#edit-show div.blackwhitelist.pool select,
 div.blackwhitelist.pool,
 div.blackwhitelist.pool select{
 	width:330px;
@@ -3379,6 +3406,12 @@ label{
 	font-weight:normal
 }
 
+.label-container{
+	display: inline-block;
+	max-width: 100%;
+	margin-bottom: 5px
+}
+
 pre{
 	border:1px solid
 }
@@ -3433,6 +3466,7 @@ input sizing (for config pages)
 	margin-top:-4px
 }
 
+#config .input350,
 .input350{
 	width:350px;
 	margin-top:-4px
@@ -3610,6 +3644,7 @@ div.formpaginate .prev, div.formpaginate .next{
 }
 
 /* step 3 related */
+#edit-show #customQualityWrapper #customQuality,
 #customQuality{
 	display:block;
 	padding:0 0 10px 0;

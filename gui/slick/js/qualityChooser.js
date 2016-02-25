@@ -2,7 +2,7 @@ function setFromPresets (preset) {
 	var elCustomQuality = $('.show-if-quality-custom'),
 		selected = 'selected';
 	if (preset = parseInt(preset)) {
-		elCustomQuality.hide();
+		elCustomQuality.fadeOut('fast', 'linear');
 
 		var upgrade = !0;
 		$('#anyQualities, #bestQualities').find('option').each(function() {
@@ -18,7 +18,7 @@ function setFromPresets (preset) {
 			$(this).attr(selected, ((preset & parseInt($(this).val())) ? selected : false));
 		});
 	} else
-		elCustomQuality.show();
+		elCustomQuality.fadeIn('fast', 'linear');
 }
 
 $(document).ready(function() {

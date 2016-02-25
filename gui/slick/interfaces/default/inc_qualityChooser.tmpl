@@ -1,6 +1,7 @@
 #import sickbeard
 #from sickbeard.common import Quality, qualityPresets, qualityPresetStrings
 
+#set $html_selected = ' selected="selected"'
 <div class="field-pair">
 	<label for="qualityPreset" class="clearfix">
 #set $overall_quality = $Quality.combineQualities($anyQualities, $bestQualities)
@@ -9,8 +10,8 @@
 #set $selected = None
 			<select id="qualityPreset" name="quality_preset" class="form-control form-control-inline input-sm">
 				<option value="0">Custom</option>
-#for $curPreset in sorted($qualityPresets):
-				<option value="$curPreset" #if $curPreset == $overall_quality then "selected=\"selected\"" else ""# #if $qualityPresetStrings[$curPreset].endswith("0p") then "style=\"padding-left: 15px;\"" else ""#>$qualityPresetStrings[$curPreset]</option>
+#for $curPreset in $qualityPresets:
+				<option value="$curPreset"#echo ('', $html_selected)[$curPreset == $overall_quality]##echo ('', ' style="padding-left:15px"')[$qualityPresetStrings[$curPreset].endswith('0p')]#>$qualityPresetStrings[$curPreset]</option>
 #end for
 			</select>
 			<span>preferred episode quality to download</span>
@@ -19,18 +20,19 @@
 </div>
 
 <div id="customQualityWrapper">
-	<div id="customQuality" class="show-if-quality-custom">
+	<div id="customQuality" class="show-if-quality-custom" style="display:none">
 		<div class="component-group-desc">
 			<p>An <em>Initial</em> quality episode must be found before an <em>Upgrade to</em> selection is considered.</p>
+			<p>Upgrades continue until the highest selected of <em>Upgrade to</em> is matched.</p>
 		</div>
 
 		<span class="component-desc">
-			<div style="float:left; padding-right: 40px">
+			<div style="float:left;padding-right:40px">
 				<h4 class="jumbo">Initial</h4>
 #set $anyQualityList = filter(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
 				<select id="anyQualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)" class="form-control form-control-inline input-sm">
 #for $curQuality in sorted($anyQualityList):
-					<option value="$curQuality" #if $curQuality in $anyQualities then "selected=\"selected\"" else ""#>$Quality.qualityStrings[$curQuality]</option>
+					<option value="$curQuality"#echo ('', $html_selected)[$curQuality in $anyQualities]#>$Quality.qualityStrings[$curQuality]</option>
 #end for
 				</select>
 			</div>
@@ -40,7 +42,7 @@
 #set $bestQualityList = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
 				<select id="bestQualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)" class="form-control form-control-inline input-sm">
 #for $curQuality in sorted($bestQualityList):
-					<option value="$curQuality" #if $curQuality in $bestQualities then "selected=\"selected\"" else ""#>$Quality.qualityStrings[$curQuality]</option>
+					<option value="$curQuality"#echo ('', $html_selected)[$curQuality in $bestQualities]#>$Quality.qualityStrings[$curQuality]</option>
 #end for
 				</select>
 			</div>

@@ -1035,11 +1035,14 @@ class PostProcessor(object):
         # send notifications
         notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
 
-        # do the library update for XBMC
-        notifiers.xbmc_notifier.update_library(ep_obj.show.name)
+        # do the library update for Emby
+        notifiers.emby_notifier.update_library(ep_obj.show)
 
         # do the library update for Kodi
         notifiers.kodi_notifier.update_library(ep_obj.show.name)
+
+        # do the library update for XBMC
+        notifiers.xbmc_notifier.update_library(ep_obj.show.name)
 
         # do the library update for Plex
         notifiers.plex_notifier.update_library(ep_obj)

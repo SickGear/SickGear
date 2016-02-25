@@ -1125,6 +1125,10 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         req_headers.update(headers)
     session.headers.update(req_headers)
 
+    mute_connect_err = kwargs.get('mute_connect_err')
+    if mute_connect_err:
+        del(kwargs['mute_connect_err'])
+
     # request session ssl verify
     session.verify = False
 
@@ -1177,7 +1181,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         logger.log(u'HTTP error %s while loading URL %s' % (e.errno, e.request.url), logger.WARNING)
         return
     except requests.exceptions.ConnectionError as e:
-        if not kwargs.get('mute_connect_err'):
+        if not mute_connect_err:
             logger.log(u'Connection error msg:%s while loading URL %s' % (e.message, e.request.url), logger.WARNING)
         return
     except requests.exceptions.ReadTimeout as e:

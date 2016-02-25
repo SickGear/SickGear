@@ -533,20 +533,25 @@ class Home(MainHandler):
         return [
             {'title': 'Add Shows', 'path': 'home/addShows/', },
             {'title': 'Manual Post-Processing', 'path': 'home/postprocess/'},
-            {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
+            {'title': 'Update Emby', 'path': 'home/updateEMBY/', 'requires': self.haveEMBY},
             {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
+            {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
             {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX},
             {'title': 'Restart', 'path': 'home/restart/?pid=' + str(sickbeard.PID), 'confirm': True},
             {'title': 'Shutdown', 'path': 'home/shutdown/?pid=' + str(sickbeard.PID), 'confirm': True},
         ]
 
     @staticmethod
-    def haveXBMC():
-        return sickbeard.USE_XBMC and sickbeard.XBMC_UPDATE_LIBRARY
+    def haveEMBY():
+        return sickbeard.USE_EMBY
 
     @staticmethod
     def haveKODI():
-        return sickbeard.USE_KODI and sickbeard.KODI_UPDATE_LIBRARY
+        return sickbeard.USE_KODI
+
+    @staticmethod
+    def haveXBMC():
+        return sickbeard.USE_XBMC and sickbeard.XBMC_UPDATE_LIBRARY
 
     @staticmethod
     def havePLEX():
@@ -771,6 +776,29 @@ class Home(MainHandler):
         else:
             return 'Error sending tweet'
 
+    def testEMBY(self, host=None, apikey=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host)
+        if not hosts:
+            return 'Fail: At least one invalid host'
+
+        total_success, cur_message = notifiers.emby_notifier.test_notify(hosts, apikey)
+        return (cur_message, u'Success. All Emby hosts tested.')[total_success]
+
+    def testKODI(self, host=None, username=None, password=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host)
+        if not hosts:
+            return 'Fail: At least one invalid host'
+
+        if None is not password and set('*') == set(password):
+            password = sickbeard.KODI_PASSWORD
+
+        total_success, cur_message = notifiers.kodi_notifier.test_notify(hosts, username, password)
+        return (cur_message, u'Success. All Kodi hosts tested.')[total_success]
+
     def testXBMC(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -788,19 +816,6 @@ class Home(MainHandler):
             finalResult += "<br />\n"
 
         return finalResult
-
-    def testKODI(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        hosts = config.clean_hosts(host)
-        if not hosts:
-            return 'Fail: At least one invalid host'
-
-        if None is not password and set('*') == set(password):
-            password = sickbeard.KODI_PASSWORD
-
-        total_success, cur_message = notifiers.kodi_notifier.test_notify(hosts, username, password)
-        return (cur_message, u'Success. All Kodi hosts tested.')[total_success]
 
     def testPMC(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1184,12 +1199,16 @@ class Home(MainHandler):
                 t.submenu.append({'title': 'Re-scan files', 'path': 'home/refreshShow?show=%d' % showObj.indexerid})
                 t.submenu.append(
                     {'title': 'Force Full Update', 'path': 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid})
-                t.submenu.append({'title': 'Update show in XBMC',
-                                  'path': 'home/updateXBMC?showName=%s' % urllib.quote_plus(
-                                  showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
+                t.submenu.append({'title': 'Update show in Emby',
+                                  'path': 'home/updateEMBY%s' %
+                                          (INDEXER_TVDB == showObj.indexer and ('?show=%s' % showObj.indexerid) or '/'),
+                                  'requires': self.haveEMBY})
                 t.submenu.append({'title': 'Update show in Kodi',
                                   'path': 'home/updateKODI?showName=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveKODI})
+                t.submenu.append({'title': 'Update show in XBMC',
+                                  'path': 'home/updateXBMC?showName=%s' % urllib.quote_plus(
+                                  showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
                 t.submenu.append({'title': 'Media Renamer', 'path': 'home/testRename?show=%d' % showObj.indexerid})
                 if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
                         showObj) and showObj.subtitles:
@@ -1617,6 +1636,30 @@ class Home(MainHandler):
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 
+    def updateEMBY(self, show=None):
+
+        if notifiers.emby_notifier.update_library(
+                sickbeard.helpers.findCertainShow(sickbeard.showList,helpers.tryInt(show, None)), force=True):
+            ui.notifications.message('Library update command sent to Emby host(s): ' + sickbeard.EMBY_HOST)
+        else:
+            ui.notifications.error('Unable to contact one or more Emby host(s): ' + sickbeard.EMBY_HOST)
+        self.redirect('/home/')
+
+    def updateKODI(self, showName=None):
+
+        # only send update to first host in the list -- workaround for kodi sql backend users
+        if sickbeard.KODI_UPDATE_ONLYFIRST:
+            # only send update to first host in the list -- workaround for kodi sql backend users
+            host = sickbeard.KODI_HOST.split(',')[0].strip()
+        else:
+            host = sickbeard.KODI_HOST
+
+        if notifiers.kodi_notifier.update_library(showName=showName, force=True):
+            ui.notifications.message('Library update command sent to Kodi host(s): ' + host)
+        else:
+            ui.notifications.error('Unable to contact one or more Kodi host(s): ' + host)
+        self.redirect('/home/')
+
     def updateXBMC(self, showName=None):
 
         # only send update to first host in the list -- workaround for xbmc sql backend users
@@ -1630,21 +1673,6 @@ class Home(MainHandler):
             ui.notifications.message('Library update command sent to XBMC host(s): ' + host)
         else:
             ui.notifications.error('Unable to contact one or more XBMC host(s): ' + host)
-        self.redirect('/home/')
-
-    def updateKODI(self, showName=None):
-
-        # only send update to first host in the list -- workaround for kodi sql backend users
-        if sickbeard.KODI_UPDATE_ONLYFIRST:
-            # only send update to first host in the list -- workaround for kodi sql backend users
-            host = sickbeard.KODI_HOST.split(',')[0].strip()
-        else:
-            host = sickbeard.KODI_HOST
-
-        if notifiers.kodi_notifier.update_library(showName=showName):
-            ui.notifications.message('Library update command sent to Kodi host(s): ' + host)
-        else:
-            ui.notifications.error('Unable to contact one or more Kodi host(s): ' + host)
         self.redirect('/home/')
 
     def updatePLEX(self, *args, **kwargs):
@@ -4873,14 +4901,16 @@ class ConfigNotifications(Config):
                                     'b64': base64.urlsafe_b64encode(location)})
         return t.respond()
 
-    def saveNotifications(self, use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None,
-                          xbmc_notify_ondownload=None,
-                          xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
-                          xbmc_update_library=None, xbmc_update_full=None, xbmc_host=None, xbmc_username=None,
-                          xbmc_password=None,
+    def saveNotifications(self,
+                          use_emby=None, emby_update_library=None, emby_host=None, emby_apikey=None,
                           use_kodi=None, kodi_always_on=None, kodi_notify_onsnatch=None, kodi_notify_ondownload=None,
-                          kodi_notify_onsubtitledownload=None, kodi_update_onlyfirst=None, kodi_update_library=None,
-                          kodi_update_full=None, kodi_host=None, kodi_username=None, kodi_password=None,
+                          kodi_notify_onsubtitledownload=None, kodi_update_onlyfirst=None,
+                          kodi_update_library=None, kodi_update_full=None,
+                          kodi_host=None, kodi_username=None, kodi_password=None,
+                          use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None, xbmc_notify_ondownload=None,
+                          xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
+                          xbmc_update_library=None, xbmc_update_full=None,
+                          xbmc_host=None, xbmc_username=None, xbmc_password=None,
                           use_plex=None, plex_notify_onsnatch=None, plex_notify_ondownload=None,
                           plex_notify_onsubtitledownload=None, plex_update_library=None,
                           plex_server_host=None, plex_host=None, plex_username=None, plex_password=None,
@@ -4922,18 +4952,24 @@ class ConfigNotifications(Config):
 
         results = []
 
-        sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
-        sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
-        sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
-        sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
-        sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
-        sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
-        sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
-        sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
-        sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
-        sickbeard.XBMC_USERNAME = xbmc_username
-        if set('*') != set(xbmc_password):
-            sickbeard.XBMC_PASSWORD = xbmc_password
+        sickbeard.USE_EMBY = config.checkbox_to_value(use_emby)
+        sickbeard.EMBY_UPDATE_LIBRARY = config.checkbox_to_value(emby_update_library)
+        sickbeard.EMBY_HOST = config.clean_hosts(emby_host)
+        keys_changed = False
+        all_keys = []
+        old_keys = [x.strip() for x in sickbeard.EMBY_APIKEY.split(',') if x.strip()]
+        new_keys = [x.strip() for x in emby_apikey.split(',') if x.strip()]
+        for key in new_keys:
+            if not starify(key, True):
+                keys_changed = True
+                all_keys += [key]
+                continue
+            for x in old_keys:
+                if key.startswith(x[0:3]) and key.endswith(x[-4:]):
+                    all_keys += [x]
+                    break
+        if keys_changed or (len(all_keys) != len(old_keys)):
+            sickbeard.EMBY_APIKEY = ','.join(all_keys)
 
         sickbeard.USE_KODI = config.checkbox_to_value(use_kodi)
         sickbeard.KODI_ALWAYS_ON = config.checkbox_to_value(kodi_always_on)
@@ -4947,6 +4983,19 @@ class ConfigNotifications(Config):
         sickbeard.KODI_USERNAME = kodi_username
         if set('*') != set(kodi_password):
             sickbeard.KODI_PASSWORD = kodi_password
+
+        sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
+        sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
+        sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
+        sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
+        sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
+        sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
+        sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
+        sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
+        sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
+        sickbeard.XBMC_USERNAME = xbmc_username
+        if set('*') != set(xbmc_password):
+            sickbeard.XBMC_PASSWORD = xbmc_password
 
         sickbeard.USE_PLEX = config.checkbox_to_value(use_plex)
         sickbeard.PLEX_NOTIFY_ONSNATCH = config.checkbox_to_value(plex_notify_onsnatch)
