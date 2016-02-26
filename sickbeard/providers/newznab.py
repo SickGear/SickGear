@@ -17,7 +17,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import time
-import urllib
 
 import sickbeard
 
@@ -84,8 +83,7 @@ class NewznabProvider(generic.NZBProvider):
 
         categories = self.get_url('%s/api' % self.url, params=params, timeout=10)
         if not categories:
-            logger.log(u'Error getting html for [%s/api?%s]' %
-                       (self.url, '&'.join('%s=%s' % (x, y) for x, y in params.items())), logger.DEBUG)
+            logger.log(u'Error getting html for [%s]' % self.session.response['url'], logger.DEBUG)
             return (False, return_categories, 'Error getting html for [%s]' %
                     ('%s/api?%s' % (self.url, '&'.join('%s=%s' % (x, y) for x, y in params.items()))))
 
@@ -258,9 +256,8 @@ class NewznabProvider(generic.NZBProvider):
                 # hardcoded to stop after a max of 4 hits (400 items) per query
                 while (offset <= total) and (offset < (200, 400)[self.supports_tvdbid()]) and batch_count:
                     cnt = len(results)
-                    search_url = '%sapi?%s' % (self.url, urllib.urlencode(request_params))
 
-                    data = self.cache.getRSSFeed(search_url)
+                    data = self.cache.getRSSFeed('%sapi' % self.url, params=request_params)
                     i and time.sleep(1.1)
 
                     if not data or not self.check_auth_from_data(data):
@@ -295,13 +292,13 @@ class NewznabProvider(generic.NZBProvider):
                         break
 
                     if offset != request_params['offset']:
-                        logger.log('Tell your newznab provider to fix their bloody newznab responses')
+                        logger.log('Ask your newznab provider to fix their newznab responses')
                         break
 
                     request_params['offset'] += request_params['limit']
                     if total <= request_params['offset']:
                         exit_log = True
-                        logger.log('%s item%s found that will be used for episode matching' % (total, helpers.maybe_plural(total)),
+                        logger.log('%s item%s found for episode matching' % (total, helpers.maybe_plural(total)),
                                    logger.DEBUG)
                         break
 
@@ -310,10 +307,10 @@ class NewznabProvider(generic.NZBProvider):
                     logger.log('%s more item%s to fetch from a batch of up to %s items.'
                                % (items, helpers.maybe_plural(items), request_params['limit']), logger.DEBUG)
 
-                    batch_count = self._log_result(results, mode, cnt, search_url)
+                    batch_count = self._log_result(results, mode, cnt, data.rq_response['url'])
 
                 if exit_log:
-                    self._log_result(results, mode, cnt, search_url)
+                    self._log_result(results, mode, cnt, data and data.rq_response['url'] or '%sapi' % self.url)
                     exit_log = False
 
                 if 'tvdbid' in request_params and len(results):

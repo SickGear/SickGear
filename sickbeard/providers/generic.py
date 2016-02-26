@@ -131,6 +131,11 @@ class GenericProvider:
 
         return result
 
+    # noinspection PyUnusedLocal
+    def cb_response(self, r, *args, **kwargs):
+        self.session.response = dict(url=r.url, status_code=r.status_code, elapsed=r.elapsed, from_cache=r.from_cache)
+        return r
+
     def get_url(self, url, post_data=None, params=None, timeout=30, json=False):
         """
         By default this is just a simple urlopen call but this method should be overridden
@@ -142,7 +147,7 @@ class GenericProvider:
             return
 
         return helpers.getURL(url, post_data=post_data, params=params, headers=self.headers, timeout=timeout,
-                              session=self.session, json=json)
+                              session=self.session, json=json, hooks=dict(response=self.cb_response))
 
     def download_result(self, result):
         """
