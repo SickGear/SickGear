@@ -33,7 +33,7 @@ import uuid
 import base64
 sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import helpers, logger, db, naming, metadata, providers, scene_exceptions, scene_numbering, \
-    scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
+    scheduler, auto_post_processor, search_queue, search_propers, search_recent, search_backlog, \
     show_queue, show_updater, subtitles, traktChecker, version_checker
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
@@ -78,9 +78,10 @@ versionCheckScheduler = None
 showQueueScheduler = None
 searchQueueScheduler = None
 properFinderScheduler = None
-autoPostProcesserScheduler = None
+autoPostProcessorScheduler = None
 subtitlesFinderScheduler = None
 traktCheckerScheduler = None
+scene_mappings_update_scheduler = None
 
 showList = None
 UPDATE_SHOWS_ON_START = False
@@ -197,19 +198,19 @@ DOWNLOAD_PROPERS = False
 CHECK_PROPERS_INTERVAL = None
 ALLOW_HIGH_PRIORITY = False
 
-AUTOPOSTPROCESSER_FREQUENCY = None
+AUTOPOSTPROCESSOR_FREQUENCY = None
 RECENTSEARCH_FREQUENCY = None
 UPDATE_FREQUENCY = None
 RECENTSEARCH_STARTUP = False
 BACKLOG_FREQUENCY = None
 BACKLOG_STARTUP = False
 
-DEFAULT_AUTOPOSTPROCESSER_FREQUENCY = 10
+DEFAULT_AUTOPOSTPROCESSOR_FREQUENCY = 10
 DEFAULT_RECENTSEARCH_FREQUENCY = 40
 DEFAULT_BACKLOG_FREQUENCY = 21
 DEFAULT_UPDATE_FREQUENCY = 1
 
-MIN_AUTOPOSTPROCESSER_FREQUENCY = 1
+MIN_AUTOPOSTPROCESSOR_FREQUENCY = 1
 MIN_RECENTSEARCH_FREQUENCY = 10
 MIN_BACKLOG_FREQUENCY = 2
 MAX_BACKLOG_FREQUENCY = 35
@@ -517,7 +518,7 @@ def initialize(consoleLogging=True):
             KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, MIN_RECENTSEARCH_FREQUENCY, DEFAULT_UPDATE_FREQUENCY, MIN_UPDATE_FREQUENCY, UPDATE_FREQUENCY, \
             showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, ZONEINFO_DIR, TIMEZONE_DISPLAY, \
             NAMING_PATTERN, NAMING_MULTI_EP, NAMING_ANIME_MULTI_EP, NAMING_FORCE_FOLDERS, NAMING_ABD_PATTERN, NAMING_CUSTOM_ABD, NAMING_SPORTS_PATTERN, NAMING_CUSTOM_SPORTS, NAMING_ANIME_PATTERN, NAMING_CUSTOM_ANIME, NAMING_STRIP_YEAR, \
-            RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcesserScheduler, \
+            RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcessorScheduler, \
             providerList, newznabProviderList, torrentRssProviderList, \
             EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, RECENTSEARCH_FREQUENCY, \
             USE_BOXCAR2, BOXCAR2_ACCESSTOKEN, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_SOUND, \
@@ -530,9 +531,9 @@ def initialize(consoleLogging=True):
             GUI_NAME, DEFAULT_HOME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, EPISODE_VIEW_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
             POSTER_SORTBY, POSTER_SORTDIR, \
             METADATA_WDTV, METADATA_TIVO, METADATA_MEDE8ER, IGNORE_WORDS, REQUIRE_WORDS, CALENDAR_UNPROTECTED, CREATE_MISSING_SHOW_DIRS, \
-            ADD_SHOWS_WO_DIR, USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_HISTORY, SUBTITLES_FINDER_FREQUENCY, subtitlesFinderScheduler, \
+            ADD_SHOWS_WO_DIR, USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_HISTORY, SUBTITLES_FINDER_FREQUENCY, subtitlesFinderScheduler, scene_mappings_update_scheduler, \
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
-            AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
+            AUTOPOSTPROCESSOR_FREQUENCY, DEFAULT_AUTOPOSTPROCESSOR_FREQUENCY, MIN_AUTOPOSTPROCESSOR_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, ANIME_TREAT_AS_HDTV, \
             COOKIE_SECRET, USE_IMDB_INFO, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS, \
@@ -733,10 +734,10 @@ def initialize(consoleLogging=True):
 
         USENET_RETENTION = check_setting_int(CFG, 'General', 'usenet_retention', 500)
 
-        AUTOPOSTPROCESSER_FREQUENCY = check_setting_int(CFG, 'General', 'autopostprocesser_frequency',
-                                                        DEFAULT_AUTOPOSTPROCESSER_FREQUENCY)
-        if AUTOPOSTPROCESSER_FREQUENCY < MIN_AUTOPOSTPROCESSER_FREQUENCY:
-            AUTOPOSTPROCESSER_FREQUENCY = MIN_AUTOPOSTPROCESSER_FREQUENCY
+        AUTOPOSTPROCESSOR_FREQUENCY = check_setting_int(CFG, 'General', 'autopostprocesser_frequency',
+                                                        DEFAULT_AUTOPOSTPROCESSOR_FREQUENCY)
+        if AUTOPOSTPROCESSOR_FREQUENCY < MIN_AUTOPOSTPROCESSOR_FREQUENCY:
+            AUTOPOSTPROCESSOR_FREQUENCY = MIN_AUTOPOSTPROCESSOR_FREQUENCY
 
         RECENTSEARCH_FREQUENCY = check_setting_int(CFG, 'General', 'recentsearch_frequency',
                                                    DEFAULT_RECENTSEARCH_FREQUENCY)
@@ -1184,10 +1185,10 @@ def initialize(consoleLogging=True):
                                                     prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
 
         # processors
-        autoPostProcesserScheduler = scheduler.Scheduler(auto_post_processer.PostProcesser(),
+        autoPostProcessorScheduler = scheduler.Scheduler(auto_post_processor.PostProcessor(),
                                                          cycleTime=datetime.timedelta(
-                                                             minutes=AUTOPOSTPROCESSER_FREQUENCY),
-                                                         threadName='POSTPROCESSER',
+                                                             minutes=AUTOPOSTPROCESSOR_FREQUENCY),
+                                                         threadName='POSTPROCESSOR',
                                                          silent=not PROCESS_AUTOMATICALLY)
 
         traktCheckerScheduler = scheduler.Scheduler(traktChecker.TraktChecker(),
@@ -1200,6 +1201,12 @@ def initialize(consoleLogging=True):
                                                        threadName='FINDSUBTITLES',
                                                        silent=not USE_SUBTITLES)
 
+        scene_mappings_update_scheduler = scheduler.Scheduler(scene_exceptions.SceneMappingsUpdate(),
+                                                              cycleTime=datetime.timedelta(hours=2),
+                                                              threadName='SCENEMAPPINGS',
+                                                              silent=False
+                                                              )
+
         showList = []
         loadingShowList = {}
 
@@ -1210,9 +1217,9 @@ def initialize(consoleLogging=True):
 def start():
     global __INITIALIZED__, backlogSearchScheduler, \
         showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
-        properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
+        properFinderScheduler, autoPostProcessorScheduler, searchQueueScheduler, \
         subtitlesFinderScheduler, USE_SUBTITLES, traktCheckerScheduler, \
-        recentSearchScheduler, events, started
+        recentSearchScheduler, scene_mappings_update_scheduler, events, started
 
     with INIT_LOCK:
         if __INITIALIZED__:
@@ -1243,7 +1250,7 @@ def start():
 
             # start the proper finder
             if PROCESS_AUTOMATICALLY:
-                autoPostProcesserScheduler.start()
+                autoPostProcessorScheduler.start()
 
             # start the subtitles finder
             if USE_SUBTITLES:
@@ -1253,15 +1260,18 @@ def start():
             #if USE_TRAKT:
                 #traktCheckerScheduler.start()
 
+            # start the scene exception update checker
+            scene_mappings_update_scheduler.start()
+
             started = True
 
 
 def halt():
     global __INITIALIZED__, backlogSearchScheduler, \
         showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
-        properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
+        properFinderScheduler, autoPostProcessorScheduler, searchQueueScheduler, \
         subtitlesFinderScheduler, traktCheckerScheduler, \
-        recentSearchScheduler, events, started
+        recentSearchScheduler, scene_mappings_update_scheduler, events, started
 
     with INIT_LOCK:
 
@@ -1319,10 +1329,10 @@ def halt():
                 pass
 
             if PROCESS_AUTOMATICALLY:
-                autoPostProcesserScheduler.stop.set()
-                logger.log(u'Waiting for the POSTPROCESSER thread to exit')
+                autoPostProcessorScheduler.stop.set()
+                logger.log(u'Waiting for the POSTPROCESSOR thread to exit')
                 try:
-                    autoPostProcesserScheduler.join(10)
+                    autoPostProcessorScheduler.join(10)
                 except:
                     pass
 
@@ -1362,6 +1372,13 @@ def halt():
                     ADBA_CONNECTION.join(10)
                 except:
                     pass
+
+            scene_mappings_update_scheduler.stop.set()
+            logger.log(u'Waiting for the SCENEMAPPINGS thread to exit')
+            try:
+                scene_mappings_update_scheduler.join(10)
+            except:
+                pass
 
             __INITIALIZED__ = False
             started = False
@@ -1432,7 +1449,7 @@ def save_config():
     new_config['General']['nzb_method'] = NZB_METHOD
     new_config['General']['torrent_method'] = TORRENT_METHOD
     new_config['General']['usenet_retention'] = int(USENET_RETENTION)
-    new_config['General']['autopostprocesser_frequency'] = int(AUTOPOSTPROCESSER_FREQUENCY)
+    new_config['General']['autopostprocesser_frequency'] = int(AUTOPOSTPROCESSOR_FREQUENCY)
     new_config['General']['recentsearch_frequency'] = int(RECENTSEARCH_FREQUENCY)
     new_config['General']['backlog_frequency'] = int(BACKLOG_FREQUENCY)
     new_config['General']['update_frequency'] = int(UPDATE_FREQUENCY)

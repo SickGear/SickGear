@@ -1438,7 +1438,7 @@ class TVEpisode(object):
 
     def refreshSubtitles(self):
         """Look for subtitles files and refresh the subtitles property"""
-        self.subtitles = subtitles.subtitlesLanguages(self.location)
+        self.subtitles = subtitles.subtitles_languages(self.location)
 
     def downloadSubtitles(self, force=False):
         # TODO: Add support for force option
@@ -1455,7 +1455,7 @@ class TVEpisode(object):
         try:
             need_languages = set(sickbeard.SUBTITLES_LANGUAGES) - set(self.subtitles)
             subtitles = subliminal.download_subtitles([self.location], languages=need_languages,
-                                                      services=sickbeard.subtitles.getEnabledServiceList(), force=force,
+                                                      services=sickbeard.subtitles.get_enabled_service_list(), force=force,
                                                       multi=True, cache_dir=sickbeard.CACHE_DIR)
 
             if sickbeard.SUBTITLES_DIR:

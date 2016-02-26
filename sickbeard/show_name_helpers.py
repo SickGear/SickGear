@@ -22,9 +22,11 @@ import re
 import datetime
 
 import sickbeard
+import sickbeard.scene_exceptions
 from sickbeard import common
 from sickbeard.helpers import sanitizeSceneName
-from sickbeard.scene_exceptions import get_scene_exceptions
+#from sickbeard.scene_exceptions import get_scene_exceptions
+
 from sickbeard import logger
 from sickbeard import db
 from sickbeard import encodingKludge as ek

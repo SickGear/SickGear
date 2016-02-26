@@ -20,16 +20,18 @@ import datetime
 import threading
 
 from sickbeard import logger
+from sickbeard.scheduler import Job
 
 
-class QueuePriorities:
+class QueuePriorities(object):
     LOW = 10
     NORMAL = 20
     HIGH = 30
 
 
-class GenericQueue(object):
+class GenericQueue(Job):
     def __init__(self):
+        super(GenericQueue, self).__init__(self.queue_task, silent=True, kwargs={}, thread_lock=True)
 
         self.currentItem = None
 
@@ -39,15 +41,13 @@ class GenericQueue(object):
 
         self.min_priority = 0
 
-        self.lock = threading.Lock()
-
     def pause(self):
         logger.log(u'Pausing queue')
         if self.lock:
             self.min_priority = 999999999999
 
     def unpause(self):
-        logger.log(u'Unpausing queue')
+        logger.log(u'Un-pausing queue')
         with self.lock:
             self.min_priority = 0
 
@@ -58,7 +58,7 @@ class GenericQueue(object):
 
             return item
 
-    def run(self, force=False):
+    def queue_task(self):
 
         # only start a new task if one isn't already going
         with self.lock:
@@ -96,6 +96,7 @@ class GenericQueue(object):
                     if not self.queue_name == 'SEARCHQUEUE':
                         self.currentItem.name = self.queue_name + '-' + self.currentItem.name
                     self.currentItem.start()
+
 
 class QueueItem(threading.Thread):
     def __init__(self, name, action_id=0):

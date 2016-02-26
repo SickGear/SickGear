@@ -19,16 +19,15 @@
 from __future__ import with_statement
 
 import datetime
-import threading
 
 import sickbeard
 
-from sickbeard import db, scheduler, helpers
+from sickbeard import db, scheduler
 from sickbeard import search_queue
 from sickbeard import logger
 from sickbeard import ui
-from sickbeard import common
 from sickbeard.search import wanted_episodes
+from sickbeard.scheduler import Job
 
 NORMAL_BACKLOG = 0
 LIMITED_BACKLOG = 10
@@ -48,13 +47,12 @@ class BacklogSearchScheduler(scheduler.Scheduler):
             return datetime.date.fromordinal(self.action._lastBacklog + self.action.cycleTime)
 
 
-class BacklogSearcher:
+class BacklogSearcher(Job):
     def __init__(self):
+        super(BacklogSearcher, self).__init__(self.queue_task, kwargs={}, thread_lock=True)
 
         self._lastBacklog = self._get_lastBacklog()
         self.cycleTime = sickbeard.BACKLOG_FREQUENCY
-        self.lock = threading.Lock()
-        self.amActive = False
         self.amPaused = False
         self.amWaiting = False
         self.forcetype = NORMAL_BACKLOG
@@ -76,10 +74,6 @@ class BacklogSearcher:
         return (not self.amWaiting) and self.amActive
 
     def search_backlog(self, which_shows=None, force_type=NORMAL_BACKLOG):
-
-        if self.amActive:
-            logger.log(u'Backlog is still running, not starting it again', logger.DEBUG)
-            return
 
         if which_shows:
             show_list = which_shows
@@ -103,7 +97,6 @@ class BacklogSearcher:
         if not which_shows and force_type != NORMAL_BACKLOG:
             forced = True
 
-        self.amActive = True
         self.amPaused = False
 
         # go through non air-by-date shows and see if they need any episodes
@@ -128,7 +121,6 @@ class BacklogSearcher:
             self._set_lastBacklog(curDate)
             self._get_lastBacklog()
 
-        self.amActive = False
         self._resetPI()
 
     def _get_lastBacklog(self):
@@ -162,11 +154,11 @@ class BacklogSearcher:
         else:
             myDB.action('UPDATE info SET last_backlog=' + str(when))
 
-    def run(self):
+    def queue_task(self):
+
         try:
             force_type = self.forcetype
             self.forcetype = NORMAL_BACKLOG
             self.search_backlog(force_type=force_type)
         except:
-            self.amActive = False
             raise

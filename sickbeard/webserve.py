@@ -53,6 +53,7 @@ from sickbeard.name_cache import buildNameCache
 from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
 from sickbeard.search_backlog import FULL_BACKLOG, LIMITED_BACKLOG
+from sickbeard.scheduler import Scheduler
 from tornado import gen
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from lib import adba
@@ -1088,6 +1089,9 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
+        if self.maybe_ignore('Shutdown'):
+            return
+
         sickbeard.events.put(sickbeard.events.SystemEvent.SHUTDOWN)
 
         title = 'Shutting down'
@@ -1100,6 +1104,9 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
+        if self.maybe_ignore('Restart'):
+            return
+
         t = PageTemplate(headers=self.request.headers, file='restart.tmpl')
         t.submenu = self.HomeMenu()
 
@@ -1107,6 +1114,17 @@ class Home(MainHandler):
         sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
 
         return t.respond()
+
+    def maybe_ignore(self, task):
+        response = Scheduler.active_jobs()
+        if response:
+            task and logger.log('%s aborted because %s' % (task, response.lower()), logger.DEBUG)
+
+            self.redirect(self.request.headers['Referer'])
+            if task:
+                ui.notifications.message(u'Fail %s because %s, please try later' % (task.lower(), response.lower()))
+                return True
+        return False
 
     def update(self, pid=None):
 
@@ -2165,6 +2183,12 @@ class HomePostProcess(Home):
 
             return self._genericMessage('Postprocessing results', u'<pre>%s</pre>' % result)
 
+    def process_dir(self, *args, **kwargs):
+        # force a check to see if there is a new version
+        if sickbeard.versionCheckScheduler.action.check_for_new_version(force=True):
+            logger.log(u'Forcing version check')
+
+        self.redirect('/home/')
 
 class NewHomeAddShows(Home):
     def index(self, *args, **kwargs):
@@ -3183,8 +3207,8 @@ class Manage(MainHandler):
         result = {}
         for cur_result in cur_show_results:
             if whichSubs == 'all':
-                if len(set(cur_result['subtitles'].split(',')).intersection(set(subtitles.wantedLanguages()))) >= len(
-                        subtitles.wantedLanguages()):
+                if len(set(cur_result['subtitles'].split(',')).intersection(set(subtitles.wanted_languages()))) >= len(
+                        subtitles.wanted_languages()):
                     continue
             elif whichSubs in cur_result['subtitles'].split(','):
                 continue
@@ -3225,7 +3249,7 @@ class Manage(MainHandler):
         for cur_status_result in status_results:
             if whichSubs == 'all':
                 if len(set(cur_status_result['subtitles'].split(',')).intersection(
-                        set(subtitles.wantedLanguages()))) >= len(subtitles.wantedLanguages()):
+                        set(subtitles.wanted_languages()))) >= len(subtitles.wanted_languages()):
                     continue
             elif whichSubs in cur_status_result['subtitles'].split(','):
                 continue
@@ -4252,7 +4276,7 @@ class ConfigPostProcessing(Config):
                            delete_failed=None, extra_scripts=None, skip_removed_files=None,
                            naming_custom_sports=None, naming_sports_pattern=None,
                            naming_custom_anime=None, naming_anime_pattern=None, naming_anime_multi_ep=None,
-                           autopostprocesser_frequency=None):
+                           autopostprocessor_frequency=None):
 
         results = []
 
@@ -4261,19 +4285,19 @@ class ConfigPostProcessing(Config):
 
         new_val = config.checkbox_to_value(process_automatically)
         if new_val != sickbeard.PROCESS_AUTOMATICALLY:
-            if not sickbeard.PROCESS_AUTOMATICALLY and not sickbeard.autoPostProcesserScheduler.ident:
+            if not sickbeard.PROCESS_AUTOMATICALLY and not sickbeard.autoPostProcessorScheduler.ident:
                 try:
-                    sickbeard.autoPostProcesserScheduler.start()
+                    sickbeard.autoPostProcessorScheduler.start()
                 except:
                     pass
             sickbeard.PROCESS_AUTOMATICALLY = new_val
 
-        config.change_AUTOPOSTPROCESSER_FREQUENCY(autopostprocesser_frequency)
+        config.change_AUTOPOSTPROCESSOR_FREQUENCY(autopostprocessor_frequency)
 
         if sickbeard.PROCESS_AUTOMATICALLY:
-            sickbeard.autoPostProcesserScheduler.silent = False
+            sickbeard.autoPostProcessorScheduler.silent = False
         else:
-            sickbeard.autoPostProcesserScheduler.silent = True
+            sickbeard.autoPostProcessorScheduler.silent = True
 
         if unpack:
             if self.isRarSupported() != 'not supported':
@@ -5174,7 +5198,7 @@ class ConfigSubtitles(Config):
                 pass
 
         sickbeard.USE_SUBTITLES = config.checkbox_to_value(use_subtitles)
-        sickbeard.SUBTITLES_LANGUAGES = [lang.alpha2 for lang in subtitles.isValidLanguage(
+        sickbeard.SUBTITLES_LANGUAGES = [lang.alpha2 for lang in subtitles.is_valid_language(
             subtitles_languages.replace(' ', '').split(','))] if subtitles_languages != '' else ''
         sickbeard.SUBTITLES_DIR = subtitles_dir
         sickbeard.SUBTITLES_HISTORY = config.checkbox_to_value(subtitles_history)

@@ -21,6 +21,7 @@ import time
 import threading
 import traceback
 
+import sickbeard
 from sickbeard import logger
 from sickbeard.exceptions import ex
 
@@ -100,3 +101,56 @@ class Scheduler(threading.Thread):
 
         # exiting thread
         self.stop.clear()
+
+    @staticmethod
+    def active_jobs():
+
+        job_report = []
+        if sickbeard.autoPostProcessorScheduler.action.amActive:
+            job_report.append('Post-Processing media')
+
+        if sickbeard.showUpdateScheduler.action.amActive:
+            job_report.append('%spdating shows data' % ('U', 'u')[len(job_report)])
+
+        if len(job_report):
+            return '%s %s running' % (' and '.join(job_report), ('are', 'is')[1 == len(job_report)])
+
+        return False
+
+
+class Job(object):
+    """
+    The job class centralises tasks with states
+    """
+    def __init__(self, func, silent=False, thread_lock=False, args=(), kwargs=None):
+
+        self._func = func
+        self._silent = silent
+        self._args = args
+        self._kwargs = (kwargs, {})[None is kwargs]
+
+        if thread_lock:
+            self.lock = threading.Lock()
+
+        self.amActive = False
+
+    def run(self):
+
+        if self.amActive and self.__class__.__name__.lower() in ('backlogsearcher', 'postprocessor'):
+            logger.log(u'%s is still running, not starting it again' % self.__class__.__name__)
+            return
+
+        if self._func:
+            result, re_raise = None, False
+            try:
+                self.amActive = True
+                result = self._func(*self._args, **self._kwargs)
+            except:
+                re_raise = True
+            finally:
+                self.amActive = False
+                not self._silent and logger.log(u'%s(%s) completed' % (self.__class__.__name__, self._func.__name__))
+                if re_raise:
+                    raise
+
+            return result

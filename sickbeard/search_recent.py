@@ -18,20 +18,16 @@
 
 from __future__ import with_statement
 
-import threading
 import sickbeard
+from sickbeard.scheduler import Job
 
 
-class RecentSearcher():
+class RecentSearcher(Job):
     def __init__(self):
-        self.lock = threading.Lock()
-        self.amActive = False
+        super(RecentSearcher, self).__init__(self.queue_task, kwargs={}, thread_lock=True)
 
-    def run(self):
-
-        self.amActive = True
+    @staticmethod
+    def queue_task():
 
         recentsearch_queue_item = sickbeard.search_queue.RecentSearchQueueItem()
         sickbeard.searchQueueScheduler.action.add_item(recentsearch_queue_item)
-
-        self.amActive = False

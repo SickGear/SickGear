@@ -364,8 +364,8 @@ class SickGear(object):
         network_timezones.update_network_dict()
 
         # load all ids from xem
-        startup_background_tasks = threading.Thread(name='FETCH-XEMDATA', target=sickbeard.scene_exceptions.get_xem_ids)
-        startup_background_tasks.start()
+#        startup_background_tasks = threading.Thread(name='FETCH-XEMDATA', target=sickbeard.scene_exceptions.get_xem_ids)
+#        startup_background_tasks.start()
 
         # sure, why not?
         if sickbeard.USE_FAILED_DOWNLOADS:

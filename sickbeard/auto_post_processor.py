@@ -21,28 +21,25 @@ import os.path
 import sickbeard
 from sickbeard import logger, processTV
 from sickbeard import encodingKludge as ek
+from sickbeard.scheduler import Job
 
 
-class PostProcesser():
+class PostProcessor(Job):
     def __init__(self):
-        self.amActive = False
+        super(PostProcessor, self).__init__(self.main_task, kwargs={})
 
-    def run(self):
-        if not sickbeard.PROCESS_AUTOMATICALLY:
-            return
+    @staticmethod
+    def main_task():
 
-        self.amActive = True
+        if sickbeard.PROCESS_AUTOMATICALLY:
 
-        if not ek.ek(os.path.isdir, sickbeard.TV_DOWNLOAD_DIR):
-            logger.log(u"Automatic post-processing attempted but dir %s doesn't exist" % sickbeard.TV_DOWNLOAD_DIR,
-                       logger.ERROR)
-            return
+            if not ek.ek(os.path.isdir, sickbeard.TV_DOWNLOAD_DIR):
+                logger.log(u'Automatic post-processing attempted but dir %s does not exist' % sickbeard.TV_DOWNLOAD_DIR,
+                           logger.ERROR)
 
-        if not ek.ek(os.path.isabs, sickbeard.TV_DOWNLOAD_DIR):
-            logger.log(u'Automatic post-processing attempted but dir %s is relative '
-                       '(and probably not what you really want to process)' % sickbeard.TV_DOWNLOAD_DIR, logger.ERROR)
-            return
+            elif not ek.ek(os.path.isabs, sickbeard.TV_DOWNLOAD_DIR):
+                logger.log(u'Automatic post-processing attempted but dir %s is relative '
+                           '(and probably not what you really want to process)' % sickbeard.TV_DOWNLOAD_DIR, logger.ERROR)
 
-        processTV.processDir(sickbeard.TV_DOWNLOAD_DIR)
-
-        self.amActive = False
+            else:
+                processTV.processDir(sickbeard.TV_DOWNLOAD_DIR)

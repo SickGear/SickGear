@@ -18,7 +18,7 @@
   	\$(document).ready(function() {
 		\$("#subtitles_languages").tokenInput(
 				[
-	                <%=",\r\n".join("{id: \"" + lang[2] + "\", name: \"" + lang[3] + "\"}" for lang in subtitles.subtitleLanguageFilter())%>
+	                <%=",\r\n".join("{id: \"" + lang[2] + "\", name: \"" + lang[3] + "\"}" for lang in subtitles.subtitle_language_filter())%>
 	            ],
 	            {
 					method: "POST",
@@ -28,7 +28,7 @@
 
 		            		[
 		            			<%=
-		            					",\r\n".join("{id: \"" + lang + "\", name: \"" + subtitles.getLanguageName(lang) + "\"}" for lang in sickbeard.SUBTITLES_LANGUAGES) if sickbeard.SUBTITLES_LANGUAGES != '' else ''
+		            					",\r\n".join("{id: \"" + lang + "\", name: \"" + subtitles.get_language_name(lang) + "\"}" for lang in sickbeard.SUBTITLES_LANGUAGES) if sickbeard.SUBTITLES_LANGUAGES != '' else ''
 		            			%>
 		            		]
 	            }
@@ -121,7 +121,7 @@
 
                     <fieldset class="component-group-list" style="margin-left: 50px; margin-top:36px">
                         <ul id="service_order_list">
-                        #for $curService in $sickbeard.subtitles.sortedServiceList():
+                        #for $curService in $sickbeard.subtitles.sorted_service_list():
                             #set $curName = $curService.id
                           <li class="ui-state-default" id="$curName">
                             <input type="checkbox" id="enable_$curName" class="service_enabler" #if $curService.enabled then "checked=\"checked\"" else ""#/>
@@ -135,7 +135,7 @@
                           </li>
                         #end for
                         </ul>
-                        <input type="hidden" name="service_order" id="service_order" value="<%=" ".join([x.get('id')+':'+str(int(x.get('enabled'))) for x in sickbeard.subtitles.sortedServiceList()])%>"/>
+                        <input type="hidden" name="service_order" id="service_order" value="<%=" ".join([x.get('id')+':'+str(int(x.get('enabled'))) for x in sickbeard.subtitles.sorted_service_list()])%>"/>
                         
                         <br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
                     </fieldset>

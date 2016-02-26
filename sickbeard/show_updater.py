@@ -17,26 +17,19 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
-import os
 
 import sickbeard
 
-from sickbeard import logger
-from sickbeard import exceptions
-from sickbeard import ui
 from sickbeard.exceptions import ex
-from sickbeard import encodingKludge as ek
-from sickbeard import db
-from sickbeard import network_timezones
-from sickbeard import failed_history
+from sickbeard import (db, exceptions, logger, network_timezones, failed_history, ui)
+from sickbeard.scheduler import Job
 
-class ShowUpdater():
+class ShowUpdater(Job):
     def __init__(self):
-        self.amActive = False
+        super(ShowUpdater, self).__init__(self.queue_task, kwargs={})
 
-    def run(self, force=False):
-
-        self.amActive = True
+    @staticmethod
+    def queue_task():
 
         try:
             update_datetime = datetime.datetime.now()
@@ -46,10 +39,10 @@ class ShowUpdater():
             network_timezones.update_network_dict()
 
             # update xem id lists
-            sickbeard.scene_exceptions.get_xem_ids()
+#            sickbeard.scene_exceptions.get_xem_ids()
 
             # update scene exceptions
-            sickbeard.scene_exceptions.retrieve_exceptions()
+#            sickbeard.scene_exceptions.retrieve_exceptions()
 
             # sure, why not?
             if sickbeard.USE_FAILED_DOWNLOADS:
@@ -104,8 +97,8 @@ class ShowUpdater():
 
             logger.log(u'Added all shows to show queue for full update')
 
-        finally:
-            self.amActive = False
+        except:
+            pass
 
     def __del__(self):
         pass

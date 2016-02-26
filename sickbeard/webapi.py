@@ -39,7 +39,7 @@ from sickbeard.exceptions import ex
 from sickbeard.common import SNATCHED, SNATCHED_PROPER, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
 from sickbeard.helpers import remove_article
 from common import Quality, qualityPresetStrings, statusStrings
-from sickbeard.webserve import MainHandler
+from sickbeard.scheduler import Scheduler
 
 try:
     import json
@@ -1587,6 +1587,11 @@ class CMD_SickBeardRestart(ApiCall):
 
     def run(self):
         """ restart sickbeard """
+        response = Scheduler.active_jobs()
+        if response:
+            msg = 'Restart aborted from API because %s' % response.lower()
+            logger.log(msg, logger.DEBUG)
+            return _responds(RESULT_FAILURE, msg=msg)
         sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
         return _responds(RESULT_SUCCESS, msg="SickGear is restarting...")
 
@@ -1764,6 +1769,12 @@ class CMD_SickBeardShutdown(ApiCall):
 
     def run(self):
         """ shutdown sickbeard """
+        response = Scheduler.active_jobs()
+        if response:
+            msg = 'Shutdown aborted from API because %s' % response.lower()
+            logger.log(msg, logger.DEBUG)
+            return _responds(RESULT_FAILURE, msg=msg)
+
         sickbeard.events.put(sickbeard.events.SystemEvent.SHUTDOWN)
         return _responds(RESULT_SUCCESS, msg="SickGear is shutting down...")
 

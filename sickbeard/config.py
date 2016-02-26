@@ -147,13 +147,13 @@ def change_TV_DOWNLOAD_DIR(tv_download_dir):
     return True
 
 
-def change_AUTOPOSTPROCESSER_FREQUENCY(freq):
-    sickbeard.AUTOPOSTPROCESSER_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_AUTOPOSTPROCESSER_FREQUENCY)
+def change_AUTOPOSTPROCESSOR_FREQUENCY(freq):
+    sickbeard.AUTOPOSTPROCESSOR_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_AUTOPOSTPROCESSOR_FREQUENCY)
 
-    if sickbeard.AUTOPOSTPROCESSER_FREQUENCY < sickbeard.MIN_AUTOPOSTPROCESSER_FREQUENCY:
-        sickbeard.AUTOPOSTPROCESSER_FREQUENCY = sickbeard.MIN_AUTOPOSTPROCESSER_FREQUENCY
+    if sickbeard.AUTOPOSTPROCESSOR_FREQUENCY < sickbeard.MIN_AUTOPOSTPROCESSOR_FREQUENCY:
+        sickbeard.AUTOPOSTPROCESSOR_FREQUENCY = sickbeard.MIN_AUTOPOSTPROCESSOR_FREQUENCY
 
-    sickbeard.autoPostProcesserScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.AUTOPOSTPROCESSER_FREQUENCY)
+    sickbeard.autoPostProcessorScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.AUTOPOSTPROCESSOR_FREQUENCY)
 
 
 def change_RECENTSEARCH_FREQUENCY(freq):

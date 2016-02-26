@@ -557,7 +557,7 @@
         #end if
     #end if
 
-    #if $sickbeard.USE_SUBTITLES and $show.subtitles and len(set(str($epResult['subtitles']).split(',')).intersection(set($subtitles.wantedLanguages()))) < len($subtitles.wantedLanguages()) and $epResult['location']
+    #if $sickbeard.USE_SUBTITLES and $show.subtitles and len(set(str($epResult['subtitles']).split(',')).intersection(set($subtitles.wanted_languages()))) < len($subtitles.wanted_languages()) and $epResult['location']
 			<a class="epSubtitlesSearch" href="searchEpisodeSubtitles?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/closed_captioning.png" height="16" alt="search subtitles" title="Search subtitles" /></a>
     #end if
 		</td>

@@ -122,4 +122,4 @@ class indexerApi(object):
 
 
 def get_xem_supported_indexers():
-    return dict((key, value) for (key, value) in indexerConfig.items() if value['xem_origin'])
+    return dict((key, value) for (key, value) in indexerConfig.items() if 'xem_origin' in value and value['xem_origin'])

@@ -18,20 +18,15 @@
 
 from __future__ import with_statement
 
-import threading
 import sickbeard
+from sickbeard.scheduler import Job
 
-
-class ProperSearcher:
+class ProperSearcher(Job):
     def __init__(self):
-        self.lock = threading.Lock()
-        self.amActive = False
+        super(ProperSearcher, self).__init__(self.queue_task, kwargs={}, thread_lock=True)
 
-    def run(self):
-
-        self.amActive = True
+    @staticmethod
+    def queue_task():
 
         propersearch_queue_item = sickbeard.search_queue.ProperSearchQueueItem()
         sickbeard.searchQueueScheduler.action.add_item(propersearch_queue_item)
-
-        self.amActive = False
