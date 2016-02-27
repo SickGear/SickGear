@@ -14,6 +14,7 @@ class RSSFeeds:
     def __init__(self, provider=None):
 
         self.provider = provider
+        self.response = None
 
     def _check_auth_cookie(self):
 
@@ -21,7 +22,12 @@ class RSSFeeds:
             return self.provider.check_auth_cookie()
         return True
 
-    def get_feed(self, url, request_headers=None):
+    # noinspection PyUnusedLocal
+    def cb_response(self, r, *args, **kwargs):
+        self.response = dict(url=r.url, elapsed=r.elapsed, from_cache=r.from_cache)
+        return r
+
+    def get_feed(self, url, request_headers=None, **kwargs):
 
         if not self._check_auth_cookie():
             return
@@ -30,12 +36,14 @@ class RSSFeeds:
         if self.provider and hasattr(self.provider, 'session'):
             session = self.provider.session
 
-        response = helpers.getURL(url, headers=request_headers, session=session)
+        response = helpers.getURL(url, headers=request_headers, session=session,
+                                  hooks=dict(response=self.cb_response), **kwargs)
         if not response:
             return
 
         try:
             feed = feedparser.parse(response)
+            feed['rq_response'] = self.response
             if feed and 'entries' in feed:
                 return feed
 
