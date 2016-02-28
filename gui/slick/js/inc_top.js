@@ -21,7 +21,6 @@ function initActions() {
 	$('#SubMenu a:contains("General")').addClass('btn').html('<i class="sgicon-config"></i>General');
 	$('#SubMenu a:contains("Episode Status")').addClass('btn').html('<i class="sgicon-episodestatus"></i>Episode Status Management');
 	$('#SubMenu a:contains("Missed Subtitle")').addClass('btn').html('<i class="sgicon-subtitles"></i>Missed Subtitles');
-	$('#SubMenu a[href$="/home/addShows/"]').addClass('btn').html('<i class="sgicon-addshow"></i>Add Show');
 	$('#SubMenu a:contains("Processing")').addClass('btn').html('<i class="sgicon-postprocess"></i>Post-Processing');
 	$('#SubMenu a:contains("Manage Searches")').addClass('btn').html('<i class="sgicon-search"></i>Manage Searches');
 	$('#SubMenu a:contains("Manage Torrents")').addClass('btn').html('<i class="sgicon-bittorrent"></i>Manage Torrents');
@@ -40,4 +39,5 @@ $(document).ready(function(){
 	initActions();
 	$('#NAV' + topmenu).addClass('active');
 	$('.dropdown-toggle').dropdownHover();
+	(/undefined/i.test(document.createElement('input').placeholder)) && $('body').addClass('no-placeholders');
 });

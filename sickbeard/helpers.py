@@ -363,16 +363,14 @@ def make_dirs(path):
     parents
     """
 
-    logger.log(u"Checking if the path " + path + " already exists", logger.DEBUG)
-
     if not ek.ek(os.path.isdir, path):
         # Windows, create all missing folders
-        if os.name == 'nt' or os.name == 'ce':
+        if os.name in ('nt', 'ce'):
             try:
-                logger.log(u"Folder " + path + " doesn't exist, creating it", logger.DEBUG)
+                logger.log(u'Path %s doesn\'t exist, creating it' % path, logger.DEBUG)
                 ek.ek(os.makedirs, path)
             except (OSError, IOError) as e:
-                logger.log(u"Failed creating " + path + " : " + ex(e), logger.ERROR)
+                logger.log(u'Failed creating %s : %s' % (path, ex(e)), logger.ERROR)
                 return False
 
         # not Windows, create all missing folders and set permissions
@@ -389,14 +387,14 @@ def make_dirs(path):
                     continue
 
                 try:
-                    logger.log(u"Folder " + sofar + " doesn't exist, creating it", logger.DEBUG)
+                    logger.log(u'Path %s doesn\'t exist, creating it' % sofar, logger.DEBUG)
                     ek.ek(os.mkdir, sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
                     chmodAsParent(ek.ek(os.path.normpath, sofar))
                     # do the library update for synoindex
                     notifiers.synoindex_notifier.addFolder(sofar)
                 except (OSError, IOError) as e:
-                    logger.log(u"Failed creating " + sofar + " : " + ex(e), logger.ERROR)
+                    logger.log(u'Failed creating %s : %s' % (sofar, ex(e)), logger.ERROR)
                     return False
 
     return True
@@ -799,6 +797,18 @@ def md5_for_file(filename, block_size=2 ** 16):
         return None
 
 
+def md5_for_text(text):
+    result = None
+    try:
+        md5 = hashlib.md5()
+        md5.update(str(text))
+        raw_md5 = md5.hexdigest()
+        result = raw_md5[17:] + raw_md5[9:17] + raw_md5[0:9]
+    except (StandardError, Exception):
+        pass
+    return result
+
+
 def get_lan_ip():
     """
     Simple function to get LAN localhost_ip
@@ -959,6 +969,7 @@ def validateShow(show, season=None, episode=None):
 
     try:
         lINDEXER_API_PARMS = sickbeard.indexerApi(show.indexer).api_params.copy()
+        lINDEXER_API_PARMS['dvdorder'] = 0 != show.dvdorder
 
         if indexer_lang and not indexer_lang == 'en':
             lINDEXER_API_PARMS['language'] = indexer_lang

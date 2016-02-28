@@ -22,6 +22,7 @@ from __future__ import with_statement
 import base64
 import datetime
 import dateutil.parser
+import glob
 import itertools
 import os
 import random
@@ -78,20 +79,18 @@ except ImportError:
 class PageTemplate(Template):
     def __init__(self, headers, *args, **kwargs):
 
-        self.sbHost = (re.match('(?msx)^' + (('[^:]+', '\[.*\]')['[' == headers['Host'][0]]), headers['Host']).group(0),
-                       headers.get('X-Forwarded-Host', ''))['X-Forwarded-Host' in headers]
+        self.sbHost = headers.get('X-Forwarded-Host')
+        if None is self.sbHost:
+            sbHost = headers.get('Host') or 'localhost'
+            self.sbHost = re.match('(?msx)^' + (('[^:]+', '\[.*\]')['[' == sbHost[0]]), sbHost).group(0)
         self.sbHttpPort = sickbeard.WEB_PORT
-        self.sbHttpsPort = (self.sbHttpPort, headers.get('X-Forwarded-Port', ''))['X-Forwarded-Port' in headers]
+        self.sbHttpsPort = headers.get('X-Forwarded-Port') or self.sbHttpPort
         self.sbRoot = sickbeard.WEB_ROOT
-        self.sbHttpsEnabled = (sickbeard.ENABLE_HTTPS, 'https' == headers.get('X-Forwarded-Proto', ''))[
-            'X-Forwarded-Proto' in headers]
+        self.sbHttpsEnabled = 'https' == headers.get('X-Forwarded-Proto') or sickbeard.ENABLE_HTTPS
         self.sbHandleReverseProxy = sickbeard.HANDLE_REVERSE_PROXY
         self.sbThemeName = sickbeard.THEME_NAME
 
-        log_page_title = 'Logs &amp; Errors'
-        if len(classes.ErrorViewer.errors):
-            log_page_title += ' (%s)' % len(classes.ErrorViewer.errors)
-        self.logPageTitle = log_page_title
+        self.log_num_errors = len(classes.ErrorViewer.errors)
         self.sbPID = str(sickbeard.PID)
         self.menu = [
             {'title': 'Home', 'key': 'home'},
@@ -99,7 +98,6 @@ class PageTemplate(Template):
             {'title': 'History', 'key': 'history'},
             {'title': 'Manage', 'key': 'manage'},
             {'title': 'Config', 'key': 'config'},
-            {'title': log_page_title, 'key': 'errorlogs'},
         ]
 
         kwargs['file'] = os.path.join(sickbeard.PROG_DIR, 'gui/%s/interfaces/default/' %
@@ -133,30 +131,34 @@ class BaseHandler(RequestHandler):
 
     def get_current_user(self, *args, **kwargs):
         if sickbeard.WEB_USERNAME or sickbeard.WEB_PASSWORD:
-            return self.get_secure_cookie('sickgear-session')
-        else:
-            return True
+            return self.get_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT))
+        return True
 
     def showPoster(self, show=None, which=None, api=None):
         # Redirect initial poster/banner thumb to default images
-        if which[0:6] == 'poster':
+        if 'poster' == which[0:6]:
             default_image_name = 'poster.png'
-        else:
+        elif 'banner' == which[0:6]:
             default_image_name = 'banner.png'
+        else:
+            default_image_name = 'backart.png'
 
         static_image_path = os.path.join('/images', default_image_name)
         if show and sickbeard.helpers.findCertainShow(sickbeard.showList, int(show)):
             cache_obj = image_cache.ImageCache()
 
             image_file_name = None
-            if which == 'poster':
+            if 'poster' == which:
                 image_file_name = cache_obj.poster_path(show)
-            if which == 'poster_thumb':
+            elif 'poster_thumb' == which:
                 image_file_name = cache_obj.poster_thumb_path(show)
-            if which == 'banner':
+            elif 'banner' == which:
                 image_file_name = cache_obj.banner_path(show)
-            if which == 'banner_thumb':
+            elif 'banner_thumb' == which:
                 image_file_name = cache_obj.banner_thumb_path(show)
+            elif 'fanart' == which[0:6]:
+                image_file_name = cache_obj.fanart_path('%s%s' % (
+                    show, re.sub('.*?fanart_(\d+(?:\.\w{1,20})?\.(?:\w{5,8})).*', r'.\1', which, 0, re.I)))
 
             if ek.ek(os.path.isfile, image_file_name):
                 static_image_path = image_file_name
@@ -188,7 +190,8 @@ class LoginHandler(BaseHandler):
 
         if (self.get_argument('username') == username) and (self.get_argument('password') == password):
             remember_me = int(self.get_argument('remember_me', default=0) or 0)
-            self.set_secure_cookie('sickgear-session', sickbeard.COOKIE_SECRET, expires_days=30 if remember_me > 0 else None)
+            self.set_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT),
+                                   sickbeard.COOKIE_SECRET, expires_days=30 if remember_me > 0 else None)
             self.redirect(self.get_argument('next', '/home/'))
         else:
             next_arg = '&next=' + self.get_argument('next', '/home/')
@@ -197,7 +200,7 @@ class LoginHandler(BaseHandler):
 
 class LogoutHandler(BaseHandler):
     def get(self, *args, **kwargs):
-        self.clear_cookie('sickgear-session')
+        self.clear_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT))
         self.redirect('/login/')
 
 
@@ -251,10 +254,10 @@ class CalendarHandler(BaseHandler):
                 ical += 'BEGIN:VEVENT%s' % crlf\
                     + 'DTSTART:%sT%sZ%s' % (air_date_time.strftime('%Y%m%d'), air_date_time.strftime('%H%M%S'), crlf)\
                     + 'DTEND:%sT%sZ%s' % (air_date_time_end.strftime('%Y%m%d'), air_date_time_end.strftime('%H%M%S'), crlf)\
-                    + 'SUMMARY:%s - %sx%s - %s%s' % (show['show_name'], str(episode['season']), str(episode['episode']), episode['name'], crlf)\
-                    + 'UID:%s-%s-%s-E%sS%s%s' % (appname, str(datetime.date.today().isoformat()), show['show_name'].replace(' ', '-'), str(episode['episode']), str(episode['season']), crlf)\
-                    + 'DESCRIPTION:%s on %s' % ((show['airs'] or '(Unknown airs)'), (show['network'] or 'Unknown network'))\
-                    + ('' if not episode['description'] else '%s%s' % (nl, episode['description'].splitlines()[0]))\
+                    + u'SUMMARY:%s - %sx%s - %s%s' % (show['show_name'], episode['season'], episode['episode'], episode['name'], crlf)\
+                    + u'UID:%s-%s-%s-E%sS%s%s' % (appname, datetime.date.today().isoformat(), show['show_name'].replace(' ', '-'), episode['episode'], episode['season'], crlf)\
+                    + u'DESCRIPTION:%s on %s' % ((show['airs'] or '(Unknown airs)'), (show['network'] or 'Unknown network'))\
+                    + ('' if not episode['description'] else u'%s%s' % (nl, episode['description'].splitlines()[0]))\
                     + '%sEND:VEVENT%s' % (crlf, crlf)
 
         # Ending the iCal
@@ -389,21 +392,6 @@ class MainHandler(WebHandler):
         sickbeard.POSTER_SORTDIR = int(direction)
         sickbeard.save_config()
 
-    def setHistoryLayout(self, layout):
-
-        if layout not in ('compact', 'detailed'):
-            layout = 'detailed'
-
-        sickbeard.HISTORY_LAYOUT = layout
-
-        self.redirect('/history/')
-
-    def toggleDisplayShowSpecials(self, show):
-
-        sickbeard.DISPLAY_SHOW_SPECIALS = not sickbeard.DISPLAY_SHOW_SPECIALS
-
-        self.redirect('/home/displayShow?show=' + show)
-
     def setEpisodeViewLayout(self, layout):
         if layout not in ('poster', 'banner', 'list', 'daybyday'):
             layout = 'banner'
@@ -424,6 +412,15 @@ class MainHandler(WebHandler):
         sickbeard.save_config()
 
         self.redirect('/episodeView/')
+
+    def setEpisodeViewCards(self, redir=0, *args, **kwargs):
+
+        sickbeard.EPISODE_VIEW_POSTERS = not sickbeard.EPISODE_VIEW_POSTERS
+
+        sickbeard.save_config()
+
+        if int(redir):
+            self.redirect('/episodeView/')
 
     def setEpisodeViewSort(self, sort, redir=1):
         if sort not in ('time', 'network', 'show'):
@@ -497,18 +494,40 @@ class MainHandler(WebHandler):
             return (remove_article(value.lower()), value.lower())[sickbeard.SORT_ARTICLE]
 
         # add localtime to the dict
+        cache_obj = image_cache.ImageCache()
+        t = PageTemplate(headers=self.request.headers, file='episodeView.tmpl')
+        t.fanart = {}
         for index, item in enumerate(sql_results):
             sql_results[index]['localtime'] = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(item['airdate'],
                                                                                        item['airs'], item['network']))
             sql_results[index]['data_show_name'] = value_maybe_article(item['show_name'])
             sql_results[index]['data_network'] = value_maybe_article(item['network'])
 
-        sql_results.sort(sorts[sickbeard.EPISODE_VIEW_SORT])
+            show_id = item['showid']
+            if show_id in t.fanart:
+                continue
 
-        t = PageTemplate(headers=self.request.headers, file='episodeView.tmpl')
-        t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
-        t.today = datetime.datetime.now(network_timezones.sb_timezone)
-        t.sql_results = sql_results
+            for img in ek.ek(glob.glob, cache_obj.fanart_path(show_id).replace('fanart.jpg', '*')) or []:
+                match = re.search(r'\.(\d+(?:\.\w*)?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+                if not match:
+                    continue
+                fanart = [(match.group(1), sickbeard.FANART_RATINGS.get(str(show_id), {}).get(match.group(1), ''))]
+                if show_id not in t.fanart:
+                    t.fanart[show_id] = fanart
+                else:
+                    t.fanart[show_id] += fanart
+
+        for show in t.fanart:
+            fanart_rating = [(n, v) for n, v in t.fanart[show] if 20 == v]
+            if fanart_rating:
+                t.fanart[show] = fanart_rating
+            else:
+                rnd = [(n, v) for (n, v) in t.fanart[show] if 30 != v]
+                grouped = [(n, v) for (n, v) in rnd if 10 == v]
+                if grouped:
+                    t.fanart[show] = [grouped[random.randint(0, len(grouped) - 1)]]
+                elif rnd:
+                    t.fanart[show] = [rnd[random.randint(0, len(rnd) - 1)]]
 
         # Allow local overriding of layout parameter
         if layout and layout in ('banner', 'daybyday', 'list', 'poster'):
@@ -516,7 +535,76 @@ class MainHandler(WebHandler):
         else:
             t.layout = sickbeard.EPISODE_VIEW_LAYOUT
 
+        t.has_art = bool(len(t.fanart))
+        t.css = ' '.join([t.layout] +
+                         ([], [('landscape', 'portrait')[sickbeard.EPISODE_VIEW_POSTERS]])['daybyday' == t.layout] +
+                         ([], ['back-art'])[sickbeard.EPISODE_VIEW_BACKGROUND and t.has_art] +
+                         ([], ['translucent'])[sickbeard.EPISODE_VIEW_BACKGROUND_TRANSLUCENT] +
+                         [{0: 'reg', 1: 'pro', 2: 'pro ii'}.get(sickbeard.EPISODE_VIEW_VIEWMODE)])
+        t.fanart_panel = sickbeard.FANART_PANEL
+
+        sql_results.sort(sorts[sickbeard.EPISODE_VIEW_SORT])
+
+        t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
+        t.today = datetime.datetime.now(network_timezones.sb_timezone)
+        t.sql_results = sql_results
+
         return t.respond()
+
+    def live_panel(self, *args, **kwargs):
+
+        if 'allseasons' in kwargs:
+            sickbeard.DISPLAY_SHOW_MINIMUM = bool(config.minimax(kwargs['allseasons'], 0, 0, 1))
+        elif 'rate' in kwargs:
+            which = kwargs['which'].replace('fanart_', '')
+            rating = int(kwargs['rate'])
+            if rating:
+                sickbeard.FANART_RATINGS.setdefault(kwargs['show'], {}).update({which: rating})
+            elif sickbeard.FANART_RATINGS.get(kwargs['show'], {}).get(which):
+                del sickbeard.FANART_RATINGS[kwargs['show']][which]
+                if not sickbeard.FANART_RATINGS[kwargs['show']]:
+                    del sickbeard.FANART_RATINGS[kwargs['show']]
+        else:
+            translucent = bool(config.minimax(kwargs.get('translucent'), 0, 0, 1))
+            backart = bool(config.minimax(kwargs.get('backart'), 0, 0, 1))
+            viewmode = config.minimax(kwargs.get('viewmode'), 0, 0, 2)
+
+            if 'ds' == kwargs.get('pg', None):
+                if 'viewart' in kwargs:
+                    sickbeard.DISPLAY_SHOW_VIEWART = config.minimax(kwargs['viewart'], 0, 0, 2)
+                elif 'translucent' in kwargs:
+                    sickbeard.DISPLAY_SHOW_BACKGROUND_TRANSLUCENT = translucent
+                elif 'backart' in kwargs:
+                    sickbeard.DISPLAY_SHOW_BACKGROUND = backart
+                elif 'viewmode' in kwargs:
+                    sickbeard.DISPLAY_SHOW_VIEWMODE = viewmode
+            elif 'ev' == kwargs.get('pg', None):
+                if 'translucent' in kwargs:
+                    sickbeard.EPISODE_VIEW_BACKGROUND_TRANSLUCENT = translucent
+                elif 'backart' in kwargs:
+                    sickbeard.EPISODE_VIEW_BACKGROUND = backart
+                    sickbeard.FANART_PANEL = 'highlight-off' == sickbeard.FANART_PANEL and 'highlight-off' or \
+                                             'highlight2' == sickbeard.FANART_PANEL and 'highlight1' or \
+                                             'highlight1' == sickbeard.FANART_PANEL and 'highlight' or 'highlight-off'
+                elif 'viewmode' in kwargs:
+                    sickbeard.EPISODE_VIEW_VIEWMODE = viewmode
+
+        sickbeard.save_config()
+
+    def toggleDisplayShowSpecials(self, show):
+
+        sickbeard.DISPLAY_SHOW_SPECIALS = not sickbeard.DISPLAY_SHOW_SPECIALS
+
+        self.redirect('/home/displayShow?show=' + show)
+
+    def setHistoryLayout(self, layout):
+
+        if layout not in ('compact', 'detailed'):
+            layout = 'detailed'
+
+        sickbeard.HISTORY_LAYOUT = layout
+
+        self.redirect('/history/')
 
     def _genericMessage(self, subject, message):
         t = PageTemplate(headers=self.request.headers, file='genericMessage.tmpl')
@@ -529,7 +617,6 @@ class MainHandler(WebHandler):
 class Home(MainHandler):
     def HomeMenu(self):
         return [
-            {'title': 'Add Shows', 'path': 'home/addShows/', },
             {'title': 'Manual Post-Processing', 'path': 'home/postprocess/'},
             {'title': 'Update Emby', 'path': 'home/updateEMBY/', 'requires': self.haveEMBY},
             {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
@@ -606,6 +693,13 @@ class Home(MainHandler):
 
         if 0 == len(t.showlists):
             t.showlists.append(['container0', 'Show List', sickbeard.showList])
+        else:
+            items = []
+            default = 0
+            for index, group in enumerate(t.showlists):
+                items += group[2]
+                default = (default, index)['Show List' == group[1]]
+            t.showlists[default][2] += [show for show in sickbeard.showList if show not in items]
 
         if 'simple' != sickbeard.HOME_LAYOUT:
             t.network_images = {}
@@ -1143,6 +1237,44 @@ class Home(MainHandler):
         else:
             self.redirect('/home/')
 
+    def display_season(self, show=None, season=None):
+
+        response = {'success': False}
+        show_obj = None
+        if show:
+            show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, helpers.tryInt(show, -1))
+        if not show_obj:
+            return json.dumps(response)
+
+        re_season = re.compile('(?i)^showseason-(\d+)$')
+        season = None if not any(re_season.findall(season)) else \
+            helpers.tryInt(re_season.findall(season)[0], None)
+        if None is season:
+            return json.dumps(response)
+
+        t = PageTemplate(headers=self.request.headers, file='inc_displayShow.tmpl')
+        t.show = show_obj
+
+        my_db = db.DBConnection()
+        sql_results = my_db.select('SELECT * FROM tv_episodes WHERE showid = ? AND season = ? ORDER BY episode DESC',
+                                   [show_obj.indexerid, season])
+        t.episodes = sql_results
+
+        ep_cats = {}
+        for row in sql_results:
+            status_overview = show_obj.getOverview(int(row['status']))
+            if status_overview:
+                ep_cats['%sx%s' % (season, row['episode'])] = status_overview
+        t.ep_cats = ep_cats
+
+        args = (int(show_obj.indexerid), int(show_obj.indexer))
+        t.scene_numbering = get_scene_numbering_for_show(*args)
+        t.xem_numbering = get_xem_numbering_for_show(*args)
+        t.scene_absolute_numbering = get_scene_absolute_numbering_for_show(*args)
+        t.xem_absolute_numbering = get_xem_absolute_numbering_for_show(*args)
+
+        return json.dumps({'success': t.respond()})
+
     def displayShow(self, show=None):
 
         if show is None:
@@ -1152,17 +1284,6 @@ class Home(MainHandler):
 
             if showObj is None:
                 return self._genericMessage('Error', 'Show not in show list')
-
-        myDB = db.DBConnection()
-        seasonResults = myDB.select(
-            'SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season desc',
-            [showObj.indexerid]
-        )
-
-        sqlResults = myDB.select(
-            'SELECT * FROM tv_episodes WHERE showid = ? ORDER BY season DESC, episode DESC',
-            [showObj.indexerid]
-        )
 
         t = PageTemplate(headers=self.request.headers, file='displayShow.tmpl')
         t.submenu = [{'title': 'Edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
@@ -1195,13 +1316,14 @@ class Home(MainHandler):
         elif sickbeard.showQueueScheduler.action.isInSubtitleQueue(showObj):  # @UndefinedVariable
             show_message = 'This show is queued and awaiting subtitles download.'
 
+        t.force_update = 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid
         if not sickbeard.showQueueScheduler.action.isBeingAdded(showObj):  # @UndefinedVariable
             if not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
                 t.submenu.append(
                     {'title': 'Remove', 'path': 'home/deleteShow?show=%d' % showObj.indexerid, 'confirm': True})
                 t.submenu.append({'title': 'Re-scan files', 'path': 'home/refreshShow?show=%d' % showObj.indexerid})
                 t.submenu.append(
-                    {'title': 'Force Full Update', 'path': 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid})
+                    {'title': 'Force Full Update', 'path': t.force_update})
                 t.submenu.append({'title': 'Update show in Emby',
                                   'path': 'home/updateEMBY%s' %
                                           (INDEXER_TVDB == showObj.indexer and ('?show=%s' % showObj.indexerid) or '/'),
@@ -1219,56 +1341,81 @@ class Home(MainHandler):
                         {'title': 'Download Subtitles', 'path': 'home/subtitleShow?show=%d' % showObj.indexerid})
 
         t.show = showObj
-        t.sqlResults = sqlResults
-        t.seasonResults = seasonResults
         t.show_message = show_message
 
-        epCounts = {}
-        epCats = {}
-        epCounts[Overview.SKIPPED] = 0
-        epCounts[Overview.WANTED] = 0
-        epCounts[Overview.QUAL] = 0
-        epCounts[Overview.GOOD] = 0
-        epCounts[Overview.UNAIRED] = 0
-        epCounts[Overview.SNATCHED] = 0
-        epCounts['videos'] = {}
-        epCounts['archived'] = {}
-        epCounts['totals'] = {}
-        highest_season = 0
-        latest_season = 0
+        ep_counts = {}
+        ep_cats = {}
+        ep_counts[Overview.SKIPPED] = 0
+        ep_counts[Overview.WANTED] = 0
+        ep_counts[Overview.QUAL] = 0
+        ep_counts[Overview.GOOD] = 0
+        ep_counts[Overview.UNAIRED] = 0
+        ep_counts[Overview.SNATCHED] = 0
+        ep_counts['videos'] = {}
+        ep_counts['status'] = {}
+        ep_counts['archived'] = {}
+        ep_counts['totals'] = {}
+        ep_counts['eps_most'] = 0
+        ep_counts['eps_all'] = 0
+        t.latest_season = 0
+        t.has_special = False
 
-        for curResult in sqlResults:
-            curEpCat = showObj.getOverview(int(curResult['status']))
-            if curEpCat:
-                epCats[str(curResult['season']) + 'x' + str(curResult['episode'])] = curEpCat
-                epCounts[curEpCat] += 1
-            if '' != curResult['location']:
-                if curResult['season'] not in epCounts['videos']:
-                    epCounts['videos'][curResult['season']] = 1
+        my_db = db.DBConnection()
+
+        for row in my_db.select('SELECT season, count(*) AS cnt FROM tv_episodes WHERE showid = ?'
+                                + ' GROUP BY season', [showObj.indexerid]):
+            ep_counts['totals'][row['season']] = row['cnt']
+
+        if None is not ep_counts['totals'].get(0, None):
+            t.has_special = True
+            if not sickbeard.DISPLAY_SHOW_SPECIALS:
+                del(ep_counts['totals'][0])
+
+        ep_counts['eps_all'] = sum(ep_counts['totals'].values())
+        ep_counts['eps_most'] = max(ep_counts['totals'].values())
+        all_seasons = sorted(ep_counts['totals'].keys(), reverse=True)
+        t.lowest_season, t.highest_season = all_seasons[-1], all_seasons[0]
+
+        # 55 == seasons 1-10 and excludes the random season 0
+        force_display_show_minimum = 30 < ep_counts['eps_most'] or 55 < sum(ep_counts['totals'].keys())
+        display_show_minimum = sickbeard.DISPLAY_SHOW_MINIMUM or force_display_show_minimum
+
+        for row in my_db.select('SELECT max(season) as latest FROM tv_episodes WHERE showid = ?'
+                                + ' and 1000 < airdate and ? < status', [showObj.indexerid, UNAIRED]):
+            t.latest_season = row['latest']
+
+        t.season_min = ([], [1])[2 < t.latest_season] + [t.latest_season]
+        t.other_seasons = (list(set(all_seasons) - set(t.season_min)), [])[display_show_minimum]
+        t.seasons = []
+        for x in all_seasons:
+            t.seasons += [(x, [None] if x not in (t.season_min + t.other_seasons) else my_db.select(
+                'SELECT * FROM tv_episodes WHERE showid = ? AND season = ? ORDER BY episode DESC',
+                [showObj.indexerid, x]))]
+
+        for row in my_db.select('SELECT season, episode, status FROM tv_episodes WHERE showid = ? AND season IN (%s)' %
+                                ','.join(['?'] * len(t.season_min + t.other_seasons)),
+                                [showObj.indexerid] + t.season_min + t.other_seasons):
+            status_overview = showObj.getOverview(row['status'])
+            if status_overview:
+                ep_cats['%sx%s' % (row['season'], row['episode'])] = status_overview
+        t.ep_cats = ep_cats
+
+        for row in my_db.select('SELECT season, count(*) AS cnt, status FROM tv_episodes WHERE showid = ?'
+                                + ' GROUP BY season, status', [showObj.indexerid]):
+            status_overview = showObj.getOverview(row['status'])
+            if status_overview:
+                ep_counts[status_overview] += row['cnt']
+                if ARCHIVED == row['status']:
+                    ep_counts['archived'].setdefault(row['season'], row['cnt'])
                 else:
-                    epCounts['videos'][curResult['season']] += 1
-            if curResult['season'] not in epCounts['totals']:
-                epCounts['totals'][curResult['season']] = 1
-            else:
-                epCounts['totals'][curResult['season']] += 1
-            if ARCHIVED == curResult['status']:
-                if curResult['season'] not in epCounts['archived']:
-                    epCounts['archived'][curResult['season']] = 1
-                else:
-                    epCounts['archived'][curResult['season']] += 1
-            if highest_season < curResult['season'] and 1000 < curResult['airdate'] and UNAIRED < curResult['status']:
-                highest_season = curResult['season']
+                    ep_counts['status'].setdefault(row['season'], {status_overview: row['cnt']})
 
-        if 0 < len(epCounts['totals']):
-            latest_season = int(sorted(epCounts['totals'])[-1::][0])
-
-        display_seasons = []
-        if 1 < highest_season:
-            display_seasons += [1]
-        display_seasons += [highest_season]
+        for row in my_db.select('SELECT season, count(*) AS cnt FROM tv_episodes WHERE showid = ?'
+                                + ' AND \'\' != location GROUP BY season', [showObj.indexerid]):
+            ep_counts['videos'][row['season']] = row['cnt']
+        t.ep_counts = ep_counts
 
         t.sortedShowLists = self.sorted_show_lists()
-
         tvshows = []
         tvshow_names = []
         cur_sel = None
@@ -1291,19 +1438,42 @@ class Home(MainHandler):
         if showObj.is_anime:
             t.bwl = showObj.release_groups
 
-        t.epCounts = epCounts
-        t.epCats = epCats
-        t.display_seasons = display_seasons
-        t.latest_season = latest_season
-
         showObj.exceptions = scene_exceptions.get_scene_exceptions(showObj.indexerid)
+
+        t.fanart = []
+        cache_obj = image_cache.ImageCache()
+        for img in ek.ek(glob.glob, cache_obj.fanart_path(showObj.indexerid).replace('fanart.jpg', '*')) or []:
+            match = re.search(r'\.(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+            if match and match.group(1):
+                t.fanart += [(match.group(1), sickbeard.FANART_RATINGS.get(show, {}).get(match.group(1), ''))]
+
+        t.start_image = None
+        ratings = [v for n, v in t.fanart]
+        if 20 in ratings:
+            t.start_image = ratings.index(20)
+        else:
+            rnd = [(x, v) for x, (n, v) in enumerate(t.fanart) if 30 != v]
+            grouped = [n for (n, v) in rnd if 10 == v]
+            if grouped:
+                t.start_image = grouped[random.randint(0, len(grouped) - 1)]
+            elif rnd:
+                t.start_image = rnd[random.randint(0, len(rnd) - 1)][0]
+        t.has_art = bool(len(t.fanart))
+        t.css = ' '.join(([], ['back-art'])[sickbeard.DISPLAY_SHOW_BACKGROUND and t.has_art] +
+                         ([], ['translucent'])[sickbeard.DISPLAY_SHOW_BACKGROUND_TRANSLUCENT] +
+                         {0: [], 1: ['poster-right'], 2: ['poster-off']}.get(sickbeard.DISPLAY_SHOW_VIEWART) +
+                         ([], ['min'])[display_show_minimum] +
+                         ([], ['min-force'])[force_display_show_minimum] +
+                         [{0: 'reg', 1: 'pro', 2: 'pro ii'}.get(sickbeard.DISPLAY_SHOW_VIEWMODE)])
+
+        t.clean_show_name = urllib.quote_plus(sickbeard.indexermapper.clean_show_name(showObj.name))
 
         indexerid = int(showObj.indexerid)
         indexer = int(showObj.indexer)
         t.all_scene_exceptions = showObj.exceptions
         t.scene_numbering = get_scene_numbering_for_show(indexerid, indexer)
-        t.xem_numbering = get_xem_numbering_for_show(indexerid, indexer)
         t.scene_absolute_numbering = get_scene_absolute_numbering_for_show(indexerid, indexer)
+        t.xem_numbering = get_xem_numbering_for_show(indexerid, indexer)
         t.xem_absolute_numbering = get_xem_absolute_numbering_for_show(indexerid, indexer)
 
         return t.respond()
@@ -1320,6 +1490,28 @@ class Home(MainHandler):
                 results = filter(lambda x: x.tag == tag, sickbeard.showList)
                 if results:
                     sorted_show_lists.append([tag, sorted(results, lambda x, y: cmp(titler(x.name), titler(y.name)))])
+            # handle orphaned shows
+            if len(sickbeard.showList) != sum([len(x[1]) for x in sorted_show_lists]):
+                used_ids = set()
+                for x in sorted_show_lists:
+                    for y in x[1]:
+                        used_ids |= {y.indexerid}
+
+                showlist = dict()
+                all_ids = set(x.indexerid for x in sickbeard.showList)
+                for iid in list(all_ids - used_ids):
+                    try:
+                        show = helpers.findCertainShow(sickbeard.showList, iid)
+                    except (StandardError, Exception):
+                        pass
+                    if show:
+                        if show.tag in showlist:
+                            showlist[show.tag] += [show]
+                        else:
+                            showlist[show.tag] = [show]
+
+                sorted_show_lists += [[key, shows] for key, shows in showlist.items()]
+
         elif 'anime' == sickbeard.SHOWLIST_TAGVIEW:
             shows = []
             anime = []
@@ -1342,7 +1534,7 @@ class Home(MainHandler):
         result = myDB.select(
             'SELECT description FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
             (int(show), int(season), int(episode)))
-        return result[0]['description'] if result else 'Episode not found.'
+        return 'Episode not found.' if not result else (result[0]['description'] or '')[:250:]
 
     def sceneExceptions(self, show):
         exceptionsList = sickbeard.scene_exceptions.get_all_scene_exceptions(show)
@@ -1351,10 +1543,8 @@ class Home(MainHandler):
 
         out = []
         for season, names in iter(sorted(iteritems(exceptionsList))):
-            if season == -1:
-                season = '*'
-            out.append('S' + str(season) + ': ' + ', '.join(names))
-        return '<br/>'.join(out)
+            out.append('S%s: %s' % ((season, '*')[-1 == season], ',<br />\n'.join(names)))
+        return '---------<br />\n'.join(out)
 
     def switchIndexer(self, indexerid, indexer, mindexerid, mindexer, set_pause=False, mark_wanted=False):
         indexer = helpers.tryInt(indexer)
@@ -1473,11 +1663,38 @@ class Home(MainHandler):
             ui.notifications.message('Mapping Reloaded')
         return json.dumps({k: {r: w for r, w in v.iteritems() if 'date' != r} for k, v in show_obj.ids.iteritems()})
 
+    @staticmethod
+    def fanart_tmpl(t):
+        t.fanart = []
+        cache_obj = image_cache.ImageCache()
+        for img in ek.ek(glob.glob, cache_obj.fanart_path(t.show.indexerid).replace('fanart.jpg', '*')) or []:
+            match = re.search(r'\.(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+            if match and match.group(1):
+                t.fanart += [(match.group(1),
+                              sickbeard.FANART_RATINGS.get(str(t.show.indexerid), {}).get(match.group(1), ''))]
+
+        t.start_image = None
+        ratings = [v for n, v in t.fanart]
+        if 20 in ratings:
+            t.start_image = ratings.index(20)
+        else:
+            rnd = [(x, v) for x, (n, v) in enumerate(t.fanart) if 30 != v]
+            grouped = [n for (n, v) in rnd if 10 == v]
+            if grouped:
+                t.start_image = grouped[random.randint(0, len(grouped) - 1)]
+            elif rnd:
+                t.start_image = rnd[random.randint(0, len(rnd) - 1)][0]
+
+        t.has_art = bool(len(t.fanart))
+        t.css = ' '.join(([], ['back-art'])[sickbeard.DISPLAY_SHOW_BACKGROUND and t.has_art] +
+                         ([], ['translucent'])[sickbeard.DISPLAY_SHOW_BACKGROUND_TRANSLUCENT] +
+                         [{0: 'reg', 1: 'pro', 2: 'pro ii'}.get(sickbeard.DISPLAY_SHOW_VIEWMODE)])
+
     def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, archive_firstmatch=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                 scene=None, tag=None, quality_preset=None, **kwargs):
+                 scene=None, tag=None, quality_preset=None, reset_fanart=None, **kwargs):
 
         if show is None:
             errString = 'Invalid show ID: ' + str(show)
@@ -1528,6 +1745,10 @@ class Home(MainHandler):
                 t.show = showObj
                 t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_ids_list[showObj.indexer]
 
+            # noinspection PyTypeChecker
+            self.fanart_tmpl(t)
+            t.num_ratings = len(sickbeard.FANART_RATINGS.get(str(t.show.indexerid), {}))
+
             return t.respond()
 
         flatten_folders = config.checkbox_to_value(flatten_folders)
@@ -1539,6 +1760,10 @@ class Home(MainHandler):
         sports = config.checkbox_to_value(sports)
         anime = config.checkbox_to_value(anime)
         subtitles = config.checkbox_to_value(subtitles)
+
+        if config.checkbox_to_value(reset_fanart) and sickbeard.FANART_RATINGS.get(show):
+            del sickbeard.FANART_RATINGS[show]
+            sickbeard.save_config()
 
         if indexerLang and indexerLang in sickbeard.indexerApi(showObj.indexer).indexer().config['valid_languages']:
             indexer_lang = indexerLang
@@ -1955,14 +2180,17 @@ class Home(MainHandler):
             if cur_ep_obj.location:
                 if cur_ep_obj.relatedEps:
                     # do we have one of multi-episodes in the rename list already
-                    have_already = False
                     for cur_related_ep in cur_ep_obj.relatedEps + [cur_ep_obj]:
                         if cur_related_ep in ep_obj_rename_list:
-                            have_already = True
                             break
-                        if not have_already:
-                            ep_obj_rename_list.append(cur_ep_obj)
+                        ep_status, ep_qual = Quality.splitCompositeStatus(cur_related_ep.status)
+                        if not ep_qual:
+                            continue
+                        ep_obj_rename_list.append(cur_ep_obj)
                 else:
+                    ep_status, ep_qual = Quality.splitCompositeStatus(cur_ep_obj.status)
+                    if not ep_qual:
+                        continue
                     ep_obj_rename_list.append(cur_ep_obj)
 
         if ep_obj_rename_list:
@@ -1973,6 +2201,9 @@ class Home(MainHandler):
         t.submenu = [{'title': 'Edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
         t.ep_obj_list = ep_obj_rename_list
         t.show = showObj
+
+        # noinspection PyTypeChecker
+        self.fanart_tmpl(t)
 
         return t.respond()
 
@@ -3214,7 +3445,7 @@ class NewHomeAddShows(Home):
 
         return t.respond()
 
-    def existing_shows(self, *args, **kwargs):
+    def import_shows(self, *args, **kwargs):
         """
         Prints out the page to add existing shows from a root dir
         """
@@ -3269,7 +3500,7 @@ class NewHomeAddShows(Home):
                 logger.log('Unable to add show due to show selection. Not enough arguments: %s' % (repr(series_pieces)),
                            logger.ERROR)
                 ui.notifications.error('Unknown error. Unable to add show due to problem with show selection.')
-                return self.redirect('/home/addShows/existing_shows/')
+                return self.redirect('/home/addShows/import_shows/')
 
             indexer = int(series_pieces[0])
             indexer_id = int(series_pieces[2])
@@ -3292,7 +3523,7 @@ class NewHomeAddShows(Home):
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
         if ek.ek(os.path.isdir, show_dir) and not fullShowPath:
             ui.notifications.error('Unable to add show', u'Found existing folder: ' + show_dir)
-            return self.redirect('/home/addShows/existing_shows?sid=%s&hash_dir=%s' % (indexer_id, abs(hash(show_dir))))
+            return self.redirect('/home/addShows/import_shows?sid=%s&hash_dir=%s' % (indexer_id, abs(hash(show_dir))))
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:
@@ -4381,34 +4612,41 @@ class ConfigGeneral(Config):
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
-                    show_tags=None, showlist_tagview=None):
+                    fanart_limit=None, show_tags=None, showlist_tagview=None):
 
         results = []
 
         # Misc
         sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
-        config.change_VERSION_NOTIFY(config.checkbox_to_value(version_notify))
-        sickbeard.AUTO_UPDATE = config.checkbox_to_value(auto_update)
-        sickbeard.NOTIFY_ON_UPDATE = config.checkbox_to_value(notify_on_update)
-        # sickbeard.LOG_DIR is set in config.change_LOG_DIR()
-
         sickbeard.UPDATE_SHOWS_ON_START = config.checkbox_to_value(update_shows_on_start)
         sickbeard.SHOW_UPDATE_HOUR = config.minimax(show_update_hour, 3, 0, 23)
         sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
         sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
+        if not config.change_LOG_DIR(log_dir, web_log):
+            results += ['Unable to create directory ' + os.path.normpath(log_dir) + ', log directory not changed.']
+        if indexer_default:
+            sickbeard.INDEXER_DEFAULT = config.to_int(indexer_default)
+            if not sickbeard.indexerApi(sickbeard.INDEXER_DEFAULT).config['active']:
+                sickbeard.INDEXER_DEFAULT = INDEXER_TVDB
+        if indexer_timeout:
+            sickbeard.INDEXER_TIMEOUT = config.to_int(indexer_timeout)
+
+        # Updates
+        config.change_VERSION_NOTIFY(config.checkbox_to_value(version_notify))
+        sickbeard.AUTO_UPDATE = config.checkbox_to_value(auto_update)
         config.change_UPDATE_FREQUENCY(update_frequency)
-        sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
-        sickbeard.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
-        sickbeard.USE_IMDB_INFO = config.checkbox_to_value(use_imdb_info)
-        sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
-        sickbeard.CPU_PRESET = cpu_preset
-        sickbeard.FILE_LOGGING_PRESET = file_logging_preset
+        sickbeard.NOTIFY_ON_UPDATE = config.checkbox_to_value(notify_on_update)
+
+        # Interface
+        sickbeard.THEME_NAME = theme_name
+        sickbeard.DEFAULT_HOME = default_home
+        sickbeard.FANART_LIMIT = config.minimax(fanart_limit, 3, 0, 500)
         sickbeard.SHOWLIST_TAGVIEW = showlist_tagview
 
-        # 'Show List' is the must have default fallback. Tags in use that are removed from config ui are restored, not deleted.
-        # Deduped list order preservation is key to feature function.
-        myDB = db.DBConnection()
-        sql_results = myDB.select('SELECT DISTINCT tag FROM tv_shows')
+        # 'Show List' is the must have default fallback. Tags in use that are removed from config ui are restored,
+        # not deleted. Deduped list order preservation is key to feature function.
+        my_db = db.DBConnection()
+        sql_results = my_db.select('SELECT DISTINCT tag FROM tv_shows')
         new_names = [u'' + v.strip() for v in (show_tags.split(u','), [])[None is show_tags] if v.strip()]
         orphans = [item for item in [v['tag'] for v in sql_results or []] if item not in new_names]
         cleanser = []
@@ -4419,75 +4657,60 @@ class ConfigGeneral(Config):
         sickbeard.SHOW_TAGS = [dedupe.setdefault(item, item) for item in (cleanser + new_names + [u'Show List'])
                                if item not in dedupe]
 
-        logger.log_set_level()
+        sickbeard.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
+        sickbeard.USE_IMDB_INFO = config.checkbox_to_value(use_imdb_info)
+        sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
+        sickbeard.FUZZY_DATING = config.checkbox_to_value(fuzzy_dating)
+        sickbeard.TRIM_ZERO = config.checkbox_to_value(trim_zero)
+        if date_preset:
+            sickbeard.DATE_PRESET = date_preset
+        if time_preset:
+            sickbeard.TIME_PRESET_W_SECONDS = time_preset
+            sickbeard.TIME_PRESET = sickbeard.TIME_PRESET_W_SECONDS.replace(u':%S', u'')
+        sickbeard.TIMEZONE_DISPLAY = timezone_display
 
-        sickbeard.ANON_REDIRECT = anon_redirect
-        sickbeard.PROXY_SETTING = proxy_setting
-        sickbeard.PROXY_INDEXERS = config.checkbox_to_value(proxy_indexers)
-        sickbeard.GIT_PATH = git_path
-        sickbeard.GIT_REMOTE = git_remote
-        sickbeard.CALENDAR_UNPROTECTED = config.checkbox_to_value(calendar_unprotected)
-        # sickbeard.LOG_DIR is set in config.change_LOG_DIR()
-
-        sickbeard.WEB_PORT = config.to_int(web_port)
-        sickbeard.WEB_IPV6 = config.checkbox_to_value(web_ipv6)
-        # sickbeard.WEB_LOG is set in config.change_LOG_DIR()
-        sickbeard.ENCRYPTION_VERSION = config.checkbox_to_value(encryption_version)
-
+        # Web interface
         reload_page = False
-
         if sickbeard.WEB_USERNAME != web_username:
             sickbeard.WEB_USERNAME = web_username
             reload_page = True
-
         if set('*') != set(web_password):
             sickbeard.WEB_PASSWORD = web_password
             reload_page = True
 
-        sickbeard.FUZZY_DATING = config.checkbox_to_value(fuzzy_dating)
-        sickbeard.TRIM_ZERO = config.checkbox_to_value(trim_zero)
-
-        if date_preset:
-            sickbeard.DATE_PRESET = date_preset
-
-        if indexer_default:
-            sickbeard.INDEXER_DEFAULT = config.to_int(indexer_default)
-            if not sickbeard.indexerApi(sickbeard.INDEXER_DEFAULT).config['active']:
-                sickbeard.INDEXER_DEFAULT = INDEXER_TVDB
-
-        if indexer_timeout:
-            sickbeard.INDEXER_TIMEOUT = config.to_int(indexer_timeout)
-
-        if time_preset:
-            sickbeard.TIME_PRESET_W_SECONDS = time_preset
-            sickbeard.TIME_PRESET = sickbeard.TIME_PRESET_W_SECONDS.replace(u':%S', u'')
-
-        sickbeard.TIMEZONE_DISPLAY = timezone_display
-
-        if not config.change_LOG_DIR(log_dir, web_log):
-            results += ['Unable to create directory ' + os.path.normpath(log_dir) + ', log directory not changed.']
-
+        sickbeard.CALENDAR_UNPROTECTED = config.checkbox_to_value(calendar_unprotected)
         sickbeard.USE_API = config.checkbox_to_value(use_api)
         sickbeard.API_KEY = api_key
+        sickbeard.WEB_PORT = config.to_int(web_port)
+        # sickbeard.WEB_LOG is set in config.change_LOG_DIR()
 
         sickbeard.ENABLE_HTTPS = config.checkbox_to_value(enable_https)
-
         if not config.change_HTTPS_CERT(https_cert):
             results += [
                 'Unable to create directory ' + os.path.normpath(https_cert) + ', https cert directory not changed.']
-
         if not config.change_HTTPS_KEY(https_key):
             results += [
                 'Unable to create directory ' + os.path.normpath(https_key) + ', https key directory not changed.']
 
+        sickbeard.WEB_IPV6 = config.checkbox_to_value(web_ipv6)
         sickbeard.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
 
-        sickbeard.THEME_NAME = theme_name
-        sickbeard.DEFAULT_HOME = default_home
+        # Advanced
+        sickbeard.GIT_REMOTE = git_remote
+        sickbeard.GIT_PATH = git_path
+        sickbeard.CPU_PRESET = cpu_preset
+        sickbeard.ANON_REDIRECT = anon_redirect
+        sickbeard.ENCRYPTION_VERSION = config.checkbox_to_value(encryption_version)
+        sickbeard.PROXY_SETTING = proxy_setting
+        sickbeard.PROXY_INDEXERS = config.checkbox_to_value(proxy_indexers)
+        sickbeard.FILE_LOGGING_PRESET = file_logging_preset
+        # sickbeard.LOG_DIR is set in config.change_LOG_DIR()
+
+        logger.log_set_level()
 
         sickbeard.save_config()
 
-        if len(results) > 0:
+        if 0 < len(results):
             for v in results:
                 logger.log(v, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
@@ -4496,7 +4719,7 @@ class ConfigGeneral(Config):
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
         if reload_page:
-            self.clear_cookie('sickgear-session')
+            self.clear_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT))
             self.write('reload')
 
     @staticmethod
@@ -4994,6 +5217,7 @@ class ConfigProviders(Config):
 
                 cur_name, cur_url, cur_key, cur_cat = curNewznabProviderStr.split('|')
                 cur_url = config.clean_url(cur_url)
+                cur_key = cur_key.strip()
 
                 if starify(cur_key, True):
                     cur_key = ''
@@ -5552,8 +5776,10 @@ class UI(MainHandler):
 class ErrorLogs(MainHandler):
     @staticmethod
     def ErrorLogsMenu():
-        return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'},
-                {'title': 'Clear Errors', 'path': 'errorlogs/clearerrors/'},]
+        if len(classes.ErrorViewer.errors):
+            return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'},
+                    {'title': 'Clear Errors', 'path': 'errorlogs/clearerrors/'},]
+        return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'},]
 
     def index(self, *args, **kwargs):
 
@@ -5583,56 +5809,73 @@ class ErrorLogs(MainHandler):
             except (StandardError, Exception):
                 return
 
-    def viewlog(self, minLevel=logger.MESSAGE, maxLines=500):
+    def viewlog(self, min_level=logger.MESSAGE, max_lines=500):
 
         t = PageTemplate(headers=self.request.headers, file='viewlogs.tmpl')
         t.submenu = self.ErrorLogsMenu
 
-        minLevel = int(minLevel)
-
-        data = []
-        if os.path.isfile(logger.sb_log_instance.log_file_path):
-            with ek.ek(open, logger.sb_log_instance.log_file_path) as f:
-                data = f.readlines()
+        min_level = int(min_level)
 
         regex = '^(\d\d\d\d)\-(\d\d)\-(\d\d)\s*(\d\d)\:(\d\d):(\d\d)\s*([A-Z]+)\s*(.+?)\s*\:\:\s*(.*)$'
 
-        finalData = []
+        final_data = []
+        normal_data = []
+        truncate = []
+        repeated = None
+        num_lines = 0
 
-        numLines = 0
-        lastLine = False
-        numToShow = min(maxLines, len(data))
+        if os.path.isfile(logger.sb_log_instance.log_file_path):
+            for x in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
 
-        for x in reversed(data):
+                x = x.decode('utf-8', 'replace')
+                match = re.match(regex, x)
 
-            x = x.decode('utf-8', 'replace')
-            match = re.match(regex, x)
+                if match:
+                    level = match.group(7)
+                    if level not in logger.reverseNames:
+                        normal_data = []
+                        continue
 
-            if match:
-                level = match.group(7)
-                if level not in logger.reverseNames:
-                    lastLine = False
-                    continue
+                    if logger.reverseNames[level] >= min_level:
+                        if truncate and not normal_data and truncate[0] == match.group(8) + match.group(9):
+                            truncate += [match.group(8) + match.group(9)]
+                            repeated = x
+                            continue
 
-                if logger.reverseNames[level] >= minLevel:
-                    lastLine = True
-                    finalData.append(x)
+                        if 1 < len(truncate):
+                            final_data[-1] = repeated.strip() + \
+                                             ' <span class="grey-text">(...%s repeat lines)</span>\n' % len(truncate)
+
+                        truncate = [match.group(8) + match.group(9)]
+
+                        final_data.append(x.replace(
+                            ' Starting SickGear', ' <span class="prelight2">Starting SickGear</span>'))
+                        if any(normal_data):
+                            final_data += ['<code><span class="prelight">'] + \
+                                          ['<span class="prelight-num">%02s)</span> %s' % (n + 1, x)
+                                           for n, x in enumerate(normal_data[::-1])] + \
+                                          ['</span></code><br />']
+                            num_lines += len(normal_data)
+                            normal_data = []
+                    else:
+                        normal_data = []
+                        continue
+
                 else:
-                    lastLine = False
-                    continue
+                    if not any(normal_data) and not any([x.strip()]):
+                        continue
 
-            elif lastLine:
-                finalData.append('AA' + x)
+                    normal_data.append(re.sub(r'\r?\n', '<br />', x.replace('<', '&lt;').replace('>', '&gt;')))
 
-            numLines += 1
+                num_lines += 1
 
-            if numLines >= numToShow:
-                break
+                if num_lines >= max_lines:
+                    break
 
-        result = ''.join(finalData)
+        result = ''.join(final_data)
 
         t.logLines = result
-        t.minLevel = minLevel
+        t.min_level = min_level
 
         return t.respond()
 

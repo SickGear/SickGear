@@ -35,7 +35,7 @@ import uuid
 
 sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import helpers, encodingKludge as ek
-from sickbeard import db, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
+from sickbeard import db, image_cache, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
     scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
     show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
@@ -423,13 +423,28 @@ EMAIL_LIST = None
 
 GUI_NAME = None
 DEFAULT_HOME = None
+FANART_LIMIT = None
+FANART_PANEL = None
+FANART_RATINGS = {}
 HOME_LAYOUT = None
-HISTORY_LAYOUT = None
+POSTER_SORTBY = None
+POSTER_SORTDIR = None
+DISPLAY_SHOW_VIEWMODE = 0
+DISPLAY_SHOW_BACKGROUND = False
+DISPLAY_SHOW_BACKGROUND_TRANSLUCENT = False
+DISPLAY_SHOW_VIEWART = 0
+DISPLAY_SHOW_MINIMUM = True
 DISPLAY_SHOW_SPECIALS = False
+EPISODE_VIEW_VIEWMODE = 0
+EPISODE_VIEW_BACKGROUND = False
+EPISODE_VIEW_BACKGROUND_TRANSLUCENT = False
 EPISODE_VIEW_LAYOUT = None
 EPISODE_VIEW_SORT = None
 EPISODE_VIEW_DISPLAY_PAUSED = False
+EPISODE_VIEW_POSTERS = True
 EPISODE_VIEW_MISSED_RANGE = None
+HISTORY_LAYOUT = None
+
 FUZZY_DATING = False
 TRIM_ZERO = False
 DATE_PRESET = None
@@ -437,8 +452,6 @@ TIME_PRESET = None
 TIME_PRESET_W_SECONDS = None
 TIMEZONE_DISPLAY = None
 THEME_NAME = None
-POSTER_SORTBY = None
-POSTER_SORTDIR = None
 
 USE_SUBTITLES = False
 SUBTITLES_LANGUAGES = []
@@ -462,6 +475,7 @@ REQUIRE_WORDS = ''
 CALENDAR_UNPROTECTED = False
 
 TMDB_API_KEY = 'edc5f123313769de83a71e157758030b'
+FANART_API_KEY = '3728ca1a2a937ba0c93b6e63cc86cecb'
 
 # to switch between staging and production TRAKT environment
 TRAKT_STAGING = False
@@ -518,13 +532,16 @@ def initialize(console_logging=True):
         # Views
         global GUI_NAME, HOME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
             EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, \
-            EPISODE_VIEW_MISSED_RANGE, HISTORY_LAYOUT
+            EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
+            EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
+            DISPLAY_SHOW_VIEWMODE, DISPLAY_SHOW_BACKGROUND, DISPLAY_SHOW_BACKGROUND_TRANSLUCENT, \
+            DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT
         # Gen Config/Misc
         global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, INDEXER_TIMEOUT, ROOT_DIRS, \
             VERSION_NOTIFY, AUTO_UPDATE, UPDATE_FREQUENCY, NOTIFY_ON_UPDATE
         # Gen Config/Interface
-        global THEME_NAME, DEFAULT_HOME, SHOWLIST_TAGVIEW, SHOW_TAGS, \
+        global THEME_NAME, DEFAULT_HOME, FANART_LIMIT, SHOWLIST_TAGVIEW, SHOW_TAGS, \
             HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
             DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, TIMEZONE_DISPLAY, \
             WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEY, WEB_PORT, WEB_LOG, \
@@ -611,6 +628,8 @@ def initialize(console_logging=True):
                        'pyTivo', 'NMA', 'Pushalot', 'Pushbullet', 'Subtitles'):
             CheckSection(CFG, stanza)
 
+        update_config = False
+
         # wanted branch
         BRANCH = check_setting_str(CFG, 'General', 'branch', '')
 
@@ -645,6 +664,14 @@ def initialize(console_logging=True):
         THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
         GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
         DEFAULT_HOME = check_setting_str(CFG, 'GUI', 'default_home', 'home')
+        FANART_LIMIT = check_setting_int(CFG, 'GUI', 'fanart_limit', 3)
+        FANART_PANEL = check_setting_str(CFG, 'GUI', 'fanart_panel', 'highlight2')
+        FANART_RATINGS = check_setting_str(CFG, 'GUI', 'fanart_ratings', None)
+        if None is not FANART_RATINGS:
+            FANART_RATINGS = ast.literal_eval(FANART_RATINGS or '{}')
+        else:
+            FANART_RATINGS = ast.literal_eval(check_setting_str(CFG, 'GUI', 'backart_ratings', None) or '{}')
+            update_config |= image_cache.ImageCache().clean_fanart()
         USE_IMDB_INFO = bool(check_setting_int(CFG, 'GUI', 'use_imdb_info', 1))
         IMDB_ACCOUNTS = CFG.get('GUI', []).get('imdb_accounts', [IMDB_DEFAULT_LIST_ID, IMDB_DEFAULT_LIST_NAME])
         HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
@@ -1042,16 +1069,27 @@ def initialize(console_logging=True):
         METADATA_KODI = check_setting_str(CFG, 'General', 'metadata_kodi', '0|0|0|0|0|0|0|0|0|0')
 
         HOME_LAYOUT = check_setting_str(CFG, 'GUI', 'home_layout', 'poster')
-        HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
-        DISPLAY_SHOW_SPECIALS = bool(check_setting_int(CFG, 'GUI', 'display_show_specials', 1))
-        EPISODE_VIEW_LAYOUT = check_setting_str(CFG, 'GUI', 'episode_view_layout', 'banner')
-        EPISODE_VIEW_SORT = check_setting_str(CFG, 'GUI', 'episode_view_sort', 'time')
-        EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(CFG, 'GUI', 'episode_view_display_paused', 0))
-        EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
-
         POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
         POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
+        DISPLAY_SHOW_VIEWMODE = check_setting_int(CFG, 'GUI', 'display_show_viewmode', 0)
+        DISPLAY_SHOW_BACKGROUND = bool(check_setting_int(CFG, 'GUI', 'display_show_background', 0))
+        DISPLAY_SHOW_BACKGROUND_TRANSLUCENT = bool(check_setting_int(
+            CFG, 'GUI', 'display_show_background_translucent', 0))
+        DISPLAY_SHOW_VIEWART = check_setting_int(CFG, 'GUI', 'display_show_viewart', 0)
+        DISPLAY_SHOW_MINIMUM = bool(check_setting_int(CFG, 'GUI', 'display_show_minimum', 1))
+        DISPLAY_SHOW_SPECIALS = bool(check_setting_int(CFG, 'GUI', 'display_show_specials', 0))
 
+        EPISODE_VIEW_VIEWMODE = check_setting_int(CFG, 'GUI', 'episode_view_viewmode', 0)
+        EPISODE_VIEW_BACKGROUND = bool(check_setting_int(CFG, 'GUI', 'episode_view_background', 0))
+        EPISODE_VIEW_BACKGROUND_TRANSLUCENT = bool(check_setting_int(
+            CFG, 'GUI', 'episode_view_background_translucent', 0))
+        EPISODE_VIEW_LAYOUT = check_setting_str(CFG, 'GUI', 'episode_view_layout', 'daybyday')
+        EPISODE_VIEW_SORT = check_setting_str(CFG, 'GUI', 'episode_view_sort', 'time')
+        EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(CFG, 'GUI', 'episode_view_display_paused', 1))
+        EPISODE_VIEW_POSTERS = bool(check_setting_int(CFG, 'GUI', 'episode_view_posters', 1))
+        EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
+
+        HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
         # initialize NZB and TORRENT providers
         providerList = providers.makeProviderList()
 
@@ -1134,7 +1172,9 @@ def initialize(console_logging=True):
                 nzb_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
 
         if not os.path.isfile(CONFIG_FILE):
-            logger.log(u'Unable to find \'' + CONFIG_FILE + '\', all settings will be default!', logger.DEBUG)
+            logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
+            save_config()
+        elif update_config:
             save_config()
 
         # start up all the threads
@@ -1199,8 +1239,8 @@ def initialize(console_logging=True):
         showUpdateScheduler = scheduler.Scheduler(
             show_updater.ShowUpdater(),
             cycleTime=datetime.timedelta(hours=1),
-            threadName='SHOWUPDATER',
             start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
+            threadName='SHOWUPDATER',
             prevent_cycle_run=showQueueScheduler.action.isShowUpdateRunning)  # 3AM
 
         # searchers
@@ -1213,8 +1253,8 @@ def initialize(console_logging=True):
         recentSearchScheduler = scheduler.Scheduler(
             search_recent.RecentSearcher(),
             cycleTime=update_interval,
-            threadName='RECENTSEARCHER',
             run_delay=update_now if RECENTSEARCH_STARTUP else datetime.timedelta(minutes=5),
+            threadName='RECENTSEARCHER',
             prevent_cycle_run=searchQueueScheduler.action.is_recentsearch_in_progress)
 
         if [x for x in providers.sortedProviderList() if x.is_active() and
@@ -1235,8 +1275,8 @@ def initialize(console_logging=True):
         backlogSearchScheduler = search_backlog.BacklogSearchScheduler(
             search_backlog.BacklogSearcher(),
             cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
-            threadName='BACKLOG',
             run_delay=datetime.timedelta(minutes=backlogdelay),
+            threadName='BACKLOG',
             prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
 
         propers_searcher = search_propers.ProperSearcher()
@@ -1251,9 +1291,9 @@ def initialize(console_logging=True):
         properFinderScheduler = scheduler.Scheduler(
             propers_searcher,
             cycleTime=update_interval,
-            threadName='FINDPROPERS',
-            start_time=run_at,
             run_delay=update_interval,
+            start_time=run_at,
+            threadName='FINDPROPERS',
             prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
 
         # processors
@@ -1264,10 +1304,8 @@ def initialize(console_logging=True):
             silent=not PROCESS_AUTOMATICALLY)
         """
         traktCheckerScheduler = scheduler.Scheduler(
-            traktChecker.TraktChecker(),
-            cycleTime=datetime.timedelta(hours=1),
-            threadName='TRAKTCHECKER',
-            silent=not USE_TRAKT)
+            traktChecker.TraktChecker(), cycleTime=datetime.timedelta(hours=1),
+            threadName='TRAKTCHECKER', silent=not USE_TRAKT)
         """
         subtitlesFinderScheduler = scheduler.Scheduler(
             subtitles.SubtitlesFinder(),
@@ -1389,17 +1427,17 @@ def save_config():
     # For passwords you must include the word `password` in the item_name and
     # add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
     new_config['General'] = {}
+    new_config['General']['config_version'] = CONFIG_VERSION
     new_config['General']['branch'] = BRANCH
     new_config['General']['git_remote'] = GIT_REMOTE
     new_config['General']['cur_commit_hash'] = CUR_COMMIT_HASH
     new_config['General']['cur_commit_branch'] = CUR_COMMIT_BRANCH
-    new_config['General']['config_version'] = CONFIG_VERSION
     new_config['General']['encryption_version'] = int(ENCRYPTION_VERSION)
     new_config['General']['log_dir'] = ACTUAL_LOG_DIR if ACTUAL_LOG_DIR else 'Logs'
     new_config['General']['file_logging_preset'] = FILE_LOGGING_PRESET if FILE_LOGGING_PRESET else 'DB'
     new_config['General']['socket_timeout'] = SOCKET_TIMEOUT
-    new_config['General']['web_port'] = WEB_PORT
     new_config['General']['web_host'] = WEB_HOST
+    new_config['General']['web_port'] = WEB_PORT
     new_config['General']['web_ipv6'] = int(WEB_IPV6)
     new_config['General']['web_log'] = int(WEB_LOG)
     new_config['General']['web_root'] = WEB_ROOT
@@ -1753,6 +1791,9 @@ def save_config():
     new_config['GUI']['gui_name'] = GUI_NAME
     new_config['GUI']['theme_name'] = THEME_NAME
     new_config['GUI']['default_home'] = DEFAULT_HOME
+    new_config['GUI']['fanart_limit'] = FANART_LIMIT
+    new_config['GUI']['fanart_panel'] = FANART_PANEL
+    new_config['GUI']['fanart_ratings'] = '%s' % FANART_RATINGS
     new_config['GUI']['use_imdb_info'] = int(USE_IMDB_INFO)
     new_config['GUI']['imdb_accounts'] = IMDB_ACCOUNTS
     new_config['GUI']['fuzzy_dating'] = int(FUZZY_DATING)
@@ -1765,17 +1806,30 @@ def save_config():
     new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
 
     new_config['GUI']['home_layout'] = HOME_LAYOUT
-    new_config['GUI']['history_layout'] = HISTORY_LAYOUT
+    new_config['GUI']['poster_sortby'] = POSTER_SORTBY
+    new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
+
+    new_config['GUI']['display_show_viewmode'] = int(DISPLAY_SHOW_VIEWMODE)
+    new_config['GUI']['display_show_background'] = int(DISPLAY_SHOW_BACKGROUND)
+    new_config['GUI']['display_show_background_translucent'] = int(DISPLAY_SHOW_BACKGROUND_TRANSLUCENT)
+    new_config['GUI']['display_show_viewart'] = int(DISPLAY_SHOW_VIEWART)
+    new_config['GUI']['display_show_minimum'] = int(DISPLAY_SHOW_MINIMUM)
     new_config['GUI']['display_show_specials'] = int(DISPLAY_SHOW_SPECIALS)
+
+    new_config['GUI']['episode_view_viewmode'] = int(EPISODE_VIEW_VIEWMODE)
+    new_config['GUI']['episode_view_background'] = int(EPISODE_VIEW_BACKGROUND)
+    new_config['GUI']['episode_view_background_translucent'] = int(EPISODE_VIEW_BACKGROUND_TRANSLUCENT)
     new_config['GUI']['episode_view_layout'] = EPISODE_VIEW_LAYOUT
     new_config['GUI']['episode_view_sort'] = EPISODE_VIEW_SORT
     new_config['GUI']['episode_view_display_paused'] = int(EPISODE_VIEW_DISPLAY_PAUSED)
+    new_config['GUI']['episode_view_posters'] = int(EPISODE_VIEW_POSTERS)
     new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
     new_config['GUI']['show_tags'] = ','.join(SHOW_TAGS)
     new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
     new_config['GUI']['show_tag_default'] = SHOW_TAG_DEFAULT
+    new_config['GUI']['history_layout'] = HISTORY_LAYOUT
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)

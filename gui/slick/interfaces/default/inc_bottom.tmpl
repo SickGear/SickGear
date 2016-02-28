@@ -3,6 +3,8 @@
 #import re
 #from sickbeard import db, sbdatetime
 #from sickbeard.common import *
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 		</div><!-- /content -->
 	</div><!-- /contentWrapper -->
@@ -26,8 +28,8 @@
 ##
 #set $sql_result = $my_db.select($sql_statement)
 ##
-#set $shows_total = len($sickbeard.showList)
-#set $shows_active = len([show for show in $sickbeard.showList if 0 == show.paused and 'Ended' != show.status])
+#set $shows_total = len($sg_str('showList'))
+#set $shows_active = len([show for show in $sg_str('showList') if 0 == show.paused and 'Ended' != show.status])
 ##
 #if $sql_result:
     #set $ep_snatched = $sql_result[0]['ep_snatched']

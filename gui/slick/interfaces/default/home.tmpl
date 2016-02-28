@@ -2,6 +2,8 @@
 #import datetime
 #from sickbeard.common import *
 #from sickbeard import sbdatetime, network_timezones
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'Home'
 #set global $header = 'Show List'
@@ -11,18 +13,18 @@
 #set fuzzydate = 'airdate'
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 	<script>
 		var config = {
-			isPoster: #echo ['!1','!0']['poster' == $sickbeard.HOME_LAYOUT]#,
-			sortArticle: #echo ['!1','!0'][$sickbeard.SORT_ARTICLE]#,
-			homeSearchFocus: #echo ['!1','!0'][$sickbeard.HOME_SEARCH_FOCUS]#,
-			fuzzyDating: #echo ['!1','!0'][$sickbeard.FUZZY_DATING]#,
-			timeZero: #echo ['!1','!0'][$sickbeard.TRIM_ZERO]#,
-			datePreset: "$sickbeard.DATE_PRESET",
-			timePreset: "$sickbeard.TIME_PRESET",
-			posterSortby: "$sickbeard.POSTER_SORTBY",
-			posterSortdir: #echo ['!1','!0'][$sickbeard.POSTER_SORTDIR]#,
+			isPoster: #echo ['!1','!0']['poster' == $sg_var('HOME_LAYOUT')]#,
+			sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]#,
+			homeSearchFocus: #echo ['!1','!0'][$sg_var('HOME_SEARCH_FOCUS', True)]#,
+			fuzzyDating: #echo ['!1','!0'][$sg_var('FUZZY_DATING')]#,
+			timeZero: #echo ['!1','!0'][$sg_var('TRIM_ZERO')]#,
+			datePreset: "$sg_str('DATE_PRESET', '%x')",
+			timePreset: "$sg_str('TIME_PRESET', '%I:%M %p')",
+			posterSortby: "$sg_var('POSTER_SORTBY')",
+			posterSortdir: #echo ['!1','!0'][$sg_var('POSTER_SORTDIR', True)]#,
 			fuzzydate: ".$fuzzydate",
 			};
 	</script>
@@ -33,33 +35,33 @@
 #set $tab = 1
 #set $selected = ' selected="selected"'
 #if 'poster' == $layout
-		<div>
+		<div id="top-row">
 			<span>Sort By:
 				<select id="postersort" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
-					<option value="name" data-sort="$sbRoot/setPosterSortBy/?sort=name"#echo $selected if 'name' == sickbeard.POSTER_SORTBY else ''#>Name</option>
-					<option value="date" data-sort="$sbRoot/setPosterSortBy/?sort=date"#echo $selected if 'date' == sickbeard.POSTER_SORTBY else ''#>Next Episode</option>
-					<option value="network" data-sort="$sbRoot/setPosterSortBy/?sort=network"#echo $selected if 'network' == sickbeard.POSTER_SORTBY else ''#>Network</option>
-					<option value="progress" data-sort="$sbRoot/setPosterSortBy/?sort=progress"#echo $selected if 'progress' == sickbeard.POSTER_SORTBY else ''#>Progress</option>
-					<option value="quality" data-sort="$sbRoot/setPosterSortBy/?sort=quality"#echo $selected if 'quality' == sickbeard.POSTER_SORTBY else ''#>Quality</option>
+					<option value="name" data-sort="$sbRoot/setPosterSortBy/?sort=name"#echo $selected if 'name' == $sg_str('POSTER_SORTBY', 'name') else ''#>Name</option>
+					<option value="date" data-sort="$sbRoot/setPosterSortBy/?sort=date"#echo $selected if 'date' == $sg_str('POSTER_SORTBY') else ''#>Next Episode</option>
+					<option value="network" data-sort="$sbRoot/setPosterSortBy/?sort=network"#echo $selected if 'network' == $sg_str('POSTER_SORTBY') else ''#>Network</option>
+					<option value="progress" data-sort="$sbRoot/setPosterSortBy/?sort=progress"#echo $selected if 'progress' == $sg_str('POSTER_SORTBY') else ''#>Progress</option>
+					<option value="quality" data-sort="$sbRoot/setPosterSortBy/?sort=quality"#echo $selected if 'quality' == $sg_str('POSTER_SORTBY') else ''#>Quality</option>
 				</select>
 			</span>
 
 			<span style="margin-left:5px">Sort Order:
 				<select id="postersortdirection" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
-					<option value="true" data-sort="$sbRoot/setPosterSortDir/?direction=1"#echo $selected if 1 == sickbeard.POSTER_SORTDIR else ''#>Asc</option>
-					<option value="false" data-sort="$sbRoot/setPosterSortDir/?direction=0"#echo $selected if 0 == sickbeard.POSTER_SORTDIR else ''#>Desc</option>
+					<option value="true" data-sort="$sbRoot/setPosterSortDir/?direction=1"#echo $selected if 1 == $sg_var('POSTER_SORTDIR', 1) else ''#>Asc</option>
+					<option value="false" data-sort="$sbRoot/setPosterSortDir/?direction=0"#echo $selected if 0 == $sg_var('POSTER_SORTDIR') else ''#>Desc</option>
 				</select>
 			</span>
 
-			<span style="margin-left:5px">Layout:
+			<span style="margin-left:5px" class="no-marginr">Layout:
 #else
-			<span class="pull-right">Layout:
+			<span id="top-row" class="pull-right no-marginr">Layout:
 #end if
 				<select style="margin-bottom:10px" name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" tabindex="$tab#set $tab += 1#">
-					<option value="$sbRoot/setHomeLayout/?layout=poster"#echo $selected if 'poster' == sickbeard.HOME_LAYOUT else ''#>Poster</option>
-					<option value="$sbRoot/setHomeLayout/?layout=small"#echo $selected if 'small' == sickbeard.HOME_LAYOUT else ''#>Small Poster</option>
-					<option value="$sbRoot/setHomeLayout/?layout=banner"#echo $selected if 'banner' == sickbeard.HOME_LAYOUT else ''#>Banner</option>
-					<option value="$sbRoot/setHomeLayout/?layout=simple"#echo $selected if 'simple' == sickbeard.HOME_LAYOUT else ''#>Simple</option>
+					<option value="$sbRoot/setHomeLayout/?layout=poster"#echo $selected if 'poster' == $sg_str('HOME_LAYOUT', 'poster') else ''#>Poster</option>
+					<option value="$sbRoot/setHomeLayout/?layout=small"#echo $selected if 'small' == $sg_str('HOME_LAYOUT') else ''#>Small Poster</option>
+					<option value="$sbRoot/setHomeLayout/?layout=banner"#echo $selected if 'banner' == $sg_str('HOME_LAYOUT') else ''#>Banner</option>
+					<option value="$sbRoot/setHomeLayout/?layout=simple"#echo $selected if 'simple' == $sg_str('HOME_LAYOUT') else ''#>Simple</option>
 				</select>
 			</span>
 
@@ -89,7 +91,7 @@
         ##
         #for $curLoadingShow in $sickbeard.showQueueScheduler.action.loadingShowList
             ##
-            #if $curLoadingShow.show != None and $curLoadingShow.show in $sickbeard.showList
+            #if $curLoadingShow.show != None and $curLoadingShow.show in $sg_str('showList')
                 #continue
             #end if
             ##
@@ -116,7 +118,7 @@
             #set $cur_total = 0
             #set $download_stat_tip = ''
             #set $display_status = $curShow.status
-            #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sickbeard.SORT_ARTICLE]
+            #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sg_var('SORT_ARTICLE')]
             #if None is not $display_status
                 #if re.search(r'(?i)(?:new|returning)\s*series', $curShow.status)
                     #set $display_status = 'Continuing'
@@ -272,7 +274,7 @@
 
 		<tbody>
         #for $curLoadingShow in $sickbeard.showQueueScheduler.action.loadingShowList
-            #if $curLoadingShow.show != None and $curLoadingShow.show in $sickbeard.showList
+            #if $curLoadingShow.show != None and $curLoadingShow.show in $sg_str('showList')
                 #continue
             #end if
             ##
@@ -302,7 +304,7 @@
             #set $cur_downloaded = 0
             #set $cur_total = 0
             #set $download_stat_tip = ''
-            #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sickbeard.SORT_ARTICLE]
+            #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sg_var('SORT_ARTICLE')]
             ##
             #if $curShow.indexerid in $show_stat
                 #set $cur_airs_next = $show_stat[$curShow.indexerid]['ep_airs_next']
@@ -437,4 +439,4 @@
 ##
 
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

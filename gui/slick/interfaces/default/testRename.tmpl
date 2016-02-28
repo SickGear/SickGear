@@ -2,97 +2,128 @@
 #from sickbeard import common
 #from sickbeard import exceptions
 ##
-#set global $title = 'Test Rename ' + $show.name
-#set global $header = '<a href="' + $sbRoot + '/home/displayShow?show=%d">%s</a>' % ($show.indexerid, $show.name)
+#set global $title = 'Media Renamer ' + $show.name
+#set global $header = $show.name
 #set global $sbPath = '..'
 #set global $topmenu = 'home'
-#set global $page_body_attr  = 'rename'
+#set $css = $getVar('css', 'reg')
+#set $has_art = $getVar('has_art', None)
+#set global $page_body_attr = 'edit-show" class="' + $css
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
+<script type="text/javascript" src="$sbRoot/js/testRename.js"></script>
+<script type="text/javascript" src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
 #if $varExists('header')
-	<h1 class="header">$header</h1>
+	<h1 class="header"><span class="grey-text">Media Renamer&nbsp;</span>$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
 
-<input type="hidden" id="showID" value="$show.indexerid" />
-
-<script type="text/javascript" src="$sbRoot/js/testRename.js"></script>
-
-<h3>Preview of the proposed name changes</h3>
-<blockquote>
-#if int($show.air_by_date) == 1 and $sickbeard.NAMING_CUSTOM_ABD:
-    $sickbeard.NAMING_ABD_PATTERN
-#elif int($show.sports) == 1 and $sickbeard.NAMING_CUSTOM_SPORTS:
-    $sickbeard.NAMING_SPORTS_PATTERN
-#else
-    $sickbeard.NAMING_PATTERN
+	<div id="background-container">
+#if $has_art
+		<ul>
+    #for $k, ($image, $rating) in enumerate($fanart)
+			<li class="#echo ' '.join((x for x in ({10:'group', 20:'fave', 30:'avoid'}.get($rating, ''), ('', 'background first-load')[$start_image == $k]) if x)) #" style="background-image:url($sbRoot/showPoster/?show=$show.indexerid&which=fanart_$image)"></li>
+    #end for
+		</ul>
 #end if
-</blockquote>
+	</div>
 
-##
+	<div id="config">
+		<div id="config-content" class="linefix container">
+			<input type="hidden" id="showID" value="$show.indexerid">
+
+			<div id="config-components">
+				<ul>
+					<li><a href="#core-component-group1">Preview</a></li>
+				</ul>
+
+				<div id="core-component-group1" class="component-group">
+
+#if 1 == int($show.air_by_date) and $sickbeard.NAMING_CUSTOM_ABD:
+    #set $type = 'Air-by-date'
+    #set $pattern = $sickbeard.NAMING_ABD_PATTERN
+#elif 1 == int($show.sports) and $sickbeard.NAMING_CUSTOM_SPORTS:
+    #set $type = 'Sports'
+    #set $pattern = $sickbeard.NAMING_SPORTS_PATTERN
+#else
+    #set $type = 'Single episode'
+    #set $pattern = $sickbeard.NAMING_PATTERN
+#end if
+					<h3>Proposed changes of existing files</h3>
+
+					<div class="component-group-desc episode-sample">
+						<h3>$type sample:</h3>
+					</div>
+					<div class="example" style="margin-bottom:30px">
+						<span class="jumbo">$pattern</span>&nbsp;<a href="$sbRoot/config/postProcessing/#core-component-group2">edit pattern</a>
+					</div>
+
+					<div>
+						<button class="btn seriesCheck">Select All Episodes</button>
+						<button class="btn clearAll">Clear All</button>
+					</div>
 #set $curSeason = -1
-#set $odd = False
-<div class="clearfix padbottom">
-	<button class="btn seriesCheck">Select All Episodes</button>
-	<button class="btn clearAll">Clear All</button>
-</div>
-
-<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="$sbRoot/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
-
-<table id="testRenameTable" class="sickbeardTable" border="0">
+#set $first_season = True
+					<table id="testRenameTable" class="sickbeardTable" border="0">
 ##
 #for $cur_ep_obj in $ep_obj_list
-    #set $curLoc = $cur_ep_obj.location[len($cur_ep_obj.show.location)+1:]
-    #set $curExt = $curLoc.split('.')[-1]
-    #set $newLoc = $cur_ep_obj.proper_path() + '.' + $curExt
-
-    #if int($cur_ep_obj.season) != $curSeason:
-	<thead>
-		<tr class="seasonheader" id="season-$cur_ep_obj.season">
-			<td colspan="4" class="text-left">
-				<h2>#if 0 == int($cur_ep_obj.season) then 'Specials' else 'Season %s' % $cur_ep_obj.season#</h2>
-			</td>
-		</tr>
-		<tr class="seasoncols" id="season-$cur_ep_obj.season-cols">
-			<th class="col-checkbox"><input type="checkbox" class="seasonCheck" id="$cur_ep_obj.season" /></th>
-			<th class="text-nowrap">Episode</th>
-			<th class="col-name">Old Location</th>
-			<th class="col-name">New Location</th>
-		</tr>
-	</thead>
-    #set $curSeason = int($cur_ep_obj.season)
-
+    #if $curSeason != int($cur_ep_obj.season):
+        #set $curSeason = int($cur_ep_obj.season)
+        #if not $first_season
+					</tbody>
+        #end if
+        #set $first_season = False
+					<thead>
+						<tr class="seasonheader" id="season-$cur_ep_obj.season">
+							<td colspan="3" class="text-left">
+								<h2>#if 0 == int($cur_ep_obj.season) then 'Specials' else 'Season %s' % $cur_ep_obj.season#</h2>
+							</td>
+						</tr>
+						<tr class="seasoncols" id="season-$cur_ep_obj.season-cols" style="line-height:26px">
+							<th class="col-checkbox"><input type="checkbox" class="seasonCheck" id="$cur_ep_obj.season"></th>
+							<th class="text-nowrap">Episode</th>
+							<th class="col-name">Old Location / New Location</th>
+						</tr>
+					</thead>
+					<tbody>
     #end if
 ##
-#set $odd = not $odd
-#set $epStr = str($cur_ep_obj.season) + 'x' + str($cur_ep_obj.episode)
+#set $curLoc = $cur_ep_obj.location[len($cur_ep_obj.show.location) + 1:]
+#set $newLoc = '%s.%s' % ($cur_ep_obj.proper_path(), $curLoc.split('.')[-1])
 #set $epList = sorted([cur_ep_obj.episode] + [x.episode for x in cur_ep_obj.relatedEps])
 #if 1 < len($epList)
     #set $epList = [$min($epList), $max($epList)]
 #end if
-	<tbody>
-		<tr class="season-$curSeason #if $curLoc == $newLoc#good#else#wanted#end if# seasonstyle">
-    #if $curLoc != $newLoc
-			<td class="col-checkbox">
-				<input type="checkbox" class="epCheck" id="<%=str(cur_ep_obj.season) + 'x' + str(cur_ep_obj.episode)%>" name="<%=str(cur_ep_obj.season) + 'x' + str(cur_ep_obj.episode) %>">
-			</td>
-    #else
-			<td></td>
-    #end if
-			<td class="col-ep text-nowrap"><%= '-'.join(map(str, epList)) %></td>
-			<td class="col-name text-left">$curLoc</td>
-			<td class="col-name text-left">$newLoc</td>
-		</tr>
-	</tbody>
+						<tr class="opacity60 #if $curLoc == $newLoc#good#else#wanted#end if#">
+#if $curLoc != $newLoc
+    #set $epStr = '%sx%s' % ($cur_ep_obj.season, $cur_ep_obj.episode)
+							<td class="col-checkbox" rowspan="2" style="line-height:30px">
+								<input type="checkbox" class="epCheck" id="$epStr" name="$epStr">
+							</td>
+#else
+							<td rowspan="2">&nbsp;</td>
+#end if
+							<td class="col-ep text-nowrap" rowspan="2">#echo '-'.join(map(str, epList))#</td>
+							<td style="text-align:left">now: $curLoc.replace('/', '/ ').replace('\\', ' \\ ')</td>
+						</tr>
+						<tr class="#if $curLoc == $newLoc#good#else#wanted#end if#">
+							<td style="text-align:left">new: $newLoc.replace('/', '/ ').replace('\\', ' \\ ')<br />
+							test: $cur_ep_obj.proper_path().replace('/', '/ ').replace('\\', ' \\ ')</td>
+						</tr>
 #end for
+					</tbody>
+					</table>
 
-</table>
+					<div style="clear:both;margin-top:20px">
+						<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="$sbRoot/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
-<div style="clear:both;margin-top:20px">
 	<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="$sbRoot/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
-</div>
-
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -37,6 +37,7 @@ try:
 except ImportError:
     pass
 
+# ERROR = 40, WARNING = 30, INFO = 20, DEBUG = 10
 ERROR = logging.ERROR
 WARNING = logging.WARNING
 MESSAGE = logging.INFO
@@ -184,6 +185,37 @@ class SBRotatingLogHandler(object):
         else:
             sys.exit(1)
 
+    @staticmethod
+    def reverse_readline(filename, buf_size=4096):
+        """a generator that returns the lines of a file in reverse order"""
+        with open(filename) as fh:
+            segment = None
+            offset = 0
+            fh.seek(0, os.SEEK_END)
+            file_size = remaining_size = fh.tell()
+            while remaining_size > 0:
+                offset = min(file_size, offset + buf_size)
+                fh.seek(file_size - offset)
+                buf = fh.read(min(remaining_size, buf_size))
+                remaining_size -= buf_size
+                lines = buf.split('\n')
+                # the first line of the buffer is probably not a complete line so
+                # we'll save it and append it to the last line of the next buffer
+                # we read
+                if segment is not None:
+                    # if the previous chunk starts right from the beginning of line
+                    # do not concat the segment to the last line of new chunk
+                    # instead, yield the segment first
+                    if buf[-1] is not '\n':
+                        lines[-1] += segment
+                    else:
+                        yield segment + '\n'
+                segment = lines[0]
+                for index in range(len(lines) - 1, 0, -1):
+                    if len(lines[index]):
+                        yield lines[index] + '\n'
+            yield None is not segment and segment + '\n' or ''
+
 
 class DispatchingFormatter:
     def __init__(self, formatters, default_formatter):
@@ -263,7 +295,10 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
 
         if 0 < self.backupCount:
             # find the oldest log file and delete it
-            all_names = encodingKludge.ek(glob.glob, file_name + '_*')
+            # phase out files named sickbeard.log in favour of sickgear.logs over backup_count days
+            all_names = encodingKludge.ek(glob.glob, file_name + '_*') + \
+                        encodingKludge.ek(glob.glob, encodingKludge.ek(os.path.join, encodingKludge.ek(
+                            os.path.dirname, file_name), 'sickbeard_*'))
             if len(all_names) > self.backupCount:
                 all_names.sort()
                 self.delete_logfile(all_names[0])

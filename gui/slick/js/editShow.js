@@ -1,3 +1,4 @@
+/** @namespace $.SickGear.Root */
 /** @namespace config.showLang */
 /** @namespace config.showIsAnime */
 /*globals $, config, sbRoot, generate_bwlist*/
@@ -7,13 +8,13 @@ $(document).ready(function () {
 	$('#location').fileBrowser({title: 'Select Show Location'});
 
 	function htmlFlag(lang) {
-		return ' class="flag" style="background-image:url(' + sbRoot + '/images/flags/' + lang + '.png)"'
+		return ' class="flag" style="background-image:url(' + $.SickGear.Root + '/images/flags/' + lang + '.png)"'
 	}
 
-	$.getJSON(sbRoot + '/home/addShows/getIndexerLanguages', {}, function (data) {
+	$.getJSON($.SickGear.Root + '/home/addShows/getIndexerLanguages', {}, function (data) {
 		var result = '', currentLangAdded = '', selected = ' selected="selected"';
 
-		if (0 == data.results.length) {
+		if (!data.results.length) {
 			result = '<option value="' + config.showLang + '"' + selected + htmlFlag(config.showLang) + '>'
 				+ config.showLang + '</option>';
 		} else {
@@ -47,13 +48,13 @@ $(document).ready(function () {
 		return allExceptions
 	}
 
-	$('#submit').click(function () {
+	$('#submit').on('click', function () {
 		$('#exceptions_list').val(getExceptions());
 		if (config.showIsAnime)
 			generate_bwlist();
 	});
 
-	$('#addSceneName').click(function () {
+	$('#addSceneName').on('click', function () {
 		var elSceneName = $('#SceneName'), elSceneNameSeason = $('#SceneNameSeason'),
 			sceneEx = elSceneName.val(), sceneExSeason = elSceneNameSeason.val();
 
@@ -72,7 +73,7 @@ $(document).ready(function () {
 		return option.appendTo($('#exceptions_list'));
 	});
 
-	$('#removeSceneName').click(function () {
+	$('#removeSceneName').on('click', function () {
 		$('#exceptions_list').find('option:selected').remove();
 
 		$(this).toggle_SceneException();
@@ -99,8 +100,8 @@ $(document).ready(function () {
 		uncheck(elABD); uncheck(elSports);
 		if (config.showIsAnime) { $('#blackwhitelist').fadeIn('fast', 'linear'); } return !0; }
 	function isScene() { uncheck(elABD); uncheck(elSports); }
-	function isABD() { uncheck(elAnime); uncheck(elScene); $('#blackwhitelist').fadeOut('fast', 'linear'); }
-	function isSports() { uncheck(elAnime); uncheck(elScene); $('#blackwhitelist').fadeOut('fast', 'linear'); }
+	function isABD() { uncheck(elAnime); uncheck(elScene); $('#blackwhitelist, #anime-options').fadeOut('fast', 'linear'); }
+	function isSports() { uncheck(elAnime); uncheck(elScene); $('#blackwhitelist, #anime-options').fadeOut('fast', 'linear'); }
 
 	if (checked(elAnime)) { isAnime(); }
 	if (checked(elScene)) { isScene(); }

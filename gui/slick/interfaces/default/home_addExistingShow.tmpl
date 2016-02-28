@@ -1,22 +1,24 @@
 #import sickbeard
 #from sickbeard.common import *
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
-#set global $title = 'Existing Show'
-#set global $header = 'Existing Show'
+#set global $title = 'Import'
+#set global $header = $title
 #set global $sbPath = '../..'
 #set global $statpath = '../..'
 #set global $topmenu = 'home'
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" charset="utf-8">
 <!--
-var config = { sortArticle: #echo ['!1','!0'][$sickbeard.SORT_ARTICLE]# }
+var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 \$.sgSid = '$kwargs.get('sid', '')';
 \$.sgHashDir = '$kwargs.get('hash_dir', '')';
 \$(document).ready(function(){
-	\$('#tabs').tabs({ collapsible: !0, selected: #echo ('0','-1')[any($sickbeard.ROOT_DIRS)]# });
+	\$('#tabs').tabs({ collapsible: !0, selected: #echo ('0', '-1')[any($sg_str('ROOT_DIRS'))]# });
 });
 //-->
 </script>
@@ -31,8 +33,9 @@ var config = { sortArticle: #echo ['!1','!0'][$sickbeard.SORT_ARTICLE]# }
 	<h1 class="title">$title</h1>
 #end if
 
-<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32<%= '-dark' if 'dark' == sickbeard.THEME_NAME else '' %>.gif" width="32" height="32" border="0">
+<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0">
 
+<h3>Existing show folders</h3>
 <form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
 
 	<span#if $kwargs.get('hash_dir', None)# class="hide"#end if#>
@@ -50,12 +53,12 @@ var config = { sortArticle: #echo ['!1','!0'][$sickbeard.SORT_ARTICLE]# }
 			</ul>
 			<div id="tabs-1" class="existingtabs">
 				<div style="width: 430px; margin: 0px auto">
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
 				</div>
 			</div>
 			<div id="tabs-2">
-				<div class="stepDiv">
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
+				<div class="stepDiv" style="padding-top:25px">
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
 				</div>
 			</div>
 		</div>
@@ -87,4 +90,4 @@ var config = { sortArticle: #echo ['!1','!0'][$sickbeard.SORT_ARTICLE]# }
 
 </form>
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

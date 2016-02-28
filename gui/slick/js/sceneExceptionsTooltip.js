@@ -6,7 +6,7 @@ $(function () {
                 text: function(event, api) {
                     // deferred object ensuring the request is only made once
                     $.ajax({
-                        url: $('#sbRoot').val() + '/home/sceneExceptions',
+                        url: $.SickGear.Root + '/home/sceneExceptions',
                         type: 'GET',
                         data: {
                             show: match[1]
@@ -35,7 +35,7 @@ $(function () {
                 }
             },
             style: {
-                classes: 'qtip-rounded qtip-shadow'
+                classes: 'qtip-dark qtip-rounded qtip-shadow'
             }
         });
     });
