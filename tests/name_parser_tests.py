@@ -33,6 +33,7 @@ simple_test_cases = {
         'Show-Name-S06E01-1080i': parser.ParseResult(None, 'Show-Name', 6, [1], '1080i'),
         'Show.Name.S06E01.Other.WEB-DL': parser.ParseResult(None, 'Show Name', 6, [1], 'Other.WEB-DL'),
         'Show.Name.S06E01 Some-Stuff Here': parser.ParseResult(None, 'Show Name', 6, [1], 'Some-Stuff Here'),
+        'Show.Name.S01E15-11001001': parser.ParseResult(None, 'Show Name', 1, [15], None),
     },
 
     'fov': {
@@ -138,6 +139,7 @@ simple_test_cases = {
     'anime_standard': {
         '[Cthuko] Shirobako - 05v2 [720p H264 AAC][80C9B09B]': parser.ParseResult(None, 'Shirobako', None, [], '720p H264 AAC', 'Cthuko', None, [5]),
         '[Ayako]_Minami-ke_Okaeri_-_01v2_[1024x576 H264+AAC][B1912CD8]': parser.ParseResult(None, 'Minami-ke Okaeri', None, [], '1024x576 H264+AAC', 'Ayako', None, [1]),
+        'Show.Name.123-11001001': parser.ParseResult(None, 'Show Name', None, [], None, None, None, [123]),
     },
 
     'anime_ep_name': {

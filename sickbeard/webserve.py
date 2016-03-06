@@ -2358,15 +2358,18 @@ class NewHomeAddShows(Home):
                     (indexer_id, show_name, indexer) = cur_provider.retrieveShowMetadata(cur_path)
 
                     # default to TVDB if indexer was not detected
-                    if show_name and not (indexer or indexer_id):
+                    if show_name and (not indexer or not indexer_id):
                         (sn, idx, id) = helpers.searchIndexerForShowID(show_name, indexer, indexer_id)
 
                         # set indexer and indexer_id from found info
-                        if not indexer and idx:
+                        if idx and id:
                             indexer = idx
-
-                        if not indexer_id and id:
                             indexer_id = id
+                            show_name = sn
+
+                # in case we don't have both indexer + indexer_id, set both to None
+                if not indexer or not indexer_id:
+                    indexer = indexer_id = None
 
                 cur_dir['existing_info'] = (indexer_id, show_name, indexer)
 

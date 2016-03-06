@@ -20,7 +20,13 @@ from __future__ import with_statement
 
 import os.path
 
-import xml.etree.cElementTree as etree
+try:
+  from lxml import etree
+except ImportError:
+    try:
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        import xml.etree.ElementTree as etree
 
 import re
 
@@ -910,6 +916,8 @@ class GenericMetadata():
         Used only when mass adding Existing Shows, using previously generated Show metadata to reduce the need to query TVDB.
         """
 
+        from sickbeard.indexers.indexer_config import INDEXER_TVDB
+
         empty_return = (None, None, None)
 
         metadata_path = ek.ek(os.path.join, folder, self._show_metadata_filename)
@@ -944,8 +952,13 @@ class GenericMetadata():
 
             if showXML.findtext('tvdbid') != None:
                 indexer_id = int(showXML.findtext('tvdbid'))
+                indexer = INDEXER_TVDB
             elif showXML.findtext('id') != None:
                 indexer_id = int(showXML.findtext('id'))
+                try:
+                    indexer = INDEXER_TVDB if [s for s in showXML.findall('.//*') if s.text and s.text.find('thetvdb.com') != -1] else indexer
+                except:
+                    pass
             else:
                 logger.log(u"Empty <id> or <tvdbid> field in NFO, unable to find a ID", logger.WARNING)
                 return empty_return
