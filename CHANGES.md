@@ -41,6 +41,11 @@
 * Fix rare NameParser case where numeric episode name was parsed as episode number
 
 
+### 0.11.7 (2016-03-06 12:30:00 UTC)
+
+* Fix Torrenting provider
+
+
 ### 0.11.6 (2016-02-18 23:10:00 UTC)
 
 * Fix saving config General/Interface/Date style (save again to repopulate blank dates on the Showlist view)
