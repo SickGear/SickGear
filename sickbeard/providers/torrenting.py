@@ -42,8 +42,15 @@ class TorrentingProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.digest, self.minseed, self.minleech = 3 * [None]
         self.cache = TorrentingCache(self)
+
+    def _authorised(self, **kwargs):
+
+        return super(TorrentingProvider, self)._authorised(
+            logged_in=(lambda x=None: (None is x or 'Other Links' in x) and self.has_all_cookies() and
+                       self.session.cookies['uid'] in self.digest and self.session.cookies['pass'] in self.digest),
+            failed_msg=(lambda x=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -103,6 +110,11 @@ class TorrentingProvider(generic.TorrentProvider):
             results = list(set(results + items[mode]))
 
         return results
+
+    @staticmethod
+    def ui_string(key):
+
+        return 'torrenting_digest' == key and 'use... \'uid=xx; pass=yy\'' or ''
 
 
 class TorrentingCache(tvcache.TVCache):
