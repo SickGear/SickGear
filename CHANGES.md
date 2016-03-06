@@ -37,6 +37,7 @@
   Mass Update, Add with Browse and from Existing views
 * Add Emby notifier to config/Notifications
 * Fix alternative unicode show names from breaking search
+* Change show update, set shows with newly added airdate or existing episodes with future or never dates, to "Wanted"
 
 
 ### 0.11.6 (2016-02-18 23:10:00 UTC)
