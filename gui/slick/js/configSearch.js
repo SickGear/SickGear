@@ -57,6 +57,8 @@ $(document).ready(function(){
                 torrent_seed_time_option = '#torrent_seed_time_option',
                 torrent_high_bandwidth_option = '#torrent_high_bandwidth_option',
                 torrent_label_option = '#torrent_label_option',
+                path_blank = '#path_blank',
+                path_transmission = '#path_transmission',
                 path_synology = '#path_synology',
                 torrent_paused_option = '#torrent_paused_option';
 
@@ -71,6 +73,8 @@ $(document).ready(function(){
             $(torrent_seed_time_option).hide();
             $(torrent_high_bandwidth_option).hide();
             $(torrent_label_option).show();
+            $(path_blank).show();
+            $(path_transmission).hide();
             $(path_synology).hide();
             $(torrent_paused_option).show();
 
@@ -83,6 +87,8 @@ $(document).ready(function(){
                 $(torrent_high_bandwidth_option).show();
                 $(torrent_label_option).hide();
                 //$('#directory_title').text(client + directory);
+                $(path_blank).hide();
+                $(path_transmission).show();
             } else if ('deluge' == selectedProvider){
                 client = 'Deluge';
                 $(torrent_verify_cert_option).show();

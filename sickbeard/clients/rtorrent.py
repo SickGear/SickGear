@@ -145,7 +145,7 @@ class rTorrentAPI(GenericClient):
 
         return True
 
-    def testAuthentication(self):
+    def test_authentication(self):
         try:
             self._get_auth()
 
