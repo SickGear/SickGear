@@ -39,6 +39,7 @@
 * Fix alternative unicode show names from breaking search
 * Change show update, set shows with newly added airdate or existing episodes with future or never dates, to "Wanted"
 * Fix rare NameParser case where numeric episode name was parsed as episode number
+* Change improve management of Transmission config/Search/Torrent Search "Downloaded files location"
 
 
 ### 0.11.7 (2016-03-06 12:30:00 UTC)

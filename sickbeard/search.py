@@ -139,7 +139,7 @@ def snatch_episode(result, end_status=SNATCHED):
                     return False
             # Snatches torrent with client
             client = clients.getClientIstance(sickbeard.TORRENT_METHOD)()
-            dl_result = client.sendTORRENT(result)
+            dl_result = client.send_torrent(result)
     else:
         logger.log(u'Unknown result type, unable to download it', logger.ERROR)
         dl_result = False

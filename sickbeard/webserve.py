@@ -676,7 +676,7 @@ class Home(MainHandler):
 
         client = clients.getClientIstance(torrent_method)
 
-        connection, accesMsg = client(host, username, password).testAuthentication()
+        connection, accesMsg = client(host, username, password).test_authentication()
 
         return accesMsg
 
