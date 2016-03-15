@@ -1,4 +1,9 @@
-﻿### 0.11.7 (2016-03-06 12:30:00 UTC)
+﻿### 0.11.8 (2016-03-16 12:50:00 UTC)
+
+* Fix ensures internal buffer of a downloaded file is written to disk
+
+
+### 0.11.7 (2016-03-06 12:30:00 UTC)
 
 * Fix Torrenting provider
 

@@ -1235,6 +1235,7 @@ def download_file(url, filename, session=None):
                 if chunk:
                     fp.write(chunk)
                     fp.flush()
+            os.fsync(fp.fileno())
 
         chmodAsParent(filename)
     except requests.exceptions.HTTPError as e:
