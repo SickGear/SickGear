@@ -28,6 +28,7 @@ import sickbeard
 from sickbeard import encodingKludge as ek
 from sickbeard import logger
 from sickbeard.exceptions import ex
+import helpers
 
 
 db_lock = threading.Lock()
@@ -48,8 +49,15 @@ def dbFilename(filename='sickbeard.db', suffix=None):
 
 class DBConnection(object):
     def __init__(self, filename='sickbeard.db', suffix=None, row_type=None):
+
+        db_src = dbFilename(filename)
+        if not os.path.isfile(db_src):
+            db_alt = dbFilename('sickrage.db')
+            if os.path.isfile(db_alt):
+                helpers.copyFile(db_alt, db_src)
+
         self.filename = filename
-        self.connection = sqlite3.connect(dbFilename(filename), 20)
+        self.connection = sqlite3.connect(db_src, 20)
 
         if row_type == 'dict':
             self.connection.row_factory = self._dict_factory
@@ -67,6 +75,9 @@ class DBConnection(object):
             return 0
 
         if result:
+            if self.hasColumn('db_version', 'db_minor_version'):
+                minor = self.select('SELECT db_minor_version FROM db_version')
+                return int(result[0]['db_version']) * 100 + int(minor[0]['db_minor_version'])
             return int(result[0]['db_version'])
         else:
             return 0
@@ -411,6 +422,10 @@ def MigrationCode(myDB):
         40: sickbeard.mainDB.BumpDatabaseVersion,
         41: sickbeard.mainDB.Migrate41,
         42: sickbeard.mainDB.Migrate41,
+        43: sickbeard.mainDB.Migrate41,
+        44: sickbeard.mainDB.Migrate41,
+
+        4301: sickbeard.mainDB.Migrate4301,
 
         5816: sickbeard.mainDB.MigrateUpstream,
         5817: sickbeard.mainDB.MigrateUpstream,
