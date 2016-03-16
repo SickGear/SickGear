@@ -50,9 +50,25 @@ $(document).ready(function () {
 
 	if (config.isPoster) {
 		$('.container').each(function (i, obj) {
+			var sortCriteria;
+			switch (config.posterSortby) {
+				case 'date':
+					sortCriteria = ['date', 'name', 'network', 'progress'];
+					break;
+				case 'network':
+					sortCriteria = ['network', 'name', 'date', 'progress'];
+					break;
+				case 'progress':
+					sortCriteria = ['progress', 'name', 'date', 'network'];
+					break;
+				default:
+					sortCriteria = ['name', 'date', 'network', 'progress'];
+					break;
+			}
+
 			$(obj).isotope({
 				itemSelector: '.show-card',
-				sortBy: config.posterSortby,
+				sortBy: sortCriteria,
 				sortAscending: config.posterSortdir,
 				layoutMode: 'masonry',
 				masonry: {
@@ -62,14 +78,17 @@ $(document).ready(function () {
 				},
 				getSortData: {
 					name: function (itemElem) {
-						var name = $(itemElem).attr('data-name') || '';
+						var name = $(itemElem).attr('data-name').toLowerCase() || '';
 						return config.sortArticle ? name : name.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
 					},
 					date: function (itemElem) {
 						var date = $(itemElem).attr('data-date');
 						return date.length && parseInt(date, 10) || Number.POSITIVE_INFINITY;
 					},
-					network: '[data-network]',
+					network: function (itemElem) {
+						return $(itemElem).attr('data-network').toLowerCase()
+								.replace(/^(.*?)\W*[(]\w{2,3}[)]|1$/i, '$1') || '';
+					},
 					progress: function (itemElem) {
 						var progress = $(itemElem).children('.sort-data').attr('data-progress');
 						return progress.length && parseInt(progress, 10) || Number.NEGATIVE_INFINITY;
