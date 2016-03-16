@@ -977,6 +977,18 @@ class Migrate41(db.SchemaUpgrade):
         return self.checkDBVersion()
 
 
+# 4301 -> 10001
+class Migrate4301(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
+        logger.log(u'Dropping redundant column')
+        self.dropColumn('db_version', 'db_minor_version')
+
+        self.setDBVersion(10001)
+        return self.checkDBVersion()
+
+
 # 5816 - 5818 -> 15
 class MigrateUpstream(db.SchemaUpgrade):
     def execute(self):
