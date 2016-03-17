@@ -46,6 +46,11 @@
 * Add scene qualities WEB.h264 to SDTV, 720p.WEB.h264 to WEB DL 720p, and 1080p.WEB.h264 to WEB DL 1080p
 
 
+### 0.11.9 (2016-03-17 12:30:00 UTC)
+
+* Fix for import of very rare db structure
+
+
 ### 0.11.8 (2016-03-16 12:50:00 UTC)
 
 * Fix ensures internal buffer of a downloaded file is written to disk

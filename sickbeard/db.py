@@ -77,7 +77,8 @@ class DBConnection(object):
         if result:
             if self.hasColumn('db_version', 'db_minor_version'):
                 minor = self.select('SELECT db_minor_version FROM db_version')
-                return int(result[0]['db_version']) * 100 + int(minor[0]['db_minor_version'])
+                version = int(result[0]['db_version']) * 100 + int(minor[0]['db_minor_version'])
+                return (version, 4301)[2000301 == version]
             return int(result[0]['db_version'])
         else:
             return 0
