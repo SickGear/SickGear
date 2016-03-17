@@ -1042,8 +1042,9 @@ class AddTvShowOverview(db.SchemaUpgrade):
     def execute(self):
         db.backup_database('sickbeard.db', self.checkDBVersion())
 
-        logger.log(u'Adding column overview to tv_shows')
-        self.addColumn('tv_shows', 'overview', 'TEXT', '')
+        if not self.hasColumn('tv_shows', 'overview'):
+            logger.log(u'Adding column overview to tv_shows')
+            self.addColumn('tv_shows', 'overview', 'TEXT', '')
 
         self.setDBVersion(20002)
         return self.checkDBVersion()
@@ -1054,8 +1055,9 @@ class AddTvShowTags(db.SchemaUpgrade):
     def execute(self):
         db.backup_database('sickbeard.db', self.checkDBVersion())
 
-        logger.log(u'Adding tag  to tv_shows')
-        self.addColumn('tv_shows', 'tag', 'TEXT', 'Show List')
+        if not self.hasColumn('tv_shows', 'tag'):
+            logger.log(u'Adding tag  to tv_shows')
+            self.addColumn('tv_shows', 'tag', 'TEXT', 'Show List')
 
         self.setDBVersion(20003)
         return self.checkDBVersion()
