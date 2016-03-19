@@ -88,7 +88,7 @@ class PiSexyProvider(generic.TorrentProvider):
 
                                 download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
 
-                            except (AttributeError, TypeError, ValueError):
+                            except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
                             if title and download_url:
