@@ -81,6 +81,7 @@
 * Add Bit-HDTV torrent provider
 * Add PrivateHD torrent provider
 * Add Zooqle torrent provider
+* Add 2160p UHD 4K WEB quality
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)

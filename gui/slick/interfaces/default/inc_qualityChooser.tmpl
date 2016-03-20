@@ -11,7 +11,7 @@
 			<select id="qualityPreset" name="quality_preset" class="form-control form-control-inline input-sm">
 				<option value="0">Custom</option>
 #for $curPreset in $qualityPresets:
-				<option value="$curPreset"#echo ('', $html_selected)[$curPreset == $overall_quality]##echo ('', ' style="padding-left:15px"')[$qualityPresetStrings[$curPreset].endswith('0p')]#>$qualityPresetStrings[$curPreset]</option>
+				<option value="$curPreset"#echo ('', $html_selected)[$curPreset == $overall_quality]##echo ('', ' style="padding-left:15px"')[$qualityPresetStrings[$curPreset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$curPreset]]#>$qualityPresetStrings[$curPreset]</option>
 #end for
 			</select>
 			<span>preferred episode quality to download</span>
