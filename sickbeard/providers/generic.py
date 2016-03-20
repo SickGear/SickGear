@@ -812,7 +812,16 @@ class TorrentProvider(object, GenericProvider):
                     response = helpers.getURL(url, session=self.session)
                     try:
                         action = re.findall('[<]form[\w\W]+?action="([^"]+)', response)[0]
-                        url = self.urls['config_provider_home_uri'] + action.lstrip('/')
+                        url = (self.urls.get('login_base') or
+                               self.urls['config_provider_home_uri']) + action.lstrip('/')
+
+                        tags = re.findall(r'(?is)(<input.*?name="[^"]+".*?>)', response)
+                        nv = [(tup[0]) for tup in [re.findall(r'(?is)name="([^"]+)"(?:.*?value="([^"]+)")?', x)
+                                                   for x in tags]]
+                        for name, value in nv:
+                            if name not in ('username', 'password'):
+                                post_params = isinstance(post_params, type({})) and post_params or {}
+                                post_params.setdefault(name, value)
                     except KeyError:
                         return super(TorrentProvider, self)._authorised()
                 else:
