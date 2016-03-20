@@ -84,6 +84,7 @@
 * Add 2160p UHD 4K WEB quality
 * Add DigitalHive torrent provider
 * Add RevTT torrent provider
+* Add PTF torrent provider
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
