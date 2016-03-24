@@ -50,6 +50,7 @@ from sickbeard import notifiers
 from sickbeard import postProcessor
 from sickbeard import subtitles
 from sickbeard import history
+from sickbeard import network_timezones
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 from sickbeard import encodingKludge as ek
@@ -1772,8 +1773,14 @@ class TVEpisode(object):
         # if we don't have the file
         if not ek.ek(os.path.isfile, self.location):
 
+            today = datetime.date.today()
+            future_airtime = self.airdate > today + datetime.timedelta(days=1) or \
+                             (not self.airdate < today - datetime.timedelta(days=1) and
+                              network_timezones.parse_date_time(self.airdate.toordinal(), self.show.airs, self.show.network) +
+                              datetime.timedelta(minutes=helpers.tryInt(self.show.runtime, 60)) > datetime.datetime.now(network_timezones.sb_timezone))
+
             # if it hasn't aired yet set the status to UNAIRED
-            if self.airdate >= datetime.date.today() and self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
+            if future_airtime and self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
                 logger.log('Episode airs in the future, marking it %s' % statusStrings[UNAIRED], logger.DEBUG)
                 self.status = UNAIRED
 

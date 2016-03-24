@@ -36,8 +36,18 @@ am_regex = re.compile(r'(A[. ]? ?M)', flags=re.I)
 pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
 
 network_dict = None
+network_dupes = None
 
 sb_timezone = tz.tzlocal()
+
+country_timezones = {
+    'AU': 'Australia/Sydney', 'AR': 'America/Buenos_Aires', 'AUSTRALIA': 'Australia/Sydney', 'BR': 'America/Sao_Paulo',
+    'CA': 'Canada/Eastern', 'CZ': 'Europe/Prague', 'DE': 'Europe/Berlin', 'ES': 'Europe/Madrid',
+    'FI': 'Europe/Helsinki', 'FR': 'Europe/Paris', 'HK': 'Asia/Hong_Kong', 'IE': 'Europe/Dublin',
+    'IS': 'Atlantic/Reykjavik', 'IT': 'Europe/Rome', 'JP': 'Asia/Tokyo', 'MX': 'America/Mexico_City',
+    'MY': 'Asia/Kuala_Lumpur', 'NL': 'Europe/Amsterdam', 'NZ': 'Pacific/Auckland', 'PH': 'Asia/Manila',
+    'PT': 'Europe/Lisbon', 'RU': 'Europe/Kaliningrad', 'SE': 'Europe/Stockholm', 'SG': 'Asia/Singapore',
+    'TW': 'Asia/Taipei', 'UK': 'Europe/London', 'US': 'US/Eastern', 'ZA': 'Africa/Johannesburg'}
 
 
 # helper to remove failed temp download
@@ -205,45 +215,61 @@ def update_network_dict():
 
 # load network timezones from db into dict
 def load_network_dict():
+    global network_dict, network_dupes
+
+    my_db = db.DBConnection('cache.db')
+    sql_name = 'REPLACE(LOWER(network_name), " ", "")'
     try:
-        my_db = db.DBConnection('cache.db')
-        cur_network_list = my_db.select('SELECT * FROM network_timezones')
+        sql = 'SELECT %s AS network_name, timezone FROM [network_timezones] ' % sql_name + \
+              'GROUP BY %s HAVING COUNT(*) = 1 ORDER BY %s;' % (sql_name, sql_name)
+        cur_network_list = my_db.select(sql)
         if cur_network_list is None or len(cur_network_list) < 1:
             update_network_dict()
-            cur_network_list = my_db.select('SELECT * FROM network_timezones')
-        d = dict(cur_network_list)
+            cur_network_list = my_db.select(sql)
+        network_dict = dict(cur_network_list)
     except:
-        d = {}
-    global network_dict
-    network_dict = d
+        network_dict = {}
+
+    try:
+
+        case_dupes = my_db.select('SELECT * FROM [network_timezones] WHERE %s IN ' % sql_name +
+                                  '(SELECT %s FROM [network_timezones]' % sql_name +
+                                  ' GROUP BY %s HAVING COUNT(*) > 1)' % sql_name +
+                                  ' ORDER BY %s;' % sql_name)
+        network_dupes = dict(case_dupes)
+    except:
+        network_dupes = {}
 
 
 # get timezone of a network or return default timezone
-def get_network_timezone(network, network_dict):
+def get_network_timezone(network):
     if network is None:
         return sb_timezone
 
+    timezone = None
+
     try:
         if zoneinfo.ZONEFILENAME is not None:
+            if not network_dict:
+                load_network_dict()
             try:
-                n_t = tz.gettz(network_dict[network])
+                timezone = tz.gettz(network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower()))
             except:
-                return sb_timezone
+                pass
 
-            if n_t is not None:
-                return n_t
-            else:
-                return sb_timezone
-        else:
-            return sb_timezone
+            if timezone is None:
+                cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
+                try:
+                    timezone = tz.gettz(country_timezones.get(cc.group(1).upper()))
+                except:
+                    pass
     except:
-        return sb_timezone
+        pass
+
+    return timezone if timezone is not None else sb_timezone
 
 
-# parse date and time string into local time
-def parse_date_time(d, t, network):
-    if network_dict is None:
-        load_network_dict()
+def parse_time(t):
     mo = time_regex.search(t)
     if mo is not None and len(mo.groups()) >= 5:
         if mo.group(5) is not None:
@@ -274,9 +300,23 @@ def parse_date_time(d, t, network):
         hr = 0
         m = 0
 
+    return hr, m
+
+
+# parse date and time string into local time
+def parse_date_time(d, t, network):
+
+    if isinstance(t, basestring):
+        (hr, m) = parse_time(t)
+    else:
+        (hr, m) = t
+
     te = datetime.datetime.fromordinal(helpers.tryInt(d))
     try:
-        foreign_timezone = get_network_timezone(network, network_dict)
+        if isinstance(network, basestring):
+            foreign_timezone = get_network_timezone(network)
+        else:
+            foreign_timezone = network
         foreign_naive = datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=foreign_timezone)
         return foreign_naive
     except:

@@ -250,6 +250,8 @@ class QueueItemAdd(ShowQueueItem):
         # this will initialize self.show to None
         ShowQueueItem.__init__(self, ShowQueueActions.ADD, self.show, scheduled_update)
 
+        self.priority = generic_queue.QueuePriorities.VERYHIGH
+
     def _getName(self):
         """
         Returns the show name if there is a show object created, if not returns
