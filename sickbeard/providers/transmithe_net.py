@@ -19,7 +19,8 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import helpers, logger, tvcache
+from sickbeard import common, helpers, logger
+from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
@@ -27,7 +28,7 @@ from lib.unidecode import unidecode
 class TransmithenetProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'Transmithe.net')
+        generic.TorrentProvider.__init__(self, 'Transmithe.net', cache_update_freq=17)
 
         self.url_base = 'https://transmithe.net/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -39,10 +40,9 @@ class TransmithenetProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
         self.user_authkey, self.user_passkey = 2 * [None]
+        self.chk_td = True
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = TransmithenetCache(self)
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -88,11 +88,13 @@ class TransmithenetProvider(generic.TorrentProvider):
 
                         try:
                             title_parts = group_name.split('[')
-                            maybe_res = re.findall('((?:72|108)0\w)', title_parts[1])
+                            maybe_res = re.findall('((?:72|108|216)0\w)', title_parts[1])
+                            maybe_ext = re.findall('(?i)(%s)' % '|'.join(common.mediaExtensions), title_parts[1])
                             detail = title_parts[1].split('/')
                             detail[1] = detail[1].strip().lower().replace('mkv', 'x264')
-                            title = '%s.%s' % (title_parts[0].strip(), '.'.join(
-                                (len(maybe_res) and [maybe_res[0]] or []) + [detail[0].strip(), detail[1]]))
+                            title = '%s.%s' % (BS4Parser(title_parts[0].strip(), 'html.parser').soup.string, '.'.join(
+                                (maybe_res and [maybe_res[0]] or []) +
+                                [detail[0].strip(), detail[1], maybe_ext and maybe_ext[0].lower() or 'mkv']))
                         except (IndexError, KeyError):
                             title = group_name
                         download_url = self.urls['get'] % (self.user_authkey, self.user_passkey, torrent_id)
@@ -117,18 +119,6 @@ class TransmithenetProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
-
-
-class TransmithenetCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 17
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = TransmithenetProvider()

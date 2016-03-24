@@ -17,7 +17,8 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import tvcache
+import time
 
 
 class WombleProvider(generic.NZBProvider):
@@ -34,46 +35,23 @@ class WombleCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 15  # cache update frequency
+        self.update_freq = 6  # cache update frequency
 
-    def updateCache(self):
+    def _cache_data(self):
 
-        # delete anything older then 7 days
-        self._clearCache()
-
-        if not self.shouldUpdate():
-            return
-
-        cl = []
-        data = None
-        for url in [self.provider.url + 'rss/?sec=tv-x264&fr=false',
-                    self.provider.url + 'rss/?sec=tv-sd&fr=false',
-                    self.provider.url + 'rss/?sec=tv-dvd&fr=false',
-                    self.provider.url + 'rss/?sec=tv-hd&fr=false']:
-            logger.log(u'Womble\'s Index cache update URL: ' + url, logger.DEBUG)
+        result = []
+        for section in ['sd', 'hd', 'x264', 'dvd']:
+            url = '%srss/?sec=tv-%s&fr=false' % (self.provider.url, section)
             data = self.getRSSFeed(url)
+            time.sleep(1.1)
+            cnt = len(result)
+            for entry in (data and data.get('entries', []) or []):
+                if entry.get('title') and entry.get('link', '').startswith('http'):
+                    result.append((entry['title'], entry['link'], None, None))
 
-            # As long as we got something from the provider we count it as an update
-            if not data:
-                return []
+            self.provider.log_result(count=len(result) - cnt, url=url)
 
-            # By now we know we've got data and no auth errors, all we need to do is put it in the database
-            for item in data.entries:
-                title, url = self._title_and_url(item)
-                ci = self._parseItem(title, url)
-                if None is not ci:
-                    cl.append(ci)
-
-        if 0 < len(cl):
-            my_db = self.get_db()
-            my_db.mass_action(cl)
-
-        # set last updated
-        if data:
-            self.setLastUpdate()
-
-    def _checkAuth(self, *data):
-        return 'Invalid Link' != data[0]
+        return result
 
 
 provider = WombleProvider()

@@ -19,7 +19,7 @@ import re
 import urllib
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.exceptions import AuthException
 from sickbeard.helpers import tryInt
 from sickbeard.indexers import indexer_config
@@ -33,7 +33,7 @@ except ImportError:
 class HDBitsProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'HDBits')
+        generic.TorrentProvider.__init__(self, 'HDBits', cache_update_freq=15)
 
         # api_spec: https://hdbits.org/wiki/API
         self.url_base = 'https://hdbits.org/'
@@ -46,9 +46,7 @@ class HDBitsProvider(generic.TorrentProvider):
         self.proper_search_terms = [' proper ', ' repack ']
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.passkey, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = HDBitsCache(self)
+        self.username, self.passkey, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def check_auth_from_data(self, parsed_json):
 
@@ -146,18 +144,6 @@ class HDBitsProvider(generic.TorrentProvider):
             results = list(set(results + items[mode]))
 
         return results
-
-
-class HDBitsCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 15  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = HDBitsProvider()

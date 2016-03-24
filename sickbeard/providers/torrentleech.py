@@ -19,14 +19,14 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from lib.unidecode import unidecode
 
 
 class TorrentLeechProvider(generic.TorrentProvider):
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'TorrentLeech')
+        generic.TorrentProvider.__init__(self, 'TorrentLeech', cache_update_freq=20)
 
         self.url_base = 'https://torrentleech.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -40,7 +40,6 @@ class TorrentLeechProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = TorrentLeechCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -110,15 +109,6 @@ class TorrentLeechProvider(generic.TorrentProvider):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
 
-
-class TorrentLeechCache(tvcache.TVCache):
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-        return self.provider.cache_data()
 
 
 provider = TorrentLeechProvider()

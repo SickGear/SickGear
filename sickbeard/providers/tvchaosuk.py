@@ -19,7 +19,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from sickbeard.config import naming_ep_type
@@ -32,9 +32,9 @@ class TVChaosUKProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TVChaosUK')
 
-        self.url_base = 'https://tvchaosuk.com/'
+        self.url_base = 'https://www.tvchaosuk.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
+                     'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'browse.php',
                      'get': self.url_base + '%s'}
 
@@ -42,7 +42,6 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
         self.search_fallback = True
-        self.cache = TVChaosUKCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -92,8 +91,9 @@ class TVChaosUKProvider(generic.TorrentProvider):
                                 info = tr.find('a', href=rc['info'])
                                 title = (tr.find('div', attrs={'class': 'tooltip-content'}).get_text() or info.get_text()).strip()
                                 title = re.findall('(?m)(^[^\r\n]+)', title)[0]
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip(
-                                    '/').replace(self.urls['config_provider_home_uri'], '')
+                                download_url = str(tr.find('a', href=rc['get'])['href'])
+                                if not download_url.startswith('http'):
+                                    download_url = self.urls['get'] % download_url.lstrip('/')
                             except Exception:
                                 continue
 
@@ -134,6 +134,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                                     add_pad = re.findall('((?:19|20)\d\d\-\d\d\-\d\d)([\w\W])', title)
                                     if len(add_pad) and add_pad[0][1] not in [' ', '.']:
                                         title = title.replace(''.join(add_pad[0]), '%s %s' % (add_pad[0][0], add_pad[0][1]))
+                                    title = re.sub(r'(?sim)(.*?)(?:Episode|Season).\d+.(.*)', r'\1\2', title)
 
                                 if title and download_url:
                                     items[mode].append((title, download_url, seeders, self._bytesizer(size)))
@@ -174,16 +175,6 @@ class TVChaosUKProvider(generic.TorrentProvider):
     def ui_string(key):
 
         return 'tvchaosuk_tip' == key and 'has missing quality data so you must add quality Custom/Unknown to any wanted show' or ''
-
-
-class TVChaosUKCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = TVChaosUKProvider()

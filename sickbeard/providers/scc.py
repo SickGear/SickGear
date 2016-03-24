@@ -20,7 +20,7 @@ import time
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -31,18 +31,16 @@ class SCCProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'SceneAccess')
 
-        self.url_base = 'https://sceneaccess.eu/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'login',
-                     'search': self.url_base + 'browse?search=%s&method=1&c27=27&c17=17&c11=11',
-                     'nonscene': self.url_base + 'nonscene?search=%s&method=1&c44=44&c45=44',
-                     'archive': self.url_base + 'archive?search=%s&method=1&c26=26',
-                     'get': self.url_base + '%s'}
+        self.url_home = ['https://sceneaccess.%s/' % u for u in 'eu', 'org']
 
-        self.url = self.urls['config_provider_home_uri']
+        self.url_vars = {
+            'login': 'login', 'search': 'browse?search=%s&method=1&c27=27&c17=17&c11=11', 'get': '%s',
+            'nonscene': 'nonscene?search=%s&method=1&c44=44&c45=44', 'archive': 'archive?search=%s&method=1&c26=26'}
+        self.url_tmpl = {
+            'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',  'search': '%(home)s%(vars)s',
+            'get': '%(home)s%(vars)s', 'nonscene': '%(home)s%(vars)s', 'archive': '%(home)s%(vars)s'}
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = SCCCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -119,18 +117,6 @@ class SCCProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
-
-
-class SCCCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = SCCProvider()

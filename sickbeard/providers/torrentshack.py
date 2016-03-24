@@ -21,7 +21,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -30,13 +30,14 @@ from lib.unidecode import unidecode
 class TorrentShackProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'TorrentShack')
+        generic.TorrentProvider.__init__(self, 'TorrentShack', cache_update_freq=20)
 
         self.url_base = 'https://torrentshack.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'login.php?lang=',
                      'search': self.url_base + 'torrents.php?searchstr=%s&%s&' + '&'.join(
-                         ['release_type=both', 'searchtags=', 'tags_type=0', 'order_by=s3', 'order_way=desc', 'torrent_preset=all']),
+                         ['release_type=both', 'searchtags=', 'tags_type=0',
+                          'order_by=s3', 'order_way=desc', 'torrent_preset=all']),
                      'get': self.url_base + '%s'}
 
         self.categories = {'shows': [600, 620, 700, 981, 980], 'anime': [850]}
@@ -44,7 +45,6 @@ class TorrentShackProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = TorrentShackCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -115,18 +115,6 @@ class TorrentShackProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
-
-
-class TorrentShackCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = TorrentShackProvider()

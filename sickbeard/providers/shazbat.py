@@ -22,7 +22,7 @@ import time
 import traceback
 
 from . import generic
-from sickbeard import helpers, logger, tvcache
+from sickbeard import helpers, logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -32,7 +32,7 @@ class ShazbatProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'Shazbat')
+        generic.TorrentProvider.__init__(self, 'Shazbat', cache_update_freq=20)
 
         self.url_base = 'https://www.shazbat.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -46,8 +46,6 @@ class ShazbatProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = ShazbatCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -145,18 +143,6 @@ class ShazbatProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, detail_only=True, scene=False, **kwargs)
-
-
-class ShazbatCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = ShazbatProvider()

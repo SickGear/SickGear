@@ -21,7 +21,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -31,7 +31,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'AlphaRatio')
+        generic.TorrentProvider.__init__(self, 'AlphaRatio', cache_update_freq=20)
 
         self.url_base = 'https://alpharatio.cc/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -44,9 +44,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = AlphaRatioCache(self)
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -65,7 +63,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                search_url = self.urls['search'] % (search_string, ('', '&freetorrent=1')[self.freeleech])
+                search_url = self.urls['search'] % (search_string, ('&freetorrent=1', '')[not self.freeleech])
 
                 html = self.get_url(search_url)
 
@@ -109,18 +107,6 @@ class AlphaRatioProvider(generic.TorrentProvider):
             results = list(set(results + items[mode]))
 
         return results
-
-
-class AlphaRatioCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = AlphaRatioProvider()

@@ -21,7 +21,7 @@ import datetime
 import time
 
 from . import generic
-from sickbeard import helpers, logger, tvcache
+from sickbeard import helpers, logger
 from sickbeard.indexers.indexer_config import INDEXER_TVDB
 
 
@@ -51,7 +51,6 @@ class RarbgProvider(generic.TorrentProvider):
         self.minseed, self.minleech, self.token, self.token_expiry = 4 * [None]
         self.confirmed = False
         self.request_throttle = datetime.datetime.now()
-        self.cache = RarbgCache(self)
 
     def _authorised(self, reset=False, **kwargs):
 
@@ -176,16 +175,6 @@ class RarbgProvider(generic.TorrentProvider):
                     search_params[x][ep_type][y] = '{{%s}}' % search_params[x][ep_type][y]
 
         return search_params
-
-
-class RarbgCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = RarbgProvider()
