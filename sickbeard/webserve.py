@@ -382,7 +382,7 @@ class MainHandler(WebHandler):
 
     def setPosterSortBy(self, sort):
 
-        if sort not in ('name', 'date', 'network', 'progress'):
+        if sort not in ('name', 'date', 'network', 'progress', 'quality'):
             sort = 'name'
 
         sickbeard.POSTER_SORTBY = sort
