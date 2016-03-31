@@ -48,6 +48,7 @@
 * Change show list second level sort criteria
 * Change adding show processing to be highest priority
 * Use timezones to check unaired status during show update/adding
+* Fix syntax error causing renamer to error out
 
 
 ### 0.11.10 (2016-03-17 19:00:00 UTC)
