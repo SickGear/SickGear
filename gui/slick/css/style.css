@@ -593,10 +593,8 @@ home.tmpl
 	height:100%;
 	overflow:visible;
 	text-align:center;
-	text-shadow:0 0 0.1em #fff;
 	vertical-align:middle;
 	font-size:12px;
-	color:#000
 }
 
 .progress-80{

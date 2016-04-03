@@ -45,7 +45,10 @@
 * Remove redundant Adult Swim logos
 * Add scene qualities WEB.h264 to SDTV, 720p.WEB.h264 to WEB DL 720p, and 1080p.WEB.h264 to WEB DL 1080p
 * Change improve handling when provider PiSexy is missing expected data
-* Change show list second level sort criteria
+* Change Show List second level sort criteria
+* Change Show List sort Next Ep, and restore sort on Downloads
+* Add sort by quality to Poster layout
+* Change +n snatches to links on all Show List layouts
 * Change adding show processing to be highest priority
 * Use timezones to check unaired status during show update/adding
 * Fix syntax error causing renamer to error out

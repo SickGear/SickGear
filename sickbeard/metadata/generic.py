@@ -295,12 +295,12 @@ class GenericMetadata():
                 indexerid = showXML.find('id')
 
                 root = showXML.getroot()
-                if indexer:
+                if None is not indexer:
                     indexer.text = show_obj.indexer
                 else:
                     etree.SubElement(root, "indexer").text = str(show_obj.indexer)
 
-                if indexerid:
+                if None is not indexerid:
                     indexerid.text = show_obj.indexerid
                 else:
                     etree.SubElement(root, "id").text = str(show_obj.indexerid)

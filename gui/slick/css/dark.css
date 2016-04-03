@@ -216,7 +216,8 @@ home.tmpl
 	border:1px solid #111
 }
 
-.progressbarText{
+.ui-font,
+a.ui-font{
 	text-shadow:0 0 0.1em #000;
 	color:#fff
 }
