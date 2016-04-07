@@ -271,7 +271,7 @@ class Quality:
 
     @staticmethod
     def assumeQuality(name):
-        if name.lower().endswith(('.avi', '.mp4')):
+        if name.lower().endswith(('.avi', '.mp4', '.mkv')):
             return Quality.SDTV
         elif name.lower().endswith('.ts'):
             return Quality.RAWHDTV
