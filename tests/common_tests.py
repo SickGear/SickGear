@@ -12,6 +12,9 @@ class QualityTests(unittest.TestCase):
     # TODO: repack / proper ? air-by-date ? season rip? multi-ep?
 
     def test_SDTV(self):
+        self.assertEqual(common.Quality.compositeStatus(common.DOWNLOADED, common.Quality.SDTV),
+                         common.Quality.statusFromName('Test.Show.S01E02-GROUP.mkv'))
+
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.PDTV.XViD-GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.PDTV.x264-GROUP"))
         self.assertEqual(common.Quality.SDTV, common.Quality.nameQuality("Test.Show.S01E02.HDTV.XViD-GROUP"))

@@ -54,6 +54,11 @@
 * Fix syntax error causing renamer to error out
 
 
+### 0.11.11 (2016-04-05 19:20:00 UTC)
+
+* Add support for SD mkv container
+
+
 ### 0.11.10 (2016-03-17 19:00:00 UTC)
 
 * Fix dbs that should not have been imported to work
