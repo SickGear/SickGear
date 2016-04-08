@@ -86,6 +86,7 @@
 * Add RevTT torrent provider
 * Add PTF torrent provider
 * Add ILT torrent provider
+* Add Fano torrent provider
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
