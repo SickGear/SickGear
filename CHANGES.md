@@ -52,6 +52,7 @@
 * Change adding show processing to be highest priority
 * Use timezones to check unaired status during show update/adding
 * Fix syntax error causing renamer to error out
+* Change storing metadata nfo vars from int to strings to resolve lxml type exceptions that don't occur with etree
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
