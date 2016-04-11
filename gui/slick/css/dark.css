@@ -163,16 +163,19 @@ inc_top.tmpl
 
 .ui-tabs .ui-tabs-panel{
 	background-color:#3d3d3d !important;
-	border:1px solid #111 !important
+	border:1px solid #111 !important;
+	border-top-width:0 !important
 }
 
 .ui-tabs .ui-tabs-nav li.ui-tabs-active{
+	border-bottom:1px solid #3d3d3d !important;
 	border-top-left-radius:5px;
 	border-top-right-radius:5px
 }
 
 .ui-tabs-nav > :not(.ui-tabs-active){
 	background:#333;
+	border-bottom:2px solid #222 !important;
 	border-top-left-radius:5px;
 	border-top-right-radius:5px
 }
@@ -213,17 +216,18 @@ home.tmpl
 	border:1px solid #111
 }
 
-.progressbarText{
+.ui-font,
+a.ui-font{
 	text-shadow:0 0 0.1em #000;
 	color:#fff
 }
 
-.show{
+#show-list .show-card{
 	background-color:#333;
 	border:1px solid #111
 }
 
-.show .ui-widget-content{
+#show-list .show-card .ui-widget-content{
 	border-top:1px solid #111;
 	border-bottom:1px solid #111;
 	border-left:0;
@@ -265,6 +269,7 @@ td.tvShow a{
 	text-decoration:none
 }
 
+td.tvShow a:hover span,
 td.tvShow a:hover{
 	cursor:pointer;
 	color:#09A2FF
@@ -274,21 +279,10 @@ td.tvShow a:hover{
 home_addShows.tmpl
 ========================================================================== */
 
-.icon-addnewshow{
-	background-image:url("../images/addshows/add-new32-white.png")
-}
-
-.icon-addtrendingshow{
-	background-image:url("../images/addshows/add-trending32-white.png")
-}
-
-.icon-addrecommendedshow{
-	background-image:url("../images/addshows/add-trakt32-white.png")
-}
-
-.icon-addexistingshow{
-	background-image:url("../images/addshows/add-existing32-white.png")
-}
+.icon-addnewshow{background-image:url("../images/addshows/add-new32-white.png")}
+.icon-addexistingshow{background-image:url("../images/addshows/add-existing32-white.png")}
+.icon-addrecommendedshow{background-image:url("../images/addshows/add-trakt32-white.png")}
+.icon-addtrendingshow{background-image:url("../images/addshows/add-trending32-white.png")}
 
 /* =======================================================================
 home_newShow.tmpl
@@ -301,6 +295,10 @@ home_newShow.tmpl
 
 .step-one #searchResults .alt{
 	background-color:rgb(40, 40, 40)
+}
+
+.article{
+	color:#707070
 }
 
 #addRootDirTable td label .filepath,
@@ -331,7 +329,7 @@ ul#rootDirStaticList li{
 home_browseShows.tmpl
 ========================================================================== */
 
-.browse-container{
+#browse-list .show-card{
 	background-color:#333;
 	border:1px solid #111
 }
@@ -684,8 +682,12 @@ bootstrap Overrides
 ========================================================================== */
 
 body{
-	color:#fff;
 	background-color:#222
+}
+
+body,
+.show-date{
+	color:#fff
 }
 
 input, textarea, select, .uneditable-input{
@@ -1178,6 +1180,7 @@ pre{
 input sizing (for config pages)
 ========================================================================== */
 
+.showlist-select optgroup,
 #pickShow optgroup,
 #showfilter optgroup,
 #editAProvider optgroup{
@@ -1185,6 +1188,7 @@ input sizing (for config pages)
 	background-color:rgb(51, 51, 51)
 }
 
+.showlist-select optgroup option,
 #pickShow optgroup option,
 #showfilter optgroup option,
 #editAProvider optgroup option{

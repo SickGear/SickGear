@@ -27,10 +27,12 @@ function initActions() {
 	$('#SubMenu a:contains("Show Queue Overview")').addClass('btn').html('<i class="sgicon-showqueue"></i>Show Queue Overview');
 	$('#SubMenu a[href$="/manage/failedDownloads/"]').addClass('btn').html('<i class="sgicon-failed"></i>Failed Downloads');
 	$('#SubMenu a:contains("Notification")').addClass('btn').html('<i class="sgicon-notification"></i>Notifications');
-	$('#SubMenu a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
-	$('#SubMenu a[href$="/home/updateXBMC/"]').addClass('btn').html('<i class="sgicon-xbmc"></i>Update XBMC');
-	$('#SubMenu a:contains("Update show in Kodi")').addClass('btn').html('<i class="sgicon-kodi"></i>Update show in Kodi');
+	$('#SubMenu a[href$="/home/updateEMBY/"]').addClass('btn').html('<i class="sgicon-emby"></i>Update Emby');
 	$('#SubMenu a[href$="/home/updateKODI/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
+	$('#SubMenu a[href$="/home/updateXBMC/"]').addClass('btn').html('<i class="sgicon-xbmc"></i>Update XBMC');
+	$('#SubMenu a:contains("Update show in Emby")').addClass('btn').html('<i class="sgicon-emby"></i>Update show in Emby');
+	$('#SubMenu a:contains("Update show in Kodi")').addClass('btn').html('<i class="sgicon-kodi"></i>Update show in Kodi');
+	$('#SubMenu a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
 }
 
 $(document).ready(function(){

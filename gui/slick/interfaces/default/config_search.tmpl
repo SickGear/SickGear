@@ -489,8 +489,9 @@
 									<span class="component-title" id="directory_title">Downloaded files location</span>
 									<span class="component-desc">
 										<input type="text" name="torrent_path" id="torrent_path" value="$sickbeard.TORRENT_PATH" class="form-control input-sm input350">
-										<p class="clear-left note">where <span id="torrent_client">the torrent client</span> will save downloaded files (blank for client default)
-											<span id="path_synology"> <b>note:</b> the destination has to be a shared folder for Synology DS</span></p>
+										<p class="clear-left note">where <span id="torrent_client">the torrent client</span> will save downloaded files <span id="path_blank">(blank for client default)</span>
+											<span id="path_synology"> <b>note:</b> the destination has to be a shared folder for Synology DS</span>
+											<span id="path_transmission" class="grey-text"> (v2.92 and newer should <em>not</em> be blank)</span></p>
 									</span>
 								</label>
 							</div>

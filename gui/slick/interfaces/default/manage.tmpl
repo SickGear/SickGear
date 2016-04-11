@@ -23,24 +23,16 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 <!--
 \$.tablesorter.addParser({
 	id: 'showNames',
-	is: function(s) {
-		return false;
-	},
+	is: function(s) { return !1; },
 	format: function(s) {
-		#if not $sickbeard.SORT_ARTICLE
-			return (s || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
-		#else
-			return (s || '');
-		#end if	
+	    return (s || '')#if not $sickbeard.SORT_ARTICLE#.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1')#end if#;
 	},
 	type: 'text'
 });
 
 \$.tablesorter.addParser({
 	id: 'quality',
-	is: function(s) {
-		return false;
-	},
+	is: function(s) { return !1; },
 	format: function(s) {
 		return s.replace('hd1080p', 5).replace('hd720p', 4).replace('hd', 3).replace('sd', 2).replace('any', 1).replace('best', 0).replace('custom', 7);
 	},
@@ -128,7 +120,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 			<td rowspan="1" colspan="#echo $columns_total-2#" class="align-right alt"><input class="btn pull-right" type="button" value="Submit" id="submitMassUpdate"></td>
 		</tr>
 	</tfoot>
-	
+
 	<tbody>
 
 #set $disabled = ' disabled="disabled"'
@@ -179,7 +171,8 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
                                  $option_state % ('remove', 'remove', ('', $disabled + $reason)[$curRemove_disabled]))
 		<tr>
 			<td align="center"><input type="checkbox" class="editCheck" id="edit-$curShow.indexerid"></td>
-			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$curShow.name</a></td>
+    #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sickbeard.SORT_ARTICLE]
+			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$display_name</a></td>
     #if $curShow.quality in $qualityPresets
 			<td align="center"><span class="quality $qualityPresetStrings[$curShow.quality]">$qualityPresetStrings[$curShow.quality]</span></td>
     #else
@@ -208,7 +201,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 		</tr>
 #end for
 	</tbody>
-	
+
 </table>
 
 </form>

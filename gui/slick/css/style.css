@@ -126,14 +126,14 @@ fonts
 	font-style:italic
 }
 
-/* Droid Sans */
+/* SickGear Icons */
 @font-face{
 	font-family:'sgicons';
-	src:url('fonts/sgicons.eot');
-	src:url('fonts/sgicons.eot?#iefix') format('embedded-opentype'),
-		url('fonts/sgicons.woff') format('woff'),
-		url('fonts/sgicons.ttf') format('truetype'),
-		url('fonts/sgicons.svg#sgicons') format('svg');
+	src:url('fonts/sgicons.eot?v1');
+	src:url('fonts/sgicons.eot?v1#iefix') format('embedded-opentype'),
+		url('fonts/sgicons.woff?v1') format('woff'),
+		url('fonts/sgicons.ttf?v1') format('truetype'),
+		url('fonts/sgicons.svg?v1#sgicons') format('svg');
 	font-weight:normal;
 	font-style:normal
 }
@@ -298,15 +298,18 @@ inc_top.tmpl
 
 .ui-tabs .ui-tabs-panel{
 	background-color:#F7F7F7 !important;
-	border:1px solid #CCC !important
+	border:1px solid #CCC !important;
+	border-top-width:0 !important
 }
 
 .ui-tabs .ui-tabs-nav li.ui-tabs-active{
+	border-bottom:1px solid #F7F7F7 !important;
 	border-top-left-radius:5px;
 	border-top-right-radius:5px
 }
 
 .ui-tabs-nav > :not(.ui-tabs-active){
+	border-bottom:1px solid transparent !important;
 	border-top-left-radius:5px;
 	border-top-right-radius:5px
 }
@@ -499,6 +502,10 @@ inc_top.tmpl
 	content:"\e621"
 }
 
+.sgicon-emby:before {
+	content: "\e900"
+}
+
 /* =======================================================================
 inc_bottom.tmpl
 ========================================================================== */
@@ -563,12 +570,11 @@ home.tmpl
 	font-size:100%
 }
 
-#HomeLayout{margin-top:-35px}
-#HomeLayout.not-poster{height:75px}
-#HomeLayout div.not-poster{position:relative;top:38px}
-#HomeLayout span.not-poster{margin-top:-30px}
-#HomeLayout.poster{margin-top:-35px}
-#HomeLayout span.poster{margin-bottom:10px}
+#HomeLayout{
+	margin-top:-35px;
+	height:75px;
+	margin-bottom:10px
+}
 #search_show_name{margin-top:0}
 
 .ui-progressbar{
@@ -587,10 +593,8 @@ home.tmpl
 	height:100%;
 	overflow:visible;
 	text-align:center;
-	text-shadow:0 0 0.1em #fff;
 	vertical-align:middle;
 	font-size:12px;
-	color:#000
 }
 
 .progress-80{
@@ -644,17 +648,23 @@ home.tmpl
 .yes{background-image:url("../images/yes16.png")}
 .no{background-image:url("../images/no16.png")}
 
+.container,
 #container{
-	margin:0 auto
+	margin:12px auto 12px
 }
 
-.show{
-	margin:12px;
+#show-list .show-card{
+	margin:0 2px 12px;
 	width:188px;
 	height:352px;
+	float:left;
 	background-color:#DFDACF;
+	color:#a6a6a6;
 	border:1px solid #111;
 	border-radius:6px
+}
+#show-list .show-card-top{
+	height:344px
 }
 
 .show-image{
@@ -665,28 +675,33 @@ home.tmpl
 	border-top-right-radius:5px
 }
 
-.show .ui-progressbar{
-	height:7px !important;
-	top:-2px
+.show-image a{
+	display:block;
+	height:100%;
+	width:100%
 }
 
-.show .ui-corner-all, .ui-corner-bottom, .ui-corner-right, .ui-corner-br{
-	border-bottom-right-radius:0
+#show-list .show-card .ui-progressbar{
+	height:8px !important;
 }
 
-.show .ui-corner-all, .ui-corner-bottom, .ui-corner-left, .ui-corner-bl{
-	border-bottom-left-radius:0
+#show-list .show-card .ui-corner-all, .ui-corner-bottom, .ui-corner-right, .ui-corner-br{
+	border-bottom-right-radius:5px
 }
 
-.show .ui-corner-all, .ui-corner-top, .ui-corner-right, .ui-corner-tr{
+#show-list .show-card .ui-corner-all, .ui-corner-bottom, .ui-corner-left, .ui-corner-bl{
+	border-bottom-left-radius:5px
+}
+
+#show-list .show-card .ui-corner-all, .ui-corner-top, .ui-corner-right, .ui-corner-tr{
 	border-top-right-radius:0
 }
 
-.show .ui-corner-all, .ui-corner-top, .ui-corner-left, .ui-corner-tl{
+#show-list .show-card .ui-corner-all, .ui-corner-top, .ui-corner-left, .ui-corner-tl{
 	border-top-left-radius:0
 }
 
-.show .ui-widget-content{
+#show-list .show-card .ui-widget-content{
 	border-top:1px solid #111;
 	border-bottom:1px solid #111;
 	border-left:0;
@@ -701,26 +716,17 @@ home.tmpl
 	border:none
 }
 
-.show .progress-20,
-.show .progress-40,
-.show .progress-60,
-.show .progress-80{
-	height:7px
+#show-list .show-card .progress-20,
+#show-list .show-card .progress-40,
+#show-list .show-card .progress-60,
+#show-list .show-card .progress-80{
+	height:8px
 }
 
-.show .progress-80{
-	border-radius:0
-}
-
-.show .progress-60{
-	border-radius:0
-}
-
-.show .progress-40{
-	border-radius:0
-}
-
-.show .progress-20{
+#show-list .show-card .progress-20,
+#show-list .show-card .progress-40,
+#show-list .show-card .progress-60,
+#show-list .show-card .progress-80{
 	border-radius:0
 }
 
@@ -786,6 +792,10 @@ home.tmpl
 	font-size:11px;
 	text-align:left;
 	display:block
+}
+
+.show-network{
+	font-size:11px;
 }
 
 .show-network-image{
@@ -860,7 +870,7 @@ home_addShows.tmpl
 	margin-left:auto
 }
 
-#addShowPortal a{
+#addShowPortal a.btn{
 	padding:0 20px;
 	width:360px;
 	float:left;
@@ -889,26 +899,14 @@ div.buttontext p{
 	font-size:13px
 }
 
-.icon-addnewshow{
-	background-image:url("../images/addshows/add-new32-black.png");
-	width:32px;
-	height:32px
-}
+.icon-addnewshow{background-image:url("../images/addshows/add-new32-black.png")}
+.icon-addexistingshow{background-image:url("../images/addshows/add-existing32-black.png")}
+.icon-addrecommendedshow{background-image:url("../images/addshows/add-trakt32-black.png")}
+.icon-addtrendingshow{background-image:url("../images/addshows/add-trending32-black.png")}
+.img-anime{background-image: url("../images/addshows/add-anime.gif")}
+.img-imdb{background-image: url("../images/addshows/add-imdb.gif")}
 
-.icon-addtrendingshow{
-	background-image:url("../images/addshows/add-trending32-black.png");
-	width:32px;
-	height:32px
-}
-
-.icon-addrecommendedshow{
-	background-image:url("../images/addshows/add-trakt32-black.png");
-	width:32px;
-	height:32px
-}
-
-.icon-addexistingshow{
-	background-image:url("../images/addshows/add-existing32-black.png");
+.square-32{
 	width:32px;
 	height:32px
 }
@@ -953,6 +951,7 @@ div.formpaginate{
 	margin-right:6px
 }
 
+#edit-show #customQualityWrapper div.component-group-desc p,
 #addShowForm #customQualityWrapper div.component-group-desc p{
 	font-size:14px
 }
@@ -1014,6 +1013,9 @@ div.formpaginate{
 	padding:0 0 0 15px
 }
 
+#edit-show #blackwhitelist,
+#edit-show #blackwhitelist h4,
+#edit-show #blackwhitelist p,
 #addShowForm #blackwhitelist,
 #addShowForm #blackwhitelist h4,
 #addShowForm #blackwhitelist p{
@@ -1063,16 +1065,16 @@ home_browseShows.tmpl
 	padding-bottom:4px
 }
 
-.browse-container p{
+.show-card-inner p{
 	padding-top:2px
 }
 
-.browse-container p img{
+.show-card-inner p img{
 	position:relative;
 	top:-2px
 }
 
-.browse-container p, .browse-container i{
+.show-card-inner p, .show-card-inner i{
 	white-space:nowrap;
 	font-size:12px;
 	overflow:hidden;
@@ -1080,9 +1082,11 @@ home_browseShows.tmpl
 	margin:0
 }
 
-.browse-container{
-	margin:12px 12px 12px 0;
+#browse-list .show-card{
+	margin:0 2px 12px;
 	width:188px;
+	height:341px;
+	float:left;
 	background-color:#DFDACF;
 	border:1px solid #111;
 	border-radius:6px
@@ -1667,6 +1671,7 @@ td.col-search{
 	padding:15px 0 0
 }
 
+#edit-show #config span.component-desc,
 #addShowForm #editShow.stepDiv span.component-desc{
 	width:639px
 }
@@ -2070,6 +2075,10 @@ history.tmpl
 	vertical-align:middle
 }
 
+#historyTable td span.article{
+	vertical-align:initial
+}
+
 #historyTable td img.help,
 #historyTable td span.help{
 	cursor:help
@@ -2151,6 +2160,10 @@ config*.tmpl
 	padding:15px 15px 25px;
 	border-bottom:1px dotted #ccc;
 	min-height:200px
+}
+
+#edit-show .component-group{
+	padding:25px 30px
 }
 
 .component-item{
@@ -2290,6 +2303,10 @@ select .selected:before{
 #editShow .field-pair #customQuality h4{
 	font-size:13px !important;
 	margin-bottom:10px
+}
+
+#editShow .field-pair #SceneException h4{
+	margin-bottom:5px
 }
 
 #editShow .field-pair #customQuality h4{
@@ -2817,6 +2834,13 @@ div.blackwhitelist.white select,
 div.blackwhitelist.black select{
 	height:110px
 }
+#edit-show div.blackwhitelist.pool{
+	width:330px;
+	height:265px;
+	margin-left:248px;
+	float:none
+}
+#edit-show div.blackwhitelist.pool select,
 div.blackwhitelist.pool,
 div.blackwhitelist.pool select{
 	width:330px;
@@ -2851,6 +2875,12 @@ div.blackwhitelist.manual{
 
 .max300{
 	max-width:300px
+}
+
+img[src=''],img:not([src]){
+	width:102%;
+	height:102%;
+	margin:-1%;
 }
 
 /* =======================================================================
@@ -3374,6 +3404,12 @@ label{
 	font-weight:normal
 }
 
+.label-container{
+	display: inline-block;
+	max-width: 100%;
+	margin-bottom: 5px
+}
+
 pre{
 	border:1px solid
 }
@@ -3428,6 +3464,7 @@ input sizing (for config pages)
 	margin-top:-4px
 }
 
+#config .input350,
 .input350{
 	width:350px;
 	margin-top:-4px
@@ -3605,6 +3642,7 @@ div.formpaginate .prev, div.formpaginate .next{
 }
 
 /* step 3 related */
+#edit-show #customQualityWrapper #customQuality,
 #customQuality{
 	display:block;
 	padding:0 0 10px 0;

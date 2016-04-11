@@ -20,13 +20,19 @@ from __future__ import with_statement
 
 import os.path
 
-import xml.etree.cElementTree as etree
+try:
+    from lxml import etree
+except ImportError:
+    try:
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        import xml.etree.ElementTree as etree
 
 import re
 
 import sickbeard
 
-from sickbeard import exceptions, helpers
+from sickbeard import helpers
 from sickbeard.metadata import helpers as metadata_helpers
 from sickbeard import logger
 from sickbeard import encodingKludge as ek
@@ -276,40 +282,40 @@ class GenericMetadata():
 
     def update_show_indexer_metadata(self, show_obj):
         if self.show_metadata and show_obj and self._has_show_metadata(show_obj):
-            logger.log(
-                u"Metadata provider " + self.name + " updating show indexer info metadata file for " + show_obj.name,
-                logger.DEBUG)
+            logger.log(u'Metadata provider %s updating show indexer metadata file for %s' % (self.name, show_obj.name),
+                       logger.DEBUG)
 
             nfo_file_path = self.get_show_file_path(show_obj)
             try:
                 with ek.ek(open, nfo_file_path, 'r') as xmlFileObj:
-                    showXML = etree.ElementTree(file=xmlFileObj)
+                    show_xml = etree.ElementTree(file=xmlFileObj)
 
-                indexer = showXML.find('indexer')
-                indexerid = showXML.find('id')
+                indexer = show_xml.find('indexer')
+                indexerid = show_xml.find('id')
 
-                root = showXML.getroot()
-                if indexer:
-                    indexer.text = show_obj.indexer
+                root = show_xml.getroot()
+                show_indexer = str(show_obj.indexer)
+                if None is not indexer:
+                    indexer.text = show_indexer
                 else:
-                    etree.SubElement(root, "indexer").text = str(show_obj.indexer)
+                    etree.SubElement(root, 'indexer').text = show_indexer
 
-                if indexerid:
-                    indexerid.text = show_obj.indexerid
+                show_indexerid = str(show_obj.indexerid)
+                if None is not indexerid:
+                    indexerid.text = show_indexerid
                 else:
-                    etree.SubElement(root, "id").text = str(show_obj.indexerid)
+                    etree.SubElement(root, 'id').text = show_indexerid
 
                 # Make it purdy
                 helpers.indentXML(root)
 
-                showXML.write(nfo_file_path)
+                show_xml.write(nfo_file_path)
                 helpers.chmodAsParent(nfo_file_path)
 
                 return True
             except IOError as e:
-                logger.log(
-                    u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),
-                    logger.ERROR)
+                logger.log(u'Unable to write file %s - is the folder writable? %s' % (nfo_file_path, ex(e)),
+                           logger.ERROR)
 
     def create_fanart(self, show_obj):
         if self.fanart and show_obj and not self._has_fanart(show_obj):
@@ -910,6 +916,8 @@ class GenericMetadata():
         Used only when mass adding Existing Shows, using previously generated Show metadata to reduce the need to query TVDB.
         """
 
+        from sickbeard.indexers.indexer_config import INDEXER_TVDB
+
         empty_return = (None, None, None)
 
         metadata_path = ek.ek(os.path.join, folder, self._show_metadata_filename)
@@ -944,8 +952,13 @@ class GenericMetadata():
 
             if showXML.findtext('tvdbid') != None:
                 indexer_id = int(showXML.findtext('tvdbid'))
+                indexer = INDEXER_TVDB
             elif showXML.findtext('id') != None:
                 indexer_id = int(showXML.findtext('id'))
+                try:
+                    indexer = INDEXER_TVDB if [s for s in showXML.findall('.//*') if s.text and s.text.find('thetvdb.com') != -1] else indexer
+                except:
+                    pass
             else:
                 logger.log(u"Empty <id> or <tvdbid> field in NFO, unable to find a ID", logger.WARNING)
                 return empty_return

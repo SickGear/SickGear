@@ -42,7 +42,7 @@ def search_propers():
 
     logger.log(u'Beginning search for new propers')
 
-    age_shows, age_anime = 2, 14
+    age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
     aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
     aired_since_anime = datetime.datetime.today() - datetime.timedelta(days=age_anime)
     recent_shows, recent_anime = _recent_history(aired_since_shows, aired_since_anime)
@@ -100,7 +100,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
             name = _generic_name(x.name)
             if name not in propers:
                 try:
-                    parse_result = np.parse(x.title)
+                    parse_result = np.parse(x.name)
                     if parse_result.series_name and parse_result.episode_numbers and \
                             parse_result.show.indexerid in recent_shows + recent_anime:
                         logger.log(u'Found new proper: ' + x.name, logger.DEBUG)
@@ -227,7 +227,7 @@ def _download_propers(proper_list):
                 continue
 
             # make sure that none of the existing history downloads are the same proper we're trying to download
-            clean_proper_name = _generic_name(helpers.remove_non_release_groups(cur_proper.name, show_obj.is_anime()))
+            clean_proper_name = _generic_name(helpers.remove_non_release_groups(cur_proper.name, show_obj.is_anime))
             is_same = False
             for result in history_results:
                 # if the result exists in history already we need to skip it

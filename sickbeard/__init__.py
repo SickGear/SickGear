@@ -42,7 +42,10 @@ from indexers.indexer_config import INDEXER_TVDB
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
     indexer_episodenotfound, indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
+from sickbeard.exceptions import ex
 from sickbeard.providers.generic import GenericProvider
+from sickbeard import encodingKludge as ek
+from lib.adba.aniDBerrors import (AniDBError, AniDBBannedError)
 from lib.configobj import ConfigObj
 from lib.libtrakt import TraktAPI
 import trakt_helpers
@@ -133,6 +136,7 @@ HTTPS_KEY = None
 LAUNCH_BROWSER = False
 CACHE_DIR = None
 ACTUAL_CACHE_DIR = None
+ZONEINFO_DIR = None
 ROOT_DIRS = None
 TRASH_REMOVE_SHOW = False
 TRASH_ROTATE_LOGS = False
@@ -251,17 +255,10 @@ TORRENT_HIGH_BANDWIDTH = False
 TORRENT_LABEL = ''
 TORRENT_VERIFY_CERT = False
 
-USE_XBMC = False
-XBMC_ALWAYS_ON = True
-XBMC_NOTIFY_ONSNATCH = False
-XBMC_NOTIFY_ONDOWNLOAD = False
-XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = False
-XBMC_UPDATE_LIBRARY = False
-XBMC_UPDATE_FULL = False
-XBMC_UPDATE_ONLYFIRST = False
-XBMC_HOST = ''
-XBMC_USERNAME = None
-XBMC_PASSWORD = None
+USE_EMBY = False
+EMBY_UPDATE_LIBRARY = False
+EMBY_HOST = None
+EMBY_APIKEY = None
 
 USE_KODI = False
 KODI_ALWAYS_ON = True
@@ -274,6 +271,18 @@ KODI_UPDATE_ONLYFIRST = False
 KODI_HOST = ''
 KODI_USERNAME = None
 KODI_PASSWORD = None
+
+USE_XBMC = False
+XBMC_ALWAYS_ON = True
+XBMC_NOTIFY_ONSNATCH = False
+XBMC_NOTIFY_ONDOWNLOAD = False
+XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = False
+XBMC_UPDATE_LIBRARY = False
+XBMC_UPDATE_FULL = False
+XBMC_UPDATE_ONLYFIRST = False
+XBMC_HOST = ''
+XBMC_USERNAME = None
+XBMC_PASSWORD = None
 
 USE_PLEX = False
 PLEX_NOTIFY_ONSNATCH = False
@@ -393,6 +402,7 @@ PUSHBULLET_ACCESS_TOKEN = None
 PUSHBULLET_DEVICE_IDEN = None
 
 USE_EMAIL = False
+EMAIL_OLD_SUBJECTS = None
 EMAIL_NOTIFY_ONSNATCH = False
 EMAIL_NOTIFY_ONDOWNLOAD = False
 EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD = False
@@ -485,12 +495,15 @@ def initialize(consoleLogging=True):
             SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, SAB_HOST, \
             NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, NZBGET_HOST, NZBGET_USE_HTTPS, backlogSearchScheduler, \
             TORRENT_USERNAME, TORRENT_PASSWORD, TORRENT_HOST, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_LABEL, TORRENT_VERIFY_CERT, \
-            USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, \
-            XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, BACKLOG_FREQUENCY, \
-            USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
+            USE_EMBY, EMBY_UPDATE_LIBRARY, EMBY_HOST, EMBY_APIKEY, \
+            USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD,\
+            KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
+            USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD,\
+            XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, \
+            USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            PLEX_UPDATE_LIBRARY, PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, \
             USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
-            USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_UPDATE_LIBRARY, \
-            PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
+            BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, ALLOW_INCOMPLETE_SHOWDATA, \
             NEWZNAB_DATA, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, RECENTSEARCH_STARTUP, \
@@ -502,7 +515,7 @@ def initialize(consoleLogging=True):
             USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN, \
             versionCheckScheduler, VERSION_NOTIFY, AUTO_UPDATE, NOTIFY_ON_UPDATE, PROCESS_AUTOMATICALLY, UNPACK, CPU_PRESET, \
             KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, MIN_RECENTSEARCH_FREQUENCY, DEFAULT_UPDATE_FREQUENCY, MIN_UPDATE_FREQUENCY, UPDATE_FREQUENCY, \
-            showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, TIMEZONE_DISPLAY, \
+            showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, ZONEINFO_DIR, TIMEZONE_DISPLAY, \
             NAMING_PATTERN, NAMING_MULTI_EP, NAMING_ANIME_MULTI_EP, NAMING_FORCE_FOLDERS, NAMING_ABD_PATTERN, NAMING_CUSTOM_ABD, NAMING_SPORTS_PATTERN, NAMING_CUSTOM_SPORTS, NAMING_ANIME_PATTERN, NAMING_CUSTOM_ANIME, NAMING_STRIP_YEAR, \
             RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcesserScheduler, \
             providerList, newznabProviderList, torrentRssProviderList, \
@@ -511,7 +524,7 @@ def initialize(consoleLogging=True):
             USE_PUSHOVER, PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHOVER_NOTIFY_ONSNATCH, PUSHOVER_PRIORITY, PUSHOVER_DEVICE, PUSHOVER_SOUND, \
             USE_LIBNOTIFY, LIBNOTIFY_NOTIFY_ONSNATCH, LIBNOTIFY_NOTIFY_ONDOWNLOAD, LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD, USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, USE_SYNOINDEX, \
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
-            USE_EMAIL, EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_LIST, \
+            USE_EMAIL, EMAIL_OLD_SUBJECTS, EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_LIST, \
             METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, METADATA_KODI, metadata_provider_dict, \
             GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, recentSearchScheduler, NFO_RENAME, \
             GUI_NAME, DEFAULT_HOME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, EPISODE_VIEW_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
@@ -532,8 +545,9 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'Blackhole')
         CheckSection(CFG, 'SABnzbd')
         CheckSection(CFG, 'NZBget')
-        CheckSection(CFG, 'XBMC')
+        CheckSection(CFG, 'Emby')
         CheckSection(CFG, 'Kodi')
+        CheckSection(CFG, 'XBMC')
         CheckSection(CFG, 'PLEX')
         CheckSection(CFG, 'Growl')
         CheckSection(CFG, 'Prowl')
@@ -580,6 +594,9 @@ def initialize(consoleLogging=True):
         # clean cache folders
         if CACHE_DIR:
             helpers.clearCache()
+            ZONEINFO_DIR = ek.ek(os.path.join, CACHE_DIR, 'zoneinfo')
+            if not ek.ek(os.path.isdir, ZONEINFO_DIR) and not helpers.make_dirs(ZONEINFO_DIR):
+                logger.log(u'!!! Creating local zoneinfo dir failed', logger.ERROR)
 
         THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
         GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
@@ -775,17 +792,10 @@ def initialize(consoleLogging=True):
         TORRENT_LABEL = check_setting_str(CFG, 'TORRENT', 'torrent_label', '')
         TORRENT_VERIFY_CERT = bool(check_setting_int(CFG, 'TORRENT', 'torrent_verify_cert', 0))
 
-        USE_XBMC = bool(check_setting_int(CFG, 'XBMC', 'use_xbmc', 0))
-        XBMC_ALWAYS_ON = bool(check_setting_int(CFG, 'XBMC', 'xbmc_always_on', 1))
-        XBMC_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'XBMC', 'xbmc_notify_onsnatch', 0))
-        XBMC_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'XBMC', 'xbmc_notify_ondownload', 0))
-        XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'XBMC', 'xbmc_notify_onsubtitledownload', 0))
-        XBMC_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'XBMC', 'xbmc_update_library', 0))
-        XBMC_UPDATE_FULL = bool(check_setting_int(CFG, 'XBMC', 'xbmc_update_full', 0))
-        XBMC_UPDATE_ONLYFIRST = bool(check_setting_int(CFG, 'XBMC', 'xbmc_update_onlyfirst', 0))
-        XBMC_HOST = check_setting_str(CFG, 'XBMC', 'xbmc_host', '')
-        XBMC_USERNAME = check_setting_str(CFG, 'XBMC', 'xbmc_username', '')
-        XBMC_PASSWORD = check_setting_str(CFG, 'XBMC', 'xbmc_password', '')
+        USE_EMBY = bool(check_setting_int(CFG, 'Emby', 'use_emby', 0))
+        EMBY_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'Emby', 'emby_update_library', 0))
+        EMBY_HOST = check_setting_str(CFG, 'Emby', 'emby_host', '')
+        EMBY_APIKEY = check_setting_str(CFG, 'Emby', 'emby_apikey', '')
 
         USE_KODI = bool(check_setting_int(CFG, 'Kodi', 'use_kodi', 0))
         KODI_ALWAYS_ON = bool(check_setting_int(CFG, 'Kodi', 'kodi_always_on', 1))
@@ -798,6 +808,18 @@ def initialize(consoleLogging=True):
         KODI_HOST = check_setting_str(CFG, 'Kodi', 'kodi_host', '')
         KODI_USERNAME = check_setting_str(CFG, 'Kodi', 'kodi_username', '')
         KODI_PASSWORD = check_setting_str(CFG, 'Kodi', 'kodi_password', '')
+
+        USE_XBMC = bool(check_setting_int(CFG, 'XBMC', 'use_xbmc', 0))
+        XBMC_ALWAYS_ON = bool(check_setting_int(CFG, 'XBMC', 'xbmc_always_on', 1))
+        XBMC_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'XBMC', 'xbmc_notify_onsnatch', 0))
+        XBMC_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'XBMC', 'xbmc_notify_ondownload', 0))
+        XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'XBMC', 'xbmc_notify_onsubtitledownload', 0))
+        XBMC_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'XBMC', 'xbmc_update_library', 0))
+        XBMC_UPDATE_FULL = bool(check_setting_int(CFG, 'XBMC', 'xbmc_update_full', 0))
+        XBMC_UPDATE_ONLYFIRST = bool(check_setting_int(CFG, 'XBMC', 'xbmc_update_onlyfirst', 0))
+        XBMC_HOST = check_setting_str(CFG, 'XBMC', 'xbmc_host', '')
+        XBMC_USERNAME = check_setting_str(CFG, 'XBMC', 'xbmc_username', '')
+        XBMC_PASSWORD = check_setting_str(CFG, 'XBMC', 'xbmc_password', '')
 
         USE_PLEX = bool(check_setting_int(CFG, 'Plex', 'use_plex', 0))
         PLEX_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Plex', 'plex_notify_onsnatch', 0))
@@ -922,6 +944,8 @@ def initialize(consoleLogging=True):
         PUSHBULLET_DEVICE_IDEN = check_setting_str(CFG, 'Pushbullet', 'pushbullet_device_iden', '')
 
         USE_EMAIL = bool(check_setting_int(CFG, 'Email', 'use_email', 0))
+        EMAIL_OLD_SUBJECTS = bool(check_setting_int(CFG, 'Email', 'email_old_subjects',
+                                                    None is not EMAIL_HOST and any(EMAIL_HOST)))
         EMAIL_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Email', 'email_notify_onsnatch', 0))
         EMAIL_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Email', 'email_notify_ondownload', 0))
         EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Email', 'email_notify_onsubtitledownload', 0))
@@ -1327,7 +1351,12 @@ def halt():
                     pass
 
             if ADBA_CONNECTION:
-                ADBA_CONNECTION.logout()
+                try:
+                    ADBA_CONNECTION.logout()
+                except AniDBBannedError as e:
+                    logger.log(u'ANIDB Error %s' % ex(e), logger.DEBUG)
+                except AniDBError as e:
+                    pass
                 logger.log(u'Waiting for the ANIDB CONNECTION thread to exit')
                 try:
                     ADBA_CONNECTION.join(10)
@@ -1583,18 +1612,11 @@ def save_config():
     new_config['TORRENT']['torrent_label'] = TORRENT_LABEL
     new_config['TORRENT']['torrent_verify_cert'] = int(TORRENT_VERIFY_CERT)
 
-    new_config['XBMC'] = {}
-    new_config['XBMC']['use_xbmc'] = int(USE_XBMC)
-    new_config['XBMC']['xbmc_always_on'] = int(XBMC_ALWAYS_ON)
-    new_config['XBMC']['xbmc_notify_onsnatch'] = int(XBMC_NOTIFY_ONSNATCH)
-    new_config['XBMC']['xbmc_notify_ondownload'] = int(XBMC_NOTIFY_ONDOWNLOAD)
-    new_config['XBMC']['xbmc_notify_onsubtitledownload'] = int(XBMC_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['XBMC']['xbmc_update_library'] = int(XBMC_UPDATE_LIBRARY)
-    new_config['XBMC']['xbmc_update_full'] = int(XBMC_UPDATE_FULL)
-    new_config['XBMC']['xbmc_update_onlyfirst'] = int(XBMC_UPDATE_ONLYFIRST)
-    new_config['XBMC']['xbmc_host'] = XBMC_HOST
-    new_config['XBMC']['xbmc_username'] = XBMC_USERNAME
-    new_config['XBMC']['xbmc_password'] = helpers.encrypt(XBMC_PASSWORD, ENCRYPTION_VERSION)
+    new_config['Emby'] = {}
+    new_config['Emby']['use_emby'] = int(USE_EMBY)
+    new_config['Emby']['emby_update_library'] = int(EMBY_UPDATE_LIBRARY)
+    new_config['Emby']['emby_host'] = EMBY_HOST
+    new_config['Emby']['emby_apikey'] = EMBY_APIKEY
 
     new_config['Kodi'] = {}
     new_config['Kodi']['use_kodi'] = int(USE_KODI)
@@ -1608,6 +1630,19 @@ def save_config():
     new_config['Kodi']['kodi_host'] = KODI_HOST
     new_config['Kodi']['kodi_username'] = KODI_USERNAME
     new_config['Kodi']['kodi_password'] = helpers.encrypt(KODI_PASSWORD, ENCRYPTION_VERSION)
+
+    new_config['XBMC'] = {}
+    new_config['XBMC']['use_xbmc'] = int(USE_XBMC)
+    new_config['XBMC']['xbmc_always_on'] = int(XBMC_ALWAYS_ON)
+    new_config['XBMC']['xbmc_notify_onsnatch'] = int(XBMC_NOTIFY_ONSNATCH)
+    new_config['XBMC']['xbmc_notify_ondownload'] = int(XBMC_NOTIFY_ONDOWNLOAD)
+    new_config['XBMC']['xbmc_notify_onsubtitledownload'] = int(XBMC_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['XBMC']['xbmc_update_library'] = int(XBMC_UPDATE_LIBRARY)
+    new_config['XBMC']['xbmc_update_full'] = int(XBMC_UPDATE_FULL)
+    new_config['XBMC']['xbmc_update_onlyfirst'] = int(XBMC_UPDATE_ONLYFIRST)
+    new_config['XBMC']['xbmc_host'] = XBMC_HOST
+    new_config['XBMC']['xbmc_username'] = XBMC_USERNAME
+    new_config['XBMC']['xbmc_password'] = helpers.encrypt(XBMC_PASSWORD, ENCRYPTION_VERSION)
 
     new_config['Plex'] = {}
     new_config['Plex']['use_plex'] = int(USE_PLEX)
@@ -1740,6 +1775,7 @@ def save_config():
 
     new_config['Email'] = {}
     new_config['Email']['use_email'] = int(USE_EMAIL)
+    new_config['Email']['email_old_subjects'] = int(EMAIL_OLD_SUBJECTS)
     new_config['Email']['email_notify_onsnatch'] = int(EMAIL_NOTIFY_ONSNATCH)
     new_config['Email']['email_notify_ondownload'] = int(EMAIL_NOTIFY_ONDOWNLOAD)
     new_config['Email']['email_notify_onsubtitledownload'] = int(EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD)

@@ -3,4 +3,4 @@ from hachoir_parser.video.flv import FlvFile
 from hachoir_parser.video.mov import MovFile
 from hachoir_parser.video.mpeg_video import MPEGVideoFile
 from hachoir_parser.video.mpeg_ts import MPEG_TS
-
+from hachoir_parser.video.avchd import AVCHDINDX, AVCHDMOBJ, AVCHDMPLS, AVCHDCLPI

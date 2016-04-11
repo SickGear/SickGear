@@ -11,9 +11,37 @@ Creation date: 13 january 2007
 
 from hachoir_parser import Parser
 from hachoir_core.field import (FieldSet, ParserError, MissingField,
-    UInt8, Enum, Bit, Bits, RawBytes)
+    UInt8, Enum, Bit, Bits, RawBytes, RawBits)
 from hachoir_core.endian import BIG_ENDIAN
 from hachoir_core.text_handler import textHandler, hexadecimal
+
+class AdaptationField(FieldSet):
+    def createFields(self):
+        yield UInt8(self, "length")
+
+        yield Bit(self, "discontinuity_indicator")
+        yield Bit(self, "random_access_indicator")
+        yield Bit(self, "es_prio_indicator")
+        yield Bit(self, "has_pcr")
+        yield Bit(self, "has_opcr")
+        yield Bit(self, "has_splice_point")
+        yield Bit(self, "private_data")
+        yield Bit(self, "has_extension")
+
+        if self['has_pcr'].value:
+            yield Bits(self, "pcr_base", 33)
+            yield Bits(self, "pcr_ext", 9)
+
+        if self['has_opcr'].value:
+            yield Bits(self, "opcr_base", 33)
+            yield Bits(self, "opcr_ext", 9)
+
+        if self['has_splice_point'].value:
+            yield Bits(self, "splice_countdown", 8)
+
+        stuff_len = ((self['length'].value+1)*8) - self.current_size
+        if self['length'].value and stuff_len:
+            yield RawBits(self, 'stuffing', stuff_len)
 
 class Packet(FieldSet):
     def __init__(self, *args):
@@ -46,7 +74,11 @@ class Packet(FieldSet):
         yield Bit(self, "has_adaptation")
         yield Bit(self, "has_payload")
         yield Bits(self, "counter", 4)
-        yield RawBytes(self, "payload", 184)
+
+        if self["has_adaptation"].value:
+            yield AdaptationField(self, "adaptation_field")
+        if self["has_payload"].value:
+            yield RawBytes(self, "payload", 188-(self.current_size/8))
         if self["has_error"].value:
             yield RawBytes(self, "error_correction", 16)
 
@@ -54,6 +86,8 @@ class Packet(FieldSet):
         text = "Packet: PID %s" % self["pid"].display
         if self["payload_unit_start"].value:
             text += ", start of payload"
+        if self["has_adaptation"].value:
+            text += ", with adaptation field"
         return text
 
     def isValid(self):
@@ -96,7 +130,7 @@ class MPEG_TS(Parser):
             sync = self.stream.searchBytes("\x47", self.current_size, self.current_size+204*8)
             if sync is None:
                 raise ParserError("Unable to find synchronization byte")
-            elif sync:
+            elif sync-self.current_size:
                 yield RawBytes(self, "incomplete_packet[]", (sync-self.current_size)//8)
             yield Packet(self, "packet[]")
 

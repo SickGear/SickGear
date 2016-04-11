@@ -304,6 +304,7 @@
     #for $cur_result in $sql_results:
         #set $cur_indexer = int($cur_result['indexer'])
         #set $runtime = $cur_result['runtime']
+        #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_result['show_name']), $cur_result['show_name'])[$sickbeard.SORT_ARTICLE]
 
         #if int($cur_result['paused']) and not $sickbeard.EPISODE_VIEW_DISPLAY_PAUSED:
             #continue
@@ -334,7 +335,7 @@
 				<div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</div><span class="sort-data">$cur_result['localtime'].strftime('%Y%m%d%H%M')</span>
 			</td>
 
-			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$cur_result['show_name']</a>
+			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$display_name</a>
         #if int($cur_result['paused']):
 				<span class="pause">[paused]</span>
         #end if
@@ -437,6 +438,7 @@
 
     #for $cur_result in $sql_results:
         #set $cur_indexer = int($cur_result['indexer'])
+        #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_result['show_name']), $cur_result['show_name'])[$sickbeard.SORT_ARTICLE]
 
         #if int($cur_result['paused']) and not $sickbeard.EPISODE_VIEW_DISPLAY_PAUSED:
             #continue
@@ -551,7 +553,7 @@
 			<td class="next_episode">
 				<div class="clearfix">
 					<span class="tvshowTitle">
-						<a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$cur_result['show_name']
+						<a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$display_name
         #if int($cur_result['paused']):
 						<span class="pause">[paused]</span>
         #end if
@@ -785,7 +787,7 @@
 
 		</div> <!-- end carouselinner //-->
 	</div> <!-- end Carousel //-->
-</div> <!-- end daybydayCarouselContainer //--> 
+</div> <!-- end daybydayCarouselContainer //-->
 
 <!-- end calender view //-->
 #end if

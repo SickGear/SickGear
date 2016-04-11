@@ -107,8 +107,8 @@ class TVCache:
 
         return []
 
-    def getRSSFeed(self, url):
-        return RSSFeeds(self.provider).get_feed(url)
+    def getRSSFeed(self, url, **kwargs):
+        return RSSFeeds(self.provider).get_feed(url, **kwargs)
 
     def _translateTitle(self, title):
         return u'' + title.replace(' ', '.')

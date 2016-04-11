@@ -1,5 +1,6 @@
 #import sickbeard
 #import urllib
+#from sickbeard.helpers import anon_url
 #slurp
 <!DOCTYPE html>
 <html>
@@ -125,19 +126,22 @@
 							<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Manage Searches</a></li>
 							<li><a href="$sbRoot/manage/showQueueOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-showqueue"></i>Show Queue Overview</a></li>
 							<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status Management</a></li>
-#if $sickbeard.USE_PLEX and $sickbeard.PLEX_SERVER_HOST != ''
-							<li><a href="$sbRoot/home/updatePLEX/" tabindex="$tab#set $tab += 1#"><i class="sgicon-plex"></i>Update PLEX</a></li>
+#if hasattr($sickbeard, 'USE_EMBY') and $sickbeard.USE_EMBY and $sickbeard.EMBY_HOST != '' and $sickbeard.EMBY_APIKEY != ''
+							<li><a href="$sbRoot/home/updateEMBY/" tabindex="$tab#set $tab += 1#"><i class="sgicon-emby"></i>Update Emby</a></li>
 #end if
-#if $sickbeard.USE_XBMC and $sickbeard.XBMC_HOST != ''
-							<li><a href="$sbRoot/home/updateXBMC/" tabindex="$tab#set $tab += 1#"><i class="sgicon-xbmc"></i>Update XBMC</a></li>
-#end if
-#if $sickbeard.USE_KODI and $sickbeard.KODI_HOST != ''
+#if hasattr($sickbeard, 'USE_KODI') and $sickbeard.USE_KODI and $sickbeard.KODI_HOST != ''
 							<li><a href="$sbRoot/home/updateKODI/" tabindex="$tab#set $tab += 1#"><i class="sgicon-kodi"></i>Update Kodi</a></li>
 #end if
-#if $sickbeard.USE_FAILED_DOWNLOADS
+#if hasattr($sickbeard, 'USE_XBMC') and $sickbeard.USE_XBMC and $sickbeard.XBMC_HOST != ''
+							<li><a href="$sbRoot/home/updateXBMC/" tabindex="$tab#set $tab += 1#"><i class="sgicon-xbmc"></i>Update XBMC</a></li>
+#end if
+#if hasattr($sickbeard, 'USE_PLEX') and $sickbeard.USE_PLEX and $sickbeard.PLEX_SERVER_HOST != ''
+							<li><a href="$sbRoot/home/updatePLEX/" tabindex="$tab#set $tab += 1#"><i class="sgicon-plex"></i>Update PLEX</a></li>
+#end if
+#if hasattr($sickbeard, 'USE_FAILED_DOWNLOADS') and $sickbeard.USE_FAILED_DOWNLOADS
 							<li><a href="$sbRoot/manage/failedDownloads/" tabindex="$tab#set $tab += 1#"><i class="sgicon-failed"></i>Failed Downloads</a></li>
 #end if
-#if $sickbeard.USE_SUBTITLES
+#if hasattr($sickbeard, 'USE_SUBTITLES') and $sickbeard.USE_SUBTITLES
 							<li><a href="$sbRoot/manage/subtitleMissed/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Missed Subtitle Management</a></li>
 #end if
 						</ul>
@@ -213,11 +217,10 @@
 #end if
 ##
 #if sys.version_info < (2, 7, 9):
-	<div class="alert alert-danger upgrade-notification" role="alert">
-		<span>
-			SickGear will be dropping support for Python 2.7.8 and below. We recommend updating to latest version:
-			<a href="https://www.python.org/downloads/" onclick="window.open(this.href); return false;">Download here</a>
-		</span>
+	<div class="alert alert-danger upgrade-notification upgrade-py" role="alert">
+		<p>As per notify 29 Nov 2015, SickGear no longer supports Python 2.7.8 and older<br />
+			Please upgrade to Python <b>2.7.9</b> or newer (not 3.x.x): <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">Download here</a>
+		</p>
 	</div>
 #end if
 #if $sickbeard.NEWEST_VERSION_STRING

@@ -1,3 +1,4 @@
+# coding=utf-8
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
@@ -28,6 +29,7 @@ import re
 import time
 import traceback
 import urllib
+import threading
 
 from mimetypes import MimeTypes
 from Cheetah.Template import Template
@@ -38,7 +40,7 @@ from sickbeard import config, sab, clients, history, notifiers, processTV, ui, l
     db, search_queue, image_cache, naming, scene_exceptions, subtitles, network_timezones, sbdatetime
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
-from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings, cpu_presets
+from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
 from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
@@ -287,6 +289,10 @@ class IsAliveHandler(BaseHandler):
 
 
 class WebHandler(BaseHandler):
+    def __init__(self, *arg, **kwargs):
+        super(BaseHandler, self).__init__(*arg, **kwargs)
+        self.lock = threading.Lock()
+
     def page_not_found(self):
         t = PageTemplate(headers=self.request.headers, file='404.tmpl')
         return t.respond()
@@ -307,6 +313,11 @@ class WebHandler(BaseHandler):
             result = method(**kwargss)
             if result:
                 self.finish(result)
+
+    def send_message(self, message):
+        with self.lock:
+            self.write(message)
+            self.flush()
 
     post = get
 
@@ -371,7 +382,7 @@ class MainHandler(WebHandler):
 
     def setPosterSortBy(self, sort):
 
-        if sort not in ('name', 'date', 'network', 'progress'):
+        if sort not in ('name', 'date', 'network', 'progress', 'quality'):
             sort = 'name'
 
         sickbeard.POSTER_SORTBY = sort
@@ -522,20 +533,25 @@ class Home(MainHandler):
         return [
             {'title': 'Add Shows', 'path': 'home/addShows/', },
             {'title': 'Manual Post-Processing', 'path': 'home/postprocess/'},
-            {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
+            {'title': 'Update Emby', 'path': 'home/updateEMBY/', 'requires': self.haveEMBY},
             {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
+            {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
             {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX},
             {'title': 'Restart', 'path': 'home/restart/?pid=' + str(sickbeard.PID), 'confirm': True},
             {'title': 'Shutdown', 'path': 'home/shutdown/?pid=' + str(sickbeard.PID), 'confirm': True},
         ]
 
     @staticmethod
-    def haveXBMC():
-        return sickbeard.USE_XBMC and sickbeard.XBMC_UPDATE_LIBRARY
+    def haveEMBY():
+        return sickbeard.USE_EMBY
 
     @staticmethod
     def haveKODI():
-        return sickbeard.USE_KODI and sickbeard.KODI_UPDATE_LIBRARY
+        return sickbeard.USE_KODI
+
+    @staticmethod
+    def haveXBMC():
+        return sickbeard.USE_XBMC and sickbeard.XBMC_UPDATE_LIBRARY
 
     @staticmethod
     def havePLEX():
@@ -660,7 +676,7 @@ class Home(MainHandler):
 
         client = clients.getClientIstance(torrent_method)
 
-        connection, accesMsg = client(host, username, password).testAuthentication()
+        connection, accesMsg = client(host, username, password).test_authentication()
 
         return accesMsg
 
@@ -760,6 +776,29 @@ class Home(MainHandler):
         else:
             return 'Error sending tweet'
 
+    def testEMBY(self, host=None, apikey=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host)
+        if not hosts:
+            return 'Fail: At least one invalid host'
+
+        total_success, cur_message = notifiers.emby_notifier.test_notify(hosts, apikey)
+        return (cur_message, u'Success. All Emby hosts tested.')[total_success]
+
+    def testKODI(self, host=None, username=None, password=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host)
+        if not hosts:
+            return 'Fail: At least one invalid host'
+
+        if None is not password and set('*') == set(password):
+            password = sickbeard.KODI_PASSWORD
+
+        total_success, cur_message = notifiers.kodi_notifier.test_notify(hosts, username, password)
+        return (cur_message, u'Success. All Kodi hosts tested.')[total_success]
+
     def testXBMC(self, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -775,24 +814,6 @@ class Home(MainHandler):
             else:
                 finalResult += 'Test XBMC notice failed to ' + urllib.unquote_plus(curHost)
             finalResult += "<br />\n"
-
-        return finalResult
-
-    def testKODI(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_hosts(host)
-        if None is not password and set('*') == set(password):
-            password = sickbeard.KODI_PASSWORD
-
-        finalResult = ''
-        for curHost in [x.strip() for x in host.split(',')]:
-            curResult = notifiers.kodi_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
-            if len(curResult.split(':')) > 2 and 'OK' in curResult.split(':')[2]:
-                finalResult += 'Test Kodi notice sent successfully to ' + urllib.unquote_plus(curHost)
-            else:
-                finalResult += 'Test Kodi notice failed to ' + urllib.unquote_plus(curHost)
-            finalResult += '<br />\n'
 
         return finalResult
 
@@ -937,16 +958,38 @@ class Home(MainHandler):
     def loadShowNotifyLists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        myDB = db.DBConnection()
-        rows = myDB.select('SELECT show_id, show_name, notify_list FROM tv_shows ORDER BY show_name ASC')
+        my_db = db.DBConnection()
+        rows = my_db.select('SELECT indexer_id, indexer, notify_list FROM tv_shows ' +
+                            'WHERE notify_list NOTNULL and notify_list != ""')
+        notify_lists = {}
+        for r in filter(lambda x: x['notify_list'].strip(), rows):
+            notify_lists['%s_%s' % (r['indexer'], r['indexer_id'])] = r['notify_list']
 
-        data = {}
-        size = 0
-        for r in rows:
-            data[r['show_id']] = {'id': r['show_id'], 'name': r['show_name'], 'list': r['notify_list']}
-            size += 1
-        data['_size'] = size
-        return json.dumps(data)
+        sorted_show_lists = self.sorted_show_lists()
+        response = []
+        for current_group in sorted_show_lists:
+            data = []
+            for current_show in current_group[1]:
+                uid = '%s_%s' % (current_show.indexer, current_show.indexerid)
+                data.append({'id': uid, 'name': current_show.name,
+                             'list': '' if uid not in notify_lists else notify_lists[uid]})
+            if data:
+                response.append({current_group[0]: data})
+
+        return json.dumps(response)
+
+    @staticmethod
+    def save_show_email(show=None, emails=None):
+        # self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        my_db = db.DBConnection()
+        success = False
+        parse = show.split('_')
+        if 1 < len(parse) and \
+                my_db.action('UPDATE tv_shows SET notify_list = ? WHERE indexer = ? AND indexer_id = ?',
+                             [emails, parse[0], parse[1]]):
+            success = True
+        return json.dumps({'id': show, 'success': success})
 
     def testEmail(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -956,9 +999,8 @@ class Home(MainHandler):
         host = config.clean_host(host)
 
         if notifiers.email_notifier.test_notify(host, port, smtp_from, use_tls, user, pwd, to):
-            return 'Test email sent successfully! Check inbox.'
-        else:
-            return 'ERROR: %s' % notifiers.email_notifier.last_err
+            return 'Success. Test email sent. Check inbox.'
+        return 'ERROR: %s' % notifiers.email_notifier.last_err
 
     def testNMA(self, nma_api=None, nma_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1022,9 +1064,12 @@ class Home(MainHandler):
             else:
                 if change:
                     output.append(change)
+                    change = None
                 if line.startswith('* '):
                     change_parts = re.findall(r'^[\*\W]+(Add|Change|Fix|Port|Remove|Update)\W(.*)', line)
                     change = change_parts and {'type': change_parts[0][0], 'text': change_parts[0][1].strip()} or {}
+                elif not max_rel:
+                    break
                 elif line.startswith('### '):
                     rel_data = re.findall(r'(?im)^###\W*([^\s]+)\W\(([^\)]+)\)', line)
                     rel_data and output.append({'type': 'rel', 'ver': rel_data[0][0], 'date': rel_data[0][1]})
@@ -1032,8 +1077,6 @@ class Home(MainHandler):
                 elif line.startswith('# '):
                     max_data = re.findall(r'^#\W*([\d]+)\W*$', line)
                     max_rel = max_data and helpers.tryInt(max_data[0], None) or 5
-            if not max_rel:
-                break
         if change:
             output.append(change)
 
@@ -1156,12 +1199,16 @@ class Home(MainHandler):
                 t.submenu.append({'title': 'Re-scan files', 'path': 'home/refreshShow?show=%d' % showObj.indexerid})
                 t.submenu.append(
                     {'title': 'Force Full Update', 'path': 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid})
-                t.submenu.append({'title': 'Update show in XBMC',
-                                  'path': 'home/updateXBMC?showName=%s' % urllib.quote_plus(
-                                  showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
+                t.submenu.append({'title': 'Update show in Emby',
+                                  'path': 'home/updateEMBY%s' %
+                                          (INDEXER_TVDB == showObj.indexer and ('?show=%s' % showObj.indexerid) or '/'),
+                                  'requires': self.haveEMBY})
                 t.submenu.append({'title': 'Update show in Kodi',
                                   'path': 'home/updateKODI?showName=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveKODI})
+                t.submenu.append({'title': 'Update show in XBMC',
+                                  'path': 'home/updateXBMC?showName=%s' % urllib.quote_plus(
+                                  showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
                 t.submenu.append({'title': 'Media Renamer', 'path': 'home/testRename?show=%d' % showObj.indexerid})
                 if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
                         showObj) and showObj.subtitles:
@@ -1217,32 +1264,11 @@ class Home(MainHandler):
             display_seasons += [1]
         display_seasons += [highest_season]
 
-        def titler(x):
-            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
-
-        if sickbeard.SHOWLIST_TAGVIEW == 'custom':
-            t.sortedShowLists = []
-            for tag in sickbeard.SHOW_TAGS:
-                results = filter(lambda x: x.tag == tag, sickbeard.showList)
-                if results:
-                    t.sortedShowLists.append([tag, sorted(results, lambda x, y: cmp(titler(x.name), titler(y.name)))])
-        elif sickbeard.SHOWLIST_TAGVIEW == 'anime':
-            shows = []
-            anime = []
-            for show in sickbeard.showList:
-                if show.is_anime:
-                    anime.append(show)
-                else:
-                    shows.append(show)
-            t.sortedShowLists = [['Shows', sorted(shows, lambda x, y: cmp(titler(x.name), titler(y.name)))],
-                                 ['Anime', sorted(anime, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
-
-        else:
-            t.sortedShowLists = [
-                ['Show List', sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+        t.sortedShowLists = self.sorted_show_lists()
 
         tvshows = []
         tvshow_names = []
+        cur_sel = None
         for tvshow_types in t.sortedShowLists:
             for tvshow in tvshow_types[1]:
                 tvshows.append(tvshow.indexerid)
@@ -1252,8 +1278,11 @@ class Home(MainHandler):
         t.tvshow_id_csv = ','.join(str(x) for x in tvshows)
 
         last_item = len(tvshow_names)
-        t.prev_title = 'Prev show, %s' % tvshow_names[(cur_sel - 2, last_item - 1)[1 == cur_sel]]
-        t.next_title = 'Next show, %s' % tvshow_names[(cur_sel, 0)[last_item == cur_sel]]
+        t.prev_title = ''
+        t.next_title = ''
+        if cur_sel:
+            t.prev_title = 'Prev show, %s' % tvshow_names[(cur_sel - 2, last_item - 1)[1 == cur_sel]]
+            t.next_title = 'Next show, %s' % tvshow_names[(cur_sel, 0)[last_item == cur_sel]]
 
         t.bwl = None
         if showObj.is_anime:
@@ -1275,6 +1304,35 @@ class Home(MainHandler):
         t.xem_absolute_numbering = get_xem_absolute_numbering_for_show(indexerid, indexer)
 
         return t.respond()
+
+    @staticmethod
+    def sorted_show_lists():
+
+        def titler(x):
+            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
+
+        if 'custom' == sickbeard.SHOWLIST_TAGVIEW:
+            sorted_show_lists = []
+            for tag in sickbeard.SHOW_TAGS:
+                results = filter(lambda x: x.tag == tag, sickbeard.showList)
+                if results:
+                    sorted_show_lists.append([tag, sorted(results, lambda x, y: cmp(titler(x.name), titler(y.name)))])
+        elif 'anime' == sickbeard.SHOWLIST_TAGVIEW:
+            shows = []
+            anime = []
+            for show in sickbeard.showList:
+                if show.is_anime:
+                    anime.append(show)
+                else:
+                    shows.append(show)
+            sorted_show_lists = [['Shows', sorted(shows, lambda x, y: cmp(titler(x.name), titler(y.name)))],
+                                 ['Anime', sorted(anime, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+
+        else:
+            sorted_show_lists = [
+                ['Show List', sorted(sickbeard.showList, lambda x, y: cmp(titler(x.name), titler(y.name)))]]
+
+        return sorted_show_lists
 
     def plotDetails(self, show, season, episode):
         myDB = db.DBConnection()
@@ -1466,7 +1524,7 @@ class Home(MainHandler):
         if do_update:
             try:
                 sickbeard.showQueueScheduler.action.updateShow(showObj, True)  # @UndefinedVariable
-                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
             except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on the show.')
 
@@ -1474,14 +1532,14 @@ class Home(MainHandler):
             try:
                 scene_exceptions.update_scene_exceptions(showObj.indexerid, exceptions_list)  # @UndefinedVdexerid)
                 buildNameCache(showObj)
-                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
             except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on scene exceptions of the show.')
 
         if do_update_scene_numbering:
             try:
                 sickbeard.scene_numbering.xem_refresh(showObj.indexerid, showObj.indexer)  # @UndefinedVariable
-                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
             except exceptions.CantUpdateException as e:
                 errors.append('Unable to force an update on scene numbering of the show.')
 
@@ -1536,7 +1594,7 @@ class Home(MainHandler):
             ui.notifications.error('Unable to refresh this show.',
                                    ex(e))
 
-        time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+        helpers.cpu_sleep()
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 
@@ -1557,8 +1615,7 @@ class Home(MainHandler):
             ui.notifications.error('Unable to update this show.',
                                    ex(e))
 
-        # just give it some time
-        time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+        helpers.cpu_sleep()
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 
@@ -1575,9 +1632,33 @@ class Home(MainHandler):
         # search and download subtitles
         sickbeard.showQueueScheduler.action.downloadSubtitles(showObj, bool(force))  # @UndefinedVariable
 
-        time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+        helpers.cpu_sleep()
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
+
+    def updateEMBY(self, show=None):
+
+        if notifiers.emby_notifier.update_library(
+                sickbeard.helpers.findCertainShow(sickbeard.showList,helpers.tryInt(show, None)), force=True):
+            ui.notifications.message('Library update command sent to Emby host(s): ' + sickbeard.EMBY_HOST)
+        else:
+            ui.notifications.error('Unable to contact one or more Emby host(s): ' + sickbeard.EMBY_HOST)
+        self.redirect('/home/')
+
+    def updateKODI(self, showName=None):
+
+        # only send update to first host in the list -- workaround for kodi sql backend users
+        if sickbeard.KODI_UPDATE_ONLYFIRST:
+            # only send update to first host in the list -- workaround for kodi sql backend users
+            host = sickbeard.KODI_HOST.split(',')[0].strip()
+        else:
+            host = sickbeard.KODI_HOST
+
+        if notifiers.kodi_notifier.update_library(showName=showName, force=True):
+            ui.notifications.message('Library update command sent to Kodi host(s): ' + host)
+        else:
+            ui.notifications.error('Unable to contact one or more Kodi host(s): ' + host)
+        self.redirect('/home/')
 
     def updateXBMC(self, showName=None):
 
@@ -1592,21 +1673,6 @@ class Home(MainHandler):
             ui.notifications.message('Library update command sent to XBMC host(s): ' + host)
         else:
             ui.notifications.error('Unable to contact one or more XBMC host(s): ' + host)
-        self.redirect('/home/')
-
-    def updateKODI(self, showName=None):
-
-        # only send update to first host in the list -- workaround for kodi sql backend users
-        if sickbeard.KODI_UPDATE_ONLYFIRST:
-            # only send update to first host in the list -- workaround for kodi sql backend users
-            host = sickbeard.KODI_HOST.split(',')[0].strip()
-        else:
-            host = sickbeard.KODI_HOST
-
-        if notifiers.kodi_notifier.update_library(showName=showName):
-            ui.notifications.message('Library update command sent to Kodi host(s): ' + host)
-        else:
-            ui.notifications.error('Unable to contact one or more Kodi host(s): ' + host)
         self.redirect('/home/')
 
     def updatePLEX(self, *args, **kwargs):
@@ -1676,7 +1742,7 @@ class Home(MainHandler):
 
                     if int(
                             status) in Quality.DOWNLOADED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.DOWNLOADED + [
-                        IGNORED] and not ek.ek(os.path.isfile, epObj.location):
+                        IGNORED, SKIPPED] and not ek.ek(os.path.isfile, epObj.location):
                         logger.log(
                             u'Refusing to change status of ' + curEp + " to DOWNLOADED because it's not SNATCHED/DOWNLOADED",
                             logger.ERROR)
@@ -2078,17 +2144,21 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       force_replace=None, failed='0', type='auto', **kwargs):
+                       force_replace=None, failed='0', type='auto', stream='0', **kwargs):
 
-        if not dir:
+        if not dir and ('0' == failed or not nzbName):
             self.redirect('/home/postprocess/')
         else:
-            result = processTV.processDir(dir, nzbName, process_method=process_method, type=type,
+            result = processTV.processDir(dir.decode('utf-8') if dir else None, nzbName.decode('utf-8') if nzbName else None,
+                                          process_method=process_method, type=type,
                                           cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
                                           force=force in ['on', '1'],
                                           force_replace=force_replace in ['on', '1'],
-                                          failed=not '0' == failed)
+                                          failed='0' != failed,
+                                          webhandler=self.send_message if stream != '0' else None)
 
+            if '0' != stream:
+                return
             result = re.sub(r'(?i)<br(?:[\s/]+)>', '\n', result)
             if None is not quiet and 1 == int(quiet):
                 return u'%s' % re.sub('(?i)<a[^>]+>([^<]+)<[/]a>', r'\1', result)
@@ -2288,15 +2358,18 @@ class NewHomeAddShows(Home):
                     (indexer_id, show_name, indexer) = cur_provider.retrieveShowMetadata(cur_path)
 
                     # default to TVDB if indexer was not detected
-                    if show_name and not (indexer or indexer_id):
+                    if show_name and (not indexer or not indexer_id):
                         (sn, idx, id) = helpers.searchIndexerForShowID(show_name, indexer, indexer_id)
 
                         # set indexer and indexer_id from found info
-                        if not indexer and idx:
+                        if idx and id:
                             indexer = idx
-
-                        if not indexer_id and id:
                             indexer_id = id
+                            show_name = sn
+
+                # in case we don't have both indexer + indexer_id, set both to None
+                if not indexer or not indexer_id:
+                    indexer = indexer_id = None
 
                 cur_dir['existing_info'] = (indexer_id, show_name, indexer)
 
@@ -2309,7 +2382,7 @@ class NewHomeAddShows(Home):
 
         return t.respond()
 
-    def newShow(self, show_to_add=None, other_shows=None, use_show_name=None, **kwargs):
+    def new_show(self, show_to_add=None, other_shows=None, use_show_name=None, **kwargs):
         """
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
@@ -2443,11 +2516,15 @@ class NewHomeAddShows(Home):
 
         return self.browse_shows(browse_type, 'Random and Hot at AniDB', filtered, **kwargs)
 
+    def anime_default(self):
+
+        return self.redirect('/home/addShows/randomhot_anidb')
+
     def addAniDBShow(self, indexer_id, showName):
 
         if helpers.findCertainShow(sickbeard.showList, config.to_int(indexer_id, '')):
             return
-        return self.newShow('|'.join(['', '', '', indexer_id or showName]), use_show_name=True, is_anime=True)
+        return self.new_show('|'.join(['', '', '', indexer_id or showName]), use_show_name=True, is_anime=True)
 
     def popular_imdb(self, *args, **kwargs):
 
@@ -2539,8 +2616,12 @@ class NewHomeAddShows(Home):
         kwargs.update(dict(footnote=footnote))
         return self.browse_shows(browse_type, 'Most Popular IMDb TV', filtered, **kwargs)
 
+    def imdb_default(self):
+
+        return self.redirect('/home/addShows/popular_imdb')
+
     def addIMDbShow(self, indexer_id, showName):
-        return self.newShow('|'.join(['', '', '', re.search('(?i)tt\d+$', indexer_id) and indexer_id or showName]),
+        return self.new_show('|'.join(['', '', '', re.search('(?i)tt\d+$', indexer_id) and indexer_id or showName]),
                             use_show_name=True)
 
     def trakt_anticipated(self, *args, **kwargs):
@@ -2710,7 +2791,7 @@ class NewHomeAddShows(Home):
     def addTraktShow(self, indexer_id, showName):
 
         if not helpers.findCertainShow(sickbeard.showList, config.to_int(indexer_id, '')):
-            return self.newShow('|'.join(['', '', '', config.to_int(indexer_id, None) and indexer_id or showName]),
+            return self.new_show('|'.join(['', '', '', config.to_int(indexer_id, None) and indexer_id or showName]),
                                 use_show_name=True)
 
     def browse_shows(self, browse_type, browse_title, shows, *args, **kwargs):
@@ -2748,7 +2829,7 @@ class NewHomeAddShows(Home):
 
         return t.respond()
 
-    def existingShows(self, *args, **kwargs):
+    def existing_shows(self, *args, **kwargs):
         """
         Prints out the page to add existing shows from a root dir
         """
@@ -2766,7 +2847,7 @@ class NewHomeAddShows(Home):
                    scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
-        provided then it forwards back to newShow, if not it goes to /home.
+        provided then it forwards back to new_show, if not it goes to /home.
         """
 
         # grab our list of other dirs if given
@@ -2785,7 +2866,7 @@ class NewHomeAddShows(Home):
             rest_of_show_dirs = other_shows[1:]
 
             # go to add the next show
-            return self.newShow(next_show_dir, rest_of_show_dirs)
+            return self.new_show(next_show_dir, rest_of_show_dirs)
 
         # if we're skipping then behave accordingly
         if skipShow:
@@ -2803,7 +2884,7 @@ class NewHomeAddShows(Home):
                 logger.log('Unable to add show due to show selection. Not enough arguments: %s' % (repr(series_pieces)),
                            logger.ERROR)
                 ui.notifications.error('Unknown error. Unable to add show due to problem with show selection.')
-                return self.redirect('/home/addShows/existingShows/')
+                return self.redirect('/home/addShows/existing_shows/')
 
             indexer = int(series_pieces[0])
             indexer_id = int(series_pieces[2])
@@ -2826,7 +2907,7 @@ class NewHomeAddShows(Home):
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
         if ek.ek(os.path.isdir, show_dir) and not fullShowPath:
             ui.notifications.error('Unable to add show', u'Found existing folder: ' + show_dir)
-            return self.redirect('/home/addShows/existingShows?sid=%s&hash_dir=%s' % (indexer_id, abs(hash(show_dir))))
+            return self.redirect('/home/addShows/existing_shows?sid=%s&hash_dir=%s' % (indexer_id, abs(hash(show_dir))))
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:
@@ -2890,11 +2971,11 @@ class NewHomeAddShows(Home):
     def addExistingShows(self, shows_to_add=None, promptForSettings=None, **kwargs):
         """
         Receives a dir list and add them. Adds the ones with given TVDB IDs first, then forwards
-        along to the newShow page.
+        along to the new_show page.
         """
 
         if kwargs.get('sid', None):
-            return self.redirect('/home/addShows/newShow?show_to_add=%s&use_show_name=True' %
+            return self.redirect('/home/addShows/new_show?show_to_add=%s&use_show_name=True' %
                                  '|'.join(['', '', '', kwargs.get('sid', '')]))
 
         # grab a list of other shows to add, if provided
@@ -2923,9 +3004,9 @@ class NewHomeAddShows(Home):
 
                 indexer_id_given.append((indexer, show_dir, int(indexer_id), show_name))
 
-        # if they want me to prompt for settings then I will just carry on to the newShow page
+        # if they want me to prompt for settings then I will just carry on to the new_show page
         if promptForSettings and shows_to_add:
-            return self.newShow(shows_to_add[0], shows_to_add[1:])
+            return self.new_show(shows_to_add[0], shows_to_add[1:])
 
         # if they don't want me to prompt for settings then I can just add all the nfo shows now
         num_added = 0
@@ -2951,8 +3032,8 @@ class NewHomeAddShows(Home):
         if not dirs_only:
             return self.redirect('/home/')
 
-        # for the remaining shows we need to prompt for each one, so forward this on to the newShow page
-        return self.newShow(dirs_only[0], dirs_only[1:])
+        # for the remaining shows we need to prompt for each one, so forward this on to the new_show page
+        return self.new_show(dirs_only[0], dirs_only[1:])
 
 
 class Manage(MainHandler):
@@ -4823,14 +4904,16 @@ class ConfigNotifications(Config):
                                     'b64': base64.urlsafe_b64encode(location)})
         return t.respond()
 
-    def saveNotifications(self, use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None,
-                          xbmc_notify_ondownload=None,
-                          xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
-                          xbmc_update_library=None, xbmc_update_full=None, xbmc_host=None, xbmc_username=None,
-                          xbmc_password=None,
+    def saveNotifications(self,
+                          use_emby=None, emby_update_library=None, emby_host=None, emby_apikey=None,
                           use_kodi=None, kodi_always_on=None, kodi_notify_onsnatch=None, kodi_notify_ondownload=None,
-                          kodi_notify_onsubtitledownload=None, kodi_update_onlyfirst=None, kodi_update_library=None,
-                          kodi_update_full=None, kodi_host=None, kodi_username=None, kodi_password=None,
+                          kodi_notify_onsubtitledownload=None, kodi_update_onlyfirst=None,
+                          kodi_update_library=None, kodi_update_full=None,
+                          kodi_host=None, kodi_username=None, kodi_password=None,
+                          use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None, xbmc_notify_ondownload=None,
+                          xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
+                          xbmc_update_library=None, xbmc_update_full=None,
+                          xbmc_host=None, xbmc_username=None, xbmc_password=None,
                           use_plex=None, plex_notify_onsnatch=None, plex_notify_ondownload=None,
                           plex_notify_onsubtitledownload=None, plex_update_library=None,
                           plex_server_host=None, plex_host=None, plex_username=None, plex_password=None,
@@ -4872,18 +4955,24 @@ class ConfigNotifications(Config):
 
         results = []
 
-        sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
-        sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
-        sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
-        sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
-        sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
-        sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
-        sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
-        sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
-        sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
-        sickbeard.XBMC_USERNAME = xbmc_username
-        if set('*') != set(xbmc_password):
-            sickbeard.XBMC_PASSWORD = xbmc_password
+        sickbeard.USE_EMBY = config.checkbox_to_value(use_emby)
+        sickbeard.EMBY_UPDATE_LIBRARY = config.checkbox_to_value(emby_update_library)
+        sickbeard.EMBY_HOST = config.clean_hosts(emby_host)
+        keys_changed = False
+        all_keys = []
+        old_keys = [x.strip() for x in sickbeard.EMBY_APIKEY.split(',') if x.strip()]
+        new_keys = [x.strip() for x in emby_apikey.split(',') if x.strip()]
+        for key in new_keys:
+            if not starify(key, True):
+                keys_changed = True
+                all_keys += [key]
+                continue
+            for x in old_keys:
+                if key.startswith(x[0:3]) and key.endswith(x[-4:]):
+                    all_keys += [x]
+                    break
+        if keys_changed or (len(all_keys) != len(old_keys)):
+            sickbeard.EMBY_APIKEY = ','.join(all_keys)
 
         sickbeard.USE_KODI = config.checkbox_to_value(use_kodi)
         sickbeard.KODI_ALWAYS_ON = config.checkbox_to_value(kodi_always_on)
@@ -4897,6 +4986,19 @@ class ConfigNotifications(Config):
         sickbeard.KODI_USERNAME = kodi_username
         if set('*') != set(kodi_password):
             sickbeard.KODI_PASSWORD = kodi_password
+
+        sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
+        sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
+        sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
+        sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
+        sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
+        sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
+        sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
+        sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
+        sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
+        sickbeard.XBMC_USERNAME = xbmc_username
+        if set('*') != set(xbmc_password):
+            sickbeard.XBMC_PASSWORD = xbmc_password
 
         sickbeard.USE_PLEX = config.checkbox_to_value(use_plex)
         sickbeard.PLEX_NOTIFY_ONSNATCH = config.checkbox_to_value(plex_notify_onsnatch)

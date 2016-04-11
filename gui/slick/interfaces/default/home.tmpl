@@ -28,48 +28,48 @@
 	</script>
 	<script type="text/javascript" src="$sbRoot/js/home.js?v=$sbPID"></script>
 	<h1 class="header" style="margin-bottom:0">$showlists[0][1]</h1>
+
+	<div id="HomeLayout" class="pull-right">
 #set $tab = 1
-#if 'poster' != $layout
-
-	<div id="HomeLayout" class="pull-right not-poster">
-		<div class="not-poster">
-			<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" data-column="1" placeholder="Search Show Name" tabindex="$tab#set $tab += 1#">
-			&nbsp;<button type="button" class="resetshows resetanime btn btn-inline" tabindex="$tab#set $tab += 1#">Reset Search</button>
-		</div>
-
-		<span class="pull-right not-poster">Layout:
-#else
-
-	<div id="HomeLayout" class="pull-right poster">
-		<span class="pull-right poster">Layout:
-#end if
 #set $selected = ' selected="selected"'
-			<select name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" tabindex="$tab#set $tab += 1#">
-				<option value="$sbRoot/setHomeLayout/?layout=poster"#echo $selected if 'poster' == sickbeard.HOME_LAYOUT else ''#>Poster</option>
-				<option value="$sbRoot/setHomeLayout/?layout=small"#echo $selected if 'small' == sickbeard.HOME_LAYOUT else ''#>Small Poster</option>
-				<option value="$sbRoot/setHomeLayout/?layout=banner"#echo $selected if 'banner' == sickbeard.HOME_LAYOUT else ''#>Banner</option>
-				<option value="$sbRoot/setHomeLayout/?layout=simple"#echo $selected if 'simple' == sickbeard.HOME_LAYOUT else ''#>Simple</option>
-			</select>
-		</span>
 #if 'poster' == $layout
+		<div>
+			<span>Sort By:
+				<select id="postersort" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
+					<option value="name" data-sort="$sbRoot/setPosterSortBy/?sort=name"#echo $selected if 'name' == sickbeard.POSTER_SORTBY else ''#>Name</option>
+					<option value="date" data-sort="$sbRoot/setPosterSortBy/?sort=date"#echo $selected if 'date' == sickbeard.POSTER_SORTBY else ''#>Next Episode</option>
+					<option value="network" data-sort="$sbRoot/setPosterSortBy/?sort=network"#echo $selected if 'network' == sickbeard.POSTER_SORTBY else ''#>Network</option>
+					<option value="progress" data-sort="$sbRoot/setPosterSortBy/?sort=progress"#echo $selected if 'progress' == sickbeard.POSTER_SORTBY else ''#>Progress</option>
+					<option value="quality" data-sort="$sbRoot/setPosterSortBy/?sort=quality"#echo $selected if 'quality' == sickbeard.POSTER_SORTBY else ''#>Quality</option>
+				</select>
+			</span>
 
-		<span>Sort By:
-			<select id="postersort" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
-				<option value="name" data-sort="$sbRoot/setPosterSortBy/?sort=name"#echo $selected if 'name' == sickbeard.POSTER_SORTBY else ''#>Name</option>
-				<option value="date" data-sort="$sbRoot/setPosterSortBy/?sort=date"#echo $selected if 'date' == sickbeard.POSTER_SORTBY else ''#>Next Episode</option>
-				<option value="network" data-sort="$sbRoot/setPosterSortBy/?sort=network"#echo $selected if 'network' == sickbeard.POSTER_SORTBY else ''#>Network</option>
-				<option value="progress" data-sort="$sbRoot/setPosterSortBy/?sort=progress"#echo $selected if 'progress' == sickbeard.POSTER_SORTBY else ''#>Progress</option>
-			</select>
-		</span>
+			<span style="margin-left:5px">Sort Order:
+				<select id="postersortdirection" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
+					<option value="true" data-sort="$sbRoot/setPosterSortDir/?direction=1"#echo $selected if 1 == sickbeard.POSTER_SORTDIR else ''#>Asc</option>
+					<option value="false" data-sort="$sbRoot/setPosterSortDir/?direction=0"#echo $selected if 0 == sickbeard.POSTER_SORTDIR else ''#>Desc</option>
+				</select>
+			</span>
 
-		<span style="margin:0 0 0 5px">Sort Order:
-			<select id="postersortdirection" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
-				<option value="true" data-sort="$sbRoot/setPosterSortDir/?direction=1"#echo $selected if 1 == sickbeard.POSTER_SORTDIR else ''#>Asc</option>
-				<option value="false" data-sort="$sbRoot/setPosterSortDir/?direction=0"#echo $selected if 0 == sickbeard.POSTER_SORTDIR else ''#>Desc</option>
-			</select>
-		</span>
-		&nbsp;
+			<span style="margin-left:5px">Layout:
+#else
+			<span class="pull-right">Layout:
 #end if
+				<select style="margin-bottom:10px" name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" tabindex="$tab#set $tab += 1#">
+					<option value="$sbRoot/setHomeLayout/?layout=poster"#echo $selected if 'poster' == sickbeard.HOME_LAYOUT else ''#>Poster</option>
+					<option value="$sbRoot/setHomeLayout/?layout=small"#echo $selected if 'small' == sickbeard.HOME_LAYOUT else ''#>Small Poster</option>
+					<option value="$sbRoot/setHomeLayout/?layout=banner"#echo $selected if 'banner' == sickbeard.HOME_LAYOUT else ''#>Banner</option>
+					<option value="$sbRoot/setHomeLayout/?layout=simple"#echo $selected if 'simple' == sickbeard.HOME_LAYOUT else ''#>Simple</option>
+				</select>
+			</span>
+
+#if 'poster' == $layout
+		</div>
+#end if
+		<div class="pull-right" style="clear:right">
+			<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" data-column="1" placeholder="Search Show Name" tabindex="$tab#set $tab += 1#">
+			&nbsp;<button type="button" class="resetshows btn btn-inline" tabindex="$tab#set $tab += 1#">Reset Search</button>
+		</div>
 	</div><!-- /HomeLayout -->
 ##
 #for $curShowlist in $showlists
@@ -84,7 +84,7 @@
     ##
     #if 'poster' == $layout
     ##
-	<div id="$curListID" class="clearfix container">
+	<div id="$curListID" class="clearfix container" style="clear:both#if 'poster' == $layout#;padding:0#end if#">
 		<div class="posterview">
         ##
         #for $curLoadingShow in $sickbeard.showQueueScheduler.action.loadingShowList
@@ -95,7 +95,7 @@
             ##
             #if None is $curLoadingShow.show
             ##
-			<div class="show" data-name="0" data-date="010101" data-network="0">
+			<div class="show-card" data-name="0" data-date="010101" data-network="0">
 				<img alt="" title="$curLoadingShow.show_name" class="show-image" style="border-bottom:1px solid #111" src="$sbRoot/images/poster.png" />
 				<div class="show-details">
 					<div class="show-add">Loading... ($curLoadingShow.show_name)</div>
@@ -116,6 +116,7 @@
             #set $cur_total = 0
             #set $download_stat_tip = ''
             #set $display_status = $curShow.status
+            #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sickbeard.SORT_ARTICLE]
             #if None is not $display_status
                 #if re.search(r'(?i)(?:new|returning)\s*series', $curShow.status)
                     #set $display_status = 'Continuing'
@@ -147,7 +148,7 @@
                 #set $download_stat = str($cur_downloaded)
                 #set $download_stat_tip = 'Downloaded: ' + str($cur_downloaded)
                 #if $cur_snatched > 0
-                    #set $download_stat = download_stat
+                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sbRoot, $cur_snatched)
                     #set $download_stat_tip = download_stat_tip + '&#013;' + 'Snatched: ' + str($cur_snatched)
                 #end if
                 #set $download_stat = download_stat + ' / ' + str($cur_total)
@@ -178,18 +179,19 @@
                 #end if
             #end if
             ##
-			<div id="show$curShow.indexerid" class="show" data-name="$curShow.name" data-date="$data_date" data-network="$curShow.network">
-				<div class="show-image">
-					<a href="$sbRoot/home/displayShow?show=$curShow.indexerid"><img alt="" class="show-image" src="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" /></a>
-				</div>
+			<div id="show$curShow.indexerid" class="show-card" data-name="$curShow.name" data-date="$data_date" data-network="$curShow.network">
+				<div class="show-card-top">
+					<div class="show-image">
+						<a href="$sbRoot/home/displayShow?show=$curShow.indexerid"><img alt="" class="show-image" src="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" /></a>
+					</div>
 
-				<div id="progressbar$curShow.indexerid"></div>
+					<div style="border-top:1px solid black;height:1px"></div>
 
-				<div class="show-title">
-					$curShow.name
-				</div>
+					<div class="show-title">
+						$display_name
+					</div>
 
-				<div class="show-date">
+					<div class="show-date">
             #if $cur_airs_next
                 #set $ldatetime = $sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next,$curShow.airs,$curShow.network))
 					<span class="$fuzzydate">$sbdatetime.sbdatetime.sbfdate($ldatetime)</span>
@@ -202,34 +204,40 @@
                         #set $output_html = $display_status
                     #end if
                 #end if
-					$output_html
+						$output_html
             #end if
-				</div><!-- /show-date -->
+					</div><!-- /show-date -->
 
-				<table width="100%" border="0">
-					<tr>
-						<td class="show-table">
-							<span class="show-dlstats" title="$download_stat_tip">$download_stat</span>
-						</td>
+					<table width="100%" border="0">
+						<tr>
+							<td class="show-table">
+								<span class="show-dlstats" title="$download_stat_tip">$download_stat</span>
+							</td>
 
-						<td class="show-table">
-            #if 'simple' != $layout
+							<td class="show-table show-network">
+            #if 'simple' == $layout
+								$curShow.network
+            #else
                 #set $img_text = ($curShow.network, 'No Network')[None is $curShow.network]
-							<img class="show-network-image" src="$sbRoot/images/network/$network_images[$curShow.indexerid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
-            #else
-							$curShow.network
+                #if 'No Network' is not $img_text and 'nonetwork' in $network_images[$curShow.indexerid]
+								$curShow.network
+                #else
+								<img class="show-network-image" src="$sbRoot/images/network/$network_images[$curShow.indexerid]" alt="$img_text" title="$img_text" />
+                #end if
             #end if
-						</td>
+							</td>
 
-						<td class="show-table">
+							<td class="show-table">
             #if $curShow.quality in $qualityPresets
-							<span class="show-quality">$qualityPresetStrings[$curShow.quality]</span>
+								<span class="show-quality">$qualityPresetStrings[$curShow.quality]</span>
             #else
-							<span class="show-quality">Custom</span>
+								<span class="show-quality">Custom</span>
             #end if
-						</td>
-					</tr>
-				</table>
+							</td>
+						</tr>
+					</table>
+				</div>
+				<div id="progressbar$curShow.indexerid"></div>
 				<span class="sort-data" data-progress="$progressbar_percent"></span>
 			</div><!-- /show$curShow.indexerid -->
 
@@ -294,6 +302,7 @@
             #set $cur_downloaded = 0
             #set $cur_total = 0
             #set $download_stat_tip = ''
+            #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sickbeard.SORT_ARTICLE]
             ##
             #if $curShow.indexerid in $show_stat
                 #set $cur_airs_next = $show_stat[$curShow.indexerid]['ep_airs_next']
@@ -318,7 +327,7 @@
                 #set $download_stat = str($cur_downloaded)
                 #set $download_stat_tip = 'Downloaded: ' + str($cur_downloaded)
                 #if $cur_snatched > 0
-                    #set $download_stat = download_stat + '+' + str($cur_snatched)
+                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sbRoot, $cur_snatched)
                     #set $download_stat_tip = download_stat_tip + '&#013;' + 'Snatched: ' + str($cur_snatched)
                 #end if
                 #set $download_stat = download_stat + ' / ' + str($cur_total)
@@ -335,6 +344,9 @@
             #end if
             ##
             #set $progressbar_percent = $nom * 100 / $den
+            #if not $progressbar_percent
+                #set $progressbar_percent = (0, -1)['?' == $download_stat]
+            #end if
             ##
 			<tr>
             #if $cur_airs_next
@@ -350,7 +362,7 @@
 						<a href="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=poster" rel="dialog" title="$curShow.name">
 							<img src="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" class="$layout" alt="$curShow.indexerid"/>
 						</a>
-						<a href="$sbRoot/home/displayShow?show=$curShow.indexerid" style="vertical-align:middle">$curShow.name</a>
+						<a href="$sbRoot/home/displayShow?show=$curShow.indexerid" style="vertical-align:middle">$display_name</a>
 					</div>
 				</td>
             #else if 'banner' == $layout
@@ -361,23 +373,28 @@
 						    <img src="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=banner" class="$layout" alt="$curShow.indexerid" title="$curShow.name" />
                         </a>
 					</div>
-					<span class="sort-data">$curShow.name</span>
+					<span class="sort-data">$display_name</span>
 				</td>
             #else if 'simple' == $layout
 
-				<td class="tvShow text-left"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$curShow.name</a></td>
+				<td class="tvShow text-left"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$display_name</a></td>
             #end if
             #if 'simple' != $layout
                 #set $img_text = ($curShow.network, 'No Network')[None is $curShow.network]
 
 				<td>
+                #if 'No Network' is not $img_text and 'nonetwork' in $network_images[$curShow.indexerid]
+					$curShow.network
+                #else
 					<img width="54" height="27" src="$sbRoot/images/network/$network_images[$curShow.indexerid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
 					<span class="sort-data">$curShow.network</span>
+                #end if
 				</td>
             #else
 
 				<td class="text-left">
 					<span>$curShow.network</span>
+					<span class="sort-data">$curShow.network</span>
 				</td>
             #end if
             #if $curShow.quality in $qualityPresets
@@ -390,7 +407,7 @@
 
 				<td>
 					<div id="progressbar$curShow.indexerid" style="position:relative">
-						<div class="progressbarText" title="$download_stat_tip">$download_stat</div>
+						<div class="progressbarText ui-font" title="$download_stat_tip">$download_stat</div>
 					</div>
 					<span class="sort-data" data-progress="$progressbar_percent"></span>
 				</td>

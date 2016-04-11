@@ -732,6 +732,14 @@ class FieldInfo(FieldSet):
             yield FieldArray(self, "attributes", AttributeInfo,
                     self["attributes_count"].value)
 
+    def createDescription(self):
+        bits = []
+        for mod in ['transient', 'protected', 'private', 'public', 'static', 'final', 'volatile']:
+            if self[mod].value:
+                bits.append(mod)
+        bits.append(parse_field_descriptor(str(self['descriptor_index'].get_cp_entry())))
+        bits.append(str(self['name_index'].get_cp_entry()))
+        return ' '.join(bits)
 
 ###############################################################################
 # method_info {
@@ -766,6 +774,15 @@ class MethodInfo(FieldSet):
             yield FieldArray(self, "attributes", AttributeInfo,
                     self["attributes_count"].value)
 
+    def createDescription(self):
+        bits = []
+        for mod in ['strict', 'static', 'native', 'synchronized', 'protected', 'private', 'public', 'final', 'abstract']:
+            if self[mod].value:
+                bits.append(mod)
+        name = str(self['name_index'].get_cp_entry())
+        meth = str(self['descriptor_index'].get_cp_entry())
+        bits.append(parse_method_descriptor(meth, name))
+        return ' '.join(bits)
 
 ###############################################################################
 # attribute_info {
@@ -953,6 +970,18 @@ class InnerClassesEntry(StaticFieldSet):
         (Bit, "private"),
         (Bit, "public"),
     )
+
+    def createDescription(self):
+        bits = []
+        for mod in ['super', 'static', 'protected', 'private', 'public', 'abstract', 'final', 'interface']:
+            if self[mod].value:
+                bits.append(mod)
+        if not self['interface'].value:
+            bits.append('class')
+
+        name = str(self['inner_class_info_index'].get_cp_entry())
+        bits.append(name)
+        return ' '.join(bits)
 
 class LineNumberTableEntry(StaticFieldSet):
     format = (

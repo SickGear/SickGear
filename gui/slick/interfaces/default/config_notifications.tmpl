@@ -32,6 +32,176 @@
 
 				<div id="tabs-1">
 				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/emby.png" alt="" title="Emby" />
+						<h3><a href="<%= anon_url('http://emby.media/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Emby</a></h3>
+						<p>Have a central media database with strong user management, e.g. for improved Kodi profile(s). Gain deep viewing and granular control on any device, e.g. replace Plex entirely, Emby + Kodi > Plex.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+#if not hasattr($sickbeard, 'EMBY_UPDATE_LIBRARY')#<span class="red-text">Restart SickGear to reveal new options here</span>#else#
+							<label class="cleafix" for="use_emby">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_emby" id="use_emby" #if $sickbeard.USE_EMBY then 'checked="checked"' else ''#>
+									<p>should SickGear enable features for Emby server(s) ?</p>
+								</span>
+							</label>
+						</div>
+						<div id="content_use_emby">
+							<div class="field-pair">
+								<label for="emby_update_library">
+									<span class="component-title">Update media library</span>
+									<span class="component-desc">
+										<input type="checkbox" name="emby_update_library" id="emby_update_library" #if $sickbeard.EMBY_UPDATE_LIBRARY then 'checked="checked"' else ''# />
+										<p>push Emby to refresh a show that is post-processed</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="emby_host">
+									<span class="component-title">Host(s) running Emby</span>
+									<span class="component-desc">
+										<input type="text" name="emby_host" id="emby_host" value="$sickbeard.EMBY_HOST" class="form-control input-sm input250">
+										<div class="clear-left"><p>IP:Port [, IP:Port] (e.g. 192.168.0.1:8096, 192.168.1.2:8096)</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="emby_apikey">
+									<span class="component-title">API key(s)</span>
+									<span class="component-desc">
+										<input type="text" name="emby_apikey" id="emby_apikey" value="<%= starify(sickbeard.EMBY_APIKEY) %>" class="form-control input-sm input250">
+										<p>(comma separated)</p>
+										<div class="clear-left"><p>one key per host from Emby/Manage Server/Advanced/Security</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="testNotification" id="testEMBY-result">Click below to test.</div>
+							<input  class="btn" type="button" value="Test Emby" id="testEMBY">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+#end if
+						</div><!-- /content_use_emby //-->
+					</fieldset>
+				</div><!-- /emby component-group //-->
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/kodi.png" alt="" title="Kodi" />
+						<h3><a href="<%= anon_url('http://kodi.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Kodi</a></h3>
+						<p>Kodi (formerly known as XBMC) is an award-winning free and open source (GPL) software media player and entertainment hub.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label class="cleafix" for="use_kodi">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_kodi" id="use_kodi" #if $sickbeard.USE_KODI then 'checked="checked"' else ''# />
+									<p>should SickGear send Kodi commands ?</p>
+								</span>
+							</label>
+						</div>
+						<div id="content_use_kodi">
+							<div class="field-pair">
+								<label for="kodi_always_on">
+									<span class="component-title">Always on</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_always_on" id="kodi_always_on" #if $sickbeard.KODI_ALWAYS_ON then 'checked="checked"' else ''# />
+										<p>log errors when unreachable</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_update_library">
+									<span class="component-title">Update shows known to Kodi</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_update_library" id="kodi_update_library" #if $sickbeard.KODI_UPDATE_LIBRARY then 'checked="checked"' else ''# />
+    									<p>push Kodi to refresh a show that is post-processed</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_update_full">
+									<span class="component-title">Perform full library update</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_update_full" id="kodi_update_full" #if $sickbeard.KODI_UPDATE_FULL then 'checked="checked"' else ''# />
+										<p>only when "Update shows" fails. Tip: enables Kodi to add new shows</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_update_onlyfirst">
+									<span class="component-title">Only update first host</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_update_onlyfirst" id="kodi_update_onlyfirst" #if $sickbeard.KODI_UPDATE_ONLYFIRST then 'checked="checked"' else ''# />
+										<p>only send library updates to the first active host</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_host">
+									<span class="component-title">Host(s) running Kodi</span>
+									<span class="component-desc">
+										<input type="text" name="kodi_host" id="kodi_host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350" />
+										<div class="clear-left"><p>IP:Port [, IP:Port] (e.g. 192.168.0.1:8080, 192.168.1.2:8080)</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_username">
+									<span class="component-title">Kodi web server username</span>
+									<span class="component-desc">
+										<input type="text" name="kodi_username" id="kodi_username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250" />
+										<p>(blank for none)</p>
+										<div class="clear-left"><p>in Kodi System/Settings/Services/Web server</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_password">
+									<span class="component-title">Kodi web server password</span>
+									<span class="component-desc">
+										<input type="password" name="kodi_password" id="kodi_password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250" />
+										<p>(blank for none)</p>
+										<div class="clear-left"><p>in Kodi System/Settings/Services/Web server</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_notify_onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_notify_onsnatch" id="kodi_notify_onsnatch" #if $sickbeard.KODI_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+										<p>download start notification</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_notify_ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_notify_ondownload" id="kodi_notify_ondownload" #if $sickbeard.KODI_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+										<p>download finish notification</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi_notify_onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="kodi_notify_onsubtitledownload" id="kodi_notify_onsubtitledownload" #if $sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+										<p>subtitle downloaded notification</p>
+									</span>
+								</label>
+							</div>
+							<div class="testNotification" id="testKODI-result">Click below to test.</div>
+							<input  class="btn" type="button" value="Test Kodi" id="testKODI" />
+							<input type="submit" class="config_submitter btn" value="Save Changes" />
+						</div><!-- /content_use_kodi //-->
+					</fieldset>
+				</div><!-- /kodi component-group //-->
+
+				<div class="component-group">
 
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/xbmc.png" alt="" title="XBMC" />
@@ -158,127 +328,6 @@
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/kodi.png" alt="" title="Kodi" />
-						<h3><a href="<%= anon_url('http://kodi.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Kodi</a></h3>
-						<p>Kodi (formerly known as XBMC) is an award-winning free and open source (GPL) software media player and entertainment hub.</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label class="cleafix" for="use_kodi">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_kodi" id="use_kodi" #if $sickbeard.USE_KODI then 'checked="checked"' else ''# />
-									<p>should SickGear send Kodi commands ?</p>
-								</span>
-							</label>
-						</div>
-						<div id="content_use_kodi">
-							<div class="field-pair">
-								<label for="kodi_always_on">
-									<span class="component-title">Always on</span>
-									<span class="component-desc">
-										<input type="checkbox" name="kodi_always_on" id="kodi_always_on" #if $sickbeard.KODI_ALWAYS_ON then 'checked="checked"' else ''# />
-										<p>log errors when unreachable ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_notify_onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_onsnatch" id="kodi_notify_onsnatch" #if $sickbeard.KODI_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_notify_ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_ondownload" id="kodi_notify_ondownload" #if $sickbeard.KODI_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_notify_onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_onsubtitledownload" id="kodi_notify_onsubtitledownload" #if $sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_update_library">
-									<span class="component-title">Update library</span>
-									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_library" id="kodi_update_library" #if $sickbeard.KODI_UPDATE_LIBRARY then 'checked="checked"' else ''# />
-										<p>update Kodi library when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_update_full">
-									<span class="component-title">Full library update</span>
-									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_full" id="kodi_update_full" #if $sickbeard.KODI_UPDATE_FULL then 'checked="checked"' else ''# />
-										<p>perform a full library update if update per-show fails ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_update_onlyfirst">
-									<span class="component-title">Only update first host</span>
-									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_onlyfirst" id="kodi_update_onlyfirst" #if $sickbeard.KODI_UPDATE_ONLYFIRST then 'checked="checked"' else ''# />
-										<p>only send library updates to the first active host ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_host">
-									<span class="component-title">Kodi IP:Port</span>
-									<input type="text" name="kodi_host" id="kodi_host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">host running Kodi (eg. 192.168.1.100:8080)</span>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(multiple host strings must be separated by commas)</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_username">
-									<span class="component-title">Kodi username</span>
-									<input type="text" name="kodi_username" id="kodi_username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">username for your KODI server (blank for none)</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="kodi_password">
-									<span class="component-title">Kodi password</span>
-									<input type="password" name="kodi_password" id="kodi_password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">password for your KODI server (blank for none)</span>
-								</label>
-							</div>
-							<div class="testNotification" id="testKODI-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Kodi" id="testKODI" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_kodi //-->
-					</fieldset>
-				</div><!-- /kodi component-group //-->
-
-				<div class="component-group">
-					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/plex.png" alt="" title="Plex Media Server" />
 						<h3><a href="<%= anon_url('http://www.plexapp.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Plex Media Server</a></h3>
 						<p>Plex organizes all of your personal media, wherever you keep it, so you can enjoy it on any device</p>
@@ -400,7 +449,6 @@
 
 					</fieldset>
 				</div><!-- /plex component-group -->
-
 
 				<div class="component-group">
 					<div class="component-group-desc">
@@ -1637,7 +1685,7 @@
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/email.png" alt="" title="Email" />
 						<h3><a href="<%= anon_url('http://en.wikipedia.org/wiki/Comparison_of_webmail_providers') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Email</a></h3>
-						<p>Allows configuration of email notifications on a per show basis.</p>
+						<p>Email notification settings.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
@@ -1679,94 +1727,70 @@
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_host">
-									<span class="component-title">SMTP host</span>
-									<input type="text" name="email_host" id="email_host" value="$sickbeard.EMAIL_HOST" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">hostname of your SMTP email server.</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="email_port">
-									<span class="component-title">SMTP port</span>
-									<input type="text" name="email_port" id="email_port" value="$sickbeard.EMAIL_PORT" class="form-control input-sm input75" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">port number used to connect to your SMTP host.</span>
-								</label>
-							</div>
-							<div class="field-pair">
 								<label for="email_from">
-									<span class="component-title">SMTP from</span>
-									<input type="text" name="email_from" id="email_from" value="$sickbeard.EMAIL_FROM" class="form-control input-sm input250" />
+									<span class="component-title">SMTP sender email address</span>
+									<span class="component-desc">
+										<input type="text" name="email_from" id="email_from" value="$sickbeard.EMAIL_FROM" class="form-control input-sm input250" />
+										<div class="clear-left"><p>some recipient hosts require a real address</p></div>
+									</span>
 								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">sender email address, some hosts require a real address.</span>
-								</label>
-							</div>
-							<div class="field-pair">
+								<div style="margin-bottom:5px;display:inline-block">
+									<span class="component-title">SMTP server hostname</span>
+									<span class="component-desc">
+										<input type="text" name="email_host" id="email_host" value="$sickbeard.EMAIL_HOST" class="form-control input-sm input250" />
+										<span style="float:left;margin-right:6px">and port</span><input type="text" name="email_port" id="email_port" value="$sickbeard.EMAIL_PORT" class="form-control input-sm input75" style="width:60px" />
+									</span>
+								</div>
 								<label for="email_tls">
-									<span class="component-title">Use TLS</span>
+									<span class="component-title">Enable TLS encryption</span>
 									<span class="component-desc">
 										<input type="checkbox" name="email_tls" id="email_tls" #if $sickbeard.EMAIL_TLS then 'checked="checked"' else ''# />
-										<p>check to use TLS encryption.</p>
+									</span>
+								</label>
+								<label for="email_user">
+									<span class="component-title">SMTP server username</span>
+									<span class="component-desc">
+										<input type="text" name="email_user" id="email_user" value="$sickbeard.EMAIL_USER" class="form-control input-sm input250" />
+										<p>(optional)</p>
+									</span>
+								</label>
+								<label for="email_password">
+									<span class="component-title">SMTP server password</span>
+									<span class="component-desc">
+										<input type="password" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250" />
+										<p>(optional)</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_user">
-									<span class="component-title">SMTP user</span>
-									<input type="text" name="email_user" id="email_user" value="$sickbeard.EMAIL_USER" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(optional) your SMTP server username.</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="email_password">
-									<span class="component-title">SMTP password</span>
-									<input type="password" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(optional) your SMTP server password.</span>
-								</label>
-							</div>
-							<div class="field-pair">
 								<label for="email_list">
-									<span class="component-title">Global email list</span>
-									<input type="text" name="email_list" id="email_list" value="$sickbeard.EMAIL_LIST" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">all emails here receive notifications for <b>all</b> shows.</span>
+									<span class="component-title">Notify for every show</span>
+									<span class="component-desc">
+										<input type="text" name="email_list" id="email_list" value="$sickbeard.EMAIL_LIST" class="form-control input-sm input350" />
+										<div class="clear-left"><p>comma separated email list</p></div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
 								<label for="email_show">
-									<span class="component-title">Show notification list</span>
-									<select name="email_show" id="email_show" class="form-control input-sm">
-										<option value="-1">-- Select a Show --</option>
+									<span class="component-title">Notify on a per show basis</span>
+									<select name="email_show" id="email_show" class="showlist-select form-control input-sm">
+										<option value="-1">-- Shows appear here --</option>
 									</select>
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
-									<input type="text" name="email_show_list" id="email_show_list" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">configure per show notifications here.</span>
+									<span class="component-desc">
+										<input type="text" name="show_email_list" id="show_email_list" class="form-control input-sm input350" />
+										<input type="button" value="Save Show" id="save_show_email" class="btn" />
+										<div class="clear-left"><p>comma separated email list for each show</p></div>
+									</span>
 								</label>
 							</div>
 
 							<div class="testNotification" id="testEmail-result">Click below to test.</div>
-							<input class="btn" type="button" value="Test Email" id="testEmail" />
-							<input class="btn" type="submit" class="config_submitter" value="Save Changes" />
+							<input type="button" class="btn" value="Test Email" id="testEmail" />
+							<input type="submit" class="btn config_submitter" value="Save Changes" />
 						</div><!-- /content_use_email //-->
 					</fieldset>
 				</div><!-- /email component-group //-->

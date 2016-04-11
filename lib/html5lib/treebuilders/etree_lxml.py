@@ -54,7 +54,7 @@ class Document(object):
 def testSerializer(element):
     rv = []
     finalText = None
-    infosetFilter = ihatexml.InfosetFilter()
+    infosetFilter = ihatexml.InfosetFilter(preventDoubleDashComments=True)
 
     def serializeElement(element, indent=0):
         if not hasattr(element, "tag"):
@@ -79,7 +79,7 @@ def testSerializer(element):
                     next_element = next_element.getnext()
             elif isinstance(element, str) or isinstance(element, bytes):
                 # Text in a fragment
-                assert isinstance(element, str) or sys.version_info.major == 2
+                assert isinstance(element, str) or sys.version_info[0] == 2
                 rv.append("|%s\"%s\"" % (' ' * indent, element))
             else:
                 # Fragment case
@@ -189,7 +189,7 @@ class TreeBuilder(_base.TreeBuilder):
 
     def __init__(self, namespaceHTMLElements, fullTree=False):
         builder = etree_builders.getETreeModule(etree, fullTree=fullTree)
-        infosetFilter = self.infosetFilter = ihatexml.InfosetFilter()
+        infosetFilter = self.infosetFilter = ihatexml.InfosetFilter(preventDoubleDashComments=True)
         self.namespaceHTMLElements = namespaceHTMLElements
 
         class Attributes(dict):
@@ -257,7 +257,7 @@ class TreeBuilder(_base.TreeBuilder):
             data = property(_getData, _setData)
 
         self.elementClass = Element
-        self.commentClass = builder.Comment
+        self.commentClass = Comment
         # self.fragmentClass = builder.DocumentFragment
         _base.TreeBuilder.__init__(self, namespaceHTMLElements)
 
@@ -315,7 +315,7 @@ class TreeBuilder(_base.TreeBuilder):
         """Create the document root"""
         # Because of the way libxml2 works, it doesn't seem to be possible to
         # alter information like the doctype after the tree has been parsed.
-        # Therefore we need to use the built-in parser to create our iniial
+        # Therefore we need to use the built-in parser to create our initial
         # tree, after which we can add elements like normal
         docStr = ""
         if self.doctype:
@@ -344,7 +344,8 @@ class TreeBuilder(_base.TreeBuilder):
 
         # Append the initial comments:
         for comment_token in self.initial_comments:
-            root.addprevious(etree.Comment(comment_token["data"]))
+            comment = self.commentClass(comment_token["data"])
+            root.addprevious(comment._element)
 
         # Create the root document and add the ElementTree to it
         self.document = self.documentClass()

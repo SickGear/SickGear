@@ -131,6 +131,11 @@ class GenericProvider:
 
         return result
 
+    # noinspection PyUnusedLocal
+    def cb_response(self, r, *args, **kwargs):
+        self.session.response = dict(url=r.url, status_code=r.status_code, elapsed=r.elapsed, from_cache=r.from_cache)
+        return r
+
     def get_url(self, url, post_data=None, params=None, timeout=30, json=False):
         """
         By default this is just a simple urlopen call but this method should be overridden
@@ -142,7 +147,7 @@ class GenericProvider:
             return
 
         return helpers.getURL(url, post_data=post_data, params=params, headers=self.headers, timeout=timeout,
-                              session=self.session, json=json)
+                              session=self.session, json=json, hooks=dict(response=self.cb_response))
 
     def download_result(self, result):
         """
@@ -599,7 +604,6 @@ class NZBProvider(object, GenericProvider):
 
         index = 0
         alt_search = ('nzbs_org' == self.get_id())
-        term_items_found = False
         do_search_alt = False
 
         search_terms = []
@@ -614,21 +618,16 @@ class NZBProvider(object, GenericProvider):
             regex += [terms]
             proper_check = re.compile(r'(?i)(%s)' % '|'.join(regex))
 
+        urls = []
         while index < len(search_terms):
-            search_params = {'q': search_terms[index], 'maxage': 4}
+            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
             if alt_search:
 
                 if do_search_alt:
+                    search_params['t'] = 'search'
                     index += 1
 
-                if term_items_found:
-                    do_search_alt = True
-                    term_items_found = False
-                else:
-                    if do_search_alt:
-                        search_params['t'] = 'search'
-
-                    do_search_alt = (True, False)[do_search_alt]
+                do_search_alt = not do_search_alt
 
             else:
                 index += 1
@@ -637,8 +636,9 @@ class NZBProvider(object, GenericProvider):
 
                 (title, url) = self._title_and_url(item)
 
-                if not proper_check.search(title):
+                if not proper_check.search(title) or url in urls:
                     continue
+                urls.append(url)
 
                 if 'published_parsed' in item and item['published_parsed']:
                     result_date = item.published_parsed
@@ -651,10 +651,8 @@ class NZBProvider(object, GenericProvider):
                 if not search_date or search_date < result_date:
                     search_result = classes.Proper(title, url, result_date, self.show)
                     results.append(search_result)
-                    term_items_found = True
-                    do_search_alt = False
 
-            time.sleep(0.2)
+            time.sleep(0.5)
 
         return results
 
@@ -814,7 +812,16 @@ class TorrentProvider(object, GenericProvider):
                     response = helpers.getURL(url, session=self.session)
                     try:
                         action = re.findall('[<]form[\w\W]+?action="([^"]+)', response)[0]
-                        url = self.urls['config_provider_home_uri'] + action.lstrip('/')
+                        url = (self.urls.get('login_base') or
+                               self.urls['config_provider_home_uri']) + action.lstrip('/')
+
+                        tags = re.findall(r'(?is)(<input.*?name="[^"]+".*?>)', response)
+                        nv = [(tup[0]) for tup in [re.findall(r'(?is)name="([^"]+)"(?:.*?value="([^"]+)")?', x)
+                                                   for x in tags]]
+                        for name, value in nv:
+                            if name not in ('username', 'password'):
+                                post_params = isinstance(post_params, type({})) and post_params or {}
+                                post_params.setdefault(name, value)
                     except KeyError:
                         return super(TorrentProvider, self)._authorised()
                 else:

@@ -213,8 +213,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                             logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                             self.success = search.snatch_episode(result)
 
-                            # give the CPU a break
-                            time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
+                            helpers.cpu_sleep()
 
                 except Exception:
                     logger.log(traceback.format_exc(), logger.DEBUG)
@@ -345,8 +344,7 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
                 logger.log(u'Downloading %s from %s' % (search_result[0].name, search_result[0].provider.name))
                 self.success = search.snatch_episode(search_result[0])
 
-                # give the CPU a break
-                time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
 
             else:
                 ui.notifications.message('No downloads found',
@@ -392,8 +390,7 @@ class BacklogQueueItem(generic_queue.QueueItem):
                     logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                     search.snatch_episode(result)
 
-                    # give the CPU a break
-                    time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
+                    helpers.cpu_sleep()
             else:
                 logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show.name)
         except Exception:
@@ -440,8 +437,7 @@ class FailedQueueItem(generic_queue.QueueItem):
                     logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                     search.snatch_episode(result)
 
-                    # give the CPU a break
-                    time.sleep(common.cpu_presets[sickbeard.CPU_PRESET])
+                    helpers.cpu_sleep()
             else:
                 pass
                 # logger.log(u'No valid episode found to retry for: [%s]' % self.segment.prettyName())

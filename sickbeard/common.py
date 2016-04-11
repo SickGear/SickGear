@@ -21,6 +21,7 @@ import operator
 import platform
 import re
 import uuid
+import traceback
 
 import sickbeard
 import logger
@@ -35,7 +36,7 @@ mediaExtensions = ['avi', 'mkv', 'mpg', 'mpeg', 'wmv', 'ogm', 'mp4', 'iso', 'img
 
 subtitleExtensions = ['srt', 'sub', 'ass', 'idx', 'ssa']
 
-cpu_presets = {'LOW': 0.01, 'NORMAL': 0.05, 'HIGH': 0.1}
+cpu_presets = {'DISABLED': 0, 'LOW': 0.01, 'NORMAL': 0.05, 'HIGH': 0.1}
 
 # Other constants
 MULTI_EP_RESULT = -1
@@ -208,7 +209,7 @@ class Quality:
         if checkName(['(pdtv|hdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|x264|h.?264))'], all) and not checkName(['(720|1080|2160)[pi]'], all) \
                 and not checkName(['hr.ws.pdtv.(x264|h.?264)'], any):
             return Quality.SDTV
-        elif checkName(['web.?dl|web.?rip', 'xvid|x264|h.?264'], all) and not checkName(['(720|1080|2160)[pi]'], all):
+        elif checkName(['web.?(dl|rip|.h264)', 'xvid|x264|h.?264'], all) and not checkName(['(720|1080|2160)[pi]'], all):
             return Quality.SDTV
         elif checkName(['(dvd.?rip|b[r|d]rip)(.ws)?(.(xvid|divx|x264|h.?264))?'], any) and not checkName(['(720|1080|2160)[pi]'], all):
             return Quality.SDDVD
@@ -219,9 +220,9 @@ class Quality:
             return Quality.RAWHDTV
         elif checkName(['1080p', 'hdtv', 'x264'], all):
             return Quality.FULLHDTV
-        elif checkName(['720p', 'web.?dl|web.?rip'], all) or checkName(['720p', 'itunes', 'x264|h.?264'], all):
+        elif checkName(['720p', 'web.?(dl|rip|.h264)'], all) or checkName(['720p', 'itunes', 'x264|h.?264'], all):
             return Quality.HDWEBDL
-        elif checkName(['1080p', 'web.?dl|web.?rip'], all) or checkName(['1080p', 'itunes', 'x264|h.?264'], all):
+        elif checkName(['1080p', 'web.?(dl|rip|.h264)'], all) or checkName(['1080p', 'itunes', 'x264|h.?264'], all):
             return Quality.FULLHDWEBDL
         elif checkName(['720p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all):
             return Quality.HDBLURAY
@@ -234,6 +235,7 @@ class Quality:
     def fileQuality(filename):
 
         from sickbeard import encodingKludge as ek
+        from sickbeard.exceptions import ex
         if ek.ek(os.path.isfile, filename):
 
             from hachoir_parser import createParser
@@ -241,10 +243,14 @@ class Quality:
             from hachoir_core.stream import InputStreamError
 
             parser = height = None
+            msg = u'Hachoir can\'t parse file "%s" content quality because it found error: %s'
             try:
-                parser = createParser(filename)
+                parser = ek.ek(createParser, filename)
             except InputStreamError as e:
-                logger.log('Hachoir can\'t parse file content quality because it found error: %s' % e.text, logger.WARNING)
+                logger.log(msg % (filename, e.text), logger.WARNING)
+            except Exception as e:
+                logger.log(msg % (filename, ex(e)), logger.ERROR)
+                logger.log(traceback.format_exc(), logger.DEBUG)
 
             if parser:
                 extract = extractMetadata(parser)

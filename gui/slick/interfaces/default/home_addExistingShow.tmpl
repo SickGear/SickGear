@@ -12,13 +12,11 @@
 
 <script type="text/javascript" charset="utf-8">
 <!--
+var config = { sortArticle: #echo ['!1','!0'][$sickbeard.SORT_ARTICLE]# }
 \$.sgSid = '$kwargs.get('sid', '')';
 \$.sgHashDir = '$kwargs.get('hash_dir', '')';
 \$(document).ready(function(){
-    \$( '#tabs' ).tabs({
-        collapsible: true,
-        selected: #if $sickbeard.ROOT_DIRS then '-1' else '0'#
-    });
+	\$('#tabs').tabs({ collapsible: !0, selected: #echo ('0','-1')[any($sickbeard.ROOT_DIRS)]# });
 });
 //-->
 </script>
@@ -37,7 +35,7 @@
 
 <form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
 
-	<span#if $kwargs.get('hash_dir', None)# style="display:none"#end if>
+	<span#if $kwargs.get('hash_dir', None)# class="hide"#end if#>
 		<p>Tip: shows are added quicker when usable show nfo and xml metadata is found</p>
 
 		<p style="margin-top:15px">

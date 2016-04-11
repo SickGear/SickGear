@@ -52,7 +52,7 @@ except ImportError:
 
 from sickbeard.exceptions import MultipleShowObjectsException, ex
 from sickbeard import logger, classes, db, notifiers, clients
-from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions
+from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions, cpu_presets
 from sickbeard import encodingKludge as ek
 
 from lib.cachecontrol import CacheControl, caches
@@ -210,17 +210,21 @@ def searchIndexerForShowID(regShowName, indexer=None, indexer_id=None, ui=None):
         t = sickbeard.indexerApi(i).indexer(**lINDEXER_API_PARMS)
 
         for name in showNames:
-            logger.log(u'Trying to find ' + name + ' on ' + sickbeard.indexerApi(i).name, logger.DEBUG)
+            logger.log('Trying to find %s on %s' % (name, sickbeard.indexerApi(i).name), logger.DEBUG)
 
             try:
                 result = t[indexer_id] if indexer_id else t[name]
             except:
                 continue
 
-            seriesname = series_id = False
-            for search in result:
-                seriesname = search['seriesname']
-                series_id = search['id']
+            seriesname = series_id = None
+            for search in result if isinstance(result, list) else [result]:
+                try:
+                    seriesname = search['seriesname']
+                    series_id = search['id']
+                except:
+                    series_id = seriesname = None
+                    continue
                 if seriesname and series_id:
                     break
 
@@ -869,7 +873,7 @@ def full_sanitizeSceneName(name):
     return re.sub('[. -]', ' ', sanitizeSceneName(name)).lower().lstrip()
 
 
-def get_show(name, try_scene_exceptions=False):
+def get_show(name, try_scene_exceptions=False, use_cache=True):
     if not sickbeard.showList or None is name:
         return
 
@@ -888,7 +892,7 @@ def get_show(name, try_scene_exceptions=False):
                 show_obj = findCertainShow(sickbeard.showList, indexer_id)
 
         # add show to cache
-        if show_obj and not from_cache:
+        if use_cache and show_obj and not from_cache:
             sickbeard.name_cache.addNameToCache(name, show_obj.indexerid)
     except Exception as e:
         logger.log(u'Error when attempting to find show: ' + name + ' in SickGear: ' + str(e), logger.DEBUG)
@@ -1125,6 +1129,10 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         req_headers.update(headers)
     session.headers.update(req_headers)
 
+    mute_connect_err = kwargs.get('mute_connect_err')
+    if mute_connect_err:
+        del(kwargs['mute_connect_err'])
+
     # request session ssl verify
     session.verify = False
 
@@ -1152,8 +1160,13 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                 }
 
         # decide if we get or post data to server
+        if 'post_json' in kwargs:
+            kwargs.setdefault('json', kwargs.get('post_json'))
+            del(kwargs['post_json'])
         if post_data:
-            resp = session.post(url, data=post_data, timeout=timeout, **kwargs)
+            kwargs.setdefault('data', post_data)
+        if 'data' in kwargs or 'json' in kwargs:
+            resp = session.post(url, timeout=timeout, **kwargs)
         else:
             resp = session.get(url, timeout=timeout, **kwargs)
 
@@ -1169,26 +1182,35 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             return
 
     except requests.exceptions.HTTPError as e:
-        logger.log(u'HTTP error %s while loading URL %s' % (e.errno, url), logger.WARNING)
+        logger.log(u'HTTP error %s while loading URL %s' % (e.errno, e.request.url), logger.WARNING)
         return
     except requests.exceptions.ConnectionError as e:
-        logger.log(u'Internet connection error msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
+        if not mute_connect_err:
+            logger.log(u'Connection error msg:%s while loading URL %s' % (e.message, e.request.url), logger.WARNING)
         return
     except requests.exceptions.ReadTimeout as e:
-        logger.log(u'Read timed out msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
+        logger.log(u'Read timed out msg:%s while loading URL %s' % (e.message, e.request.url), logger.WARNING)
         return
     except (requests.exceptions.Timeout, socket.timeout) as e:
-        logger.log(u'Connection timed out msg:%s while loading URL %s' % (str(e.message), url), logger.WARNING)
+        logger.log(u'Connection timed out msg:%s while loading URL %s'
+                   % (e.message, hasattr(e, 'request') and e.request.url or url), logger.WARNING)
         return
     except Exception as e:
+        url = hasattr(e, 'request') and e.request.url or url
         if e.message:
-            logger.log(u'Exception caught while loading URL %s\r\nDetail... %s\r\n%s' % (url, str(e.message), traceback.format_exc()), logger.WARNING)
+            logger.log(u'Exception caught while loading URL %s\r\nDetail... %s\r\n%s'
+                       % (url, e.message, traceback.format_exc()), logger.WARNING)
         else:
-            logger.log(u'Unknown exception while loading URL %s\r\nDetail... %s' % (url, traceback.format_exc()), logger.WARNING)
+            logger.log(u'Unknown exception while loading URL %s\r\nDetail... %s'
+                       % (url, traceback.format_exc()), logger.WARNING)
         return
 
     if json:
-        return resp.json()
+        try:
+            return resp.json()
+        except (TypeError, Exception) as e:
+            logger.log(u'JSON data issue from URL %s\r\nDetail... %s' % (url, e.message), logger.WARNING)
+            return None
 
     return resp.content
 
@@ -1445,3 +1467,8 @@ def make_search_segment_html_string(segment, max_eps=5):
 
 def has_anime():
     return False if not sickbeard.showList else any(filter(lambda show: show.is_anime, sickbeard.showList))
+
+
+def cpu_sleep():
+    if cpu_presets[sickbeard.CPU_PRESET]:
+        time.sleep(cpu_presets[sickbeard.CPU_PRESET])

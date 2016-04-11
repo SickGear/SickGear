@@ -403,6 +403,8 @@
 		</h3>
 	</div>
 #else:
+#set $network_timezone = $network_timezones.get_network_timezone($show.network)
+#set $network_time = $network_timezones.parse_time($show.airs)
 #for $epResult in $sqlResults
     #set $epStr = '%sx%s' % ($epResult['season'], $epResult['episode'])
     #if not $epStr in $epCats or (0 == int($epResult['season']) and not $sickbeard.DISPLAY_SHOW_SPECIALS)
@@ -526,7 +528,7 @@
 		</td>
 
 		<td class="col-airdate">
-			<span class="${fuzzydate}">#if 1 == int($epResult['airdate']) then 'never' else $sbdatetime.sbdatetime.sbfdate($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($epResult['airdate'], $show.airs, $show.network)))#</span>
+			<span class="${fuzzydate}">#if 1 == int($epResult['airdate']) then 'never' else $sbdatetime.sbdatetime.sbfdate($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($epResult['airdate'], $network_time, $network_timezone)))#</span>
 		</td>
 
     #if $sickbeard.USE_SUBTITLES and $show.subtitles
