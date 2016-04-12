@@ -681,8 +681,17 @@ home.tmpl
 	width:100%
 }
 
+#browse-list .show-card .ui-progressbar{
+	height:5px !important
+}
+#browse-list .show-card .ui-corner-right{
+	border-bottom-right-radius:3px
+}
+#browse-list .show-card .ui-corner-left{
+	border-bottom-right-radius:3px
+}
 #show-list .show-card .ui-progressbar{
-	height:8px !important;
+	height:8px !important
 }
 
 #show-list .show-card .ui-corner-all, .ui-corner-bottom, .ui-corner-right, .ui-corner-br{
@@ -693,10 +702,12 @@ home.tmpl
 	border-bottom-left-radius:5px
 }
 
+#browse-list .show-card .ui-corner-all,
 #show-list .show-card .ui-corner-all, .ui-corner-top, .ui-corner-right, .ui-corner-tr{
 	border-top-right-radius:0
 }
 
+#browse-list .show-card .ui-corner-all,
 #show-list .show-card .ui-corner-all, .ui-corner-top, .ui-corner-left, .ui-corner-tl{
 	border-top-left-radius:0
 }
@@ -1083,13 +1094,14 @@ home_browseShows.tmpl
 }
 
 #browse-list .show-card{
-	margin:0 2px 12px;
+	margin:0 2px 17px;
 	width:188px;
 	height:341px;
 	float:left;
 	background-color:#DFDACF;
 	border:1px solid #111;
-	border-radius:6px
+	border-top-left-radius:6px;
+	border-top-right-radius:6px
 }
 
 .browse-image{
