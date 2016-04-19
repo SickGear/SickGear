@@ -1120,8 +1120,12 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     # request session
     if None is session:
         session = requests.session()
-    cache_dir = sickbeard.CACHE_DIR or _getTempDir()
-    session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
+
+    if not kwargs.get('nocache'):
+        cache_dir = sickbeard.CACHE_DIR or _getTempDir()
+        session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
+    else:
+        del(kwargs['nocache'])
 
     # request session headers
     req_headers = {'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip,deflate'}

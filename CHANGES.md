@@ -55,6 +55,12 @@
 * Fix syntax error causing renamer to error out
 * Change storing metadata nfo vars from int to strings to resolve lxml type exceptions that don't occur with etree
 * Add visual indicator for upcoming or started shows on Add Browse Shows
+* Add IMDb Watchlists to 'View' drop down on the 'Add from IMDb' page
+* Add 5 decades of 'IMDb Popular' selections to 'View' drop down on 'Add from... Browse Shows'
+* Add 'Other Services' to 'View' drop down on 'Add from... Browse Shows'
+* Add enable, disable and delete public IMDb watchlists to Config/General/Interface with a default 'SickGear' list
+* Change prevent duplicate show ids from presenting items on 'Add from... Browse Shows'
+* Change add 'nocache' kwarg to helpers.getURL to facilitate non-cached requests
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)

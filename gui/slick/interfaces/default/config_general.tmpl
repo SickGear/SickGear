@@ -153,9 +153,9 @@
 							<label>
 								<span class="component-title">Show root directories</span>
 								<span class="component-desc">
-								    <p>where the files of shows are located</p>
+									<p>where the files of shows are located</p>
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
-							    </span>
+								</span>
 							</label>
 						</div>
 
@@ -266,8 +266,8 @@
 									</select>
 									#set $hidden = ' class="hidden"'
 									<span id="showlist_tagview_standard"#echo ('', $hidden)['standard' not in $sickbeard.SHOWLIST_TAGVIEW]#>that contains all shows (default)</span>
-                                    <span id="showlist_tagview_anime"#echo ('', $hidden)['anime' not in $sickbeard.SHOWLIST_TAGVIEW]#>two groups, the show list and anime</span>
-                                    <span id="showlist_tagview_custom"#echo ('', $hidden)['custom' not in $sickbeard.SHOWLIST_TAGVIEW]#>multiple custom<sup>1</sup> named groups and a "Show List"</span>
+									<span id="showlist_tagview_anime"#echo ('', $hidden)['anime' not in $sickbeard.SHOWLIST_TAGVIEW]#>two groups, the show list and anime</span>
+									<span id="showlist_tagview_custom"#echo ('', $hidden)['custom' not in $sickbeard.SHOWLIST_TAGVIEW]#>multiple custom<sup>1</sup> named groups and a "Show List"</span>
 								</span>
 							</label>
 						</div>
@@ -278,7 +278,7 @@
 								<span class="component-desc">
 									<input type="text" name="show_tags" id="show_tags" value="$show_tags" class="form-control input-sm input300">
 									<span>comma separated names</span>
-                                    <p class="clear-left note">group shows to the order of this custom list (add shows to groups with <a href="/manage/">mass edit</a>)</p>
+									<p class="clear-left note">group shows to the order of this custom list (add shows to groups with <a href="/manage/">mass edit</a>)</p>
 								</span>
 							</label>
 						</div>
@@ -299,6 +299,37 @@
 								<span class="component-desc">
 									<input type="checkbox" name="use_imdb_info" id="use_imdb_info"#echo ('', $checked)[$sickbeard.USE_IMDB_INFO]#>
 									<p>for ui links, display show; ratings, country flag, year, runtime, and genre tags</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="imdb-accounts">
+								<span class="component-title">Public IMDb watchlists:</span>
+#if not hasattr($sickbeard, 'IMDB_ACCOUNTS')#<span class="red-text">Restart SickGear to reveal new options here</span>#else#
+								<span class="component-desc">
+									<select id="imdb-accounts" class="pull-left form-control input-sm">
+										<option value="new" selected="selected">Add watchlist ...</option>
+    #for $i, $v in $enumerate($sickbeard.IMDB_ACCOUNTS)
+        #if not $i % 2
+            #set $id = $v
+        #else
+										<option value="$id">#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
+        #end if
+    #end for
+									</select>
+									<input type="button" class="btn btn-inline" value="Delete" id="imdb-list-del" disabled="disabled" />
+								</span>
+							</label>
+							<label for="imdb-url">
+								<span class="component-title">&nbsp</span>
+								<span class="component-desc">
+									<input type="text" id="imdb-url" value="" class="form-control input-sm input250" />
+									<input type="button" class="btn btn-inline" value="Enable" id="imdb-list-onoff" />
+									<div class="clear-left">
+									<p><code>imdb.com/user/ur64552276</code> or <code>ur64552276</code> to <span id="view-list">view list</span><a class="hide" id="link-list" href="$sbRoot/home/addShows/watchlist_imdb?account=64552276">view list</a> at "Add from IMDb"
+									</p></div>
+#end if
 								</span>
 							</label>
 						</div>
