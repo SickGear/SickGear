@@ -62,6 +62,7 @@
 * Change prevent duplicate show ids from presenting items on 'Add from... Browse Shows'
 * Change add 'nocache' kwarg to helpers.getURL to facilitate non-cached requests
 * Change instantly use saved value from Search Settings/Episode Search/"Check propers every" instead of after a restart
+* Change include OSError system messages in file system failure logs during post process
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
