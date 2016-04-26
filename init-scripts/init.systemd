@@ -53,5 +53,8 @@ Type=forking
 GuessMainPID=no
 ExecStart=/usr/bin/python /opt/sickgear/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear
 
+CPUAccounting=true
+CPUQuota=50%
+
 [Install]
 WantedBy=multi-user.target
