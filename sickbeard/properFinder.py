@@ -58,12 +58,16 @@ def search_propers():
     _set_last_proper_search(datetime.datetime.today().toordinal())
 
     run_at = ''
-    if None is sickbeard.properFinderScheduler.start_time:
-        run_in = sickbeard.properFinderScheduler.lastRun + sickbeard.properFinderScheduler.cycleTime - datetime.datetime.now()
-        hours, remainder = divmod(run_in.seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        run_at = u', next check in approx. ' + (
-            '%dh, %dm' % (hours, minutes) if 0 < hours else '%dm, %ds' % (minutes, seconds))
+    proper_sch = sickbeard.properFinderScheduler
+    if None is proper_sch.start_time:
+        run_in = proper_sch.lastRun + proper_sch.cycleTime - datetime.datetime.now()
+        run_at = u', next check '
+        if datetime.timedelta() > run_in:
+            run_at += u'imminent'
+        else:
+            hours, remainder = divmod(run_in.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            run_at += u'in approx. ' + ('%dh, %dm' % (hours, minutes) if 0 < hours else '%dm, %ds' % (minutes, seconds))
 
     logger.log(u'Completed the search for new propers%s' % run_at)
 

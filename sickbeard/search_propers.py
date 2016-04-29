@@ -26,6 +26,8 @@ class ProperSearcher:
     def __init__(self):
         self.lock = threading.Lock()
         self.amActive = False
+        self.search_intervals = [('daily', '24 hours', 24 * 60), ('4h', '4 hours', 4 * 60),
+                                 ('90m', '90 mins', 90), ('45m', '45 mins', 45), ('15m', '15 mins', 15)]
 
     def run(self):
 

@@ -1172,15 +1172,16 @@ def initialize(consoleLogging=True):
                                                                        else datetime.timedelta(minutes=10),
                                                                        prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
 
-        search_intervals = {'15m': 15, '45m': 45, '90m': 90, '4h': 4 * 60, 'daily': 24 * 60}
-        if CHECK_PROPERS_INTERVAL in search_intervals:
-            update_interval = datetime.timedelta(minutes=search_intervals[CHECK_PROPERS_INTERVAL])
+        propers_searcher = search_propers.ProperSearcher()
+        item = [(k, n, v) for (k, n, v) in propers_searcher.search_intervals if k == CHECK_PROPERS_INTERVAL]
+        if item:
+            update_interval = datetime.timedelta(minutes=item[0][2])
             run_at = None
         else:
             update_interval = datetime.timedelta(hours=1)
             run_at = datetime.time(hour=1)  # 1 AM
 
-        properFinderScheduler = scheduler.Scheduler(search_propers.ProperSearcher(),
+        properFinderScheduler = scheduler.Scheduler(propers_searcher,
                                                     cycleTime=update_interval,
                                                     threadName='FINDPROPERS',
                                                     start_time=run_at,
