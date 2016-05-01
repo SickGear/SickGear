@@ -37,7 +37,7 @@ from six import iteritems
 
 import sickbeard
 from sickbeard import config, sab, clients, history, notifiers, processTV, ui, logger, helpers, exceptions, classes, \
-    db, search_queue, image_cache, naming, scene_exceptions, subtitles, network_timezones, sbdatetime
+    db, search_queue, image_cache, naming, scene_exceptions, search_propers, subtitles, network_timezones, sbdatetime
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
@@ -4331,6 +4331,7 @@ class ConfigSearch(Config):
                                      for show in sickbeard.showList if show.rls_require_words and
                                      show.rls_require_words.strip()]
         t.using_rls_require_words.sort(lambda x, y: cmp(x[1], y[1]), reverse=False)
+        t.propers_intervals = search_propers.ProperSearcher().search_intervals
         return t.respond()
 
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
@@ -4367,7 +4368,24 @@ class ConfigSearch(Config):
         sickbeard.REQUIRE_WORDS = require_words if require_words else ''
 
         sickbeard.DOWNLOAD_PROPERS = config.checkbox_to_value(download_propers)
-        sickbeard.CHECK_PROPERS_INTERVAL = check_propers_interval
+        if sickbeard.CHECK_PROPERS_INTERVAL != check_propers_interval:
+            sickbeard.CHECK_PROPERS_INTERVAL = check_propers_interval
+
+            if sickbeard.DOWNLOAD_PROPERS:
+                proper_sch = sickbeard.properFinderScheduler
+                item = [(k, n, v) for (k, n, v) in proper_sch.action.search_intervals if k == check_propers_interval]
+                if item and None is proper_sch.start_time:
+                    interval = datetime.timedelta(minutes=item[0][2])
+                    run_in = proper_sch.lastRun + interval - datetime.datetime.now()
+                    proper_sch.cycleTime = interval
+
+                    run_at = 'imminent'
+                    if datetime.timedelta() < run_in:
+                        hours, remainder = divmod(run_in.seconds, 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        run_at = u'in approx. ' + ('%dh, %dm' % (hours, minutes) if 0 < hours else
+                                                   '%dm, %ds' % (minutes, seconds))
+                    logger.log(u'Change search PROPERS interval, next check %s' % run_at)
 
         sickbeard.SEARCH_UNAIRED = config.checkbox_to_value(search_unaired)
 
