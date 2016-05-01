@@ -170,6 +170,9 @@ INDEXER_TIMEOUT = None
 SCENE_DEFAULT = False
 ANIME_DEFAULT = False
 USE_IMDB_INFO = True
+IMDB_ACCOUNTS = []
+IMDB_DEFAULT_LIST_ID = '64552276'
+IMDB_DEFAULT_LIST_NAME = 'SickGear'
 PROVIDER_ORDER = []
 
 NAMING_MULTI_EP = False
@@ -535,7 +538,7 @@ def initialize(consoleLogging=True):
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, ANIME_TREAT_AS_HDTV, \
-            COOKIE_SECRET, USE_IMDB_INFO, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS, \
+            COOKIE_SECRET, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS, \
             SHOW_TAGS, DEFAULT_SHOW_TAG, SHOWLIST_TAGVIEW
 
         if __INITIALIZED__:
@@ -602,6 +605,7 @@ def initialize(consoleLogging=True):
         GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
         DEFAULT_HOME = check_setting_str(CFG, 'GUI', 'default_home', 'home')
         USE_IMDB_INFO = bool(check_setting_int(CFG, 'GUI', 'use_imdb_info', 1))
+        IMDB_ACCOUNTS = CFG.get('GUI', []).get('imdb_accounts', [IMDB_DEFAULT_LIST_ID, IMDB_DEFAULT_LIST_NAME])
         HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
         SORT_ARTICLE = bool(check_setting_int(CFG, 'General', 'sort_article', 0))
         FUZZY_DATING = bool(check_setting_int(CFG, 'GUI', 'fuzzy_dating', 0))
@@ -1798,6 +1802,7 @@ def save_config():
     new_config['GUI']['theme_name'] = THEME_NAME
     new_config['GUI']['default_home'] = DEFAULT_HOME
     new_config['GUI']['use_imdb_info'] = int(USE_IMDB_INFO)
+    new_config['GUI']['imdb_accounts'] = IMDB_ACCOUNTS
     new_config['GUI']['fuzzy_dating'] = int(FUZZY_DATING)
     new_config['GUI']['trim_zero'] = int(TRIM_ZERO)
     new_config['GUI']['date_preset'] = DATE_PRESET

@@ -639,11 +639,14 @@ def analyze_company_name(name, stripNotes=False):
     o_name = name
     name = name.strip()
     country = None
-    if name.endswith(']'):
-        idx = name.rfind('[')
-        if idx != -1:
-            country = name[idx:]
-            name = name[:idx].rstrip()
+    if name.startswith('['):
+        name = re.sub('[!@#$\(\)\[\]]', '', name)
+    else:
+        if name.endswith(']'):
+            idx = name.rfind('[')
+            if idx != -1:
+                country = name[idx:]
+                name = name[:idx].rstrip()
     if not name:
         raise IMDbParserError('invalid name: "%s"' % o_name)
     result = {'name': name}
@@ -957,7 +960,7 @@ def _tag4TON(ton, addAccessSystem=False, _containerOnly=False):
             crl = [crl]
         for cr in crl:
             crTag = cr.__class__.__name__.lower()
-            crValue = cr['long imdb name']
+            crValue = cr.get('long imdb name') or u''
             crValue = _normalizeValue(crValue)
             crID = cr.getID()
             if crID is not None:

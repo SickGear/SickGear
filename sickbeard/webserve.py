@@ -2526,6 +2526,168 @@ class NewHomeAddShows(Home):
             return
         return self.new_show('|'.join(['', '', '', indexer_id or showName]), use_show_name=True, is_anime=True)
 
+    @staticmethod
+    def watchlist_config(**kwargs):
+
+        if not isinstance(sickbeard.IMDB_ACCOUNTS, type([])):
+            sickbeard.IMDB_ACCOUNTS = list(sickbeard.IMDB_ACCOUNTS)
+        accounts = dict(map(None, *[iter(sickbeard.IMDB_ACCOUNTS)] * 2))
+
+        if 'enable' == kwargs.get('action'):
+            account_id = re.findall('\d{6,32}', kwargs.get('input', ''))
+            if not account_id:
+                return json.dumps({'result': 'Fail: Invalid IMDb ID'})
+            acc_id = account_id[0]
+
+            url = 'http://www.imdb.com/user/ur%s/watchlist' % acc_id + \
+                  '/_ajax?sort=date_added,desc&mode=detail&page=1&title_type=tvSeries%2CtvEpisode&ref_=wl_vm_dtl'
+            html = helpers.getURL(url, nocache=True)
+
+            try:
+                list_name = re.findall('(?i)<h1[^>]+>(.*)\s+Watchlist</h1>', html)[0].replace('\'s', '')
+                accounts[acc_id] = list_name or 'noname'
+            except:
+                return json.dumps({'result': 'Fail: No list found with id: %s' % acc_id})
+
+        else:
+            acc_id = kwargs.get('select', '')
+            if acc_id not in accounts:
+                return json.dumps({'result': 'Fail: Unknown IMDb ID'})
+
+            if 'disable' == kwargs.get('action'):
+                accounts[acc_id] = '(Off) %s' % accounts[acc_id].replace('(Off) ', '')
+            else:
+                del accounts[acc_id]
+
+        gears = [[k, v] for k, v in accounts.iteritems() if 'sickgear' in v.lower()]
+        if gears:
+            del accounts[gears[0][0]]
+        yours = [[k, v] for k, v in accounts.iteritems() if 'your' == v.replace('(Off) ', '').lower()]
+        if yours:
+            del accounts[yours[0][0]]
+        sickbeard.IMDB_ACCOUNTS = [x for tup in sorted(list(accounts.items()), key=lambda t: t[1]) for x in tup]
+        if gears:
+            sickbeard.IMDB_ACCOUNTS.insert(0, gears[0][1])
+            sickbeard.IMDB_ACCOUNTS.insert(0, gears[0][0])
+        if yours:
+            sickbeard.IMDB_ACCOUNTS.insert(0, yours[0][1])
+            sickbeard.IMDB_ACCOUNTS.insert(0, yours[0][0])
+        sickbeard.save_config()
+
+        return json.dumps({'result': 'Success', 'accounts': sickbeard.IMDB_ACCOUNTS})
+
+    def watchlist_imdb(self, *args, **kwargs):
+
+        if 'add' == kwargs.get('action'):
+            return self.redirect('/config/general/#core-component-group2')
+
+        if kwargs.get('action') in ('delete', 'enable', 'disable'):
+            return self.watchlist_config(**kwargs)
+
+        browse_type = 'IMDb'
+
+        filtered = []
+        footnote = None
+        start_year, end_year = (datetime.date.today().year - 10, datetime.date.today().year + 1)
+        periods = [(start_year, end_year)] + [(x-10, x) for x in range(start_year, start_year-40, -10)]
+
+        accounts = dict(map(None, *[iter(sickbeard.IMDB_ACCOUNTS)]*2))
+        acc_id, list_name = (sickbeard.IMDB_DEFAULT_LIST_ID, sickbeard.IMDB_DEFAULT_LIST_NAME) if \
+            0 == sickbeard.helpers.tryInt(kwargs.get('account')) or \
+            kwargs.get('account') not in accounts.keys() or \
+            accounts.get(kwargs.get('account'), '').startswith('(Off) ') else \
+            (kwargs.get('account'), accounts.get(kwargs.get('account')))
+
+        list_name += ('\'s', '')['your' == list_name.replace('(Off) ', '').lower()]
+
+        url = 'http://www.imdb.com/user/ur%s/watchlist' % acc_id
+        url_data = '/_ajax?sort=date_added,desc&mode=detail&page=1&title_type=tvSeries%2CtvEpisode&ref_=wl_vm_dtl'
+        url_ui = '?mode=detail&page=1&sort=date_added,desc&title_type=tvSeries%2CtvEpisode&ref_=wl_ref_typ'
+
+        html = helpers.getURL(url + url_data)
+        if html:
+            img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)(.*?)$')
+            imdb_id = re.compile(r'(?i).*(tt\d+).*')
+
+            with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                show_list = soup.find('div', {'class': 'lister-list'})
+                shows = [] if not show_list else show_list.find_all('div', {'class': 'mode-detail'})
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+
+                for show in shows:
+                    try:
+                        url_path = show.select('h3.lister-item-header a[href*=title]')[0]['href'].strip('/')
+                        ids = dict(imdb=imdb_id.sub(r'\1', url_path))
+                        first_aired = show.select('h3.lister-item-header span.lister-item-year')
+                        year = None if not len(first_aired) else re.sub(r'.*(\d{4}).*', r'\1', first_aired[0].get_text())
+                        dt_ordinal = 0
+                        if year:
+                            dt = dateutil.parser.parse('01-01-%s' % year)
+                            dt_ordinal = dt.toordinal()
+                            if dt_ordinal < oldest_dt:
+                                oldest_dt = dt_ordinal
+                                oldest = year
+                            if dt_ordinal > newest_dt:
+                                newest_dt = dt_ordinal
+                                newest = year
+
+                        genres = show.select('span.genre')
+                        images = {}
+                        img = show.select('div.lister-item-image img')
+                        overview = '' if not show.find('p', '') else show.find('p', '').get_text().strip()
+                        rating = show.find('meta', attrs={'itemprop': 'ratingValue'})
+                        rating = None is not rating and rating.get('content') or ''
+                        voting = show.find('meta', attrs={'itemprop': 'ratingCount'})
+                        voting = None is not voting and voting.get('content') or ''
+                        if len(img):
+                            img_uri = img[0].get('loadlate')
+                            match = img_size.search(img_uri)
+                            if match and 'tv_series.gif' not in img_uri and 'nopicture' not in img_uri:
+                                scale = lambda low1, high1: int((float(450) / high1) * low1)
+                                high = int(max([match.group(9), match.group(11)]))
+                                scaled = [scale(x, high) for x in [(int(match.group(n)), high)[high == int(match.group(n))] for n in 3, 5, 7, 9, 11]]
+                                parts = [match.group(1), match.group(4), match.group(6), match.group(8), match.group(10), match.group(12)]
+                                img_uri = img_uri.replace(match.group(), ''.join([str(y) for x in map(None, parts, scaled) for y in x if y is not None]))
+                                path = ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'imdb'))
+                                helpers.make_dirs(path)
+                                file_name = ek.ek(os.path.basename, img_uri)
+                                cached_name = ek.ek(os.path.join, path, file_name)
+                                if not ek.ek(os.path.isfile, cached_name):
+                                    helpers.download_file(img_uri, cached_name)
+                                images = dict(poster=dict(thumb='cache/images/imdb/%s' % file_name))
+
+                        filtered.append(dict(
+                            premiered=dt_ordinal,
+                            premiered_str=year or 'No year',
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not poss. 16.11.2015
+                            genres='No genre yet' if not len(genres) else genres[0].get_text().strip().lower().replace(' |', ','),
+                            ids=ids,
+                            images=images,
+                            overview='No overview yet' if not len(overview) else self.encode_html(overview[:250:].strip()),
+                            rating=0 if not len(rating) else int(helpers.tryFloat(rating) * 10),
+                            title=show.select('h3.lister-item-header a[href*=title]')[0].get_text().strip(),
+                            url_src_db='http://www.imdb.com/%s/' % url_path,
+                            votes=0 if not len(voting) else helpers.tryInt(voting)))
+
+                        tvshow = filter(lambda x: x.imdbid == ids['imdb'], sickbeard.showList)[0]
+                        src = ((None, 'tvrage')[INDEXER_TVRAGE == tvshow.indexer], 'tvdb')[INDEXER_TVDB == tvshow.indexer]
+                        if src:
+                            filtered[-1]['ids'][src] = tvshow.indexerid
+                            filtered[-1]['url_' + src] = '%s%s' % (sickbeard.indexerApi(tvshow.indexer).config['show_url'], tvshow.indexerid)
+                    except (AttributeError, TypeError, KeyError, IndexError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest, start_year=start_year))
+
+            if len(filtered):
+                footnote = 'Note; Some images on this page may be cropped at source: <a target="_blank" href="%s">%s watchlist at IMDb</a>' % (helpers.anon_url(url + url_ui), list_name)
+            elif None is not show_list:
+                kwargs['show_header'] = True
+                kwargs['error_msg'] = 'No TV titles in the <a target="_blank" href="%s">%s watchlist at IMDb</a>' % (helpers.anon_url(url + url_ui), list_name)
+
+        kwargs.update(dict(footnote=footnote, mode='watchlist-%s' % acc_id, periods=periods))
+        return self.browse_shows(browse_type, '%s IMDb Watchlist' % list_name, filtered, **kwargs)
+
     def popular_imdb(self, *args, **kwargs):
 
         browse_type = 'IMDb'
@@ -2533,6 +2695,15 @@ class NewHomeAddShows(Home):
         filtered = []
         footnote = None
         start_year, end_year = (datetime.date.today().year - 10, datetime.date.today().year + 1)
+        periods = [(start_year, end_year)] + [(x-10, x) for x in range(start_year, start_year-40, -10)]
+
+        start_year_in, end_year_in = [helpers.tryInt(x) for x in (('0,0', kwargs.get('period'))[
+                                                              ',' in kwargs.get('period', '')]).split(',')]
+        if 1900 < start_year_in < 2050 and 2050 > end_year_in > 1900:
+            start_year, end_year = (start_year_in, end_year_in)
+
+        mode = 'popular-%s,%s' % (start_year, end_year)
+
         url = 'http://www.imdb.com/search/title?at=0&sort=moviemeter&title_type=tv_series&year=%s,%s' % (start_year, end_year)
         html = helpers.getURL(url)
         if html:
@@ -2598,7 +2769,8 @@ class NewHomeAddShows(Home):
                             rating=0 if not len(rating) else int(helpers.tryFloat(rating[0].get_text()) * 10),
                             title=tr.select('td.title a')[0].get_text().strip(),
                             url_src_db='http://www.imdb.com/%s/' % url_path,
-                            votes=0 if not len(voting) else vote_value.sub(r'\1\2', voting[0].get('title'))))
+                            votes=0 if not len(voting) else helpers.tryInt(
+                                    vote_value.sub(r'\1\2', voting[0].get('title')), 'TBA')))
 
                         tvshow = filter(lambda x: x.imdbid == ids['imdb'], sickbeard.showList)[0]
                         src = ((None, 'tvrage')[INDEXER_TVRAGE == tvshow.indexer], 'tvdb')[INDEXER_TVDB == tvshow.indexer]
@@ -2608,7 +2780,7 @@ class NewHomeAddShows(Home):
                     except (AttributeError, TypeError, KeyError, IndexError):
                         continue
 
-                kwargs.update(dict(oldest=oldest, newest=newest))
+                kwargs.update(dict(oldest=oldest, newest=newest, mode=mode, periods=periods))
 
             if len(filtered):
                 footnote = 'Note; Some images on this page may be cropped at source: <a target="_blank" href="%s">IMDb</a>' % helpers.anon_url(url)
@@ -2803,11 +2975,12 @@ class NewHomeAddShows(Home):
         t.submenu = self.HomeMenu()
         t.browse_type = browse_type
         t.browse_title = browse_title
-        t.all_shows = shows
+        t.all_shows = []
         t.kwargs = kwargs
+        dedupe = []
 
         t.all_shows_inlibrary = 0
-        for item in t.all_shows:
+        for item in shows:
             item['show_id'] = ''
             for index, tvdb in enumerate(['tvdb', 'tvrage']):
                 try:
@@ -2826,6 +2999,10 @@ class NewHomeAddShows(Home):
 
             if not item['show_id'] and 'tt' in item['ids'].get('imdb', ''):
                 item['show_id'] = item['ids']['imdb']
+
+            if item['show_id'] not in dedupe:
+                dedupe.append(item['show_id'])
+                t.all_shows.append(item)
 
         return t.respond()
 

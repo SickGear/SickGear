@@ -6,7 +6,7 @@
 #from sickbeard import sbdatetime
 #from sickbeard.helpers import anon_url
 ##
-#set global $title='Browse Shows'
+#set global $title='Browse %s Shows' % $browse_type
 #set global $header='Browse Shows'
 #set global $sbPath='..'
 #set global $topmenu='home'
@@ -97,7 +97,7 @@
 
 	\$('#showfilter').on( 'change', function() {
 		var filterValue = this.value;
-		if (-1 == filterValue.indexOf('trakt')) {
+		if (-1 == filterValue.indexOf('trakt') && -1 == filterValue.indexOf('imdb') && -1 == filterValue.indexOf('default')) {
 			\$('#container').isotope({ filter: filterValue });
 		} else {
 			location = '$sbRoot/home/addShows/' + filterValue;
@@ -118,18 +118,33 @@
 #end if
 	<h1 style="margin-bottom:0" class="grey-text #echo '%s">%s' % $heading#</h1>
 
-#if $all_shows or ($kwargs and $kwargs.get('show_header', None))
+#set $mode = $kwargs and $kwargs.get('mode', '')
+#if $all_shows or ($kwargs and $kwargs.get('show_header'))
 <div class="pull-right" style="margin-top:-35px">
-	<span>Show:</span>
+	<span>View:</span>
 	<select id="showfilter" class="form-control form-control-inline input-sm">
     #set $count_all_shows = len($all_shows)
     #set $count_inlibrary = $all_shows_inlibrary
 		<option value="*" selected="selected">All<%= ' (%d)' % count_all_shows %></option>
 		<option value=".notinlibrary">Not In Library<%= ' (%d)' % (count_all_shows - count_inlibrary) %></option>
 		<option value=".inlibrary">In Library<%= ' (%d)' % count_inlibrary %></option>
+    #if $browse_type in ('IMDb', 'Trakt', 'AniDB')
+		<optgroup label="Other Services">
+        #if 'IMDb' == $browse_type
+			<option value="trakt_default">Trakt</option>
+        #elif 'Trakt' == $browse_type
+			<option value="imdb_default">IMDb</option>
+        #elif 'AniDB' == $browse_type
+			<option value="imdb_default">IMDb</option>
+			<option value="trakt_default">Trakt</option>
+        #end if
+        #if $sickbeard.USE_ANIDB and $browse_type in ('IMDb', 'Trakt')
+			<option value="anime_default">AniDB</option>
+        #end if
+		</optgroup>
+    #end if
+    #set $selected = ' class="selected"'
     #if 'Trakt' == $browse_type
-        #set $mode = $kwargs and $kwargs.get('mode', None)
-        #set $selected = ' class="selected"'
 		<optgroup label="Trakt">
 			<option value="trakt_anticipated"#echo ('', selected)['anticipated' == $mode]#>Anticipating</option>
 			<option value="trakt_newseasons"#echo ('', selected)['newseasons' == $mode]#>New Seasons</option>
@@ -151,7 +166,7 @@
 		<optgroup label="Trakt recommended">
             #for $account in $sickbeard.TRAKT_ACCOUNTS
                 #if $sickbeard.TRAKT_ACCOUNTS[$account].active and $sickbeard.TRAKT_ACCOUNTS[$account].name
-			<option value="trakt_recommended?account=$account"#echo ('', selected)['recommended-%s' % $account == $mode]#>for $sickbeard.TRAKT_ACCOUNTS[$account].name</option>
+			<option value="trakt_recommended?account=$account"#echo ('', selected)[('recommended-%s' % $account) == $mode]#>for $sickbeard.TRAKT_ACCOUNTS[$account].name</option>
                 #end if
             #end for
         #else
@@ -159,6 +174,30 @@
 			<option value="trakt_recommended?action=add">Enable Trakt here</option>
         #end if
 		</optgroup>
+    #elif 'IMDb' == $browse_type
+        #set $periods = $kwargs and $kwargs.get('periods')
+        #if $periods
+		<optgroup label="IMDb Popular">
+            #for $i, $p in enumerate($periods)
+                #set $period='%s,%s' % ($p[0], $p[1])
+			<option value="popular_imdb?period=$period"#echo ('', selected)[('popular-%s' % $period) == $mode]#>#echo '%s - %s' % (($p[1], 'Current')[not $i], $p[0])#</option>
+            #end for
+		</optgroup>
+        #end if
+        #if not hasattr($sickbeard, 'IMDB_ACCOUNTS')#<optgroup label="Restart SickGear to reveal"><option>new options after restart</option></optgroup>#else#
+		<optgroup label="IMDb Watchlists">
+            #if any($sickbeard.IMDB_ACCOUNTS)
+                #for $i, $v in $enumerate($sickbeard.IMDB_ACCOUNTS)
+                    #if not $i % 2
+                        #set $id = $v
+                    #elif not $v.startswith('(Off) ')
+			<option value="watchlist_imdb?account=$id"#echo ('', selected)[('watchlist-%s' % $id) == $mode]#>#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
+                    #end if
+                #end for
+            #end if
+			<option value="watchlist_imdb?action=add"><< Add lists >></option>
+		</optgroup>
+        #end if
     #end if
 	</select>
 
@@ -179,7 +218,7 @@
 	</select>
 </div>
 <h4 style="float:left;margin:0 0 0 2px">$browse_title</h4>
-    #if $kwargs and $kwargs.get('oldest', None):
+    #if $kwargs and $kwargs.get('oldest'):
 <div class="grey-text" style="clear:both;margin-left:2px;font-size:0.85em">
 	First aired from $kwargs['oldest'] until $kwargs['newest']
 </div>
@@ -190,7 +229,7 @@
 #if $all_shows
     #for $this_show in $all_shows:
         #set $title_html = $this_show['title'].replace('"', '&quot;').replace("'", '&#39;')
-        #if 'newseasons' == $kwargs.get('mode', '')
+        #if 'newseasons' == $mode
             #set $overview = '%s: %s' % (
             	('Season %s' % $this_show['episode_season'], 'Brand-new')[1 == $this_show['episode_season']],
                 ($this_show['overview'], $this_show['episode_overview'])[any($this_show['episode_overview']) and 1 != $this_show['episode_season']])
@@ -204,7 +243,7 @@
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
 					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>#if $this_show['genres']#<br /><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
 					<p style='margin:0 0 2px'>#echo re.sub(r'([,\.!][^,\.!]*?)$', '...', re.sub(r'([!\?\.])(?=\w)', r'\1 ', $overview))#</p>
-					<p><span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if $kwargs and 'newseasons' == $kwargs.get('mode', None)#Air#else#First air#end if##echo ('s', 'ed')[$this_show['when_past']]#: $this_show['premiered_str']</em></span></p>
+					<p><span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if $kwargs and 'newseasons' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['when_past']]#: $this_show['premiered_str']</em></span></p>
 					<span style='float:right'>Click for more at <span class='boldest'>$browse_type</span></span>">
         #if 'poster' in $this_show['images']:
             #set $image = $this_show['images']['poster']['thumb']
@@ -243,15 +282,15 @@
 	</div>
     #end for
 </div>
-    #if $kwargs and $kwargs.get('footnote', None):
+    #if $kwargs and $kwargs.get('footnote'):
 <div>
     $kwargs['footnote']
 </div>
     #end if
 #else
-	<div class="show-card" style="width:100%; margin-top:20px">
+	<div class="show-card" style="width:100%; margin-top:20px; padding:20px">
 		<p class="red-text">
-    #if $kwargs and $kwargs.get('error_msg', None):
+    #if $kwargs and $kwargs.get('error_msg'):
 			$kwargs['error_msg']
 	#else
 			$browse_type API did not return results, this can happen from time to time.

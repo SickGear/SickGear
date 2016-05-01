@@ -14,6 +14,7 @@
 * Update dateutil library 2.4.2 (083f666) to 2.4.2 (d4baf97)
 * Update Hachoir library 1.3.4 (r1383) to 1.3.4 (r1435)
 * Update html5lib 0.999 to 0.99999999/1.0b9 (46dae3d)
+* Update IMDb 5.0 to 5.1dev20160106
 * Update PNotify library 2.0.1 to 2.1.0
 * Update profilehooks 1.4 to 1.8.2.dev0 (ee3f1a8)
 * Update Requests library 2.7.0 (5d6d1bc) to 2.9.1 (a1c9b84)
@@ -54,6 +55,12 @@
 * Fix syntax error causing renamer to error out
 * Change storing metadata nfo vars from int to strings to resolve lxml type exceptions that don't occur with etree
 * Add visual indicator for upcoming or started shows on Add Browse Shows
+* Add IMDb Watchlists to 'View' drop down on the 'Add from IMDb' page
+* Add 5 decades of 'IMDb Popular' selections to 'View' drop down on 'Add from... Browse Shows'
+* Add 'Other Services' to 'View' drop down on 'Add from... Browse Shows'
+* Add enable, disable and delete public IMDb watchlists to Config/General/Interface with a default 'SickGear' list
+* Change prevent duplicate show ids from presenting items on 'Add from... Browse Shows'
+* Change add 'nocache' kwarg to helpers.getURL to facilitate non-cached requests
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
