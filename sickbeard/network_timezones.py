@@ -266,7 +266,7 @@ def get_network_timezone(network):
     except:
         pass
 
-    return timezone if timezone is not None else sb_timezone
+    return timezone if isinstance(timezone, datetime.tzinfo) else sb_timezone
 
 
 def parse_time(t):
@@ -306,17 +306,17 @@ def parse_time(t):
 # parse date and time string into local time
 def parse_date_time(d, t, network):
 
-    if isinstance(t, basestring):
-        (hr, m) = parse_time(t)
-    else:
+    if isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], int) and isinstance(t[1], int):
         (hr, m) = t
+    else:
+        (hr, m) = parse_time(t)
 
     te = datetime.datetime.fromordinal(helpers.tryInt(d))
     try:
-        if isinstance(network, basestring):
-            foreign_timezone = get_network_timezone(network)
-        else:
+        if isinstance(network, datetime.tzinfo):
             foreign_timezone = network
+        else:
+            foreign_timezone = get_network_timezone(network)
         foreign_naive = datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=foreign_timezone)
         return foreign_naive
     except:
