@@ -174,6 +174,7 @@
 * Fix ensure downloaded eps are not shown on episode view
 * Fix allow propers to pp when show marked upgrade once
 * Fix never set episodes without airdate to wanted
+* Change improve getting the local timezone information
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

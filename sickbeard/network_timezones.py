@@ -19,6 +19,7 @@
 from lib.six import iteritems
 
 from lib.dateutil import tz, zoneinfo
+from lib.tzlocal import get_localzone
 from sickbeard import db
 from sickbeard import helpers
 from sickbeard import logger
@@ -38,8 +39,6 @@ pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
 network_dict = None
 network_dupes = None
 
-sb_timezone = tz.tzlocal()
-
 country_timezones = {
     'AU': 'Australia/Sydney', 'AR': 'America/Buenos_Aires', 'AUSTRALIA': 'Australia/Sydney', 'BR': 'America/Sao_Paulo',
     'CA': 'Canada/Eastern', 'CZ': 'Europe/Prague', 'DE': 'Europe/Berlin', 'ES': 'Europe/Madrid',
@@ -48,6 +47,24 @@ country_timezones = {
     'MY': 'Asia/Kuala_Lumpur', 'NL': 'Europe/Amsterdam', 'NZ': 'Pacific/Auckland', 'PH': 'Asia/Manila',
     'PT': 'Europe/Lisbon', 'RU': 'Europe/Kaliningrad', 'SE': 'Europe/Stockholm', 'SG': 'Asia/Singapore',
     'TW': 'Asia/Taipei', 'UK': 'Europe/London', 'US': 'US/Eastern', 'ZA': 'Africa/Johannesburg'}
+
+
+def tz_fallback(t):
+    return t if isinstance(t, datetime.tzinfo) else tz.tzlocal()
+
+
+def get_tz():
+    t = get_localzone()
+    if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone and hasattr(sickbeard, 'ZONEINFO_DIR'):
+        try:
+            t = tz.gettz(t.zone)
+        except:
+            t = tz_fallback(t)
+    else:
+        t = tz_fallback(t)
+    return t
+
+sb_timezone = get_tz()
 
 
 # helper to remove failed temp download
@@ -83,7 +100,7 @@ def _remove_old_zoneinfo():
 # update the dateutil zoneinfo
 def _update_zoneinfo():
     global sb_timezone
-    sb_timezone = tz.tzlocal()
+    sb_timezone = get_tz()
 
     # now check if the zoneinfo needs update
     url_zv = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/zoneinfo.txt'
@@ -146,7 +163,7 @@ def _update_zoneinfo():
             if '_CLASS_ZONE_INSTANCE' in gettz.func_globals:
                 gettz.func_globals.__setitem__('_CLASS_ZONE_INSTANCE', list())
 
-            sb_timezone = tz.tzlocal()
+            sb_timezone = get_tz()
         except:
             _remove_zoneinfo_failed(zonefile_tmp)
             return
