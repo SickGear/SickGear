@@ -225,18 +225,23 @@ class ProcessTVShow(object):
         else:
             video_batch = video_files
 
-        while 0 < len(video_batch):
-            video_pick = ['']
-            video_size = 0
-            for cur_video_file in video_batch:
-                cur_video_size = ek.ek(os.path.getsize, ek.ek(os.path.join, path, cur_video_file))
-                if 0 == video_size or cur_video_size > video_size:
-                    video_size = cur_video_size
-                    video_pick = [cur_video_file]
+        try:
+            while 0 < len(video_batch):
+                video_pick = ['']
+                video_size = 0
+                for cur_video_file in video_batch:
+                    cur_video_size = ek.ek(os.path.getsize, ek.ek(os.path.join, path, cur_video_file))
+                    if 0 == video_size or cur_video_size > video_size:
+                        video_size = cur_video_size
+                        video_pick = [cur_video_file]
 
-            video_batch = set(video_batch) - set(video_pick)
+                video_batch = set(video_batch) - set(video_pick)
 
-            self._process_media(path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup)
+                self._process_media(path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup)
+
+        except OSError as e:
+            logger.log('Batch skipped, %s%s' %
+                       (ex(e), e.filename and (' (file %s)' % e.filename) or ''), logger.WARNING)
 
         # Process video files in TV subdirectories
         for directory in [x for x in dirs if self._validate_dir(path, x, nzb_name_original, failed)]:
@@ -266,18 +271,24 @@ class ProcessTVShow(object):
                 else:
                     video_batch = video_files
 
-                while 0 < len(video_batch):
-                    video_pick = ['']
-                    video_size = 0
-                    for cur_video_file in video_batch:
-                        cur_video_size = ek.ek(os.path.getsize, ek.ek(os.path.join, process_path, cur_video_file))
-                        if 0 == video_size or cur_video_size > video_size:
-                            video_size = cur_video_size
-                            video_pick = [cur_video_file]
+                try:
+                    while 0 < len(video_batch):
+                        video_pick = ['']
+                        video_size = 0
+                        for cur_video_file in video_batch:
+                            cur_video_size = ek.ek(os.path.getsize, ek.ek(os.path.join, process_path, cur_video_file))
 
-                    video_batch = set(video_batch) - set(video_pick)
+                            if 0 == video_size or cur_video_size > video_size:
+                                video_size = cur_video_size
+                                video_pick = [cur_video_file]
 
-                    self._process_media(process_path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup)
+                        video_batch = set(video_batch) - set(video_pick)
+
+                        self._process_media(process_path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup)
+
+                except OSError as e:
+                    logger.log('Batch skipped, %s%s' %
+                               (ex(e), e.filename and (' (file %s)' % e.filename) or ''), logger.WARNING)
 
                 if process_method in ('hardlink', 'symlink') and video_in_rar:
                     self._delete_files(process_path, rar_content)

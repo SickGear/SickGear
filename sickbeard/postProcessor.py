@@ -448,6 +448,9 @@ class PostProcessor(object):
             self.in_history = True
             show = helpers.findCertainShow(sickbeard.showList, indexer_id)
             to_return = (show, season, [], quality)
+            if not show:
+                self._log(u'Unknown show, check availability on ShowList page', logger.DEBUG)
+                break
             self._log(u'Found a match in history for %s' % show.name, logger.DEBUG)
             break
 
