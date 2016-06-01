@@ -313,7 +313,8 @@ class ProcessTVShow(object):
             if not self.files_failed:
                 _bottom_line(u'Successfully processed.', logger.MESSAGE)
             else:
-                _bottom_line(u'Successfully processed at least one video file %s.' % (', others were skipped', 'and skipped another')[1 == self.files_failed], logger.MESSAGE)
+                _bottom_line(u'Successfully processed at least one video file%s.' %
+                             (', others were skipped', ' and skipped another')[1 == self.files_failed], logger.MESSAGE)
         else:
             _bottom_line(u'Failed! Did not process any files.', logger.WARNING)
 
@@ -432,7 +433,7 @@ class ProcessTVShow(object):
 
     def _already_postprocessed(self, dir_name, videofile, force):
 
-        if force and not self.any_vid_processed:
+        if force or not self.any_vid_processed:
             return False
 
         # Needed for accessing DB with a unicode dir_name
@@ -454,7 +455,7 @@ class ProcessTVShow(object):
                 # processed in the past
                 return False
 
-        showlink = (' for "<a href="/home/displayShow?show=%s" target="_blank">%s</a>"' % (parse_result.show.indexerid, parse_result.show.name),
+        showlink = ('for "<a href="/home/displayShow?show=%s" target="_blank">%s</a>"' % (parse_result.show.indexerid, parse_result.show.name),
                     parse_result.show.name)[self.any_vid_processed]
 
         ep_detail_sql = ''

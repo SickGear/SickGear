@@ -73,6 +73,7 @@
 * Change only create threads for providers needing a recent search instead of for all enabled
 * Add 4489 as experimental value to "Recent search frequency" to use provider freqs instead of fixed width for all
 * Change remove some logging cruft
+* Fix post processing "Force already processed" processing only the first of multiple files
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
