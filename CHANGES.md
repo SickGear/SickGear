@@ -63,6 +63,7 @@
 * Change add 'nocache' kwarg to helpers.getURL to facilitate non-cached requests
 * Change instantly use saved value from Search Settings/Episode Search/"Check propers every" instead of after a restart
 * Change include OSError system messages in file system failure logs during post process
+* Fix find associated meta files to prevent orphan episode images
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
