@@ -170,32 +170,33 @@ class PostProcessor(object):
 
         file_path_list = []
 
-        base_name = file_path.rpartition('.')[0]
+        tmp_base = base_name = file_path.rpartition('.')[0]
 
         if not base_name_only:
-            base_name += '.'
+            tmp_base += '.'
 
         # don't strip it all and use cwd by accident
-        if not base_name:
+        if not tmp_base:
             return []
 
         # don't confuse glob with chars we didn't mean to use
         base_name = re.sub(r'[\[\]\*\?]', r'[\g<0>]', base_name)
 
-        for associated_file_path in ek.ek(glob.glob, base_name + '*'):
-            # only add associated to list
-            if associated_file_path == file_path:
-                continue
-            # only list it if the only non-shared part is the extension or if it is a subtitle
-            if subtitles_only and not associated_file_path[len(associated_file_path) - 3:] in common.subtitleExtensions:
-                continue
+        for meta_ext in ['', '-thumb', '.ext', '.ext.cover', '.metathumb']:
+            for associated_file_path in ek.ek(glob.glob, '%s%s.*' % (base_name, meta_ext)):
+                # only add associated to list
+                if associated_file_path == file_path:
+                    continue
+                # only list it if the only non-shared part is the extension or if it is a subtitle
+                if subtitles_only and not associated_file_path[len(associated_file_path) - 3:] in common.subtitleExtensions:
+                    continue
 
-            # Exclude .rar files from associated list
-            if re.search('(^.+\.(rar|r\d+)$)', associated_file_path):
-                continue
+                # Exclude .rar files from associated list
+                if re.search('(^.+\.(rar|r\d+)$)', associated_file_path):
+                    continue
 
-            if ek.ek(os.path.isfile, associated_file_path):
-                file_path_list.append(associated_file_path)
+                if ek.ek(os.path.isfile, associated_file_path):
+                    file_path_list.append(associated_file_path)
 
         return file_path_list
 
