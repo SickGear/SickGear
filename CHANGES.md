@@ -75,6 +75,7 @@
 * Change remove some logging cruft
 * Fix post processing "Force already processed" processing only the first of multiple files
 * Add FileList torrent provider
+* Add provider Anizb
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
