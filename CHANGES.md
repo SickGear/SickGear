@@ -74,6 +74,7 @@
 * Add 4489 as experimental value to "Recent search frequency" to use provider freqs instead of fixed width for all
 * Change remove some logging cruft
 * Fix post processing "Force already processed" processing only the first of multiple files
+* Add FileList torrent provider
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
