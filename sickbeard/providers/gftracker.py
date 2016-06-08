@@ -20,7 +20,7 @@ import time
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -29,7 +29,7 @@ from lib.unidecode import unidecode
 class GFTrackerProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'GFTracker')
+        generic.TorrentProvider.__init__(self, 'GFTracker', cache_update_freq=17)
 
         self.url_base = 'https://thegft.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -44,7 +44,6 @@ class GFTrackerProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = GFTrackerCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -120,18 +119,6 @@ class GFTrackerProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
-
-
-class GFTrackerCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 17  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = GFTrackerProvider()

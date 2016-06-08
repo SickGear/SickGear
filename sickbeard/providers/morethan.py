@@ -21,7 +21,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -30,19 +30,19 @@ from lib.unidecode import unidecode
 class MoreThanProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'MoreThan')
+        generic.TorrentProvider.__init__(self, 'MoreThan', cache_update_freq=20)
 
         self.url_base = 'https://www.morethan.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s&' + '&'.join([
-                         'tags_type=1', 'order_by=time', '&order_way=desc', 'filter_cat[2]=1', 'action=basic', 'searchsubmit=1']),
+                         'tags_type=1', 'order_by=time', 'order_way=desc',
+                         'filter_cat[2]=1', 'action=basic', 'searchsubmit=1']),
                      'get': self.url_base + '%s'}
 
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = MoreThanCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -95,7 +95,7 @@ class MoreThanProvider(generic.TorrentProvider):
                                     title = '%s %s' % (tr.find('div', attrs={'class': rc['name']}).get_text().strip(),
                                                        title)
 
-                                link = str(tr.find('a', title=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
+                                link = str(tr.find('a', href=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
                                 download_url = self.urls['get'] % link
                             except (AttributeError, TypeError, ValueError):
                                 continue
@@ -115,18 +115,6 @@ class MoreThanProvider(generic.TorrentProvider):
             results = list(set(results + items[mode]))
 
         return results
-
-
-class MoreThanCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = MoreThanProvider()

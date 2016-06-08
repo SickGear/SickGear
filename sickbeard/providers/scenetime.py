@@ -20,7 +20,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -29,7 +29,7 @@ from lib.unidecode import unidecode
 class SceneTimeProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SceneTime')
+        generic.TorrentProvider.__init__(self, 'SceneTime', cache_update_freq=15)
 
         self.url_base = 'https://www.scenetime.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -42,9 +42,7 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = SceneTimeCache(self)
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -58,15 +56,16 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': '.*id=(\d+).*', 'fl': '\[freeleech\]',
-                                                             'cats': 'cat=(?:%s)' % self._categories_string(template='', delimiter='|')
-                                                             }.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'info': 'detail', 'get': '.*id=(\d+).*', 'fl': '\[freeleech\]',
+            'cats': 'cat=(?:%s)' % self._categories_string(template='', delimiter='|')}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 post_data = self.urls['params'].copy()
-                post_data.update(ast.literal_eval('{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
+                post_data.update(ast.literal_eval(
+                    '{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
                 if 'Cache' != mode:
                     search_string = '+'.join(search_string.split())
                     post_data['search'] = search_string
@@ -99,10 +98,11 @@ class SceneTimeProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
+                                title = info.attrs.get('title') or info.get_text().strip()
 
-                                download_url = self.urls['get'] % {'id': re.sub(rc['get'], r'\1', str(info.attrs['href'])),
-                                                                   'title': str(title).replace(' ', '.')}
+                                download_url = self.urls['get'] % {
+                                    'id': re.sub(rc['get'], r'\1', str(info.attrs['href'])),
+                                    'title': str(title).replace(' ', '.')}
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -122,18 +122,6 @@ class SceneTimeProvider(generic.TorrentProvider):
             results = list(set(results + items[mode]))
 
         return results
-
-
-class SceneTimeCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 15  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = SceneTimeProvider()

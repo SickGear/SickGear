@@ -420,7 +420,7 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
     else:
         logger.log('%s -> ******' % item_name, logger.DEBUG)
 
-    return my_val
+    return (my_val, def_val)['None' == my_val]
 
 
 class ConfigMigrator():

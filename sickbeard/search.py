@@ -179,6 +179,21 @@ def snatch_episode(result, end_status=SNATCHED):
 
     return True
 
+
+def pass_show_wordlist_checks(name, show):
+    re_extras = dict(re_prefix='.*', re_suffix='.*')
+    result = show_name_helpers.contains_any(name, show.rls_ignore_words, **re_extras)
+    if None is not result and result:
+        logger.log(u'Ignored: %s for containing ignore word' % name)
+        return False
+
+    result = show_name_helpers.contains_any(name, show.rls_require_words, **re_extras)
+    if None is not result and not result:
+        logger.log(u'Ignored: %s for not containing any required word match' % name)
+        return False
+    return True
+
+
 def pick_best_result(results, show, quality_list=None):
     logger.log(u'Picking the best result out of %s' % [x.name for x in results], logger.DEBUG)
 
@@ -195,15 +210,7 @@ def pick_best_result(results, show, quality_list=None):
             logger.log(u'%s is an unwanted quality, rejecting it' % cur_result.name, logger.DEBUG)
             continue
 
-        re_extras = dict(re_prefix='.*', re_suffix='.*')
-        result = show_name_helpers.contains_any(cur_result.name, show.rls_ignore_words, **re_extras)
-        if None is not result and result:
-            logger.log(u'Ignored: %s for containing ignore word' % cur_result.name)
-            continue
-
-        result = show_name_helpers.contains_any(cur_result.name, show.rls_require_words, **re_extras)
-        if None is not result and not result:
-            logger.log(u'Ignored: %s for not containing any required word match' % cur_result.name)
+        if not pass_show_wordlist_checks(cur_result.name, show):
             continue
 
         cur_size = getattr(cur_result, 'size', None)
@@ -427,8 +434,11 @@ def search_for_needed_episodes(episodes):
 
     threading.currentThread().name = orig_thread_name
 
-    if not search_done:
-        logger.log(u'No NZB/Torrent provider enabled to do recent searches. Please check provider options.', logger.ERROR)
+    if not len(providers):
+        logger.log('No NZB/Torrent sources enabled in Search Provider options to do recent searches', logger.WARNING)
+    elif not search_done:
+        logger.log('Failed recent search of %s enabled provider%s. More info in debug log.' % (
+            len(providers), helpers.maybe_plural(len(providers))), logger.ERROR)
 
     return found_results.values()
 
@@ -672,12 +682,39 @@ def search_providers(show, episodes, manual_search=False):
                 continue
 
             # filter out possible bad torrents from providers
-            if 'torrent' == best_result.resultType and 'blackhole' != sickbeard.TORRENT_METHOD:
-                best_result.content = None
-                if not best_result.url.startswith('magnet'):
-                    best_result.content = best_result.provider.get_url(best_result.url)
-                    if not best_result.content:
+            if 'torrent' == best_result.resultType:
+                if best_result.url.startswith('magnet'):
+                    if 'blackhole' != sickbeard.TORRENT_METHOD:
+                        best_result.content = None
+                else:
+                    td = best_result.provider.get_url(best_result.url)
+                    if not td:
                         continue
+                    if getattr(best_result.provider, 'chk_td', None):
+                        name = None
+                        try:
+                            hdr = re.findall('(\w+(\d+):)', td[0:6])[0]
+                            x, v = len(hdr[0]), int(hdr[1])
+                            for item in range(0, 12):
+                                y = x + v
+                                name = 'name' == td[x: y]
+                                w = re.findall('((?:i\d+e|d|l)?(\d+):)', td[y: y + 32])[0]
+                                x, v = y + len(w[0]), int(w[1])
+                                if name:
+                                    name = td[x: x + v]
+                                    break
+                        except:
+                            continue
+                        if name:
+                            if not pass_show_wordlist_checks(name, show):
+                                continue
+                            if not show_name_helpers.pass_wordlist_checks(name):
+                                logger.log(u'Ignored: %s (debug log has detail)' % name)
+                                continue
+                            best_result.name = name
+
+                    if 'blackhole' != sickbeard.TORRENT_METHOD:
+                        best_result.content = td
 
             # add result if its not a duplicate and
             found = False
@@ -702,8 +739,10 @@ def search_providers(show, episodes, manual_search=False):
         if len(episodes) == wanted_ep_count:
             break
 
-    if not search_done:
-        logger.log(u'No NZB/Torrent providers found or enabled in the SickGear config for backlog searches. Please check your settings.',
-                   logger.ERROR)
+    if not len(provider_list):
+        logger.log('No NZB/Torrent sources enabled in Search Provider options to do backlog searches', logger.WARNING)
+    elif not search_done:
+        logger.log('Failed backlog search of %s enabled provider%s. More info in debug log.' % (
+            len(provider_list), helpers.maybe_plural(len(provider_list))), logger.ERROR)
 
     return final_results

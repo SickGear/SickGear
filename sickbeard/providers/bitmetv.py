@@ -19,7 +19,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -28,7 +28,7 @@ from lib.unidecode import unidecode
 class BitmetvProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'BitMeTV')
+        generic.TorrentProvider.__init__(self, 'BitMeTV', cache_update_freq=7)
 
         self.url_base = 'http://www.bitmetv.org/'
 
@@ -42,7 +42,6 @@ class BitmetvProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.digest, self.minseed, self.minleech = 3 * [None]
-        self.cache = BitmetvCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -63,9 +62,7 @@ class BitmetvProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                category = 'cat=%s' % self.categories[
-                    (mode in ['Season', 'Episode'] and self.show and self.show.is_anime) and 'anime' or 'shows']
-                search_url = self.urls['search'] % (category, search_string)
+                search_url = self.urls['search'] % (self._categories_string(mode, 'cat=%s'), search_string)
 
                 html = self.get_url(search_url)
 
@@ -89,8 +86,8 @@ class BitmetvProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
-                                download_url = self.urls['get'] % tr.find('a', href=rc['get']).get('href')
+                                title = info.attrs.get('title') or info.get_text().strip()
+                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -114,18 +111,6 @@ class BitmetvProvider(generic.TorrentProvider):
     def ui_string(key):
 
         return 'bitmetv_digest' == key and 'use... \'uid=xx; pass=yy\'' or ''
-
-
-class BitmetvCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 7  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = BitmetvProvider()

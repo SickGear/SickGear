@@ -64,6 +64,15 @@
 * Change instantly use saved value from Search Settings/Episode Search/"Check propers every" instead of after a restart
 * Change include OSError system messages in file system failure logs during post process
 * Fix find associated meta files to prevent orphan episode images
+* Add torrent provider HD4Free
+* Change validate and improve specific Torrent provider connections, IPT, KAT, SCC, TPB, TB, TD, TT
+* Change refactor cache for torrent providers to reduce code
+* Change improve search category selection BMTV, FSH, FF, TB
+* Change identify more SD release qualities
+* Change update SpeedCD, MoreThan, TVChaosuk
+* Change only create threads for providers needing a recent search instead of for all enabled
+* Add 4489 as experimental value to "Recent search frequency" to use provider freqs instead of fixed width for all
+* Change remove some logging cruft
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)

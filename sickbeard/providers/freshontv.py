@@ -19,7 +19,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -28,19 +28,19 @@ from lib.unidecode import unidecode
 class FreshOnTVProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'FreshOnTV')
+        generic.TorrentProvider.__init__(self, 'FreshOnTV', cache_update_freq=20)
 
         self.url_base = 'https://freshon.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'login.php?action=makelogin',
-                     'search': self.url_base + 'browse.php?incldead=%s&words=0&cat=0&search=%s',
+                     'search': self.url_base + 'browse.php?incldead=%s&words=0&%s&search=%s',
                      'get': self.url_base + '%s'}
+
+        self.categories = {'shows': 0, 'anime': 235}
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = FreshOnTVCache(self)
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -59,16 +59,17 @@ class FreshOnTVProvider(generic.TorrentProvider):
             return results
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
-        freeleech = (0, 3)[self.freeleech]
+        freeleech = (3, 0)[not self.freeleech]
 
         rc = dict((k, re.compile('(?i)' + v))
                   for (k, v) in {'info': 'detail', 'get': 'download', 'name': '_name'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
 
-                search_string, search_url = self._title_and_url((
-                    isinstance(search_string, unicode) and unidecode(search_string) or search_string,
-                    self.urls['search'] % (freeleech, search_string)))
+                search_string, void = self._title_and_url((
+                    isinstance(search_string, unicode) and unidecode(search_string) or search_string, ''))
+                void, search_url = self._title_and_url((
+                    '', self.urls['search'] % (freeleech, self._categories_string(mode, 'cat=%s'), search_string)))
 
                 # returns top 15 results by default, expandable in user profile to 100
                 html = self.get_url(search_url)
@@ -96,7 +97,7 @@ class FreshOnTVProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['info'], attrs={'class': rc['name']})
-                                title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
+                                title = info.attrs.get('title') or info.get_text().strip()
 
                                 download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
                             except (AttributeError, TypeError, ValueError):
@@ -117,21 +118,9 @@ class FreshOnTVProvider(generic.TorrentProvider):
 
         return results
 
-    def _get_episode_search_strings(self, ep_obj, **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
-
-
-class FreshOnTVCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = FreshOnTVProvider()

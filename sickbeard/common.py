@@ -213,6 +213,9 @@ class Quality:
             return Quality.SDTV
         elif checkName(['(dvd.?rip|b[r|d]rip)(.ws)?(.(xvid|divx|x264|h.?264))?'], any) and not checkName(['(720|1080|2160)[pi]'], all):
             return Quality.SDDVD
+        elif checkName(['(xvid|divx|480p)'], any) and not checkName(['(720|1080|2160)[pi]'], all) \
+                and not checkName(['hr.ws.pdtv.(x264|h.?264)'], any):
+            return Quality.SDTV
         elif checkName(['720p', 'hdtv', 'x264|h.?264'], all) or checkName(['hr.ws.pdtv.(x264|h.?264)'], any) \
                 and not checkName(['(1080|2160)[pi]'], all):
             return Quality.HDTV

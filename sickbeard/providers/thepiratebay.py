@@ -23,7 +23,7 @@ import traceback
 import urllib
 
 from . import generic
-from sickbeard import config, logger, tvcache, show_name_helpers
+from sickbeard import config, logger, show_name_helpers
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.common import Quality, mediaExtensions
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
@@ -33,40 +33,32 @@ from lib.unidecode import unidecode
 class ThePirateBayProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'The Pirate Bay')
+        generic.TorrentProvider.__init__(self, 'The Pirate Bay', cache_update_freq=20)
 
-        self.urls = {'config_provider_home_uri': ['https://thepiratebay.se/', 'https://thepiratebay.gd/',
-                                                  'https://thepiratebay.mn/', 'https://thepiratebay.vg/',
-                                                  'https://thepiratebay.la/'],
-                     'search': 'search/%s/0/7/200',
-                     'browse': 'tv/latest/'}  # order by seed
+        self.url_home = ['https://thepiratebay.%s/' % u for u in 'se', 'org']
+
+        self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s',
+                         'browse': '%(home)s%(vars)s'}
 
         self.proper_search_terms = None
-        self.url = self.urls['config_provider_home_uri'][0]
 
         self.minseed, self.minleech = 2 * [None]
         self.confirmed = False
-        self.cache = ThePirateBayCache(self)
+
+    @staticmethod
+    def _has_signature(data=None):
+        return data and re.search(r'Pirate\sBay', data[33:7632:])
 
     def _find_season_quality(self, title, torrent_id, ep_number):
         """ Return the modified title of a Season Torrent with the quality found inspecting torrent file list """
 
+        if not self.url:
+            return False
+
         quality = Quality.UNKNOWN
         file_name = None
-        data = None
-        has_signature = False
-        details_url = '/ajax_details_filelist.php?id=%s' % torrent_id
-        for idx, url in enumerate(self.urls['config_provider_home_uri']):
-            data = self.get_url(url + details_url)
-            if data and re.search(r'<title>The\sPirate\sBay', data[33:200:]):
-                has_signature = True
-                break
-            else:
-                data = None
-
-        if not has_signature:
-            logger.log(u'Failed to identify a page from ThePirateBay at %s attempted urls (tpb blocked? general network issue or site dead)' % len(self.urls['config_provider_home_uri']), logger.ERROR)
-
+        data = self.get_url('%sajax_details_filelist.php?id=%s' % (self.url, torrent_id))
         if not data:
             return None
 
@@ -138,30 +130,22 @@ class ThePirateBayProvider(generic.TorrentProvider):
     def _search_provider(self, search_params, search_mode='eponly', epcount=0, **kwargs):
 
         results = []
+        if not self.url:
+            return results
+
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v))
                   for (k, v) in {'info': 'detail', 'get': 'download[^"]+magnet', 'tid': r'.*/(\d{5,}).*',
                                  'verify': '(?:helper|moderator|trusted|vip)'}.items())
-        has_signature = False
+
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                log_url = '%s %s' % (self.name, search_string)   # placebo value
-                for idx, search_url in enumerate(self.urls['config_provider_home_uri']):
-                    search_url += self.urls['browse'] if 'Cache' == mode\
-                        else self.urls['search'] % (urllib.quote(search_string))
-
-                    log_url = u'(%s/%s): %s' % (idx + 1, len(self.urls['config_provider_home_uri']), search_url)
-
-                    html = self.get_url(search_url)
-
-                    if html and re.search(r'Pirate\sBay', html[33:7632:]):
-                        has_signature = True
-                        break
-                    else:
-                        html = None
+                search_url = self.urls['browse'] if 'Cache' == mode \
+                    else self.urls['search'] % (urllib.quote(search_string))
+                html = self.get_url(search_url)
 
                 cnt = len(items[mode])
                 try:
@@ -213,28 +197,13 @@ class ThePirateBayProvider(generic.TorrentProvider):
                     pass
                 except Exception:
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_search(mode, len(items[mode]) - cnt, log_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
             self._sort_seeders(mode, items)
 
             results = list(set(results + items[mode]))
 
-        if not has_signature:
-            logger.log(u'Failed to identify a page from ThePirateBay at %s attempted urls (tpb blocked? general network issue or site dead)' % len(self.urls['config_provider_home_uri']), logger.ERROR)
-
         return results
-
-
-class ThePirateBayCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = ThePirateBayProvider()

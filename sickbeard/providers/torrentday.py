@@ -19,8 +19,7 @@ import re
 import time
 
 from . import generic
-from sickbeard import tvcache
-from sickbeard.helpers import (has_anime, tryInt)
+from sickbeard.helpers import tryInt
 
 
 class TorrentDayProvider(generic.TorrentProvider):
@@ -28,22 +27,19 @@ class TorrentDayProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorrentDay')
 
-        self.url_base = 'https://torrentday.eu/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'torrents/',
-                     'search': self.url_base + 'V3/API/API.php',
-                     'get': self.url_base + 'download.php/%s/%s'}
+        self.url_home = ['https://%s/' % u for u in 'torrentday.eu', 'secure.torrentday.com', 'tdonline.org',
+                                                    'torrentday.it', 'www.td.af', 'www.torrentday.com']
 
-        self.categories = {'Season': {'c31': 1, 'c33': 1, 'c14': 1},
-                           'Episode': {'c32': 1, 'c26': 1, 'c7': 1, 'c2': 1},
-                           'Cache': {'c31': 1, 'c33': 1, 'c14': 1, 'c32': 1, 'c26': 1, 'c7': 1, 'c2': 1}}
+        self.url_vars = {'login': 'torrents/', 'search': 'V3/API/API.php', 'get': 'download.php/%s/%s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
+                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+
+        self.categories = {'Season': [31, 33, 14], 'Episode': [24, 32, 26, 7, 2], 'Anime': [29]}
+        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.proper_search_terms = None
-        self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = TorrentDayCache(self)
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -66,11 +62,8 @@ class TorrentDayProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = '+'.join(search_string.split())
-                post_data = dict({'/browse.php?': None, 'cata': 'yes', 'jxt': 8, 'jxw': 'b', 'search': search_string},
-                                 **self.categories[(mode, 'Episode')['Propers' == mode]])
-                if ('Cache' == mode and has_anime()) or (
-                        mode in ['Season', 'Episode'] and self.show and self.show.is_anime):
-                    post_data.update({'c29': 1})
+                post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')),
+                                 search=search_string, cata='yes', jxt=8, jxw='b')
 
                 if self.freeleech:
                     post_data.update({'free': 'on'})
@@ -110,16 +103,6 @@ class TorrentDayProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', date_or=True, **kwargs)
-
-
-class TorrentDayCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = TorrentDayProvider()

@@ -19,7 +19,7 @@ import re
 import time
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.exceptions import AuthException
 from lib.unidecode import unidecode
 
@@ -41,7 +41,6 @@ class BeyondHDProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.passkey, self.minseed, self.minleech = 3 * [None]
-        self.cache = BeyondHDCache(self)
 
     def _check_auth_from_data(self, data_json):
 
@@ -99,16 +98,6 @@ class BeyondHDProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
-
-
-class BeyondHDCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = BeyondHDProvider()

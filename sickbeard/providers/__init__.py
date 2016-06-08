@@ -18,30 +18,37 @@
 
 from os import sys
 
+import os.path
 import sickbeard
 
 from . import generic
-from sickbeard import logger
+from sickbeard import logger, encodingKludge as ek
 # usenet
 from . import newznab, omgwtfnzbs, womble
 # torrent
-from . import alpharatio, beyondhd, bitmetv, bitsoup, btn, freshontv, funfile, gftracker, grabtheinfo, \
-    hdbits, hdspace, iptorrents, kat, morethan, pisexy, pretome, rarbg, scc, scenetime, shazbat, speedcd, \
+from . import alpharatio, beyondhd, bitmetv, btn, freshontv, funfile, gftracker, grabtheinfo, \
+    hd4free, hdbits, hdspace, iptorrents, kat, morethan, pisexy, pretome, rarbg, scc, scenetime, shazbat, speedcd, \
     thepiratebay, torrentbytes, torrentday, torrenting, torrentleech, torrentshack, transmithe_net, tvchaosuk
 # anime
 from . import nyaatorrents, tokyotoshokan
+# custom
+try:
+    from . import custom01
+except:
+    pass
 
 __all__ = ['omgwtfnzbs',
            'womble',
            'alpharatio',
            'beyondhd',
            'bitmetv',
-           'bitsoup',
            'btn',
+           'custom01',
            'freshontv',
            'funfile',
            'gftracker',
            'grabtheinfo',
+           'hd4free',
            'hdbits',
            'hdspace',
            'iptorrents',
@@ -208,16 +215,19 @@ def makeTorrentRssProvider(configString):
 
 
 def getDefaultNewznabProviders():
-    return 'Sick Beard Index|http://lolo.sickbeard.com/|0|5030,5040|0|eponly|0|0|0!!!NZBs.org|https://nzbs.org/||5030,5040|0|eponly|0|0|0!!!Usenet-Crawler|https://www.usenet-crawler.com/||5030,5040|0|eponly|0|0|0'
+    return '!!!'.join(['Sick Beard Index|http://lolo.sickbeard.com/|0|5030,5040|0|eponly|0|0|0',
+                       'NZBgeek|https://api.nzbgeek.info/||5030,5040|0|eponly|0|0|0',
+                       'NZBs.org|https://nzbs.org/||5030,5040|0|eponly|0|0|0',
+                       'Usenet-Crawler|https://www.usenet-crawler.com/||5030,5040|0|eponly|0|0|0'])
 
 
 def getProviderModule(name):
-    name = name.lower()
-    prefix = "sickbeard.providers."
+    prefix, cprov, name = 'sickbeard.providers.', 'motsuc'[::-1], name.lower()
     if name in __all__ and prefix + name in sys.modules:
         return sys.modules[prefix + name]
-    else:
-        raise Exception("Can't find " + prefix + name + " in " + "Providers")
+    elif cprov in name:
+        return None
+    raise Exception('Can\'t find %s%s in providers' % (prefix, name))
 
 
 def getProviderClass(id):

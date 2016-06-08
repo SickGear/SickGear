@@ -32,6 +32,7 @@ from name_parser.parser import NameParser, InvalidNameException, InvalidShowExce
 from sickbeard.rssfeeds import RSSFeeds
 import itertools
 
+
 class CacheDBConnection(db.DBConnection):
     def __init__(self, providerName):
         db.DBConnection.__init__(self, 'cache.db')
@@ -43,6 +44,7 @@ class CacheDBConnection(db.DBConnection):
         except Exception as e:
             if str(e) != 'table lastUpdate already exists':
                 raise
+
 
 class TVCache:
     def __init__(self, provider):
@@ -56,7 +58,7 @@ class TVCache:
         return CacheDBConnection(self.providerID)
 
     def _clearCache(self):
-        if self.shouldClearCache():
+        if self.should_clear_cache():
             myDB = self.get_db()
             myDB.action('DELETE FROM provider_cache WHERE provider = ?', [self.providerID])
 
@@ -81,21 +83,16 @@ class TVCache:
             logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
             return []
 
-        if self.shouldUpdate():
-            # as long as the http request worked we count this as an update
+        if self.should_update():
             data = self._cache_data()
-            if not data:
-                return []
 
             # clear cache
-            self._clearCache()
-
-            # set updated
-            self.setLastUpdate()
+            if data:
+                self._clearCache()
 
             # parse data
             cl = []
-            for item in data:
+            for item in data or []:
                 title, url = self._title_and_url(item)
                 ci = self._parseItem(title, url)
                 if ci is not None:
@@ -104,6 +101,9 @@ class TVCache:
             if len(cl) > 0:
                 myDB = self.get_db()
                 myDB.mass_action(cl)
+
+            # set updated as time the attempt to fetch data is
+            self.setLastUpdate()
 
         return []
 
@@ -180,21 +180,13 @@ class TVCache:
     lastUpdate = property(_getLastUpdate)
     lastSearch = property(_getLastSearch)
 
-    def shouldUpdate(self):
+    def should_update(self):
         # if we've updated recently then skip the update
-        if datetime.datetime.today() - self.lastUpdate < datetime.timedelta(minutes=self.update_freq):
-            logger.log(u'Last update was too soon, using old cache: today()-' + str(self.lastUpdate) + '<' + str(
-                datetime.timedelta(minutes=self.update_freq)), logger.DEBUG)
-            return False
+        return datetime.datetime.today() - self.lastUpdate >= datetime.timedelta(minutes=self.update_freq)
 
-        return True
-
-    def shouldClearCache(self):
+    def should_clear_cache(self):
         # if recent search hasn't used our previous results yet then don't clear the cache
-        if self.lastUpdate > self.lastSearch:
-            return False
-
-        return True
+        return self.lastSearch >= self.lastUpdate
 
     def add_cache_entry(self, name, url, parse_result=None, indexer_id=0):
 

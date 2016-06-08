@@ -37,9 +37,9 @@
 
     var show_nzb_providers = <%= 'true' if sickbeard.USE_NZBS else 'false' %>;
 
-        #for $curNewznabProvider in $sickbeard.newznabProviderList:
+        #for $cur_newznab_provider in $sickbeard.newznabProviderList:
 
-    \$(this).addProvider('$curNewznabProvider.get_id()', '$curNewznabProvider.name', '$curNewznabProvider.url', '<%= starify(curNewznabProvider.key) %>', '$curNewznabProvider.cat_ids', $int($curNewznabProvider.default), show_nzb_providers);
+    \$(this).addProvider('$cur_newznab_provider.get_id()', '$cur_newznab_provider.name', '$cur_newznab_provider.url', '<%= starify(cur_newznab_provider.key) %>', '$cur_newznab_provider.cat_ids', $int($cur_newznab_provider.default), show_nzb_providers);
 
         #end for
 
@@ -47,9 +47,9 @@
 
     #if $sickbeard.USE_TORRENTS
 
-        #for $curTorrentRssProvider in $sickbeard.torrentRssProviderList:
+        #for $cur_torrent_rss_provider in $sickbeard.torrentRssProviderList:
 
-    \$(this).addTorrentRssProvider('$curTorrentRssProvider.get_id()', '$curTorrentRssProvider.name', '$curTorrentRssProvider.url', '<%= starify(curTorrentRssProvider.cookies) %>');
+    \$(this).addTorrentRssProvider('$cur_torrent_rss_provider.get_id()', '$cur_torrent_rss_provider.name', '$cur_torrent_rss_provider.url', '<%= starify(cur_torrent_rss_provider.cookies) %>');
 
         #end for
 
@@ -98,20 +98,20 @@
 
 
 						<ul id="provider_order_list" class="provider_order_panel">
-#for $curProvider in $sickbeard.providers.sortedProviderList()
-    #if $curProvider.providerType == $GenericProvider.NZB and not $sickbeard.USE_NZBS
-        #continue
-    #elif $curProvider.providerType == $GenericProvider.TORRENT and not $sickbeard.USE_TORRENTS
-        #continue
-    #end if
-    #set $curName = $curProvider.get_id()
-						  <li class="ui-state-default" id="$curName">
-							<input type="checkbox" id="enable_$curName" class="provider_enabler" <%= html_checked if curProvider.is_enabled() else '' %>/>
-                            <a href="<%= anon_url(curProvider.url) %>" class="imgLink" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><img src="$sbRoot/images/providers/$curProvider.image_name()" alt="$curProvider.name" title="$curProvider.name" width="16" height="16" style="vertical-align:middle;"/></a>
-							<span style="vertical-align:middle">$curProvider.name</span>
-<%= '*' if not curProvider.supportsBacklog else '' %>
-							<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="margin-top:3px"></span>
-						  </li>
+#for $cur_provider in [$x for $x in $sickbeard.providers.sortedProviderList()
+    if $x.providerType == $GenericProvider.NZB and $sickbeard.USE_NZBS or
+       $x.providerType == $GenericProvider.TORRENT and $sickbeard.USE_TORRENTS]
+    #set $cur_name = $cur_provider.get_id()
+    #set $cur_url = $cur_provider.url
+    #set $tip = ($cur_provider.name, 'Site Down')[not $cur_url]
+    #set $state = ('', ' <span class="red-text">(Site Down?)</span>')[not $cur_url]
+							<li class="ui-state-default" id="$cur_name">
+								<input type="checkbox" id="enable_$cur_name" class="provider_enabler" <%= html_checked if cur_provider.is_enabled() else '' %>/>
+								<a href="<%= anon_url(cur_url) %>" class="imgLink" rel="noreferrer" onclick="window.open(this.href,'_blank');return false;"><img src="$sbRoot/images/providers/$cur_provider.image_name()" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle" /></a>
+								<span style="vertical-align:middle">$cur_provider.name$state</span>
+<%= '*' if not cur_provider.supports_backlog else '' %>
+								<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="margin-top:3px"></span>
+							</li>
 #end for
 						</ul>
 
@@ -150,16 +150,13 @@
 								<span class="component-desc">
 #set $provider_config_list_enabled = []
 #set $provider_config_list = []
-#for $curProvider in $sickbeard.providers.sortedProviderList()
-    #if $curProvider.providerType == $GenericProvider.NZB and not $sickbeard.USE_NZBS
-        #continue
-    #elif $curProvider.providerType == $GenericProvider.TORRENT and not $sickbeard.USE_TORRENTS
-        #continue
-    #end if
-    #if $curProvider.is_enabled()
-        $provider_config_list_enabled.append($curProvider)
+#for $cur_provider in [$x for $x in $sickbeard.providers.sortedProviderList()
+    if $x.providerType == $GenericProvider.NZB and $sickbeard.USE_NZBS or
+        $x.providerType == $GenericProvider.TORRENT and $sickbeard.USE_TORRENTS]
+    #if $cur_provider.is_enabled()
+        $provider_config_list_enabled.append($cur_provider)
     #else
-        $provider_config_list.append($curProvider)
+        $provider_config_list.append($cur_provider)
     #end if
 #end for
 
@@ -188,71 +185,71 @@
 						</div>
 
 					<!-- start div for editing providers //-->
-#for $curNewznabProvider in [$curProvider for $curProvider in $sickbeard.newznabProviderList]
-					<div class="providerDiv" id="${curNewznabProvider.get_id()}Div">
-    #if $curNewznabProvider.default and $curNewznabProvider.needs_auth
+#for $cur_newznab_provider in [$cur_provider for $cur_provider in $sickbeard.newznabProviderList]
+					<div class="providerDiv" id="${cur_newznab_provider.get_id()}Div">
+    #if $cur_newznab_provider.default and $cur_newznab_provider.needs_auth
 						<div class="field-pair">
-							<label for="${curNewznabProvider.get_id()}_url">
+							<label for="${cur_newznab_provider.get_id()}_url">
 								<span class="component-title">URL</span>
 								<span class="component-desc">
-									<input type="text" id="${curNewznabProvider.get_id()}_url" value="$curNewznabProvider.url" class="form-control input-sm input350" disabled/>
+									<input type="text" id="${cur_newznab_provider.get_id()}_url" value="$cur_newznab_provider.url" class="form-control input-sm input350" disabled/>
 								</span>
 							</label>
 						</div>
 
 						<div class="field-pair">
-							<label for="${curNewznabProvider.get_id()}_hash">
+							<label for="${cur_newznab_provider.get_id()}_hash">
 								<span class="component-title">API key</span>
 								<span class="component-desc">
-									<input type="text" id="${curNewznabProvider.get_id()}_hash" value="<%= starify(curNewznabProvider.key) %>" newznab_name="${curNewznabProvider.get_id()}_hash" class="newznab_key form-control input-sm input350" />
+									<input type="text" id="${cur_newznab_provider.get_id()}_hash" value="<%= starify(cur_newznab_provider.key) %>" newznab_name="${cur_newznab_provider.get_id()}_hash" class="newznab_key form-control input-sm input350" />
 									<div class="clear-left"><p>get API key from provider website</p></div>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curNewznabProvider, 'enable_recentsearch') and $curNewznabProvider.supportsBacklog:
+    #if $hasattr($cur_newznab_provider, 'enable_recentsearch') and $cur_newznab_provider.supports_backlog:
 						<div class="field-pair">
-							<label for="${curNewznabProvider.get_id()}_enable_recentsearch">
+							<label for="${cur_newznab_provider.get_id()}_enable_recentsearch">
 								<span class="component-title">Enable recent searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curNewznabProvider.get_id()}_enable_recentsearch" id="${curNewznabProvider.get_id()}_enable_recentsearch" <%= html_checked if curNewznabProvider.enable_recentsearch else '' %>/>
+									<input type="checkbox" name="${cur_newznab_provider.get_id()}_enable_recentsearch" id="${cur_newznab_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_newznab_provider.enable_recentsearch else '' %>/>
 									<p>perform recent searches at provider</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curNewznabProvider, 'enable_backlog') and $curNewznabProvider.supportsBacklog:
+    #if $hasattr($cur_newznab_provider, 'enable_backlog') and $cur_newznab_provider.supports_backlog:
 						<div class="field-pair">
-							<label for="${curNewznabProvider.get_id()}_enable_backlog">
+							<label for="${cur_newznab_provider.get_id()}_enable_backlog">
 								<span class="component-title">Enable backlog searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curNewznabProvider.get_id()}_enable_backlog" id="${curNewznabProvider.get_id()}_enable_backlog" <%= html_checked if curNewznabProvider.enable_backlog else '' %>/>
+									<input type="checkbox" name="${cur_newznab_provider.get_id()}_enable_backlog" id="${cur_newznab_provider.get_id()}_enable_backlog" <%= html_checked if cur_newznab_provider.enable_backlog else '' %>/>
 									<p>perform backlog searches at provider</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curNewznabProvider, 'search_mode') and $curNewznabProvider.supportsBacklog:
+    #if $hasattr($cur_newznab_provider, 'search_mode') and $cur_newznab_provider.supports_backlog:
 						<div class="field-pair">
-							<span class="component-title">Season search mode</span>
+							<span class="component-title">Episode search mode</span>
 							<span class="component-desc">
 								<label class="space-right">
-									<input type="radio" name="${curNewznabProvider.get_id()}_search_mode" id="${curNewznabProvider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == curNewznabProvider.search_mode else '' %>/>season packs only
+									<input type="radio" name="${cur_newznab_provider.get_id()}_search_mode" id="${cur_newznab_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_newznab_provider.search_mode else '' %>/>episodes only (normal use)
 								</label>
 								<label>
-									<input type="radio" name="${curNewznabProvider.get_id()}_search_mode" id="${curNewznabProvider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == curNewznabProvider.search_mode else '' %>/>episodes only
+									<input type="radio" name="${cur_newznab_provider.get_id()}_search_mode" id="${cur_newznab_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_newznab_provider.search_mode else '' %>/>season packs only
 								</label>
-								<p>when searching for complete seasons, search for packs or collect single episodes</p>
+								<p>when searching for episodes, collect single episodes or search for packs</p>
 							</span>
 						</div>
     #end if
-    #if $hasattr($curNewznabProvider, 'search_fallback') and $curNewznabProvider.supportsBacklog:
+    #if $hasattr($cur_newznab_provider, 'search_fallback') and $cur_newznab_provider.supports_backlog:
 						<div class="field-pair">
-							<label for="${curNewznabProvider.get_id()}_search_fallback">
-								<span class="component-title">Season search fallback</span>
+							<label for="${cur_newznab_provider.get_id()}_search_fallback">
+								<span class="component-title">Episode search fallback</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curNewznabProvider.get_id()}_search_fallback" id="${curNewznabProvider.get_id()}_search_fallback" <%= html_checked if curNewznabProvider.search_fallback else '' %>/>
-									<p>run the alternate season search mode when a complete season is not found</p>
+									<input type="checkbox" name="${cur_newznab_provider.get_id()}_search_fallback" id="${cur_newznab_provider.get_id()}_search_fallback" <%= html_checked if cur_newznab_provider.search_fallback else '' %>/>
+									<p>use the alternate episode search mode if no match is found -- warning; may result in a heavy block hit -- best use: manually collect a season, disable after.</p>
 								</span>
 							</label>
 						</div>
@@ -262,80 +259,81 @@
 ##
 
 ##
-#for $curNzbProvider in [$curProvider for $curProvider in $sickbeard.providers.sortedProviderList() if $curProvider.providerType == $GenericProvider.NZB and $curProvider not in $sickbeard.newznabProviderList]:
-					<div class="providerDiv" id="${curNzbProvider.get_id()}Div">
-    #if $hasattr($curNzbProvider, 'username'):
+#for $cur_nzb_provider in [$cur_provider for $cur_provider in $sickbeard.providers.sortedProviderList()
+    if $cur_provider.providerType == $GenericProvider.NZB and $cur_provider not in $sickbeard.newznabProviderList]:
+					<div class="providerDiv" id="${cur_nzb_provider.get_id()}Div">
+    #if $hasattr($cur_nzb_provider, 'username'):
 						<div class="field-pair">
-							<label for="${curNzbProvider.get_id()}_username">
+							<label for="${cur_nzb_provider.get_id()}_username">
 								<span class="component-title">Username</span>
 								<span class="component-desc">
-									<input type="text" name="${curNzbProvider.get_id()}_username" value="$curNzbProvider.username" class="form-control input-sm input350" />
+									<input type="text" name="${cur_nzb_provider.get_id()}_username" value="$cur_nzb_provider.username" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curNzbProvider, 'api_key'):
+    #if $hasattr($cur_nzb_provider, 'api_key'):
 						<div class="field-pair">
-							<label for="${curNzbProvider.get_id()}_api_key">
+							<label for="${cur_nzb_provider.get_id()}_api_key">
 								<span class="component-title">API key</span>
 								<span class="component-desc">
-        #set $field_name = curNzbProvider.get_id() + '_api_key'
-									<input type="text" name="$field_name" value="<%= starify(curNzbProvider.api_key) %>" class="form-control input-sm input350" />
-        #if callable(getattr(curNzbProvider, 'ui_string', None))
-									<div class="clear-left"><p>${curNzbProvider.ui_string($field_name)}</p></div>
+        #set $field_name = cur_nzb_provider.get_id() + '_api_key'
+									<input type="text" name="$field_name" value="<%= starify(cur_nzb_provider.api_key) %>" class="form-control input-sm input350" />
+        #if callable(getattr(cur_nzb_provider, 'ui_string', None))
+									<div class="clear-left"><p>${cur_nzb_provider.ui_string($field_name)}</p></div>
         #end if
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curNzbProvider, 'enable_recentsearch') and $curNzbProvider.supportsBacklog:
+    #if $hasattr($cur_nzb_provider, 'enable_recentsearch') and $cur_nzb_provider.supports_backlog:
 						<div class="field-pair">
-							<label for="${curNzbProvider.get_id()}_enable_recentsearch">
+							<label for="${cur_nzb_provider.get_id()}_enable_recentsearch">
 								<span class="component-title">Enable recent searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curNzbProvider.get_id()}_enable_recentsearch" id="${curNzbProvider.get_id()}_enable_recentsearch" <%= html_checked if curNzbProvider.enable_recentsearch else '' %>/>
-									<p>enable provider to perform recent searches.</p>
+									<input type="checkbox" name="${cur_nzb_provider.get_id()}_enable_recentsearch" id="${cur_nzb_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_nzb_provider.enable_recentsearch else '' %>/>
+									<p>enable provider to perform recent searches</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curNzbProvider, 'enable_backlog') and $curNzbProvider.supportsBacklog:
+    #if $hasattr($cur_nzb_provider, 'enable_backlog') and $cur_nzb_provider.supports_backlog:
 						<div class="field-pair">
-							<label for="${curNzbProvider.get_id()}_enable_backlog">
+							<label for="${cur_nzb_provider.get_id()}_enable_backlog">
 								<span class="component-title">Enable backlog searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curNzbProvider.get_id()}_enable_backlog" id="${curNzbProvider.get_id()}_enable_backlog" <%= html_checked if curNzbProvider.enable_backlog else '' %>/>
-									<p>enable provider to perform backlog searches.</p>
+									<input type="checkbox" name="${cur_nzb_provider.get_id()}_enable_backlog" id="${cur_nzb_provider.get_id()}_enable_backlog" <%= html_checked if cur_nzb_provider.enable_backlog else '' %>/>
+									<p>enable provider to perform backlog searches</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curNzbProvider, 'search_mode') and $curNzbProvider.supportsBacklog:
+    #if $hasattr($cur_nzb_provider, 'search_mode') and $cur_nzb_provider.supports_backlog:
 						<div class="field-pair">
-							<span class="component-title">Season search mode</span>
+							<span class="component-title">Episode search mode</span>
 							<span class="component-desc">
 								<label class="space-right">
-									<input type="radio" name="${curNzbProvider.get_id()}_search_mode" id="${curNzbProvider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == curNzbProvider.search_mode else '' %>/>season packs only
+									<input type="radio" name="${cur_nzb_provider.get_id()}_search_mode" id="${cur_nzb_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_nzb_provider.search_mode else '' %>/>episodes only (normal use)
 								</label>
 								<label>
-									<input type="radio" name="${curNzbProvider.get_id()}_search_mode" id="${curNzbProvider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == curNzbProvider.search_mode else '' %>/>episodes only
+									<input type="radio" name="${cur_nzb_provider.get_id()}_search_mode" id="${cur_nzb_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_nzb_provider.search_mode else '' %>/>season packs only
 								</label>
-								<p>when searching for complete seasons, search for packs or collect single episodes</p>
+								<p>when searching for episodes, collect single episodes or search for packs</p>
 							</span>
 						</div>
     #end if
-    #if $hasattr($curNzbProvider, 'search_fallback') and $curNzbProvider.supportsBacklog:
+    #if $hasattr($cur_nzb_provider, 'search_fallback') and $cur_nzb_provider.supports_backlog:
 						<div class="field-pair">
-							<label for="${curNzbProvider.get_id()}_search_fallback">
-								<span class="component-title">Season search fallback</span>
+							<label for="${cur_nzb_provider.get_id()}_search_fallback">
+								<span class="component-title">Episode search fallback</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curNzbProvider.get_id()}_search_fallback" id="${curNzbProvider.get_id()}_search_fallback" <%= html_checked if curNzbProvider.search_fallback else '' %>/>
-									<p>run the alternate season search mode when a complete season is not found</p>
+									<input type="checkbox" name="${cur_nzb_provider.get_id()}_search_fallback" id="${cur_nzb_provider.get_id()}_search_fallback" <%= html_checked if cur_nzb_provider.search_fallback else '' %>/>
+									<p>use the alternate episode search mode if no match is found -- warning; may result in a heavy block hit -- best use: manually collect a season, disable after.</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if not $curNzbProvider.supportsBacklog:
+    #if not $cur_nzb_provider.supports_backlog:
 						<div class="field-pair">
 							<span class="component-desc">The latest releases are the focus of this provider, no backlog searching</span>
 						</div>
@@ -345,233 +343,229 @@
 ##
 
 ##
-#for $curTorrentProvider in [$curProvider for $curProvider in $sickbeard.providers.sortedProviderList() if $curProvider.providerType == $GenericProvider.TORRENT]:
-					<div class="providerDiv" id="${curTorrentProvider.get_id()}Div">
-    #if callable(getattr(curTorrentProvider, 'ui_string', None))
-        #set $field_name = curTorrentProvider.get_id() + '_tip'
-        #set $tip_text = curTorrentProvider.ui_string($field_name)
+#for $cur_torrent_provider in [$cur_provider for $cur_provider in $sickbeard.providers.sortedProviderList()
+    if $cur_provider.providerType == $GenericProvider.TORRENT]:
+					<div class="providerDiv" id="${cur_torrent_provider.get_id()}Div">
+    #if callable(getattr(cur_torrent_provider, 'ui_string', None))
+        #set $field_name = cur_torrent_provider.get_id() + '_tip'
+        #set $tip_text = cur_torrent_provider.ui_string($field_name)
         #if $tip_text
 						<div class="field-pair">
 							<span class="component-desc" style="margin:0;width:100%">
-								<div class="clear-left"><p class="grey-text"><span class="red-text">Important! ${curTorrentProvider.name}</span> $tip_text</p></div>
+								<div class="clear-left"><p class="grey-text"><span class="red-text">Important! ${cur_torrent_provider.name}</span> $tip_text</p></div>
 							</span>
 						</div>
         #end if
     #end if
-    #if $hasattr($curTorrentProvider, 'api_key'):
+    #if $getattr($cur_torrent_provider, 'url_edit', None):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_api_key">
-								<span class="component-title">Api key:</span>
+							<label for="url_base">
+        #set $url_label = callable(getattr(cur_torrent_provider, 'ui_string', None)) and cur_torrent_provider.ui_string(cur_torrent_provider.get_id() + '_site_url') or 'Site URL'
+								<span class="component-title">$url_label</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.get_id()}_api_key" id="${curTorrentProvider.get_id()}_api_key" value="<%= starify(curTorrentProvider.api_key) %>" class="form-control input-sm input350" />
-								</span>
-							</label>
-						</div>
-    #end if
-    #if $hasattr($curTorrentProvider, 'digest'):
-						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_digest">
-								<span class="component-title">Cookies:</span>
-								<span class="component-desc">
-        #set $field_name = curTorrentProvider.get_id() + '_digest'
-									<input type="text" name="$field_name" id="$field_name" value="<%= starify(curTorrentProvider.digest) %>" class="form-control input-sm input350" />
-        #if callable(getattr(curTorrentProvider, 'ui_string', None))
-									<div class="clear-left"><p>${curTorrentProvider.ui_string($field_name)}</p></div>
+        #set $field_name = cur_torrent_provider.get_id() + '_url_edit'
+									<input type="text" name="$field_name" id="$field_name" value="<%= ', '.join(cur_torrent_provider.url_home) %>" class="form-control input-sm input350" />
+        #if callable(getattr(cur_torrent_provider, 'ui_string', None))
+									<div class="clear-left"><p>${cur_torrent_provider.ui_string($field_name)}</p></div>
         #end if
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'hash'):
+    #if $hasattr($cur_torrent_provider, 'api_key'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_hash">
+							<label for="${cur_torrent_provider.get_id()}_api_key">
+								<span class="component-title">Api key:</span>
+								<span class="component-desc">
+									<input type="text" name="${cur_torrent_provider.get_id()}_api_key" id="${cur_torrent_provider.get_id()}_api_key" value="<%= starify(cur_torrent_provider.api_key) %>" class="form-control input-sm input350" />
+								</span>
+							</label>
+						</div>
+    #end if
+    #if $hasattr($cur_torrent_provider, 'digest'):
+        #set $field_name = cur_torrent_provider.get_id() + '_digest'
+						<div class="field-pair">
+							<label for="$field_name">
+								<span class="component-title">Cookies:</span>
+								<span class="component-desc">
+									<input type="text" name="$field_name" id="$field_name" value="<%= starify(cur_torrent_provider.digest) %>" class="form-control input-sm input350" />
+        #if callable(getattr(cur_torrent_provider, 'ui_string', None))
+									<div class="clear-left"><p>${cur_torrent_provider.ui_string($field_name)}</p></div>
+        #end if
+								</span>
+							</label>
+						</div>
+    #end if
+    #if $hasattr($cur_torrent_provider, 'hash'):
+						<div class="field-pair">
+							<label for="${cur_torrent_provider.get_id()}_hash">
 								<span class="component-title">Hash:</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.get_id()}_hash" id="${curTorrentProvider.get_id()}_hash" value="$curTorrentProvider.hash" class="form-control input-sm input350" />
+									<input type="text" name="${cur_torrent_provider.get_id()}_hash" id="${cur_torrent_provider.get_id()}_hash" value="$cur_torrent_provider.hash" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'username'):
+    #for $user_type in ['username', 'uid']:
+        #if $hasattr($cur_torrent_provider, $user_type):
+            #set $prov_type = '%s_%s' % ($cur_torrent_provider.get_id(), $user_type)
+            #set $user_value = $getattr($cur_torrent_provider, $user_type) or ''
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_username">
-								<span class="component-title">Username:</span>
+							<label for="$prov_type">
+								<span class="component-title">$user_type.capitalize():</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.get_id()}_username" id="${curTorrentProvider.get_id()}_username" value="$curTorrentProvider.username" class="form-control input-sm input350" />
+									<input type="text" name="$prov_type" id="$prov_type" value="$user_value" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
-    #end if
-    #if $hasattr($curTorrentProvider, 'password'):
+            #break
+        #end if
+    #end for
+    #if $hasattr($cur_torrent_provider, 'password'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_password">
+							<label for="${cur_torrent_provider.get_id()}_password">
 								<span class="component-title">Password:</span>
 								<span class="component-desc">
-									<input type="password" name="${curTorrentProvider.get_id()}_password" id="${curTorrentProvider.get_id()}_password" value="#echo $curTorrentProvider.password and '*' * len($curTorrentProvider.password) or ''#" class="form-control input-sm input350" />
+									<input type="password" name="${cur_torrent_provider.get_id()}_password" id="${cur_torrent_provider.get_id()}_password" value="#echo $cur_torrent_provider.password and '*' * len($cur_torrent_provider.password) or ''#" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'passkey'):
+    #if $hasattr($cur_torrent_provider, 'passkey'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_passkey">
+							<label for="${cur_torrent_provider.get_id()}_passkey">
 								<span class="component-title">Passkey:</span>
 								<span class="component-desc">
-									<input type="text" name="${curTorrentProvider.get_id()}_passkey" id="${curTorrentProvider.get_id()}_passkey" value="<%= starify(curTorrentProvider.passkey) %>" class="form-control input-sm input350" />
+									<input type="text" name="${cur_torrent_provider.get_id()}_passkey" id="${cur_torrent_provider.get_id()}_passkey" value="<%= starify(cur_torrent_provider.passkey) %>" class="form-control input-sm input350" />
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, '_seed_ratio') and 'blackhole' != $sickbeard.TORRENT_METHOD:
+    #if $hasattr($cur_torrent_provider, '_seed_ratio') and 'blackhole' != $sickbeard.TORRENT_METHOD:
         #set $torrent_method_text = {'utorrent': 'uTorrent', 'transmission': 'Transmission', 'deluge': 'Deluge', 'download_station': 'Synology DS', 'rtorrent': 'rTorrent'}
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_ratio">
-								<span class="component-title" id="${curTorrentProvider.get_id()}_ratio_desc">Seed until ratio (the goal)</span>
+							<label for="${cur_torrent_provider.get_id()}_ratio">
+								<span class="component-title" id="${cur_torrent_provider.get_id()}_ratio_desc">Seed until ratio (the goal)</span>
 								<span class="component-desc">
-									<input type="number" name="${curTorrentProvider.get_id()}_ratio" id="${curTorrentProvider.get_id()}_ratio" value="$curTorrentProvider._seed_ratio" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_ratio" id="${cur_torrent_provider.get_id()}_ratio" value="$cur_torrent_provider._seed_ratio" class="form-control input-sm input75" />
 									<p>this ratio is requested of each item sent to $torrent_method_text[$sickbeard.TORRENT_METHOD]</p>
 									<div class="clear-left"><p>(#if 'Transmission' in $torrent_method_text[$sickbeard.TORRENT_METHOD]#set -1 to seed forever, or #end if#leave blank for the $torrent_method_text[$sickbeard.TORRENT_METHOD] setting)</p></div>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'seed_time') and 'utorrent' == $sickbeard.TORRENT_METHOD:
+    #if $hasattr($cur_torrent_provider, 'seed_time') and 'utorrent' == $sickbeard.TORRENT_METHOD:
         #set $torrent_method_text = {'utorrent': 'uTorrent'}
         #set $use_default = 'to use the %s min <a href="%s/config/search/#core-component-group3">torrent search setting minumum default</a>' % ($sickbeard.TORRENT_SEED_TIME, $sbRoot) if $sickbeard.TORRENT_SEED_TIME else 'for the %s setting' % $torrent_method_text[$sickbeard.TORRENT_METHOD]
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_seed_time">
-								<span class="component-title" id="${curTorrentProvider.get_id()}_seed_time_desc">Seed time (provider default)</span>
+							<label for="${cur_torrent_provider.get_id()}_seed_time">
+								<span class="component-title" id="${cur_torrent_provider.get_id()}_seed_time_desc">Seed time (provider default)</span>
 								<span class="component-desc">
-									<input type="number" name="${curTorrentProvider.get_id()}_seed_time" id="${curTorrentProvider.get_id()}_seed_time" value="$curTorrentProvider.seed_time" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_seed_time" id="${cur_torrent_provider.get_id()}_seed_time" value="$cur_torrent_provider.seed_time" class="form-control input-sm input75" />
 									<p>set 1 or more minimum minutes for each item sent to $torrent_method_text[$sickbeard.TORRENT_METHOD]</p>
 									<div class="clear-left"><p>(leave blank $use_default)</p></div>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'minseed'):
+    #if $hasattr($cur_torrent_provider, 'minseed'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_minseed">
-								<span class="component-title" id="${curTorrentProvider.get_id()}_minseed_desc">Minimum seeders</span>
+							<label for="${cur_torrent_provider.get_id()}_minseed">
+								<span class="component-title" id="${cur_torrent_provider.get_id()}_minseed_desc">Minimum seeders</span>
 								<span class="component-desc">
-									<input type="number" name="${curTorrentProvider.get_id()}_minseed" id="${curTorrentProvider.get_id()}_minseed" value="$curTorrentProvider.minseed" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_minseed" id="${cur_torrent_provider.get_id()}_minseed" value="$cur_torrent_provider.minseed" class="form-control input-sm input75" />
 									<p>a release must have to be snatch worthy</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'minleech'):
+    #if $hasattr($cur_torrent_provider, 'minleech'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_minleech">
-								<span class="component-title" id="${curTorrentProvider.get_id()}_minleech_desc">Minimum leechers</span>
+							<label for="${cur_torrent_provider.get_id()}_minleech">
+								<span class="component-title" id="${cur_torrent_provider.get_id()}_minleech_desc">Minimum leechers</span>
 								<span class="component-desc">
-									<input type="number" name="${curTorrentProvider.get_id()}_minleech" id="${curTorrentProvider.get_id()}_minleech" value="$curTorrentProvider.minleech" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_minleech" id="${cur_torrent_provider.get_id()}_minleech" value="$cur_torrent_provider.minleech" class="form-control input-sm input75" />
 									<p>a release must have to be snatch worthy</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'proxy'):
+    #if $hasattr($cur_torrent_provider, 'confirmed'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_proxy">
-								<span class="component-title">Access provider via proxy</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="${curTorrentProvider.get_id()}_proxy" id="${curTorrentProvider.get_id()}_proxy" <%= html_checked if curTorrentProvider.proxy.enabled else '' %>/>
-									<p>to bypass country blocking mechanisms</p>
-								</span>
-							</label>
-						</div>
-        #if $hasattr($curTorrentProvider.proxy, 'url'):
-						<div class="field-pair content_${curTorrentProvider.get_id()}_proxy" id="content_${curTorrentProvider.get_id()}_proxy">
-							<label for="${curTorrentProvider.get_id()}_proxy_url">
-								<span class="component-title">Proxy URL:</span>
-								<span class="component-desc">
-								  <select name="${curTorrentProvider.get_id()}_proxy_url" id="${curTorrentProvider.get_id()}_proxy_url" class="form-control input-sm">
-            #for $i in $curTorrentProvider.proxy.urls.keys():
-									<option value="$curTorrentProvider.proxy.urls[$i]" <%= html_selected if curTorrentProvider.proxy.url == curTorrentProvider.proxy.urls[i] else '' %>>$i</option>
-            #end for
-									</select>
-								</span>
-							</label>
-						</div>
-        #end if
-    #end if
-    #if $hasattr($curTorrentProvider, 'confirmed'):
-						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_confirmed">
+							<label for="${cur_torrent_provider.get_id()}_confirmed">
 								<span class="component-title">Confirmed download</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curTorrentProvider.get_id()}_confirmed" id="${curTorrentProvider.get_id()}_confirmed" <%= html_checked if curTorrentProvider.confirmed else '' %>/>
+									<input type="checkbox" name="${cur_torrent_provider.get_id()}_confirmed" id="${cur_torrent_provider.get_id()}_confirmed" <%= html_checked if cur_torrent_provider.confirmed else '' %>/>
 									<p>only download torrents from trusted or verified uploaders ?</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'freeleech'):
+    #if $hasattr($cur_torrent_provider, 'freeleech'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_freeleech">
+							<label for="${cur_torrent_provider.get_id()}_freeleech">
 								<span class="component-title">Freeleech</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curTorrentProvider.get_id()}_freeleech" id="${curTorrentProvider.get_id()}_freeleech" <%= html_checked if curTorrentProvider.freeleech else '' %>/>
-									<p>only download <b>[FreeLeech]</b> torrents.</p>
+									<input type="checkbox" name="${cur_torrent_provider.get_id()}_freeleech" id="${cur_torrent_provider.get_id()}_freeleech" <%= html_checked if cur_torrent_provider.freeleech else '' %>/>
+									<p>only download <b>[FreeLeech]</b> torrents</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'reject_m2ts'):
+    #if $hasattr($cur_torrent_provider, 'reject_m2ts'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_reject_m2ts">
+							<label for="${cur_torrent_provider.get_id()}_reject_m2ts">
 								<span class="component-title">Reject Blu-ray M2TS releases</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curTorrentProvider.get_id()}_reject_m2ts" id="${curTorrentProvider.get_id()}_reject_m2ts" <%= html_checked if curTorrentProvider.reject_m2ts else '' %>/>
+									<input type="checkbox" name="${cur_torrent_provider.get_id()}_reject_m2ts" id="${cur_torrent_provider.get_id()}_reject_m2ts" <%= html_checked if cur_torrent_provider.reject_m2ts else '' %>/>
 									<p>enable to ignore Blu-ray MPEG-2 Transport Stream container releases</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'enable_recentsearch') and $curTorrentProvider.supportsBacklog:
+    #if $hasattr($cur_torrent_provider, 'enable_recentsearch'):
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_enable_recentsearch">
+							<label for="${cur_torrent_provider.get_id()}_enable_recentsearch">
 								<span class="component-title">Enable recent searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curTorrentProvider.get_id()}_enable_recentsearch" id="${curTorrentProvider.get_id()}_enable_recentsearch" <%= html_checked if curTorrentProvider.enable_recentsearch else '' %>/>
-									<p>enable provider to perform recent searches.</p>
+									<input type="checkbox" name="${cur_torrent_provider.get_id()}_enable_recentsearch" id="${cur_torrent_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_torrent_provider.enable_recentsearch else '' %>/>
+									<p>enable provider to perform recent searches</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'enable_backlog') and $curTorrentProvider.supportsBacklog:
+    #if $hasattr($cur_torrent_provider, 'enable_backlog') and $cur_torrent_provider.supports_backlog:
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_enable_backlog">
+							<label for="${cur_torrent_provider.get_id()}_enable_backlog">
 								<span class="component-title">Enable backlog searches</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curTorrentProvider.get_id()}_enable_backlog" id="${curTorrentProvider.get_id()}_enable_backlog" <%= html_checked if curTorrentProvider.enable_backlog else '' %>/>
-									<p>enable provider to perform backlog searches.</p>
+									<input type="checkbox" name="${cur_torrent_provider.get_id()}_enable_backlog" id="${cur_torrent_provider.get_id()}_enable_backlog" <%= html_checked if cur_torrent_provider.enable_backlog else '' %>/>
+									<p>enable provider to perform backlog searches</p>
 								</span>
 							</label>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'search_mode') and $curTorrentProvider.supportsBacklog:
+    #if $hasattr($cur_torrent_provider, 'search_mode') and $cur_torrent_provider.supports_backlog:
 						<div class="field-pair">
-							<span class="component-title">Season search mode</span>
+							<span class="component-title">Episode search mode</span>
 							<span class="component-desc">
 								<label class="space-right">
-									<input type="radio" name="${curTorrentProvider.get_id()}_search_mode" id="${curTorrentProvider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == curTorrentProvider.search_mode else '' %>/>season packs only
+									<input type="radio" name="${cur_torrent_provider.get_id()}_search_mode" id="${cur_torrent_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_torrent_provider.search_mode else '' %>/>episodes only (normal use)
 								</label>
 								<label>
-									<input type="radio" name="${curTorrentProvider.get_id()}_search_mode" id="${curTorrentProvider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == curTorrentProvider.search_mode else '' %>/>episodes only
+									<input type="radio" name="${cur_torrent_provider.get_id()}_search_mode" id="${cur_torrent_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_torrent_provider.search_mode else '' %>/>season packs only
 								</label>
-								<p>when searching for complete seasons, search for packs or collect single episodes</p>
+								<p>when searching for episodes, collect single episodes or search for packs</p>
 							</span>
 						</div>
     #end if
-    #if $hasattr($curTorrentProvider, 'search_fallback') and $curTorrentProvider.supportsBacklog:
+    #if $hasattr($cur_torrent_provider, 'search_fallback') and $cur_torrent_provider.supports_backlog:
 						<div class="field-pair">
-							<label for="${curTorrentProvider.get_id()}_search_fallback">
-								<span class="component-title">Season search fallback</span>
+							<label for="${cur_torrent_provider.get_id()}_search_fallback">
+								<span class="component-title">Episode search fallback</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${curTorrentProvider.get_id()}_search_fallback" id="${curTorrentProvider.get_id()}_search_fallback" <%= html_checked if curTorrentProvider.search_fallback else '' %>/>
-									<p>run the alternate season search mode when a complete season is not found</p>
+									<input type="checkbox" name="${cur_torrent_provider.get_id()}_search_fallback" id="${cur_torrent_provider.get_id()}_search_fallback" <%= html_checked if cur_torrent_provider.search_fallback else '' %>/>
+									<p>use the alternate episode search mode if no match is found -- warning; may result in duplicates or a heavy ratio hit -- best use: manually collect a season, disable after.</p>
 								</span>
 							</label>
 						</div>

@@ -30,6 +30,7 @@ from threading import Lock
 import sys
 import os.path
 import uuid
+import ast
 import base64
 sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import helpers, logger, db, naming, metadata, providers, scene_exceptions, scene_numbering, \
@@ -174,6 +175,7 @@ IMDB_ACCOUNTS = []
 IMDB_DEFAULT_LIST_ID = '64552276'
 IMDB_DEFAULT_LIST_NAME = 'SickGear'
 PROVIDER_ORDER = []
+PROVIDER_HOMES = {}
 
 NAMING_MULTI_EP = False
 NAMING_ANIME_MULTI_EP = False
@@ -520,7 +522,7 @@ def initialize(consoleLogging=True):
             KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, MIN_RECENTSEARCH_FREQUENCY, DEFAULT_UPDATE_FREQUENCY, MIN_UPDATE_FREQUENCY, UPDATE_FREQUENCY, \
             showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, ZONEINFO_DIR, TIMEZONE_DISPLAY, \
             NAMING_PATTERN, NAMING_MULTI_EP, NAMING_ANIME_MULTI_EP, NAMING_FORCE_FOLDERS, NAMING_ABD_PATTERN, NAMING_CUSTOM_ABD, NAMING_SPORTS_PATTERN, NAMING_CUSTOM_SPORTS, NAMING_ANIME_PATTERN, NAMING_CUSTOM_ANIME, NAMING_STRIP_YEAR, \
-            RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcesserScheduler, \
+            RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, PROVIDER_HOMES, autoPostProcesserScheduler, \
             providerList, newznabProviderList, torrentRssProviderList, \
             EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, RECENTSEARCH_FREQUENCY, \
             USE_BOXCAR2, BOXCAR2_ACCESSTOKEN, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_SOUND, \
@@ -579,10 +581,6 @@ def initialize(consoleLogging=True):
         CUR_COMMIT_BRANCH = check_setting_str(CFG, 'General', 'cur_commit_branch', '')
 
         ACTUAL_CACHE_DIR = check_setting_str(CFG, 'General', 'cache_dir', 'cache')
-
-        # fix bad configs due to buggy code
-        if ACTUAL_CACHE_DIR == 'None':
-            ACTUAL_CACHE_DIR = 'cache'
 
         # unless they specify, put the cache dir inside the data dir
         if not os.path.isabs(ACTUAL_CACHE_DIR):
@@ -699,6 +697,7 @@ def initialize(consoleLogging=True):
         SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
 
         PROVIDER_ORDER = check_setting_str(CFG, 'General', 'provider_order', '').split()
+        PROVIDER_HOMES = ast.literal_eval(check_setting_str(CFG, 'General', 'provider_homes', None) or '{}')
 
         NAMING_PATTERN = check_setting_str(CFG, 'General', 'naming_pattern', 'Season %0S/%SN - S%0SE%0E - %EN')
         NAMING_ABD_PATTERN = check_setting_str(CFG, 'General', 'naming_abd_pattern', '%SN - %A.D - %EN')
@@ -1029,28 +1028,28 @@ def initialize(consoleLogging=True):
             prov_id = torrent_prov.get_id()
             prov_id_uc = torrent_prov.get_id().upper()
             torrent_prov.enabled = bool(check_setting_int(CFG, prov_id_uc, prov_id, 0))
+            if getattr(torrent_prov, 'url_edit', None):
+                torrent_prov.url_home = check_setting_str(CFG, prov_id_uc, prov_id + '_url_home', [])
             if hasattr(torrent_prov, 'api_key'):
                 torrent_prov.api_key = check_setting_str(CFG, prov_id_uc, prov_id + '_api_key', '')
             if hasattr(torrent_prov, 'hash'):
                 torrent_prov.hash = check_setting_str(CFG, prov_id_uc, prov_id + '_hash', '')
             if hasattr(torrent_prov, 'digest'):
                 torrent_prov.digest = check_setting_str(CFG, prov_id_uc, prov_id + '_digest', '')
-            if hasattr(torrent_prov, 'username'):
-                torrent_prov.username = check_setting_str(CFG, prov_id_uc, prov_id + '_username', '')
+            for user_type in ['username', 'uid']:
+                if hasattr(torrent_prov, user_type):
+                    setattr(torrent_prov, user_type,
+                            check_setting_str(CFG, prov_id_uc, '%s_%s' % (prov_id, user_type), ''))
             if hasattr(torrent_prov, 'password'):
                 torrent_prov.password = check_setting_str(CFG, prov_id_uc, prov_id + '_password', '')
             if hasattr(torrent_prov, 'passkey'):
                 torrent_prov.passkey = check_setting_str(CFG, prov_id_uc, prov_id + '_passkey', '')
-            if hasattr(torrent_prov, 'proxy'):
-                torrent_prov.proxy.enabled = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_proxy', 0))
-                if hasattr(torrent_prov.proxy, 'url'):
-                    torrent_prov.proxy.url = check_setting_str(CFG, prov_id_uc, prov_id + '_proxy_url', '')
             if hasattr(torrent_prov, 'confirmed'):
                 torrent_prov.confirmed = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_confirmed', 0))
             if hasattr(torrent_prov, 'options'):
                 torrent_prov.options = check_setting_str(CFG, prov_id_uc, prov_id + '_options', '')
             if hasattr(torrent_prov, '_seed_ratio'):
-                torrent_prov._seed_ratio = check_setting_str(CFG, prov_id_uc, prov_id + '_seed_ratio', '').replace('None', '')
+                torrent_prov._seed_ratio = check_setting_str(CFG, prov_id_uc, prov_id + '_seed_ratio', '')
             if hasattr(torrent_prov, 'seed_time'):
                 torrent_prov.seed_time = check_setting_int(CFG, prov_id_uc, prov_id + '_seed_time', '')
             if hasattr(torrent_prov, 'minseed'):
@@ -1087,7 +1086,8 @@ def initialize(consoleLogging=True):
                 nzb_prov.search_fallback = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_search_fallback', 0))
             if hasattr(nzb_prov, 'enable_recentsearch'):
                 nzb_prov.enable_recentsearch = bool(check_setting_int(CFG, prov_id_uc,
-                                                                      prov_id + '_enable_recentsearch', 1))
+                                                                      prov_id + '_enable_recentsearch', 1)) or \
+                                               not getattr(nzb_prov, 'supports_backlog', True)
             if hasattr(nzb_prov, 'enable_backlog'):
                 nzb_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
 
@@ -1157,7 +1157,7 @@ def initialize(consoleLogging=True):
                                                    cycleTime=datetime.timedelta(seconds=3),
                                                    threadName='SEARCHQUEUE')
 
-        update_interval = datetime.timedelta(minutes=RECENTSEARCH_FREQUENCY)
+        update_interval = datetime.timedelta(minutes=(RECENTSEARCH_FREQUENCY, 1)[4489 == RECENTSEARCH_FREQUENCY])
         recentSearchScheduler = scheduler.Scheduler(search_recent.RecentSearcher(),
                                                     cycleTime=update_interval,
                                                     threadName='RECENTSEARCHER',
@@ -1457,6 +1457,7 @@ def save_config():
     new_config['General']['anime_default'] = int(ANIME_DEFAULT)
     new_config['General']['scene_default'] = int(SCENE_DEFAULT)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
+    new_config['General']['provider_homes'] = '%s' % PROVIDER_HOMES
     new_config['General']['version_notify'] = int(VERSION_NOTIFY)
     new_config['General']['auto_update'] = int(AUTO_UPDATE)
     new_config['General']['notify_on_update'] = int(NOTIFY_ON_UPDATE)
@@ -1522,73 +1523,40 @@ def save_config():
     new_config['Blackhole']['nzb_dir'] = NZB_DIR
     new_config['Blackhole']['torrent_dir'] = TORRENT_DIR
 
-    # dynamically save provider settings
-    for torrent_prov in [curProvider for curProvider in providers.sortedProviderList()
-                         if GenericProvider.TORRENT == curProvider.providerType]:
-        prov_id = torrent_prov.get_id()
-        prov_id_uc = torrent_prov.get_id().upper()
-        new_config[prov_id_uc] = {}
-        new_config[prov_id_uc][prov_id] = int(torrent_prov.enabled)
-        if hasattr(torrent_prov, 'digest'):
-            new_config[prov_id_uc][prov_id + '_digest'] = torrent_prov.digest
-        if hasattr(torrent_prov, 'hash'):
-            new_config[prov_id_uc][prov_id + '_hash'] = torrent_prov.hash
-        if hasattr(torrent_prov, 'api_key'):
-            new_config[prov_id_uc][prov_id + '_api_key'] = torrent_prov.api_key
-        if hasattr(torrent_prov, 'username'):
-            new_config[prov_id_uc][prov_id + '_username'] = torrent_prov.username
-        if hasattr(torrent_prov, 'password'):
-            new_config[prov_id_uc][prov_id + '_password'] = helpers.encrypt(torrent_prov.password, ENCRYPTION_VERSION)
-        if hasattr(torrent_prov, 'passkey'):
-            new_config[prov_id_uc][prov_id + '_passkey'] = torrent_prov.passkey
-        if hasattr(torrent_prov, 'confirmed'):
-            new_config[prov_id_uc][prov_id + '_confirmed'] = int(torrent_prov.confirmed)
-        if hasattr(torrent_prov, '_seed_ratio'):
-            new_config[prov_id_uc][prov_id + '_seed_ratio'] = torrent_prov.seed_ratio()
-        if hasattr(torrent_prov, 'seed_time'):
-            new_config[prov_id_uc][prov_id + '_seed_time'] = torrent_prov.seed_time
-        if hasattr(torrent_prov, 'minseed'):
-            new_config[prov_id_uc][prov_id + '_minseed'] = int(torrent_prov.minseed)
-        if hasattr(torrent_prov, 'minleech'):
-            new_config[prov_id_uc][prov_id + '_minleech'] = int(torrent_prov.minleech)
-        if hasattr(torrent_prov, 'freeleech'):
-            new_config[prov_id_uc][prov_id + '_freeleech'] = int(torrent_prov.freeleech)
-        if hasattr(torrent_prov, 'reject_m2ts'):
-            new_config[prov_id_uc][prov_id + '_reject_m2ts'] = int(torrent_prov.reject_m2ts)
-        if hasattr(torrent_prov, 'enable_recentsearch'):
-            new_config[prov_id_uc][prov_id + '_enable_recentsearch'] = int(torrent_prov.enable_recentsearch)
-        if hasattr(torrent_prov, 'enable_backlog'):
-            new_config[prov_id_uc][prov_id + '_enable_backlog'] = int(torrent_prov.enable_backlog)
-        if hasattr(torrent_prov, 'search_mode'):
-            new_config[prov_id_uc][prov_id + '_search_mode'] = torrent_prov.search_mode
-        if hasattr(torrent_prov, 'search_fallback'):
-            new_config[prov_id_uc][prov_id + '_search_fallback'] = int(torrent_prov.search_fallback)
-        if hasattr(torrent_prov, 'options'):
-            new_config[prov_id_uc][prov_id + '_options'] = torrent_prov.options
-        if hasattr(torrent_prov, 'proxy'):
-            new_config[prov_id_uc][prov_id + '_proxy'] = int(torrent_prov.proxy.enabled)
-            if hasattr(torrent_prov.proxy, 'url'):
-                new_config[prov_id_uc][prov_id + '_proxy_url'] = torrent_prov.proxy.url
+    for src in [x for x in providers.sortedProviderList() if GenericProvider.TORRENT == x.providerType]:
+        src_id = src.get_id()
+        src_id_uc = src_id.upper()
+        new_config[src_id_uc] = {}
+        new_config[src_id_uc][src_id] = int(src.enabled)
+        if getattr(src, 'url_edit', None):
+            new_config[src_id_uc][src_id + '_url_home'] = src.url_home
 
-    for nzb_prov in [curProvider for curProvider in providers.sortedProviderList()
-                     if GenericProvider.NZB == curProvider.providerType]:
-        prov_id = nzb_prov.get_id()
-        prov_id_uc = nzb_prov.get_id().upper()
-        new_config[prov_id_uc] = {}
-        new_config[prov_id_uc][prov_id] = int(nzb_prov.enabled)
+        if hasattr(src, 'password'):
+            new_config[src_id_uc][src_id + '_password'] = helpers.encrypt(src.password, ENCRYPTION_VERSION)
 
-        if hasattr(nzb_prov, 'api_key'):
-            new_config[prov_id_uc][prov_id + '_api_key'] = nzb_prov.api_key
-        if hasattr(nzb_prov, 'username'):
-            new_config[prov_id_uc][prov_id + '_username'] = nzb_prov.username
-        if hasattr(nzb_prov, 'search_mode'):
-            new_config[prov_id_uc][prov_id + '_search_mode'] = nzb_prov.search_mode
-        if hasattr(nzb_prov, 'search_fallback'):
-            new_config[prov_id_uc][prov_id + '_search_fallback'] = int(nzb_prov.search_fallback)
-        if hasattr(nzb_prov, 'enable_recentsearch'):
-            new_config[prov_id_uc][prov_id + '_enable_recentsearch'] = int(nzb_prov.enable_recentsearch)
-        if hasattr(nzb_prov, 'enable_backlog'):
-            new_config[prov_id_uc][prov_id + '_enable_backlog'] = int(nzb_prov.enable_backlog)
+        for (setting, value) in [
+            ('%s_%s' % (src_id, k), getattr(src, k, v) if not v else helpers.tryInt(getattr(src, k, None)))
+            for (k, v) in [
+                ('api_key', None), ('passkey', None), ('digest', None), ('hash', None), ('username', ''), ('uid', ''),
+                ('minseed', 1), ('minleech', 1), ('confirmed', 1), ('freeleech', 1), ('reject_m2ts', 1),
+                ('enable_recentsearch', 1), ('enable_backlog', 1), ('search_mode', None), ('search_fallback', 1),
+                ('seed_time', None)] if hasattr(src, k)]:
+            new_config[src_id_uc][setting] = value
+
+        if hasattr(src, '_seed_ratio'):
+            new_config[src_id_uc][src_id + '_seed_ratio'] = src.seed_ratio()
+
+    for src in [x for x in providers.sortedProviderList() if GenericProvider.NZB == x.providerType]:
+        src_id = src.get_id()
+        src_id_uc = src.get_id().upper()
+        new_config[src_id_uc] = {}
+        new_config[src_id_uc][src_id] = int(src.enabled)
+
+        for attr in [x for x in ['api_key', 'username', 'search_mode'] if hasattr(src, x)]:
+            new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
+
+        for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'search_fallback'] if hasattr(src, x)]:
+            new_config[src_id_uc]['%s_%s' % (src_id, attr)] = helpers.tryInt(getattr(src, attr, None))
 
     new_config['SABnzbd'] = {}
     new_config['SABnzbd']['sab_username'] = SAB_USERNAME

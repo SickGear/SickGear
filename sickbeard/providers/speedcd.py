@@ -19,34 +19,32 @@ import re
 import time
 
 from . import generic
-from sickbeard import tvcache
+from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 
 
 class SpeedCDProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SpeedCD')
+        generic.TorrentProvider.__init__(self, 'SpeedCD', cache_update_freq=20)
 
-        self.url_base = 'http://speed.cd/'
+        self.url_base = 'https://speed.cd/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'V3/API/API.php',
-                     'get': self.url_base + 'download.php?torrent=%s'}
+                     'get': self.url_base + '%s'}
 
-        self.categories = {'Season': {'c41': 1, 'c53': 1},
-                           'Episode': {'c2': 1, 'c49': 1, 'c50': 1, 'c55': 1},
-                           'Cache': {'c41': 1, 'c2': 1, 'c49': 1, 'c50': 1, 'c53': 1, 'c55': 1}}
+        self.categories = {'Season': [41, 53], 'Episode': [2, 49, 50, 55], 'anime': [30]}
+        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = SpeedCDCache(self)
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(SpeedCDProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies('inSpeed_speedian')))
+        return super(SpeedCDProvider, self)._authorised(
+            logged_in=(lambda x=None: self.has_all_cookies('inSpeed_speedian')))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -56,37 +54,49 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        remove_tag = re.compile(r'<[^>]*>')
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'download', 'fl': '\[freeleech\]'}.items())
+
         for mode in search_params.keys():
-            search_mode = (mode, 'Episode')['Propers' == mode]
+            rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
                 search_string = '+'.join(search_string.split())
-                post_data = dict({'/browse.php?': None, 'cata': 'yes', 'jxt': 4, 'jxw': 'b', 'search': search_string},
-                                 **self.categories[search_mode])
-                if self.freeleech:
-                    post_data['freeleech'] = 'on'
+                post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')), search=search_string,
+                                 jxt=2, jxw='b', freeleech=('on', None)[not self.freeleech])
 
                 data_json = self.get_url(self.urls['search'], post_data=post_data, json=True)
 
                 cnt = len(items[mode])
                 try:
-                    if not data_json:
+                    html = data_json.get('Fs')[0].get('Cn')[0].get('d')
+                    if not html or self._has_no_results(html):
                         raise generic.HaltParseException
-                    torrents = data_json.get('Fs', [])[0].get('Cn', {}).get('torrents', [])
 
-                    for item in torrents:
+                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                        torrent_table = soup.find('table', attrs={'cellspacing': 0})
+                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
-                        if self.freeleech and not item.get('free'):
-                            continue
+                        if 2 > len(torrent_rows):
+                            raise generic.HaltParseException
 
-                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in 'seed', 'leech', 'size']]
-                        if self._peers_fail(mode, seeders, leechers):
-                            continue
+                        for tr in torrent_rows[1:]:
+                            try:
+                                seeders, leechers, size = [tryInt(n, n) for n in [
+                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -3)]]
+                                if None is tr.find('a', href=rc['cats']) \
+                                        or self.freeleech and None is rc['fl'].search(tr.find_all('td')[1].get_text()) \
+                                        or self._peers_fail(mode, seeders, leechers):
+                                    continue
 
-                        title = remove_tag.sub('', item.get('name'))
-                        download_url = self.urls['get'] % item.get('id')
-                        if title and download_url:
-                            items[mode].append((title, download_url, seeders, self._bytesizer(size)))
+                                info = tr.find('a', 'torrent')
+                                title = info.attrs.get('title') or info.get_text().strip()
+
+                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
+
+                            except (AttributeError, TypeError, ValueError):
+                                continue
+
+                            if title and download_url:
+                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except Exception:
                     time.sleep(1.1)
@@ -103,18 +113,6 @@ class SpeedCDProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
-
-
-class SpeedCDCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = SpeedCDProvider()

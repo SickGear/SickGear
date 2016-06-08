@@ -19,7 +19,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from lib.unidecode import unidecode
 
@@ -27,7 +27,7 @@ from lib.unidecode import unidecode
 class HDSpaceProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'HDSpace')
+        generic.TorrentProvider.__init__(self, 'HDSpace', cache_update_freq=17)
 
         self.url_base = 'https://hd-space.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -40,9 +40,7 @@ class HDSpaceProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = HDSpaceCache(self)
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -122,18 +120,6 @@ class HDSpaceProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
-
-
-class HDSpaceCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 17  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = HDSpaceProvider()

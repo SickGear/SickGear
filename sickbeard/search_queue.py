@@ -18,7 +18,6 @@
 
 from __future__ import with_statement
 
-import time
 import traceback
 import threading
 import datetime
@@ -288,21 +287,29 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         orig_thread_name = threading.currentThread().name
         threads = []
 
-        logger.log('Updating provider caches with recent upload data')
-
         providers = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_recentsearch]
         for cur_provider in providers:
-            # spawn separate threads for each provider so we don't need to wait for providers with slow network operation
+            if not cur_provider.cache.should_update():
+                continue
+
+            if not threads:
+                logger.log('Updating provider caches with recent upload data')
+
+            # spawn a thread for each provider to save time waiting for slow response providers
             threads.append(threading.Thread(target=cur_provider.cache.updateCache,
                                             name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
             # start the thread we just created
             threads[-1].start()
 
-        # wait for all threads to finish
-        for t in threads:
-            t.join()
+        if not len(providers):
+            logger.log('No NZB/Torrent sources enabled in Search Provider options for cache update', logger.WARNING)
 
-        logger.log('Finished updating provider caches')
+        if threads:
+            # wait for all threads to finish
+            for t in threads:
+                t.join()
+
+            logger.log('Finished updating provider caches')
 
 
 class ProperSearchQueueItem(generic_queue.QueueItem):
@@ -427,7 +434,7 @@ class FailedQueueItem(generic_queue.QueueItem):
                     history.logFailed(epObj, release, provider)
 
                 failed_history.revertEpisode(epObj)
-                logger.log(u'Beginning failed download search for: []' % epObj.prettyName())
+                logger.log(u'Beginning failed download search for: [%s]' % epObj.prettyName())
 
             search_result = search.search_providers(self.show, self.segment, True)
 

@@ -23,7 +23,7 @@ import traceback
 import urllib
 
 from . import generic
-from sickbeard import config, logger, show_name_helpers, tvcache
+from sickbeard import config, logger, show_name_helpers
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import (has_anime, tryInt)
 from sickbeard.common import Quality, mediaExtensions
@@ -34,20 +34,22 @@ from lib.unidecode import unidecode
 class KATProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'KickAssTorrents')
+        generic.TorrentProvider.__init__(self, 'KickAssTorrents', cache_update_freq=20)
 
-        self.url_base = 'https://kat.ph/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'base': [self.url_base, 'http://katproxy.com/'],
-                     'search': 'usearch/%s/',
-                     'sorted': '?field=time_add&sorder=desc'}
+        self.url_home = ['https://%s/' % u for u in 'kat.ph', 'kat.cr', 'kickass.unblocked.red', 'katproxy.com']
+
+        self.url_vars = {'search': 'usearch/%s/?field=time_add&sorder=desc', 'get': '%s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s',
+                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
         self.proper_search_terms = None
-        self.url = self.urls['config_provider_home_uri']
 
         self.minseed, self.minleech = 2 * [None]
         self.confirmed = False
-        self.cache = KATCache(self)
+
+    @staticmethod
+    def _has_signature(data=None):
+        return data and (re.search(r'(?sim)(<title>KAT)', data[15:1024:]) or 'kastatic' in data)
 
     def _find_season_quality(self, title, torrent_link, ep_number):
         """ Return the modified title of a Season Torrent with the quality found inspecting torrent file list """
@@ -135,7 +137,7 @@ class KATProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'link': 'normal', 'get': '^magnet', 'verif': 'verif'}.items())
-        url = 0
+
         for mode in search_params.keys():
             search_show = mode in ['Season', 'Episode']
             if not search_show and has_anime():
@@ -145,19 +147,17 @@ class KATProvider(generic.TorrentProvider):
             for enum, search_string in enumerate(search_params[mode]):
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                self.url = self.urls['base'][url]
-                search_url = self.url + (self.urls['search'] % urllib.quote('%scategory:%s' % (
+                search_url = self.urls['search'] % urllib.quote('%scategory:%s' % (
                     ('', '%s ' % search_string)['Cache' != mode],
-                    ('tv', 'anime')[(search_show and bool(self.show and self.show.is_anime)) or bool(enum)])))
+                    ('tv', 'anime')[(search_show and bool(self.show and self.show.is_anime)) or bool(enum)]))
 
                 self.session.headers.update({'Referer': search_url})
-                html = self.get_url(search_url + self.urls['sorted'])
+                html = self.get_url(search_url)
 
                 cnt = len(items[mode])
                 try:
-                    if not html or 'kastatic' not in html or self._has_no_results(html) or re.search(r'(?is)<(?:h\d)[^>]*>.*?(?:did\snot\smatch)', html):
-                        if html and 'kastatic' not in html:
-                            url += (1, 0)[url == len(self.urls['base'])]
+                    if not html or self._has_no_results(html) or \
+                            re.search(r'(?is)<(?:h\d)[^>]*>.*?(?:did\snot\smatch)', html):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
@@ -183,11 +183,13 @@ class KATProvider(generic.TorrentProvider):
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
-                            if self.confirmed and not (tr.find('a', title=rc['verif']) or tr.find('i', title=rc['verif'])):
+                            if self.confirmed and not (tr.find('a', title=rc['verif']) or
+                                                       tr.find('i', title=rc['verif'])):
                                 logger.log(u'Skipping untrusted non-verified result: %s' % title, logger.DEBUG)
                                 continue
 
-                            # Check number video files = episode in season and find the real Quality for full season torrent analyzing files in torrent
+                            # Check number video files = episode in season and find the real Quality for
+                            # full season torrent analyzing files in torrent
                             if 'Season' == mode and 'sponly' == search_mode:
                                 ep_number = int(epcount / len(set(show_name_helpers.allPossibleShowNames(self.show))))
                                 title = self._find_season_quality(title, link, ep_number)
@@ -206,18 +208,6 @@ class KATProvider(generic.TorrentProvider):
             results = list(set(results + items[mode]))
 
         return results
-
-
-class KATCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = KATProvider()
