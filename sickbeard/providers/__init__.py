@@ -26,11 +26,11 @@ from sickbeard import logger, encodingKludge as ek
 # usenet
 from . import newznab, omgwtfnzbs, womble
 # torrent
-from . import alpharatio, anizb, beyondhd, bitmetv, btn, filelist, freshontv, funfile, gftracker, grabtheinfo, \
+from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, filelist, freshontv, funfile, gftracker, grabtheinfo, \
     hd4free, hdbits, hdspace, iptorrents, kat, morethan, pisexy, pretome, rarbg, scc, scenetime, shazbat, speedcd, \
     thepiratebay, torrentbytes, torrentday, torrenting, torrentleech, torrentshack, transmithe_net, tvchaosuk
 # anime
-from . import nyaatorrents, tokyotoshokan
+from . import anizb, nyaatorrents, tokyotoshokan
 # custom
 try:
     from . import custom01
@@ -42,6 +42,7 @@ __all__ = ['omgwtfnzbs',
            'alpharatio',
            'anizb',
            'beyondhd',
+           'bithdtv',
            'bitmetv',
            'btn',
            'custom01',
