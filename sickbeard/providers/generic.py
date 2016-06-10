@@ -914,11 +914,14 @@ class TorrentProvider(object, GenericProvider):
                 return super(TorrentProvider, self)._authorised()
 
         if hasattr(self, 'username') and hasattr(self, 'password'):
-            creds = dict(username=self.username, password=self.password)
             if not post_params:
-                post_params = creds.copy()
-            elif self.password not in post_params.values() and isinstance(post_params, type({})):
-                post_params.update(creds)
+                post_params = dict(username=self.username, password=self.password)
+            elif isinstance(post_params, type({})):
+                if self.username not in post_params.values():
+                    post_params['username'] = self.username
+                if self.password not in post_params.values():
+                    post_params['password'] = self.password
+
 
         response = helpers.getURL(url, post_data=post_params, session=self.session, timeout=timeout)
         if response:
