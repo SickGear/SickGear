@@ -64,7 +64,7 @@
 * Change instantly use saved value from Search Settings/Episode Search/"Check propers every" instead of after a restart
 * Change include OSError system messages in file system failure logs during post process
 * Fix find associated meta files to prevent orphan episode images
-* Add torrent provider HD4Free
+* Add HD4Free torrent provider
 * Change validate and improve specific Torrent provider connections, IPT, KAT, SCC, TPB, TB, TD, TT
 * Change refactor cache for torrent providers to reduce code
 * Change improve search category selection BMTV, FSH, FF, TB
@@ -80,6 +80,7 @@
 * Add button 'Discover' Emby server to notifications
 * Add Bit-HDTV torrent provider
 * Add PrivateHD torrent provider
+* Add Zooqle torrent provider
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)

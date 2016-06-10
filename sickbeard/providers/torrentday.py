@@ -10,7 +10,7 @@
 # SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
@@ -102,8 +102,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                 except Exception:
                     time.sleep(1.1)
 
-                self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string, self.name)['Cache' == mode])
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
             self._sort_seeders(mode, items)
 
