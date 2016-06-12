@@ -776,6 +776,10 @@ class Home(MainHandler):
         else:
             return 'Error sending tweet'
 
+    @staticmethod
+    def discover_emby():
+        return notifiers.emby_notifier.discover_server()
+
     def testEMBY(self, host=None, apikey=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
