@@ -1173,6 +1173,10 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             resp = session.post(url, timeout=timeout, **kwargs)
         else:
             resp = session.get(url, timeout=timeout, **kwargs)
+            if resp.ok and not resp.content and 'url=' in resp.headers.get('Refresh', '').lower():
+                parsed[2] = '/%s' % resp.headers.get('Refresh').lower().split('url=')[1].strip('/')
+                url = urlparse.urlunparse(parsed)
+                resp = session.get(url, timeout=timeout, **kwargs)
 
         if not resp.ok:
             if resp.status_code in clients.http_error_code:
