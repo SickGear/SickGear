@@ -79,6 +79,7 @@
 * Change TorrentDay to use its 2.x interface
 * Add button 'Discover' Emby server to notifications
 * Add Bit-HDTV torrent provider
+* Add PrivateHD torrent provider
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
