@@ -1190,21 +1190,23 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             return
 
     except requests.exceptions.HTTPError as e:
-        logger.log(u'HTTP error %s while loading URL %s' % (e.errno, e.request.url), logger.WARNING)
+        logger.log(u'HTTP error %s while loading URL%s' % (
+            e.errno, _maybe_request_url(e)), logger.WARNING)
         return
     except requests.exceptions.ConnectionError as e:
         if not mute_connect_err:
-            logger.log(u'Connection error msg:%s while loading URL %s' % (e.message, e.request.url), logger.WARNING)
+            logger.log(u'Connection error msg:%s while loading URL%s' % (
+                e.message, _maybe_request_url(e)), logger.WARNING)
         return
     except requests.exceptions.ReadTimeout as e:
-        logger.log(u'Read timed out msg:%s while loading URL %s' % (e.message, e.request.url), logger.WARNING)
+        logger.log(u'Read timed out msg:%s while loading URL%s' % (
+            e.message, _maybe_request_url(e)), logger.WARNING)
         return
     except (requests.exceptions.Timeout, socket.timeout) as e:
-        logger.log(u'Connection timed out msg:%s while loading URL %s'
-                   % (e.message, hasattr(e, 'request') and e.request.url or url), logger.WARNING)
+        logger.log(u'Connection timed out msg:%s while loading URL %s' % (
+            e.message, _maybe_request_url(e, url)), logger.WARNING)
         return
     except Exception as e:
-        url = hasattr(e, 'request') and e.request.url or url
         if e.message:
             logger.log(u'Exception caught while loading URL %s\r\nDetail... %s\r\n%s'
                        % (url, e.message, traceback.format_exc()), logger.WARNING)
@@ -1221,6 +1223,10 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             return None
 
     return resp.content
+
+
+def _maybe_request_url(e, def_url=''):
+    return hasattr(e, 'request') and hasattr(e.request, 'url') and ' ' + e.request.url or def_url
 
 
 def download_file(url, filename, session=None):

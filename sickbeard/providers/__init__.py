@@ -28,7 +28,7 @@ from . import newznab, omgwtfnzbs, womble
 # torrent
 from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, filelist, freshontv, funfile, gftracker, grabtheinfo, \
     hd4free, hdbits, hdspace, iptorrents, kat, morethan, pisexy, pretome, privatehd, rarbg, scc, scenetime, shazbat, speedcd, \
-    thepiratebay, torrentbytes, torrentday, torrenting, torrentleech, torrentshack, transmithe_net, tvchaosuk
+    thepiratebay, torrentbytes, torrentday, torrenting, torrentleech, torrentshack, transmithe_net, tvchaosuk, zooqle
 # anime
 from . import anizb, nyaatorrents, tokyotoshokan
 # custom
@@ -73,6 +73,7 @@ __all__ = ['omgwtfnzbs',
            'torrentshack',
            'transmithe_net',
            'tvchaosuk',
+           'zooqle',
            'nyaatorrents',
            'tokyotoshokan',
            ]

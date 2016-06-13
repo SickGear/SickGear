@@ -994,10 +994,10 @@ class TorrentProvider(object, GenericProvider):
 
     @staticmethod
     def _has_no_results(*html):
-        return re.search(r'(?i)<(?:b|div|h\d|span|strong)[^>]*>(?:' +
+        return re.search(r'(?i)<(?:b|div|h\d|p|span|strong)[^>]*>(?:' +
                          'your\ssearch\sdid\snot\smatch|' +
                          'nothing\sfound|' +
-                         'no\storrents\sfound|' +
+                         '(sorry,\s)?no\storrents\s(found|match)|' +
                          '.*?there\sare\sno\sresults|' +
                          '.*?no\shits\.\sTry\sadding' +
                          ')', html[0])
