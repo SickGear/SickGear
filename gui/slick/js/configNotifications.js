@@ -37,30 +37,46 @@
 			});
 	});
 
+	$('#discover-emby').click(function () {
+		$(this).prop('disabled', !0);
+		$('#emby_host,#emby_apikey').removeClass('warning');
+		$('#testEMBY-result').html(loading);
+		$.get(sbRoot + '/home/discover_emby')
+			.done(function (data) {
+				var result = 'Unable to discover a server, is one running?';
+				if ('' != data) {
+					$('#emby_host').val(data);
+					result = 'Server found.';
+				}
+				$('#testEMBY-result').html(result);
+				$('#discover-emby').prop('disabled', !1);
+			});
+	});
+
 	$('#testEMBY').click(function () {
-		var emby_host = $('#emby_host').val();
-		var emby_apikey = $('#emby_apikey').val();
-		if (!emby_host || !emby_apikey) {
+		var host$ = $('#emby_host'), host = $.trim(host$.val());
+		var apikey$ = $('#emby_apikey'), apikey = $.trim(apikey$.val());
+		if (!host || !apikey) {
 			$('#testEMBY-result').html('Please fill out the necessary fields above.');
-			if (!emby_host) {
-				$('#emby_host').addClass('warning');
+			if (!host) {
+				host$.addClass('warning');
 			} else {
-				$('#emby_host').removeClass('warning');
+				host$.removeClass('warning');
 			}
-			if (!emby_apikey) {
-				$('#emby_apikey').addClass('warning');
+			if (!apikey) {
+				apikey$.addClass('warning');
 			} else {
-				$('#emby_apikey').removeClass('warning');
+				apikey$.removeClass('warning');
 			}
 			return;
 		}
-		$('#emby_host, #emby_apikey').removeClass('warning');
-		$(this).prop('disabled', true);
+		$('#emby_host,#emby_apikey').removeClass('warning');
+		$(this).prop('disabled', !0);
 		$('#testEMBY-result').html(loading);
-		$.get(sbRoot + '/home/testEMBY', {'host': emby_host, 'apikey': emby_apikey})
+		$.get(sbRoot + '/home/testEMBY', {'host': host, 'apikey': apikey})
 			.done(function (data) {
 				$('#testEMBY-result').html(data);
-				$('#testEMBY').prop('disabled', false);
+				$('#testEMBY').prop('disabled', !1);
 			});
 	});
 

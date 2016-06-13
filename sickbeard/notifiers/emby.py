@@ -17,6 +17,8 @@
 
 import sickbeard
 from sickbeard import logger
+from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR, SO_BROADCAST, SHUT_RDWR
+from lib import simplejson as json
 
 
 class EmbyNotifier:
@@ -114,6 +116,35 @@ class EmbyNotifier:
         self.response = dict(status_code=r.status_code, ok=r.ok)
         return r
 
+    @staticmethod
+    def _discover_server():
+        cs = socket(AF_INET, SOCK_DGRAM)
+        mb_listen_port = 7359
+
+        cs.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        cs.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+        cs.settimeout(10)
+        result, sock_issue = '', None
+        for server in ('EmbyServer', 'MediaBrowserServer'):
+            bufr = 'who is %s?' % server
+            try:
+                assert len(bufr) == cs.sendto(bufr, ('255.255.255.255', mb_listen_port)), \
+                    'Not all data sent through the socket'
+                message, host = cs.recvfrom(1024)
+                if message:
+                    logger.log('%s found at %s: udp query response (%s)' % (server, host[0], message))
+                    result = ('{"Address":' not in message and message.split('|')[1] or
+                              json.loads(message).get('Address', ''))
+                    if result:
+                        break
+            except AssertionError:
+                sock_issue = True
+            except Exception:
+                pass
+        if not sock_issue:
+            cs.shutdown(SHUT_RDWR)
+        return result
+
     def _check_config(self, hosts=None, apikeys=None):
 
         from sickbeard.helpers import starify
@@ -147,6 +178,9 @@ class EmbyNotifier:
     ##############################################################################
     # Public functions
     ##############################################################################
+
+    def discover_server(self):
+        return self._discover_server()
 
     def test_notify(self, host, apikey):
 
