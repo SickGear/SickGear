@@ -167,6 +167,9 @@ def sanitizeFileName(name):
     # remove leading/trailing periods and spaces
     name = name.strip(' .')
 
+    for char in sickbeard.REMOVE_FILENAME_CHARS or []:
+        name = name.replace(char, '')
+
     return name
 
 
