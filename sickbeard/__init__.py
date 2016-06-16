@@ -123,7 +123,7 @@ HANDLE_REVERSE_PROXY = False
 PROXY_SETTING = None
 PROXY_INDEXERS = True
 
-CPU_PRESET = 'NORMAL'
+CPU_PRESET = 'DISABLED'
 
 ANON_REDIRECT = None
 
@@ -649,7 +649,7 @@ def initialize(consoleLogging=True):
         WEB_PASSWORD = check_setting_str(CFG, 'General', 'web_password', '')
         LAUNCH_BROWSER = bool(check_setting_int(CFG, 'General', 'launch_browser', 1))
 
-        CPU_PRESET = check_setting_str(CFG, 'General', 'cpu_preset', 'NORMAL')
+        CPU_PRESET = check_setting_str(CFG, 'General', 'cpu_preset', 'DISABLED')
 
         ANON_REDIRECT = check_setting_str(CFG, 'General', 'anon_redirect', '')
         PROXY_SETTING = check_setting_str(CFG, 'General', 'proxy_setting', '')
