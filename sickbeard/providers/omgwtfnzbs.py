@@ -38,15 +38,13 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         self.url = 'https://omgwtfnzbs.org/'
 
-        self.url_base = 'https://omgwtfnzbs.org/'
+        self.url_base = 'https://api.omgwtfnzbs.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'cache': 'https://rss.omgwtfnzbs.org/rss-download.php?%s',
                      'search': self.url_base + 'json/?%s',
                      'get': self.url_base + '%s',
                      'cache_html': self.url_base + 'browse.php?cat=tv%s',
                      'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}
-
-        self.url = self.urls['config_provider_home_uri']
 
         self.needs_auth = True
         self.username, self.api_key, self.cookies = 3 * [None]
@@ -91,7 +89,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
     def _title_and_url(self, item):
 
-        return item['release'], item['getnzb']
+        return item['release'].replace('_', '.'), item['getnzb']
 
     def get_result(self, episodes, url):
 
@@ -144,6 +142,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             params = {'user': self.username,
                       'api': api_key,
                       'eng': 1,
+                      'nukes': 1,
                       'catid': '19,20',  # SD,HD
                       'retention': (sickbeard.USENET_RETENTION, retention)[retention or not sickbeard.USENET_RETENTION],
                       'search': search}
@@ -155,6 +154,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             if data_json and self._check_auth_from_data(data_json, is_xml=False):
                 for item in data_json:
                     if 'release' in item and 'getnzb' in item:
+                        if item.get('nuked', '').startswith('1'):
+                            continue
                         results.append(item)
         return results
 
