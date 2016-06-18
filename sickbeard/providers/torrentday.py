@@ -115,10 +115,12 @@ class TorrentDayProvider(generic.TorrentProvider):
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', date_or=True, **kwargs)
 
     def ui_string(self, key):
-        current_url = self.urls['config_provider_home_uri']
-        return ('torrentday_digest' == key and
-                ('use... \'uid=xx; pass=yy\' from a session logged in at <a target="_blank" href="%s">%s</a>' %
-                 (anon_url(current_url), current_url.strip('/'))) or '')
+        if 'torrentday_digest' == key and self._valid_home():
+            current_url = getattr(self, 'urls', {}).get('config_provider_home_uri')
+            return ('use... \'uid=xx; pass=yy\'' +
+                    (current_url and (' from a session logged in at <a target="_blank" href="%s">%s</a>' %
+                                      (anon_url(current_url), current_url.strip('/'))) or ''))
+        return ''
 
 
 provider = TorrentDayProvider()

@@ -343,8 +343,8 @@
 ##
 
 ##
-#for $cur_torrent_provider in [$cur_provider for $cur_provider in $sickbeard.providers.sortedProviderList()
-    if $cur_provider.providerType == $GenericProvider.TORRENT]:
+#for $cur_torrent_provider in $sickbeard.USE_TORRENTS and [$cur_provider for $cur_provider in $sickbeard.providers.sortedProviderList()
+    if $cur_provider.providerType == $GenericProvider.TORRENT] or []:
 					<div class="providerDiv" id="${cur_torrent_provider.get_id()}Div">
     #if callable(getattr(cur_torrent_provider, 'ui_string', None))
         #set $field_name = cur_torrent_provider.get_id() + '_tip'

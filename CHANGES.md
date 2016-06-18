@@ -88,6 +88,8 @@
 * Add ILT torrent provider
 * Add Fano torrent provider
 * Change CPU throttling on General Config/Advanced to "Disabled" by default for new installs
+* Change provider OMGWTFNZBS api url and auto reject nuked releases
+* Change Search Provider page to load torrent settings only when Search torrents is enabled in Search Settings
 
 
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
