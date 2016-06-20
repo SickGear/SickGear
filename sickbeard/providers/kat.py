@@ -36,7 +36,7 @@ class KATProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'KickAssTorrents')
 
-        self.url_base = 'https://kat.ph/'
+        self.url_base = 'https://kat.cr/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'base': [self.url_base, 'http://katproxy.com/'],
                      'search': 'usearch/%s/',
@@ -155,8 +155,8 @@ class KATProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    if not html or 'kastatic' not in html or self._has_no_results(html) or re.search(r'(?is)<(?:h\d)[^>]*>.*?(?:did\snot\smatch)', html):
-                        if html and 'kastatic' not in html:
+                    if not html or 'kastatus.com' not in html or self._has_no_results(html) or re.search(r'(?is)<(?:h\d)[^>]*>.*?(?:did\snot\smatch)', html):
+                        if html and 'kastatus.com' not in html:
                             url += (1, 0)[url == len(self.urls['base'])]
                         raise generic.HaltParseException
 
