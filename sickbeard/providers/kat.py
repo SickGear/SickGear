@@ -36,7 +36,7 @@ class KATProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'KickAssTorrents')
 
-        self.url_base = 'https://kat.ph/'
+        self.url_base = 'https://kat.cr/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'base': [self.url_base, 'http://katproxy.com/'],
                      'search': 'usearch/%s/',
