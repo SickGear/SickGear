@@ -977,15 +977,25 @@ class Migrate41(db.SchemaUpgrade):
         return self.checkDBVersion()
 
 
-# 4301 -> 10001
+# 4301 -> 10002
 class Migrate4301(db.SchemaUpgrade):
     def execute(self):
         db.backup_database('sickbeard.db', self.checkDBVersion())
 
-        logger.log(u'Dropping redundant column')
-        self.dropColumn('db_version', 'db_minor_version')
+        logger.log(u'Bumping database version')
 
-        self.setDBVersion(10001)
+        self.setDBVersion(10002)
+        return self.checkDBVersion()
+
+
+# 4302,4400 -> 10003
+class Migrate4302(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
+        logger.log(u'Bumping database version')
+
+        self.setDBVersion(10003)
         return self.checkDBVersion()
 
 
@@ -1016,10 +1026,35 @@ class RemoveDefaultEpStatusFromTvShows(db.SchemaUpgrade):
     def execute(self):
         db.backup_database('sickbeard.db', self.checkDBVersion())
 
-        logger.log(u'Dropping column default_ep_status from tv_shows')
+        logger.log(u'Dropping redundant column default_ep_status from tv_shows')
         self.dropColumn('tv_shows', 'default_ep_status')
 
         self.setDBVersion(10000)
+        return self.checkDBVersion()
+
+
+# 10002 -> 10001
+class RemoveMinorDBVersion(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
+        logger.log(u'Dropping redundant column db_minor_version from db_version')
+        self.dropColumn('db_version', 'db_minor_version')
+
+        self.setDBVersion(10001)
+        return self.checkDBVersion()
+
+
+# 10003 -> 10002
+class RemoveMetadataSub(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
+        if self.hasColumn('tv_shows', 'sub_use_sr_metadata'):
+            logger.log(u'Dropping redundant column metadata sub')
+            self.dropColumn('tv_shows', 'sub_use_sr_metadata')
+
+        self.setDBVersion(10002)
         return self.checkDBVersion()
 
 
@@ -1056,7 +1091,7 @@ class AddTvShowTags(db.SchemaUpgrade):
         db.backup_database('sickbeard.db', self.checkDBVersion())
 
         if not self.hasColumn('tv_shows', 'tag'):
-            logger.log(u'Adding tag  to tv_shows')
+            logger.log(u'Adding tag to tv_shows')
             self.addColumn('tv_shows', 'tag', 'TEXT', 'Show List')
 
         self.setDBVersion(20003)
