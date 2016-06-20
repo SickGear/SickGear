@@ -92,6 +92,11 @@
 * Change Search Provider page to load torrent settings only when Search torrents is enabled in Search Settings
 
 
+### 0.11.12 (2016-06-20 02:20:00 UTC)
+
+* Change improve importing show list sickbeard.db files
+
+
 ### 0.11.11 (2016-04-05 19:20:00 UTC)
 
 * Add support for SD mkv container

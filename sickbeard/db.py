@@ -75,11 +75,11 @@ class DBConnection(object):
             return 0
 
         if result:
-            if self.hasColumn('db_version', 'db_minor_version'):
+            version = int(result[0]['db_version'])
+            if 10000 > version and self.hasColumn('db_version', 'db_minor_version'):
                 minor = self.select('SELECT db_minor_version FROM db_version')
-                version = int(result[0]['db_version']) * 100 + int(minor[0]['db_minor_version'])
-                return (version, 4301)[2000301 == version]
-            return int(result[0]['db_version'])
+                return version * 100 + int(minor[0]['db_minor_version'])
+            return version
         else:
             return 0
 
@@ -433,6 +433,8 @@ def MigrationCode(myDB):
         44: sickbeard.mainDB.Migrate41,
 
         4301: sickbeard.mainDB.Migrate4301,
+        4302: sickbeard.mainDB.Migrate4302,
+        4400: sickbeard.mainDB.Migrate4302,
 
         5816: sickbeard.mainDB.MigrateUpstream,
         5817: sickbeard.mainDB.MigrateUpstream,
@@ -440,6 +442,8 @@ def MigrationCode(myDB):
 
         10000: sickbeard.mainDB.SickGearDatabaseVersion,
         10001: sickbeard.mainDB.RemoveDefaultEpStatusFromTvShows,
+        10002: sickbeard.mainDB.RemoveMinorDBVersion,
+        10003: sickbeard.mainDB.RemoveMetadataSub,
 
         20000: sickbeard.mainDB.DBIncreaseTo20001,
         20001: sickbeard.mainDB.AddTvShowOverview,
