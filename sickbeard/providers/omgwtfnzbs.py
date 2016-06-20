@@ -38,10 +38,11 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         self.url = 'https://omgwtfnzbs.org/'
 
-        self.url_base = 'https://api.omgwtfnzbs.org/'
+        self.url_base = 'https://omgwtfnzbs.org/'
+        self.url_api = 'https://api.omgwtfnzbs.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'cache': 'https://rss.omgwtfnzbs.org/rss-download.php?%s',
-                     'search': self.url_base + 'json/?%s',
+                     'search': self.url_api + 'json/?%s',
                      'get': self.url_base + '%s',
                      'cache_html': self.url_base + 'browse.php?cat=tv%s',
                      'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}
