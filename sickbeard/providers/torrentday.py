@@ -45,9 +45,14 @@ class TorrentDayProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(TorrentDayProvider, self)._authorised(
-            logged_in=(lambda x=None: (None is x or 'RSS URL' in x) and self.has_all_cookies() and
+            logged_in=(lambda x='': ('RSS URL' in x) and self.has_all_cookies() and
                        self.session.cookies['uid'] in self.digest and self.session.cookies['pass'] in self.digest),
             failed_msg=(lambda x=None: u'Invalid cookie details for %s. Check settings'))
+
+    @staticmethod
+    def _has_signature(data=None):
+        return generic.TorrentProvider._has_signature(data) or \
+               (data and re.search(r'(?i)<title[^<]+?(td|torrentday)', data))
 
     def _search_provider(self, search_params, **kwargs):
 

@@ -49,7 +49,7 @@ class KATProvider(generic.TorrentProvider):
 
     @staticmethod
     def _has_signature(data=None):
-        return data and (re.search(r'(?sim)(<title>KAT)', data[15:1024:]) or 'kastatic' in data)
+        return data and (re.search(r'(?sim)(<title>KAT)', data[15:1024:]) or 'kastat' in data)
 
     def _find_season_quality(self, title, torrent_link, ep_number):
         """ Return the modified title of a Season Torrent with the quality found inspecting torrent file list """
