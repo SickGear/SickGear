@@ -922,7 +922,6 @@ class TorrentProvider(object, GenericProvider):
                 if self.password not in post_params.values():
                     post_params['password'] = self.password
 
-
         response = helpers.getURL(url, post_data=post_params, session=self.session, timeout=timeout)
         if response:
             if logged_in(response):
