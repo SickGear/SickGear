@@ -1,60 +1,75 @@
-$(document).ready(function(){
-  $('#submitMassRemove').click(function(){
+$(document).ready(function() {
 
-    var removeArr = new Array()
+	$('#limit').change(function() {
+		window.location.href = sbRoot + '/manage/failedDownloads/?limit=' + $(this).val();
+	});
 
-    $('.removeCheck').each(function() {
-      if (this.checked == true) {
-        removeArr.push($(this).attr('id').split('-')[1])
-      }
-    });
+	$('#submitMassRemove').click(function() {
 
-    if (removeArr.length == 0)
-      return false
+		var removeArr = [];
 
-    url = sbRoot + '/manage/failedDownloads?toRemove='+removeArr.join('|')
+		$('.removeCheck').each(function() {
+			if (!0 == this.checked) {
+				removeArr.push($(this).attr('id').split('-')[1])
+			}
+		});
 
-    window.location.href = url
+		if (0 == removeArr.length)
+			return !1;
 
-  });
+		window.location.href = sbRoot + '/manage/failedDownloads?toRemove=' + removeArr.join('|');
+	});
 
-  $('.bulkCheck').click(function(){
+	$('.bulkCheck').click(function() {
 
-    var bulkCheck = this;
-    var whichBulkCheck = $(bulkCheck).attr('id');
+		var bulkCheck = this, whichBulkCheck = $(bulkCheck).attr('id');
 
-    $('.'+whichBulkCheck+':visible').each(function(){
-        this.checked = bulkCheck.checked
-    });
-  });
+		$('.' + whichBulkCheck + ':visible').each(function() {
+			this.checked = bulkCheck.checked
+		});
+	});
 
-  ['.removeCheck'].forEach(function(name) {
-    var lastCheck = null;
+	['.removeCheck'].forEach(function(name) {
 
-    $(name).click(function(event) {
+		var lastCheck = null;
 
-      if(!lastCheck || !event.shiftKey) {
-        lastCheck = this;
-        return;
-      }
+		$(name).click(function(event) {
 
-      var check = this;
-      var found = 0;
+			var table$ = $('#failedTable');
+			if(!lastCheck || !event.shiftKey) {
+				lastCheck = this;
+				$(this).parent('td').attr('data-order', this.checked ? '1' : '0');
+				table$.trigger('update');
+				return;
+			}
 
-      $(name+':visible').each(function() {
-        switch (found) {
-          case 2: return false;
-          case 1:
-              this.checked = lastCheck.checked;
-        }
+			var check = this, found = 0;
 
-        if (this == check || this == lastCheck)
-          found++;
-      });
+			$(name + ':visible').each(function() {
+				switch (found) {
+					case 2:
+						return !1;
+					case 1:
+						this.checked = lastCheck.checked;
+						$(this).parent('td').attr('data-order', this.checked ? '1' : '0');
+				}
 
-    });
+				if (this == check || this == lastCheck)
+					found++;
+			});
 
-  });
+			table$.trigger('update');
+		});
+	});
 
+	$('#failedTable:has(tbody tr)').tablesorter({
+		widgets: ['zebra'],
+		sortList: [[0,0]],
+		sortAppend: [[0,0]],
+		textExtraction: {
+			0: function(node) { return $(node).attr('data-order'); },
+			3: function(node) { return $(node).find('img').attr('title'); },
+			4: function(node) { return $(node).attr('data-order'); }}
+	});
 
 });

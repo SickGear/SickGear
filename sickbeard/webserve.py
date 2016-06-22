@@ -3886,10 +3886,12 @@ class Manage(MainHandler):
 
         myDB = db.DBConnection('failed.db')
 
-        if limit == '0':
-            sqlResults = myDB.select('SELECT * FROM failed')
+        sql = 'SELECT * FROM failed ORDER BY ROWID DESC'
+        limit = helpers.tryInt(limit, 100)
+        if not limit:
+            sql_results = myDB.select(sql)
         else:
-            sqlResults = myDB.select('SELECT * FROM failed LIMIT ?', [limit])
+            sql_results = myDB.select(sql + ' LIMIT ?', [limit + 1])
 
         toRemove = toRemove.split('|') if toRemove is not None else []
 
@@ -3901,8 +3903,9 @@ class Manage(MainHandler):
             return self.redirect('/manage/failedDownloads/')
 
         t = PageTemplate(headers=self.request.headers, file='manage_failedDownloads.tmpl')
-        t.failedResults = sqlResults
-        t.limit = limit
+        t.over_limit = limit and len(sql_results) > limit
+        t.failedResults = t.over_limit and sql_results[0:-1] or sql_results
+        t.limit = str(limit)
         t.submenu = self.ManageMenu()
 
         return t.respond()

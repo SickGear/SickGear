@@ -90,6 +90,10 @@
 * Change CPU throttling on General Config/Advanced to "Disabled" by default for new installs
 * Change provider OMGWTFNZBS api url and auto reject nuked releases
 * Change Search Provider page to load torrent settings only when Search torrents is enabled in Search Settings
+* Add "Order" table column and list failed from newest to oldest wherever possible on Manage Failed Downloads
+* Add number of items shown to Manage Failed Downloads table footer and indicate if number of shown items is limited
+* Add sorting to "Provider" column and fix sorting of "Remove" column on Manage Failed Downloads
+* Fix "Limit" drop down on Manage Failed Downloads
 
 
 ### 0.11.12 (2016-06-20 02:20:00 UTC)
