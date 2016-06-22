@@ -14,74 +14,66 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript">
-<!--
-\$(document).ready(function()
-{
-	\$('#failedTable:has(tbody tr)').tablesorter({
-		widgets: ['zebra'],
-		sortList: [[0,0]],
-		headers: { 3: { sorter: false } }
-	});
-	\$('#limit').change(function(){
-		url = '$sbRoot/manage/failedDownloads/?limit='+\$(this).val()
-		window.location.href = url
-	});
-});
-//-->
-</script>
 <script type="text/javascript" src="$sbRoot/js/failedDownloads.js?v=$sbPID"></script>
+<style>
+.tablesorter .tablesorter-header{padding: 4px 18px 4px 5px}
+</style>
 
-#if $varExists('header') 
+#if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 #set selected = ' selected="selected"'
-<div class="h2footer pull-right"><b>Limit:</b>
-	<select id="limit" name="limit" class="form-control form-control-inline input-sm">
-		<option value="0"#if '0' == $limit then $selected else ''#>All</option>
-		<option value="100"#if '100' == $limit then $selected else ''#>100</option>
-		<option value="250"#if '250' == $limit then $selected else ''#>250</option>
-		<option value="500"#if '500' == $limit then $selected else ''#>500</option>
-	</select>
-</div>
+	<div class="h2footer pull-right"><b>Limit:</b>
+		<select id="limit" name="limit" class="form-control form-control-inline input-sm">
+			<option value="0"#if '0' == $limit then $selected else ''#>All</option>
+			<option value="100"#if '100' == $limit then $selected else ''#>100</option>
+			<option value="250"#if '250' == $limit then $selected else ''#>250</option>
+			<option value="500"#if '500' == $limit then $selected else ''#>500</option>
+		</select>
+	</div>
 
-<table id="failedTable" class="sickbeardTable tablesorter" border="0">
-	<thead>
-		<tr>
-			<th class="text-nowrap text-left" style="width:75%">Release</th>
-			<th style="width:10%">Size</th>
-			<th style="width:14%">Provider</th>
-			<th style="width:1%">Remove<br />
-				<input id="removeCheck" type="checkbox" class="bulkCheck">
-			</th>
-		</tr>
-	</thead>
+	<table id="failedTable" class="sickbeardTable tablesorter" border="0">
+		<thead>
+			<tr>
+				<th style="width:1%">Order</th>
+				<th class="text-nowrap text-left" style="width:74%">Release</th>
+				<th style="width:10%">Size</th>
+				<th style="width:14%">Provider</th>
+				<th style="width:1%;padding: 4px 18px">Remove<br />
+					<input id="removeCheck" type="checkbox" class="bulkCheck">
+				</th>
+			</tr>
+		</thead>
 
-	<tfoot>
-		<tr>
-			<td rowspan="1" colspan="4">
-				<input id="submitMassRemove" type="button" class="btn pull-right" value="Submit">
-			</td>
-		</tr>
-	</tfoot>
+#set $oldest = $len($failedResults)
+		<tfoot>
+			<tr>
+				<td colspan="4" class="text-left">
+					$oldest items shown#if $getVar('over_limit', False)#, more are available by changing the limit#end if#
+				</td>
+				<td>
+					<input id="submitMassRemove" type="button" class="btn" value="Submit">
+				</td>
+			</tr>
+		</tfoot>
 
-	<tbody>
-#for $hItem in $failedResults
-    <tr>
-        <td class="text-nowrap text-left">#echo re.sub('"', '', $hItem['release'])#</td>
-        <td>#echo ($hItem['size'], '?')[-1 == $hItem['size']]#</td>
-	#set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
-	#if None is not $provider:
-		<td><img src="$sbRoot/images/providers/<%= provider.image_name() %>" width="16" height="16" alt="$provider.name" title="$provider.name" /></td>
-	#else
-		<td><img src="$sbRoot/images/providers/missing.png" width="16" height="16" alt="missing provider" title="missing provider" /></td>
-	#end if
-		<td><input type="checkbox" class="removeCheck" id="remove-#echo re.sub('"', '___', $hItem['release'])#" /></td>
-	</tr>
+		<tbody>
+#set $order = $oldest
+#for $hItem in $failedResults[::-1]
+    #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
+    #set $provider_name = None is not $provider and $provider.name or 'missing provider'
+    #set $provider_image = None is not $provider and $provider.image_name() or 'missing.png'
+			<tr>
+				<td data-order="$order">#echo 1 == $order and 'Newest' or $oldest == $order and 'Oldest' or '-'##set $order -= 1#</td>
+				<td class="text-nowrap text-left">#echo re.sub('"', '', $hItem['release'])#</td>
+				<td>#echo ($hItem['size'], '?')[-1 == $hItem['size']]#</td>
+				<td><img src="$sbRoot/images/providers/$provider_image" width="16" height="16" alt="$provider_name" title="$provider_name"></td>
+				<td data-order="0"><input type="checkbox" class="removeCheck" id="remove-#echo re.sub('"', '___', $hItem['release'])#"></td>
+			</tr>
 #end for
-	</tbody>
-</table>
+		</tbody>
+	</table>
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
