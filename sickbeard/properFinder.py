@@ -32,7 +32,7 @@ from sickbeard import history
 
 from sickbeard.common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, Quality
 
-from name_parser.parser import NameParser
+from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 
 def search_propers():
@@ -112,6 +112,8 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
                         x.provider = cur_provider
                         propers[name] = x
                         count += 1
+                except (InvalidNameException, InvalidShowException):
+                    continue
                 except Exception:
                     continue
 

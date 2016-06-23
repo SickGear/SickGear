@@ -681,7 +681,7 @@ class TorrentProvider(object, GenericProvider):
 
     @property
     def url(self):
-        if None is self._url:
+        if None is self._url or (hasattr(self, 'url_tmpl') and not self.urls):
             self._url = self._valid_home()
             self._valid_url()
         return self._url

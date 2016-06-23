@@ -102,6 +102,8 @@
 * Change improve highlight of shows found in database in "Add New Show" results
 * Change use full first aired date where available in "Add New Show" results
 * Change prevent duplicate results in "Add New Show"
+* Add qBitTorrent to Search Settings/Torrent Search
+* Add "Test NZBGet" client to Search Settings/NZB Search/NZBGet
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

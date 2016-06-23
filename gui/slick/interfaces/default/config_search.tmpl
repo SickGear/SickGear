@@ -9,7 +9,11 @@
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
-
+<script>
+<!--
+	var config = {defaultHost: $clients.default_host}
+//-->
+</script>
 <script type="text/javascript" src="$sbRoot/js/configSearch.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
 
@@ -211,7 +215,7 @@
 							</label>
 						</div>
 
-						<div id="blackhole_settings">
+						<div id="blackhole-settings">
 							<div class="field-pair">
 								<label>
 									<span class="component-title">Black hole folder location</span>
@@ -223,7 +227,7 @@
 							</div>
 						</div>
 
-						<div id="sabnzbd_settings">
+						<div id="sabnzbd-settings">
 							<div class="field-pair">
 								<label>
 									<span class="component-title">SABnzbd server URL</span>
@@ -275,7 +279,7 @@
 							</div>
 						</div>
 
-						<div id="nzbget_settings">
+						<div id="nzbget-settings">
 							<div class="field-pair">
 								<label for="nzbget_use_https">
 									<span class="component-title">Connect using HTTPS</span>
@@ -302,7 +306,7 @@
 								<label>
 									<span class="component-title">NZBget username</span>
 									<span class="component-desc">
-										<input type="text" name="nzbget_username" value="$sickbeard.NZBGET_USERNAME" class="form-control input-sm input200">
+										<input type="text" name="nzbget_username" id="nzbget_username" value="$sickbeard.NZBGET_USERNAME" class="form-control input-sm input200">
 										<p>locate in nzbget.conf (default:nzbget)</p>
 									</span>
 								</label>
@@ -367,8 +371,9 @@
 							</div>
 						</div>
 
-						<div class="testNotification" id="testSABnzbd_result">Click below to test</div>
-						<input class="btn" type="button" value="Test SABnzbd" id="testSABnzbd" class="btn test-button">
+						<div class="testNotification" id="test-nzb-result">Click below to test</div>
+						<input type="button" value="Test SABnzbd" id="test_sabnzbd" class="btn test-button sabnzbd">
+						<input type="button" value="Test NZBget" id="test_nzbget" class="btn test-button nzbget">
 						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 
 						</div><!-- /content_use_nzbs //-->
@@ -401,16 +406,17 @@
 							<label for="torrent_method">
 								<span class="component-title">Send .torrent files to:</span>
 								<span class="component-desc">
-								<select name="torrent_method" id="torrent_method" class="form-control input-sm">
-#set $torrent_method_text = {'blackhole': "Black hole", 'utorrent': "uTorrent", 'transmission': "Transmission", 'deluge': "Deluge", 'download_station': "Synology DS", 'rtorrent': "rTorrent"}
-#for $curAction in ('blackhole', 'utorrent', 'transmission', 'deluge', 'download_station', 'rtorrent'):
+									<select name="torrent_method" id="torrent_method" class="form-control input-sm">
+#set $torrent_method_text = {'blackhole': "Black hole", 'utorrent': "uTorrent", 'transmission': "Transmission", 'qbittorrent': "qBittorrent", 'deluge': "Deluge", 'download_station': "Synology DS", 'rtorrent': "rTorrent"}
+#for $curAction in ('blackhole', 'deluge', 'qbittorrent', 'rtorrent', 'download_station', 'transmission', 'utorrent'):
     #set $selected = $html_selected if $sickbeard.TORRENT_METHOD == $curAction else ''
-								<option value="$curAction"$selected>$torrent_method_text[$curAction]</option>
+										<option value="$curAction"$selected>$torrent_method_text[$curAction]</option>
 #end for
-								</select>
+									</select>
+								</span>
 							</label>
 
-						<div id="options_torrent_blackhole">
+						<div id="options-torrent-blackhole">
 							<div class="field-pair">
 								<label>
 									<span class="component-title">Black hole folder location</span>
@@ -426,22 +432,22 @@
 							</div>
 						</div>
 
-						<div id="options_torrent_clients">
+						<div id="options-torrent-clients">
 							<div class="field-pair">
 								<label>
-									<span class="component-title" id="host_title">Torrent host:port</span>
+									<span class="component-title" id="host-title">Torrent host:port</span>
 									<span class="component-desc">
 										<input type="text" name="torrent_host" id="torrent_host" value="$sickbeard.TORRENT_HOST" class="form-control input-sm input350">
 										<p class="clear-left note">
-											<span id="host_desc_torrent">URL to your torrent client (e.g. http://localhost:8000/)</span>
-											<span id="host_desc_rtorrent" style="display:none"><b>Note:</b> <i>rTorrent</i> client URLs use e.g. scgi://localhost:5000/</span>
-											<span id="host_desc_deluge" style="display:none">URL to your Deluge WebUI (e.g. http://localhost:8112/)</span>
+											<span id="host-desc-torrent">URL to your torrent client (e.g. <span class="default-host">http://localhost:8000</span>/)</span>
+											<span id="host-desc-deluge" style="display:none">URL to your Deluge WebUI (e.g. <span class="default-host">http://localhost:8112</span>/)</span>
+											<span id="host-desc-rtorrent" style="display:none"><b>Note:</b> <i>rTorrent</i> client URLs use e.g. <span class="default-host">scgi://localhost:5000</span>/</span>
 										</p>
 									</span>
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_verify_cert_option">
+							<div class="field-pair" id="torrent-verify-cert-option">
 								<label for="torrent_verify_cert">
 									<span class="component-title">Verify certificate</span>
 									<span class="component-desc">
@@ -451,9 +457,9 @@
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_username_option">
+							<div class="field-pair" id="torrent-username-option">
 								<label>
-									<span class="component-title" id="username_title">Client username</span>
+									<span class="component-title" id="username-title">Client username</span>
 									<span class="component-desc">
 										<input type="text" name="torrent_username" id="torrent_username" value="$sickbeard.TORRENT_USERNAME" class="form-control input-sm input200">
 										<p>(blank for none)</p>
@@ -463,7 +469,7 @@
 
 							<div class="field-pair">
 								<label>
-									<span class="component-title" id="password_title">Client password</span>
+									<span class="component-title" id="password-title">Client password</span>
 									<span class="component-desc">
 										<input type="password" name="torrent_password" id="torrent_password" value="#echo '*' * len($sickbeard.TORRENT_PASSWORD)#" class="form-control input-sm input200">
 										<p>(blank for none)</p>
@@ -471,31 +477,36 @@
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_label_option">
+							<div class="field-pair" id="torrent-label-option">
 								<label>
-									<span class="component-title">Add label to torrent</span>
+									<span class="component-title">Set torrent label<span class="qbittorrent">/category</span></span>
 									<span class="component-desc">
 										<input type="text" name="torrent_label" id="torrent_label" value="$sickbeard.TORRENT_LABEL" class="form-control input-sm input200">
-										<span id="label_warning_deluge" style="display:none"><p>(blank spaces are not allowed)</p>
+										<span id="label-warning-deluge" style="display:none"><p>(blank spaces are not allowed)</p>
 											<p class="clear-left note">note: label plugin must be enabled in Deluge clients</p>
 										</span>
+										<span class="qbittorrent" style="display:none"><p>(qB 3.3.1 and newer clients)</p></span>
 									</span>
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_path_option">
+							<div class="field-pair" id="torrent-path-option">
 								<label>
-									<span class="component-title" id="directory_title">Downloaded files location</span>
+									<span class="component-title">Downloaded files location</span>
 									<span class="component-desc">
 										<input type="text" name="torrent_path" id="torrent_path" value="$sickbeard.TORRENT_PATH" class="form-control input-sm input350">
-										<p class="clear-left note">where <span id="torrent_client">the torrent client</span> will save downloaded files <span id="path_blank">(blank for client default)</span>
-											<span id="path_synology"> <b>note:</b> the destination has to be a shared folder for Synology DS</span>
-											<span id="path_transmission" class="grey-text"> (v2.92 and newer should <em>not</em> be blank)</span></p>
+										<p class="clear-left note">
+											where <span id="torrent-client">the torrent client</span> will save files
+											<span class="qbittorrent">(blank otherwise set will ignore label/category)</span>
+											<span id="path-blank">(blank for client default)</span>
+											<span class="synology"> <b>note:</b> the destination has to be a shared folder for Synology DS</span>
+											<span class="transmission grey-text"> (v2.92 and newer should <em>not</em> be blank)</span>
+										</p>
 									</span>
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_seed_time_option">
+							<div class="field-pair" id="torrent-seed-time-option">
 								<label>
 									<span class="component-title">Seed time (minimum default)</span>
 									<span class="component-desc"><input type="number" step="0.1" name="torrent_seed_time" id="torrent_seed_time" value="$sickbeard.TORRENT_SEED_TIME" class="form-control input-sm input100">
@@ -503,7 +514,7 @@
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_paused_option">
+							<div class="field-pair" id="torrent-paused-option">
 								<label>
 									<span class="component-title">Start torrent paused</span>
 									<span class="component-desc">
@@ -513,7 +524,7 @@
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_high_bandwidth_option">
+							<div class="field-pair" id="torrent-high-bandwidth-option">
 								<label>
 									<span class="component-title">Allow high bandwidth</span>
 									<span class="component-desc">
@@ -523,8 +534,8 @@
 								</label>
 							</div>
 
-							<div class="testNotification" id="test_torrent_result">Click below to test</div>
-							<input class="btn" type="button" value="Test Connection" id="test_torrent" class="btn test-button">
+							<div class="testNotification" id="test-torrent-result">Click below to test</div>
+							<input type="button" value="Test Connection" id="test_torrent" class="btn test-button">
 							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 							</div>
 					</div><!-- /content_use_torrents //-->
