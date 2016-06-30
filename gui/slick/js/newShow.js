@@ -77,7 +77,8 @@ $(document).ready(function () {
 				if (0 === data.results.length) {
 					resultStr += '<span class="boldest">Sorry, no results found. Try a different search.</span>';
 				} else {
-					var idxSrcDB = 0, idxSrcDBId = 1, idxSrcUrl = 2, idxShowID = 3, idxTitle = 4, idxDate = 5;
+					var idxSrcDB = 0, idxSrcDBId = 1, idxSrcUrl = 2, idxShowID = 3, idxTitle = 4, idxTitleHtml = 5,
+						idxDate = 6, idxNetwork = 7, idxGenres = 8, idxOverview = 9;
 					$.each(data.results, function (index, obj) {
 						checked = (0 == row ? ' checked' : '');
 						rowType = (0 == row % 2 ? '' : ' class="alt"');
@@ -102,7 +103,12 @@ $(document).ready(function () {
 							+ ' />'
 							+ '<a'
 							+ ' class="stepone-result-title"'
-							+ ' title="View detail for <span style=\'color: rgb(66, 139, 202)\'>' + display_show_name + '</span>"'
+							+ ' title="<div style=\'color: rgb(66, 139, 202)\'>' + cleanseText(obj[idxTitleHtml], !0) + '</div>'
+							+ (0 < obj[idxGenres].length ? '<div style=\'font-weight:bold\'>(<em>' + obj[idxGenres] + '</em>)</div>' : '')
+							+ (0 < obj[idxNetwork].length ? '<div style=\'font-weight:bold;font-size:0.9em;color:#888\'><em>' + obj[idxNetwork] + '</em></div>' : '')
+							+ (0 < obj[idxOverview].length ? '<p style=\'margin:0 0 2px\'>' + obj[idxOverview] + '</p>' : '')
+							+ '<span style=\'float:right\'>Click for more</span>'
+							+ '"'
 							+ ' href="' + anonURL + obj[idxSrcUrl] + obj[idxShowID] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return false;"'
 							+ '>' + display_show_name + '</a>'

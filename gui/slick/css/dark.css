@@ -1244,6 +1244,10 @@ div.stepsguide .step p{
 	color:#ccc;
 }
 
+.stepDiv #searchResults div .exists-db{
+	color:#1178B3
+}
+
 div.stepsguide .disabledstep p{
 	border-color:#1178B3
 }

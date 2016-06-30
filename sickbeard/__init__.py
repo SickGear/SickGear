@@ -481,7 +481,7 @@ else:
     TRAKT_CLIENT_ID = 'f1c453c67d81f1307f9118172c408a883eb186b094d5ea33080d59ddedb7fc7c'
     TRAKT_CLIENT_SECRET = '12efb6fb6e863a08934d9904032a90008325df7e23514650cade55e7e7c118c5'
     TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
-    TRAKT_BASE_URL = 'https://api-v2launch.trakt.tv/'
+    TRAKT_BASE_URL = 'https://api.trakt.tv/'
 
 COOKIE_SECRET = base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
