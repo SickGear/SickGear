@@ -985,6 +985,11 @@ div.formpaginate{
 	line-height:1.7
 }
 
+.stepDiv #searchResults div .exists-db{
+	font-weight:800;
+	font-style:italic
+}
+
 .stepDiv #searchResults #searchingAnim{
 	margin-right:6px
 }

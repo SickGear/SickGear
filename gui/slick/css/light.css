@@ -1203,6 +1203,10 @@ div.stepsguide .disabledstep p{
 	color:#8a775e;
 }
 
+.stepDiv #searchResults div .exists-db{
+	color:#1178B3
+}
+
 div.formpaginate .prev, div.formpaginate .next{
 	color:#fff;
 	background:#57442b

@@ -2204,8 +2204,8 @@ class NewHomeAddShows(Home):
         search_id = ''
         try:
             search_id = re.search(r'(?m)((?:tt\d{4,})|^\d{4,}$)', search_term).group(1)
-            resp = [r for r in self.getTrakt('/search?id_type=%s&id=%s' % (('tvdb', 'imdb')['tt' in search_id],
-                                                                           search_id)) if 'show' == r['type']][0]
+            resp = [r for r in self.getTrakt('/search/%s/%s?type=show&extended=full' % (
+                ('tvdb', 'imdb')['tt' in search_id], search_id)) if 'show' == r['type']][0]
             search_term = resp['show']['title']
             indexer_id = resp['show']['ids']['tvdb']
         except:
@@ -2224,7 +2224,12 @@ class NewHomeAddShows(Home):
                     logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
                         search_id, search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
                     results.setdefault('tt' in search_id and 3 or indexer, []).extend(
-                        [{'id': indexer_id, 'seriesname': t[indexer_id]['seriesname'], 'firstaired': t[indexer_id]['firstaired']}])
+                        [{'id': indexer_id, 'seriesname': t[indexer_id]['seriesname'],
+                          'firstaired': t[indexer_id]['firstaired'], 'network': t[indexer_id]['network'],
+                          'overview': t[indexer_id]['overview'],
+                          'genres': '' if not t[indexer_id]['genre'] else
+                            t[indexer_id]['genre'].lower().strip('|').replace('|', ', '),
+                          }])
                     break
                 else:
                     logger.log('Searching for shows using search term: %s from tv datasource %s' % (
@@ -2236,29 +2241,48 @@ class NewHomeAddShows(Home):
             # Query trakt for tvdb ids
             try:
                 logger.log('Searching for show using search term: %s from tv datasource Trakt' % search_term, logger.DEBUG)
-                resp = self.getTrakt('/search?query=%s&type=show' % search_term)
+                resp = self.getTrakt('/search/show?query=%s&extended=full' % search_term)
                 tvdb_ids = []
-                for tvdb_item in results[INDEXER_TVDB]:
-                    tvdb_ids.append(int(tvdb_item['id']))
                 results_trakt = []
                 for item in resp:
-                    if 'tvdb' in item['show']['ids'] and item['show']['ids']['tvdb'] and \
-                                    item['show']['ids']['tvdb'] not in tvdb_ids:
-                        results_trakt.append({'id': item['show']['ids']['tvdb'], 'seriesname': item['show']['title'],
-                                              'firstaired': item['show']['year']})
+                    show = item['show']
+                    if 'tvdb' in show['ids'] and show['ids']['tvdb'] and show['ids']['tvdb'] not in tvdb_ids:
+                        results_trakt.append({
+                            'id': show['ids']['tvdb'], 'seriesname': show['title'],
+                            'firstaired': (show['first_aired'] and re.sub(r'T.*$', '', str(show['first_aired'])) or show['year']),
+                            'network': show['network'], 'overview': show['overview'],
+                            'genres': ', '.join(['%s' % v.lower() for v in show.get('genres', {}) or []])})
+                        tvdb_ids.append(show['ids']['tvdb'])
                 results.update({3: results_trakt})
+                if INDEXER_TVDB in results:
+                    tvdb_filtered = []
+                    for tvdb_item in results[INDEXER_TVDB]:
+                        if int(tvdb_item['id']) not in tvdb_ids:
+                            tvdb_filtered.append(tvdb_item)
+                    if tvdb_filtered:
+                        results[INDEXER_TVDB] = tvdb_filtered
+                    else:
+                        del(results[INDEXER_TVDB])
             except:
                 pass
 
         id_names = [None, sickbeard.indexerApi(INDEXER_TVDB).name, sickbeard.indexerApi(INDEXER_TVRAGE).name,
                     '%s via Trakt' % sickbeard.indexerApi(INDEXER_TVDB).name]
         map(final_results.extend,
-            ([['%s%s' % (id_names[id], helpers.findCertainShow(sickbeard.showList, int(show['id'])) and ' - exists in db' or ''),
+            ([['%s%s' % (id_names[id], helpers.findCertainShow(sickbeard.showList, int(show['id'])) and ' - <span class="exists-db">exists in db</span>' or ''),
                (id, INDEXER_TVDB)[id == 3], sickbeard.indexerApi((id, INDEXER_TVDB)[id == 3]).config['show_url'], int(show['id']),
-               show['seriesname'], show['firstaired']] for show in shows] for id, shows in results.items()))
+               show['seriesname'], self.encode_html(show['seriesname']), show['firstaired'],
+               show.get('network', '') or '', show.get('genres', '') or '',
+               re.sub(r'([,\.!][^,\.!]*?)$', '...',
+                      re.sub(r'([!\?\.])(?=\w)', r'\1 ',
+                             self.encode_html((show.get('overview', '') or '')[:250:].strip())))
+               ] for show in shows] for id, shows in results.items()))
 
         lang_id = sickbeard.indexerApi().config['langabbv_to_id'][lang]
-        return json.dumps({'results': final_results, 'langid': lang_id})
+        return json.dumps({
+            'results': sorted(final_results, reverse=True, key=lambda x: dateutil.parser.parse(
+                re.match('^(?:19|20)\d\d$', str(x[6])) and ('%s-12-31' % str(x[6])) or (x[6] and str(x[6])) or '1900')),
+            'langid': lang_id})
 
     def getTrakt(self, url, *args, **kwargs):
 

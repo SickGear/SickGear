@@ -97,6 +97,11 @@
 * Change nzbs.org anime search category and fix newznab anime backlog search
 * Change improve nzbgeek search response
 * Change use query search at 6box (id search fails)
+* Change "Add New Show" results sorted newest show to oldest from top
+* Change add show genre, network, and overview to "Add New Show" results
+* Change improve highlight of shows found in database in "Add New Show" results
+* Change use full first aired date where available in "Add New Show" results
+* Change prevent duplicate results in "Add New Show"
 
 
 ### 0.11.12 (2016-06-20 02:20:00 UTC)
