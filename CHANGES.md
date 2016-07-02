@@ -103,6 +103,9 @@
 * Change use full first aired date where available in "Add New Show" results
 * Change prevent duplicate results in "Add New Show"
 
+[develop changelog]
+* Change send nzb data to NZBGet for Anizb instead of url
+
 
 ### 0.11.12 (2016-06-20 02:20:00 UTC)
 
