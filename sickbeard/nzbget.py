@@ -90,6 +90,12 @@ def sendNZB(nzb, proper=False):
     if nzb.resultType == "nzbdata":
         data = nzb.extraInfo[0]
         nzbcontent64 = standard_b64encode(data)
+    elif 'Anizb' == nzb.provider.name and 'nzb' == nzb.resultType:
+        gen_provider = GenericProvider('')
+        data = gen_provider.get_url(nzb.url)
+        if None is data:
+            return False
+        nzbcontent64 = standard_b64encode(data)
 
     logger.log(u"Sending NZB to NZBGet: %s" % nzb.name)
     logger.log(u"NZBGet URL: " + url, logger.DEBUG)
