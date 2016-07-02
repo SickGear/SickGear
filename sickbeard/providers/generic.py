@@ -647,7 +647,7 @@ class NZBProvider(object, GenericProvider):
                     if result_date:
                         result_date = datetime.datetime(*result_date[0:6])
                 else:
-                    logger.log(u'Unable to figure out the date for entry %s, skipping it', title)
+                    logger.log(u'Unable to figure out the date for entry %s, skipping it' % title)
                     continue
 
                 if not search_date or search_date < result_date:

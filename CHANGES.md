@@ -94,6 +94,9 @@
 * Add number of items shown to Manage Failed Downloads table footer and indicate if number of shown items is limited
 * Add sorting to "Provider" column and fix sorting of "Remove" column on Manage Failed Downloads
 * Fix "Limit" drop down on Manage Failed Downloads
+* Change nzbs.org anime search category and fix newznab anime backlog search
+* Change improve nzbgeek search response
+* Change use query search at 6box (id search fails)
 
 
 ### 0.11.12 (2016-06-20 02:20:00 UTC)

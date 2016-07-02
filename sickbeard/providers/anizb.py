@@ -37,14 +37,14 @@ class AnizbProvider(generic.NZBProvider):
         for mode in search_params.keys():
             for params in search_params[mode]:
 
-                search_url = '%sapi/%s' % (self.url, params and ('?q=%s' % params) or '')
+                search_url = '%sapi/%s' % (self.url, params and (('?q=%s', '?q=%(q)s')['q' in params] % params) or '')
                 data = self.cache.getRSSFeed(search_url)
                 time.sleep(1.1)
 
                 cnt = len(results)
                 for entry in (data and data.get('entries', []) or []):
                     if entry.get('title') and entry.get('link', '').startswith('http'):
-                        results.append((entry['title'], entry['link'], None, None))
+                        results.append(entry)
 
                 self.log_result(mode=mode, count=len(results) - cnt, url=search_url)
 
