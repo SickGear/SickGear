@@ -129,7 +129,8 @@ class NewznabProvider(generic.NZBProvider):
 
         # id search
         ids = helpers.mapIndexersToShow(ep_obj.show)
-        if ids[1]:  # or ids[2]:
+        ids_fail = '6box' in self.name
+        if not ids_fail and ids[1]:  # or ids[2]:
             params = base_params.copy()
             use_id = False
             if ids[1] and self.supports_tvdbid():
@@ -144,15 +145,18 @@ class NewznabProvider(generic.NZBProvider):
         name_exceptions = list(
             set([helpers.sanitizeSceneName(a) for a in
                  scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
+
+        spacer = 'geek' in self.get_id() and ' ' or '.'
         for cur_exception in name_exceptions:
             params = base_params.copy()
+            cur_exception = cur_exception.replace('.', spacer)
             if 'q' in params:
-                params['q'] = '%s.%s' % (cur_exception, params['q'])
+                params['q'] = '%s%s%s' % (cur_exception, spacer, params['q'])
                 search_params.append(params)
 
             if ep_detail:
                 params = base_params.copy()
-                params['q'] = '%s.%s' % (cur_exception, ep_detail)
+                params['q'] = '%s%s%s' % (cur_exception, spacer, ep_detail)
                 'season' in params and params.pop('season')
                 'ep' in params and params.pop('ep')
                 search_params.append(params)
@@ -177,7 +181,7 @@ class NewznabProvider(generic.NZBProvider):
         elif ep_obj.show.is_anime:
             base_params['ep'] = '%i' % (helpers.tryInt(ep_obj.scene_absolute_number) or
                                         helpers.tryInt(ep_obj.scene_episode))
-            ep_detail = '%02d' % base_params['ep']
+            ep_detail = '%02d' % helpers.tryInt(base_params['ep'])
         else:
             base_params['season'], base_params['ep'] = (
                 (ep_obj.season, ep_obj.episode), (ep_obj.scene_season, ep_obj.scene_episode))[ep_obj.show.is_scene]
@@ -187,7 +191,8 @@ class NewznabProvider(generic.NZBProvider):
 
         # id search
         ids = helpers.mapIndexersToShow(ep_obj.show)
-        if ids[1]:  # or ids[2]:
+        ids_fail = '6box' in self.name
+        if not ids_fail and ids[1]:  # or ids[2]:
             params = base_params.copy()
             use_id = False
             if ids[1]:
@@ -204,14 +209,16 @@ class NewznabProvider(generic.NZBProvider):
             set([helpers.sanitizeSceneName(a) for a in
                  scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
 
+        spacer = 'geek' in self.get_id() and ' ' or '.'
         for cur_exception in name_exceptions:
             params = base_params.copy()
+            cur_exception = cur_exception.replace('.', spacer)
             params['q'] = cur_exception
             search_params.append(params)
 
             if ep_detail:
                 params = base_params.copy()
-                params['q'] = '%s.%s' % (cur_exception, ep_detail)
+                params['q'] = '%s%s%s' % (cur_exception, spacer, ep_detail)
                 'season' in params and params.pop('season')
                 'ep' in params and params.pop('ep')
                 search_params.append(params)
@@ -244,9 +251,7 @@ class NewznabProvider(generic.NZBProvider):
                 # category ids
                 cat = []
                 cat_sport = ['5060']
-                cat_anime = []
-                if 'nzbgeek' != self.get_id():
-                    cat_anime = (['5070'], ['6070'])['nzbs_org' == self.get_id()]
+                cat_anime = (['5070'], ['6070,7040'])['nzbs_org' == self.get_id()]
                 if 'Episode' == mode or 'Season' == mode:
                     if not ('rid' in params or 'tvdbid' in params or 'q' in params or not self.supports_tvdbid()):
                         logger.log('Error no rid, tvdbid, or search term available for search.')
