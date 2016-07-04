@@ -1,5 +1,4 @@
 # Author: Nic Wolfe <nic@wolfeden.ca>
-# URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
 #
@@ -11,21 +10,30 @@
 # SickGear is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-__all__ = ['utorrent',
-           'transmission',
-           'deluge',
-           'download_station',
-           'rtorrent'
-]
-
 import sickbeard
 
 from os import sys
+
+__all__ = ['deluge', 'download_station', 'qbittorrent', 'rtorrent', 'transmission', 'utorrent']
+
+default_host = {
+    'deluge': 'http://localhost:8112',
+    'download_station': 'http://localhost:5000',
+    'rtorrent': 'scgi://localhost:5000',
+    'qbittorrent': 'http://localhost:8080',
+    'transmission': 'http://localhost:9091',
+    'utorrent': 'http://localhost:8000'}
+
+
+def get_client_instance(name):
+
+    module = __import__('sickbeard.clients.%s' % name.lower(), fromlist=__all__)
+    return getattr(module, module.api.__class__.__name__)
 
 # Mapping error status codes to official W3C names
 http_error_code = {
@@ -65,26 +73,4 @@ http_error_code = {
     503: 'Service Unavailable',
     504: 'Gateway Timeout',
     505: 'HTTP Version Not Supported',
-    511: 'Network Authentication Required',
-}
-
-default_host = {'utorrent': 'http://localhost:8000',
-                'transmission': 'http://localhost:9091',
-                'deluge': 'http://localhost:8112',
-                'download_station': 'http://localhost:5000',
-                'rtorrent': 'scgi://localhost:5000',
-}
-
-
-def getClientModule(name):
-    name = name.lower()
-    prefix = "sickbeard.clients."
-
-    return __import__(prefix + name, fromlist=__all__)
-
-
-def getClientIstance(name):
-    module = getClientModule(name)
-    className = module.api.__class__.__name__
-
-    return getattr(module, className)
+    511: 'Network Authentication Required'}

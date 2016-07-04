@@ -36,8 +36,9 @@ from Cheetah.Template import Template
 from six import iteritems
 
 import sickbeard
-from sickbeard import config, sab, clients, history, notifiers, processTV, ui, logger, helpers, exceptions, classes, \
-    db, search_queue, image_cache, naming, scene_exceptions, search_propers, subtitles, network_timezones, sbdatetime
+from sickbeard import config, sab, nzbget, clients, history, notifiers, processTV, ui, logger, helpers, exceptions,\
+    classes,  db, search_queue, image_cache, naming, scene_exceptions, search_propers, subtitles, network_timezones,\
+    sbdatetime
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
@@ -649,7 +650,7 @@ class Home(MainHandler):
 
         return t.respond()
 
-    def testSABnzbd(self, host=None, username=None, password=None, apikey=None):
+    def test_sabnzbd(self, host=None, username=None, password=None, apikey=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_url(host)
@@ -667,14 +668,24 @@ class Home(MainHandler):
             return u'Authentication failed. %s' % auth_msg
         return u'Unable to connect to host'
 
-    def testTorrent(self, torrent_method=None, host=None, username=None, password=None):
+    def test_nzbget(self, host=None, use_https=None, username=None, password=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_url(host)
+        if None is not password and set('*') == set(password):
+            password = sickbeard.NZBGET_PASSWORD
+
+        authed, auth_msg, void = nzbget.test_nzbget(host, bool(config.checkbox_to_value(use_https)), username, password)
+        return auth_msg
+
+    def test_torrent(self, torrent_method=None, host=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_url(host)
         if None is not password and set('*') == set(password):
             password = sickbeard.TORRENT_PASSWORD
 
-        client = clients.getClientIstance(torrent_method)
+        client = clients.get_client_instance(torrent_method)
 
         connection, accesMsg = client(host, username, password).test_authentication()
 

@@ -441,8 +441,8 @@
 							</label>
 						</div>
     #end if
-    #if $hasattr($cur_torrent_provider, '_seed_ratio') and 'blackhole' != $sickbeard.TORRENT_METHOD:
-        #set $torrent_method_text = {'utorrent': 'uTorrent', 'transmission': 'Transmission', 'deluge': 'Deluge', 'download_station': 'Synology DS', 'rtorrent': 'rTorrent'}
+    #if $hasattr($cur_torrent_provider, '_seed_ratio') and $sickbeard.TORRENT_METHOD not in ('blackhole', 'qbittorrent'):
+        #set $torrent_method_text = {'deluge': 'Deluge', 'qbittorrent': 'qBittorrent', 'rtorrent': 'rTorrent', 'download_station': 'Synology DS', 'transmission': 'Transmission', 'utorrent': 'uTorrent'}
 						<div class="field-pair">
 							<label for="${cur_torrent_provider.get_id()}_ratio">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_ratio_desc">Seed until ratio (the goal)</span>

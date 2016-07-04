@@ -120,7 +120,7 @@ def snatch_episode(result, end_status=SNATCHED):
             dl_result = sab.send_nzb(result)
         elif 'nzbget' == sickbeard.NZB_METHOD:
             is_proper = True if SNATCHED_PROPER == end_status else False
-            dl_result = nzbget.sendNZB(result, is_proper)
+            dl_result = nzbget.send_nzb(result, is_proper)
         else:
             logger.log(u'Unknown NZB action specified in config: %s' % sickbeard.NZB_METHOD, logger.ERROR)
             dl_result = False
@@ -138,7 +138,7 @@ def snatch_episode(result, end_status=SNATCHED):
                     logger.log(u'Torrent content failed to download from %s' % result.url, logger.ERROR)
                     return False
             # Snatches torrent with client
-            client = clients.getClientIstance(sickbeard.TORRENT_METHOD)()
+            client = clients.get_client_instance(sickbeard.TORRENT_METHOD)()
             dl_result = client.send_torrent(result)
     else:
         logger.log(u'Unknown result type, unable to download it', logger.ERROR)
