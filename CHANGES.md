@@ -107,6 +107,7 @@
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
+* Change ensure KAT URL is available
 
 
 ### 0.11.12 (2016-06-20 02:20:00 UTC)
