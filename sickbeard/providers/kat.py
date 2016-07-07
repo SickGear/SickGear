@@ -134,6 +134,8 @@ class KATProvider(generic.TorrentProvider):
     def _search_provider(self, search_params, search_mode='eponly', epcount=0, **kwargs):
 
         results = []
+        if None is self.url:
+            return results
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'link': 'normal', 'get': '^magnet', 'verif': 'verif'}.items())
