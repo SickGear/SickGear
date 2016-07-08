@@ -104,6 +104,7 @@
 * Change prevent duplicate results in "Add New Show"
 * Add qBitTorrent to Search Settings/Torrent Search
 * Add "Test NZBGet" client to Search Settings/NZB Search/NZBGet
+* Change include x265 category when searching IPT provider
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
