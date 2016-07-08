@@ -35,7 +35,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
-        self.categories = {'shows': [4, 5, 22, 23, 24, 25, 26, 55, 65, 66, 73, 78, 79], 'anime': [60]}
+        self.categories = {'shows': [4, 5, 22, 23, 24, 25, 26, 55, 65, 66, 78, 79, 99], 'anime': [60]}
 
         self.proper_search_terms = None
 
