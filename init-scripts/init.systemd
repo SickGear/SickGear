@@ -1,4 +1,4 @@
-# Sickbeard systemd service unit file
+# SickGear systemd service unit file
 #
 # Configuration Notes
 #
@@ -24,21 +24,21 @@
 ### Example Using SickGear as daemon with pid file
 # Type=forking
 # PIDFile=/var/run/sickgear/sickgear.pid
-# ExecStart=/usr/bin/python /opt/sickgear/SickBeard.py -q --daemon --nolaunch --pidfile=/var/run/sickgear/sickgear.pid --datadir=/opt/sickgear
+# ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --pidfile=/var/run/sickgear/sickgear.pid --datadir=/opt/sickgear/data
 
 ## Example Using SickGear as daemon without pid file
 # Type=forking
 # GuessMainPID=no
-# ExecStart=/usr/bin/python /opt/sickgear/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear
+# ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear/data
 
 ### Example Using simple
 # Type=simple
-# ExecStart=/usr/bin/python /opt/sickgear/SickBeard.py -q --nolaunch
+# ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --nolaunch
 
 ### Example Using simple with EnvironmentFile where SB_DATA=/home/sickgear/.sickgear in /etc/sickgear.conf
 # Type=simple
 # EnvironmentFile=/etc/sickgear.conf
-# ExecStart=/usr/bin/python /opt/sickgear/SickBeard.py -q --nolaunch --datadir=${SB_DATA}
+# ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --nolaunch --datadir=${SB_DATA}
 
 ### Configuration
 
@@ -51,7 +51,7 @@ Group=sickgear
 
 Type=forking
 GuessMainPID=no
-ExecStart=/usr/bin/python /opt/sickgear/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear
+ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear/data
 
 [Install]
 WantedBy=multi-user.target
