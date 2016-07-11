@@ -1,10 +1,10 @@
-from sickbeard import common
-
 import unittest
 
 import sys
 import os.path
 sys.path.insert(1, os.path.abspath('..'))
+
+from sickbeard import common
 
 
 class QualityTests(unittest.TestCase):
