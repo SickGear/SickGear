@@ -17,35 +17,36 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import with_statement
-
-import webbrowser
-import datetime
-import socket
-import os
-import re
-
 from threading import Lock
 
+import datetime
+import os
+import re
+import signal
+import socket
+import webbrowser
+
 # apparently py2exe won't build these unless they're imported somewhere
-import sys
-import os.path
-import uuid
 import ast
 import base64
+import os.path
+import sys
+import uuid
+
 sys.path.insert(1, os.path.abspath('../lib'))
-from sickbeard import helpers, logger, db, naming, metadata, providers, scene_exceptions, scene_numbering, \
+from sickbeard import helpers, encodingKludge as ek
+from sickbeard import db, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
     scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
     show_queue, show_updater, subtitles, traktChecker, version_checker
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
+from sickbeard.exceptions import ex
+from sickbeard.providers.generic import GenericProvider
 from indexers.indexer_config import INDEXER_TVDB
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
     indexer_episodenotfound, indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
-from sickbeard.exceptions import ex
-from sickbeard.providers.generic import GenericProvider
-from sickbeard import encodingKludge as ek
 from lib.adba.aniDBerrors import (AniDBError, AniDBBannedError)
 from lib.configobj import ConfigObj
 from lib.libtrakt import TraktAPI
@@ -1376,9 +1377,14 @@ def halt():
 
 
 def sig_handler(signum=None, frame=None):
-    if isinstance(signum, type(None)):
-        logger.log(u'Signal %i caught, saving and exiting...' % int(signum))
+    is_ctrlbreak = 'win32' == sys.platform and signal.SIGBREAK == signum
+    msg = u'Signal "%s" found' % (signal.SIGINT == signum and 'CTRL-C' or is_ctrlbreak and 'CTRL+BREAK' or
+                                  signal.SIGTERM == signum and 'Termination' or signum)
+    if None is signum or signum in (signal.SIGINT, signal.SIGTERM) or is_ctrlbreak:
+        logger.log('%s, saving and exiting...' % msg)
         events.put(events.SystemEvent.SHUTDOWN)
+    else:
+        logger.log('%s, not exiting' % msg)
 
 
 def save_all():

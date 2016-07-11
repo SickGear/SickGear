@@ -21,16 +21,17 @@
 from __future__ import print_function
 from __future__ import with_statement
 
-import time
+import datetime
+import errno
+import getopt
+import locale
+import os
 import signal
 import sys
 import shutil
 import subprocess
-import os
-import locale
-import datetime
+import time
 import threading
-import getopt
 
 if sys.version_info < (2, 6):
     print('Sorry, requires Python 2.6 or 2.7.')
@@ -61,12 +62,15 @@ from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
 from sickbeard.databases.mainDB import MIN_DB_VERSION, MAX_DB_VERSION
 from sickbeard.event_queue import Events
+from sickbeard.exceptions import ex
 from lib.configobj import ConfigObj
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 
 signal.signal(signal.SIGINT, sickbeard.sig_handler)
 signal.signal(signal.SIGTERM, sickbeard.sig_handler)
+if 'win32' == sys.platform:
+    signal.signal(signal.SIGBREAK, sickbeard.sig_handler)
 
 
 class SickGear(object):
@@ -526,6 +530,12 @@ class SickGear(object):
 if __name__ == '__main__':
     if sys.hexversion >= 0x020600F0:
         freeze_support()
-
-    # start SickGear
-    SickGear().start()
+    try:
+        try:
+            # start SickGear
+            SickGear().start()
+        except IOError as e:
+            if e.errno != errno.EINTR:
+                raise
+    except Exception as e:
+        logger.log('SickGear.Start() exception caught %s' % ex(e))

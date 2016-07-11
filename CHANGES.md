@@ -106,10 +106,12 @@
 * Add "Test NZBGet" client to Search Settings/NZB Search/NZBGet
 * Change include x265 category when searching IPT provider
 * Change init.systemd to use python2 binary and recommended installation paths
+* Change improve handling of SIGINT CTRL+C, SIGINT CTRL+BREAK(Windows) and SIGTERM
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
 * Change ensure KAT URL is available
+* Change revert test_common.py include file placement so Travis builds don't fail
 
 
 ### 0.11.12 (2016-06-20 02:20:00 UTC)
