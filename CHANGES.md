@@ -114,6 +114,11 @@
 * Change revert test_common.py include file placement so Travis builds don't fail
 
 
+### 0.11.13 (2016-07-21 20:30:00 UTC)
+
+* Remove KAT torrent provider
+
+
 ### 0.11.12 (2016-06-20 02:20:00 UTC)
 
 * Change improve importing show list sickbeard.db files
