@@ -300,6 +300,7 @@
 * Fix provider MTV download URL
 * Change give provider OMGWTFNZBS more time to respond
 * Change file browser to permit manually entering a path
+* Fix updating Trakt collection from Unix
 
 
 ### 0.10.0 (2015-08-06 11:05:00 UTC)

@@ -19,6 +19,7 @@
 import sickbeard
 from sickbeard import logger
 from lib.libtrakt import TraktAPI, exceptions
+import os
 
 
 class TraktNotifier:
@@ -75,7 +76,7 @@ class TraktNotifier:
                 if tid not in sickbeard.TRAKT_ACCOUNTS.keys():
                     continue
                 for loc in locations:
-                    if not ep_obj.location.startswith('%s\\' % loc.rstrip('\\')):
+                    if not ep_obj.location.startswith('%s%s' % (loc.rstrip(os.path.sep), os.path.sep)):
                         continue
 
                     warn, msg = False, ''
