@@ -107,6 +107,9 @@
 * Change include x265 category when searching IPT provider
 * Change init.systemd to use python2 binary and recommended installation paths
 * Change improve handling of SIGINT CTRL+C, SIGINT CTRL+BREAK(Windows) and SIGTERM
+* Change add three IPTorrents fallback urls
+* Change remove one dead and add three fallback magnet torcaches for blackhole use
+* Change increase delay between requests to nnab servers to over 2 seconds
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

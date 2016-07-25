@@ -285,7 +285,7 @@ class NewznabProvider(generic.NZBProvider):
                     cnt = len(results)
 
                     data = self.cache.getRSSFeed('%sapi' % self.url, params=request_params)
-                    i and time.sleep(1.1)
+                    i and time.sleep(2.1)
 
                     if not data or not self.check_auth_from_data(data):
                         break
