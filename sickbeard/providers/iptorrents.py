@@ -29,7 +29,8 @@ class IPTorrentsProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'IPTorrents')
 
-        self.url_home = ['https://iptorrents.%s/' % u for u in 'eu', 'com', 'ru']
+        self.url_home = (['https://iptorrents.%s/' % u for u in 'eu', 'com', 'me', 'ru'] +
+                         ['https://mysite.access.ly/', 'https://pcgame.servegame.com/'])
 
         self.url_vars = {'login': 'getrss.php', 'search': 't?%s;q=%s;qf=ti%s%s#torrents', 'get': '%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',

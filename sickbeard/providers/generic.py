@@ -173,9 +173,9 @@ class GenericProvider:
                     logger.log('Unable to extract torrent hash from link: ' + ex(result.url), logger.ERROR)
                     return False
 
-                urls = ['http%s://%s/%s.torrent' % (u + (torrent_hash,))
-                        for u in (('s', 'torcache.net/torrent'), ('', 'thetorrent.org/torrent'),
-                                  ('s', 'itorrents.org/torrent'))]
+                urls = ['http%s://%s/torrent/%s.torrent' % (u + (torrent_hash,))
+                        for u in (('s', 'itorrents.org'), ('s', 'torra.pro'), ('s', 'torra.click'),
+                                  ('s', 'torrentproject.se'), ('', 'thetorrent.org'))]
             except:
                 link_type = 'torrent'
                 urls = [result.url]
