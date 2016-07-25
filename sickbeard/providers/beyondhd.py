@@ -29,7 +29,7 @@ class BeyondHDProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'BeyondHD')
 
-        self.url_base = 'https://beyondhd.me/'
+        self.url_base = 'https://beyond-hd.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'browse': self.url_base + 'api_tv.php?passkey=%s&cats=%s',
                      'search': '&search=%s'}
