@@ -114,6 +114,11 @@
 * Change revert test_common.py include file placement so Travis builds don't fail
 
 
+### 0.11.14 (2016-07-25 03:10:00 UTC)
+
+* Fix BeyondHD torrent provider
+
+
 ### 0.11.13 (2016-07-21 20:30:00 UTC)
 
 * Remove KAT torrent provider
