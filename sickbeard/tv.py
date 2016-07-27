@@ -1795,11 +1795,14 @@ class TVEpisode(object):
             # if we don't have the file and the airdate is in the past
             else:
                 if self.status == UNAIRED:
-                    self.status = WANTED
+                    if 0 < self.season:
+                        self.status = WANTED
+                    else:
+                        self.status = SKIPPED
 
                 # if we somehow are still UNKNOWN then just skip it
                 elif self.status == UNKNOWN or (old_airdate_future and self.status == SKIPPED):
-                    if update and not self.show.paused:
+                    if update and not self.show.paused and 0 < self.season:
                         self.status = WANTED
                     else:
                         self.status = SKIPPED
