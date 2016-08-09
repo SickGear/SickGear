@@ -27,7 +27,7 @@ class NyaaProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'NyaaTorrents', anime_only=True)
 
-        self.url = 'http://www.nyaa.se/'
+        self.url_base = self.url = 'http://www.nyaa.se/'
 
         self.cache = NyaaCache(self)
 
