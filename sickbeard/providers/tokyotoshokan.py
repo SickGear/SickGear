@@ -29,7 +29,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TokyoToshokan', anime_only=True)
 
-        self.url = 'http://tokyotosho.info/'
+        self.url_base = self.url = 'http://tokyotosho.info/'
 
         self.cache = TokyoToshokanCache(self)
 

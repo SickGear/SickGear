@@ -65,7 +65,7 @@
 * Change include OSError system messages in file system failure logs during post process
 * Fix find associated meta files to prevent orphan episode images
 * Add HD4Free torrent provider
-* Change validate and improve specific Torrent provider connections, IPT, KAT, SCC, TPB, TB, TD, TT
+* Change validate and improve specific Torrent provider connections, IPT, SCC, TPB, TB, TD, TT
 * Change refactor cache for torrent providers to reduce code
 * Change improve search category selection BMTV, FSH, FF, TB
 * Change identify more SD release qualities
@@ -114,8 +114,8 @@
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
-* Change ensure KAT URL is available
 * Change revert test_common.py include file placement so Travis builds don't fail
+* Fix Nyaa and TT torrent providers
 
 
 ### 0.11.14 (2016-07-25 03:10:00 UTC)
