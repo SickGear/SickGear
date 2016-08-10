@@ -111,6 +111,7 @@
 * Change remove one dead and add three fallback magnet torcaches for blackhole use
 * Change increase delay between requests to nnab servers to over 2 seconds
 * Change set Specials to status "Skipped" not "Wanted" during show updates
+* Change improve debug log message for CloudFlare response that indicate website is offline
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

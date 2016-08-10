@@ -1184,14 +1184,15 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                 resp = session.get(url, timeout=timeout, **kwargs)
 
         if not resp.ok:
+            http_err_text = 'CloudFlare Ray ID' in resp.content and 'CloudFlare reports, "Website is offline"; ' or ''
             if resp.status_code in clients.http_error_code:
-                http_err_text = clients.http_error_code[resp.status_code]
+                http_err_text += clients.http_error_code[resp.status_code]
             elif resp.status_code in range(520, 527):
-                http_err_text = 'CloudFlare to origin server connection failure'
+                http_err_text += 'Origin server connection failure'
             else:
                 http_err_text = 'Custom HTTP error code'
-            logger.log(u'Requested url %s returned status code is %s: %s'
-                       % (url, resp.status_code, http_err_text), logger.DEBUG)
+            logger.log(u'Response not ok. %s: %s from requested url %s'
+                       % (resp.status_code, http_err_text, url), logger.DEBUG)
             return
 
     except requests.exceptions.HTTPError as e:
