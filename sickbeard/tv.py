@@ -700,7 +700,7 @@ class TVShow(object):
                     cur_ep.status = Quality.compositeStatus(DOWNLOADED, new_quality)
 
             # check for status/quality changes as long as it's a new file
-            elif not same_file and sickbeard.helpers.isMediaFile(file)\
+            elif not same_file and sickbeard.helpers.has_media_ext(file)\
                     and cur_ep.status not in Quality.DOWNLOADED + [ARCHIVED, IGNORED]:
 
                 old_status, old_quality = Quality.splitCompositeStatus(cur_ep.status)
@@ -1813,7 +1813,7 @@ class TVEpisode(object):
                         statusStrings[self.status], logger.DEBUG)
 
         # if we have a media file then it's downloaded
-        elif sickbeard.helpers.isMediaFile(self.location):
+        elif sickbeard.helpers.has_media_ext(self.location):
             # leave propers alone, you have to either post-process them or manually change them back
             if self.status not in Quality.SNATCHED_PROPER + Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED]:
                 status_quality = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
@@ -1838,7 +1838,7 @@ class TVEpisode(object):
 
         if self.location != "":
 
-            if UNKNOWN == self.status and sickbeard.helpers.isMediaFile(self.location):
+            if UNKNOWN == self.status and sickbeard.helpers.has_media_ext(self.location):
                 status_quality = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
                 logger.log('(3) Status changes from %s to %s' % (self.status, status_quality), logger.DEBUG)
                 self.status = status_quality
