@@ -2755,7 +2755,7 @@ class NewHomeAddShows(Home):
         url_data = '/_ajax?sort=date_added,desc&mode=detail&page=1&title_type=tvSeries%2CtvEpisode&ref_=wl_vm_dtl'
         url_ui = '?mode=detail&page=1&sort=date_added,desc&title_type=tvSeries%2CtvEpisode&ref_=wl_ref_typ'
 
-        html = helpers.getURL(url + url_data)
+        html = helpers.getURL(url + url_data, headers={'Accept-Language': 'en-US'})
         if html:
             show_list_found = self.parse_imdb_html(html, filtered, kwargs)
             kwargs.update(dict(start_year=start_year))
@@ -2789,7 +2789,7 @@ class NewHomeAddShows(Home):
         mode = 'popular-%s,%s' % (start_year, end_year)
 
         url = 'http://www.imdb.com/search/title?at=0&sort=moviemeter&title_type=tv_series&year=%s,%s' % (start_year, end_year)
-        html = helpers.getURL(url)
+        html = helpers.getURL(url, headers={'Accept-Language': 'en-US'})
         if html:
             self.parse_imdb_html(html, filtered, kwargs)
             kwargs.update(dict(mode=mode, periods=periods))
