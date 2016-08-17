@@ -59,6 +59,7 @@
 * Add 5 decades of 'IMDb Popular' selections to 'View' drop down on 'Add from... Browse Shows'
 * Add 'Other Services' to 'View' drop down on 'Add from... Browse Shows'
 * Add enable, disable and delete public IMDb watchlists to Config/General/Interface with a default 'SickGear' list
+* Change ensure English data from IMDb
 * Change prevent duplicate show ids from presenting items on 'Add from... Browse Shows'
 * Change add 'nocache' kwarg to helpers.getURL to facilitate non-cached requests
 * Change instantly use saved value from Search Settings/Episode Search/"Check propers every" instead of after a restart
