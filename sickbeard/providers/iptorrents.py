@@ -78,7 +78,8 @@ class IPTorrentsProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': 'torrents'})
+                        torrent_table = soup.find('table', attrs={'id': 'torrents'}) or \
+                            soup.find('table', attrs={'class': 'torrents'})
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
