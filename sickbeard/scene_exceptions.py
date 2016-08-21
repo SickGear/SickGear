@@ -352,3 +352,9 @@ def get_xem_ids():
         xem_ids = _xem_get_ids(indexer['name'], indexer['xem_origin'])
         if len(xem_ids):
             xem_ids_list[indexer['id']] = xem_ids
+
+
+def has_abs_episodes(ep_obj=None, name=None):
+    return any((name or ep_obj.show.name or '').lower().startswith(x.lower()) for x in [
+        'The Eighties', 'The Making of the Mob', 'The Night Of', 'Roots 2016', 'Trepalium'
+    ])

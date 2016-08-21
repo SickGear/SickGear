@@ -768,6 +768,8 @@ class TorrentProvider(object, GenericProvider):
             ep_dict = self._ep_dict(ep_obj)
             ep_detail = sickbeard.config.naming_ep_type[2] % ep_dict \
                 if 'ep_detail' not in kwargs.keys() else kwargs['ep_detail'](ep_dict)
+            if sickbeard.scene_exceptions.has_abs_episodes(ep_obj):
+                ep_detail = [ep_detail] + ['%d' % ep_dict['episodenumber']]
         ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)]
         detail = ({}, {'Episode_only': ep_detail})[detail_only and not show.is_sports and not show.is_anime]
         return [dict({'Episode': self._build_search_strings(ep_detail, scene, prefix)}.items() + detail.items())]
