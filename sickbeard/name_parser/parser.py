@@ -208,6 +208,11 @@ class NameParser(object):
                 else:
                     result.version = -1
 
+                if None is result.season_number and result.episode_numbers and not result.air_date and \
+                        cur_regex_name in ['no_season', 'no_season_general', 'no_season_multi_ep'] and \
+                        re.search(r'(?i)\bpart.?\d{1,2}\b', result.original_name):
+                    result.season_number = 1
+
                 matches.append(result)
 
             if len(matches):

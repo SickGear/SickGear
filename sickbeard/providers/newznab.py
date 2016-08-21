@@ -1,4 +1,4 @@
-# Author: Nic Wolfe <nic@wolfeden.ca>
+﻿# Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
@@ -210,6 +210,8 @@ class NewznabProvider(generic.NZBProvider):
                  scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
 
         spacer = 'geek' in self.get_id() and ' ' or '.'
+        if sickbeard.scene_exceptions.has_abs_episodes(ep_obj):
+            search_params.append({'q': '%s%s%s' % (ep_obj.show.name, spacer, base_params['ep'])})
         for cur_exception in name_exceptions:
             params = base_params.copy()
             cur_exception = cur_exception.replace('.', spacer)

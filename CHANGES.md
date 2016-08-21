@@ -113,6 +113,7 @@
 * Change increase delay between requests to nnab servers to over 2 seconds
 * Change set Specials to status "Skipped" not "Wanted" during show updates
 * Change improve debug log message for CloudFlare response that indicate website is offline
+* Add handling for 'part' numbered new releases and also for specific existing 'part' numbered releases
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
