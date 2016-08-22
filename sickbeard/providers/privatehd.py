@@ -35,7 +35,7 @@ class PrivateHDProvider(generic.TorrentProvider):
                      'login_action': self.url_base + 'auth/login',
                      'search': self.url_base + 'torrents?%s' % '&'.join(
                          ['in=1', 'tags=', 'type=2', 'language=0', 'subtitle=0', 'rip_type=0',
-                          'video_quality=0', 'uploader=', 'search=%s', 'tv_type=%s', 'discount=%s'])}
+                          'video_quality=0', 'uploader=', 'search=%s', 'tv_type[]=%s', 'discount[]=%s'])}
 
         self.categories = {'Season': [2], 'Episode': [1], 'Cache': [0]}
 
@@ -46,8 +46,8 @@ class PrivateHDProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(PrivateHDProvider, self)._authorised(
-            logged_in=lambda x=None: self.has_all_cookies(['privatehdlove']),
-            post_params={'username_email': self.username})
+            logged_in=lambda x=None: self.has_all_cookies(['love']),
+            post_params={'email_username': self.username})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -89,11 +89,11 @@ class PrivateHDProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-3, -2, -5)]]
+                                    (tr.find_all('td')[x].get_text().strip()) for x in (-3, -2, -4)]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                title = rc['info'].sub('', tr.find('a', attrs={'data-title': rc['info']})['data-title'])
+                                title = rc['info'].sub('', tr.find('a', attrs={'title': rc['info']})['title'])
 
                                 download_url = tr.find('a', href=rc['get'])['href']
 

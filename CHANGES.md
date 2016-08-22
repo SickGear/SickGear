@@ -124,6 +124,7 @@
 * Change send nzb data to NZBGet for Anizb instead of url
 * Change revert test_common.py include file placement so Travis builds don't fail
 * Fix Nyaa and TT torrent providers
+* Change PrivateHD torrent provider
 
 
 ### 0.11.14 (2016-07-25 03:10:00 UTC)
