@@ -824,10 +824,11 @@ class PostProcessor(object):
         Post-process a given file
         """
 
-        self._log(u'Processing %s%s' % (self.file_path, (u'<br />.. from nzb %s' % self.nzb_name, u'')[None is self.nzb_name]))
+        self._log(u'Processing... %s%s' % (ek.ek(os.path.relpath, self.file_path, self.folder_path),
+                                           (u'<br />.. from nzb %s' % self.nzb_name, u'')[None is self.nzb_name]))
 
         if ek.ek(os.path.isdir, self.file_path):
-            self._log(u'File %s<br />.. seems to be a directory' % self.file_path)
+            self._log(u'Expecting file %s<br />.. is actually a directory, skipping' % self.file_path)
             return False
 
         for ignore_file in self.IGNORED_FILESTRINGS:
@@ -844,7 +845,7 @@ class PostProcessor(object):
 
         # if we don't have it then give up
         if not show:
-            self._log(u'Please add the show to your SickGear then try to post process an episode', logger.WARNING)
+            self._log(u'Must add show to SickGear before trying to post process an episode', logger.WARNING)
             raise exceptions.PostProcessingFailed()
         elif None is season or not episodes:
             self._log(u'Quitting this post process, could not determine what episode this is', logger.DEBUG)
@@ -876,7 +877,7 @@ class PostProcessor(object):
                     helpers.delete_empty_folders(ek.ek(os.path.dirname, cur_ep.location),
                                                  keep_dir=ep_obj.show.location)
             except (OSError, IOError):
-                raise exceptions.PostProcessingFailed(u'Unable to delete the existing files')
+                raise exceptions.PostProcessingFailed(u'Unable to delete existing files')
 
             # set the status of the episodes
             # for curEp in [ep_obj] + ep_obj.relatedEps:
@@ -938,7 +939,7 @@ class PostProcessor(object):
         if None is not release_name:
             failed_history.logSuccess(release_name)
         else:
-            self._log(u'No release found in snatch history', logger.WARNING)
+            self._log(u'No snatched release found in history', logger.WARNING)
 
         # find the destination folder
         try:

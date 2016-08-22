@@ -114,6 +114,11 @@
 * Change set Specials to status "Skipped" not "Wanted" during show updates
 * Change improve debug log message for CloudFlare response that indicate website is offline
 * Add handling for 'part' numbered new releases and also for specific existing 'part' numbered releases
+* Add detection of password protected rars with config/Post Processing/'Unpack downloads' enabled
+* Change post process to cleanup filenames with config/Post Processing/'Unpack downloads' enabled
+* Change post process to join incrementally named (i.e. file.001 to file.nnn) split files
+* Change replace unrar2 lib with rarfile 3.0 and UnRAR.exe 5.40 beta 4 freeware
+* Change post process "Copy" to delete redundant files after use
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

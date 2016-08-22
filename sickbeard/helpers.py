@@ -130,33 +130,19 @@ def isSyncFile(filename):
         return False
 
 
-def isMediaFile(filename):
+def has_media_ext(filename):
     # ignore samples
-    if re.search('(^|[\W_])(sample\d*)[\W_]', filename, re.I):
+    if re.search('(^|[\W_])(sample\d*)[\W_]', filename, re.I) \
+            or filename.startswith('._'):  # and MAC OS's 'resource fork' files
         return False
 
-    # ignore MAC OS's retarded "resource fork" files
-    if filename.startswith('._'):
-        return False
-
-    sepFile = filename.rpartition(".")
-
-    if re.search('extras?$', sepFile[0], re.I):
-        return False
-
-    if sepFile[2].lower() in mediaExtensions:
-        return True
-    else:
-        return False
+    sep_file = filename.rpartition('.')
+    return (None is re.search('extras?$', sep_file[0], re.I)) and (sep_file[2].lower() in mediaExtensions)
 
 
-def isRarFile(filename):
-    archive_regex = '(?P<file>^(?P<base>(?:(?!\.part\d+\.rar$).)*)\.(?:(?:part0*1\.)?rar)$)'
+def is_first_rar_volume(filename):
 
-    if re.search(archive_regex, filename):
-        return True
-
-    return False
+    return None is not re.search('(?P<file>^(?P<base>(?:(?!\.part\d+\.rar$).)*)\.(?:(?:part0*1\.)?rar)$)', filename)
 
 
 def sanitizeFileName(name):
@@ -264,7 +250,7 @@ def listMediaFiles(path):
         if ek.ek(os.path.isdir, fullCurFile) and not curFile.startswith('.') and not curFile == 'Extras':
             files += listMediaFiles(fullCurFile)
 
-        elif isMediaFile(curFile):
+        elif has_media_ext(curFile):
             files.append(fullCurFile)
 
     return files

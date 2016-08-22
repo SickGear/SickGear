@@ -856,7 +856,7 @@ class TorrentProvider(object, GenericProvider):
             file_name = '%s.py' % os.path.join(sickbeard.PROG_DIR, *self.__module__.split('.'))
             if ek.ek(os.path.isfile, file_name):
                 with open(file_name, 'rb') as file_hd:
-                    is_valid = 1661931498 == s + zlib.crc32(file_hd.read())
+                    is_valid = s + zlib.crc32(file_hd.read()) in (1661931498, 472149389)
         return is_valid
 
     def _authorised(self, logged_in=None, post_params=None, failed_msg=None, url=None, timeout=30):

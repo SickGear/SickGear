@@ -26,6 +26,7 @@ import itertools
 import os
 import random
 import re
+import sys
 import time
 import traceback
 import urllib
@@ -59,7 +60,8 @@ from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from lib import adba
 from lib import subliminal
 from lib.dateutil import tz
-from lib.unrar2 import RarFile
+import lib.rarfile.rarfile as rarfile
+
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
 from trakt_helpers import build_config, trakt_collection_remove_account
@@ -4629,19 +4631,20 @@ class ConfigPostProcessing(Config):
     def isRarSupported(self, *args, **kwargs):
         """
         Test Packing Support:
-            - Simulating in memory rar extraction on test.rar file
         """
 
         try:
-            rar_path = os.path.join(sickbeard.PROG_DIR, 'lib', 'unrar2', 'test.rar')
-            testing = RarFile(rar_path).read_files('*test.txt')
-            if testing[0][1] == 'This is only a test.':
+            if 'win32' == sys.platform:
+                rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
+            rar_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'test.rar')
+            if 'This is only a test.' == rarfile.RarFile(rar_path).read(r'test\test.txt'):
                 return 'supported'
-            logger.log(u'Rar Not Supported: Can not read the content of test file', logger.ERROR)
-            return 'not supported'
+            msg = 'Could not read test file content'
         except Exception as e:
-            logger.log(u'Rar Not Supported: ' + ex(e), logger.ERROR)
-            return 'not supported'
+            msg = ex(e)
+
+        logger.log(u'Rar Not Supported: %s' % msg, logger.ERROR)
+        return 'not supported'
 
 
 class ConfigProviders(Config):
