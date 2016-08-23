@@ -33,8 +33,9 @@ import subprocess
 import time
 import threading
 
-if sys.version_info < (2, 6):
-    print('Sorry, requires Python 2.6 or 2.7.')
+if not (2, 7, 9) <= sys.version_info < (3, 0):
+    print('Python %s.%s.%s detected.' % sys.version_info[:3])
+    print('Sorry, SickGear requires Python 2.7.9 or higher. Python 3 is not supported.')
     sys.exit(1)
 
 try:

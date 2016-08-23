@@ -1,5 +1,6 @@
 ﻿### 0.12.0 (2016-xx-xx xx:xx:xx UTC)
 
+* Add strict Python version check (equal or higher than 2.7.9 and less than 3.0), ** exit ** if incorrect version
 * Update unidecode library 0.04.11 to 0.04.18 (fd57cbf)
 * Update xmltodict library 0.9.2 (579a005) to 0.9.2 (eac0031)
 * Update Tornado Web Server 4.3.dev1 (1b6157d) to 4.4.dev1 (c2b4d05)
@@ -117,7 +118,7 @@
 * Add detection of password protected rars with config/Post Processing/'Unpack downloads' enabled
 * Change post process to cleanup filenames with config/Post Processing/'Unpack downloads' enabled
 * Change post process to join incrementally named (i.e. file.001 to file.nnn) split files
-* Change replace unrar2 lib with rarfile 3.0 and UnRAR.exe 5.40 beta 4 freeware
+* Change replace unrar2 lib with rarfile 3.0 and UnRAR.exe 5.40 freeware
 * Change post process "Copy" to delete redundant files after use
 
 [develop changelog]
@@ -125,6 +126,7 @@
 * Change revert test_common.py include file placement so Travis builds don't fail
 * Fix Nyaa and TT torrent providers
 * Change PrivateHD torrent provider
+* Fix Add from Trakt
 
 
 ### 0.11.14 (2016-07-25 03:10:00 UTC)
