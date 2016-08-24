@@ -113,10 +113,10 @@ class sbdatetime(datetime.datetime):
                     'july', 'august', 'september', 'october', 'november', 'december'])
 
     @static_or_instance
-    def convert_to_setting(self, dt=None):
+    def convert_to_setting(self, dt=None, force_local=False):
         obj = (dt, self)[self is not None]
         try:
-            if 'local' == sickbeard.TIMEZONE_DISPLAY:
+            if force_local or 'local' == sickbeard.TIMEZONE_DISPLAY:
                 return obj.astimezone(sb_timezone)
         except (StandardError, Exception):
             pass
