@@ -19,11 +19,13 @@
 from __future__ import with_statement
 
 from functools import partial
+import datetime
 import os
 import re
 import shutil
 import stat
 import sys
+import time
 
 import sickbeard
 from sickbeard import postProcessor
@@ -38,6 +40,11 @@ from sickbeard.history import reset_status
 from sickbeard import failedProcessor
 
 import lib.rarfile.rarfile as rarfile
+
+try:
+    import json
+except ImportError:
+    from lib import simplejson as json
 
 try:
     from lib.send2trash import send2trash
@@ -190,12 +197,12 @@ class ProcessTVShow(object):
 
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
 
-        sync_files = filter(helpers.isSyncFile, files)
-
-        # Don't post process if files are still being synced and option is activated
-        if sync_files and sickbeard.POSTPONE_IF_SYNC_FILES:
+        if sickbeard.POSTPONE_IF_SYNC_FILES and any(filter(helpers.isSyncFile, files)):
             self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
             return self.result
+
+        if not process_method:
+            process_method = sickbeard.PROCESS_METHOD
 
         self._log_helper(u'Processing folder... %s' % path)
 
@@ -204,7 +211,8 @@ class ProcessTVShow(object):
         if joined:
             work_files += [joined]
 
-        rar_files = filter(helpers.is_first_rar_volume, files)
+        rar_files, rarfile_history = self.unused_archives(
+            path, filter(helpers.is_first_rar_volume, files), pp_type, process_method)
         rar_content = self._unrar(path, rar_files, force)
         if self.fail_detected:
             self._process_failed(dir_name, nzb_name)
@@ -227,9 +235,6 @@ class ProcessTVShow(object):
         nzb_name_original = nzb_name
         if 2 <= len(video_files):
             nzb_name = None
-
-        if not process_method:
-            process_method = sickbeard.PROCESS_METHOD
 
         # self._set_process_success()
 
@@ -266,14 +271,12 @@ class ProcessTVShow(object):
 
             for walk_path, walk_dir, files in ek.ek(os.walk, ek.ek(os.path.join, path, directory), topdown=False):
 
-                sync_files = filter(helpers.isSyncFile, files)
-
-                # Don't post process if files are still being synced and option is activated
-                if sync_files and sickbeard.POSTPONE_IF_SYNC_FILES:
+                if sickbeard.POSTPONE_IF_SYNC_FILES and any(filter(helpers.isSyncFile, files)):
                     self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
                     return self.result
 
-                rar_files = filter(helpers.is_first_rar_volume, files)
+                rar_files, rarfile_history = self.unused_archives(
+                    walk_path, filter(helpers.is_first_rar_volume, files), pp_type, process_method, rarfile_history)
                 rar_content = self._unrar(walk_path, rar_files, force)
                 work_files += [ek.ek(os.path.join, walk_path, item) for item in rar_content]
                 if self.fail_detected:
@@ -345,6 +348,43 @@ class ProcessTVShow(object):
             _bottom_line(u'Failed! Did not process any files.', logger.WARNING)
 
         return self.result
+
+    @staticmethod
+    def unused_archives(path, archives, pp_type, process_method, archive_history=None):
+
+        archive_history = (archive_history, {})[not archive_history]
+        if ('auto' == pp_type and sickbeard.PROCESS_AUTOMATICALLY
+                and 'copy' == process_method and sickbeard.UNPACK):
+
+            archive_history_file = ek.ek(os.path.join, sickbeard.DATA_DIR, 'archive_history.txt')
+
+            if not archive_history:
+                try:
+                    with open(archive_history_file, 'r') as fh:
+                        archive_history = json.loads(fh.read(10 * 1024 * 1024))
+                except (IOError, ValueError, Exception):
+                    pass
+
+            init_history_cnt = len(archive_history)
+
+            for archive in archive_history.keys():
+                if not ek.ek(os.path.isfile, archive):
+                    del archive_history[archive]
+
+            unused_files = list(set([ek.ek(os.path.join, path, x) for x in archives]) - set(archive_history.keys()))
+            archives = [ek.ek(os.path.basename, x) for x in unused_files]
+            if unused_files:
+                for f in unused_files:
+                    archive_history.setdefault(f, time.mktime(datetime.datetime.utcnow().timetuple()))
+
+            if init_history_cnt != len(archive_history):
+                try:
+                    with open(archive_history_file, 'w') as fh:
+                        fh.write(json.dumps(archive_history))
+                except (IOError, Exception):
+                    pass
+
+        return archives, archive_history
 
     def _validate_dir(self, path, dir_name, nzb_name_original, failed):
 
