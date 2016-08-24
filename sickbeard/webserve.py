@@ -4330,7 +4330,7 @@ class ConfigGeneral(Config):
     def fetch_branches():
         try:
             branches = sickbeard.versionCheckScheduler.action.list_remote_branches()
-            return json.dumps({'result': 'success', 'branches': branches})
+            return json.dumps({'result': 'success', 'branches': branches, 'current': sickbeard.BRANCH or 'master'})
         except Exception as e:
             logger.log(u'exception msg: ' + str(e), logger.DEBUG)
             return json.dumps({'result': 'fail'})
