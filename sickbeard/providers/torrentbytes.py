@@ -32,8 +32,8 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.torrentbytes.net/']
 
-        self.url_vars = {'login': 'takelogin.php', 'search': 'browse.php?search=%s&%s', 'get': '%s'}
-        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
+        self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&%s', 'get': '%s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
         self.categories = {'Season': [41, 32], 'Episode': [33, 37, 38]}
@@ -43,7 +43,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
-        return super(TorrentBytesProvider, self)._authorised(post_params={'login': 'Log in!'})
+        return super(TorrentBytesProvider, self)._authorised(post_params={'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -78,15 +78,14 @@ class TorrentBytesProvider(generic.TorrentProvider):
                             try:
                                 info = tr.find('a', href=rc['info'])
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -4)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
                                 if self.freeleech and (len(info.contents) < 2 or not rc['fl'].search(
                                         info.contents[1].string.strip())) or self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                title = info.attrs.get('title') or info.contents[0]
-                                title = (isinstance(title, list) and title[0] or title).strip()
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-                            except (AttributeError, TypeError, ValueError):
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
+                            except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
                             if title and download_url:
@@ -94,14 +93,12 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

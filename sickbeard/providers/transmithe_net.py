@@ -47,8 +47,8 @@ class TransmithenetProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         if not super(TransmithenetProvider, self)._authorised(
-                logged_in=(lambda x=None: self.has_all_cookies('session')),
-                post_params={'keeplogged': '1', 'login': 'Login'}):
+                logged_in=(lambda y=None: self.has_all_cookies('session')),
+                post_params={'keeplogged': '1', 'form_tmpl': True}):
             return False
         if not self.user_authkey:
             response = helpers.getURL(self.urls['user'], session=self.session, json=True)
@@ -102,13 +102,11 @@ class TransmithenetProvider(generic.TorrentProvider):
                         if title and download_url:
                             items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

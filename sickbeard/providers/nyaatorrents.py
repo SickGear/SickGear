@@ -1,5 +1,3 @@
-# Author: Mr_Orange
-# URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
 #
@@ -16,10 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import urllib
 
 from . import generic
 from sickbeard import logger, show_name_helpers, tvcache
+from sickbeard.helpers import tryInt
 
 
 class NyaaProvider(generic.TorrentProvider):
@@ -27,43 +27,55 @@ class NyaaProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'NyaaTorrents', anime_only=True)
 
-        self.url_base = self.url = 'http://www.nyaa.se/'
+        self.url_base = self.url = 'https://www.nyaa.se/'
+
+        self.minseed, self.minleech = 2 * [None]
 
         self.cache = NyaaCache(self)
 
-    def _search_provider(self, search_string, **kwargs):
+    def _search_provider(self, search_string, search_mode='eponly', **kwargs):
+
+        if self.show and not self.show.is_anime:
+            return []
+
+        params = urllib.urlencode({'term': search_string.encode('utf-8'),
+                                   'cats': '1_37',  # Limit to English-translated Anime (for now)
+                                   #  'sort': '2',     # Sort Descending By Seeders
+                                   })
+
+        return self.get_data(getrss_func=self.cache.getRSSFeed,
+                             search_url='%s?page=rss&%s' % (self.url, params),
+                             mode=('Episode', 'Season')['sponly' == search_mode])
+
+    def get_data(self, getrss_func, search_url, mode='cache'):
+
+        data = getrss_func(search_url)
 
         results = []
-        if self.show and not self.show.is_anime:
-            return results
-
-        params = {'term': search_string.encode('utf-8'),
-                  'cats': '1_37',  # Limit to English-translated Anime (for now)
-                  # 'sort': '2',     # Sort Descending By Seeders
-                  }
-
-        search_url = self.url + '?page=rss&' + urllib.urlencode(params)
-
-        logger.log(u'Search string: ' + search_url, logger.DEBUG)
-
-        data = self.cache.getRSSFeed(search_url)
         if data and 'entries' in data:
-            items = data.entries
-            for curItem in items:
 
-                title, url = self._title_and_url(curItem)
+            rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+                'stats': '(\d+)\W+seed[^\d]+(\d+)\W+leech[^\d]+\d+\W+down[^\d]+([\d.,]+\s\w+)'}.iteritems())
 
-                if title and url:
-                    results.append(curItem)
-                else:
-                    logger.log(u'The data returned from ' + self.name + ' is incomplete, this result is unusable',
-                               logger.DEBUG)
+            for cur_item in data.get('entries', []):
+                try:
+                    seeders, leechers, size = 0, 0, 0
+                    stats = rc['stats'].findall(cur_item.get('summary_detail', {'value': ''}).get('value', ''))
+                    if len(stats):
+                        seeders, leechers, size = (tryInt(n, n) for n in stats[0])
+                        if self._peers_fail(mode, seeders, leechers):
+                            continue
+                    title, download_url = self._title_and_url(cur_item)
+                    download_url = self._link(download_url)
+                except (AttributeError, TypeError, ValueError, IndexError):
+                    continue
 
-        return results
+                if title and download_url:
+                    results.append((title, download_url, seeders, self._bytesizer(size)))
 
-    def find_search_results(self, show, episodes, search_mode, manual_search=False):
+        self._log_search(mode, len(results), search_url)
 
-        return generic.TorrentProvider.find_search_results(self, show, episodes, search_mode, manual_search)
+        return self._sort_seeding(mode, results)
 
     def _season_strings(self, ep_obj, **kwargs):
 
@@ -79,20 +91,17 @@ class NyaaCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 15  # cache update frequency
+        self.update_freq = 15
 
     def _cache_data(self):
-        params = {'page': 'rss',   # Use RSS page
-                  'order': '1',    # Sort Descending By Date
-                  'cats': '1_37'}  # Limit to English-translated Anime (for now)
 
-        url = self.provider.url + '?' + urllib.urlencode(params)
-        logger.log(u'NyaaTorrents cache update URL: ' + url, logger.DEBUG)
+        params = urllib.urlencode({'page': 'rss',   # Use RSS page
+                                   'order': '1',    # Sort Descending By Date
+                                   'cats': '1_37'   # Limit to English-translated Anime (for now)
+                                   })
 
-        data = self.getRSSFeed(url)
-        if data and 'entries' in data:
-            return data.entries
-        return []
+        return self.provider.get_data(getrss_func=self.getRSSFeed,
+                                      search_url='%s?%s' % (self.provider.url, params))
 
 
 provider = NyaaProvider()

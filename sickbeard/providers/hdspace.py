@@ -21,6 +21,7 @@ import traceback
 from . import generic
 from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -31,8 +32,9 @@ class HDSpaceProvider(generic.TorrentProvider):
 
         self.url_base = 'https://hd-space.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'index.php?page=login',
-                     'browse': self.url_base + 'index.php?page=torrents&' + '&'.join(['options=0', 'active=1', 'category=']),
+                     'login_action': self.url_base + 'index.php?page=login',
+                     'browse': self.url_base + 'index.php?page=torrents&' + '&'.join(
+                         ['options=0', 'active=1', 'category=']),
                      'search': '&search=%s',
                      'get': self.url_base + '%s'}
 
@@ -44,7 +46,8 @@ class HDSpaceProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
-        return super(HDSpaceProvider, self)._authorised(post_params={'uid': self.username, 'pwd': self.password})
+        return super(HDSpaceProvider, self)._authorised(
+            post_params={'uid': self.username, 'pwd': self.password, 'form_tmpl': 'name=[\'"]login[\'"]'})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -71,8 +74,9 @@ class HDSpaceProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='width="100%"\Wclass="lista"') as soup:
-                        torrent_table = soup.find_all('table', attrs={'class': 'lista'})[-1]
+                    with BS4Parser(html, features=['html5lib', 'permissive'],
+                                   attr='width="100%"\Wclass="lista"') as soup:
+                        torrent_table = soup.find_all('table', class_='lista')[-1]
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -85,16 +89,16 @@ class HDSpaceProvider(generic.TorrentProvider):
                             if None is downlink:
                                 continue
                             try:
-                                seeders, leechers = [int(x.get_text().strip()) for x in tr.find_all('a', href=rc['peers'])]
+                                seeders, leechers = [tryInt(x.get_text().strip())
+                                                     for x in tr.find_all('a', href=rc['peers'])]
                                 if self._peers_fail(mode, seeders, leechers)\
                                         or self.freeleech and None is tr.find('img', title=rc['fl']):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = ('title' in info.attrs and info['title']) or info.get_text().strip()
+                                title = (info.attrs.get('title') or info.get_text()).strip()
                                 size = tr.find_all('td')[-5].get_text().strip()
-
-                                download_url = self.urls['get'] % str(downlink['href']).lstrip('/')
+                                download_url = self._link(downlink['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -103,13 +107,11 @@ class HDSpaceProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

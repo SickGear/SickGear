@@ -46,8 +46,8 @@ class PrivateHDProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(PrivateHDProvider, self)._authorised(
-            logged_in=lambda x=None: self.has_all_cookies(['love']),
-            post_params={'email_username': self.username})
+            logged_in=(lambda y=None: self.has_all_cookies('love')),
+            post_params={'email_username': self.username, 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -80,7 +80,7 @@ class PrivateHDProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': 'table'})
+                        torrent_table = soup.find('table', class_='table')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -89,14 +89,12 @@ class PrivateHDProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-3, -2, -4)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -3, -2, -4]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 title = rc['info'].sub('', tr.find('a', attrs={'title': rc['info']})['title'])
-
-                                download_url = tr.find('a', href=rc['get'])['href']
-
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
@@ -105,14 +103,12 @@ class PrivateHDProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

@@ -52,10 +52,10 @@ class HD4FreeProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 params['search'] = '+'.join(search_string.split())
-                data_json = self.get_url(self.urls['search'], params=params, json=True)
+                json_resp = self.get_url(self.urls['search'], params=params, json=True)
 
                 cnt = len(items[mode])
-                for k, item in data_json.items():
+                for k, item in json_resp.items():
                     if 'error' == k or not item.get('total_results'):
                         break
                     seeders, leechers, size = [tryInt(n, n) for n in [
@@ -63,17 +63,15 @@ class HD4FreeProvider(generic.TorrentProvider):
                     if self._peers_fail(mode, seeders, leechers):
                         continue
                     title = item.get('release_name')
-                    download_url = (self.urls['get'] % (item.get('torrentid'), item.get('torrentpass')), None)[
-                        not (item.get('torrentid') and item.get('torrentpass'))]
+                    tid, tpass = [item.get('torrent' + x) for x in 'id', 'pass']
+                    download_url = all([tid, tpass]) and (self.urls['get'] % (tid, tpass))
                     if title and download_url:
                         items[mode].append((title, download_url, seeders, self._bytesizer('%smb' % size)))
 
                 self._log_search(mode, len(items[mode]) - cnt, self.session.response['url'])
                 time.sleep(1.1)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

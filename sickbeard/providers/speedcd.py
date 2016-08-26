@@ -44,7 +44,7 @@ class SpeedCDProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(SpeedCDProvider, self)._authorised(
-            logged_in=(lambda x=None: self.has_all_cookies('inSpeed_speedian')))
+            logged_in=(lambda y=None: self.has_all_cookies('inSpeed_speedian')))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -81,32 +81,28 @@ class SpeedCDProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -3)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -3]]
                                 if None is tr.find('a', href=rc['cats']) \
                                         or self.freeleech and None is rc['fl'].search(tr.find_all('td')[1].get_text()) \
                                         or self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', 'torrent')
-                                title = info.attrs.get('title') or info.get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if title and download_url:
                                 items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
-                except Exception:
+                except (StandardError, Exception):
                     time.sleep(1.1)
 
                 self._log_search(mode, len(items[mode]) - cnt,
                                  ('search string: ' + search_string, self.name)['Cache' == mode])
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

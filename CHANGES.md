@@ -89,6 +89,11 @@
 * Add PTF torrent provider
 * Add ILT torrent provider
 * Add Fano torrent provider
+* Add BTScene torrent provider
+* Add Extratorrent provider
+* Add Limetorrents provider
+* Add nCore torrent provider
+* Remove Usenet-Crawler provider
 * Change CPU throttling on General Config/Advanced to "Disabled" by default for new installs
 * Change provider OMGWTFNZBS api url and auto reject nuked releases
 * Change Search Provider page to load torrent settings only when Search torrents is enabled in Search Settings
@@ -120,6 +125,9 @@
 * Change post process to join incrementally named (i.e. file.001 to file.nnn) split files
 * Change replace unrar2 lib with rarfile 3.0 and UnRAR.exe 5.40 freeware
 * Change post process "Copy" to delete redundant files after use
+* Add indicator for public access search providers
+* Change improve probability selecting most seeded release
+* Change add the TorrentDay x265 category to search
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

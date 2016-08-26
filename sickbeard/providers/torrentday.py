@@ -35,7 +35,7 @@ class TorrentDayProvider(generic.TorrentProvider):
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
-        self.categories = {'Season': [31, 33, 14], 'Episode': [24, 32, 26, 7, 2], 'Anime': [29]}
+        self.categories = {'Season': [31, 33, 14], 'Episode': [24, 32, 26, 7, 34, 2], 'Anime': [29]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.proper_search_terms = None
@@ -45,9 +45,10 @@ class TorrentDayProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(TorrentDayProvider, self)._authorised(
-            logged_in=(lambda x='': ('RSS URL' in x) and self.has_all_cookies() and
-                       self.session.cookies['uid'] in self.digest and self.session.cookies['pass'] in self.digest),
-            failed_msg=(lambda x=None: u'Invalid cookie details for %s. Check settings'))
+            logged_in=(lambda y='': all(
+                ['RSS URL' in y, self.has_all_cookies()] +
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):
@@ -87,15 +88,14 @@ class TorrentDayProvider(generic.TorrentProvider):
 
                         for tr in torrent_rows[1:]:
                             try:
-                                seeders, leechers = [tryInt(tr.find('td', attrs={'class': x}).get_text().strip())
-                                                     for x in ('seedersInfo', 'leechersInfo')]
+                                seeders, leechers = [tryInt(tr.find('td', class_=x + 'ersInfo').get_text().strip())
+                                                     for x in 'seed', 'leech']
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 title = tr.find('a', href=rc['info']).get_text().strip()
                                 size = tr.find_all('td')[-3].get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -104,14 +104,12 @@ class TorrentDayProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     time.sleep(1.1)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

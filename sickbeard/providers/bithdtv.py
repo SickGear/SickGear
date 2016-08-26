@@ -44,7 +44,7 @@ class BitHDTVProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(BitHDTVProvider, self)._authorised(
-            logged_in=(lambda x=None: self.has_all_cookies(['h_sl', 'h_sp', 'h_su']))) and 'search' in self.urls
+            logged_in=(lambda y=None: self.has_all_cookies(['h_sl', 'h_sp', 'h_su']))) and 'search' in self.urls
 
     @staticmethod
     def _has_signature(data=None):
@@ -82,15 +82,15 @@ class BitHDTVProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-3, -2, -5)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -3, -2, -5]]
                                 if self.freeleech and not tr.attrs.get('bgcolor').endswith('FF99') or \
                                         self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = (info.attrs.get('title') or info.contents[0].get_text()).strip()
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-                            except (AttributeError, TypeError, ValueError):
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
+                            except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
                             if title and download_url:
@@ -98,14 +98,12 @@ class BitHDTVProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

@@ -51,7 +51,7 @@ class HDBitsProvider(generic.TorrentProvider):
     def check_auth_from_data(self, parsed_json):
 
         if 'status' in parsed_json and 5 == parsed_json.get('status') and 'message' in parsed_json:
-            logger.log(u'Incorrect username or password for %s : %s' % (self.name, parsed_json['message']), logger.DEBUG)
+            logger.log(u'Incorrect username or password for %s: %s' % (self.name, parsed_json['message']), logger.DEBUG)
             raise AuthException('Your username or password for %s is incorrect, check your config.' % self.name)
 
         return True
@@ -120,13 +120,14 @@ class HDBitsProvider(generic.TorrentProvider):
                 cnt = len(items[mode])
                 for item in json_resp['data']:
                     try:
-                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in 'seeders', 'leechers', 'size']]
+                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in
+                                                                          'seeders', 'leechers', 'size']]
                         if self._peers_fail(mode, seeders, leechers)\
                                 or self.freeleech and re.search('(?i)no', item.get('freeleech', 'no')):
                             continue
+
                         title = item['name']
                         download_url = self.urls['get'] % urllib.urlencode({'id': item['id'], 'passkey': self.passkey})
-
                     except (AttributeError, TypeError, ValueError):
                         continue
 
@@ -136,12 +137,10 @@ class HDBitsProvider(generic.TorrentProvider):
                 self._log_search(mode, len(items[mode]) - cnt,
                                  ('search_param: ' + str(search_param), self.name)['Cache' == mode])
 
-                self._sort_seeders(mode, items)
+                results = self._sort_seeding(mode, results + items[mode])
 
-                if id_search and len(items[mode]):
-                    return items[mode]
-
-            results = list(set(results + items[mode]))
+                if id_search and len(results):
+                    return results
 
         return results
 

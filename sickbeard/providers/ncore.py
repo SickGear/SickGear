@@ -1,5 +1,7 @@
 # coding=utf-8
 #
+# Author: SickGear
+#
 # This file is part of SickGear.
 #
 # SickGear is free software: you can redistribute it and/or modify
@@ -25,27 +27,29 @@ from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
-class FanoProvider(generic.TorrentProvider):
+class NcoreProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'Fano')
+        generic.TorrentProvider.__init__(self, 'nCore')
 
-        self.url_base = 'https://www.fano.in/'
+        self.url_base = 'https://ncore.cc/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse_old.php?search=%s&%s&incldead=0%s',
+                     'search': self.url_base + 'torrents.php?mire=%s&' + '&'.join([
+                         'miszerint=fid', 'hogyan=DESC', 'tipus=kivalasztottak_kozott',
+                         'kivalasztott_tipus=xvidser,dvdser,hdser', 'miben=name']),
                      'get': self.url_base + '%s'}
-
-        self.categories = {'Season': [49], 'Episode': [6, 23, 32, 35], 'anime': [27]}
-        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.chk_td = True
 
     def _authorised(self, **kwargs):
 
-        return super(FanoProvider, self)._authorised()
+        return super(NcoreProvider, self)._authorised(
+            logged_in=(lambda y='': all([bool(y), 'action="login' not in y, self.has_all_cookies('PHPSESSID')])),
+            post_params={'nev': self.username, 'pass': self.password, 'form_tmpl': 'name=[\'"]login[\'"]'})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -55,16 +59,13 @@ class FanoProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'abd': '(\d{4}(?:[.]\d{2}){2})', 'info': 'details', 'get': 'download'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'list': '.*?torrent_all', 'info': 'details'}.iteritems())
         for mode in search_params.keys():
-            rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                search_string = '+'.join(rc['abd'].sub(r'%22\1%22', search_string).split())
-                search_url = self.urls['search'] % (search_string, self._categories_string(mode),
-                                                    ('&sgold=on', '')[not self.freeleech])
+                search_url = self.urls['search'] % search_string
 
+                # fetches 15 results by default, and up to 100 if allowed in user profile
                 html = self.get_url(search_url)
 
                 cnt = len(items[mode])
@@ -73,22 +74,24 @@ class FanoProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', id='line')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                        torrent_table = soup.find('div', class_=rc['list'])
+                        torrent_rows = [] if not torrent_table else torrent_table.find_all('div', class_='box_torrent')
 
-                        if 2 > len(torrent_rows):
+                        if not len(torrent_rows):
                             raise generic.HaltParseException
 
-                        for tr in torrent_rows[1:]:
+                        for tr in torrent_rows:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
-                                if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats']):
+                                    tr.find('div', class_=x).get_text().strip()
+                                    for x in 'box_s2', 'box_l2', 'box_meret2']]
+                                if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                title = tr.find('a', href=rc['info']).get_text().strip()
-                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
-                            except (AttributeError, TypeError, ValueError, IndexError):
+                                anchor = tr.find('a', href=rc['info'])
+                                title = (anchor.get('title') or anchor.get_text()).strip()
+                                download_url = self._link(anchor.get('href').replace('details', 'download'))
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if title and download_url:
@@ -106,4 +109,4 @@ class FanoProvider(generic.TorrentProvider):
         return results
 
 
-provider = FanoProvider()
+provider = NcoreProvider()

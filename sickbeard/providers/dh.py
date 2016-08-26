@@ -46,9 +46,9 @@ class DHProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(DHProvider, self)._authorised(
-            logged_in=(lambda x=None: (None is x or re.search('(?i)rss\slink', x)) and self.has_all_cookies() and
+            logged_in=(lambda y=None: (None is y or re.search('(?i)rss\slink', y)) and self.has_all_cookies() and
                        self.session.cookies['uid'] in self.digest and self.session.cookies['pass'] in self.digest),
-            failed_msg=(lambda x=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -82,14 +82,12 @@ class DHProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-3, -2, -5)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -3, -2, -5]]
                                 if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats']):
                                     continue
 
                                 title = tr.find('a', href=rc['info']).get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
@@ -98,14 +96,12 @@ class DHProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, self.session.response.get('url'))
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

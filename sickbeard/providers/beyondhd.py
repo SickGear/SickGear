@@ -71,7 +71,7 @@ class BeyondHDProvider(generic.TorrentProvider):
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                 search_url = self.urls['browse'] % (self.passkey, self.categories[mode_cats])
                 if 'Cache' != mode:
-                    search_url += self.urls['search'] % re.sub('[\.\s]+', ' ', search_string)
+                    search_url += self.urls['search'] % re.sub('[.\s]+', ' ', search_string)
 
                 data_json = self.get_url(search_url, json=True)
 
@@ -82,16 +82,14 @@ class BeyondHDProvider(generic.TorrentProvider):
                         seeders, leechers = item.get('seeders', 0), item.get('leechers', 0)
                         if self._peers_fail(mode, seeders, leechers):
                             continue
-                        title, download_url = item.get('file'), item.get('get')
+                        title, download_url = item.get('file'), self._link(item.get('get'))
                         if title and download_url:
                             items[mode].append((title, download_url, seeders, self._bytesizer(item.get('size'))))
 
                 time.sleep(1.1)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

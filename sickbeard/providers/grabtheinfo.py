@@ -81,35 +81,27 @@ class GrabTheInfoProvider(generic.TorrentProvider):
 
                         for tr in torrent_rows[1 + shows_found:]:
                             try:
-                                info = tr.find('a', href=rc['info'])
-                                if None is info:
-                                    continue
-                                title = (('title' in info.attrs.keys() and info['title']) or info.get_text()).strip()
-
-                                download_url = tr.find('a', href=rc['get'])
-                                if None is download_url:
-                                    continue
-
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-2, -1, -3)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -3]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
+
+                                info = tr.find('a', href=rc['info'])
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
-                            if title:
-                                items[mode].append((title, self.urls['get'] % str(download_url['href'].lstrip('/')),
-                                                    seeders, self._bytesizer(size)))
+                            if title and download_url:
+                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

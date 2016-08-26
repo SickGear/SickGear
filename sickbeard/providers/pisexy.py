@@ -40,7 +40,8 @@ class PiSexyProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
-        return super(PiSexyProvider, self)._authorised(logged_in=lambda x=None: self.has_all_cookies(['uid', 'pass', 'pcode', 'pisexy']))
+        return super(PiSexyProvider, self)._authorised(
+            logged_in=(lambda y=None: self.has_all_cookies(['uid', 'pass', 'pcode', 'pisexy'])))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -81,13 +82,10 @@ class PiSexyProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = 'title' in info.attrs and rc['title'].sub('', info.attrs['title'])\
-                                        or info.get_text().strip()
+                                title = (rc['title'].sub('', info.attrs.get('title', '')) or info.get_text()).strip()
                                 size = tr.find_all('td')[3].get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-
-                            except (AttributeError, TypeError, ValueError, IndexError):
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
+                            except (AttributeError, TypeError, ValueError, KeyError, IndexError):
                                 continue
 
                             if title and download_url:
@@ -95,14 +93,12 @@ class PiSexyProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

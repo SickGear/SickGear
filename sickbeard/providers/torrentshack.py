@@ -34,7 +34,7 @@ class TorrentShackProvider(generic.TorrentProvider):
 
         self.url_base = 'https://torrentshack.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'login.php?lang=',
+                     'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s&%s&' + '&'.join(
                          ['release_type=both', 'searchtags=', 'tags_type=0',
                           'order_by=s3', 'order_way=desc', 'torrent_preset=all']),
@@ -48,8 +48,8 @@ class TorrentShackProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
-        return super(TorrentShackProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies('session')),
-                                                             post_params={'keeplogged': '1', 'login': 'Login'})
+        return super(TorrentShackProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies('session')),
+                                                             post_params={'keeplogged': '1', 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -59,8 +59,8 @@ class TorrentShackProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'info': 'view', 'get': 'download', 'title': 'view\s+torrent\s+'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'info': 'view', 'get': 'download', 'title': 'view\s+torrent\s+', 'size': '\s{2,}.*'}.iteritems())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
@@ -75,7 +75,7 @@ class TorrentShackProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': 'torrent_table'})
+                        torrent_table = soup.find('table', class_='torrent_table')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -84,17 +84,15 @@ class TorrentShackProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -4)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
+                                size = rc['size'].sub('', size)
                                 info = tr.find('a', title=rc['info'])
-                                title = 'title' in info.attrs and rc['title'].sub('', info.attrs['title']) \
-                                        or info.get_text().strip()
-
-                                link = str(tr.find('a', title=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
-                                download_url = self.urls['get'] % link
-                            except (AttributeError, TypeError, ValueError):
+                                title = (rc['title'].sub('', info.attrs.get('title', '')) or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', title=rc['get'])['href'])
+                            except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
                             if title and download_url:
@@ -102,13 +100,11 @@ class TorrentShackProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
