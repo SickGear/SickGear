@@ -34,7 +34,7 @@ class MoreThanProvider(generic.TorrentProvider):
 
         self.url_base = 'https://www.morethan.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'login.php',
+                     'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s&' + '&'.join([
                          'tags_type=1', 'order_by=time', 'order_way=desc',
                          'filter_cat[2]=1', 'action=basic', 'searchsubmit=1']),
@@ -46,8 +46,8 @@ class MoreThanProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
-        return super(MoreThanProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies('session')),
-                                                         post_params={'keeplogged': '1', 'login': 'Log in'})
+        return super(MoreThanProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies('session')),
+                                                         post_params={'keeplogged': '1', 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -72,7 +72,7 @@ class MoreThanProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': 'torrent_table'})
+                        torrent_table = soup.find('table', class_='torrent_table')
                         torrent_rows = []
                         if torrent_table:
                             torrent_rows = torrent_table.find_all('tr')
@@ -86,17 +86,15 @@ class MoreThanProvider(generic.TorrentProvider):
 
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -4)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 title = tr.find('a', title=rc['info']).get_text().strip()
                                 if title.lower().startswith('season '):
-                                    title = '%s %s' % (tr.find('div', attrs={'class': rc['name']}).get_text().strip(),
-                                                       title)
+                                    title = '%s %s' % (tr.find('div', class_=rc['name']).get_text().strip(), title)
 
-                                link = str(tr.find('a', href=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
-                                download_url = self.urls['get'] % link
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -105,14 +103,12 @@ class MoreThanProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

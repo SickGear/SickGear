@@ -82,9 +82,7 @@ class ZooqleProvider(generic.TorrentProvider):
                                 info = td[1].find('a', href=rc['info'])
                                 title = info and info.get_text().strip()
                                 size = td[-3].get_text().strip()
-
                                 download_url = info and (self.urls['get'] % rc['info'].findall(info['href'])[0])
-
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
@@ -93,14 +91,12 @@ class ZooqleProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

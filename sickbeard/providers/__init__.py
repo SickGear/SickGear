@@ -26,8 +26,10 @@ from sickbeard import logger, encodingKludge as ek
 # usenet
 from . import newznab, omgwtfnzbs, womble
 # torrent
-from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, dh, fano, filelist, freshontv, funfile, gftracker, grabtheinfo, \
-    hd4free, hdbits, hdspace, ilt, iptorrents, morethan, pisexy, pretome, privatehd, ptf, rarbg, revtt, scc, scenetime, shazbat, speedcd, \
+from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, btscene, dh, extratorrent, \
+    fano, filelist, freshontv, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, \
+    ilt, iptorrents, limetorrents, morethan, ncore, pisexy, pretome, privatehd, ptf, \
+    rarbg, revtt, scc, scenetime, shazbat, speedcd, \
     thepiratebay, torrentbytes, torrentday, torrenting, torrentleech, torrentshack, transmithe_net, tvchaosuk, zooqle
 # anime
 from . import anizb, nyaatorrents, tokyotoshokan
@@ -45,8 +47,10 @@ __all__ = ['omgwtfnzbs',
            'bithdtv',
            'bitmetv',
            'btn',
+           'btscene',
            'custom01',
            'dh',
+           'extratorrent',
            'fano',
            'filelist',
            'freshontv',
@@ -58,7 +62,9 @@ __all__ = ['omgwtfnzbs',
            'hdspace',
            'ilt',
            'iptorrents',
+           'limetorrents',
            'morethan',
+           'ncore',
            'pisexy',
            'pretome',
            'privatehd',
@@ -227,7 +233,7 @@ def getDefaultNewznabProviders():
     return '!!!'.join(['Sick Beard Index|http://lolo.sickbeard.com/|0|5030,5040|0|eponly|0|0|0',
                        'NZBgeek|https://api.nzbgeek.info/||5030,5040|0|eponly|0|0|0',
                        'NZBs.org|https://nzbs.org/||5030,5040|0|eponly|0|0|0',
-                       'Usenet-Crawler|https://www.usenet-crawler.com/||5030,5040|0|eponly|0|0|0'])
+                       ])
 
 
 def getProviderModule(name):

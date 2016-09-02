@@ -359,7 +359,7 @@ class NewznabCache(tvcache.TVCache):
     def __init__(self, provider):
         tvcache.TVCache.__init__(self, provider)
 
-        self.update_freq = 5  # cache update frequency
+        self.update_freq = 5
 
     def updateCache(self):
 

@@ -32,7 +32,7 @@ class FunFileProvider(generic.TorrentProvider):
 
         self.url_base = 'https://www.funfile.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
+                     'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'browse.php?%s&search=%s&incldead=0&showspam=1&',
                      'get': self.url_base + '%s'}
 
@@ -45,9 +45,9 @@ class FunFileProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(FunFileProvider, self)._authorised(
-            logged_in=(lambda x=None: None is not self.session.cookies.get('uid', domain='.funfile.org') and
-                       None is not self.session.cookies.get('pass', domain='.funfile.org')),
-            post_params={'login': 'Login', 'returnto': '/'}, timeout=self.url_timeout)
+            logged_in=(lambda y=None: all(
+                [None is not self.session.cookies.get(x, domain='.funfile.org') for x in 'uid', 'pass'])),
+            post_params={'form_tmpl': True}, timeout=self.url_timeout)
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -72,7 +72,7 @@ class FunFileProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('td', attrs={'class': 'colhead'}).find_parent('table')
+                        torrent_table = soup.find('td', class_='colhead').find_parent('table')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -85,13 +85,12 @@ class FunFileProvider(generic.TorrentProvider):
                                     continue
 
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-2, -1, -4)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
                                 if None is tr.find('a', href=rc['cats']) or self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                title = info.attrs.get('title') or info.get_text().strip()
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -100,14 +99,12 @@ class FunFileProvider(generic.TorrentProvider):
 
                 except (generic.HaltParseException, AttributeError):
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

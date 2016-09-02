@@ -35,19 +35,19 @@ class WombleCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 6  # cache update frequency
+        self.update_freq = 6
 
     def _cache_data(self):
 
         result = []
         for section in ['sd', 'hd', 'x264', 'dvd']:
             url = '%srss/?sec=tv-%s&fr=false' % (self.provider.url, section)
-            data = self.getRSSFeed(url)
+            xml_data = self.getRSSFeed(url)
             time.sleep(1.1)
             cnt = len(result)
-            for entry in (data and data.get('entries', []) or []):
+            for entry in (xml_data and xml_data.get('entries', []) or []):
                 if entry.get('title') and entry.get('link', '').startswith('http'):
-                    result.append((entry['title'], entry['link'], None, None))
+                    result.append((entry.get('title'), entry.get('link'), None, None))
 
             self.provider.log_result(count=len(result) - cnt, url=url)
 

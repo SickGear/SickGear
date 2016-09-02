@@ -32,7 +32,7 @@ class FreshOnTVProvider(generic.TorrentProvider):
 
         self.url_base = 'https://freshon.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'login.php?action=makelogin',
+                     'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'browse.php?incldead=%s&words=0&%s&search=%s',
                      'get': self.url_base + '%s'}
 
@@ -45,8 +45,8 @@ class FreshOnTVProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(FreshOnTVProvider, self)._authorised(
-            post_params={'login': 'Do it!'},
-            failed_msg=(lambda x=None: 'DDoS protection by CloudFlare' in x and
+            post_params={'form_tmpl': True},
+            failed_msg=(lambda y=None: 'DDoS protection by CloudFlare' in y and
                                        u'Unable to login to %s due to CloudFlare DDoS javascript check' or
                                        'Username does not exist' in x and
                                        u'Invalid username or password for %s. Check settings' or
@@ -80,7 +80,7 @@ class FreshOnTVProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': 'frame'})
+                        torrent_table = soup.find('table', class_='frame')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -92,14 +92,13 @@ class FreshOnTVProvider(generic.TorrentProvider):
                                     continue
 
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-2, -1, -4)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                info = tr.find('a', href=rc['info'], attrs={'class': rc['name']})
-                                title = info.attrs.get('title') or info.get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
+                                info = tr.find('a', href=rc['info'], class_=rc['name'])
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -108,13 +107,11 @@ class FreshOnTVProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

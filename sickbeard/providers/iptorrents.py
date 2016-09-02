@@ -21,6 +21,7 @@ import traceback
 from . import generic
 from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
@@ -45,9 +46,10 @@ class IPTorrentsProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(IPTorrentsProvider, self)._authorised(
-            logged_in=(lambda x='': ('RSS Link' in x) and self.has_all_cookies() and
-                       self.session.cookies['uid'] in self.digest and self.session.cookies['pass'] in self.digest),
-            failed_msg=(lambda x=None: u'Invalid cookie details for %s. Check settings'))
+            logged_in=(lambda y='': all(
+                ['RSS Link' in y, self.has_all_cookies()] +
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):
@@ -78,8 +80,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'id': 'torrents'}) or \
-                            soup.find('table', attrs={'class': 'torrents'})
+                        torrent_table = soup.find(id='torrents') or soup.find('table', class_='torrents')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -87,16 +88,15 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
                         for tr in torrent_rows[1:]:
                             try:
-                                seeders, leechers = [int(tr.find('td', attrs={'class': x}).get_text().strip())
-                                                     for x in ('t_seeders', 't_leechers')]
+                                seeders, leechers = [tryInt(tr.find('td', class_='t_' + x).get_text().strip())
+                                                     for x in 'seeders', 'leechers']
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = ('title' in info.attrs and info['title']) or info.get_text().strip()
+                                title = (info.attrs.get('title') or info.get_text()).strip()
                                 size = tr.find_all('td')[-4].get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -105,13 +105,11 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

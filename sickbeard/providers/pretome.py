@@ -52,11 +52,11 @@ class PreToMeProvider(generic.TorrentProvider):
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                 search_url = url + (self.urls['search'] % search_string, '')['Cache' == mode]
 
-                data = RSSFeeds(self).get_feed(search_url)
+                xml_data = RSSFeeds(self).get_feed(search_url)
 
                 cnt = len(items[mode])
-                if data and 'entries' in data:
-                    for entry in data['entries']:
+                if xml_data and 'entries' in xml_data:
+                    for entry in xml_data['entries']:
                         try:
                             if entry['title'] and 'download' in entry['link']:
                                 items[mode].append((entry['title'], entry['link'], None, None))

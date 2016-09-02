@@ -43,9 +43,10 @@ class TorrentingProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(TorrentingProvider, self)._authorised(
-            logged_in=(lambda x='': ('RSS link' in x) and self.has_all_cookies() and
-                       self.session.cookies['uid'] in self.digest and self.session.cookies['pass'] in self.digest),
-            failed_msg=(lambda x=None: u'Invalid cookie details for %s. Check settings'))
+            logged_in=(lambda y='': all(
+                ['RSS link' in y, self.has_all_cookies()] +
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):
@@ -84,14 +85,13 @@ class TorrentingProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -3)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -3]]
                                 if None is tr.find('a', href=rc['cats']) or self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = info.attrs.get('title') or info.get_text().strip()
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -100,14 +100,12 @@ class TorrentingProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

@@ -100,7 +100,7 @@ class TorrentRssProvider(generic.TorrentProvider):
                     try:
                         bdecode(torrent_file)
                         break
-                    except Exception:
+                    except (StandardError, Exception):
                         pass
             else:
                 return False, '%s fetched RSS feed data: %s' % \

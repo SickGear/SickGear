@@ -33,6 +33,7 @@ import sickbeard
 import requests
 import requests.cookies
 from hachoir_parser import guessParser
+from hachoir_core.error import HachoirError
 from hachoir_core.stream import FileInputStream
 
 from sickbeard import helpers, classes, logger, db, tvcache, encodingKludge as ek
@@ -77,7 +78,8 @@ class GenericProvider:
         self.headers = {
             # Using USER_AGENT instead of Mozilla to keep same user agent along authentication and download phases,
             # otherwise session might be broken and download fail, asking again for authentication
-            # 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36'}
+            # 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
+            #              'Chrome/32.0.1700.107 Safari/537.36'}
             'User-Agent': USER_AGENT}
 
     def get_id(self):
@@ -99,8 +101,16 @@ class GenericProvider:
     def _authorised(self):
         return True
 
-    def _check_auth(self):
+    def _check_auth(self, is_required=None):
         return True
+
+    def is_public_access(self):
+        try:
+            return bool(re.search('(?i)rarbg|sick|womble|anizb', self.name)) \
+                   or False is bool(('_authorised' in self.__class__.__dict__ or hasattr(self, 'digest')
+                                     or self._check_auth(is_required=True)))
+        except AuthException:
+            return False
 
     def is_active(self):
         if GenericProvider.NZB == self.providerType and sickbeard.USE_NZBS:
@@ -176,7 +186,7 @@ class GenericProvider:
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (torrent_hash,))
                         for u in (('s', 'itorrents.org'), ('s', 'torra.pro'), ('s', 'torra.click'),
                                   ('s', 'torrentproject.se'), ('', 'thetorrent.org'))]
-            except:
+            except (StandardError, Exception):
                 link_type = 'torrent'
                 urls = [result.url]
 
@@ -204,7 +214,7 @@ class GenericProvider:
                     try:
                         helpers.moveFile(cache_file, final_file)
                         msg = 'moved'
-                    except:
+                    except (OSError, Exception):
                         msg = 'copied cached file'
                     logger.log(u'Saved %s link and %s to %s' % (link_type, msg, final_file))
                     saved = True
@@ -234,13 +244,13 @@ class GenericProvider:
             try:
                 stream = FileInputStream(file_name)
                 parser = guessParser(stream)
-            except:
+            except (HachoirError, Exception):
                 pass
             result = parser and 'application/x-bittorrent' == parser.mime_type
 
             try:
                 stream._input.close()
-            except:
+            except (HachoirError, Exception):
                 pass
 
         return result
@@ -282,13 +292,22 @@ class GenericProvider:
         try:
             title, url = isinstance(item, tuple) and (item[0], item[1]) or \
                 (item.get('title', None), item.get('link', None))
-        except Exception:
+        except (StandardError, Exception):
             pass
 
         title = title and re.sub(r'\s+', '.', u'%s' % title)
         url = url and str(url).replace('&amp;', '&')
 
         return title, url
+
+    def _link(self, url, url_tmpl=None):
+
+        url = url and str(url).strip().replace('&amp;', '&') or ''
+        try:
+            url_tmpl = url_tmpl or self.urls['get']
+        except (StandardError, Exception):
+            url_tmpl = '%s'
+        return url if re.match('(?i)https?://', url) else (url_tmpl % url.lstrip('/'))
 
     def find_search_results(self, show, episodes, search_mode, manual_search=False):
 
@@ -391,8 +410,9 @@ class GenericProvider:
                         logger.log(u'The result ' + title + u' doesn\'t seem to be a valid season that we are trying' +
                                    u' to snatch, ignoring', logger.DEBUG)
                         add_cache_entry = True
-                    elif len(parse_result.episode_numbers) and not [ep for ep in episodes if
-                                                                    ep.season == parse_result.season_number and ep.episode in parse_result.episode_numbers]:
+                    elif len(parse_result.episode_numbers) and not [
+                        ep for ep in episodes if ep.season == parse_result.season_number and
+                            ep.episode in parse_result.episode_numbers]:
                         logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
                                    u' to snatch, ignoring', logger.DEBUG)
                         add_cache_entry = True
@@ -409,8 +429,8 @@ class GenericProvider:
                 else:
                     airdate = parse_result.air_date.toordinal()
                     my_db = db.DBConnection()
-                    sql_results = my_db.select('SELECT season, episode FROM tv_episodes WHERE showid = ? AND airdate = ?',
-                                               [show_obj.indexerid, airdate])
+                    sql_results = my_db.select('SELECT season, episode FROM tv_episodes ' +
+                                               'WHERE showid = ? AND airdate = ?', [show_obj.indexerid, airdate])
 
                     if 1 != len(sql_results):
                         logger.log(u'Tried to look up the date for the episode ' + title + ' but the database didn\'t' +
@@ -507,6 +527,7 @@ class GenericProvider:
     def log_result(self, mode='Cache', count=0, url='url missing'):
         """
         Simple function to log the result of any search
+        :param mode: string that this log relates to
         :param count: count of successfully processed items
         :param url: source url of item(s)
         """
@@ -541,8 +562,8 @@ class GenericProvider:
 
     def has_all_cookies(self, cookies=None, pre=''):
 
-        cookies = cookies or ['uid', 'pass']
-        return False not in ['%s%s' % (pre, item) in self.session.cookies for item in ([cookies], cookies)[isinstance(cookies, list)]]
+        cookies = cookies and ([cookies], cookies)[isinstance(cookies, list)] or ['uid', 'pass']
+        return all(['%s%s' % (pre, item) in self.session.cookies for item in cookies])
 
     def _categories_string(self, mode='Cache', template='c%s=1', delimiter='&'):
 
@@ -558,7 +579,7 @@ class GenericProvider:
     def _bytesizer(size_dim=''):
 
         try:
-            value = float('.'.join(re.findall('(?i)(\d+)(?:[\.,](\d+))?', size_dim)[0]))
+            value = float('.'.join(re.findall('(?i)(\d+)(?:[.,](\d+))?', size_dim)[0]))
         except TypeError:
             return size_dim
         except IndexError:
@@ -587,7 +608,7 @@ class NZBProvider(object, GenericProvider):
             return (getattr(self, 'key', '') and self.key) or (getattr(self, 'api_key', '') and self.api_key) or None
         return False
 
-    def _check_auth(self):
+    def _check_auth(self, is_required=None):
 
         has_key = self.maybe_apikey()
         if has_key:
@@ -703,8 +724,15 @@ class TorrentProvider(object, GenericProvider):
 
     @staticmethod
     def _sort_seeders(mode, items):
-
+        """ legacy function used by a custom provider, do not remove """
         mode in ['Season', 'Episode'] and items[mode].sort(key=lambda tup: tup[2], reverse=True)
+
+    @staticmethod
+    def _sort_seeding(mode, items):
+
+        if mode in ['Season', 'Episode']:
+            return sorted(set(items), key=lambda tup: tup[2], reverse=True)
+        return items
 
     def _peers_fail(self, mode, seeders=0, leechers=0):
 
@@ -744,7 +772,7 @@ class TorrentProvider(object, GenericProvider):
         ep_dict = self._ep_dict(ep_obj)
         sp_detail = (show.air_by_date or show.is_sports) and str(ep_obj.airdate).split('-')[0] or \
                     (show.is_anime and ep_obj.scene_absolute_number or
-                     'S%(seasonnumber)02d' % ep_dict if 'sp_detail' not in kwargs.keys() else kwargs['sp_detail'](ep_dict))
+                     ('sp_detail' in kwargs.keys() and kwargs['sp_detail'](ep_dict)) or 'S%(seasonnumber)02d' % ep_dict)
         sp_detail = ([sp_detail], sp_detail)[isinstance(sp_detail, list)]
         detail = ({}, {'Season_only': sp_detail})[detail_only and not self.show.is_sports and not self.show.is_anime]
         return [dict({'Season': self._build_search_strings(sp_detail, scene, prefix)}.items() + detail.items())]
@@ -792,7 +820,7 @@ class TorrentProvider(object, GenericProvider):
         prefix = ([prefix], prefix)[isinstance(prefix, list)]
 
         search_params = []
-        crop = re.compile(r'([\.\s])(?:\1)+')
+        crop = re.compile(r'([.\s])(?:\1)+')
         for name in set(allPossibleShowNames(self.show)):
             if process_name:
                 name = helpers.sanitizeSceneName(name)
@@ -861,11 +889,14 @@ class TorrentProvider(object, GenericProvider):
 
     def _authorised(self, logged_in=None, post_params=None, failed_msg=None, url=None, timeout=30):
 
-        maxed_out = (lambda x: re.search(r'(?i)[1-3]((<[^>]+>)|\W)*(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)', x))
+        maxed_out = (lambda y: re.search(r'(?i)[1-3]((<[^>]+>)|\W)*' +
+                                         '(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)', y))
         logged_in, failed_msg = [None is not a and a or b for (a, b) in (
-            (logged_in, (lambda x=None: self.has_all_cookies())),
-            (failed_msg, (lambda x='': maxed_out(x) and u'Urgent abort, running low on login attempts. Password flushed to prevent service disruption to %s.' or
-                          (re.search(r'(?i)(username|password)((<[^>]+>)|\W)*(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', x) and
+            (logged_in, (lambda y=None: self.has_all_cookies())),
+            (failed_msg, (lambda y='': maxed_out(y) and u'Urgent abort, running low on login attempts. ' +
+                                                        u'Password flushed to prevent service disruption to %s.' or
+                          (re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
+                                     '(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
                            u'Invalid username or password for %s. Check settings' or
                            u'Failed to authenticate or parse a response from %s, abort provider')))
         )]
@@ -896,17 +927,25 @@ class TorrentProvider(object, GenericProvider):
                 if url:
                     response = helpers.getURL(url, session=self.session)
                     try:
-                        action = re.findall('[<]form[\w\W]+?action=[\'\"]([^\'\"]+)', response)[0]
+                        post_params = isinstance(post_params, type({})) and post_params or {}
+                        form = 'form_tmpl' in post_params and post_params.pop('form_tmpl')
+                        if form:
+                            form = re.findall(
+                                '(?is)(<form[^>]+%s.*?</form>)' % (True is form and 'login' or form), response)
+                            response = form and form[0] or response
+
+                        action = re.findall('<form[^>]+action=[\'"]([^\'"]*)', response)[0]
                         url = action if action.startswith('http') else \
+                            url if not action else \
+                            (url + action) if action.startswith('?') else \
                             (self.urls.get('login_base') or self.urls['config_provider_home_uri']) + action.lstrip('/')
 
-                        tags = re.findall(r'(?is)(<input.*?name=[\'\"][^\'\"]+[\'\"].*?>)', response)
+                        tags = re.findall(r'(?is)(<input.*?name=[\'"][^\'"]+[^>]*)', response)
                         nv = [(tup[0]) for tup in [
-                            re.findall(r'(?is)name=[\'\"]([^\'\"]+)[\'\"](?:.*?value=[\'\"]([^\'\"]+)[\'\"])?', x)
+                            re.findall(r'(?is)name=[\'"]([^\'"]+)(?:[^>]*?value=[\'"]([^\'"]+))?', x)
                             for x in tags]]
                         for name, value in nv:
                             if name not in ('username', 'password'):
-                                post_params = isinstance(post_params, type({})) and post_params or {}
                                 post_params.setdefault(name, value)
                     except KeyError:
                         return super(TorrentProvider, self)._authorised()
@@ -936,7 +975,7 @@ class TorrentProvider(object, GenericProvider):
 
         return False
 
-    def _check_auth(self):
+    def _check_auth(self, is_required=False):
 
         if hasattr(self, 'username') and hasattr(self, 'password'):
             if self.username and self.password:
@@ -963,7 +1002,7 @@ class TorrentProvider(object, GenericProvider):
                 return True
             setting = 'Passkey'
         else:
-            return GenericProvider._check_auth(self)
+            return not is_required and GenericProvider._check_auth(self)
 
         raise AuthException('%s for %s is empty in config provider options' % (setting, self.name))
 
@@ -982,7 +1021,7 @@ class TorrentProvider(object, GenericProvider):
 
         items = self._search_provider({'Propers': search_terms})
 
-        clean_term = re.compile(r'(?i)[^a-z1-9\|\.]+')
+        clean_term = re.compile(r'(?i)[^a-z1-9|.]+')
         for proper_term in search_terms:
 
             proper_check = re.compile(r'(?i)(?:%s)' % clean_term.sub('', proper_term))
@@ -995,10 +1034,10 @@ class TorrentProvider(object, GenericProvider):
 
     @staticmethod
     def _has_no_results(*html):
-        return re.search(r'(?i)<(?:b|div|h\d|p|span|strong)[^>]*>(?:' +
-                         'your\ssearch\sdid\snot\smatch|' +
-                         'nothing\sfound|' +
-                         '(sorry,\s)?no\storrents\s(found|match)|' +
+        return re.search(r'(?i)<(?:b|div|h\d|p|span|strong)[^>]*>\s*(?:' +
+                         'your\ssearch.*?did\snot\smatch|' +
+                         '(?:nothing|0</b>\s+torrents)\sfound|' +
+                         '(sorry,\s)?no\s(?:results|torrents)\s(found|match)|' +
                          '.*?there\sare\sno\sresults|' +
                          '.*?no\shits\.\sTry\sadding' +
                          ')', html[0])

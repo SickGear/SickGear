@@ -1,5 +1,3 @@
-# Author: Mr_Orange
-# URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
 #
@@ -16,11 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import traceback
 import urllib
 
 from . import generic
 from sickbeard import logger, show_name_helpers, tvcache
+from sickbeard.helpers import tryInt
 from sickbeard.bs4_parser import BS4Parser
 
 
@@ -29,7 +29,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TokyoToshokan', anime_only=True)
 
-        self.url_base = self.url = 'http://tokyotosho.info/'
+        self.url_base = self.url = 'https://tokyotosho.info/'
 
         self.cache = TokyoToshokanCache(self)
 
@@ -39,36 +39,49 @@ class TokyoToshokanProvider(generic.TorrentProvider):
         if self.show and not self.show.is_anime:
             return results
 
-        params = {'terms': search_string.encode('utf-8'),
-                  'type': 1}  # get anime types
+        params = urllib.urlencode({'terms': search_string.encode('utf-8'),
+                                   'type': 1})  # get anime types
 
-        search_url = self.url + 'search.php?' + urllib.urlencode(params)
-        logger.log(u'Search string: ' + search_url, logger.DEBUG)
+        search_url = '%ssearch.php?%s' % (self.url, params)
+        mode = ('Episode', 'Season')['sponly' == search_mode]
+
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'stats': 'S:\s*?(\d)+\s*L:\s*(\d+)', 'size': 'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
 
         html = self.get_url(search_url)
         if html:
             try:
                 with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                    torrent_table = soup.find('table', attrs={'class': 'listing'})
-                    torrent_rows = torrent_table.find_all('tr') if torrent_table else []
+                    torrent_table = soup.find('table', class_='listing')
+                    torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
                     if torrent_rows:
-                        a = (0, 1)[None is not torrent_rows[0].find('td', attrs={'class': 'centertext'})]
+                        a = (0, 1)[None is not torrent_rows[0].find('td', class_='centertext')]
 
-                        for top, bottom in zip(torrent_rows[a::2], torrent_rows[a::2]):
-                            title = top.find('td', attrs={'class': 'desc-top'}).text
-                            url = top.find('td', attrs={'class': 'desc-top'}).find('a')['href']
+                        for top, bottom in zip(torrent_rows[a::2], torrent_rows[a+1::2]):
+                            try:
+                                bottom_text = bottom.get_text() or ''
+                                stats = rc['stats'].findall(bottom_text)
+                                seeders, leechers = (0, 0) if not stats else [tryInt(n) for n in stats[0]]
 
-                            if title and url:
-                                results.append((title.lstrip(), url))
+                                size = rc['size'].findall(bottom_text)
+                                size = size and size[0] or -1
 
-            except Exception:
-                logger.log(u'Failed to parsing ' + self.name + ' Traceback: ' + traceback.format_exc(), logger.ERROR)
+                                info = top.find('td', class_='desc-top')
+                                title = info and re.sub(r'[ .]{2,}', '.', info.get_text().strip())
+                                urls = info and sorted([x.get('href') for x in info.find_all('a') or []])
+                                download_url = urls and urls[0].startswith('http') and urls[0] or urls[1]
+                            except (AttributeError, TypeError, ValueError, IndexError):
+                                continue
 
-        return results
+                            if title and download_url:
+                                results.append((title, download_url, seeders, self._bytesizer(size)))
 
-    def find_search_results(self, show, episodes, search_mode, manual_search=False):
+            except (StandardError, Exception):
+                logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
-        return generic.TorrentProvider.find_search_results(self, show, episodes, search_mode, manual_search)
+        self._log_search(mode, len(results), search_url)
+
+        return self._sort_seeding(mode, results)
 
     def _season_strings(self, ep_obj, **kwargs):
 
@@ -84,18 +97,35 @@ class TokyoToshokanCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 15  # cache update frequency
+        self.update_freq = 15
 
     def _cache_data(self):
-        params = {'filter': '1'}
 
-        url = self.provider.url + 'rss.php?' + urllib.urlencode(params)
-        logger.log(u'TokyoToshokan cache update URL: ' + url, logger.DEBUG)
+        mode = 'Cache'
+        search_url = '%srss.php?%s' % (self.provider.url, urllib.urlencode({'filter': '1'}))
+        data = self.getRSSFeed(search_url)
 
-        data = self.getRSSFeed(url)
+        results = []
         if data and 'entries' in data:
-            return data.entries
-        return []
+
+            rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'size': 'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
+
+            for cur_item in data.get('entries', []):
+                try:
+                    title, download_url = self._title_and_url(cur_item)
+                    size = rc['size'].findall(cur_item.get('summary_detail', {'value': ''}).get('value', ''))
+                    size = size and size[0] or -1
+
+                except (AttributeError, TypeError, ValueError):
+                    continue
+
+                if title and download_url:
+                    # feed does not carry seed, leech counts
+                    results.append((title, download_url, 0, self.provider._bytesizer(size)))
+
+        self.provider._log_search(mode, len(results), search_url)
+
+        return results
 
 
 provider = TokyoToshokanProvider()

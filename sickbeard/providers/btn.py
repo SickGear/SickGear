@@ -75,15 +75,18 @@ class BTNProvider(generic.TorrentProvider):
                 try:
                     response = helpers.getURL(self.url_api, post_data=json_rpc(params), session=self.session, json=True)
                     error_text = response['error']['message']
-                    logger.log(('Call Limit' in error_text and u'Action aborted because the %(prov)s 150 calls/hr limit was reached' or
-                               u'Action prematurely ended. %(prov)s server error response = %(desc)s') % {'prov': self.name, 'desc': error_text}, logger.WARNING)
+                    logger.log(
+                        ('Call Limit' in error_text
+                         and u'Action aborted because the %(prov)s 150 calls/hr limit was reached'
+                         or u'Action prematurely ended. %(prov)s server error response = %(desc)s') %
+                        {'prov': self.name, 'desc': error_text}, logger.WARNING)
                     return results
-                except:
+                except (KeyError, Exception):
                     data_json = response and 'result' in response and response['result'] or {}
 
                 if data_json:
 
-                    found_torrents = {} if 'torrents' not in data_json else data_json['torrents']
+                    found_torrents = 'torrents' in data_json and data_json['torrents'] or {}
 
                     # We got something, we know the API sends max 1000 results at a time.
                     # See if there are more than 1000 results for our query, if not we
@@ -101,37 +104,45 @@ class BTNProvider(generic.TorrentProvider):
                         for page in range(1, pages_needed + 1):
 
                             try:
-                                response = helpers.getURL(self.url_api, json=True, session=self.session,
-                                                          post_data=json_rpc(params, results_per_page, page * results_per_page))
+                                response = helpers.getURL(
+                                    self.url_api, json=True, session=self.session,
+                                    post_data=json_rpc(params, results_per_page, page * results_per_page))
                                 error_text = response['error']['message']
-                                logger.log(('Call Limit' in error_text and u'Action prematurely ended because the %(prov)s 150 calls/hr limit was reached' or
-                                            u'Action prematurely ended. %(prov)s server error response = %(desc)s') % {'prov': self.name, 'desc': error_text}, logger.WARNING)
+                                logger.log(
+                                    ('Call Limit' in error_text
+                                     and u'Action prematurely ended because the %(prov)s 150 calls/hr limit was reached'
+                                     or u'Action prematurely ended. %(prov)s server error response = %(desc)s') %
+                                    {'prov': self.name, 'desc': error_text}, logger.WARNING)
                                 return results
-                            except:
+                            except (KeyError, Exception):
                                 data_json = response and 'result' in response and response['result'] or {}
 
-                            # Note that this these are individual requests and might time out individually. This would result in 'gaps'
-                            # in the results. There is no way to fix this though.
+                            # Note that this these are individual requests and might time out individually.
+                            # This would result in 'gaps' in the results. There is no way to fix this though.
                             if 'torrents' in data_json:
                                 found_torrents.update(data_json['torrents'])
 
                     cnt = len(results)
                     for torrentid, torrent_info in found_torrents.iteritems():
-                        seeders, leechers = [tryInt(n) for n in torrent_info.get('Seeders'), torrent_info.get('Leechers')]
+                        seeders, leechers, size = (tryInt(n, n) for n in [torrent_info.get(x) for x in
+                                                                          'Seeders', 'Leechers', 'Size'])
                         if self._peers_fail(mode, seeders, leechers) or \
                                 self.reject_m2ts and re.match(r'(?i)m2?ts', torrent_info.get('Container', '')):
                             continue
 
-                        title, url = self._title_and_url(torrent_info)
+                        title, url = self._get_title_and_url(torrent_info)
                         if title and url:
-                            results.append(torrent_info)
+                            results.append((title, url, seeders, self._bytesizer(size)))
 
                     self._log_search(mode, len(results) - cnt,
                                      ('search_param: ' + str(search_param), self.name)['Cache' == mode])
 
+                    results = self._sort_seeding(mode, results)
+
         return results
 
-    def _title_and_url(self, data_json):
+    @staticmethod
+    def _get_title_and_url(data_json):
 
         # The BTN API gives a lot of information in response,
         # however SickGear is built mostly around Scene or
@@ -189,7 +200,7 @@ class BTNProvider(generic.TorrentProvider):
                 series_param.update(base_params)
                 search_params.append(series_param)
 
-        return [dict({'Season': search_params})]
+        return [dict(Season=search_params)]
 
     def _episode_strings(self, ep_obj, **kwargs):
 
@@ -231,7 +242,7 @@ class BTNProvider(generic.TorrentProvider):
                 series_param.update(base_params)
                 search_params.append(series_param)
 
-        return [dict({'Episode': search_params})]
+        return [dict(Episode=search_params)]
 
     def cache_data(self, **kwargs):
 
@@ -246,11 +257,11 @@ class BTNProvider(generic.TorrentProvider):
         # Set maximum to 24 hours (24 * 60 * 60 = 86400 seconds) of "RSS" data search,
         # older items will be done through backlog
         if 86400 < seconds_since_last_update:
-            logger.log(u'Only trying to fetch the last 24 hours even though the last known successful update on %s was over 24 hours'
-                       % self.name, logger.WARNING)
+            logger.log(u'Only trying to fetch the last 24 hours even though the last known successful update on ' +
+                       '%s was over 24 hours' % self.name, logger.WARNING)
             seconds_since_last_update = 86400
 
-        return self._search_provider(dict({'Cache': ['']}), age=seconds_since_last_update)
+        return self._search_provider(dict(Cache=['']), age=seconds_since_last_update)
 
 
 class BTNCache(tvcache.TVCache):
@@ -258,7 +269,7 @@ class BTNCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 15  # cache update frequency
+        self.update_freq = 15
 
     def _cache_data(self):
 

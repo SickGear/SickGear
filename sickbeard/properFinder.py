@@ -78,6 +78,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
     # for each provider get a list of the
     orig_thread_name = threading.currentThread().name
     providers = [x for x in sickbeard.providers.sortedProviderList() if x.is_active()]
+    np = NameParser(False, try_scene_exceptions=True)
     for cur_provider in providers:
         if not recent_anime and cur_provider.anime_only:
             continue
@@ -99,7 +100,6 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
 
         # if they haven't been added by a different provider than add the proper to the list
         count = 0
-        np = NameParser(False, try_scene_exceptions=True)
         for x in found_propers:
             name = _generic_name(x.name)
             if name not in propers:
@@ -124,6 +124,8 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
     verified_propers = []
 
     for cur_proper in sorted_propers:
+
+        parse_result = np.parse(cur_proper.name)
 
         # set the indexerid in the db to the show's indexerid
         cur_proper.indexerid = parse_result.show.indexerid

@@ -26,6 +26,7 @@ from . import generic
 from sickbeard import config, logger, show_name_helpers
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.common import Quality, mediaExtensions
+from sickbeard.helpers import tryInt
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from lib.unidecode import unidecode
 
@@ -35,7 +36,8 @@ class ThePirateBayProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay', cache_update_freq=20)
 
-        self.url_home = ['https://thepiratebay.%s/' % u for u in 'se', 'org']
+        self.url_home = ['https://thepiratebay.%s/' % u for u in 'se', 'org'] + \
+                        ['piratebay.usbypass.xyz/']
 
         self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s',
@@ -135,9 +137,9 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'info': 'detail', 'get': 'download[^"]+magnet', 'tid': r'.*/(\d{5,}).*',
-                                 'verify': '(?:helper|moderator|trusted|vip)'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'info': 'detail', 'get': 'download[^"]+magnet', 'tid': r'.*/(\d{5,}).*',
+            'verify': '(?:helper|moderator|trusted|vip)', 'size': 'size[^\d]+(\d+(?:[.,]\d+)?\W*[bkmgt]\w+)'}.items())
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
@@ -153,7 +155,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive'], attr='id="searchResult"') as soup:
-                        torrent_table = soup.find('table', attrs={'id': 'searchResult'})
+                        torrent_table = soup.find(id='searchResult')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -161,14 +163,13 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
                         for tr in torrent_table.find_all('tr')[1:]:
                             try:
-                                seeders, leechers = [int(tr.find_all('td')[x].get_text().strip()) for x in (-2, -1)]
+                                seeders, leechers = [tryInt(tr.find_all('td')[x].get_text().strip()) for x in -2, -1]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', title=rc['info'])
                                 title = info.get_text().strip().replace('_', '.')
                                 tid = rc['tid'].sub(r'\1', str(info['href']))
-
                                 download_magnet = tr.find('a', title=rc['get'])['href']
                             except (AttributeError, TypeError, ValueError):
                                 continue
@@ -186,22 +187,19 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             if title and download_magnet:
                                 size = None
                                 try:
-                                    size = re.findall('(?i)size[^\d]+(\d+(?:[\.,]\d+)?\W*[bkmgt]\w+)',
-                                                      tr.find_all(class_='detDesc')[0].get_text())[0]
-                                except Exception:
+                                    size = rc['size'].findall(tr.find_all(class_='detDesc')[0].get_text())[0]
+                                except (StandardError, Exception):
                                     pass
 
                                 items[mode].append((title, download_magnet, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

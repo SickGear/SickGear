@@ -47,7 +47,7 @@ class GFTrackerProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
-        return super(GFTrackerProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies(pre='gft_')),
+        return super(GFTrackerProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies(pre='gft_')),
                                                           url=[self.urls['login_init']])
 
     def _search_provider(self, search_params, **kwargs):
@@ -90,10 +90,9 @@ class GFTrackerProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = ('title' in info.attrs and info['title']) or info.get_text().strip()
+                                title = (info.attrs.get('title') or info.get_text()).strip()
                                 size = tr.find_all('td')[-2].get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -102,13 +101,11 @@ class GFTrackerProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

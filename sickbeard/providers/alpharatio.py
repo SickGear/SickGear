@@ -35,7 +35,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
         self.url_base = 'https://alpharatio.cc/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'login.php',
+                     'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s%s&' + '&'.join(
                          ['tags_type=1', 'order_by=time', 'order_way=desc'] +
                          ['filter_cat[%s]=1' % c for c in 1, 2, 3, 4, 5] +
@@ -48,8 +48,8 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
-        return super(AlphaRatioProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies('session')),
-                                                           post_params={'keeplogged': '1', 'login': 'Login'})
+        return super(AlphaRatioProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies('session')),
+                                                           post_params={'keeplogged': '1', 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -73,7 +73,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'id': 'torrent_table'})
+                        torrent_table = soup.find(id='torrent_table')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -82,14 +82,12 @@ class AlphaRatioProvider(generic.TorrentProvider):
                         for tr in torrent_rows[1:]:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -4)]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 title = tr.find('a', title=rc['info']).get_text().strip()
-
-                                link = str(tr.find('a', title=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
-                                download_url = self.urls['get'] % link
+                                download_url = self._link(tr.find('a', title=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -98,13 +96,11 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

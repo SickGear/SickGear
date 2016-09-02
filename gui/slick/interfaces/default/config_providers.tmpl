@@ -87,7 +87,7 @@
 						<div class="component-group-desc">
 							<h3>Provider Priorities</h3>
 							<p>Check off and drag the providers into the order you want them to be used.</p>
-							<p>At least one provider is required but two are recommended.</p>
+							<p>At least one provider is required, two are recommended.</p>
 
 #if $methods_notused
 							<blockquote style="margin:20px 0"><%= '/'.join(x for x in methods_notused) %> providers can be enabled in <a href="$sbRoot/config/search/">Search Settings</a></blockquote>
@@ -109,7 +109,10 @@
 								<input type="checkbox" id="enable_$cur_name" class="provider_enabler" <%= html_checked if cur_provider.is_enabled() else '' %>/>
 								<a href="<%= anon_url(cur_url) %>" class="imgLink" rel="noreferrer" onclick="window.open(this.href,'_blank');return false;"><img src="$sbRoot/images/providers/$cur_provider.image_name()" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle" /></a>
 								<span style="vertical-align:middle">$cur_provider.name$state</span>
-<%= '*' if not cur_provider.supports_backlog else '' %>
+    #if $cur_provider.is_public_access()#
+								<span style="font-size:10px;vertical-align:top;font-weight:normal">(PA)</span>
+    #end if#
+    #if not $cur_provider.supports_backlog#*#end if#
 								<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="margin-top:3px"></span>
 							</li>
 #end for
@@ -117,10 +120,12 @@
 
 
 						<div id="provider_key">
-							<h4 class="note">*</h4><p class="note">Provider does not support backlog searches at this time</p>
-#if $sickbeard.USE_TORRENTS
-							<h4 class="note">**</h4><p class="note">Provider supports <b>limited</b> backlog searches, some episodes/qualities may not be available</p>
-#end if
+							<span style="float:left;font-size:10px;vertical-align:top;font-weight:normal">(PA)</span><p class="note">Public access, no account required</p>
+							<h4 class="note"></h4><p class="note">Searches current and past releases</p>
+							<h4 class="note">*</h4><p class="note">Searches current but not past releases</p>
+## #if $sickbeard.USE_TORRENTS
+##							<h4 class="note">**</h4><p class="note">Supports <b>limited</b> backlog searches, some episodes/qualities may not be available</p>
+## #end if
 							##<h4 class="note">!</h4><p class="note">Provider is <b>NOT WORKING</b></p>
 						</div>
 

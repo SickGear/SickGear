@@ -50,10 +50,9 @@ class ShazbatProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(ShazbatProvider, self)._authorised(
-            logged_in=(lambda x=None: '<input type="password"' not in helpers.getURL(
+            logged_in=(lambda y=None: '<input type="password"' not in helpers.getURL(
                 self.urls['feeds'], session=self.session)),
-            post_params={'tv_login': self.username, 'tv_password': self.password,
-                         'referer': 'login', 'query': '', 'email': ''})
+            post_params={'tv_login': self.username, 'tv_password': self.password, 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -116,8 +115,7 @@ class ShazbatProvider(generic.TorrentProvider):
                                         title = unicode(element).strip()
                                         break
 
-                                link = str(tr.find('a', href=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
-                                download_url = self.urls['get'] % link
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -126,13 +124,11 @@ class ShazbatProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 

@@ -38,7 +38,7 @@ class RarbgProvider(generic.TorrentProvider):
                      'api_list': self.url_api + 'mode=list',
                      'api_search': self.url_api + 'mode=search'}
 
-        self.params = {'defaults': '&format=json_extended&category=18;41&limit=100&sort=last&ranked=%(ranked)s&token=%(token)s',
+        self.params = {'defaults': '&format=json_extended&category=18;41&limit=100&sort=last&ranked=%(r)s&token=%(t)s',
                        'param_iid': '&search_imdb=%(sid)s',
                        'param_tid': '&search_tvdb=%(sid)s',
                        'param_str': '&search_string=%(str)s',
@@ -90,7 +90,8 @@ class RarbgProvider(generic.TorrentProvider):
                 id_search = self.params[search_with] % {'sid': sid}
 
         dedupe = []
-        search_types = sorted([x for x in search_params.items()], key=lambda tup: tup[0], reverse=True)  # sort type "_only" as first to process
+        # sort type "_only" as first to process
+        search_types = sorted([x for x in search_params.items()], key=lambda tup: tup[0], reverse=True)
         for mode_params in search_types:
             mode_search = mode_params[0]
             mode = mode_search.replace('_only', '')
@@ -121,41 +122,40 @@ class RarbgProvider(generic.TorrentProvider):
                         time_out += 1
                         time.sleep(1)
 
-                    searched_url = search_url % {'ranked': int(self.confirmed), 'token': self.token}
+                    searched_url = search_url % {'r': int(self.confirmed), 't': self.token}
 
-                    data = self.get_url(searched_url, json=True)
+                    data_json = self.get_url(searched_url, json=True)
 
                     self.token_expiry = datetime.datetime.now() + datetime.timedelta(minutes=14)
                     self.request_throttle = datetime.datetime.now() + datetime.timedelta(seconds=3)
-                    if not data:
+                    if not data_json:
                         continue
 
-                    if 'error' in data:
-                        if 5 == data['error_code']:  # Too many requests per second.
+                    if 'error' in data_json:
+                        if 5 == data_json['error_code']:  # Too many requests per second.
                             continue
 
-                        elif 2 == data['error_code']:  # Invalid token set
+                        elif 2 == data_json['error_code']:  # Invalid token set
                             if self._authorised(reset=True):
                                 continue
                             self.log_result(mode, len(items[mode]) - cnt, searched_url)
                             return items[mode]
                     break
 
-                if 'error' not in data:
-                    for item in data['torrent_results']:
+                if 'error' not in data_json:
+                    for item in data_json['torrent_results']:
                         title, download_magnet, seeders, size = [
                             item.get(x) for x in 'title', 'download', 'seeders', 'size']
                         title = None is title and item.get('filename') or title
                         if not (title and download_magnet) or download_magnet in dedupe:
                             continue
                         dedupe += [download_magnet]
+
                         items[mode].append((title, download_magnet, seeders, self._bytesizer(size)))
 
                 self._log_search(mode, len(items[mode]) - cnt, searched_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
             if '_only' in mode_search and len(results):
                 break
