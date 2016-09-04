@@ -50,6 +50,16 @@
 #except NotFound
     #set $localheader = ''
 #end try
+<%
+try:
+    next_backlog_timeleft = str(sickbeard.backlogSearchScheduler.next_backlog_timeleft()).split('.')[0]
+except AttributeError:
+    next_backlog_timeleft = 'soon'
+try:
+    recent_search_timeleft = str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0]
+except AttributeError:
+    recent_search_timeleft = 'soon'
+%>
 ##
 			<span class="footerhighlight">$shows_total</span> shows (<span class="footerhighlight">$shows_active</span> active)
 			| <span class="footerhighlight">$ep_downloaded</span><%=
@@ -60,10 +70,8 @@
     % (localRoot, str(ep_snatched))
 )[0 < ep_snatched]
 %>&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded $ep_percentage
-			| recent search: <span class="footerhighlight"><%= str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0] %></span>
-			| backlog search: <span class="footerhighlight"><%= str(sickbeard.backlogSearchScheduler.timeLeft()).split('.')[0] %></span>
-			| full backlog: <span class="footerhighlight"><%= sbdatetime.sbdatetime.sbfdate(sickbeard.backlogSearchScheduler.nextRun()) %>
-			</span>
+			| recent search: <span class="footerhighlight">$recent_search_timeleft</span>
+			| backlog search: <span class="footerhighlight">$next_backlog_timeleft</span>
 		</div>
 	</footer>
 </body>

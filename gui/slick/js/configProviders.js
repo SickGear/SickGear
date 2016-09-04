@@ -1,5 +1,5 @@
 $(document).ready(function(){
-
+    $.sgd = !1;
     $.fn.showHideProviders = function() {
         $('.providerDiv').each(function(){
             var providerName = $(this).attr('id');
@@ -40,7 +40,7 @@ $(document).ready(function(){
         $.getJSON(sbRoot + '/config/providers/getNewznabCategories', params,
                 function(data){
                     updateNewznabCaps( data, selectedProvider );
-                    console.debug(data.tv_categories);
+                    //console.debug(data.tv_categories);
             });
     }
 
@@ -217,7 +217,7 @@ $(document).ready(function(){
             if (rootObject.name == searchFor) {
                 found = true;
             }
-            console.log(rootObject.name + ' while searching for: ' + searchFor);
+            //console.log(rootObject.name + ' while searching for: ' + searchFor);
         });
         return found;
     };
@@ -232,25 +232,53 @@ $(document).ready(function(){
     updateNewznabCaps = function( newzNabCaps, selectedProvider ) {
 
         if (newzNabCaps && !ifExists($.fn.newznabProvidersCapabilities, selectedProvider[0])) {
-            $.fn.newznabProvidersCapabilities.push({'name' : selectedProvider[0], 'categories' : newzNabCaps.tv_categories});
-        }
 
+            $.fn.newznabProvidersCapabilities.push({
+                'name' : selectedProvider[0],
+                'categories' : newzNabCaps.tv_categories
+                    .sort(function(a, b){return a.name > b.name})})
+        }
+        $.sgd && console.log(selectedProvider);
         //Loop through the array and if currently selected newznab provider name matches one in the array, use it to
         //update the capabilities select box (on the left).
         if (selectedProvider[0]) {
-            $.fn.newznabProvidersCapabilities.forEach(function(newzNabCap) {
+            var newCapOptions = [], catName = '', hasCats = false;
+            if ($.fn.newznabProvidersCapabilities.length) {
+                $.fn.newznabProvidersCapabilities.forEach(function (newzNabCap) {
+                    $.sgd && console.log('array found:' + (newzNabCap.categories instanceof Array ? 'yes': 'no'));
 
-                if (newzNabCap.name && newzNabCap.name == selectedProvider[0] && newzNabCap.categories instanceof Array) {
-                        var newCapOptions = [];
-                        newzNabCap.categories.forEach(function(category_set) {
+                    if (newzNabCap.name && newzNabCap.name == selectedProvider[0] && newzNabCap.categories instanceof Array) {
+                        newzNabCap.categories.forEach(function (category_set) {
                             if (category_set.id && category_set.name) {
-                                newCapOptions.push({value : category_set.id, text : category_set.name + '(' + category_set.id + ')'});
-                            };
+                                catName = category_set.name.replace(/Docu([^\w]|$)(.*?)/i, 'Documentary$1');
+                                newCapOptions.push({
+                                    value: category_set.id,
+                                    text: catName + ' (' + category_set.id + ')'
+                                });
+                            }
                         });
                         $('#newznab_cap').replaceOptions(newCapOptions);
-                }
-            });
-        };
+                        hasCats = !!newCapOptions.length
+                    }
+                });
+                $('#nn-loadcats').removeClass('show').addClass('hide');
+                if (hasCats) {
+                    $.sgd && console.log('hasCats');
+                    $('#nn-nocats').removeClass('show').addClass('hide');
+                    $('#nn-cats').removeClass('hide').addClass('show');
+                 } else {
+                    $.sgd && console.log('noCats');
+                    $('#nn-cats').removeClass('show').addClass('hide');
+                    $('#nn-nocats').removeClass('hide').addClass('show');
+                 }
+            } else {
+                $.sgd && console.log('errCats');
+                // error - no caps
+                $('#nn-cats').removeClass('show').addClass('hide');
+                $('#nn-nocats').removeClass('show').addClass('hide');
+                $('#nn-loadcats').removeClass('hide').addClass('show');
+            }
+        }
     }
 
     $.fn.makeNewznabProviderString = function() {
@@ -384,7 +412,7 @@ $(document).ready(function(){
     });
 
     $(this).on('click', '#newznab_cat_update', function(){
-        console.debug('Clicked Button');
+        //console.debug('Clicked Button');
 
         //Maybe check if there is anything selected?
         $('#newznab_cat option').each(function() {
@@ -400,7 +428,7 @@ $(document).ready(function(){
             if($(this).attr('selected') == 'selected')
             {
                 var selected_cat = $(this).val();
-                console.debug(selected_cat);
+                //console.debug(selected_cat);
                 newOptions.push({text: selected_cat, value: selected_cat})
              };
         });

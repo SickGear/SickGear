@@ -161,7 +161,7 @@ class ProcessTVShow(object):
 
         return result
 
-    def process_dir(self, dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, pp_type='auto', cleanup=False):
+    def process_dir(self, dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, pp_type='auto', cleanup=False, showObj=None):
         """
         Scans through the files in dir_name and processes whatever media files it finds
 
@@ -193,7 +193,7 @@ class ProcessTVShow(object):
                 self._log_helper(u'Unable to figure out what folder to process. ' +
                                  u'If your downloader and SickGear aren\'t on the same PC then make sure ' +
                                  u'you fill out your completed TV download folder in the PP config.')
-            return self.result
+                return self.result
 
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
 
@@ -240,7 +240,7 @@ class ProcessTVShow(object):
 
         # Don't Link media when the media is extracted from a rar in the same path
         if process_method in ('hardlink', 'symlink') and video_in_rar:
-            self._process_media(path, video_in_rar, nzb_name, 'move', force, force_replace)
+            self._process_media(path, video_in_rar, nzb_name, 'move', force, force_replace, showObj=showObj)
             self._delete_files(path, [ek.ek(os.path.relpath, item, path) for item in work_files], force=True)
             video_batch = set(video_files) - set(video_in_rar)
         else:
@@ -258,7 +258,7 @@ class ProcessTVShow(object):
 
                 video_batch = set(video_batch) - set(video_pick)
 
-                self._process_media(path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup)
+                self._process_media(path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup, showObj=showObj)
 
         except OSError as e:
             logger.log('Batch skipped, %s%s' %
@@ -289,7 +289,7 @@ class ProcessTVShow(object):
 
                 # Don't Link media when the media is extracted from a rar in the same path
                 if process_method in ('hardlink', 'symlink') and video_in_rar:
-                    self._process_media(walk_path, video_in_rar, nzb_name, 'move', force, force_replace)
+                    self._process_media(walk_path, video_in_rar, nzb_name, 'move', force, force_replace, showObj=showObj)
                     video_batch = set(video_files) - set(video_in_rar)
                 else:
                     video_batch = video_files
@@ -307,7 +307,7 @@ class ProcessTVShow(object):
 
                         video_batch = set(video_batch) - set(video_pick)
 
-                        self._process_media(walk_path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup)
+                        self._process_media(walk_path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup, showObj=showObj)
 
                 except OSError as e:
                     logger.log('Batch skipped, %s%s' %
@@ -764,7 +764,7 @@ class ProcessTVShow(object):
 
         return False
 
-    def _process_media(self, process_path, video_files, nzb_name, process_method, force, force_replace, use_trash=False):
+    def _process_media(self, process_path, video_files, nzb_name, process_method, force, force_replace, use_trash=False, showObj=None):
 
         processor = None
         for cur_video_file in video_files:
@@ -776,7 +776,7 @@ class ProcessTVShow(object):
             cur_video_file_path = ek.ek(os.path.join, process_path, cur_video_file)
 
             try:
-                processor = postProcessor.PostProcessor(cur_video_file_path, nzb_name, process_method, force_replace, use_trash=use_trash, webhandler=self.webhandler)
+                processor = postProcessor.PostProcessor(cur_video_file_path, nzb_name, process_method, force_replace, use_trash=use_trash, webhandler=self.webhandler, showObj=showObj)
                 file_success = processor.process()
                 process_fail_message = ''
             except exceptions.PostProcessingFailed:
@@ -850,6 +850,6 @@ class ProcessTVShow(object):
 
 
 # backward compatibility prevents the case of this function name from being updated to PEP8
-def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, type='auto', cleanup=False, webhandler=None):
+def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, type='auto', cleanup=False, webhandler=None, showObj=None):
     # backward compatibility prevents the case of this function name from being updated to PEP8
-    return ProcessTVShow(webhandler).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed, type, cleanup)
+    return ProcessTVShow(webhandler).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed, type, cleanup, showObj)

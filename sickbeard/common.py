@@ -16,16 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
 import operator
+import os.path
 import platform
 import re
-import uuid
 import traceback
+import uuid
 
-import sickbeard
 import logger
-
+import sickbeard
 
 INSTANCE_ID = str(uuid.uuid1())
 
@@ -409,7 +408,8 @@ class Overview:
     # For both snatched statuses. Note: SNATCHED/QUAL have same value and break dict.
     SNATCHED = SNATCHED_PROPER = SNATCHED_BEST  # 9
 
-    overviewStrings = {SKIPPED: 'skipped',
+    overviewStrings = {UNKNOWN: 'unknown',
+                       SKIPPED: 'skipped',
                        WANTED: 'wanted',
                        QUAL: 'qual',
                        GOOD: 'good',

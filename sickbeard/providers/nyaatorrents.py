@@ -39,8 +39,8 @@ class NyaaProvider(generic.TorrentProvider):
             return []
 
         params = urllib.urlencode({'term': search_string.encode('utf-8'),
-                                   'cats': '1_37',  # Limit to English-translated Anime (for now)
-                                   #  'sort': '2',     # Sort Descending By Seeders
+                  'cats': '1_37',  # Limit to English-translated Anime (for now)
+                  # 'sort': '2',     # Sort Descending By Seeders
                                    })
 
         return self.get_data(getrss_func=self.cache.getRSSFeed,
@@ -96,7 +96,7 @@ class NyaaCache(tvcache.TVCache):
     def _cache_data(self):
 
         params = urllib.urlencode({'page': 'rss',   # Use RSS page
-                                   'order': '1',    # Sort Descending By Date
+                  'order': '1',    # Sort Descending By Date
                                    'cats': '1_37'   # Limit to English-translated Anime (for now)
                                    })
 

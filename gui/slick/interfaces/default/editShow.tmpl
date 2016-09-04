@@ -3,6 +3,8 @@
 #from sickbeard import common
 #from sickbeard import exceptions
 #from sickbeard import scene_exceptions
+#from sickbeard.helpers import anon_url
+#from sickbeard.indexers.indexer_config import INDEXER_TVDB
 #import sickbeard.blackandwhitelist
 ##
 #set global $title = 'Edit ' + $show.name
@@ -12,6 +14,7 @@
 #set global $page_body_attr = 'edit-show'
 ##
 #import os.path
+#from urllib import quote_plus
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
@@ -31,13 +34,14 @@
 <div id="config">
 	<div id="config-content" class="linefix container">
 		<form action="editShow" method="post" id="editShow" style="width:894px">
-			<input type="hidden" name="show" value="$show.indexerid">
+			<input type="hidden" name="show" id="show" value="$show.indexerid">
+			<input type="hidden" name="indexer" id="indexer" value="$show.indexer">
 
 			<div id="config-components">
 				<ul>
 					<li><a href="#core-component-group1">Common</a></li>
 					<li><a href="#core-component-group2">Search</a></li>
-					<li><a href="#core-component-group3">Post-Processing</a></li>
+					<li><a href="#core-component-group3">Other</a></li>
 				</ul>
 
 				<div id="core-component-group1" class="component-group">
@@ -243,6 +247,89 @@
 								<p#if not $sickbeard.USE_SUBTITLES# class="grey-text"><del#end if#>download episode subtitles for this show#if not $sickbeard.USE_SUBTITLES#</del> ... (<span class="red-text">note: first <a href="$sbRoot/config/subtitles/">enable the subtitle system here</a></span>)#end if#</p>
 							</span>
 						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="idmapping">
+							<span class="component-title">Related show IDs</span>
+							<span class="component-desc">
+								<label for="idmapping">
+									<input id="idmapping" type="checkbox">
+									<span>TV info source IDs (advanced use only)</span>
+								</label>
+							</span>
+						</label>
+					</div>
+
+#set $dev = True
+#set $dev = None
+					<div id="idmapping-options" style="display:#if $dev#--#end if#none">
+#set $is_master_settable = False
+#for $src_id, $src_name in $sickbeard.indexerApi().all_indexers.iteritems()
+    #set $is_master_settable |= ($dev or
+        ($src_id != $show.indexer and $show.ids[$src_id].get('id', 0) > 0 and
+         $src_id in $sickbeard.indexerApi().indexers and not $sickbeard.indexerApi($src_id).config.get('defunct') and
+         $sickbeard.indexerApi($src_id).config.get('active')))
+    #if $is_master_settable
+        #break
+    #end if
+#end for
+#set $search_name = quote_plus($sickbeard.indexermapper.clean_show_name($show.name))
+#for $src_id, $src_name in $sickbeard.indexerApi().all_indexers.iteritems()
+    #set $ok_src_id = $show.ids[$src_id].get('id', 0) > 0
+    #set $maybe_master = ($src_id != $show.indexer and
+         $src_id in $sickbeard.indexerApi().indexers and not $sickbeard.indexerApi($src_id).config.get('defunct') and
+         $sickbeard.indexerApi($src_id).config.get('active'))
+    #set $settable_master = ($dev or ($ok_src_id and $maybe_master))
+						<div class="field-pair" style="padding:0">
+								<span class="component-title">
+    #if $src_id in $show.ids
+        #set $src_search_url = sickbeard.indexerApi($src_id).config.get('finder')
+        #set $use_search_url = $src_search_url
+        #set $data_link = 'data-'
+        #if $ok_src_id and $sickbeard.indexermapper.MapStatus.NOT_FOUND != $show.ids[$src_id]['status']
+            #set $data_link = ''
+            #set $use_search_url = False
+        #end if
+									<a id="src-mid-$src_id" class="service" style="margin-right:6px" data-search="#if $use_search_url#y#else#n#end if#" #if $src_search_url#data-search-href="$anon_url($src_search_url % $search_name)" data-search-onclick="window.open(this.href, '_blank'); return !1;" data-search-title="Search for show at $src_name" #end if##if $use_search_url#href="$anon_url($src_search_url % $search_name)" onclick="window.open(this.href, '_blank'); return !1;" title="Search for show at $src_name" #end if#$(data_link)href="$anon_url(sickbeard.indexerApi($src_id).config['show_url'], $show.ids[$src_id]['id'])" $(data_link)onclick="window.open(this.href, '_blank'); return !1;" $(data_link)title="View $src_name info in new tab"><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($src_id).config['icon']" /></a>
+    #end if
+									$src_name
+								</span>
+								<span class="component-desc">
+									<input type="text" data-maybe-master="#echo ('0', '1')[bool($maybe_master)]#" name="mid-$src_id" id="#echo ('mid-%s' % $src_id, 'source-id')[$src_id == $show.indexer]#" value="$show.ids.get($src_id, {'id': 0}).get('id')" class="form-control form-control-inline input-sm" #echo ('', $html_disabled)[$src_id == $show.indexer]#>
+    #if $src_id != $show.indexer
+									<label for="lockid-$src_id">
+										<input type="checkbox" name="lockid-$src_id" id="lockid-$src_id"#echo ('', $html_checked)[$show.ids.get($src_id, {'status': $sickbeard.indexermapper.MapStatus.NONE}).get('status') == $sickbeard.indexermapper.MapStatus.NO_AUTOMATIC_CHANGE]#>
+										<p style="padding-left:19px;margin-right:24px">lock this ID</p>
+									</label>
+        #if $settable_master
+									<label for="set-master-$src_id">
+										<input type="radio" name="set-master" id="set-master-$src_id" data-indexer="$src_id" data-indexerid="$show.ids[$src_id].get('id', 0)">set master
+									</label>
+        #end if
+    #else
+									<label for="the-master">
+        #if $is_master_settable
+										<input type="radio" name="set-master" id="the-master" checked>
+        #end if
+										<p#if $is_master_settable# style="padding-left:19px"#end if#>locked master, can't be edited</p>
+									</label>
+    #end if
+								</span>
+						</div>
+#end for
+						<div class="field-pair" style="padding-top:0">
+							<span id="panel-save-get" class="component-desc show">
+								<p>invalid values can break finding episode and TV info</p>
+								<input type="button" value="Save Changes" id="save-mapping" class="btn btn-inline">
+								<p style="float:left;margin-right:6px">or</p>
+								<input type="button" value="Get Defaults" id="reset-mapping" class="btn btn-inline">
+								<p>for unlocked IDs</p>
+							</span>
+							<span id="save-wait" class="component-desc hide">
+								<span><img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#.gif" style="margin-right:6px">Saving...</span>
+							</span>
+						</div>
 					</div>
 
 				</div><!-- /component-group3 //-->

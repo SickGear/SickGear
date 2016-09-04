@@ -40,10 +40,10 @@ Add: <i>$len($queueLength['add']) show$sickbeard.helpers.maybe_plural($len($queu
 		<tbody>
 		#set $row = 0
 		#for $cur_show in $queueLength['add']:
-			#set $show_name = str($cur_show[0])
+			#set $show_name = str($cur_show['name'])
 			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 				<td style="width:80%;text-align:left;color:white">$show_name</td>
-				<td style="width:20%;text-align:center;color:white">#if $cur_show[1]#Scheduled#end if#</td>
+				<td style="width:20%;text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled#end if#</td>
 			</tr>
 		#end for
 		</tbody>
@@ -60,13 +60,13 @@ Update <span class="grey-text">(Forced / Forced Web)</span>: <i>$len($queueLengt
 		<tbody>
 		#set $row = 0
 		#for $cur_show in $queueLength['update']:
-			#set $show = $findCertainShow($showList, $cur_show[0])
-			#set $show_name = $show.name if $show else str($cur_show[0])
+			#set $show = $findCertainShow($showList, $cur_show['indexerid'])
+			#set $show_name = $show.name if $show else str($cur_show['name'])
 			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 				<td style="width:80%;text-align:left">
-					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show[0]">$show_name</a>
+					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexerid']">$show_name</a>
 				</td>
-				<td style="width:20%;text-align:center;color:white">#if $cur_show[1]#Scheduled, #end if#$cur_show[2]</td>
+				<td style="width:20%;text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled, #end if#$cur_show['update_type']</td>
 			</tr>
 		#end for
 		</tbody>
@@ -83,13 +83,13 @@ Refresh: <i>$len($queueLength['refresh']) show$sickbeard.helpers.maybe_plural($l
 		<tbody>
 		#set $row = 0
 		#for $cur_show in $queueLength['refresh']:
-			#set $show = $findCertainShow($showList, $cur_show[0])
-			#set $show_name = $show.name if $show else str($cur_show[0])
+			#set $show = $findCertainShow($showList, $cur_show['indexerid'])
+			#set $show_name = $show.name if $show else str($cur_show['name'])
 			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 				<td style="width:80%;text-align:left">
-					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show[0]">$show_name</a>
+					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexerid']">$show_name</a>
 				</td>
-				<td style="width:20%;text-align:center;color:white">#if $cur_show[1]#Scheduled#end if#</td>
+				<td style="width:20%;text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled#end if#</td>
 			</tr>
 		#end for
 		</tbody>
@@ -107,13 +107,13 @@ Rename: <i>$len($queueLength['rename']) show$sickbeard.helpers.maybe_plural($len
 	<tbody>
 	#set $row = 0
 	#for $cur_show in $queueLength['rename']:
-		#set $show = $findCertainShow($showList, $cur_show[0])
-		#set $show_name = $show.name if $show else str($cur_show[0])
+		#set $show = $findCertainShow($showList, $cur_show['indexerid'])
+		#set $show_name = $show.name if $show else str($cur_show['name'])
 		<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 			<td style="width:80%;text-align:left">
-				<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show[0]">$show_name</a>
+				<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexerid']">$show_name</a>
 			</td>
-			<td style="width:20%;text-align:center;color:white">#if $cur_show[1]#Scheduled#end if#</td>
+			<td style="width:20%;text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled#end if#</td>
 		</tr>
 	#end for
 	</tbody>
@@ -131,13 +131,13 @@ Rename: <i>$len($queueLength['rename']) show$sickbeard.helpers.maybe_plural($len
 			<tbody>
 			#set $row = 0
 			#for $cur_show in $queueLength['subtitle']:
-				#set $show = $findCertainShow($showList, $cur_show[0])
-				#set $show_name = $show.name if $show else str($cur_show[0])
+				#set $show = $findCertainShow($showList, $cur_show['indexerid'])
+				#set $show_name = $show.name if $show else str($cur_show['name'])
 				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 					<td style="width:80%;text-align:left">
-						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show[0]">$show_name</a>
+						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexerid']">$show_name</a>
 					</td>
-					<td style="width:20%;text-align:center;color:white">#if $cur_show[1]#Scheduled#end if#</td>
+					<td style="width:20%;text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled#end if#</td>
 				</tr>
 			#end for
 			</tbody>

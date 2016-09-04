@@ -88,25 +88,31 @@ class ShowQueue(generic_queue.GenericQueue):
         with self.lock:
             for cur_item in [self.currentItem] + self.queue:
                 if isinstance(cur_item, QueueItemAdd):
-                    length['add'].append([cur_item.show_name, cur_item.scheduled_update])
+                    length['add'].append({'name': cur_item.show_name, 'scheduled_update': cur_item.scheduled_update})
                 elif isinstance(cur_item, QueueItemUpdate):
                     update_type = 'Normal'
                     if isinstance(cur_item, QueueItemForceUpdate):
                         update_type = 'Forced'
                     elif isinstance(cur_item, QueueItemForceUpdateWeb):
                         update_type = 'Forced Web'
-                    length['update'].append([cur_item.show_name, cur_item.scheduled_update, update_type])
+                    length['update'].append({'name': cur_item.show_name, 'indexerid': cur_item.show.indexerid,
+                                             'indexer': cur_item.show.indexer, 'scheduled_update': cur_item.scheduled_update,
+                                             'update_type': update_type})
                 elif isinstance(cur_item, QueueItemRefresh):
-                    length['refresh'].append([cur_item.show_name, cur_item.scheduled_update])
+                    length['refresh'].append({'name': cur_item.show_name, 'indexerid': cur_item.show.indexerid,
+                                             'indexer': cur_item.show.indexer, 'scheduled_update': cur_item.scheduled_update})
                 elif isinstance(cur_item, QueueItemRename):
-                    length['rename'].append([cur_item.show_name, cur_item.scheduled_update])
+                    length['rename'].append({'name': cur_item.show_name, 'indexerid': cur_item.show.indexerid,
+                                             'indexer': cur_item.show.indexer, 'scheduled_update': cur_item.scheduled_update})
                 elif isinstance(cur_item, QueueItemSubtitle):
-                    length['subtitle'].append([cur_item.show_name, cur_item.scheduled_update])
+                    length['subtitle'].append({'name': cur_item.show_name, 'indexerid': cur_item.show.indexerid,
+                                             'indexer': cur_item.show.indexer, 'scheduled_update': cur_item.scheduled_update})
             return length
 
     loadingShowList = property(_getLoadingShowList)
 
-    def updateShow(self, show, force=False, web=False, scheduled_update=False):
+    def updateShow(self, show, force=False, web=False, scheduled_update=False,
+                   priority=generic_queue.QueuePriorities.NORMAL, **kwargs):
 
         if self.isBeingAdded(show):
             raise exceptions.CantUpdateException(
@@ -121,17 +127,18 @@ class ShowQueue(generic_queue.GenericQueue):
                 'This show is already being updated, can\'t update again until it\'s done.')
 
         if not force:
-            queueItemObj = QueueItemUpdate(show, scheduled_update=scheduled_update)
+            queueItemObj = QueueItemUpdate(show, scheduled_update=scheduled_update, **kwargs)
         elif web:
-            queueItemObj = QueueItemForceUpdateWeb(show, scheduled_update=scheduled_update)
+            queueItemObj = QueueItemForceUpdateWeb(show, scheduled_update=scheduled_update, priority=priority, **kwargs)
         else:
-            queueItemObj = QueueItemForceUpdate(show, scheduled_update=scheduled_update)
+            queueItemObj = QueueItemForceUpdate(show, scheduled_update=scheduled_update, **kwargs)
 
         self.add_item(queueItemObj)
 
         return queueItemObj
 
-    def refreshShow(self, show, force=False, scheduled_update=False, after_update=False):
+    def refreshShow(self, show, force=False, scheduled_update=False, after_update=False,
+                    priority=generic_queue.QueuePriorities.HIGH, **kwargs):
 
         if self.isBeingRefreshed(show) and not force:
             raise exceptions.CantRefreshException('This show is already being refreshed, not refreshing again.')
@@ -142,7 +149,7 @@ class ShowQueue(generic_queue.GenericQueue):
                 logger.DEBUG)
             return
 
-        queueItemObj = QueueItemRefresh(show, force=force, scheduled_update=scheduled_update)
+        queueItemObj = QueueItemRefresh(show, force=force, scheduled_update=scheduled_update, priority=priority, **kwargs)
 
         self.add_item(queueItemObj)
 
@@ -458,6 +465,9 @@ class QueueItemAdd(ShowQueueItem):
 
         self.show.flushEpisodes()
 
+        # load ids
+        self.show.ids
+
         # if sickbeard.USE_TRAKT:
         #     # if there are specific episodes that need to be added by trakt
         #     sickbeard.traktCheckerScheduler.action.manageNewShow(self.show)
@@ -485,14 +495,16 @@ class QueueItemAdd(ShowQueueItem):
 
 
 class QueueItemRefresh(ShowQueueItem):
-    def __init__(self, show=None, force=False, scheduled_update=False):
+    def __init__(self, show=None, force=False, scheduled_update=False, priority=generic_queue.QueuePriorities.HIGH, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.REFRESH, show, scheduled_update)
 
         # do refreshes first because they're quick
-        self.priority = generic_queue.QueuePriorities.HIGH
+        self.priority = priority
 
         # force refresh certain items
         self.force = force
+
+        self.kwargs = kwargs
 
     def run(self):
         ShowQueueItem.run(self)
@@ -509,6 +521,8 @@ class QueueItemRefresh(ShowQueueItem):
         if self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
             sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
 
+        if 'pausestatus_after' in self.kwargs and self.kwargs['pausestatus_after'] is not None:
+            self.show.paused = self.kwargs['pausestatus_after']
         self.inProgress = False
 
 
@@ -568,10 +582,11 @@ class QueueItemSubtitle(ShowQueueItem):
 
 
 class QueueItemUpdate(ShowQueueItem):
-    def __init__(self, show=None, scheduled_update=False):
+    def __init__(self, show=None, scheduled_update=False, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.UPDATE, show, scheduled_update)
         self.force = False
         self.force_web = False
+        self.kwargs = kwargs
 
     def run(self):
 
@@ -642,18 +657,24 @@ class QueueItemUpdate(ShowQueueItem):
                     except exceptions.EpisodeDeletedException:
                         pass
 
-        sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True)
+        if self.priority != generic_queue.QueuePriorities.NORMAL:
+            self.kwargs['priority'] = self.priority
+        sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True,
+                                                        **self.kwargs)
 
 
 class QueueItemForceUpdate(QueueItemUpdate):
-    def __init__(self, show=None, scheduled_update=False):
+    def __init__(self, show=None, scheduled_update=False, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show, scheduled_update)
         self.force = True
         self.force_web = False
+        self.kwargs = kwargs
 
 
 class QueueItemForceUpdateWeb(QueueItemUpdate):
-    def __init__(self, show=None, scheduled_update=False):
+    def __init__(self, show=None, scheduled_update=False, priority=generic_queue.QueuePriorities.NORMAL, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show, scheduled_update)
         self.force = True
         self.force_web = True
+        self.priority = priority
+        self.kwargs = kwargs

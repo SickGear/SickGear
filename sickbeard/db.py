@@ -448,6 +448,7 @@ def MigrationCode(myDB):
         20000: sickbeard.mainDB.DBIncreaseTo20001,
         20001: sickbeard.mainDB.AddTvShowOverview,
         20002: sickbeard.mainDB.AddTvShowTags,
+        20003: sickbeard.mainDB.ChangeMapIndexer
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

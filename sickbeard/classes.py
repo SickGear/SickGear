@@ -177,7 +177,7 @@ class ShowListUI:
 
 
 class Proper:
-    def __init__(self, name, url, date, show):
+    def __init__(self, name, url, date, show, parsed_show=None):
         self.name = name
         self.url = url
         self.date = date
@@ -186,6 +186,7 @@ class Proper:
         self.release_group = None
         self.version = -1
 
+        self.parsed_show = parsed_show
         self.show = show
         self.indexer = None
         self.indexerid = -1

@@ -63,8 +63,27 @@ class TraktNotifier:
                 ]
             }
 
-            indexer = ('tvrage', 'tvdb')[1 == ep_obj.show.indexer]
-            data['shows'][0]['ids'][indexer] = ep_obj.show.indexerid
+            from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_IMDB, INDEXER_TMDB, \
+                INDEXER_TRAKT
+
+            supported_indexer = {INDEXER_TRAKT: 'trakt', INDEXER_TVDB: 'tvdb', INDEXER_TVRAGE: 'tvrage',
+                                 INDEXER_IMDB: 'imdb', INDEXER_TMDB: 'tmdb'}
+            indexer_priorities = [INDEXER_TRAKT, INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_IMDB, INDEXER_TMDB]
+
+            indexer = indexerid = None
+            if ep_obj.show.indexer in supported_indexer:
+                indexer, indexerid = supported_indexer[ep_obj.show.indexer], ep_obj.show.indexerid
+            else:
+                for i in indexer_priorities:
+                    if ep_obj.show.ids.get(i, {'id': 0}).get('id', 0) > 0:
+                        indexer, indexerid = supported_indexer[i], ep_obj.show.ids[i]['id']
+                        break
+
+            if indexer is None or indexerid is None:
+                logger.log('Missing trakt supported id, could not add to collection.', logger.WARNING)
+                return
+
+            data['shows'][0]['ids'][indexer] = indexerid
 
             # Add Season and Episode + Related Episodes
             data['shows'][0]['seasons'] = [{'number': ep_obj.season, 'episodes': []}]

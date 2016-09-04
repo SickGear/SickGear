@@ -20,6 +20,7 @@ import datetime
 import locale
 import functools
 import re
+import time
 
 import sickbeard
 from sickbeard.network_timezones import sb_timezone
@@ -200,3 +201,12 @@ class sbdatetime(datetime.datetime):
         finally:
             sbdatetime.setlocale(use_has_locale=sbdatetime.has_locale)
             return strd
+
+    @static_or_instance
+    def totimestamp(self, dt=None, default=None):
+        obj = (dt, self)[self is not None]
+        timestamp = default
+        try:
+            timestamp = time.mktime(obj.timetuple())
+        finally:
+            return (default, timestamp)[isinstance(timestamp, float)]

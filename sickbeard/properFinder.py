@@ -104,6 +104,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
             name = _generic_name(x.name)
             if name not in propers:
                 try:
+                    np = NameParser(False, try_scene_exceptions=True, showObj=x.parsed_show)
                     parse_result = np.parse(x.name)
                     if parse_result.series_name and parse_result.episode_numbers and \
                             parse_result.show.indexerid in recent_shows + recent_anime:

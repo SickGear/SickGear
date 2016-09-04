@@ -645,15 +645,27 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Search categories</span>
+								<span class="component-title">Extra categories to search
+									<span style="font-weight:normal">with.. (u)hd, sd, sport, anime</span>
+								</span>
 								<span class="component-desc">
-									<select id="newznab_cap" multiple="multiple" style="min-width:10em;" ></select>
-									<select id="newznab_cat" multiple="multiple" style="min-width:10em;" ></select>
-									<div class="clear-left">
-										<p>select newznab categories to search on the left then "Update Categories"<br />
-										<b>remember</b> to "Save Changes"!</p>
+									<div id="nn-cats">
+										<div class="pull-left">
+											<select class="pull-left" id="newznab_cap" multiple="multiple" style="min-width:10em;min-height:72px"></select>
+											<input class="btn" type="button" class="newznab_cat_update" id="newznab_cat_update" value=">>" style="position:relative;bottom:-15px">
+										</div>
+										<select id="newznab_cat" multiple="multiple" style="min-width:7em;min-height:72px"></select>
+										<div class="clear-left">
+											<p>multi-select newznab categories on the left<br />
+											then click ">>" and finally "Save Changes"</p>
+										</div>
 									</div>
-									<div class="clear-left"><input class="btn" type="button" class="newznab_cat_update" id="newznab_cat_update" value="Update Categories" /></div>
+									<div id="nn-nocats" class="hide">
+										<span>No extra categories found</span>
+									</div>
+									<div id="nn-loadcats" class="hide">
+										<span>Loading categories...</span>
+									</div>
 								</span>
 							</label>
 						</div>

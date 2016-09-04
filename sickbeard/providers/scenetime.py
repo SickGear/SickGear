@@ -38,7 +38,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                      'params': {'sec': 'jax', 'cata': 'yes'},
                      'get': self.url_base + 'download.php/%(id)s/%(title)s.torrent'}
 
-        self.categories = {'shows': [2, 43, 9, 63, 77, 79, 101]}
+        self.categories = {'shows': [2, 43, 9, 63, 77, 79, 83]}
 
         self.url = self.urls['config_provider_home_uri']
 

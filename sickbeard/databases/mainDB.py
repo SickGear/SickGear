@@ -27,7 +27,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20003
+MAX_DB_VERSION = 20004
 
 
 class MainSanityCheck(db.DBSanityCheck):
@@ -1095,4 +1095,58 @@ class AddTvShowTags(db.SchemaUpgrade):
             self.addColumn('tv_shows', 'tag', 'TEXT', 'Show List')
 
         self.setDBVersion(20003)
+        return self.checkDBVersion()
+
+# 20003 -> 20004
+class ChangeMapIndexer(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
+        if self.hasTable('indexer_mapping'):
+            self.connection.action('DROP TABLE indexer_mapping')
+
+        logger.log(u'Changing table indexer_mapping')
+        self.connection.action(
+            'CREATE TABLE indexer_mapping (indexer_id INTEGER, indexer NUMERIC, mindexer_id INTEGER NOT NULL, mindexer NUMERIC, date NUMERIC NOT NULL  DEFAULT 0, status INTEGER NOT NULL  DEFAULT 0, PRIMARY KEY (indexer_id, indexer, mindexer))')
+
+        self.connection.action('CREATE INDEX IF NOT EXISTS idx_mapping ON indexer_mapping (indexer_id, indexer)')
+
+        if not self.hasColumn('info', 'last_run_backlog'):
+            logger.log('Adding last_run_backlog to info')
+            self.addColumn('info', 'last_run_backlog', 'NUMERIC', 1)
+
+        logger.log(u'Moving table scene_exceptions from cache.db to sickbeard.db')
+        if self.hasTable('scene_exceptions_refresh'):
+            self.connection.action('DROP TABLE scene_exceptions_refresh')
+        self.connection.action('CREATE TABLE scene_exceptions_refresh (list TEXT PRIMARY KEY, last_refreshed INTEGER)')
+        if self.hasTable('scene_exceptions'):
+            self.connection.action('DROP TABLE scene_exceptions')
+        self.connection.action('CREATE TABLE scene_exceptions (exception_id INTEGER PRIMARY KEY, indexer_id INTEGER KEY, show_name TEXT, season NUMERIC, custom NUMERIC)')
+
+        try:
+            cachedb = db.DBConnection(filename='cache.db')
+            if cachedb.hasTable('scene_exceptions'):
+                sqlResults = cachedb.action('SELECT * FROM scene_exceptions')
+                cs = []
+                for r in sqlResults:
+                    cs.append(['INSERT OR REPLACE INTO scene_exceptions (exception_id, indexer_id, show_name, season, custom)'
+                               ' VALUES (?,?,?,?,?)', [r['exception_id'], r['indexer_id'], r['show_name'],
+                                                         r['season'], r['custom']]])
+
+                if len(cs) > 0:
+                    self.connection.mass_action(cs)
+        except:
+            pass
+
+        keep_tables = {'scene_exceptions', 'scene_exceptions_refresh', 'info', 'indexer_mapping', 'blacklist',
+                       'db_version', 'history', 'imdb_info', 'lastUpdate', 'scene_numbering', 'tv_episodes', 'tv_shows',
+                       'whitelist', 'xem_refresh'}
+        current_tables = set(self.listTables())
+        remove_tables = list(current_tables - keep_tables)
+        for table in remove_tables:
+            self.connection.action('DROP TABLE [%s]' % table)
+
+        self.connection.action('VACUUM')
+
+        self.setDBVersion(20004)
         return self.checkDBVersion()

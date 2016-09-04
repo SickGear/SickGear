@@ -54,7 +54,8 @@ from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, 
 from sickbeard.name_cache import buildNameCache
 from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
-from sickbeard.search_backlog import FULL_BACKLOG, LIMITED_BACKLOG
+from sickbeard.search_backlog import FORCED_BACKLOG
+from sickbeard.indexermapper import MapStatus, save_mapping, map_indexers_to_show
 from tornado import gen
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from lib import adba
@@ -1370,11 +1371,128 @@ class Home(MainHandler):
             out.append('S' + str(season) + ': ' + ', '.join(names))
         return '<br/>'.join(out)
 
+    def switchIndexer(self, indexerid, indexer, mindexerid, mindexer, set_pause=False, mark_wanted=False):
+        indexer = helpers.tryInt(indexer)
+        indexerid = helpers.tryInt(indexerid)
+        mindexer = helpers.tryInt(mindexer)
+        mindexerid = helpers.tryInt(mindexerid)
+        show_obj = sickbeard.helpers.find_show_by_id(
+            sickbeard.showList, {indexer: indexerid}, no_mapped_ids=True)
+        try:
+            m_show_obj = sickbeard.helpers.find_show_by_id(
+                sickbeard.showList, {mindexer: mindexerid}, no_mapped_ids=False)
+        except exceptions.MultipleShowObjectsException:
+            msg = 'Duplicate shows in DB'
+            ui.notifications.message('Indexer Switch', 'Error: ' + msg)
+            return {'Error': msg}
+        if not show_obj or (m_show_obj and show_obj is not m_show_obj):
+            msg = 'Unable to find the specified show'
+            ui.notifications.message('Indexer Switch', 'Error: ' + msg)
+            return {'Error': msg}
+
+        with show_obj.lock:
+            show_obj.indexer = mindexer
+            show_obj.indexerid = mindexerid
+            pausestatus_after = None
+            if not set_pause:
+                show_obj.paused = False
+                if not mark_wanted:
+                    show_obj.paused = True
+                    pausestatus_after = False
+            elif not show_obj.paused:
+                show_obj.paused = True
+
+        show_obj.switchIndexer(indexer, indexerid, pausestatus_after=pausestatus_after)
+
+        ui.notifications.message('Indexer Switch', 'Finished after updating the show')
+        return {'Success': 'Switched to new TV info source'}
+
+    def saveMapping(self, show, **kwargs):
+        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
+        response = {}
+        if not show_obj:
+            return json.dumps(response)
+        new_ids = {}
+        save_map = []
+        with show_obj.lock:
+            for k, v in kwargs.iteritems():
+                t = re.search(r'mid-(\d+)', k)
+                if t:
+                    i = helpers.tryInt(v, None)
+                    if None is not i:
+                        new_ids.setdefault(helpers.tryInt(t.group(1)), {'id': 0, 'status': MapStatus.NONE,
+                                                                        'date': datetime.date.fromordinal(1)})['id'] = i
+                else:
+                    t = re.search(r'lockid-(\d+)', k)
+                    if t:
+                        new_ids.setdefault(helpers.tryInt(t.group(1)), {'id': 0, 'status': MapStatus.NONE, 'date':
+                            datetime.date.fromordinal(1)})['status'] = (MapStatus.NONE, MapStatus.NO_AUTOMATIC_CHANGE)[
+                            'true' == v]
+            if new_ids:
+                for k, v in new_ids.iteritems():
+                    if None is v.get('id') or None is v.get('status'):
+                        continue
+                    if (show_obj.ids.get(k, {'id': 0}).get('id') != v.get('id') or
+                            (MapStatus.NO_AUTOMATIC_CHANGE == v.get('status') and
+                             MapStatus.NO_AUTOMATIC_CHANGE != show_obj.ids.get(
+                                 k, {'status': MapStatus.NONE}).get('status')) or
+                            (MapStatus.NO_AUTOMATIC_CHANGE != v.get('status') and
+                             MapStatus.NO_AUTOMATIC_CHANGE == show_obj.ids.get(
+                                 k, {'status': MapStatus.NONE}).get('status'))):
+                        show_obj.ids[k]['id'] = (0, v['id'])[v['id'] >= 0]
+                        show_obj.ids[k]['status'] = (MapStatus.NOT_FOUND, v['status'])[v['id'] != 0]
+                        save_map.append(k)
+            if len(save_map):
+                save_mapping(show_obj, save_map=save_map)
+                ui.notifications.message('Mappings saved')
+            else:
+                ui.notifications.message('Mappings unchanged, not saving.')
+
+        master_ids = [show] + [kwargs.get(x) for x in 'indexer', 'mindexerid', 'mindexer']
+        if all([helpers.tryInt(x) > 0 for x in master_ids]):
+            master_ids += [bool(helpers.tryInt(kwargs.get(x))) for x in 'paused', 'markwanted']
+            response = {'switch': self.switchIndexer(*master_ids), 'mid': kwargs['mindexerid']}
+
+        response.update({
+            'map': {k: {r: w for r, w in v.iteritems() if r != 'date'} for k, v in show_obj.ids.iteritems()}
+        })
+        return json.dumps(response)
+
+    def forceMapping(self, show, **kwargs):
+        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
+        if not show_obj:
+            return json.dumps({})
+        save_map = []
+        with show_obj.lock:
+            for k, v in kwargs.iteritems():
+                t = re.search(r'lockid-(\d+)', k)
+                if t:
+                    new_status = (MapStatus.NONE, MapStatus.NO_AUTOMATIC_CHANGE)['true' == v]
+                    old_status = show_obj.ids.get(helpers.tryInt(t.group(1)), {'status': MapStatus.NONE})['status']
+                    if ((MapStatus.NO_AUTOMATIC_CHANGE == new_status and
+                         MapStatus.NO_AUTOMATIC_CHANGE != old_status) or
+                        (MapStatus.NO_AUTOMATIC_CHANGE != new_status and
+                         MapStatus.NO_AUTOMATIC_CHANGE == old_status)):
+                        i = helpers.tryInt(t.group(1))
+                        if 'mid-%s' % i in kwargs:
+                            l = helpers.tryInt(kwargs['mid-%s' % i], None)
+                            if None is not id and id >= 0:
+                                show_obj.ids.setdefault(i, {'id': 0, 'status': MapStatus.NONE, 'date':
+                                    datetime.date.fromordinal(1)})['id'] = l
+                        show_obj.ids.setdefault(i, {'id': 0, 'status': MapStatus.NONE, 'date':
+                            datetime.date.fromordinal(1)})['status'] = new_status
+                        save_map.append(i)
+            if len(save_map):
+                save_mapping(show_obj, save_map=save_map)
+            map_indexers_to_show(show_obj, force=True)
+            ui.notifications.message('Mapping Reloaded')
+        return json.dumps({k: {r: w for r, w in v.iteritems() if 'date' != r} for k, v in show_obj.ids.iteritems()})
+
     def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, archive_firstmatch=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                 scene=None, tag=None, quality_preset=None):
+                 scene=None, tag=None, quality_preset=None, **kwargs):
 
         if show is None:
             errString = 'Invalid show ID: ' + str(show)
@@ -2161,18 +2279,31 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       force_replace=None, failed='0', type='auto', stream='0', **kwargs):
+                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, **kwargs):
 
         if not dir and ('0' == failed or not nzbName):
             self.redirect('/home/postprocess/')
         else:
+            showIdRegex = re.compile(r'^SickGear-([A-Za-z]*)(\d+)-')
+            indexer = 0
+            showObj = None
+            if dupekey and showIdRegex.search(dupekey):
+                m = showIdRegex.match(dupekey)
+                istr = m.group(1)
+                for i in sickbeard.indexerApi().indexers:
+                    if istr == sickbeard.indexerApi(i).config.get('dupekey'):
+                        indexer = i
+                        break
+                showObj = helpers.find_show_by_id(sickbeard.showList, {indexer: int(m.group(2))},
+                                               no_mapped_ids=True)
             result = processTV.processDir(dir.decode('utf-8') if dir else None, nzbName.decode('utf-8') if nzbName else None,
                                           process_method=process_method, type=type,
                                           cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
                                           force=force in ['on', '1'],
                                           force_replace=force_replace in ['on', '1'],
                                           failed='0' != failed,
-                                          webhandler=self.send_message if stream != '0' else None)
+                                          webhandler=self.send_message if stream != '0' else None,
+                                          showObj=showObj)
 
             if '0' != stream:
                 return
@@ -3925,9 +4056,10 @@ class Manage(MainHandler):
 class ManageSearches(Manage):
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='manage_manageSearches.tmpl')
-        # t.backlogPI = sickbeard.backlogSearchScheduler.action.getProgressIndicator()
+        # t.backlogPI = sickbeard.backlogSearchScheduler.action.get_progress_indicator()
         t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
         t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
+        t.backlogIsActive = sickbeard.backlogSearchScheduler.action.am_running()
         t.standardBacklogRunning = sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress()
         t.backlogRunningType = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
         t.recentSearchStatus = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
@@ -3945,25 +4077,15 @@ class ManageSearches(Manage):
 
         self.redirect('/home/')
 
-    def forceLimitedBacklog(self, *args, **kwargs):
+    def forceBacklog(self, *args, **kwargs):
         # force it to run the next time it looks
         if not sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress():
-            sickbeard.backlogSearchScheduler.forceSearch(force_type=LIMITED_BACKLOG)
-            logger.log(u'Limited Backlog search forced')
-            ui.notifications.message('Limited Backlog search started')
+            sickbeard.backlogSearchScheduler.force_search(force_type=FORCED_BACKLOG)
+            logger.log(u'Backlog search forced')
+            ui.notifications.message('Backlog search started')
 
             time.sleep(5)
             self.redirect('/manage/manageSearches/')
-
-    def forceFullBacklog(self, *args, **kwargs):
-        # force it to run the next time it looks
-        if not sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress():
-            sickbeard.backlogSearchScheduler.forceSearch(force_type=FULL_BACKLOG)
-            logger.log(u'Full Backlog search forced')
-            ui.notifications.message('Full Backlog search started')
-
-        time.sleep(5)
-        self.redirect('/manage/manageSearches/')
 
     def forceSearch(self, *args, **kwargs):
 
@@ -4355,8 +4477,8 @@ class ConfigSearch(Config):
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
                    sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None,
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
-                   backlog_days=None, backlog_frequency=None, search_unaired=None, recentsearch_frequency=None,
-                   nzb_method=None, torrent_method=None, usenet_retention=None,
+                   backlog_days=None, backlog_frequency=None, search_unaired=None, unaired_recent_search_only=None,
+                   recentsearch_frequency=None, nzb_method=None, torrent_method=None, usenet_retention=None,
                    download_propers=None, check_propers_interval=None, allow_high_priority=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
                    torrent_label=None, torrent_path=None, torrent_verify_cert=None,
@@ -4405,7 +4527,8 @@ class ConfigSearch(Config):
                                                    '%dm, %ds' % (minutes, seconds))
                     logger.log(u'Change search PROPERS interval, next check %s' % run_at)
 
-        sickbeard.SEARCH_UNAIRED = config.checkbox_to_value(search_unaired)
+        sickbeard.SEARCH_UNAIRED = bool(config.checkbox_to_value(search_unaired))
+        sickbeard.UNAIRED_RECENT_SEARCH_ONLY = bool(config.checkbox_to_value(unaired_recent_search_only, value_off=1, value_on=0))
 
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 
@@ -4702,14 +4825,17 @@ class ConfigProviders(Config):
             error = '\nNo provider %s specified' % error
             return json.dumps({'success': False, 'error': error})
 
-        providers = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
-        temp_provider = newznab.NewznabProvider(name, url, key)
-        if None is not key and starify(key, True):
-            temp_provider.key = providers[temp_provider.get_id()].key
+        if name in [n.name for n in sickbeard.newznabProviderList if n.url == url]:
+            tv_categories = newznab.NewznabProvider.clean_newznab_categories([n for n in sickbeard.newznabProviderList if n.name == name][0].all_cats)
+        else:
+            providers = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+            temp_provider = newznab.NewznabProvider(name, url, key)
+            if None is not key and starify(key, True):
+                temp_provider.key = providers[temp_provider.get_id()].key
 
-        success, tv_categories, error = temp_provider.get_newznab_categories()
+            tv_categories = newznab.NewznabProvider.clean_newznab_categories(temp_provider.all_cats)
 
-        return json.dumps({'success': success, 'tv_categories': tv_categories, 'error': error})
+        return json.dumps({'success': True, 'tv_categories': tv_categories, 'error': ''})
 
     def deleteNewznabProvider(self, nnid):
 

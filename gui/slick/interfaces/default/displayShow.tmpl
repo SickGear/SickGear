@@ -6,6 +6,7 @@
 #from sickbeard.common import *
 #from sickbeard.helpers import anon_url
 #from lib import subliminal
+#from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_IMDB
 ##
 #set global $title = $show.name
 #set global $topmenu = 'home'
@@ -45,7 +46,7 @@
     $('.addQTip').each(function () {
         $(this).css({'cursor':'help', 'text-shadow':'0px 0px 0.5px #666'});
         $(this).qtip({
-            show: {solo:true},
+            show: {solo:!0},
             position: {viewport:$(window), my:'left center', adjust:{ y: -10, x: 2 }},
             style: {classes:'qtip-rounded qtip-shadow qtip-maxwidth'}
         });
@@ -182,15 +183,34 @@
 			<div id="details-wrapper">
 				<div id="details-right">
 					<div>
-						<span class="details-title">Indexers</span>
+						<span class="details-title">Links</span>
 						<span class="details-info">
-#set $_show = $show
-#if $sickbeard.USE_IMDB_INFO and $show.imdbid
-							<a class="service" href="<%= anon_url('http://www.imdb.com/title/', _show.imdbid) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="Show IMDb info in new tab"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" /></a>
-#end if
-							<a class="service" href="<%= anon_url(sickbeard.indexerApi(_show.indexer).config['show_url'], _show.indexerid) %>" onclick="window.open(this.href, '_blank'); return false;" title="Show $sickbeard.indexerApi($show.indexer).name info in new tab"><img alt="$sickbeard.indexerApi($show.indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($show.indexer).config['icon']" /></a>
+#set $tvdb_id = None
+#for $src_id, $src_name in $sickbeard.indexerApi().all_indexers.iteritems()
+    #if sickbeard.indexerApi($src_id).config.get('defunct') and $src_id != $show.indexer
+        #continue
+    #end if
+    #if $src_id in $show.ids and $show.ids[$src_id].get('id', 0) > 0 and $sickbeard.indexermapper.MapStatus.NOT_FOUND != $show.ids[$src_id]['status']
+        #if $INDEXER_TVDB == $src_id
+            #set $tvdb_id = $show.ids[$src_id]['id']
+        #end if
+        #if $INDEXER_IMDB == $src_id and not $sickbeard.USE_IMDB_INFO
+            #continue
+        #end if
+        #if not sickbeard.indexerApi($src_id).config.get('defunct')
+							<a class="service" href="$anon_url(sickbeard.indexerApi($src_id).config['show_url'], $show.ids[$src_id]['id'])" onclick="window.open(this.href, '_blank'); return !1;" title="View $src_name info in new tab">
+        #else#
+							<a class="service" href="$sbRoot/home/editShow?show=$show.indexerid#core-component-group3" title="Edit related show IDs">
+        #end if#
+								<img alt="$src_name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($src_id).config['icon']" />
+							</a>
+    #end if
+#end for
+##if $tvdb_id
+##							<a class="service" href="$anon_url('https://fanart.tv/series/', $tvdb_id)" onclick="window.open(this.href, '_blank'); return !1;" title="View Fanart.tv info in new tab"><img alt="Fanart.tv" height="16" width="16" src="$sbRoot/images/fanart.png" /></a>
+##end if
 #if $xem_numbering or $xem_absolute_numbering
-							<a class="service" href="<%= anon_url('http://thexem.de/search?q=', _show.name) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;" title="Show XEM info in new tab"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" /></a>
+							<a class="service" href="$anon_url('http://thexem.de/search?q=', $show.name)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View XEM info in new tab"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" /></a>
 #end if
 						</span>
 					</div>
@@ -399,7 +419,7 @@
 #if 0 == len($sqlResults)
 	<div style="margin-top:50px">
 		<h3>Episodes do not exist for this show at the associated indexer
-			<a class="service" href="<%= anon_url(sickbeard.indexerApi(_show.indexer).config['show_url'], _show.indexerid) %>" onclick="window.open(this.href, '_blank'); return false;" title="Show $sickbeard.indexerApi($show.indexer).name info in new tab">$sickbeard.indexerApi($show.indexer).name</a>
+			<a class="service" href="$anon_url(sickbeard.indexerApi($show.indexer).config['show_url'], $show.indexerid)" onclick="window.open(this.href, '_blank'); return !1;" title="View $sickbeard.indexerApi($show.indexer).name info in new tab">$sickbeard.indexerApi($show.indexer).name</a>
 		</h3>
 	</div>
 #else:

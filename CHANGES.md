@@ -129,6 +129,34 @@
 * Add indicator for public access search providers
 * Change improve probability selecting most seeded release
 * Change add the TorrentDay x265 category to search
+* Add smart logic to reduce api hits to newznab server types and improve how nzbs are downloaded
+* Add newznab smart logic to avoid missing releases when there are a great many recent releases
+* Change improve performance by using newznab server advertised capabilities
+* Change config/providers newznab to display only non-default categories
+* Change use scene season for wanted segment in backlog if show is scene numbering
+* Change combine Manage Searches / Backlog Search / Limited and Full to Force
+* Change consolidate limited and full backlog
+* Change config / Search / Backlog search frequency to instead spread backlog searches over a number of days
+* Change migrate minimum used value for search frequency into new minimum 7 for search spread
+* Change restrict nzb providers to 1 backlog batch run per day
+* Add to Config/Search/Unaired episodes/Allow episodes that are released early
+* Add to Config/Search/Unaired episodes/Use specific api requests to search for early episode releases
+* Add use related ids for newznab searches to increase search efficiency
+* Add periodic update of related show ids
+* Change terminology Edit Show/"Post processing" tab name to "Other"
+* Add advanced feature "Related show IDs" to Edit Show/Other used for finding episodes and TV info
+* Add search info source image links to those that have zero id under Edit Show/Other/"Related show IDs"
+* Add "set master" button to Edit Show/Other/"Related show IDs" for info source that can be changed
+* Change displayShow terminology "Indexers" to "Links" to cover internal and web links
+* Change add related show info sources on displayShow page
+* Change don't display "temporarily" defunct TVRage image link on displayShow pages unless it is master info source
+* Change if a defunct info source is the master of a show then present a link on displayShow to edit related show IDs
+* Change simplify the next backlog search run time display in the page footer
+* Change try ssl when fetching data thetvdb, imdb, trakt, scene exception
+* Change improve reliability to Trakt notifier by using show related id support
+* Change improve config/providers newznab categories layout
+* Change show loaded log message at start up and include info source
+* Change if episode has no airdate then set status to unaired (was skipped)
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
