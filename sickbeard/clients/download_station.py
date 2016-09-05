@@ -18,10 +18,12 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 #
-# Uses the Synology Download Station API: http://download.synology.com/download/Document/DeveloperGuide/Synology_Download_Station_Web_API.pdf
+# Uses the Synology Download Station API:
+# http://download.synology.com/download/Document/DeveloperGuide/Synology_Download_Station_Web_API.pdf
 
 import sickbeard
 from sickbeard.clients.generic import GenericClient
+
 
 class DownloadStationAPI(GenericClient):
 
@@ -29,47 +31,53 @@ class DownloadStationAPI(GenericClient):
 
         super(DownloadStationAPI, self).__init__('DownloadStation', host, username, password)
 
-        self.url = self.host + 'webapi/DownloadStation/task.cgi'
+        self.url = '%swebapi/DownloadStation/task.cgi' % self.host
 
     def _get_auth(self):
 
-        auth_url = self.host + 'webapi/auth.cgi?api=SYNO.API.Auth&version=2&method=login&account=' + self.username + '&passwd=' + self.password + '&session=DownloadStation&format=sid'
+        auth_url = ('%swebapi/auth.cgi?api=SYNO.API.Auth&' % self.host +
+                    'version=2&method=login&account=%s&passwd=%s' % (self.username, self.password) +
+                    '&session=DownloadStation&format=sid')
 
         try:
             response = self.session.get(auth_url, verify=False)
             self.auth = response.json()['data']['sid']
-        except:
+        except (StandardError, Exception):
             return None
 
         return self.auth
 
     def _add_torrent_uri(self, result):
 
-        data = {'api':'SYNO.DownloadStation.Task',
-                'version':'1', 'method':'create',
-                'session':'DownloadStation',
-                '_sid':self.auth,
-                'uri':result.url
-                }
-        if sickbeard.TORRENT_PATH:
-            data['destination'] = sickbeard.TORRENT_PATH
-        response = self._request(method='post', data=data)
-
-        return response.json()['success']
+        return self.send_dsm_request(params={'uri': result.url})
 
     def _add_torrent_file(self, result):
 
-        data = {'api':'SYNO.DownloadStation.Task',
-                'version':'1',
-                'method':'create',
-                'session':'DownloadStation',
-                '_sid':self.auth
-                }
+        return self.send_dsm_request(files={'file': ('%s.torrent' % result.name, result.content)})
+
+    def send_dsm_request(self, params=None, files=None):
+
+        api_params = {
+            'method': 'create',
+            'version': '1',
+            'api': 'SYNO.DownloadStation.Task',
+            'session': 'DownloadStation',
+            '_sid': self.auth
+        }
+
         if sickbeard.TORRENT_PATH:
-            data['destination'] = sickbeard.TORRENT_PATH
-        files = {'file':(result.name + '.torrent', result.content)}
+            api_params['destination'] = sickbeard.TORRENT_PATH
+
+        data = api_params.copy()
+        if params:
+            data.update(params)
         response = self._request(method='post', data=data, files=files)
 
-        return response.json()['success']
+        try:
+            result = response.json()['success']
+        except (StandardError, Exception):
+            result = None
+
+        return result
 
 api = DownloadStationAPI()
