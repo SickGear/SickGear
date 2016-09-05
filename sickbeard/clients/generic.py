@@ -33,22 +33,23 @@ class GenericClient(object):
             self.last_time = time.time()
             self._get_auth()
 
-        logger.log(
-            '%s: Requested a %s connection to url %s with Params= %s' % (self.name, method.upper(), self.url, params) +
-            ' Data= ' + ('None' if not data else '%s%s' % (data[0:99], ('', '...')[200 < len(data)])) +
-            ' Json= ' + ('None' if not kwargs.get('json') else '%s%s' %
-                                                               (str(kwargs.get('json'))[0:99],
-                                                                ('', '...')[200 < len(str(kwargs.get('json')))])),
-            logger.DEBUG
-        )
-
-        logger.log(
-            '%s: Requested a %s connection to url %s with Params= %s' % (self.name, method.upper(), self.url, params) +
-            ('' if not data else ' Data= %s%s' % (data[0:100], ('', '...')[100 < len(data)])) +
-            ('' if not kwargs.get('json') else ' Json= %s%s' % (str(kwargs.get('json'))[0:100],
-                                                                ('', '...')[100 < len(str(kwargs.get('json')))])),
-            logger.DEBUG
-        )
+        logger.log('%s: sending %s request to %s with ...' % (self.name, method.upper(), self.url), logger.DEBUG)
+        lines = [('params', (str(params), '')[not params]),
+                 ('data', (str(data), '')[not data]),
+                 ('files', (str(files), '')[not files]),
+                 ('json', (str(kwargs.get('json')), '')[not kwargs.get('json')])]
+        m, c = 300, 100
+        type_chunks = [(linetype, [ln[i:i + c] for i in range(0, min(len(ln), m), c)]) for linetype, ln in lines if ln]
+        for (arg, chunks) in type_chunks:
+            output = []
+            nch = len(chunks) - 1
+            for i, seg in enumerate(chunks):
+                if nch == i and 'files' == arg:
+                    sample = ' ..excerpt(%s/%s)' % (m, len(lines[2][1]))
+                    seg = seg[0:c - (len(sample) - 2)] + sample
+                output += ['%s: request %s= %s%s%s' % (self.name, arg, ('', '..')[bool(i)], seg, ('', '..')[i != nch])]
+            for out in output:
+                logger.log(out, logger.DEBUG)
 
         if not self.auth:
             logger.log('%s: Authentication Failed' % self.name, logger.ERROR)
@@ -228,5 +229,5 @@ class GenericClient(object):
             if authenticated and self.auth:
                 return True, 'Success: Connected and Authenticated'
             return False, 'Error: Unable to get %s Authentication, check your config!' % self.name
-        except Exception:
+        except (StandardError, Exception):
             return False, 'Error: Unable to connect to %s' % self.name

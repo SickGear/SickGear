@@ -136,6 +136,7 @@
 * Change PrivateHD torrent provider
 * Fix Add from Trakt
 * Change unpack files once only in auto post processing copy mode
+* Fix data logger for clients
 
 
 ### 0.11.14 (2016-07-25 03:10:00 UTC)
