@@ -93,6 +93,7 @@
 * Add Extratorrent provider
 * Add Limetorrents provider
 * Add nCore torrent provider
+* Add Torrentz2 provider
 * Remove Usenet-Crawler provider
 * Change CPU throttling on General Config/Advanced to "Disabled" by default for new installs
 * Change provider OMGWTFNZBS api url and auto reject nuked releases
@@ -137,6 +138,8 @@
 * Fix Add from Trakt
 * Change unpack files once only in auto post processing copy mode
 * Fix data logger for clients
+* Change handle when a torrent provider goes down and its urls are cleared
+* Add handler for when rar files can not be opened during post processing
 
 
 ### 0.11.14 (2016-07-25 03:10:00 UTC)

@@ -108,12 +108,13 @@ class NameParser(object):
 
         for regex in self.compiled_regexes:
             for (cur_regex_num, cur_regex_name, cur_regex) in self.compiled_regexes[regex]:
-                match = cur_regex.match(name)
+                new_name = helpers.remove_non_release_groups(name, 'anime' in cur_regex_name)
+                match = cur_regex.match(new_name)
 
                 if not match:
                     continue
 
-                result = ParseResult(name)
+                result = ParseResult(new_name)
                 result.which_regex = [cur_regex_name]
                 result.score = 0 - cur_regex_num
 
@@ -195,7 +196,7 @@ class NameParser(object):
                     result.score += 1
 
                 if 'release_group' in named_groups:
-                    result.release_group = helpers.remove_non_release_groups(match.group('release_group'))
+                    result.release_group = match.group('release_group')
                     result.score += 1
 
                 if 'version' in named_groups:
@@ -240,7 +241,8 @@ class NameParser(object):
                     return best_result
 
                 # get quality
-                best_result.quality = common.Quality.nameQuality(name, show.is_anime)
+                new_name = helpers.remove_non_release_groups(name, show.is_anime)
+                best_result.quality = common.Quality.nameQuality(new_name, show.is_anime)
 
                 new_episode_numbers = []
                 new_season_numbers = []

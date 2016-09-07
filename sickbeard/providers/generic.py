@@ -26,6 +26,7 @@ import os
 import re
 import time
 import urlparse
+from urllib import quote_plus
 import zlib
 from base64 import b16encode, b32decode
 
@@ -308,6 +309,36 @@ class GenericProvider:
         except (StandardError, Exception):
             url_tmpl = '%s'
         return url if re.match('(?i)https?://', url) else (url_tmpl % url.lstrip('/'))
+
+    @staticmethod
+    def _dhtless_magnet(btih, name=None):
+        """
+        :param btih: torrent hash
+        :param name: torrent name
+        :return: a magnet loaded with default trackers for clients without enabled DHT or None if bad hash
+        """
+        try:
+            btih = btih.lstrip('/').upper()
+            if 32 == len(btih):
+                btih = b16encode(b32decode(btih)).lower()
+            btih = re.search('(?i)[0-9a-f]{32,40}', btih) and btih or None
+        except (StandardError, Exception):
+            btih = None
+        return (btih and 'magnet:?xt=urn:btih:%s&dn=%s&tr=%s' % (btih, quote_plus(name or btih), '&tr='.join(
+            [quote_plus(tr) for tr in
+             'http://atrack.pow7.com/announce', 'http://mgtracker.org:2710/announce',
+             'http://pow7.com/announce', 'http://t1.pow7.com/announce',
+             'http://tracker.tfile.me/announce', 'udp://9.rarbg.com:2710/announce',
+             'udp://9.rarbg.me:2710/announce', 'udp://9.rarbg.to:2710/announce',
+             'udp://eddie4.nl:6969/announce', 'udp://explodie.org:6969/announce',
+             'udp://inferno.demonoid.pw:3395/announce', 'udp://inferno.subdemon.com:3395/announce',
+             'udp://ipv4.tracker.harry.lu:80/announce', 'udp://p4p.arenabg.ch:1337/announce',
+             'udp://shadowshq.yi.org:6969/announce', 'udp://tracker.aletorrenty.pl:2710/announce',
+             'udp://tracker.coppersurfer.tk:6969', 'udp://tracker.coppersurfer.tk:6969/announce',
+             'udp://tracker.internetwarriors.net:1337', 'udp://tracker.internetwarriors.net:1337/announce',
+             'udp://tracker.leechers-paradise.org:6969', 'udp://tracker.leechers-paradise.org:6969/announce',
+             'udp://tracker.opentrackr.org:1337/announce', 'udp://tracker.torrent.eu.org:451/announce',
+             'udp://tracker.trackerfix.com:80/announce'])) or None)
 
     def find_search_results(self, show, episodes, search_mode, manual_search=False):
 
@@ -797,7 +828,7 @@ class TorrentProvider(object, GenericProvider):
             ep_detail = sickbeard.config.naming_ep_type[2] % ep_dict \
                 if 'ep_detail' not in kwargs.keys() else kwargs['ep_detail'](ep_dict)
             if sickbeard.scene_exceptions.has_abs_episodes(ep_obj):
-                ep_detail = [ep_detail] + ['%d' % ep_dict['episodenumber']]
+                ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)] + ['%d' % ep_dict['episodenumber']]
         ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)]
         detail = ({}, {'Episode_only': ep_detail})[detail_only and not show.is_sports and not show.is_anime]
         return [dict({'Episode': self._build_search_strings(ep_detail, scene, prefix)}.items() + detail.items())]
@@ -901,7 +932,7 @@ class TorrentProvider(object, GenericProvider):
                            u'Failed to authenticate or parse a response from %s, abort provider')))
         )]
 
-        if logged_in():
+        if logged_in() and (not hasattr(self, 'urls') or bool(len(getattr(self, 'urls')))):
             return True
 
         if not self._valid_home():
