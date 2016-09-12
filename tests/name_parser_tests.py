@@ -39,6 +39,8 @@ simple_test_cases = {
         'Show.Name.S06E01.Other.WEB-DL': parser.ParseResult(None, 'Show Name', 6, [1], 'Other.WEB-DL'),
         'Show.Name.S06E01 Some-Stuff Here': parser.ParseResult(None, 'Show Name', 6, [1], 'Some-Stuff Here'),
         'Show.Name.S01E15-11001001': parser.ParseResult(None, 'Show Name', 1, [15], None),
+        'Show.Name.S01E02.Source.Quality.Etc-Group - [stuff]':
+            parser.ParseResult(None, 'Show Name', 1, [2], 'Source.Quality.Etc', 'Group'),
     },
 
     'fov': {

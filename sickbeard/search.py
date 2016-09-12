@@ -476,6 +476,10 @@ def search_providers(show, episodes, manual_search=False):
             try:
                 cur_provider.cache._clearCache()
                 search_results = cur_provider.find_search_results(show, episodes, search_mode, manual_search)
+                if any(search_results):
+                    logger.log(', '.join(['%s%s has %s candidate%s' % (
+                        ('S', 'Ep')['ep' in search_mode], k, len(v), helpers.maybe_plural(len(v)))
+                                          for (k, v) in search_results.iteritems()]))
             except exceptions.AuthException as e:
                 logger.log(u'Authentication error: %s' % ex(e), logger.ERROR)
                 break

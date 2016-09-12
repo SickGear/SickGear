@@ -476,7 +476,11 @@ class ProcessTVShow(object):
 
                 try:
                     rar_handle = rarfile.RarFile(ek.ek(os.path.join, path, archive))
-
+                except (StandardError, Exception):
+                    self._log_helper(u'Failed to open archive: %s' % archive, logger.ERROR)
+                    self._set_process_success(False)
+                    continue
+                try:
                     # Skip extraction if any file in archive has previously been extracted
                     skip_file = False
                     for file_in_archive in [ek.ek(os.path.basename, x.filename)
@@ -504,7 +508,7 @@ class ProcessTVShow(object):
                     self._log_helper(u'Failed to unpack archive PasswordRequired: %s' % archive, logger.ERROR)
                     self._set_process_success(False)
                     self.fail_detected = True
-                except Exception as e:
+                except (StandardError, Exception):
                     self._log_helper(u'Failed to unpack archive: %s' % archive, logger.ERROR)
                     self._set_process_success(False)
                 finally:
@@ -516,13 +520,17 @@ class ProcessTVShow(object):
             for archive in rar_files:
                 try:
                     rar_handle = rarfile.RarFile(ek.ek(os.path.join, path, archive))
+                except (StandardError, Exception):
+                    self._log_helper(u'Failed to open archive: %s' % archive, logger.ERROR)
+                    continue
+                try:
                     if rar_handle.needs_password():
                         self._log_helper(u'Failed to unpack archive PasswordRequired: %s' % archive, logger.ERROR)
                         self._set_process_success(False)
                         self.failure_detected = True
                     rar_handle.close()
                     del rar_handle
-                except Exception:
+                except (StandardError, Exception):
                     pass
 
         return unpacked_files

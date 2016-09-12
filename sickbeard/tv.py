@@ -2165,12 +2165,12 @@ class TVEpisode(object):
 
         def release_name(name, is_anime=False):
             if name:
-                name = helpers.remove_non_release_groups(helpers.remove_extension(name), is_anime)
+                name = helpers.remove_non_release_groups(name, is_anime)
             return name
 
         def release_group(show, name):
             if name:
-                name = helpers.remove_non_release_groups(helpers.remove_extension(name), show.is_anime)
+                name = helpers.remove_non_release_groups(name, show.is_anime)
             else:
                 return ''
 
