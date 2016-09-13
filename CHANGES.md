@@ -1,4 +1,9 @@
-﻿### 0.11.14 (2016-07-25 03:10:00 UTC)
+﻿### 0.11.15 (2016-09-13 19:50:00 UTC)
+
+* Add rollback capability to undo database changes made during tests
+
+
+### 0.11.14 (2016-07-25 03:10:00 UTC)
 
 * Fix BeyondHD torrent provider
 
