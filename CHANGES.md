@@ -140,6 +140,7 @@
 * Fix data logger for clients
 * Change handle when a torrent provider goes down and its urls are cleared
 * Add handler for when rar files can not be opened during post processing
+* Fix join clean up
 
 
 ### 0.11.14 (2016-07-25 03:10:00 UTC)

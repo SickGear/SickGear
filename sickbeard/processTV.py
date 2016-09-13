@@ -618,8 +618,7 @@ class ProcessTVShow(object):
 
         return is_renamed
 
-    @staticmethod
-    def join(directory):
+    def join(self, directory):
 
         result = False
         chunks = {}
