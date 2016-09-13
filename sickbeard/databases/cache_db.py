@@ -18,6 +18,9 @@
 
 from sickbeard import db
 
+MIN_DB_VERSION = 1
+MAX_DB_VERSION = 2
+
 # Add new migrations at the bottom of the list; subclass the previous migration.
 class InitialSchema(db.SchemaUpgrade):
     def test(self):

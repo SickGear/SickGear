@@ -478,9 +478,45 @@ def MigrationCode(myDB):
                 else:
                     logger.log_error_and_exit(u'Failed to restore database version: %s' % db_version)
 
+
 def backup_database(filename, version):
     logger.log(u'Backing up database before upgrade')
     if not sickbeard.helpers.backupVersionedFile(dbFilename(filename), version):
         logger.log_error_and_exit(u'Database backup failed, abort upgrading database')
     else:
         logger.log(u'Proceeding with upgrade')
+
+
+def get_rollback_module():
+    import imp
+
+    module_urls = [
+        'https://raw.githubusercontent.com/SickGear/sickgear.extdata/master/SickGear/Rollback/rollback.py']
+
+    try:
+        hdr = '# SickGear Rollback Module'
+        module = ''
+        fetched = False
+
+        for t in range(1, 4):
+            for url in module_urls:
+                try:
+                    module = helpers.getURL(url)
+                    if module and module.startswith(hdr):
+                        fetched = True
+                        break
+                except (StandardError, Exception):
+                    continue
+            if fetched:
+                break
+            time.sleep(30)
+
+        if fetched:
+            loaded = imp.new_module('DbRollback')
+            exec(module, loaded.__dict__)
+            return loaded
+
+    except (StandardError, Exception):
+        pass
+
+    return None
