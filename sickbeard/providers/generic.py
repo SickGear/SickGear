@@ -271,7 +271,7 @@ class GenericProvider:
         quality = Quality.sceneQuality(title, anime)
         return quality
 
-    def _search_provider(self, search_params, search_mode='eponly', epcount=0, age=0):
+    def _search_provider(self, search_params, search_mode='eponly', epcount=0, age=0, **kwargs):
         return []
 
     def _season_strings(self, episode):
@@ -340,7 +340,10 @@ class GenericProvider:
              'udp://tracker.opentrackr.org:1337/announce', 'udp://tracker.torrent.eu.org:451/announce',
              'udp://tracker.trackerfix.com:80/announce'])) or None)
 
-    def find_search_results(self, show, episodes, search_mode, manual_search=False):
+    def get_show(self, item, **kwargs):
+        return None
+
+    def find_search_results(self, show, episodes, search_mode, manual_search=False, **kwargs):
 
         self._check_auth()
         self.show = show
@@ -377,6 +380,10 @@ class GenericProvider:
             for cur_param in search_params:
                 item_list += self._search_provider(cur_param, search_mode=search_mode, epcount=len(episodes))
 
+        return self.finish_find_search_results(show, episodes, search_mode, manual_search, results, item_list)
+
+    def finish_find_search_results(self, show, episodes, search_mode, manual_search, results, item_list, **kwargs):
+
         # if we found what we needed already from cache then return results and exit
         if len(results) == len(episodes):
             return results
@@ -400,10 +407,10 @@ class GenericProvider:
 
         # filter results
         cl = []
-        parser = NameParser(False, convert=True)
         for item in item_list:
             (title, url) = self._title_and_url(item)
 
+            parser = NameParser(False, showObj=self.get_show(item, **kwargs), convert=True)
             # parse the file name
             try:
                 parse_result = parser.parse(title)
@@ -441,8 +448,9 @@ class GenericProvider:
                         logger.log(u'The result ' + title + u' doesn\'t seem to be a valid season that we are trying' +
                                    u' to snatch, ignoring', logger.DEBUG)
                         add_cache_entry = True
-                    elif len(parse_result.episode_numbers) and not [
-                        ep for ep in episodes if ep.season == parse_result.season_number and
+                    elif len(parse_result.episode_numbers)\
+                            and not [ep for ep in episodes
+                                     if ep.season == parse_result.season_number and
                             ep.episode in parse_result.episode_numbers]:
                         logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
                                    u' to snatch, ignoring', logger.DEBUG)
@@ -713,7 +721,7 @@ class NZBProvider(object, GenericProvider):
     def cache_data(self, *args, **kwargs):
 
         search_params = {'Cache': [{}]}
-        return self._search_provider(search_params)
+        return self._search_provider(search_params=search_params, **kwargs)
 
 
 class TorrentProvider(object, GenericProvider):

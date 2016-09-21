@@ -16,13 +16,75 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import division
+
 import time
-
 import sickbeard
+import datetime
+import re
+import urllib
+from math import ceil
 
+from sickbeard.sbdatetime import sbdatetime
 from . import generic
-from sickbeard import helpers, logger, scene_exceptions, tvcache
-from sickbeard.exceptions import AuthException
+from sickbeard import helpers, logger, scene_exceptions, tvcache, classes, db
+from sickbeard.common import Quality
+from sickbeard.exceptions import AuthException, MultipleShowObjectsException
+from sickbeard.indexers.indexer_config import *
+from io import BytesIO
+from lib.dateutil import parser
+from sickbeard.network_timezones import sb_timezone
+
+try:
+  from lxml import etree
+except ImportError:
+    try:
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        import xml.etree.ElementTree as etree
+
+
+class NewznabConstants:
+    SEARCH_TEXT = -100
+    SEARCH_SEASON = -101
+    SEARCH_EPISODE = -102
+
+    CAT_SD = -200
+    CAT_HD = -201
+    CAT_UHD = -202
+    CAT_HEVC = -203
+    CAT_ANIME = -204
+    CAT_SPORT = -205
+
+    catSearchStrings = {r'^Anime$': CAT_ANIME,
+                        r'^Sport$': CAT_SPORT,
+                        r'^SD$': CAT_SD,
+                        r'^HD$': CAT_HD,
+                        r'^UHD$': CAT_UHD,
+                        r'^4K$': CAT_UHD,
+                        r'^HEVC$': CAT_HEVC}
+
+    providerToIndexerMapping = {'tvdbid': INDEXER_TVDB,
+                                'rageid': INDEXER_TVRAGE,
+                                'tvmazeid': INDEXER_TVMAZE,
+                                'imdbid': INDEXER_IMDB,
+                                'tmdbid': INDEXER_TMDB,
+                                'traktid': INDEXER_TRAKT}
+
+    indexer_priority_list = [INDEXER_TVDB, INDEXER_TVMAZE, INDEXER_TVRAGE, INDEXER_TRAKT, INDEXER_TMDB, INDEXER_TMDB]
+
+    searchTypes = {'rid': INDEXER_TVRAGE,
+                   'tvdbid': INDEXER_TVDB,
+                   'tvmazeid': INDEXER_TVMAZE,
+                   'imdbid': INDEXER_IMDB,
+                   'tmdbid': INDEXER_TMDB,
+                   'traktid': INDEXER_TRAKT,
+                   'q': SEARCH_TEXT,
+                   'season': SEARCH_SEASON,
+                   'ep': SEARCH_EPISODE}
+
+    def __init__(self):
+        pass
 
 
 class NewznabProvider(generic.NZBProvider):
@@ -33,22 +95,182 @@ class NewznabProvider(generic.NZBProvider):
 
         self.url = url
         self.key = key
-        self.cat_ids = cat_ids or '5030,5040'
+        self.cat_ids = cat_ids or ''
+        self._cat_ids = None
         self.search_mode = search_mode or 'eponly'
         self.search_fallback = search_fallback
         self.enable_recentsearch = enable_recentsearch
         self.enable_backlog = enable_backlog
         self.needs_auth = '0' != self.key.strip()  # '0' in the key setting indicates that api_key is not needed
         self.default = False
+        self._caps = {}
+        self._caps_cats = {}
+        self._caps_all_cats = []
+        self._caps_need_apikey = {'need': False, 'date': datetime.date.fromordinal(1)}
+        self._limits = 100
+        self._last_recent_search = None
+        self._caps_last_updated = datetime.datetime.fromordinal(1)
         self.cache = NewznabCache(self)
+
+    @property
+    def cat_ids(self):
+        return self._cat_ids
+
+    @cat_ids.setter
+    def cat_ids(self, cats):
+        self._cat_ids = self.clean_newznab_categories(cats)
+
+    @property
+    def caps(self):
+        self.check_cap_update()
+        return self._caps
+
+    @property
+    def cats(self):
+        self.check_cap_update()
+        return self._caps_cats
+
+    @property
+    def all_cats(self):
+        self.check_cap_update()
+        return self._caps_all_cats
+
+    @property
+    def limits(self):
+        self.check_cap_update()
+        return self._limits
+
+    @property
+    def last_recent_search(self):
+        if not self._last_recent_search:
+            try:
+                my_db = db.DBConnection('cache.db')
+                res = my_db.select('SELECT "datetime" FROM "lastrecentsearch" WHERE "name"=?', [self.get_id()])
+                if res:
+                    self._last_recent_search = datetime.datetime.fromtimestamp(int(res[0]['datetime']))
+            except:
+                pass
+        return self._last_recent_search
+
+    @last_recent_search.setter
+    def last_recent_search(self, value):
+        try:
+            my_db = db.DBConnection('cache.db')
+            my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
+                        [self.get_id(), sbdatetime.totimestamp(value, default=0)])
+        except:
+            pass
+        self._last_recent_search = value
+
+    def check_cap_update(self):
+        if not self._caps or (datetime.datetime.now() - self._caps_last_updated) >= datetime.timedelta(days=1):
+            self.get_caps()
+
+    def _get_caps_data(self):
+        xml_caps = None
+        if datetime.date.today() - self._caps_need_apikey['date'] > datetime.timedelta(days=30) or \
+                not self._caps_need_apikey['need']:
+            self._caps_need_apikey['need'] = False
+            data = self.get_url('%s/api?t=caps' % self.url)
+            if data:
+                xml_caps = helpers.parse_xml(data)
+        if (xml_caps is None or not hasattr(xml_caps, 'tag') or xml_caps.tag == 'error' or xml_caps.tag != 'caps') and \
+                self.maybe_apikey():
+            data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, self.maybe_apikey()))
+            if data:
+                xml_caps = helpers.parse_xml(data)
+                if xml_caps and hasattr(xml_caps, 'tag') and xml_caps.tag == 'caps':
+                    self._caps_need_apikey = {'need': True, 'date': datetime.date.today()}
+        return xml_caps
+
+    def get_caps(self):
+        caps = {}
+        cats = {}
+        all_cats = []
+        xml_caps = self._get_caps_data()
+        if None is not xml_caps:
+            tv_search = xml_caps.find('.//tv-search')
+            if None is not tv_search:
+                for c in [i for i in tv_search.get('supportedParams', '').split(',')]:
+                    k = NewznabConstants.searchTypes.get(c)
+                    if k:
+                        caps[k] = c
+
+            limit = xml_caps.find('.//limits')
+            if None is not limit:
+                l = helpers.tryInt(limit.get('max'), 100)
+                self._limits = (100, l)[l >= 100]
+
+            try:
+                for category in xml_caps.iter('category'):
+                    if 'TV' == category.get('name'):
+                        for subcat in category.findall('subcat'):
+                            try:
+                                cat_name = subcat.attrib['name']
+                                cat_id = subcat.attrib['id']
+                                all_cats.append({'id': cat_id, 'name': cat_name})
+                                for s, v in NewznabConstants.catSearchStrings.iteritems():
+                                    if None is not re.search(s, cat_name, re.IGNORECASE):
+                                        cats.setdefault(v, []).append(cat_id)
+                            except:
+                                continue
+                    elif category.get('name', '').upper() in ['XXX', 'OTHER', 'MISC']:
+                        for subcat in category.findall('subcat'):
+                            try:
+                                if None is not re.search(r'^Anime$', subcat.attrib['name'], re.IGNORECASE):
+                                    cats.setdefault(NewznabConstants.CAT_ANIME, []).append(subcat.attrib['id'])
+                                    break
+                            except:
+                                continue
+            except:
+                logger.log('Error parsing result for [%s]' % self.name, logger.DEBUG)
+
+        if not caps and self._caps and not all_cats and self._caps_all_cats and not cats and self._caps_cats:
+            return
+
+        self._caps_last_updated = datetime.datetime.now()
+
+        if not caps and self.get_id() not in ['sick_beard_index']:
+            caps[INDEXER_TVDB] = 'tvdbid'
+        if NewznabConstants.SEARCH_TEXT not in caps or not caps.get(NewznabConstants.SEARCH_TEXT):
+            caps[NewznabConstants.SEARCH_TEXT] = 'q'
+        if NewznabConstants.SEARCH_SEASON not in caps or not caps.get(NewznabConstants.SEARCH_SEASON):
+            caps[NewznabConstants.SEARCH_SEASON] = 'season'
+        if NewznabConstants.SEARCH_EPISODE not in caps or not caps.get(NewznabConstants.SEARCH_EPISODE):
+            caps[NewznabConstants.SEARCH_TEXT] = 'ep'
+        if (INDEXER_TVRAGE not in caps or not caps.get(INDEXER_TVRAGE)) and self.get_id() not in ['sick_beard_index']:
+            caps[INDEXER_TVRAGE] = 'rid'
+
+        if NewznabConstants.CAT_HD not in cats or not cats.get(NewznabConstants.CAT_HD):
+            cats[NewznabConstants.CAT_HD] = ['5040']
+        if NewznabConstants.CAT_SD not in cats or not cats.get(NewznabConstants.CAT_SD):
+            cats[NewznabConstants.CAT_SD] = ['5030']
+        if NewznabConstants.CAT_ANIME not in cats or not cats.get(NewznabConstants.CAT_ANIME):
+            cats[NewznabConstants.CAT_ANIME] = (['5070'], ['6070,7040'])['nzbs_org' == self.get_id()]
+        if NewznabConstants.CAT_SPORT not in cats or not cats.get(NewznabConstants.CAT_SPORT):
+            cats[NewznabConstants.CAT_SPORT] = ['5060']
+
+        self._caps = caps
+        self._caps_cats = cats
+        self._caps_all_cats = all_cats
+
+    @staticmethod
+    def clean_newznab_categories(cats):
+        """
+        Removes the anime (5070), sports (5060), HD (5040), UHD (5045), SD (5030) categories from the list
+        """
+        exclude = {'5070', '5060', '5040', '5045', '5030'}
+        if isinstance(cats, list):
+            return [x for x in cats if x['id'] not in exclude]
+        return ','.join(set(cats.split(',')) - exclude)
 
     def check_auth_from_data(self, data):
 
-        if data is None:
-            return self._check_auth()
+        if data is None or not hasattr(data, 'tag'):
+            return False
 
-        if 'error' in data.feed:
-            code = data.feed['error']['code']
+        if 'error' == data.tag:
+            code = data.get('code', '')
 
             if '100' == code:
                 raise AuthException('Your API key for %s is incorrect, check your config.' % self.name)
@@ -57,51 +279,14 @@ class NewznabProvider(generic.NZBProvider):
             elif '102' == code:
                 raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.' % self.name)
             elif '910' == code:
-                logger.log(u'%s currently has their API disabled, please check with provider.' % self.name,
+                logger.log('%s currently has their API disabled, please check with provider.' % self.name,
                            logger.WARNING)
             else:
-                logger.log(u'Unknown error given from %s: %s' % (self.name, data.feed['error']['description']),
+                logger.log('Unknown error given from %s: %s' % (self.name, data.get('description', '')),
                            logger.ERROR)
             return False
 
         return True
-
-    def get_newznab_categories(self):
-        """
-        Uses the newznab provider url and apikey to get the capabilities.
-        Makes use of the default newznab caps param. e.a. http://yournewznab/api?t=caps&apikey=skdfiw7823sdkdsfjsfk
-        Returns a tuple with (succes or not, array with dicts [{"id": "5070", "name": "Anime"},
-        {"id": "5080", "name": "Documentary"}, {"id": "5020", "name": "Foreign"}...etc}], error message)
-        """
-        return_categories = []
-
-        api_key = self._check_auth()
-
-        params = {'t': 'caps'}
-        if isinstance(api_key, basestring):
-            params['apikey'] = api_key
-
-        url = '%s/api?%s' % (self.url.strip('/'), '&'.join(['%s=%s' % (k, v) for k, v in params.items()]))
-        categories = self.get_url(url, timeout=10)
-        if not categories:
-            logger.log(u'Error getting html for [%s]' % url, logger.DEBUG)
-            return False, return_categories, 'Error getting html for [%s]' % url
-
-        xml_categories = helpers.parse_xml(categories)
-        if not xml_categories:
-            logger.log(u'Error parsing xml for [%s]' % self.name, logger.DEBUG)
-            return False, return_categories, 'Error parsing xml for [%s]' % self.name
-
-        try:
-            for category in xml_categories.iter('category'):
-                if 'TV' == category.get('name'):
-                    for subcat in category.findall('subcat'):
-                        return_categories.append(subcat.attrib)
-        except:
-            logger.log(u'Error parsing result for [%s]' % self.name, logger.DEBUG)
-            return False, return_categories, 'Error parsing result for [%s]' % self.name
-
-        return True, return_categories, ''
 
     def config_str(self):
         return '%s|%s|%s|%s|%i|%s|%i|%i|%i' \
@@ -128,18 +313,13 @@ class NewznabProvider(generic.NZBProvider):
             ep_detail = 'S%02d' % helpers.tryInt(base_params['season'], 1)
 
         # id search
-        ids = helpers.mapIndexersToShow(ep_obj.show)
-        ids_fail = '6box' in self.name
-        if not ids_fail and ids[1]:  # or ids[2]:
-            params = base_params.copy()
-            use_id = False
-            if ids[1] and self.supports_tvdbid():
-                params['tvdbid'] = ids[1]
+        params = base_params.copy()
+        use_id = False
+        for i in sickbeard.indexerApi().all_indexers:
+            if i in ep_obj.show.ids and 0 < ep_obj.show.ids[i]['id'] and i in self.caps:
+                params[self.caps[i]] = ep_obj.show.ids[i]['id']
                 use_id = True
-            if ids[2]:
-                params['rid'] = ids[2]
-                use_id = True
-            use_id and search_params.append(params)
+        use_id and search_params.append(params)
 
         # query search and exceptions
         name_exceptions = list(
@@ -190,19 +370,13 @@ class NewznabProvider(generic.NZBProvider):
                 'episodenumber': helpers.tryInt(base_params['ep'], 1)}
 
         # id search
-        ids = helpers.mapIndexersToShow(ep_obj.show)
-        ids_fail = '6box' in self.name
-        if not ids_fail and ids[1]:  # or ids[2]:
-            params = base_params.copy()
-            use_id = False
-            if ids[1]:
-                if self.supports_tvdbid():
-                    params['tvdbid'] = ids[1]
+        params = base_params.copy()
+        use_id = False
+        for i in sickbeard.indexerApi().all_indexers:
+            if i in ep_obj.show.ids and 0 < ep_obj.show.ids[i]['id'] and i in self.caps:
+                params[self.caps[i]] = ep_obj.show.ids[i]['id']
                 use_id = True
-            if ids[2]:
-                params['rid'] = ids[2]
-                use_id = True
-            use_id and search_params.append(params)
+        use_id and search_params.append(params)
 
         # query search and exceptions
         name_exceptions = list(
@@ -231,47 +405,205 @@ class NewznabProvider(generic.NZBProvider):
 
         return self.get_id() not in ['sick_beard_index']
 
-    def _search_provider(self, search_params, **kwargs):
+    def _title_and_url(self, item):
+        title, url = None, None
+        try:
+            title = item.findtext('title')
+            url = item.findtext('link')
+        except Exception:
+            pass
+
+        title = title and re.sub(r'\s+', '.', '%s' % title)
+        url = url and str(url).replace('&amp;', '&')
+
+        return title, url
+
+    def get_show(self, item, **kwargs):
+        show_obj = None
+        if 'name_space' in kwargs and 'newznab' in kwargs['name_space']:
+            ids = self.cache.parse_ids(item, kwargs['name_space'])
+
+            if ids:
+                try:
+                    show_obj = helpers.find_show_by_id(sickbeard.showList, id_dict=ids, no_mapped_ids=False)
+                except MultipleShowObjectsException:
+                    return None
+        return show_obj
+
+    def choose_search_mode(self, episodes, ep_obj, hits_per_page=100):
+        if not hasattr(ep_obj, 'eps_aired_in_season'):
+            return None, True, True, True, hits_per_page
+        searches = [e for e in episodes if (not ep_obj.show.is_scene and e.season == ep_obj.season) or
+                    (ep_obj.show.is_scene and e.scene_season == ep_obj.scene_season)]
+        need_sd = need_hd = need_uhd = False
+        max_sd = Quality.SDDVD
+        hd_qualities = [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
+                        Quality.HDBLURAY, Quality.FULLHDBLURAY]
+        max_hd = Quality.FULLHDBLURAY
+        for s in searches:
+            if not s.show.is_anime and not s.show.is_sports:
+                if not need_sd and min(s.wantedQuality) <= max_sd:
+                    need_sd = True
+                if not need_hd and any(i in hd_qualities for i in s.wantedQuality):
+                    need_hd = True
+                if not need_uhd and max(s.wantedQuality) > max_hd:
+                    need_uhd = True
+        per_ep, limit_per_ep = 0, 0
+        if need_sd and not need_hd:
+            per_ep, limit_per_ep = 10, 25
+        if need_hd:
+            if not need_sd:
+                per_ep, limit_per_ep = 30, 90
+            else:
+                per_ep, limit_per_ep = 40, 120
+        if need_uhd or (need_hd and not self.cats.get(NewznabConstants.CAT_UHD)):
+            per_ep += 4
+            limit_per_ep += 10
+        if ep_obj.show.is_anime or ep_obj.show.is_sports or ep_obj.show.air_by_date:
+            rel_per_ep, limit_per_ep = 5, 10
+        else:
+            rel_per_ep = per_ep
+        rel = int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show.is_scene else
+                        ep_obj.eps_aired_in_season * rel_per_ep) / hits_per_page))
+        rel_limit = int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show.is_scene else
+                              ep_obj.eps_aired_in_season * limit_per_ep) / hits_per_page))
+        season_search = rel < (len(searches) * 100 // hits_per_page)
+        if not season_search:
+            need_sd = need_hd = need_uhd = False
+            if not ep_obj.show.is_anime and not ep_obj.show.is_sports:
+                if min(ep_obj.wantedQuality) <= max_sd:
+                    need_sd = True
+                if any(i in hd_qualities for i in ep_obj.wantedQuality):
+                    need_hd = True
+                if max(ep_obj.wantedQuality) > max_hd:
+                    need_uhd = True
+        return (season_search, need_sd, need_hd, need_uhd,
+                (hits_per_page * 100 // hits_per_page * 2, hits_per_page * int(ceil(rel_limit * 1.5)))[season_search])
+
+    def find_search_results(self, show, episodes, search_mode, manual_search=False, try_other_searches=False, **kwargs):
+        self._check_auth()
+        self.show = show
+
+        results = {}
+        item_list = []
+        name_space = {}
+
+        searched_scene_season = s_mode = None
+        for ep_obj in episodes:
+            # skip if season already searched
+            if (s_mode or 'sponly' == search_mode) and 1 < len(episodes) \
+                    and searched_scene_season == ep_obj.scene_season:
+                continue
+
+            # search cache for episode result
+            cache_result = self.cache.searchCache(ep_obj, manual_search)
+            if cache_result:
+                if ep_obj.episode not in results:
+                    results[ep_obj.episode] = cache_result
+                else:
+                    results[ep_obj.episode].extend(cache_result)
+
+                # found result, search next episode
+                continue
+
+            s_mode, need_sd, need_hd, need_uhd, max_items = self.choose_search_mode(
+                episodes, ep_obj, hits_per_page=self.limits)
+
+            if 'sponly' == search_mode:
+                searched_scene_season = ep_obj.scene_season
+
+                # get season search params
+                search_params = self._season_strings(ep_obj)
+            else:
+                # get single episode search params
+                if s_mode and 1 < len(episodes):
+                    searched_scene_season = ep_obj.scene_season
+                    search_params = self._season_strings(ep_obj)
+                else:
+                    search_params = self._episode_strings(ep_obj)
+
+            for cur_param in search_params:
+                items, n_space = self._search_provider(cur_param, search_mode=search_mode, epcount=len(episodes),
+                                                       need_anime=self.show.is_anime, need_sports=self.show.is_sports,
+                                                       need_sd=need_sd, need_hd=need_hd, need_uhd=need_uhd,
+                                                       max_items=max_items, try_all_searches=try_other_searches)
+                item_list += items
+                name_space.update(n_space)
+
+        return self.finish_find_search_results(
+            show, episodes, search_mode, manual_search, results, item_list, name_space=name_space)
+
+    @staticmethod
+    def _parse_pub_date(item, default=None):
+        parsed_date = default
+        try:
+            p = item.findtext('pubDate')
+            if p:
+                p = parser.parse(p, fuzzy=True)
+                try:
+                    p = p.astimezone(sb_timezone)
+                except:
+                    pass
+                if isinstance(p, datetime.datetime):
+                    parsed_date = p.replace(tzinfo=None)
+        except:
+            pass
+
+        return parsed_date
+
+    def _search_provider(self, search_params, need_anime=True, need_sports=True, need_sd=True, need_hd=True,
+                         need_uhd=True, max_items=400, try_all_searches=False, **kwargs):
 
         api_key = self._check_auth()
 
         base_params = {'t': 'tvsearch',
                        'maxage': sickbeard.USENET_RETENTION or 0,
-                       'limit': 100,
-                       'attrs': 'rageid',
+                       'limit': self.limits,
+                       'attrs': ','.join([k for k, v in NewznabConstants.providerToIndexerMapping.iteritems()
+                                          if v in self.caps]),
                        'offset': 0}
 
         if isinstance(api_key, basestring):
             base_params['apikey'] = api_key
 
-        results = []
+        results, n_spaces = [], {}
         total, cnt, search_url, exit_log = 0, len(results), '', False
+
+        cat_sport = self.cats.get(NewznabConstants.CAT_SPORT, ['5060'])
+        cat_anime = self.cats.get(NewznabConstants.CAT_ANIME, ['5070'])
+        cat_hd = self.cats.get(NewznabConstants.CAT_HD, ['5040'])
+        cat_sd = self.cats.get(NewznabConstants.CAT_SD, ['5030'])
+        cat_uhd = self.cats.get(NewznabConstants.CAT_UHD)
 
         for mode in search_params.keys():
             for i, params in enumerate(search_params[mode]):
 
                 # category ids
                 cat = []
-                cat_sport = ['5060']
-                cat_anime = (['5070'], ['6070,7040'])['nzbs_org' == self.get_id()]
                 if 'Episode' == mode or 'Season' == mode:
-                    if not ('rid' in params or 'tvdbid' in params or 'q' in params or not self.supports_tvdbid()):
-                        logger.log('Error no rid, tvdbid, or search term available for search.')
+                    if not (any(x in params for x in [v for c, v in self.caps.iteritems()
+                                if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]]) or
+                                not self.supports_tvdbid()):
+                        logger.log('Error no id or search term available for search.')
                         continue
 
-                    if self.show:
-                        if self.show.is_sports:
-                            cat = cat_sport
-                        elif self.show.is_anime:
-                            cat = cat_anime
-                else:
-                    cat = cat_sport + cat_anime
+                if need_anime:
+                    cat.extend(cat_anime)
+                if need_sports:
+                    cat.extend(cat_sport)
+
+                if need_hd:
+                    cat.extend(cat_hd)
+                if need_sd:
+                    cat.extend(cat_sd)
+                if need_uhd and cat_uhd is not None:
+                    cat.extend(cat_uhd)
 
                 if self.cat_ids or len(cat):
-                    base_params['cat'] = ','.join(sorted(set(self.cat_ids.split(',') + cat)))
+                    base_params['cat'] = ','.join(sorted(set((self.cat_ids.split(',') if self.cat_ids else []) + cat)))
 
                 request_params = base_params.copy()
-                if 'q' in params and not (any(x in params for x in ['season', 'ep'])):
+                if 'Propers' == mode and 'q' in params and not (any(x in params for x in ['season', 'ep'])):
                     request_params['t'] = 'search'
                 request_params.update(params)
 
@@ -281,33 +613,54 @@ class NewznabProvider(generic.NZBProvider):
 
                 offset = 0
                 batch_count = not 0
+                first_date = last_date = None
 
                 # hardcoded to stop after a max of 4 hits (400 items) per query
-                while (offset <= total) and (offset < (200, 400)[self.supports_tvdbid()]) and batch_count:
+                while (offset <= total) and (offset < max_items) and batch_count:
                     cnt = len(results)
 
-                    data = self.cache.getRSSFeed('%sapi' % self.url, params=request_params)
+                    search_url = '%sapi?%s' % (self.url, urllib.urlencode(request_params))
                     i and time.sleep(2.1)
 
-                    if not data or not self.check_auth_from_data(data):
+                    data = helpers.getURL(search_url)
+
+                    # hack this in until it's fixed server side
+                    if data and not data.startswith('<?xml'):
+                        data = '<?xml version="1.0" encoding="ISO-8859-1" ?>%s' % data
+
+                    try:
+                        parsed_xml, n_spaces = self.cache.parse_and_get_ns(data)
+                        items = parsed_xml.findall('channel/item')
+                    except Exception:
+                        logger.log('Error trying to load %s RSS feed' % self.name, logger.ERROR)
                         break
 
-                    for item in data.entries:
+                    if not self.check_auth_from_data(parsed_xml):
+                        break
+
+                    if 'rss' != parsed_xml.tag:
+                        logger.log('Resulting XML from %s isn\'t RSS, not parsing it' % self.name, logger.ERROR)
+                        break
+
+                    i and time.sleep(2.1)
+
+                    for item in items:
 
                         title, url = self._title_and_url(item)
                         if title and url:
                             results.append(item)
                         else:
-                            logger.log(u'The data returned from %s is incomplete, this result is unusable' % self.name,
+                            logger.log('The data returned from %s is incomplete, this result is unusable' % self.name,
                                        logger.DEBUG)
 
-                    # get total and offset attribs
+                    # get total and offset attributes
                     try:
                         if 0 == total:
-                            total = int(data.feed.newznab_response['total'] or 0)
-                            hits = (total / 100 + int(0 < (total % 100)))
+                            total = (helpers.tryInt(parsed_xml.find(
+                                './/%sresponse' % n_spaces['newznab']).get('total', 0)), 1000)['Cache' == mode]
+                            hits = (total // self.limits + int(0 < (total % self.limits)))
                             hits += int(0 == hits)
-                        offset = int(data.feed.newznab_response['offset'] or 0)
+                        offset = helpers.tryInt(parsed_xml.find('.//%sresponse' % n_spaces['newznab']).get('offset', 0))
                     except AttributeError:
                         break
 
@@ -317,8 +670,14 @@ class NewznabProvider(generic.NZBProvider):
 
                     # Cache mode, prevent from doing another search
                     if 'Cache' == mode:
-                        exit_log = True
-                        break
+                        if items and len(items):
+                            if not first_date:
+                                first_date = self._parse_pub_date(items[0])
+                            last_date = self._parse_pub_date(items[-1])
+                        if not first_date or not last_date or not self._last_recent_search or \
+                                last_date <= self.last_recent_search:
+                            exit_log = True
+                            break
 
                     if offset != request_params['offset']:
                         logger.log('Ask your newznab provider to fix their newznab responses')
@@ -336,14 +695,78 @@ class NewznabProvider(generic.NZBProvider):
                     logger.log('%s more item%s to fetch from a batch of up to %s items.'
                                % (items, helpers.maybe_plural(items), request_params['limit']), logger.DEBUG)
 
-                    batch_count = self._log_result(results, mode, cnt, data.rq_response['url'])
+                    batch_count = self._log_result(results, mode, cnt, search_url)
+
+                if 'Cache' == mode and first_date:
+                    self.last_recent_search = first_date
 
                 if exit_log:
-                    self._log_result(results, mode, cnt, data and data.rq_response['url'] or '%sapi' % self.url)
+                    self._log_result(results, mode, cnt, search_url)
                     exit_log = False
 
-                if 'tvdbid' in request_params and len(results):
+                if not try_all_searches and any(x in request_params for x in [v for c, v in self.caps.iteritems()
+                                if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON,
+                                             NewznabConstants.SEARCH_TEXT]]) and len(results):
                     break
+
+        return results, n_spaces
+
+    def find_propers(self, search_date=None, shows=None, anime=None, **kwargs):
+        cache_results = self.cache.listPropers(search_date)
+        results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show) for x in
+                   cache_results]
+
+        index = 0
+        alt_search = ('nzbs_org' == self.get_id())
+        do_search_alt = False
+
+        search_terms = []
+        regex = []
+        if shows:
+            search_terms += ['.proper.', '.repack.']
+            regex += ['proper|repack']
+            proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
+        if anime:
+            terms = 'v1|v2|v3|v4|v5'
+            search_terms += [terms]
+            regex += [terms]
+            proper_check = re.compile(r'(?i)(%s)' % '|'.join(regex))
+
+        urls = []
+        while index < len(search_terms):
+            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
+            if alt_search:
+
+                if do_search_alt:
+                    search_params['t'] = 'search'
+                    index += 1
+
+                do_search_alt = not do_search_alt
+
+            else:
+                index += 1
+
+            items, n_space = self._search_provider({'Propers': [search_params]})
+
+            for item in items:
+
+                (title, url) = self._title_and_url(item)
+
+                if not proper_check.search(title) or url in urls:
+                    continue
+                urls.append(url)
+
+                result_date = self._parse_pub_date(item)
+                if not result_date:
+                    logger.log(u'Unable to figure out the date for entry %s, skipping it' % title)
+                    continue
+
+                if not search_date or search_date < result_date:
+                    show_obj = self.get_show(item, name_space=n_space)
+                    search_result = classes.Proper(title, url, result_date, self.show, parsed_show=show_obj)
+                    results.append(search_result)
+
+            time.sleep(0.5)
 
         return results
 
@@ -361,15 +784,31 @@ class NewznabCache(tvcache.TVCache):
 
         self.update_freq = 5
 
-    def updateCache(self):
+    # helper method to read the namespaces from xml
+    @staticmethod
+    def parse_and_get_ns(data):
+        events = 'start', 'start-ns'
+        root = None
+        ns = {}
+        for event, elem in etree.iterparse(BytesIO(data.encode('utf-8')), events):
+            if 'start-ns' == event:
+                ns[elem[0]] = '{%s}' % elem[1]
+            elif 'start' == event:
+                if None is root:
+                    root = elem
+        return root, ns
+
+    def updateCache(self, need_anime=True, need_sports=True, need_sd=True, need_hd=True, need_uhd=True, **kwargs):
 
         result = []
 
         if 4489 != sickbeard.RECENTSEARCH_FREQUENCY or self.should_update():
+            n_spaces = {}
             try:
                 self._checkAuth()
-                items = self.provider.cache_data()
-            except Exception:
+                (items, n_spaces) = self.provider.cache_data(need_anime=need_anime, need_sports=need_sports,
+                                                             need_sd=need_sd, need_hd=need_hd, need_uhd=need_uhd)
+            except Exception as e:
                 items = None
 
             if items:
@@ -378,7 +817,7 @@ class NewznabCache(tvcache.TVCache):
                 # parse data
                 cl = []
                 for item in items:
-                    ci = self._parseItem(item)
+                    ci = self._parseItem(n_spaces, item)
                     if ci is not None:
                         cl.append(ci)
 
@@ -391,30 +830,33 @@ class NewznabCache(tvcache.TVCache):
 
         return result
 
+    @staticmethod
+    def parse_ids(item, ns):
+        ids = {}
+        if 'newznab' in ns:
+            for attr in item.findall('%sattr' % ns['newznab']):
+                if attr.get('name', '') in NewznabConstants.providerToIndexerMapping:
+                    v = helpers.tryInt(attr.get('value'))
+                    if v > 0:
+                        ids[NewznabConstants.providerToIndexerMapping[attr.get('name')]] = v
+        return ids
+
     # overwrite method with that parses the rageid from the newznab feed
-    def _parseItem(self, *item):
+    def _parseItem(self, ns, item):
 
-        title = item[0].title
-        url = item[0].link
+        title = item.findtext('title')
+        url = item.findtext('link')
 
-        attrs = item[0].newznab_attr
-        if not isinstance(attrs, list):
-            attrs = [item[0].newznab_attr]
-
-        tvrageid = 0
-        for attr in attrs:
-            if 'tvrageid' == attr['name']:
-                tvrageid = int(attr['value'])
-                break
+        ids = self.parse_ids(item, ns)
 
         self._checkItemAuth(title, url)
 
         if not title or not url:
-            logger.log(u'The data returned from the %s feed is incomplete, this result is unusable'
+            logger.log('The data returned from the %s feed is incomplete, this result is unusable'
                        % self.provider.name, logger.DEBUG)
             return None
 
         url = self._translateLinkURL(url)
 
-        logger.log(u'Attempting to add item from RSS to cache: ' + title, logger.DEBUG)
-        return self.add_cache_entry(title, url, indexer_id=tvrageid)
+        logger.log('Attempting to add item from RSS to cache: %s' % title, logger.DEBUG)
+        return self.add_cache_entry(title, url, id_dict=ids)

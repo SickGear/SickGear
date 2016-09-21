@@ -19,14 +19,13 @@
 
 	<div id="summary2" class="align-left">
 		<h3>Backlog Search:</h3>
-		<a id="forcebacklog" class="btn#if $standardBacklogRunning# disabled#end if#" href="$sbRoot/manage/manageSearches/forceLimitedBacklog"><i class="sgicon-play"></i> Force Limited</a>
-		<a id="forcefullbacklog" class="btn#if $standardBacklogRunning# disabled#end if#" href="$sbRoot/manage/manageSearches/forceFullBacklog"><i class="sgicon-play"></i> Force Full</a>
+		<a id="forcebacklog" class="btn#if $standardBacklogRunning or $backlogIsActive# disabled#end if#" href="$sbRoot/manage/manageSearches/forceBacklog"><i class="sgicon-play"></i> Force</a>
 		<a id="pausebacklog" class="btn" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlogPaused then "0" else "1"#"><i class="#if $backlogPaused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlogPaused then "Unpause" else "Pause"#</a>
 #if $backlogPaused then 'Paused: ' else ''#
-#if not $backlogRunning:
+#if not $backlogRunning and not $backlogIsActive:
 		Not in progress<br />
 #else
-		Currently running ($backlogRunningType)<br />
+		Currently running#if $backlogRunningType != "None"# ($backlogRunningType)#end if#<br />
 #end if
 		<br />
 
@@ -51,7 +50,7 @@
 		<h3>Version Check:</h3>
 		<a class="btn" href="$sbRoot/manage/manageSearches/forceVersionCheck"><i class="sgicon-updatecheck"></i> Force Check</a>
 		<br /><br />
-	
+
 		<h3>Search Queue:</h3>
 #if $queueLength['backlog'] or $queueLength['manual'] or $queueLength['failed']
 		<input type="button" class="show-all-more btn" id="all-btn-more" value="Expand All"><input type="button" class="show-all-less btn" id="all-btn-less" value="Collapse All"></br>
@@ -68,13 +67,16 @@ Backlog: <i>$len($queueLength['backlog']) item$sickbeard.helpers.maybe_plural($l
 		#set $row = 0
 		#for $cur_item in $queueLength['backlog']:
 			#set $search_type = 'On Demand'
-			#if $cur_item[3]:
-				#if $cur_item[5]:
+			#if $cur_item['standard_backlog']:
+				#if $cur_item['forced']:
 					#set $search_type = 'Forced'
 				#else
 					#set $search_type = 'Scheduled'
 				#end if
-				#if $cur_item[4]:
+				#if $cur_item['torrent_only']:
+					#set $search_type += ', Torrent Only'
+				#end if
+				#if $cur_item['limited_backlog']:
 					#set $search_type += ' (Limited)'
 				#else
 					#set $search_type += ' (Full)'
@@ -82,7 +84,7 @@ Backlog: <i>$len($queueLength['backlog']) item$sickbeard.helpers.maybe_plural($l
 			#end if
 			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 				<td style="width:80%;text-align:left;color:white">
-					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item[0]">$cur_item[1]</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item[2])
+					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
 				</td>
 				<td style="width:20%;text-align:center;color:white">$search_type</td>
 			</tr>
@@ -103,7 +105,7 @@ Manual: <i>$len($queueLength['manual']) item$sickbeard.helpers.maybe_plural($len
 		#for $cur_item in $queueLength['manual']:
 			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 				<td style="width:100%;text-align:left;color:white">
-					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item[0]">$cur_item[1]</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item[2])
+					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
 				</td>
 			</tr>
 		#end for
@@ -123,7 +125,7 @@ Failed: <i>$len($queueLength['failed']) item$sickbeard.helpers.maybe_plural($len
 		#for $cur_item in $queueLength['failed']:
 			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 				<td style="width:100%;text-align:left;color:white">
-					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item[0]">$cur_item[1]</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item[2])
+					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
 				</td>
 			</tr>
 		#end for

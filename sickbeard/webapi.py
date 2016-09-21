@@ -39,6 +39,7 @@ from sickbeard.exceptions import ex
 from sickbeard.common import SNATCHED, SNATCHED_PROPER, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
 from sickbeard.helpers import remove_article
 from common import Quality, qualityPresetStrings, statusStrings
+from sickbeard.indexers.indexer_config import *
 from sickbeard.webserve import MainHandler
 
 try:
@@ -1096,7 +1097,7 @@ class CMD_Exceptions(ApiCall):
 
     def run(self):
         """ display scene exceptions for all or a given show """
-        myDB = db.DBConnection("cache.db", row_type="dict")
+        myDB = db.DBConnection(row_type="dict")
 
         if self.indexerid == None:
             sqlResults = myDB.select("SELECT show_name, indexer_id AS 'indexerid' FROM scene_exceptions")
@@ -1411,7 +1412,7 @@ class CMD_SickBeardCheckScheduler(ApiCall):
 
         backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()  #@UndefinedVariable
         backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()  #@UndefinedVariable
-        nextBacklog = sickbeard.backlogSearchScheduler.nextRun().strftime(dateFormat).decode(sickbeard.SYS_ENCODING)
+        nextBacklog = sickbeard.backlogSearchScheduler.next_run().strftime(dateFormat).decode(sickbeard.SYS_ENCODING)
 
         data = {"backlog_is_paused": int(backlogPaused), "backlog_is_running": int(backlogRunning),
                 "last_backlog": _ordinal_to_dateForm(sqlResults[0]["last_backlog"]),
@@ -1819,7 +1820,7 @@ class CMD_Show(ApiCall):
         #clean up tvdb horrible airs field
         showDict["airs"] = str(showObj.airs).replace('am', ' AM').replace('pm', ' PM').replace('  ', ' ')
         showDict["indexerid"] = self.indexerid
-        showDict["tvrage_id"] = helpers.mapIndexersToShow(showObj)[2]
+        showDict["tvrage_id"] = showObj.ids.get(INDEXER_TVRAGE, {'id': 0})['id']
         showDict["tvrage_name"] = showObj.name
         showDict["network"] = showObj.network
         if not showDict["network"]:
@@ -2592,8 +2593,8 @@ class CMD_Shows(ApiCall):
                 "sports": curShow.sports,
                 "anime": curShow.anime,
                 "indexerid": curShow.indexerid,
-                "tvdbid": helpers.mapIndexersToShow(curShow)[1],
-                "tvrage_id": helpers.mapIndexersToShow(curShow)[2],
+                "tvdbid": curShow.ids.get(INDEXER_TVDB , {'id': 0})['id'],
+                "tvrage_id": curShow.ids.get(INDEXER_TVRAGE, {'id': 0})['id'],
                 "tvrage_name": curShow.name,
                 "network": curShow.network,
                 "show_name": curShow.name,

@@ -61,7 +61,7 @@ class PostProcessor(object):
 
     IGNORED_FILESTRINGS = ['/.AppleDouble/', '.DS_Store']
 
-    def __init__(self, file_path, nzb_name=None, process_method=None, force_replace=None, use_trash=None, webhandler=None):
+    def __init__(self, file_path, nzb_name=None, process_method=None, force_replace=None, use_trash=None, webhandler=None, showObj=None):
         """
         Creates a new post processor with the given file path and optionally an NZB name.
 
@@ -88,6 +88,8 @@ class PostProcessor(object):
         self.use_trash = use_trash
 
         self.webhandler = webhandler
+
+        self.showObj = showObj
 
         self.in_history = False
 
@@ -475,7 +477,7 @@ class PostProcessor(object):
             return to_return
 
         # parse the name to break it into show name, season, and episode
-        np = NameParser(resource, try_scene_exceptions=True, convert=True)
+        np = NameParser(resource, try_scene_exceptions=True, convert=True, showObj=self.showObj)
         parse_result = np.parse(name)
         self._log(u'Parsed %s<br />.. from %s' % (str(parse_result).decode('utf-8', 'xmlcharrefreplace'), name), logger.DEBUG)
 

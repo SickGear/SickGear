@@ -27,7 +27,7 @@ from sickbeard import logger
 from sickbeard.common import Quality
 
 from sickbeard import helpers, show_name_helpers
-from sickbeard.exceptions import AuthException, ex
+from sickbeard.exceptions import MultipleShowObjectsException, AuthException, ex
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard.rssfeeds import RSSFeeds
 import itertools
@@ -76,7 +76,7 @@ class TVCache:
     def _checkItemAuth(self, title, url):
         return True
 
-    def updateCache(self):
+    def updateCache(self, **kwargs):
         try:
             self._checkAuth()
         except AuthException as e:
@@ -188,7 +188,7 @@ class TVCache:
         # if recent search hasn't used our previous results yet then don't clear the cache
         return self.lastSearch >= self.lastUpdate
 
-    def add_cache_entry(self, name, url, parse_result=None, indexer_id=0):
+    def add_cache_entry(self, name, url, parse_result=None, indexer_id=0, id_dict=None):
 
         # check if we passed in a parsed result or should we try and create one
         if not parse_result:
@@ -196,7 +196,16 @@ class TVCache:
             # create showObj from indexer_id if available
             showObj=None
             if indexer_id:
-                showObj = helpers.findCertainShow(sickbeard.showList, indexer_id)
+                try:
+                    showObj = helpers.findCertainShow(sickbeard.showList, indexer_id)
+                except MultipleShowObjectsException:
+                    return None
+
+            if id_dict:
+                try:
+                    showObj = helpers.find_show_by_id(sickbeard.showList, id_dict=id_dict, no_mapped_ids=False)
+                except MultipleShowObjectsException:
+                    return None
 
             try:
                 np = NameParser(showObj=showObj, convert=True)

@@ -4,6 +4,7 @@ Libs with customisations...
 /lib/dateutil/zoneinfo/__init__.py
 /lib/hachoir_core/config.py
 /lib/hachoir_core/stream/input_helpers.py
+/lib/lockfile/mkdirlockfile.py
 /lib/pynma/pynma.py
 /lib/requests/packages/urllib3/connectionpool.py
 /lib/requests/packages/urllib3/util/ssl_.py

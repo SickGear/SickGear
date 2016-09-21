@@ -19,7 +19,8 @@
 from sickbeard import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 2
+MAX_DB_VERSION = 3
+
 
 # Add new migrations at the bottom of the list; subclass the previous migration.
 class InitialSchema(db.SchemaUpgrade):
@@ -32,17 +33,21 @@ class InitialSchema(db.SchemaUpgrade):
             'CREATE TABLE lastSearch (provider TEXT, time NUMERIC)',
             'CREATE TABLE db_version (db_version INTEGER)',
             'INSERT INTO db_version (db_version) VALUES (1)',
-            'CREATE TABLE scene_exceptions (exception_id INTEGER PRIMARY KEY, indexer_id INTEGER KEY,'
-                ' show_name TEXT, season NUMERIC, custom NUMERIC)',
-            'CREATE TABLE scene_names (indexer_id INTEGER, name TEXT)',
             'CREATE TABLE network_timezones (network_name TEXT PRIMARY KEY, timezone TEXT)',
-            'CREATE TABLE scene_exceptions_refresh (list TEXT PRIMARY KEY, last_refreshed INTEGER)',
             'CREATE TABLE network_conversions ('
                 'tvdb_network TEXT PRIMARY KEY, tvrage_network TEXT, tvrage_country TEXT)',
             'CREATE INDEX tvrage_idx on network_conversions (tvrage_network, tvrage_country)',
+            'CREATE TABLE provider_cache (provider TEXT ,name TEXT, season NUMERIC, episodes TEXT,'
+            ' indexerid NUMERIC, url TEXT UNIQUE, time NUMERIC, quality TEXT, release_group TEXT, '
+            'version NUMERIC)',
+            'CREATE  TABLE  IF NOT EXISTS "backlogparts" ("part" NUMERIC NOT NULL ,'
+            ' "indexer" NUMERIC NOT NULL , "indexerid" NUMERIC NOT NULL )',
+            'CREATE  TABLE  IF NOT EXISTS "lastrecentsearch" ("name" TEXT PRIMARY KEY  NOT NULL'
+            ' , "datetime" NUMERIC NOT NULL )',
         ]
         for query in queries:
             self.connection.action(query)
+        self.setDBVersion(3)
 
 
 class ConsolidateProviders(InitialSchema):
@@ -59,11 +64,38 @@ class ConsolidateProviders(InitialSchema):
                                ' indexerid NUMERIC, url TEXT UNIQUE, time NUMERIC, quality TEXT, release_group TEXT, '
                                'version NUMERIC)')
 
-        keep_tables = set(['lastUpdate', 'lastSearch', 'db_version', 'scene_exceptions', 'scene_names',
-                           'network_timezones', 'scene_exceptions_refresh', 'network_conversions', 'provider_cache'])
+        keep_tables = set(['lastUpdate', 'lastSearch', 'db_version',
+                           'network_timezones', 'network_conversions', 'provider_cache'])
         current_tables = set(self.listTables())
         remove_tables = list(current_tables - keep_tables)
         for table in remove_tables:
             self.connection.action('DROP TABLE [%s]' % table)
+
+        self.incDBVersion()
+
+
+class AddBacklogParts(ConsolidateProviders):
+    def test(self):
+        return self.checkDBVersion() > 2
+
+    def execute(self):
+
+        db.backup_database('cache.db', self.checkDBVersion())
+        if self.hasTable('scene_names'):
+            self.connection.action('DROP TABLE scene_names')
+
+        if not self.hasTable('backlogparts'):
+            self.connection.action('CREATE  TABLE  IF NOT EXISTS "backlogparts" ("part" NUMERIC NOT NULL ,'
+                                   ' "indexer" NUMERIC NOT NULL , "indexerid" NUMERIC NOT NULL )')
+
+        if not self.hasTable('lastrecentsearch'):
+            self.connection.action('CREATE  TABLE  IF NOT EXISTS "lastrecentsearch" ("name" TEXT PRIMARY KEY  NOT NULL'
+                                   ' , "datetime" NUMERIC NOT NULL )')
+
+        if self.hasTable('scene_exceptions_refresh'):
+            self.connection.action('DROP TABLE scene_exceptions_refresh')
+        if self.hasTable('scene_exceptions'):
+            self.connection.action('DROP TABLE scene_exceptions')
+        self.connection.action('VACUUM')
 
         self.incDBVersion()

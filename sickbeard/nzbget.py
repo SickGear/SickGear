@@ -80,10 +80,8 @@ def send_nzb(nzb, proper=False):
     # if it aired recently make it high priority and generate DupeKey/Score
     for curEp in nzb.episodes:
         if '' == dupekey:
-            if 1 == curEp.show.indexer:
-                dupekey = 'SickGear-%s' % curEp.show.indexerid
-            elif 2 == curEp.show.indexer:
-                dupekey = 'SickGear-tvr%s' % curEp.show.indexerid
+            dupekey = "SickGear-%s%s" % (
+                sickbeard.indexerApi(curEp.show.indexer).config.get('dupekey', ''), curEp.show.indexerid)
         dupekey += '-%s.%s' % (curEp.season, curEp.episode)
 
         if datetime.date.today() - curEp.airdate <= datetime.timedelta(days=7):

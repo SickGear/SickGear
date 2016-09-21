@@ -94,10 +94,10 @@
 
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Backlog search frequency</span>
+								<span class="component-title">Backlog search spread</span>
 								<span class="component-desc">
 									<input type="text" name="backlog_frequency" value="$sickbeard.BACKLOG_FREQUENCY" class="form-control input-sm input75">
-									<p>days between full backlog searches (min $sickbeard.MIN_BACKLOG_FREQUENCY, default $sickbeard.DEFAULT_BACKLOG_FREQUENCY, max $sickbeard.MAX_BACKLOG_FREQUENCY)</p>
+									<p>days to spread full backlog searches over (min $sickbeard.MIN_BACKLOG_FREQUENCY, default $sickbeard.DEFAULT_BACKLOG_FREQUENCY, max $sickbeard.MAX_BACKLOG_FREQUENCY)</p>
 								</span>
 							</label>
 						</div>
@@ -123,7 +123,7 @@
 								<span class="component-desc">
 #set $shows = []
 #for $show in $using_rls_ignore_words
-	#set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+    #set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
 #end for
 #if len($using_rls_ignore_words)
 									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
@@ -145,7 +145,7 @@
 								<span class="component-desc">
 #set $shows = []
 #for $show in $using_rls_require_words
-	#set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+    #set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
 #end for
 #if len($using_rls_require_words)
 									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
@@ -171,9 +171,19 @@
 								<span class="component-title">Unaired episodes</span>
 								<span class="component-desc">
 									<input type="checkbox" name="search_unaired" id="search_unaired" class="enabler"<%= html_checked if sickbeard.SEARCH_UNAIRED == True else '' %>>
-									<p>process episodes found before their expected airdate (disable if getting fakes)</p>
+									<p>allow episodes that are released early (disable if getting fakes)</p>
 								</span>
 							</label>
+						</div>
+						<div id="content_search_unaired">
+							<div class="field-pair" style="margin-top:-24px">
+								<label for="unaired_recent_search_only">
+									<span class="component-desc">
+										<input type="checkbox" name="unaired_recent_search_only" id="unaired_recent_search_only" class="enabler"<%= html_checked if sickbeard.UNAIRED_RECENT_SEARCH_ONLY == False else '' %>>
+										<p>use specific server api requests to search for early episode releases</p>
+									</span>
+								</label>
+							</div>
 						</div>
 
 						<input type="submit" class="btn config_submitter" value="Save Changes">
@@ -556,11 +566,11 @@
 
 <script type="text/javascript" charset="utf-8">
 <!--
-    jQuery('#config-components').tabs();
-    jQuery('#nzb_dir').fileBrowser({ title: 'Select .nzb black hole/watch location' });
-    jQuery('#torrent_dir').fileBrowser({ title: 'Select .torrent black hole/watch location' });
-    jQuery('#torrent_path').fileBrowser({ title: 'Select .torrent download location' });
-    jQuery('#tv_download_dir').fileBrowser({ title: 'Select TV download location' });
+	jQuery('#config-components').tabs();
+	jQuery('#nzb_dir').fileBrowser({ title: 'Select .nzb black hole/watch location' });
+	jQuery('#torrent_dir').fileBrowser({ title: 'Select .torrent black hole/watch location' });
+	jQuery('#torrent_path').fileBrowser({ title: 'Select .torrent download location' });
+	jQuery('#tv_download_dir').fileBrowser({ title: 'Select TV download location' });
 //-->
 </script>
 

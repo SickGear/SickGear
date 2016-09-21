@@ -37,7 +37,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay', cache_update_freq=20)
 
         self.url_home = ['https://thepiratebay.%s/' % u for u in 'se', 'org'] + \
-                        ['piratebay.usbypass.xyz/']
+                        ['https://piratebay.usbypass.xyz/']
 
         self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s',

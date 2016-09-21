@@ -37,7 +37,7 @@ sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import helpers, encodingKludge as ek
 from sickbeard import db, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
     scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
-    show_queue, show_updater, subtitles, traktChecker, version_checker
+    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
@@ -51,6 +51,7 @@ from lib.adba.aniDBerrors import (AniDBError, AniDBBannedError)
 from lib.configobj import ConfigObj
 from lib.libtrakt import TraktAPI
 import trakt_helpers
+import threading
 
 PID = None
 
@@ -83,6 +84,7 @@ properFinderScheduler = None
 autoPostProcesserScheduler = None
 subtitlesFinderScheduler = None
 traktCheckerScheduler = None
+background_mapping_task = None
 
 showList = None
 UPDATE_SHOWS_ON_START = False
@@ -217,12 +219,13 @@ DEFAULT_UPDATE_FREQUENCY = 1
 
 MIN_AUTOPOSTPROCESSER_FREQUENCY = 1
 MIN_RECENTSEARCH_FREQUENCY = 10
-MIN_BACKLOG_FREQUENCY = 2
-MAX_BACKLOG_FREQUENCY = 35
+MIN_BACKLOG_FREQUENCY = 7
+MAX_BACKLOG_FREQUENCY = 42
 MIN_UPDATE_FREQUENCY = 1
 
 BACKLOG_DAYS = 7
 SEARCH_UNAIRED = False
+UNAIRED_RECENT_SEARCH_ONLY = True
 
 ADD_SHOWS_WO_DIR = False
 REMOVE_FILENAME_CHARS = None
@@ -541,9 +544,9 @@ def initialize(consoleLogging=True):
             USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
             AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
-            SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, ANIME_TREAT_AS_HDTV, \
+            SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, ANIME_TREAT_AS_HDTV, \
             COOKIE_SECRET, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS, \
-            SHOW_TAGS, DEFAULT_SHOW_TAG, SHOWLIST_TAGVIEW
+            SHOW_TAGS, DEFAULT_SHOW_TAG, SHOWLIST_TAGVIEW, background_mapping_task
 
         if __INITIALIZED__:
             return False
@@ -615,7 +618,8 @@ def initialize(consoleLogging=True):
         TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u':%S', u'')
         TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
         DISPLAY_BACKGROUND = bool(check_setting_int(CFG, 'General', 'display_background', 0))
-        DISPLAY_BACKGROUND_TRANSPARENT = check_setting_str(CFG, 'General', 'display_background_transparent', 'transparent')
+        DISPLAY_BACKGROUND_TRANSPARENT = check_setting_str(CFG, 'General', 'display_background_transparent',
+                                                           'transparent')
         DISPLAY_ALL_SEASONS = bool(check_setting_int(CFG, 'General', 'display_all_seasons', 1))
         SHOW_TAGS = check_setting_str(CFG, 'GUI', 'show_tags', 'Show List').split(',')
         DEFAULT_SHOW_TAG = check_setting_str(CFG, 'GUI', 'default_show_tag', 'Show List')
@@ -705,7 +709,8 @@ def initialize(consoleLogging=True):
         NAMING_ABD_PATTERN = check_setting_str(CFG, 'General', 'naming_abd_pattern', '%SN - %A.D - %EN')
         NAMING_CUSTOM_ABD = bool(check_setting_int(CFG, 'General', 'naming_custom_abd', 0))
         NAMING_SPORTS_PATTERN = check_setting_str(CFG, 'General', 'naming_sports_pattern', '%SN - %A-D - %EN')
-        NAMING_ANIME_PATTERN = check_setting_str(CFG, 'General', 'naming_anime_pattern', 'Season %0S/%SN - S%0SE%0E - %EN')
+        NAMING_ANIME_PATTERN = check_setting_str(CFG, 'General', 'naming_anime_pattern',
+                                                 'Season %0S/%SN - S%0SE%0E - %EN')
         NAMING_ANIME = check_setting_int(CFG, 'General', 'naming_anime', 3)
         NAMING_CUSTOM_SPORTS = bool(check_setting_int(CFG, 'General', 'naming_custom_sports', 0))
         NAMING_CUSTOM_ANIME = bool(check_setting_int(CFG, 'General', 'naming_custom_anime', 0))
@@ -750,7 +755,8 @@ def initialize(consoleLogging=True):
             RECENTSEARCH_FREQUENCY = MIN_RECENTSEARCH_FREQUENCY
 
         BACKLOG_FREQUENCY = check_setting_int(CFG, 'General', 'backlog_frequency', DEFAULT_BACKLOG_FREQUENCY)
-        BACKLOG_FREQUENCY = minimax(BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY)
+        BACKLOG_FREQUENCY = minimax(BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY,
+                                    MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY)
 
         UPDATE_FREQUENCY = check_setting_int(CFG, 'General', 'update_frequency', DEFAULT_UPDATE_FREQUENCY)
         if UPDATE_FREQUENCY < MIN_UPDATE_FREQUENCY:
@@ -758,6 +764,7 @@ def initialize(consoleLogging=True):
 
         BACKLOG_DAYS = check_setting_int(CFG, 'General', 'backlog_days', 7)
         SEARCH_UNAIRED = bool(check_setting_int(CFG, 'General', 'search_unaired', 0))
+        UNAIRED_RECENT_SEARCH_ONLY = bool(check_setting_int(CFG, 'General', 'unaired_recent_search_only', 1))
 
         NZB_DIR = check_setting_str(CFG, 'Blackhole', 'nzb_dir', '')
         TORRENT_DIR = check_setting_str(CFG, 'Blackhole', 'torrent_dir', '')
@@ -914,7 +921,8 @@ def initialize(consoleLogging=True):
         TRAKT_START_PAUSED = bool(check_setting_int(CFG, 'Trakt', 'trakt_start_paused', 0))
         TRAKT_SYNC = bool(check_setting_int(CFG, 'Trakt', 'trakt_sync', 0))
         TRAKT_DEFAULT_INDEXER = check_setting_int(CFG, 'Trakt', 'trakt_default_indexer', 1)
-        TRAKT_UPDATE_COLLECTION = trakt_helpers.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_update_collection', ''))
+        TRAKT_UPDATE_COLLECTION = trakt_helpers.read_config_string(
+            check_setting_str(CFG, 'Trakt', 'trakt_update_collection', ''))
         TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
         TRAKT_MRU = check_setting_str(CFG, 'Trakt', 'trakt_mru', '')
 
@@ -1141,40 +1149,60 @@ def initialize(consoleLogging=True):
         # initialize schedulers
         # updaters
         update_now = datetime.timedelta(minutes=0)
-        versionCheckScheduler = scheduler.Scheduler(version_checker.CheckVersion(),
-                                                    cycleTime=datetime.timedelta(hours=UPDATE_FREQUENCY),
-                                                    threadName='CHECKVERSION',
-                                                    silent=False)
+        versionCheckScheduler = scheduler.Scheduler(
+            version_checker.CheckVersion(),
+            cycleTime=datetime.timedelta(hours=UPDATE_FREQUENCY),
+            threadName='CHECKVERSION',
+            silent=False)
 
-        showQueueScheduler = scheduler.Scheduler(show_queue.ShowQueue(),
-                                                 cycleTime=datetime.timedelta(seconds=3),
-                                                 threadName='SHOWQUEUE')
+        showQueueScheduler = scheduler.Scheduler(
+            show_queue.ShowQueue(),
+            cycleTime=datetime.timedelta(seconds=3),
+            threadName='SHOWQUEUE')
 
-        showUpdateScheduler = scheduler.Scheduler(show_updater.ShowUpdater(),
-                                                  cycleTime=datetime.timedelta(hours=1),
-                                                  threadName='SHOWUPDATER',
-                                                  start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
-                                                  prevent_cycle_run=showQueueScheduler.action.isShowUpdateRunning)  # 3 AM
+        showUpdateScheduler = scheduler.Scheduler(
+            show_updater.ShowUpdater(),
+            cycleTime=datetime.timedelta(hours=1),
+            threadName='SHOWUPDATER',
+            start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
+            prevent_cycle_run=showQueueScheduler.action.isShowUpdateRunning)  # 3AM
 
         # searchers
-        searchQueueScheduler = scheduler.Scheduler(search_queue.SearchQueue(),
-                                                   cycleTime=datetime.timedelta(seconds=3),
-                                                   threadName='SEARCHQUEUE')
+        searchQueueScheduler = scheduler.Scheduler(
+            search_queue.SearchQueue(),
+            cycleTime=datetime.timedelta(seconds=3),
+            threadName='SEARCHQUEUE')
 
         update_interval = datetime.timedelta(minutes=(RECENTSEARCH_FREQUENCY, 1)[4489 == RECENTSEARCH_FREQUENCY])
-        recentSearchScheduler = scheduler.Scheduler(search_recent.RecentSearcher(),
-                                                    cycleTime=update_interval,
-                                                    threadName='RECENTSEARCHER',
-                                                    run_delay=update_now if RECENTSEARCH_STARTUP
-                                                    else datetime.timedelta(minutes=5),
-                                                    prevent_cycle_run=searchQueueScheduler.action.is_recentsearch_in_progress)
+        recentSearchScheduler = scheduler.Scheduler(
+            search_recent.RecentSearcher(),
+            cycleTime=update_interval,
+            threadName='RECENTSEARCHER',
+            run_delay=update_now if RECENTSEARCH_STARTUP
+            else datetime.timedelta(minutes=5),
+            prevent_cycle_run=searchQueueScheduler.action.is_recentsearch_in_progress)
 
-        backlogSearchScheduler = search_backlog.BacklogSearchScheduler(search_backlog.BacklogSearcher(),
-                                                                       cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
-                                                                       threadName='BACKLOG',
-                                                                       run_delay=update_now if BACKLOG_STARTUP
-                                                                       else datetime.timedelta(minutes=10),
-                                                                       prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
+        if [x for x in providers.sortedProviderList() if x.is_active() and
+                x.enable_backlog and x.providerType == GenericProvider.NZB]:
+            nextbacklogpossible = datetime.datetime.fromtimestamp(
+                search_backlog.BacklogSearcher().last_runtime) + datetime.timedelta(hours=23)
+            now = datetime.datetime.now()
+            if nextbacklogpossible > now:
+                time_diff = nextbacklogpossible - now
+                if (time_diff > datetime.timedelta(hours=12) and
+                        nextbacklogpossible - datetime.timedelta(hours=12) > now):
+                    time_diff = time_diff - datetime.timedelta(hours=12)
+            else:
+                time_diff = datetime.timedelta(minutes=0)
+            backlogdelay = helpers.tryInt((time_diff.total_seconds() / 60) + 10, 10)
+        else:
+            backlogdelay = 10
+        backlogSearchScheduler = search_backlog.BacklogSearchScheduler(
+            search_backlog.BacklogSearcher(),
+            cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
+            threadName='BACKLOG',
+            run_delay=datetime.timedelta(minutes=backlogdelay),
+            prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
 
         propers_searcher = search_propers.ProperSearcher()
         item = [(k, n, v) for (k, n, v) in propers_searcher.search_intervals if k == CHECK_PROPERS_INTERVAL]
@@ -1185,32 +1213,38 @@ def initialize(consoleLogging=True):
             update_interval = datetime.timedelta(hours=1)
             run_at = datetime.time(hour=1)  # 1 AM
 
-        properFinderScheduler = scheduler.Scheduler(propers_searcher,
-                                                    cycleTime=update_interval,
-                                                    threadName='FINDPROPERS',
-                                                    start_time=run_at,
-                                                    run_delay=update_interval,
-                                                    prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
+        properFinderScheduler = scheduler.Scheduler(
+            propers_searcher,
+            cycleTime=update_interval,
+            threadName='FINDPROPERS',
+            start_time=run_at,
+            run_delay=update_interval,
+            prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
 
         # processors
-        autoPostProcesserScheduler = scheduler.Scheduler(auto_post_processer.PostProcesser(),
-                                                         cycleTime=datetime.timedelta(
-                                                             minutes=AUTOPOSTPROCESSER_FREQUENCY),
-                                                         threadName='POSTPROCESSER',
-                                                         silent=not PROCESS_AUTOMATICALLY)
+        autoPostProcesserScheduler = scheduler.Scheduler(
+            auto_post_processer.PostProcesser(),
+            cycleTime=datetime.timedelta(
+                minutes=AUTOPOSTPROCESSER_FREQUENCY),
+            threadName='POSTPROCESSER',
+            silent=not PROCESS_AUTOMATICALLY)
 
-        traktCheckerScheduler = scheduler.Scheduler(traktChecker.TraktChecker(),
-                                                    cycleTime=datetime.timedelta(hours=1),
-                                                    threadName='TRAKTCHECKER',
-                                                    silent=not USE_TRAKT)
+        traktCheckerScheduler = scheduler.Scheduler(
+            traktChecker.TraktChecker(),
+            cycleTime=datetime.timedelta(hours=1),
+            threadName='TRAKTCHECKER',
+            silent=not USE_TRAKT)
 
-        subtitlesFinderScheduler = scheduler.Scheduler(subtitles.SubtitlesFinder(),
-                                                       cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_FREQUENCY),
-                                                       threadName='FINDSUBTITLES',
-                                                       silent=not USE_SUBTITLES)
+        subtitlesFinderScheduler = scheduler.Scheduler(
+            subtitles.SubtitlesFinder(),
+            cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_FREQUENCY),
+            threadName='FINDSUBTITLES',
+            silent=not USE_SUBTITLES)
 
         showList = []
         loadingShowList = {}
+
+        background_mapping_task = threading.Thread(name='LOAD-MAPPINGS', target=indexermapper.load_mapped_ids)
 
         __INITIALIZED__ = True
         return True
@@ -1221,10 +1255,15 @@ def start():
         showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
         properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
         subtitlesFinderScheduler, USE_SUBTITLES, traktCheckerScheduler, \
-        recentSearchScheduler, events, started
+        recentSearchScheduler, events, started, background_mapping_task
 
     with INIT_LOCK:
         if __INITIALIZED__:
+            # Load all Indexer mappings in background
+            indexermapper.defunct_indexer = [i for i in indexerApi().all_indexers if indexerApi(i).config.get('defunct')]
+            indexermapper.indexer_list = [i for i in indexerApi().all_indexers]
+            background_mapping_task.start()
+
             # start sysetm events queue
             events.start()
 
@@ -1259,8 +1298,8 @@ def start():
                 subtitlesFinderScheduler.start()
 
             # start the trakt checker
-            #if USE_TRAKT:
-                #traktCheckerScheduler.start()
+            # if USE_TRAKT:
+                # traktCheckerScheduler.start()
 
             started = True
 
@@ -1414,7 +1453,8 @@ def save_config():
     new_config = ConfigObj()
     new_config.filename = CONFIG_FILE
 
-    # For passwords you must include the word `password` in the item_name and add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
+    # For passwords you must include the word `password` in the item_name and
+    # add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
     new_config['General'] = {}
     new_config['General']['branch'] = BRANCH
     new_config['General']['git_remote'] = GIT_REMOTE
@@ -1506,6 +1546,7 @@ def save_config():
 
     new_config['General']['backlog_days'] = int(BACKLOG_DAYS)
     new_config['General']['search_unaired'] = int(SEARCH_UNAIRED)
+    new_config['General']['unaired_recent_search_only'] = int(UNAIRED_RECENT_SEARCH_ONLY)
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
     new_config['General']['root_dirs'] = ROOT_DIRS if ROOT_DIRS else ''

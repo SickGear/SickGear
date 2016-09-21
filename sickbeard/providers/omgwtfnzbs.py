@@ -133,7 +133,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                 return data.entries
         return []
 
-    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0):
+    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0, **kwargs):
 
         api_key = self._init_api()
         if False is api_key:

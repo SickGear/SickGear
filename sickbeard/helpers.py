@@ -18,7 +18,11 @@
 
 from __future__ import print_function
 from __future__ import with_statement
+
+import base64
+import datetime
 import getpass
+import hashlib
 import os
 import re
 import shutil
@@ -27,18 +31,14 @@ import stat
 import tempfile
 import time
 import traceback
-import hashlib
 import urlparse
 import uuid
-import base64
-import datetime
 
-import sickbeard
-import subliminal
 import adba
 import requests
 import requests.exceptions
-
+import sickbeard
+import subliminal
 
 try:
     import json
@@ -51,7 +51,7 @@ except ImportError:
     import elementtree.ElementTree as etree
 
 from sickbeard.exceptions import MultipleShowObjectsException, ex
-from sickbeard import logger, classes, db, notifiers, clients
+from sickbeard import logger, db, notifiers, clients
 from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions, cpu_presets
 from sickbeard import encodingKludge as ek
 
@@ -171,6 +171,33 @@ def findCertainShow(showList, indexerid):
     results = []
     if showList and indexerid:
         results = filter(lambda x: int(x.indexerid) == int(indexerid), showList)
+
+    if len(results) == 1:
+        return results[0]
+    elif len(results) > 1:
+        raise MultipleShowObjectsException()
+
+
+def find_show_by_id(show_list, id_dict, no_mapped_ids=True):
+    """
+
+    :param show_list:
+    :type show_list: list
+    :param id_dict: {indexer: id}
+    :type id_dict: dict
+    :param no_mapped_ids:
+    :type no_mapped_ids: bool
+    :return: showObj or MultipleShowObjectsException
+    """
+    results = []
+    if show_list and id_dict and isinstance(id_dict, dict):
+        id_dict = {k: v for k, v in id_dict.items() if v > 0}
+        if no_mapped_ids:
+            results = list(set([s for k, v in id_dict.iteritems() for s in show_list
+                                if k == s.indexer and v == s.indexerid]))
+        else:
+            results = list(set([s for k, v in id_dict.iteritems() for s in show_list
+                                if v == s.ids.get(k, {'id': 0})['id']]))
 
     if len(results) == 1:
         return results[0]
@@ -960,64 +987,6 @@ def set_up_anidb_connection():
     return sickbeard.ADBA_CONNECTION.authed()
 
 
-def mapIndexersToShow(showObj):
-    mapped = {}
-
-    # init mapped indexers object
-    for indexer in sickbeard.indexerApi().indexers:
-        mapped[indexer] = showObj.indexerid if int(indexer) == int(showObj.indexer) else 0
-
-    myDB = db.DBConnection()
-    sqlResults = myDB.select(
-        "SELECT * FROM indexer_mapping WHERE indexer_id = ? AND indexer = ?",
-        [showObj.indexerid, showObj.indexer])
-
-    # for each mapped entry
-    for curResult in sqlResults:
-        nlist = [i for i in curResult if None is not i]
-        # Check if its mapped with both tvdb and tvrage.
-        if 4 <= len(nlist):
-            logger.log(u"Found indexer mapping in cache for show: " + showObj.name, logger.DEBUG)
-            mapped[int(curResult['mindexer'])] = int(curResult['mindexer_id'])
-            break
-
-    else:
-        sql_l = []
-        for indexer in sickbeard.indexerApi().indexers:
-            if indexer == showObj.indexer:
-                mapped[indexer] = showObj.indexerid
-                continue
-
-            lINDEXER_API_PARMS = sickbeard.indexerApi(indexer).api_params.copy()
-            lINDEXER_API_PARMS['custom_ui'] = classes.ShowListUI
-            t = sickbeard.indexerApi(indexer).indexer(**lINDEXER_API_PARMS)
-
-            try:
-                mapped_show = t[showObj.name]
-            except sickbeard.indexer_shownotfound:
-                logger.log(u"Unable to map " + sickbeard.indexerApi(showObj.indexer).name + "->" + sickbeard.indexerApi(
-                    indexer).name + " for show: " + showObj.name + ", skipping it", logger.DEBUG)
-                continue
-
-            if mapped_show and len(mapped_show) == 1:
-                logger.log(u"Mapping " + sickbeard.indexerApi(showObj.indexer).name + "->" + sickbeard.indexerApi(
-                    indexer).name + " for show: " + showObj.name, logger.DEBUG)
-
-                mapped[indexer] = int(mapped_show[0]['id'])
-
-                logger.log(u"Adding indexer mapping to DB for show: " + showObj.name, logger.DEBUG)
-
-                sql_l.append([
-                    "INSERT OR IGNORE INTO indexer_mapping (indexer_id, indexer, mindexer_id, mindexer) VALUES (?,?,?,?)",
-                    [showObj.indexerid, showObj.indexer, int(mapped_show[0]['id']), indexer]])
-
-        if len(sql_l) > 0:
-            myDB = db.DBConnection()
-            myDB.mass_action(sql_l)
-
-    return mapped
-
-
 def touchFile(fname, atime=None):
     if None != atime:
         try:
@@ -1102,7 +1071,7 @@ def proxy_setting(proxy_setting, request_url, force=False):
     return (False, proxy_address)[request_url_match], True
 
 
-def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False, **kwargs):
+def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False, raise_status_code=False, **kwargs):
     """
     Returns a byte-string retrieved from the url provider.
     """
@@ -1170,6 +1139,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                     url = urlparse.urlunparse(parsed)
                 resp = session.get(url, timeout=timeout, **kwargs)
 
+        if raise_status_code:
+            resp.raise_for_status()
+
         if not resp.ok:
             http_err_text = 'CloudFlare Ray ID' in resp.content and 'CloudFlare reports, "Website is offline"; ' or ''
             if resp.status_code in clients.http_error_code:
@@ -1183,6 +1155,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             return
 
     except requests.exceptions.HTTPError as e:
+        if raise_status_code:
+            resp.raise_for_status()
         logger.log(u'HTTP error %s while loading URL%s' % (
             e.errno, _maybe_request_url(e)), logger.WARNING)
         return
@@ -1479,3 +1453,5 @@ def has_anime():
 def cpu_sleep():
     if cpu_presets[sickbeard.CPU_PRESET]:
         time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+
+
