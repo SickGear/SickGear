@@ -157,6 +157,7 @@
 * Change improve config/providers newznab categories layout
 * Change show loaded log message at start up and include info source
 * Change if episode has no airdate then set status to unaired (was skipped)
+* Fix only replace initial quality releases from the upgrade to list
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

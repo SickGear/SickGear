@@ -303,8 +303,8 @@ def is_first_best_match(result):
 
 
 def wanted_episodes(show, from_date, make_dict=False, unaired=False):
-    initial_qualities, archive_qualities = common.Quality.splitQuality(show.quality)
-    all_qualities = list(set(initial_qualities + archive_qualities))
+    initial_qualities, upgrade_qualities = common.Quality.splitQuality(show.quality)
+    all_qualities = list(set(initial_qualities + upgrade_qualities))
 
     my_db = db.DBConnection()
 
@@ -350,19 +350,20 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
         not_downloaded = True
         cur_composite_status = int(result['status'])
         cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_composite_status)
+        cur_snatched = cur_status in downloaded_status_list
 
-        if show.archive_firstmatch and cur_status in downloaded_status_list and cur_quality in archive_qualities:
+        if show.archive_firstmatch and cur_snatched and cur_quality in upgrade_qualities:
             continue
 
-        # special case: already downloaded quality is not in any of the wanted Qualities
+        # special case: already downloaded quality is not in any of the upgrade to Qualities
         other_quality_downloaded = False
-        if cur_status in downloaded_status_list and cur_quality not in all_qualities:
+        if len(upgrade_qualities) and cur_snatched and cur_quality not in all_qualities:
             other_quality_downloaded = True
             wanted_qualities = all_qualities
         else:
-            wanted_qualities = archive_qualities
+            wanted_qualities = upgrade_qualities
 
-        if archive_qualities:
+        if upgrade_qualities:
             highest_wanted_quality = max(wanted_qualities)
         else:
             if other_quality_downloaded:
@@ -371,11 +372,10 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
                 highest_wanted_quality = 0
 
         # if we need a better one then say yes
-        if (cur_status in downloaded_status_list and cur_quality < highest_wanted_quality) or \
-            cur_status in status_list or \
-                (sickbeard.SEARCH_UNAIRED and 1 == result['airdate'] and cur_status in (common.SKIPPED, common.IGNORED,
-                                                                                        common.UNAIRED, common.UNKNOWN,
-                                                                                        common.FAILED)):
+        if (cur_snatched and cur_quality < highest_wanted_quality) \
+                or cur_status in status_list \
+                or (sickbeard.SEARCH_UNAIRED and 1 == result['airdate']
+                    and cur_status in (common.SKIPPED, common.IGNORED, common.UNAIRED, common.UNKNOWN, common.FAILED)):
 
             if cur_status in (common.WANTED, common.FAILED):
                 total_wanted += 1
@@ -386,8 +386,8 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
                 not_downloaded = False
 
             ep_obj = show.getEpisode(int(result['season']), int(result['episode']))
-            ep_obj.wantedQuality = [i for i in (initial_qualities if not_downloaded else
-                                                wanted_qualities) if (i > cur_quality and i != common.Quality.UNKNOWN)]
+            ep_obj.wantedQuality = [i for i in (wanted_qualities, initial_qualities)[not_downloaded]
+                                    if (common.Quality.UNKNOWN != i and cur_quality < i)]
             ep_obj.eps_aired_in_season = ep_count.get(helpers.tryInt(result['season']), 0)
             ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
                 helpers.tryInt(result['scene_season']), 0) if result['scene_season'] else None
