@@ -186,6 +186,7 @@ class GenericProvider:
 
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (torrent_hash,))
                         for u in (('s', 'itorrents.org'), ('s', 'torra.pro'), ('s', 'torra.click'),
+                                  ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
                                   ('s', 'torrentproject.se'), ('', 'thetorrent.org'))]
             except (StandardError, Exception):
                 link_type = 'torrent'

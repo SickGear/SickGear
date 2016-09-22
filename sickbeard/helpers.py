@@ -951,7 +951,7 @@ def validateShow(show, season=None, episode=None):
             return t
 
         return t[show.indexerid][season][episode]
-    except (sickbeard.indexer_episodenotfound, sickbeard.indexer_seasonnotfound):
+    except (sickbeard.indexer_episodenotfound, sickbeard.indexer_seasonnotfound, TypeError):
         pass
 
 
