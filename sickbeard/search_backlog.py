@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
+from __future__ import with_statement, division
 
 import datetime
 import threading
+from math import ceil
 
 import sickbeard
 
@@ -119,6 +120,29 @@ class BacklogSearcher:
                         forced=forced, torrent_only=torrent_only)
                     sickbeard.searchQueueScheduler.action.add_item(backlog_queue_item)
 
+    @staticmethod
+    def change_backlog_parts(old_count, new_count):
+        try:
+            my_db = db.DBConnection('cache.db')
+            sql_result = my_db.select('SELECT * FROM backlogparts')
+            if sql_result:
+                current_parts = len(set(s['part'] for s in sql_result))
+                parts_count = len(sql_result)
+                new_part_count = int(ceil(new_count / old_count * current_parts))
+                parts = int(ceil(parts_count / new_part_count))
+                cl = ([], [['DELETE FROM backlogparts']])[parts_count > 1]
+                p = new_count - new_part_count
+                for i, s in enumerate(sql_result):
+                    if i % parts == 0:
+                        p += 1
+                    cl.append(['INSERT INTO backlogparts (part, indexerid, indexer) VALUES (?,?,?)',
+                                   [p, s['indexerid'], s['indexer']]])
+
+                if 0 < len(cl):
+                    my_db.mass_action(cl)
+        except:
+            pass
+
     def search_backlog(self, which_shows=None, force_type=NORMAL_BACKLOG, force=False):
 
         if self.amActive:
@@ -188,7 +212,7 @@ class BacklogSearcher:
 
         parts = []
         if standard_backlog and not torrent_only and not continued_backlog:
-            fullbacklogparts = sum([len(w) for w in wanted_list if w]) / sickbeard.BACKLOG_FREQUENCY
+            fullbacklogparts = sum([len(w) for w in wanted_list if w]) // sickbeard.BACKLOG_FREQUENCY
             h_part = []
             counter = 0
             for w in wanted_list:

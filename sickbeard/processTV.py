@@ -265,7 +265,7 @@ class ProcessTVShow(object):
                        (ex(e), e.filename and (' (file %s)' % e.filename) or ''), logger.WARNING)
 
         # Process video files in TV subdirectories
-        for directory in [x for x in dirs if self._validate_dir(path, x, nzb_name_original, failed)]:
+        for directory in [x for x in dirs if self._validate_dir(path, x, nzb_name_original, failed, showObj=showObj)]:
 
             # self._set_process_success(reset=True)
 
@@ -386,7 +386,7 @@ class ProcessTVShow(object):
 
         return archives, archive_history
 
-    def _validate_dir(self, path, dir_name, nzb_name_original, failed):
+    def _validate_dir(self, path, dir_name, nzb_name_original, failed, showObj=None):
 
         self._log_helper(u'Processing sub dir: ' + dir_name)
 
@@ -434,14 +434,14 @@ class ProcessTVShow(object):
         # check if the directory have at least one tv video file
         for video in video_files:
             try:
-                NameParser().parse(video, cache_result=False)
+                NameParser(showObj=showObj).parse(video, cache_result=False)
                 return True
             except (InvalidNameException, InvalidShowException):
                 pass
 
         for directory in all_dirs:
             try:
-                NameParser().parse(directory, cache_result=False)
+                NameParser(showObj=showObj).parse(directory, cache_result=False)
                 return True
             except (InvalidNameException, InvalidShowException):
                 pass
@@ -452,7 +452,7 @@ class ProcessTVShow(object):
 
             for packed in packed_files:
                 try:
-                    NameParser().parse(packed, cache_result=False)
+                    NameParser(showObj=showObj).parse(packed, cache_result=False)
                     return True
                 except (InvalidNameException, InvalidShowException):
                     pass
