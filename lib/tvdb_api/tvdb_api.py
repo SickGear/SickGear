@@ -5,8 +5,8 @@
 # repository:http://github.com/dbr/tvdb_api
 # license:unlicense (http://unlicense.org/)
 
-from functools import wraps
 import traceback
+from functools import wraps
 
 __author__ = 'dbr/Ben'
 __version__ = '1.9'
@@ -21,12 +21,6 @@ import logging
 import zipfile
 import requests
 import requests.exceptions
-import xmltodict
-
-try:
-    import xml.etree.cElementTree as ElementTree
-except ImportError:
-    import xml.etree.ElementTree as ElementTree
 
 try:
     import gzip
@@ -36,6 +30,7 @@ except ImportError:
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
 
+from lib.etreetodict import ConvertXmlToDict
 from tvdb_ui import BaseUI, ConsoleUI
 from tvdb_exceptions import (tvdb_error, tvdb_shownotfound,
                              tvdb_seasonnotfound, tvdb_episodenotfound, tvdb_attributenotfound)
@@ -565,18 +560,17 @@ class Tvdb:
         except Exception:
             raise tvdb_error('Unknown exception while loading URL %s: %s' % (url, traceback.format_exc()))
 
-        def process(path, key, value):
-            key = key.lower()
-
-            # clean up value and do type changes
-            if value:
-                if 'firstaired' == key:
-                    try:
-                        value = parse(value, fuzzy=True).strftime('%Y-%m-%d')
-                    except:
-                        value = None
-
-            return key, value
+        def process_data(data):
+            te = ConvertXmlToDict(data)
+            if isinstance(te, dict) and 'Data' in te and isinstance(te['Data'], dict) and \
+                            'Series' in te['Data'] and isinstance(te['Data']['Series'], dict) and \
+                            'FirstAired' in te['Data']['Series']:
+                try:
+                    value = parse(te['Data']['Series']['FirstAired'], fuzzy=True).strftime('%Y-%m-%d')
+                except:
+                    value = None
+                te['Data']['Series']['firstaired'] = value
+            return te
 
         if resp.ok:
             if 'application/zip' in resp.headers.get('Content-Type', ''):
@@ -586,12 +580,12 @@ class Tvdb:
                     zipdata = StringIO.StringIO()
                     zipdata.write(resp.content)
                     myzipfile = zipfile.ZipFile(zipdata)
-                    return xmltodict.parse(myzipfile.read('%s.xml' % language), postprocessor=process)
+                    return process_data(myzipfile.read('%s.xml' % language))
                 except zipfile.BadZipfile:
                     raise tvdb_error('Bad zip file received from thetvdb.com, could not read it')
             else:
                 try:
-                    return xmltodict.parse(resp.content.strip(), postprocessor=process)
+                    return process_data(resp.content.strip())
                 except:
                     return dict([(u'data', None)])
 
@@ -641,7 +635,7 @@ class Tvdb:
         - Replaces &amp; with &
         - Trailing whitespace
         """
-        return data if data is None else data.strip().replace(u'&amp;', u'&')
+        return data if not isinstance(data, basestring) else data.strip().replace(u'&amp;', u'&')
 
     def search(self, series):
         """This searches TheTVDB.com for the series name
@@ -654,6 +648,7 @@ class Tvdb:
         try:
             series_found = self._getetsrc(self.config['url_get_series'], self.config['params_get_series'])
             if series_found:
+                series_found['Series'] = [{k.lower(): v for k, v in s.iteritems()} for s in series_found['Series']]
                 return series_found.values()[0]
         except:
             pass
@@ -804,21 +799,21 @@ class Tvdb:
 
         # Parse show information
         log().debug('Getting all series data for %s' % sid)
-        url = self.config['url_epInfo%s' % ('', '_zip')[self.config['useZip']]] % (sid, language)
+        url = (self.config['url_seriesInfo'] % (sid, language), self.config['url_epInfo%s' % ('', '_zip')[self.config['useZip']]] % (sid, language))[get_ep_info]
         show_data = self._getetsrc(url, language=get_show_in_language)
 
         # check and make sure we have data to process and that it contains a series name
-        if not len(show_data) or (isinstance(show_data, dict) and 'seriesname' not in show_data['series']):
+        if not len(show_data) or (isinstance(show_data, dict) and 'SeriesName' not in show_data['Series']):
             return False
 
-        for k, v in show_data['series'].items():
+        for k, v in show_data['Series'].iteritems():
             if None is not v:
                 if k in ['banner', 'fanart', 'poster']:
                     v = self.config['url_artworkPrefix'] % v
                 else:
                     v = self._clean_data(v)
 
-            self._set_show_data(sid, k, v)
+            self._set_show_data(sid, k.lower(), v)
 
         if get_ep_info:
             # Parse banners
@@ -832,24 +827,24 @@ class Tvdb:
             # Parse episode data
             log().debug('Getting all episodes of %s' % sid)
 
-            if 'episode' not in show_data:
+            if 'Episode' not in show_data:
                 return False
 
-            episodes = show_data['episode']
+            episodes = show_data['Episode']
             if not isinstance(episodes, list):
                 episodes = [episodes]
 
             for cur_ep in episodes:
                 if self.config['dvdorder']:
                     log().debug('Using DVD ordering.')
-                    use_dvd = None is not cur_ep['dvd_season'] and None is not cur_ep['dvd_episodenumber']
+                    use_dvd = None is not cur_ep['DVD_season'] and None is not cur_ep['DVD_episodenumber']
                 else:
                     use_dvd = False
 
                 if use_dvd:
-                    elem_seasnum, elem_epno = cur_ep['dvd_season'], cur_ep['dvd_episodenumber']
+                    elem_seasnum, elem_epno = cur_ep['DVD_season'], cur_ep['DVD_episodenumber']
                 else:
-                    elem_seasnum, elem_epno = cur_ep['seasonnumber'], cur_ep['episodenumber']
+                    elem_seasnum, elem_epno = cur_ep['SeasonNumber'], cur_ep['EpisodeNumber']
 
                 if None is elem_seasnum or None is elem_epno:
                     log().warning('An episode has incomplete season/episode number (season: %r, episode: %r)' % (
@@ -895,10 +890,16 @@ class Tvdb:
         """Handles tvdb_instance['seriesname'] calls.
         The dict index should be the show id
         """
+        arg = None
+        if isinstance(key, tuple) and 2 == len(key):
+            key, arg = key
+            if not isinstance(arg, bool):
+                arg = None
+
         if isinstance(key, (int, long)):
             # Item is integer, treat as show id
             if key not in self.shows:
-                self._get_show_data(key, self.config['language'], True)
+                self._get_show_data(key, self.config['language'], (True, arg)[arg is not None])
             return None if key not in self.shows else self.shows[key]
 
         key = str(key).lower()

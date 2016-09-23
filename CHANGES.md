@@ -159,6 +159,11 @@
 * Change show loaded log message at start up and include info source
 * Change if episode has no airdate then set status to unaired (was skipped)
 * Fix only replace initial quality releases from the upgrade to list
+* Change optimise TheTVDB processes, 40% to 66% saved adding new and existing shows, 40% to 50% saved per show update
+* Change improve shows with more episodes gain largest reductions in time spent processing
+* Change when using "Add new show" reduce search time outs
+* Change always allow incomplete show data
+* Remove redundant config/general/"Allow incomplete show data"
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
