@@ -93,6 +93,7 @@
 * Add Extratorrent provider
 * Add Limetorrents provider
 * Add nCore torrent provider
+* Add TorLock provider
 * Add Torrentz2 provider
 * Remove Usenet-Crawler provider
 * Change CPU throttling on General Config/Advanced to "Disabled" by default for new installs
