@@ -88,18 +88,6 @@
 							</label>
 						</div>
 
-#if hasattr($sickbeard, 'ALLOW_INCOMPLETE_SHOWDATA')
-						<div class="field-pair">
-							<label for="allow_incomplete_showdata">
-								<span class="component-title">Allow incomplete show data</span>
-								<span class="component-desc">
-									<input type="checkbox" name="allow_incomplete_showdata" id="allow_incomplete_showdata"#echo ('', $checked)[$sickbeard.ALLOW_INCOMPLETE_SHOWDATA]#>
-									<p>add partial show data for future updates to complete</p>
-								</span>
-							</label>
-						</div>
-#end if
-
 						<div class="field-pair">
 							<span class="component-title">Send to trash for actions</span>
 							<span class="component-desc">

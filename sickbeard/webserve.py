@@ -2368,11 +2368,11 @@ class NewHomeAddShows(Home):
                     logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
                         search_id, search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
                     results.setdefault('tt' in search_id and 3 or indexer, []).extend(
-                        [{'id': indexer_id, 'seriesname': t[indexer_id]['seriesname'],
-                          'firstaired': t[indexer_id]['firstaired'], 'network': t[indexer_id]['network'],
-                          'overview': t[indexer_id]['overview'],
-                          'genres': '' if not t[indexer_id]['genre'] else
-                            t[indexer_id]['genre'].lower().strip('|').replace('|', ', '),
+                        [{'id': indexer_id, 'seriesname': t[indexer_id, False]['seriesname'],
+                          'firstaired': t[indexer_id, False]['firstaired'], 'network': t[indexer_id, False]['network'],
+                          'overview': t[indexer_id, False]['overview'],
+                          'genres': '' if not t[indexer_id, False]['genre'] else
+                            t[indexer_id, False]['genre'].lower().strip('|').replace('|', ', '),
                           }])
                     break
                 else:
@@ -4305,7 +4305,7 @@ class ConfigGeneral(Config):
         return m.hexdigest()
 
     def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None,
-                    update_shows_on_start=None, show_update_hour=None, allow_incomplete_showdata=None,
+                    update_shows_on_start=None, show_update_hour=None,
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
@@ -4327,7 +4327,6 @@ class ConfigGeneral(Config):
 
         sickbeard.UPDATE_SHOWS_ON_START = config.checkbox_to_value(update_shows_on_start)
         sickbeard.SHOW_UPDATE_HOUR = config.minimax(show_update_hour, 3, 0, 23)
-        sickbeard.ALLOW_INCOMPLETE_SHOWDATA = config.checkbox_to_value(allow_incomplete_showdata)
         sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
         sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
         config.change_UPDATE_FREQUENCY(update_frequency)

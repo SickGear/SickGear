@@ -296,7 +296,7 @@ class QueueItemAdd(ShowQueueItem):
             logger.log(u'' + str(sickbeard.indexerApi(self.indexer).name) + ': ' + repr(lINDEXER_API_PARMS))
 
             t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
-            s = t[self.indexer_id]
+            s = t[self.indexer_id, False]
 
             # this usually only happens if they have an NFO in their show dir which gave us a Indexer ID that has no proper english version of the show
             if getattr(s, 'seriesname', None) is None:
@@ -305,14 +305,6 @@ class QueueItemAdd(ShowQueueItem):
                 ui.notifications.error('Unable to add show',
                                        'Show in %s has no name on %s, probably the wrong language. Delete .nfo and add manually in the correct language.' %
                                        (self.showDir, sickbeard.indexerApi(self.indexer).name))
-                self._finishEarly()
-                return
-            # if the show has no episodes/seasons
-            if not sickbeard.ALLOW_INCOMPLETE_SHOWDATA and not s:
-                msg = 'Show %s is on %s but contains no season/episode data. Only the show folder was created.'\
-                      % (s['seriesname'], sickbeard.indexerApi(self.indexer).name)
-                logger.log(msg, logger.ERROR)
-                ui.notifications.error('Unable to add show', msg)
                 self._finishEarly()
                 return
         except Exception as e:

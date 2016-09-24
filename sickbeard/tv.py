@@ -559,6 +559,8 @@ class TVShow(object):
         if self.dvdorder != 0:
             lINDEXER_API_PARMS['dvdorder'] = True
 
+        logger.log('%s: Loading all episodes from %s..' % (self.indexerid, sickbeard.indexerApi(self.indexer).name))
+
         try:
             t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
             showObj = t[self.indexerid]
@@ -566,8 +568,6 @@ class TVShow(object):
             logger.log('%s timed out, unable to update episodes from %s' %
                        (sickbeard.indexerApi(self.indexer).name, sickbeard.indexerApi(self.indexer).name), logger.ERROR)
             return None
-
-        logger.log('%s: Loading all episodes from %s..' % (self.indexerid, sickbeard.indexerApi(self.indexer).name))
 
         scannedEps = {}
 
@@ -912,7 +912,7 @@ class TVShow(object):
         else:
             t = tvapi
 
-        myEp = t[self.indexerid]
+        myEp = t[self.indexerid, False]
         if None is myEp:
             logger.log('Show not found (maybe even removed?)', logger.WARNING)
             return False
@@ -931,7 +931,7 @@ class TVShow(object):
         self.imdbid = getattr(myEp, 'imdb_id', '')
 
         if getattr(myEp, 'airs_dayofweek', None) is not None and getattr(myEp, 'airs_time', None) is not None:
-            self.airs = myEp["airs_dayofweek"] + " " + myEp["airs_time"]
+            self.airs = ('%s %s' % (myEp['airs_dayofweek'], myEp['airs_time'])).strip()
 
         if getattr(myEp, 'firstaired', None) is not None:
             self.startyear = int(str(myEp["firstaired"]).split('-')[0])
@@ -1076,15 +1076,15 @@ class TVShow(object):
         for path, dirs, files in ek.ek(os.walk, image_cache_dir):
             for filename in ek.ek(fnmatch.filter, files, '%s.*' % self.indexerid):
                 cache_file = ek.ek(os.path.join, path, filename)
-                logger.log('Attempt to %s cache file %s' % (action, cache_file))
-                try:
-                    if sickbeard.TRASH_REMOVE_SHOW:
-                        send2trash(cache_file)
-                    else:
-                        os.remove(cache_file)
+            logger.log('Attempt to %s cache file %s' % (action, cache_file))
+            try:
+                if sickbeard.TRASH_REMOVE_SHOW:
+                    send2trash(cache_file)
+                else:
+                    os.remove(cache_file)
 
-                except OSError as e:
-                    logger.log('Unable to %s %s: %s / %s' % (action, cache_file, repr(e), str(e)), logger.WARNING)
+            except OSError as e:
+                logger.log('Unable to %s %s: %s / %s' % (action, cache_file, repr(e), str(e)), logger.WARNING)
 
         # remove entire show folder
         if full:
@@ -1771,15 +1771,7 @@ class TVEpisode(object):
                 self.deleteEpisode()
             return
 
-        if not sickbeard.ALLOW_INCOMPLETE_SHOWDATA and None is getattr(myEp, 'episodename', None):
-            logger.log('This episode (%s - %sx%s) has no name on %s' %
-                       (self.show.name, season, episode, sickbeard.indexerApi(self.indexer).name))
-            # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
-            if -1 != self.indexerid:
-                self.deleteEpisode()
-            return False
-
-        if None is getattr(myEp, 'absolute_number', None):
+        if getattr(myEp, 'absolute_number', None) in (None, ''):
             logger.log('This episode (%s - %sx%s) has no absolute number on %s' %
                        (self.show.name, season, episode, sickbeard.indexerApi(self.indexer).name), logger.DEBUG)
         else:
@@ -1827,8 +1819,7 @@ class TVEpisode(object):
         self.indexerid = getattr(myEp, 'id', None)
         if None is self.indexerid:
             logger.log('Failed to retrieve ID from %s' % sickbeard.indexerApi(self.indexer).name, logger.ERROR)
-            if -1 != self.indexerid:
-                self.deleteEpisode()
+            self.deleteEpisode()
             return False
 
         # don't update show status if show dir is missing, unless it's missing on purpose
@@ -2060,42 +2051,26 @@ class TVEpisode(object):
             logger.log('%s: Not creating SQL queue - record is not dirty' % self.show.indexerid, logger.DEBUG)
             return
 
-        myDB = db.DBConnection()
-        rows = myDB.select(
-            'SELECT episode_id FROM tv_episodes WHERE showid = ? AND indexer=? AND season = ? AND episode = ?',
-            [self.show.indexerid, self.show.indexer, self.season, self.episode])
-
-        epID = None
-        if rows:
-            epID = int(rows[0]['episode_id'])
-
         self.dirty = False
-        if epID:
-            # use a custom update method to get the data into the DB for existing records.
-            return [
-                'UPDATE tv_episodes SET indexerid = ?, indexer = ?, name = ?, description = ?, subtitles = ?, '
-                'subtitles_searchcount = ?, subtitles_lastsearch = ?, airdate = ?, hasnfo = ?, hastbn = ?, status = ?, '
-                'location = ?, file_size = ?, release_name = ?, is_proper = ?, showid = ?, season = ?, episode = ?, '
-                'absolute_number = ?, version = ?, release_group = ? WHERE episode_id = ?',
-                [self.indexerid, self.indexer, self.name, self.description, ",".join([sub for sub in self.subtitles]),
-                 self.subtitles_searchcount, self.subtitles_lastsearch, self.airdate.toordinal(), self.hasnfo,
-                 self.hastbn,
-                 self.status, self.location, self.file_size, self.release_name, self.is_proper, self.show.indexerid,
-                 self.season, self.episode, self.absolute_number, self.version, self.release_group, epID]]
-        else:
-            # use a custom insert method to get the data into the DB.
-            return [
-                'INSERT OR IGNORE INTO tv_episodes (episode_id, indexerid, indexer, name, description, subtitles, '
-                'subtitles_searchcount, subtitles_lastsearch, airdate, hasnfo, hastbn, status, location, file_size, '
-                'release_name, is_proper, showid, season, episode, absolute_number, version, release_group) VALUES '
-                '((SELECT episode_id FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?)'
-                ',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);',
-                [self.show.indexerid, self.season, self.episode, self.indexerid, self.indexer, self.name,
-                 self.description,
-                 ",".join([sub for sub in self.subtitles]), self.subtitles_searchcount, self.subtitles_lastsearch,
-                 self.airdate.toordinal(), self.hasnfo, self.hastbn, self.status, self.location, self.file_size,
-                 self.release_name, self.is_proper, self.show.indexerid, self.season, self.episode,
-                 self.absolute_number, self.version, self.release_group]]
+        return [
+            'INSERT OR REPLACE INTO tv_episodes (episode_id, indexerid, indexer, name, description, subtitles, '
+            'subtitles_searchcount, subtitles_lastsearch, airdate, hasnfo, hastbn, status, location, file_size, '
+            'release_name, is_proper, showid, season, episode, absolute_number, version, release_group, '
+            'scene_absolute_number, scene_season, scene_episode) VALUES '
+            '((SELECT episode_id FROM tv_episodes WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?)'
+            ',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'
+            '(SELECT scene_absolute_number FROM tv_episodes WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?),'
+            '(SELECT scene_season FROM tv_episodes WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?),'
+            '(SELECT scene_episode FROM tv_episodes WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?));',
+            [self.show.indexer, self.show.indexerid, self.season, self.episode, self.indexerid, self.indexer, self.name,
+             self.description,
+             ",".join([sub for sub in self.subtitles]), self.subtitles_searchcount, self.subtitles_lastsearch,
+             self.airdate.toordinal(), self.hasnfo, self.hastbn, self.status, self.location, self.file_size,
+             self.release_name, self.is_proper, self.show.indexerid, self.season, self.episode,
+             self.absolute_number, self.version, self.release_group,
+             self.show.indexer, self.show.indexerid, self.season, self.episode,
+             self.show.indexer, self.show.indexerid, self.season, self.episode,
+             self.show.indexer, self.show.indexerid, self.season, self.episode]]
 
     def saveToDB(self, forceSave=False):
         """
