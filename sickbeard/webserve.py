@@ -4494,7 +4494,9 @@ class ConfigSearch(Config):
 
         config.change_RECENTSEARCH_FREQUENCY(recentsearch_frequency)
 
+        old_backlog_frequency = sickbeard.BACKLOG_FREQUENCY
         config.change_BACKLOG_FREQUENCY(backlog_frequency)
+        sickbeard.search_backlog.BacklogSearcher.change_backlog_parts(old_backlog_frequency, sickbeard.BACKLOG_FREQUENCY)
         sickbeard.BACKLOG_DAYS = config.to_int(backlog_days, default=7)
 
         sickbeard.USE_NZBS = config.checkbox_to_value(use_nzbs)
