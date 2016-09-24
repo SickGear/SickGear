@@ -743,7 +743,7 @@ class TorrentProvider(object, GenericProvider):
     @property
     def url(self):
         if None is self._url or (hasattr(self, 'url_tmpl') and not self.urls):
-            self._url = self._valid_home()
+            self._url = self._valid_home(False)
             self._valid_url()
         return self._url
 
@@ -873,7 +873,7 @@ class TorrentProvider(object, GenericProvider):
         return data and re.search(r'(?sim)<input[^<]+name="password"', data) and \
                re.search(r'(?sim)<input[^<]+name="username"', data)
 
-    def _valid_home(self):
+    def _valid_home(self, attempt_fetch=True):
         """
         :return: signature verified home url else None if validation fail
         """
@@ -910,7 +910,7 @@ class TorrentProvider(object, GenericProvider):
 
         logger.log('Failed to identify a "%s" page with %s %s (local network issue, site down, or ISP blocked) ' %
                    (self.name, len(url_list), ('URL', 'different URLs')[1 < len(url_list)]) +
-                   'Suggest; 1) Disable "%s" 2) Use a proxy/VPN' % self.get_id(),
+                   (attempt_fetch and ('Suggest; 1) Disable "%s" 2) Use a proxy/VPN' % self.get_id()) or ''),
                    (logger.WARNING, logger.ERROR)[self.enabled])
         self.urls = {}
         sickbeard.PROVIDER_HOMES[self.get_id()] = ('site down', int(time.time()) + (5 * 60))

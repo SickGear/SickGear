@@ -1076,15 +1076,15 @@ class TVShow(object):
         for path, dirs, files in ek.ek(os.walk, image_cache_dir):
             for filename in ek.ek(fnmatch.filter, files, '%s.*' % self.indexerid):
                 cache_file = ek.ek(os.path.join, path, filename)
-            logger.log('Attempt to %s cache file %s' % (action, cache_file))
-            try:
-                if sickbeard.TRASH_REMOVE_SHOW:
-                    send2trash(cache_file)
-                else:
-                    os.remove(cache_file)
+                logger.log('Attempt to %s cache file %s' % (action, cache_file))
+                try:
+                    if sickbeard.TRASH_REMOVE_SHOW:
+                        send2trash(cache_file)
+                    else:
+                        os.remove(cache_file)
 
-            except OSError as e:
-                logger.log('Unable to %s %s: %s / %s' % (action, cache_file, repr(e), str(e)), logger.WARNING)
+                except OSError as e:
+                    logger.log('Unable to %s %s: %s / %s' % (action, cache_file, repr(e), str(e)), logger.WARNING)
 
         # remove entire show folder
         if full:
