@@ -164,6 +164,8 @@
 * Change when using "Add new show" reduce search time outs
 * Change always allow incomplete show data
 * Remove redundant config/general/"Allow incomplete show data"
+* Fix status reset of a snatched, downloaded, or archived episode when its date is set to never (no date) on the info
+  source and there is no media file
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

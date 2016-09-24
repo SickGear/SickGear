@@ -1836,30 +1836,30 @@ class TVEpisode(object):
         # if we don't have the file
         if not ek.ek(os.path.isfile, self.location):
 
-            today = datetime.date.today()
-            delta = datetime.timedelta(days=1)
-            show_time = network_timezones.parse_date_time(self.airdate.toordinal(), self.show.airs, self.show.network)
-            show_length = datetime.timedelta(minutes=helpers.tryInt(self.show.runtime, 60))
-            tz_now = datetime.datetime.now(network_timezones.sb_timezone)
-            future_airtime = (self.airdate > (today + delta) or
-                              (not self.airdate < (today - delta) and ((show_time + show_length) > tz_now)))
+            if self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
+                today = datetime.date.today()
+                delta = datetime.timedelta(days=1)
+                show_time = network_timezones.parse_date_time(self.airdate.toordinal(), self.show.airs, self.show.network)
+                show_length = datetime.timedelta(minutes=helpers.tryInt(self.show.runtime, 60))
+                tz_now = datetime.datetime.now(network_timezones.sb_timezone)
+                future_airtime = (self.airdate > (today + delta) or
+                                  (not self.airdate < (today - delta) and ((show_time + show_length) > tz_now)))
 
-            # if this episode hasn't aired yet set the status to UNAIRED
-            if future_airtime and self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
-                msg = 'Episode airs in the future, marking it %s'
-                self.status = UNAIRED
-
-            # if there's no airdate then set it to unaired (and respect ignored)
-            elif self.airdate == datetime.date.fromordinal(1):
-                if IGNORED == self.status:
-                    msg = 'Episode has no air date and marked %s, no change'
-                else:
-                    msg = 'Episode has no air date, marking it %s'
+                # if this episode hasn't aired yet set the status to UNAIRED
+                if future_airtime:
+                    msg = 'Episode airs in the future, marking it %s'
                     self.status = UNAIRED
 
-            # if the airdate is in the past
-            else:
-                if UNAIRED == self.status:
+                # if there's no airdate then set it to unaired (and respect ignored)
+                elif self.airdate == datetime.date.fromordinal(1):
+                    if IGNORED == self.status:
+                        msg = 'Episode has no air date and marked %s, no change'
+                    else:
+                        msg = 'Episode has no air date, marking it %s'
+                        self.status = UNAIRED
+
+                # if the airdate is in the past
+                elif UNAIRED == self.status:
                     msg = ('Episode status %s%s, with air date in the past, marking it ' % (
                         statusStrings[self.status], ','.join([(' is a special', '')[0 < self.season],
                                                               ('', ' is paused')[self.show.paused]])) + '%s')
@@ -1875,6 +1875,9 @@ class TVEpisode(object):
 
                 else:
                     msg = 'Not touching episode status %s, with air date in the past, because there is no file'
+
+            else:
+                msg = 'Not touching episode status %s, because there is no file'
 
             logger.log(msg % statusStrings[self.status], logger.DEBUG)
 
