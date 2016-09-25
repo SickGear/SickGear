@@ -1871,7 +1871,7 @@ class Home(MainHandler):
 
                 with epObj.lock:
                     # don't let them mess up UNAIRED episodes
-                    if epObj.status == UNAIRED:
+                    if epObj.status == UNAIRED and not sickbeard.SEARCH_UNAIRED:
                         logger.log(u'Refusing to change status of ' + curEp + ' because it is UNAIRED', logger.ERROR)
                         continue
 
@@ -3392,13 +3392,15 @@ class Manage(MainHandler):
 
         result = {}
         for cur_result in cur_show_results:
+            if not sickbeard.SEARCH_UNAIRED and 1000 > cur_result['airdate']:
+                continue
             cur_season = int(cur_result['season'])
             cur_episode = int(cur_result['episode'])
 
             if cur_season not in result:
                 result[cur_season] = {}
 
-            result[cur_season][cur_episode] = {'name': cur_result['name'], 'airdate_never': (True, False)[1000 < int(cur_result['airdate'])]}
+            result[cur_season][cur_episode] = {'name': cur_result['name'], 'airdate_never': 1000 > int(cur_result['airdate'])}
 
         return json.dumps(result)
 
@@ -3438,6 +3440,8 @@ class Manage(MainHandler):
         show_names = {}
         sorted_show_ids = []
         for cur_status_result in status_results:
+            if not sickbeard.SEARCH_UNAIRED and 1000 > cur_status_result['airdate']:
+                continue
             cur_indexer_id = int(cur_status_result['indexer_id'])
             if cur_indexer_id not in ep_counts:
                 ep_counts[cur_indexer_id] = 1
@@ -3640,6 +3644,8 @@ class Manage(MainHandler):
                 [curShow.indexerid])
 
             for curResult in sqlResults:
+                if not sickbeard.SEARCH_UNAIRED and 1 == curResult['airdate']:
+                    continue
                 curEpCat = curShow.getOverview(int(curResult['status']))
                 if curEpCat:
                     epCats[str(curResult['season']) + 'x' + str(curResult['episode'])] = curEpCat
