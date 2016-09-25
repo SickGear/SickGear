@@ -482,7 +482,8 @@ class MainHandler(WebHandler):
         sql_results = list(set(sql_results))
 
         # make a dict out of the sql results
-        sql_results = [dict(row) for row in sql_results]
+        sql_results = [dict(row) for row in sql_results
+                       if Quality.splitCompositeStatus(helpers.tryInt(row['status']))[0] not in qualities]
 
         # multi dimension sort
         sorts = {
@@ -4870,7 +4871,7 @@ class ConfigProviders(Config):
         tempProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
 
         if tempProvider.get_id() in providerDict:
-            return json.dumps({'error': 'Exists as ' + providerDict[tempProvider.get_id()].name})
+            return json.dumps({'error': 'A provider exists as [%s]' % providerDict[tempProvider.get_id()].name})
         else:
             (succ, errMsg) = tempProvider.validate_feed()
             if succ:
@@ -5040,14 +5041,15 @@ class ConfigProviders(Config):
                     setattr(torrent_src, attr, key)
 
             attr = 'ratio'
-            if hasattr(torrent_src, '_seed_' + attr):
+            if hasattr(torrent_src, '_seed_' + attr) and src_id_prefix + attr in kwargs:
                 setattr(torrent_src, '_seed_' + attr, kwargs.get(src_id_prefix + attr, '').strip() or None)
 
             for attr in [x for x in ['minseed', 'minleech'] if hasattr(torrent_src, x)]:
                 setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
 
             for attr in [x for x in ['confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
-                                     'enable_backlog', 'search_fallback'] if hasattr(torrent_src, x)]:
+                                     'enable_backlog', 'search_fallback']
+                         if hasattr(torrent_src, x) and src_id_prefix + attr in kwargs]:
                 setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
             attr = 'seed_time'
