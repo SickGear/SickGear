@@ -179,6 +179,7 @@
 * Change handle when a torrent provider goes down and its urls are cleared
 * Add handler for when rar files can not be opened during post processing
 * Fix join clean up
+* Fix add custom torrent RSS
 
 
 ### 0.11.15 (2016-09-13 19:50:00 UTC)

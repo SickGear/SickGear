@@ -1072,7 +1072,8 @@ def initialize(consoleLogging=True):
                 torrent_prov.reject_m2ts = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_reject_m2ts', 0))
             if hasattr(torrent_prov, 'enable_recentsearch'):
                 torrent_prov.enable_recentsearch = bool(check_setting_int(CFG, prov_id_uc,
-                                                                          prov_id + '_enable_recentsearch', 1))
+                                                                          prov_id + '_enable_recentsearch', 1)) or \
+                                                   not getattr(torrent_prov, 'supports_backlog', True)
             if hasattr(torrent_prov, 'enable_backlog'):
                 torrent_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
             if hasattr(torrent_prov, 'search_mode'):
