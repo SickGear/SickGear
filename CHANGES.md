@@ -167,8 +167,6 @@
 * Fix status reset of a snatched, downloaded, or archived episode when its date is set to never (no date) on the info
   source and there is no media file
 * Change only show unaired episodes on Manage/Backlog Overview and Manage/Episode Status Management where relevant
-* Change display show page, can mark unaired items with a date to "Wanted" to trigger a manual active backlog search
-  provided search setting "Unaired episodes" is enabled
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

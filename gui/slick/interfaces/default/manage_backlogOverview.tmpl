@@ -106,7 +106,7 @@
                 #continue
             #end try
             ##
-            #if $overview in ($Overview.QUAL, $Overview.WANTED) or ($sickbeard.SEARCH_UNAIRED and $Overview.UNAIRED == $overview and 0 < $curResult['season'])
+            #if $overview in ($Overview.QUAL, $Overview.WANTED)
             #
 		<tr class="seasonstyle $Overview.overviewStrings[$showCats[$curShow.indexerid][$whichStr]]">
 			<td>$whichStr</td>
