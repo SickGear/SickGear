@@ -1871,7 +1871,7 @@ class Home(MainHandler):
 
                 with epObj.lock:
                     # don't let them mess up UNAIRED episodes
-                    if epObj.status == UNAIRED and not sickbeard.SEARCH_UNAIRED:
+                    if epObj.status == UNAIRED:
                         logger.log(u'Refusing to change status of ' + curEp + ' because it is UNAIRED', logger.ERROR)
                         continue
 
