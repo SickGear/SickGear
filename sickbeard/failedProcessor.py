@@ -28,13 +28,14 @@ from sickbeard.name_parser.parser import NameParser, InvalidNameException, Inval
 class FailedProcessor(object):
     """Take appropriate action when a download fails to complete"""
 
-    def __init__(self, dirName, nzbName):
+    def __init__(self, dirName, nzbName, showObj=None):
         """
         dirName: Full path to the folder of the failed download
         nzbName: Full name of the nzb file that failed
         """
         self.dir_name = dirName
         self.nzb_name = nzbName
+        self.show = showObj
 
         self.log = ""
 
@@ -47,7 +48,7 @@ class FailedProcessor(object):
             raise exceptions.FailedProcessingFailed()
 
         try:
-            parser = NameParser(False, convert=True)
+            parser = NameParser(False, showObj=self.show, convert=True)
             parsed = parser.parse(releaseName)
         except InvalidNameException:
             self._log(u"Error: release name is invalid: " + releaseName, logger.DEBUG)

@@ -43,7 +43,7 @@ from sickbeard import config, sab, nzbget, clients, history, notifiers, processT
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
-from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED
+from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED, SNATCHED_BEST, SNATCHED_PROPER
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
 from sickbeard.helpers import remove_article, starify
@@ -483,7 +483,8 @@ class MainHandler(WebHandler):
 
         # make a dict out of the sql results
         sql_results = [dict(row) for row in sql_results
-                       if Quality.splitCompositeStatus(helpers.tryInt(row['status']))[0] not in qualities]
+                       if Quality.splitCompositeStatus(helpers.tryInt(row['status']))[0] not in
+                       [DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVED, IGNORED]]
 
         # multi dimension sort
         sorts = {
@@ -1877,7 +1878,7 @@ class Home(MainHandler):
                         continue
 
                     if int(
-                            status) in Quality.DOWNLOADED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.DOWNLOADED + [
+                            status) in Quality.DOWNLOADED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.DOWNLOADED + [
                         IGNORED, SKIPPED] and not ek.ek(os.path.isfile, epObj.location):
                         logger.log(
                             u'Refusing to change status of ' + curEp + " to DOWNLOADED because it's not SNATCHED/DOWNLOADED",
@@ -1885,7 +1886,7 @@ class Home(MainHandler):
                         continue
 
                     if int(
-                            status) == FAILED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.DOWNLOADED:
+                            status) == FAILED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.DOWNLOADED:
                         logger.log(
                             u'Refusing to change status of ' + curEp + " to FAILED because it's not SNATCHED/DOWNLOADED",
                             logger.ERROR)

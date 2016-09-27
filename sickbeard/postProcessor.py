@@ -748,7 +748,7 @@ class PostProcessor(object):
             self._log(u'Existing episode status is not downloaded/archived, marking it safe to replace', logger.DEBUG)
             return True
 
-        if common.ARCHIVED == old_ep_status:
+        if common.ARCHIVED == old_ep_status and common.Quality.NONE == old_ep_quality:
             self._log(u'Marking it unsafe to replace because the existing episode status is archived', logger.DEBUG)
             return False
 
@@ -771,6 +771,10 @@ class PostProcessor(object):
 
         # if there's an existing downloaded file with same quality, check filesize to decide
         if new_ep_quality == old_ep_quality:
+            if re.search(r'\bproper|repack\b', self.nzb_name, re.I) or re.search(r'\bproper|repack\b', self.file_name, re.I):
+                self._log(u'Proper or repack with same quality, marking it safe to replace', logger.DEBUG)
+                return True
+
             self._log(u'An episode exists in the database with the same quality as the episode to process', logger.DEBUG)
 
             existing_file_status = self._check_for_existing_file(ep_obj.location)
@@ -911,10 +915,13 @@ class PostProcessor(object):
 
                 cur_ep.release_name = self.release_name or ''
 
+                any_qualities, best_qualities = common.Quality.splitQuality(cur_ep.show.quality)
+
                 cur_ep.status = common.Quality.compositeStatus(
                     **({'status': common.DOWNLOADED, 'quality': new_ep_quality},
                        {'status': common.ARCHIVED, 'quality': new_ep_quality})
-                    [ep_obj.status in common.Quality.SNATCHED_BEST])
+                    [ep_obj.status in common.Quality.SNATCHED_BEST or
+                     (cur_ep.show.archive_firstmatch and new_ep_quality in best_qualities)])
 
                 cur_ep.release_group = self.release_group or ''
 
