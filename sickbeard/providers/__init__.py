@@ -27,8 +27,8 @@ from sickbeard import logger, encodingKludge as ek
 from . import newznab, omgwtfnzbs, womble
 # torrent
 from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, btscene, dh, extratorrent, \
-    fano, filelist, freshontv, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, \
-    ilt, iptorrents, limetorrents, morethan, ncore, pisexy, pretome, privatehd, ptf, \
+    fano, filelist, freshontv, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, hdtorrents, \
+    iptorrents, limetorrents, morethan, ncore, pisexy, pretome, privatehd, ptf, \
     rarbg, revtt, scc, scenetime, shazbat, speedcd, \
     thepiratebay, torlock, torrentbytes, torrentday, torrenting, torrentleech, \
     torrentshack, torrentz2, transmithe_net, tvchaosuk, zooqle
@@ -61,7 +61,7 @@ __all__ = ['omgwtfnzbs',
            'hd4free',
            'hdbits',
            'hdspace',
-           'ilt',
+           'hdtorrents',
            'iptorrents',
            'limetorrents',
            'morethan',

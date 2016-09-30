@@ -34,9 +34,8 @@ class BeyondHDProvider(generic.TorrentProvider):
                      'browse': self.url_base + 'api_tv.php?passkey=%s&cats=%s',
                      'search': '&search=%s'}
 
-        self.categories = {'Season': '89',
-                           'Episode': '40,44,48,43,45',
-                           'Cache': '40,44,48,89,43,45'}
+        self.categories = {'Season': '89', 'Episode': '40,44,48,46,45'}
+        self.categories['Cache'] = '%s,%s' % (self.categories['Episode'], self.categories['Season'])
 
         self.url = self.urls['config_provider_home_uri']
 

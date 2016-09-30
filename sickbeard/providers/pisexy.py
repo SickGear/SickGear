@@ -36,7 +36,7 @@ class PiSexyProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -51,9 +51,9 @@ class PiSexyProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'info': 'download', 'get': 'download', 'valid_cat': 'cat=(?:0|50[12])',
-                                 'title': r'Download\s([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'info': 'download', 'get': 'download', 'valid_cat': 'cat=(?:0|50[12])', 'filter': 'free',
+            'title': r'Download\s([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
@@ -78,7 +78,8 @@ class PiSexyProvider(generic.TorrentProvider):
                                 seeders, leechers = 2 * [tr.find_all('td')[-4].get_text().strip()]
                                 seeders, leechers = [tryInt(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
-                                if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['valid_cat']):
+                                if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['valid_cat']) \
+                                        or (self.freeleech and not tr.find('img', src=rc['filter'])):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

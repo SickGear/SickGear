@@ -520,6 +520,23 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							</label>
 						</div>
     #end if
+    #if $hasattr($cur_torrent_provider, 'may_filter'):
+						<div class="field-pair">
+							<span class="component-title">Allow releases that are</span>
+							<span class="component-desc">
+        #for $cur_fval, $filter in $cur_torrent_provider.may_filter.iteritems()
+            #set $cur_fname, $cur_is_default = $filter[0], $filter[1]
+            #set $filter_id = '%s_filter_%s' % ($cur_torrent_provider.get_id(), $cur_fval)
+								<label class="space-right">
+									<input type="checkbox" name="$filter_id" id="$filter_id" #echo ('', $html_checked)[$cur_fval in $cur_torrent_provider.filter]#/>
+									<span>$cur_fname</span>
+								</label>
+        #end for
+								<span>(see site for meaning)</span>
+								<p>nothing selected allows everything (no filter, default)</p>
+							</span>
+						</div>
+    #end if
     #if $hasattr($cur_torrent_provider, 'reject_m2ts'):
 						<div class="field-pair">
 							<label for="${cur_torrent_provider.get_id()}_reject_m2ts">

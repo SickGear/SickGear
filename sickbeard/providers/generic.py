@@ -961,6 +961,7 @@ class TorrentProvider(object, GenericProvider):
             for i in range(0, len(url)):
                 helpers.getURL(url.pop(), session=self.session)
 
+        passfield, userfield = None, None
         if not url:
             if hasattr(self, 'urls'):
                 url = self.urls.get('login_action')
@@ -980,12 +981,13 @@ class TorrentProvider(object, GenericProvider):
                             (url + action) if action.startswith('?') else \
                             (self.urls.get('login_base') or self.urls['config_provider_home_uri']) + action.lstrip('/')
 
-                        tags = re.findall(r'(?is)(<input.*?name=[\'"][^\'"]+[^>]*)', response)
-                        nv = [(tup[0]) for tup in [
-                            re.findall(r'(?is)name=[\'"]([^\'"]+)(?:[^>]*?value=[\'"]([^\'"]+))?', x)
-                            for x in tags]]
-                        for name, value in nv:
-                            if name not in ('username', 'password'):
+                        tags = re.findall(r'(?is)(<input[^>]*?name=[\'"][^\'"]+[^>]*)', response)
+                        attrs = [[(re.findall(r'(?is)%s=[\'"]([^\'"]+)' % attr, x) or [''])[0]
+                                  for attr in ['type', 'name', 'value']] for x in tags]
+                        for itype, name, value in attrs:
+                            if 'password' in [itype, name]:
+                                passfield = name
+                            if name not in ('username', 'password') and 'password' != itype:
                                 post_params.setdefault(name, value)
                     except KeyError:
                         return super(TorrentProvider, self)._authorised()
@@ -1001,7 +1003,7 @@ class TorrentProvider(object, GenericProvider):
                 if self.username not in post_params.values():
                     post_params['username'] = self.username
                 if self.password not in post_params.values():
-                    post_params['password'] = self.password
+                    post_params[(passfield, 'password')[not passfield]] = self.password
 
         response = helpers.getURL(url, post_data=post_params, session=self.session, timeout=timeout)
         if response:
@@ -1074,10 +1076,10 @@ class TorrentProvider(object, GenericProvider):
 
     @staticmethod
     def _has_no_results(*html):
-        return re.search(r'(?i)<(?:b|div|h\d|p|span|strong)[^>]*>\s*(?:' +
+        return re.search(r'(?i)<(?:b|div|h\d|p|span|strong|td)[^>]*>\s*(?:' +
                          'your\ssearch.*?did\snot\smatch|' +
                          '(?:nothing|0</b>\s+torrents)\sfound|' +
-                         '(sorry,\s)?no\s(?:results|torrents)\s(found|match)|' +
+                         '(sorry,\s)?no\s(?:results|torrents)\s(found|here|match)|' +
                          '.*?there\sare\sno\sresults|' +
                          '.*?no\shits\.\sTry\sadding' +
                          ')', html[0])

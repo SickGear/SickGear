@@ -2290,7 +2290,7 @@ config*.tmpl
 }
 
 #config label.space-right{
-	margin-right:20px
+	margin-right:16px
 }
 
 #config .metadataDiv{

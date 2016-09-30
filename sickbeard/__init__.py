@@ -1080,6 +1080,8 @@ def initialize(consoleLogging=True):
                 torrent_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
             if hasattr(torrent_prov, 'search_fallback'):
                 torrent_prov.search_fallback = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_search_fallback', 0))
+            if hasattr(torrent_prov, 'filter'):
+                torrent_prov.filter = check_setting_str(CFG, prov_id_uc, prov_id + '_filter', [])
 
         for nzb_prov in [curProvider for curProvider in providers.sortedProviderList()
                          if GenericProvider.NZB == curProvider.providerType]:
@@ -1594,6 +1596,8 @@ def save_config():
 
         if hasattr(src, '_seed_ratio'):
             new_config[src_id_uc][src_id + '_seed_ratio'] = src.seed_ratio()
+        if hasattr(src, 'filter'):
+            new_config[src_id_uc][src_id + '_filter'] = src.filter
 
     for src in [x for x in providers.sortedProviderList() if GenericProvider.NZB == x.providerType]:
         src_id = src.get_id()
