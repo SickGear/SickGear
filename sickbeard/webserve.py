@@ -3063,6 +3063,18 @@ class NewHomeAddShows(Home):
                 if dt_ordinal > newest_dt:
                     newest_dt = dt_ordinal
                     newest = dt_string
+
+                img_uri = item.get('show', {}).get('images', {}).get('poster', {}).get('thumb', {}) or ''
+                if img_uri:
+                    path = ek.ek(os.path.abspath, ek.ek(
+                        os.path.join, sickbeard.CACHE_DIR, 'images', 'trakt', 'poster', 'thumb'))
+                    helpers.make_dirs(path)
+                    file_name = ek.ek(os.path.basename, img_uri)
+                    cached_name = ek.ek(os.path.join, path, file_name)
+                    if not ek.ek(os.path.isfile, cached_name):
+                        helpers.download_file(img_uri, cached_name)
+                    images = dict(poster=dict(thumb='cache/images/trakt/poster/thumb/%s' % file_name))
+
                 filtered.append(dict(
                     premiered=dt_ordinal,
                     premiered_str=dt_string,
@@ -3074,7 +3086,7 @@ class NewHomeAddShows(Home):
                     genres=('' if 'genres' not in item['show'] else
                             ', '.join(['%s' % v for v in item['show']['genres']])),
                     ids=item['show']['ids'],
-                    images='' if 'images' not in item['show'] else item['show']['images'],
+                    images='' if not img_uri else images,
                     overview=('' if 'overview' not in item['show'] or None is item['show']['overview'] else
                               self.encode_html(item['show']['overview'][:250:].strip())),
                     rating=0 < item['show'].get('rating', 0) and
