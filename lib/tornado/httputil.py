@@ -33,33 +33,36 @@ import time
 
 from tornado.escape import native_str, parse_qs_bytes, utf8
 from tornado.log import gen_log
-from tornado.util import ObjectDict
+from tornado.util import ObjectDict, PY3
 
-try:
-    import Cookie  # py2
-except ImportError:
-    import http.cookies as Cookie  # py3
+if PY3:
+    import http.cookies as Cookie
+    from http.client import responses
+    from urllib.parse import urlencode
+else:
+    import Cookie
+    from httplib import responses
+    from urllib import urlencode
 
-try:
-    from httplib import responses  # py2
-except ImportError:
-    from http.client import responses  # py3
 
 # responses is unused in this file, but we re-export it to other files.
 # Reference it so pyflakes doesn't complain.
 responses
 
 try:
-    from urllib import urlencode  # py2
-except ImportError:
-    from urllib.parse import urlencode  # py3
-
-try:
     from ssl import SSLError
 except ImportError:
     # ssl is unavailable on app engine.
-    class SSLError(Exception):
+    class _SSLError(Exception):
         pass
+    # Hack around a mypy limitation. We can't simply put "type: ignore"
+    # on the class definition itself; must go through an assignment.
+    SSLError = _SSLError  # type: ignore
+
+try:
+    import typing
+except ImportError:
+    pass
 
 
 # RFC 7230 section 3.5: a recipient MAY recognize a single LF as a line
@@ -127,8 +130,8 @@ class HTTPHeaders(collections.MutableMapping):
     Set-Cookie: C=D
     """
     def __init__(self, *args, **kwargs):
-        self._dict = {}
-        self._as_list = {}
+        self._dict = {}  # type: typing.Dict[str, str]
+        self._as_list = {}  # type: typing.Dict[str, typing.List[str]]
         self._last_key = None
         if (len(args) == 1 and len(kwargs) == 0 and
                 isinstance(args[0], HTTPHeaders)):
@@ -142,6 +145,7 @@ class HTTPHeaders(collections.MutableMapping):
     # new public methods
 
     def add(self, name, value):
+        # type: (str, str) -> None
         """Adds a new value for the given key."""
         norm_name = _normalized_headers[name]
         self._last_key = norm_name
@@ -158,6 +162,7 @@ class HTTPHeaders(collections.MutableMapping):
         return self._as_list.get(norm_name, [])
 
     def get_all(self):
+        # type: () -> typing.Iterable[typing.Tuple[str, str]]
         """Returns an iterable of all (name, value) pairs.
 
         If a header has multiple values, multiple pairs will be
@@ -206,6 +211,7 @@ class HTTPHeaders(collections.MutableMapping):
         self._as_list[norm_name] = [value]
 
     def __getitem__(self, name):
+        # type: (str) -> str
         return self._dict[_normalized_headers[name]]
 
     def __delitem__(self, name):
@@ -227,6 +233,14 @@ class HTTPHeaders(collections.MutableMapping):
     # This makes shallow copies one level deeper, but preserves
     # the appearance that HTTPHeaders is a single container.
     __copy__ = copy
+
+    def __str__(self):
+        lines = []
+        for name, value in self.get_all():
+            lines.append("%s: %s\n" % (name, value))
+        return "".join(lines)
+
+    __unicode__ = __str__
 
 
 class HTTPServerRequest(object):
@@ -743,7 +757,7 @@ def parse_multipart_form_data(boundary, data, arguments, files):
         name = disp_params["name"]
         if disp_params.get("filename"):
             ctype = headers.get("Content-Type", "application/unknown")
-            files.setdefault(name, []).append(HTTPFile(
+            files.setdefault(name, []).append(HTTPFile(  # type: ignore
                 filename=disp_params["filename"], body=value,
                 content_type=ctype))
         else:

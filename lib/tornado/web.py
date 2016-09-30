@@ -90,24 +90,27 @@ from tornado import stack_context
 from tornado import template
 from tornado.escape import utf8, _unicode
 from tornado.util import (import_object, ObjectDict, raise_exc_info,
-                          unicode_type, _websocket_mask)
+                          unicode_type, _websocket_mask, re_unescape, PY3)
 from tornado.httputil import split_host_and_port
 
+if PY3:
+    import http.cookies as Cookie
+    import urllib.parse as urlparse
+    from urllib.parse import urlencode
+else:
+    import Cookie
+    import urlparse
+    from urllib import urlencode
 
 try:
-    import Cookie  # py2
-except ImportError:
-    import http.cookies as Cookie  # py3
+    import typing  # noqa
 
-try:
-    import urlparse  # py2
+    # The following types are accepted by RequestHandler.set_header
+    # and related methods.
+    _HeaderTypes = typing.Union[bytes, unicode_type,
+                                numbers.Integral, datetime.datetime]
 except ImportError:
-    import urllib.parse as urlparse  # py3
-
-try:
-    from urllib import urlencode  # py2
-except ImportError:
-    from urllib.parse import urlencode  # py3
+    pass
 
 
 MIN_SUPPORTED_SIGNED_VALUE_VERSION = 1
@@ -152,7 +155,7 @@ class RequestHandler(object):
     SUPPORTED_METHODS = ("GET", "HEAD", "POST", "DELETE", "PATCH", "PUT",
                          "OPTIONS")
 
-    _template_loaders = {}  # {path: template.BaseLoader}
+    _template_loaders = {}  # type: typing.Dict[str, template.BaseLoader]
     _template_loader_lock = threading.Lock()
     _remove_control_chars_regex = re.compile(r"[\x00-\x08\x0e-\x1f]")
 
@@ -166,6 +169,7 @@ class RequestHandler(object):
         self._auto_finish = True
         self._transforms = None  # will be set in _execute
         self._prepared_future = None
+        self._headers = None  # type: httputil.HTTPHeaders
         self.path_args = None
         self.path_kwargs = None
         self.ui = ObjectDict((n, self._ui_method(m)) for n, m in
@@ -184,7 +188,7 @@ class RequestHandler(object):
 
     def initialize(self):
         """Hook for subclass initialization. Called for each request.
-          
+
         A dictionary passed as the third argument of a url spec will be
         supplied as keyword arguments to initialize().
 
@@ -313,13 +317,14 @@ class RequestHandler(object):
             try:
                 self._reason = httputil.responses[status_code]
             except KeyError:
-                raise ValueError("unknown status code %d", status_code)
+                raise ValueError("unknown status code %d" % status_code)
 
     def get_status(self):
         """Returns the status code for our response."""
         return self._status_code
 
     def set_header(self, name, value):
+        # type: (str, _HeaderTypes) -> None
         """Sets the given response header name and value.
 
         If a datetime is given, we automatically format it according to the
@@ -329,6 +334,7 @@ class RequestHandler(object):
         self._headers[name] = self._convert_header_value(value)
 
     def add_header(self, name, value):
+        # type: (str, _HeaderTypes) -> None
         """Adds the given response header and value.
 
         Unlike `set_header`, `add_header` may be called multiple times
@@ -345,13 +351,25 @@ class RequestHandler(object):
         if name in self._headers:
             del self._headers[name]
 
-    _INVALID_HEADER_CHAR_RE = re.compile(br"[\x00-\x1f]")
+    _INVALID_HEADER_CHAR_RE = re.compile(r"[\x00-\x1f]")
 
     def _convert_header_value(self, value):
-        if isinstance(value, bytes):
-            pass
-        elif isinstance(value, unicode_type):
-            value = value.encode('utf-8')
+        # type: (_HeaderTypes) -> str
+
+        # Convert the input value to a str. This type check is a bit
+        # subtle: The bytes case only executes on python 3, and the
+        # unicode case only executes on python 2, because the other
+        # cases are covered by the first match for str.
+        if isinstance(value, str):
+            retval = value
+        elif isinstance(value, bytes):  # py3
+            # Non-ascii characters in headers are not well supported,
+            # but if you pass bytes, use latin1 so they pass through as-is.
+            retval = value.decode('latin1')
+        elif isinstance(value, unicode_type):  # py2
+            # TODO: This is inconsistent with the use of latin1 above,
+            # but it's been that way for a long time. Should it change?
+            retval = escape.utf8(value)
         elif isinstance(value, numbers.Integral):
             # return immediately since we know the converted value will be safe
             return str(value)
@@ -361,11 +379,11 @@ class RequestHandler(object):
             raise TypeError("Unsupported header value %r" % value)
         # If \n is allowed into the header, it is possible to inject
         # additional headers or split the request.
-        if RequestHandler._INVALID_HEADER_CHAR_RE.search(value):
-            raise ValueError("Unsafe header value %r", value)
-        return value
+        if RequestHandler._INVALID_HEADER_CHAR_RE.search(retval):
+            raise ValueError("Unsafe header value %r", retval)
+        return retval
 
-    _ARG_DEFAULT = []
+    _ARG_DEFAULT = object()
 
     def get_argument(self, name, default=_ARG_DEFAULT, strip=True):
         """Returns the value of the argument with the given name.
@@ -509,7 +527,7 @@ class RequestHandler(object):
 
         Additional keyword arguments are set on the Cookie.Morsel
         directly.
-        See http://docs.python.org/library/cookie.html#morsel-objects
+        See https://docs.python.org/2/library/cookie.html#Cookie.Morsel
         for available attributes.
         """
         # The cookie library only accepts type str, in both python 2 and 3
@@ -696,6 +714,8 @@ class RequestHandler(object):
 
     def render(self, template_name, **kwargs):
         """Renders the template with the given arguments as the response."""
+        if self._finished:
+            raise RuntimeError("Cannot render() after finish()")
         html = self.render_string(template_name, **kwargs)
 
         # Insert the additional JS and CSS added by the modules on the page
@@ -915,8 +935,8 @@ class RequestHandler(object):
                 if self.check_etag_header():
                     self._write_buffer = []
                     self.set_status(304)
-            if self._status_code == 304:
-                assert not self._write_buffer, "Cannot send body with 304"
+            if self._status_code in (204, 304):
+                assert not self._write_buffer, "Cannot send body with %s" % self._status_code
                 self._clear_headers_for_304()
             elif "Content-Length" not in self._headers:
                 content_length = sum(len(part) for part in self._write_buffer)
@@ -1072,8 +1092,8 @@ class RequestHandler(object):
 
               def get_current_user(self):
                   user_cookie = self.get_secure_cookie("user")
-                      if user_cookie:
-                          return json.loads(user_cookie)
+                  if user_cookie:
+                      return json.loads(user_cookie)
                   return None
 
         * It may be set as a normal variable, typically from an overridden
@@ -1089,7 +1109,7 @@ class RequestHandler(object):
         may not, so the latter form is necessary if loading the user requires
         asynchronous operations.
 
-        The user object may any type of the application's choosing.
+        The user object may be any type of the application's choosing.
         """
         if not hasattr(self, "_current_user"):
             self._current_user = self.get_current_user()
@@ -1265,6 +1285,8 @@ class RequestHandler(object):
             raise HTTPError(403, "'_xsrf' argument missing from POST")
         _, token, _ = self._decode_xsrf_token(token)
         _, expected_token, _ = self._get_raw_xsrf_token()
+        if not token:
+            raise HTTPError(403, "'_xsrf' argument has invalid format")
         if not _time_independent_equals(utf8(token), utf8(expected_token)):
             raise HTTPError(403, "XSRF cookie does not match POST argument")
 
@@ -1385,7 +1407,9 @@ class RequestHandler(object):
             match = True
         else:
             # Use a weak comparison when comparing entity-tags.
-            val = lambda x: x[2:] if x.startswith(b'W/') else x
+            def val(x):
+                return x[2:] if x.startswith(b'W/') else x
+
             for etag in etags:
                 if val(etag) == val(computed_etag):
                     match = True
@@ -1603,6 +1627,7 @@ def asynchronous(method):
             result = method(self, *args, **kwargs)
             if result is not None:
                 result = gen.convert_yielded(result)
+
                 # If @asynchronous is used with @gen.coroutine, (but
                 # not @gen.engine), we can automatically finish the
                 # request when the future resolves.  Additionally,
@@ -2240,7 +2265,7 @@ class StaticFileHandler(RequestHandler):
     """
     CACHE_MAX_AGE = 86400 * 365 * 10  # 10 years
 
-    _static_hashes = {}
+    _static_hashes = {}  # type: typing.Dict
     _lock = threading.Lock()  # protects _static_hashes
 
     def initialize(self, path, default_filename=None):
@@ -2693,6 +2718,7 @@ class OutputTransform(object):
         pass
 
     def transform_first_chunk(self, status_code, headers, chunk, finishing):
+        # type: (int, httputil.HTTPHeaders, bytes, bool) -> typing.Tuple[int, httputil.HTTPHeaders, bytes]
         return status_code, headers, chunk
 
     def transform_chunk(self, chunk, finishing):
@@ -2713,7 +2739,8 @@ class GZipContentEncoding(OutputTransform):
     # beginning with "text/").
     CONTENT_TYPES = set(["application/javascript", "application/x-javascript",
                          "application/xml", "application/atom+xml",
-                         "application/json", "application/xhtml+xml"])
+                         "application/json", "application/xhtml+xml",
+                         "image/svg+xml"])
     # Python's GzipFile defaults to level 9, while most other gzip
     # tools (including gzip itself) default to 6, which is probably a
     # better CPU/size tradeoff.
@@ -2732,10 +2759,12 @@ class GZipContentEncoding(OutputTransform):
         return ctype.startswith('text/') or ctype in self.CONTENT_TYPES
 
     def transform_first_chunk(self, status_code, headers, chunk, finishing):
+        # type: (int, httputil.HTTPHeaders, bytes, bool) -> typing.Tuple[int, httputil.HTTPHeaders, bytes]
+        # TODO: can/should this type be inherited from the superclass?
         if 'Vary' in headers:
-            headers['Vary'] += b', Accept-Encoding'
+            headers['Vary'] += ', Accept-Encoding'
         else:
-            headers['Vary'] = b'Accept-Encoding'
+            headers['Vary'] = 'Accept-Encoding'
         if self._gzipping:
             ctype = _unicode(headers.get("Content-Type", "")).split(";")[0]
             self._gzipping = self._compressible_type(ctype) and \
@@ -2966,9 +2995,11 @@ class URLSpec(object):
     def __init__(self, pattern, handler, kwargs=None, name=None):
         """Parameters:
 
-        * ``pattern``: Regular expression to be matched.  Any groups
-          in the regex will be passed in to the handler's get/post/etc
-          methods as arguments.
+        * ``pattern``: Regular expression to be matched. Any capturing
+          groups in the regex will be passed in to the handler's
+          get/post/etc methods as arguments (by keyword if named, by
+          position if unnamed. Named and unnamed capturing groups may
+          may not be mixed in the same rule).
 
         * ``handler``: `RequestHandler` subclass to be invoked.
 
@@ -2977,6 +3008,7 @@ class URLSpec(object):
 
         * ``name`` (optional): A name for this handler.  Used by
           `Application.reverse_url`.
+
         """
         if not pattern.endswith('$'):
             pattern += '$'
@@ -3024,13 +3056,19 @@ class URLSpec(object):
                 if paren_loc >= 0:
                     pieces.append('%s' + fragment[paren_loc + 1:])
             else:
-                pieces.append(fragment)
+                try:
+                    unescaped_fragment = re_unescape(fragment)
+                except ValueError as exc:
+                    # If we can't unescape part of it, we can't
+                    # reverse this url.
+                    return (None, None)
+                pieces.append(unescaped_fragment)
 
         return (''.join(pieces), self.regex.groups)
 
     def reverse(self, *args):
-        assert self._path is not None, \
-            "Cannot reverse url regex " + self.regex.pattern
+        if self._path is None:
+            raise ValueError("Cannot reverse url regex " + self.regex.pattern)
         assert len(args) == self._group_count, "required number of arguments "\
             "not found"
         if not len(args):
@@ -3268,7 +3306,7 @@ def _create_signature_v2(secret, s):
 
 
 def _unquote_or_none(s):
-    """None-safe wrapper around url_unescape to handle unamteched optional
+    """None-safe wrapper around url_unescape to handle unmatched optional
     groups correctly.
 
     Note that args are passed as bytes so the handler can decide what

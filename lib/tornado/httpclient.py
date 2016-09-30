@@ -25,7 +25,7 @@ to switch to ``curl_httpclient`` for reasons such as the following:
 Note that if you are using ``curl_httpclient``, it is highly
 recommended that you use a recent version of ``libcurl`` and
 ``pycurl``.  Currently the minimum supported version of libcurl is
-7.21.1, and the minimum version of pycurl is 7.18.2.  It is highly
+7.22.0, and the minimum version of pycurl is 7.18.2.  It is highly
 recommended that your ``libcurl`` installation is built with
 asynchronous DNS resolver (threaded or c-ares), otherwise you may
 encounter various problems with request timeouts (for more
@@ -61,7 +61,7 @@ class HTTPClient(object):
         http_client = httpclient.HTTPClient()
         try:
             response = http_client.fetch("http://www.google.com/")
-            print response.body
+            print(response.body)
         except httpclient.HTTPError as e:
             # HTTPError is raised for non-200 responses; the response
             # can be found in e.response.
@@ -108,14 +108,14 @@ class AsyncHTTPClient(Configurable):
 
     Example usage::
 
-        def handle_request(response):
+        def handle_response(response):
             if response.error:
-                print "Error:", response.error
+                print("Error: %s" % response.error)
             else:
-                print response.body
+                print(response.body)
 
         http_client = AsyncHTTPClient()
-        http_client.fetch("http://www.google.com/", handle_request)
+        http_client.fetch("http://www.google.com/", handle_response)
 
     The constructor for this class is magic in several respects: It
     actually creates an instance of an implementation-specific
@@ -227,6 +227,9 @@ class AsyncHTTPClient(Configurable):
             raise RuntimeError("fetch() called on closed AsyncHTTPClient")
         if not isinstance(request, HTTPRequest):
             request = HTTPRequest(url=request, **kwargs)
+        else:
+            if kwargs:
+                raise ValueError("kwargs can't be used if request is an HTTPRequest object")
         # We may modify this (to add Host, Accept-Encoding, etc),
         # so make sure we don't modify the caller's object.  This is also
         # where normal dicts get converted to HTTPHeaders objects.
@@ -307,10 +310,10 @@ class HTTPRequest(object):
                  network_interface=None, streaming_callback=None,
                  header_callback=None, prepare_curl_callback=None,
                  proxy_host=None, proxy_port=None, proxy_username=None,
-                 proxy_password=None, allow_nonstandard_methods=None,
-                 validate_cert=None, ca_certs=None,
-                 allow_ipv6=None,
-                 client_key=None, client_cert=None, body_producer=None,
+                 proxy_password=None, proxy_auth_mode=None,
+                 allow_nonstandard_methods=None, validate_cert=None,
+                 ca_certs=None, allow_ipv6=None, client_key=None,
+                 client_cert=None, body_producer=None,
                  expect_100_continue=False, decompress_response=None,
                  ssl_options=None):
         r"""All parameters except ``url`` are optional.
@@ -369,12 +372,14 @@ class HTTPRequest(object):
            a ``pycurl.Curl`` object to allow the application to make additional
            ``setopt`` calls.
         :arg string proxy_host: HTTP proxy hostname.  To use proxies,
-           ``proxy_host`` and ``proxy_port`` must be set; ``proxy_username`` and
-           ``proxy_pass`` are optional.  Proxies are currently only supported
-           with ``curl_httpclient``.
+           ``proxy_host`` and ``proxy_port`` must be set; ``proxy_username``,
+           ``proxy_pass`` and ``proxy_auth_mode`` are optional.  Proxies are
+           currently only supported with ``curl_httpclient``.
         :arg int proxy_port: HTTP proxy port
         :arg string proxy_username: HTTP proxy username
         :arg string proxy_password: HTTP proxy password
+        :arg string proxy_auth_mode: HTTP proxy Authentication mode;
+           default is "basic". supports "basic" and "digest"
         :arg bool allow_nonstandard_methods: Allow unknown values for ``method``
            argument?
         :arg bool validate_cert: For HTTPS requests, validate the server's
@@ -427,6 +432,7 @@ class HTTPRequest(object):
         self.proxy_port = proxy_port
         self.proxy_username = proxy_username
         self.proxy_password = proxy_password
+        self.proxy_auth_mode = proxy_auth_mode
         self.url = url
         self.method = method
         self.body = body
@@ -527,7 +533,7 @@ class HTTPResponse(object):
 
     * buffer: ``cStringIO`` object for response body
 
-    * body: response body as string (created on demand from ``self.buffer``)
+    * body: response body as bytes (created on demand from ``self.buffer``)
 
     * error: Exception object, if any
 
@@ -569,15 +575,14 @@ class HTTPResponse(object):
         self.request_time = request_time
         self.time_info = time_info or {}
 
-    def _get_body(self):
+    @property
+    def body(self):
         if self.buffer is None:
             return None
         elif self._body is None:
             self._body = self.buffer.getvalue()
 
         return self._body
-
-    body = property(_get_body)
 
     def rethrow(self):
         """If there was an error on the request, raise an `HTTPError`."""
@@ -611,6 +616,12 @@ class HTTPError(Exception):
 
     def __str__(self):
         return "HTTP %d: %s" % (self.code, self.message)
+
+    # There is a cyclic reference between self and self.response,
+    # which breaks the default __repr__ implementation.
+    # (especially on pypy, which doesn't have the same recursion
+    # detection as cpython).
+    __repr__ = __str__
 
 
 class _RequestProxy(object):

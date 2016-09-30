@@ -3,7 +3,7 @@
 * Add strict Python version check (equal to, or higher than 2.7.9 and less than 3.0), **exit** if incorrect version
 * Update unidecode library 0.04.11 to 0.04.18 (fd57cbf)
 * Update xmltodict library 0.9.2 (579a005) to 0.9.2 (eac0031)
-* Update Tornado Web Server 4.3.dev1 (1b6157d) to 4.4.dev1 (c2b4d05)
+* Update Tornado Web Server 4.3.dev1 (1b6157d) to 4.5.dev1 (92f29b8)
 * Update change to suppress reporting of Tornado exception error 1 to updated package (ref:hacks.txt)
 * Change API response header for JSON content type and the return of JSONP data
 * Remove redundant MultipartPostHandler
@@ -184,6 +184,7 @@
 * Fix join clean up
 * Fix add custom torrent RSS
 * Remove ILT torrent provider
+* Update Tornado Web Server 4.3.dev1 (1b6157d) to 4.4.dev1 (c2b4d05)
 
 
 ### 0.11.15 (2016-09-13 19:50:00 UTC)
