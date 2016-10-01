@@ -771,7 +771,8 @@ class PostProcessor(object):
 
         # if there's an existing downloaded file with same quality, check filesize to decide
         if new_ep_quality == old_ep_quality:
-            if re.search(r'\bproper|repack\b', self.nzb_name, re.I) or re.search(r'\bproper|repack\b', self.file_name, re.I):
+            if (isinstance(self.nzb_name, basestring) and re.search(r'\bproper|repack\b', self.nzb_name, re.I)) or \
+                    (isinstance(self.file_name, basestring) and re.search(r'\bproper|repack\b', self.file_name, re.I)):
                 self._log(u'Proper or repack with same quality, marking it safe to replace', logger.DEBUG)
                 return True
 
