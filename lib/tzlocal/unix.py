@@ -90,6 +90,13 @@ def _get_localzone(_root='/'):
                 # We found a timezone
                 return pytz.timezone(etctz.replace(' ', '_'))
 
+    # look for FreeBSD's /var/db/zoneinfo file, which contains the zone name and a newline.
+    freebsd_zoneinfo = os.path.join(_root, 'var/db/zoneinfo')
+    if os.path.exists(freebsd_zoneinfo):
+        with open(freebsd_zoneinfo, 'rt') as tzfile:
+            data = tzfile.read().strip()
+            return pytz.timezone(data)
+
     # systemd distributions use symlinks that include the zone name, 
     # see manpage of localtime(5) and timedatectl(1)
     tzpath = os.path.join(_root, 'etc/localtime')

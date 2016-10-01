@@ -13,9 +13,10 @@ restore/
 
 ######################
 #  SB Test Related   #
+tests/cache/*
 tests/Logs/*
 tests/sickbeard.*
-tests/cache.db
+tests/*.db
 
 ######################
 #  Compiled source   #
