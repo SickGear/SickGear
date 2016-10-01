@@ -169,6 +169,7 @@
 * Fix status reset of a snatched, downloaded, or archived episode when its date is set to never (no date) on the info
   source and there is no media file
 * Change only show unaired episodes on Manage/Backlog Overview and Manage/Episode Status Management where relevant
+* Change locally cache "Add from Trakt" show posters, first run takes more time but is faster thereafter
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
