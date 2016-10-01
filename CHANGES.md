@@ -191,6 +191,7 @@
 * Remove ILT torrent provider
 * Update Tornado Web Server 4.3.dev1 (1b6157d) to 4.4.dev1 (c2b4d05)
 * Change add support for freebsd /var/db/zoneinfo when getting local timezone information
+* Fix issue with post processing propers/repacks
 
 
 ### 0.11.15 (2016-09-13 19:50:00 UTC)
