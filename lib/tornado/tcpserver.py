@@ -39,7 +39,21 @@ class TCPServer(object):
     r"""A non-blocking, single-threaded TCP server.
 
     To use `TCPServer`, define a subclass which overrides the `handle_stream`
-    method.
+    method. For example, a simple echo server could be defined like this::
+
+      from tornado.tcpserver import TCPServer
+      from tornado.iostream import StreamClosedError
+      from tornado import gen
+
+      class EchoServer(TCPServer):
+          @gen.coroutine
+          def handle_stream(self, stream, address):
+              while True:
+                  try:
+                      data = yield stream.read_until(b"\n")
+                      yield stream.write(data)
+                  except StreamClosedError:
+                      break
 
     To make this server serve SSL traffic, send the ``ssl_options`` keyword
     argument with an `ssl.SSLContext` object. For compatibility with older
@@ -147,7 +161,8 @@ class TCPServer(object):
         """Singular version of `add_sockets`.  Takes a single socket object."""
         self.add_sockets([socket])
 
-    def bind(self, port, address=None, family=socket.AF_UNSPEC, backlog=128, reuse_port=False):
+    def bind(self, port, address=None, family=socket.AF_UNSPEC, backlog=128,
+             reuse_port=False):
         """Binds this server to the given port on the given address.
 
         To start the server, call `start`. If you want to run this server
@@ -162,10 +177,14 @@ class TCPServer(object):
         both will be used if available.
 
         The ``backlog`` argument has the same meaning as for
-        `socket.listen <socket.socket.listen>`.
+        `socket.listen <socket.socket.listen>`. The ``reuse_port`` argument
+        has the same meaning as for `.bind_sockets`.
 
         This method may be called multiple times prior to `start` to listen
         on multiple ports or interfaces.
+
+        .. versionchanged:: 4.4
+           Added the ``reuse_port`` argument.
         """
         sockets = bind_sockets(port, address=address, family=family,
                                backlog=backlog, reuse_port=reuse_port)
