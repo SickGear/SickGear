@@ -170,6 +170,10 @@
   source and there is no media file
 * Change only show unaired episodes on Manage/Backlog Overview and Manage/Episode Status Management where relevant
 * Change locally cache "Add from Trakt" show posters, first run takes more time but is faster thereafter
+* Change allow pp to replace files with a repack or proper of same quality
+* Fix ensure downloaded eps are not shown on episode view
+* Fix allow propers to pp when show marked upgrade once
+* Fix never set episodes without airdate to wanted
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

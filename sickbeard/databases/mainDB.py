@@ -45,19 +45,23 @@ class MainSanityCheck(db.DBSanityCheck):
 
         for cur_duplicate in sql_results:
 
-            logger.log(u'Duplicate show detected! ' + column + ': ' + str(cur_duplicate[column]) + u' count: ' + str(
-                cur_duplicate['count']), logger.DEBUG)
+            logger.log(u'Duplicate show detected! %s: %s count: %s' % (column, cur_duplicate[column],
+                                                                       cur_duplicate['count']), logger.DEBUG)
 
             cur_dupe_results = self.connection.select(
                 'SELECT show_id, ' + column + ' FROM tv_shows WHERE ' + column + ' = ? LIMIT ?',
                 [cur_duplicate[column], int(cur_duplicate['count']) - 1]
             )
 
+            cl = []
             for cur_dupe_id in cur_dupe_results:
                 logger.log(
-                    u'Deleting duplicate show with ' + column + ': ' + str(cur_dupe_id[column]) + u' show_id: ' + str(
-                        cur_dupe_id['show_id']))
-                self.connection.action('DELETE FROM tv_shows WHERE show_id = ?', [cur_dupe_id['show_id']])
+                    u'Deleting duplicate show with %s: %s show_id: %s' % (column, cur_dupe_id[column],
+                                                                          cur_dupe_id['show_id']))
+                cl.append(['DELETE FROM tv_shows WHERE show_id = ?', [cur_dupe_id['show_id']]])
+
+            if 0 < len(cl):
+                self.connection.mass_action(cl)
 
         else:
             logger.log(u'No duplicate show, check passed')
@@ -69,10 +73,9 @@ class MainSanityCheck(db.DBSanityCheck):
 
         for cur_duplicate in sql_results:
 
-            logger.log(u'Duplicate episode detected! showid: ' + str(cur_duplicate['showid']) + u' season: '
-                       + str(cur_duplicate['season']) + u' episode: ' + str(cur_duplicate['episode']) + u' count: '
-                       + str(cur_duplicate['count']),
-                       logger.DEBUG)
+            logger.log(u'Duplicate episode detected! showid: %s season: %s episode: %s count: %s' %
+                       (cur_duplicate['showid'], cur_duplicate['season'], cur_duplicate['episode'],
+                        cur_duplicate['count']), logger.DEBUG)
 
             cur_dupe_results = self.connection.select(
                 'SELECT episode_id FROM tv_episodes WHERE showid = ? AND season = ? and episode = ? ORDER BY episode_id DESC LIMIT ?',
@@ -80,9 +83,13 @@ class MainSanityCheck(db.DBSanityCheck):
                  int(cur_duplicate['count']) - 1]
             )
 
+            cl = []
             for cur_dupe_id in cur_dupe_results:
-                logger.log(u'Deleting duplicate episode with episode_id: ' + str(cur_dupe_id['episode_id']))
-                self.connection.action('DELETE FROM tv_episodes WHERE episode_id = ?', [cur_dupe_id['episode_id']])
+                logger.log(u'Deleting duplicate episode with episode_id: %s' % cur_dupe_id['episode_id'])
+                cl.append(['DELETE FROM tv_episodes WHERE episode_id = ?', [cur_dupe_id['episode_id']]])
+
+            if 0 < len(cl):
+                self.connection.mass_action(cl)
 
         else:
             logger.log(u'No duplicate episode, check passed')
@@ -92,11 +99,15 @@ class MainSanityCheck(db.DBSanityCheck):
         sql_results = self.connection.select(
             'SELECT episode_id, showid, tv_shows.indexer_id FROM tv_episodes LEFT JOIN tv_shows ON tv_episodes.showid=tv_shows.indexer_id WHERE tv_shows.indexer_id is NULL')
 
+        cl = []
         for cur_orphan in sql_results:
-            logger.log(u'Orphan episode detected! episode_id: ' + str(cur_orphan['episode_id']) + ' showid: ' + str(
-                cur_orphan['showid']), logger.DEBUG)
-            logger.log(u'Deleting orphan episode with episode_id: ' + str(cur_orphan['episode_id']))
-            self.connection.action('DELETE FROM tv_episodes WHERE episode_id = ?', [cur_orphan['episode_id']])
+            logger.log(u'Orphan episode detected! episode_id: %s showid: %s' % (cur_orphan['episode_id'],
+                                                                                cur_orphan['showid']), logger.DEBUG)
+            logger.log(u'Deleting orphan episode with episode_id: %s' % cur_orphan['episode_id'])
+            cl.append(['DELETE FROM tv_episodes WHERE episode_id = ?', [cur_orphan['episode_id']]])
+
+        if 0 < len(cl):
+            self.connection.mass_action(cl)
 
         else:
             logger.log(u'No orphan episodes, check passed')
@@ -128,18 +139,22 @@ class MainSanityCheck(db.DBSanityCheck):
 
     def fix_unaired_episodes(self):
 
-        cur_date = datetime.date.today()
+        cur_date = datetime.date.today() + datetime.timedelta(days=1)
 
         sql_results = self.connection.select(
-            'SELECT episode_id, showid FROM tv_episodes WHERE status = ? or airdate > ? AND status in (?,?)', ['',
-            cur_date.toordinal(), common.SKIPPED, common.WANTED])
+            'SELECT episode_id, showid FROM tv_episodes WHERE status = ? or ( airdate > ? AND status in (?,?) ) or '
+            '( airdate <= 1 AND status = ? )', ['', cur_date.toordinal(), common.SKIPPED, common.WANTED, common.WANTED])
 
+        cl = []
         for cur_unaired in sql_results:
-            logger.log(u'UNAIRED episode detected! episode_id: ' + str(cur_unaired['episode_id']) + ' showid: ' + str(
-                cur_unaired['showid']), logger.DEBUG)
-            logger.log(u'Fixing unaired episode status with episode_id: ' + str(cur_unaired['episode_id']))
-            self.connection.action('UPDATE tv_episodes SET status = ? WHERE episode_id = ?',
-                                   [common.UNAIRED, cur_unaired['episode_id']])
+            logger.log(u'UNAIRED episode detected! episode_id: %s showid: %s' % (cur_unaired['episode_id'],
+                                                                                 cur_unaired['showid']), logger.DEBUG)
+            logger.log(u'Fixing unaired episode status with episode_id: %s' % cur_unaired['episode_id'])
+            cl.append(['UPDATE tv_episodes SET status = ? WHERE episode_id = ?',
+                                   [common.UNAIRED, cur_unaired['episode_id']]])
+
+        if 0 < len(cl):
+            self.connection.mass_action(cl)
 
         else:
             logger.log(u'No UNAIRED episodes, check passed')

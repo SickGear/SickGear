@@ -30,7 +30,7 @@ from sickbeard import helpers, logger, show_name_helpers
 from sickbeard import search
 from sickbeard import history
 
-from sickbeard.common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, Quality
+from sickbeard.common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, Quality, ARCHIVED, SNATCHED_BEST
 
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
@@ -173,7 +173,8 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
 
         # only keep the proper if we have already retrieved the same quality ep (don't get better/worse ones)
         old_status, old_quality = Quality.splitCompositeStatus(int(sql_results[0]['status']))
-        if old_status not in (DOWNLOADED, SNATCHED) or cur_proper.quality != old_quality:
+        if old_status not in (DOWNLOADED, SNATCHED, SNATCHED_BEST, ARCHIVED) \
+                or cur_proper.quality != old_quality:
             continue
 
         # check if we actually want this proper (if it's the right release group and a higher version)

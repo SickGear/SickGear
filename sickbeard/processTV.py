@@ -188,7 +188,7 @@ class ProcessTVShow(object):
         # if we didn't find a real directory then process "failed" or just quit
         if not dir_name or not ek.ek(os.path.isdir, dir_name):
             if nzb_name and failed:
-                self._process_failed(dir_name, nzb_name)
+                self._process_failed(dir_name, nzb_name, showObj=showObj)
             else:
                 self._log_helper(u'Unable to figure out what folder to process. ' +
                                  u'If your downloader and SickGear aren\'t on the same PC then make sure ' +
@@ -215,7 +215,7 @@ class ProcessTVShow(object):
             path, filter(helpers.is_first_rar_volume, files), pp_type, process_method)
         rar_content = self._unrar(path, rar_files, force)
         if self.fail_detected:
-            self._process_failed(dir_name, nzb_name)
+            self._process_failed(dir_name, nzb_name, showObj=showObj)
             return self.result
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
         video_files = filter(helpers.has_media_ext, files)
@@ -280,7 +280,7 @@ class ProcessTVShow(object):
                 rar_content = self._unrar(walk_path, rar_files, force)
                 work_files += [ek.ek(os.path.join, walk_path, item) for item in rar_content]
                 if self.fail_detected:
-                    self._process_failed(dir_name, nzb_name)
+                    self._process_failed(dir_name, nzb_name, showObj=showObj)
                     continue
                 files = list(set(files + rar_content))
                 video_files = filter(helpers.has_media_ext, files)
@@ -401,7 +401,7 @@ class ProcessTVShow(object):
             return False
 
         if failed:
-            self._process_failed(os.path.join(path, dir_name), nzb_name_original)
+            self._process_failed(os.path.join(path, dir_name), nzb_name_original, showObj=showObj)
             return False
 
         if helpers.is_hidden_folder(dir_name):
@@ -820,14 +820,14 @@ class ProcessTVShow(object):
         return path, dirs, files
 
     # noinspection PyArgumentList
-    def _process_failed(self, dir_name, nzb_name):
+    def _process_failed(self, dir_name, nzb_name, showObj=None):
         """ Process a download that did not complete correctly """
 
         if sickbeard.USE_FAILED_DOWNLOADS:
             processor = None
 
             try:
-                processor = failedProcessor.FailedProcessor(dir_name, nzb_name)
+                processor = failedProcessor.FailedProcessor(dir_name, nzb_name, showObj)
                 self._set_process_success(processor.process())
                 process_fail_message = ''
             except exceptions.FailedProcessingFailed as e:
