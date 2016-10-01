@@ -174,6 +174,7 @@
 * Fix ensure downloaded eps are not shown on episode view
 * Fix allow propers to pp when show marked upgrade once
 * Fix never set episodes without airdate to wanted
+* Change improve getting the local timezone information
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
@@ -189,6 +190,7 @@
 * Fix add custom torrent RSS
 * Remove ILT torrent provider
 * Update Tornado Web Server 4.3.dev1 (1b6157d) to 4.4.dev1 (c2b4d05)
+* Change add support for freebsd /var/db/zoneinfo when getting local timezone information
 
 
 ### 0.11.15 (2016-09-13 19:50:00 UTC)
