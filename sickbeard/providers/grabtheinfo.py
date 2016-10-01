@@ -37,7 +37,7 @@ class GrabTheInfoProvider(generic.TorrentProvider):
                      'search': '&search=%s',
                      'get': self.url_base + '%s'}
 
-        self.categories = {'shows': [36, 32, 43, 56, 8, 10, 61]}
+        self.categories = {'shows': [36, 32, 43, 56, 8, 65, 61, 10]}
 
         self.url = self.urls['config_provider_home_uri']
 

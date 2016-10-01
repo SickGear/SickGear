@@ -22,7 +22,7 @@ import traceback
 from . import generic
 from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
+from sickbeard.helpers import tryInt, anon_url
 from lib.unidecode import unidecode
 
 
@@ -31,22 +31,27 @@ class SceneTimeProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'SceneTime', cache_update_freq=15)
 
-        self.url_base = 'https://www.scenetime.com/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
-                     'browse': self.url_base + 'browse_API.php',
-                     'params': {'sec': 'jax', 'cata': 'yes'},
-                     'get': self.url_base + 'download.php/%(id)s/%(title)s.torrent'}
+        self.url_home = ['https://%s.scenetime.com/' % u for u in 'www', 'uk']
+
+        self.url_vars = {'login': 'support.php', 'browse': 'browse_API.php', 'get': 'download.php/%s.torrent'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
+                         'browse': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
         self.categories = {'shows': [2, 43, 9, 63, 77, 79, 83]}
 
-        self.url = self.urls['config_provider_home_uri']
-
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(SceneTimeProvider, self)._authorised(post_params={'form_tmpl': True})
+        return super(SceneTimeProvider, self)._authorised(
+            logged_in=(lambda y='': all(
+                ['staff-support' in y, self.has_all_cookies()] +
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+
+    @staticmethod
+    def _has_signature(data=None):
+        return generic.TorrentProvider._has_signature(data) or (data and re.search(r'(?i)<title[^<]+?(Scenetim)', data))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -63,7 +68,7 @@ class SceneTimeProvider(generic.TorrentProvider):
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                post_data = self.urls['params'].copy()
+                post_data = {'sec': 'jax', 'cata': 'yes'}
                 post_data.update(ast.literal_eval(
                     '{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
                 if 'Cache' != mode:
@@ -99,9 +104,8 @@ class SceneTimeProvider(generic.TorrentProvider):
 
                                 info = tr.find('a', href=rc['info'])
                                 title = (info.attrs.get('title') or info.get_text()).strip()
-                                download_url = self.urls['get'] % {
-                                    'id': re.sub(rc['get'], r'\1', str(info.attrs['href'])),
-                                    'title': str(title).replace(' ', '.')}
+                                download_url = self._link('%s/%s' % (
+                                    re.sub(rc['get'], r'\1', str(info.attrs['href'])), str(title).replace(' ', '.')))
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
@@ -119,6 +123,14 @@ class SceneTimeProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    def ui_string(self, key):
+        if 'scenetime_digest' == key and self._valid_home():
+            current_url = getattr(self, 'urls', {}).get('config_provider_home_uri')
+            return ('use... \'uid=xx; pass=yy\'' +
+                    (current_url and (' from a session logged in at <a target="_blank" href="%s">%s</a>' %
+                                      (anon_url(current_url), current_url.strip('/'))) or ''))
+        return ''
 
 
 provider = SceneTimeProvider()

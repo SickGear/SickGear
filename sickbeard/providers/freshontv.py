@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+try:
+    from collections import OrderedDict
+except ImportError:
+    from requests.compat import OrderedDict
 import re
 import traceback
 
@@ -33,14 +37,17 @@ class FreshOnTVProvider(generic.TorrentProvider):
         self.url_base = 'https://freshon.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse.php?incldead=%s&words=0&%s&search=%s',
+                     'search': self.url_base + 'browse.php?incldead=0&words=0&%s&search=%s',
                      'get': self.url_base + '%s'}
 
         self.categories = {'shows': 0, 'anime': 235}
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.filter = []
+        self.may_filter = OrderedDict([
+            ('f0', ('not marked', False, '')), ('f50', ('50%', True)), ('f100', ('100%', True))])
+        self.username, self.password, self.minseed, self.minleech = 4 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -59,17 +66,25 @@ class FreshOnTVProvider(generic.TorrentProvider):
             return results
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
-        freeleech = (3, 0)[not self.freeleech]
 
         rc = dict((k, re.compile('(?i)' + v))
                   for (k, v) in {'info': 'detail', 'get': 'download', 'name': '_name'}.items())
+        log = ''
+        if self.filter:
+            non_marked = 'f0' in self.filter
+            # if search_any, use unselected to exclude, else use selected to keep
+            filters = ([f for f in self.may_filter if f in self.filter],
+                       [f for f in self.may_filter if f not in self.filter])[non_marked]
+            rc['filter'] = re.compile('(?i)(%s).png' % '|'.join(
+                [f.replace('f', '') for f in filters if self.may_filter[f][1]]))
+            log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
         for mode in search_params.keys():
             for search_string in search_params[mode]:
 
                 search_string, void = self._title_and_url((
                     isinstance(search_string, unicode) and unidecode(search_string) or search_string, ''))
                 void, search_url = self._title_and_url((
-                    '', self.urls['search'] % (freeleech, self._categories_string(mode, 'cat=%s'), search_string)))
+                    '', self.urls['search'] % (self._categories_string(mode, 'cat=%s'), search_string)))
 
                 # returns top 15 results by default, expandable in user profile to 100
                 html = self.get_url(search_url)
@@ -87,10 +102,12 @@ class FreshOnTVProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            if (tr.find('img', alt='Nuked')
+                                or (any(self.filter)
+                                    and ((non_marked and tr.find('img', src=rc['filter']))
+                                         or (not non_marked and not tr.find('img', src=rc['filter']))))):
+                                continue
                             try:
-                                if tr.find('img', alt='Nuked'):
-                                    continue
-
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
                                 if self._peers_fail(mode, seeders, leechers):
@@ -109,7 +126,7 @@ class FreshOnTVProvider(generic.TorrentProvider):
                     pass
                 except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_search(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, log + search_url)
 
             results = self._sort_seeding(mode, results + items[mode])
 

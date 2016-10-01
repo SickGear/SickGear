@@ -28,33 +28,35 @@ from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
-FLTAG = '</a>\s+<img[^>]+%s[^<]+<br'
 
-
-class FanoProvider(generic.TorrentProvider):
+class HDTorrentsProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'Fano')
+        generic.TorrentProvider.__init__(self, 'HDTorrents')
 
-        self.url_base = 'https://www.fano.in/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php', 'get': self.url_base + '%s',
-                     'search': self.url_base + 'browse_old.php?search=%s&%s&incldead=0'}
+        self.url_home = ['https://hd-torrents.%s/' % x for x in 'org', 'net', 'me'] + ['https://hdts.ru/']
 
-        self.categories = {'Season': [49], 'Episode': [6, 23, 32, 35], 'anime': [27]}
-        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
+        self.url_vars = {'login_action': 'index.php',
+                         'search': 'torrents.php?search=%s&active=0&options=0&%s', 'get': '%s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
+                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
-        self.url = self.urls['config_provider_home_uri']
+        self.categories = {'Episode': [59, 60, 30, 38, 65], 'anime': ['Animation']}
+        self.categories['Season'] = self.categories['Cache'] = self.categories['Episode']
 
         self.filter = []
-        self.may_filter = OrderedDict([
-            ('f0', ('not marked', False, '')), ('fx2', ('x2', True, FLTAG % 'x2_up')),
-            ('fgx2', ('gold/x2', True, FLTAG % 'free[^<]+<img[^>]+x2_up')), ('fg', ('gold', True, FLTAG % 'free'))])
+        self.may_filter = OrderedDict(
+            [('f0', ('not marked', False)), ('f25', ('-25%', True)), ('f50', ('-50%', True)), ('f75', ('-75%', True))])
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(FanoProvider, self)._authorised()
+        return super(HDTorrentsProvider, self)._authorised(post_params={'uid': self.username})
+
+    @staticmethod
+    def _has_signature(data=None):
+        return generic.TorrentProvider._has_signature(data) or \
+               (data and re.search(r'(?i)<title[^<]+?(HD-Torrents)', data))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -64,24 +66,25 @@ class FanoProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'abd': '(\d{4}(?:[.]\d{2}){2})', 'info': 'details', 'get': 'download'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'details', 'get': 'download'}.items())
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
             # if search_any, use unselected to exclude, else use selected to keep
             filters = ([f for f in self.may_filter if f in self.filter],
                        [f for f in self.may_filter if f not in self.filter])[non_marked]
-            rc['filter'] = re.compile('(?i)(%s)' % '|'.join(
-                [self.may_filter[f][2] for f in filters if self.may_filter[f][1]]))
+            rc['filter'] = re.compile('(?i)(%s).png' % '|'.join(
+                [f.replace('f', '') for f in filters if self.may_filter[f][1]]))
             log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
+
         for mode in search_params.keys():
-            rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
+            rc['cats'] = re.compile('(?i)category=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                search_string = '+'.join(rc['abd'].sub(r'%22\1%22', search_string).split())
-                search_url = self.urls['search'] % (search_string, self._categories_string(mode))
-
+                search_url = self.urls['search'] % (
+                    search_string,
+                    self._categories_string(mode, template='category[]=%s')
+                        .replace('&category[]=Animation', ('&genre[]=Animation', '')[mode in ['Cache', 'Propers']]))
                 html = self.get_url(search_url)
 
                 cnt = len(items[mode])
@@ -89,24 +92,30 @@ class FanoProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', id='line')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    html = re.sub('(?ims)<div[^>]+display:\s*none;.*?</div>', '', html)
+                    html = re.sub('(?im)href=([^\\"][^>]+)>', r'href="\1">', html)
+                    html = (html.replace('"/></td>', '" /></a></td>')
+                            .replace('"title="', '" title="')
+                            .replace('</u></span></a></td>', '</u></a></span></td>'))
+                    html = re.sub('(?im)<b([mtwfs][^>]+)', r'<b>\1</b', html)
 
-                        if 2 > len(torrent_rows):
+                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='width="100%"') as soup:
+                        torrent_rows = [tr for tr in ([] if not soup else soup.find_all('tr'))
+                                        if tr.find('a', href=rc['info'])]
+
+                        if not len(torrent_rows):
                             raise generic.HaltParseException
 
-                        for tr in torrent_rows[1:]:
+                        for tr in torrent_rows:
                             if (any(self.filter)
-                                and ((non_marked and rc['filter'].search(str(tr)))
-                                     or (not non_marked and not rc['filter'].search(str(tr))))):
+                                and ((non_marked and tr.find('img', src=rc['filter']))
+                                     or (not non_marked and not tr.find('img', src=rc['filter'])))):
                                 continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
+                                    tr.find_all('td')[x].get_text().strip() for x in -3, -2, -5]]
                                 if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats']):
                                     continue
-
                                 title = tr.find('a', href=rc['info']).get_text().strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, IndexError):
@@ -126,5 +135,11 @@ class FanoProvider(generic.TorrentProvider):
 
         return results
 
+    def _season_strings(self, ep_obj, **kwargs):
+        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False, **kwargs)
 
-provider = FanoProvider()
+    def _episode_strings(self, ep_obj, **kwargs):
+        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, sep_date=' ', **kwargs)
+
+
+provider = HDTorrentsProvider()

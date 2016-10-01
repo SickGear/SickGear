@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+try:
+    from collections import OrderedDict
+except ImportError:
+    from requests.compat import OrderedDict
 import re
 import time
 import traceback
@@ -22,7 +26,7 @@ import traceback
 from . import generic
 from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
+from sickbeard.helpers import tryInt, anon_url
 from lib.unidecode import unidecode
 
 
@@ -33,9 +37,8 @@ class PTFProvider(generic.TorrentProvider):
 
         self.url_base = 'https://ptfiles.net/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'loginproc/',
-                     'login_base': self.url_base + 'loginproc/',
-                     'search': self.url_base + 'browse.php?search=%s&%s&incldead=0&title=0%s',
+                     'login': self.url_base + 'panel.php?tool=links',
+                     'search': self.url_base + 'browse.php?search=%s&%s&incldead=0&title=0',
                      'get': self.url_base + '%s'}
 
         self.categories = {'Season': [39], 'Episode': [7, 33, 42], 'anime': [23]}
@@ -43,12 +46,19 @@ class PTFProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.filter = []
+        self.may_filter = OrderedDict([
+            ('f0', ('not marked', False, '')), ('free', ('free', True, '^free$')),
+            ('freeday', ('free day', True, '^free[^!]+day')), ('freeweek', ('free week', True, '^free[^!]+week'))])
+        self.digest, self.minseed, self.minleech = 3 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(PTFProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies('session_key')),
-                                                    post_params={'force_ssl': 'on', 'ssl': '', 'form_tmpl': True})
+        return super(PTFProvider, self)._authorised(
+            logged_in=(lambda y='': all(
+                ['RSS Feed' in y, self.has_all_cookies('session_key')] +
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in ['session_key']])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -60,13 +70,21 @@ class PTFProvider(generic.TorrentProvider):
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'details', 'get': 'dl.php', 'snatch': 'snatches',
                                                              'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
+        log = ''
+        if self.filter:
+            non_marked = 'f0' in self.filter
+            # if search_any, use unselected to exclude, else use selected to keep
+            filters = ([f for f in self.may_filter if f in self.filter],
+                       [f for f in self.may_filter if f not in self.filter])[non_marked]
+            rc['filter'] = re.compile('(?i)(%s)' % '|'.join(
+                [self.may_filter[f][2] for f in filters if self.may_filter[f][1]]))
+            log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
         for mode in search_params.keys():
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                search_url = self.urls['search'] % ('+'.join(search_string.split()), self._categories_string(mode),
-                                                    ('&free=1', '')[not self.freeleech])
+                search_url = self.urls['search'] % ('+'.join(search_string.split()), self._categories_string(mode))
                 html = self.get_url(search_url)
                 time.sleep(2)
                 if not self.has_all_cookies(['session_key']):
@@ -87,6 +105,15 @@ class PTFProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            if any(self.filter):
+                                marker = ''
+                                try:
+                                    marker = tr.select('a[href^="browse"] .tip')[0].get_text().strip()
+                                except (StandardError, Exception):
+                                    pass
+                                if ((non_marked and rc['filter'].search(marker)) or
+                                        (not non_marked and not rc['filter'].search(marker))):
+                                    continue
                             try:
                                 seeders, leechers = 2 * [tr.find_all('td')[-2].get_text().strip()]
                                 seeders, leechers = [tryInt(n) for n in [
@@ -110,11 +137,19 @@ class PTFProvider(generic.TorrentProvider):
                 except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
-                self._log_search(mode, len(items[mode]) - cnt, self.session.response.get('url'))
+                self._log_search(mode, len(items[mode]) - cnt, log + self.session.response.get('url'))
 
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    def ui_string(self, key):
+        if 'ptfiles_digest' == key and self._valid_home():
+            current_url = getattr(self, 'urls', {}).get('config_provider_home_uri')
+            return ('use... \'session_key=xx\'' +
+                    (current_url and (' from a session logged in at <a target="_blank" href="%s">%s</a>' %
+                                      (anon_url(current_url), current_url.strip('/'))) or ''))
+        return ''
 
 
 provider = PTFProvider()

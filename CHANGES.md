@@ -87,14 +87,16 @@
 * Add DigitalHive torrent provider
 * Add RevTT torrent provider
 * Add PTF torrent provider
-* Add ILT torrent provider
 * Add Fano torrent provider
 * Add BTScene torrent provider
 * Add Extratorrent provider
 * Add Limetorrents provider
+* Add HD-Torrents provider
 * Add nCore torrent provider
 * Add TorLock provider
 * Add Torrentz2 provider
+* Add freeleech options to fano, freshon, hdspace, phd, ptf providers
+* Change SceneTime to cookie auth
 * Remove Usenet-Crawler provider
 * Change CPU throttling on General Config/Advanced to "Disabled" by default for new installs
 * Change provider OMGWTFNZBS api url and auto reject nuked releases
@@ -180,6 +182,7 @@
 * Add handler for when rar files can not be opened during post processing
 * Fix join clean up
 * Fix add custom torrent RSS
+* Remove ILT torrent provider
 
 
 ### 0.11.15 (2016-09-13 19:50:00 UTC)

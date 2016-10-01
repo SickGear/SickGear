@@ -49,7 +49,7 @@ class NcoreProvider(generic.TorrentProvider):
 
         return super(NcoreProvider, self)._authorised(
             logged_in=(lambda y='': all([bool(y), 'action="login' not in y, self.has_all_cookies('PHPSESSID')])),
-            post_params={'nev': self.username, 'pass': self.password, 'form_tmpl': 'name=[\'"]login[\'"]'})
+            post_params={'nev': self.username, 'form_tmpl': 'name=[\'"]login[\'"]'})
 
     def _search_provider(self, search_params, **kwargs):
 

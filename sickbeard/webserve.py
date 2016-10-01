@@ -5060,6 +5060,12 @@ class ConfigProviders(Config):
             if hasattr(torrent_src, attr):
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip() or 'eponly')
 
+            attr = 'filter'
+            if hasattr(torrent_src, attr):
+                setattr(torrent_src, attr,
+                        [k for k in torrent_src.may_filter.keys()
+                         if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
+
         # update nzb source settings
         for nzb_src in [src for src in sickbeard.providers.sortedProviderList() if
                         sickbeard.GenericProvider.NZB == src.providerType]:
