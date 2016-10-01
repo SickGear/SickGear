@@ -1,4 +1,9 @@
-﻿### 0.11.15 (2016-09-13 19:50:00 UTC)
+﻿### 0.11.16 (2016-10-16 17:30:00 UTC)
+
+* Change ensure a cache.db table does exist on migration
+
+
+### 0.11.15 (2016-09-13 19:50:00 UTC)
 
 * Add rollback capability to undo database changes made during tests
 
