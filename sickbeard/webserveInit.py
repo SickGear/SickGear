@@ -67,6 +67,7 @@ class WebServer(threading.Thread):
         self.app.add_handlers('.*$', [
             (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
             (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
+            (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
             (r'%s/cache(/?.*)' % self.options['web_root'], webserve.Cache),
             (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
             (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),

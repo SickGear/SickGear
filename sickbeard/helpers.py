@@ -56,6 +56,7 @@ from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions, cp
 from sickbeard import encodingKludge as ek
 
 from lib.cachecontrol import CacheControl, caches
+from lib.scandir.scandir import scandir
 from itertools import izip, cycle
 
 
@@ -1454,4 +1455,39 @@ def cpu_sleep():
     if cpu_presets[sickbeard.CPU_PRESET]:
         time.sleep(cpu_presets[sickbeard.CPU_PRESET])
 
+
+def scantree(path):
+    """Recursively yield DirEntry objects for given directory."""
+    for entry in ek.ek(scandir, path):
+        if entry.is_dir(follow_symlinks=False):
+            for entry in scantree(entry.path):
+                yield entry
+        else:
+            yield entry
+
+
+def cleanup_Cache():
+    """Delete cached Images older then 30 days"""
+    basepath = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images')
+    cachepaths = [ek.ek(os.path.join, basepath, 'trakt')]
+    del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=30)).timetuple())
+    for c in cachepaths:
+        try:
+            for f in scantree(c):
+                if f.is_file(follow_symlinks=False) and f.stat(follow_symlinks=False).st_mtime < del_time:
+                    try:
+                        ek.ek(os.remove, f.path)
+                    except:
+                        pass
+        except:
+            pass
+
+
+def set_file_timestamp(filename, min_age=3, new_time=None):
+    min_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=min_age)).timetuple())
+    try:
+        if ek.ek(os.path.isfile, filename) and ek.ek(os.path.getmtime, filename) < min_time:
+            ek.ek(os.utime, filename, new_time)
+    except (StandardError, Exception):
+        pass
 

@@ -171,7 +171,7 @@
 * Fix status reset of a snatched, downloaded, or archived episode when its date is set to never (no date) on the info
   source and there is no media file
 * Change only show unaired episodes on Manage/Backlog Overview and Manage/Episode Status Management where relevant
-* Change locally cache "Add from Trakt" show posters, first run takes more time but is faster thereafter
+* Change locally cache "Add from Trakt" show posters
 * Change allow pp to replace files with a repack or proper of same quality
 * Fix ensure downloaded eps are not shown on episode view
 * Fix allow propers to pp when show marked upgrade once
@@ -196,6 +196,7 @@
 * Change add support for freebsd /var/db/zoneinfo when getting local timezone information
 * Fix issue with post processing propers/repacks
 * Change use legacy tzlocal() if new gettz fails to create
+* Change load cached images (Trakt) on demand
 
 
 ### 0.11.15 (2016-09-13 19:50:00 UTC)

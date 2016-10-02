@@ -298,6 +298,7 @@ class WebHandler(BaseHandler):
         self.lock = threading.Lock()
 
     def page_not_found(self):
+        self.set_status(404)
         t = PageTemplate(headers=self.request.headers, file='404.tmpl')
         return t.respond()
 
@@ -3067,14 +3068,7 @@ class NewHomeAddShows(Home):
 
                 img_uri = item.get('show', {}).get('images', {}).get('poster', {}).get('thumb', {}) or ''
                 if img_uri:
-                    path = ek.ek(os.path.abspath, ek.ek(
-                        os.path.join, sickbeard.CACHE_DIR, 'images', 'trakt', 'poster', 'thumb'))
-                    helpers.make_dirs(path)
-                    file_name = ek.ek(os.path.basename, img_uri)
-                    cached_name = ek.ek(os.path.join, path, file_name)
-                    if not ek.ek(os.path.isfile, cached_name):
-                        helpers.download_file(img_uri, cached_name)
-                    images = dict(poster=dict(thumb='cache/images/trakt/poster/thumb/%s' % file_name))
+                    images = dict(poster=dict(thumb='imagecache?path=trakt/poster/thumb&source=%s' % img_uri))
 
                 filtered.append(dict(
                     premiered=dt_ordinal,
@@ -5621,3 +5615,24 @@ class Cache(MainHandler):
         t.cacheResults = sql_results
 
         return t.respond()
+
+
+class CachedImages(MainHandler):
+    def index(self, path='', source=None, *args, **kwargs):
+
+        path = path.strip('/')
+        file_name = ek.ek(os.path.basename, source)
+        static_image_path = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', path, file_name)
+        static_image_path = ek.ek(os.path.abspath, static_image_path.replace('\\', '/'))
+        if not ek.ek(os.path.isfile, static_image_path) and source is not None:
+            basepath = ek.ek(os.path.dirname, static_image_path)
+            helpers.make_dirs(basepath)
+            if not helpers.download_file(source, static_image_path) and source.find('trakt.us'):
+                helpers.download_file(source.replace('trakt.us', 'trakt.tv'), static_image_path)
+
+        if not ek.ek(os.path.isfile, static_image_path):
+            self.redirect('images/trans.png')
+        else:
+            helpers.set_file_timestamp(static_image_path, min_age=3, new_time=None)
+            self.redirect('cache/images/%s/%s' % (path, file_name))
+
