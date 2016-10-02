@@ -967,6 +967,8 @@ class TorrentProvider(object, GenericProvider):
                 url = self.urls.get('login_action')
                 if url:
                     response = helpers.getURL(url, session=self.session)
+                    if None is response:
+                        return False
                     try:
                         post_params = isinstance(post_params, type({})) and post_params or {}
                         form = 'form_tmpl' in post_params and post_params.pop('form_tmpl')

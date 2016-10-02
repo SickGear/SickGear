@@ -16,6 +16,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import time
 import traceback
 
 from . import generic
@@ -33,7 +34,7 @@ class FunFileProvider(generic.TorrentProvider):
         self.url_base = 'https://www.funfile.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse.php?%s&search=%s&incldead=0&showspam=1&',
+                     'search': self.url_base + 'browse.php?%s&search=%s&incldead=0&showspam=1',
                      'get': self.url_base + '%s'}
 
         self.categories = {'shows': [7], 'anime': [44]}
@@ -44,6 +45,7 @@ class FunFileProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
+        time.sleep(2.5)
         return super(FunFileProvider, self)._authorised(
             logged_in=(lambda y=None: all(
                 [None is not self.session.cookies.get(x, domain='.funfile.org') for x in 'uid', 'pass'])),
@@ -79,13 +81,13 @@ class FunFileProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            info = tr.find('a', href=rc['info'])
+                            if 5 > len(cells) or not info:
+                                continue
                             try:
-                                info = tr.find('a', href=rc['info'])
-                                if not info:
-                                    continue
-
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
+                                    cells[x].get_text().strip() for x in -2, -1, -4]]
                                 if None is tr.find('a', href=rc['cats']) or self._peers_fail(mode, seeders, leechers):
                                     continue
 

@@ -84,9 +84,12 @@ class TorLockProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 5 > len(cells):
+                                continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -3, -2, -4]]
+                                    cells[x].get_text().strip() for x in -3, -2, -4]]
                                 if self._peers_fail(mode, seeders, leechers) \
                                         or self.confirmed and not (tr.find('img', src=rc['versrc'])
                                                                    or tr.find('img', title=rc['verified'])):

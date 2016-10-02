@@ -76,11 +76,14 @@ class Torrentz2Provider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows:
+                            cells = tr.dd.find_all('span')
+                            if 4 > len(cells):
+                                continue
                             try:
                                 if not rc['info'].search(unidecode(tr.dt.get_text().strip())):
                                     continue
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.dd.find_all('span')[x].get_text().strip() for x in -2, -1, -3]]
+                                    cells[x].get_text().strip() for x in -2, -1, -3]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 

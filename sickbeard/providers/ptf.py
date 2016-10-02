@@ -105,6 +105,9 @@ class PTFProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 4 > len(cells):
+                                continue
                             if any(self.filter):
                                 marker = ''
                                 try:
@@ -115,7 +118,7 @@ class PTFProvider(generic.TorrentProvider):
                                         (not non_marked and not rc['filter'].search(marker))):
                                     continue
                             try:
-                                seeders, leechers = 2 * [tr.find_all('td')[-2].get_text().strip()]
+                                seeders, leechers = 2 * [cells[-2].get_text().strip()]
                                 seeders, leechers = [tryInt(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
                                 if self._peers_fail(mode, seeders, leechers) or\
@@ -124,7 +127,7 @@ class PTFProvider(generic.TorrentProvider):
 
                                 title = tr.find('a', href=rc['info']).get_text().strip()
                                 snatches = tr.find('a', href=rc['snatch']).get_text().strip()
-                                size = tr.find_all('td')[-3].get_text().strip().replace(snatches, '')
+                                size = cells[-3].get_text().strip().replace(snatches, '')
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue

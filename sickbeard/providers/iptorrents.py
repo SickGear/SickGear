@@ -87,6 +87,9 @@ class IPTorrentsProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 5 > len(cells):
+                                continue
                             try:
                                 seeders, leechers = [tryInt(tr.find('td', class_='t_' + x).get_text().strip())
                                                      for x in 'seeders', 'leechers']
@@ -95,7 +98,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
                                 info = tr.find('a', href=rc['info'])
                                 title = (info.attrs.get('title') or info.get_text()).strip()
-                                size = tr.find_all('td')[-4].get_text().strip()
+                                size = cells[-4].get_text().strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
