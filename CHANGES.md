@@ -177,6 +177,7 @@
 * Fix allow propers to pp when show marked upgrade once
 * Fix never set episodes without airdate to wanted
 * Change improve getting the local timezone information
+* Change hachoir_parser to close input stream if no parser is found e.g. due to file corruption
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
