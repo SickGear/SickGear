@@ -57,7 +57,7 @@ def get_tz():
     t = get_localzone()
     if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone and hasattr(sickbeard, 'ZONEINFO_DIR'):
         try:
-            t = tz.gettz(t.zone)
+            t = tz_fallback(tz.gettz(t.zone))
         except:
             t = tz_fallback(t)
     else:
