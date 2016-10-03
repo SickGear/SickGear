@@ -1466,21 +1466,39 @@ def scantree(path):
             yield entry
 
 
-def cleanup_Cache():
-    """Delete cached Images older then 30 days"""
-    basepath = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images')
-    cachepaths = [ek.ek(os.path.join, basepath, 'trakt')]
-    del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=30)).timetuple())
-    for c in cachepaths:
+def cleanup_cache():
+    """
+    Delete old cached files
+    """
+    delete_not_changed_in([ek.ek(os.path.join, sickbeard.CACHE_DIR, *x) for x in [
+        ('images', 'trakt')]])
+
+
+def delete_not_changed_in(paths, days=30, minutes=0):
+    """
+    Delete files under paths not changed in n days and/or n minutes.
+    If a file was modified later than days/and or minutes, then don't delete it.
+
+    :param paths: List of paths to scan for files to delete
+    :param days: Purge files not modified in this number of days (default: 30 days)
+    :param minutes: Purge files not modified in this number of minutes (default: 0 minutes)
+    :return: tuple; number of files that qualify for deletion, number of qualifying files that failed to be deleted
+    """
+    del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes)).timetuple())
+    errors = 0
+    qualified = 0
+    for c in paths:
         try:
             for f in scantree(c):
-                if f.is_file(follow_symlinks=False) and f.stat(follow_symlinks=False).st_mtime < del_time:
+                if f.is_file(follow_symlinks=False) and del_time > f.stat(follow_symlinks=False).st_mtime:
                     try:
                         ek.ek(os.remove, f.path)
-                    except:
+                    except (StandardError, Exception):
+                        errors += 1
+                    qualified += 1
+        except (StandardError, Exception):
                         pass
-        except:
-            pass
+    return qualified, errors
 
 
 def set_file_timestamp(filename, min_age=3, new_time=None):
@@ -1490,4 +1508,3 @@ def set_file_timestamp(filename, min_age=3, new_time=None):
             ek.ek(os.utime, filename, new_time)
     except (StandardError, Exception):
         pass
-
