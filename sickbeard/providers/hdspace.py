@@ -99,7 +99,8 @@ class HDSpaceProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
-                            if (tr.find('td', class_='header')
+                            cells = tr.find_all('td')
+                            if (6 > len(cells) or tr.find('td', class_='header')
                                 or (any(self.filter)
                                     and ((non_marked and tr.find('img', src=rc['filter']))
                                          or (not non_marked and not tr.find('img', src=rc['filter']))))):
@@ -115,7 +116,7 @@ class HDSpaceProvider(generic.TorrentProvider):
 
                                 info = tr.find('a', href=rc['info'])
                                 title = (info.attrs.get('title') or info.get_text()).strip()
-                                size = tr.find_all('td')[-5].get_text().strip()
+                                size = cells[-5].get_text().strip()
                                 download_url = self._link(downlink['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue

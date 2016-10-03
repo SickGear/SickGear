@@ -77,9 +77,12 @@ class BTSceneProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows:
+                            cells = tr.find_all('td')
+                            if 6 > len(cells):
+                                continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -4, -3, -5]]
+                                    cells[x].get_text().strip() for x in -4, -3, -5]]
                                 if self._peers_fail(mode, seeders, leechers) or \
                                         self.confirmed and not (tr.find('img', src=rc['verified'])
                                                                 or tr.find('img', title=rc['verified'])):

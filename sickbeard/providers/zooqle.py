@@ -72,16 +72,18 @@ class ZooqleProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 4 > len(cells):
+                                continue
                             try:
-                                td = tr.find_all('td')
-                                stats = rc['peers'].findall((td[-1].find(class_='progress') or {}).get('title', ''))
+                                stats = rc['peers'].findall((cells[-1].find(class_='progress') or {}).get('title', ''))
                                 seeders, leechers = any(stats) and [tryInt(x) for x in stats[0]] or (0, 0)
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                info = td[1].find('a', href=rc['info'])
+                                info = cells[1].find('a', href=rc['info'])
                                 title = info and info.get_text().strip()
-                                size = td[-3].get_text().strip()
+                                size = cells[-3].get_text().strip()
                                 download_url = info and (self.urls['get'] % rc['info'].findall(info['href'])[0])
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue

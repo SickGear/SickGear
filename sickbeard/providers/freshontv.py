@@ -102,14 +102,15 @@ class FreshOnTVProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
-                            if (tr.find('img', alt='Nuked')
+                            cells = tr.find_all('td')
+                            if (5 > len(cells) or tr.find('img', alt='Nuked')
                                 or (any(self.filter)
                                     and ((non_marked and tr.find('img', src=rc['filter']))
                                          or (not non_marked and not tr.find('img', src=rc['filter']))))):
                                 continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
+                                    cells[x].get_text().strip() for x in -2, -1, -4]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 

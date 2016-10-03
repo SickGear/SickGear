@@ -82,11 +82,14 @@ class TVChaosUKProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 6 > len(cells):
+                                continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -3, -2, -5]]
+                                    cells[x].get_text().strip() for x in -3, -2, -5]]
                                 if self._peers_fail(mode, seeders, leechers) \
-                                        or self.freeleech and None is tr.find_all('td')[1].find('img', title=rc['fl']):
+                                        or self.freeleech and None is cells[1].find('img', title=rc['fl']):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

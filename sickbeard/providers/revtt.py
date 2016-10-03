@@ -78,9 +78,12 @@ class RevTTProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 5 > len(cells):
+                                continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -4]]
+                                    cells[x].get_text().strip() for x in -2, -1, -4]]
                                 if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats']):
                                     continue
 

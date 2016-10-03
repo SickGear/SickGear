@@ -97,6 +97,8 @@
 * Add Torrentz2 provider
 * Add freeleech options to fano, freshon, hdspace, phd, ptf providers
 * Change SceneTime to cookie auth
+* Change improve parser tolerance for torrent providers
+* Change disable TorrentBytes provider, over 90s for a response is not good
 * Remove Usenet-Crawler provider
 * Change CPU throttling on General Config/Advanced to "Disabled" by default for new installs
 * Change provider OMGWTFNZBS api url and auto reject nuked releases

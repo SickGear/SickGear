@@ -76,9 +76,12 @@ class FLProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows:
+                            cells = tr.select('span[style*="cell"]')
+                            if 6 > len(cells):
+                                continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.select('span[style*="cell"]')[x].get_text().strip() for x in -3, -2, -5]]
+                                    cells[x].get_text().strip() for x in -3, -2, -5]]
                                 if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats']):
                                     continue
 

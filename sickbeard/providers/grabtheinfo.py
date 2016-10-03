@@ -32,7 +32,7 @@ class GrabTheInfoProvider(generic.TorrentProvider):
 
         self.url_base = 'http://grabthe.info/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
+                     'login': self.url_base + 'rules.php',
                      'browse': self.url_base + 'browse.php?%s&incldead=%s&blah=0%s',
                      'search': '&search=%s',
                      'get': self.url_base + '%s'}
@@ -41,7 +41,19 @@ class GrabTheInfoProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
+
+    def _authorised(self, **kwargs):
+
+        return super(GrabTheInfoProvider, self)._authorised(
+            logged_in=(lambda y='': all(
+                ['Rules</title' in y, self.has_all_cookies()] +
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+
+    @staticmethod
+    def _has_signature(data=None):
+        return generic.TorrentProvider._has_signature(data) or (data and re.search(r'(?i)<title[^<]+?(G\s*T)', data))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -80,9 +92,12 @@ class GrabTheInfoProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[1 + shows_found:]:
+                            cells = tr.find_all('td')
+                            if 4 > len(cells):
+                                continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -2, -1, -3]]
+                                    cells[x].get_text().strip() for x in -2, -1, -3]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 

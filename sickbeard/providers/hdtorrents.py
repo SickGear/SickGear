@@ -107,13 +107,14 @@ class HDTorrentsProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows:
-                            if (any(self.filter)
+                            cells = tr.find_all('td')
+                            if (6 > len(cells) or any(self.filter)
                                 and ((non_marked and tr.find('img', src=rc['filter']))
                                      or (not non_marked and not tr.find('img', src=rc['filter'])))):
                                 continue
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in -3, -2, -5]]
+                                    cells[x].get_text().strip() for x in -3, -2, -5]]
                                 if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats']):
                                     continue
                                 title = tr.find('a', href=rc['info']).get_text().strip()

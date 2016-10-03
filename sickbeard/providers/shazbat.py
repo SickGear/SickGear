@@ -99,8 +99,11 @@ class ShazbatProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         for tr in torrent_rows[0:]:
+                            cells = tr.find_all('td')
+                            if 4 > len(cells):
+                                continue
                             try:
-                                stats = tr.find_all('td')[3].get_text().strip()
+                                stats = cells[3].get_text().strip()
                                 seeders, leechers = [(tryInt(x[0], 0), tryInt(x[1], 0)) for x in
                                                      re.findall('(?::(\d+))(?:\W*[/]\W*:(\d+))?', stats) if x[0]][0]
                                 if self._peers_fail(mode, seeders, leechers):
@@ -109,7 +112,7 @@ class ShazbatProvider(generic.TorrentProvider):
                                          re.findall('([\d.]+\w+)?(?:\s*[(\[](\d+)[)\]])?', stats) if x[0]][0]
                                 size = sizes[(0, 1)[1 < len(sizes)]]
 
-                                for element in [x for x in tr.find_all('td')[2].contents[::-1] if unicode(x).strip()]:
+                                for element in [x for x in cells[2].contents[::-1] if unicode(x).strip()]:
                                     if 'NavigableString' in str(element.__class__):
                                         title = unicode(element).strip()
                                         break
