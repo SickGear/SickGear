@@ -196,7 +196,7 @@
 * Change add support for freebsd /var/db/zoneinfo when getting local timezone information
 * Fix issue with post processing propers/repacks
 * Change use legacy tzlocal() if new gettz fails to create
-* Change load cached images (Trakt) on demand
+* Change load cached images on demand
 
 
 ### 0.11.15 (2016-09-13 19:50:00 UTC)

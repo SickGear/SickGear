@@ -1471,7 +1471,7 @@ def cleanup_cache():
     Delete old cached files
     """
     delete_not_changed_in([ek.ek(os.path.join, sickbeard.CACHE_DIR, *x) for x in [
-        ('images', 'trakt')]])
+        ('images', 'trakt'), ('images', 'imdb'), ('images', 'anidb')]])
 
 
 def delete_not_changed_in(paths, days=30, minutes=0):

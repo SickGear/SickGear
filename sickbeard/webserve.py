@@ -2656,13 +2656,7 @@ class NewHomeAddShows(Home):
                             newest = dt_string
 
                         img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
-                        path = ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'anidb'))
-                        helpers.make_dirs(path)
-                        file_name = ek.ek(os.path.basename, img_uri)
-                        cached_name = ek.ek(os.path.join, path, file_name)
-                        if not ek.ek(os.path.isfile, cached_name):
-                            helpers.download_file(img_uri, cached_name)
-                        images = dict(poster=dict(thumb='cache/images/anidb/%s' % file_name))
+                        images = dict(poster=dict(thumb='imagecache?path=anidb&source=%s' % img_uri))
 
                         votes = rating = 0
                         counts = anime.find('./ratings/permanent')
@@ -2814,6 +2808,7 @@ class NewHomeAddShows(Home):
                     rating = None is not rating and rating.get('content') or ''
                     voting = row.find('meta', attrs={'itemprop': 'ratingCount'})
                     voting = None is not voting and voting.get('content') or ''
+                    img_uri = None
                     if len(img):
                         img_uri = img[0].get('loadlate')
                         match = img_size.search(img_uri)
@@ -2827,13 +2822,7 @@ class NewHomeAddShows(Home):
                                      match.group(12)]
                             img_uri = img_uri.replace(match.group(), ''.join(
                                 [str(y) for x in map(None, parts, scaled) for y in x if y is not None]))
-                            path = ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'imdb'))
-                            helpers.make_dirs(path)
-                            file_name = ek.ek(os.path.basename, img_uri)
-                            cached_name = ek.ek(os.path.join, path, file_name)
-                            if not ek.ek(os.path.isfile, cached_name):
-                                helpers.download_file(img_uri, cached_name)
-                            images = dict(poster=dict(thumb='cache/images/imdb/%s' % file_name))
+                            images = dict(poster=dict(thumb='imagecache?path=imdb&source=%s' % img_uri))
 
                     filtered.append(dict(
                         premiered=dt_ordinal,
@@ -2843,7 +2832,7 @@ class NewHomeAddShows(Home):
                         genres=('No genre yet' if not len(genres) else
                                 genres[0].get_text().strip().lower().replace(' |', ',')),
                         ids=ids,
-                        images=images,
+                        images='' if not img_uri else images,
                         overview='No overview yet' if not overview else self.encode_html(overview[:250:]),
                         rating=0 if not len(rating) else int(helpers.tryFloat(rating) * 10),
                         title=title.get_text().strip(),
