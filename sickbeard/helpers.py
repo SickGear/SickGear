@@ -143,6 +143,15 @@ def has_media_ext(filename):
     return (None is re.search('extras?$', sep_file[0], re.I)) and (sep_file[2].lower() in mediaExtensions)
 
 
+def has_image_ext(filename):
+    try:
+        if ek.ek(os.path.splitext, filename)[1].lower() in ['.bmp', '.gif', '.jpeg', '.jpg', '.png', '.webp']:
+            return True
+    except (StandardError, Exception):
+        pass
+    return False
+
+
 def is_first_rar_volume(filename):
 
     return None is not re.search('(?P<file>^(?P<base>(?:(?!\.part\d+\.rar$).)*)\.(?:(?:part0*1\.)?rar)$)', filename)

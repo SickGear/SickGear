@@ -229,6 +229,7 @@ class UIError():
         self.message = message
         self.time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+
 class OrderedDefaultdict(OrderedDict):
     def __init__(self, *args, **kwargs):
         if not args:
@@ -249,3 +250,36 @@ class OrderedDefaultdict(OrderedDict):
     def __reduce__(self):  # optional, for pickle support
         args = (self.default_factory,) if self.default_factory else ()
         return self.__class__, args, None, None, self.iteritems()
+
+
+class ImageUrlList(list):
+    def __init__(self, iterable=None, max_age=30):
+        super(ImageUrlList, self).__init__()
+        self.max_age = max_age
+
+    def add_url(self, url):
+        self.remove_old()
+        for x in self:
+            if isinstance(x, (tuple, list)) and len(x) == 2 and url == x[0]:
+                x = (x[0], datetime.datetime.now())
+                return
+        self.append((url, datetime.datetime.now()))
+
+    def remove_old(self):
+        age_limit = datetime.datetime.now() - datetime.timedelta(minutes=self.max_age)
+        self[:] = [x for x in self if isinstance(x, (tuple, list)) and len(x) == 2 and x[1] > age_limit]
+
+    def __repr__(self):
+        return str([x[0] for x in self if isinstance(x, (tuple, list)) and len(x) == 2])
+
+    def __contains__(self, y):
+        for x in self:
+            if isinstance(x, (tuple, list)) and len(x) == 2 and y == x[0]:
+                return True
+        return False
+
+    def remove(self, x):
+        for v in self:
+            if isinstance(v, (tuple, list)) and len(v) == 2 and v[0] == x:
+                super(ImageUrlList, self).remove(v)
+                break
