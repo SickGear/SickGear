@@ -59,6 +59,9 @@ class ShowUpdater:
             # clear the data of unused providers
             sickbeard.helpers.clear_unused_providers()
 
+            # cleanup image cache
+            sickbeard.helpers.cleanup_cache()
+
             # add missing mapped ids
             if not sickbeard.background_mapping_task.is_alive():
                 logger.log(u'Updating the Indexer mappings')
