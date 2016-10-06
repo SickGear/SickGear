@@ -33,6 +33,7 @@ import time
 import traceback
 import urlparse
 import uuid
+import subprocess
 
 import adba
 import requests
@@ -286,7 +287,11 @@ def listMediaFiles(path):
 
 
 def copyFile(srcFile, destFile):
-    ek.ek(shutil.copyfile, srcFile, destFile)
+    if os.name.startswith('posix'):
+        subprocess.call(['cp', srcFile, destFile])
+    else:
+        ek.ek(shutil.copyfile, srcFile, destFile)
+
     try:
         ek.ek(shutil.copymode, srcFile, destFile)
     except OSError:
