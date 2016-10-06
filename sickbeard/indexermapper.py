@@ -32,7 +32,9 @@ from sickbeard.indexers.indexer_config import (INDEXER_TVDB, INDEXER_TVRAGE, IND
                                                INDEXER_IMDB, INDEXER_TRAKT, INDEXER_TMDB)
 from lib.tmdb_api import TMDB
 from lib.imdb import IMDb
+from time import sleep
 
+tv_maze_retry_wait = 10
 defunct_indexer = []
 indexer_list = []
 tmdb_ids = {INDEXER_TVDB: 'tvdb_id', INDEXER_IMDB: 'imdb_id', INDEXER_TVRAGE: 'tvrage_id'}
@@ -94,18 +96,34 @@ class TraktDict(OrderedDict):
                                              (self[key], '%07d' % self[key])[key == INDEXER_IMDB])
 
 
+def get_tvmaze_data(count=0, *args, **kwargs):
+    res = None
+    count += 1
+    if 3 >= count:
+        try:
+            res = getURL(*args, **kwargs)
+        except requests.HTTPError as e:
+            # rate limit
+            if 429 == e.response.status_code:
+                sleep(tv_maze_retry_wait)
+                return get_tvmaze_data(*args, count=count, **kwargs)
+        except (StandardError, Exception):
+            pass
+    return res
+
+
 def get_tvmaze_ids(url_tvmaze):
     ids = {}
     for url_key in url_tvmaze.iterkeys():
         try:
-            res = getURL(url=url_tvmaze.get_url(url_key), json=True, raise_status_code=True, timeout=120)
+            res = get_tvmaze_data(url=url_tvmaze.get_url(url_key), json=True, raise_status_code=True, timeout=120)
             if res and 'externals' in res:
                 ids[INDEXER_TVRAGE] = res['externals'].get('tvrage', 0)
                 ids[INDEXER_TVDB] = res['externals'].get('thetvdb', 0)
                 ids[INDEXER_IMDB] = tryInt(str(res['externals'].get('imdb')).replace('tt', ''))
                 ids[INDEXER_TVMAZE] = res.get('id', 0)
                 break
-        except (requests.HTTPError, Exception):
+        except (StandardError, Exception):
             pass
     return {k: v for k, v in ids.iteritems() if v not in (None, '', 0)}
 
@@ -129,7 +147,7 @@ def get_tvmaze_by_name(showname, premiere_date):
     try:
         url = '%ssearch/shows?%s' % (sickbeard.indexerApi(INDEXER_TVMAZE).config['base_url'],
                                      urlencode({'q': clean_show_name(showname)}))
-        res = getURL(url=url, json=True, raise_status_code=True, timeout=120)
+        res = get_tvmaze_data(url=url, json=True, raise_status_code=True, timeout=120)
         if res:
             for r in res:
                 if 'show' in r and 'premiered' in r['show'] and 'externals' in r['show']:

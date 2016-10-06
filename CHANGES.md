@@ -198,6 +198,7 @@
 * Fix issue with post processing propers/repacks
 * Change use legacy tzlocal() if new gettz fails to create
 * Change load cached images on demand
+* Change add rate limit handler for info source
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)
