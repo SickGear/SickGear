@@ -992,6 +992,35 @@ class Migrate41(db.SchemaUpgrade):
         return self.checkDBVersion()
 
 
+# 43,44 -> 10001
+class Migrate43(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
+        db_chg = None
+        table = 'tmdb_info'
+        if self.hasTable(table):
+            logger.log(u'Dropping redundant table tmdb_info')
+            self.connection.action('DROP TABLE [%s]' % table)
+            db_chg = True
+
+        if self.hasColumn('tv_shows', 'tmdb_id'):
+            logger.log(u'Dropping redundant tmdb_info refs')
+            self.dropColumn('tv_shows', 'tmdb_id')
+            db_chg = True
+
+        if not self.hasTable('db_version'):
+            self.connection.action('PRAGMA user_version = 0')
+            self.connection.action('CREATE TABLE db_version (db_version INTEGER);')
+            self.connection.action('INSERT INTO db_version (db_version) VALUES (0);')
+
+        if not db_chg:
+            logger.log(u'Bumping database version')
+
+        self.setDBVersion(10001)
+        return self.checkDBVersion()
+
+
 # 4301 -> 10002
 class Migrate4301(db.SchemaUpgrade):
     def execute(self):

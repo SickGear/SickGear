@@ -66,11 +66,16 @@ class DBConnection(object):
 
     def checkDBVersion(self):
 
-        result = None
-
         try:
             if self.hasTable('db_version'):
                 result = self.select('SELECT db_version FROM db_version')
+            else:
+                version = self.select('PRAGMA user_version')[0]['user_version']
+                if version:
+                    self.action('PRAGMA user_version = 0')
+                    self.action('CREATE TABLE db_version (db_version INTEGER);')
+                    self.action('INSERT INTO db_version (db_version) VALUES (%s);' % version)
+                return version
         except:
             return 0
 
@@ -429,8 +434,8 @@ def MigrationCode(myDB):
         40: sickbeard.mainDB.BumpDatabaseVersion,
         41: sickbeard.mainDB.Migrate41,
         42: sickbeard.mainDB.Migrate41,
-        43: sickbeard.mainDB.Migrate41,
-        44: sickbeard.mainDB.Migrate41,
+        43: sickbeard.mainDB.Migrate43,
+        44: sickbeard.mainDB.Migrate43,
 
         4301: sickbeard.mainDB.Migrate4301,
         4302: sickbeard.mainDB.Migrate4302,

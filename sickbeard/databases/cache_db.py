@@ -60,9 +60,15 @@ class ConsolidateProviders(InitialSchema):
         if self.hasTable('provider_cache'):
             self.connection.action('DROP TABLE provider_cache')
 
-        self.connection.action('CREATE TABLE provider_cache (provider TEXT ,name TEXT, season NUMERIC, episodes TEXT,'
-                               ' indexerid NUMERIC, url TEXT UNIQUE, time NUMERIC, quality TEXT, release_group TEXT, '
+        self.connection.action('CREATE TABLE provider_cache (provider TEXT, name TEXT, season NUMERIC, episodes TEXT, '
+                               'indexerid NUMERIC, url TEXT UNIQUE, time NUMERIC, quality TEXT, release_group TEXT, '
                                'version NUMERIC)')
+
+        if not self.hasTable('network_conversions'):
+            self.connection.action('CREATE TABLE network_conversions ' +
+                                   '(tvdb_network TEXT PRIMARY KEY, tvrage_network TEXT, tvrage_country TEXT)')
+            self.connection.action('CREATE INDEX tvrage_idx ' +
+                                   'on network_conversions (tvrage_network, tvrage_country)')
 
         keep_tables = set(['lastUpdate', 'lastSearch', 'db_version',
                            'network_timezones', 'network_conversions', 'provider_cache'])
