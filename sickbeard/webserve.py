@@ -46,7 +46,7 @@ from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStri
 from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED, SNATCHED_BEST, SNATCHED_PROPER
 from sickbeard.common import SD, HD720p, HD1080p
 from sickbeard.exceptions import ex
-from sickbeard.helpers import remove_article, starify
+from sickbeard.helpers import has_image_ext, remove_article, starify
 from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
@@ -2657,6 +2657,7 @@ class NewHomeAddShows(Home):
 
                         img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
                         images = dict(poster=dict(thumb='imagecache?path=anidb&source=%s' % img_uri))
+                        sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
                         votes = rating = 0
                         counts = anime.find('./ratings/permanent')
@@ -2823,6 +2824,7 @@ class NewHomeAddShows(Home):
                             img_uri = img_uri.replace(match.group(), ''.join(
                                 [str(y) for x in map(None, parts, scaled) for y in x if y is not None]))
                             images = dict(poster=dict(thumb='imagecache?path=imdb&source=%s' % img_uri))
+                            sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
                     filtered.append(dict(
                         premiered=dt_ordinal,
@@ -3058,6 +3060,7 @@ class NewHomeAddShows(Home):
                 img_uri = item.get('show', {}).get('images', {}).get('poster', {}).get('thumb', {}) or ''
                 if img_uri:
                     images = dict(poster=dict(thumb='imagecache?path=trakt/poster/thumb&source=%s' % img_uri))
+                    sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
                 filtered.append(dict(
                     premiered=dt_ordinal,
@@ -5598,8 +5601,6 @@ class Cache(MainHandler):
         if not sql_results:
             sql_results = []
 
-
-
         t = PageTemplate(headers=self.request.headers, file='cache.tmpl')
         t.cacheResults = sql_results
 
@@ -5613,7 +5614,8 @@ class CachedImages(MainHandler):
         file_name = ek.ek(os.path.basename, source)
         static_image_path = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', path, file_name)
         static_image_path = ek.ek(os.path.abspath, static_image_path.replace('\\', '/'))
-        if not ek.ek(os.path.isfile, static_image_path) and source is not None:
+        if not ek.ek(os.path.isfile, static_image_path) and source is not None and has_image_ext(file_name) \
+                and source in sickbeard.CACHE_IMAGE_URL_LIST:
             basepath = ek.ek(os.path.dirname, static_image_path)
             helpers.make_dirs(basepath)
             if not helpers.download_file(source, static_image_path) and source.find('trakt.us'):
@@ -5624,4 +5626,3 @@ class CachedImages(MainHandler):
         else:
             helpers.set_file_timestamp(static_image_path, min_age=3, new_time=None)
             self.redirect('cache/images/%s/%s' % (path, file_name))
-

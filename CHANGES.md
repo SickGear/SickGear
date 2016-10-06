@@ -172,7 +172,7 @@
 * Fix status reset of a snatched, downloaded, or archived episode when its date is set to never (no date) on the info
   source and there is no media file
 * Change only show unaired episodes on Manage/Backlog Overview and Manage/Episode Status Management where relevant
-* Change locally cache "Add from Trakt" show posters
+* Change locally cache Trakt/IMDb/Anime show cards
 * Change allow pp to replace files with a repack or proper of same quality
 * Fix ensure downloaded eps are not shown on episode view
 * Fix allow propers to pp when show marked upgrade once
@@ -199,6 +199,8 @@
 * Change use legacy tzlocal() if new gettz fails to create
 * Change load cached images on demand
 * Change add rate limit handler for info source
+* Change improve security of cached image use
+* Change add helper function to validate acceptable image file extension
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

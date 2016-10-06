@@ -37,7 +37,7 @@ sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import helpers, encodingKludge as ek
 from sickbeard import db, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
     scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
-    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper
+    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
@@ -488,6 +488,8 @@ else:
 
 COOKIE_SECRET = base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
+CACHE_IMAGE_URL_LIST = classes.ImageUrlList()
+
 __INITIALIZED__ = False
 
 
@@ -545,7 +547,7 @@ def initialize(consoleLogging=True):
             ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
             SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, ANIME_TREAT_AS_HDTV, \
             COOKIE_SECRET, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS, \
-            SHOW_TAGS, DEFAULT_SHOW_TAG, SHOWLIST_TAGVIEW, background_mapping_task
+            SHOW_TAGS, DEFAULT_SHOW_TAG, SHOWLIST_TAGVIEW, background_mapping_task, CACHE_IMAGE_URL_LIST
 
         if __INITIALIZED__:
             return False
