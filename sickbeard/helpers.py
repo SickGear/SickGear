@@ -1285,37 +1285,28 @@ def download_file(url, filename, session=None):
 
 
 def clearCache(force=False):
-    update_datetime = datetime.datetime.now()
 
     # clean out cache directory, remove everything > 12 hours old
     if sickbeard.CACHE_DIR:
-        logger.log(u"Trying to clean cache folder " + sickbeard.CACHE_DIR)
+        logger.log(u'Trying to clean cache folder %s' % sickbeard.CACHE_DIR)
 
         # Does our cache_dir exists
         if not ek.ek(os.path.isdir, sickbeard.CACHE_DIR):
-            logger.log(u"Can't clean " + sickbeard.CACHE_DIR + " if it doesn't exist", logger.WARNING)
+            logger.log(u'Skipping clean of non-existing folder: %s' % sickbeard.CACHE_DIR, logger.WARNING)
         else:
-            max_age = datetime.timedelta(hours=12)
-
-            # Get all our cache files
-            exclude = ['rss', 'images']
-            for cache_root, cache_dirs, cache_files in os.walk(sickbeard.CACHE_DIR, topdown=True):
-                cache_dirs[:] = [d for d in cache_dirs if d not in exclude]
-
-                for file in cache_files:
-                    cache_file = ek.ek(os.path.join, cache_root, file)
-
-                    if ek.ek(os.path.isfile, cache_file):
-                        cache_file_modified = datetime.datetime.fromtimestamp(
-                            ek.ek(os.path.getmtime, cache_file))
-
-                        if force or (update_datetime - cache_file_modified > max_age):
-                            try:
-                                ek.ek(os.remove, cache_file)
-                            except OSError as e:
-                                logger.log(u"Unable to clean " + cache_root + ": " + repr(e) + " / " + str(e),
-                                           logger.WARNING)
-                                break
+            exclude = ['rss', 'images', 'zoneinfo']
+            del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(hours=12)).timetuple())
+            for f in scantree(sickbeard.CACHE_DIR, exclude, follow_symlinks=True):
+                if f.is_file(follow_symlinks=False) and (force or del_time > f.stat(follow_symlinks=False).st_mtime):
+                    try:
+                        ek.ek(os.remove, f.path)
+                    except OSError as e:
+                        logger.log('Unable to delete %s: %r / %s' % (f.path, e, str(e)), logger.WARNING)
+                elif f.is_dir(follow_symlinks=False) and f.name not in ['cheetah', 'sessions', 'indexers']:
+                    try:
+                        ek.ek(os.rmdir, f.path)
+                    except OSError:
+                        pass
 
 
 def human(size):
@@ -1474,11 +1465,14 @@ def cpu_sleep():
         time.sleep(cpu_presets[sickbeard.CPU_PRESET])
 
 
-def scantree(path):
+def scantree(path, exclude=None, follow_symlinks=False):
     """Recursively yield DirEntry objects for given directory."""
+    exclude = (exclude, ([exclude], [])[None is exclude])[not isinstance(exclude, list)]
     for entry in ek.ek(scandir, path):
-        if entry.is_dir(follow_symlinks=False):
-            for entry in scantree(entry.path):
+        if entry.is_dir(follow_symlinks=follow_symlinks):
+            if entry.name not in exclude:
+                for subentry in scantree(entry.path):
+                    yield subentry
                 yield entry
         else:
             yield entry
@@ -1497,7 +1491,8 @@ def delete_not_changed_in(paths, days=30, minutes=0):
     Delete files under paths not changed in n days and/or n minutes.
     If a file was modified later than days/and or minutes, then don't delete it.
 
-    :param paths: List of paths to scan for files to delete
+    :param paths: Path(s) to scan for files to delete
+    :type paths: String or List of strings
     :param days: Purge files not modified in this number of days (default: 30 days)
     :param minutes: Purge files not modified in this number of minutes (default: 0 minutes)
     :return: tuple; number of files that qualify for deletion, number of qualifying files that failed to be deleted
@@ -1505,7 +1500,7 @@ def delete_not_changed_in(paths, days=30, minutes=0):
     del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes)).timetuple())
     errors = 0
     qualified = 0
-    for c in paths:
+    for c in (paths, [paths])[not isinstance(paths, list)]:
         try:
             for f in scantree(c):
                 if f.is_file(follow_symlinks=False) and del_time > f.stat(follow_symlinks=False).st_mtime:
