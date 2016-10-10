@@ -261,7 +261,7 @@ class Quality:
                 logger.log(traceback.format_exc(), logger.DEBUG)
 
             if parser:
-                extract = extractMetadata(parser)
+                extract = extractMetadata(parser, scan_index=False)
                 if extract:
                     try:
                         height = extract.get('height')

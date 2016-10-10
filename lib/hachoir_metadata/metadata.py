@@ -270,7 +270,7 @@ def registerExtractor(parser, extractor):
     assert issubclass(extractor, RootMetadata)
     extractors[parser] = extractor
 
-def extractMetadata(parser, quality=QUALITY_NORMAL):
+def extractMetadata(parser, quality=QUALITY_NORMAL, scan_index=True):
     """
     Create a Metadata class from a parser. Returns None if no metadata
     extractor does exist for the parser class.
@@ -281,7 +281,7 @@ def extractMetadata(parser, quality=QUALITY_NORMAL):
         return None
     metadata = extractor(quality)
     try:
-        metadata.extract(parser)
+        metadata.extract(parser, scan_index)
     except HACHOIR_ERRORS, err:
         error("Error during metadata extraction: %s" % unicode(err))
         return None
