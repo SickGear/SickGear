@@ -203,6 +203,8 @@
 * Change add rate limit handler for info source
 * Change improve security of cached image use
 * Change add helper function to validate acceptable image file extension
+* Change make sure avi files are closed if an error occurs
+* Change refactor hachoir scan_index for non RIFF file processing
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

@@ -261,7 +261,10 @@ class Quality:
                 logger.log(traceback.format_exc(), logger.DEBUG)
 
             if parser:
-                extract = extractMetadata(parser, scan_index=False)
+                if '.avi' == filename[-4::].lower():
+                    extract = extractMetadata(parser, scan_index=False)
+                else:
+                    extract = extractMetadata(parser)
                 if extract:
                     try:
                         height = extract.get('height')

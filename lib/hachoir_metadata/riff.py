@@ -23,7 +23,7 @@ class RiffMetadata(MultipleMetadata):
         "IDIT": "creation_date",
     }
 
-    def extract(self, riff, scan_index=True):
+    def extract(self, riff, **kwargs):
         type = riff["type"].value
         if type == "WAVE":
             self.extractWAVE(riff)
@@ -32,7 +32,10 @@ class RiffMetadata(MultipleMetadata):
                 computeAudioComprRate(self, size*8)
         elif type == "AVI ":
             if "headers" in riff:
-                self.extractAVI(riff["headers"], scan_index)
+                if 'scan_index' in kwargs:
+                    self.extractAVI(riff["headers"], scan_index=kwargs['scan_index'])
+                else:
+                    self.extractAVI(riff["headers"])
                 self.extractInfo(riff["headers"])
         elif type == "ACON":
             self.extractAnim(riff)
@@ -142,7 +145,7 @@ class RiffMetadata(MultipleMetadata):
         self.width = header["width"].value
         self.height = header["height"].value
 
-    def extractAVI(self, headers, scan_index=True):
+    def extractAVI(self, headers, **kwargs):
         audio_index = 1
         for stream in headers.array("stream"):
             if "stream_hdr/stream_type" not in stream:
@@ -167,6 +170,7 @@ class RiffMetadata(MultipleMetadata):
             self.bit_rate = float(headers["/movie/size"].value) * 8 / timedelta2seconds(self.get('duration'))
 
         # Video has index?
+        scan_index = (True, kwargs['scan_index'])['scan_index' in kwargs]
         if scan_index and "/index" in headers:
             self.comment = _("Has audio/video index (%s)") \
                 % humanFilesize(headers["/index"].size/8)
