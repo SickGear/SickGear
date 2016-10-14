@@ -16,6 +16,7 @@
 * Update Hachoir library 1.3.4 (r1383) to 1.3.4 (r1435)
 * Update html5lib 0.999 to 0.99999999/1.0b9 (46dae3d)
 * Update IMDb 5.0 to 5.1dev20160106
+* Update moment.js 2.6 to 2.15.1
 * Update PNotify library 2.0.1 to 2.1.0
 * Update profilehooks 1.4 to 1.8.2.dev0 (ee3f1a8)
 * Update Requests library 2.7.0 (5d6d1bc) to 2.9.1 (a1c9b84)
@@ -181,6 +182,8 @@
 * Change hachoir_parser to close input stream if no parser is found e.g. due to file corruption
 * Change reduce time taken to parse avi RIFF metadata during post processing and other times
 * Change avi metadata extraction is more fault tolerant and the chance of hanging due to corrupt avi files is reduced
+* Change fuzzyMoment to handle air dates before ~1970 on display show page
+* Change limit availability of fuzzy date functions on General Config/Interface to English locale systems
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
@@ -205,6 +208,7 @@
 * Change add helper function to validate acceptable image file extension
 * Change make sure avi files are closed if an error occurs
 * Change refactor hachoir scan_index for non RIFF file processing
+* Change ensure sbdatetime functions return formatted string instead of tuple
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

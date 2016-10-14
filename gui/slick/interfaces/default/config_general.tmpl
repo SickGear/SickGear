@@ -332,6 +332,10 @@
 							</label>
 						</div>
 
+#if not $sbdatetime.is_locale_eng()
+						<input type="hidden" name="fuzzy_dating" id="fuzzy_dating" value="false">
+						<input type="hidden" name="trim_zero" id="trim_zero" value="false">
+#else
 						<div class="field-pair">
 							<label for="fuzzy_dating">
 								<span class="component-title">Display fuzzy dates</span>
@@ -350,7 +354,7 @@
 								</span>
 							</label>
 						</div>
-
+#end if
 						<div class="field-pair">
 							<label for="date_presets">
 								<span class="component-title">Date style:</span>

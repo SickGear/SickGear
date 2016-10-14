@@ -20,7 +20,7 @@
 		dtInline = (/undefined/i.test(typeof(fmConfig)) || /undefined/i.test(typeof(fmConfig.dtInline)) ? false : fmConfig.dtInline),
 
 		jd = (function (str) {
-			var token_map = ['a', 'ddd', 'A', 'dddd', 'b', 'MMM', 'B', 'MMMM', 'd', 'DD', 'm', 'MM', 'y', 'YY', 'Y', 'YYYY', 'x', 'L',
+			var token_map = ['d', 'DD', 'a', 'ddd', 'A', 'dddd', 'b', 'MMM', 'B', 'MMMM', 'm', 'MM', 'y', 'YY', 'Y', 'YYYY', 'x', 'L',
 					'H', 'HH', 'I', 'hh', 'M', 'mm', 'S', 'ss', 'p', 'A', 'P', 'a'],
 				result = '';
 
@@ -36,8 +36,6 @@
 
 			return result;
 		}),
-		dateTemplate = jd(dateFormat),
-		timeTemplate = jd(timeFormat),
 
 		addQTip = (function() {
 			$(this).css('cursor', 'help');
@@ -48,10 +46,7 @@
 				position: {
 					viewport: $(window),
 					my: 'left center',
-					adjust: {
-						y: -10,
-						x: 2
-					}
+					adjust: { y: -10, x: 2 }
 				},
 				style: {
 					classes: 'qtip-dark qtip-rounded qtip-shadow'
@@ -59,18 +54,18 @@
 			});
 		});
 
-	if (trimZero) {
-		timeTemplate = timeTemplate.replace(/hh/g, 'h');
-		timeTemplate = timeTemplate.replace(/HH/g, 'H');
-		dateTemplate = dateTemplate.replace(/\bDD\b/g, 'D');
-	}
-
 	$(containerClass).each(function() {
-		var input = $(this).text(),
+		var attrFullDate = $(this).data('fulldate'),
+			useTextDate = /undefined/i.test(typeof(attrFullDate)),
+			input = useTextDate ? $(this).text() : attrFullDate,
+			inputDateTemplate = jd(useTextDate ? dateFormat : '%A, %B %d, %Y'),
+			inDateTemplate = trimZero ? inputDateTemplate.replace(/\bDD\b/g, 'D') : inputDateTemplate,
+			outDateTemplate = trimZero ? jd(dateFormat).replace(/\bDD\b/g, 'D') : jd(dateFormat),
+			timeTemplate = trimZero ? jd(timeFormat).replace(/hh/g, 'h').replace(/HH/g, 'H') : jd(timeFormat),
+			timeToken = timeTemplate,
 			dateA = '[<span class="fd">',
 			dtSeparator = ' ',
-			timeA = '</span>]', timeB = '[' + timeA,
-			timeToken = timeTemplate;
+			timeA = '</span>]', timeB = '[' + timeA;
 
 		if (dateWithTime) {
 			var timeMeta = input.match(/([,\s]+)(\d{1,2})(?:(.)(\d\d)(?:(.)(\d\d))?)?(?:\s?([ap]m))?$/im);
@@ -103,12 +98,13 @@
 			timeB = '[</span>' + dtGlue + '<span class="ft">]' + timeToken + timeB;
 		}
 
-		var inputTokens = dateTemplate + dtSeparator + (dateWithTime ?  timeToken : 'HH:mm:ss');
+		var inputTokens = inDateTemplate + dtSeparator + (dateWithTime ?  timeToken : 'HH:mm:ss'),
+			outTokens = outDateTemplate + dtSeparator + (dateWithTime ?  timeToken : 'HH:mm:ss');
 
-		if (! moment(input + (dateWithTime ? '' : dtSeparator + '00:00:00'), inputTokens).isValid())
+		if (! (moment(input + (dateWithTime ? '' : dtSeparator + '00:00:00'), inputTokens).isValid()
+				&& moment(input + (dateWithTime ? '' : dtSeparator + '00:00:00'), outTokens).isValid()))
 			return;
-
-		moment.lang('en', {
+		moment.updateLocale('en', {
 			calendar: {
 				lastDay:dateA + 'Yesterday' + timeA, sameDay:dateA + 'Today' + timeA, nextDay:dateA + 'Tomorrow' + timeA,
 				lastWeek:dateA + 'last] ddd' + timeB, nextWeek:dateA + 'on] ddd' + timeB,
@@ -155,7 +151,7 @@
 			titleThis = true;
 		}
 
-		var n = false; // disable for prod
+		var n = !1; // disable for prod
 		$(this).html(result);
 		if (dateWithTime && /(yester|to)day/i.test(result))
 			$(this).find('.fd').attr('title',(n?'1) ':'') + moment.duration(airdatetime.diff(moment(),'seconds'),'seconds').humanize(true)).each(addQTip);
@@ -168,13 +164,13 @@
 
 		if (titleThis)
 			if (dateWithTime && qTipTime)
-				$(this).attr('title',(n?'4) ':'') + airdatetime.format(inputTokens)).each(addQTip);
+				$(this).attr('title',(n?'4) ':'') + airdatetime.format(outTokens)).each(addQTip);
 			else
-				$(this).attr('title',(n?'5) ':'') + airdate.format(dateTemplate)).each(addQTip);
+				$(this).attr('title',(n?'5) ':'') + airdate.format(outDateTemplate)).each(addQTip);
 		else
 			if (dateWithTime && qTipTime)
-				$(this).find('.ft').attr('title',(n?'6) ':'') + airdatetime.format(inputTokens)).each(addQTip);
+				$(this).find('.ft').attr('title',(n?'6) ':'') + airdatetime.format(outTokens)).each(addQTip);
 			else
-				$(this).find('.ft').attr('title',(n?'7) ':'') + airdate.format(dateTemplate)).each(addQTip);
+				$(this).find('.ft').attr('title',(n?'7) ':'') + airdate.format(outDateTemplate)).each(addQTip);
 	});
 }

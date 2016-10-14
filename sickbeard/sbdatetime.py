@@ -105,12 +105,20 @@ class sbdatetime(datetime.datetime):
     has_locale = True
 
     @static_or_instance
+    def is_locale_eng(self):
+        today = sbdatetime.sbfdate(sbdatetime.now(), '%A').lower()
+        return ('day' == today[-3::] and today[0:-3:] in ['sun', 'mon', 'tues', 'wednes', 'thurs', 'fri', 'satur']
+                and sbdatetime.sbfdate(sbdatetime.now(), '%B').lower() in [
+                    'january', 'february', 'march', 'april', 'may', 'june',
+                    'july', 'august', 'september', 'october', 'november', 'december'])
+
+    @static_or_instance
     def convert_to_setting(self, dt=None):
         obj = (dt, self)[self is not None]
         try:
             if 'local' == sickbeard.TIMEZONE_DISPLAY:
                 return obj.astimezone(sb_timezone)
-        except:
+        except (StandardError, Exception):
             pass
 
         return obj
@@ -121,7 +129,7 @@ class sbdatetime(datetime.datetime):
             try:
                 if None is use_has_locale or use_has_locale:
                     locale.setlocale(locale.LC_TIME, locale_str)
-            except:
+            except locale.Error:
                 if None is not use_has_locale:
                     sbdatetime.has_locale = False
                 pass
@@ -133,41 +141,40 @@ class sbdatetime(datetime.datetime):
         sbdatetime.setlocale(setlocale=setlocale, use_has_locale=sbdatetime.has_locale, locale_str='us_US')
 
         strt = ''
-        try:
-            obj = (dt, self)[self is not None]
-            if None is not obj:
-                tmpl = (((sickbeard.TIME_PRESET, sickbeard.TIME_PRESET_W_SECONDS)[show_seconds]),
-                        t_preset)[None is not t_preset]
-                tmpl = (tmpl.replace(':%S', ''), tmpl)[show_seconds]
 
-                strt = obj.strftime(tmpl.replace('%P', '%p'))
+        obj = (dt, self)[self is not None]
+        if None is not obj:
+            tmpl = (((sickbeard.TIME_PRESET, sickbeard.TIME_PRESET_W_SECONDS)[show_seconds]),
+                    t_preset)[None is not t_preset]
+            tmpl = (tmpl.replace(':%S', ''), tmpl)[show_seconds]
+
+            strt = sbdatetime.sbstrftime(obj, tmpl.replace('%P', '%p'))
+
+            if sickbeard.TRIM_ZERO:
+                strt = re.sub(r'^0(\d:\d\d)', r'\1', strt)
+
+            if re.search(r'(?im)%p$', tmpl):
+                if '%p' in tmpl:
+                    strt = strt.upper()
+                elif '%P' in tmpl:
+                    strt = strt.lower()
 
                 if sickbeard.TRIM_ZERO:
-                    strt = re.sub(r'^0(\d:\d\d)', r'\1', strt)
+                    strt = re.sub(r'(?im)^(\d+)(?::00)?(\s?[ap]m)', r'\1\2', strt)
 
-                if re.search(r'(?im)%p$', tmpl):
-                    if '%p' in tmpl:
-                        strt = strt.upper()
-                    elif '%P' in tmpl:
-                        strt = strt.lower()
+            if markup:
+                match = re.search(r'(?im)(\d{1,2})(?:(.)(\d\d)(?:(.)(\d\d))?)?(?:\s?([ap]m))?$', strt)
+                if match:
+                    strt = ('%s%s%s%s%s%s' % (
+                        ('<span class="time-hr">%s</span>' % match.group(1), '')[None is match.group(1)],
+                        ('<span class="time-hr-min">%s</span>' % match.group(2), '')[None is match.group(2)],
+                        ('<span class="time-min">%s</span>' % match.group(3), '')[None is match.group(3)],
+                        ('<span class="time-min-sec">%s</span>' % match.group(4), '')[None is match.group(4)],
+                        ('<span class="time-sec">%s</span>' % match.group(5), '')[None is match.group(5)],
+                        ('<span class="time-am-pm">%s</span>' % match.group(6), '')[None is match.group(6)]))
 
-                    if sickbeard.TRIM_ZERO:
-                        strt = re.sub(r'(?im)^(\d+)(?::00)?(\s?[ap]m)', r'\1\2', strt)
-
-                if markup:
-                    match = re.search(r'(?im)(\d{1,2})(?:(.)(\d\d)(?:(.)(\d\d))?)?(?:\s?([ap]m))?$', strt)
-                    if match:
-                        strt = ('%s%s%s%s%s%s' % (
-                            ('<span class="time-hr">%s</span>' % match.group(1), '')[None is match.group(1)],
-                            ('<span class="time-hr-min">%s</span>' % match.group(2), '')[None is match.group(2)],
-                            ('<span class="time-min">%s</span>' % match.group(3), '')[None is match.group(3)],
-                            ('<span class="time-min-sec">%s</span>' % match.group(4), '')[None is match.group(4)],
-                            ('<span class="time-sec">%s</span>' % match.group(5), '')[None is match.group(5)],
-                            ('<span class="time-am-pm">%s</span>' % match.group(6), '')[None is match.group(6)]))
-
-        finally:
-            sbdatetime.setlocale(setlocale=setlocale, use_has_locale=sbdatetime.has_locale)
-            return strt
+        sbdatetime.setlocale(setlocale=setlocale, use_has_locale=sbdatetime.has_locale)
+        return strt
 
     # display Date in SickGear Format
     @static_or_instance
@@ -179,7 +186,7 @@ class sbdatetime(datetime.datetime):
         try:
             obj = (dt, self)[self is not None]
             if None is not obj:
-                strd = obj.strftime((sickbeard.DATE_PRESET, d_preset)[None is not d_preset])
+                strd = sbdatetime.sbstrftime(obj, (sickbeard.DATE_PRESET, d_preset)[None is not d_preset])
 
         finally:
             sbdatetime.setlocale(setlocale=setlocale)
@@ -195,12 +202,22 @@ class sbdatetime(datetime.datetime):
         obj = (dt, self)[self is not None]
         try:
             if None is not obj:
-                strd = u'%s, %s' % (obj.strftime((sickbeard.DATE_PRESET, d_preset)[None is not d_preset]),
-                                    sbdatetime.sbftime(dt, show_seconds, t_preset, False, markup))
+                strd = u'%s, %s' % (
+                    sbdatetime.sbstrftime(obj, (sickbeard.DATE_PRESET, d_preset)[None is not d_preset]),
+                    sbdatetime.sbftime(dt, show_seconds, t_preset, False, markup))
 
         finally:
             sbdatetime.setlocale(use_has_locale=sbdatetime.has_locale)
             return strd
+
+    @staticmethod
+    def sbstrftime(obj, str_format):
+        try:
+            result = obj.strftime(str_format),
+        except ValueError:
+            result = obj.replace(tzinfo=None).strftime(str_format)
+        return result if isinstance(result, basestring) else \
+            isinstance(result, tuple) and 1 == len(result) and '%s' % result[0] or ''
 
     @static_or_instance
     def totimestamp(self, dt=None, default=None):
