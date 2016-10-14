@@ -548,7 +548,7 @@
 		</td>
 
 		<td class="col-airdate">
-			<span class="${fuzzydate}">#if 1 == int($epResult['airdate']) then 'never' else $sbdatetime.sbdatetime.sbfdate($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($epResult['airdate'], $network_time, $network_timezone)))#</span>
+			<span class="${fuzzydate}"#if $sickbeard.FUZZY_DATING# data-fulldate="$sbdatetime.sbdatetime.sbfdate(dt=$datetime.date.fromordinal($epResult['airdate']), d_preset='%A, %B %d, %Y')"#end if#>#if 1 == int($epResult['airdate']) then 'never' else $sbdatetime.sbdatetime.sbfdate($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($epResult['airdate'], $network_time, $network_timezone)))#</span>
 		</td>
 
     #if $sickbeard.USE_SUBTITLES and $show.subtitles

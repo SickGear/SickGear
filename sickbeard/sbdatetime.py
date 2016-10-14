@@ -106,9 +106,9 @@ class sbdatetime(datetime.datetime):
 
     @static_or_instance
     def is_locale_eng(self):
-        return (sbdatetime.sbdatetime.sbfdate(datetime.datetime.now(), '%A').lower() in [
-            'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] and
-                    sbdatetime.sbdatetime.sbfdate(datetime.datetime.now(), '%B').lower() in [
+        today = sbdatetime.sbfdate(sbdatetime.now(), '%A').lower()
+        return ('day' == today[-3::] and today[0:-3:] in ['sun', 'mon', 'tues', 'wednes', 'thurs', 'fri', 'satur']
+                and sbdatetime.sbfdate(sbdatetime.now(), '%B').lower() in [
                     'january', 'february', 'march', 'april', 'may', 'june',
                     'july', 'august', 'september', 'october', 'november', 'december'])
 
@@ -118,7 +118,7 @@ class sbdatetime(datetime.datetime):
         try:
             if 'local' == sickbeard.TIMEZONE_DISPLAY:
                 return obj.astimezone(sb_timezone)
-        except:
+        except (StandardError, Exception):
             pass
 
         return obj
@@ -148,11 +148,7 @@ class sbdatetime(datetime.datetime):
                     t_preset)[None is not t_preset]
             tmpl = (tmpl.replace(':%S', ''), tmpl)[show_seconds]
 
-            pm_token = tmpl.replace('%P', '%p')
-            try:
-                strt = obj.strftime(pm_token)
-            except ValueError:
-                strt = obj.replace(tzinfo=None).strftime(pm_token)
+            strt = sbdatetime.sbstrftime(obj, tmpl.replace('%P', '%p'))
 
             if sickbeard.TRIM_ZERO:
                 strt = re.sub(r'^0(\d:\d\d)', r'\1', strt)
@@ -190,11 +186,7 @@ class sbdatetime(datetime.datetime):
         try:
             obj = (dt, self)[self is not None]
             if None is not obj:
-                preset = (sickbeard.DATE_PRESET, d_preset)[None is not d_preset]
-                try:
-                    strd = obj.strftime(preset)
-                except ValueError:
-                    strd = obj.replace(tzinfo=None).strftime(preset)
+                strd = sbdatetime.sbstrftime(obj, (sickbeard.DATE_PRESET, d_preset)[None is not d_preset])
 
         finally:
             sbdatetime.setlocale(setlocale=setlocale)
@@ -210,16 +202,22 @@ class sbdatetime(datetime.datetime):
         obj = (dt, self)[self is not None]
         try:
             if None is not obj:
-                preset = (sickbeard.DATE_PRESET, d_preset)[None is not d_preset]
-                try:
-                    strd = obj.strftime(preset),
-                except ValueError:
-                    strd = obj.replace(tzinfo=None).strftime(preset)
-                strd = u'%s, %s' % (strd, sbdatetime.sbftime(dt, show_seconds, t_preset, False, markup))
+                strd = u'%s, %s' % (
+                    sbdatetime.sbstrftime(obj, (sickbeard.DATE_PRESET, d_preset)[None is not d_preset]),
+                    sbdatetime.sbftime(dt, show_seconds, t_preset, False, markup))
 
         finally:
             sbdatetime.setlocale(use_has_locale=sbdatetime.has_locale)
             return strd
+
+    @staticmethod
+    def sbstrftime(obj, str_format):
+        try:
+            result = obj.strftime(str_format),
+        except ValueError:
+            result = obj.replace(tzinfo=None).strftime(str_format)
+        return result if isinstance(result, basestring) else \
+            isinstance(result, tuple) and 1 == len(result) and '%s' % result[0] or ''
 
     @static_or_instance
     def totimestamp(self, dt=None, default=None):
