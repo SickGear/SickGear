@@ -1107,9 +1107,11 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         req_headers.update(headers)
     session.headers.update(req_headers)
 
-    mute_connect_err = kwargs.get('mute_connect_err')
-    if mute_connect_err:
-        del(kwargs['mute_connect_err'])
+    mute = []
+    for muted in filter(
+            lambda x: kwargs.get(x, False), ['mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout']):
+        mute += [muted]
+        del kwargs[muted]
 
     # request session ssl verify
     session.verify = False
@@ -1176,17 +1178,19 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             e.errno, _maybe_request_url(e)), logger.WARNING)
         return
     except requests.exceptions.ConnectionError as e:
-        if not mute_connect_err:
+        if 'mute_connect_err' not in mute:
             logger.log(u'Connection error msg:%s while loading URL%s' % (
                 e.message, _maybe_request_url(e)), logger.WARNING)
         return
     except requests.exceptions.ReadTimeout as e:
-        logger.log(u'Read timed out msg:%s while loading URL%s' % (
-            e.message, _maybe_request_url(e)), logger.WARNING)
+        if 'mute_read_timeout' not in mute:
+            logger.log(u'Read timed out msg:%s while loading URL%s' % (
+                e.message, _maybe_request_url(e)), logger.WARNING)
         return
     except (requests.exceptions.Timeout, socket.timeout) as e:
-        logger.log(u'Connection timed out msg:%s while loading URL %s' % (
-            e.message, _maybe_request_url(e, url)), logger.WARNING)
+        if 'mute_connect_timeout' not in mute:
+            logger.log(u'Connection timed out msg:%s while loading URL %s' % (
+                e.message, _maybe_request_url(e, url)), logger.WARNING)
         return
     except Exception as e:
         if e.message:

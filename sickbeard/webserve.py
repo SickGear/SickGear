@@ -846,7 +846,7 @@ class Home(MainHandler):
 
         finalResult = ''
         for curHost in [x.strip() for x in host.split(',')]:
-            curResult = notifiers.plex_notifier.test_notify_pmc(urllib.unquote_plus(curHost), username, password)
+            curResult = notifiers.plex_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
             if len(curResult.split(':')) > 2 and 'OK' in curResult.split(':')[2]:
                 finalResult += 'Successful test notice sent to Plex client ... ' + urllib.unquote_plus(curHost)
             else:
@@ -863,18 +863,13 @@ class Home(MainHandler):
         if None is not password and set('*') == set(password):
             password = sickbeard.PLEX_PASSWORD
 
-        finalResult = ''
-
-        curResult = notifiers.plex_notifier.test_notify_pms(urllib.unquote_plus(host), username, password)
-        if None is curResult:
-            finalResult += 'Successful test of Plex server(s) ... ' + urllib.unquote_plus(host.replace(',', ', '))
-        else:
-            finalResult += 'Test failed for Plex server(s) ... ' + urllib.unquote_plus(curResult.replace(',', ', '))
-        finalResult += '<br />' + '\n'
+        cur_result = notifiers.plex_notifier.test_notify(urllib.unquote_plus(host), username, password, server=True)
+        final_result = (('Test result for', 'Successful test of')['Fail' not in cur_result]
+                        + ' Plex server(s) ... %s<br />\n' % cur_result)
 
         ui.notifications.message('Tested Plex Media Server host(s): ', urllib.unquote_plus(host.replace(',', ', ')))
 
-        return finalResult
+        return final_result
 
     def testLibnotify(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1815,11 +1810,11 @@ class Home(MainHandler):
 
     def updatePLEX(self, *args, **kwargs):
         result = notifiers.plex_notifier.update_library()
-        if None is result:
+        if 'Fail' not in result:
             ui.notifications.message(
                 'Library update command sent to', 'Plex Media Server host(s): ' + sickbeard.PLEX_SERVER_HOST.replace(',', ', '))
         else:
-            ui.notifications.error('Unable to contact', 'Plex Media Server host(s): ' + result.replace(',', ', '))
+            ui.notifications.error('Unable to contact', 'Plex Media Server host(s): ' + result)
         self.redirect('/home/')
 
     def setStatus(self, show=None, eps=None, status=None, direct=False):
