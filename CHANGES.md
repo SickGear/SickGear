@@ -184,6 +184,7 @@
 * Change avi metadata extraction is more fault tolerant and the chance of hanging due to corrupt avi files is reduced
 * Change fuzzyMoment to handle air dates before ~1970 on display show page
 * Change limit availability of fuzzy date functions on General Config/Interface to English locale systems
+* Add Plex notifications secure connect where available (PMS 1.1.4.2757 and newer with username and password)
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
