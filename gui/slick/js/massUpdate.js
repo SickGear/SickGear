@@ -14,7 +14,7 @@ $(document).ready(function() {
 		if (0 == editArr.length)
 			return !1;
 
-		window.location.href = $.SickGear.Root + 'massEdit?toEdit=' + editArr.join('|');
+		window.location.href = $.SickGear.Root + '/manage/massEdit?toEdit=' + editArr.join('|');
 	});
 
 

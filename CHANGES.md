@@ -216,6 +216,7 @@
 * Change ensure sbdatetime functions return formatted string instead of tuple
 * Change image cache processing for browse Trakt page
 * Change logging for newznab response code 910 and add check for empty response data
+* Change improve reverse proxy web_root support
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

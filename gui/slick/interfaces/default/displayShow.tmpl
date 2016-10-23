@@ -573,14 +573,14 @@
 		<td class="col-search">
     #if 0 != int($epResult['season'])
         #if (int($epResult['status']) in $Quality.SNATCHED or int($epResult['status']) in $Quality.DOWNLOADED) and $sickbeard.USE_FAILED_DOWNLOADS
-			<a class="epRetry" id="#echo $epStr#" name="#echo $epStr#" href="retryEpisode?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download" /></a>
+			<a class="epRetry" id="#echo $epStr#" name="#echo $epStr#" href="$sbRoot/home/retryEpisode?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download" /></a>
         #else:
-			<a class="epSearch" id="#echo $epStr#" name="#echo $epStr#" href="searchEpisode?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search" /></a>
+			<a class="epSearch" id="#echo $epStr#" name="#echo $epStr#" href="$sbRoot/home/searchEpisode?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search" /></a>
         #end if
     #end if
 
     #if $sickbeard.USE_SUBTITLES and $show.subtitles and len(set(str($epResult['subtitles']).split(',')).intersection(set($subtitles.wantedLanguages()))) < len($subtitles.wantedLanguages()) and $epResult['location']
-			<a class="epSubtitlesSearch" href="searchEpisodeSubtitles?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/closed_captioning.png" height="16" alt="search subtitles" title="Search subtitles" /></a>
+			<a class="epSubtitlesSearch" href="$sbRoot/home/searchEpisodeSubtitles?show=$show.indexerid&amp;season=$epResult['season']&amp;episode=$epResult['episode']"><img src="$sbRoot/images/closed_captioning.png" height="16" alt="search subtitles" title="Search subtitles" /></a>
     #end if
 		</td>
 	</tr>
