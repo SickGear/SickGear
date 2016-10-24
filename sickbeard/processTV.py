@@ -193,7 +193,7 @@ class ProcessTVShow(object):
                 self._log_helper(u'Unable to figure out what folder to process. ' +
                                  u'If your downloader and SickGear aren\'t on the same PC then make sure ' +
                                  u'you fill out your completed TV download folder in the PP config.')
-                return self.result
+            return self.result
 
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
 

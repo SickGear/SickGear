@@ -210,6 +210,8 @@
 * Change make sure avi files are closed if an error occurs
 * Change refactor hachoir scan_index for non RIFF file processing
 * Change ensure sbdatetime functions return formatted string instead of tuple
+* Change image cache processing for browse Trakt page
+* Change logging for newznab response code 910 and add check for empty response data
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)
