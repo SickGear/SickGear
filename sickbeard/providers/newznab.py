@@ -271,6 +271,7 @@ class NewznabProvider(generic.NZBProvider):
 
         if 'error' == data.tag:
             code = data.get('code', '')
+            description = data.get('description', '')
 
             if '100' == code:
                 raise AuthException('Your API key for %s is incorrect, check your config.' % self.name)
@@ -279,7 +280,8 @@ class NewznabProvider(generic.NZBProvider):
             elif '102' == code:
                 raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.' % self.name)
             elif '910' == code:
-                logger.log('%s currently has their API disabled, please check with provider.' % self.name,
+                logger.log('%s %s, please check with provider.' %
+                           (self.name, ('currently has their API disabled', description)[description not in (None, '')]),
                            logger.WARNING)
             else:
                 logger.log('Unknown error given from %s: %s' % (self.name, data.get('description', '')),
@@ -624,6 +626,10 @@ class NewznabProvider(generic.NZBProvider):
 
                     data = helpers.getURL(search_url)
 
+                    if not data:
+                        logger.log('No Data returned from %s' % self.name, logger.DEBUG)
+                        break
+
                     # hack this in until it's fixed server side
                     if data and not data.startswith('<?xml'):
                         data = '<?xml version="1.0" encoding="ISO-8859-1" ?>%s' % data
@@ -661,7 +667,7 @@ class NewznabProvider(generic.NZBProvider):
                             hits = (total // self.limits + int(0 < (total % self.limits)))
                             hits += int(0 == hits)
                         offset = helpers.tryInt(parsed_xml.find('.//%sresponse' % n_spaces['newznab']).get('offset', 0))
-                    except AttributeError:
+                    except (AttributeError, KeyError):
                         break
 
                     # No items found, prevent from doing another search
