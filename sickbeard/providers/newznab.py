@@ -145,10 +145,10 @@ class NewznabProvider(generic.NZBProvider):
         if not self._last_recent_search:
             try:
                 my_db = db.DBConnection('cache.db')
-                res = my_db.select('SELECT "datetime" FROM "lastrecentsearch" WHERE "name"=?', [self.get_id()])
+                res = my_db.select('SELECT' + ' "datetime" FROM "lastrecentsearch" WHERE "name"=?', [self.get_id()])
                 if res:
                     self._last_recent_search = datetime.datetime.fromtimestamp(int(res[0]['datetime']))
-            except:
+            except (StandardError, Exception):
                 pass
         return self._last_recent_search
 
@@ -157,8 +157,8 @@ class NewznabProvider(generic.NZBProvider):
         try:
             my_db = db.DBConnection('cache.db')
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
-                        [self.get_id(), sbdatetime.totimestamp(value, default=0)])
-        except:
+                         [self.get_id(), sbdatetime.totimestamp(value, default=0)])
+        except (StandardError, Exception):
             pass
         self._last_recent_search = value
 
@@ -212,7 +212,7 @@ class NewznabProvider(generic.NZBProvider):
                                 for s, v in NewznabConstants.catSearchStrings.iteritems():
                                     if None is not re.search(s, cat_name, re.IGNORECASE):
                                         cats.setdefault(v, []).append(cat_id)
-                            except:
+                            except (StandardError, Exception):
                                 continue
                     elif category.get('name', '').upper() in ['XXX', 'OTHER', 'MISC']:
                         for subcat in category.findall('subcat'):
@@ -220,9 +220,9 @@ class NewznabProvider(generic.NZBProvider):
                                 if None is not re.search(r'^Anime$', subcat.attrib['name'], re.IGNORECASE):
                                     cats.setdefault(NewznabConstants.CAT_ANIME, []).append(subcat.attrib['id'])
                                     break
-                            except:
+                            except (StandardError, Exception):
                                 continue
-            except:
+            except (StandardError, Exception):
                 logger.log('Error parsing result for [%s]' % self.name, logger.DEBUG)
 
         if not caps and self._caps and not all_cats and self._caps_all_cats and not cats and self._caps_cats:
@@ -271,6 +271,7 @@ class NewznabProvider(generic.NZBProvider):
 
         if 'error' == data.tag:
             code = data.get('code', '')
+            description = data.get('description', '')
 
             if '100' == code:
                 raise AuthException('Your API key for %s is incorrect, check your config.' % self.name)
@@ -279,8 +280,10 @@ class NewznabProvider(generic.NZBProvider):
             elif '102' == code:
                 raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.' % self.name)
             elif '910' == code:
-                logger.log('%s currently has their API disabled, please check with provider.' % self.name,
-                           logger.WARNING)
+                logger.log(
+                    '%s %s, please check with provider.' %
+                    (self.name, ('currently has their API disabled', description)[description not in (None, '')]),
+                    logger.WARNING)
             else:
                 logger.log('Unknown error given from %s: %s' % (self.name, data.get('description', '')),
                            logger.ERROR)
@@ -410,7 +413,7 @@ class NewznabProvider(generic.NZBProvider):
         try:
             title = item.findtext('title')
             url = item.findtext('link')
-        except Exception:
+        except (StandardError, Exception):
             pass
 
         title = title and re.sub(r'\s+', '.', '%s' % title)
@@ -542,11 +545,11 @@ class NewznabProvider(generic.NZBProvider):
                 p = parser.parse(p, fuzzy=True)
                 try:
                     p = p.astimezone(sb_timezone)
-                except:
+                except (StandardError, Exception):
                     pass
                 if isinstance(p, datetime.datetime):
                     parsed_date = p.replace(tzinfo=None)
-        except:
+        except (StandardError, Exception):
             pass
 
         return parsed_date
@@ -567,7 +570,7 @@ class NewznabProvider(generic.NZBProvider):
             base_params['apikey'] = api_key
 
         results, n_spaces = [], {}
-        total, cnt, search_url, exit_log = 0, len(results), '', False
+        total, cnt, search_url, exit_log = 0, len(results), '', True
 
         cat_sport = self.cats.get(NewznabConstants.CAT_SPORT, ['5060'])
         cat_anime = self.cats.get(NewznabConstants.CAT_ANIME, ['5070'])
@@ -582,9 +585,9 @@ class NewznabProvider(generic.NZBProvider):
                 cat = []
                 if 'Episode' == mode or 'Season' == mode:
                     if not (any(x in params for x in [v for c, v in self.caps.iteritems()
-                                if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]]) or
-                                not self.supports_tvdbid()):
-                        logger.log('Error no id or search term available for search.')
+                                if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]])
+                            or not self.supports_tvdbid()):
+                        logger.log('Show is missing either an id or search term for search')
                         continue
 
                 if need_anime:
@@ -624,6 +627,10 @@ class NewznabProvider(generic.NZBProvider):
 
                     data = helpers.getURL(search_url)
 
+                    if not data:
+                        logger.log('No Data returned from %s' % self.name, logger.DEBUG)
+                        break
+
                     # hack this in until it's fixed server side
                     if data and not data.startswith('<?xml'):
                         data = '<?xml version="1.0" encoding="ISO-8859-1" ?>%s' % data
@@ -631,7 +638,7 @@ class NewznabProvider(generic.NZBProvider):
                     try:
                         parsed_xml, n_spaces = self.cache.parse_and_get_ns(data)
                         items = parsed_xml.findall('channel/item')
-                    except Exception:
+                    except (StandardError, Exception):
                         logger.log('Error trying to load %s RSS feed' % self.name, logger.ERROR)
                         break
 
@@ -661,7 +668,7 @@ class NewznabProvider(generic.NZBProvider):
                             hits = (total // self.limits + int(0 < (total % self.limits)))
                             hits += int(0 == hits)
                         offset = helpers.tryInt(parsed_xml.find('.//%sresponse' % n_spaces['newznab']).get('offset', 0))
-                    except AttributeError:
+                    except (AttributeError, KeyError):
                         break
 
                     # No items found, prevent from doing another search
@@ -676,7 +683,6 @@ class NewznabProvider(generic.NZBProvider):
                             last_date = self._parse_pub_date(items[-1])
                         if not first_date or not last_date or not self._last_recent_search or \
                                 last_date <= self.last_recent_search:
-                            exit_log = True
                             break
 
                     if offset != request_params['offset']:
@@ -685,9 +691,6 @@ class NewznabProvider(generic.NZBProvider):
 
                     request_params['offset'] += request_params['limit']
                     if total <= request_params['offset']:
-                        exit_log = True
-                        logger.log('%s item%s found for episode matching' % (total, helpers.maybe_plural(total)),
-                                   logger.DEBUG)
                         break
 
                     # there are more items available than the amount given in one call, grab some more
@@ -696,17 +699,18 @@ class NewznabProvider(generic.NZBProvider):
                                % (items, helpers.maybe_plural(items), request_params['limit']), logger.DEBUG)
 
                     batch_count = self._log_result(results, mode, cnt, search_url)
+                    exit_log = False
 
                 if 'Cache' == mode and first_date:
                     self.last_recent_search = first_date
 
                 if exit_log:
-                    self._log_result(results, mode, cnt, search_url)
-                    exit_log = False
+                    self._log_search(mode, total, search_url)
 
-                if not try_all_searches and any(x in request_params for x in [v for c, v in self.caps.iteritems()
-                                if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON,
-                                             NewznabConstants.SEARCH_TEXT]]) and len(results):
+                if not try_all_searches and any(x in request_params for x in [
+                    v for c, v in self.caps.iteritems()
+                    if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON,
+                                 NewznabConstants.SEARCH_TEXT]]) and len(results):
                     break
 
         return results, n_spaces
@@ -808,7 +812,7 @@ class NewznabCache(tvcache.TVCache):
                 self._checkAuth()
                 (items, n_spaces) = self.provider.cache_data(need_anime=need_anime, need_sports=need_sports,
                                                              need_sd=need_sd, need_hd=need_hd, need_uhd=need_uhd)
-            except Exception as e:
+            except (StandardError, Exception):
                 items = None
 
             if items:

@@ -67,7 +67,7 @@ from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
 from trakt_helpers import build_config, trakt_collection_remove_account
 from sickbeard.bs4_parser import BS4Parser
-
+from lib.tmdb_api import TMDB
 
 try:
     import json
@@ -3052,10 +3052,11 @@ class NewHomeAddShows(Home):
                     newest_dt = dt_ordinal
                     newest = dt_string
 
-                img_uri = item.get('show', {}).get('images', {}).get('poster', {}).get('thumb', {}) or ''
-                if img_uri:
-                    images = dict(poster=dict(thumb='imagecache?path=trakt/poster/thumb&source=%s' % img_uri))
-                    sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+                tmdbid = item.get('show', {}).get('ids', {}).get('tmdb', 0)
+                tvdbid = item.get('show', {}).get('ids', {}).get('tvdb', 0)
+                traktid = item.get('show', {}).get('ids', {}).get('trakt', 0)
+                images = dict(poster=dict(thumb='imagecache?path=trakt/poster/thumb&filename=%s&tmdbid=%s&tvdbid=%s' %
+                                                ('%s.jpg' % traktid, tmdbid, tvdbid)))
 
                 filtered.append(dict(
                     premiered=dt_ordinal,
@@ -3068,7 +3069,7 @@ class NewHomeAddShows(Home):
                     genres=('' if 'genres' not in item['show'] else
                             ', '.join(['%s' % v for v in item['show']['genres']])),
                     ids=item['show']['ids'],
-                    images='' if not img_uri else images,
+                    images=images,
                     overview=('' if 'overview' not in item['show'] or None is item['show']['overview'] else
                               self.encode_html(item['show']['overview'][:250:].strip())),
                     rating=0 < item['show'].get('rating', 0) and
@@ -5603,18 +5604,87 @@ class Cache(MainHandler):
 
 
 class CachedImages(MainHandler):
-    def index(self, path='', source=None, *args, **kwargs):
+    @staticmethod
+    def should_try_image(filename, source, days=1, minutes=0):
+        try:
+            dummy_file = '%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], source)
+            if ek.ek(os.path.isfile, dummy_file):
+                if ek.ek(os.stat, dummy_file).st_mtime < time.mktime((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes)).timetuple()):
+                    CachedImages.delete_dummy_image(dummy_file)
+                    return True
+                return False
+        except:
+            pass
+        return True
+
+    @staticmethod
+    def create_dummy_image(filename, source):
+        dummy_file = '%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], source)
+        CachedImages.delete_dummy_image(dummy_file)
+        try:
+            with open(dummy_file, 'w'):
+                pass
+        except:
+            pass
+
+    @staticmethod
+    def delete_dummy_image(dummy_file):
+        try:
+            if ek.ek(os.path.isfile, dummy_file):
+                ek.ek(os.remove, dummy_file)
+        except:
+            pass
+
+    @staticmethod
+    def delete_all_dummy_images(filename):
+        for f in ['tmdb', 'tvdb']:
+            CachedImages.delete_dummy_image('%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], f))
+
+    def index(self, path='', source=None, filename=None, tmdbid=None, tvdbid=None, *args, **kwargs):
 
         path = path.strip('/')
-        file_name = ek.ek(os.path.basename, source)
+        file_name = ''
+        if None is not source:
+            file_name = ek.ek(os.path.basename, source)
+        elif filename not in [None, 0, '0']:
+            file_name = filename
         static_image_path = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', path, file_name)
         static_image_path = ek.ek(os.path.abspath, static_image_path.replace('\\', '/'))
-        if not ek.ek(os.path.isfile, static_image_path) and source is not None and has_image_ext(file_name) \
-                and source in sickbeard.CACHE_IMAGE_URL_LIST:
+        if not ek.ek(os.path.isfile, static_image_path) and has_image_ext(file_name):
             basepath = ek.ek(os.path.dirname, static_image_path)
             helpers.make_dirs(basepath)
-            if not helpers.download_file(source, static_image_path) and source.find('trakt.us'):
-                helpers.download_file(source.replace('trakt.us', 'trakt.tv'), static_image_path)
+            s = ''
+            tmdbimage = False
+            if source is not None and source in sickbeard.CACHE_IMAGE_URL_LIST:
+                s = source
+            if source is None and tmdbid not in [None, 0, '0'] and self.should_try_image(static_image_path, 'tmdb'):
+                tmdbimage = True
+                try:
+                    tmdbapi = TMDB(sickbeard.TMDB_API_KEY)
+                    tmdbconfig = tmdbapi.Configuration().info()
+                    images = tmdbapi.TV(helpers.tryInt(tmdbid)).images()
+                    s = '%s%s%s' % (tmdbconfig['images']['base_url'], tmdbconfig['images']['poster_sizes'][3], sorted(images['posters'], key=lambda x: x['vote_average'], reverse=True)[0]['file_path']) if len(images['posters']) > 0 else ''
+                except:
+                    s = ''
+            if s and not helpers.download_file(s, static_image_path) and s.find('trakt.us'):
+                helpers.download_file(s.replace('trakt.us', 'trakt.tv'), static_image_path)
+            if tmdbimage and not ek.ek(os.path.isfile, static_image_path):
+                self.create_dummy_image(static_image_path, 'tmdb')
+
+            if source is None and tvdbid not in [None, 0, '0'] and not ek.ek(os.path.isfile, static_image_path) and self.should_try_image(static_image_path, 'tvdb'):
+                try:
+                    r = sickbeard.indexerApi(INDEXER_TVDB).indexer()[helpers.tryInt(tvdbid), False]
+                    if hasattr(r, 'data') and 'poster' in r.data:
+                        s = r.data['poster']
+                except:
+                    s = ''
+                if s:
+                    helpers.download_file(s, static_image_path)
+                if not ek.ek(os.path.isfile, static_image_path):
+                    self.create_dummy_image(static_image_path, 'tvdb')
+
+            if ek.ek(os.path.isfile, static_image_path):
+                self.delete_all_dummy_images(static_image_path)
 
         if not ek.ek(os.path.isfile, static_image_path):
             self.redirect('images/trans.png')

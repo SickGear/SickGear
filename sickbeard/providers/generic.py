@@ -904,7 +904,7 @@ class TorrentProvider(object, GenericProvider):
                     self.urls[k] = v % {'home': cur_url, 'vars': getattr(self, 'url_vars', {}).get(k, '')}
 
                 if last_url != cur_url or (expire and not (expire > int(time.time()))):
-                    sickbeard.PROVIDER_HOMES[self.get_id()] = (cur_url, int(time.time()) + (15*60))
+                    sickbeard.PROVIDER_HOMES[self.get_id()] = (cur_url, int(time.time()) + (60*60))
                     sickbeard.save_config()
                 return cur_url
 
