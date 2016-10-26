@@ -210,6 +210,7 @@ UPDATE_FREQUENCY = None
 RECENTSEARCH_STARTUP = False
 BACKLOG_FREQUENCY = None
 BACKLOG_STARTUP = False
+BACKLOG_NOFULL = False
 
 DEFAULT_AUTOPOSTPROCESSER_FREQUENCY = 10
 DEFAULT_RECENTSEARCH_FREQUENCY = 40
@@ -514,7 +515,7 @@ def initialize(consoleLogging=True):
             USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, \
             PLEX_UPDATE_LIBRARY, PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, \
             USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
-            BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, SKIP_REMOVED_FILES, \
+            BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, BACKLOG_NOFULL, SKIP_REMOVED_FILES, \
             showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             NEWZNAB_DATA, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
             QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, RECENTSEARCH_STARTUP, \
@@ -740,6 +741,7 @@ def initialize(consoleLogging=True):
 
         RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 0))
         BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 0))
+        BACKLOG_NOFULL = bool(check_setting_int(CFG, 'General', 'backlog_nofull', 0))
         SKIP_REMOVED_FILES = check_setting_int(CFG, 'General', 'skip_removed_files', 0)
 
         USENET_RETENTION = check_setting_int(CFG, 'General', 'usenet_retention', 500)
@@ -1498,6 +1500,7 @@ def save_config():
     new_config['General']['allow_high_priority'] = int(ALLOW_HIGH_PRIORITY)
     new_config['General']['recentsearch_startup'] = int(RECENTSEARCH_STARTUP)
     new_config['General']['backlog_startup'] = int(BACKLOG_STARTUP)
+    new_config['General']['backlog_nofull'] = int(BACKLOG_NOFULL)
     new_config['General']['skip_removed_files'] = int(SKIP_REMOVED_FILES)
     new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
     new_config['General']['status_default'] = int(STATUS_DEFAULT)
