@@ -185,6 +185,8 @@
 * Change fuzzyMoment to handle air dates before ~1970 on display show page
 * Change limit availability of fuzzy date functions on General Config/Interface to English locale systems
 * Add Plex notifications secure connect where available (PMS 1.1.4.2757 and newer with username and password)
+* Add if all torrent caches fail, save magnets from RARBG and TPB as files for clients (or plugins) that now support it
+* Add advice to logs if all caches fail to switch to direct client connect instead of the basic blackhole method
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
