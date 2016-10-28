@@ -707,7 +707,7 @@ class ProcessTVShow(object):
                 # processed in the past
                 return False
 
-        showlink = ('for "<a href="/home/displayShow?show=%s" target="_blank">%s</a>"' % (parse_result.show.indexerid, parse_result.show.name),
+        showlink = ('for "<a href="%s/home/displayShow?show=%s" target="_blank">%s</a>"' % (sickbeard.WEB_ROOT, parse_result.show.indexerid, parse_result.show.name),
                     parse_result.show.name)[self.any_vid_processed]
 
         ep_detail_sql = ''

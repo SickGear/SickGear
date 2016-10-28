@@ -1310,11 +1310,7 @@ def start():
 
 
 def halt():
-    global __INITIALIZED__, backlogSearchScheduler, \
-        showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
-        properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
-        subtitlesFinderScheduler, traktCheckerScheduler, \
-        recentSearchScheduler, events, started
+    global __INITIALIZED__, started
 
     with INIT_LOCK:
 
@@ -1322,54 +1318,30 @@ def halt():
 
             logger.log(u'Aborting all threads')
 
-            events.stop.set()
-            logger.log(u'Waiting for the EVENTS thread to exit')
-            try:
-                events.join(10)
-            except:
-                pass
+            schedulers = [
+                recentSearchScheduler,
+                backlogSearchScheduler,
+                showUpdateScheduler,
+                versionCheckScheduler,
+                showQueueScheduler,
+                searchQueueScheduler,
 
-            recentSearchScheduler.stop.set()
-            logger.log(u'Waiting for the RECENTSEARCH thread to exit')
-            try:
-                recentSearchScheduler.join(10)
-            except:
-                pass
+                properFinderScheduler,
+                autoPostProcesserScheduler,
+                subtitlesFinderScheduler,
 
-            backlogSearchScheduler.stop.set()
-            logger.log(u'Waiting for the BACKLOG thread to exit')
-            try:
-                backlogSearchScheduler.join(10)
-            except:
-                pass
+                events
+            ]
 
-            showUpdateScheduler.stop.set()
-            logger.log(u'Waiting for the SHOWUPDATER thread to exit')
-            try:
-                showUpdateScheduler.join(10)
-            except:
-                pass
+            for thread in schedulers:
+                thread.stop.set()
 
-            versionCheckScheduler.stop.set()
-            logger.log(u'Waiting for the VERSIONCHECKER thread to exit')
-            try:
-                versionCheckScheduler.join(10)
-            except:
-                pass
-
-            showQueueScheduler.stop.set()
-            logger.log(u'Waiting for the SHOWQUEUE thread to exit')
-            try:
-                showQueueScheduler.join(10)
-            except:
-                pass
-
-            searchQueueScheduler.stop.set()
-            logger.log(u'Waiting for the SEARCHQUEUE thread to exit')
-            try:
-                searchQueueScheduler.join(10)
-            except:
-                pass
+            for thread in schedulers:
+                logger.log('Waiting for the %s thread to exit' % thread.name)
+                try:
+                    thread.join(10)
+                except RuntimeError:
+                    pass
 
             if PROCESS_AUTOMATICALLY:
                 autoPostProcesserScheduler.stop.set()
@@ -1378,14 +1350,6 @@ def halt():
                     autoPostProcesserScheduler.join(10)
                 except:
                     pass
-
-            # if USE_TRAKT:
-            #     traktCheckerScheduler.stop.set()
-            #     logger.log(u'Waiting for the TRAKTCHECKER thread to exit')
-            #     try:
-            #         traktCheckerScheduler.join(10)
-            #     except:
-            #         pass
 
             if DOWNLOAD_PROPERS:
                 properFinderScheduler.stop.set()

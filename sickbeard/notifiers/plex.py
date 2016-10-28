@@ -196,17 +196,18 @@ class PLEXNotifier:
 
         if sickbeard.USE_PLEX and sickbeard.PLEX_UPDATE_LIBRARY or test:
 
-            if not sickbeard.PLEX_SERVER_HOST and not any([host]):
-                msg = u'No Plex Media Server host specified, check your settings'
-                self.log(msg, logger.DEBUG)
-                return '%sFail: %s' % (('', '<br />')[test], msg)
+            if not test:
+                if not sickbeard.PLEX_SERVER_HOST:
+                    msg = u'No Plex Media Server host specified, check your settings'
+                    self.log(msg, logger.DEBUG)
+                    return '%sFail: %s' % (('', '<br />')[test], msg)
 
-            if not host:
-                host = sickbeard.PLEX_SERVER_HOST
-            if not username:
-                username = sickbeard.PLEX_USERNAME
-            if not password:
-                password = sickbeard.PLEX_PASSWORD
+                if not host:
+                    host = sickbeard.PLEX_SERVER_HOST
+                if not username:
+                    username = sickbeard.PLEX_USERNAME
+                if not password:
+                    password = sickbeard.PLEX_PASSWORD
 
             # if username and password were provided, fetch the auth token from plex.tv
             token_arg = None

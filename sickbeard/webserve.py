@@ -864,6 +864,8 @@ class Home(MainHandler):
             password = sickbeard.PLEX_PASSWORD
 
         cur_result = notifiers.plex_notifier.test_notify(urllib.unquote_plus(host), username, password, server=True)
+        if '<br />' == cur_result:
+            cur_result += 'Fail: No valid host set to connect with'
         final_result = (('Test result for', 'Successful test of')['Fail' not in cur_result]
                         + ' Plex server(s) ... %s<br />\n' % cur_result)
 
@@ -1117,7 +1119,6 @@ class Home(MainHandler):
             return self.redirect('/home/')
 
         t = PageTemplate(headers=self.request.headers, file='restart.tmpl')
-        t.submenu = self.HomeMenu()
 
         # restart
         sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
@@ -1129,16 +1130,11 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
-        updated = sickbeard.versionCheckScheduler.action.update()  # @UndefinedVariable
-        if updated:
-            # do a hard restart
-            sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
+        if sickbeard.versionCheckScheduler.action.update():
+            return self.restart(pid)
 
-            t = PageTemplate(headers=self.request.headers, file='restart_bare.tmpl')
-            return t.respond()
-        else:
-            return self._genericMessage('Update Failed',
-                                        "Update wasn't successful, not restarting. Check your log for more information.")
+        return self._genericMessage('Update Failed',
+                                    'Update wasn\'t successful, not restarting. Check your log for more information.')
 
     def branchCheckout(self, branch):
         sickbeard.BRANCH = branch

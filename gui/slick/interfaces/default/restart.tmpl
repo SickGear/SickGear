@@ -1,16 +1,87 @@
-#import sickbeard
-#import datetime
-#from sickbeard.common import *
-#from sickbeard import db
-##
-#set global $title = 'Home'
-#set global $header = 'Restarting SickGear'
-#set global $sbPath = '..'
-#set global $topmenu = 'home'
-##
-#import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/restart_bare.tmpl')
+<title>SickGear - Restarting</title>
+<link rel="shortcut icon" href="$sbRoot/images/ico/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="$sbRoot/images/ico/apple-touch-icon-180x180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="$sbRoot/images/ico/apple-touch-icon-152x152.png">
+<link rel="apple-touch-icon" sizes="144x144" href="$sbRoot/images/ico/apple-touch-icon-144x144.png">
+<link rel="apple-touch-icon" sizes="120x120" href="$sbRoot/images/ico/apple-touch-icon-120x120.png">
+<link rel="apple-touch-icon" sizes="114x114" href="$sbRoot/images/ico/apple-touch-icon-114x114.png">
+<link rel="apple-touch-icon" sizes="76x76" href="$sbRoot/images/ico/apple-touch-icon-76x76.png">
+<link rel="apple-touch-icon" sizes="72x72" href="$sbRoot/images/ico/apple-touch-icon-72x72.png">
+<link rel="apple-touch-icon" sizes="60x60" href="$sbRoot/images/ico/apple-touch-icon-60x60.png">
+<link rel="apple-touch-icon" sizes="57x57" href="$sbRoot/images/ico/apple-touch-icon-57x57.png">
+<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-192x192.png" sizes="192x192">
+<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-160x160.png" sizes="160x160">
+<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-16x16.png" sizes="16x16">
+<meta name="msapplication-TileColor" content="#2b5797">
+<meta name="msapplication-TileImage" content="$sbRoot/images/ico/mstile-144x144.png">
+<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+<script type="text/javascript" src="$sbRoot/js/lib/jquery-1.8.3.min.js?v=$sbPID"></script>
+
+#try:
+    #set sgHost = $sbHost
+    #set sgPort = $sbHttpPort
+    #set sgUseHttps = $sbHttpsEnabled
+    #set themeSpinner = $sbThemeName
+#except NameMapper.NotFound:
+    #set sgHost = 'localhost'
+    #set sgPort = $sickbeard.WEB_PORT
+    #set sgUseHttps = False
+    #set themeSpinner = $sickbeard.THEME_NAME
+#end try
+#set themeSpinner = '-dark' if 'dark' == themeSpinner else ''
+##
+<script type="text/javascript" charset="utf-8">
+<!--
+	\$.SickGear = {
+		Root: '$sbRoot',
+		Host: '$sgHost',
+		Port: '$sgPort',
+		UseHttps: #echo ('!1', '!0')[False != $sgUseHttps and 0 != $sgUseHttps]#
+	};
+//-->
+</script>
+
+<script type="text/javascript" src="$sbRoot/js/restart.js?v=$sbPID"></script>
+
+<style>
+body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;margin-bottom:-10px;background:url(${sbRoot}/images/sickgear.png) no-repeat 0 0}.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sbRoot}/images/loading16${themeSpinner}.gif) no-repeat 0 0}.sub-title{padding-bottom:10px}.desc, .images i{margin-right:6px}.images i{vertical-align:middle}.hide,.hide-yes,.hide-no{display:none}#restart_fail_message{padding-top:10px}
+</style>
+
+<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID">
+<link rel="stylesheet" type="text/css" href="$sbRoot/css/#echo ('dark', 'light')['' == themeSpinner]#.css?v=$sbPID">
+
+</head><body><span class="sglogo"></span>
+<div class="bfr"><img src="$sbRoot/images/loading16${themeSpinner}.gif" /><img src="$sbRoot/images/yes16.png" /><img src="$sbRoot/images/no16.png" /></div>
+
+<h2 class="sub-title">Performing Restart</h2>
+
+<div id="shut_down_message">
+<span class="desc"><span class="grey-text">Waiting for SickGear to</span> shut down: </span>
+<span class="images"><i class="spinner"></i><span class="hide-yes"><i class="yes"></i></span></span>
+</div>
+
+<div class="hide" id="restart_message">
+<span class="desc"><span class="grey-text">Waiting for SickGear to</span> start up: </span>
+<span class="images"><i class="spinner"></i><span class="hide-yes"><i class="yes"></i></span><span class="hide-no"><i class="no"></i></span></span>
+</div>
+
+<div class="hide" id="refresh_message">
+<span class="desc"><span class="grey-text">Waiting for SickGear </span> home page: </span>
+<span class="images"><i class="spinner"></i></span>
+</div>
+
+<div class="hide" id="restart_fail_message">
+<span class="red-text">Error:</span> The restart timed out, perhaps something prevented SickGear from starting ?
+</div>
+
+</body></html>
