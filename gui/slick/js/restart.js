@@ -22,13 +22,13 @@ function is_alive() {
 
 			$('#shut_down_message').find('.spinner,.hide-yes').removeClass();
 			$('#restart_message').removeClass();
-			setTimeout(is_alive, 250);
+			setTimeout(is_alive, 100);
 
 		} else if ('' == $.SickGear.currentPid || $.SickGear.currentPid == data.msg) {
 			// if this is before we've even shut down then just try again later
 
 			$.SickGear.currentPid = data.msg;
-			setTimeout(is_alive, 250);
+			setTimeout(is_alive, 100);
 
 		} else {
 			// if we're ready to go then redirect to new url
@@ -78,7 +78,7 @@ $(document).ready(function() {
 
 		if (0 == timeoutId) {
 
-			timeoutId = setTimeout(is_alive, 250);
+			timeoutId = setTimeout(is_alive, 100);
 		}
 	});
 

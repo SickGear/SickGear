@@ -189,6 +189,7 @@
 * Add advice to logs if all caches fail to switch to direct client connect instead of the basic blackhole method
 * Add search setting "Disable auto full backlog"
 * Change improve performance and reduce start up time
+* Fix button "Checkout branch" when stuck on disabled
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
