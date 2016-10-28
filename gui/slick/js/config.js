@@ -302,8 +302,8 @@ function fetch_branches() {
 				$.each(branches, function (i, text) {
 					add_option_to_branches(text);
 				});
-				$('#branchVersion').find('option[value=' + data['current'] + ']').attr('selected','selected');
 				$('#branchCheckout').removeAttr('disabled');
+				$('#branchVersion').find('option[value="' + data['current'] + '"]').attr('selected', 'selected');
 			} else {
 				add_option_to_branches('No branches available');
 			}
