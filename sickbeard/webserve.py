@@ -4483,7 +4483,8 @@ class ConfigSearch(Config):
                    download_propers=None, check_propers_interval=None, allow_high_priority=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
                    torrent_label=None, torrent_path=None, torrent_verify_cert=None,
-                   torrent_seed_time=None, torrent_paused=None, torrent_high_bandwidth=None, ignore_words=None, require_words=None):
+                   torrent_seed_time=None, torrent_paused=None, torrent_high_bandwidth=None, ignore_words=None, require_words=None,
+                   backlog_nofull=None):
 
         results = []
 
@@ -4499,6 +4500,11 @@ class ConfigSearch(Config):
         config.change_BACKLOG_FREQUENCY(backlog_frequency)
         sickbeard.search_backlog.BacklogSearcher.change_backlog_parts(old_backlog_frequency, sickbeard.BACKLOG_FREQUENCY)
         sickbeard.BACKLOG_DAYS = config.to_int(backlog_days, default=7)
+
+        sickbeard.BACKLOG_NOFULL = bool(config.checkbox_to_value(backlog_nofull))
+        if sickbeard.BACKLOG_NOFULL:
+            my_db = db.DBConnection('cache.db')
+            my_db.action('DELETE FROM backlogparts')
 
         sickbeard.USE_NZBS = config.checkbox_to_value(use_nzbs)
         sickbeard.USE_TORRENTS = config.checkbox_to_value(use_torrents)

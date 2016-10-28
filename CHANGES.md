@@ -187,6 +187,7 @@
 * Add Plex notifications secure connect where available (PMS 1.1.4.2757 and newer with username and password)
 * Add if all torrent caches fail, save magnets from RARBG and TPB as files for clients (or plugins) that now support it
 * Add advice to logs if all caches fail to switch to direct client connect instead of the basic blackhole method
+* Add search setting "Disable auto full backlog"
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

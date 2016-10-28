@@ -136,11 +136,11 @@ class BacklogSearcher:
                     if i % parts == 0:
                         p += 1
                     cl.append(['INSERT INTO backlogparts (part, indexerid, indexer) VALUES (?,?,?)',
-                                   [p, s['indexerid'], s['indexer']]])
+                               [p, s['indexerid'], s['indexer']]])
 
                 if 0 < len(cl):
                     my_db.mass_action(cl)
-        except:
+        except (StandardError, Exception):
             pass
 
     def search_backlog(self, which_shows=None, force_type=NORMAL_BACKLOG, force=False):
@@ -157,13 +157,12 @@ class BacklogSearcher:
             standard_backlog = True
 
         now = datetime.datetime.now()
-        torrent_only = continued_backlog = False
+        any_torrent_enabled = continued_backlog = False
         if not force and standard_backlog and (datetime.datetime.now() - datetime.datetime.fromtimestamp(
                 self._get_last_runtime())) < datetime.timedelta(hours=23):
-            if [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog and
-                    x.providerType == GenericProvider.TORRENT]:
-                torrent_only = True
-            else:
+            any_torrent_enabled = any([x for x in sickbeard.providers.sortedProviderList() if x.is_active()
+                                       and x.enable_backlog and x.providerType == GenericProvider.TORRENT])
+            if not any_torrent_enabled:
                 logger.log('Last scheduled Backlog run was within the last day, skipping this run.', logger.DEBUG)
                 return
 
@@ -176,14 +175,17 @@ class BacklogSearcher:
         limited_from_date = datetime.date.today() - datetime.timedelta(days=sickbeard.BACKLOG_DAYS)
 
         limited_backlog = False
-        if not which_shows and torrent_only:
+        if standard_backlog and (any_torrent_enabled or sickbeard.BACKLOG_NOFULL):
             logger.log(u'Running limited backlog for episodes missed during the last %s day(s)' %
                        str(sickbeard.BACKLOG_DAYS))
             from_date = limited_from_date
             limited_backlog = True
 
         runparts = []
-        if standard_backlog and not torrent_only:
+        if standard_backlog and not any_torrent_enabled and sickbeard.BACKLOG_NOFULL:
+            logger.log(u'Skipping automated full backlog search because it is disabled in search settings')
+
+        if standard_backlog and not any_torrent_enabled and not sickbeard.BACKLOG_NOFULL:
             my_db = db.DBConnection('cache.db')
             sql_result = my_db.select('SELECT * FROM backlogparts WHERE part in (SELECT MIN(part) FROM backlogparts)')
             if sql_result:
@@ -198,9 +200,7 @@ class BacklogSearcher:
                 continued_backlog = True
                 my_db.action('DELETE FROM backlogparts WHERE part = ?', [part_nr])
 
-        forced = False
-        if not which_shows and force_type != NORMAL_BACKLOG:
-            forced = True
+        forced = standard_backlog and force_type != NORMAL_BACKLOG
 
         wanted_list = []
         for curShow in show_list:
@@ -211,7 +211,7 @@ class BacklogSearcher:
                     wanted_list.append(w)
 
         parts = []
-        if standard_backlog and not torrent_only and not continued_backlog:
+        if standard_backlog and not any_torrent_enabled and not continued_backlog and not sickbeard.BACKLOG_NOFULL:
             fullbacklogparts = sum([len(w) for w in wanted_list if w]) // sickbeard.BACKLOG_FREQUENCY
             h_part = []
             counter = 0
@@ -238,7 +238,7 @@ class BacklogSearcher:
             wanted_list = [w for w in wanted_list if w and in_showlist(w.itervalues().next()[0].show, runparts)]
 
         limited_wanted_list = []
-        if standard_backlog and not torrent_only and runparts:
+        if standard_backlog and not any_torrent_enabled and runparts:
             for curShow in sickbeard.showList:
                 if not curShow.paused and not in_showlist(curShow, runparts):
                     w = wanted_episodes(curShow, limited_from_date, make_dict=True,
@@ -246,11 +246,11 @@ class BacklogSearcher:
                     if w:
                         limited_wanted_list.append(w)
 
-        self.add_backlog_item(wanted_list, standard_backlog, limited_backlog, forced, torrent_only)
-        if standard_backlog and not torrent_only and limited_wanted_list:
-            self.add_backlog_item(limited_wanted_list, standard_backlog, True, forced, torrent_only)
+        self.add_backlog_item(wanted_list, standard_backlog, limited_backlog, forced, any_torrent_enabled)
+        if standard_backlog and not any_torrent_enabled and limited_wanted_list:
+            self.add_backlog_item(limited_wanted_list, standard_backlog, True, forced, any_torrent_enabled)
 
-        if standard_backlog and not torrent_only and not continued_backlog:
+        if standard_backlog and not sickbeard.BACKLOG_NOFULL and not any_torrent_enabled and not continued_backlog:
             cl = ([], [['DELETE FROM backlogparts']])[len(parts) > 1]
             for i, l in enumerate(parts):
                 if 0 == i:
@@ -264,11 +264,11 @@ class BacklogSearcher:
 
         # don't consider this an actual backlog search if we only did recent eps
         # or if we only did certain shows
-        if from_date == datetime.date.fromordinal(1) and not which_shows:
+        if from_date == datetime.date.fromordinal(1) and standard_backlog:
             self._set_last_backlog(cur_date)
             self._get_last_backlog()
 
-        if standard_backlog and not torrent_only:
+        if standard_backlog and not any_torrent_enabled:
             self._set_last_runtime(now)
 
         self.amActive = False

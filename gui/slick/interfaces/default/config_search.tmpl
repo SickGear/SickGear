@@ -52,7 +52,7 @@
 								<span class="component-title">Download propers</span>
 								<span class="component-desc">
 									<input type="checkbox" name="download_propers" id="download_propers" class="enabler"<%= html_checked if sickbeard.DOWNLOAD_PROPERS == True else '' %>>
-									<p>replace original download with "Proper" or "Repack" if nuked</p>
+									<p>replace original download with 'Proper' or 'Repack' if nuked</p>
 								</span>
 							</label>
 						</div>
@@ -93,6 +93,24 @@
 						</div>
 
 						<div class="field-pair">
+							<label for="backlog_nofull">
+								<span class="component-title">Disable auto full backlog</span>
+								<span class="component-desc">
+									<input type="checkbox" name="backlog_nofull" id="backlog_nofull" class="enabler viewIf"<%= html_checked if sickbeard.BACKLOG_NOFULL == True else '' %>>
+									<p>backlog search manually by setting episodes 'Wanted' or via 'Backlog overview'</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair" id="content_backlog_nofull">
+							<label>
+								<span class="component-title"><em class="grey-text">Backlog search spread</em></span>
+								<span class="component-desc">
+									<p><em class="grey-text">to access this setting, unselect "<span class="boldest">Disable auto full backlog</span>" search above</em></p>
+								</span>
+							</label>
+						</div>
+						<div class="field-pair hide_if_backlog_nofull">
 							<label>
 								<span class="component-title">Backlog search spread</span>
 								<span class="component-desc">
@@ -116,7 +134,7 @@
 							<label>
 								<span class="component-title">Ignore result with any word</span>
 								<span class="component-desc">
-									<input type="text" name="ignore_words" value="$sickbeard.IGNORE_WORDS" class="form-control input-sm input350"><p>(opt: start "regex:")</p>
+									<input type="text" name="ignore_words" value="$sickbeard.IGNORE_WORDS" class="form-control input-sm input350"><p>(opt: start 'regex:')</p>
 									<p class="clear-left note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words</p>
 								</span>
 								<span class="component-title">Shows with custom ignores</span>
@@ -138,7 +156,7 @@
 							<label>
 								<span class="component-title">Require all these words</span>
 								<span class="component-desc">
-									<input type="text" name="require_words" value="$sickbeard.REQUIRE_WORDS" class="form-control input-sm input350"><p>(opt: start "regex:")</p>
+									<input type="text" name="require_words" value="$sickbeard.REQUIRE_WORDS" class="form-control input-sm input350"><p>(opt: start 'regex:')</p>
 									<p class="clear-left note">ignore search result <em class="grey-text">unless its title contains all</em> of these comma seperated words</p>
 								</span>
 								<span class="component-title">Shows with custom requires</span>
