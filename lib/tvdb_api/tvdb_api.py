@@ -864,7 +864,7 @@ class Tvdb:
 
                     if None is not v:
                         if 'filename' == k:
-                            v = self.config['url_artworkPrefix'] % v
+                            v = v and (self.config['url_artworkPrefix'] % v) or v
                         else:
                             v = self._clean_data(v)
 

@@ -218,6 +218,7 @@
 * Change image cache processing for browse Trakt page
 * Change logging for newznab response code 910 and add check for empty response data
 * Change improve reverse proxy web_root support
+* Fix "error trying to retrieve image" from tvdb due to there is no image to fetch
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

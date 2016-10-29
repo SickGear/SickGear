@@ -99,8 +99,11 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             data = self.get_url(url, timeout=90)
             if not data:
                 return result
+            if '<strong>Limit Reached</strong>' in data:
+                logger.log('Daily Nzb Download limit reached', logger.DEBUG)
+                return result
             if '</nzb>' not in data or 'seem to be logged in' in data:
-                logger.log(u'Failed nzb data response: %s' % data, logger.DEBUG)
+                logger.log('Failed nzb data response: %s' % data, logger.DEBUG)
                 return result
             result = classes.NZBDataSearchResult(episodes)
             result.extraInfo += [data]
