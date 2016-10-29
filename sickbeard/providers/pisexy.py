@@ -73,12 +73,15 @@ class PiSexyProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        header = torrent_rows[0].find_all('td')
+                        peers_td = ([x.get_text().strip().lower() for x in header].index('see/lee') - len(header))
+                        size_td = ([x.get_text().strip().lower() for x in header].index('size'))
                         for tr in torrent_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
                             try:
-                                seeders, leechers = 2 * [cells[-4].get_text().strip()]
+                                seeders, leechers = 2 * [cells[peers_td].get_text().strip()]
                                 seeders, leechers = [tryInt(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
                                 if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['valid_cat']) \
@@ -87,7 +90,7 @@ class PiSexyProvider(generic.TorrentProvider):
 
                                 info = tr.find('a', href=rc['info'])
                                 title = (rc['title'].sub('', info.attrs.get('title', '')) or info.get_text()).strip()
-                                size = cells[3].get_text().strip()
+                                size = cells[size_td].get_text().strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, KeyError, IndexError):
                                 continue
