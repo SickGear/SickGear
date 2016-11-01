@@ -66,7 +66,7 @@ $(document).ready(function () {
 				'lang': elIndexerLang.val(),
 				'indexer': elTvDatabase.val()
 			},
-			timeout: parseInt($('#indexer_timeout').val(), 10) * 1000,
+			timeout: parseInt($('#indexer_timeout').val(), 10) * parseInt($('#indexer_count').val(), 2) * 1000 + 15000,
 			dataType: 'json',
 			error: function () {
 				$('#searchResults').empty().html('search timed out, try again or try another database');

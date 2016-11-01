@@ -220,6 +220,7 @@
 * Change improve reverse proxy web_root support
 * Fix "error trying to retrieve image" from tvdb due to there is no image to fetch
 * Fix PiSexy for vip user class
+* Change retry sleep timeout for Trakt searches to prevent issues when Trakt is down
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

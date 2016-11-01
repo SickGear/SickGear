@@ -2426,7 +2426,7 @@ class NewHomeAddShows(Home):
 
         filtered = []
         try:
-            resp = TraktAPI().trakt_request(url)
+            resp = TraktAPI().trakt_request(url, sleep_retry=5)
             if len(resp):
                 filtered = resp
         except TraktException as e:
