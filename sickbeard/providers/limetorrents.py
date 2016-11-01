@@ -77,13 +77,15 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                         if not len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[0]:  # 0 = all rows
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
                             try:
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n.replace(',', ''), n) for n in [
-                                    cells[x].get_text().strip() for x in -3, -2, -4]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 

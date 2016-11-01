@@ -34,9 +34,9 @@ class BTSceneProvider(generic.TorrentProvider):
         self.url_home = ['http://www.btstorrent.cc/', 'http://bittorrentstart.com/',
                          'http://diriri.xyz/', 'http://mytorrentz.tv/']
 
-        self.url_vars = {'search': 'results.php?q=%s&category=series&order=1', 'browse': 'lastdaycat/type/Series/',
+        self.url_vars = {'search': '?q=%s&category=series&order=1', 'browse': 'lastdaycat/type/Series/',
                          'get': 'torrentdownload.php?id=%s'}
-        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s',
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(vars)s',
                          'browse': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
         self.minseed, self.minleech = 2 * [None]
@@ -56,13 +56,24 @@ class BTSceneProvider(generic.TorrentProvider):
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
             'info': '\w+?(\d+)[.]html', 'verified': 'Verified'}.iteritems())
+
+        url = self.url
+        response = self.get_url(url)
+        form = re.findall('(?is)(<form[^>]+)', response)
+        response = any(form) and form[0] or response
+        action = re.findall('<form[^>]+action=[\'"]([^\'"]*)', response)[0]
+        url = action if action.startswith('http') else \
+            url if not action else \
+            (url + action) if action.startswith('?') else \
+            self.urls['config_provider_home_uri'] + action.lstrip('/')
+
         for mode in search_params.keys():
             for search_string in search_params[mode]:
 
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 search_url = self.urls['browse'] if 'Cache' == mode \
-                    else self.urls['search'] % (urllib.quote_plus(search_string))
+                    else url + self.urls['search'] % (urllib.quote_plus(search_string))
 
                 html = self.get_url(search_url)
 
@@ -76,13 +87,15 @@ class BTSceneProvider(generic.TorrentProvider):
                         if not len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows:
                             cells = tr.find_all('td')
                             if 6 > len(cells):
                                 continue
                             try:
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[x].get_text().strip() for x in -4, -3, -5]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers) or \
                                         self.confirmed and not (tr.find('img', src=rc['verified'])
                                                                 or tr.find('img', title=rc['verified'])):

@@ -98,12 +98,14 @@ class ShazbatProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[0:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
                             try:
-                                stats = cells[3].get_text().strip()
+                                head = head if None is not head else self._header_row(tr)
+                                stats = cells[head['leech']].get_text().strip()
                                 seeders, leechers = [(tryInt(x[0], 0), tryInt(x[1], 0)) for x in
                                                      re.findall('(?::(\d+))(?:\W*[/]\W*:(\d+))?', stats) if x[0]][0]
                                 if self._peers_fail(mode, seeders, leechers):

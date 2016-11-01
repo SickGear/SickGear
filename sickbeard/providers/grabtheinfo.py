@@ -91,13 +91,15 @@ class GrabTheInfoProvider(generic.TorrentProvider):
                         if not shows_found or 2 > (len(torrent_rows) - shows_found):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1 + shows_found:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
                             try:
+                                head = head if None is not head else self._header_row(torrent_rows[shows_found])
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[x].get_text().strip() for x in -2, -1, -3]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 

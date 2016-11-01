@@ -110,6 +110,7 @@ class PrivateHDProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells) or (self.confirmed and tr.find('i', title=re.compile('(?i)unverified'))):
@@ -122,8 +123,9 @@ class PrivateHDProvider(generic.TorrentProvider):
                                         (not non_marked and not rc['filter'].search(munged))):
                                     continue
                             try:
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[x].get_text().strip() for x in -3, -2, -4]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 

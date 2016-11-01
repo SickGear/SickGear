@@ -113,7 +113,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
                 json_resp = self.get_url(search_url, post_data=post_data, json=True)
 
-                if not (json_resp and 'data' in json_resp and self.check_auth_from_data(json_resp)):
+                if not (json_resp and self.check_auth_from_data(json_resp) and 'data' in json_resp):
                     logger.log(u'Response from %s does not contain any json data, abort' % self.name, logger.ERROR)
                     return results
 

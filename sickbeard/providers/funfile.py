@@ -80,14 +80,17 @@ class FunFileProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
                             cells = tr.find_all('td')
                             info = tr.find('a', href=rc['info'])
                             if 5 > len(cells) or not info:
                                 continue
                             try:
+                                head = head if None is not head else self._header_row(
+                                    tr, {'seed': r'(?:up\.gif|seed|s/l)', 'leech': r'(?:down\.gif|leech|peers)'})
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[x].get_text().strip() for x in -2, -1, -4]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if None is tr.find('a', href=rc['cats']) or self._peers_fail(mode, seeders, leechers):
                                     continue
 

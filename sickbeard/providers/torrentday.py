@@ -86,18 +86,20 @@ class TorrentDayProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
                             try:
-                                seeders, leechers = [tryInt(tr.find('td', class_=x + 'ersInfo').get_text().strip())
-                                                     for x in 'seed', 'leech']
+                                head = head if None is not head else self._header_row(
+                                    tr, header_strip='(?i)(?:leechers|seeders|size);')
+                                seeders, leechers, size = [tryInt(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 title = tr.find('a', href=rc['info']).get_text().strip()
-                                size = cells[-3].get_text().strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
