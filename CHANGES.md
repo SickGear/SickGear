@@ -221,6 +221,7 @@
 * Fix "error trying to retrieve image" from tvdb due to there is no image to fetch
 * Fix PiSexy for vip user class
 * Change retry sleep timeout for Trakt searches to prevent issues when Trakt is down
+* Fix TVDb search issue when only 1 result is returned
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)
