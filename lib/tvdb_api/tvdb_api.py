@@ -649,6 +649,8 @@ class Tvdb:
         try:
             series_found = self._getetsrc(self.config['url_get_series'], self.config['params_get_series'])
             if series_found:
+                if not isinstance(series_found['Series'], list):
+                    series_found['Series'] = [series_found['Series']]
                 series_found['Series'] = [{k.lower(): v for k, v in s.iteritems()} for s in series_found['Series']]
                 return series_found.values()[0]
         except:
