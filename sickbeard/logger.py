@@ -313,3 +313,7 @@ def close():
 def log_set_level():
     if sb_log_instance.cur_handler:
         sb_log_instance.cur_handler.setLevel(reverseNames[sickbeard.FILE_LOGGING_PRESET])
+
+
+def current_log_file():
+    return os.path.join(sickbeard.LOG_DIR, sb_log_instance.log_file)

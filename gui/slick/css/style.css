@@ -502,6 +502,10 @@ inc_top.tmpl
 	content:"\e621"
 }
 
+.sgicon-download:before{
+	content:"\e626"
+}
+
 .sgicon-emby:before {
 	content: "\e900"
 }
