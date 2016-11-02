@@ -6,6 +6,7 @@ function initActions() {
 	$('#SubMenu a:contains("Remove")').addClass('btn remove').html('<i class="sgicon-delete"></i>Remove');
 	$('#SubMenu a:contains("Clear History")').addClass('btn clearhistory').html('<i class="sgicon-delete"></i>Clear History');
 	$('#SubMenu a:contains("Trim History")').addClass('btn trimhistory').html('<i class="sgicon-trim"></i>Trim History');
+	$('#SubMenu a[href$="/errorlogs/downloadlog/"]').addClass('btn').html('<i class="sgicon-download"></i>Download Log');
 	$('#SubMenu a[href$="/errorlogs/clearerrors/"]').addClass('btn').html('<i class="sgicon-delete"></i>Clear Errors');
 	$('#SubMenu a:contains("Re-scan")').addClass('btn').html('<i class="sgicon-refresh"></i>Re-scan');
 	$('#SubMenu a:contains("Backlog Overview")').addClass('btn').html('<i class="sgicon-backlog"></i>Backlog Overview');

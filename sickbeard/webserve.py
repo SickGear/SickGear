@@ -5480,7 +5480,8 @@ class UI(MainHandler):
 class ErrorLogs(MainHandler):
     @staticmethod
     def ErrorLogsMenu():
-        return [{'title': 'Clear Errors', 'path': 'errorlogs/clearerrors/'},]
+        return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'},
+                {'title': 'Clear Errors', 'path': 'errorlogs/clearerrors/'},]
 
     def index(self, *args, **kwargs):
 
@@ -5492,6 +5493,12 @@ class ErrorLogs(MainHandler):
     def clearerrors(self, *args, **kwargs):
         classes.ErrorViewer.clear()
         self.redirect('/errorlogs/')
+
+    def downloadlog(self, *args, **kwargs):
+        self.set_header('Content-Type', 'text/plain')
+        self.set_header('Content-Disposition', 'attachment; filename=sickgear.log')
+        with open(logger.current_log_file(), 'r') as logfile:
+            return logfile.read()
 
     def viewlog(self, minLevel=logger.MESSAGE, maxLines=500):
 
