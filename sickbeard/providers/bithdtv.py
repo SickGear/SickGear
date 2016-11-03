@@ -69,9 +69,10 @@ class BitHDTVProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html):
+                    if not html or self._has_no_results(html) or 'width=750' not in html:
                         raise generic.HaltParseException
 
+                    html = re.sub(r'</td>([^<]*)<tr>', '</td></tr>\1<tr>', html)
                     with BS4Parser(html, 'html.parser', attr='width=750') as soup:
                         torrent_table = soup.find('table', attrs={'width': 750})
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
@@ -79,13 +80,15 @@ class BitHDTVProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
                             cells = tr.find_all('td')
                             if 6 > len(cells):
                                 continue
                             try:
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[x].get_text().strip() for x in -3, -2, -5]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self.freeleech and not tr.attrs.get('bgcolor').endswith('FF99') or \
                                         self._peers_fail(mode, seeders, leechers):
                                     continue

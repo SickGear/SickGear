@@ -98,6 +98,7 @@ class HDSpaceProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
                             cells = tr.find_all('td')
                             if (6 > len(cells) or tr.find('td', class_='header')
@@ -109,6 +110,7 @@ class HDSpaceProvider(generic.TorrentProvider):
                             if None is downlink:
                                 continue
                             try:
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers = [tryInt(x.get_text().strip())
                                                      for x in tr.find_all('a', href=rc['peers'])]
                                 if self._peers_fail(mode, seeders, leechers):
@@ -116,7 +118,7 @@ class HDSpaceProvider(generic.TorrentProvider):
 
                                 info = tr.find('a', href=rc['info'])
                                 title = (info.attrs.get('title') or info.get_text()).strip()
-                                size = cells[-5].get_text().strip()
+                                size = cells[head['size']].get_text().strip()
                                 download_url = self._link(downlink['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue

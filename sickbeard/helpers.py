@@ -103,7 +103,8 @@ def remove_non_release_groups(name, is_anime=False):
 
     if name:
         rc = [re.compile(r'(?i)' + v) for v in [
-              '([\s\.\-_\[\{\(]*(no-rar|nzbgeek|ripsalot|rp|siklopentan)[\s\.\-_\]\}\)]*)$',
+              '([\s\.\-_\[\{\(]*(no-rar|nzbgeek|ripsalot|siklopentan)[\s\.\-_\]\}\)]*)$',
+              '([\s\.\-_\[\{\(]rp[\s\.\-_\]\}\)]*)$',
               '(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*(www\.\w+.\w+)[\s\.\-_]*[\]\}\)][\s\.\-_]*)$',
               '(?<=\w)([\s\.\-_]*[\[\{\(]\s*(rar(bg|tv)|((e[tz]|v)tv))[\s\.\-_]*[\]\}\)][\s\.\-_]*)$'] +
               (['(?<=\w)([\s\.\-_]*[\[\{\(][\s\.\-_]*[\w\s\.\-\_]+[\s\.\-_]*[\]\}\)][\s\.\-_]*)$',

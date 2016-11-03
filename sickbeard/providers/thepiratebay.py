@@ -161,12 +161,14 @@ class ThePirateBayProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_table.find_all('tr')[1:]:
                             cells = tr.find_all('td')
                             if 3 > len(cells):
                                 continue
                             try:
-                                seeders, leechers = [tryInt(cells[x].get_text().strip()) for x in -2, -1]
+                                head = head if None is not head else self._header_row(tr)
+                                seeders, leechers = [tryInt(cells[head[x]].get_text().strip()) for x in 'seed', 'leech']
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
