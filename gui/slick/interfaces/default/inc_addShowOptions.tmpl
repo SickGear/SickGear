@@ -56,7 +56,7 @@
 				<span class="component-desc">
 					<select name="tag" id="tag" class="form-control form-control-inline input-sm">
 #for $tag in $sickbeard.SHOW_TAGS:
-						<option value="$tag" #if $tag == $sickbeard.DEFAULT_SHOW_TAG then 'selected="selected"' else ''#>$tag</option>
+						<option value="$tag" #if $tag == $getattr(sickbeard, 'SHOW_TAG_DEFAULT', $getattr(sickbeard, 'DEFAULT_SHOW_TAG', None)) then 'selected="selected"' else ''#>$tag</option>
 #end for
 					</select>
 					<span>and display on the show list page under this section</span>

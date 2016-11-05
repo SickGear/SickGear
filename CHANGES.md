@@ -191,6 +191,7 @@
 * Change improve performance and reduce start up time
 * Fix button "Checkout branch" when stuck on disabled
 * Add 'Download Log' to 'Logs & Errors' page
+* Change consolidate shutdown with restart, improve systemd support, bring order to on-init globals
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

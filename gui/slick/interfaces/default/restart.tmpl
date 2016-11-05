@@ -1,3 +1,10 @@
+##
+#set sgHost = $sbHost
+#set sgPort = $sbHttpPort
+#set sgRoot = $sbRoot
+#set sgUseHttps = $sbHttpsEnabled
+#set themeSpinner = '-dark' if 'dark' == $sbThemeName else ''
+##
 <!DOCTYPE html>
 <head>
 <meta charset="utf-8">
@@ -26,26 +33,12 @@
 <meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
 
 <script type="text/javascript" src="$sbRoot/js/lib/jquery-1.8.3.min.js?v=$sbPID"></script>
-
-#try:
-    #set sgHost = $sbHost
-    #set sgPort = $sbHttpPort
-    #set sgUseHttps = $sbHttpsEnabled
-    #set themeSpinner = $sbThemeName
-#except NameMapper.NotFound:
-    #set sgHost = 'localhost'
-    #set sgPort = $sickbeard.WEB_PORT
-    #set sgUseHttps = False
-    #set themeSpinner = $sickbeard.THEME_NAME
-#end try
-#set themeSpinner = '-dark' if 'dark' == themeSpinner else ''
-##
 <script type="text/javascript" charset="utf-8">
 <!--
 	\$.SickGear = {
-		Root: '$sbRoot',
 		Host: '$sgHost',
 		Port: '$sgPort',
+		Root: '$sgRoot',
 		UseHttps: #echo ('!1', '!0')[False != $sgUseHttps and 0 != $sgUseHttps]#
 	};
 //-->
@@ -58,12 +51,12 @@ body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;marg
 </style>
 
 <link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID">
-<link rel="stylesheet" type="text/css" href="$sbRoot/css/#echo ('dark', 'light')['' == themeSpinner]#.css?v=$sbPID">
+<link rel="stylesheet" type="text/css" href="$sbRoot/css/#echo ('dark', 'light')['' == $themeSpinner]#.css?v=$sbPID">
 
 </head><body><span class="sglogo"></span>
 <div class="bfr"><img src="$sbRoot/images/loading16${themeSpinner}.gif" /><img src="$sbRoot/images/yes16.png" /><img src="$sbRoot/images/no16.png" /></div>
 
-<h2 class="sub-title">Performing Restart</h2>
+<h2 class="sub-title">Performing #echo ('Restart', 'Shutdown')[$shutdown]#</h2>
 
 <div id="shut_down_message">
 <span class="desc"><span class="grey-text">Waiting for SickGear to</span> shut down: </span>
@@ -71,17 +64,23 @@ body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;marg
 </div>
 
 <div class="hide" id="restart_message">
+#if not $shutdown
 <span class="desc"><span class="grey-text">Waiting for SickGear to</span> start up: </span>
 <span class="images"><i class="spinner"></i><span class="hide-yes"><i class="yes"></i></span><span class="hide-no"><i class="no"></i></span></span>
+#end if
 </div>
 
 <div class="hide" id="refresh_message">
+#if not $shutdown
 <span class="desc"><span class="grey-text">Waiting for SickGear </span> home page: </span>
 <span class="images"><i class="spinner"></i></span>
+#end if
 </div>
 
 <div class="hide" id="restart_fail_message">
+#if not $shutdown
 <span class="red-text">Error:</span> The restart timed out, perhaps something prevented SickGear from starting ?
+#end if
 </div>
 
 </body></html>
