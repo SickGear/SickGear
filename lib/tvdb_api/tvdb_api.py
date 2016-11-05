@@ -563,12 +563,12 @@ class Tvdb:
 
         def process_data(data):
             te = ConvertXmlToDict(data)
-            if isinstance(te, dict) and 'Data' in te and isinstance(te['Data'], dict) and \
-                            'Series' in te['Data'] and isinstance(te['Data']['Series'], dict) and \
-                            'FirstAired' in te['Data']['Series']:
+            if isinstance(te, dict) and 'Data' in te and isinstance(te['Data'], dict) \
+                    and 'Series' in te['Data'] and isinstance(te['Data']['Series'], dict) \
+                    and 'FirstAired' in te['Data']['Series']:
                 try:
                     value = parse(te['Data']['Series']['FirstAired'], fuzzy=True).strftime('%Y-%m-%d')
-                except:
+                except (StandardError, Exception):
                     value = None
                 te['Data']['Series']['firstaired'] = value
             return te
@@ -587,7 +587,7 @@ class Tvdb:
             else:
                 try:
                     return process_data(resp.content.strip())
-                except:
+                except (StandardError, Exception):
                     return dict([(u'data', None)])
 
     def _getetsrc(self, url, params=None, language=None):
@@ -596,7 +596,7 @@ class Tvdb:
         try:
             src = self._load_url(url, params=params, language=language).values()[0]
             return src
-        except:
+        except (StandardError, Exception):
             return []
 
     def _set_item(self, sid, seas, ep, attrib, value):
@@ -629,7 +629,8 @@ class Tvdb:
             self.shows[sid] = Show()
         self.shows[sid].data[key] = value
 
-    def _clean_data(self, data):
+    @staticmethod
+    def _clean_data(data):
         """Cleans up strings returned by TheTVDB.com
 
         Issues corrected:
@@ -637,6 +638,9 @@ class Tvdb:
         - Trailing whitespace
         """
         return data if not isinstance(data, basestring) else data.strip().replace(u'&amp;', u'&')
+
+    def _get_url_artwork(self, image):
+        return image and (self.config['url_artworkPrefix'] % image) or image
 
     def search(self, series):
         """This searches TheTVDB.com for the series name
@@ -653,7 +657,7 @@ class Tvdb:
                     series_found['Series'] = [series_found['Series']]
                 series_found['Series'] = [{k.lower(): v for k, v in s.iteritems()} for s in series_found['Series']]
                 return series_found.values()[0]
-        except:
+        except (StandardError, Exception):
             pass
 
         return []
@@ -733,9 +737,9 @@ class Tvdb:
                     if k.endswith('path'):
                         new_key = '_%s' % k
                         self.log('Transforming %s to %s' % (k, new_key))
-                        new_url = self.config['url_artworkPrefix'] % v
+                        new_url = self._get_url_artwork(v)
                         banners[btype][btype2][bid][new_key] = new_url
-        except:
+        except (StandardError, Exception):
             pass
 
         self._set_show_data(sid, '_banners', banners)
@@ -775,12 +779,12 @@ class Tvdb:
                     k = k.lower()
                     if None is not v:
                         if 'image' == k:
-                            v = self.config['url_artworkPrefix'] % v
+                            v = self._get_url_artwork(v)
                         else:
                             v = self._clean_data(v)
                     cur_actor[k] = v
                 cur_actors.append(cur_actor)
-        except:
+        except (StandardError, Exception):
             pass
 
         self._set_show_data(sid, '_actors', cur_actors)
@@ -812,7 +816,7 @@ class Tvdb:
         for k, v in show_data['Series'].iteritems():
             if None is not v:
                 if k in ['banner', 'fanart', 'poster']:
-                    v = self.config['url_artworkPrefix'] % v
+                    v = self._get_url_artwork(v)
                 else:
                     v = self._clean_data(v)
 
@@ -866,7 +870,7 @@ class Tvdb:
 
                     if None is not v:
                         if 'filename' == k:
-                            v = v and (self.config['url_artworkPrefix'] % v) or v
+                            v = self._get_url_artwork(v)
                         else:
                             v = self._clean_data(v)
 
