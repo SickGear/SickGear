@@ -180,6 +180,7 @@
 * Fix never set episodes without airdate to wanted
 * Change improve getting the local timezone information
 * Change hachoir_parser to close input stream if no parser is found e.g. due to file corruption
+* Change improve fault tolerance of Hachoir jpeg parser
 * Change reduce time taken to parse avi RIFF metadata during post processing and other times
 * Change avi metadata extraction is more fault tolerant and the chance of hanging due to corrupt avi files is reduced
 * Change fuzzyMoment to handle air dates before ~1970 on display show page

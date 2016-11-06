@@ -210,6 +210,10 @@ class JpegMetadata(RootMetadata):
         datestamp = None
         for entry in ifd.array("entry"):
             tag = entry["tag"].display
+            if tag not in ["GPSLatitudeRef", "GPSLongitudeRef","GPSAltitudeRef",
+                           "GPSLatitude", "GPSLongitude", "GPSAltitude",
+                           "GPSDateStamp", "GPSTimeStamp"]:
+                continue
             values = [v.value for v in ifd.getEntryValues(entry)]
             if tag == "GPSLatitudeRef":
                 if values[0] == "N":
