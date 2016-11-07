@@ -5495,10 +5495,21 @@ class ErrorLogs(MainHandler):
         self.redirect('/errorlogs/')
 
     def downloadlog(self, *args, **kwargs):
-        self.set_header('Content-Type', 'text/plain')
+        logfile_name = logger.current_log_file()
+        self.set_header('Content-Type', 'application/octet-stream')
+        self.set_header('Content-Description', 'Logfile Download')
+        self.set_header('Content-Length', ek.ek(os.path.getsize, logfile_name))
         self.set_header('Content-Disposition', 'attachment; filename=sickgear.log')
-        with open(logger.current_log_file(), 'r') as logfile:
-            return logfile.read()
+        with open(logfile_name, 'r') as logfile:
+            try:
+                while True:
+                    data = logfile.read(4096)
+                    if not data:
+                        break
+                    self.write(data)
+                self.finish()
+            except (StandardError, Exception):
+                return
 
     def viewlog(self, minLevel=logger.MESSAGE, maxLines=500):
 
