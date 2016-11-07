@@ -1476,7 +1476,8 @@ def save_config():
     new_config['General']['anime_default'] = int(ANIME_DEFAULT)
     new_config['General']['scene_default'] = int(SCENE_DEFAULT)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
-    new_config['General']['provider_homes'] = '%s' % PROVIDER_HOMES
+    new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in PROVIDER_HOMES.items() if pid in [
+        p.get_id() for p in [x for x in providers.sortedProviderList() if GenericProvider.TORRENT == x.providerType]]])
     new_config['General']['version_notify'] = int(VERSION_NOTIFY)
     new_config['General']['auto_update'] = int(AUTO_UPDATE)
     new_config['General']['notify_on_update'] = int(NOTIFY_ON_UPDATE)
