@@ -226,6 +226,7 @@
 * Change improve TvChaos item parsing and can use qualities instead of 'Unknown'
 * Change remove deprecated providers being saved to config
 * Change prevent a missing slash typo and correct develop typo after a network outage
+* Change send download logfile as stream
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)
