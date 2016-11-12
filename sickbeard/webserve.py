@@ -1,4 +1,4 @@
-# coding=utf-8
+﻿# coding=utf-8
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
@@ -5301,11 +5301,16 @@ class ConfigProviders(Config):
             src_enabled = bool(config.to_int(src_enabled))
 
             if '' != getattr(sources[src_name], 'enabled', '') and sources[src_name].is_enabled() != src_enabled:
+                if isinstance(sources[src_name], sickbeard.providers.newznab.NewznabProvider) and \
+                        not sources[src_name].enabled and src_enabled:
+                    reload_page = True
                 sources[src_name].enabled = src_enabled
                 if not reload_page and sickbeard.GenericProvider.TORRENT == sources[src_name].providerType:
                     reload_page = True
 
             if src_name in newznab_sources:
+                if not newznab_sources[src_name].enabled and src_enabled:
+                    reload_page = True
                 newznab_sources[src_name].enabled = src_enabled
             elif src_name in torrent_rss_sources:
                 torrent_rss_sources[src_name].enabled = src_enabled
