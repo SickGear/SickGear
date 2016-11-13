@@ -55,7 +55,7 @@ class FreshOnTVProvider(generic.TorrentProvider):
             post_params={'form_tmpl': True},
             failed_msg=(lambda y=None: 'DDoS protection by CloudFlare' in y and
                                        u'Unable to login to %s due to CloudFlare DDoS javascript check' or
-                                       'Username does not exist' in x and
+                                       'Username does not exist' in y and
                                        u'Invalid username or password for %s. Check settings' or
                                        u'Failed to authenticate or parse a response from %s, abort provider'))
 

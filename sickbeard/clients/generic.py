@@ -228,6 +228,6 @@ class GenericClient(object):
             # FIXME: This test is redundant
             if authenticated and self.auth:
                 return True, 'Success: Connected and Authenticated'
-            return False, 'Error: Unable to get %s Authentication, check your config!' % self.name
+            return False, 'Error: Unable to get %s authentication, check your config!' % self.name
         except (StandardError, Exception):
             return False, 'Error: Unable to connect to %s' % self.name

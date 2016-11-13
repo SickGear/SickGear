@@ -338,6 +338,24 @@ class Torrent:
         else:
             return p.view.set_not_visible(self.info_hash, view)
 
+    def add_tracker(self, group, tracker):
+        """
+        Add tracker to torrent
+
+        @param group: The group to add the tracker to
+        @type group: int
+
+        @param tracker: The tracker url
+        @type tracker: str
+
+        @return: if successful, 0
+        @rtype: int
+        """
+        m = rtorrent.rpc.Multicall(self)
+        self.multicall_add(m, "d.tracker.insert", group, tracker)
+
+        return (m.call()[-1])
+
     ############################################################################
     # CUSTOM METHODS (Not part of the official rTorrent API)
     ##########################################################################
