@@ -1106,12 +1106,12 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
+        t = PageTemplate(headers=self.request.headers, file='restart.tmpl')
+        t.shutdown = True
+
         sickbeard.events.put(sickbeard.events.SystemEvent.SHUTDOWN)
 
-        title = 'Shutting down'
-        message = 'SickGear is shutting down...'
-
-        return self._genericMessage(title, message)
+        return t.respond()
 
     def restart(self, pid=None):
 
@@ -1119,8 +1119,8 @@ class Home(MainHandler):
             return self.redirect('/home/')
 
         t = PageTemplate(headers=self.request.headers, file='restart.tmpl')
+        t.shutdown = False
 
-        # restart
         sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
 
         return t.respond()
@@ -4275,7 +4275,7 @@ class ConfigGeneral(Config):
         sickbeard.SCENE_DEFAULT = config.checkbox_to_value(default_scene)
         sickbeard.SUBTITLES_DEFAULT = config.checkbox_to_value(default_subtitles)
         sickbeard.ANIME_DEFAULT = config.checkbox_to_value(default_anime)
-        sickbeard.DEFAULT_SHOW_TAG = default_tag
+        sickbeard.SHOW_TAG_DEFAULT = default_tag
 
         sickbeard.save_config()
 
@@ -4311,7 +4311,6 @@ class ConfigGeneral(Config):
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
-                    display_background=None, display_background_transparent=None, display_all_seasons=None,
                     show_tags=None, showlist_tagview=None):
 
         results = []
@@ -4331,9 +4330,6 @@ class ConfigGeneral(Config):
         sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
         sickbeard.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
         sickbeard.USE_IMDB_INFO = config.checkbox_to_value(use_imdb_info)
-        sickbeard.DISPLAY_BACKGROUND = config.checkbox_to_value(display_background)
-        sickbeard.DISPLAY_BACKGROUND_TRANSPARENT = display_background_transparent
-        sickbeard.DISPLAY_ALL_SEASONS = config.checkbox_to_value(display_all_seasons)
         sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
         sickbeard.CPU_PRESET = cpu_preset
         sickbeard.FILE_LOGGING_PRESET = file_logging_preset

@@ -11,8 +11,7 @@
 #        Putting a minus (-) in front of file means no error warning if the file doesn't exist
 #
 #    - Adjust ExecStart= to point to your python and SickGear executables.
-#       The FIRST token of the command line must be an ABSOLUTE FILE NAME,
-#       then followed by arguments for the process.
+#       The FIRST token of the command line must be an ABSOLUTE FILE NAME, followed by arguments for the process.
 #       If no --datadir is given, data is stored in same dir as SickBeard.py
 #       Arguments can also be set in EnvironmentFile (except python)
 #
@@ -20,16 +19,6 @@
 #        multi-user.target equates to runlevel 3 (multi-user text mode)
 #        graphical.target  equates to runlevel 5 (multi-user X11 graphical mode)
 #
-
-### Example Using SickGear as daemon with pid file
-# Type=forking
-# PIDFile=/var/run/sickgear/sickgear.pid
-# ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --pidfile=/var/run/sickgear/sickgear.pid --datadir=/opt/sickgear/data
-
-## Example Using SickGear as daemon without pid file
-# Type=forking
-# GuessMainPID=no
-# ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear/data
 
 ### Example Using simple
 # Type=simple
@@ -43,15 +32,16 @@
 ### Configuration
 
 [Unit]
-Description=SickGear Daemon
+Description=SickGear Service
 
 [Service]
 User=sickgear
 Group=sickgear
 
-Type=forking
-GuessMainPID=no
-ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py -q --daemon --nolaunch --datadir=/opt/sickgear/data
+Environment=PYTHONUNBUFFERED=true
+ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py --systemd --datadir=/opt/sickgear/data
+KillMode=process
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

@@ -740,7 +740,6 @@ class ConfigMigrator():
     def _migrate_v8(self):
         # removing settings from gui and making it a hidden debug option
         sickbeard.RECENTSEARCH_STARTUP = False
-        sickbeard.BACKLOG_STARTUP = False
 
     def _migrate_v9(self):
         sickbeard.PUSHBULLET_ACCESS_TOKEN = check_setting_str(self.config_obj, 'Pushbullet', 'pushbullet_api', '')

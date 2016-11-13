@@ -83,7 +83,7 @@ searchQueueScheduler = None
 properFinderScheduler = None
 autoPostProcesserScheduler = None
 subtitlesFinderScheduler = None
-traktCheckerScheduler = None
+# traktCheckerScheduler = None
 background_mapping_task = None
 
 showList = None
@@ -146,11 +146,8 @@ TRASH_ROTATE_LOGS = False
 HOME_SEARCH_FOCUS = True
 SORT_ARTICLE = False
 DEBUG = False
-DISPLAY_BACKGROUND = False
-DISPLAY_BACKGROUND_TRANSPARENT = None
-DISPLAY_ALL_SEASONS = True
 SHOW_TAGS = []
-DEFAULT_SHOW_TAG = ''
+SHOW_TAG_DEFAULT = ''
 SHOWLIST_TAGVIEW = ''
 
 METADATA_XBMC = None
@@ -203,13 +200,13 @@ TORRENT_DIR = None
 DOWNLOAD_PROPERS = False
 CHECK_PROPERS_INTERVAL = None
 ALLOW_HIGH_PRIORITY = False
+NEWZNAB_DATA = ''
 
 AUTOPOSTPROCESSER_FREQUENCY = None
-RECENTSEARCH_FREQUENCY = None
+RECENTSEARCH_FREQUENCY = 0
 UPDATE_FREQUENCY = None
 RECENTSEARCH_STARTUP = False
 BACKLOG_FREQUENCY = None
-BACKLOG_STARTUP = False
 BACKLOG_NOFULL = False
 
 DEFAULT_AUTOPOSTPROCESSER_FREQUENCY = 10
@@ -458,7 +455,8 @@ EXTRA_SCRIPTS = []
 
 GIT_PATH = None
 
-IGNORE_WORDS = 'core2hd, hevc, MrLss, reenc, x265, danish, deutsch, dutch, flemish, french, german, italian, nordic, norwegian, portuguese, spanish, swedish, turkish'
+IGNORE_WORDS = 'core2hd, hevc, MrLss, reenc, x265, danish, deutsch, dutch, flemish, french, ' + \
+               'german, italian, nordic, norwegian, portuguese, spanish, swedish, turkish'
 REQUIRE_WORDS = ''
 
 CALENDAR_UNPROTECTED = False
@@ -499,81 +497,119 @@ def get_backlog_cycle_time():
     return max([cycletime, 720])
 
 
-def initialize(consoleLogging=True):
+def initialize(console_logging=True):
     with INIT_LOCK:
 
-        global BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, CUR_COMMIT_BRANCH, ACTUAL_LOG_DIR, LOG_DIR, FILE_LOGGING_PRESET, WEB_PORT, WEB_LOG, ENCRYPTION_VERSION, WEB_ROOT, WEB_USERNAME, WEB_PASSWORD, WEB_HOST, WEB_IPV6, USE_API, API_KEY, ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, \
-            HANDLE_REVERSE_PROXY, USE_NZBS, USE_TORRENTS, NZB_METHOD, NZB_DIR, DOWNLOAD_PROPERS, CHECK_PROPERS_INTERVAL, ALLOW_HIGH_PRIORITY, TORRENT_METHOD, \
-            SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, SAB_HOST, \
-            NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, NZBGET_HOST, NZBGET_USE_HTTPS, backlogSearchScheduler, \
-            TORRENT_USERNAME, TORRENT_PASSWORD, TORRENT_HOST, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_LABEL, TORRENT_VERIFY_CERT, \
-            USE_EMBY, EMBY_UPDATE_LIBRARY, EMBY_HOST, EMBY_APIKEY, \
-            USE_KODI, KODI_ALWAYS_ON, KODI_NOTIFY_ONSNATCH, KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD,\
-            KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, KODI_UPDATE_LIBRARY, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, \
-            USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD,\
-            XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, XBMC_UPDATE_LIBRARY, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, \
-            USE_PLEX, PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, \
-            PLEX_UPDATE_LIBRARY, PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, \
-            USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_USE_WATCHLIST, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, traktCheckerScheduler, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
-            BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY, MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY, BACKLOG_STARTUP, BACKLOG_NOFULL, SKIP_REMOVED_FILES, \
-            showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, HOME_SEARCH_FOCUS, SORT_ARTICLE, showList, loadingShowList, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
-            NEWZNAB_DATA, INDEXER_DEFAULT, INDEXER_TIMEOUT, USENET_RETENTION, TORRENT_DIR, \
-            QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, RECENTSEARCH_STARTUP, \
-            GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
-            USE_GROWL, GROWL_HOST, GROWL_PASSWORD, USE_PROWL, PROWL_NOTIFY_ONSNATCH, PROWL_NOTIFY_ONDOWNLOAD, PROWL_NOTIFY_ONSUBTITLEDOWNLOAD, PROWL_API, PROWL_PRIORITY, PROG_DIR, \
-            USE_PYTIVO, PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME, \
+        # Misc
+        global __INITIALIZED__, showList, providerList, newznabProviderList, torrentRssProviderList, \
+            WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, CREATE_MISSING_SHOW_DIRS, \
+            RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, REMOVE_FILENAME_CHARS, \
+            CONFIG_FILE
+        # Schedulers
+        # global traktCheckerScheduler
+        global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
+            versionCheckScheduler, showQueueScheduler, searchQueueScheduler, \
+            properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, background_mapping_task
+        # Add Show Defaults
+        global STATUS_DEFAULT, QUALITY_DEFAULT, SHOW_TAG_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, \
+            WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SCENE_DEFAULT, ANIME_DEFAULT
+        # Post processing
+        global KEEP_PROCESSED_DIR
+        # Views
+        global GUI_NAME, HOME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
+            EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, \
+            EPISODE_VIEW_MISSED_RANGE, HISTORY_LAYOUT
+        # Gen Config/Misc
+        global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
+            TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, INDEXER_TIMEOUT, ROOT_DIRS, \
+            VERSION_NOTIFY, AUTO_UPDATE, UPDATE_FREQUENCY, NOTIFY_ON_UPDATE
+        # Gen Config/Interface
+        global THEME_NAME, DEFAULT_HOME, SHOWLIST_TAGVIEW, SHOW_TAGS, \
+            HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
+            DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, TIMEZONE_DISPLAY, \
+            WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEY, WEB_PORT, WEB_LOG, \
+            ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, HANDLE_REVERSE_PROXY
+        # Gen Config/Advanced
+        global BRANCH, CUR_COMMIT_BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, GIT_PATH, CPU_PRESET, ANON_REDIRECT, \
+            ENCRYPTION_VERSION, PROXY_SETTING, PROXY_INDEXERS, FILE_LOGGING_PRESET
+        # Search Settings/Episode
+        global DOWNLOAD_PROPERS, CHECK_PROPERS_INTERVAL, RECENTSEARCH_FREQUENCY, \
+            BACKLOG_DAYS, BACKLOG_NOFULL, BACKLOG_FREQUENCY, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
+            ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY
+        # Search Settings/NZB search
+        global USE_NZBS, NZB_METHOD, NZB_DIR, SAB_HOST, SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, \
+            NZBGET_USE_HTTPS, NZBGET_HOST, NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY
+        # Search Settings/Torrent search
+        global USE_TORRENTS, TORRENT_METHOD, TORRENT_DIR, TORRENT_HOST, TORRENT_USERNAME, TORRENT_PASSWORD, \
+            TORRENT_LABEL, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_VERIFY_CERT
+        # Search Providers
+        global PROVIDER_ORDER, NEWZNAB_DATA, PROVIDER_HOMES
+        # Subtitles
+        global USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_FINDER_FREQUENCY,  \
+            SUBTITLES_HISTORY, SUBTITLES_SERVICES_ENABLED, SUBTITLES_SERVICES_LIST
+        # Post Processing/Post-Processing
+        global TV_DOWNLOAD_DIR, PROCESS_METHOD, PROCESS_AUTOMATICALLY, AUTOPOSTPROCESSER_FREQUENCY, \
+            POSTPONE_IF_SYNC_FILES, EXTRA_SCRIPTS, \
+            DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
+            UNPACK, SKIP_REMOVED_FILES, MOVE_ASSOCIATED_FILES, NFO_RENAME, RENAME_EPISODES, AIRDATE_EPISODES, \
+            USE_FAILED_DOWNLOADS, DELETE_FAILED
+        # Post Processing/Episode Naming
+        global NAMING_PATTERN, NAMING_MULTI_EP, NAMING_STRIP_YEAR, NAMING_CUSTOM_ABD, NAMING_ABD_PATTERN, \
+            NAMING_CUSTOM_SPORTS, NAMING_SPORTS_PATTERN, \
+            NAMING_CUSTOM_ANIME, NAMING_ANIME_PATTERN, NAMING_ANIME_MULTI_EP, NAMING_ANIME
+        # Post Processing/Metadata
+        global metadata_provider_dict, METADATA_KODI, METADATA_MEDE8ER, METADATA_XBMC, METADATA_MEDIABROWSER, \
+            METADATA_PS3, METADATA_TIVO, METADATA_WDTV, METADATA_XBMC_12PLUS
+        # Notification Settings/HT and NAS
+        global USE_EMBY, EMBY_UPDATE_LIBRARY, EMBY_HOST, EMBY_APIKEY, \
+            USE_KODI, KODI_ALWAYS_ON, KODI_UPDATE_LIBRARY, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, \
+            KODI_HOST, KODI_USERNAME, KODI_PASSWORD, KODI_NOTIFY_ONSNATCH, \
+            KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            XBMC_UPDATE_LIBRARY, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, \
+            USE_PLEX, PLEX_USERNAME, PLEX_PASSWORD, PLEX_UPDATE_LIBRARY, PLEX_SERVER_HOST, \
+            PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_HOST, \
+            USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, \
+            USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, \
+            USE_SYNOINDEX, \
+            USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, \
+            SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            USE_PYTIVO, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME, \
+            PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY
+        # Notification Settings/Devices
+        global USE_GROWL, GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            GROWL_HOST, GROWL_PASSWORD, \
+            USE_PROWL, PROWL_NOTIFY_ONSNATCH, PROWL_NOTIFY_ONDOWNLOAD, PROWL_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            PROWL_API, PROWL_PRIORITY, \
+            USE_LIBNOTIFY, LIBNOTIFY_NOTIFY_ONSNATCH, LIBNOTIFY_NOTIFY_ONDOWNLOAD, \
+            LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            USE_PUSHOVER, PUSHOVER_NOTIFY_ONSNATCH, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_PRIORITY, PUSHOVER_DEVICE, PUSHOVER_SOUND, \
+            USE_BOXCAR2, BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            BOXCAR2_ACCESSTOKEN, BOXCAR2_SOUND, \
             USE_NMA, NMA_NOTIFY_ONSNATCH, NMA_NOTIFY_ONDOWNLOAD, NMA_NOTIFY_ONSUBTITLEDOWNLOAD, NMA_API, NMA_PRIORITY, \
-            USE_PUSHALOT, PUSHALOT_NOTIFY_ONSNATCH, PUSHALOT_NOTIFY_ONDOWNLOAD, PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHALOT_AUTHORIZATIONTOKEN, \
-            USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN, \
-            versionCheckScheduler, VERSION_NOTIFY, AUTO_UPDATE, NOTIFY_ON_UPDATE, PROCESS_AUTOMATICALLY, UNPACK, CPU_PRESET, \
-            KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, MIN_RECENTSEARCH_FREQUENCY, DEFAULT_UPDATE_FREQUENCY, MIN_UPDATE_FREQUENCY, UPDATE_FREQUENCY, \
-            showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, ZONEINFO_DIR, TIMEZONE_DISPLAY, \
-            NAMING_PATTERN, NAMING_MULTI_EP, NAMING_ANIME_MULTI_EP, NAMING_FORCE_FOLDERS, NAMING_ABD_PATTERN, NAMING_CUSTOM_ABD, NAMING_SPORTS_PATTERN, NAMING_CUSTOM_SPORTS, NAMING_ANIME_PATTERN, NAMING_CUSTOM_ANIME, NAMING_STRIP_YEAR, \
-            RENAME_EPISODES, AIRDATE_EPISODES, properFinderScheduler, PROVIDER_ORDER, PROVIDER_HOMES, autoPostProcesserScheduler, \
-            providerList, newznabProviderList, torrentRssProviderList, \
-            EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, RECENTSEARCH_FREQUENCY, \
-            USE_BOXCAR2, BOXCAR2_ACCESSTOKEN, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_SOUND, \
-            USE_PUSHOVER, PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHOVER_NOTIFY_ONSNATCH, PUSHOVER_PRIORITY, PUSHOVER_DEVICE, PUSHOVER_SOUND, \
-            USE_LIBNOTIFY, LIBNOTIFY_NOTIFY_ONSNATCH, LIBNOTIFY_NOTIFY_ONDOWNLOAD, LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD, USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, USE_SYNOINDEX, \
-            USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
-            USE_EMAIL, EMAIL_OLD_SUBJECTS, EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_LIST, \
-            METADATA_XBMC, METADATA_XBMC_12PLUS, METADATA_MEDIABROWSER, METADATA_PS3, METADATA_KODI, metadata_provider_dict, \
-            GIT_PATH, MOVE_ASSOCIATED_FILES, POSTPONE_IF_SYNC_FILES, recentSearchScheduler, NFO_RENAME, \
-            GUI_NAME, DEFAULT_HOME, HOME_LAYOUT, HISTORY_LAYOUT, DISPLAY_SHOW_SPECIALS, EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, EPISODE_VIEW_MISSED_RANGE, FUZZY_DATING, TRIM_ZERO, DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, THEME_NAME, \
-            POSTER_SORTBY, POSTER_SORTDIR, \
-            METADATA_WDTV, METADATA_TIVO, METADATA_MEDE8ER, IGNORE_WORDS, REQUIRE_WORDS, CALENDAR_UNPROTECTED, CREATE_MISSING_SHOW_DIRS, \
-            ADD_SHOWS_WO_DIR, REMOVE_FILENAME_CHARS, USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_HISTORY, SUBTITLES_FINDER_FREQUENCY, subtitlesFinderScheduler, \
-            USE_FAILED_DOWNLOADS, DELETE_FAILED, ANON_REDIRECT, TMDB_API_KEY, DEBUG, PROXY_SETTING, PROXY_INDEXERS, \
-            AUTOPOSTPROCESSER_FREQUENCY, DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
-            ANIME_DEFAULT, NAMING_ANIME, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST, \
-            SCENE_DEFAULT, BACKLOG_DAYS, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, ANIME_TREAT_AS_HDTV, \
-            COOKIE_SECRET, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_BACKGROUND, DISPLAY_BACKGROUND_TRANSPARENT, DISPLAY_ALL_SEASONS, \
-            SHOW_TAGS, DEFAULT_SHOW_TAG, SHOWLIST_TAGVIEW, background_mapping_task, CACHE_IMAGE_URL_LIST
+            USE_PUSHALOT, PUSHALOT_NOTIFY_ONSNATCH, PUSHALOT_NOTIFY_ONDOWNLOAD, \
+            PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHALOT_AUTHORIZATIONTOKEN, \
+            USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, \
+            PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN
+        # Notification Settings/Social
+        global USE_TWITTER, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, \
+            USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
+            TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
+            TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
+            USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
+            EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_LIST, EMAIL_OLD_SUBJECTS
+        # Anime Settings
+        global ANIME_TREAT_AS_HDTV, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST
 
         if __INITIALIZED__:
             return False
 
-        CheckSection(CFG, 'General')
-        CheckSection(CFG, 'Blackhole')
-        CheckSection(CFG, 'SABnzbd')
-        CheckSection(CFG, 'NZBget')
-        CheckSection(CFG, 'Emby')
-        CheckSection(CFG, 'Kodi')
-        CheckSection(CFG, 'XBMC')
-        CheckSection(CFG, 'PLEX')
-        CheckSection(CFG, 'Growl')
-        CheckSection(CFG, 'Prowl')
-        CheckSection(CFG, 'Twitter')
-        CheckSection(CFG, 'Boxcar2')
-        CheckSection(CFG, 'NMJ')
-        CheckSection(CFG, 'NMJv2')
-        CheckSection(CFG, 'Synology')
-        CheckSection(CFG, 'SynologyNotifier')
-        CheckSection(CFG, 'pyTivo')
-        CheckSection(CFG, 'NMA')
-        CheckSection(CFG, 'Pushalot')
-        CheckSection(CFG, 'Pushbullet')
-        CheckSection(CFG, 'Subtitles')
+        for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBget', 'Emby', 'Kodi', 'XBMC', 'PLEX',
+                       'Growl', 'Prowl', 'Twitter', 'Boxcar2', 'NMJ', 'NMJv2', 'Synology', 'SynologyNotifier',
+                       'pyTivo', 'NMA', 'Pushalot', 'Pushbullet', 'Subtitles'):
+            CheckSection(CFG, stanza)
 
         # wanted branch
         BRANCH = check_setting_str(CFG, 'General', 'branch', '')
@@ -619,12 +655,9 @@ def initialize(consoleLogging=True):
         TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
         TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u':%S', u'')
         TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
-        DISPLAY_BACKGROUND = bool(check_setting_int(CFG, 'General', 'display_background', 0))
-        DISPLAY_BACKGROUND_TRANSPARENT = check_setting_str(CFG, 'General', 'display_background_transparent',
-                                                           'transparent')
-        DISPLAY_ALL_SEASONS = bool(check_setting_int(CFG, 'General', 'display_all_seasons', 1))
         SHOW_TAGS = check_setting_str(CFG, 'GUI', 'show_tags', 'Show List').split(',')
-        DEFAULT_SHOW_TAG = check_setting_str(CFG, 'GUI', 'default_show_tag', 'Show List')
+        SHOW_TAG_DEFAULT = check_setting_str(CFG, 'GUI', 'show_tag_default',
+                                             check_setting_str(CFG, 'GUI', 'default_show_tag', 'Show List'))
         SHOWLIST_TAGVIEW = check_setting_str(CFG, 'GUI', 'showlist_tagview', 'standard')
 
         ACTUAL_LOG_DIR = check_setting_str(CFG, 'General', 'log_dir', 'Logs')
@@ -639,17 +672,10 @@ def initialize(consoleLogging=True):
         SOCKET_TIMEOUT = check_setting_int(CFG, 'General', 'socket_timeout', 30)
         socket.setdefaulttimeout(SOCKET_TIMEOUT)
 
-        try:
-            WEB_PORT = check_setting_int(CFG, 'General', 'web_port', 8081)
-        except:
-            WEB_PORT = 8081
-
-        if WEB_PORT < 21 or WEB_PORT > 65535:
-            WEB_PORT = 8081
-
         WEB_HOST = check_setting_str(CFG, 'General', 'web_host', '0.0.0.0')
-        WEB_IPV6 = bool(check_setting_int(CFG, 'General', 'web_ipv6', 0))
+        WEB_PORT = minimax(check_setting_int(CFG, 'General', 'web_port', 8081), 8081, 21, 65535)
         WEB_ROOT = check_setting_str(CFG, 'General', 'web_root', '').rstrip('/')
+        WEB_IPV6 = bool(check_setting_int(CFG, 'General', 'web_ipv6', 0))
         WEB_LOG = bool(check_setting_int(CFG, 'General', 'web_log', 0))
         ENCRYPTION_VERSION = check_setting_int(CFG, 'General', 'encryption_version', 0)
         WEB_USERNAME = check_setting_str(CFG, 'General', 'web_username', '')
@@ -740,7 +766,6 @@ def initialize(consoleLogging=True):
         ALLOW_HIGH_PRIORITY = bool(check_setting_int(CFG, 'General', 'allow_high_priority', 1))
 
         RECENTSEARCH_STARTUP = bool(check_setting_int(CFG, 'General', 'recentsearch_startup', 0))
-        BACKLOG_STARTUP = bool(check_setting_int(CFG, 'General', 'backlog_startup', 0))
         BACKLOG_NOFULL = bool(check_setting_int(CFG, 'General', 'backlog_nofull', 0))
         SKIP_REMOVED_FILES = check_setting_int(CFG, 'General', 'skip_removed_files', 0)
 
@@ -1033,8 +1058,8 @@ def initialize(consoleLogging=True):
         NEWZNAB_DATA = check_setting_str(CFG, 'Newznab', 'newznab_data', '')
         newznabProviderList = providers.getNewznabProviderList(NEWZNAB_DATA)
 
-        TORRENTRSS_DATA = check_setting_str(CFG, 'TorrentRss', 'torrentrss_data', '')
-        torrentRssProviderList = providers.getTorrentRssProviderList(TORRENTRSS_DATA)
+        torrentrss_data = check_setting_str(CFG, 'TorrentRss', 'torrentrss_data', '')
+        torrentRssProviderList = providers.getTorrentRssProviderList(torrentrss_data)
 
         # dynamically load provider settings
         for torrent_prov in [curProvider for curProvider in providers.sortedProviderList()
@@ -1077,7 +1102,7 @@ def initialize(consoleLogging=True):
             if hasattr(torrent_prov, 'enable_recentsearch'):
                 torrent_prov.enable_recentsearch = bool(check_setting_int(CFG, prov_id_uc,
                                                                           prov_id + '_enable_recentsearch', 1)) or \
-                                                   not getattr(torrent_prov, 'supports_backlog', True)
+                                                   not getattr(torrent_prov, 'supports_backlog')
             if hasattr(torrent_prov, 'enable_backlog'):
                 torrent_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
             if hasattr(torrent_prov, 'search_mode'):
@@ -1104,7 +1129,7 @@ def initialize(consoleLogging=True):
             if hasattr(nzb_prov, 'enable_recentsearch'):
                 nzb_prov.enable_recentsearch = bool(check_setting_int(CFG, prov_id_uc,
                                                                       prov_id + '_enable_recentsearch', 1)) or \
-                                               not getattr(nzb_prov, 'supports_backlog', True)
+                                               not getattr(nzb_prov, 'supports_backlog')
             if hasattr(nzb_prov, 'enable_backlog'):
                 nzb_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
 
@@ -1113,7 +1138,7 @@ def initialize(consoleLogging=True):
             save_config()
 
         # start up all the threads
-        logger.sb_log_instance.initLogging(consoleLogging=consoleLogging)
+        logger.sb_log_instance.initLogging(consoleLogging=console_logging)
 
         # initialize the main SB database
         my_db = db.DBConnection()
@@ -1183,8 +1208,7 @@ def initialize(consoleLogging=True):
             search_recent.RecentSearcher(),
             cycleTime=update_interval,
             threadName='RECENTSEARCHER',
-            run_delay=update_now if RECENTSEARCH_STARTUP
-            else datetime.timedelta(minutes=5),
+            run_delay=update_now if RECENTSEARCH_STARTUP else datetime.timedelta(minutes=5),
             prevent_cycle_run=searchQueueScheduler.action.is_recentsearch_in_progress)
 
         if [x for x in providers.sortedProviderList() if x.is_active() and
@@ -1229,17 +1253,16 @@ def initialize(consoleLogging=True):
         # processors
         autoPostProcesserScheduler = scheduler.Scheduler(
             auto_post_processer.PostProcesser(),
-            cycleTime=datetime.timedelta(
-                minutes=AUTOPOSTPROCESSER_FREQUENCY),
+            cycleTime=datetime.timedelta(minutes=AUTOPOSTPROCESSER_FREQUENCY),
             threadName='POSTPROCESSER',
             silent=not PROCESS_AUTOMATICALLY)
-
+        """
         traktCheckerScheduler = scheduler.Scheduler(
             traktChecker.TraktChecker(),
             cycleTime=datetime.timedelta(hours=1),
             threadName='TRAKTCHECKER',
             silent=not USE_TRAKT)
-
+        """
         subtitlesFinderScheduler = scheduler.Scheduler(
             subtitles.SubtitlesFinder(),
             cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_FREQUENCY),
@@ -1247,7 +1270,6 @@ def initialize(consoleLogging=True):
             silent=not USE_SUBTITLES)
 
         showList = []
-        loadingShowList = {}
 
         background_mapping_task = threading.Thread(name='LOAD-MAPPINGS', target=indexermapper.load_mapped_ids)
 
@@ -1255,58 +1277,54 @@ def initialize(consoleLogging=True):
         return True
 
 
+def enabled_schedulers(is_init=False):
+    # ([], [traktCheckerScheduler])[USE_TRAKT] + \
+    for s in ([], [events])[is_init] + \
+            [recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler,
+             versionCheckScheduler, showQueueScheduler, searchQueueScheduler] + \
+            ([], [properFinderScheduler])[DOWNLOAD_PROPERS] + \
+            ([], [autoPostProcesserScheduler])[PROCESS_AUTOMATICALLY] + \
+            ([], [subtitlesFinderScheduler])[USE_SUBTITLES] + \
+            ([events], [])[is_init]:
+        yield s
+
+
 def start():
-    global __INITIALIZED__, backlogSearchScheduler, \
-        showUpdateScheduler, versionCheckScheduler, showQueueScheduler, \
-        properFinderScheduler, autoPostProcesserScheduler, searchQueueScheduler, \
-        subtitlesFinderScheduler, USE_SUBTITLES, traktCheckerScheduler, \
-        recentSearchScheduler, events, started, background_mapping_task
+    global started
 
     with INIT_LOCK:
         if __INITIALIZED__:
             # Load all Indexer mappings in background
-            indexermapper.defunct_indexer = [i for i in indexerApi().all_indexers if indexerApi(i).config.get('defunct')]
+            indexermapper.defunct_indexer = [
+                i for i in indexerApi().all_indexers if indexerApi(i).config.get('defunct')]
             indexermapper.indexer_list = [i for i in indexerApi().all_indexers]
             background_mapping_task.start()
 
-            # start sysetm events queue
-            events.start()
-
-            # start the recent search scheduler
-            recentSearchScheduler.start()
-
-            # start the backlog scheduler
-            backlogSearchScheduler.start()
-
-            # start the show updater
-            showUpdateScheduler.start()
-
-            # start the version checker
-            versionCheckScheduler.start()
-
-            # start the queue checker
-            showQueueScheduler.start()
-
-            # start the search queue checker
-            searchQueueScheduler.start()
-
-            # start the queue checker
-            if DOWNLOAD_PROPERS:
-                properFinderScheduler.start()
-
-            # start the proper finder
-            if PROCESS_AUTOMATICALLY:
-                autoPostProcesserScheduler.start()
-
-            # start the subtitles finder
-            if USE_SUBTITLES:
-                subtitlesFinderScheduler.start()
-
-            # start the trakt checker
-            # if USE_TRAKT:
-                # traktCheckerScheduler.start()
+            for thread in enabled_schedulers(is_init=True):
+                thread.start()
 
             started = True
+
+
+def restart(soft=True):
+    if soft:
+        halt()
+        save_all()
+        logger.log(u'Re-initializing all data')
+        initialize()
+    else:
+        events.put(events.SystemEvent.RESTART)
+
+
+def sig_handler(signum=None, _=None):
+    is_ctrlbreak = 'win32' == sys.platform and signal.SIGBREAK == signum
+    msg = u'Signal "%s" found' % (signal.SIGINT == signum and 'CTRL-C' or is_ctrlbreak and 'CTRL+BREAK' or
+                                  signal.SIGTERM == signum and 'Termination' or signum)
+    if None is signum or signum in (signal.SIGINT, signal.SIGTERM) or is_ctrlbreak:
+        logger.log('%s, saving and exiting...' % msg)
+        events.put(events.SystemEvent.SHUTDOWN)
+    else:
+        logger.log('%s, not exiting' % msg)
 
 
 def halt():
@@ -1318,53 +1336,14 @@ def halt():
 
             logger.log(u'Aborting all threads')
 
-            schedulers = [
-                recentSearchScheduler,
-                backlogSearchScheduler,
-                showUpdateScheduler,
-                versionCheckScheduler,
-                showQueueScheduler,
-                searchQueueScheduler,
-
-                properFinderScheduler,
-                autoPostProcesserScheduler,
-                subtitlesFinderScheduler,
-
-                events
-            ]
-
-            for thread in schedulers:
+            for thread in enabled_schedulers():
                 thread.stop.set()
 
-            for thread in schedulers:
+            for thread in enabled_schedulers():
                 logger.log('Waiting for the %s thread to exit' % thread.name)
                 try:
                     thread.join(10)
                 except RuntimeError:
-                    pass
-
-            if PROCESS_AUTOMATICALLY:
-                autoPostProcesserScheduler.stop.set()
-                logger.log(u'Waiting for the POSTPROCESSER thread to exit')
-                try:
-                    autoPostProcesserScheduler.join(10)
-                except:
-                    pass
-
-            if DOWNLOAD_PROPERS:
-                properFinderScheduler.stop.set()
-                logger.log(u'Waiting for the PROPERFINDER thread to exit')
-                try:
-                    properFinderScheduler.join(10)
-                except:
-                    pass
-
-            if USE_SUBTITLES:
-                subtitlesFinderScheduler.stop.set()
-                logger.log(u'Waiting for the SUBTITLESFINDER thread to exit')
-                try:
-                    subtitlesFinderScheduler.join(10)
-                except:
                     pass
 
             if ADBA_CONNECTION:
@@ -1372,27 +1351,16 @@ def halt():
                     ADBA_CONNECTION.logout()
                 except AniDBBannedError as e:
                     logger.log(u'ANIDB Error %s' % ex(e), logger.DEBUG)
-                except AniDBError as e:
+                except AniDBError:
                     pass
                 logger.log(u'Waiting for the ANIDB CONNECTION thread to exit')
                 try:
                     ADBA_CONNECTION.join(10)
-                except:
+                except (StandardError, Exception):
                     pass
 
             __INITIALIZED__ = False
             started = False
-
-
-def sig_handler(signum=None, frame=None):
-    is_ctrlbreak = 'win32' == sys.platform and signal.SIGBREAK == signum
-    msg = u'Signal "%s" found' % (signal.SIGINT == signum and 'CTRL-C' or is_ctrlbreak and 'CTRL+BREAK' or
-                                  signal.SIGTERM == signum and 'Termination' or signum)
-    if None is signum or signum in (signal.SIGINT, signal.SIGTERM) or is_ctrlbreak:
-        logger.log('%s, saving and exiting...' % msg)
-        events.put(events.SystemEvent.SHUTDOWN)
-    else:
-        logger.log('%s, not exiting' % msg)
 
 
 def save_all():
@@ -1406,16 +1374,6 @@ def save_all():
     # save config
     logger.log(u'Saving config file to disk')
     save_config()
-
-
-def restart(soft=True):
-    if soft:
-        halt()
-        save_all()
-        logger.log(u'Re-initializing all data')
-        initialize()
-    else:
-        events.put(events.SystemEvent.RESTART)
 
 
 def save_config():
@@ -1463,7 +1421,6 @@ def save_config():
     new_config['General']['check_propers_interval'] = CHECK_PROPERS_INTERVAL
     new_config['General']['allow_high_priority'] = int(ALLOW_HIGH_PRIORITY)
     new_config['General']['recentsearch_startup'] = int(RECENTSEARCH_STARTUP)
-    new_config['General']['backlog_startup'] = int(BACKLOG_STARTUP)
     new_config['General']['backlog_nofull'] = int(BACKLOG_NOFULL)
     new_config['General']['skip_removed_files'] = int(SKIP_REMOVED_FILES)
     new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
@@ -1501,9 +1458,6 @@ def save_config():
     new_config['General']['sort_article'] = int(SORT_ARTICLE)
     new_config['General']['proxy_setting'] = PROXY_SETTING
     new_config['General']['proxy_indexers'] = int(PROXY_INDEXERS)
-    new_config['General']['display_background'] = int(DISPLAY_BACKGROUND)
-    new_config['General']['display_background_transparent'] = DISPLAY_BACKGROUND_TRANSPARENT
-    new_config['General']['display_all_seasons'] = int(DISPLAY_ALL_SEASONS)
 
     new_config['General']['metadata_xbmc'] = METADATA_XBMC
     new_config['General']['metadata_xbmc_12plus'] = METADATA_XBMC_12PLUS
@@ -1800,6 +1754,10 @@ def save_config():
     new_config['GUI']['date_preset'] = DATE_PRESET
     new_config['GUI']['time_preset'] = TIME_PRESET_W_SECONDS
     new_config['GUI']['timezone_display'] = TIMEZONE_DISPLAY
+
+    new_config['GUI']['show_tags'] = ','.join(SHOW_TAGS)
+    new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
+
     new_config['GUI']['home_layout'] = HOME_LAYOUT
     new_config['GUI']['history_layout'] = HISTORY_LAYOUT
     new_config['GUI']['display_show_specials'] = int(DISPLAY_SHOW_SPECIALS)
@@ -1811,7 +1769,7 @@ def save_config():
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
     new_config['GUI']['show_tags'] = ','.join(SHOW_TAGS)
     new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
-    new_config['GUI']['default_show_tag'] = DEFAULT_SHOW_TAG
+    new_config['GUI']['show_tag_default'] = SHOW_TAG_DEFAULT
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)
@@ -1842,14 +1800,11 @@ def save_config():
 def launch_browser(start_port=None):
     if not start_port:
         start_port = WEB_PORT
-    if ENABLE_HTTPS:
-        browser_url = 'https://localhost:%d%s' % (start_port, WEB_ROOT)
-    else:
-        browser_url = 'http://localhost:%d%s' % (start_port, WEB_ROOT)
+    browser_url = 'http%s://localhost:%d%s' % (('s' or '')[not ENABLE_HTTPS], start_port, WEB_ROOT)
     try:
         webbrowser.open(browser_url, 2, 1)
-    except:
+    except (StandardError, Exception):
         try:
             webbrowser.open(browser_url, 1, 1)
-        except:
-            logger.log(u'Unable to launch a browser', logger.ERROR)
+        except (StandardError, Exception):
+            logger.log('Unable to launch a browser', logger.ERROR)
