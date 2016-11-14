@@ -1800,7 +1800,7 @@ def save_config():
 def launch_browser(start_port=None):
     if not start_port:
         start_port = WEB_PORT
-    browser_url = 'http%s://localhost:%d%s' % (('s' or '')[not ENABLE_HTTPS], start_port, WEB_ROOT)
+    browser_url = 'http%s://localhost:%d%s' % (('s', '')[not ENABLE_HTTPS], start_port, WEB_ROOT)
     try:
         webbrowser.open(browser_url, 2, 1)
     except (StandardError, Exception):

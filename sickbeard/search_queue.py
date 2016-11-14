@@ -206,15 +206,20 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                         need_anime = True
                     if not need_sports and curShow.is_sports:
                         need_sports = True
-                    if not need_sd or not need_hd:
+                    if not need_sd or not need_hd or not need_uhd:
                         for w in wanted_eps:
+                            if need_sd and need_hd and need_uhd:
+                                break
                             if not w.show.is_anime and not w.show.is_sports:
-                                if not need_sd and max_sd >= min(w.wantedQuality):
-                                    need_sd = True
-                                if not need_hd and any(i in hd_qualities for i in w.wantedQuality):
-                                    need_hd = True
-                                if not need_uhd and max_hd < max(w.wantedQuality):
-                                    need_uhd = True
+                                if Quality.UNKNOWN in w.wantedQuality:
+                                    need_sd = need_hd = need_uhd = True
+                                else:
+                                    if not need_sd and max_sd >= min(w.wantedQuality):
+                                        need_sd = True
+                                    if not need_hd and any(i in hd_qualities for i in w.wantedQuality):
+                                        need_hd = True
+                                    if not need_uhd and max_hd < max(w.wantedQuality):
+                                        need_uhd = True
                 self.episodes.extend(wanted_eps)
 
             self.update_providers(need_anime=need_anime, need_sports=need_sports,

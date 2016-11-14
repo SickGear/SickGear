@@ -444,13 +444,18 @@ class NewznabProvider(generic.NZBProvider):
                         Quality.HDBLURAY, Quality.FULLHDBLURAY]
         max_hd = Quality.FULLHDBLURAY
         for s in searches:
+            if need_sd and need_hd and need_uhd:
+                break
             if not s.show.is_anime and not s.show.is_sports:
-                if not need_sd and min(s.wantedQuality) <= max_sd:
-                    need_sd = True
-                if not need_hd and any(i in hd_qualities for i in s.wantedQuality):
-                    need_hd = True
-                if not need_uhd and max(s.wantedQuality) > max_hd:
-                    need_uhd = True
+                if Quality.UNKNOWN in s.wantedQuality:
+                    need_sd = need_hd = need_uhd = True
+                else:
+                    if not need_sd and min(s.wantedQuality) <= max_sd:
+                        need_sd = True
+                    if not need_hd and any(i in hd_qualities for i in s.wantedQuality):
+                        need_hd = True
+                    if not need_uhd and max(s.wantedQuality) > max_hd:
+                        need_uhd = True
         per_ep, limit_per_ep = 0, 0
         if need_sd and not need_hd:
             per_ep, limit_per_ep = 10, 25
@@ -474,12 +479,15 @@ class NewznabProvider(generic.NZBProvider):
         if not season_search:
             need_sd = need_hd = need_uhd = False
             if not ep_obj.show.is_anime and not ep_obj.show.is_sports:
-                if min(ep_obj.wantedQuality) <= max_sd:
-                    need_sd = True
-                if any(i in hd_qualities for i in ep_obj.wantedQuality):
-                    need_hd = True
-                if max(ep_obj.wantedQuality) > max_hd:
-                    need_uhd = True
+                if Quality.UNKNOWN in ep_obj.wantedQuality:
+                    need_sd = need_hd = need_uhd = True
+                else:
+                    if min(ep_obj.wantedQuality) <= max_sd:
+                        need_sd = True
+                    if any(i in hd_qualities for i in ep_obj.wantedQuality):
+                        need_hd = True
+                    if max(ep_obj.wantedQuality) > max_hd:
+                        need_uhd = True
         return (season_search, need_sd, need_hd, need_uhd,
                 (hits_per_page * 100 // hits_per_page * 2, hits_per_page * int(ceil(rel_limit * 1.5)))[season_search])
 
