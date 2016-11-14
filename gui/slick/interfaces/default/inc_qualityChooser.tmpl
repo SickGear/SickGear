@@ -21,30 +21,40 @@
 
 <div id="customQualityWrapper">
 	<div id="customQuality" class="show-if-quality-custom" style="display:none">
-		<div class="component-group-desc">
+		<div class="component-group-desc tip-text">
 			<p>An <em>Initial</em> quality episode must be found before an <em>Upgrade to</em> selection is considered.</p>
 			<p>Upgrades continue until the highest selected of <em>Upgrade to</em> is matched.</p>
 		</div>
 
 		<span class="component-desc">
-			<div style="float:left;padding-right:40px">
+			<div style="float:left;padding-right:28px">
 				<h4 class="jumbo">Initial</h4>
 #set $anyQualityList = filter(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
 				<select id="anyQualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)" class="form-control form-control-inline input-sm">
+#set $has_unknown = False
 #for $curQuality in sorted($anyQualityList):
+    #set $has_unknown |= ($Quality.UNKNOWN == $curQuality and $curQuality in $anyQualities)
 					<option value="$curQuality"#echo ('', $html_selected)[$curQuality in $anyQualities]#>$Quality.qualityStrings[$curQuality]</option>
 #end for
 				</select>
 			</div>
 
-			<div style="float:left">
+			<div style="float:left;padding-right:20px">
 				<h4 class="jumbo">Upgrade to</h4>
 #set $bestQualityList = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
 				<select id="bestQualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)" class="form-control form-control-inline input-sm">
 #for $curQuality in sorted($bestQualityList):
 					<option value="$curQuality"#echo ('', $html_selected)[$curQuality in $bestQualities]#>$Quality.qualityStrings[$curQuality]</option>
 #end for
-				</select>
+				</select><br />
+				<span>Ctrl + Click = toggle a quality</span>
+			</div>
+
+			<div style="line-height:normal;padding-top:50px" id="quality-notes" class="tip-text">
+				<p id="unknown"#if not $has_unknown# style="display:none"#end if#>
+					<em class="highlight-text">Note:</em> Temporarily use 'Unknown' for releases with no recognised quality.
+					Full-time use risks snatching bad releases and wastes API hits.
+				</p>
 			</div>
 		</span>
 	</div>

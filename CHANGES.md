@@ -193,6 +193,8 @@
 * Fix button "Checkout branch" when stuck on disabled
 * Add 'Download Log' to 'Logs & Errors' page
 * Change consolidate shutdown with restart, improve systemd support, bring order to on-init globals
+* Change speed improvement in finding needed categories/qualities (sd, hd, uhd)
+* Change add guidance when using the "unknown" quality selection
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
@@ -229,6 +231,9 @@
 * Change remove deprecated providers being saved to config
 * Change prevent a missing slash typo and correct develop typo after a network outage
 * Change send download logfile as stream
+* Fix launch browser during startup
+* Change don't exclude "unknown" from search
+* Fix UHD category select in Recent Search
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

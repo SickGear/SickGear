@@ -2147,7 +2147,7 @@ class Home(MainHandler):
         # Find the quality class for the episode
         quality_class = Quality.qualityStrings[Quality.UNKNOWN]
         ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
-        for x in (SD, HD720p, HD1080p):
+        for x in (SD, HD720p, HD1080p, UHD2160p):
             if ep_quality in Quality.splitQuality(x)[0]:
                 quality_class = qualityPresetStrings[x]
                 break

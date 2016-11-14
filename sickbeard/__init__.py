@@ -1138,7 +1138,7 @@ def initialize(console_logging=True):
             save_config()
 
         # start up all the threads
-        logger.sb_log_instance.initLogging(consoleLogging=console_logging)
+        logger.sb_log_instance.init_logging(console_logging=console_logging)
 
         # initialize the main SB database
         my_db = db.DBConnection()

@@ -401,7 +401,7 @@ class ProcessTVShow(object):
             return False
 
         if failed:
-            self._process_failed(os.path.join(path, dir_name), nzb_name_original, showObj=showObj)
+            self._process_failed(ek.ek(os.path.join, path, dir_name), nzb_name_original, showObj=showObj)
             return False
 
         if helpers.is_hidden_folder(dir_name):
@@ -623,11 +623,11 @@ class ProcessTVShow(object):
         result = False
         chunks = {}
         matcher = re.compile('\.[0-9]+$')
-        for dirpath, void, filenames in os.walk(directory):
+        for dirpath, void, filenames in ek.ek(os.walk, directory):
             for filename in filenames:
                 if None is not matcher.search(filename):
                     maybe_chunk = ek.ek(os.path.join, dirpath, filename)
-                    base_filepath, ext = os.path.splitext(maybe_chunk)
+                    base_filepath, ext = ek.ek(os.path.splitext, maybe_chunk)
                     if base_filepath not in chunks:
                         chunks[base_filepath] = []
                     chunks[base_filepath].append(maybe_chunk)
@@ -809,10 +809,10 @@ class ProcessTVShow(object):
                 break
         else:
             path, dirs = ek.ek(os.path.split, dir_name)  # Script Post Processing
-            if None is not nzb_name and not nzb_name.endswith('.nzb') and os.path.isfile(
-                    os.path.join(dir_name, nzb_name)):  # For single torrent file without directory
+            if None is not nzb_name and not nzb_name.endswith('.nzb') and \
+                    ek.ek(os.path.isfile, ek.ek(os.path.join, dir_name, nzb_name)):  # For single torrent file without directory
                 dirs = []
-                files = [os.path.join(dir_name, nzb_name)]
+                files = [ek.ek(os.path.join, dir_name, nzb_name)]
             else:
                 dirs = [dirs]
                 files = []

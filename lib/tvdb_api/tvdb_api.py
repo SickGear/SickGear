@@ -517,7 +517,7 @@ class Tvdb:
         self.config['url_artworkPrefix'] = u'%(base_url)s/banners/%%s' % self.config
 
     def log(self, msg, log_level=logger.DEBUG):
-        logger.log('TVDB_API :: %s' % (msg.replace(self.config['apikey'], '<apikey>')), logLevel=log_level)
+        logger.log('TVDB_API :: %s' % (msg.replace(self.config['apikey'], '<apikey>')), log_level=log_level)
 
     @staticmethod
     def _get_temp_dir():
