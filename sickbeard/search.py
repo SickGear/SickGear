@@ -387,7 +387,7 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
 
             ep_obj = show.getEpisode(int(result['season']), int(result['episode']))
             ep_obj.wantedQuality = [i for i in (wanted_qualities, initial_qualities)[not_downloaded]
-                                    if (common.Quality.UNKNOWN != i and cur_quality < i)]
+                                    if cur_quality < i]
             ep_obj.eps_aired_in_season = ep_count.get(helpers.tryInt(result['season']), 0)
             ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
                 helpers.tryInt(result['scene_season']), 0) if result['scene_season'] else ep_obj.eps_aired_in_season

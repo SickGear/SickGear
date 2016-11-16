@@ -93,7 +93,7 @@ sickbeard.PROG_DIR = os.path.abspath('..')
 sickbeard.DATA_DIR = sickbeard.PROG_DIR
 sickbeard.LOG_DIR = os.path.join(TESTDIR, 'Logs')
 createTestLogFolder()
-sickbeard.logger.sb_log_instance.initLogging(False)
+sickbeard.logger.sb_log_instance.init_logging(False)
 
 sickbeard.CACHE_DIR = os.path.join(TESTDIR, 'cache')
 createTestCacheFolder()

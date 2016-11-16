@@ -1079,9 +1079,9 @@ class TVShow(object):
                 logger.log('Attempt to %s cache file %s' % (action, cache_file))
                 try:
                     if sickbeard.TRASH_REMOVE_SHOW:
-                        send2trash(cache_file)
+                        ek.ek(send2trash, cache_file)
                     else:
-                        os.remove(cache_file)
+                        ek.ek(os.remove, cache_file)
 
                 except OSError as e:
                     logger.log('Unable to %s %s: %s / %s' % (action, cache_file, repr(e), str(e)), logger.WARNING)
@@ -1101,7 +1101,7 @@ class TVShow(object):
                         logger.log('Unable to change permissions of %s' % self._location, logger.WARNING)
 
                 if sickbeard.TRASH_REMOVE_SHOW:
-                    send2trash(self.location)
+                    ek.ek(send2trash, self.location)
                 else:
                     ek.ek(shutil.rmtree, self.location)
 
@@ -1137,7 +1137,7 @@ class TVShow(object):
 
         sql_l = []
         for ep in sqlResults:
-            curLoc = os.path.normpath(ep['location'])
+            curLoc = ek.ek(os.path.normpath, ep['location'])
             season = int(ep['season'])
             episode = int(ep['episode'])
 
@@ -1149,8 +1149,8 @@ class TVShow(object):
                 continue
 
             # if the path doesn't exist or if it's not in our show dir
-            if not ek.ek(os.path.isfile, curLoc) or not os.path.normpath(curLoc).startswith(
-                    os.path.normpath(self.location)):
+            if not ek.ek(os.path.isfile, curLoc) or not ek.ek(os.path.normpath, curLoc).startswith(
+                    ek.ek(os.path.normpath, self.location)):
 
                 # check if downloaded files still exist, update our data if this has changed
                 if 1 != sickbeard.SKIP_REMOVED_FILES:
@@ -1528,7 +1528,7 @@ class TVEpisode(object):
 
             if sickbeard.SUBTITLES_DIR:
                 for video in subtitles:
-                    subs_new_path = ek.ek(os.path.join, os.path.dirname(video.path), sickbeard.SUBTITLES_DIR)
+                    subs_new_path = ek.ek(os.path.join, ek.ek(os.path.dirname, video.path), sickbeard.SUBTITLES_DIR)
                     dir_exists = helpers.makeDir(subs_new_path)
                     if not dir_exists:
                         logger.log('Unable to create subtitles folder %s' % subs_new_path, logger.ERROR)
@@ -1536,7 +1536,7 @@ class TVEpisode(object):
                         helpers.chmodAsParent(subs_new_path)
 
                     for subtitle in subtitles.get(video):
-                        new_file_path = ek.ek(os.path.join, subs_new_path, os.path.basename(subtitle.path))
+                        new_file_path = ek.ek(os.path.join, subs_new_path, ek.ek(os.path.basename, subtitle.path))
                         helpers.moveFile(subtitle.path, new_file_path)
                         helpers.chmodAsParent(new_file_path)
             else:
@@ -1664,7 +1664,7 @@ class TVEpisode(object):
 
             # don't overwrite my location
             if sql_results[0]['location'] and sql_results[0]['location']:
-                self.location = os.path.normpath(sql_results[0]['location'])
+                self.location = ek.ek(os.path.normpath, sql_results[0]['location'])
             if sql_results[0]['file_size']:
                 self.file_size = int(sql_results[0]['file_size'])
             else:
@@ -2493,7 +2493,7 @@ class TVEpisode(object):
         if len(name_groups) == 1:
             return ''
         else:
-            return self._format_pattern(os.sep.join(name_groups[:-1]), multi)
+            return self._format_pattern(ek.ek(os.sep.join, name_groups[:-1]), multi)
 
     def formatted_filename(self, pattern=None, multi=None, anime_type=None):
         """
@@ -2605,7 +2605,7 @@ class TVEpisode(object):
         """
         if not datetime.date == type(self.airdate) or 1 == self.airdate.year:
             logger.log('%s: Did not change modify date of %s because episode date is never aired or invalid'
-                       % (self.show.indexerid, os.path.basename(self.location)), logger.DEBUG)
+                       % (self.show.indexerid, ek.ek(os.path.basename, self.location)), logger.DEBUG)
             return
 
         hr = m = 0
@@ -2619,7 +2619,7 @@ class TVEpisode(object):
 
         airdatetime = datetime.datetime.combine(self.airdate, airtime)
 
-        filemtime = datetime.datetime.fromtimestamp(os.path.getmtime(self.location))
+        filemtime = datetime.datetime.fromtimestamp(ek.ek(os.path.getmtime, self.location))
 
         if filemtime != airdatetime:
             import time
@@ -2627,7 +2627,7 @@ class TVEpisode(object):
             airdatetime = airdatetime.timetuple()
             if helpers.touchFile(self.location, time.mktime(airdatetime)):
                 logger.log('%s: Changed modify date of %s to show air date %s'
-                           % (self.show.indexerid, os.path.basename(self.location), time.strftime('%b %d,%Y (%H:%M)', airdatetime)))
+                           % (self.show.indexerid, ek.ek(os.path.basename, self.location), time.strftime('%b %d,%Y (%H:%M)', airdatetime)))
 
     def __getstate__(self):
         d = dict(self.__dict__)

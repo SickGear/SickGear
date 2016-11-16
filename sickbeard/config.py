@@ -89,7 +89,7 @@ def change_LOG_DIR(log_dir, web_log):
             sickbeard.ACTUAL_LOG_DIR = os.path.normpath(log_dir)
             sickbeard.LOG_DIR = abs_log_dir
 
-            logger.sb_log_instance.initLogging()
+            logger.sb_log_instance.init_logging()
             logger.log(u'Initialized new log file in %s' % sickbeard.LOG_DIR)
             log_dir_changed = True
 

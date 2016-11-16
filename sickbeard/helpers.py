@@ -172,10 +172,10 @@ def sanitizeFileName(name):
     return name
 
 
-def _remove_file_failed(file):
+def remove_file_failed(filename):
     try:
-        ek.ek(os.remove, file)
-    except:
+        ek.ek(os.remove, filename)
+    except (StandardError, Exception):
         pass
 
 
@@ -323,7 +323,7 @@ def link(src, dst):
 
         if ctypes.windll.kernel32.CreateHardLinkW(unicode(dst), unicode(src), 0) == 0: raise ctypes.WinError()
     else:
-        os.link(src, dst)
+        ek.ek(os.link, src, dst)
 
 
 def hardlinkFile(srcFile, destFile):
@@ -340,10 +340,11 @@ def symlink(src, dst):
     if os.name == 'nt':
         import ctypes
 
-        if ctypes.windll.kernel32.CreateSymbolicLinkW(unicode(dst), unicode(src), 1 if os.path.isdir(src) else 0) in [0,
-                                                                                                                      1280]: raise ctypes.WinError()
+        if ctypes.windll.kernel32.CreateSymbolicLinkW(
+                unicode(dst), unicode(src), 1 if ek.ek(os.path.isdir, src) else 0) in [0, 1280]:
+            raise ctypes.WinError()
     else:
-        os.symlink(src, dst)
+        ek.ek(os.symlink, src, dst)
 
 
 def moveAndSymlinkFile(srcFile, destFile):
@@ -411,11 +412,11 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     old_path_length: The length of media file path (old name) WITHOUT THE EXTENSION
     """
 
-    new_dest_dir, new_dest_name = os.path.split(new_path)  # @UnusedVariable
+    new_dest_dir, new_dest_name = ek.ek(os.path.split, new_path)  # @UnusedVariable
 
     if old_path_length == 0 or old_path_length > len(cur_path):
         # approach from the right
-        cur_file_name, cur_file_ext = os.path.splitext(cur_path)  # @UnusedVariable
+        cur_file_name, cur_file_ext = ek.ek(os.path.splitext, cur_path)  # @UnusedVariable
     else:
         # approach from the left
         cur_file_ext = cur_path[old_path_length:]
@@ -423,7 +424,7 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
 
     if cur_file_ext[1:] in subtitleExtensions:
         # Extract subtitle language from filename
-        sublang = os.path.splitext(cur_file_name)[1][1:]
+        sublang = ek.ek(os.path.splitext, cur_file_name)[1][1:]
 
         # Check if the language extracted from filename is a valid language
         try:
@@ -435,7 +436,7 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     # put the extension on the incoming file
     new_path += cur_file_ext
 
-    make_dirs(os.path.dirname(new_path))
+    make_dirs(ek.ek(os.path.dirname, new_path))
 
     # move the file
     try:
@@ -724,7 +725,7 @@ def backupVersionedFile(old_file, version):
 def restoreVersionedFile(backup_file, version):
     numTries = 0
 
-    new_file, backup_version = os.path.splitext(backup_file)
+    new_file, backup_version = ek.ek(os.path.splitext, backup_file)
     restore_file = new_file + '.' + 'v' + str(version)
 
     if not ek.ek(os.path.isfile, new_file):
@@ -1007,7 +1008,7 @@ def touchFile(fname, atime=None):
     if None != atime:
         try:
             with open(fname, 'a'):
-                os.utime(fname, (atime, atime))
+                ek.ek(os.utime, fname, (atime, atime))
                 return True
         except:
             logger.log(u"File air date stamping not available on your OS", logger.DEBUG)
@@ -1027,9 +1028,9 @@ def _getTempDir():
         try:
             uid = getpass.getuser()
         except ImportError:
-            return os.path.join(tempfile.gettempdir(), "SickGear")
+            return ek.ek(os.path.join, tempfile.gettempdir(), "SickGear")
 
-    return os.path.join(tempfile.gettempdir(), "SickGear-%s" % (uid))
+    return ek.ek(os.path.join, tempfile.gettempdir(), "SickGear-%s" % (uid))
 
 
 def proxy_setting(proxy_setting, request_url, force=False):
@@ -1098,7 +1099,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
     if not kwargs.get('nocache'):
         cache_dir = sickbeard.CACHE_DIR or _getTempDir()
-        session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
+        session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
     else:
         del(kwargs['nocache'])
 
@@ -1221,7 +1222,7 @@ def download_file(url, filename, session=None):
     if None is session:
         session = requests.session()
     cache_dir = sickbeard.CACHE_DIR or _getTempDir()
-    session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
+    session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
 
     # request session headers
     session.headers.update({'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip,deflate'})
@@ -1258,27 +1259,27 @@ def download_file(url, filename, session=None):
                 if chunk:
                     fp.write(chunk)
                     fp.flush()
-            os.fsync(fp.fileno())
+            ek.ek(os.fsync, fp.fileno())
 
         chmodAsParent(filename)
     except requests.exceptions.HTTPError as e:
-        _remove_file_failed(filename)
+        remove_file_failed(filename)
         logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
         return False
     except requests.exceptions.ConnectionError as e:
-        _remove_file_failed(filename)
+        remove_file_failed(filename)
         logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return False
     except requests.exceptions.Timeout as e:
-        _remove_file_failed(filename)
+        remove_file_failed(filename)
         logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
         return False
     except EnvironmentError as e:
-        _remove_file_failed(filename)
+        remove_file_failed(filename)
         logger.log(u"Unable to save the file: " + ex(e), logger.ERROR)
         return False
     except Exception:
-        _remove_file_failed(filename)
+        remove_file_failed(filename)
         logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)
         return False
 

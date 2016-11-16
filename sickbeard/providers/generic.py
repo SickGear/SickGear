@@ -40,7 +40,7 @@ from hachoir_core.stream import FileInputStream
 from sickbeard import helpers, classes, logger, db, tvcache, encodingKludge as ek
 from sickbeard.common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
 from sickbeard.exceptions import SickBeardException, AuthException, ex
-from sickbeard.helpers import maybe_plural, _remove_file_failed as remove_file_failed
+from sickbeard.helpers import maybe_plural, remove_file_failed
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard.show_name_helpers import allPossibleShowNames
 

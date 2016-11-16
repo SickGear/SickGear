@@ -1212,7 +1212,7 @@ div.formpaginate .prev, div.formpaginate .next{
 	background:#57442b
 }
 
-#customQualityWrapper div.component-group-desc p{
+#customQualityWrapper .tip-text p{
 	color:#666
 }
 

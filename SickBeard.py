@@ -220,7 +220,7 @@ class SickGear(object):
             # Run as a double forked daemon
             if o in ('-d', '--daemon'):
                 self.run_as_daemon = True
-                # When running as daemon disable consoleLogging and don't start browser
+                # When running as daemon disable console_logging and don't start browser
                 self.console_logging = False
                 self.no_launch = True
 
