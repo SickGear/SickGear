@@ -280,7 +280,7 @@
 								<label>
 									<span class="component-title">SABnzbd password</span>
 									<span class="component-desc">
-										<input type="password" name="sab_password" id="sab_password" value="#echo '*' * len($sickbeard.SAB_PASSWORD)#" class="form-control input-sm input200">
+										<input type="password" autocomplete="nope" name="sab_password" id="sab_password" value="#echo '*' * len($sickbeard.SAB_PASSWORD)#" class="form-control input-sm input200">
 										<p>(blank for none)</p>
 									</span>
 								</label>
@@ -344,7 +344,7 @@
 								<label>
 									<span class="component-title">NZBget password</span>
 									<span class="component-desc">
-										<input type="password" name="nzbget_password" id="nzbget_password" value="#echo '*' * len($sickbeard.NZBGET_PASSWORD)#" class="form-control input-sm input200">
+										<input type="password" autocomplete="nope" name="nzbget_password" id="nzbget_password" value="#echo '*' * len($sickbeard.NZBGET_PASSWORD)#" class="form-control input-sm input200">
 										<p>locate in nzbget.conf (default:tegbzn6789)</p>
 									</span>
 								</label>
@@ -499,7 +499,7 @@
 								<label>
 									<span class="component-title" id="password-title">Client password</span>
 									<span class="component-desc">
-										<input type="password" name="torrent_password" id="torrent_password" value="#echo '*' * len($sickbeard.TORRENT_PASSWORD)#" class="form-control input-sm input200">
+										<input type="password" autocomplete="nope" name="torrent_password" id="torrent_password" value="#echo '*' * len($sickbeard.TORRENT_PASSWORD)#" class="form-control input-sm input200">
 										<p>(blank for none)</p>
 									</span>
 								</label>

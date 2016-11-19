@@ -163,7 +163,7 @@
 								<label for="kodi_password">
 									<span class="component-title">Kodi web server password</span>
 									<span class="component-desc">
-										<input type="password" name="kodi_password" id="kodi_password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250" />
+										<input type="password" autocomplete="nope" name="kodi_password" id="kodi_password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250">
 										<p>(blank for none)</p>
 										<div class="clear-left"><p>in Kodi System/Settings/Services/Web server</p></div>
 									</span>
@@ -312,7 +312,7 @@
 							<div class="field-pair">
 								<label for="xbmc_password">
 									<span class="component-title">XBMC password</span>
-									<input type="password" name="xbmc_password" id="xbmc_password" value="#echo '*' * len($sickbeard.XBMC_PASSWORD)#" class="form-control input-sm input250" />
+									<input type="password" autocomplete="nope" name="xbmc_password" id="xbmc_password" value="#echo '*' * len($sickbeard.XBMC_PASSWORD)#" class="form-control input-sm input250">
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -361,7 +361,7 @@
 									<label for="plex_password">
 										<span class="component-title">Server/client password</span>
 										<span class="component-desc">
-											<input type="password" name="plex_password" id="plex_password" value="#echo '*' * len($sickbeard.PLEX_PASSWORD)#" class="form-control input-sm input250" />
+											<input type="password" autocomplete="nope" name="plex_password" id="plex_password" value="#echo '*' * len($sickbeard.PLEX_PASSWORD)#" class="form-control input-sm input250">
 											<p>blank = no authentication</p>
 										</span>
 									</label>
@@ -812,7 +812,7 @@
 							<div class="field-pair">
 								<label for="growl_password">
 									<span class="component-title">Growl password</span>
-									<input type="password" name="growl_password" id="growl_password" value="#echo '*' * len($sickbeard.GROWL_PASSWORD)#" class="form-control input-sm input250" />
+									<input type="password" autocomplete="nope" name="growl_password" id="growl_password" value="#echo '*' * len($sickbeard.GROWL_PASSWORD)#" class="form-control input-sm input250">
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
@@ -1759,7 +1759,7 @@
 								<label for="email_password">
 									<span class="component-title">SMTP server password</span>
 									<span class="component-desc">
-										<input type="password" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250" />
+										<input type="password" autocomplete="nope" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250">
 										<p>(optional)</p>
 									</span>
 								</label>

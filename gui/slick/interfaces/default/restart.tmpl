@@ -1,9 +1,12 @@
 ##
-#set sgHost = $sbHost
-#set sgPort = $sbHttpPort
-#set sgRoot = $sbRoot
-#set sgUseHttps = $sbHttpsEnabled
-#set themeSpinner = '-dark' if 'dark' == $sbThemeName else ''
+#from sickbeard import WEB_PORT, WEB_ROOT, PID, ENABLE_HTTPS, THEME_NAME
+#set sg_host = $getVar('sbHost', 'localhost')
+#set sg_port = str($getVar('sbHttpPort', WEB_PORT))
+#set sg_root = $getVar('sbRoot', WEB_ROOT)
+#set sg_pid = $getVar('sbPID', str(PID))
+#set sg_use_https = $getVar('sbHttpsEnabled', ENABLE_HTTPS)
+#set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
+#set do_shutdown = bool($getVar('shutdown', False))  ## can be None so must enforce bool
 ##
 <!DOCTYPE html>
 <head>
@@ -13,50 +16,50 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 <title>SickGear - Restarting</title>
-<link rel="shortcut icon" href="$sbRoot/images/ico/favicon.ico">
-<link rel="apple-touch-icon" sizes="180x180" href="$sbRoot/images/ico/apple-touch-icon-180x180.png">
-<link rel="apple-touch-icon" sizes="152x152" href="$sbRoot/images/ico/apple-touch-icon-152x152.png">
-<link rel="apple-touch-icon" sizes="144x144" href="$sbRoot/images/ico/apple-touch-icon-144x144.png">
-<link rel="apple-touch-icon" sizes="120x120" href="$sbRoot/images/ico/apple-touch-icon-120x120.png">
-<link rel="apple-touch-icon" sizes="114x114" href="$sbRoot/images/ico/apple-touch-icon-114x114.png">
-<link rel="apple-touch-icon" sizes="76x76" href="$sbRoot/images/ico/apple-touch-icon-76x76.png">
-<link rel="apple-touch-icon" sizes="72x72" href="$sbRoot/images/ico/apple-touch-icon-72x72.png">
-<link rel="apple-touch-icon" sizes="60x60" href="$sbRoot/images/ico/apple-touch-icon-60x60.png">
-<link rel="apple-touch-icon" sizes="57x57" href="$sbRoot/images/ico/apple-touch-icon-57x57.png">
-<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-192x192.png" sizes="192x192">
-<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-160x160.png" sizes="160x160">
-<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-96x96.png" sizes="96x96">
-<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-32x32.png" sizes="32x32">
-<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-16x16.png" sizes="16x16">
+<link rel="shortcut icon" href="$sg_root/images/ico/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="$sg_root/images/ico/apple-touch-icon-180x180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="$sg_root/images/ico/apple-touch-icon-152x152.png">
+<link rel="apple-touch-icon" sizes="144x144" href="$sg_root/images/ico/apple-touch-icon-144x144.png">
+<link rel="apple-touch-icon" sizes="120x120" href="$sg_root/images/ico/apple-touch-icon-120x120.png">
+<link rel="apple-touch-icon" sizes="114x114" href="$sg_root/images/ico/apple-touch-icon-114x114.png">
+<link rel="apple-touch-icon" sizes="76x76" href="$sg_root/images/ico/apple-touch-icon-76x76.png">
+<link rel="apple-touch-icon" sizes="72x72" href="$sg_root/images/ico/apple-touch-icon-72x72.png">
+<link rel="apple-touch-icon" sizes="60x60" href="$sg_root/images/ico/apple-touch-icon-60x60.png">
+<link rel="apple-touch-icon" sizes="57x57" href="$sg_root/images/ico/apple-touch-icon-57x57.png">
+<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-192x192.png" sizes="192x192">
+<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-160x160.png" sizes="160x160">
+<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-16x16.png" sizes="16x16">
 <meta name="msapplication-TileColor" content="#2b5797">
-<meta name="msapplication-TileImage" content="$sbRoot/images/ico/mstile-144x144.png">
-<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
+<meta name="msapplication-TileImage" content="$sg_root/images/ico/mstile-144x144.png">
+<meta name="msapplication-config" content="$sg_root/css/browserconfig.xml">
 
-<script type="text/javascript" src="$sbRoot/js/lib/jquery-1.8.3.min.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sg_root/js/lib/jquery-1.8.3.min.js?v=$sg_pid"></script>
 <script type="text/javascript" charset="utf-8">
 <!--
 	\$.SickGear = {
-		Host: '$sgHost',
-		Port: '$sgPort',
-		Root: '$sgRoot',
-		UseHttps: #echo ('!1', '!0')[False != $sgUseHttps and 0 != $sgUseHttps]#
+		Host: '$sg_host',
+		Port: '$sg_port',
+		Root: '$sg_root',
+		UseHttps: #echo ('!1', '!0')[False != $sg_use_https and 0 != $sg_use_https]#
 	};
 //-->
 </script>
 
-<script type="text/javascript" src="$sbRoot/js/restart.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sg_root/js/restart.js?v=$sg_pid"></script>
 
 <style>
-body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;margin-bottom:-10px;background:url(${sbRoot}/images/sickgear.png) no-repeat 0 0}.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sbRoot}/images/loading16${themeSpinner}.gif) no-repeat 0 0}.sub-title{padding-bottom:10px}.desc, .images i{margin-right:6px}.images i{vertical-align:middle}.hide,.hide-yes,.hide-no{display:none}#restart_fail_message{padding-top:10px}
+body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;margin-bottom:-10px;background:url(${sg_root}/images/sickgear.png) no-repeat 0 0}.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}.sub-title{padding-bottom:10px}.desc, .images i{margin-right:6px}.images i{vertical-align:middle}.hide,.hide-yes,.hide-no{display:none}#restart_fail_message{padding-top:10px}
 </style>
 
-<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID">
-<link rel="stylesheet" type="text/css" href="$sbRoot/css/#echo ('dark', 'light')['' == $themeSpinner]#.css?v=$sbPID">
+<link rel="stylesheet" type="text/css" href="$sg_root/css/style.css?v=$sg_pid">
+<link rel="stylesheet" type="text/css" href="$sg_root/css/#echo ('dark', 'light')['' == $theme_suffix]#.css?v=$sg_pid">
 
 </head><body><span class="sglogo"></span>
-<div class="bfr"><img src="$sbRoot/images/loading16${themeSpinner}.gif" /><img src="$sbRoot/images/yes16.png" /><img src="$sbRoot/images/no16.png" /></div>
+<div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif" /><img src="$sg_root/images/yes16.png" /><img src="$sg_root/images/no16.png" /></div>
 
-<h2 class="sub-title">Performing #echo ('Restart', 'Shutdown')[$shutdown]#</h2>
+<h2 class="sub-title">Performing #echo ('Restart', 'Shutdown')[$do_shutdown]#</h2>
 
 <div id="shut_down_message">
 <span class="desc"><span class="grey-text">Waiting for SickGear to</span> shut down: </span>
@@ -64,21 +67,21 @@ body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;marg
 </div>
 
 <div class="hide" id="restart_message">
-#if not $shutdown
+#if not $do_shutdown
 <span class="desc"><span class="grey-text">Waiting for SickGear to</span> start up: </span>
 <span class="images"><i class="spinner"></i><span class="hide-yes"><i class="yes"></i></span><span class="hide-no"><i class="no"></i></span></span>
 #end if
 </div>
 
 <div class="hide" id="refresh_message">
-#if not $shutdown
+#if not $do_shutdown
 <span class="desc"><span class="grey-text">Waiting for SickGear </span> home page: </span>
 <span class="images"><i class="spinner"></i></span>
 #end if
 </div>
 
 <div class="hide" id="restart_fail_message">
-#if not $shutdown
+#if not $do_shutdown
 <span class="red-text">Error:</span> The restart timed out, perhaps something prevented SickGear from starting ?
 #end if
 </div>

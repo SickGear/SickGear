@@ -432,7 +432,7 @@
 							<label for="${cur_torrent_provider.get_id()}_password">
 								<span class="component-title">Password:</span>
 								<span class="component-desc">
-									<input type="password" name="${cur_torrent_provider.get_id()}_password" id="${cur_torrent_provider.get_id()}_password" value="#echo $cur_torrent_provider.password and '*' * len($cur_torrent_provider.password) or ''#" class="form-control input-sm input350" />
+									<input type="password" autocomplete="nope" name="${cur_torrent_provider.get_id()}_password" id="${cur_torrent_provider.get_id()}_password" value="#echo $cur_torrent_provider.password and '*' * len($cur_torrent_provider.password) or ''#" class="form-control input-sm input350">
 								</span>
 							</label>
 						</div>

@@ -76,35 +76,22 @@ except ImportError:
 
 
 class PageTemplate(Template):
-    def __init__(self, headers, *args, **KWs):
-        KWs['file'] = os.path.join(sickbeard.PROG_DIR, 'gui/' + sickbeard.GUI_NAME + '/interfaces/default/',
-                                   KWs['file'])
-        super(PageTemplate, self).__init__(*args, **KWs)
+    def __init__(self, headers, *args, **kwargs):
 
-        self.sbRoot = sickbeard.WEB_ROOT
+        self.sbHost = (re.match('(?msx)^' + (('[^:]+', '\[.*\]')['[' == headers['Host'][0]]), headers['Host']).group(0),
+                       headers.get('X-Forwarded-Host', ''))['X-Forwarded-Host' in headers]
         self.sbHttpPort = sickbeard.WEB_PORT
-        self.sbHttpsPort = sickbeard.WEB_PORT
-        self.sbHttpsEnabled = sickbeard.ENABLE_HTTPS
+        self.sbHttpsPort = (self.sbHttpPort, headers.get('X-Forwarded-Port', ''))['X-Forwarded-Port' in headers]
+        self.sbRoot = sickbeard.WEB_ROOT
+        self.sbHttpsEnabled = (sickbeard.ENABLE_HTTPS, 'https' == headers.get('X-Forwarded-Proto', ''))[
+            'X-Forwarded-Proto' in headers]
         self.sbHandleReverseProxy = sickbeard.HANDLE_REVERSE_PROXY
         self.sbThemeName = sickbeard.THEME_NAME
 
-        if headers['Host'][0] == '[':
-            self.sbHost = re.match('^\[.*\]', headers['Host'], re.X | re.M | re.S).group(0)
-        else:
-            self.sbHost = re.match('^[^:]+', headers['Host'], re.X | re.M | re.S).group(0)
-
-        if 'X-Forwarded-Host' in headers:
-            self.sbHost = headers['X-Forwarded-Host']
-        if 'X-Forwarded-Port' in headers:
-            sbHttpPort = headers['X-Forwarded-Port']
-            self.sbHttpsPort = sbHttpPort
-        if 'X-Forwarded-Proto' in headers:
-            self.sbHttpsEnabled = True if headers['X-Forwarded-Proto'] == 'https' else False
-
-        logPageTitle = 'Logs &amp; Errors'
+        log_page_title = 'Logs &amp; Errors'
         if len(classes.ErrorViewer.errors):
-            logPageTitle += ' (' + str(len(classes.ErrorViewer.errors)) + ')'
-        self.logPageTitle = logPageTitle
+            log_page_title += ' (%s)' % len(classes.ErrorViewer.errors)
+        self.logPageTitle = log_page_title
         self.sbPID = str(sickbeard.PID)
         self.menu = [
             {'title': 'Home', 'key': 'home'},
@@ -112,8 +99,12 @@ class PageTemplate(Template):
             {'title': 'History', 'key': 'history'},
             {'title': 'Manage', 'key': 'manage'},
             {'title': 'Config', 'key': 'config'},
-            {'title': logPageTitle, 'key': 'errorlogs'},
+            {'title': log_page_title, 'key': 'errorlogs'},
         ]
+
+        kwargs['file'] = os.path.join(sickbeard.PROG_DIR, 'gui/%s/interfaces/default/' %
+                                      sickbeard.GUI_NAME, kwargs['file'])
+        super(PageTemplate, self).__init__(*args, **kwargs)
 
     def compile(self, *args, **kwargs):
         if not os.path.exists(os.path.join(sickbeard.CACHE_DIR, 'cheetah')):
