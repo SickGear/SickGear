@@ -195,6 +195,7 @@
 * Change consolidate shutdown with restart, improve systemd support, bring order to on-init globals
 * Change speed improvement in finding needed categories/qualities (sd, hd, uhd)
 * Change add guidance when using the "unknown" quality selection
+* Change prevent browser auto completing password fields on config pages
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
@@ -234,6 +235,8 @@
 * Fix launch browser during startup
 * Change don't exclude "unknown" from search
 * Fix UHD category select in Recent Search
+* Change only update enabled torrent providers
+* Fix restart when switching from master to develop
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

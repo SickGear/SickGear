@@ -299,10 +299,9 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
 
     @staticmethod
     def delete_logfile(filepath):
-        from sickbeard import encodingKludge
-        if encodingKludge.ek(os.path.exists, filepath):
+        if os.path.exists(filepath):
             if sickbeard.TRASH_ROTATE_LOGS:
-                encodingKludge.ek(send2trash, filepath)
+                send2trash(filepath)
             else:
                 sickbeard.helpers.remove_file_failed(filepath)
 

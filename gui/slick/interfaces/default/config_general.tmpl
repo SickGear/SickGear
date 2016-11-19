@@ -433,7 +433,7 @@
 							<label for="web_password">
 								<span class="component-title">Password</span>
 								<span class="component-desc">
-									<input type="password" name="web_password" id="web_password" value="#echo '*' * len($sickbeard.WEB_PASSWORD)#" class="form-control input-sm input300">
+									<input type="password" autocomplete="nope" name="web_password" id="web_password" value="#echo '*' * len($sickbeard.WEB_PASSWORD)#" class="form-control input-sm input300">
 									<p>blank for none</p>
 									<span class="clear-left">check autoProcessTV.cfg is set up for external apps to use post processing scripts</span>
 								</span>

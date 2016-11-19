@@ -952,12 +952,15 @@ class TorrentProvider(object, GenericProvider):
         url_list = ['%s/' % x.rstrip('/') for x in url_list]
         last_url, expire = sickbeard.PROVIDER_HOMES.get(self.get_id(), ('', None))
         if 'site down' == last_url:
-            if expire and (expire > int(time.time())):
+            if expire and (expire > int(time.time())) or not self.enabled:
                 return None
         elif last_url:
             last_url = last_url.replace('getrss.php', '/')  # correct develop typo after a network outage (0.11>0.12)
             last_url in url_list and url_list.remove(last_url)
             url_list.insert(0, last_url)
+
+        if not self.enabled:
+            return last_url
 
         for cur_url in url_list:
             if not self.is_valid_mod(cur_url):
