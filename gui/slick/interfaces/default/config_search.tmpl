@@ -119,7 +119,7 @@
 								</span>
 							</label>
 						</div>
-
+#if $sickbeard.USE_NZBS
 						<div class="field-pair">
 							<label>
 								<span class="component-title">Usenet retention</span>
@@ -129,7 +129,9 @@
 								</span>
 							</label>
 						</div>
-
+#else
+						<input type="hidden" name="usenet_retention" value="$sickbeard.USENET_RETENTION" class="form-control input-sm input75">
+#end if
 						<div class="field-pair">
 							<label>
 								<span class="component-title">Ignore result with any word</span>

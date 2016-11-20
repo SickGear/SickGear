@@ -196,6 +196,8 @@
 * Change speed improvement in finding needed categories/qualities (sd, hd, uhd)
 * Change add guidance when using the "unknown" quality selection
 * Change prevent browser auto completing password fields on config pages
+* Change refresh page when torrent providers are enabled/disabled
+* Change only display Search Settings/"Usenet retention" if Search NZBs is enabled
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
@@ -237,6 +239,7 @@
 * Fix UHD category select in Recent Search
 * Change only update enabled torrent providers
 * Fix restart when switching from master to develop
+* Change update IMDb show parser
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)
