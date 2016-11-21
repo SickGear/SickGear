@@ -44,7 +44,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
 from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED, SNATCHED_BEST, SNATCHED_PROPER
-from sickbeard.common import SD, HD720p, HD1080p
+from sickbeard.common import SD, HD720p, HD1080p, UHD2160p
 from sickbeard.exceptions import ex
 from sickbeard.helpers import has_image_ext, remove_article, starify
 from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE
@@ -2752,6 +2752,72 @@ class NewHomeAddShows(Home):
                 overview = text
         return overview
 
+    def parse_imdb(self, data, filtered, kwargs):
+
+        oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+        show_list = (data or {}).get('list', {}).get('items', {})
+        idx_ids = dict([(x.imdbid, (x.indexer, x.indexerid)) for x in sickbeard.showList if getattr(x, 'imdbid', None)])
+        # list_id = (data or {}).get('list', {}).get('id', {})
+        for row in show_list:
+            row = data.get('titles', {}).get(row.get('const', None), None)
+            if not row:
+                continue
+            try:
+                ids = dict(imdb=row.get('id', ''))
+                year, ended = 2 * [None]
+                if 2 == len(row.get('primary').get('year')):
+                    year, ended = row.get('primary').get('year')
+                dt_ordinal = 0
+                if year:
+                    dt = dateutil.parser.parse('01-01-%s' % year)
+                    dt_ordinal = dt.toordinal()
+                    if dt_ordinal < oldest_dt:
+                        oldest_dt = dt_ordinal
+                        oldest = year
+                    if dt_ordinal > newest_dt:
+                        newest_dt = dt_ordinal
+                        newest = year
+
+                overview = row.get('plot')
+                rating = row.get('ratings', {}).get('rating', 0)
+                voting = row.get('ratings', {}).get('votes', 0)
+                images = {}
+                img_uri = '%s' % row.get('poster', {}).get('url', '')
+                if img_uri and 'tv_series.gif' not in img_uri and 'nopicture' not in img_uri:
+                    scale = (lambda low1, high1: int((float(450) / high1) * low1))
+                    dims = [row.get('poster', {}).get('width', 0), row.get('poster', {}).get('height', 0)]
+                    s = [scale(x, int(max(dims))) for x in dims]
+                    img_uri = re.sub('(?im)(.*V1_?)(\..*?)$', r'\1UX%s_CR0,0,%s,%s_AL_\2' % (s[0], s[0], s[1]), img_uri)
+                    images = dict(poster=dict(thumb='imagecache?path=imdb&source=%s' % img_uri))
+                    sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+
+                filtered.append(dict(
+                    premiered=dt_ordinal,
+                    premiered_str=year or 'No year',
+                    ended_str=ended or '',
+                    when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not poss. 16.11.2015
+                    genres=', '.join(row.get('metadata', {}).get('genres', {})) or 'No genre yet',
+                    ids=ids,
+                    images='' if not img_uri else images,
+                    overview='No overview yet' if not overview else self.encode_html(overview[:250:]),
+                    rating=int(helpers.tryFloat(rating) * 10),
+                    title=row.get('primary').get('title'),
+                    url_src_db='http://www.imdb.com/%s/' % row.get('primary').get('href').strip('/'),
+                    votes=helpers.tryInt(voting, 'TBA')))
+
+                indexer, indexerid = idx_ids.get(ids['imdb'], (None, None))
+                src = ((None, 'tvrage')[INDEXER_TVRAGE == indexer], 'tvdb')[INDEXER_TVDB == indexer]
+                if src:
+                    filtered[-1]['ids'][src] = indexerid
+                    filtered[-1]['url_' + src] = '%s%s' % (
+                        sickbeard.indexerApi(indexer).config['show_url'], indexerid)
+            except (AttributeError, TypeError, KeyError, IndexError):
+                pass
+
+        kwargs.update(dict(oldest=oldest, newest=newest))
+
+        return show_list and True or None
+
     def parse_imdb_html(self, html, filtered, kwargs):
 
         img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)(.*?)$')
@@ -2861,12 +2927,18 @@ class NewHomeAddShows(Home):
         list_name += ('\'s', '')['your' == list_name.replace('(Off) ', '').lower()]
 
         url = 'http://www.imdb.com/user/ur%s/watchlist' % acc_id
-        url_data = '/_ajax?sort=date_added,desc&mode=detail&page=1&title_type=tvSeries%2CtvEpisode&ref_=wl_vm_dtl'
         url_ui = '?mode=detail&page=1&sort=date_added,desc&title_type=tvSeries%2CtvEpisode&ref_=wl_ref_typ'
 
-        html = helpers.getURL(url + url_data, headers={'Accept-Language': 'en-US'})
+        html = helpers.getURL(url + url_ui, headers={'Accept-Language': 'en-US'})
         if html:
-            show_list_found = self.parse_imdb_html(html, filtered, kwargs)
+            show_list_found = None
+            try:
+                data = json.loads((re.findall(r'(?im)IMDb.*?Initial.*?\.push\((.*)\).*?$', html) or ['{}'])[0])
+                show_list_found = self.parse_imdb(data, filtered, kwargs)
+            except (StandardError, Exception):
+                pass
+            if not show_list_found:
+                show_list_found = self.parse_imdb_html(html, filtered, kwargs)
             kwargs.update(dict(start_year=start_year))
 
             if len(filtered):
@@ -2900,7 +2972,14 @@ class NewHomeAddShows(Home):
         url = 'http://www.imdb.com/search/title?at=0&sort=moviemeter&title_type=tv_series&year=%s,%s' % (start_year, end_year)
         html = helpers.getURL(url, headers={'Accept-Language': 'en-US'})
         if html:
-            self.parse_imdb_html(html, filtered, kwargs)
+            show_list_found = None
+            try:
+                data = json.loads((re.findall(r'(?im)IMDb.*?Initial.*?\.push\((.*)\).*?$', html) or ['{}'])[0])
+                show_list_found = self.parse_imdb(data, filtered, kwargs)
+            except (StandardError, Exception):
+                pass
+            if not show_list_found:
+                self.parse_imdb_html(html, filtered, kwargs)
             kwargs.update(dict(mode=mode, periods=periods))
 
             if len(filtered):
@@ -4906,6 +4985,7 @@ class ConfigProviders(Config):
         # add all the newznab info we have into our list
         newznab_sources = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
         active_ids = []
+        reload_page = False
         if newznab_string:
             for curNewznabProviderStr in newznab_string.split('!!!'):
 
@@ -4995,8 +5075,10 @@ class ConfigProviders(Config):
             provider_list.append(src_name)
             src_enabled = bool(config.to_int(src_enabled))
 
-            if src_name in sources and hasattr(sources[src_name], 'enabled'):
+            if '' != getattr(sources[src_name], 'enabled', '') and sources[src_name].is_enabled() != src_enabled:
                 sources[src_name].enabled = src_enabled
+                if not reload_page and sickbeard.GenericProvider.TORRENT == sources[src_name].providerType:
+                    reload_page = True
 
             if src_name in newznab_sources:
                 newznab_sources[src_name].enabled = src_enabled
@@ -5091,7 +5173,10 @@ class ConfigProviders(Config):
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
-        self.redirect('/config/providers/')
+        if reload_page:
+            self.write('reload')
+        else:
+            self.redirect('/config/providers/')
 
 
 class ConfigNotifications(Config):
