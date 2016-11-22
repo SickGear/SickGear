@@ -198,6 +198,7 @@
 * Change prevent browser auto completing password fields on config pages
 * Change refresh page when torrent providers are enabled/disabled
 * Change only display Search Settings/"Usenet retention" if Search NZBs is enabled
+* Change sab API request to prevent naming mismatch
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
