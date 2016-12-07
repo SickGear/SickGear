@@ -199,6 +199,7 @@
 * Change refresh page when torrent providers are enabled/disabled
 * Change only display Search Settings/"Usenet retention" if Search NZBs is enabled
 * Change sab API request to prevent naming mismatch
+* Change update rTorrent systems
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

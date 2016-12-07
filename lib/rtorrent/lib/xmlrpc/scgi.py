@@ -80,12 +80,25 @@
 # WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
 # ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 # OF THIS SOFTWARE.
+from __future__ import print_function
 
-import httplib
+try:
+    import http.client as httplib
+except ImportError:
+    import httplib
 import re
 import socket
-import urllib
-import xmlrpclib
+import sys
+try:
+    import urllib.parse as urlparser
+except ImportError:
+    import urllib as urlparser
+
+try:
+    import xmlrpc.client as xmlrpclib
+except:
+    import xmlrpclib
+
 import errno
 
 
@@ -96,7 +109,7 @@ class SCGITransport(xmlrpclib.Transport):
         for i in (0, 1):
             try:
                 return self.single_request(host, handler, request_body, verbose)
-            except socket.error, e:
+            except socket.error as e:
                 if i or e.errno not in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
                     raise
             except httplib.BadStatusLine: #close after we sent request
@@ -105,8 +118,8 @@ class SCGITransport(xmlrpclib.Transport):
 
     def single_request(self, host, handler, request_body, verbose=0):
         # Add SCGI headers to the request.
-        headers = {'CONTENT_LENGTH': str(len(request_body)), 'SCGI': '1'}
-        header = '\x00'.join(('%s\x00%s' % item for item in headers.iteritems())) + '\x00'
+        headers = [('CONTENT_LENGTH', str(len(request_body))), ('SCGI', '1')]
+        header = '\x00'.join(['%s\x00%s' % (key, value) for key, value in headers]) + '\x00'
         header = '%d:%s' % (len(header), header)
         request_body = '%s,%s' % (header, request_body)
 
@@ -114,7 +127,7 @@ class SCGITransport(xmlrpclib.Transport):
 
         try:
             if host:
-                host, port = urllib.splitport(host)
+                host, port = urlparser.splitport(host)
                 addrinfo = socket.getaddrinfo(host, int(port), socket.AF_INET,
                                               socket.SOCK_STREAM)
                 sock = socket.socket(*addrinfo[0][:3])
@@ -125,7 +138,10 @@ class SCGITransport(xmlrpclib.Transport):
 
             self.verbose = verbose
 
-            sock.send(request_body)
+            if sys.version_info[0] > 2:
+                sock.send(bytes(request_body, "utf-8"))
+            else:
+                sock.send(request_body)
             return self.parse_response(sock.makefile())
         finally:
             if sock:
@@ -142,11 +158,17 @@ class SCGITransport(xmlrpclib.Transport):
             response_body += data
 
         # Remove SCGI headers from the response.
-        response_header, response_body = re.split(r'\n\s*?\n', response_body,
-                                                  maxsplit=1)
 
         if self.verbose:
-            print 'body:', repr(response_body)
+            print('body:', repr(response_body))
+
+        try:
+            response_header, response_body = re.split(r'\n\s*?\n', response_body,
+                                                  maxsplit=1)
+        except ValueError:
+            print("error in response: %s", response_body)
+            p.close()
+            u.close()
 
         p.feed(response_body)
         p.close()
@@ -157,10 +179,10 @@ class SCGITransport(xmlrpclib.Transport):
 class SCGIServerProxy(xmlrpclib.ServerProxy):
     def __init__(self, uri, transport=None, encoding=None, verbose=False,
                  allow_none=False, use_datetime=False):
-        type, uri = urllib.splittype(uri)
+        type, uri = urlparser.splittype(uri)
         if type not in ('scgi'):
             raise IOError('unsupported XML-RPC protocol')
-        self.__host, self.__handler = urllib.splithost(uri)
+        self.__host, self.__handler = urlparser.splithost(uri)
         if not self.__handler:
             self.__handler = '/'
 

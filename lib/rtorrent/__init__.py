@@ -17,10 +17,16 @@
 # LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-import urllib
+try:
+    import urllib.parse as urlparser
+except ImportError:
+    import urllib as urlparser
 import os.path
 import time
-import xmlrpclib
+try:
+    import xmlrpc.client as xmlrpclib
+except ImportError:
+    import xmlrpclib
 
 from rtorrent.common import find_torrent, \
     is_valid_port, convert_version_tuple_to_str
@@ -53,7 +59,7 @@ class RTorrent:
         self.username = username
         self.password = password
 
-        self.schema = urllib.splittype(uri)[0]
+        self.schema = urlparser.splittype(uri)[0]
 
         if sp:
             self.sp = sp
@@ -210,34 +216,36 @@ class RTorrent:
         # load magnet
         getattr(p, func_name)(magneturl)
 
+        t = None
         if verify_load:
-            MAX_RETRIES = 3
+            max_retries = 3
             i = 0
-            while i < MAX_RETRIES:
-                for torrent in self.get_torrents():
-                    if torrent.info_hash != info_hash:
+            while i < max_retries:
+                for t in self.get_torrents():
+                    if t.info_hash != info_hash:
                         continue
                     time.sleep(1)
                     i += 1
 
-            # Resolve magnet to torrent
-            torrent.start()
+            if t:
+                # Resolve magnet to torrent
+                t.start()
 
-            assert info_hash in [t.info_hash for t in self.torrents],\
-                "Adding torrent was unsuccessful."
+                assert info_hash in [t.info_hash for t in self.torrents],\
+                    "Adding torrent was unsuccessful."
 
-            MAX_RETRIES = 3
-            i = 0
-            while i < MAX_RETRIES:
-                for torrent in self.get_torrents():
-                    if torrent.info_hash == info_hash:
-                        if str(info_hash) not in str(torrent.name) :
-                            time.sleep(1)
-                            i += 1
+                max_retries = 3
+                i = 0
+                while i < max_retries:
+                    for t in self.get_torrents():
+                        if t.info_hash == info_hash:
+                            if str(info_hash) not in str(t.name) :
+                                time.sleep(1)
+                                i += 1
 
-        return(torrent)
+        return t
 
-    def load_torrent(self, torrent, start=False, verbose=False, verify_load=True):
+    def load_torrent(self, torrent, start=False, verbose=False, verify_load=True, verify_retries=3):
         """
         Loads torrent into rTorrent (with various enhancements)
 
@@ -282,9 +290,8 @@ class RTorrent:
         getattr(p, func_name)(torrent)
 
         if verify_load:
-            MAX_RETRIES = 3
             i = 0
-            while i < MAX_RETRIES:
+            while i < verify_retries:
                 self.get_torrents()
                 if info_hash in [t.info_hash for t in self.torrents]:
                     break
