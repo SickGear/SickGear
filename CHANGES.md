@@ -200,6 +200,7 @@
 * Change only display Search Settings/"Usenet retention" if Search NZBs is enabled
 * Change sab API request to prevent naming mismatch
 * Change update rTorrent systems
+* Change logger to properly cleanup used resources
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
@@ -242,6 +243,7 @@
 * Change only update enabled torrent providers
 * Fix restart when switching from master to develop
 * Change update IMDb show parser
+* Fix rTorrent auth and magnet issue
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

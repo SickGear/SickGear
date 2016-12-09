@@ -25,7 +25,7 @@ from lib.rtorrent import RTorrent
 class RtorrentAPI(GenericClient):
     def __init__(self, host=None, username=None, password=None):
 
-        if host and host.startswith('scgi:') and any([username, password]):
+        if host and host.startswith('scgi:'):
             username = password = None
 
         super(RtorrentAPI, self).__init__('rTorrent', host, username, password)
@@ -37,7 +37,7 @@ class RtorrentAPI(GenericClient):
         self.auth = None
         if self.host:
             try:
-                if self.host and self.host.startswith('scgi:') and any([self.username, self.password]):
+                if self.host and self.host.startswith('scgi:'):
                     self.username = self.password = None
                 self.auth = RTorrent(self.host, self.username, self.password, True)
             except (AssertionError, xmlrpclib.ProtocolError) as e:
@@ -54,7 +54,7 @@ class RtorrentAPI(GenericClient):
                 if 'file' == cmd:
                     torrent = self.auth.load_torrent(kwargs['file'])
                 elif 'magnet' == cmd:
-                    torrent = self.auth.load_magnet(kwargs['url'], kwargs['btih'])
+                    torrent = self.auth.load_magnet(kwargs['uri'], kwargs['btih'])
 
                 if torrent:
 

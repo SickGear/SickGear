@@ -1138,6 +1138,12 @@ def initialize(console_logging=True):
             save_config()
 
         # start up all the threads
+        old_log = os.path.join(LOG_DIR, 'sickbeard.log')
+        if os.path.isfile(old_log):
+            try:
+                os.rename(old_log, os.path.join(LOG_DIR, logger.sb_log_instance.log_file))
+            except (StandardError, Exception):
+                pass
         logger.sb_log_instance.init_logging(console_logging=console_logging)
 
         # initialize the main SB database

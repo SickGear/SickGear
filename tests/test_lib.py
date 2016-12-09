@@ -54,8 +54,8 @@ FILEPATH = os.path.join(FILEDIR, FILENAME)
 
 SHOWDIR = os.path.join(TESTDIR, SHOWNAME + ' final')
 
-#sickbeard.logger.sb_log_instance = sickbeard.logger.SBRotatingLogHandler(os.path.join(TESTDIR, 'sickbeard.log'), sickbeard.logger.NUM_LOGS, sickbeard.logger.LOG_SIZE)
-sickbeard.logger.SBRotatingLogHandler.log_file = os.path.join(os.path.join(TESTDIR, 'Logs'), 'test_sickbeard.log')
+#sickbeard.logger.sb_log_instance = sickbeard.logger.SBRotatingLogHandler(os.path.join(TESTDIR, 'sickgear.log'), sickbeard.logger.NUM_LOGS, sickbeard.logger.LOG_SIZE)
+sickbeard.logger.SBRotatingLogHandler.log_file = os.path.join(os.path.join(TESTDIR, 'Logs'), 'test_sickgear.log')
 
 
 #=================
