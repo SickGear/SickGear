@@ -1,7 +1,5 @@
-# Author: Nic Wolfe <nic@wolfeden.ca>
-# URL: http://code.google.com/p/sickbeard/
 #
-# This file is part of SickGear.
+#  This file is part of SickGear.
 #
 # SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,14 +16,15 @@
 
 from __future__ import with_statement
 
-import time
-import os
-import sys
-import threading
-import zipfile
+import codecs
 import logging
 import glob
-import codecs
+import os
+import re
+import sys
+import threading
+import time
+import zipfile
 
 from logging.handlers import TimedRotatingFileHandler
 
@@ -44,14 +43,10 @@ MESSAGE = logging.INFO
 DEBUG = logging.DEBUG
 DB = 5
 
-reverseNames = {u'ERROR': ERROR,
-                u'WARNING': WARNING,
-                u'INFO': MESSAGE,
-                u'DEBUG': DEBUG,
-                u'DB': DB}
+reverseNames = {u'ERROR': ERROR, u'WARNING': WARNING, u'INFO': MESSAGE, u'DEBUG': DEBUG, u'DB': DB}
 
 
-# send logging to null
+# suppress output with this handler
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
@@ -61,141 +56,92 @@ class SBRotatingLogHandler(object):
     def __init__(self, log_file):
         self.log_file = log_file
         self.log_file_path = log_file
-        self.cur_handler = None
+        self.h_file = None
+        self.h_console = None
 
         self.console_logging = False
         self.log_lock = threading.Lock()
+        self.log_types = ['sickbeard', 'tornado.application', 'tornado.general', 'imdbpy', 'subliminal']
+        self.log_types_null = ['tornado.access']
 
     def __del__(self):
         pass
 
     def close_log(self, handler=None):
+
+        handlers = []
         if not handler:
-            handler = self.cur_handler
+            handlers = [self.h_file]
+            if None is not self.h_console:
+                handlers += [self.h_console]
+        elif not isinstance(handler, list):
+            handlers = [handler]
 
-        if handler:
-            sb_logger = logging.getLogger('sickbeard')
-            sub_logger = logging.getLogger('subliminal')
-            imdb_logger = logging.getLogger('imdbpy')
-            tornado_logger = logging.getLogger('tornado')
-            feedcache_logger = logging.getLogger('feedcache')
-
-            sb_logger.removeHandler(handler)
-            sub_logger.removeHandler(handler)
-            imdb_logger.removeHandler(handler)
-            tornado_logger.removeHandler(handler)
-            feedcache_logger.removeHandler(handler)
+        for handler in handlers:
+            for logger_name in self.log_types + self.log_types_null:
+                logging.getLogger(logger_name).removeHandler(handler)
 
             handler.flush()
             handler.close()
 
     def init_logging(self, console_logging=False):
 
-        if console_logging:
-            self.console_logging = console_logging
-
-        old_handler = None
-
-        # get old handler in case we want to close it
-        if self.cur_handler:
-            old_handler = self.cur_handler
-        else:
-
-            # add a new logging level DB
-            logging.addLevelName(5, 'DB')
-
-            # only start console_logging on first initialize
-            if self.console_logging:
-                # define a Handler which writes INFO messages or higher to the sys.stderr
-                console = logging.StreamHandler()
-
-                console.setLevel(logging.INFO)
-                if sickbeard.DEBUG:
-                    console.setLevel(logging.DEBUG)
-
-                # set a format which is simpler for console use
-                console.setFormatter(DispatchingFormatter(
-                    {'sickbeard': logging.Formatter(
-                        '%(asctime)s %(levelname)s::%(message)s', '%H:%M:%S'),
-                     'subliminal': logging.Formatter(
-                         '%(asctime)s %(levelname)s::SUBLIMINAL :: %(message)s', '%H:%M:%S'),
-                     'imdbpy': logging.Formatter(
-                         '%(asctime)s %(levelname)s::IMDBPY :: %(message)s', '%H:%M:%S'),
-                     'tornado.general': logging.Formatter(
-                         '%(asctime)s %(levelname)s::TORNADO :: %(message)s', '%H:%M:%S'),
-                     'tornado.application': logging.Formatter(
-                         '%(asctime)s %(levelname)s::TORNADO :: %(message)s', '%H:%M:%S'),
-                     'feedcache.cache': logging.Formatter(
-                         '%(asctime)s %(levelname)s::FEEDCACHE :: %(message)s', '%H:%M:%S')},
-                    logging.Formatter('%(message)s'), ))
-
-                # add the handler to the root logger
-                logging.getLogger('sickbeard').addHandler(console)
-                logging.getLogger('tornado.general').addHandler(console)
-                logging.getLogger('tornado.application').addHandler(console)
-                logging.getLogger('subliminal').addHandler(console)
-                logging.getLogger('imdbpy').addHandler(console)
-                logging.getLogger('feedcache').addHandler(console)
-
+        self.console_logging |= console_logging
         self.log_file_path = os.path.join(sickbeard.LOG_DIR, self.log_file)
 
-        self.cur_handler = self._config_handler()
-        logging.getLogger('sickbeard').addHandler(self.cur_handler)
-        logging.getLogger('tornado.access').addHandler(NullHandler())
-        logging.getLogger('tornado.general').addHandler(self.cur_handler)
-        logging.getLogger('tornado.application').addHandler(self.cur_handler)
-        logging.getLogger('subliminal').addHandler(self.cur_handler)
-        logging.getLogger('imdbpy').addHandler(self.cur_handler)
-        logging.getLogger('feedcache').addHandler(self.cur_handler)
+        # get old handler for post switch-over closure
+        old_h_file = old_h_console = None
+        if self.h_file or self.h_console:
+            if self.h_file:
+                old_h_file = self.h_file
+            if self.h_console:
+                old_h_console = self.h_console
 
+        # add a new logging level DB
+        logging.addLevelName(5, 'DB')
+
+        if self.console_logging:
+            # get a console handler to output INFO or higher messages to sys.stderr
+            h_console = logging.StreamHandler()
+            h_console.setLevel((logging.INFO, logging.DEBUG)[sickbeard.DEBUG])
+            h_console.setFormatter(DispatchingFormatter(self._formatters(), logging.Formatter('%(message)s'), ))
+            self.h_console = h_console
+
+            # add the handler to the root logger
+            for logger_name in self.log_types:
+                logging.getLogger(logger_name).addHandler(h_console)
+
+        for logger_name in self.log_types_null:
+            logging.getLogger(logger_name).addHandler(NullHandler())
+
+        h_file = TimedCompressedRotatingFileHandler(self.log_file_path, logger=self)
+        h_file.setLevel(reverseNames[sickbeard.FILE_LOGGING_PRESET])
+        h_file.setFormatter(DispatchingFormatter(self._formatters(False), logging.Formatter('%(message)s'), ))
+        self.h_file = h_file
+
+        for logger_name in self.log_types:
+            logging.getLogger(logger_name).addHandler(h_file)
+
+        log_level = (logging.WARNING, logging.DEBUG)[sickbeard.DEBUG]
+        for logger_name in [x for x in self.log_types if 'sickbeard' != x]:
+            logging.getLogger(logger_name).setLevel(log_level)
         logging.getLogger('sickbeard').setLevel(DB)
 
-        log_level = logging.WARNING
-        if sickbeard.DEBUG:
-            log_level = logging.DEBUG
+        # as now logging in new log folder, close old handlers
+        if old_h_file:
+            self.close_log(old_h_file)
+        if old_h_console:
+            self.close_log(old_h_console)
 
-        logging.getLogger('tornado.general').setLevel(log_level)
-        logging.getLogger('tornado.application').setLevel(log_level)
-        logging.getLogger('subliminal').setLevel(log_level)
-        logging.getLogger('imdbpy').setLevel(log_level)
-        logging.getLogger('feedcache').setLevel(log_level)
+    def _formatters(self, log_simple=True):
+        fmt = {}
+        for logger_name in self.log_types:
+            source = (re.sub('(.*\.\w\w\w).*$', r'\1', logger_name).upper() + ' :: ', '')['sickbeard' == logger_name]
+            fmt.setdefault(logger_name, logging.Formatter(
+                '%(asctime)s %(levelname)' + ('-8', '')[log_simple] + 's ' + source
+                + '%(message)s', ('%Y-%m-%d ', '')[log_simple] + '%H:%M:%S'))
 
-        # already logging in new log folder, close the old handler
-        if old_handler:
-            self.close_log(old_handler)
-            #            old_handler.flush()
-            #            old_handler.close()
-            #            sb_logger = logging.getLogger('sickbeard')
-            #            sub_logger = logging.getLogger('subliminal')
-            #            imdb_logger = logging.getLogger('imdbpy')
-            #            sb_logger.removeHandler(old_handler)
-            #            subli_logger.removeHandler(old_handler)
-            #            imdb_logger.removeHandler(old_handler)
-
-    def _config_handler(self):
-        """
-        Configure a file handler to log at file_name and return it.
-        """
-
-        file_handler = TimedCompressedRotatingFileHandler(self.log_file_path, when='midnight',
-                                                          backupCount=16, encoding='utf-8')
-        file_handler.setLevel(reverseNames[sickbeard.FILE_LOGGING_PRESET])
-        file_handler.setFormatter(DispatchingFormatter(
-            {'sickbeard': logging.Formatter(
-                '%(asctime)s %(levelname)-8s %(message)s', '%Y-%m-%d %H:%M:%S'),
-             'subliminal': logging.Formatter(
-                 '%(asctime)s %(levelname)-8s SUBLIMINAL :: %(message)s', '%Y-%m-%d %H:%M:%S'),
-             'imdbpy': logging.Formatter(
-                 '%(asctime)s %(levelname)-8s IMDBPY :: %(message)s', '%Y-%m-%d %H:%M:%S'),
-             'tornado.general': logging.Formatter(
-                 '%(asctime)s %(levelname)-8s TORNADO :: %(message)s', '%Y-%m-%d %H:%M:%S'),
-             'tornado.application': logging.Formatter(
-                 '%(asctime)s %(levelname)-8s TORNADO :: %(message)s', '%Y-%m-%d %H:%M:%S'),
-             'feedcache.cache': logging.Formatter(
-                 '%(asctime)s %(levelname)-8s FEEDCACHE :: %(message)s', '%Y-%m-%d %H:%M:%S')},
-            logging.Formatter('%(message)s'), ))
-
-        return file_handler
+        return fmt
 
     def log(self, to_log, log_level=MESSAGE):
 
@@ -209,7 +155,6 @@ class SBRotatingLogHandler(object):
             # sub_logger = logging.getLogger('subliminal')
             # imdb_logger = logging.getLogger('imdbpy')
             # tornado_logger = logging.getLogger('tornado')
-            # feedcache_logger = logging.getLogger('feedcache')
 
             try:
                 if DEBUG == log_level:
@@ -252,11 +197,27 @@ class DispatchingFormatter:
 
 
 class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
+    def __init__(self, log_file_path, logger=None, when='midnight', interval=1,
+                 backup_count=16, encoding='utf-8', delay=False, utc=False):
+        super(TimedCompressedRotatingFileHandler, self).__init__(log_file_path, when, interval,
+                                                                 backup_count, encoding, delay, utc)
+        self.logger_instance = logger
+
+    def doRollover(self):
+        """
+        example:
+        logger.TimedCompressedRotatingFileHandler(sickbeard.logger.sb_log_instance.log_file_path, when='M', interval=2,
+                                                  logger=sickbeard.logger.sb_log_instance).doRollover()
+        """
+        if self.logger_instance:
+            with self.logger_instance.log_lock:
+                self._do_rollover()
+
     """
        Extended version of TimedRotatingFileHandler that compress logs on rollover.
        by Angel Freire <cuerty at gmail dot com>
     """
-    def doRollover(self):
+    def _do_rollover(self):
         """
         do a rollover; in this case, a date/time stamp is appended to the filename
         when the rollover happens.  However, you want the file to be named for the
@@ -268,34 +229,45 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
 
         """
         self.stream.close()
-        # get the time that this sequence started at and make it a TimeTuple
+
+        # get the time that this sequence started at
         t = self.rolloverAt - self.interval
-        time_tuple = time.localtime(t)
+        start_time = time.localtime(t)
         file_name = self.baseFilename.rpartition('.')[0]
-        dfn = '%s_%s.log' % (file_name, time.strftime(self.suffix, time_tuple))
+        dfn = '%s_%s.log' % (file_name, time.strftime(self.suffix, start_time))
         self.delete_logfile(dfn)
+
+        self.logger_instance.close_log()
+        self.logger_instance.h_file = self.logger_instance.h_console = None
+
+        from sickbeard import encodingKludge
         try:
-            ek.ek(os.rename, self.baseFilename, dfn)
+            encodingKludge.ek(os.rename, self.baseFilename, dfn)
         except (StandardError, Exception):
             pass
-        if 0 < self.backupCount:
-            # find the oldest log file and delete it
-            s = glob.glob(file_name + '_*')
-            if len(s) > self.backupCount:
-                s.sort()
-                self.delete_logfile(s[0])
-        # print "%s -> %s" % (self.baseFilename, dfn)
+
+        self.logger_instance.init_logging()
+
         if self.encoding:
             self.stream = codecs.open(self.baseFilename, 'w', self.encoding)
         else:
             self.stream = open(self.baseFilename, 'w')
-        self.rolloverAt = self.rolloverAt + self.interval
+
         zip_name = '%s.zip' % dfn.rpartition('.')[0]
         self.delete_logfile(zip_name)
-        zip_fh = zipfile.ZipFile(zip_name, 'w')
-        zip_fh.write(dfn, os.path.basename(dfn), zipfile.ZIP_DEFLATED)
-        zip_fh.close()
+        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zip_fh:
+            zip_fh.write(dfn, os.path.basename(dfn))
+
         self.delete_logfile(dfn)
+
+        if 0 < self.backupCount:
+            # find the oldest log file and delete it
+            all_names = encodingKludge.ek(glob.glob, file_name + '_*')
+            if len(all_names) > self.backupCount:
+                all_names.sort()
+                self.delete_logfile(all_names[0])
+
+        self.rolloverAt = self.rolloverAt + self.interval
 
     @staticmethod
     def delete_logfile(filepath):
@@ -306,7 +278,7 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
                 sickbeard.helpers.remove_file_failed(filepath)
 
 
-sb_log_instance = SBRotatingLogHandler('sickbeard.log')
+sb_log_instance = SBRotatingLogHandler('sickgear.log')
 
 
 def log(to_log, log_level=MESSAGE):
@@ -322,8 +294,8 @@ def close():
 
 
 def log_set_level():
-    if sb_log_instance.cur_handler:
-        sb_log_instance.cur_handler.setLevel(reverseNames[sickbeard.FILE_LOGGING_PRESET])
+    if sb_log_instance.h_file:
+        sb_log_instance.h_file.setLevel(reverseNames[sickbeard.FILE_LOGGING_PRESET])
 
 
 def current_log_file():
