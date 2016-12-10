@@ -31,7 +31,8 @@ class ExtraTorrentProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'ExtraTorrent')
 
-        self.url_home = ['https://www.extratorrent%s/' % u for u in '.works', 'live.com', 'online.com', '.cc'] + \
+        self.url_home = ['https://www.extratorrent%s/' % u for u in '.life', 'live.com', 'online.com', '.one'] + \
+                        ['https://extra.to/'] + \
                         ['https://etmirror.com/', 'https://etproxy.com/', 'https://extratorrent.usbypass.xyz/']
 
         self.url_vars = {'search': 'search/?new=1&search=%s&s_cat=8', 'browse': 'view/today/TV.html',
