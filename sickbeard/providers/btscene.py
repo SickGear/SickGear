@@ -31,8 +31,7 @@ class BTSceneProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'BTScene')
 
-        self.url_home = ['http://www.btstorrent.cc/', 'http://bittorrentstart.com/',
-                         'http://diriri.xyz/', 'http://mytorrentz.tv/']
+        self.url_home = ['http://btsone.cc/',  'http://diriri.xyz/', 'http://mytorrentz.tv/']
 
         self.url_vars = {'search': '?q=%s&category=series&order=1', 'browse': 'lastdaycat/type/Series/',
                          'get': 'torrentdownload.php?id=%s'}

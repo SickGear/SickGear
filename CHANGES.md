@@ -244,6 +244,7 @@
 * Fix restart when switching from master to develop
 * Change update IMDb show parser
 * Fix rTorrent auth and magnet issue
+* Change torrent provider links for bts, et, rarbg, tpb
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)
