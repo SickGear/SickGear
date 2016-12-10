@@ -203,21 +203,11 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
                                                                  backup_count, encoding, delay, utc)
         self.logger_instance = logger
 
-    def doRollover(self):
-        """
-        example:
-        logger.TimedCompressedRotatingFileHandler(sickbeard.logger.sb_log_instance.log_file_path, when='M', interval=2,
-                                                  logger=sickbeard.logger.sb_log_instance).doRollover()
-        """
-        if self.logger_instance:
-            with self.logger_instance.log_lock:
-                self._do_rollover()
-
     """
        Extended version of TimedRotatingFileHandler that compress logs on rollover.
        by Angel Freire <cuerty at gmail dot com>
     """
-    def _do_rollover(self):
+    def doRollover(self):
         """
         do a rollover; in this case, a date/time stamp is appended to the filename
         when the rollover happens.  However, you want the file to be named for the
@@ -227,8 +217,12 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
 
         This method is modified from the one in TimedRotatingFileHandler.
 
+        example:
+        logger.TimedCompressedRotatingFileHandler(sickbeard.logger.sb_log_instance.log_file_path, when='M', interval=2,
+                                                  logger=sickbeard.logger.sb_log_instance).doRollover()
         """
-        self.stream.close()
+        if not self.logger_instance:
+            return
 
         # get the time that this sequence started at
         t = self.rolloverAt - self.interval
@@ -239,6 +233,11 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
 
         self.logger_instance.close_log()
         self.logger_instance.h_file = self.logger_instance.h_console = None
+
+        try:
+            self.stream.close()
+        except AttributeError:
+            pass
 
         from sickbeard import encodingKludge
         try:
