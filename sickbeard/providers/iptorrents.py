@@ -33,7 +33,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
         self.url_home = (['https://iptorrents.%s/' % u for u in 'eu', 'com', 'me', 'ru'] +
                          ['http://11111.workisboring.com/', 'https://ipt-update.com'])
 
-        self.url_vars = {'login': 'getrss.php', 'search': 't?%s;q=%s;qf=ti%s%s#torrents', 'get': '%s'}
+        self.url_vars = {'login': 't', 'search': 't?%s;q=%s;qf=ti%s%s#torrents', 'get': '%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
@@ -47,7 +47,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
         return super(IPTorrentsProvider, self)._authorised(
             logged_in=(lambda y='': all(
-                ['RSS Link' in y, self.has_all_cookies()] +
+                ['IPTorrents' in y, self.has_all_cookies()] +
                 [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
