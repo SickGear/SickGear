@@ -41,7 +41,7 @@ class PiSexyProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(PiSexyProvider, self)._authorised(
-            logged_in=(lambda y=None: self.has_all_cookies(['uid', 'pass', 'pcode', 'pisexy'])))
+            logged_in=(lambda y=None: self.has_all_cookies(['uid', 'pass', 'pcode'])))
 
     def _search_provider(self, search_params, **kwargs):
 
