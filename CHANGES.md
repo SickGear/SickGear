@@ -246,6 +246,7 @@
 * Fix rTorrent auth and magnet issue
 * Change torrent provider links for bts, et, rarbg, tpb
 * Change IPT uri used for sanity check
+* Change PiSexy auth check
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)
