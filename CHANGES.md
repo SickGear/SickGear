@@ -247,6 +247,7 @@
 * Change torrent provider links for bts, et, rarbg, tpb
 * Change IPT uri used for sanity check
 * Change PiSexy auth check
+* Change logger clean up to prevent lock during restart under pythonw
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

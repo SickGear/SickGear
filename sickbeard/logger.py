@@ -71,9 +71,9 @@ class SBRotatingLogHandler(object):
 
         handlers = []
         if not handler:
-            handlers = [self.h_file]
             if None is not self.h_console:
-                handlers += [self.h_console]
+                handlers = [self.h_console]
+            handlers += [self.h_file]
         elif not isinstance(handler, list):
             handlers = [handler]
 
@@ -81,8 +81,9 @@ class SBRotatingLogHandler(object):
             for logger_name in self.log_types + self.log_types_null:
                 logging.getLogger(logger_name).removeHandler(handler)
 
-            handler.flush()
-            handler.close()
+            if type(handler) != type(logging.StreamHandler()):  # check exact type, not an inherited instance
+                handler.flush()
+                handler.close()
 
     def init_logging(self, console_logging=False):
 
@@ -103,9 +104,10 @@ class SBRotatingLogHandler(object):
         if self.console_logging:
             # get a console handler to output INFO or higher messages to sys.stderr
             h_console = logging.StreamHandler()
-            h_console.setLevel((logging.INFO, logging.DEBUG)[sickbeard.DEBUG])
-            h_console.setFormatter(DispatchingFormatter(self._formatters(), logging.Formatter('%(message)s'), ))
-            self.h_console = h_console
+            if None is not h_console.stream:
+                h_console.setLevel((logging.INFO, logging.DEBUG)[sickbeard.DEBUG])
+                h_console.setFormatter(DispatchingFormatter(self._formatters(), logging.Formatter('%(message)s'), ))
+                self.h_console = h_console
 
             # add the handler to the root logger
             for logger_name in self.log_types:

@@ -2,6 +2,7 @@
 /** @namespace $.SickGear.Host */
 /** @namespace $.SickGear.Port */
 /** @namespace $.SickGear.UseHttps */
+/** @namespace $.SickGear.PID */
 /** @namespace data.msg */
 
 var sgRoot = $.SickGear.Root,
@@ -10,24 +11,23 @@ var sgRoot = $.SickGear.Root,
 		+ (('' == sgRoot) ? $.SickGear.Port : location.port) + sgRoot,
 	isAliveUrl = sgRoot + '/home/is_alive/',
 	timeoutId;
-$.SickGear.currentPid = '';
 $.SickGear.numRestartWaits = 0;
 
 function is_alive() {
 	timeoutId = 0;
 	$.get(isAliveUrl, function(data) {
 
-		if ('nope' == data.msg.toString()) {
+		var resp = data.msg.toString();
+		if ('nope' == resp) {
 			// if initialising then just wait and try again
 
 			$('#shut_down_message').find('.spinner,.hide-yes').removeClass();
 			$('#restart_message').removeClass();
 			setTimeout(is_alive, 100);
 
-		} else if ('' == $.SickGear.currentPid || $.SickGear.currentPid == data.msg) {
+		} else if (/undefined/i.test($.SickGear.PID) || $.SickGear.PID == resp) {
 			// if this is before we've even shut down then just try again later
 
-			$.SickGear.currentPid = data.msg;
 			setTimeout(is_alive, 100);
 
 		} else {
