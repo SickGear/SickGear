@@ -1,29 +1,32 @@
 #import sickbeard
 #import lib.adba as adba
-#from sickbeard import common
-#from sickbeard import exceptions
-#from sickbeard import scene_exceptions
+#from sickbeard import (blackandwhitelist, common, exceptions, helpers, scene_exceptions)
 #from sickbeard.helpers import anon_url
-#from sickbeard.indexers.indexer_config import INDEXER_TVDB
-#import sickbeard.blackandwhitelist
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'Edit ' + $show.name
 #set global $header = $show.name
 #set global $sbPath = '..'
 #set global $topmenu = 'home'
-#set global $page_body_attr = 'edit-show'
+#set $css = $getVar('css', 'reg')
+#set $has_art = $getVar('has_art', None)
+#set $restart = 'Restart SickGear for new features on this page'
+#set $show_message = (None, $restart)[None is $has_art]
+#set global $page_body_attr = 'edit-show" class="' + $css
 ##
 #import os.path
 #from urllib import quote_plus
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
+<script>
+	var config = {showLang: '$show.lang', showIsAnime: #echo ('!1','!0')[$show.is_anime]#}
+</script>
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/editShow.js?v=$sbPID"></script>
-<script>
-	var config = {showLang: '$show.lang', showIsAnime: #echo ['!1','!0'][$show.is_anime]#}
-</script>
+<script type="text/javascript" src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
 #if $varExists('header')
-	<h1 class="header"><span class="grey-text">Edit</span> $header</h1>
+	<h1 class="header"><span class="grey-text">Edit&nbsp;</span>$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
@@ -31,6 +34,21 @@
 ##
 #set $html_checked = ' checked="checked"'
 #set $html_disabled = ' disabled="disabled"'
+<div id="background-container">
+#if $has_art
+	<ul>
+    #for $k, ($image, $rating) in enumerate($fanart)
+		<li class="#echo ' '.join((x for x in ({10:'group', 20:'fave', 30:'avoid'}.get($rating, ''), ('', 'background first-load')[$start_image == $k]) if x)) #" style="background-image:url($sbRoot/showPoster/?show=$show.indexerid&which=fanart_$image)"></li>
+    #end for
+	</ul>
+#end if
+</div>
+#if $show_message
+<div class="alert alert-info">
+	$show_message
+</div>
+#end if
+
 <div id="config">
 	<div id="config-content" class="linefix container">
 		<form action="editShow" method="post" id="editShow" style="width:894px">
@@ -48,20 +66,20 @@
 
 					<div class="field-pair">
 						<label for="paused">
-							<span class="component-title">Paused</span>
+							<span class="component-title">Pause searching releases</span>
 							<span class="component-desc">
 								<input type="checkbox" name="paused" id="paused"#echo ('', $html_checked)[$show.paused]#>
-								<p>#echo ('enable to not', 'disable to')[$show.paused]# search or match releases for <b class="boldest grey-text">$show.name</b></p>
+								<p>for <b class="boldest grey-text">$show.name</b></p>
 							</span>
 						</label>
 					</div>
 
-					<div class="field-pair#if $sickbeard.SHOWLIST_TAGVIEW != 'custom'# hidden#end if#">
+					<div class="field-pair#if $sg_str('SHOWLIST_TAGVIEW') != 'custom'# hidden#end if#">
 						<label for="tag">
 							<span class="component-title">Group show under</span>
 							<span class="component-desc">
 								<select name="tag" id="tag" class="form-control form-control-inline input-sm">
-#for $tag in $sickbeard.SHOW_TAGS:
+#for $tag in $sg_var('SHOW_TAGS', []):
 									<option value="$tag" #if $tag == $show.tag then 'selected="selected"' else ''#>$tag#echo ('', ' (default)')['Show List' == $tag]#</option>
 #end for
 								</select>
@@ -72,9 +90,9 @@
 
 					<div class="field-pair">
 						<span class="label-container">
-							<span class="component-title">Alternative show name(s)</span>
+							<span class="component-title">Alternative release name(s)</span>
 							<span class="component-desc">
-								<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200">
+								<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200" placeholder="Enter one title here, then 'Add'">
 								<select id="SceneNameSeason" class="form-control form-control-inline input-sm input100" style="#echo ('visibility:hidden','float:left')[$show.anime]#">
 									<option value="-1">Series</option>
 #if $show.anime:
@@ -84,8 +102,8 @@
 #end if
 								</select>
 								<input class="btn btn-inline" type="button" value="Add" id="addSceneName">
-								<p style="float:left">e.g. The Show, The Show (2016), The Show (US)</p>
-								<p class="clear-left note">post-processing or searching may require an alternative if a "Show not found" error is reported</p>
+								<p style="float:left"><span class="add-tip">Enter one.. </span>e.g. Show, Show (2016), or The Show (US)</p>
+								<p class="clear-left note">searching and post-processing require the alternatives if "Show not found" errors are in the logs</p>
 							</span>
 							<span id="SceneException" class="component-desc" style="display:none">
 								<h4 class="grey-text">Alternative a.k.a scene exceptions list (multi-selectable)</h4>
@@ -96,7 +114,7 @@
     #end for
 #end for
 								</select>
-								<span><p class="note">#if $show.is_anime#S* = Any series. #end if#This case insensitive list overrides the original name to process</p></span>
+								<span><p class="note">#if $show.is_anime#S* = Any series. #end if#The original name is used along<br />with this case insensitive list</p></span>
 								<div>
 									<input id="removeSceneName" value="Remove" class="btn pull-left" type="button" style="margin-top: 10px;"/>
 								</div>
@@ -130,7 +148,7 @@
 #set $qualities = $common.Quality.splitQuality(int($show.quality))
 #set global $anyQualities = $qualities[0]
 #set global $bestQualities = $qualities[1]
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
 
 #if $anyQualities + $bestQualities
 						<div class="field-pair show-if-quality-custom" style="display:none">
@@ -213,7 +231,7 @@
 
 #if $show.is_anime
     #import sickbeard.blackandwhitelist
-    #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
+    #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
 					<script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
 #end if
 				</div><!-- /component-group2 //-->
@@ -233,7 +251,7 @@
 						<label for="flatten_folders">
 							<span class="component-title">Flat folder hierarchy</span>
 							<span class="component-desc">
-								<input type="checkbox" name="flatten_folders" id="flatten_folders"#echo ('', $html_checked)[$show.flatten_folders and not $sickbeard.NAMING_FORCE_FOLDERS]##echo ('', $html_disabled)[$sickbeard.NAMING_FORCE_FOLDERS]#>
+								<input type="checkbox" name="flatten_folders" id="flatten_folders"#echo ('', $html_checked)[$show.flatten_folders and not $sg_var('NAMING_FORCE_FOLDERS')]##echo ('', $html_disabled)[$sg_var('NAMING_FORCE_FOLDERS')]#>
 								<p>prevent creating season folders to group files</p>
 							</span>
 						</label>
@@ -243,8 +261,27 @@
 						<label for="subtitles">
 							<span class="component-title">Subtitles</span>
 							<span class="component-desc">
-								<input type="checkbox" name="subtitles" id="subtitles"#echo ('', $html_checked)[$show.subtitles and $sickbeard.USE_SUBTITLES]##echo ($html_disabled, '')[$sickbeard.USE_SUBTITLES]#>
-								<p#if not $sickbeard.USE_SUBTITLES# class="grey-text"><del#end if#>download episode subtitles for this show#if not $sickbeard.USE_SUBTITLES#</del> ... (<span class="red-text">note: first <a href="$sbRoot/config/subtitles/">enable the subtitle system here</a></span>)#end if#</p>
+								<input type="checkbox" name="subtitles" id="subtitles"#echo ('', $html_checked)[$show.subtitles and $sg_var('USE_SUBTITLES')]##echo ($html_disabled, '')[$sg_var('USE_SUBTITLES')]#>
+								<p#if not $sg_var('USE_SUBTITLES')# class="grey-text"><del#end if#>download episode subtitles for this show#if not $sg_var('USE_SUBTITLES')#</del> ... (<span class="red-text">note: first <a href="$sbRoot/config/subtitles/">enable the subtitle system here</a></span>)#end if#</p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="reset_fanart">
+							<span class="component-title">Reset fanart ratings</span>
+							<span class="component-desc">
+#if $num_ratings
+								<input type="checkbox" name="reset_fanart" id="reset_fanart">
+								<p>delete <span class="grey-text">$num_ratings</span> fanart rating$helpers.maybe_plural($num_ratings) for "<span class="grey-text">$show.name</span>"</p>
+#else
+								<p>no fanart ratings to delete for "<span class="grey-text">$show.name</span>"</p>
+#end if
+								<p>
+								<span class="grey-text">fanart usage:&nbsp;</span>maximum $sg_var('FANART_LIMIT', 3) fanart images downloaded per show, <a href="$sbRoot/config/general/#core-component-group2">change limit</a><br />
+								<span class="grey-text">fanart keys:&nbsp;</span>hold down Ctrl+Alt (mac: Command+Option) and then press any of... left or right to change image, and<br />
+								's' to change and save ratings where 'a'/down = avoid, 'f' = fave, 'g'/up = group (repeat keypress to toggle rating)
+								with the livepanel not in 's'ave mode; up = change view mode, down = toggle translucency
 							</span>
 						</label>
 					</div>
@@ -327,7 +364,7 @@
 								<p>for unlocked IDs</p>
 							</span>
 							<span id="save-wait" class="component-desc hide">
-								<span><img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#.gif" style="margin-right:6px">Saving...</span>
+								<span><img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" style="margin-right:6px">Saving...</span>
 							</span>
 						</div>
 					</div>
@@ -344,4 +381,4 @@
 	</div>
 </div>
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

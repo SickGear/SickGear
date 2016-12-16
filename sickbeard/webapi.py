@@ -1235,50 +1235,65 @@ class CMD_Logs(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ view sickbeard's log """
+        """ view sickgear's log """
         # 10 = Debug / 20 = Info / 30 = Warning / 40 = Error
-        minLevel = logger.reverseNames[str(self.min_level).upper()]
-
-        data = []
-        if os.path.isfile(logger.sb_log_instance.log_file_path):
-            with ek.ek(open, logger.sb_log_instance.log_file_path) as f:
-                data = f.readlines()
+        min_level = logger.reverseNames[str(self.min_level).upper()]
+        max_lines = 50
 
         regex = "^(\d\d\d\d)\-(\d\d)\-(\d\d)\s*(\d\d)\:(\d\d):(\d\d)\s*([A-Z]+)\s*(.+?)\s*\:\:\s*(.*)$"
 
-        finalData = []
+        final_data = []
+        normal_data = []
+        truncate = []
+        repeated = None
+        num_lines = 0
 
-        numLines = 0
-        lastLine = False
-        numToShow = min(50, len(data))
+        if os.path.isfile(logger.sb_log_instance.log_file_path):
+            for x in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
 
-        for x in reversed(data):
+                x = x.decode('utf-8')
+                match = re.match(regex, x)
 
-            x = x.decode('utf-8')
-            match = re.match(regex, x)
+                if match:
+                    level = match.group(7)
+                    if level not in logger.reverseNames:
+                        normal_data = []
+                        continue
 
-            if match:
-                level = match.group(7)
-                if level not in logger.reverseNames:
-                    lastLine = False
-                    continue
+                    if logger.reverseNames[level] >= min_level:
+                        if truncate and not normal_data and truncate[0] == match.group(8) + match.group(9):
+                            truncate += [match.group(8) + match.group(9)]
+                            repeated = x
+                            continue
 
-                if logger.reverseNames[level] >= minLevel:
-                    lastLine = True
-                    finalData.append(x.rstrip("\n"))
+                        if 1 < len(truncate):
+                            final_data[-1] = repeated.strip() + ' (... %s repeat lines)\n' % len(truncate)
+
+                        truncate = [match.group(8) + match.group(9)]
+
+                        final_data.append(x)
+                        if any(normal_data):
+                            final_data += ['%02s) %s' % (n + 1, x) for n, x in enumerate(normal_data[::-1])] + \
+                                          ['<br />']
+                            num_lines += len(normal_data)
+                            normal_data = []
+                    else:
+                        normal_data = []
+                        continue
+
                 else:
-                    lastLine = False
-                    continue
+                    if not any(normal_data) and not any([x.strip()]):
+                        continue
 
-            elif lastLine:
-                finalData.append("AA" + x)
+                    normal_data.append(re.sub(r'\r?\n', '<br />', x.replace('<', '&lt;').replace('>', '&gt;')))
 
-            numLines += 1
+                num_lines += 1
 
-            if numLines >= numToShow:
-                break
+                if num_lines >= max_lines:
+                    break
 
-        return _responds(RESULT_SUCCESS, finalData)
+        return _responds(RESULT_SUCCESS, final_data)
+
 
 class CMD_PostProcess(ApiCall):
     _help = {"desc": "Manual postprocess TV Download Dir",

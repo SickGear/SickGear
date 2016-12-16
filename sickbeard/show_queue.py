@@ -138,7 +138,7 @@ class ShowQueue(generic_queue.GenericQueue):
         return queueItemObj
 
     def refreshShow(self, show, force=False, scheduled_update=False, after_update=False,
-                    priority=generic_queue.QueuePriorities.HIGH, **kwargs):
+                    priority=generic_queue.QueuePriorities.HIGH, force_image_cache=False, **kwargs):
 
         if self.isBeingRefreshed(show) and not force:
             raise exceptions.CantRefreshException('This show is already being refreshed, not refreshing again.')
@@ -149,7 +149,8 @@ class ShowQueue(generic_queue.GenericQueue):
                 logger.DEBUG)
             return
 
-        queueItemObj = QueueItemRefresh(show, force=force, scheduled_update=scheduled_update, priority=priority, **kwargs)
+        queueItemObj = QueueItemRefresh(show, force=force, scheduled_update=scheduled_update, priority=priority,
+                                        force_image_cache=force_image_cache, **kwargs)
 
         self.add_item(queueItemObj)
 
@@ -487,7 +488,8 @@ class QueueItemAdd(ShowQueueItem):
 
 
 class QueueItemRefresh(ShowQueueItem):
-    def __init__(self, show=None, force=False, scheduled_update=False, priority=generic_queue.QueuePriorities.HIGH, **kwargs):
+    def __init__(self, show=None, force=False, scheduled_update=False, priority=generic_queue.QueuePriorities.HIGH,
+                 force_image_cache=False, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.REFRESH, show, scheduled_update)
 
         # do refreshes first because they're quick
@@ -495,6 +497,8 @@ class QueueItemRefresh(ShowQueueItem):
 
         # force refresh certain items
         self.force = force
+
+        self.force_image_cache = force_image_cache
 
         self.kwargs = kwargs
 
@@ -507,7 +511,7 @@ class QueueItemRefresh(ShowQueueItem):
         self.show.writeMetadata()
         #if self.force:
         #    self.show.updateMetadata()
-        self.show.populateCache()
+        self.show.populateCache(self.force_image_cache)
 
         # Load XEM data to DB for show
         if self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
@@ -652,7 +656,7 @@ class QueueItemUpdate(ShowQueueItem):
         if self.priority != generic_queue.QueuePriorities.NORMAL:
             self.kwargs['priority'] = self.priority
         sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True,
-                                                        **self.kwargs)
+                                                        force_image_cache=self.force_web, **self.kwargs)
 
 
 class QueueItemForceUpdate(QueueItemUpdate):

@@ -12,6 +12,7 @@ Libs with customisations...
 /lib/pynma/pynma.py
 /lib/requests/packages/urllib3/connectionpool.py
 /lib/requests/packages/urllib3/util/ssl_.py
+/lib/tmdb_api/tmdb_api.py
 /lib/tornado
-/lib/tvdb/tvdb_api.py
+/lib/tvdb_api/tvdb_api.py
 /lib/tzlocal/unix.py

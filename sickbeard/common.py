@@ -121,6 +121,11 @@ class Quality:
                       SNATCHED_BEST: 'Snatched (Best)'}
 
     @staticmethod
+    def get_quality_css(quality):
+        return (Quality.qualityStrings[quality].replace('2160p', 'UHD2160p').replace('1080p', 'HD1080p')
+                .replace('720p', 'HD720p').replace('HD TV', 'HD720p').replace('RawHD TV', 'RawHD'))
+
+    @staticmethod
     def _getStatusStrings(status):
         toReturn = {}
         for x in Quality.qualityStrings.keys():

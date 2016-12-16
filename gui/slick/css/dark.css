@@ -1,6 +1,24 @@
 /* =======================================================================
 inc_top.tmpl
 ========================================================================== */
+.navbar-default .navbar-nav .logger.errors.n,
+pre .prelight{
+	color:#c3ed9b
+}
+
+.navbar-default .navbar-nav .logger.errors.nn,
+pre .prelight2{
+	color:#f6ff41
+}
+
+.navbar-default .navbar-nav .logger.errors.nnn,
+pre .prelight-num{
+	color:#ffba57
+}
+
+.navbar-default .navbar-nav .logger.errors.nnnn{
+	color:#ff6d5e
+}
 
 [class^="icon-"],
 [class*=" icon-"]{
@@ -41,21 +59,21 @@ inc_top.tmpl
 .ui-widget-content{
 	background:#606060;
 	border:1px solid #111;
-	color:#fff
+	color:#ddd
 }
 
 .ui-widget-content a{
-	color:#2D8FBF
+	color:#2d8fbf
 }
 
 .ui-widget-content a:hover{
-	color:#09A2FF
+	color:#09a2ff
 }
 
 .ui-widget-header{
 	background:#3d3d3d;
 	border:1px solid #111;
-	color:#fff
+	color:#ddd
 }
 
 .ui-state-default,
@@ -103,7 +121,7 @@ inc_top.tmpl
 }
 
 .ui-state-default .ui-icon{
-	background-image:url('../css/lib/images/ui-icons_09a2ff_256x240.png')
+	background-image:url("../css/lib/images/ui-icons_09a2ff_256x240.png")
 }
 
 .ui-state-hover .ui-icon,
@@ -133,12 +151,12 @@ inc_top.tmpl
 }
 
 .ui-state-active a, .ui-state-active a:link, .ui-state-active a:visited{
-	color:#140F06;
+	color:#140f06;
 	text-decoration:none
 }
 
 .ui-state-default a, .ui-state-default a:link, .ui-state-default a:visited{
-	color:#fff;
+	color:#ddd;
 	text-decoration:none
 }
 
@@ -180,13 +198,6 @@ inc_top.tmpl
 	border-top-right-radius:5px
 }
 
-#SubMenu{
-	padding-right:20px;
-	clear:both;
-	font-size:12px;
-	float:right
-}
-
 .upgrade-notification{
 	width:600px;
 	text-align:center;
@@ -201,7 +212,7 @@ inc_bottom.tmpl
 ========================================================================== */
 
 .footerhighlight{
-	color:#09A2FF
+	color:#09a2ff
 }
 
 /* =======================================================================
@@ -219,7 +230,7 @@ home.tmpl
 .ui-font,
 a.ui-font{
 	text-shadow:0 0 0.1em #000;
-	color:#fff
+	color:#ddd
 }
 
 #show-list .show-card{
@@ -265,14 +276,14 @@ a.ui-font{
 }
 
 td.tvShow a{
-	color:#fff;
+	color:#ddd;
 	text-decoration:none
 }
 
 td.tvShow a:hover span,
 td.tvShow a:hover{
 	cursor:pointer;
-	color:#09A2FF
+	color:#09a2ff
 }
 
 /* =======================================================================
@@ -302,9 +313,8 @@ home_newShow.tmpl
 }
 
 #addRootDirTable td label .filepath,
-.grey-text{
-	color:#999
-}
+.grey-text{color:#999}
+.highlight-text{color:#fff}
 
 #newShowPortal #displayText .show-name,
 #newShowPortal #displayText .show-dest,
@@ -314,7 +324,7 @@ home_newShow.tmpl
 
 #newShowPortal #displayText .show-name,
 #newShowPortal #displayText .show-dest{
-	color:rgb(255, 255, 255)
+	color:#ddd
 }
 
 /* =======================================================================
@@ -344,8 +354,27 @@ home_postprocess.tmpl
 
 
 /* =======================================================================
+displayShow.tmpl and episodeView.tmpl
+========================================================================== */
+#episode-view.back-art .controlsBlock,
+#episode-view.back-art .h2footer,
+#episode-view.back-art.daybyday h1.header,
+#episode-view.back-art.pro .daybyday-show,
+#display-show.back-art #change-show,
+#display-show.back-art #change-status,
+#display-show.back-art #no-episode-data,
+body.back-art .footer,
+#display-show.back-art .sickbeardTable{
+	background:rgba(0, 0, 0, 0.5)
+}
+
+
+/* =======================================================================
 displayShow.tmpl
 ========================================================================== */
+body#display-show.back-art{
+	color:#ddd
+}
 
 tr.seasonheader{
 	text-align:left;
@@ -355,51 +384,88 @@ tr.seasonheader{
 #prevShow,
 #nextShow,
 #topcontrol{
-	-webkit-filter:"none";
+	-webkit-filter:none;
 	filter:none
 }
 
-.tvshowImg{
+#posterCol .tvshowImg{
 	border:1px solid #111
 }
 
-.display-details{
-	background-color:#3d3d3d;
-	border:1px solid #111
+body#display-show.back-art .displayshow-wrapper .label a{
+	color:#ddd
+}
+body#display-show.back-art .displayshow-wrapper .label a:hover,
+body#display-show.back-art .displayshow-wrapper .label a:focus{
+	color:#aaa
 }
 
-.pro .details-title{
-	color:#999
+#edit-show.back-art .ui-tabs-nav > :not(.ui-tabs-active){
+	background:rgba(0,0,0,0.2)
 }
 
-.back-art.pro .details-title{
-	color:#bbb
+#edit-show.back-art .ui-tabs-nav .ui-tabs-active,
+#edit-show.back-art .ui-tabs .ui-tabs-panel{
+	background:rgba(0,0,0,0.8) !important
+}
+
+#edit-show.back-art .header,
+#display-show.back-art #showCol{
+	background:rgba(0,0,0,0.5);
+	border:1px solid rgba(0,0,0,0.5)
+}
+
+#livepanel .over-layer0,
+#showCol{
+	background-color:#3d3d3d
+}
+
+#livepanel .over-layer0,
+#livepanel .over-layer1,
+#showCol{
+	border-color:#111
+}
+
+.back-art #livepanel .over-layer0{
+	background:rgba(0,0,0,0.5);
+	border-color:rgba(0,0,0,0.5)
+}
+
+.pro .details-title,
+.pro .hint{
+	color:#aaa
 }
 
 .back-art #details-top .label,
 .back-art #details-bottom .label{
-	background-color:#15528F
+	background-color:#15528f
 }
 
 #details-top .label,
 #details-bottom .label{
-	background-color:#15528F
+	background-color:#15528f
 }
 
 .paused-highlight{
-	color:#09A2FF
+	color:#09a2ff
 }
 
 .sickbeardTable th{
 	background-color:#15528f
 }
 
+.back-art th.row-seasonheader h3,
 .displayshow-wrapper .sickbeardTable th.row-seasonheader{
-	color:#fff
+	color:#ddd
 }
 
-.back-art.pro .sickbeardTable .seasoncols th,
-.translucent.pro .sickbeardTable .seasoncols th{
+.back-art.pro.ii .navbar-default,
+.back-art.pro.ii .day-of-week .day-number,
+.translucent.pro.ii .day-of-week .day-number,
+.back-art.pro.ii .sickbeardTable .seasoncols th,
+.translucent.pro.ii .sickbeardTable .seasoncols th,
+.back-art.pro.ii .sickbeardTable thead .seasoncols td,
+.translucent.pro.ii .sickbeardTable thead .seasoncols td{
 	background-color:rgba(21, 82, 143, 0.5)
 }
 
@@ -408,19 +474,19 @@ episodeView.tmpl
 ========================================================================== */
 
 h2.day, h2.network{
-	color:#FFF;
+	color:#ddd;
 	text-shadow:-1px -1px 0 rgba(0, 0, 0, 0.3);
-	background-color:#15528F
+	background-color:#15528f
 }
 
 .tvshowDiv{
 	border:1px solid #ccc;
-	background:#fff;
+	background:#ddd;
 	color:#000
 }
 
 .tvshowDiv a:hover{
-	color:#09A2FF
+	color:#09a2ff
 }
 
 .tvshowTitle a{
@@ -450,12 +516,12 @@ h2.day, h2.network{
 
 #showListTable td.tvShow a:hover{
 	cursor:pointer;
-	color:#09A2FF
+	color:#09a2ff
 }
 
 .day-of-week .day-number{
-	background-color:#15528F;
-	color:#fff
+	background-color:#15528f;
+	color:#ddd
 }
 
 .today .day-number .number, .today .day-number .month, .today .day-number .day{
@@ -477,7 +543,7 @@ h2.day, h2.network{
 .day-of-week .text .airtime,
 .day-of-week .text .episode,
 .day-of-week .text .episode .name{
-	color:#fff
+	color:#ddd
 }
 
 .day-of-week .text .episode .season,
@@ -506,14 +572,14 @@ h2.day, h2.network{
 }
 
 .carousel-control{
-	color:#297AB8;
+	color:#297ab8;
 	filter:alpha(opacity=100);
 	opacity:1
 }
 
 .carousel-control:hover,
 .carousel-control:focus{
-	color:#15528F;
+	color:#15528f;
 	filter:alpha(opacity=100);
 	opacity:1
 }
@@ -524,8 +590,8 @@ h2.day, h2.network{
 }
 
 .carousel-indicators .active{
-	background:#8DBEEE;
-	border-color:#8DBEEE
+	background:#8dbeee;
+	border-color:#8dbeee
 }
 
 /* =======================================================================
@@ -554,13 +620,16 @@ config*.tmpl
 }
 
 .testNotification{
-	border:1px dotted #CCC
+	border:1px dotted #ccc
 }
 
 #provider_order_list li,
 #service_order_list li{
+	color:#ddd
+}
+
+#service_order_list li{
 	background:#333 !important;
-	color:#fff
 }
 
 .infoTableSeperator{
@@ -581,14 +650,23 @@ config_postProcessing.tmpl
 	border-color:#111
 }
 
+.back-art #config .episode-sample{
+	background:rgba(34,34,34,0.8);
+	border-color:rgba(17,17,17,0.8)
+}
+.back-art #config .example{
+	background:rgba(33,33,33,0.8);
+	border-color:rgba(11,11,11,0.8);
+	line-height: 24px
+}
 .Key{
 	background-color:#3d3d3d;
 	border:1px solid #111
 }
 
 .Key th, .tableHeader{
-	color:#fff;
-	background:#15528F
+	color:#ddd;
+	background:#15528f
 }
 
 .Key tr{
@@ -605,17 +683,17 @@ config_notifications.tmpl
 
 div.metadata_options{
 	background:#333;
-	color:#fff;
+	color:#ddd;
 	border:1px solid #111
 }
 
 div.metadata_options label:hover{
-	color:#fff;
-	background-color:#15528F
+	color:#ddd;
+	background-color:#15528f
 }
 
 div.metadata_options label{
-	color:#fff
+	color:#ddd
 }
 
 div.metadata_example{
@@ -623,7 +701,7 @@ div.metadata_example{
 }
 
 div.metadata_example label{
-	color:#fff
+	color:#ddd
 }
 
 div.metadataDiv .disabled{
@@ -631,8 +709,8 @@ div.metadataDiv .disabled{
 }
 
 .warning{
-	border-color:#F89406;
-	background:url("../images/warning16.png") no-repeat right 5px center #fff
+	border-color:#f89406;
+	background:url("../images/warning16.png") no-repeat right 5px center #ddd
 }
 
 .solid-border{
@@ -648,7 +726,7 @@ manage*.tmpl
 ========================================================================== */
 
 .separator{
-	color:#fff
+	color:#ddd
 }
 
 a.whitelink{
@@ -660,7 +738,7 @@ a.whitelink{
 ========================================================================== */
 
 #error-404 path{
-fill:#fff
+fill:#ddd
 }
 
 /* =======================================================================
@@ -668,7 +746,7 @@ Global
 ========================================================================== */
 
 span.path{
-	color:#09A2FF;
+	color:#09a2ff;
 	background-color:#333
 }
 
@@ -687,7 +765,7 @@ body{
 
 body,
 .show-date{
-	color:#fff
+	color:#ddd
 }
 
 input, textarea, select, .uneditable-input{
@@ -697,24 +775,24 @@ input, textarea, select, .uneditable-input{
 
 /* navbar styling */
 .navbar-default{
-	background-color:#15528F;
-	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#297AB8', endColorstr='#15528F');
-	background-image:-ms-linear-gradient(top, #297AB8 0%, #15528F 100%);
-	background-image:-moz-linear-gradient(top, #297AB8 0%, #15528F 100%);
-	background-image:-o-linear-gradient(top, #297AB8 0%, #15528F 100%);
-	background-image:-webkit-gradient(linear, left top, left bottom, color-stop(0, #297AB8), color-stop(1, #15528F));
-	background-image:-webkit-linear-gradient(top, #297AB8 0%, #15528F 100%);
-	background-image:linear-gradient(to bottom, #297AB8 0%, #15528F 100%);
+	background-color:#15528f;
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr="#297ab8", endColorstr="#15528f");
+	background-image:-ms-linear-gradient(top, #297ab8 0%, #15528f 100%);
+	background-image:-moz-linear-gradient(top, #297ab8 0%, #15528f 100%);
+	background-image:-o-linear-gradient(top, #297ab8 0%, #15528f 100%);
+	background-image:-webkit-gradient(linear, left top, left bottom, color-stop(0, #297ab8), color-stop(1, #15528f));
+	background-image:-webkit-linear-gradient(top, #297ab8 0%, #15528f 100%);
+	background-image:linear-gradient(to bottom, #297ab8 0%, #15528f 100%);
 	border-color:#3e3f3a
 }
 
 .navbar-default .navbar-brand{
-	color:#fff
+	color:#ddd
 }
 
 .navbar-default .navbar-brand:hover,
 .navbar-default .navbar-brand:focus{
-	color:#fff;
+	color:#ddd;
 	background-color:transparent
 }
 
@@ -728,14 +806,14 @@ input, textarea, select, .uneditable-input{
 
 .navbar-default .navbar-nav > li > a:hover,
 .navbar-default .navbar-nav > li > a:focus{
-	color:#fff;
+	color:#ddd;
 	background-color:#124477
 }
 
 .navbar-default .navbar-nav > .active > a,
 .navbar-default .navbar-nav > .active > a:hover,
 .navbar-default .navbar-nav > .active > a:focus{
-	color:#fff;
+	color:#ddd;
 	background-color:#124477
 }
 
@@ -768,7 +846,7 @@ input, textarea, select, .uneditable-input{
 .navbar-default .navbar-nav > .open > a:hover,
 .navbar-default .navbar-nav > .open > a:focus{
 	background-color:#124477;
-	color:#fff
+	color:#ddd
 }
 
 @media (max-width:767px){
@@ -777,13 +855,13 @@ input, textarea, select, .uneditable-input{
 	}
 	.navbar-default .navbar-nav .open .dropdown-menu > li > a:hover,
 	.navbar-default .navbar-nav .open .dropdown-menu > li > a:focus{
-		color:#fff;
+		color:#ddd;
 		background-color:transparent
 	}
 	.navbar-default .navbar-nav .open .dropdown-menu > .active > a,
 	.navbar-default .navbar-nav .open .dropdown-menu > .active > a:hover,
 	.navbar-default .navbar-nav .open .dropdown-menu > .active > a:focus{
-		color:#fff;
+		color:#ddd;
 		background-color:#124477
 	}
 	.navbar-default .navbar-nav .open .dropdown-menu > .disabled > a,
@@ -799,7 +877,7 @@ input, textarea, select, .uneditable-input{
 }
 
 .navbar-default .navbar-link:hover{
-	color:#fff
+	color:#ddd
 }
 
 .navbar-default .btn-link{
@@ -819,13 +897,13 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 }
 
 .dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus{
-	color:#fff;
+	color:#ddd;
 	text-decoration:none;
-	background-color:#15528F
+	background-color:#15528f
 }
 
 .dropdown-menu > li > a{
-	color:#fff
+	color:#ddd
 }
 
 .dropdown-menu{
@@ -834,26 +912,29 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	box-shadow:0 6px 12px rgba(0, 0, 0, 0.176)
 }
 
+.img-trakt-16{background-image:url("../images/addshows/trakt16-white.png")}
+.img-import-16{background-image:url("../images/addshows/add-existing16-white.png")}
+
 .form-control{
 	color:#000
 }
 
 .btn{
-	color:#fff;
+	color:#ddd;
 	text-shadow:0 1px 1px rgba(0, 0, 0, 0.75);
-	background-color:#2672B6;
-	*background-color:#2672B6;
-	background-image:-ms-linear-gradient(top, #297AB8, #15528F);
-	background-image:-webkit-gradient(linear, 0 0, 0 100%, from(#297AB8), to(#15528F));
-	background-image:-webkit-linear-gradient(top, #297AB8, #15528F);
-	background-image:-o-linear-gradient(top, #297AB8, #15528F);
-	background-image:linear-gradient(top, #297AB8, #15528F);
-	background-image:-moz-linear-gradient(top, #297AB8, #15528F);
+	background-color:#2672b6;
+	*background-color:#2672b6;
+	background-image:-ms-linear-gradient(top, #297ab8, #15528f);
+	background-image:-webkit-gradient(linear, 0 0, 0 100%, from(#297ab8), to(#15528f));
+	background-image:-webkit-linear-gradient(top, #297ab8, #15528f);
+	background-image:-o-linear-gradient(top, #297ab8, #15528f);
+	background-image:linear-gradient(top, #297ab8, #15528f);
+	background-image:-moz-linear-gradient(top, #297ab8, #15528f);
 	border:1px solid #111;
 	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
 	border-color:#111 #111 #111;
 	border-bottom-color:#111;
-	filter:progid:dximagetransform.microsoft.gradient(startColorstr='#297AB8', endColorstr='#15528F', GradientType=0);
+	filter:progid:dximagetransform.microsoft.gradient(startcolorstr="#297ab8", endcolorstr="#15528f", gradienttype=0);
 	filter:progid:dximagetransform.microsoft.gradient(enabled=false);
 	-webkit-box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.0), 0 1px 2px rgba(0, 0, 0, 0.05);
 	-moz-box-shadow:inset 0 1px 0 rgba(255, 255, 255, 0.0), 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -865,21 +946,21 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 .btn.active,
 .btn.disabled,
 .btn[disabled]{
-	background-color:#2672B6;
-	*background-color:#2672B6;
-	color:#fff
+	background-color:#2672b6;
+	*background-color:#2672b6;
+	color:#ddd
 }
 
 .btn:active,
 .btn.active{
 	background-color:#ccc \9;
-	color:#fff
+	color:#ddd
 }
 
 .btn:hover{
-	color:#fff;
-	background-color:#2672B6;
-	*background-color:#2672B6;
+	color:#ddd;
+	background-color:#2672b6;
+	*background-color:#2672b6;
 	background-position:0 -150px;
 	-webkit-transition:background-position 0.0s linear;
 	-moz-transition:background-position 0.0s linear;
@@ -892,15 +973,15 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	outline:thin dotted #333;
 	outline:5px auto -webkit-focus-ring-color;
 	outline-offset:-2px;
-	color:#fff
+	color:#ddd
 }
 
 .btn.active,
 .btn:active{
-	background-color:#2672B6;
-	background-color:#2672B6 \9;
+	background-color:#2672b6;
+	background-color:#2672b6 \9;
 	background-image:none;
-	color:#fff;
+	color:#ddd;
 	outline:0;
 	-webkit-box-shadow:inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.05);
 	-moz-box-shadow:inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -910,7 +991,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 .btn.disabled,
 .btn[disabled]{
 	cursor:default;
-	background:#15528F none;
+	background:#15528f none;
 	opacity:0.65;
 	filter:alpha(opacity=65);
 	-webkit-box-shadow:none;
@@ -940,13 +1021,15 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 .btn-warning:hover,
 .btn-danger,
 .btn-danger:hover,
+.ui-widget-content .btn-danger,
+.ui-widget-content .btn-danger:hover,
 .btn-success,
 .btn-success:hover,
 .btn-info,
 .btn-info:hover,
 .btn-inverse,
 .btn-inverse:hover{
-	color:#fff;
+	color:#ddd;
 	text-shadow:0 -1px 0 rgba(0, 0, 0, 0.25)
 }
 
@@ -971,7 +1054,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-repeat:repeat-x;
 	border-color:#0055cc #0055cc #003580;
 	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-	filter:progid:dximagetransform.microsoft.gradient(startColorstr='#0088cc', endColorstr='#0055cc', GradientType=0);
+	filter:progid:dximagetransform.microsoft.gradient(startColorstr="#0088cc", endColorstr="#0055cc", GradientType=0);
 	filter:progid:dximagetransform.microsoft.gradient(enabled=false)
 }
 
@@ -1001,7 +1084,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-repeat:repeat-x;
 	border-color:#f89406 #f89406 #ad6704;
 	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-	filter:progid:dximagetransform.microsoft.gradient(startColorstr='#fbb450', endColorstr='#f89406', GradientType=0);
+	filter:progid:dximagetransform.microsoft.gradient(startColorstr="#fbb450", endColorstr="#f89406", GradientType=0);
 	filter:progid:dximagetransform.microsoft.gradient(enabled=false)
 }
 
@@ -1031,7 +1114,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-repeat:repeat-x;
 	border-color:#bd362f #bd362f #802420;
 	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-	filter:progid:dximagetransform.microsoft.gradient(startColorstr='#ee5f5b', endColorstr='#bd362f', GradientType=0);
+	filter:progid:dximagetransform.microsoft.gradient(startColorstr="#ee5f5b", endColorstr="#bd362f", GradientType=0);
 	filter:progid:dximagetransform.microsoft.gradient(enabled=false)
 }
 
@@ -1061,7 +1144,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-repeat:repeat-x;
 	border-color:#51a351 #51a351 #387038;
 	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-	filter:progid:dximagetransform.microsoft.gradient(startColorstr='#62c462', endColorstr='#51a351', GradientType=0);
+	filter:progid:dximagetransform.microsoft.gradient(startColorstr="#62c462", endColorstr="#51a351", GradientType=0);
 	filter:progid:dximagetransform.microsoft.gradient(enabled=false)
 }
 
@@ -1091,7 +1174,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-repeat:repeat-x;
 	border-color:#2f96b4 #2f96b4 #1f6377;
 	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-	filter:progid:dximagetransform.microsoft.gradient(startColorstr='#5bc0de', endColorstr='#2f96b4', GradientType=0);
+	filter:progid:dximagetransform.microsoft.gradient(startColorstr="#5bc0de", endColorstr="#2f96b4", GradientType=0);
 	filter:progid:dximagetransform.microsoft.gradient(enabled=false)
 }
 
@@ -1121,7 +1204,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-repeat:repeat-x;
 	border-color:#222 #222 #000;
 	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-	filter:progid:dximagetransform.microsoft.gradient(startColorstr='#555555', endColorstr='#222222', GradientType=0);
+	filter:progid:dximagetransform.microsoft.gradient(startColorstr="#555555", endColorstr="#222222", GradientType=0);
 	filter:progid:dximagetransform.microsoft.gradient(enabled=false)
 }
 
@@ -1160,9 +1243,9 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 
 	.navbar-default .navbar-nav > .active > a{
 		background-color:transparent;
-		-webkit-box-shadow:inset 0px -5px 0px 0px #8DBEEE;
-		-moz-box-shadow:inset 0px -5px 0px 0px #8DBEEE;
-		box-shadow:inset 0px -5px 0px 0px #8DBEEE
+		-webkit-box-shadow:inset 0px -5px 0px 0px #8dbeee;
+		-moz-box-shadow:inset 0px -5px 0px 0px #8dbeee;
+		box-shadow:inset 0px -5px 0px 0px #8dbeee
 	}
 
 	.navbar-fixed-top{
@@ -1171,7 +1254,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 }
 
 pre{
-	color:#fff;
+	color:#ddd;
 	background-color:#3d3d3d;
 	border-color:#111
 }
@@ -1193,7 +1276,7 @@ input sizing (for config pages)
 #showfilter optgroup option,
 #editAProvider optgroup option{
 	color:#222;
-	background-color:#fff
+	background-color:#ddd
 }
 
 /* =======================================================================
@@ -1206,7 +1289,7 @@ browser.css
 
 #fileBrowserDialog ul li a:hover{
 	color:#09a2ff;
-	background: rgb(61, 61, 61) none
+	background:rgb(61, 61, 61) none
 }
 
 .ui-menu .ui-menu-item{
@@ -1214,11 +1297,11 @@ browser.css
 }
 
 .ui-menu .ui-menu-item-alternate{
-	background-color:#fff
+	background-color:#ddd
 }
 
 .ui-autocomplete .ui-menu-item .ui-state-focus{
-	color:#fff;
+	color:#ddd;
 	background:none;
 	background-color:#0a246a
 }
@@ -1229,11 +1312,11 @@ formWizard
 
 .step,
 legend.legendStep{
-	color:#fff
+	color:#ddd
 }
 
 div.stepsguide .step p{
-	border-color:#23AFDC
+	border-color:#23afdc
 }
 
 .disabledstep{
@@ -1241,7 +1324,7 @@ div.stepsguide .step p{
 }
 
 #newShowPortal #addShowForm .stepsguide .disabledstep:hover > .smalltext{
-	color:#ccc;
+	color:#ccc
 }
 
 .stepDiv #searchResults div .exists-db{
@@ -1249,16 +1332,16 @@ div.stepsguide .step p{
 }
 
 div.stepsguide .disabledstep p{
-	border-color:#1178B3
+	border-color:#1178b3
 }
 
 div.formpaginate .prev, div.formpaginate .next{
-	color:#fff;
-	background:#2265A1
+	color:#ddd;
+	background:#2265a1
 }
 
 #customQualityWrapper .tip-text p{
-	color:#888
+	color:#999
 }
 
 /* =======================================================================
@@ -1276,11 +1359,11 @@ pnotify.css
 }
 
 .ui-pnotify-title{
-	color:#fff
+	color:#ddd
 }
 
 .ui-pnotify-text{
-	color:#fff
+	color:#ddd
 }
 
 /* =======================================================================
@@ -1288,7 +1371,7 @@ tablesorter.css
 ========================================================================== */
 
 .tablesorter{
-	color:#fff;
+	color:#ddd;
 	background-color:#333
 }
 
@@ -1303,25 +1386,26 @@ tablesorter.css
 	border-left:none
 }
 
-.tablesorter th{
-	color:#fff;
+.tablesorter th,
+.sickbeardTable thead .seasoncols td{
+	color:#ddd;
 	text-shadow:-1px -1px 0 rgba(0, 0, 0, 0.3);
-	background-color:#15528F
+	background-color:#15528f
 }
 
 .tablesorter .tablesorter-header{
-	background:#15528F url(data:image/gif;base64,R0lGODlhFQAJAIAAAP///////yH5BAEAAAEALAAAAAAVAAkAAAIXjI+AywnaYnhUMoqt3gZXPmVg94yJVQAAOw==) no-repeat center right;
-	/* background-image:url(../images/tablesorter/bg.gif) */
+	background:#15528f url("data:image/gif;base64,R0lGODlhFQAJAIAAAP///////yH5BAEAAAEALAAAAAAVAAkAAAIXjI+AywnaYnhUMoqt3gZXPmVg94yJVQAAOw==") no-repeat center right;
+	/* background-image:url("../images/tablesorter/bg.gif") */
 }
 
 .tablesorter thead .tablesorter-headerDesc{
-	background:#297AB8 url(data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7) no-repeat center right;
-	/* background-image:url(../images/tablesorter/asc.gif) */
+	background:#297ab8 url("data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7") no-repeat center right;
+	/* background-image:url("../images/tablesorter/asc.gif") */
 }
 
 .tablesorter thead .tablesorter-headerAsc{
-	background:#297AB8 url(data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjI8Bya2wnINUMopZAQA7) no-repeat center right;
-	/* background-image:url(../images/tablesorter/desc.gif) */
+	background:#297ab8 url("data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjI8Bya2wnINUMopZAQA7") no-repeat center right;
+	/* background-image:url("../images/tablesorter/desc.gif") */
 }
 
 thead.tablesorter-stickyHeader{
@@ -1329,11 +1413,16 @@ thead.tablesorter-stickyHeader{
 	border-bottom:2px solid #222
 }
 
+.ui-state-default.row-odd{
+	background-color:#363636
+}
+
 /* Zebra Widget - row alternating colors */
 .tablesorter tr.odd, .sickbeardTable tr.odd{
 	background-color:#333
 }
 
+.ui-state-default.row-even,
 .tablesorter tr.even, .sickbeardTable tr.even{
 	background-color:#2e2e2e
 }
@@ -1346,7 +1435,7 @@ thead.tablesorter-stickyHeader{
 }
 
 .tablesorter tfoot tr{
-	color:#fff;
+	color:#ddd;
 	text-align:center;
 	text-shadow:-1px -1px 0 rgba(0, 0, 0, 0.3);
 	background-color:#333;
@@ -1354,7 +1443,7 @@ thead.tablesorter-stickyHeader{
 }
 
 .tablesorter tfoot a{
-	color:#fff
+	color:#ddd
 }
 
 #showListTable tbody{
@@ -1368,7 +1457,7 @@ token-input.css
 
 ul.token-input-list{
 	border:1px solid #ccc;
-	background-color:#fff
+	background-color:#ddd
 }
 
 ul.token-input-list li input{
@@ -1387,7 +1476,7 @@ li.token-input-token span{
 
 li.token-input-selected-token{
 	background-color:#08844e;
-	color:#fff
+	color:#ddd
 }
 
 li.token-input-selected-token span{
@@ -1395,7 +1484,7 @@ li.token-input-selected-token span{
 }
 
 div.token-input-dropdown{
-	background-color:#fff;
+	background-color:#ddd;
 	color:#000;
 	border-left-color:#ccc;
 	border-right-color:#ccc;
@@ -1407,7 +1496,7 @@ div.token-input-dropdown p{
 }
 
 div.token-input-dropdown ul li{
-	background-color:#fff
+	background-color:#ddd
 }
 
 div.token-input-dropdown ul li.token-input-dropdown-item{
@@ -1415,7 +1504,7 @@ div.token-input-dropdown ul li.token-input-dropdown-item{
 }
 
 div.token-input-dropdown ul li.token-input-dropdown-item2{
-	background-color:#fff
+	background-color:#ddd
 }
 
 div.token-input-dropdown ul li.token-input-selected-dropdown-item{
@@ -1427,7 +1516,7 @@ jquery.confirm.css
 ========================================================================== */
 
 #confirmOverlay{
-	background:url('../images/bg.gif');
+	background:url("../images/bg.gif");
 	background:-moz-linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)) repeat-x rgba(0, 0, 0, 0.5);
 	background:-webkit-gradient(linear, 0% 0%, 0% 100%, from(rgba(0, 0, 0, 0.5)), to(rgba(0, 0, 0, 0.5))) repeat-x rgba(0, 0, 0, 0.5);
 	z-index:100000
@@ -1440,19 +1529,19 @@ jquery.confirm.css
 }
 
 #confirmBox h1{
-	background-color:#15528F;
+	background-color:#15528f;
 	border-bottom:1px solid #111;
-	color:#fff;
+	color:#ddd;
 	text-shadow:0 1px 1px rgba(0, 0, 0, 0.75)
 }
 
 #confirmBox p{
-	color:#fff;
+	color:#ddd;
 	text-shadow:0 1px 1px rgba(0, 0, 0, 0.75)
 }
 
 #confirmBox .button{
-	color:#fff;
+	color:#ddd;
 	text-shadow:0 1px 1px rgba(0, 0, 0, 0.75);
 	border:1px solid #111;
 	border-radius:3px;
@@ -1465,17 +1554,17 @@ jquery.confirm.css
 }
 
 #confirmBox .green{
-	background-color:#3F7636
+	background-color:#3f7636
 }
 
 #confirmBox .green:hover{
-	background-color:#48873E
+	background-color:#48873e
 }
 
 #confirmBox .red{
-	background-color:#8D2D2B
+	background-color:#8d2d2b
 }
 
 #confirmBox .red:hover{
-	background-color:#A13331
+	background-color:#a13331
 }

@@ -1,0 +1,59 @@
+#import sickbeard
+#from sickbeard.helpers import anon_url
+<% def mainvar(varname, default=False): return getattr(sickbeard, varname, default) %>
+<% def mainstr(varname, default=''): return getattr(sickbeard, varname, default) %>
+##
+#set $panel_title = {'viewart0': 'Poster <em>left</em>', 'viewart1': 'Poster <em>right</em>', 'viewart2': 'No poster',
+                     'viewart3': 'Open gear', 'viewart4': 'Backart only',
+                     'translucent_on': 'Translucency <em>on</em>', 'translucent_off': 'Translucency <em>off</em>',
+                     'rateart0': 'Random (default)', 'rateart1': 'Group random',
+                     'rateart2': 'Always display', 'rateart3': 'Avoid image',
+                     'backart_on': 'Backart <em>on</em>', 'backart_off': 'Backart <em>off</em>',
+                     'viewmode0': 'Regular view', 'viewmode1': 'Proview I', 'viewmode2': 'Proview II',
+                     'viewmode3': 'Set/Save art random/avoids'}
+#set $init_title_translucent = $panel_title['translucent_' + ('off', 'on')[$mainvar('DISPLAY_SHOW_BACKGROUND_TRANSLUCENT')]]
+#set $init_title_backart = $panel_title['backart_' + ('off', 'on')[$mainvar('DISPLAY_SHOW_BACKGROUND') and $has_art]]
+#set $init_title_view = $panel_title['viewmode%s' % ((1, 0)[not $mainvar('DISPLAY_SHOW_VIEWMODE')], $mainvar('DISPLAY_SHOW_VIEWMODE'))[$mainvar('DISPLAY_SHOW_BACKGROUND') and $has_art]]
+##
+<script>
+	config.panelTitles = $panel_title;
+</script>
+<script type="text/javascript" src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
+
+<div id="livepanel" class="off $getVar('fanart_panel', 'highlight2')">
+	<span class="over-layer0">
+		<span class="art-toggle oneof">
+			<i class="icon-glyph"></i>
+			<i class="icon-glyph"></i>
+		</span>
+		<span class="art-toggle-all"><i class="icon-glyph"></i></span>
+		<span class="art-toggle">
+			<i class="icon-glyph"></i>
+			<i class="icon-glyph rate-art"></i>
+		</span>
+		<i class="icon-glyph"></i>
+		<span class="art-toggle-all"><i class="icon-glyph last"></i></span>
+	</span>
+	<span id="viewmodes"  class="over-layer1">
+		<span class="art-toggle oneof">
+			<a id="art-next" title="<span style='white-space:nowrap'>Next view</span>" href="#"><i class="icon-glyph"></i></a>
+			<a id="art-prev" title="<span style='white-space:nowrap'>Previous view</span>" href="#"><i class="icon-glyph"></i></a>
+		</span>
+		<span class="art-toggle-all"><a id="viewart" title="Poster left" href="#"><i class="icon-glyph"></i></a></span>
+		<span class="art-toggle">
+			<a id="translucent" title="$init_title_translucent" href="#"><i class="icon-glyph"></i></a>
+			<a id="rate-art" title="Random (default)" href="#"><i class="icon-glyph"></i></a>
+		</span>
+#if $has_art
+		<a id="back-art" title="$init_title_backart" href="#"><i class="icon-glyph image"></i></a>
+#else
+    #try
+        #set $link = $anon_url('https://fanart.tv/?s=', $clean_show_name, '&sect=1')
+		<a id="back-art" title="No art! Force full update or add one to fanart.tv if none available" href="$link" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;"><i class="icon-glyph fatv"></i></a>
+    #except
+		<a id="back-art" title="No art available!" href="#"><i class="icon-glyph image"></i></a>
+    #end try
+#end if
+		<span class="art-toggle-all"><a id="proview" title="$init_title_view" href="#"><i class="icon-glyph"></i></a></span>
+	</span>
+</div>

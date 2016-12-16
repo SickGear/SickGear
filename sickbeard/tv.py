@@ -60,7 +60,7 @@ from sickbeard import encodingKludge as ek
 
 from common import Quality, Overview, statusStrings
 from common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVED, IGNORED, UNAIRED, WANTED, SKIPPED, \
-    UNKNOWN, FAILED
+    UNKNOWN, FAILED, SUBTITLED
 from common import NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMING_SEPARATED_REPEAT, \
     NAMING_LIMITED_EXTEND_E_PREFIXED
 
@@ -503,12 +503,10 @@ class TVShow(object):
         t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
 
         cachedShow = t[self.indexerid]
-        cachedSeasons = {}
-
         if None is cachedShow:
-            logger.log('No cache showdata to parse from %s' % sickbeard.indexerApi(self.indexer).name)
             return scannedEps
 
+        cachedSeasons = {}
         for curResult in sqlResults:
 
             deleteEp = False
@@ -1072,19 +1070,26 @@ class TVShow(object):
         sickbeard.showList = [x for x in sickbeard.showList if int(x.indexerid) != self.indexerid]
 
         # clear the cache
-        image_cache_dir = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images')
-        for path, dirs, files in ek.ek(os.walk, image_cache_dir):
-            for filename in ek.ek(fnmatch.filter, files, '%s.*' % self.indexerid):
-                cache_file = ek.ek(os.path.join, path, filename)
-                logger.log('Attempt to %s cache file %s' % (action, cache_file))
-                try:
-                    if sickbeard.TRASH_REMOVE_SHOW:
-                        ek.ek(send2trash, cache_file)
-                    else:
-                        ek.ek(os.remove, cache_file)
+        ic = image_cache.ImageCache()
+        for cache_obj in ek.ek(glob.glob, ic.poster_path(self.indexerid).replace('poster.jpg', '*')) \
+                + ek.ek(glob.glob, ic.poster_thumb_path(self.indexerid).replace('poster.jpg', '*')) \
+                + ek.ek(glob.glob, ic.fanart_path(self.indexerid).replace('%s.fanart.jpg' % self.indexerid, '')):
+            cache_dir = ek.ek(os.path.isdir, cache_obj)
+            logger.log('Attempt to %s cache %s %s' % (action, cache_dir and 'dir' or 'file', cache_obj))
+            try:
+                if sickbeard.TRASH_REMOVE_SHOW:
+                    ek.ek(send2trash, cache_obj)
+                elif cache_dir:
+                    ek.ek(shutil.rmtree, cache_obj)
+                else:
+                    ek.ek(os.remove, cache_obj)
 
-                except OSError as e:
-                    logger.log('Unable to %s %s: %s / %s' % (action, cache_file, repr(e), str(e)), logger.WARNING)
+            except OSError as e:
+                logger.log('Unable to %s %s: %s / %s' % (action, cache_obj, repr(e), str(e)), logger.WARNING)
+
+        show_id = '%s' % self.indexerid
+        if show_id in sickbeard.FANART_RATINGS:
+            del sickbeard.FANART_RATINGS[show_id]
 
         # remove entire show folder
         if full:
@@ -1092,7 +1097,7 @@ class TVShow(object):
                 logger.log('Attempt to %s show folder %s' % (action, self._location))
                 # check first the read-only attribute
                 file_attribute = ek.ek(os.stat, self.location)[0]
-                if (not file_attribute & stat.S_IWRITE):
+                if not file_attribute & stat.S_IWRITE:
                     # File is read-only, so make it writeable
                     logger.log('Attempting to make writeable the read only folder %s' % self._location, logger.DEBUG)
                     try:
@@ -1114,11 +1119,11 @@ class TVShow(object):
             except OSError as e:
                 logger.log('Unable to %s %s: %s / %s' % (action, self._location, repr(e), str(e)), logger.WARNING)
 
-    def populateCache(self):
+    def populateCache(self, force=False):
         cache_inst = image_cache.ImageCache()
 
         logger.log('Checking & filling cache for show %s' % self.name)
-        cache_inst.fill_cache(self)
+        cache_inst.fill_cache(self, force)
 
     def refreshDir(self):
 
@@ -1233,7 +1238,23 @@ class TVShow(object):
                 try:
                     helpers.moveFile(cache_file, new_cachefile)
                 except Exception as e:
-                    logger.log('Unable to rename %s to %s: %s / %s' % (cache_file, new_cachefile, repr(e), str(e)), logger.WARNING)
+                    logger.log('Unable to rename %s to %s: %s / %s' % (cache_file, new_cachefile, repr(e), str(e)),
+                               logger.WARNING)
+
+        ic = image_cache.ImageCache()
+        cache_dir = ic.fanart_path(old_indexerid).replace('%s.fanart.jpg' % old_indexerid, '').rstrip('\/')
+        new_cache_dir = ic.fanart_path(self.indexerid).replace('%s.fanart.jpg' % self.indexerid, '').rstrip('\/')
+        try:
+            helpers.moveFile(cache_dir, new_cache_dir)
+        except Exception as e:
+            logger.log('Unable to rename %s to %s: %s / %s' % (cache_dir, new_cache_dir, repr(e), str(e)),
+                       logger.WARNING)
+
+        rating = sickbeard.FANART_RATINGS.get('%s' % old_indexerid)
+        if rating:
+            del sickbeard.FANART_RATINGS['%s' % old_indexerid]
+            sickbeard.FANART_RATINGS['%s' % self.indexerid] = rating
+            sickbeard.save_config()
 
         name_cache.buildNameCache(self)
 
@@ -1294,27 +1315,21 @@ class TVShow(object):
             myDB.upsert('imdb_info', newValueDict, controlValueDict)
 
     def __str__(self):
-        toReturn = ''
-        toReturn += 'indexerid: %s\n' % self.indexerid
-        toReturn += 'indexer: %s\n' % self.indexer
-        toReturn += 'name: %s\n' % self.name
-        toReturn += 'location: %s\n' % self._location
-        if self.network:
-            toReturn += 'network: %s\n' % self.network
-        if self.airs:
-            toReturn += 'airs: %s\n' % self.airs
-        if self.status:
-            toReturn += 'status: %s\n' % self.status
-        toReturn += 'startyear: %s\n' % self.startyear
-        if self.genre:
-            toReturn += 'genre: %s\n' % self.genre
-        toReturn += 'classification: %s\n' % self.classification
-        toReturn += 'runtime: %s\n' % self.runtime
-        toReturn += 'quality: %s\n' % self.quality
-        toReturn += 'scene: %s\n' % self.is_scene
-        toReturn += 'sports: %s\n' % self.is_sports
-        toReturn += 'anime: %s\n' % self.is_anime
-        return toReturn
+        return 'indexerid: %s\n' % self.indexerid \
+               + 'indexer: %s\n' % self.indexerid \
+               + 'name: %s\n' % self.name \
+               + 'location: %s\n' % self._location \
+               + ('', 'network: %s\n' % self.network)[self.network] \
+               + ('', 'airs: %s\n' % self.airs)[self.airs] \
+               + ('', 'status: %s\n' % self.status)[self.status] \
+               + 'startyear: %s\n' % self.startyear \
+               + ('', 'genre: %s\n' % self.genre)[self.genre] \
+               + 'classification: %s\n' % self.classification \
+               + 'runtime: %s\n' % self.runtime \
+               + 'quality: %s\n' % self.quality \
+               + 'scene: %s\n' % self.is_scene \
+               + 'sports: %s\n' % self.is_sports \
+               + 'anime: %s\n' % self.is_anime
 
     def wantEpisode(self, season, episode, quality, manualSearch=False):
 
@@ -1398,7 +1413,7 @@ class TVShow(object):
             return Overview.SKIPPED
         if status in (UNAIRED, UNKNOWN):
             return Overview.UNAIRED
-        if status in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
+        if status in [SUBTITLED] + Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
 
             if FAILED == status:
                 return Overview.WANTED
@@ -1493,7 +1508,8 @@ class TVEpisode(object):
     release_group = property(lambda self: self._release_group, dirty_setter('_release_group'))
 
     def _set_location(self, new_location):
-        logger.log('Setter sets location to %s' % new_location, logger.DEBUG)
+        log_vals = (('clears', ''), ('sets', ' to ' + new_location))[any(new_location)]
+        logger.log(u'Setter %s location%s' % log_vals, logger.DEBUG)
 
         # self._location = newLocation
         dirty_setter('_location')(self, new_location)
@@ -1981,18 +1997,16 @@ class TVEpisode(object):
 
     def __str__(self):
 
-        toReturn = ''
-        toReturn += '%s - %sx%s - %s\n' % (self.show.name, self.season, self.episode, self.name)
-        toReturn += 'location: %s\n' % self.location
-        toReturn += 'description: %s\n' % self.description
-        toReturn += 'subtitles: %s\n' % ','.join(self.subtitles)
-        toReturn += 'subtitles_searchcount: %s\n' % self.subtitles_searchcount
-        toReturn += 'subtitles_lastsearch: %s\n' % self.subtitles_lastsearch
-        toReturn += 'airdate: %s (%s)\n' % (self.airdate.toordinal(), self.airdate)
-        toReturn += 'hasnfo: %s\n' % self.hasnfo
-        toReturn += 'hastbn: %s\n' % self.hastbn
-        toReturn += 'status: %s\n' % self.status
-        return toReturn
+        return '%s - %sx%s - %s\n' % (self.show.name, self.season, self.episode, self.name) \
+               + 'location: %s\n' % self.location \
+               + 'description: %s\n' % self.description \
+               + 'subtitles: %s\n' % ','.join(self.subtitles) \
+               + 'subtitles_searchcount: %s\n' % self.subtitles_searchcount \
+               + 'subtitles_lastsearch: %s\n' % self.subtitles_lastsearch \
+               + 'airdate: %s (%s)\n' % (self.airdate.toordinal(), self.airdate) \
+               + 'hasnfo: %s\n' % self.hasnfo \
+               + 'hastbn: %s\n' % self.hastbn \
+               + 'status: %s\n' % self.status
 
     def createMetaFiles(self):
 
@@ -2067,7 +2081,7 @@ class TVEpisode(object):
             '(SELECT scene_episode FROM tv_episodes WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?));',
             [self.show.indexer, self.show.indexerid, self.season, self.episode, self.indexerid, self.indexer, self.name,
              self.description,
-             ",".join([sub for sub in self.subtitles]), self.subtitles_searchcount, self.subtitles_lastsearch,
+             ','.join([sub for sub in self.subtitles]), self.subtitles_searchcount, self.subtitles_lastsearch,
              self.airdate.toordinal(), self.hasnfo, self.hastbn, self.status, self.location, self.file_size,
              self.release_name, self.is_proper, self.show.indexerid, self.season, self.episode,
              self.absolute_number, self.version, self.release_group,

@@ -201,6 +201,56 @@
 * Change sab API request to prevent naming mismatch
 * Change update rTorrent systems
 * Change logger to properly cleanup used resources
+* Add fanart to Episodes View, Display Show, and Edit Show page
+* Add path used for fanart images <Cache Dir>/images/fanart (<Cache Dir> value on Help page)
+* Add populate images when the daily show updater is run with default maximum 3 images per show
+* Change force full update in a show will replace existing images with new
+* Add "Maximum fanart image files per show to cache" to config General/Interface
+* Add fanart livepanel to lower right of Episodes View and Display Show page
+* Add highlight panel red on Episodes view until button is clicked a few times
+* Add flick through multiple background images on Episodes View and Display Show page
+* Add persistent move poster image to right hand side or hide on Display Show page (multi-click the eye)
+* Add persistent translucency of background images on Episodes View and Display Show page
+* Add persistent fanart rating to avoid art completely, random display, random from a group, or display fave always
+* Add persistent views of the show detail on Display Show page
+* Add persistent views on Episodes View
+* Add persistent button to collapse and expand card images on Episode View/Layout daybyday
+* Add non persistent "Open gear" and "Backart only" image views to Episodes View and Display Show page
+* Add "smart" selection of fanart image to display on Episode view
+* Change insert [!] and change text shade of ended shows in drop down show list on Display Show page
+* Change button graphic for next and previous show of show list on Display Show page
+* Add logic to hide some livepanel buttons until artwork becomes available or in other circumstances
+* Add "(Ended)" where appropriate to show title on Display Show page
+* Change use tense for label "Airs" or "Aired" depending on if show ended
+* Change display "No files" instead of "0 files" and "Upgrade once" instead of "End upgrade on first match"
+* Add persistent button to newest season to "Show all" episodes
+* Add persistent button to all shown seasons to "Hide most" episodes
+* Add button to older seasons to toggle "Show Season n" or "Show Specials" with "Hide..." episodes
+* Add season level status counts next to each season header on display show page
+* Add sorting to season table headers on display show page
+* Add filename and size to quality badge on display show page, removed its redundant "downloaded" text
+* Remove redundant "Add show" buttons
+* Change combine the NFO and TBN columns into a single Meta column
+* Change reduce screen estate used by episode numbers columns
+* Change improve clarity of text on Add Show page
+* Change rename Edit show/"Post-Processing" tab to "Other"
+* Add "Reset fanart ratings" to show Edit/Other tab
+* Add fanart keys guide to show Edit/Other tab
+* Change add placeholder tip to "Alternative release name(s)" on show Edit
+* Change add placeholder tip to search box on shows Search
+* Change hide Anime tips on show Edit when selecting its mutually exclusive options
+* Change label "End upgrade on first match" to "Upgrade once" on show Edit
+* Change improve performance rendering displayShow
+* Add total episodes to start of show description (excludes specials if those are hidden)
+* Add "Add show" actions i.e. "Search", "Trakt cards", "IMDb cards", and "Anime" to Shows menu
+* Add "Import (existing)" action to Tools menu
+* Change SD quality from red to dark green, 2160p UHD 4K is red
+* Change relocate the functions of Logs & Errors to the right side Tools menu -> View Log File
+* Add warning indicator to the Tools menu in different colour depending on error count (green through red)
+* Change View Log error item output from reversed to natural order
+* Change View Log File add a typeface and some colour to improve readability
+* Change View Log File/Errors only display "Clear Errors" button when there are errors to clear
+* Change improve performance of View Log File
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url
@@ -371,7 +421,7 @@
 * Fix post processing season pack folders
 * Fix saving torrent provider option "Seed until ratio" after recent refactor
 * Change white text in light theme on Manage / Episode Status Management page to black for better readability
-* Change displayShow page episode colours when a minimum quality is met with "End upgrade on first match"
+* Change displayShow page episode colours when a minimum quality is met with "Upgrade once"
 * Add seed time per provider for torrent clients that support seed time per torrent, i.e. currently only uTorrent
 * Remove seed time display for Transmission in config/Torrent Search page because the torrent client doesn't support it
 * Add PreToMe torrent provider
@@ -559,7 +609,7 @@
 * Change Trakt url to fix baseline uses (e.g. add from trending)
 * Fix edit on show page for shows that have anime enabled in mass edit
 * Fix issue parsing items in ToktoToshokan provider
-* Change to only show option "End upgrade on first match" on edit show page if quality custom is selected
+* Change to only show option "Upgrade once" on edit show page if quality custom is selected
 * Change label "Show is grouped in" in edit show page to "Show is in group" and move the section higher
 * Fix post processing of anime with version tags
 * Change accept SD titles that contain audio quality

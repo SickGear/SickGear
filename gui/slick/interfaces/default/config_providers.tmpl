@@ -104,16 +104,20 @@
        $x.providerType == $GenericProvider.TORRENT and $sickbeard.USE_TORRENTS]
     #set $cur_name = $cur_provider.get_id()
     #set $cur_url = $cur_provider.url
+    #set $show_type = $sickbeard.USE_NZBS and $sickbeard.USE_TORRENTS and $GenericProvider.NZB == $cur_provider.providerType
     #set $bad_url = not $cur_url and cur_provider.is_enabled()
     #set $tip = ($cur_provider.name + ('', ' (enable for link)')[not $cur_url and not cur_provider.is_enabled()],
         'Site Down')[$bad_url]
     #set $state = ('', ' <span class="red-text">(Site Down?)</span>')[$bad_url]
-							<li class="ui-state-default" id="$cur_name">
+							<li class="ui-state-default row-#echo ('odd', 'even')[$show_type or not $sickbeard.USE_TORRENTS]#" id="$cur_name">
 								<input type="checkbox" id="enable_$cur_name" class="provider_enabler" <%= html_checked if cur_provider.is_enabled() else '' %>/>
 								<a class="imgLink" #if $cur_url#href="<%= anon_url(cur_url) %>" onclick="window.open(this.href,'_blank');return false;"#else#name=""#end if# rel="noreferrer"><img src="$sbRoot/images/providers/$cur_provider.image_name()" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle" /></a>
 								<span style="vertical-align:middle">$cur_provider.name$state</span>
     #if $cur_provider.is_public_access() and type($cur_provider).__name__ not in ['TorrentRssProvider']
 								<span style="font-size:10px;vertical-align:top;font-weight:normal">(PA)</span>
+    #end if#
+    #if $show_type
+								<span style="font-size:10px;vertical-align:top;font-weight:normal">($cur_provider.providerType)</span>
     #end if#
     #if not $cur_provider.supports_backlog#*#end if#
 								<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="margin-top:3px"></span>

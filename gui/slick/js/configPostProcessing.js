@@ -468,7 +468,7 @@ $(document).ready(function () {
 			at: 'top center'
 		},
 		style: {
-			classes: 'qtip-rounded qtip-shadow'
+			classes: 'qtip-dark qtip-rounded qtip-shadow'
 		}
 	});
 	$('.custom-pattern,#unpack').qtip({

@@ -1,0 +1,125 @@
+#import datetime
+#import sickbeard
+#from sickbeard import network_timezones, sbdatetime, subtitles
+#from sickbeard.common import Overview, Quality, statusStrings, ARCHIVED, UNAIRED, SUBTITLED
+#from lib import subliminal
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
+#######
+#set $network_timezone = $network_timezones.get_network_timezone($show.network)
+#set $network_time = $network_timezones.parse_time($show.airs)
+#set $odd = 0
+#set $fuzzydate = 'airdate'
+#set $scene, $scene_anime = (False, False)
+#if not $show.air_by_date and not $show.is_sports and not $show.is_anime and $show.is_scene
+    #set $scene = True
+#elif not $show.air_by_date and not $show.is_sports and $show.is_anime and $show.is_scene
+    #set $scene_anime = True
+#end if
+#set $attr_title_ep = ('', ' (Anime #)')[$show.is_anime]
+##
+#set $eps = $getVar('episodes', None) or [$episode]
+#for $ep in $eps
+    #set $ep_str = '%sx%s' % ($ep['season'], $ep['episode'])
+    #set $epLoc = $ep['location']
+    #set never_aired = 0 < int($ep['season']) and 1 == int($ep['airdate'])
+		<tr class="#echo ($Overview.overviewStrings[$ep_cats[$ep_str]], 'airdate-never')[$never_aired]##echo ('', ' archived')[ARCHIVED == int($ep['status'])]#">
+			<td class="col-checkbox">
+    #if $UNAIRED != int($ep['status']) and not $never_aired
+				<input type="checkbox" class="epCheck" id="$ep_str" name="$ep_str">
+    #end if
+			</td>
+
+    #set $nfo, $nfo_img = (('No', '-no'), ('Yes', ''))[int($ep['hasnfo'])]
+    #set $tbn, $tbn_img = (('No', '-no'), ('Yes', ''))[int($ep['hastbn'])]
+			<td align="center" class="meta"><img src="$sbRoot/images/nfo${nfo_img}.gif" alt="$nfo" title="$nfo" width="23" height="11" /><br />
+			<img src="$sbRoot/images/tbn${tbn_img}.gif" alt="$tbn" title="$tbn" width="23" height="11" /></td>
+
+    #if $epLoc and $show._location and $epLoc.lower().startswith($show._location.lower())
+        #set $epLoc = $epLoc[len($show._location)+1:]
+    #elif $epLoc and (not $epLoc.lower().startswith($show._location.lower()) or not $show._location)
+        #set $epLoc = $epLoc
+    #end if
+
+    #set $episode = str($ep['episode']) + ('', ' (%s)' % $ep['absolute_number'])[$show.is_anime]
+    #set $downloaded = ('', '<strong>file</strong> %s<br /><strong>size</strong> %s' % ($epLoc, $sickbeard.helpers.human($ep['file_size'])))['' != $epLoc and None != $epLoc]
+    #set $attr=(('', 'Ep # %s' % $attr_title_ep)[bool($attr_title_ep)], $downloaded)[any($downloaded)]
+			<td align="center">
+				<span style="white-space:nowrap"#if $attr# class="addQTip" title="$attr"#end if#>$episode</span>
+			</td>
+
+    #slurp
+    #if $scene
+        #set $dfltSeas, $dfltEpis = (0, 0) if ($ep['season'], $ep['episode']) not in $xem_numbering else $xem_numbering[($ep['season'], $ep['episode'])]
+			<td align="center">
+				<input type="text" placeholder="#echo '%sx%s' % ($dfltSeas, $dfltEpis)#" size="6" maxlength="8"
+					class="sceneSeasonXEpisode form-control input-scene" data-for-season="$ep['season']" data-for-episode="$ep['episode']"
+					id="sceneSeasonXEpisode_#echo '%s_%s_%s' % ($show.indexerid, $ep['season'], $ep['episode'])#"
+					title="Change the value here if scene numbering differs from the indexer episode numbering"
+        #if ($ep['season'], $ep['episode']) in $scene_numbering
+            #set $scSeas, $scEpis = $scene_numbering[($ep['season'], $ep['episode'])]
+					value="#echo '%sx%s' % ($scSeas, $scEpis)#"
+        #else
+					value=""
+        #end if
+					style="padding:0; text-align:center; max-width:60px">
+			</td>
+    #elif $scene_anime
+        #set $dfltAbsolute = 0 if $ep['absolute_number'] not in $xem_absolute_numbering else $xem_absolute_numbering[$ep['absolute_number']]
+			<td align="center">
+				<input type="text" placeholder="$dfltAbsolute" size="6" maxlength="8"
+					class="sceneAbsolute form-control input-scene" data-for-absolute="$ep['absolute_number']"
+					id="sceneAbsolute_#echo '%s_%s' % ($show.indexerid, $ep['absolute_number'])#"
+					title="Change the value here if scene absolute numbering differs from the indexer absolute numbering"
+        #if $ep['absolute_number'] in $scene_absolute_numbering
+					value="$scene_absolute_numbering[$ep['absolute_number']]"
+        #else
+					value=""
+        #end if
+					style="padding:0; text-align:center; max-width:60px" />
+			</td>
+    #end if
+    #slurp
+			<td class="col-name">
+				<img src="$sbRoot/images/info32.png" width="16" height="16" alt="" class="plotInfo#echo '%s" />' %\
+                    ('None opacity40', ('" id="plot_info_%s_%s_%s' % ($show.indexerid, $ep['season'], $ep['episode'])))[None is not $ep['description'] and '' != $ep['description']]#
+    				#if not $ep['name'] or 'TBA' == $ep['name']#<em class="tba grey-text">TBA</em>#else#$ep['name']#end if#
+			</td>
+
+			<td class="col-airdate">
+				<span class="$fuzzydate" data-airdate="$ep['airdate']"#if $sg_var('FUZZY_DATING')# data-fulldate="$sbdatetime.sbdatetime.sbfdate(dt=$datetime.date.fromordinal($ep['airdate']), d_preset='%A, %B %d, %Y')"#end if#>#if 1 == int($ep['airdate']) then 'never' else $sbdatetime.sbdatetime.sbfdate($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($ep['airdate'], $network_time, $network_timezone)))#</span>
+			</td>
+
+    #if $sg_var('USE_SUBTITLES') and $show.subtitles
+			<td class="col-subtitles" align="center">
+        #if $ep['subtitles']
+            #for $sub_lang in subliminal.language.language_list($ep['subtitles'].split(','))
+                #if '' != sub_lang.alpha2
+				<img src="$sbRoot/images/flags/${sub_lang.alpha2}.png" width="16" height="11" alt="${sub_lang}" />
+                #end if
+            #end for
+        #end if
+			</td>
+    #end if
+    #slurp
+    #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($ep['status']))
+    #if Quality.NONE != $curQuality
+			<td class="col-status">#if SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# <span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.qualityStrings[$curQuality]</span></td>
+    #else
+			<td class="col-status">$statusStrings[$curStatus]</td>
+    #end if
+			<td class="col-search">
+    #if 0 != int($ep['season'])
+        #if (int($ep['status']) in $Quality.SNATCHED or int($ep['status']) in $Quality.DOWNLOADED) and $sg_var('USE_FAILED_DOWNLOADS')
+				<a class="epRetry" id="$ep_str" name="$ep_str" href="$sbRoot/home/retryEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download" /></a>
+        #else
+				<a class="epSearch" id="$ep_str" name="$ep_str" href="$sbRoot/home/searchEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search" /></a>
+        #end if
+    #end if
+    #slurp
+    #if $sg_var('USE_SUBTITLES') and $show.subtitles and len(set(str($ep['subtitles']).split(',')).intersection(set($subtitles.wantedLanguages()))) < len($subtitles.wantedLanguages()) and $ep['location']
+				<a class="epSubtitlesSearch" href="$sbRoot/home/searchEpisodeSubtitles?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/closed_captioning.png" height="16" alt="search subtitles" title="Search subtitles" /></a>
+    #end if
+			</td>
+		</tr>
+#end for

@@ -5,7 +5,7 @@
 <div class="field-pair">
 	<label for="qualityPreset" class="clearfix">
 #set $overall_quality = $Quality.combineQualities($anyQualities, $bestQualities)
-		<span class="component-title input">Quality</span>
+		<span class="component-title input">Quality to download</span>
 		<span class="component-desc">
 #set $selected = None
 			<select id="qualityPreset" name="quality_preset" class="form-control form-control-inline input-sm">
@@ -14,7 +14,7 @@
 				<option value="$curPreset"#echo ('', $html_selected)[$curPreset == $overall_quality]##echo ('', ' style="padding-left:15px"')[$qualityPresetStrings[$curPreset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$curPreset]]#>$qualityPresetStrings[$curPreset]</option>
 #end for
 			</select>
-			<span>preferred episode quality to download</span>
+			<span>tip: select a quality then "Custom" for a default selection</span>
 		</span>
 	</label>
 </div>
@@ -22,8 +22,9 @@
 <div id="customQualityWrapper">
 	<div id="customQuality" class="show-if-quality-custom" style="display:none">
 		<div class="component-group-desc tip-text">
-			<p>An <em>Initial</em> quality episode must be found before an <em>Upgrade to</em> selection is considered.</p>
-			<p>Upgrades continue until the highest selected of <em>Upgrade to</em> is matched.</p>
+			<p>An <em class="highlight-text">Initial</em> quality downloads before any <em class="highlight-text">Upgrade to</em> selections are considered.</p>
+			<p>Deselect all <em class="highlight-text">Upgrade to</em> qualities to keep the first best <em class="highlight-text">Initial</em> release found.</p>
+			<p>All found <em class="highlight-text">Upgrade to</em> qualities download until the best.</p>
 		</div>
 
 		<span class="component-desc">
@@ -48,6 +49,7 @@
 #end for
 				</select><br />
 				<span>Ctrl + Click = toggle a quality</span>
+				<br /><span>Ctrl + Click = toggle a quality</span>
 			</div>
 
 			<div style="line-height:normal;padding-top:50px" id="quality-notes" class="tip-text">

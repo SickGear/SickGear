@@ -17,18 +17,10 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
-import os
 
 import sickbeard
-
-from sickbeard import logger
-from sickbeard import exceptions
-from sickbeard import ui
+from sickbeard import logger, exceptions, ui, db, network_timezones, failed_history
 from sickbeard.exceptions import ex
-from sickbeard import encodingKludge as ek
-from sickbeard import db
-from sickbeard import network_timezones
-from sickbeard import failed_history
 
 
 class ShowUpdater:
@@ -109,7 +101,7 @@ class ShowUpdater:
                         logger.log(
                             u'Not updating episodes for show ' + curShow.name + ' because it\'s marked as ended and ' +
                             'last/next episode is not within the grace period.', logger.DEBUG)
-                        cur_queue_item = sickbeard.showQueueScheduler.action.refreshShow(curShow, True, True)
+                        cur_queue_item = sickbeard.showQueueScheduler.action.refreshShow(curShow, True, True, force_image_cache=True)
 
                     pi_list.append(cur_queue_item)
 

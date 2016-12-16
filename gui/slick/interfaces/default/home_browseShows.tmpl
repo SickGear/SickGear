@@ -5,6 +5,8 @@
 #from sickbeard.common import *
 #from sickbeard import sbdatetime
 #from sickbeard.helpers import anon_url
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title='Browse %s Shows' % $browse_type
 #set global $header='Browse Shows'
@@ -13,7 +15,7 @@
 #set global $page_body_attr = 'browse-list'
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
 
@@ -51,7 +53,7 @@
 				premiered: '[data-premiered] parseInt',
 				name: function( itemElem ) {
 					var name = \$( itemElem ).attr('data-name') || '';
-#if not $sickbeard.SORT_ARTICLE:
+#if not $sg_var('SORT_ARTICLE'):
 					name = name.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
 #end if
 					return name.toLowerCase();
@@ -128,21 +130,6 @@
 		<option value="*" selected="selected">All<%= ' (%d)' % count_all_shows %></option>
 		<option value=".notinlibrary">Not In Library<%= ' (%d)' % (count_all_shows - count_inlibrary) %></option>
 		<option value=".inlibrary">In Library<%= ' (%d)' % count_inlibrary %></option>
-    #if $browse_type in ('IMDb', 'Trakt', 'AniDB')
-		<optgroup label="Other Services">
-        #if 'IMDb' == $browse_type
-			<option value="trakt_default">Trakt</option>
-        #elif 'Trakt' == $browse_type
-			<option value="imdb_default">IMDb</option>
-        #elif 'AniDB' == $browse_type
-			<option value="imdb_default">IMDb</option>
-			<option value="trakt_default">Trakt</option>
-        #end if
-        #if $sickbeard.USE_ANIDB and $browse_type in ('IMDb', 'Trakt')
-			<option value="anime_default">AniDB</option>
-        #end if
-		</optgroup>
-    #end if
     #set $selected = ' class="selected"'
     #if 'Trakt' == $browse_type
 		<optgroup label="Trakt">
@@ -162,11 +149,11 @@
 			<option value="trakt_played?period=year"#echo ('', selected)['played-year' == $mode]#>Most Played</option>
 			<option value="trakt_collected?period=year"#echo ('', selected)['collected-year' == $mode]#>Most Collected</option>
 		</optgroup>
-		#if any($sickbeard.TRAKT_ACCOUNTS)
+		#if any($sg_var('TRAKT_ACCOUNTS', []))
 		<optgroup label="Trakt recommended">
-            #for $account in $sickbeard.TRAKT_ACCOUNTS
-                #if $sickbeard.TRAKT_ACCOUNTS[$account].active and $sickbeard.TRAKT_ACCOUNTS[$account].name
-			<option value="trakt_recommended?account=$account"#echo ('', selected)[('recommended-%s' % $account) == $mode]#>for $sickbeard.TRAKT_ACCOUNTS[$account].name</option>
+            #for $account in $sg_var('TRAKT_ACCOUNTS')
+                #if $sg_var('TRAKT_ACCOUNTS').get($account).active and $sg_var('TRAKT_ACCOUNTS').get($account).name
+			<option value="trakt_recommended?account=$account"#echo ('', selected)[('recommended-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
                 #end if
             #end for
         #else
@@ -186,8 +173,8 @@
         #end if
         #if not hasattr($sickbeard, 'IMDB_ACCOUNTS')#<optgroup label="Restart SickGear to reveal"><option>new options after restart</option></optgroup>#else#
 		<optgroup label="IMDb Watchlists">
-            #if any($sickbeard.IMDB_ACCOUNTS)
-                #for $i, $v in $enumerate($sickbeard.IMDB_ACCOUNTS)
+            #if any($sg_var('IMDB_ACCOUNTS', []))
+                #for $i, $v in $enumerate($sg_var('IMDB_ACCOUNTS'))
                     #if not $i % 2
                         #set $id = $v
                     #elif not $v.startswith('(Off) ')
@@ -256,11 +243,11 @@
 			</div>
 
 			<div class="show-title">
-				<%= ((re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', this_show['title']), this_show['title'])[sickbeard.SORT_ARTICLE], '<span>&nbsp;</span>')['' == this_show['title']] %>
+				#echo ((re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#
 			</div>
 
 			<div class="clearfix">
-				<p>$this_show['rating']% <img src="$sbRoot/images/heart.png"><i>$this_show['votes'] votes</i></p>
+				<p>$this_show['rating']%<i class="heart icon-glyph"></i><i>$this_show['votes'] votes</i></p>
         #if 'url_tvdb' in $this_show and $this_show['url_tvdb']:
 				<a class="service" href="<%= anon_url(this_show['url_tvdb']) %>" onclick="window.open(this.href, '_blank'); return false;"
 				title="View <span class='boldest'>tvdb</span> detail for <span style='color: rgb(66, 139, 202)'>$title_html</span>">
@@ -269,7 +256,7 @@
 
 				<div class="browse-add-show-holder">
         #if ':' in $this_show['show_id']:
-					<p style="line-height: 1.5; padding: 2px 5px 3px" title="<%= '%s added' % ('TVRage', 'theTVDB')['1' == this_show['show_id'][:1]] %>">In library</p>
+					<p style="line-height:1.5;padding:2px 5px 3px" title="#echo '%s added' % $sickbeard.indexerApi(this_show['show_id'][:1]).config.get('name')#">In library</p>
         #else
 					<a href="$sbRoot/home/addShows/add${browse_type}Show?indexer_id=${this_show['show_id']}&amp;showName=${urllib.quote($this_show['title'].encode("utf-8"))}" class="btn btn-xs">Add Show</a>
         #end if
@@ -308,4 +295,4 @@ window.setInterval('location.reload(true)', 600000); // Refresh every 10 minutes
 //-->
 </script>
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

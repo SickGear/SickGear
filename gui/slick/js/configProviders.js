@@ -40,7 +40,6 @@ $(document).ready(function(){
         $.getJSON(sbRoot + '/config/providers/getNewznabCategories', params,
                 function(data){
                     updateNewznabCaps( data, selectedProvider );
-                    //console.debug(data.tv_categories);
             });
     }
 
@@ -217,7 +216,6 @@ $(document).ready(function(){
             if (rootObject.name == searchFor) {
                 found = true;
             }
-            //console.log(rootObject.name + ' while searching for: ' + searchFor);
         });
         return found;
     };
@@ -247,20 +245,20 @@ $(document).ready(function(){
                 $.fn.newznabProvidersCapabilities.forEach(function (newzNabCap) {
                     $.sgd && console.log('array found:' + (newzNabCap.categories instanceof Array ? 'yes': 'no'));
 
-                    if (newzNabCap.name && newzNabCap.name == selectedProvider[0] && newzNabCap.categories instanceof Array) {
+                if (newzNabCap.name && newzNabCap.name == selectedProvider[0] && newzNabCap.categories instanceof Array) {
                         newzNabCap.categories.forEach(function (category_set) {
                             if (category_set.id && category_set.name) {
                                 catName = category_set.name.replace(/Docu([^\w]|$)(.*?)/i, 'Documentary$1');
                                 newCapOptions.push({
                                     value: category_set.id,
                                     text: catName + ' (' + category_set.id + ')'
-                                });
+                        });
                             }
                         });
                         $('#newznab_cap').replaceOptions(newCapOptions);
                         hasCats = !!newCapOptions.length
-                    }
-                });
+                }
+            });
                 $('#nn-loadcats').removeClass('show').addClass('hide');
                 if (hasCats) {
                     $.sgd && console.log('hasCats');
@@ -270,7 +268,7 @@ $(document).ready(function(){
                     $.sgd && console.log('noCats');
                     $('#nn-cats').removeClass('show').addClass('hide');
                     $('#nn-nocats').removeClass('hide').addClass('show');
-                 }
+    }
             } else {
                 $.sgd && console.log('errCats');
                 // error - no caps
@@ -412,7 +410,6 @@ $(document).ready(function(){
     });
 
     $(this).on('click', '#newznab_cat_update', function(){
-        //console.debug('Clicked Button');
 
         //Maybe check if there is anything selected?
         $('#newznab_cat option').each(function() {
@@ -428,7 +425,6 @@ $(document).ready(function(){
             if($(this).attr('selected') == 'selected')
             {
                 var selected_cat = $(this).val();
-                //console.debug(selected_cat);
                 newOptions.push({text: selected_cat, value: selected_cat})
              };
         });

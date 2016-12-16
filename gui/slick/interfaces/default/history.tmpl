@@ -6,15 +6,17 @@
 #from sickbeard import history
 #from sickbeard import providers
 #from sickbeard.providers import generic
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'History'
 #set global $header = 'History'
 #set global $sbPath = '..'
 #set global $topmenu = 'history'
-#set $layout = $sickbeard.HISTORY_LAYOUT
+#set $layout = $sg_str('HISTORY_LAYOUT', 'detailed')
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript">
 <!--
@@ -61,13 +63,13 @@
 	});
 
 #set $fuzzydate = 'airdate'
-#if $sickbeard.FUZZY_DATING
+#if $sg_var('FUZZY_DATING')
 	fuzzyMoment({
 		containerClass: '.${fuzzydate}',
 		dateHasTime: !0,
-		dateFormat: '${sickbeard.DATE_PRESET}',
-		timeFormat: '${sickbeard.TIME_PRESET_W_SECONDS}',
-		trimZero: #echo ('!1', '!0')[$sickbeard.TRIM_ZERO]#,
+		dateFormat: '$sg_str('DATE_PRESET', '%x')',
+		timeFormat: '$sg_str('TIME_PRESET_W_SECONDS', '%I:%M:%S %p')',
+		trimZero: #echo ('!1', '!0')[$sg_var('TRIM_ZERO')]#,
 		dtGlue: ', '
 	});
 #end if
@@ -93,8 +95,8 @@
 
 		<span style="margin-left:5px">Layout:
 			<select name="HistoryLayout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value">
-				<option value="$sbRoot/setHistoryLayout/?layout=compact"#echo ('', $html_selected)['compact' == $sickbeard.HISTORY_LAYOUT]#>Compact</option>
-				<option value="$sbRoot/setHistoryLayout/?layout=detailed"#echo ('', $html_selected)['detailed' == $sickbeard.HISTORY_LAYOUT]#>Detailed</option>
+				<option value="$sbRoot/setHistoryLayout/?layout=compact"#echo ('', $html_selected)['compact' == $sg_str('HISTORY_LAYOUT')]#>Compact</option>
+				<option value="$sbRoot/setHistoryLayout/?layout=detailed"#echo ('', $html_selected)['detailed' == $sg_str('HISTORY_LAYOUT', 'detailed')]#>Detailed</option>
 			</select>
 		</span>
 	</div>
@@ -121,10 +123,10 @@
 		<tbody>
     #for $hItem in $historyResults
         #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($hItem['action']))
-        #set $data_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'\2', $hItem['show_name']), $hItem['show_name'])[$sickbeard.SORT_ARTICLE]
+        #set $data_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'\2', $hItem['show_name']), $hItem['show_name'])[$sg_var('SORT_ARTICLE')]
         #set $display_name = '<span data-name="%s">%s - S%02iE%02i</span>' % (
             $data_name,
-            (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $hItem['show_name']), $hItem['show_name'])[$sickbeard.SORT_ARTICLE],
+            (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $hItem['show_name']), $hItem['show_name'])[$sg_var('SORT_ARTICLE')],
             int(hItem['season']), int(hItem['episode']))
 			<tr>
         #set $curdatetime = $datetime.datetime.strptime(str($hItem['date']), $history.dateFormat)
@@ -156,7 +158,7 @@
             #end if
         #end if
 				</td>
-				<td><span class="hide">$curQuality</span><span class="quality $Quality.qualityStrings[$curQuality].replace('720p', 'HD720p').replace('1080p', 'HD1080p').replace('RawHD TV', 'RawHD').replace('HD TV', 'HD720p')">$Quality.qualityStrings[$curQuality]</span></td>
+				<td><span class="hide">$curQuality</span><span class="quality $Quality.get_quality_css($curQuality)">$Quality.qualityStrings[$curQuality]</span></td>
 			</tr>
     #end for
 
@@ -164,10 +166,10 @@
 		<thead>
 			<tr>
 				<th class="nowrap">Time</th>
-				<th width="#echo '3%s%%' % ('5', '0')[sickbeard.USE_SUBTITLES]#">Episode</th>
+				<th width="#echo '3%s%%' % ('5', '0')[$sg_var('USE_SUBTITLES')]#">Episode</th>
 				<th>Snatched</th>
 				<th>Downloaded</th>
-    #if sickbeard.USE_SUBTITLES
+    #if $sg_var('USE_SUBTITLES')
 				<th>Subtitled</th>
     #end if
 				<th width="14%">Quality</th>
@@ -183,10 +185,10 @@
 		<tbody>
     #for $hItem in $compactResults
         #set $curdatetime = $datetime.datetime.strptime(str($hItem['actions'][0]['time']), $history.dateFormat)
-        #set $data_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'\2', $hItem['show_name']), $hItem['show_name'])[$sickbeard.SORT_ARTICLE]
+        #set $data_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'\2', $hItem['show_name']), $hItem['show_name'])[$sg_var('SORT_ARTICLE')]
         #set $display_name = '<span data-name="%s">%s - S%02iE%02i</span>' % (
             $data_name,
-            (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $hItem['show_name']), $hItem['show_name'])[$sickbeard.SORT_ARTICLE],
+            (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $hItem['show_name']), $hItem['show_name'])[$sg_var('SORT_ARTICLE')],
             int(hItem['season']), int(hItem['episode']))
         #set $prov_list = []
         #set $down_list = []
@@ -245,7 +247,7 @@
 				<td>
 					#echo ' '.join($down_list)#
 				</td>
-        #if sickbeard.USE_SUBTITLES
+        #if $sg_var('USE_SUBTITLES')
 				<td>
             #for $action in reversed($hItem['actions'])
                 #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
@@ -258,7 +260,7 @@
             #end for
 				</td>
         #end if
-				<td quality="$curQuality"><span class="quality $Quality.qualityStrings[$curQuality].replace('720p', 'HD720p').replace('1080p', 'HD1080p').replace('RawHD TV', 'RawHD').replace('HD TV', 'HD720p')">$Quality.qualityStrings[$curQuality]</span></td>
+				<td quality="$curQuality"><span class="quality $Quality.get_quality_css($curQuality)">$Quality.qualityStrings[$curQuality]</span></td>
 			</tr>
     #end for
 
@@ -266,4 +268,4 @@
 		</tbody>
 	</table>
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

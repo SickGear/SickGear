@@ -853,3 +853,21 @@ button.ui-button::-moz-focus-inner {
 	filter: Alpha(Opacity=35);
 	border-radius: 8px;
 }
+
+.ui-tooltip {
+	padding:3px 6px;
+	position:absolute;
+	z-index:9999;
+	max-width:300px;
+
+	-webkit-box-shadow:1px 1px 3px 1px rgba(0,0,0,.15);
+	-moz-box-shadow:1px 1px 3px 1px rgba(0,0,0,.15);
+	box-shadow:1px 1px 3px 1px rgba(0,0,0,.15)
+}
+body .ui-tooltip {
+	font-size: 10px;
+	border-radius: 5px 5px 5px 5px;
+	border: 1px solid rgb(241, 208, 49);
+	background-color: rgb(255, 255, 163);
+	color: rgb(85, 85, 85)
+}

@@ -1,14 +1,25 @@
 #import sickbeard
 #from sickbeard.common import *
 #from sickbeard import subtitles
-        <div class="stepDiv linefix">
+##
+#set $checked = ' checked="checked"'
+#set $selected = ' selected="selected"'
+##
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
+		<div class="stepDiv linefix">
+
+		<div style="float:right;margin:-30px -15px 20px 15px;font-size:12px;line-height:27px;">
+			<span class="grey-text">To reuse options below when adding more shows&nbsp;<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save as defaults" disabled="disabled" /></span>
+		</div>
+
 		<div class="field-pair">
 			<label for="statusSelect">
 				<span class="component-title">Initial episode status</span>
 				<span class="component-desc">
 					<select name="defaultStatus" id="statusSelect" class="form-control form-control-inline input-sm">
 #for $curStatus in [$SKIPPED, $WANTED, $ARCHIVED, $IGNORED]:
-						<option value="$curStatus" #if $sickbeard.STATUS_DEFAULT == $curStatus then 'selected="selected"' else ''#>$statusStrings[$curStatus]</option>
+						<option value="$curStatus"#if $sg_var('STATUS_DEFAULT', SKIPPED) == $curStatus then $selected else ''#>$statusStrings[$curStatus]</option>
 #end for
 					</select>
 					<span>set the initial status of missing episodes</span>
@@ -21,10 +32,10 @@
 		</div>
 
 		<div class="field-pair">
-#set $qualities = $Quality.splitQuality($sickbeard.QUALITY_DEFAULT)
+#set $qualities = $Quality.splitQuality($sg_var('QUALITY_DEFAULT', SD))
 #set global $anyQualities = $qualities[0]
 #set global $bestQualities = $qualities[1]
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
 		</div>
 
 #try:
@@ -33,14 +44,14 @@
 			<span class="component-title">From season 1 forward, set</span>
 			<span class="component-desc">
 				<label for="wanted_begin" style="padding-bottom:10px">
-					<input type="number" name="wanted_begin" id="wanted_begin" value="$sickbeard.WANTED_BEGIN_DEFAULT" class="form-control input-sm input75">
+					<input type="number" name="wanted_begin" id="wanted_begin" value="$sg_str('WANTED_BEGIN_DEFAULT')" class="form-control input-sm input75">
 					<span>episodes as wanted (10 ... 0, and where -1 is whole first season)</span>
 				</label>
 			</span>
 			<span class="component-title">From latest going back, set</span>
 			<span class="component-desc">
 				<label for="wanted_latest">
-					<input type="number" name="wanted_latest" id="wanted_latest" value="$sickbeard.WANTED_LATEST_DEFAULT" class="form-control input-sm input75">
+					<input type="number" name="wanted_latest" id="wanted_latest" value="$sg_str('WANTED_LATEST_DEFAULT')" class="form-control input-sm input75">
 					<span>episodes as wanted (10 ... 0, and where -1 is whole latest season)</span>
 				</label>
 			</span>
@@ -50,13 +61,13 @@
     #pass
 #end try
 
-		<div class="field-pair #if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then 'hidden' else ''#" style="margin-top:10px">
+		<div class="field-pair #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#" style="margin-top:10px">
 			<label for="tag">
 				<span class="component-title">Place show in group</span>
 				<span class="component-desc">
 					<select name="tag" id="tag" class="form-control form-control-inline input-sm">
-#for $tag in $sickbeard.SHOW_TAGS:
-						<option value="$tag" #if $tag == $getattr(sickbeard, 'SHOW_TAG_DEFAULT', $getattr(sickbeard, 'DEFAULT_SHOW_TAG', None)) then 'selected="selected"' else ''#>$tag</option>
+#for $tag in $sg_var('SHOW_TAGS', []):
+						<option value="$tag"#if $tag == $getattr(sickbeard, 'SHOW_TAG_DEFAULT', $getattr(sickbeard, 'DEFAULT_SHOW_TAG', None)) then $selected else ''#>$tag</option>
 #end for
 					</select>
 					<span>and display on the show list page under this section</span>
@@ -68,7 +79,7 @@
 			<label for="flatten_folders">
 				<span class="component-title">Flat folder structure</span>
 				<span class="component-desc">
-					<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders" #if $sickbeard.FLATTEN_FOLDERS_DEFAULT then "checked=\"checked\"" else ""# />
+					<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders"#if $sg_var('FLATTEN_FOLDERS_DEFAULT') then $checked else ''# />
 					<p>do not create sub folders</p>
 				</span>
 			</label>
@@ -78,18 +89,18 @@
 			<label for="scene">
 				<span class="component-title">Scene numbering</span>
 				<span class="component-desc">
-					<input type="checkbox" name="scene" id="scene" #if $sickbeard.SCENE_DEFAULT then "checked=\"checked\"" else ""# />
+					<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''# />
 					<p>search for episodes numbered by scene groups instead of by the TV network<span id="scene-maps-found" style="display:none" class="grey-text"> (scene numbers found)</span></p>
 				</span>
 			</label>
 		</div>
 
-#if $sickbeard.USE_SUBTITLES:
+#if $sg_var('USE_SUBTITLES'):
 		<div class="field-pair alt">
 			<label for="subtitles">
 				<span class="component-title">Subtitles</span>
 				<span class="component-desc">
-					<input type="checkbox" name="subtitles" id="subtitles" #if $sickbeard.SUBTITLES_DEFAULT then "checked=\"checked\"" else ""# />
+					<input type="checkbox" name="subtitles" id="subtitles"#if $sg_var('SUBTITLES_DEFAULT') then $checked else ''# />
 					<p>download subtitles for this show</p>
 				</span>
 			</label>
@@ -101,27 +112,18 @@
 			<label for="anime">
 				<span class="component-title">Show is anime</span>
 				<span class="component-desc">
-					<input type="checkbox" name="anime" id="anime" #if $sickbeard.ANIME_DEFAULT or $kwargs.get('is_anime') then "checked=\"checked\"" else ""# />
+					<input type="checkbox" name="anime" id="anime"#if $sg_var('ANIME_DEFAULT') or $kwargs.get('is_anime') then $checked else ''# />
 					<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
 				</span>
 			</label>
 		</div>
 
 #end if
-		<div class="field-pair alt" style="margin-top:20px">
-			<label for="saveDefaultsButton">
-				<span class="component-title">Save options as defaults</span>
-				<span class="component-desc">
-					<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save Defaults" disabled="disabled" />
-					<p>reuse the above options when adding more shows</p>
-				</span>
-			</label>
-		</div>
 		</div>
 
 #if $enable_anime_options
 #import sickbeard.blackandwhitelist
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
 #else
 		<input type="hidden" name="anime" id="anime" value="0" />
 #end if

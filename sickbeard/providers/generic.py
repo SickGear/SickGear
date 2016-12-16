@@ -403,7 +403,7 @@ class GenericProvider:
              'udp://tracker.internetwarriors.net:1337', 'udp://tracker.internetwarriors.net:1337/announce',
              'udp://tracker.leechers-paradise.org:6969', 'udp://tracker.leechers-paradise.org:6969/announce',
              'udp://tracker.opentrackr.org:1337/announce', 'udp://tracker.torrent.eu.org:451/announce',
-             'udp://tracker.trackerfix.com:80/announce'])) or None)
+             'udp://tracker.trackerfix.com:80/announce', 'udp://tracker.zer0day.to:1337/announce'])) or None)
 
     def get_show(self, item, **kwargs):
         return None
