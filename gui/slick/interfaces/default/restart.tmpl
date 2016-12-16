@@ -42,7 +42,8 @@
 		Host: '$sg_host',
 		Port: '$sg_port',
 		Root: '$sg_root',
-		UseHttps: #echo ('!1', '!0')[False != $sg_use_https and 0 != $sg_use_https]#
+		UseHttps: #echo ('!1', '!0')[False != $sg_use_https and 0 != $sg_use_https]#,
+		PID: '$sbPID'
 	};
 //-->
 </script>
