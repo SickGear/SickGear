@@ -617,13 +617,11 @@ class MainHandler(WebHandler):
 class Home(MainHandler):
     def HomeMenu(self):
         return [
-            {'title': 'Manual Post-Processing', 'path': 'home/postprocess/'},
+            {'title': 'Process Media', 'path': 'home/postprocess/'},
             {'title': 'Update Emby', 'path': 'home/updateEMBY/', 'requires': self.haveEMBY},
             {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
             {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
-            {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX},
-            {'title': 'Restart', 'path': 'home/restart/?pid=' + str(sickbeard.PID), 'confirm': True},
-            {'title': 'Shutdown', 'path': 'home/shutdown/?pid=' + str(sickbeard.PID), 'confirm': True},
+            {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX}
         ]
 
     @staticmethod
@@ -1372,9 +1370,9 @@ class Home(MainHandler):
                 del(ep_counts['totals'][0])
 
         ep_counts['eps_all'] = sum(ep_counts['totals'].values())
-        ep_counts['eps_most'] = max(ep_counts['totals'].values())
+        ep_counts['eps_most'] = max(ep_counts['totals'].values() + [0])
         all_seasons = sorted(ep_counts['totals'].keys(), reverse=True)
-        t.lowest_season, t.highest_season = all_seasons[-1], all_seasons[0]
+        t.lowest_season, t.highest_season = all_seasons and (all_seasons[-1], all_seasons[0]) or (0, 0)
 
         # 55 == seasons 1-10 and excludes the random season 0
         force_display_show_minimum = 30 < ep_counts['eps_most'] or 55 < sum(ep_counts['totals'].keys())
@@ -2491,7 +2489,7 @@ class HomePostProcess(Home):
     def index(self, *args, **kwargs):
 
         t = PageTemplate(headers=self.request.headers, file='home_postprocess.tmpl')
-        t.submenu = self.HomeMenu()
+        t.submenu = [x for x in self.HomeMenu() if 'postprocess' not in x['path']]
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
@@ -3653,24 +3651,24 @@ class NewHomeAddShows(Home):
 
 
 class Manage(MainHandler):
-    def ManageMenu(self):
-        manageMenu = [
+    def ManageMenu(self, exclude='n/a'):
+        menu = [
             {'title': 'Backlog Overview', 'path': 'manage/backlogOverview/'},
-            {'title': 'Manage Searches', 'path': 'manage/manageSearches/'},
-            {'title': 'Show Queue Overview', 'path': 'manage/showQueueOverview/'},
-            {'title': 'Episode Status Management', 'path': 'manage/episodeStatuses/'}, ]
+            {'title': 'Media Search', 'path': 'manage/manageSearches/'},
+            {'title': 'Show Processes', 'path': 'manage/showProcesses/'},
+            {'title': 'Episode Status', 'path': 'manage/episodeStatuses/'}, ]
 
         if sickbeard.USE_SUBTITLES:
-            manageMenu.append({'title': 'Missed Subtitle Management', 'path': 'manage/subtitleMissed/'})
+            menu.append({'title': 'Missed Subtitle Management', 'path': 'manage/subtitleMissed/'})
 
         if sickbeard.USE_FAILED_DOWNLOADS:
-            manageMenu.append({'title': 'Failed Downloads', 'path': 'manage/failedDownloads/'})
+            menu.append({'title': 'Failed Downloads', 'path': 'manage/failedDownloads/'})
 
-        return manageMenu
+        return [x for x in menu if exclude not in x['title']]
 
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='manage.tmpl')
-        t.submenu = self.ManageMenu()
+        t.submenu = self.ManageMenu('Bulk')
         return t.respond()
 
     def showEpisodeStatuses(self, indexer_id, whichStatus):
@@ -3708,7 +3706,7 @@ class Manage(MainHandler):
             status_list = []
 
         t = PageTemplate(headers=self.request.headers, file='manage_episodeStatuses.tmpl')
-        t.submenu = self.ManageMenu()
+        t.submenu = self.ManageMenu('Episode')
         t.whichStatus = whichStatus
 
         my_db = db.DBConnection()
@@ -3832,7 +3830,7 @@ class Manage(MainHandler):
     def subtitleMissed(self, whichSubs=None):
 
         t = PageTemplate(headers=self.request.headers, file='manage_subtitleMissed.tmpl')
-        t.submenu = self.ManageMenu()
+        t.submenu = self.ManageMenu('Subtitle')
         t.whichSubs = whichSubs
 
         if not whichSubs:
@@ -3914,7 +3912,7 @@ class Manage(MainHandler):
     def backlogOverview(self, *args, **kwargs):
 
         t = PageTemplate(headers=self.request.headers, file='manage_backlogOverview.tmpl')
-        t.submenu = self.ManageMenu()
+        t.submenu = self.ManageMenu('Backlog')
 
         showCounts = {}
         showCats = {}
@@ -4205,7 +4203,7 @@ class Manage(MainHandler):
 
         self.redirect('/manage/')
 
-    def massUpdate(self, toUpdate=None, toRefresh=None, toRename=None, toDelete=None, toRemove=None, toMetadata=None, toSubtitle=None):
+    def bulkChange(self, toUpdate=None, toRefresh=None, toRename=None, toDelete=None, toRemove=None, toMetadata=None, toSubtitle=None):
 
         if toUpdate is not None:
             toUpdate = toUpdate.split('|')
@@ -4347,7 +4345,7 @@ class Manage(MainHandler):
         t.over_limit = limit and len(sql_results) > limit
         t.failedResults = t.over_limit and sql_results[0:-1] or sql_results
         t.limit = str(limit)
-        t.submenu = self.ManageMenu()
+        t.submenu = self.ManageMenu('Failed')
 
         return t.respond()
 
@@ -4365,7 +4363,7 @@ class ManageSearches(Manage):
         t.findPropersStatus = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
         t.queueLength = sickbeard.searchQueueScheduler.action.queue_length()
 
-        t.submenu = self.ManageMenu()
+        t.submenu = self.ManageMenu('Search')
 
         return t.respond()
 
@@ -4418,14 +4416,15 @@ class ManageSearches(Manage):
         time.sleep(5)
         self.redirect('/manage/manageSearches/')
 
-class showQueueOverview(Manage):
+
+class showProcesses(Manage):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='manage_showQueueOverview.tmpl')
+        t = PageTemplate(headers=self.request.headers, file='manage_showProcesses.tmpl')
         t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
         t.showList = sickbeard.showList
         t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
 
-        t.submenu = self.ManageMenu()
+        t.submenu = self.ManageMenu('Processes')
 
         return t.respond()
 
@@ -4437,7 +4436,8 @@ class showQueueOverview(Manage):
             ui.notifications.message('Forced Show Update started')
 
         time.sleep(5)
-        self.redirect('/manage/showQueueOverview/')
+        self.redirect('/manage/showProcesses/')
+
 
 class History(MainHandler):
     def index(self, limit=100):
@@ -4530,20 +4530,21 @@ class History(MainHandler):
 
 class Config(MainHandler):
     @staticmethod
-    def ConfigMenu():
-        return [
+    def ConfigMenu(exclude='n/a'):
+        menu = [
             {'title': 'General', 'path': 'config/general/'},
-            {'title': 'Search Settings', 'path': 'config/search/'},
-            {'title': 'Search Providers', 'path': 'config/providers/'},
-            {'title': 'Subtitles Settings', 'path': 'config/subtitles/'},
+            {'title': 'Media Providers', 'path': 'config/providers/'},
+            {'title': 'Search', 'path': 'config/search/'},
+            {'title': 'Subtitles', 'path': 'config/subtitles/'},
             {'title': 'Post Processing', 'path': 'config/postProcessing/'},
             {'title': 'Notifications', 'path': 'config/notifications/'},
             {'title': 'Anime', 'path': 'config/anime/'},
         ]
+        return [x for x in menu if exclude not in x['title']]
 
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='config.tmpl')
-        t.submenu = self.ConfigMenu
+        t.submenu = self.ConfigMenu()
 
         return t.respond()
 
@@ -4552,7 +4553,7 @@ class ConfigGeneral(Config):
     def index(self, *args, **kwargs):
 
         t = PageTemplate(headers=self.request.headers, file='config_general.tmpl')
-        t.submenu = self.ConfigMenu
+        t.submenu = self.ConfigMenu('General')
         t.show_tags = ', '.join(sickbeard.SHOW_TAGS)
         t.indexers = dict([(i, sickbeard.indexerApi().indexers[i]) for i in sickbeard.indexerApi().indexers
                            if sickbeard.indexerApi(i).config['active']])
@@ -4748,7 +4749,7 @@ class ConfigSearch(Config):
     def index(self, *args, **kwargs):
 
         t = PageTemplate(headers=self.request.headers, file='config_search.tmpl')
-        t.submenu = self.ConfigMenu
+        t.submenu = self.ConfigMenu('Search')
         t.using_rls_ignore_words = [(show.indexerid, show.name)
                                     for show in sickbeard.showList if show.rls_ignore_words and
                                     show.rls_ignore_words.strip()]
@@ -4871,7 +4872,7 @@ class ConfigPostProcessing(Config):
     def index(self, *args, **kwargs):
 
         t = PageTemplate(headers=self.request.headers, file='config_postProcessing.tmpl')
-        t.submenu = self.ConfigMenu
+        t.submenu = self.ConfigMenu('Processing')
         return t.respond()
 
     def savePostProcessing(self, naming_pattern=None, naming_multi_ep=None,
@@ -5067,7 +5068,7 @@ class ConfigPostProcessing(Config):
 class ConfigProviders(Config):
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='config_providers.tmpl')
-        t.submenu = self.ConfigMenu
+        t.submenu = self.ConfigMenu('Providers')
         return t.respond()
 
     def canAddNewznabProvider(self, name):
@@ -5407,7 +5408,7 @@ class ConfigNotifications(Config):
 
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='config_notifications.tmpl')
-        t.submenu = self.ConfigMenu
+        t.submenu = self.ConfigMenu('Notifications')
         t.root_dirs = []
         if sickbeard.ROOT_DIRS:
             root_pieces = sickbeard.ROOT_DIRS.split('|')
@@ -5668,7 +5669,7 @@ class ConfigNotifications(Config):
 class ConfigSubtitles(Config):
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='config_subtitles.tmpl')
-        t.submenu = self.ConfigMenu
+        t.submenu = self.ConfigMenu('Subtitle')
         return t.respond()
 
     def saveSubtitles(self, use_subtitles=None, subtitles_plugins=None, subtitles_languages=None, subtitles_dir=None,
@@ -5726,7 +5727,7 @@ class ConfigAnime(Config):
     def index(self, *args, **kwargs):
 
         t = PageTemplate(headers=self.request.headers, file='config_anime.tmpl')
-        t.submenu = self.ConfigMenu
+        t.submenu = self.ConfigMenu('Anime')
         return t.respond()
 
     def saveAnime(self, use_anidb=None, anidb_username=None, anidb_password=None, anidb_use_mylist=None,

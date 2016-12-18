@@ -324,7 +324,7 @@ class ImageCache:
             count_urls = len(image_urls)
             sources = []
             for image_url in image_urls or []:
-                img_data = helpers.getURL(image_url)
+                img_data = helpers.getURL(image_url, nocache=True)
                 if None is img_data:
                     continue
                 crc = '%05X' % (zlib.crc32(img_data) & 0xFFFFFFFF)

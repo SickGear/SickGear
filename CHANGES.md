@@ -37,7 +37,7 @@
 * Add passthru of param "post_json" to Requests() "json" in helpers.getURL
 * Add search show Name to Show List Layout: Poster
 * Change indicate when not sorting with article by dimming ("The", "A", "An") on Show List, Episode, History,
-  Mass Update, Add with Browse and from Existing views
+  Bulk Change, Add with Browse and from Existing views
 * Add Emby notifier to config/Notifications
 * Use a subprocess and cp for copying files on posix systems to preserve file metadata
 * Fix alternative unicode show names from breaking search
@@ -133,7 +133,7 @@
 * Change post process to join incrementally named (i.e. file.001 to file.nnn) split files
 * Change replace unrar2 lib with rarfile 3.0 and UnRAR.exe 5.40 freeware
 * Change post process "Copy" to delete redundant files after use
-* Add indicator for public access search providers
+* Add indicator for public access media providers
 * Change improve probability selecting most seeded release
 * Change add the TorrentDay x265 category to search
 * Add smart logic to reduce api hits to newznab server types and improve how nzbs are downloaded
@@ -141,7 +141,7 @@
 * Change improve performance by using newznab server advertised capabilities
 * Change config/providers newznab to display only non-default categories
 * Change use scene season for wanted segment in backlog if show is scene numbering
-* Change combine Manage Searches / Backlog Search / Limited and Full to Force
+* Change combine Media Search / Backlog Search / Limited and Full to Force
 * Change consolidate limited and full backlog
 * Change config / Search / Backlog search frequency to instead spread backlog searches over a number of days
 * Change migrate minimum used value for search frequency into new minimum 7 for search spread
@@ -172,7 +172,7 @@
 * Remove redundant config/general/"Allow incomplete show data"
 * Fix status reset of a snatched, downloaded, or archived episode when its date is set to never (no date) on the info
   source and there is no media file
-* Change only show unaired episodes on Manage/Backlog Overview and Manage/Episode Status Management where relevant
+* Change only show unaired episodes on Manage/Backlog Overview and Manage/Episode Status where relevant
 * Change locally cache Trakt/IMDb/Anime show cards
 * Change allow pp to replace files with a repack or proper of same quality
 * Fix ensure downloaded eps are not shown on episode view
@@ -251,6 +251,17 @@
 * Change View Log File add a typeface and some colour to improve readability
 * Change View Log File/Errors only display "Clear Errors" button when there are errors to clear
 * Change improve performance of View Log File
+* Change fanart images to not use cache as cache is not required
+* Change rename "Manual Post-Processing" menu item to "Process Media"
+* Change rename "Search Providers" -> "Media Providers"
+* Change rename "Manage Searches" -> "Media Search"
+* Change rename "Episode Status Management" -> "Episode Status"
+* Change rename "Mass Update" -> "Bulk Change"
+* Change indicate default home on "Shows Menu"
+* Change relocate "Episodes" menu to "Shows"/"Episode Schedule"
+* Change relocate "History" menu to "Shows"/"History"
+* Change remove restart/shutdown buttons from "Show List"
+* Change remove superfluous buttons from all submenus
 
 [develop changelog]
 * Change send nzb data to NZBGet for Anizb instead of url

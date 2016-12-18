@@ -1,15 +1,15 @@
 #import sickbeard
 #from sickbeard.helpers import findCertainShow
 ##
-#set global $title = 'Show Queue Overview'
-#set global $header = 'Show Queue Overview'
+#set global $title = 'Show Processes'
+#set global $header = 'Show Processes'
 #set global $sbPath = '..'
 #set global $topmenu = 'manage'
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/manageShowQueueOverview.js?v=$sbPID" xmlns="http://www.w3.org/1999/html"></script>
+<script type="text/javascript" src="$sbRoot/js/manageShowProcesses.js?v=$sbPID" xmlns="http://www.w3.org/1999/html"></script>
 <div id="content800">
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -19,7 +19,7 @@
 
 <div id="summary2" class="align-left">
 <h3> Daily Show Update:</h3>
-<a id="showupdatebutton" class="btn#if $ShowUpdateRunning# disabled#end if#" href="$sbRoot/manage/showQueueOverview/forceShowUpdate"><i class="sgicon-play"></i> Force</a>
+<a id="showupdatebutton" class="btn#if $ShowUpdateRunning# disabled#end if#" href="$sbRoot/manage/showProcesses/forceShowUpdate"><i class="sgicon-play"></i> Force</a>
 #if not $ShowUpdateRunning:
 	Not in progress<br />
 #else:
