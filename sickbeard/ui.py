@@ -122,7 +122,7 @@ class ProgressIndicator():
         self.currentStatus = currentStatus
 
 class ProgressIndicators():
-    _pi = {'massUpdate': [],
+    _pi = {'bulkChange': [],
            'massAdd': [],
            'dailyUpdate': []
            }

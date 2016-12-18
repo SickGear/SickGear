@@ -559,7 +559,7 @@ def initialize(console_logging=True):
         # Search Settings/Torrent search
         global USE_TORRENTS, TORRENT_METHOD, TORRENT_DIR, TORRENT_HOST, TORRENT_USERNAME, TORRENT_PASSWORD, \
             TORRENT_LABEL, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_VERIFY_CERT
-        # Search Providers
+        # Media Providers
         global PROVIDER_ORDER, NEWZNAB_DATA, PROVIDER_HOMES
         # Subtitles
         global USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_FINDER_FREQUENCY,  \

@@ -111,9 +111,18 @@
 				<ul class="nav navbar-nav navbar-right">
 					<li id="NAVhome" class="dropdown">
 						<a href="$sbRoot/home/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#">Shows <b class="caret"></b></a>
+#set $showlist_home, $episode_home, $history_home = 3 * ['(<i class="sgicon-home tight"></i>)']
+#if 'shows' == $sickbeard.DEFAULT_HOME
+    #set $episode_home, $history_home = 2 * ['']
+#elif 'episodes' == $sickbeard.DEFAULT_HOME
+    #set $showlist_home, $history_home = 2 * ['']
+#else
+    #set $showlist_home, $episode_home = 2 * ['']
+#end if
 						<ul class="dropdown-menu">
-							<li><a href="$sbRoot/home/showlistView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-home"></i>Show List</a></li>
-							<li><a href="$sbRoot/home/postprocess/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Manual Post-Processing</a></li>
+							<li><a href="$sbRoot/home/showlistView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-list" style="font-size:12px"></i>Show List $showlist_home</a></li>
+							<li><a href="$sbRoot/episodeView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-cal"></i>Episode Schedule $episode_home</a></li>
+							<li><a href="$sbRoot/history/" tabindex="$tab#set $tab += 1#"><i class="sgicon-mediafile"></i>History $history_home</a></li>
 							<li class="divider"></li>
 							<li class="menu-item-noicon opacity60">Add show...</li>
 							<li><a href="$sbRoot/home/addShows/new_show/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>Search
@@ -132,22 +141,16 @@
 						</ul>
 					</li>
 
-					<li id="NAVepisodeView">
-						<a href="$sbRoot/episodeView/" tabindex="$tab#set $tab += 1#">Episodes</a>
-					</li>
-
-					<li id="NAVhistory">
-						<a href="$sbRoot/history/" tabindex="$tab#set $tab += 1#">History</a>
-					</li>
-
 					<li id="NAVmanage" class="dropdown">
 						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b></a>
 						<ul class="dropdown-menu">
-							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-massupdate"></i>Mass Update</a></li>
+							<li><a href="$sbRoot/home/postprocess/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Process Media</a></li>
+							<li class="divider"></li>
+							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-bulk-change"></i>Bulk Change</a></li>
 							<li><a href="$sbRoot/manage/backlogOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-backlog"></i>Backlog Overview</a></li>
-							<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Manage Searches</a></li>
-							<li><a href="$sbRoot/manage/showQueueOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-showqueue"></i>Show Queue Overview</a></li>
-							<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status Management</a></li>
+							<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Media Search</a></li>
+							<li><a href="$sbRoot/manage/showProcesses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-showqueue"></i>Show Processes</a></li>
+							<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status</a></li>
 #if hasattr($sickbeard, 'USE_EMBY') and $sg_var('USE_EMBY') and $sg_str('EMBY_HOST') != '' and $sg_str('EMBY_APIKEY') != ''
 							<li><a href="$sbRoot/home/updateEMBY/" tabindex="$tab#set $tab += 1#"><i class="sgicon-emby"></i>Update Emby</a></li>
 #end if
@@ -172,11 +175,13 @@
 					<li id="NAVconfig" class="dropdown">
 						<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
 						<ul class="dropdown-menu">
-							<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>Help &amp; Info</a></li>
+							<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>About</a></li>
+							<li class="divider"></li>
+							<li class="menu-item-noicon opacity60">Settings...</li>
 							<li><a href="$sbRoot/config/general/" tabindex="$tab#set $tab += 1#"><i class="sgicon-config"></i>General</a></li>
-							<li><a href="$sbRoot/config/search/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Settings</a></li>
-							<li><a href="$sbRoot/config/providers/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Providers</a></li>
-							<li><a href="$sbRoot/config/subtitles/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Subtitles Settings</a></li>
+							<li><a href="$sbRoot/config/providers/" tabindex="$tab#set $tab += 1#"><i class="sgicon-book"></i>Media Providers</a></li>
+							<li><a href="$sbRoot/config/search/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search</a></li>
+							<li><a href="$sbRoot/config/subtitles/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Subtitles</a></li>
 							<li><a href="$sbRoot/config/postProcessing/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Post Processing</a></li>
 							<li><a href="$sbRoot/config/notifications/" tabindex="$tab#set $tab += 1#"><i class="sgicon-notification"></i>Notifications</a></li>
 							<li><a href="$sbRoot/config/anime/" tabindex="$tab#set $tab += 1#"><i class="sgicon-anime"></i>Anime</a></li>

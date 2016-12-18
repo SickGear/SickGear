@@ -2,7 +2,7 @@
 #from sickbeard import clients
 #from sickbeard.helpers import starify
 ##
-#set global $title = 'Config - Episode Search'
+#set global $title = 'Config - Media Search'
 #set global $header = 'Search Settings'
 #set global $sbPath = '../..'
 #set global $topmenu = 'config'
@@ -33,16 +33,16 @@
 
 			<div id="config-components">
 				<ul>
-					<li><a href="#core-component-group1">Episode Search</a></li>
-					<li><a href="#core-component-group2">NZB Search</a></li>
-					<li><a href="#core-component-group3">Torrent Search</a></li>
+					<li><a href="#core-component-group1">Media Search</a></li>
+					<li><a href="#core-component-group2">NZB Results</a></li>
+					<li><a href="#core-component-group3">Torrent Results</a></li>
 				</ul>
 
 
 				<div id="core-component-group1" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>Episode Search</h3>
+						<h3>Media Search</h3>
 						<p>How to manage searching with <a href="$sbRoot/config/providers/">providers</a>.</p>
 					</div>
 
@@ -214,7 +214,7 @@
 				<div id="core-component-group2" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>NZB Search</h3>
+						<h3>NZB Results</h3>
 						<p>How to handle NZB search results.</p>
 					</div>
 
@@ -225,7 +225,7 @@
 								<span class="component-title">Search NZBs</span>
 								<span class="component-desc">
 									<input type="checkbox" name="use_nzbs" class="enabler" id="use_nzbs"<%= html_checked if sickbeard.USE_NZBS else '' %>>
-									<p>enable NZB search providers</p></span>
+									<p>enable NZB media providers</p></span>
 							</label>
 						</div>
 
@@ -414,7 +414,7 @@
 				<div id="core-component-group3" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>Torrent Search</h3>
+						<h3>Torrent Results</h3>
 						<p>How to handle Torrent search results.</p>
 					</div>
 
@@ -426,7 +426,7 @@
 								<span class="component-title">Search torrents</span>
 								<span class="component-desc">
 									<input type="checkbox" name="use_torrents" class="enabler" id="use_torrents"<%= html_checked if sickbeard.USE_TORRENTS == True else '' %>>
-									<p>enable torrent search providers</p>
+									<p>enable torrent media providers</p>
 								</span>
 							</label>
 						</div>

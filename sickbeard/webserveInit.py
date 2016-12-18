@@ -84,7 +84,7 @@ class WebServer(threading.Thread):
             (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomePostProcess),
             (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
             (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
-            (r'%s/manage/showQueueOverview(/?.*)' % self.options['web_root'], webserve.showQueueOverview),
+            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.showProcesses),
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
             (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
             (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),

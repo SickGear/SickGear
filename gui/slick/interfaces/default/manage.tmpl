@@ -1,8 +1,8 @@
 #import sickbeard
 #from sickbeard.common import *
 ##
-#set global $title = 'Mass Update'
-#set global $header = 'Mass Update'
+#set global $title = 'Bulk Change'
+#set global $header = 'Bulk Change'
 #set global $sbPath = '../..'
 #set global $topmenu = 'manage'
 ##
@@ -62,7 +62,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 
 \$(document).ready(function()
 {
-	\$('#massUpdateTable:has(tbody tr)').tablesorter({
+	\$('#bulkChangeTable:has(tbody tr)').tablesorter({
 		widgets: ['zebra'],
 		sortList: [[1,0]],
 		headers: {
@@ -76,15 +76,15 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 });
 //-->
 </script>
-<script type="text/javascript" src="$sbRoot/js/massUpdate.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/bulkChange.js?v=$sbPID"></script>
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
-<form name="massUpdateForm" method="post" action="massUpdate">
+<form name="bulkChangeForm" method="post" action="bulkChange">
 
-<table id="massUpdateTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
+<table id="bulkChangeTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
 	<thead>
 		<tr>
 			<th class="col-checkbox">Edit<br /><input type="checkbox" class="bulkCheck" id="editCheck"></th>
@@ -117,7 +117,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 	<tfoot>
 		<tr>
 			<td rowspan="1" colspan="2" class="align-center alt"><input class="btn pull-left" type="button" value="Edit Selected" id="submitMassEdit"></td>
-			<td rowspan="1" colspan="#echo $columns_total-2#" class="align-right alt"><input class="btn pull-right" type="button" value="Submit" id="submitMassUpdate"></td>
+			<td rowspan="1" colspan="#echo $columns_total-2#" class="align-right alt"><input class="btn pull-right" type="button" value="Submit" id="submitBulkChange"></td>
 		</tr>
 	</tfoot>
 

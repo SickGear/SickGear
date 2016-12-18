@@ -18,7 +18,7 @@ $(document).ready(function() {
 	});
 
 
-	$('#submitMassUpdate').click(function() {
+	$('#submitBulkChange').click(function() {
 
 		var updateArr = [], refreshArr = [], renameArr = [], subtitleArr = [],
 			deleteArr = [], removeArr = [], metadataArr = [];
@@ -69,7 +69,7 @@ $(document).ready(function() {
 		if (0 == updateArr.length + refreshArr.length + renameArr.length + subtitleArr.length + deleteArr.length + removeArr.length + metadataArr.length)
 			return !1;
 
-		window.location.href = $.SickGear.Root + 'massUpdate?toUpdate=' + updateArr.join('|') + '&toRefresh=' + refreshArr.join('|') + '&toRename=' + renameArr.join('|') + '&toSubtitle=' + subtitleArr.join('|') + '&toDelete=' + deleteArr.join('|') + '&toRemove=' + removeArr.join('|') + '&toMetadata=' + metadataArr.join('|');
+		window.location.href = $.SickGear.Root + 'bulkChange?toUpdate=' + updateArr.join('|') + '&toRefresh=' + refreshArr.join('|') + '&toRename=' + renameArr.join('|') + '&toSubtitle=' + subtitleArr.join('|') + '&toDelete=' + deleteArr.join('|') + '&toRemove=' + removeArr.join('|') + '&toMetadata=' + metadataArr.join('|');
 
 	});
 

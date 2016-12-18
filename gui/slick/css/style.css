@@ -397,6 +397,10 @@ inc_top.tmpl
 	margin-right:6px
 }
 
+.dropdown [class^="sgicon-"].tight{
+	margin-right:0px
+}
+
 #SubMenu [class^="sgicon-"], #SubMenu [class*="sgicon-"]{
 	margin-right:3px
 }
@@ -478,7 +482,7 @@ inc_top.tmpl
 	content:"\e614"
 }
 
-.sgicon-massupdate:before{
+.sgicon-bulk-change:before{
 	content:"\e615"
 }
 
@@ -564,6 +568,26 @@ inc_top.tmpl
 
 .sgicon-warning:before{
 	content:"\e62a"
+}
+
+.sgicon-list:before{
+	content:"\e62b"
+}
+
+.sgicon-cal:before{
+	content:"\e62c"
+}
+
+.sgicon-mediafile:before{
+	content:"\e62d"
+}
+
+.sgicon-archive:before{
+	content:"\e62e"
+}
+
+.sgicon-book:before{
+	content:"\e62f"
 }
 
 .sgicon-imdb:before{
