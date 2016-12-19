@@ -1,4 +1,12 @@
-﻿### 0.12.1 (2016-12-19 12:00:00 UTC)
+﻿### 0.13.0 (2016-xx-xx xx:xx:xx UTC)
+
+
+
+[develop changelog]
+
+
+
+### 0.12.1 (2016-12-19 12:00:00 UTC)
 
 * Fix image scan log for show titles that contain "%"
 
