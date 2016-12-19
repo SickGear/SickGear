@@ -1,4 +1,4 @@
-﻿### 0.12.0 (2016-xx-xx xx:xx:xx UTC)
+﻿### 0.12.0 (2016-12-19 03:00:00 UTC)
 
 * Add strict Python version check (equal to, or higher than 2.7.9 and less than 3.0), **exit** if incorrect version
 * Update unidecode library 0.04.11 to 0.04.18 (fd57cbf)
@@ -262,54 +262,6 @@
 * Change relocate "History" menu to "Shows"/"History"
 * Change remove restart/shutdown buttons from "Show List"
 * Change remove superfluous buttons from all submenus
-
-[develop changelog]
-* Change send nzb data to NZBGet for Anizb instead of url
-* Change revert test_common.py include file placement so Travis builds don't fail
-* Fix Nyaa and TT torrent providers
-* Change PrivateHD torrent provider
-* Fix Add from Trakt
-* Change unpack files once only in auto post processing copy mode
-* Fix data logger for clients
-* Change handle when a torrent provider goes down and its urls are cleared
-* Add handler for when rar files can not be opened during post processing
-* Fix join clean up
-* Fix add custom torrent RSS
-* Remove ILT torrent provider
-* Update Tornado Web Server 4.3.dev1 (1b6157d) to 4.4.dev1 (c2b4d05)
-* Change add support for freebsd /var/db/zoneinfo when getting local timezone information
-* Fix issue with post processing propers/repacks
-* Change use legacy tzlocal() if new gettz fails to create
-* Change load cached images on demand
-* Change add rate limit handler for info source
-* Change improve security of cached image use
-* Change add helper function to validate acceptable image file extension
-* Change make sure avi files are closed if an error occurs
-* Change refactor hachoir scan_index for non RIFF file processing
-* Change ensure sbdatetime functions return formatted string instead of tuple
-* Change image cache processing for browse Trakt page
-* Change logging for newznab response code 910 and add check for empty response data
-* Change improve reverse proxy web_root support
-* Fix "error trying to retrieve image" from tvdb due to there is no image to fetch
-* Fix PiSexy for vip user class
-* Change retry sleep timeout for Trakt searches to prevent issues when Trakt is down
-* Fix TVDb search issue when only 1 result is returned
-* Change improve TvChaos item parsing and can use qualities instead of 'Unknown'
-* Change remove deprecated providers being saved to config
-* Change prevent a missing slash typo and correct develop typo after a network outage
-* Change send download logfile as stream
-* Fix launch browser during startup
-* Change don't exclude "unknown" from search
-* Fix UHD category select in Recent Search
-* Change only update enabled torrent providers
-* Fix restart when switching from master to develop
-* Change update IMDb show parser
-* Fix rTorrent auth and magnet issue
-* Change torrent provider links for bts, et, rarbg, tpb
-* Change IPT uri used for sanity check
-* Change PiSexy auth check
-* Change logger clean up to prevent lock during restart under pythonw
-* Change icon font version and remove unused font
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)
