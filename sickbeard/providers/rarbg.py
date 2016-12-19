@@ -30,7 +30,7 @@ class RarbgProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'Rarbg')
 
-        self.url_base = 'https://rarbg.unblocked.uno/'
+        self.url_base = 'https://rarbgmirror.xyz/'
         # api_spec: https://rarbg.com/pubapi/apidocs_v2.txt
         self.url_api = 'https://torrentapi.org/pubapi_v2.php?app_id=SickGear&'
         self.urls = {'config_provider_home_uri': self.url_base,
