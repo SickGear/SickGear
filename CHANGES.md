@@ -309,6 +309,7 @@
 * Change IPT uri used for sanity check
 * Change PiSexy auth check
 * Change logger clean up to prevent lock during restart under pythonw
+* Change icon font version and remove unused font
 
 
 ### 0.11.16 (2016-10-16 17:30:00 UTC)

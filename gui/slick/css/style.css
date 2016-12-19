@@ -129,29 +129,16 @@ fonts
 /* SickGear Icons */
 @font-face{
 	font-family:"sgicons";
-	src:url("fonts/sgicons.eot?v1");
-	src:url("fonts/sgicons.eot?v1#iefix") format("embedded-opentype"),
-		url("fonts/sgicons.woff?v1") format("woff"),
-		url("fonts/sgicons.ttf?v1") format("truetype"),
-		url("fonts/sgicons.svg?v1#sgicons") format("svg");
+	src:url("fonts/sgicons.eot?v2");
+	src:url("fonts/sgicons.eot?v2#iefix") format("embedded-opentype"),
+		url("fonts/sgicons.woff?v2") format("woff"),
+		url("fonts/sgicons.ttf?v2") format("truetype"),
+		url("fonts/sgicons.svg?v2#sgicons") format("svg");
 	font-weight:normal;
 	font-style:normal
 }
 
 /* Hack */
-/* Regular */
-@font-face{
-	font-family:"Hack";
-	src:url("fonts/Hack-Regular.eot");
-	src:url("fonts/Hack-Regular.eot?#iefix") format("embedded-opentype"),
-		url("fonts/Hack-Regular.woff") format("woff"),
-		url("fonts/Hack-Regular.ttf") format("truetype"),
-		url("fonts/Hack-Regular.svg") format("svg");
-	font-weight:normal;
-	font-weight:400;
-	font-style:normal
-}
-
 /* Regular-mono */
 @font-face{
 	font-family:"Hack-mono";
