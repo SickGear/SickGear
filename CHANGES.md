@@ -1,4 +1,9 @@
-﻿### 0.12.0 (2016-12-19 03:00:00 UTC)
+﻿### 0.12.1 (2016-12-19 12:00:00 UTC)
+
+* Fix image scan log for show titles that contain "%"
+
+
+### 0.12.0 (2016-12-19 03:00:00 UTC)
 
 * Add strict Python version check (equal to, or higher than 2.7.9 and less than 3.0), **exit** if incorrect version
 * Update unidecode library 0.04.11 to 0.04.18 (fd57cbf)
