@@ -19,14 +19,17 @@
 from lib.six import iteritems
 
 from lib.dateutil import tz, zoneinfo
+from lib.tzlocal import get_localzone
 from sickbeard import db
 from sickbeard import helpers
 from sickbeard import logger
 from sickbeard import encodingKludge as ek
 from os.path import basename, join, isfile
+from itertools import chain
 import os
 import re
 import datetime
+import sickbeard
 
 # regex to parse time (12/24 hour format)
 time_regex = re.compile(r'(\d{1,2})(([:.](\d{2}))? ?([PA][. ]? ?M)|[:.](\d{2}))\b', flags=re.I)
@@ -34,8 +37,34 @@ am_regex = re.compile(r'(A[. ]? ?M)', flags=re.I)
 pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
 
 network_dict = None
+network_dupes = None
 
-sb_timezone = tz.tzlocal()
+country_timezones = {
+    'AU': 'Australia/Sydney', 'AR': 'America/Buenos_Aires', 'AUSTRALIA': 'Australia/Sydney', 'BR': 'America/Sao_Paulo',
+    'CA': 'Canada/Eastern', 'CZ': 'Europe/Prague', 'DE': 'Europe/Berlin', 'ES': 'Europe/Madrid',
+    'FI': 'Europe/Helsinki', 'FR': 'Europe/Paris', 'HK': 'Asia/Hong_Kong', 'IE': 'Europe/Dublin',
+    'IS': 'Atlantic/Reykjavik', 'IT': 'Europe/Rome', 'JP': 'Asia/Tokyo', 'MX': 'America/Mexico_City',
+    'MY': 'Asia/Kuala_Lumpur', 'NL': 'Europe/Amsterdam', 'NZ': 'Pacific/Auckland', 'PH': 'Asia/Manila',
+    'PT': 'Europe/Lisbon', 'RU': 'Europe/Kaliningrad', 'SE': 'Europe/Stockholm', 'SG': 'Asia/Singapore',
+    'TW': 'Asia/Taipei', 'UK': 'Europe/London', 'US': 'US/Eastern', 'ZA': 'Africa/Johannesburg'}
+
+
+def tz_fallback(t):
+    return t if isinstance(t, datetime.tzinfo) else tz.tzlocal()
+
+
+def get_tz():
+    t = get_localzone()
+    if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone and hasattr(sickbeard, 'ZONEINFO_DIR'):
+        try:
+            t = tz_fallback(tz.gettz(t.zone))
+        except:
+            t = tz_fallback(t)
+    else:
+        t = tz_fallback(t)
+    return t
+
+sb_timezone = get_tz()
 
 
 # helper to remove failed temp download
@@ -53,10 +82,10 @@ def _remove_old_zoneinfo():
         return
     cur_zoneinfo = ek.ek(basename, zonefilename)
 
-    cur_file = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
+    cur_file = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
 
-    for (path, dirs, files) in ek.ek(os.walk,
-                                     helpers.real_path(ek.ek(os.path.dirname, zoneinfo.__file__))):
+    for (path, dirs, files) in chain.from_iterable(ek.ek(os.walk,
+                                     helpers.real_path(di)) for di in (sickbeard.ZONEINFO_DIR, ek.ek(os.path.dirname, zoneinfo.__file__))):
         for filename in files:
             if filename.endswith('.tar.gz'):
                 file_w_path = ek.ek(join, path, filename)
@@ -71,7 +100,7 @@ def _remove_old_zoneinfo():
 # update the dateutil zoneinfo
 def _update_zoneinfo():
     global sb_timezone
-    sb_timezone = tz.tzlocal()
+    sb_timezone = get_tz()
 
     # now check if the zoneinfo needs update
     url_zv = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/zoneinfo.txt'
@@ -87,7 +116,7 @@ def _update_zoneinfo():
     cur_zoneinfo = zonefilename
     if None is not cur_zoneinfo:
         cur_zoneinfo = ek.ek(basename, zonefilename)
-    zonefile = helpers.real_path(ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
+    zonefile = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
     zonemetadata = zoneinfo.gettz_db_metadata() if ek.ek(os.path.isfile, zonefile) else None
     (new_zoneinfo, zoneinfo_md5) = url_data.decode('utf-8').strip().rsplit(u' ')
     newtz_regex = re.search(r'(\d{4}[^.]+)', new_zoneinfo)
@@ -125,7 +154,7 @@ def _update_zoneinfo():
             # remove the old zoneinfo file
             if cur_zoneinfo is not None:
                 old_file = helpers.real_path(
-                    ek.ek(join, ek.ek(os.path.dirname, zoneinfo.__file__), cur_zoneinfo))
+                    ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
                 if ek.ek(os.path.exists, old_file):
                     ek.ek(os.remove, old_file)
             # rename downloaded file
@@ -134,7 +163,7 @@ def _update_zoneinfo():
             if '_CLASS_ZONE_INSTANCE' in gettz.func_globals:
                 gettz.func_globals.__setitem__('_CLASS_ZONE_INSTANCE', list())
 
-            sb_timezone = tz.tzlocal()
+            sb_timezone = get_tz()
         except:
             _remove_zoneinfo_failed(zonefile_tmp)
             return
@@ -203,45 +232,61 @@ def update_network_dict():
 
 # load network timezones from db into dict
 def load_network_dict():
+    global network_dict, network_dupes
+
+    my_db = db.DBConnection('cache.db')
+    sql_name = 'REPLACE(LOWER(network_name), " ", "")'
     try:
-        my_db = db.DBConnection('cache.db')
-        cur_network_list = my_db.select('SELECT * FROM network_timezones')
+        sql = 'SELECT %s AS network_name, timezone FROM [network_timezones] ' % sql_name + \
+              'GROUP BY %s HAVING COUNT(*) = 1 ORDER BY %s;' % (sql_name, sql_name)
+        cur_network_list = my_db.select(sql)
         if cur_network_list is None or len(cur_network_list) < 1:
             update_network_dict()
-            cur_network_list = my_db.select('SELECT * FROM network_timezones')
-        d = dict(cur_network_list)
+            cur_network_list = my_db.select(sql)
+        network_dict = dict(cur_network_list)
     except:
-        d = {}
-    global network_dict
-    network_dict = d
+        network_dict = {}
+
+    try:
+
+        case_dupes = my_db.select('SELECT * FROM [network_timezones] WHERE %s IN ' % sql_name +
+                                  '(SELECT %s FROM [network_timezones]' % sql_name +
+                                  ' GROUP BY %s HAVING COUNT(*) > 1)' % sql_name +
+                                  ' ORDER BY %s;' % sql_name)
+        network_dupes = dict(case_dupes)
+    except:
+        network_dupes = {}
 
 
 # get timezone of a network or return default timezone
-def get_network_timezone(network, network_dict):
+def get_network_timezone(network):
     if network is None:
         return sb_timezone
 
+    timezone = None
+
     try:
         if zoneinfo.ZONEFILENAME is not None:
+            if not network_dict:
+                load_network_dict()
             try:
-                n_t = tz.gettz(network_dict[network])
+                timezone = tz.gettz(network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower()))
             except:
-                return sb_timezone
+                pass
 
-            if n_t is not None:
-                return n_t
-            else:
-                return sb_timezone
-        else:
-            return sb_timezone
+            if timezone is None:
+                cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
+                try:
+                    timezone = tz.gettz(country_timezones.get(cc.group(1).upper()))
+                except:
+                    pass
     except:
-        return sb_timezone
+        pass
+
+    return timezone if isinstance(timezone, datetime.tzinfo) else sb_timezone
 
 
-# parse date and time string into local time
-def parse_date_time(d, t, network):
-    if network_dict is None:
-        load_network_dict()
+def parse_time(t):
     mo = time_regex.search(t)
     if mo is not None and len(mo.groups()) >= 5:
         if mo.group(5) is not None:
@@ -272,9 +317,23 @@ def parse_date_time(d, t, network):
         hr = 0
         m = 0
 
+    return hr, m
+
+
+# parse date and time string into local time
+def parse_date_time(d, t, network):
+
+    if isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], int) and isinstance(t[1], int):
+        (hr, m) = t
+    else:
+        (hr, m) = parse_time(t)
+
     te = datetime.datetime.fromordinal(helpers.tryInt(d))
     try:
-        foreign_timezone = get_network_timezone(network, network_dict)
+        if isinstance(network, datetime.tzinfo):
+            foreign_timezone = network
+        else:
+            foreign_timezone = get_network_timezone(network)
         foreign_naive = datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=foreign_timezone)
         return foreign_naive
     except:

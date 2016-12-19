@@ -1,5 +1,3 @@
-# Author: Nic Wolfe <nic@wolfeden.ca>
-# URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
 #
@@ -16,127 +14,146 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from lib.six import moves
-
 import datetime
+import re
 
 import sickbeard
-
+import config
+from lib.six import moves
 from base64 import standard_b64encode
-
+from common import Quality
+from sickbeard import logger
+from sickbeard.helpers import tryInt
 from sickbeard.providers.generic import GenericProvider
 
-from sickbeard import logger, helpers
 
-from common import Quality
+def test_nzbget(host, use_https, username, password):
 
+    result = False
+    if not host:
+        msg = 'No NZBget host found. Please configure it'
+        logger.log(msg, logger.ERROR)
+        return result, msg, None
 
-def sendNZB(nzb, proper=False):
-    addToTop = False
-    nzbgetprio = 0
-    
-    if sickbeard.NZBGET_USE_HTTPS:
-        nzbgetXMLrpc = "https://%(username)s:%(password)s@%(host)s/xmlrpc"
-    else:
-        nzbgetXMLrpc = "http://%(username)s:%(password)s@%(host)s/xmlrpc"
-
-    if sickbeard.NZBGET_HOST == None:
-        logger.log(u"No NZBget host found in configuration. Please configure it.", logger.ERROR)
-        return False
-
-    url = nzbgetXMLrpc % {"host": sickbeard.NZBGET_HOST, "username": sickbeard.NZBGET_USERNAME,
-                          "password": sickbeard.NZBGET_PASSWORD}
-
-    nzbGetRPC = moves.xmlrpc_client.ServerProxy(url)
+    url = 'http%(scheme)s://%(username)s:%(password)s@%(host)s/xmlrpc' % {
+        'scheme': ('', 's')[use_https], 'host': re.sub('(?:https?://)?(.*?)/?$', r'\1', host),
+        'username': username, 'password': password}
+    rpc_client = moves.xmlrpc_client.ServerProxy(url)
     try:
-        if nzbGetRPC.writelog("INFO", "SickGear connected to drop off %s any moment now." % (nzb.name + ".nzb")):
-            logger.log(u"Successfully connected to NZBget", logger.DEBUG)
+        msg = 'Success. Connected'
+        if rpc_client.writelog('INFO', 'SickGear connected as a test'):
+            logger.log(msg, logger.DEBUG)
         else:
-            logger.log(u"Successfully connected to NZBget, but unable to send a message", logger.ERROR)
+            msg += ', but unable to send a message'
+            logger.log(msg, logger.ERROR)
+        result = True
+        logger.log(u'NZBGet URL: %s' % url, logger.DEBUG)
 
     except moves.http_client.socket.error:
-        logger.log(
-            u"Please check your NZBget host and port (if it is running). NZBget is not responding to this combination",
-            logger.ERROR)
-        return False
+        msg = 'Please check NZBget host and port (if it is running). NZBget is not responding to these values'
+        logger.log(msg, logger.ERROR)
 
     except moves.xmlrpc_client.ProtocolError as e:
-        if (e.errmsg == "Unauthorized"):
-            logger.log(u"NZBget username or password is incorrect.", logger.ERROR)
+        if 'Unauthorized' == e.errmsg:
+            msg = 'NZBget username or password is incorrect'
+            logger.log(msg, logger.ERROR)
         else:
-            logger.log(u"Protocol Error: " + e.errmsg, logger.ERROR)
-        return False
+            msg = 'Protocol Error: %s' % e.errmsg
+            logger.log(msg, logger.ERROR)
 
-    dupekey = ""
+    return result, msg, rpc_client
+
+
+def send_nzb(nzb, proper=False):
+    result = False
+    add_to_top = False
+    nzbget_prio = 0
+
+    authed, auth_msg, rpc_client = test_nzbget(
+        sickbeard.NZBGET_HOST, sickbeard.NZBGET_USE_HTTPS, sickbeard.NZBGET_USERNAME, sickbeard.NZBGET_PASSWORD)
+
+    if not authed:
+        return authed
+
+    dupekey = ''
     dupescore = 0
     # if it aired recently make it high priority and generate DupeKey/Score
     for curEp in nzb.episodes:
-        if dupekey == "":
-            if curEp.show.indexer == 1:
-                dupekey = "SickGear-" + str(curEp.show.indexerid)
-            elif curEp.show.indexer == 2:
-                dupekey = "SickGear-tvr" + str(curEp.show.indexerid)
-        dupekey += "-" + str(curEp.season) + "." + str(curEp.episode)
-        if datetime.date.today() - curEp.airdate <= datetime.timedelta(days=7):
-            addToTop = True
-            nzbgetprio = sickbeard.NZBGET_PRIORITY
+        if '' == dupekey:
+            dupekey = "SickGear-%s%s" % (
+                sickbeard.indexerApi(curEp.show.indexer).config.get('dupekey', ''), curEp.show.indexerid)
+        dupekey += '-%s.%s' % (curEp.season, curEp.episode)
 
-    if nzb.quality != Quality.UNKNOWN:
+        if datetime.date.today() - curEp.airdate <= datetime.timedelta(days=7):
+            add_to_top = True
+            nzbget_prio = sickbeard.NZBGET_PRIORITY
+
+    if Quality.UNKNOWN != nzb.quality:
         dupescore = nzb.quality * 100
     if proper:
         dupescore += 10
 
     nzbcontent64 = None
-    if nzb.resultType == "nzbdata":
+    if 'nzbdata' == nzb.resultType:
         data = nzb.extraInfo[0]
         nzbcontent64 = standard_b64encode(data)
+    elif 'Anizb' == nzb.provider.name and 'nzb' == nzb.resultType:
+        gen_provider = GenericProvider('')
+        data = gen_provider.get_url(nzb.url)
+        if None is data:
+            return result
+        nzbcontent64 = standard_b64encode(data)
 
-    logger.log(u"Sending NZB to NZBGet: %s" % nzb.name)
-    logger.log(u"NZBGet URL: " + url, logger.DEBUG)
+    logger.log(u'Sending NZB to NZBGet: %s' % nzb.name)
 
     try:
-        # Find out if nzbget supports priority (Version 9.0+), old versions beginning with a 0.x will use the old command
-        nzbget_version_str = nzbGetRPC.version()
-        nzbget_version = helpers.tryInt(nzbget_version_str[:nzbget_version_str.find(".")])
-        if nzbget_version == 0:
-            if nzbcontent64 is not None:
-                nzbget_result = nzbGetRPC.append(nzb.name + ".nzb", sickbeard.NZBGET_CATEGORY, addToTop, nzbcontent64)
-            else:
-                if nzb.resultType == "nzb":
-                    genProvider = GenericProvider("")
-                    data = genProvider.get_url(nzb.url)
-                    if (data == None):
-                        return False
-                    nzbcontent64 = standard_b64encode(data)
-                nzbget_result = nzbGetRPC.append(nzb.name + ".nzb", sickbeard.NZBGET_CATEGORY, addToTop, nzbcontent64)
-        elif nzbget_version == 12:
-            if nzbcontent64 is not None:
-                nzbget_result = nzbGetRPC.append(nzb.name + ".nzb", sickbeard.NZBGET_CATEGORY, nzbgetprio, False,
-                                                 nzbcontent64, False, dupekey, dupescore, "score")
-            else:
-                nzbget_result = nzbGetRPC.appendurl(nzb.name + ".nzb", sickbeard.NZBGET_CATEGORY, nzbgetprio, False,
-                                                    nzb.url, False, dupekey, dupescore, "score")
-        # v13+ has a new combined append method that accepts both (url and content)
-        # also the return value has changed from boolean to integer 
+        # Find out if nzbget supports priority (Version 9.0+), old versions beginning with a 0.x will use the old cmd
+        nzbget_version_str = rpc_client.version()
+        nzbget_version = tryInt(nzbget_version_str[:nzbget_version_str.find('.')])
+
+        # v13+ has a combined append method that accepts both (url and content)
+        # also the return value has changed from boolean to integer
         # (Positive number representing NZBID of the queue item. 0 and negative numbers represent error codes.)
-        elif nzbget_version >= 13:
-            nzbget_result = True if nzbGetRPC.append(nzb.name + ".nzb", nzbcontent64 if nzbcontent64 is not None else nzb.url,
-                                                     sickbeard.NZBGET_CATEGORY, nzbgetprio, False, False, dupekey, dupescore,
-                                                     "score") > 0 else False
+        if 13 <= nzbget_version:
+            nzbget_result = rpc_client.append(
+                '%s.nzb' % nzb.name, (nzbcontent64, nzb.url)[None is nzbcontent64], sickbeard.NZBGET_CATEGORY,
+                nzbget_prio, False, False, dupekey, dupescore, 'score') > 0
+
+        elif 12 == nzbget_version:
+            if nzbcontent64 is not None:
+                nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+                                                  nzbget_prio, False, nzbcontent64, False, dupekey, dupescore, 'score')
+            else:
+                nzbget_result = rpc_client.appendurl('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+                                                     nzbget_prio, False, nzb.url, False, dupekey, dupescore, 'score')
+        elif 0 == nzbget_version:
+            if nzbcontent64 is not None:
+                nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+                                                  add_to_top, nzbcontent64)
+            else:
+                if 'nzb' == nzb.resultType:
+                    gen_provider = GenericProvider('')
+                    data = gen_provider.get_url(nzb.url)
+                    if None is data:
+                        return result
+
+                    nzbcontent64 = standard_b64encode(data)
+                nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+                                                  add_to_top, nzbcontent64)
         else:
             if nzbcontent64 is not None:
-                nzbget_result = nzbGetRPC.append(nzb.name + ".nzb", sickbeard.NZBGET_CATEGORY, nzbgetprio, False,
-                                                 nzbcontent64)
+                nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+                                                  nzbget_prio, False, nzbcontent64)
             else:
-                nzbget_result = nzbGetRPC.appendurl(nzb.name + ".nzb", sickbeard.NZBGET_CATEGORY, nzbgetprio, False,
-                                                    nzb.url)
+                nzbget_result = rpc_client.appendurl('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+                                                     nzbget_prio, False, nzb.url)
 
         if nzbget_result:
-            logger.log(u"NZB sent to NZBget successfully", logger.DEBUG)
-            return True
+            logger.log(u'NZB sent to NZBget successfully', logger.DEBUG)
+            result = True
         else:
-            logger.log(u"NZBget could not add %s to the queue" % (nzb.name + ".nzb"), logger.ERROR)
-            return False
+            logger.log(u'NZBget could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
     except:
-        logger.log(u"Connect Error to NZBget: could not add %s to the queue" % (nzb.name + ".nzb"), logger.ERROR)
-        return False
+        logger.log(u'Connect Error to NZBget: could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
+
+    return result

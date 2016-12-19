@@ -657,10 +657,16 @@ class TVRage:
         """Handles tvrage_instance['seriesname'] calls.
         The dict index should be the show id
         """
+        arg = None
+        if isinstance(key, tuple) and 2 == len(key):
+            key, arg = key
+            if not isinstance(arg, bool):
+                arg = None
+
         if isinstance(key, (int, long)):
             # Item is integer, treat as show id
             if key not in self.shows:
-                self._getShowData(key, True)
+                self._getShowData(key, (True, arg)[arg is not None])
             return None if key not in self.shows else self.shows[key]
 
         key = key.lower()

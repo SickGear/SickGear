@@ -1,4 +1,7 @@
 """Diagnostic functions, mainly for use when doing tech support."""
+
+__license__ = "MIT"
+
 import cProfile
 from StringIO import StringIO
 from HTMLParser import HTMLParser

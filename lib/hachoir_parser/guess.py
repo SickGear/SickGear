@@ -91,6 +91,11 @@ class QueryParser(object):
         parser = self.doparse(stream, fallback)
         if parser is not None:
             stream._cached_parser = weakref.ref(parser)
+        else:
+            try:
+                stream._input.close()
+            except:
+                pass
         return parser
 
     def doparse(self, stream, fallback=True):

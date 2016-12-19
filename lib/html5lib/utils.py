@@ -2,6 +2,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from types import ModuleType
 
+from six import text_type
+
 try:
     import xml.etree.cElementTree as default_etree
 except ImportError:
@@ -9,7 +11,26 @@ except ImportError:
 
 
 __all__ = ["default_etree", "MethodDispatcher", "isSurrogatePair",
-           "surrogatePairToCodepoint", "moduleFactoryFactory"]
+           "surrogatePairToCodepoint", "moduleFactoryFactory",
+           "supports_lone_surrogates"]
+
+
+# Platforms not supporting lone surrogates (\uD800-\uDFFF) should be
+# caught by the below test. In general this would be any platform
+# using UTF-16 as its encoding of unicode strings, such as
+# Jython. This is because UTF-16 itself is based on the use of such
+# surrogates, and there is no mechanism to further escape such
+# escapes.
+try:
+    _x = eval('"\\uD800"')
+    if not isinstance(_x, text_type):
+        # We need this with u"" because of http://bugs.jython.org/issue2039
+        _x = eval('u"\\uD800"')
+        assert isinstance(_x, text_type)
+except:
+    supports_lone_surrogates = False
+else:
+    supports_lone_surrogates = True
 
 
 class MethodDispatcher(dict):
@@ -43,7 +64,7 @@ class MethodDispatcher(dict):
         return dict.get(self, key, self.default)
 
 
-# Some utility functions to dal with weirdness around UCS2 vs UCS4
+# Some utility functions to deal with weirdness around UCS2 vs UCS4
 # python builds
 
 def isSurrogatePair(data):
@@ -70,13 +91,21 @@ def moduleFactoryFactory(factory):
         else:
             name = b"_%s_factory" % baseModule.__name__
 
-        if name in moduleCache:
-            return moduleCache[name]
-        else:
+        kwargs_tuple = tuple(kwargs.items())
+
+        try:
+            return moduleCache[name][args][kwargs_tuple]
+        except KeyError:
             mod = ModuleType(name)
             objs = factory(baseModule, *args, **kwargs)
             mod.__dict__.update(objs)
-            moduleCache[name] = mod
+            if "name" not in moduleCache:
+                moduleCache[name] = {}
+            if "args" not in moduleCache[name]:
+                moduleCache[name][args] = {}
+            if "kwargs" not in moduleCache[name][args]:
+                moduleCache[name][args][kwargs_tuple] = {}
+            moduleCache[name][args][kwargs_tuple] = mod
             return mod
 
     return moduleFactory

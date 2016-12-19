@@ -1,28 +1,32 @@
 #import sickbeard
 #import lib.adba as adba
-#from sickbeard import common
-#from sickbeard import exceptions
-#from sickbeard import scene_exceptions
-#import sickbeard.blackandwhitelist
+#from sickbeard import (blackandwhitelist, common, exceptions, helpers, scene_exceptions)
+#from sickbeard.helpers import anon_url
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'Edit ' + $show.name
-#set global $header = 'Edit ' + $show.name
+#set global $header = $show.name
 #set global $sbPath = '..'
 #set global $topmenu = 'home'
+#set $css = $getVar('css', 'reg')
+#set $has_art = $getVar('has_art', None)
+#set $restart = 'Restart SickGear for new features on this page'
+#set $show_message = (None, $restart)[None is $has_art]
+#set global $page_body_attr = 'edit-show" class="' + $css
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#from urllib import quote_plus
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
+<script>
+	var config = {showLang: '$show.lang', showIsAnime: #echo ('!1','!0')[$show.is_anime]#}
+</script>
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/editShow.js?v=$sbPID"></script>
-<script>
-	var config = {
-		show_lang: "$show.lang",
-		show_isanime: #echo ['!1','!0'][$show.is_anime]#
-	}
-</script>
+<script type="text/javascript" src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
 #if $varExists('header')
-	<h1 class="header">$header</h1>
+	<h1 class="header"><span class="grey-text">Edit&nbsp;</span>$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
@@ -30,209 +34,351 @@
 ##
 #set $html_checked = ' checked="checked"'
 #set $html_disabled = ' disabled="disabled"'
-<form action="editShow" method="post" id="addShowForm">
-<input type="hidden" name="show" value="$show.indexerid">
+<div id="background-container">
+#if $has_art
+	<ul>
+    #for $k, ($image, $rating) in enumerate($fanart)
+		<li class="#echo ' '.join((x for x in ({10:'group', 20:'fave', 30:'avoid'}.get($rating, ''), ('', 'background first-load')[$start_image == $k]) if x)) #" style="background-image:url($sbRoot/showPoster/?show=$show.indexerid&which=fanart_$image)"></li>
+    #end for
+	</ul>
+#end if
+</div>
+#if $show_message
+<div class="alert alert-info">
+	$show_message
+</div>
+#end if
 
-	<div id="editShow" class="stepDiv linefix">
+<div id="config">
+	<div id="config-content" class="linefix container">
+		<form action="editShow" method="post" id="editShow" style="width:894px">
+			<input type="hidden" name="show" id="show" value="$show.indexerid">
+			<input type="hidden" name="indexer" id="indexer" value="$show.indexer">
 
-		<div class="field-pair">
-			<label for="paused">
-				<span class="component-title">Paused</span>
-				<span class="component-desc">
-					<input type="checkbox" name="paused" id="paused"#if 1 == $show.paused then $html_checked else ''#>
-					<p>enable to pause searching providers for show episodes</p>
-				</span>
-			</label>
-		</div>
+			<div id="config-components">
+				<ul>
+					<li><a href="#core-component-group1">Common</a></li>
+					<li><a href="#core-component-group2">Search</a></li>
+					<li><a href="#core-component-group3">Other</a></li>
+				</ul>
 
-		<div class="field-pair">
+				<div id="core-component-group1" class="component-group">
+
+					<div class="field-pair">
+						<label for="paused">
+							<span class="component-title">Pause searching releases</span>
+							<span class="component-desc">
+								<input type="checkbox" name="paused" id="paused"#echo ('', $html_checked)[$show.paused]#>
+								<p>for <b class="boldest grey-text">$show.name</b></p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair#if $sg_str('SHOWLIST_TAGVIEW') != 'custom'# hidden#end if#">
+						<label for="tag">
+							<span class="component-title">Group show under</span>
+							<span class="component-desc">
+								<select name="tag" id="tag" class="form-control form-control-inline input-sm">
+#for $tag in $sg_var('SHOW_TAGS', []):
+									<option value="$tag" #if $tag == $show.tag then 'selected="selected"' else ''#>$tag#echo ('', ' (default)')['Show List' == $tag]#</option>
+#end for
+								</select>
+								<span>on the "Show List" page</span>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<span class="label-container">
+							<span class="component-title">Alternative release name(s)</span>
+							<span class="component-desc">
+								<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200" placeholder="Enter one title here, then 'Add'">
+								<select id="SceneNameSeason" class="form-control form-control-inline input-sm input100" style="#echo ('visibility:hidden','float:left')[$show.anime]#">
+									<option value="-1">Series</option>
+#if $show.anime:
+    #for $season in $seasonResults:
+									<option value="$season[0]">Season $season[0]</option>
+    #end for
+#end if
+								</select>
+								<input class="btn btn-inline" type="button" value="Add" id="addSceneName">
+								<p style="float:left"><span class="add-tip">Enter one.. </span>e.g. Show, Show (2016), or The Show (US)</p>
+								<p class="clear-left note">searching and post-processing require the alternatives if "Show not found" errors are in the logs</p>
+							</span>
+							<span id="SceneException" class="component-desc" style="display:none">
+								<h4 class="grey-text">Alternative a.k.a scene exceptions list (multi-selectable)</h4>
+								<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="input350" style="min-height:90px; float:left" >
+#for $cur_exception_season in $show.exceptions:
+    #for $cur_exception in $show.exceptions[$cur_exception_season]:
+									<option value="$cur_exception_season|$cur_exception">#if $show.is_anime#S#echo ($cur_exception_season, '*')[$cur_exception_season == -1]#: #end if#$cur_exception</option>
+    #end for
+#end for
+								</select>
+								<span><p class="note">#if $show.is_anime#S* = Any series. #end if#The original name is used along<br />with this case insensitive list</p></span>
+								<div>
+									<input id="removeSceneName" value="Remove" class="btn pull-left" type="button" style="margin-top: 10px;"/>
+								</div>
+							</span>
+						</span>
+					</div>
+
+					<div class="field-pair">
+						<label for="rls_ignore_words">
+							<span class="component-title">Ignore result with any word</span>
+							<span class="component-desc">
+								<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="$show.rls_ignore_words" class="form-control form-control-inline input-sm input350">
+								<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
+								<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words or regular expressions</p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="rls_require_words">
+							<span class="component-title">Require at least one word</span>
+							<span class="component-desc">
+								<input type="text" name="rls_require_words" id="rls_require_words" value="$show.rls_require_words" class="form-control form-control-inline input-sm input350">
+								<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
+								<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words or regular expressions</p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
 #set $qualities = $common.Quality.splitQuality(int($show.quality))
 #set global $anyQualities = $qualities[0]
 #set global $bestQualities = $qualities[1]
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
 
 #if $anyQualities + $bestQualities
-			<div class="field-pair show-if-quality-custom">
-				<label for="archive_firstmatch">
-					<span class="component-title">End upgrade on first match</span>
-					<span class="component-desc">
-						<input type="checkbox" name="archive_firstmatch" id="archive_firstmatch"#if $show.archive_firstmatch == 1 then $html_checked else ''#>
-						<p>mark an episode complete after the first best match is found from the <em>Upgrade to</em> quality list</p>
-					</span>
-				</label>
-			</div>
+						<div class="field-pair show-if-quality-custom" style="display:none">
+							<label for="archive_firstmatch">
+								<span class="component-title">Upgrade once</span>
+								<span class="component-desc">
+									<input type="checkbox" name="archive_firstmatch" id="archive_firstmatch"#echo ('', $html_checked)[$show.archive_firstmatch]#>
+									<p>stop upgrading after matching the first best <em>Upgrade to</em> quality</p>
+								</span>
+							</label>
+						</div>
 #end if
-		</div>
+					</div>
 
-		<div class="field-pair">
-			<label for="SceneName">
-				<span class="component-title">Scene exception</span>
-				<span class="component-desc">
-					<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200">
-					<select id="SceneNameSeason" class="form-control form-control-inline input-sm input100" style="#echo ('visibility:hidden','float:left')[$show.anime]#">
-						<option value="-1">Series</option>
-#if $show.anime:
-	#for $season in $seasonResults:
-						<option value="$season[0]">Season $season[0]</option>
-	#end for
+				</div><!-- /component-group1 //-->
+
+				<div id="core-component-group2" class="component-group">
+
+					<div class="field-pair">
+						<label for="air_by_date">
+							<span class="component-title">Air by date release names</span>
+							<span class="component-desc">
+								<input type="checkbox" name="air_by_date" id="air_by_date"#echo ('', $html_checked)[$show.air_by_date]#>
+								<p>#echo ('enable if releases contain dates', 'disable for episodic releases')[$show.air_by_date]#, example: <em class="grey-text">Show.#echo ('03.02.2010', 'S02E03')[$show.air_by_date]#</em></p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="scene">
+							<span class="component-title">Scene numbering</span>
+							<span class="component-desc">
+								<input type="checkbox" name="scene" id="scene"#echo ('', $html_checked)[$show.scene]#>
+								<p>find episodes numbered by release groups instead of the TV network <em class="grey-text">(#if $show_has_scene_map then 'scene/manual numbers' else 'manual numbers only '# available)</em></p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="dvdorder">
+							<span class="component-title">Use DVD titles and numbers</span>
+							<span class="component-desc">
+								<input type="checkbox" name="dvdorder" id="dvdorder"#echo ('', $html_checked)[$show.dvdorder]#>
+								<p>#echo ('enable to use DVD title and episode ordering', 'disable to use TV network title, number and aired order')[$show.dvdorder]#.&nbsp;
+								After changing this setting, a "force full update" is essential, and existing episodes should be manually renamed or replaced with #echo ('DVD', 'network')[$show.dvdorder]# numbered releases</p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="indexerLangSelectEdit">
+							<span class="component-title">Info language</span>
+							<span class="component-desc">
+								<select name="indexerLang" id="indexerLangSelectEdit" class="form-control form-control-inline input-sm"></select>
+								<span>fetch show information in this language</span>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="sports">
+							<span class="component-title">Show is sports</span>
+							<span class="component-desc">
+								<input type="checkbox" name="sports" id="sports"#echo ('', $html_checked)[$show.sports]#>
+								<p>treat this show as a sporting or MMA event</p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="anime">
+							<span class="component-title">Show is anime</span>
+							<span class="component-desc">
+								<input type="checkbox" name="anime" id="anime"#echo ('', $html_checked)[$show.is_anime]#>
+								<p>releases for this show are named like ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
+								#if not $show.is_anime#<span id="anime-options" style="display:none">Update Show then edit again to view additional options here</span>#end if#
+							</span>
+						</label>
+					</div>
+
+#if $show.is_anime
+    #import sickbeard.blackandwhitelist
+    #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
+					<script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
 #end if
-					</select>
-					<input class="btn btn-inline" type="button" value="Add" id="addSceneName">
-#set $addSceneNameText = ('', ' or seasons')[$show.anime]
-					<p class="clear-left note">add alternative release names$addSceneNameText found on search providers for <b class="boldest grey-text">$show.name</b></p>
-				</span>
-				<span class="component-desc">
-					<div id="SceneException">
-						<h4 class="grey-text">Exceptions list (multi-selectable)</h4>
-						<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="input350" style="min-height:90px; float:left" >
-#for $cur_exception_season in $show.exceptions:
-	#for $cur_exception in $show.exceptions[$cur_exception_season]:
-							<option value="$cur_exception_season|$cur_exception">S#echo ($cur_exception_season, '*')[$cur_exception_season == -1]#: $cur_exception</option>
-	#end for
+				</div><!-- /component-group2 //-->
+
+				<div id="core-component-group3" class="component-group">
+
+					<div class="field-pair">
+						<label for="location">
+							<span class="component-title">Location for files</span>
+							<span class="component-desc">
+								<input type="text" name="location" id="location" value="$show._location" class="form-control form-control-inline input-sm input350">
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="flatten_folders">
+							<span class="component-title">Flat folder hierarchy</span>
+							<span class="component-desc">
+								<input type="checkbox" name="flatten_folders" id="flatten_folders"#echo ('', $html_checked)[$show.flatten_folders and not $sg_var('NAMING_FORCE_FOLDERS')]##echo ('', $html_disabled)[$sg_var('NAMING_FORCE_FOLDERS')]#>
+								<p>prevent creating season folders to group files</p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="subtitles">
+							<span class="component-title">Subtitles</span>
+							<span class="component-desc">
+								<input type="checkbox" name="subtitles" id="subtitles"#echo ('', $html_checked)[$show.subtitles and $sg_var('USE_SUBTITLES')]##echo ($html_disabled, '')[$sg_var('USE_SUBTITLES')]#>
+								<p#if not $sg_var('USE_SUBTITLES')# class="grey-text"><del#end if#>download episode subtitles for this show#if not $sg_var('USE_SUBTITLES')#</del> ... (<span class="red-text">note: first <a href="$sbRoot/config/subtitles/">enable the subtitle system here</a></span>)#end if#</p>
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="reset_fanart">
+							<span class="component-title">Reset fanart ratings</span>
+							<span class="component-desc">
+#if $num_ratings
+								<input type="checkbox" name="reset_fanart" id="reset_fanart">
+								<p>delete <span class="grey-text">$num_ratings</span> fanart rating$helpers.maybe_plural($num_ratings) for "<span class="grey-text">$show.name</span>"</p>
+#else
+								<p>no fanart ratings to delete for "<span class="grey-text">$show.name</span>"</p>
+#end if
+								<p>
+								<span class="grey-text">fanart usage:&nbsp;</span>maximum $sg_var('FANART_LIMIT', 3) fanart images downloaded per show, <a href="$sbRoot/config/general/#core-component-group2">change limit</a><br />
+								<span class="grey-text">fanart keys:&nbsp;</span>hold down Ctrl+Alt (mac: Command+Option) and then press any of... left or right to change image, and<br />
+								's' to change and save ratings where 'a'/down = avoid, 'f' = fave, 'g'/up = group (repeat keypress to toggle rating)
+								with the livepanel not in 's'ave mode; up = change view mode, down = toggle translucency
+							</span>
+						</label>
+					</div>
+
+					<div class="field-pair">
+						<label for="idmapping">
+							<span class="component-title">Related show IDs</span>
+							<span class="component-desc">
+								<label for="idmapping">
+									<input id="idmapping" type="checkbox">
+									<span>TV info source IDs (advanced use only)</span>
+								</label>
+							</span>
+						</label>
+					</div>
+
+#set $dev = True
+#set $dev = None
+					<div id="idmapping-options" style="display:#if $dev#--#end if#none">
+#set $is_master_settable = False
+#for $src_id, $src_name in $sickbeard.indexerApi().all_indexers.iteritems()
+    #set $is_master_settable |= ($dev or
+        ($src_id != $show.indexer and $show.ids[$src_id].get('id', 0) > 0 and
+         $src_id in $sickbeard.indexerApi().indexers and not $sickbeard.indexerApi($src_id).config.get('defunct') and
+         $sickbeard.indexerApi($src_id).config.get('active')))
+    #if $is_master_settable
+        #break
+    #end if
 #end for
-						</select>
-						<span><p class="note">this list overrides the original name<br />to search, it doesn't append to it</p></span>
-						<div>
-							<input id="removeSceneName" value="Remove" class="btn pull-left" type="button" style="margin-top: 10px;"/>
+#set $search_name = quote_plus($sickbeard.indexermapper.clean_show_name($show.name))
+#for $src_id, $src_name in $sickbeard.indexerApi().all_indexers.iteritems()
+    #set $ok_src_id = $show.ids[$src_id].get('id', 0) > 0
+    #set $maybe_master = ($src_id != $show.indexer and
+         $src_id in $sickbeard.indexerApi().indexers and not $sickbeard.indexerApi($src_id).config.get('defunct') and
+         $sickbeard.indexerApi($src_id).config.get('active'))
+    #set $settable_master = ($dev or ($ok_src_id and $maybe_master))
+						<div class="field-pair" style="padding:0">
+								<span class="component-title">
+    #if $src_id in $show.ids
+        #set $src_search_url = sickbeard.indexerApi($src_id).config.get('finder')
+        #set $use_search_url = $src_search_url
+        #set $data_link = 'data-'
+        #if $ok_src_id and $sickbeard.indexermapper.MapStatus.NOT_FOUND != $show.ids[$src_id]['status']
+            #set $data_link = ''
+            #set $use_search_url = False
+        #end if
+									<a id="src-mid-$src_id" class="service" style="margin-right:6px" data-search="#if $use_search_url#y#else#n#end if#" #if $src_search_url#data-search-href="$anon_url($src_search_url % $search_name)" data-search-onclick="window.open(this.href, '_blank'); return !1;" data-search-title="Search for show at $src_name" #end if##if $use_search_url#href="$anon_url($src_search_url % $search_name)" onclick="window.open(this.href, '_blank'); return !1;" title="Search for show at $src_name" #end if#$(data_link)href="$anon_url(sickbeard.indexerApi($src_id).config['show_url'], $show.ids[$src_id]['id'])" $(data_link)onclick="window.open(this.href, '_blank'); return !1;" $(data_link)title="View $src_name info in new tab"><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($src_id).config['icon']" /></a>
+    #end if
+									$src_name
+								</span>
+								<span class="component-desc">
+									<input type="text" data-maybe-master="#echo ('0', '1')[bool($maybe_master)]#" name="mid-$src_id" id="#echo ('mid-%s' % $src_id, 'source-id')[$src_id == $show.indexer]#" value="$show.ids.get($src_id, {'id': 0}).get('id')" class="form-control form-control-inline input-sm" #echo ('', $html_disabled)[$src_id == $show.indexer]#>
+    #if $src_id != $show.indexer
+									<label for="lockid-$src_id">
+										<input type="checkbox" name="lockid-$src_id" id="lockid-$src_id"#echo ('', $html_checked)[$show.ids.get($src_id, {'status': $sickbeard.indexermapper.MapStatus.NONE}).get('status') == $sickbeard.indexermapper.MapStatus.NO_AUTOMATIC_CHANGE]#>
+										<p style="padding-left:19px;margin-right:24px">lock this ID</p>
+									</label>
+        #if $settable_master
+									<label for="set-master-$src_id">
+										<input type="radio" name="set-master" id="set-master-$src_id" data-indexer="$src_id" data-indexerid="$show.ids[$src_id].get('id', 0)">set master
+									</label>
+        #end if
+    #else
+									<label for="the-master">
+        #if $is_master_settable
+										<input type="radio" name="set-master" id="the-master" checked>
+        #end if
+										<p#if $is_master_settable# style="padding-left:19px"#end if#>locked master, can't be edited</p>
+									</label>
+    #end if
+								</span>
+						</div>
+#end for
+						<div class="field-pair" style="padding-top:0">
+							<span id="panel-save-get" class="component-desc show">
+								<p>invalid values can break finding episode and TV info</p>
+								<input type="button" value="Save Changes" id="save-mapping" class="btn btn-inline">
+								<p style="float:left;margin-right:6px">or</p>
+								<input type="button" value="Get Defaults" id="reset-mapping" class="btn btn-inline">
+								<p>for unlocked IDs</p>
+							</span>
+							<span id="save-wait" class="component-desc hide">
+								<span><img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" style="margin-right:6px">Saving...</span>
+							</span>
 						</div>
 					</div>
-				</span>
-			</label>
-			<div style="clear:right">&nbsp;</div>
-		</div>
 
-		<div class="field-pair">
-			<label for="rls_ignore_words">
-				<span class="component-title">Ignore result with any word</span>
-				<span class="component-desc">
-					<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="$show.rls_ignore_words" class="form-control form-control-inline input-sm input350">
-					<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
-					<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words or regular expressions</p>
-				</span>
-			</label>
-		</div>
+				</div><!-- /component-group3 //-->
 
-		<div class="field-pair">
-			<label for="rls_require_words">
-				<span class="component-title">Require at least one word</span>
-				<span class="component-desc">
-					<input type="text" name="rls_require_words" id="rls_require_words" value="$show.rls_require_words" class="form-control form-control-inline input-sm input350">
-					<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
-					<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words or regular expressions</p>
-				</span>
-			</label>
-		</div>
+			</div>
 
-		<div class="field-pair">
-			<label for="location">
-				<span class="component-title">Location for files</span>
-				<span class="component-desc">
-					<input type="text" name="location" id="location" value="$show._location" class="form-control form-control-inline input-sm input350">
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair">
-			<label for="flatten_folders">
-				<span class="component-title">Flat folder structure</span>
-				<span class="component-desc">
-					<input type="checkbox" name="flatten_folders" id="flatten_folders"#if 1 == $show.flatten_folders and not $sickbeard.NAMING_FORCE_FOLDERS then $html_checked else ''##if $sickbeard.NAMING_FORCE_FOLDERS then $html_disabled else ''#>
-					<p>enable to prevent creating the folders normally used to group seasons</p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair">
-			<label for="air_by_date">
-				<span class="component-title">Air by date episode names</span>
-				<span class="component-desc">
-					<input type="checkbox" name="air_by_date" id="air_by_date"#if 1 == $show.air_by_date then $html_checked else ''#>
-					<p>enable if episode releases are named ... <em class="grey-text">Show.03.02.2010</em> instead of <em class="grey-text">Show.S02E03</em></p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair">
-			<label for="dvdorder">
-				<span class="component-title">Use DVD order</span>
-				<span class="component-desc">
-					<input type="checkbox" name="dvdorder" id="dvdorder"#if 1 == $show.dvdorder then $html_checked else ''#>
-					<p>for episode titles, numbering etc. instead of the order the show aired on the network</p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair">
-			<label for="scene">
-				<span class="component-title">Scene numbering</span>
-				<span class="component-desc">
-					<input type="checkbox" name="scene" id="scene"#if $show.scene == 1 then $html_checked else ''#>
-					<p>search for episodes numbered by scene groups instead of by the TV network <em class="grey-text">(#if $show_has_scene_map then 'scene/manual numbers' else 'manual numbers only '# available)</em></p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair" style="margin-bottom:10px">
-			<label for="indexerLangSelectEdit">
-				<span class="component-title">Info language</span>
-				<span class="component-desc">
-					<select name="indexerLang" id="indexerLangSelectEdit" class="form-control form-control-inline input-sm"></select>
-					<span>attempt to fetch show data and episode filenames in this language</span>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair">
-			<label for="subtitles">
-				<span class="component-title">Subtitles</span>
-				<span class="component-desc">
-					<input type="checkbox" name="subtitles" id="subtitles"#if 1 == $show.subtitles and $sickbeard.USE_SUBTITLES then $html_checked else ''##if not $sickbeard.USE_SUBTITLES then $html_disabled else ''#>
-					<p#if not $sickbeard.USE_SUBTITLES then ' class="grey-text"><del' else ''#>attempt to download episode subtitles for this show#if not $sickbeard.USE_SUBTITLES then '</del> ... (<span class="red-text">note: first <a href="%s/config/subtitles/">enable the subtitle system here</a></span>)' % $sbRoot else ''#</p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair#if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then ' hidden' else ''#" style="margin-bottom:10px">
-			<label for="tag">
-				<span class="component-title">Show is in group</span>
-				<span class="component-desc">
-					<select name="tag" id="tag" class="form-control form-control-inline input-sm">
-#for $tag in $sickbeard.SHOW_TAGS:
-						<option value="$tag" #if $tag == $show.tag then 'selected="selected"' else ''#>$tag#echo ('', ' (default)')['Show List' == $tag]#</option>
-#end for
-					</select>
-					<span>and is displayed on the show list page under this section</span>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair">
-			<label for="sports">
-				<span class="component-title">Show is sports</span>
-				<span class="component-desc">
-					<input type="checkbox" name="sports" id="sports"#if 1 == $show.sports then $html_checked else ''#>
-					<p>enable to treat this show as a sporting or MMA event</p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair">
-			<label for="anime">
-				<span class="component-title">Show is anime</span>
-				<span class="component-desc">
-					<input type="checkbox" name="anime" id="anime"#if $show.is_anime then $html_checked else ''#>
-					<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
-				</span>
-			</label>
-		</div>
-
-#if $show.is_anime:
-    #import sickbeard.blackandwhitelist
-    #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
-		<script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
-#end if
-		<input type="submit" id="submit" value="Submit" class="btn btn-primary" />
-	</form>
+			<div style="margin-top:15px">
+				<input type="submit" id="submit" value="Update Show" class="btn btn-primary" />
+				<a href="$sbRoot/home/displayShow?show=$show.indexerid" class="btn btn-primary" style="margin-left:10px">Cancel Edit</a>
+			</div>
+		</form>
+	</div>
 </div>
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

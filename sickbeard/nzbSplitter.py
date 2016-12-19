@@ -18,7 +18,6 @@
 
 from __future__ import with_statement
 
-import urllib2
 import xml.etree.cElementTree as etree
 import xml.etree
 import re
@@ -84,7 +83,7 @@ def createNZBString(fileElements, xmlns):
     for curFile in fileElements:
         rootElement.append(stripNS(curFile, xmlns))
 
-    return xml.etree.ElementTree.tostring(rootElement, 'utf-8', 'replace')
+    return xml.etree.ElementTree.tostring(rootElement, 'utf-8')
 
 
 def saveNZB(nzbName, nzbString):
@@ -158,7 +157,7 @@ def splitResult(result):
 
         wantEp = True
         for epNo in parse_result.episode_numbers:
-            if not result.extraInfo[0].wantEpisode(season, epNo, result.quality):
+            if not result.show.wantEpisode(season, epNo, result.quality):
                 logger.log(u"Ignoring result " + newNZB + " because we don't want an episode that is " +
                            Quality.qualityStrings[result.quality], logger.DEBUG)
                 wantEp = False
@@ -169,13 +168,14 @@ def splitResult(result):
         # get all the associated episode objects
         epObjList = []
         for curEp in parse_result.episode_numbers:
-            epObjList.append(result.extraInfo[0].getEpisode(season, curEp))
+            epObjList.append(result.show.getEpisode(season, curEp))
 
         # make a result
         curResult = classes.NZBDataSearchResult(epObjList)
         curResult.name = newNZB
         curResult.provider = result.provider
         curResult.quality = result.quality
+        curResult.show = result.show
         curResult.extraInfo = [createNZBString(separateNZBs[newNZB], xmlns)]
 
         resultList.append(curResult)

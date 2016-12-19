@@ -22,7 +22,7 @@ import time
 import traceback
 
 from . import generic
-from sickbeard import helpers, logger, tvcache
+from sickbeard import helpers, logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -32,7 +32,7 @@ class ShazbatProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'Shazbat')
+        generic.TorrentProvider.__init__(self, 'Shazbat', cache_update_freq=20)
 
         self.url_base = 'https://www.shazbat.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -46,16 +46,12 @@ class ShazbatProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = ShazbatCache(self)
 
     def _authorised(self, **kwargs):
 
         return super(ShazbatProvider, self)._authorised(
-            logged_in=(lambda x=None: '<input type="password"' not in helpers.getURL(
-                self.urls['feeds'], session=self.session)),
-            post_params={'tv_login': self.username, 'tv_password': self.password,
-                         'referer': 'login', 'query': '', 'email': ''})
+            logged_in=(lambda y=None: '<input type="password"' not in helpers.getURL(
+                self.urls['feeds'], session=self.session)), post_params={'tv_login': self.username, 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -102,24 +98,28 @@ class ShazbatProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[0:]:
+                            cells = tr.find_all('td')
+                            if 4 > len(cells):
+                                continue
                             try:
-                                stats = tr.find_all('td')[3].get_text().strip()
+                                head = head if None is not head else self._header_row(tr)
+                                stats = cells[head['leech']].get_text().strip()
                                 seeders, leechers = [(tryInt(x[0], 0), tryInt(x[1], 0)) for x in
                                                      re.findall('(?::(\d+))(?:\W*[/]\W*:(\d+))?', stats) if x[0]][0]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
                                 sizes = [(tryInt(x[0], x[0]), tryInt(x[1], False)) for x in
-                                         re.findall('([\d\.]+\w+)?(?:\s*[\(\[](\d+)[\)\]])?', stats) if x[0]][0]
+                                         re.findall('([\d.]+\w+)?(?:\s*[(\[](\d+)[)\]])?', stats) if x[0]][0]
                                 size = sizes[(0, 1)[1 < len(sizes)]]
 
-                                for element in [x for x in tr.find_all('td')[2].contents[::-1] if unicode(x).strip()]:
+                                for element in [x for x in cells[2].contents[::-1] if unicode(x).strip()]:
                                     if 'NavigableString' in str(element.__class__):
                                         title = unicode(element).strip()
                                         break
 
-                                link = str(tr.find('a', href=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
-                                download_url = self.urls['get'] % link
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -128,13 +128,11 @@ class ShazbatProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
@@ -145,18 +143,6 @@ class ShazbatProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, detail_only=True, scene=False, **kwargs)
-
-
-class ShazbatCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = ShazbatProvider()

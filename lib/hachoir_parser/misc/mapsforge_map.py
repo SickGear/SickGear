@@ -10,7 +10,7 @@ References:
 
 from hachoir_parser import Parser
 from hachoir_core.field import (ParserError,
-    Bit, Bits, UInt8, UInt16, UInt32, UInt64, String, RawBytes,
+    Bit, Bits, UInt8, UInt16, UInt32, Int32, UInt64, String, RawBytes,
     PaddingBits, PaddingBytes,
     Enum, Field, FieldSet, SeekableFieldSet, RootSeekableFieldSet)
 from hachoir_core.endian import LITTLE_ENDIAN, BIG_ENDIAN
@@ -140,6 +140,11 @@ class TileHeader(FieldSet):
 
 class POIData(FieldSet):
     def createFields(self):
+        if self["/have_debug"].value:
+            yield String(self, "signature", 32)
+            if not self['signature'].value.startswith("***POIStart"):
+                raise ValueError
+
         yield IntVbe(self, "lat_diff")
         yield IntVbe(self, "lon_diff")
         yield Bits(self, "layer", 4)
@@ -179,6 +184,11 @@ class SubTileBitmap(FieldSet):
 
 class WayProperties(FieldSet):
     def createFields(self):
+        if self["/have_debug"].value:
+            yield String(self, "signature", 32)
+            if not self['signature'].value.startswith("---WayStart"):
+                raise ValueError
+
         yield UIntVbe(self, "way_data_size")
 
         # WayProperties is split into an outer and an inner field, to allow specifying data size for inner part:
@@ -251,6 +261,11 @@ class TileData(FieldSet):
         self.zoomIntervalCfg = zoomIntervalCfg
 
     def createFields(self):
+        if self["/have_debug"].value:
+            yield String(self, "signature", 32)
+            if not self['signature'].value.startswith("###TileStart"):
+                raise ValueError
+
         yield TileHeader(self, "tile_header", self.zoomIntervalCfg)
 
         numLevels = int(self.zoomIntervalCfg["max_zoom_level"].value - self.zoomIntervalCfg["min_zoom_level"].value) +1
@@ -272,6 +287,11 @@ class ZoomSubFile(SeekableFieldSet):
         self.zoomIntervalCfg = zoomIntervalCfg
 
     def createFields(self):
+        if self["/have_debug"].value:
+            yield String(self, "signature", 16)
+            if self['signature'].value != "+++IndexStart+++":
+                raise ValueError
+
         indexEntries = []
         numTiles = None
         i = 0
@@ -284,13 +304,24 @@ class ZoomSubFile(SeekableFieldSet):
             if numTiles is None:
                 # calculate number of tiles (TODO: better calc this from map bounding box)
                 firstOffset = self["tile_index_entry[0]"]["offset"].value
+                if self["/have_debug"].value:
+                    firstOffset -= 16
                 numTiles = firstOffset / 5
             if i >= numTiles:
                 break
 
-        for indexEntry in indexEntries:
-            self.seekByte(indexEntry["offset"].value, relative=True)
-            yield TileData(self, "tile_data[]", zoomIntervalCfg=self.zoomIntervalCfg)
+        for i, indexEntry in enumerate(indexEntries):
+            offset = indexEntry["offset"].value
+            self.seekByte(offset, relative=True)
+            if i != len(indexEntries) - 1:
+                next_offset = indexEntries[i + 1]["offset"].value
+                size = (next_offset - offset) * 8
+            else:
+                size = self.size - offset * 8
+            if size == 0:
+                # hachoir doesn't support empty field.
+                continue
+            yield TileData(self, "tile_data[%d]" % i, zoomIntervalCfg=self.zoomIntervalCfg, size=size)
 
 
 
@@ -314,10 +345,10 @@ class MapsforgeMapFile(Parser, RootSeekableFieldSet):
         yield UInt32(self, "file_version")
         yield UInt64(self, "file_size")
         yield UInt64(self, "creation_date")
-        yield UInt32(self, "min_lat")
-        yield UInt32(self, "min_lon")
-        yield UInt32(self, "max_lat")
-        yield UInt32(self, "max_lon")
+        yield Int32(self, "min_lat")
+        yield Int32(self, "min_lon")
+        yield Int32(self, "max_lat")
+        yield Int32(self, "max_lon")
         yield UInt16(self, "tile_size")
         yield VbeString(self, "projection")
 

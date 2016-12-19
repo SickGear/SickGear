@@ -14,6 +14,7 @@ from hachoir_core.field import (StaticFieldSet, FieldSet,
 from hachoir_core.text_handler import textHandler, filesizeHandler, hexadecimal
 from hachoir_core.endian import LITTLE_ENDIAN
 from hachoir_parser.common.msdos import MSDOSFileAttr32
+from datetime import timedelta
 
 MAX_FILESIZE = 1000 * 1024 * 1024
 
@@ -63,9 +64,13 @@ def formatRARVersion(field):
     """
     return "%u.%u" % divmod(field.value, 10)
 
-def commonFlags(s):
-    yield Bit(s, "has_added_size", "Additional field indicating additional size")
-    yield Bit(s, "is_ignorable", "Old versions of RAR should ignore this block when copying data")
+def markerFlags(s):
+    yield UInt16(s, "flags", "Marker flags, always 0x1a21")
+
+commonFlags = (
+    (Bit, "is_ignorable", "Old versions of RAR should ignore this block when copying data"),
+    (Bit, "has_added_size", "Additional field indicating additional size"),
+)
 
 class ArchiveFlags(StaticFieldSet):
     format = (
@@ -79,8 +84,8 @@ class ArchiveFlags(StaticFieldSet):
         (Bit, "is_passworded", "Needs a password to be decrypted"),
         (Bit, "is_first_vol", "Whether it is the first volume"),
         (Bit, "is_encrypted", "Whether the encryption version is present"),
-        (NullBits, "internal", 6, "Reserved for 'internal use'")
-    )
+        (NullBits, "internal", 4, "Reserved for 'internal use'"),
+    ) + commonFlags
 
 def archiveFlags(s):
     yield ArchiveFlags(s, "flags", "Archiver block flags")
@@ -135,29 +140,57 @@ class FileFlags(FieldSet):
         yield Bit(self, "is_solid", "Information from previous files is used (solid flag)")
         # The 3 following lines are what blocks more staticity
         yield Enum(Bits(self, "dictionary_size", 3, "Dictionary size"), DICTIONARY_SIZE)
-        for bit in commonFlags(self):
-            yield bit
         yield Bit(self, "is_large", "file64 operations needed")
         yield Bit(self, "is_unicode", "Filename also encoded using Unicode")
         yield Bit(self, "has_salt", "Has salt for encryption")
         yield Bit(self, "uses_file_version", "File versioning is used")
-        yield Bit(self, "has_ext_time", "Extra time ??")
+        yield Bit(self, "has_ext_time", "Extra time info present")
         yield Bit(self, "has_ext_flags", "Extra flag ??")
+        for field in commonFlags:
+            yield field[0](self, *field[1:])
 
 def fileFlags(s):
     yield FileFlags(s, "flags", "File block flags")
 
+class ExtTimeFlags(FieldSet):
+    static_size = 16
+    def createFields(self):
+        for name in ['arctime', 'atime', 'ctime', 'mtime']:
+            yield Bits(self, "%s_count" % name, 2, "Number of %s bytes" % name)
+            yield Bit(self, "%s_onesec" % name, "Add one second to the timestamp?")
+            yield Bit(self, "%s_present" % name, "Is %s extra time present?" % name)
+
 class ExtTime(FieldSet):
     def createFields(self):
-        yield textHandler(UInt16(self, "time_flags", "Flags for extended time"), hexadecimal)
-        flags = self["time_flags"].value
-        for index in xrange(4):
-            rmode = flags >> ((3-index)*4)
-            if rmode & 8:
-                if index:
-                    yield TimeDateMSDOS32(self, "dos_time[]", "DOS Time")
-                if rmode & 3:
-                    yield RawBytes(self, "remainder[]", rmode & 3, "Time remainder")
+        yield ExtTimeFlags(self, "time_flags")
+        for name in ['mtime', 'ctime', 'atime', 'arctime']:
+            if self['time_flags/%s_present' % name].value:
+                if name != 'mtime':
+                    yield TimeDateMSDOS32(self, "%s" % name, "%s DOS timestamp" % name)
+                count = self['time_flags/%s_count' % name].value
+                if count:
+                    yield Bits(self, "%s_remainder" % name, 8 * count, "%s extra precision time (in 100ns increments)" % name)
+
+    def createDescription(self):
+        out = 'Time extension'
+        pieces = []
+        for name in ['mtime', 'ctime', 'atime', 'arctime']:
+            if not self['time_flags/%s_present' % name].value:
+                continue
+
+            if name == 'mtime':
+                basetime = self['../ftime'].value
+            else:
+                basetime = self['%s' % name].value
+            delta = timedelta()
+            if self['time_flags/%s_onesec' % name].value:
+                delta += timedelta(seconds=1)
+            if '%s_remainder'%name in self:
+                delta += timedelta(microseconds=self['%s_remainder' % name].value / 10.0)
+            pieces.append('%s=%s' % (name, basetime + delta))
+        if pieces:
+            out += ': ' + ', '.join(pieces)
+        return out
 
 def specialHeader(s, is_file):
     yield filesizeHandler(UInt32(s, "compressed_size", "Compressed size (bytes)"))
@@ -188,9 +221,9 @@ def specialHeader(s, is_file):
     # Start additional fields from unrar - file only
     if is_file:
         if s["flags/has_salt"].value:
-            yield textHandler(UInt8(s, "salt", "Salt"), hexadecimal)
+            yield RawBytes(s, "salt", 8, "Encryption salt to increase security")
         if s["flags/has_ext_time"].value:
-            yield ExtTime(s, "extra_time", "Extra time info")
+            yield ExtTime(s, "extra_time")
 
 def fileHeader(s):
     return specialHeader(s, True)
@@ -203,9 +236,11 @@ def fileBody(s):
     if size > 0:
         yield RawBytes(s, "compressed_data", size, "File compressed data")
 
-def fileDescription(s):
-    return "File entry: %s (%s)" % \
-           (s["filename"].display, s["compressed_size"].display)
+def fileDescription(tag):
+    def _fileDescription(s):
+        return "%s: %s (%s)" % \
+               (tag, s["filename"].display, s["compressed_size"].display)
+    return _fileDescription
 
 def newSubHeader(s):
     return specialHeader(s, False)
@@ -216,36 +251,31 @@ class EndFlags(StaticFieldSet):
         (Bit, "has_data_crc", "Whether a CRC value is present"),
         (Bit, "rev_space"),
         (Bit, "has_vol_number", "Whether the volume number is present"),
-        (Bits, "unused[]", 4),
-        (Bit, "has_added_size", "Additional field indicating additional size"),
-        (Bit, "is_ignorable", "Old versions of RAR should ignore this block when copying data"),
-        (Bits, "unused[]", 6),
-    )
+        (NullBits, "unused[]", 10),
+    ) + commonFlags
 
 def endFlags(s):
     yield EndFlags(s, "flags", "End block flags")
 
-class BlockFlags(FieldSet):
+class BlockFlags(StaticFieldSet):
     static_size = 16
 
-    def createFields(self):
-        yield textHandler(Bits(self, "unused[]", 8, "Unused flag bits"), hexadecimal)
-        yield Bit(self, "has_added_size", "Additional field indicating additional size")
-        yield Bit(self, "is_ignorable", "Old versions of RAR should ignore this block when copying data")
-        yield Bits(self, "unused[]", 6)
+    format = (
+        (NullBits, "unused[]", 14),
+    ) + commonFlags
 
 class Block(FieldSet):
     BLOCK_INFO = {
         # None means 'use default function'
-        0x72: ("marker", "Archive header", None, None, None),
+        0x72: ("marker", "File format marker", markerFlags, None, None),
         0x73: ("archive_start", "Archive info", archiveFlags, archiveHeader, None),
-        0x74: ("file[]", fileDescription, fileFlags, fileHeader, fileBody),
-        0x75: ("comment[]", "Stray comment", None, commentHeader, commentBody),
+        0x74: ("file[]", fileDescription("File entry"), fileFlags, fileHeader, fileBody),
+        0x75: ("comment[]", "Comment", None, commentHeader, commentBody),
         0x76: ("av_info[]", "Extra information", None, avInfoHeader, avInfoBody),
-        0x77: ("sub_block[]", "Stray subblock", None, newSubHeader, fileBody),
+        0x77: ("sub_block[]", fileDescription("Subblock"), None, newSubHeader, fileBody),
         0x78: ("recovery[]", "Recovery block", None, recoveryHeader, None),
         0x79: ("signature", "Signature block", None, signatureHeader, None),
-        0x7A: ("new_sub_block[]", "Stray new-format subblock", fileFlags,
+        0x7A: ("sub_block[]", fileDescription("New-format subblock"), fileFlags,
                newSubHeader, fileBody),
         0x7B: ("archive_end", "Archive end block", endFlags, None, None),
     }

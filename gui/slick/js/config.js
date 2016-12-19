@@ -30,6 +30,126 @@ $(document).ready(function () {
 		}
 	});
 
+	var idSelect = '#imdb-accounts', idDel = '#imdb-list-del', idInput = '#imdb-url', idOnOff = '#imdb-list-onoff',
+		sel = 'selected', opt = 'option', selOpt = [opt, sel].join(':'),
+		elDropDown = $(idSelect), elDel = $(idDel), elInput = $(idInput), elOnOff = $(idOnOff);
+
+	function accId() {return elDropDown.find(selOpt).val();}
+	function nameList() {return elDropDown.find(selOpt).text();}
+	function isAdd() {return 'new' === accId();}
+	function isOff() {return 0 == nameList().indexOf('(Off) ');}
+	function warnMessage(msg) { elInput.addClass('warning').prop('title', msg); }
+	function all(state) {$([idSelect, idDel, idInput, idOnOff].join()).prop('disabled', 'on' == state ? !1 : !0)}
+	function setOnOff() {elOnOff.val(isAdd() || isOff() ? 'Enable' : 'Disable');}
+	function setLink() {
+		var idView = '#view-list', idLink = '#link-list';
+		return $([idView, idLink].join()).removeClass() &&
+			((isAdd() || isOff()) && $(idLink).addClass('hide') || $(idView).addClass('hide')) &&
+			(!isOff() && $(idLink)
+				.attr('href', sbRoot + '/home/addShows/watchlist_imdb?account=' + accId())
+				.attr('title', 'View ' + nameList()));
+	}
+
+	function defaultControls() {
+		elDel.prop('disabled', isAdd());
+		elInput.removeClass('warning')
+			.val(!isAdd() && accId() || '')
+			.prop('title', isAdd() ? '' : 'Select Add. Use Delete or Disable')
+			.prop('readonly', !isAdd());
+		setOnOff();
+		setLink();
+	}
+
+	function populateSelect(jsonData) {
+		/** @namespace response.accounts */
+		var response = $.parseJSON(jsonData);
+
+		if ('Success' !== response.result) {
+			warnMessage(response.result);
+			return !1;
+		}
+
+		elDropDown.find(opt).slice(1).remove();
+		var i, l, accounts = response.accounts, options = elDropDown.get(0).options;
+		for (i = 0, l = accounts.length; i < l; i = i + 2) {
+			options[options.length] = new Option(accounts[i + 1] +
+				(0 == accounts[i + 1].replace('(Off) ', '').toLowerCase().indexOf('your') ? '' : '\'s') + ' list', accounts[i]);
+			if (0 <= $.trim(elInput.val()).indexOf(accounts[i])) {
+				elDropDown.find(opt).prop(sel, !1);
+				elDropDown.find('option[value="' + accounts[i] + '"]').prop(sel, sel);
+				elInput.val(accounts[i]);
+				elInput.prop('title', 'Select Add. Use Delete or Disable');
+				setOnOff();
+			}
+		}
+		return !0;
+	}
+
+	elDropDown.change(function() {
+		defaultControls();
+	});
+
+	elDel.on('click', function(e) {
+		all('off');
+		$.confirm({
+			'title'		: 'Remove the "' + nameList().replace('\'s', '').replace(' list', '') + '" IMDb Watchlist',
+			'message'	: 'Are you sure you want to remove <span class="footerhighlight">' + nameList() + '</span> ?<br /><br />',
+			'buttons'	: {
+				'Yes'	: {
+					'class'	: 'green',
+					'action': function() {
+						all('off');
+						$.get(sbRoot + '/home/addShows/watchlist_imdb', {
+							'action': elDel.val().toLowerCase(),
+							'select': accId()})
+							.done(function(response) {
+								all('on'); setControls(!populateSelect(response), !1); setOnOff(); })
+							.fail(function() {
+								all('on'); setControls(!0, 'Invalid ID'); setOnOff(); });
+					}
+				},
+				'No'	: {
+					'class'	: 'red',
+					'action': function() { e.preventDefault(); all('on'); defaultControls();}
+				}
+			}
+		});
+	});
+
+	elOnOff.on('click', function(e) {
+		var strList = $.trim(elInput.val());
+
+		elInput.removeClass('warning');
+		if (!strList) {
+			warnMessage('Missing IMDb list Id or URL');
+		} else {
+			all('off');
+			var params = {'action': elOnOff.val().toLowerCase()};
+			if ('enable' == params.action)
+				params.input = strList;
+			else
+				params.select = accId();
+
+			$.get(sbRoot + '/home/addShows/watchlist_imdb', params)
+				.done(function(data) { setControls(!populateSelect(data), !1); })
+				.fail(function() { setControls(!0, 'Failed to load list'); });
+		}
+	});
+
+	function setControls(resetSelect, message) {
+		all('on');
+		if (resetSelect) {
+			if (message)
+				warnMessage(message);
+			var addList = '[value="new"]';
+			elDropDown.find(opt).not(addList).prop(sel, !1);
+			elDropDown.find(opt + addList).prop(sel, sel);
+		}
+		elDel.prop('disabled', isAdd());
+		elInput.prop('readonly', !isAdd());
+		setLink()
+	}
+
 	var ui_update_trim_zero = (function () {
 		var secs = ('00' + new Date().getSeconds().toString()).slice(-2),
 			elSecs = $('#trim_info_seconds'),
@@ -183,6 +303,7 @@ function fetch_branches() {
 					add_option_to_branches(text);
 				});
 				$('#branchCheckout').removeAttr('disabled');
+				$('#branchVersion').find('option[value="' + data['current'] + '"]').attr('selected', 'selected');
 			} else {
 				add_option_to_branches('No branches available');
 			}
@@ -193,14 +314,14 @@ function fetch_branches() {
 }
 
 function add_option_to_pulls(text) {
-	option = $('<option>');
+	var option = $('<option>');
 	option.attr('value', text[1]);
 	option.html(text[0]);
 	option.appendTo('#pullRequestVersion');
 }
 
 function add_option_to_branches(text) {
-	option = $('<option>');
+	var option = $('<option>');
 	option.attr('value', text);
 	option.html(text);
 	option.appendTo('#branchVersion');

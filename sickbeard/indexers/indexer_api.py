@@ -103,9 +103,12 @@ class indexerApi(object):
     def api_params(self):
         if self.indexerID:
             if sickbeard.CACHE_DIR:
-                indexerConfig[self.indexerID]['api_params']['cache'] = os.path.join(sickbeard.CACHE_DIR, 'indexers', self.name)
+                indexerConfig[self.indexerID]['api_params']['cache'] = os.path.join(
+                    sickbeard.CACHE_DIR, 'indexers', self.name)
             if sickbeard.PROXY_SETTING and sickbeard.PROXY_INDEXERS:
-                (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING, indexerConfig[self.indexerID]['base_url'], force=True)
+                (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING,
+                                                           indexerConfig[self.indexerID]['base_url'],
+                                                           force=True)
                 if proxy_address:
                     indexerConfig[self.indexerID]['api_params']['proxy'] = proxy_address
 
@@ -118,8 +121,15 @@ class indexerApi(object):
 
     @property
     def indexers(self):
+        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if not x['mapped_only'])
+
+    @property
+    def all_indexers(self):
+        """
+        return all indexers including mapped only indexers
+        """
         return dict((int(x['id']), x['name']) for x in indexerConfig.values())
 
-
-def get_xem_supported_indexers():
-    return dict((key, value) for (key, value) in indexerConfig.items() if value['xem_origin'])
+    @property
+    def xem_supported_indexers(self):
+        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if x.get('xem_origin'))

@@ -1,48 +1,61 @@
 #import sickbeard
 #from sickbeard.common import Quality, qualityPresets, qualityPresetStrings
 
+#set $html_selected = ' selected="selected"'
 <div class="field-pair">
 	<label for="qualityPreset" class="clearfix">
 #set $overall_quality = $Quality.combineQualities($anyQualities, $bestQualities)
-		<span class="component-title input">Quality</span>
+		<span class="component-title input">Quality to download</span>
 		<span class="component-desc">
 #set $selected = None
 			<select id="qualityPreset" name="quality_preset" class="form-control form-control-inline input-sm">
 				<option value="0">Custom</option>
-#for $curPreset in sorted($qualityPresets):
-				<option value="$curPreset" #if $curPreset == $overall_quality then "selected=\"selected\"" else ""# #if $qualityPresetStrings[$curPreset].endswith("0p") then "style=\"padding-left: 15px;\"" else ""#>$qualityPresetStrings[$curPreset]</option>
+#for $curPreset in $qualityPresets:
+				<option value="$curPreset"#echo ('', $html_selected)[$curPreset == $overall_quality]##echo ('', ' style="padding-left:15px"')[$qualityPresetStrings[$curPreset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$curPreset]]#>$qualityPresetStrings[$curPreset]</option>
 #end for
 			</select>
-			<span>preferred episode quality to download</span>
+			<span>tip: select a quality then "Custom" for a default selection</span>
 		</span>
 	</label>
 </div>
 
 <div id="customQualityWrapper">
-	<div id="customQuality" class="show-if-quality-custom">
-		<div class="component-group-desc">
-			<p>An <em>Initial</em> quality episode must be found before an <em>Upgrade to</em> selection is considered.</p>
+	<div id="customQuality" class="show-if-quality-custom" style="display:none">
+		<div class="component-group-desc tip-text">
+			<p>An <em class="highlight-text">Initial</em> quality downloads before any <em class="highlight-text">Upgrade to</em> selections are considered.</p>
+			<p>Deselect all <em class="highlight-text">Upgrade to</em> qualities to keep the first best <em class="highlight-text">Initial</em> release found.</p>
+			<p>All found <em class="highlight-text">Upgrade to</em> qualities download until the best.</p>
 		</div>
 
 		<span class="component-desc">
-			<div style="float:left; padding-right: 40px">
+			<div style="float:left;padding-right:28px">
 				<h4 class="jumbo">Initial</h4>
 #set $anyQualityList = filter(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
 				<select id="anyQualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)" class="form-control form-control-inline input-sm">
+#set $has_unknown = False
 #for $curQuality in sorted($anyQualityList):
-					<option value="$curQuality" #if $curQuality in $anyQualities then "selected=\"selected\"" else ""#>$Quality.qualityStrings[$curQuality]</option>
+    #set $has_unknown |= ($Quality.UNKNOWN == $curQuality and $curQuality in $anyQualities)
+					<option value="$curQuality"#echo ('', $html_selected)[$curQuality in $anyQualities]#>$Quality.qualityStrings[$curQuality]</option>
 #end for
 				</select>
 			</div>
 
-			<div style="float:left">
+			<div style="float:left;padding-right:20px">
 				<h4 class="jumbo">Upgrade to</h4>
 #set $bestQualityList = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
 				<select id="bestQualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)" class="form-control form-control-inline input-sm">
 #for $curQuality in sorted($bestQualityList):
-					<option value="$curQuality" #if $curQuality in $bestQualities then "selected=\"selected\"" else ""#>$Quality.qualityStrings[$curQuality]</option>
+					<option value="$curQuality"#echo ('', $html_selected)[$curQuality in $bestQualities]#>$Quality.qualityStrings[$curQuality]</option>
 #end for
-				</select>
+				</select><br />
+				<span>Ctrl + Click = toggle a quality</span>
+			</div>
+
+			<div style="line-height:normal;padding-top:50px" id="quality-notes" class="tip-text">
+				<p id="unknown"#if not $has_unknown# style="display:none"#end if#>
+					<em class="highlight-text">Note:</em> Temporarily use 'Unknown' for releases with no recognised quality.
+					Full-time use risks snatching bad releases and wastes API hits.
+				</p>
 			</div>
 		</span>
 	</div>

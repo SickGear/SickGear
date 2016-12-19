@@ -28,7 +28,6 @@ import sickbeard
 
 from sickbeard import logger, helpers, scene_numbering, common, scene_exceptions, encodingKludge as ek, db
 from sickbeard.exceptions import ex
-from sickbeard.common import cpu_presets
 
 
 class NameParser(object):
@@ -109,12 +108,13 @@ class NameParser(object):
 
         for regex in self.compiled_regexes:
             for (cur_regex_num, cur_regex_name, cur_regex) in self.compiled_regexes[regex]:
-                match = cur_regex.match(name)
+                new_name = helpers.remove_non_release_groups(name, 'anime' in cur_regex_name)
+                match = cur_regex.match(new_name)
 
                 if not match:
                     continue
 
-                result = ParseResult(name)
+                result = ParseResult(new_name)
                 result.which_regex = [cur_regex_name]
                 result.score = 0 - cur_regex_num
 
@@ -136,24 +136,40 @@ class NameParser(object):
                     result.season_number = tmp_season
                     result.score += 1
 
-                if 'ep_num' in named_groups:
-                    ep_num = self._convert_number(match.group('ep_num'))
-                    if 'extra_ep_num' in named_groups and match.group('extra_ep_num'):
-                        result.episode_numbers = range(ep_num, self._convert_number(match.group('extra_ep_num')) + 1)
-                        result.score += 1
+                def _process_epnum(captures, capture_names, grp_name, extra_grp_name, ep_numbers, parse_result):
+                    ep_num = self._convert_number(captures.group(grp_name))
+                    extra_grp_name = 'extra_%s' % extra_grp_name
+                    ep_numbers = '%sepisode_numbers' % ep_numbers
+                    if extra_grp_name in capture_names and captures.group(extra_grp_name):
+                        try:
+                            if hasattr(self.showObj, 'getEpisode'):
+                                ep = self.showObj.getEpisode(parse_result.season_number, ep_num)
+                            else:
+                                tmp_show = helpers.get_show(parse_result.series_name, True, False)
+                                if tmp_show and hasattr(tmp_show, 'getEpisode'):
+                                    ep = tmp_show.getEpisode(parse_result.season_number, ep_num)
+                                else:
+                                    ep = None
+                        except:
+                            ep = None
+                        en = ep and ep.name and re.match(r'^\W*(\d+)', ep.name) or None
+                        es = en and en.group(1) or None
+
+                        extra_ep_num = self._convert_number(captures.group(extra_grp_name))
+                        parse_result.__dict__[ep_numbers] = range(ep_num, extra_ep_num + 1) if not (
+                            ep and es and es != captures.group(extra_grp_name)) and (
+                            0 < extra_ep_num - ep_num < 10) else [ep_num]
+                        parse_result.score += 1
                     else:
-                        result.episode_numbers = [ep_num]
-                    result.score += 1
+                        parse_result.__dict__[ep_numbers] = [ep_num]
+                    parse_result.score += 1
+                    return parse_result
+
+                if 'ep_num' in named_groups:
+                    result = _process_epnum(match, named_groups, 'ep_num', 'ep_num', '', result)
 
                 if 'ep_ab_num' in named_groups:
-                    ep_ab_num = self._convert_number(match.group('ep_ab_num'))
-                    if 'extra_ab_ep_num' in named_groups and match.group('extra_ab_ep_num'):
-                        result.ab_episode_numbers = range(ep_ab_num,
-                                                          self._convert_number(match.group('extra_ab_ep_num')) + 1)
-                        result.score += 1
-                    else:
-                        result.ab_episode_numbers = [ep_ab_num]
-                    result.score += 1
+                    result = _process_epnum(match, named_groups, 'ep_ab_num', 'ab_ep_num', 'ab_', result)
 
                 if 'air_year' in named_groups and 'air_month' in named_groups and 'air_day' in named_groups:
                     year = int(match.group('air_year'))
@@ -180,7 +196,7 @@ class NameParser(object):
                     result.score += 1
 
                 if 'release_group' in named_groups:
-                    result.release_group = helpers.remove_non_release_groups(match.group('release_group'))
+                    result.release_group = match.group('release_group')
                     result.score += 1
 
                 if 'version' in named_groups:
@@ -192,6 +208,11 @@ class NameParser(object):
                         result.version = 1
                 else:
                     result.version = -1
+
+                if None is result.season_number and result.episode_numbers and not result.air_date and \
+                        cur_regex_name in ['no_season', 'no_season_general', 'no_season_multi_ep'] and \
+                        re.search(r'(?i)\bpart.?\d{1,2}\b', result.original_name):
+                    result.season_number = 1
 
                 matches.append(result)
 
@@ -220,7 +241,8 @@ class NameParser(object):
                     return best_result
 
                 # get quality
-                best_result.quality = common.Quality.nameQuality(name, show.is_anime)
+                new_name = helpers.remove_non_release_groups(name, show.is_anime)
+                best_result.quality = common.Quality.nameQuality(new_name, show.is_anime)
 
                 new_episode_numbers = []
                 new_season_numbers = []
@@ -338,8 +360,7 @@ class NameParser(object):
                                % (best_result.original_name, str(best_result).decode('utf-8', 'xmlcharrefreplace')),
                                logger.DEBUG)
 
-                # CPU sleep
-                time.sleep(cpu_presets[sickbeard.CPU_PRESET])
+                helpers.cpu_sleep()
 
                 return best_result
 

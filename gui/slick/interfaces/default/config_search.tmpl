@@ -2,14 +2,18 @@
 #from sickbeard import clients
 #from sickbeard.helpers import starify
 ##
-#set global $title = 'Config - Episode Search'
+#set global $title = 'Config - Media Search'
 #set global $header = 'Search Settings'
 #set global $sbPath = '../..'
 #set global $topmenu = 'config'
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
-
+<script>
+<!--
+	var config = {defaultHost: $clients.default_host}
+//-->
+</script>
 <script type="text/javascript" src="$sbRoot/js/configSearch.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
 
@@ -29,16 +33,16 @@
 
 			<div id="config-components">
 				<ul>
-					<li><a href="#core-component-group1">Episode Search</a></li>
-					<li><a href="#core-component-group2">NZB Search</a></li>
-					<li><a href="#core-component-group3">Torrent Search</a></li>
+					<li><a href="#core-component-group1">Media Search</a></li>
+					<li><a href="#core-component-group2">NZB Results</a></li>
+					<li><a href="#core-component-group3">Torrent Results</a></li>
 				</ul>
 
 
 				<div id="core-component-group1" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>Episode Search</h3>
+						<h3>Media Search</h3>
 						<p>How to manage searching with <a href="$sbRoot/config/providers/">providers</a>.</p>
 					</div>
 
@@ -48,7 +52,7 @@
 								<span class="component-title">Download propers</span>
 								<span class="component-desc">
 									<input type="checkbox" name="download_propers" id="download_propers" class="enabler"<%= html_checked if sickbeard.DOWNLOAD_PROPERS == True else '' %>>
-									<p>replace original download with "Proper" or "Repack" if nuked</p>
+									<p>replace original download with 'Proper' or 'Repack' if nuked</p>
 								</span>
 							</label>
 						</div>
@@ -58,10 +62,8 @@
 									<span class="component-title">Check propers every:</span>
 									<span class="component-desc">
 										<select id="check_propers_interval" name="check_propers_interval" class="form-control input-sm">
-#set $check_propers_interval_text = {'daily': "24 hours", '4h': "4 hours", '90m': "90 mins", '45m': "45 mins", '15m': "15 mins"}
-#for $curInterval in ('daily', '4h', '90m', '45m', '15m'):
-    #set $selected = $html_selected if $sickbeard.CHECK_PROPERS_INTERVAL == $curInterval else ''
-											<option value="$curInterval"$selected>$check_propers_interval_text[$curInterval]</option>
+#for $curKey, $curText, $void in $propers_intervals:
+											<option value="$curKey"#echo ('', $html_selected)[$sickbeard.CHECK_PROPERS_INTERVAL == $curKey]#>$curText</option>
 #end for
 										</select>
 									</span>
@@ -75,6 +77,7 @@
 								<span class="component-desc">
 									<input type="text" name="recentsearch_frequency" value="$sickbeard.RECENTSEARCH_FREQUENCY" class="form-control input-sm input75">
 									<p>minutes between checking recent updated shows (minimum $sickbeard.MIN_RECENTSEARCH_FREQUENCY)</p>
+									<p><em class="grey-text">enter 4489 for experimental internal provider frequencies</em></p>
 								</span>
 							</label>
 						</div>
@@ -90,15 +93,33 @@
 						</div>
 
 						<div class="field-pair">
-							<label>
-								<span class="component-title">Backlog search frequency</span>
+							<label for="backlog_nofull">
+								<span class="component-title">Disable auto full backlog</span>
 								<span class="component-desc">
-									<input type="text" name="backlog_frequency" value="$sickbeard.BACKLOG_FREQUENCY" class="form-control input-sm input75">
-									<p>days between full backlog searches (min $sickbeard.MIN_BACKLOG_FREQUENCY, default $sickbeard.DEFAULT_BACKLOG_FREQUENCY, max $sickbeard.MAX_BACKLOG_FREQUENCY)</p>
+									<input type="checkbox" name="backlog_nofull" id="backlog_nofull" class="enabler viewIf"<%= html_checked if sickbeard.BACKLOG_NOFULL == True else '' %>>
+									<p>backlog search manually by setting episodes 'Wanted' or via 'Backlog overview'</p>
 								</span>
 							</label>
 						</div>
 
+						<div class="field-pair" id="content_backlog_nofull">
+							<label>
+								<span class="component-title"><em class="grey-text">Backlog search spread</em></span>
+								<span class="component-desc">
+									<p><em class="grey-text">to access this setting, unselect "<span class="boldest">Disable auto full backlog</span>" search above</em></p>
+								</span>
+							</label>
+						</div>
+						<div class="field-pair hide_if_backlog_nofull">
+							<label>
+								<span class="component-title">Backlog search spread</span>
+								<span class="component-desc">
+									<input type="text" name="backlog_frequency" value="$sickbeard.BACKLOG_FREQUENCY" class="form-control input-sm input75">
+									<p>days to spread full backlog searches over (min $sickbeard.MIN_BACKLOG_FREQUENCY, default $sickbeard.DEFAULT_BACKLOG_FREQUENCY, max $sickbeard.MAX_BACKLOG_FREQUENCY)</p>
+								</span>
+							</label>
+						</div>
+#if $sickbeard.USE_NZBS
 						<div class="field-pair">
 							<label>
 								<span class="component-title">Usenet retention</span>
@@ -108,19 +129,21 @@
 								</span>
 							</label>
 						</div>
-
+#else
+						<input type="hidden" name="usenet_retention" value="$sickbeard.USENET_RETENTION" class="form-control input-sm input75">
+#end if
 						<div class="field-pair">
 							<label>
 								<span class="component-title">Ignore result with any word</span>
 								<span class="component-desc">
-									<input type="text" name="ignore_words" value="$sickbeard.IGNORE_WORDS" class="form-control input-sm input350"><p>(opt: start "regex:")</p>
+									<input type="text" name="ignore_words" value="$sickbeard.IGNORE_WORDS" class="form-control input-sm input350"><p>(opt: start 'regex:')</p>
 									<p class="clear-left note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words</p>
 								</span>
 								<span class="component-title">Shows with custom ignores</span>
 								<span class="component-desc">
 #set $shows = []
 #for $show in $using_rls_ignore_words
-	#set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+    #set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
 #end for
 #if len($using_rls_ignore_words)
 									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
@@ -135,14 +158,14 @@
 							<label>
 								<span class="component-title">Require all these words</span>
 								<span class="component-desc">
-									<input type="text" name="require_words" value="$sickbeard.REQUIRE_WORDS" class="form-control input-sm input350"><p>(opt: start "regex:")</p>
+									<input type="text" name="require_words" value="$sickbeard.REQUIRE_WORDS" class="form-control input-sm input350"><p>(opt: start 'regex:')</p>
 									<p class="clear-left note">ignore search result <em class="grey-text">unless its title contains all</em> of these comma seperated words</p>
 								</span>
 								<span class="component-title">Shows with custom requires</span>
 								<span class="component-desc">
 #set $shows = []
 #for $show in $using_rls_require_words
-	#set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+    #set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
 #end for
 #if len($using_rls_require_words)
 									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
@@ -168,9 +191,19 @@
 								<span class="component-title">Unaired episodes</span>
 								<span class="component-desc">
 									<input type="checkbox" name="search_unaired" id="search_unaired" class="enabler"<%= html_checked if sickbeard.SEARCH_UNAIRED == True else '' %>>
-									<p>process episodes found before their expected airdate (disable if getting fakes)</p>
+									<p>allow episodes that are released early (disable if getting fakes)</p>
 								</span>
 							</label>
+						</div>
+						<div id="content_search_unaired">
+							<div class="field-pair" style="margin-top:-24px">
+								<label for="unaired_recent_search_only">
+									<span class="component-desc">
+										<input type="checkbox" name="unaired_recent_search_only" id="unaired_recent_search_only" class="enabler"<%= html_checked if sickbeard.UNAIRED_RECENT_SEARCH_ONLY == False else '' %>>
+										<p>use specific server api requests to search for early episode releases</p>
+									</span>
+								</label>
+							</div>
 						</div>
 
 						<input type="submit" class="btn config_submitter" value="Save Changes">
@@ -181,7 +214,7 @@
 				<div id="core-component-group2" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>NZB Search</h3>
+						<h3>NZB Results</h3>
 						<p>How to handle NZB search results.</p>
 					</div>
 
@@ -192,7 +225,7 @@
 								<span class="component-title">Search NZBs</span>
 								<span class="component-desc">
 									<input type="checkbox" name="use_nzbs" class="enabler" id="use_nzbs"<%= html_checked if sickbeard.USE_NZBS else '' %>>
-									<p>enable NZB search providers</p></span>
+									<p>enable NZB media providers</p></span>
 							</label>
 						</div>
 
@@ -212,7 +245,7 @@
 							</label>
 						</div>
 
-						<div id="blackhole_settings">
+						<div id="blackhole-settings">
 							<div class="field-pair">
 								<label>
 									<span class="component-title">Black hole folder location</span>
@@ -224,7 +257,7 @@
 							</div>
 						</div>
 
-						<div id="sabnzbd_settings">
+						<div id="sabnzbd-settings">
 							<div class="field-pair">
 								<label>
 									<span class="component-title">SABnzbd server URL</span>
@@ -249,7 +282,7 @@
 								<label>
 									<span class="component-title">SABnzbd password</span>
 									<span class="component-desc">
-										<input type="password" name="sab_password" id="sab_password" value="#echo '*' * len($sickbeard.SAB_PASSWORD)#" class="form-control input-sm input200">
+										<input type="password" autocomplete="nope" name="sab_password" id="sab_password" value="#echo '*' * len($sickbeard.SAB_PASSWORD)#" class="form-control input-sm input200">
 										<p>(blank for none)</p>
 									</span>
 								</label>
@@ -276,7 +309,7 @@
 							</div>
 						</div>
 
-						<div id="nzbget_settings">
+						<div id="nzbget-settings">
 							<div class="field-pair">
 								<label for="nzbget_use_https">
 									<span class="component-title">Connect using HTTPS</span>
@@ -303,7 +336,7 @@
 								<label>
 									<span class="component-title">NZBget username</span>
 									<span class="component-desc">
-										<input type="text" name="nzbget_username" value="$sickbeard.NZBGET_USERNAME" class="form-control input-sm input200">
+										<input type="text" name="nzbget_username" id="nzbget_username" value="$sickbeard.NZBGET_USERNAME" class="form-control input-sm input200">
 										<p>locate in nzbget.conf (default:nzbget)</p>
 									</span>
 								</label>
@@ -313,7 +346,7 @@
 								<label>
 									<span class="component-title">NZBget password</span>
 									<span class="component-desc">
-										<input type="password" name="nzbget_password" id="nzbget_password" value="#echo '*' * len($sickbeard.NZBGET_PASSWORD)#" class="form-control input-sm input200">
+										<input type="password" autocomplete="nope" name="nzbget_password" id="nzbget_password" value="#echo '*' * len($sickbeard.NZBGET_PASSWORD)#" class="form-control input-sm input200">
 										<p>locate in nzbget.conf (default:tegbzn6789)</p>
 									</span>
 								</label>
@@ -368,8 +401,9 @@
 							</div>
 						</div>
 
-						<div class="testNotification" id="testSABnzbd_result">Click below to test</div>
-						<input class="btn" type="button" value="Test SABnzbd" id="testSABnzbd" class="btn test-button">
+						<div class="testNotification" id="test-nzb-result">Click below to test</div>
+						<input type="button" value="Test SABnzbd" id="test_sabnzbd" class="btn test-button sabnzbd">
+						<input type="button" value="Test NZBget" id="test_nzbget" class="btn test-button nzbget">
 						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 
 						</div><!-- /content_use_nzbs //-->
@@ -380,7 +414,7 @@
 				<div id="core-component-group3" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>Torrent Search</h3>
+						<h3>Torrent Results</h3>
 						<p>How to handle Torrent search results.</p>
 					</div>
 
@@ -392,7 +426,7 @@
 								<span class="component-title">Search torrents</span>
 								<span class="component-desc">
 									<input type="checkbox" name="use_torrents" class="enabler" id="use_torrents"<%= html_checked if sickbeard.USE_TORRENTS == True else '' %>>
-									<p>enable torrent search providers</p>
+									<p>enable torrent media providers</p>
 								</span>
 							</label>
 						</div>
@@ -402,16 +436,17 @@
 							<label for="torrent_method">
 								<span class="component-title">Send .torrent files to:</span>
 								<span class="component-desc">
-								<select name="torrent_method" id="torrent_method" class="form-control input-sm">
-#set $torrent_method_text = {'blackhole': "Black hole", 'utorrent': "uTorrent", 'transmission': "Transmission", 'deluge': "Deluge", 'download_station': "Synology DS", 'rtorrent': "rTorrent"}
-#for $curAction in ('blackhole', 'utorrent', 'transmission', 'deluge', 'download_station', 'rtorrent'):
+									<select name="torrent_method" id="torrent_method" class="form-control input-sm">
+#set $torrent_method_text = {'blackhole': "Black hole", 'utorrent': "uTorrent", 'transmission': "Transmission", 'qbittorrent': "qBittorrent", 'deluge': "Deluge", 'download_station': "Synology DS", 'rtorrent': "rTorrent"}
+#for $curAction in ('blackhole', 'deluge', 'qbittorrent', 'rtorrent', 'download_station', 'transmission', 'utorrent'):
     #set $selected = $html_selected if $sickbeard.TORRENT_METHOD == $curAction else ''
-								<option value="$curAction"$selected>$torrent_method_text[$curAction]</option>
+										<option value="$curAction"$selected>$torrent_method_text[$curAction]</option>
 #end for
-								</select>
+									</select>
+								</span>
 							</label>
 
-						<div id="options_torrent_blackhole">
+						<div id="options-torrent-blackhole">
 							<div class="field-pair">
 								<label>
 									<span class="component-title">Black hole folder location</span>
@@ -427,22 +462,22 @@
 							</div>
 						</div>
 
-						<div id="options_torrent_clients">
+						<div id="options-torrent-clients">
 							<div class="field-pair">
 								<label>
-									<span class="component-title" id="host_title">Torrent host:port</span>
+									<span class="component-title" id="host-title">Torrent host:port</span>
 									<span class="component-desc">
 										<input type="text" name="torrent_host" id="torrent_host" value="$sickbeard.TORRENT_HOST" class="form-control input-sm input350">
 										<p class="clear-left note">
-											<span id="host_desc_torrent">URL to your torrent client (e.g. http://localhost:8000/)</span>
-											<span id="host_desc_rtorrent" style="display:none"><b>Note:</b> <i>rTorrent</i> client URLs use e.g. scgi://localhost:5000/</span>
-											<span id="host_desc_deluge" style="display:none">URL to your Deluge WebUI (e.g. http://localhost:8112/)</span>
+											<span id="host-desc-torrent">URL to your torrent client (e.g. <span class="default-host">http://localhost:8000</span>/)</span>
+											<span id="host-desc-deluge" style="display:none">URL to your Deluge WebUI (e.g. <span class="default-host">http://localhost:8112</span>/)</span>
+											<span id="host-desc-rtorrent" style="display:none"><b>Note:</b> <i>rTorrent</i> client URLs use e.g. <span class="default-host">scgi://localhost:5000</span>/</span>
 										</p>
 									</span>
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_verify_cert_option">
+							<div class="field-pair" id="torrent-verify-cert-option">
 								<label for="torrent_verify_cert">
 									<span class="component-title">Verify certificate</span>
 									<span class="component-desc">
@@ -452,9 +487,9 @@
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_username_option">
+							<div class="field-pair" id="torrent-username-option">
 								<label>
-									<span class="component-title" id="username_title">Client username</span>
+									<span class="component-title" id="username-title">Client username</span>
 									<span class="component-desc">
 										<input type="text" name="torrent_username" id="torrent_username" value="$sickbeard.TORRENT_USERNAME" class="form-control input-sm input200">
 										<p>(blank for none)</p>
@@ -464,38 +499,44 @@
 
 							<div class="field-pair">
 								<label>
-									<span class="component-title" id="password_title">Client password</span>
+									<span class="component-title" id="password-title">Client password</span>
 									<span class="component-desc">
-										<input type="password" name="torrent_password" id="torrent_password" value="#echo '*' * len($sickbeard.TORRENT_PASSWORD)#" class="form-control input-sm input200">
+										<input type="password" autocomplete="nope" name="torrent_password" id="torrent_password" value="#echo '*' * len($sickbeard.TORRENT_PASSWORD)#" class="form-control input-sm input200">
 										<p>(blank for none)</p>
 									</span>
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_label_option">
+							<div class="field-pair" id="torrent-label-option">
 								<label>
-									<span class="component-title">Add label to torrent</span>
+									<span class="component-title">Set torrent label<span class="qbittorrent">/category</span></span>
 									<span class="component-desc">
 										<input type="text" name="torrent_label" id="torrent_label" value="$sickbeard.TORRENT_LABEL" class="form-control input-sm input200">
-										<span id="label_warning_deluge" style="display:none"><p>(blank spaces are not allowed)</p>
+										<span id="label-warning-deluge" style="display:none"><p>(blank spaces are not allowed)</p>
 											<p class="clear-left note">note: label plugin must be enabled in Deluge clients</p>
 										</span>
+										<span class="qbittorrent" style="display:none"><p>(qB 3.3.1 and newer clients)</p></span>
 									</span>
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_path_option">
+							<div class="field-pair" id="torrent-path-option">
 								<label>
-									<span class="component-title" id="directory_title">Downloaded files location</span>
+									<span class="component-title">Downloaded files location</span>
 									<span class="component-desc">
 										<input type="text" name="torrent_path" id="torrent_path" value="$sickbeard.TORRENT_PATH" class="form-control input-sm input350">
-										<p class="clear-left note">where <span id="torrent_client">the torrent client</span> will save downloaded files (blank for client default)
-											<span id="path_synology"> <b>note:</b> the destination has to be a shared folder for Synology DS</span></p>
+										<p class="clear-left note">
+											where <span id="torrent-client">the torrent client</span> will save files
+											<span class="qbittorrent">(blank otherwise set will ignore label/category)</span>
+											<span id="path-blank">(blank for client default)</span>
+											<span class="synology"> <b>note:</b> the destination has to be a shared folder for Synology DS</span>
+											<span class="transmission grey-text"> (v2.92 and newer should <em>not</em> be blank)</span>
+										</p>
 									</span>
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_seed_time_option">
+							<div class="field-pair" id="torrent-seed-time-option">
 								<label>
 									<span class="component-title">Seed time (minimum default)</span>
 									<span class="component-desc"><input type="number" step="0.1" name="torrent_seed_time" id="torrent_seed_time" value="$sickbeard.TORRENT_SEED_TIME" class="form-control input-sm input100">
@@ -503,7 +544,7 @@
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_paused_option">
+							<div class="field-pair" id="torrent-paused-option">
 								<label>
 									<span class="component-title">Start torrent paused</span>
 									<span class="component-desc">
@@ -513,7 +554,7 @@
 								</label>
 							</div>
 
-							<div class="field-pair" id="torrent_high_bandwidth_option">
+							<div class="field-pair" id="torrent-high-bandwidth-option">
 								<label>
 									<span class="component-title">Allow high bandwidth</span>
 									<span class="component-desc">
@@ -523,8 +564,8 @@
 								</label>
 							</div>
 
-							<div class="testNotification" id="test_torrent_result">Click below to test</div>
-							<input class="btn" type="button" value="Test Connection" id="test_torrent" class="btn test-button">
+							<div class="testNotification" id="test-torrent-result">Click below to test</div>
+							<input type="button" value="Test Connection" id="test_torrent" class="btn test-button">
 							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 							</div>
 					</div><!-- /content_use_torrents //-->
@@ -545,11 +586,11 @@
 
 <script type="text/javascript" charset="utf-8">
 <!--
-    jQuery('#config-components').tabs();
-    jQuery('#nzb_dir').fileBrowser({ title: 'Select .nzb black hole/watch location' });
-    jQuery('#torrent_dir').fileBrowser({ title: 'Select .torrent black hole/watch location' });
-    jQuery('#torrent_path').fileBrowser({ title: 'Select .torrent download location' });
-    jQuery('#tv_download_dir').fileBrowser({ title: 'Select TV download location' });
+	jQuery('#config-components').tabs();
+	jQuery('#nzb_dir').fileBrowser({ title: 'Select .nzb black hole/watch location' });
+	jQuery('#torrent_dir').fileBrowser({ title: 'Select .torrent black hole/watch location' });
+	jQuery('#torrent_path').fileBrowser({ title: 'Select .torrent download location' });
+	jQuery('#tv_download_dir').fileBrowser({ title: 'Select TV download location' });
 //-->
 </script>
 

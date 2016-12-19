@@ -89,7 +89,7 @@ def change_LOG_DIR(log_dir, web_log):
             sickbeard.ACTUAL_LOG_DIR = os.path.normpath(log_dir)
             sickbeard.LOG_DIR = abs_log_dir
 
-            logger.sb_log_instance.initLogging()
+            logger.sb_log_instance.init_logging()
             logger.log(u'Initialized new log file in %s' % sickbeard.LOG_DIR)
             log_dir_changed = True
 
@@ -420,7 +420,7 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
     else:
         logger.log('%s -> ******' % item_name, logger.DEBUG)
 
-    return my_val
+    return (my_val, def_val)['None' == my_val]
 
 
 class ConfigMigrator():
@@ -740,7 +740,6 @@ class ConfigMigrator():
     def _migrate_v8(self):
         # removing settings from gui and making it a hidden debug option
         sickbeard.RECENTSEARCH_STARTUP = False
-        sickbeard.BACKLOG_STARTUP = False
 
     def _migrate_v9(self):
         sickbeard.PUSHBULLET_ACCESS_TOKEN = check_setting_str(self.config_obj, 'Pushbullet', 'pushbullet_api', '')

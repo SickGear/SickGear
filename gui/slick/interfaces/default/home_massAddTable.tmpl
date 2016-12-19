@@ -1,3 +1,4 @@
+#import re
 #import sickbeard
 #from sickbeard.helpers import anon_url
 
@@ -31,24 +32,24 @@
         #set $indexer = $curDir['existing_info'][2]
     #end if
 
-	#set $indexer = $sickbeard.INDEXER_DEFAULT
-
-#*
     #set $indexer = 0
-    #if $curDir['existing_info'][0]
+    #if $curDir['existing_info'][0] and $sickbeard.indexerApi($curDir['existing_info'][2]).config.get('active')
         #set $indexer = $curDir['existing_info'][2]
     #elif 0 < $sickbeard.INDEXER_DEFAULT
         #set $indexer = $sickbeard.INDEXER_DEFAULT
     #end if
-*#
+
 		<tr>
 			<td class="col-checkbox">
 				<input type="checkbox" id="$show_id" class="dirCheck" checked=checked>
 			</td>
 			<td>
 				<label for="$show_id">
-					<span class="filepath#echo ('', ' red-text')[$curDir['highlight']]#">$curDir['path']</span>$curDir['name']
-					#echo ('', '<br />^ <span class="red-text">... (cannot add, this location is in use)</span>')[$curDir['highlight']]#
+    #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curDir['name']), $curDir['name'])[$sickbeard.SORT_ARTICLE]
+					<span class="filepath#if $curDir['highlight']# red-text#end if#">$curDir['path']</span>$display_name
+    #if $curDir['highlight']
+					<br />^ <span class="red-text">... (cannot add, this location is in use)</span>
+    #end if
 				</label>
 			</td>
     #if $curDir['existing_info'][1] and $indexer > 0
@@ -61,9 +62,9 @@
 			<td align="center">
 				<select name="indexer">
     #for $curIndexer in $sickbeard.indexerApi().indexers.items()
-					#if $curIndexer[0] == $sickbeard.INDEXER_DEFAULT
+        #if $sickbeard.indexerApi($curIndexer[0]).config.get('active')
 					<option value="$curIndexer[0]" #if $curIndexer[0] == $indexer then 'selected="selected"' else ''#>$curIndexer[1]</option>
-					#end if
+        #end if
     #end for
 				</select>
 			</td>

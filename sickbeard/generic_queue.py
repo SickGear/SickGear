@@ -26,6 +26,7 @@ class QueuePriorities:
     LOW = 10
     NORMAL = 20
     HIGH = 30
+    VERYHIGH = 40
 
 
 class GenericQueue(object):

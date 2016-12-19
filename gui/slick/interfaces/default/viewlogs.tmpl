@@ -2,28 +2,35 @@
 #from sickbeard import classes
 #from sickbeard.common import *
 #from sickbeard.logger import reverseNames
+#from sickbeard.helpers import maybe_plural
 ##
 #set global $header = 'Log File'
 #set global $title = 'Logs'
 #set global $sbPath = '..'
 #set global $topmenu = 'errorlogs'
+#set $log_level_var = None is $getVar('min_level', None) and 'minLevel' or 'min_level'
+#set $log_level = $getVar($log_level_var, 20)
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
-#else 
+#else
 	<h1 class="title">$title</h1>
 #end if
 
-<div class="h2footer pull-right">Minimum logging level to display:
+<div class="h2footer pull-right">
 	<select name="minLevel" id="minLevel" class="form-control form-control-inline input-sm">
 #set $levels = $reverseNames.keys()
 #set void = $levels.sort(lambda x,y: cmp($reverseNames[$x], $reverseNames[$y]))
+#set $level_count = len($levels)
 #for $level in $levels
-		<option value="$reverseNames[$level]" #if $minLevel == $reverseNames[$level] then 'selected="selected"' else ''#>$level.title()</option>
+    #set $level_count -= 1
+    #set $level_text = '%s%s' % ($level.title(), (('', ' only')[0 == $level_count], ' and the next%s level%s' % ((' ' + str($level_count), '')[1 == $level_count], maybe_plural($level_count)))[0 < $level_count])
+		<option value="$reverseNames[$level]"#if $log_level == $reverseNames[$level]# selected="selected" class="selected"#end if#>$level_text</option>
 #end for
+
 	</select>
 </div>
 
@@ -35,7 +42,7 @@
 <!--
 \$(document).ready(function(){
 	\$('#minLevel').change(function(){
-		window.location.href = '$sbRoot/errorlogs/viewlog/?minLevel=' + \$(this).val()
+		window.location.href = '$sbRoot/errorlogs/viewlog/?$log_level_var=' + \$(this).val()
 	});
 
     window.setInterval('location.reload(true)', 600000); // Refresh every 10 minutes

@@ -1,10 +1,18 @@
 Libs with customisations...
 
 /lib/cachecontrol/caches/file_cache.py
+/lib/dateutil/zoneinfo/__init__.py
 /lib/hachoir_core/config.py
+/lib/hachoir_core/stream/input_helpers.py
+/lib/hachoir_metadata/jpeg.py
+/lib/hachoir_metadata/metadata.py
+/lib/hachoir_metadata/riff.py
+/lib/hachoir_parser/guess.py
+/lib/lockfile/mkdirlockfile.py
 /lib/pynma/pynma.py
 /lib/requests/packages/urllib3/connectionpool.py
 /lib/requests/packages/urllib3/util/ssl_.py
-/tornado
-/lib/unrar2/unix.py
-/lib/tvdb/tvdb_api.py
+/lib/tmdb_api/tmdb_api.py
+/lib/tornado
+/lib/tvdb_api/tvdb_api.py
+/lib/tzlocal/unix.py

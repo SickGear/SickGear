@@ -45,6 +45,8 @@ def send_nzb(nzb):
         if 1 == nzb.priority:
             params['priority'] = 1
 
+        params['nzbname'] = '%s.nzb' % nzb.name
+
         kwargs = {}
         # if it's a normal result we just pass SAB the URL
         if 'nzb' == nzb.resultType:

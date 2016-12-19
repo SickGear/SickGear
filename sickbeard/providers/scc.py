@@ -20,7 +20,7 @@ import time
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -31,22 +31,20 @@ class SCCProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'SceneAccess')
 
-        self.url_base = 'https://sceneaccess.eu/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'login',
-                     'search': self.url_base + 'browse?search=%s&method=1&c27=27&c17=17&c11=11',
-                     'nonscene': self.url_base + 'nonscene?search=%s&method=1&c44=44&c45=44',
-                     'archive': self.url_base + 'archive?search=%s&method=1&c26=26',
-                     'get': self.url_base + '%s'}
+        self.url_home = ['https://sceneaccess.%s/' % u for u in 'eu', 'org']
 
-        self.url = self.urls['config_provider_home_uri']
+        self.url_vars = {
+            'login_action': 'login', 'search': 'browse?search=%s&method=1&c27=27&c17=17&c11=11', 'get': '%s',
+            'nonscene': 'nonscene?search=%s&method=1&c44=44&c45=44', 'archive': 'archive?search=%s&method=1&c26=26'}
+        self.url_tmpl = {
+            'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',  'search': '%(home)s%(vars)s',
+            'get': '%(home)s%(vars)s', 'nonscene': '%(home)s%(vars)s', 'archive': '%(home)s%(vars)s'}
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = SCCCache(self)
 
     def _authorised(self, **kwargs):
 
-        return super(SCCProvider, self)._authorised(post_params={'submit': 'come+on+in'})
+        return super(SCCProvider, self)._authorised(post_params={'form_tmpl': 'method'})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -78,7 +76,7 @@ class SCCProvider(generic.TorrentProvider):
                             raise generic.HaltParseException
 
                         with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                            torrent_table = soup.find('table', attrs={'id': 'torrents-table'})
+                            torrent_table = soup.find(id='torrents-table')
                             torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                             if 2 > len(torrent_rows):
@@ -87,17 +85,14 @@ class SCCProvider(generic.TorrentProvider):
                             for tr in torrent_table.find_all('tr')[1:]:
                                 try:
                                     seeders, leechers, size = [tryInt(n, n) for n in [
-                                        tr.find('td', attrs={'class': x}).get_text().strip()
-                                        for x in ('ttr_seeders', 'ttr_leechers', 'ttr_size')]]
+                                        tr.find('td', class_='ttr_' + x).get_text().strip()
+                                        for x in 'seeders', 'leechers', 'size']]
                                     if self._peers_fail(mode, seeders, leechers):
                                         continue
 
                                     info = tr.find('a', href=rc['info'])
-                                    title = ('title' in info.attrs and info['title']) or info.get_text().strip()
-
-                                    link = str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-                                    download_url = self.urls['get'] % link
-
+                                    title = (info.attrs.get('title') or info.get_text()).strip()
+                                    download_url = self._link(tr.find('a', href=rc['get'])['href'])
                                 except (AttributeError, TypeError, ValueError):
                                     continue
 
@@ -106,31 +101,17 @@ class SCCProvider(generic.TorrentProvider):
 
                     except generic.HaltParseException:
                         time.sleep(1.1)
-                    except Exception:
+                    except (StandardError, Exception):
                         logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                     self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
-
-
-class SCCCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = SCCProvider()

@@ -19,7 +19,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -28,25 +28,22 @@ from lib.unidecode import unidecode
 class TorrentBytesProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'TorrentBytes')
+        generic.TorrentProvider.__init__(self, 'TorrentBytes', cache_update_freq=20)
 
-        self.url_base = 'https://www.torrentbytes.net/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
-                     'search': self.url_base + 'browse.php?search=%s&%s',
-                     'get': self.url_base + '%s'}
+        self.url_home = ['https://www.torrentbytes.net/']
 
-        self.categories = {'shows': [41, 33, 38, 32, 37]}
+        self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&%s', 'get': '%s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
+                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
-        self.url = self.urls['config_provider_home_uri']
+        self.categories = {'Season': [41, 32], 'Episode': [33, 37, 38]}
+        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = TorrentBytesCache(self)
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(TorrentBytesProvider, self)._authorised(post_params={'login': 'Log in!'})
+        return super(TorrentBytesProvider, self)._authorised(post_params={'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -56,12 +53,12 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download', 'fl': '\[\W*F\W?L\W*\]'
-                                                             }.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download',
+                                                             'fl': '\[\W*F\W?L\W*\]'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                search_url = self.urls['search'] % (search_string, self._categories_string())
+                search_url = self.urls['search'] % (search_string, self._categories_string(mode))
 
                 html = self.get_url(search_url, timeout=90)
 
@@ -77,19 +74,23 @@ class TorrentBytesProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 5 > len(cells):
+                                continue
                             try:
                                 info = tr.find('a', href=rc['info'])
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -4)]]
-                                if self.freeleech and (len(info.contents) < 2 or not rc['fl'].search(info.contents[1].string.strip())) \
-                                        or self._peers_fail(mode, seeders, leechers):
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                if self.freeleech and (len(info.contents) < 2 or not rc['fl'].search(
+                                        info.contents[1].string.strip())) or self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                title = 'title' in info.attrs and info.attrs['title'] or info.contents[0]
-                                title = (isinstance(title, list) and title[0] or title).strip()
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
-                            except (AttributeError, TypeError, ValueError):
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
+                            except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
                             if title and download_url:
@@ -97,28 +98,14 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-
-class TorrentBytesCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = TorrentBytesProvider()

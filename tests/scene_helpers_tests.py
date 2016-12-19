@@ -29,7 +29,7 @@ class SceneTests(test.SickbeardTestDBCase):
 
     def test_allPossibleShowNames(self):
         # common.sceneExceptions[-1] = ['Exception Test']
-        my_db = db.DBConnection('cache.db')
+        my_db = db.DBConnection()
         my_db.action('INSERT INTO scene_exceptions (indexer_id, show_name, season) VALUES (?,?,?)', [-1, 'Exception Test', -1])
         common.countryList['Full Country Name'] = 'FCN'
 
@@ -84,7 +84,7 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
 
     def test_sceneExceptionsResetNameCache(self):
         # clear the exceptions
-        my_db = db.DBConnection('cache.db')
+        my_db = db.DBConnection()
         my_db.action('DELETE FROM scene_exceptions')
 
         # put something in the cache

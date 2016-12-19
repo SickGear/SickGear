@@ -19,7 +19,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -28,7 +28,7 @@ from lib.unidecode import unidecode
 class BitmetvProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'BitMeTV')
+        generic.TorrentProvider.__init__(self, 'BitMeTV', cache_update_freq=7)
 
         self.url_base = 'http://www.bitmetv.org/'
 
@@ -42,14 +42,13 @@ class BitmetvProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.digest, self.minseed, self.minleech = 3 * [None]
-        self.cache = BitmetvCache(self)
 
     def _authorised(self, **kwargs):
 
         return super(BitmetvProvider, self)._authorised(
-            logged_in=(lambda x=None: (None is x or 'Other Links' in x) and self.has_all_cookies() and
+            logged_in=(lambda y=None: (None is y or 'Other Links' in y) and self.has_all_cookies() and
                        self.session.cookies['uid'] in self.digest and self.session.cookies['pass'] in self.digest),
-            failed_msg=(lambda x=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -63,9 +62,7 @@ class BitmetvProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                category = 'cat=%s' % self.categories[
-                    (mode in ['Season', 'Episode'] and self.show and self.show.is_anime) and 'anime' or 'shows']
-                search_url = self.urls['search'] % (category, search_string)
+                search_url = self.urls['search'] % (self._categories_string(mode, 'cat=%s'), search_string)
 
                 html = self.get_url(search_url)
 
@@ -81,16 +78,21 @@ class BitmetvProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 6 > len(cells):
+                                continue
                             try:
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-3, -2, -5)]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
-                                download_url = self.urls['get'] % tr.find('a', href=rc['get']).get('href')
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -99,14 +101,12 @@ class BitmetvProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
@@ -114,18 +114,6 @@ class BitmetvProvider(generic.TorrentProvider):
     def ui_string(key):
 
         return 'bitmetv_digest' == key and 'use... \'uid=xx; pass=yy\'' or ''
-
-
-class BitmetvCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 7  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = BitmetvProvider()

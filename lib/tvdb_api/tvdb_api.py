@@ -5,8 +5,8 @@
 # repository:http://github.com/dbr/tvdb_api
 # license:unlicense (http://unlicense.org/)
 
-from functools import wraps
 import traceback
+from functools import wraps
 
 __author__ = 'dbr/Ben'
 __version__ = '1.9'
@@ -21,12 +21,6 @@ import logging
 import zipfile
 import requests
 import requests.exceptions
-import xmltodict
-
-try:
-    import xml.etree.cElementTree as ElementTree
-except ImportError:
-    import xml.etree.ElementTree as ElementTree
 
 try:
     import gzip
@@ -36,16 +30,15 @@ except ImportError:
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
 
+from lib.etreetodict import ConvertXmlToDict
 from tvdb_ui import BaseUI, ConsoleUI
 from tvdb_exceptions import (tvdb_error, tvdb_shownotfound,
                              tvdb_seasonnotfound, tvdb_episodenotfound, tvdb_attributenotfound)
 
-
-def log():
-    return logging.getLogger('tvdb_api')
+from sickbeard import logger
 
 
-def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
+def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logr=None):
     """Retry calling the decorated function using an exponential backoff.
 
     http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
@@ -61,8 +54,8 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
     :param backoff: backoff multiplier e.g. value of 2 will double the delay
         each retry
     :type backoff: int
-    :param logger: logger to use. If None, print
-    :type logger: logging.Logger instance
+    :param logr: logger to use. If None, print
+    :type logr: logging.Logger instance
     """
 
     def deco_retry(f):
@@ -74,9 +67,9 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
                 try:
                     return f(*args, **kwargs)
                 except ExceptionToCheck, e:
-                    msg = '%s, Retrying in %d seconds...' % (str(e), mdelay)
-                    if logger:
-                        logger.warning(msg)
+                    msg = 'TVDB_API :: %s, Retrying in %d seconds...' % (str(e), mdelay)
+                    if logr:
+                        logger.log(msg, logger.WARNING)
                     else:
                         print msg
                     time.sleep(mdelay)
@@ -173,9 +166,9 @@ class Show(dict):
         Search terms are converted to lower case (unicode) strings.
 
         # Examples
-        
+
         These examples assume t is an instance of Tvdb():
-        
+
         >> t = Tvdb()
         >>
 
@@ -523,6 +516,9 @@ class Tvdb:
         self.config['url_seriesBanner'] = u'%(base_url)s/api/%(apikey)s/series/%%s/banners.xml' % self.config
         self.config['url_artworkPrefix'] = u'%(base_url)s/banners/%%s' % self.config
 
+    def log(self, msg, log_level=logger.DEBUG):
+        logger.log('TVDB_API :: %s' % (msg.replace(self.config['apikey'], '<apikey>')), log_level=log_level)
+
     @staticmethod
     def _get_temp_dir():
         """Returns the [system temp dir]/tvdb_api-u501 (or
@@ -541,7 +537,7 @@ class Tvdb:
 
     @retry(tvdb_error)
     def _load_url(self, url, params=None, language=None):
-        log().debug('Retrieving URL %s' % url)
+        self.log('Retrieving URL %s' % url)
 
         session = requests.session()
 
@@ -549,7 +545,7 @@ class Tvdb:
             session = CacheControl(session, cache=caches.FileCache(self.config['cache_location']))
 
         if self.config['proxy']:
-            log().debug('Using proxy for URL: %s' % url)
+            self.log('Using proxy for URL: %s' % url)
             session.proxies = {'http': self.config['proxy'], 'https': self.config['proxy']}
 
         session.headers.update({'Accept-Encoding': 'gzip,deflate'})
@@ -565,34 +561,33 @@ class Tvdb:
         except Exception:
             raise tvdb_error('Unknown exception while loading URL %s: %s' % (url, traceback.format_exc()))
 
-        def process(path, key, value):
-            key = key.lower()
-
-            # clean up value and do type changes
-            if value:
-                if 'firstaired' == key:
-                    try:
-                        value = parse(value, fuzzy=True).strftime('%Y-%m-%d')
-                    except:
-                        value = None
-
-            return key, value
+        def process_data(data):
+            te = ConvertXmlToDict(data)
+            if isinstance(te, dict) and 'Data' in te and isinstance(te['Data'], dict) \
+                    and 'Series' in te['Data'] and isinstance(te['Data']['Series'], dict) \
+                    and 'FirstAired' in te['Data']['Series']:
+                try:
+                    value = parse(te['Data']['Series']['FirstAired'], fuzzy=True).strftime('%Y-%m-%d')
+                except (StandardError, Exception):
+                    value = None
+                te['Data']['Series']['firstaired'] = value
+            return te
 
         if resp.ok:
             if 'application/zip' in resp.headers.get('Content-Type', ''):
                 try:
                     # TODO: The zip contains actors.xml and banners.xml, which are currently ignored [GH-20]
-                    log().debug('We recived a zip file unpacking now ...')
+                    self.log('We received a zip file unpacking now ...')
                     zipdata = StringIO.StringIO()
                     zipdata.write(resp.content)
                     myzipfile = zipfile.ZipFile(zipdata)
-                    return xmltodict.parse(myzipfile.read('%s.xml' % language), postprocessor=process)
+                    return process_data(myzipfile.read('%s.xml' % language))
                 except zipfile.BadZipfile:
                     raise tvdb_error('Bad zip file received from thetvdb.com, could not read it')
             else:
                 try:
-                    return xmltodict.parse(resp.content.strip(), postprocessor=process)
-                except:
+                    return process_data(resp.content.strip())
+                except (StandardError, Exception):
                     return dict([(u'data', None)])
 
     def _getetsrc(self, url, params=None, language=None):
@@ -601,7 +596,7 @@ class Tvdb:
         try:
             src = self._load_url(url, params=params, language=language).values()[0]
             return src
-        except:
+        except (StandardError, Exception):
             return []
 
     def _set_item(self, sid, seas, ep, attrib, value):
@@ -634,28 +629,35 @@ class Tvdb:
             self.shows[sid] = Show()
         self.shows[sid].data[key] = value
 
-    def _clean_data(self, data):
+    @staticmethod
+    def _clean_data(data):
         """Cleans up strings returned by TheTVDB.com
 
         Issues corrected:
         - Replaces &amp; with &
         - Trailing whitespace
         """
-        return data if data is None else data.strip().replace(u'&amp;', u'&')
+        return data if not isinstance(data, basestring) else data.strip().replace(u'&amp;', u'&')
+
+    def _get_url_artwork(self, image):
+        return image and (self.config['url_artworkPrefix'] % image) or image
 
     def search(self, series):
         """This searches TheTVDB.com for the series name
         and returns the result list
         """
         series = series.encode('utf-8')
-        log().debug('Searching for show %s' % series)
+        self.log('Searching for show %s' % series)
         self.config['params_get_series']['seriesname'] = series
 
         try:
             series_found = self._getetsrc(self.config['url_get_series'], self.config['params_get_series'])
             if series_found:
+                if not isinstance(series_found['Series'], list):
+                    series_found['Series'] = [series_found['Series']]
+                series_found['Series'] = [{k.lower(): v for k, v in s.iteritems()} for s in series_found['Series']]
                 return series_found.values()[0]
-        except:
+        except (StandardError, Exception):
             pass
 
         return []
@@ -671,19 +673,19 @@ class Tvdb:
             all_series = [all_series]
 
         if 0 == len(all_series):
-            log().debug('Series result returned zero')
+            self.log('Series result returned zero')
             raise tvdb_shownotfound('Show-name search returned zero results (cannot find show on TVDB)')
 
         if None is not self.config['custom_ui']:
-            log().debug('Using custom UI %s' % (repr(self.config['custom_ui'])))
+            self.log('Using custom UI %s' % (repr(self.config['custom_ui'])))
             custom_ui = self.config['custom_ui']
             ui = custom_ui(config=self.config)
         else:
             if not self.config['interactive']:
-                log().debug('Auto-selecting first search result using BaseUI')
+                self.log('Auto-selecting first search result using BaseUI')
                 ui = BaseUI(config=self.config)
             else:
-                log().debug('Interactively selecting show using ConsoleUI')
+                self.log('Interactively selecting show using ConsoleUI')
                 ui = ConsoleUI(config=self.config)
 
         return ui.selectSeries(all_series)
@@ -706,7 +708,7 @@ class Tvdb:
 
         This interface will be improved in future versions.
         """
-        log().debug('Getting season banners for %s' % sid)
+        self.log('Getting season banners for %s' % sid)
         banners_et = self._getetsrc(self.config['url_seriesBanner'] % sid)
         banners = {}
 
@@ -734,10 +736,10 @@ class Tvdb:
                 for k, v in banners[btype][btype2][bid].items():
                     if k.endswith('path'):
                         new_key = '_%s' % k
-                        log().debug('Transforming %s to %s' % (k, new_key))
-                        new_url = self.config['url_artworkPrefix'] % v
+                        self.log('Transforming %s to %s' % (k, new_key))
+                        new_url = self._get_url_artwork(v)
                         banners[btype][btype2][bid][new_key] = new_url
-        except:
+        except (StandardError, Exception):
             pass
 
         self._set_show_data(sid, '_banners', banners)
@@ -766,7 +768,7 @@ class Tvdb:
         Any key starting with an underscore has been processed (not the raw
         data from the XML)
         """
-        log().debug('Getting actors for %s' % sid)
+        self.log('Getting actors for %s' % sid)
         actors_et = self._getetsrc(self.config['url_actorsInfo'] % sid)
 
         cur_actors = Actors()
@@ -777,12 +779,12 @@ class Tvdb:
                     k = k.lower()
                     if None is not v:
                         if 'image' == k:
-                            v = self.config['url_artworkPrefix'] % v
+                            v = self._get_url_artwork(v)
                         else:
                             v = self._clean_data(v)
                     cur_actor[k] = v
                 cur_actors.append(cur_actor)
-        except:
+        except (StandardError, Exception):
             pass
 
         self._set_show_data(sid, '_actors', cur_actors)
@@ -794,31 +796,31 @@ class Tvdb:
         """
 
         if None is self.config['language']:
-            log().debug('Config language is none, using show language')
+            self.log('Config language is none, using show language')
             if None is language:
                 raise tvdb_error('config[\'language\'] was None, this should not happen')
             get_show_in_language = language
         else:
-            log().debug('Configured language %s override show language of %s' % (self.config['language'], language))
+            self.log('Configured language %s override show language of %s' % (self.config['language'], language))
             get_show_in_language = self.config['language']
 
         # Parse show information
-        log().debug('Getting all series data for %s' % sid)
-        url = self.config['url_epInfo%s' % ('', '_zip')[self.config['useZip']]] % (sid, language)
+        self.log('Getting all series data for %s' % sid)
+        url = (self.config['url_seriesInfo'] % (sid, language), self.config['url_epInfo%s' % ('', '_zip')[self.config['useZip']]] % (sid, language))[get_ep_info]
         show_data = self._getetsrc(url, language=get_show_in_language)
 
         # check and make sure we have data to process and that it contains a series name
-        if not len(show_data) or (isinstance(show_data, dict) and 'seriesname' not in show_data['series']):
+        if not len(show_data) or (isinstance(show_data, dict) and 'SeriesName' not in show_data['Series']):
             return False
 
-        for k, v in show_data['series'].items():
+        for k, v in show_data['Series'].iteritems():
             if None is not v:
                 if k in ['banner', 'fanart', 'poster']:
-                    v = self.config['url_artworkPrefix'] % v
+                    v = self._get_url_artwork(v)
                 else:
                     v = self._clean_data(v)
 
-            self._set_show_data(sid, k, v)
+            self._set_show_data(sid, k.lower(), v)
 
         if get_ep_info:
             # Parse banners
@@ -830,46 +832,58 @@ class Tvdb:
                 self._parse_actors(sid)
 
             # Parse episode data
-            log().debug('Getting all episodes of %s' % sid)
+            self.log('Getting all episodes of %s' % sid)
 
-            if 'episode' not in show_data:
+            if 'Episode' not in show_data:
                 return False
 
-            episodes = show_data['episode']
+            episodes = show_data['Episode']
             if not isinstance(episodes, list):
                 episodes = [episodes]
 
+            dvd_order = {'dvd': [], 'network': []}
             for cur_ep in episodes:
                 if self.config['dvdorder']:
-                    log().debug('Using DVD ordering.')
-                    use_dvd = None is not cur_ep['dvd_season'] and None is not cur_ep['dvd_episodenumber']
+                    use_dvd = cur_ep['DVD_season'] not in (None, '') and cur_ep['DVD_episodenumber'] not in (None, '')
                 else:
                     use_dvd = False
 
                 if use_dvd:
-                    elem_seasnum, elem_epno = cur_ep['dvd_season'], cur_ep['dvd_episodenumber']
+                    elem_seasnum, elem_epno = cur_ep['DVD_season'], cur_ep['DVD_episodenumber']
                 else:
-                    elem_seasnum, elem_epno = cur_ep['seasonnumber'], cur_ep['episodenumber']
+                    elem_seasnum, elem_epno = cur_ep['SeasonNumber'], cur_ep['EpisodeNumber']
 
                 if None is elem_seasnum or None is elem_epno:
-                    log().warning('An episode has incomplete season/episode number (season: %r, episode: %r)' % (
-                        elem_seasnum, elem_epno))
+                    self.log('An episode has incomplete season/episode number (season: %r, episode: %r)' % (
+                        elem_seasnum, elem_epno), logger.WARNING)
                     continue  # Skip to next episode
 
                 # float() is because https://github.com/dbr/tvnamer/issues/95 - should probably be fixed in TVDB data
                 seas_no = int(float(elem_seasnum))
                 ep_no = int(float(elem_epno))
 
+                if self.config['dvdorder']:
+                    dvd_order[('network', 'dvd')[use_dvd]] += ['S%02dE%02d' % (seas_no, ep_no)]
+
                 for k, v in cur_ep.items():
                     k = k.lower()
 
                     if None is not v:
                         if 'filename' == k:
-                            v = self.config['url_artworkPrefix'] % v
+                            v = self._get_url_artwork(v)
                         else:
                             v = self._clean_data(v)
 
                     self._set_item(sid, seas_no, ep_no, k, v)
+
+            if self.config['dvdorder']:
+                num_dvd, num_network = [len(dvd_order[x]) for x in 'dvd', 'network']
+                num_all = num_dvd + num_network
+                if num_all:
+                    self.log('Of %s episodes, %s use the DVD order, and %s use the network aired order' % (
+                        num_all, num_dvd, num_network))
+                    for ep_numbers in [', '.join(dvd_order['dvd'][i:i + 5]) for i in xrange(0, num_dvd, 5)]:
+                        self.log('Using DVD order: %s' % ep_numbers)
 
         return True
 
@@ -879,10 +893,10 @@ class Tvdb:
         the correct SID.
         """
         if name in self.corrections:
-            log().debug('Correcting %s to %s' % (name, self.corrections[name]))
+            self.log('Correcting %s to %s' % (name, self.corrections[name]))
             return self.corrections[name]
         else:
-            log().debug('Getting show %s' % name)
+            self.log('Getting show %s' % name)
             selected_series = self._get_series(name)
             if isinstance(selected_series, dict):
                 selected_series = [selected_series]
@@ -895,10 +909,16 @@ class Tvdb:
         """Handles tvdb_instance['seriesname'] calls.
         The dict index should be the show id
         """
+        arg = None
+        if isinstance(key, tuple) and 2 == len(key):
+            key, arg = key
+            if not isinstance(arg, bool):
+                arg = None
+
         if isinstance(key, (int, long)):
             # Item is integer, treat as show id
             if key not in self.shows:
-                self._get_show_data(key, self.config['language'], True)
+                self._get_show_data(key, self.config['language'], (True, arg)[arg is not None])
             return None if key not in self.shows else self.shows[key]
 
         key = str(key).lower()

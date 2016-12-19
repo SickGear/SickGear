@@ -23,6 +23,7 @@ import os
 import re
 import subprocess
 import stat
+import threading
 
 import sickbeard
 
@@ -60,7 +61,7 @@ class PostProcessor(object):
 
     IGNORED_FILESTRINGS = ['/.AppleDouble/', '.DS_Store']
 
-    def __init__(self, file_path, nzb_name=None, process_method=None, force_replace=None, use_trash=None):
+    def __init__(self, file_path, nzb_name=None, process_method=None, force_replace=None, use_trash=None, webhandler=None, showObj=None):
         """
         Creates a new post processor with the given file path and optionally an NZB name.
 
@@ -85,6 +86,10 @@ class PostProcessor(object):
         self.force_replace = force_replace
 
         self.use_trash = use_trash
+
+        self.webhandler = webhandler
+
+        self.showObj = showObj
 
         self.in_history = False
 
@@ -167,32 +172,33 @@ class PostProcessor(object):
 
         file_path_list = []
 
-        base_name = file_path.rpartition('.')[0]
+        tmp_base = base_name = file_path.rpartition('.')[0]
 
         if not base_name_only:
-            base_name += '.'
+            tmp_base += '.'
 
         # don't strip it all and use cwd by accident
-        if not base_name:
+        if not tmp_base:
             return []
 
         # don't confuse glob with chars we didn't mean to use
         base_name = re.sub(r'[\[\]\*\?]', r'[\g<0>]', base_name)
 
-        for associated_file_path in ek.ek(glob.glob, base_name + '*'):
-            # only add associated to list
-            if associated_file_path == file_path:
-                continue
-            # only list it if the only non-shared part is the extension or if it is a subtitle
-            if subtitles_only and not associated_file_path[len(associated_file_path) - 3:] in common.subtitleExtensions:
-                continue
+        for meta_ext in ['', '-thumb', '.ext', '.ext.cover', '.metathumb']:
+            for associated_file_path in ek.ek(glob.glob, '%s%s.*' % (base_name, meta_ext)):
+                # only add associated to list
+                if associated_file_path == file_path:
+                    continue
+                # only list it if the only non-shared part is the extension or if it is a subtitle
+                if subtitles_only and not associated_file_path[len(associated_file_path) - 3:] in common.subtitleExtensions:
+                    continue
 
-            # Exclude .rar files from associated list
-            if re.search('(^.+\.(rar|r\d+)$)', associated_file_path):
-                continue
+                # Exclude .rar files from associated list
+                if re.search('(^.+\.(rar|r\d+)$)', associated_file_path):
+                    continue
 
-            if ek.ek(os.path.isfile, associated_file_path):
-                file_path_list.append(associated_file_path)
+                if ek.ek(os.path.isfile, associated_file_path):
+                    file_path_list.append(associated_file_path)
 
         return file_path_list
 
@@ -287,10 +293,10 @@ class PostProcessor(object):
                 cur_extension = 'nfo-orig'
 
             # check if file have subtitles language
-            if os.path.splitext(cur_extension)[1][1:] in common.subtitleExtensions:
-                cur_lang = os.path.splitext(cur_extension)[0]
+            if ek.ek(os.path.splitext, cur_extension)[1][1:] in common.subtitleExtensions:
+                cur_lang = ek.ek(os.path.splitext, cur_extension)[0]
                 if cur_lang in sickbeard.SUBTITLES_LANGUAGES:
-                    cur_extension = cur_lang + os.path.splitext(cur_extension)[1]
+                    cur_extension = cur_lang + ek.ek(os.path.splitext, cur_extension)[1]
 
             # If new base name then convert name
             if new_base_name:
@@ -445,6 +451,9 @@ class PostProcessor(object):
             self.in_history = True
             show = helpers.findCertainShow(sickbeard.showList, indexer_id)
             to_return = (show, season, [], quality)
+            if not show:
+                self._log(u'Unknown show, check availability on ShowList page', logger.DEBUG)
+                break
             self._log(u'Found a match in history for %s' % show.name, logger.DEBUG)
             break
 
@@ -468,7 +477,7 @@ class PostProcessor(object):
             return to_return
 
         # parse the name to break it into show name, season, and episode
-        np = NameParser(resource, try_scene_exceptions=True, convert=True)
+        np = NameParser(resource, try_scene_exceptions=True, convert=True, showObj=self.showObj)
         parse_result = np.parse(name)
         self._log(u'Parsed %s<br />.. from %s' % (str(parse_result).decode('utf-8', 'xmlcharrefreplace'), name), logger.DEBUG)
 
@@ -739,7 +748,7 @@ class PostProcessor(object):
             self._log(u'Existing episode status is not downloaded/archived, marking it safe to replace', logger.DEBUG)
             return True
 
-        if common.ARCHIVED == old_ep_status:
+        if common.ARCHIVED == old_ep_status and common.Quality.NONE == old_ep_quality:
             self._log(u'Marking it unsafe to replace because the existing episode status is archived', logger.DEBUG)
             return False
 
@@ -762,6 +771,11 @@ class PostProcessor(object):
 
         # if there's an existing downloaded file with same quality, check filesize to decide
         if new_ep_quality == old_ep_quality:
+            if (isinstance(self.nzb_name, basestring) and re.search(r'\bproper|repack\b', self.nzb_name, re.I)) or \
+                    (isinstance(self.file_name, basestring) and re.search(r'\bproper|repack\b', self.file_name, re.I)):
+                self._log(u'Proper or repack with same quality, marking it safe to replace', logger.DEBUG)
+                return True
+
             self._log(u'An episode exists in the database with the same quality as the episode to process', logger.DEBUG)
 
             existing_file_status = self._check_for_existing_file(ep_obj.location)
@@ -817,10 +831,11 @@ class PostProcessor(object):
         Post-process a given file
         """
 
-        self._log(u'Processing %s%s' % (self.file_path, (u'<br />.. from nzb %s' % str(self.nzb_name), u'')[None is self.nzb_name]))
+        self._log(u'Processing... %s%s' % (ek.ek(os.path.relpath, self.file_path, self.folder_path),
+                                           (u'<br />.. from nzb %s' % self.nzb_name, u'')[None is self.nzb_name]))
 
         if ek.ek(os.path.isdir, self.file_path):
-            self._log(u'File %s<br />.. seems to be a directory' % self.file_path)
+            self._log(u'Expecting file %s<br />.. is actually a directory, skipping' % self.file_path)
             return False
 
         for ignore_file in self.IGNORED_FILESTRINGS:
@@ -837,7 +852,7 @@ class PostProcessor(object):
 
         # if we don't have it then give up
         if not show:
-            self._log(u'Please add the show to your SickGear then try to post process an episode', logger.WARNING)
+            self._log(u'Must add show to SickGear before trying to post process an episode', logger.WARNING)
             raise exceptions.PostProcessingFailed()
         elif None is season or not episodes:
             self._log(u'Quitting this post process, could not determine what episode this is', logger.DEBUG)
@@ -869,7 +884,7 @@ class PostProcessor(object):
                     helpers.delete_empty_folders(ek.ek(os.path.dirname, cur_ep.location),
                                                  keep_dir=ep_obj.show.location)
             except (OSError, IOError):
-                raise exceptions.PostProcessingFailed(u'Unable to delete the existing files')
+                raise exceptions.PostProcessingFailed(u'Unable to delete existing files')
 
             # set the status of the episodes
             # for curEp in [ep_obj] + ep_obj.relatedEps:
@@ -901,10 +916,13 @@ class PostProcessor(object):
 
                 cur_ep.release_name = self.release_name or ''
 
+                any_qualities, best_qualities = common.Quality.splitQuality(cur_ep.show.quality)
+
                 cur_ep.status = common.Quality.compositeStatus(
                     **({'status': common.DOWNLOADED, 'quality': new_ep_quality},
                        {'status': common.ARCHIVED, 'quality': new_ep_quality})
-                    [ep_obj.status in common.Quality.SNATCHED_BEST])
+                    [ep_obj.status in common.Quality.SNATCHED_BEST or
+                     (cur_ep.show.archive_firstmatch and new_ep_quality in best_qualities)])
 
                 cur_ep.release_group = self.release_group or ''
 
@@ -931,7 +949,7 @@ class PostProcessor(object):
         if None is not release_name:
             failed_history.logSuccess(release_name)
         else:
-            self._log(u'No release found in snatch history', logger.WARNING)
+            self._log(u'No snatched release found in history', logger.WARNING)
 
         # find the destination folder
         try:
@@ -963,6 +981,16 @@ class PostProcessor(object):
         if sickbeard.ANIDB_USE_MYLIST and ep_obj.show.is_anime:
             self._add_to_anidb_mylist(self.file_path)
 
+        if self.webhandler:
+            def keep_alive(webh, stop_event):
+                while not stop_event.is_set():
+                    stop_event.wait(60)
+                    webh('.')
+                webh(u'\n')
+
+            keepalive_stop = threading.Event()
+            keepalive = threading.Thread(target=keep_alive,  args=(self.webhandler, keepalive_stop))
+
         try:
             # move the episode and associated files to the show dir
             args_link = {'file_path': self.file_path, 'new_path': dest_path,
@@ -971,6 +999,9 @@ class PostProcessor(object):
             args_cpmv = {'subtitles': sickbeard.USE_SUBTITLES and ep_obj.show.subtitles,
                          'action_tmpl': u' %s<br />.. to %s'}
             args_cpmv.update(args_link)
+            if self.webhandler:
+                self.webhandler('Processing method is "%s"' % self.process_method)
+                keepalive.start()
             if 'copy' == self.process_method:
                 self._copy(**args_cpmv)
             elif 'move' == self.process_method:
@@ -984,7 +1015,11 @@ class PostProcessor(object):
                 raise exceptions.PostProcessingFailed(u'Unable to move the files to the new location')
         except (OSError, IOError):
             raise exceptions.PostProcessingFailed(u'Unable to move the files to the new location')
-                
+        finally:
+            if self.webhandler:
+                #stop the keep_alive
+                keepalive_stop.set()
+
         # download subtitles
         dosubs = sickbeard.USE_SUBTITLES and ep_obj.show.subtitles
 
@@ -1015,11 +1050,14 @@ class PostProcessor(object):
         # send notifications
         notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
 
-        # do the library update for XBMC
-        notifiers.xbmc_notifier.update_library(ep_obj.show.name)
+        # do the library update for Emby
+        notifiers.emby_notifier.update_library(ep_obj.show)
 
         # do the library update for Kodi
         notifiers.kodi_notifier.update_library(ep_obj.show.name)
+
+        # do the library update for XBMC
+        notifiers.xbmc_notifier.update_library(ep_obj.show.name)
 
         # do the library update for Plex
         notifiers.plex_notifier.update_library(ep_obj)

@@ -16,10 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import sickbeard
-
-import xbmc
+import emby
 import kodi
+import xbmc
 import plex
 import nmj
 import nmjv2
@@ -41,11 +40,10 @@ import tweet
 from lib import libtrakt
 import emailnotify
 
-from sickbeard.common import *
-
 # home theater / nas
+emby_notifier = emby.EmbyNotifier()
+kodi_notifier = kodi.KodiNotifier()
 xbmc_notifier = xbmc.XBMCNotifier()
-kodi_notifier = kodi.KODINotifier()
 plex_notifier = plex.PLEXNotifier()
 nmj_notifier = nmj.NMJNotifier()
 nmjv2_notifier = nmjv2.NMJv2Notifier()
@@ -68,8 +66,8 @@ email_notifier = emailnotify.EmailNotifier()
 
 notifiers = [
     libnotify_notifier,  # Libnotify notifier goes first because it doesn't involve blocking on network activity.
-    xbmc_notifier,
     kodi_notifier,
+    xbmc_notifier,
     plex_notifier,
     nmj_notifier,
     nmjv2_notifier,

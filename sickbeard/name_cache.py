@@ -74,7 +74,7 @@ def buildNameCache(show=None):
             nameCache = dict(
                 (sickbeard.helpers.full_sanitizeSceneName(x.name), [x.indexerid, -1]) for x in sickbeard.showList if x)
 
-        cacheDB = db.DBConnection('cache.db')
+        cacheDB = db.DBConnection()
 
         cache_results = cacheDB.select(
             'SELECT show_name, indexer_id, season FROM scene_exceptions WHERE indexer_id IN (%s)' % ','.join(

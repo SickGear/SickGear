@@ -21,7 +21,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -30,24 +30,24 @@ from lib.unidecode import unidecode
 class MoreThanProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'MoreThan')
+        generic.TorrentProvider.__init__(self, 'MoreThan', cache_update_freq=20)
 
         self.url_base = 'https://www.morethan.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'login.php',
+                     'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s&' + '&'.join([
-                         'tags_type=1', 'order_by=time', '&order_way=desc', 'filter_cat[2]=1', 'action=basic', 'searchsubmit=1']),
+                         'tags_type=1', 'order_by=time', 'order_way=desc',
+                         'filter_cat[2]=1', 'action=basic', 'searchsubmit=1']),
                      'get': self.url_base + '%s'}
 
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = MoreThanCache(self)
 
     def _authorised(self, **kwargs):
 
-        return super(MoreThanProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies('session')),
-                                                         post_params={'keeplogged': '1', 'login': 'Log in'})
+        return super(MoreThanProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies('session')),
+                                                         post_params={'keeplogged': '1', 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -72,7 +72,7 @@ class MoreThanProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': 'torrent_table'})
+                        torrent_table = soup.find('table', class_='torrent_table')
                         torrent_rows = []
                         if torrent_table:
                             torrent_rows = torrent_table.find_all('tr')
@@ -80,23 +80,23 @@ class MoreThanProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
-                            if tr.find('img', alt=rc['nuked']):
+                            cells = tr.find_all('td')
+                            if 5 > len(cells) or tr.find('img', alt=rc['nuked']):
                                 continue
-
                             try:
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -4)]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 title = tr.find('a', title=rc['info']).get_text().strip()
                                 if title.lower().startswith('season '):
-                                    title = '%s %s' % (tr.find('div', attrs={'class': rc['name']}).get_text().strip(),
-                                                       title)
+                                    title = '%s %s' % (tr.find('div', class_=rc['name']).get_text().strip(), title)
 
-                                link = str(tr.find('a', title=rc['get'])['href']).replace('&amp;', '&').lstrip('/')
-                                download_url = self.urls['get'] % link
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -105,28 +105,14 @@ class MoreThanProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-
-class MoreThanCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = MoreThanProvider()

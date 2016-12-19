@@ -19,7 +19,7 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -28,22 +28,32 @@ from lib.unidecode import unidecode
 class GrabTheInfoProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'GrabTheInfo')
+        generic.TorrentProvider.__init__(self, 'GrabTheInfo', cache_update_freq=20)
 
         self.url_base = 'http://grabthe.info/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
+                     'login': self.url_base + 'rules.php',
                      'browse': self.url_base + 'browse.php?%s&incldead=%s&blah=0%s',
                      'search': '&search=%s',
                      'get': self.url_base + '%s'}
 
-        self.categories = {'shows': [36, 32, 43, 56, 8, 10, 61]}
+        self.categories = {'shows': [36, 32, 43, 56, 8, 65, 61, 10]}
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = GrabTheInfoCache(self)
+        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
+
+    def _authorised(self, **kwargs):
+
+        return super(GrabTheInfoProvider, self)._authorised(
+            logged_in=(lambda y='': all(
+                ['Rules</title' in y, self.has_all_cookies()] +
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+
+    @staticmethod
+    def _has_signature(data=None):
+        return generic.TorrentProvider._has_signature(data) or (data and re.search(r'(?i)<title[^<]+?(G\s*T)', data))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -57,7 +67,7 @@ class GrabTheInfoProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                search_url = self.urls['browse'] % (self._categories_string(), ('0', '3')[self.freeleech],
+                search_url = self.urls['browse'] % (self._categories_string(), ('3', '0')[not self.freeleech],
                                                     (self.urls['search'] % search_string, '')['Cache' == mode])
 
                 html = self.get_url(search_url)
@@ -81,55 +91,40 @@ class GrabTheInfoProvider(generic.TorrentProvider):
                         if not shows_found or 2 > (len(torrent_rows) - shows_found):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1 + shows_found:]:
+                            cells = tr.find_all('td')
+                            if 4 > len(cells):
+                                continue
                             try:
-                                info = tr.find('a', href=rc['info'])
-                                if None is info:
-                                    continue
-                                title = (('title' in info.attrs.keys() and info['title']) or info.get_text()).strip()
-
-                                download_url = tr.find('a', href=rc['get'])
-                                if None is download_url:
-                                    continue
-
+                                head = head if None is not head else self._header_row(torrent_rows[shows_found])
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-2, -1, -3)]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
+
+                                info = tr.find('a', href=rc['info'])
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
-                            if title:
-                                items[mode].append((title, self.urls['get'] % str(download_url['href'].lstrip('/')),
-                                                    seeders, self._bytesizer(size)))
+                            if title and download_url:
+                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
-
-
-class GrabTheInfoCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = GrabTheInfoProvider()

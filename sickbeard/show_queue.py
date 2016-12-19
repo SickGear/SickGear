@@ -88,25 +88,31 @@ class ShowQueue(generic_queue.GenericQueue):
         with self.lock:
             for cur_item in [self.currentItem] + self.queue:
                 if isinstance(cur_item, QueueItemAdd):
-                    length['add'].append([cur_item.show_name, cur_item.scheduled_update])
+                    length['add'].append({'name': cur_item.show_name, 'scheduled_update': cur_item.scheduled_update})
                 elif isinstance(cur_item, QueueItemUpdate):
                     update_type = 'Normal'
                     if isinstance(cur_item, QueueItemForceUpdate):
                         update_type = 'Forced'
                     elif isinstance(cur_item, QueueItemForceUpdateWeb):
                         update_type = 'Forced Web'
-                    length['update'].append([cur_item.show_name, cur_item.scheduled_update, update_type])
+                    length['update'].append({'name': cur_item.show_name, 'indexerid': cur_item.show.indexerid,
+                                             'indexer': cur_item.show.indexer, 'scheduled_update': cur_item.scheduled_update,
+                                             'update_type': update_type})
                 elif isinstance(cur_item, QueueItemRefresh):
-                    length['refresh'].append([cur_item.show_name, cur_item.scheduled_update])
+                    length['refresh'].append({'name': cur_item.show_name, 'indexerid': cur_item.show.indexerid,
+                                             'indexer': cur_item.show.indexer, 'scheduled_update': cur_item.scheduled_update})
                 elif isinstance(cur_item, QueueItemRename):
-                    length['rename'].append([cur_item.show_name, cur_item.scheduled_update])
+                    length['rename'].append({'name': cur_item.show_name, 'indexerid': cur_item.show.indexerid,
+                                             'indexer': cur_item.show.indexer, 'scheduled_update': cur_item.scheduled_update})
                 elif isinstance(cur_item, QueueItemSubtitle):
-                    length['subtitle'].append([cur_item.show_name, cur_item.scheduled_update])
+                    length['subtitle'].append({'name': cur_item.show_name, 'indexerid': cur_item.show.indexerid,
+                                             'indexer': cur_item.show.indexer, 'scheduled_update': cur_item.scheduled_update})
             return length
 
     loadingShowList = property(_getLoadingShowList)
 
-    def updateShow(self, show, force=False, web=False, scheduled_update=False):
+    def updateShow(self, show, force=False, web=False, scheduled_update=False,
+                   priority=generic_queue.QueuePriorities.NORMAL, **kwargs):
 
         if self.isBeingAdded(show):
             raise exceptions.CantUpdateException(
@@ -121,28 +127,30 @@ class ShowQueue(generic_queue.GenericQueue):
                 'This show is already being updated, can\'t update again until it\'s done.')
 
         if not force:
-            queueItemObj = QueueItemUpdate(show, scheduled_update=scheduled_update)
+            queueItemObj = QueueItemUpdate(show, scheduled_update=scheduled_update, **kwargs)
         elif web:
-            queueItemObj = QueueItemForceUpdateWeb(show, scheduled_update=scheduled_update)
+            queueItemObj = QueueItemForceUpdateWeb(show, scheduled_update=scheduled_update, priority=priority, **kwargs)
         else:
-            queueItemObj = QueueItemForceUpdate(show, scheduled_update=scheduled_update)
+            queueItemObj = QueueItemForceUpdate(show, scheduled_update=scheduled_update, **kwargs)
 
         self.add_item(queueItemObj)
 
         return queueItemObj
 
-    def refreshShow(self, show, force=False, scheduled_update=False, after_update=False):
+    def refreshShow(self, show, force=False, scheduled_update=False, after_update=False,
+                    priority=generic_queue.QueuePriorities.HIGH, force_image_cache=False, **kwargs):
 
         if self.isBeingRefreshed(show) and not force:
             raise exceptions.CantRefreshException('This show is already being refreshed, not refreshing again.')
 
         if ((not after_update and self.isBeingUpdated(show)) or self.isInUpdateQueue(show)) and not force:
             logger.log(
-                u'Skipping this refresh as there is already an update queued or in progress and a refresh is done at the end of an update anyway.',
+                'Skipping this refresh as there is already an update queued or in progress and a refresh is done at the end of an update anyway.',
                 logger.DEBUG)
             return
 
-        queueItemObj = QueueItemRefresh(show, force=force, scheduled_update=scheduled_update)
+        queueItemObj = QueueItemRefresh(show, force=force, scheduled_update=scheduled_update, priority=priority,
+                                        force_image_cache=force_image_cache, **kwargs)
 
         self.add_item(queueItemObj)
 
@@ -250,6 +258,8 @@ class QueueItemAdd(ShowQueueItem):
         # this will initialize self.show to None
         ShowQueueItem.__init__(self, ShowQueueActions.ADD, self.show, scheduled_update)
 
+        self.priority = generic_queue.QueuePriorities.VERYHIGH
+
     def _getName(self):
         """
         Returns the show name if there is a show object created, if not returns
@@ -276,7 +286,7 @@ class QueueItemAdd(ShowQueueItem):
 
         ShowQueueItem.run(self)
 
-        logger.log(u'Starting to add show ' + self.showDir)
+        logger.log('Starting to add show %s' % self.showDir)
         # make sure the Indexer IDs are valid
         try:
 
@@ -287,33 +297,23 @@ class QueueItemAdd(ShowQueueItem):
             logger.log(u'' + str(sickbeard.indexerApi(self.indexer).name) + ': ' + repr(lINDEXER_API_PARMS))
 
             t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
-            s = t[self.indexer_id]
+            s = t[self.indexer_id, False]
 
             # this usually only happens if they have an NFO in their show dir which gave us a Indexer ID that has no proper english version of the show
             if getattr(s, 'seriesname', None) is None:
-                logger.log(u'Show in ' + self.showDir + ' has no name on ' + str(
-                    sickbeard.indexerApi(self.indexer).name) + ', probably the wrong language used to search with.',
-                           logger.ERROR)
+                logger.log('Show in %s has no name on %s, probably the wrong language used to search with.' %
+                           (self.showDir, sickbeard.indexerApi(self.indexer).name), logger.ERROR)
                 ui.notifications.error('Unable to add show',
-                                       'Show in ' + self.showDir + ' has no name on ' + str(sickbeard.indexerApi(
-                                           self.indexer).name) + ', probably the wrong language. Delete .nfo and add manually in the correct language.')
-                self._finishEarly()
-                return
-            # if the show has no episodes/seasons
-            if not sickbeard.ALLOW_INCOMPLETE_SHOWDATA and not s:
-                msg = u'Show %s is on %s but contains no season/episode data. Only the show folder was created.'\
-                      % (s['seriesname'], sickbeard.indexerApi(self.indexer).name)
-                logger.log(msg, logger.ERROR)
-                ui.notifications.error('Unable to add show', msg)
+                                       'Show in %s has no name on %s, probably the wrong language. Delete .nfo and add manually in the correct language.' %
+                                       (self.showDir, sickbeard.indexerApi(self.indexer).name))
                 self._finishEarly()
                 return
         except Exception as e:
-            logger.log(u'Unable to find show ID:' + str(self.indexer_id) + ' on Indexer: ' + str(
-                sickbeard.indexerApi(self.indexer).name), logger.ERROR)
+            logger.log('Unable to find show ID:%s on Indexer: %s' % (self.indexer_id, sickbeard.indexerApi(self.indexer).name),
+                       logger.ERROR)
             ui.notifications.error('Unable to add show',
-                                   'Unable to look up the show in ' + self.showDir + ' on ' + str(sickbeard.indexerApi(
-                                       self.indexer).name) + ' using ID ' + str(
-                                       self.indexer_id) + ', not using the NFO. Delete .nfo and try adding manually again.')
+                                   'Unable to look up the show in %s on %s using ID %s, not using the NFO. Delete .nfo and try adding manually again.' %
+                                   (self.showDir, sickbeard.indexerApi(self.indexer).name, self.indexer_id))
             self._finishEarly()
             return
 
@@ -350,26 +350,25 @@ class QueueItemAdd(ShowQueueItem):
 
         except sickbeard.indexer_exception as e:
             logger.log(
-                u'Unable to add show due to an error with ' + sickbeard.indexerApi(self.indexer).name + ': ' + ex(e),
+                'Unable to add show due to an error with %s: %s' % (sickbeard.indexerApi(self.indexer).name, ex(e)),
                 logger.ERROR)
             if self.show:
                 ui.notifications.error(
-                    'Unable to add ' + str(self.show.name) + ' due to an error with ' + sickbeard.indexerApi(
-                        self.indexer).name + '')
+                    'Unable to add %s due to an error with %s' % (self.show.name, sickbeard.indexerApi(self.indexer).name))
             else:
                 ui.notifications.error(
-                    'Unable to add show due to an error with ' + sickbeard.indexerApi(self.indexer).name + '')
+                    'Unable to add show due to an error with %s' % sickbeard.indexerApi(self.indexer).name)
             self._finishEarly()
             return
 
         except exceptions.MultipleShowObjectsException:
-            logger.log(u'The show in ' + self.showDir + ' is already in your show list, skipping', logger.ERROR)
-            ui.notifications.error('Show skipped', 'The show in ' + self.showDir + ' is already in your show list')
+            logger.log('The show in %s is already in your show list, skipping' % self.showDir, logger.ERROR)
+            ui.notifications.error('Show skipped', 'The show in %s is already in your show list' % self.showDir)
             self._finishEarly()
             return
 
         except Exception as e:
-            logger.log(u'Error trying to add show: ' + ex(e), logger.ERROR)
+            logger.log('Error trying to add show: %s' % ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
             self._finishEarly()
             raise
@@ -379,7 +378,7 @@ class QueueItemAdd(ShowQueueItem):
         try:
             self.show.saveToDB()
         except Exception as e:
-            logger.log(u'Error saving the show to the database: ' + ex(e), logger.ERROR)
+            logger.log('Error saving the show to the database: %s' % ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
             self._finishEarly()
             raise
@@ -391,20 +390,20 @@ class QueueItemAdd(ShowQueueItem):
             self.show.loadEpisodesFromIndexer()
         except Exception as e:
             logger.log(
-                u'Error with ' + sickbeard.indexerApi(self.show.indexer).name + ', not creating episode list: ' + ex(e),
+                'Error with %s, not creating episode list: %s' % (sickbeard.indexerApi(self.show.indexer).name, ex(e)),
                 logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         try:
             self.show.loadEpisodesFromDir()
         except Exception as e:
-            logger.log(u'Error searching directory for episodes: ' + ex(e), logger.ERROR)
+            logger.log('Error searching directory for episodes: %s' % ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         # if they gave a custom status then change all the eps to it
         my_db = db.DBConnection()
         if self.default_status != SKIPPED:
-            logger.log(u'Setting all episodes to the specified default status: ' + str(self.default_status))
+            logger.log('Setting all episodes to the specified default status: %s' % sickbeard.common.statusStrings[self.default_status])
             my_db.action('UPDATE tv_episodes SET status = ? WHERE status = ? AND showid = ? AND season != 0',
                         [self.default_status, SKIPPED, self.show.indexerid])
 
@@ -447,7 +446,7 @@ class QueueItemAdd(ShowQueueItem):
         msg = ' the specified show into ' + self.showDir
         # if started with WANTED eps then run the backlog
         if WANTED == self.default_status or items_wanted:
-            logger.log(u'Launching backlog for this show since episodes are WANTED')
+            logger.log('Launching backlog for this show since episodes are WANTED')
             sickbeard.backlogSearchScheduler.action.search_backlog([self.show])  #@UndefinedVariable
             ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
         else:
@@ -458,6 +457,9 @@ class QueueItemAdd(ShowQueueItem):
         self.show.populateCache()
 
         self.show.flushEpisodes()
+
+        # load ids
+        self.show.ids
 
         # if sickbeard.USE_TRAKT:
         #     # if there are specific episodes that need to be added by trakt
@@ -471,7 +473,7 @@ class QueueItemAdd(ShowQueueItem):
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
         # check if show has XEM mapping and if user disabled scene numbering during add show, output availability to log
         if not self.scene and self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
-            logger.log(u'Alternative scene episode numbers were disabled during add show. Edit show to enable them for searching.')
+            logger.log('Alternative scene episode numbers were disabled during add show. Edit show to enable them for searching.')
 
         # update internal name cache
         name_cache.buildNameCache(self.show)
@@ -486,14 +488,19 @@ class QueueItemAdd(ShowQueueItem):
 
 
 class QueueItemRefresh(ShowQueueItem):
-    def __init__(self, show=None, force=False, scheduled_update=False):
+    def __init__(self, show=None, force=False, scheduled_update=False, priority=generic_queue.QueuePriorities.HIGH,
+                 force_image_cache=False, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.REFRESH, show, scheduled_update)
 
         # do refreshes first because they're quick
-        self.priority = generic_queue.QueuePriorities.HIGH
+        self.priority = priority
 
         # force refresh certain items
         self.force = force
+
+        self.force_image_cache = force_image_cache
+
+        self.kwargs = kwargs
 
     def run(self):
         ShowQueueItem.run(self)
@@ -504,12 +511,14 @@ class QueueItemRefresh(ShowQueueItem):
         self.show.writeMetadata()
         #if self.force:
         #    self.show.updateMetadata()
-        self.show.populateCache()
+        self.show.populateCache(self.force_image_cache)
 
         # Load XEM data to DB for show
         if self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
             sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer)
 
+        if 'pausestatus_after' in self.kwargs and self.kwargs['pausestatus_after'] is not None:
+            self.show.paused = self.kwargs['pausestatus_after']
         self.inProgress = False
 
 
@@ -521,12 +530,12 @@ class QueueItemRename(ShowQueueItem):
 
         ShowQueueItem.run(self)
 
-        logger.log(u'Performing rename on ' + self.show.name)
+        logger.log('Performing rename on %s' % self.show.name)
 
         try:
             show_loc = self.show.location
         except exceptions.ShowDirNotFoundException:
-            logger.log(u'Can\'t perform rename on ' + self.show.name + ' when the show directory is missing.', logger.WARNING)
+            logger.log('Can\'t perform rename on %s when the show directory is missing.' % self.show.name, logger.WARNING)
             return
 
         ep_obj_rename_list = []
@@ -561,7 +570,7 @@ class QueueItemSubtitle(ShowQueueItem):
     def run(self):
         ShowQueueItem.run(self)
 
-        logger.log(u'Downloading subtitles for ' + self.show.name)
+        logger.log('Downloading subtitles for %s' % self.show.name)
 
         self.show.downloadSubtitles()
 
@@ -569,34 +578,35 @@ class QueueItemSubtitle(ShowQueueItem):
 
 
 class QueueItemUpdate(ShowQueueItem):
-    def __init__(self, show=None, scheduled_update=False):
+    def __init__(self, show=None, scheduled_update=False, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.UPDATE, show, scheduled_update)
         self.force = False
         self.force_web = False
+        self.kwargs = kwargs
 
     def run(self):
 
         ShowQueueItem.run(self)
 
         if not sickbeard.indexerApi(self.show.indexer).config['active']:
-            logger.log(u'Indexer %s is marked inactive, aborting update for show %s and continue with refresh.' % (sickbeard.indexerApi(self.show.indexer).config['name'], self.show.name))
+            logger.log('Indexer %s is marked inactive, aborting update for show %s and continue with refresh.' % (sickbeard.indexerApi(self.show.indexer).config['name'], self.show.name))
             sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True)
             return
 
-        logger.log(u'Beginning update of ' + self.show.name)
+        logger.log('Beginning update of %s' % self.show.name)
 
-        logger.log(u'Retrieving show info from ' + sickbeard.indexerApi(self.show.indexer).name + '', logger.DEBUG)
+        logger.log('Retrieving show info from %s' % sickbeard.indexerApi(self.show.indexer).name, logger.DEBUG)
         try:
             result = self.show.loadFromIndexer(cache=not self.force)
             if None is not result:
                 return
         except sickbeard.indexer_error as e:
-            logger.log(u'Unable to contact ' + sickbeard.indexerApi(self.show.indexer).name + ', aborting: ' + ex(e),
+            logger.log('Unable to contact %s, aborting: %s' % (sickbeard.indexerApi(self.show.indexer).name, ex(e)),
                        logger.WARNING)
             return
         except sickbeard.indexer_attributenotfound as e:
-            logger.log(u'Data retrieved from ' + sickbeard.indexerApi(
-                self.show.indexer).name + ' was incomplete, aborting: ' + ex(e), logger.ERROR)
+            logger.log('Data retrieved from %s was incomplete, aborting: %s' %
+                       (sickbeard.indexerApi(self.show.indexer).name, ex(e)), logger.ERROR)
             return
 
         if self.force_web:
@@ -605,57 +615,62 @@ class QueueItemUpdate(ShowQueueItem):
         try:
             self.show.saveToDB()
         except Exception as e:
-            logger.log(u'Error saving the episode to the database: ' + ex(e), logger.ERROR)
+            logger.log('Error saving the episode to the database: %s' % ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         # get episode list from DB
-        logger.log(u'Loading all episodes from the database', logger.DEBUG)
-        DBEpList = self.show.loadEpisodesFromDB()
+        logger.log('Loading all episodes from the database', logger.DEBUG)
+        DBEpList = self.show.loadEpisodesFromDB(update=True)
 
         # get episode list from TVDB
-        logger.log(u'Loading all episodes from ' + sickbeard.indexerApi(self.show.indexer).name + '', logger.DEBUG)
+        logger.log('Loading all episodes from %s' % sickbeard.indexerApi(self.show.indexer).name, logger.DEBUG)
         try:
-            IndexerEpList = self.show.loadEpisodesFromIndexer(cache=not self.force)
+            IndexerEpList = self.show.loadEpisodesFromIndexer(cache=not self.force, update=True)
         except sickbeard.indexer_exception as e:
-            logger.log(u'Unable to get info from ' + sickbeard.indexerApi(
-                self.show.indexer).name + ', the show info will not be refreshed: ' + ex(e), logger.ERROR)
+            logger.log('Unable to get info from %s, the show info will not be refreshed: %s' %
+                       (sickbeard.indexerApi(self.show.indexer).name, ex(e)), logger.ERROR)
             IndexerEpList = None
 
         if IndexerEpList == None:
-            logger.log(u'No data returned from ' + sickbeard.indexerApi(
-                self.show.indexer).name + ', unable to update this show', logger.ERROR)
+            logger.log('No data returned from %s, unable to update this show' %
+                       sickbeard.indexerApi(self.show.indexer).name, logger.ERROR)
         else:
             # for each ep we found on TVDB delete it from the DB list
             for curSeason in IndexerEpList:
                 for curEpisode in IndexerEpList[curSeason]:
-                    logger.log(u'Removing ' + str(curSeason) + 'x' + str(curEpisode) + ' from the DB list',
-                               logger.DEBUG)
+                    logger.log('Removing %sx%s from the DB list' % (curSeason, curEpisode), logger.DEBUG)
                     if curSeason in DBEpList and curEpisode in DBEpList[curSeason]:
                         del DBEpList[curSeason][curEpisode]
 
             # for the remaining episodes in the DB list just delete them from the DB
             for curSeason in DBEpList:
                 for curEpisode in DBEpList[curSeason]:
-                    logger.log(u'Permanently deleting episode ' + str(curSeason) + 'x' + str(
-                        curEpisode) + ' from the database', logger.MESSAGE)
+                    logger.log('Permanently deleting episode %sx%s from the database' %
+                               (curSeason, curEpisode), logger.MESSAGE)
                     curEp = self.show.getEpisode(curSeason, curEpisode)
                     try:
                         curEp.deleteEpisode()
                     except exceptions.EpisodeDeletedException:
                         pass
 
-        sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True)
+        if self.priority != generic_queue.QueuePriorities.NORMAL:
+            self.kwargs['priority'] = self.priority
+        sickbeard.showQueueScheduler.action.refreshShow(self.show, self.force, self.scheduled_update, after_update=True,
+                                                        force_image_cache=self.force_web, **self.kwargs)
 
 
 class QueueItemForceUpdate(QueueItemUpdate):
-    def __init__(self, show=None, scheduled_update=False):
+    def __init__(self, show=None, scheduled_update=False, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show, scheduled_update)
         self.force = True
         self.force_web = False
+        self.kwargs = kwargs
 
 
 class QueueItemForceUpdateWeb(QueueItemUpdate):
-    def __init__(self, show=None, scheduled_update=False):
+    def __init__(self, show=None, scheduled_update=False, priority=generic_queue.QueuePriorities.NORMAL, **kwargs):
         ShowQueueItem.__init__(self, ShowQueueActions.FORCEUPDATE, show, scheduled_update)
         self.force = True
         self.force_web = True
+        self.priority = priority
+        self.kwargs = kwargs

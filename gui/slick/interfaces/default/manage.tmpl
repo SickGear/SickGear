@@ -1,8 +1,8 @@
 #import sickbeard
 #from sickbeard.common import *
 ##
-#set global $title = 'Mass Update'
-#set global $header = 'Mass Update'
+#set global $title = 'Bulk Change'
+#set global $header = 'Bulk Change'
 #set global $sbPath = '../..'
 #set global $topmenu = 'manage'
 ##
@@ -23,24 +23,16 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 <!--
 \$.tablesorter.addParser({
 	id: 'showNames',
-	is: function(s) {
-		return false;
-	},
+	is: function(s) { return !1; },
 	format: function(s) {
-		#if not $sickbeard.SORT_ARTICLE
-			return (s || '').replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
-		#else
-			return (s || '');
-		#end if	
+	    return (s || '')#if not $sickbeard.SORT_ARTICLE#.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1')#end if#;
 	},
 	type: 'text'
 });
 
 \$.tablesorter.addParser({
 	id: 'quality',
-	is: function(s) {
-		return false;
-	},
+	is: function(s) { return !1; },
 	format: function(s) {
 		return s.replace('hd1080p', 5).replace('hd720p', 4).replace('hd', 3).replace('sd', 2).replace('any', 1).replace('best', 0).replace('custom', 7);
 	},
@@ -70,7 +62,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 
 \$(document).ready(function()
 {
-	\$('#massUpdateTable:has(tbody tr)').tablesorter({
+	\$('#bulkChangeTable:has(tbody tr)').tablesorter({
 		widgets: ['zebra'],
 		sortList: [[1,0]],
 		headers: {
@@ -84,15 +76,15 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 });
 //-->
 </script>
-<script type="text/javascript" src="$sbRoot/js/massUpdate.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/bulkChange.js?v=$sbPID"></script>
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
-<form name="massUpdateForm" method="post" action="massUpdate">
+<form name="bulkChangeForm" method="post" action="bulkChange">
 
-<table id="massUpdateTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
+<table id="bulkChangeTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
 	<thead>
 		<tr>
 			<th class="col-checkbox">Edit<br /><input type="checkbox" class="bulkCheck" id="editCheck"></th>
@@ -125,10 +117,10 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 	<tfoot>
 		<tr>
 			<td rowspan="1" colspan="2" class="align-center alt"><input class="btn pull-left" type="button" value="Edit Selected" id="submitMassEdit"></td>
-			<td rowspan="1" colspan="#echo $columns_total-2#" class="align-right alt"><input class="btn pull-right" type="button" value="Submit" id="submitMassUpdate"></td>
+			<td rowspan="1" colspan="#echo $columns_total-2#" class="align-right alt"><input class="btn pull-right" type="button" value="Submit" id="submitBulkChange"></td>
 		</tr>
 	</tfoot>
-	
+
 	<tbody>
 
 #set $disabled = ' disabled="disabled"'
@@ -179,7 +171,8 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
                                  $option_state % ('remove', 'remove', ('', $disabled + $reason)[$curRemove_disabled]))
 		<tr>
 			<td align="center"><input type="checkbox" class="editCheck" id="edit-$curShow.indexerid"></td>
-			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$curShow.name</a></td>
+    #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sickbeard.SORT_ARTICLE]
+			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$display_name</a></td>
     #if $curShow.quality in $qualityPresets
 			<td align="center"><span class="quality $qualityPresetStrings[$curShow.quality]">$qualityPresetStrings[$curShow.quality]</span></td>
     #else
@@ -208,7 +201,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 		</tr>
 #end for
 	</tbody>
-	
+
 </table>
 
 </form>

@@ -35,7 +35,7 @@ from sickbeard.name_parser.parser import NameParser
 from sickbeard.tv import TVShow
 
 class XEMBasicTests(test.SickbeardTestDBCase):
-    def loadShowsFromDB(self):
+    def load_shows_from_db(self):
         """
         Populates the showList with shows from the database
         """

@@ -3,6 +3,8 @@
 #import re
 #from sickbeard import db, sbdatetime
 #from sickbeard.common import *
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 		</div><!-- /content -->
 	</div><!-- /contentWrapper -->
@@ -26,8 +28,8 @@
 ##
 #set $sql_result = $my_db.select($sql_statement)
 ##
-#set $shows_total = len($sickbeard.showList)
-#set $shows_active = len([show for show in $sickbeard.showList if 0 == show.paused and 'Ended' != show.status])
+#set $shows_total = len($sg_str('showList'))
+#set $shows_active = len([show for show in $sg_str('showList') if 0 == show.paused and 'Ended' != show.status])
 ##
 #if $sql_result:
     #set $ep_snatched = $sql_result[0]['ep_snatched']
@@ -50,6 +52,16 @@
 #except NotFound
     #set $localheader = ''
 #end try
+<%
+try:
+    next_backlog_timeleft = str(sickbeard.backlogSearchScheduler.next_backlog_timeleft()).split('.')[0]
+except AttributeError:
+    next_backlog_timeleft = 'soon'
+try:
+    recent_search_timeleft = str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0]
+except AttributeError:
+    recent_search_timeleft = 'soon'
+%>
 ##
 			<span class="footerhighlight">$shows_total</span> shows (<span class="footerhighlight">$shows_active</span> active)
 			| <span class="footerhighlight">$ep_downloaded</span><%=
@@ -60,10 +72,8 @@
     % (localRoot, str(ep_snatched))
 )[0 < ep_snatched]
 %>&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded $ep_percentage
-			| recent search: <span class="footerhighlight"><%= str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0] %></span>
-			| backlog search: <span class="footerhighlight"><%= str(sickbeard.backlogSearchScheduler.timeLeft()).split('.')[0] %></span>
-			| full backlog: <span class="footerhighlight"><%= sbdatetime.sbdatetime.sbfdate(sickbeard.backlogSearchScheduler.nextRun()) %>
-			</span>
+			| recent search: <span class="footerhighlight">$recent_search_timeleft</span>
+			| backlog search: <span class="footerhighlight">$next_backlog_timeleft</span>
 		</div>
 	</footer>
 </body>

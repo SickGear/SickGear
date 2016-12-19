@@ -1,152 +1,154 @@
+/** @namespace config.defaultHost */
 $(document).ready(function(){
-    var loading = '<img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />';
 
-    function toggle_torrent_title(){
-        if ($('#use_torrents').prop('checked'))
-            $('#no_torrents').show();
-        else
-            $('#no_torrents').hide();
-    }
+	var loading = '<img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />';
 
-    $.fn.nzb_method_handler = function() {
+	function toggleTorrentTitle() {
+		var noTorrent$ = $('#no_torrents');
+		if ($('#use_torrents').prop('checked'))
+			noTorrent$.show();
+		else
+			noTorrent$.hide();
+	}
 
-        var selectedProvider = $('#nzb_method :selected').val(),
-            blackhole_settings = '#blackhole_settings',
-            sabnzbd_settings = '#sabnzbd_settings',
-            testSABnzbd = '#testSABnzbd',
-            testSABnzbd_result = '#testSABnzbd_result',
-            nzbget_settings = '#nzbget_settings';
+	$.fn.nzbMethodHandler = function() {
 
-        $(blackhole_settings).hide();
-        $(sabnzbd_settings).hide();
-        $(testSABnzbd).hide();
-        $(testSABnzbd_result).hide();
-        $(nzbget_settings).hide();
+		var selectedProvider = $('#nzb_method').find(':selected').val(),
+			blackholeSettings = '#blackhole-settings',
+			nzbgetSettings = '#nzbget-settings, #test-nzb-result, .nzbget',
+			sabnzbdSettings = '#sabnzbd-settings, #test-nzb-result, .sabnzbd';
 
-        if ('blackhole' == selectedProvider) {
-            $(blackhole_settings).show();
-        } else if ('nzbget' == selectedProvider) {
-            $(nzbget_settings).show();
-        } else {
-            $(sabnzbd_settings).show();
-            $(testSABnzbd).show();
-            $(testSABnzbd_result).show();
-        }
-    }
+		$('#test-sabnzbd-result').html('Click below to test');
+		$([blackholeSettings, nzbgetSettings, sabnzbdSettings].join(',')).hide();
 
-    $.fn.torrent_method_handler = function() {
+		if ('blackhole' == selectedProvider) {
+			$(blackholeSettings).show();
+		} else if ('nzbget' == selectedProvider) {
+			$(nzbgetSettings).show();
+		} else {
+			$(sabnzbdSettings).show();
+		}
+	};
+	$('#nzb_method').change($(this).nzbMethodHandler);
+	$(this).nzbMethodHandler();
 
-        $('#options_torrent_clients').hide();
-        $('#options_torrent_blackhole').hide();
+	$.fn.torrentMethodHandler = function() {
 
-        var selectedProvider = $('#torrent_method :selected').val(),
-            host = ' host:port',
-            username = ' username',
-            password = ' password',
-            label = ' label',
-            directory = ' directory',
-            client = '',
-            option_panel = '#options_torrent_blackhole';
+		var selectedProvider = $('#torrent_method').find(':selected').val(),
+			host = ' host:port', username = ' username', password = ' password',
+			label = ' label',
+			directory = ' directory',
+			client = '',
+			hideHostDesc = !1, hidePausedOption = !1, hideLabelOption = !1, hidePathBlank = !1,
+			optionsBlackhole = '#options-torrent-blackhole',
+			optionsClients = '#options-torrent-clients',
+			optionsPanel = optionsBlackhole;
 
-        if ('blackhole' != selectedProvider) {
-            var label_warning_deluge = '#label_warning_deluge',
-                host_desc_rtorrent = '#host_desc_rtorrent',
-                host_desc_torrent = '#host_desc_torrent',
-                torrent_verify_cert_option = '#torrent_verify_cert_option',
-                torrent_path_option = '#torrent_path_option',
-                torrent_seed_time_option = '#torrent_seed_time_option',
-                torrent_high_bandwidth_option = '#torrent_high_bandwidth_option',
-                torrent_label_option = '#torrent_label_option',
-                path_synology = '#path_synology',
-                torrent_paused_option = '#torrent_paused_option';
+		$(optionsBlackhole).hide();
+		$(optionsClients).hide();
 
-            $(label_warning_deluge).hide();
-            $(host_desc_rtorrent).hide();
-            $(host_desc_deluge).hide();
-            $(host_desc_torrent).show();
-            $(torrent_username_option).show();
-            $(torrent_verify_cert_option).hide();
-            $(torrent_path_option).show();
-            $(torrent_path_option).find('.fileBrowser').show();
-            $(torrent_seed_time_option).hide();
-            $(torrent_high_bandwidth_option).hide();
-            $(torrent_label_option).show();
-            $(path_synology).hide();
-            $(torrent_paused_option).show();
+		$('#test-torrent-result').html('Click below to test');
+		$('.default-host').html(config.defaultHost[selectedProvider]);
 
-            if ('utorrent' == selectedProvider) {
-                client = 'uTorrent';
-                $(torrent_path_option).hide();
-                $(torrent_seed_time_option).show();
-            } else if ('transmission' == selectedProvider){
-                client = 'Transmission';
-                $(torrent_high_bandwidth_option).show();
-                $(torrent_label_option).hide();
-                //$('#directory_title').text(client + directory);
-            } else if ('deluge' == selectedProvider){
-                client = 'Deluge';
-                $(torrent_verify_cert_option).show();
-                $(label_warning_deluge).show();
-                $(host_desc_torrent).hide();
-                $(host_desc_deluge).show();
-                $(torrent_username_option).hide();
-                //$('#directory_title').text(client + directory);
-            } else if ('download_station' == selectedProvider){
-                client = 'Synology DS';
-                $(torrent_label_option).hide();
-                $('#torrent_paused_option').hide();
-                $(torrent_path_option).find('.fileBrowser').hide();
-                //$('#directory_title').text(client + directory);
-                $(path_synology).show();
-            } else if ('rtorrent' == selectedProvider){
-                client = 'rTorrent';
-                $(host_desc_torrent).hide();
-                $(host_desc_rtorrent).show();
-                $(torrent_paused_option).hide();
-                //$('#directory_title').text(client + directory);
-            }
-            $('#host_title').text(client + host);
-            $('#username_title').text(client + username);
-            $('#password_title').text(client + password);
-            $('#torrent_client').text(client);
-            option_panel = '#options_torrent_clients';
-        }
-        $(option_panel).show();
-    }
+		if ('blackhole' != selectedProvider) {
+			var labelWarningDeluge = '#label-warning-deluge',
+				hostDesc = '#host-desc-torrent',
+				hostDescDeluge = '#host-desc-deluge',
+				hostDescRtorrent = '#host-desc-rtorrent',
+				usernameOption = '#torrent-username-option',
+				verifyCertOption = '#torrent-verify-cert-option',
+				labelOption = '#torrent-label-option',
+				qBitTorrent = '.qbittorrent',
+				synology = '.synology',
+				transmission = '.transmission',
+				pathOption = '#torrent-path-option',
+				pathBlank = '#path-blank',
+				seedTimeOption = '#torrent-seed-time-option',
+				pausedOption = '#torrent-paused-option',
+				highBandwidthOption = '#torrent-high-bandwidth-option';
 
-    $('#nzb_method').change($(this).nzb_method_handler);
+			$([labelWarningDeluge, hostDescDeluge, hostDescRtorrent, verifyCertOption, seedTimeOption,
+				highBandwidthOption, qBitTorrent, synology, transmission].join(',')).hide();
 
-    $(this).nzb_method_handler();
+			$([hostDesc, usernameOption, pathOption, labelOption, pathBlank, pausedOption].join(',')).show();
+			$(pathOption).find('.fileBrowser').show();
 
-    $('#testSABnzbd').click(function(){
-        $('#testSABnzbd_result').html(loading);
-        var sab_host = $('#sab_host').val();
-        var sab_username = $('#sab_username').val();
-        var sab_password = $('#sab_password').val();
-        var sab_apiKey = $('#sab_apikey').val();
+			switch (selectedProvider) {
+				case 'utorrent':
+					client = 'uTorrent';
+					$(pathOption).hide();
+					$(seedTimeOption).show();
+					break;
+				case 'deluge':
+					client = 'Deluge'; hideHostDesc = !0;
+					$(usernameOption).hide();
+					$([hostDescDeluge, verifyCertOption, labelWarningDeluge].join(',')).show();
+					break;
+				case 'transmission':
+					client = 'Transmission'; hideLabelOption = !0; hidePathBlank = !0;
+					$([transmission, highBandwidthOption].join(',')).show();
+					break;
+				case 'qbittorrent':
+					// Setting Paused is buggy on qB, remove from use
+					client = 'qBittorrent'; hidePausedOption = !0; hidePathBlank = !0;
+					$(qBitTorrent).show();
+					break;
+				case 'download_station':
+					client = 'Synology DS'; hideLabelOption = !0; hidePausedOption = !0;
+					$(pathOption).find('.fileBrowser').hide();
+					$(synology).show();
+					break;
+				case 'rtorrent':
+					client = 'rTorrent'; hideHostDesc = !0; hidePausedOption = !0;
+					$(hostDescRtorrent).show();
+					break;
+			}
+			hideHostDesc && $(hostDesc).hide();
+			hideLabelOption && $(labelOption).hide();
+			hidePausedOption && $(pausedOption).hide();
+			hidePathBlank && $(pathBlank).hide();
+			$('#host-title').text(client + host);
+			$('#username-title').text(client + username);
+			$('#password-title').text(client + password);
+			$('#torrent-client').text(client);
+			optionsPanel = optionsClients;
+		}
+		$(optionsPanel).show();
+	};
+	$('#torrent_method').change($(this).torrentMethodHandler);
+	$(this).torrentMethodHandler();
 
-        $.get(sbRoot + '/home/testSABnzbd', {'host': sab_host, 'username': sab_username, 'password': sab_password, 'apikey': sab_apiKey},
-        function (data){ $('#testSABnzbd_result').html(data); });
-    });
+	$('#use_torrents').click(function() {
+		toggleTorrentTitle();
+	});
 
+	$.fn.testResult = function(data, test$) {
+		// endpoint changed so gracefully handle 404s until restarted
+		$(test$).html(/404/.test(data) ? 'Test not found, a restart should fix' : data);
+	};
 
-    $('#torrent_method').change($(this).torrent_method_handler);
+	$('#test_torrent').click(function() {
+		$('#test-torrent-result').html(loading);
+		$.get(sbRoot + '/home/test_torrent',
+			{'torrent_method': $('#torrent_method').find(':selected').val(), 'host': $('#torrent_host').val(),
+				'username': $('#torrent_username').val(), 'password': $('#torrent_password').val()},
+				function(data) { $(this).testResult(data, '#test-torrent-result'); });
+	});
 
-    $(this).torrent_method_handler();
+	$('#test_nzbget').click(function() {
+		$('#test-nzb-result').html(loading);
+		$.get(sbRoot + '/home/test_nzbget',
+			{'host': $('#nzbget_host').val(), 'use_https': $('#nzbget_use_https').prop('checked'),
+				'username': $('#nzbget_username').val(), 'password': $('#nzbget_password').val()},
+			function(data) { $(this).testResult(data, '#test-nzb-result'); });
+	});
 
-    $('#use_torrents').click(function(){
-        toggle_torrent_title();
-    });
-
-    $('#test_torrent').click(function(){
-        $('#test_torrent_result').html(loading);
-        var torrent_method = $('#torrent_method :selected').val();
-        var torrent_host = $('#torrent_host').val();
-        var torrent_username = $('#torrent_username').val();
-        var torrent_password = $('#torrent_password').val();
-
-        $.get(sbRoot + '/home/testTorrent', {'torrent_method': torrent_method, 'host': torrent_host, 'username': torrent_username, 'password': torrent_password},
-        function (data){ $('#test_torrent_result').html(data); });
-    });
+	$('#test_sabnzbd').click(function() {
+		$('#test-nzb-result').html(loading);
+		$.get(sbRoot + '/home/test_sabnzbd',
+			{'host': $('#sab_host').val(), 'username': $('#sab_username').val(),
+				'password': $('#sab_password').val(), 'apikey': $('#sab_apikey').val()},
+			function(data) { $(this).testResult(data, '#test-nzb-result'); });
+	});
 
 });

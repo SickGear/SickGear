@@ -1,5 +1,8 @@
 #import sickbeard
 #import urllib
+#from sickbeard.helpers import anon_url
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 #slurp
 <!DOCTYPE html>
 <html>
@@ -34,6 +37,7 @@
 	<meta name="msapplication-TileColor" content="#2b5797">
 	<meta name="msapplication-TileImage" content="$sbRoot/images/ico/mstile-144x144.png">
 	<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
+	<meta name="theme-color" content="#echo '#%s' % ('333', '15528F')['dark' == $sg_str('THEME_NAME', 'dark')]#">
 
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap.css?v=$sbPID"/>
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/browser.css?v=$sbPID" />
@@ -41,7 +45,7 @@
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/jquery.qtip-2.2.1.min.css?v=$sbPID"/>
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/pnotify.custom.min.css?v=$sbPID" />
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID"/>
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/${sickbeard.THEME_NAME}.css?v=$sbPID" />
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/${sg_str('THEME_NAME', 'dark')}.css?v=$sbPID" />
 
 	<script type="text/javascript" src="$sbRoot/js/lib/jquery-1.8.3.min.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/lib/bootstrap.min.js?v=$sbPID"></script>
@@ -62,14 +66,15 @@
 	<script type="text/javascript" src="$sbRoot/js/lib/jquery.confirm.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/script.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/inc_top.js?v=$sbPID"></script>
-#if $sickbeard.FUZZY_DATING
+#if $sg_var('FUZZY_DATING')
 	<script type="text/javascript" src="$sbRoot/js/moment/moment.min.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/fuzzyMoment.js?v=$sbPID"></script>
 #end if
 	<script type="text/javascript" charset="utf-8">
 	<!--
-		var sbRoot = '$sbRoot', anonURL = '$sickbeard.ANON_REDIRECT', themeSpinner = '#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#',
+		var sbRoot = '$sbRoot', anonURL = '$sg_str('ANON_REDIRECT')', themeSpinner = '#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#',
 			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top" />', topmenu = '$topmenu';
+		\$.SickGear = {Root: '${sbRoot}', PID: '${sbPID}'};
 	//-->
 	</script>
 	<script type="text/javascript" src="$sbRoot/js/lib/jquery.scrolltopcontrol-1.1.js"></script>
@@ -84,6 +89,10 @@
 #except
     #pass
 #end try
+#if not any([x in $body_attr for x in ['back-art', 'pro', 'ii']])
+    #set $parts = $body_attr.split('class="')
+    #set $body_attr = ('class="%s '.join($parts), $parts[0] + ' class="%s"')[1 == len($parts)] % {0: '', 1: 'pro', 2: 'pro ii'}.get(getattr($sickbeard, 'DISPLAY_SHOW_VIEWMODE', 0))
+#end if
 <body$body_attr>
 	<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
 		<div class="container-fluid">
@@ -102,63 +111,77 @@
 				<ul class="nav navbar-nav navbar-right">
 					<li id="NAVhome" class="dropdown">
 						<a href="$sbRoot/home/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#">Shows <b class="caret"></b></a>
+#set $showlist_home, $episode_home, $history_home = 3 * ['(<i class="sgicon-home tight"></i>)']
+#if 'shows' == $sickbeard.DEFAULT_HOME
+    #set $episode_home, $history_home = 2 * ['']
+#elif 'episodes' == $sickbeard.DEFAULT_HOME
+    #set $showlist_home, $history_home = 2 * ['']
+#else
+    #set $showlist_home, $episode_home = 2 * ['']
+#end if
 						<ul class="dropdown-menu">
-							<li><a href="$sbRoot/home/showlistView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-home"></i>Show List</a></li>
-							<li><a href="$sbRoot/home/addShows/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>Add Shows</a></li>
-							<li><a href="$sbRoot/home/postprocess/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Manual Post-Processing</a></li>
+							<li><a href="$sbRoot/home/showlistView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-list" style="font-size:12px"></i>Show List $showlist_home</a></li>
+							<li><a href="$sbRoot/episodeView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-cal"></i>Episode Schedule $episode_home</a></li>
+							<li><a href="$sbRoot/history/" tabindex="$tab#set $tab += 1#"><i class="sgicon-mediafile"></i>History $history_home</a></li>
+							<li class="divider"></li>
+							<li class="menu-item-noicon opacity60">Add show...</li>
+							<li><a href="$sbRoot/home/addShows/new_show/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>Search
+								<div class="menu-item-desc opacity60">find show at TV info source</div></a></li>
+							<li><a href="$sbRoot/home/addShows/trakt_default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-trakt"></i>Trakt Cards
+								<div class="menu-item-desc opacity60">trends, tailored suggestions...</div></a></li>
+							<li><a href="$sbRoot/home/addShows/imdb_default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-imdb"></i>IMDb Cards
+								<div class="menu-item-desc opacity60">popular decades, watchlists...</div></a></li>
+#if $sg_var('USE_ANIDB')
+							<li><a href="$sbRoot/home/addShows/anime_default/" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
+								<div class="menu-item-desc opacity60">browse anime to add</div></a></li>
+#else
+							<li><a href="$sbRoot/config/anime/" class="opacity60" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
+								<div class="menu-item-desc">to use, first enable AniDB here</div></a></li>
+#end if
 						</ul>
-					</li>
-
-					<li id="NAVepisodeView">
-						<a href="$sbRoot/episodeView/" tabindex="$tab#set $tab += 1#">Episodes</a>
-					</li>
-
-					<li id="NAVhistory">
-						<a href="$sbRoot/history/" tabindex="$tab#set $tab += 1#">History</a>
 					</li>
 
 					<li id="NAVmanage" class="dropdown">
 						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b></a>
 						<ul class="dropdown-menu">
-							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-massupdate"></i>Mass Update</a></li>
+							<li><a href="$sbRoot/home/postprocess/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Process Media</a></li>
+							<li class="divider"></li>
+							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-bulk-change"></i>Bulk Change</a></li>
 							<li><a href="$sbRoot/manage/backlogOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-backlog"></i>Backlog Overview</a></li>
-							<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Manage Searches</a></li>
-							<li><a href="$sbRoot/manage/showQueueOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-showqueue"></i>Show Queue Overview</a></li>
-							<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status Management</a></li>
-#if $sickbeard.USE_PLEX and $sickbeard.PLEX_SERVER_HOST != ''
-							<li><a href="$sbRoot/home/updatePLEX/" tabindex="$tab#set $tab += 1#"><i class="sgicon-plex"></i>Update PLEX</a></li>
+							<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Media Search</a></li>
+							<li><a href="$sbRoot/manage/showProcesses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-showqueue"></i>Show Processes</a></li>
+							<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status</a></li>
+#if hasattr($sickbeard, 'USE_EMBY') and $sg_var('USE_EMBY') and $sg_str('EMBY_HOST') != '' and $sg_str('EMBY_APIKEY') != ''
+							<li><a href="$sbRoot/home/updateEMBY/" tabindex="$tab#set $tab += 1#"><i class="sgicon-emby"></i>Update Emby</a></li>
 #end if
-#if $sickbeard.USE_XBMC and $sickbeard.XBMC_HOST != ''
-							<li><a href="$sbRoot/home/updateXBMC/" tabindex="$tab#set $tab += 1#"><i class="sgicon-xbmc"></i>Update XBMC</a></li>
-#end if
-#if $sickbeard.USE_KODI and $sickbeard.KODI_HOST != ''
+#if hasattr($sickbeard, 'USE_KODI') and $sg_var('USE_KODI') and $sg_str('KODI_HOST') != ''
 							<li><a href="$sbRoot/home/updateKODI/" tabindex="$tab#set $tab += 1#"><i class="sgicon-kodi"></i>Update Kodi</a></li>
 #end if
-#if $sickbeard.USE_FAILED_DOWNLOADS
+#if hasattr($sickbeard, 'USE_XBMC') and $sg_var('USE_XBMC') and $sg_str('XBMC_HOST') != ''
+							<li><a href="$sbRoot/home/updateXBMC/" tabindex="$tab#set $tab += 1#"><i class="sgicon-xbmc"></i>Update XBMC</a></li>
+#end if
+#if hasattr($sickbeard, 'USE_PLEX') and $sg_var('USE_PLEX') and $sg_str('PLEX_SERVER_HOST') != ''
+							<li><a href="$sbRoot/home/updatePLEX/" tabindex="$tab#set $tab += 1#"><i class="sgicon-plex"></i>Update PLEX</a></li>
+#end if
+#if hasattr($sickbeard, 'USE_FAILED_DOWNLOADS') and $sg_var('USE_FAILED_DOWNLOADS')
 							<li><a href="$sbRoot/manage/failedDownloads/" tabindex="$tab#set $tab += 1#"><i class="sgicon-failed"></i>Failed Downloads</a></li>
 #end if
-#if $sickbeard.USE_SUBTITLES
+#if hasattr($sickbeard, 'USE_SUBTITLES') and $sg_var('USE_SUBTITLES')
 							<li><a href="$sbRoot/manage/subtitleMissed/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Missed Subtitle Management</a></li>
 #end if
-						</ul>
-					</li>
-
-					<li id="NAVerrorlogs" class="dropdown">
-						<a href="$sbRoot/errorlogs/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#">$logPageTitle <b class="caret"></b></a>
-						<ul class="dropdown-menu">
-							<li><a href="$sbRoot/errorlogs/" tabindex="$tab#set $tab += 1#"><i class="sgicon-errorlog"></i>View Log (Errors)</a></li>
-							<li><a href="$sbRoot/errorlogs/viewlog/" tabindex="$tab#set $tab += 1#"><i class="sgicon-log"></i>View Log</a></li>
 						</ul>
 					</li>
 
 					<li id="NAVconfig" class="dropdown">
 						<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
 						<ul class="dropdown-menu">
-							<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>Help &amp; Info</a></li>
+							<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>About</a></li>
+							<li class="divider"></li>
+							<li class="menu-item-noicon opacity60">Settings...</li>
 							<li><a href="$sbRoot/config/general/" tabindex="$tab#set $tab += 1#"><i class="sgicon-config"></i>General</a></li>
-							<li><a href="$sbRoot/config/search/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Settings</a></li>
-							<li><a href="$sbRoot/config/providers/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Providers</a></li>
-							<li><a href="$sbRoot/config/subtitles/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Subtitles Settings</a></li>
+							<li><a href="$sbRoot/config/providers/" tabindex="$tab#set $tab += 1#"><i class="sgicon-book"></i>Media Providers</a></li>
+							<li><a href="$sbRoot/config/search/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search</a></li>
+							<li><a href="$sbRoot/config/subtitles/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Subtitles</a></li>
 							<li><a href="$sbRoot/config/postProcessing/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Post Processing</a></li>
 							<li><a href="$sbRoot/config/notifications/" tabindex="$tab#set $tab += 1#"><i class="sgicon-notification"></i>Notifications</a></li>
 							<li><a href="$sbRoot/config/anime/" tabindex="$tab#set $tab += 1#"><i class="sgicon-anime"></i>Anime</a></li>
@@ -166,12 +189,22 @@
 					</li>
 
 					<li class="dropdown">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span></a>
+#set num_errors = $getVar('$log_num_errors', None)
+#set $err_class = ('', ' errors ' + (len('%s' % $num_errors ) * 'n')[0:4])[any([$num_errors])]
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"></i></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/manage/manageSearches/forceVersionCheck" tabindex="$tab#set $tab += 1#"><i class="sgicon-updatecheck"></i>Check for Updates</a></li>
-							<li><a href="$sbRoot/home/viewchanges" tabindex="$tab#set $tab += 1#"><i class="sgicon-log"></i>View Changes</a></li>
+							<li><a href="$sbRoot/home/viewchanges" tabindex="$tab#set $tab += 1#"><i class="sgicon-changes"></i>View Changes</a></li>
 							<li class="divider"></li>
-#if $sickbeard.WEB_USERNAME or $sickbeard.WEB_PASSWORD
+#if $err_class
+							<li><a href="$sbRoot/errorlogs/" tabindex="$tab#set $tab += 1#"><span class="logger item$err_class"><i class="sgicon-warning"></i></span></i>View Errors</a></li>
+#end if
+							<li><a href="$sbRoot/errorlogs/viewlog/" tabindex="$tab#set $tab += 1#"><i class="sgicon-log"></i>View Log File</a></li>
+							<li class="divider"></li>
+							<li><a href="$sbRoot/home/addShows/import_shows/" tabindex="$tab#set $tab += 1#"><i class="sgicon-import"></i>Import
+								<div class="menu-item-desc opacity60">existing shows</div></a></li>
+							<li class="divider"></li>
+#if $sg_str('WEB_USERNAME') or $sg_str('WEB_PASSWORD')
 							<li><a href="$sbRoot/logout" class="confirm logout" tabindex="$tab#set $tab += 1#"><i class="sgicon-logout"></i>Logout</a></li>
 #end if
 							<li><a href="$sbRoot/home/restart/?pid=$sbPID" class="confirm restart" tabindex="$tab#set $tab += 1#"><i class="sgicon-restart"></i>Restart</a></li>
@@ -213,16 +246,15 @@
 #end if
 ##
 #if sys.version_info < (2, 7, 9):
-	<div class="alert alert-danger upgrade-notification" role="alert">
-		<span>
-			SickGear will be dropping support for Python 2.7.8 and below. We recommend updating to latest version:
-			<a href="https://www.python.org/downloads/" onclick="window.open(this.href); return false;">Download here</a>
-		</span>
+	<div class="alert alert-danger upgrade-notification upgrade-py" role="alert">
+		<p>As per notify 29 Nov 2015, SickGear no longer supports Python 2.7.8 and older<br />
+			Please upgrade to Python <b>2.7.9</b> or newer (not 3.x.x): <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">Download here</a>
+		</p>
 	</div>
 #end if
-#if $sickbeard.NEWEST_VERSION_STRING
+#if $sg_str('NEWEST_VERSION_STRING')
 	<div class="alert alert-success upgrade-notification" role="alert">
-		<span>$sickbeard.NEWEST_VERSION_STRING</span>
+		<span>$sg_str('NEWEST_VERSION_STRING')</span>
 	</div>
 #end if
 ##

@@ -19,7 +19,7 @@ import re
 import urllib
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.exceptions import AuthException
 from sickbeard.helpers import tryInt
 from sickbeard.indexers import indexer_config
@@ -33,7 +33,7 @@ except ImportError:
 class HDBitsProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'HDBits')
+        generic.TorrentProvider.__init__(self, 'HDBits', cache_update_freq=15)
 
         # api_spec: https://hdbits.org/wiki/API
         self.url_base = 'https://hdbits.org/'
@@ -46,14 +46,12 @@ class HDBitsProvider(generic.TorrentProvider):
         self.proper_search_terms = [' proper ', ' repack ']
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.passkey, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = HDBitsCache(self)
+        self.username, self.passkey, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def check_auth_from_data(self, parsed_json):
 
         if 'status' in parsed_json and 5 == parsed_json.get('status') and 'message' in parsed_json:
-            logger.log(u'Incorrect username or password for %s : %s' % (self.name, parsed_json['message']), logger.DEBUG)
+            logger.log(u'Incorrect username or password for %s: %s' % (self.name, parsed_json['message']), logger.DEBUG)
             raise AuthException('Your username or password for %s is incorrect, check your config.' % self.name)
 
         return True
@@ -115,20 +113,21 @@ class HDBitsProvider(generic.TorrentProvider):
 
                 json_resp = self.get_url(search_url, post_data=post_data, json=True)
 
-                if not (json_resp and 'data' in json_resp and self.check_auth_from_data(json_resp)):
+                if not (json_resp and self.check_auth_from_data(json_resp) and 'data' in json_resp):
                     logger.log(u'Response from %s does not contain any json data, abort' % self.name, logger.ERROR)
                     return results
 
                 cnt = len(items[mode])
                 for item in json_resp['data']:
                     try:
-                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in 'seeders', 'leechers', 'size']]
+                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in
+                                                                          'seeders', 'leechers', 'size']]
                         if self._peers_fail(mode, seeders, leechers)\
                                 or self.freeleech and re.search('(?i)no', item.get('freeleech', 'no')):
                             continue
+
                         title = item['name']
                         download_url = self.urls['get'] % urllib.urlencode({'id': item['id'], 'passkey': self.passkey})
-
                     except (AttributeError, TypeError, ValueError):
                         continue
 
@@ -138,26 +137,12 @@ class HDBitsProvider(generic.TorrentProvider):
                 self._log_search(mode, len(items[mode]) - cnt,
                                  ('search_param: ' + str(search_param), self.name)['Cache' == mode])
 
-                self._sort_seeders(mode, items)
+                results = self._sort_seeding(mode, results + items[mode])
 
-                if id_search and len(items[mode]):
-                    return items[mode]
-
-            results = list(set(results + items[mode]))
+                if id_search and len(results):
+                    return results
 
         return results
-
-
-class HDBitsCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 15  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = HDBitsProvider()

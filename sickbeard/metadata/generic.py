@@ -20,21 +20,31 @@ from __future__ import with_statement
 
 import os.path
 
-import xml.etree.cElementTree as etree
+try:
+    from lxml import etree
+except ImportError:
+    try:
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        import xml.etree.ElementTree as etree
 
 import re
 
 import sickbeard
 
-from sickbeard import exceptions, helpers
+from sickbeard import helpers
 from sickbeard.metadata import helpers as metadata_helpers
 from sickbeard import logger
 from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
 from sickbeard.show_name_helpers import allPossibleShowNames
+from sickbeard.indexers import indexer_config
+
 from six import iteritems
 
 from lib.tmdb_api.tmdb_api import TMDB
+from lib.fanart.core import Request as fanartRequest
+import lib.fanart as fanart
 
 
 class GenericMetadata():
@@ -143,21 +153,21 @@ class GenericMetadata():
 
     def _has_episode_thumb(self, ep_obj):
         location = self.get_episode_thumb_path(ep_obj)
-        result = location != None and ek.ek(os.path.isfile, location)
+        result = None is not location and ek.ek(os.path.isfile, location)
         if location:
             logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
         return result
 
     def _has_season_poster(self, show_obj, season):
         location = self.get_season_poster_path(show_obj, season)
-        result = location != None and ek.ek(os.path.isfile, location)
+        result = None is not location and ek.ek(os.path.isfile, location)
         if location:
             logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
         return result
 
     def _has_season_banner(self, show_obj, season):
         location = self.get_season_banner_path(show_obj, season)
-        result = location != None and ek.ek(os.path.isfile, location)
+        result = None is not location and ek.ek(os.path.isfile, location)
         if location:
             logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
         return result
@@ -276,40 +286,40 @@ class GenericMetadata():
 
     def update_show_indexer_metadata(self, show_obj):
         if self.show_metadata and show_obj and self._has_show_metadata(show_obj):
-            logger.log(
-                u"Metadata provider " + self.name + " updating show indexer info metadata file for " + show_obj.name,
-                logger.DEBUG)
+            logger.log(u'Metadata provider %s updating show indexer metadata file for %s' % (self.name, show_obj.name),
+                       logger.DEBUG)
 
             nfo_file_path = self.get_show_file_path(show_obj)
             try:
                 with ek.ek(open, nfo_file_path, 'r') as xmlFileObj:
-                    showXML = etree.ElementTree(file=xmlFileObj)
+                    show_xml = etree.ElementTree(file=xmlFileObj)
 
-                indexer = showXML.find('indexer')
-                indexerid = showXML.find('id')
+                indexer = show_xml.find('indexer')
+                indexerid = show_xml.find('id')
 
-                root = showXML.getroot()
-                if indexer:
-                    indexer.text = show_obj.indexer
+                root = show_xml.getroot()
+                show_indexer = str(show_obj.indexer)
+                if None is not indexer:
+                    indexer.text = show_indexer
                 else:
-                    etree.SubElement(root, "indexer").text = str(show_obj.indexer)
+                    etree.SubElement(root, 'indexer').text = show_indexer
 
-                if indexerid:
-                    indexerid.text = show_obj.indexerid
+                show_indexerid = str(show_obj.indexerid)
+                if None is not indexerid:
+                    indexerid.text = show_indexerid
                 else:
-                    etree.SubElement(root, "id").text = str(show_obj.indexerid)
+                    etree.SubElement(root, 'id').text = show_indexerid
 
                 # Make it purdy
                 helpers.indentXML(root)
 
-                showXML.write(nfo_file_path)
+                show_xml.write(nfo_file_path)
                 helpers.chmodAsParent(nfo_file_path)
 
                 return True
             except IOError as e:
-                logger.log(
-                    u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),
-                    logger.ERROR)
+                logger.log(u'Unable to write file %s - is the folder writable? %s' % (nfo_file_path, ex(e)),
+                           logger.ERROR)
 
     def create_fanart(self, show_obj):
         if self.fanart and show_obj and not self._has_fanart(show_obj):
@@ -736,29 +746,26 @@ class GenericMetadata():
 
     def _retrieve_show_image(self, image_type, show_obj, which=None):
         """
-        Gets an image URL from theTVDB.com and TMDB.com, downloads it and returns the data.
+        Gets an image URL from theTVDB.com, fanart.tv and TMDB.com, downloads it and returns the data.
+        If type is fanart, multiple image src urls are returned instead of a single data image.
 
-        image_type: type of image to retrieve (currently supported: fanart, poster, banner)
+        image_type: type of image to retrieve (currently supported: fanart, poster, banner, poster_thumb, banner_thumb)
         show_obj: a TVShow object to use when searching for the image
         which: optional, a specific numbered poster to look for
 
         Returns: the binary image data if available, or else None
         """
-        image_url = None
         indexer_lang = show_obj.lang
 
         try:
             # There's gotta be a better way of doing this but we don't wanna
             # change the language value elsewhere
             lINDEXER_API_PARMS = sickbeard.indexerApi(show_obj.indexer).api_params.copy()
-
             lINDEXER_API_PARMS['banners'] = True
+            lINDEXER_API_PARMS['dvdorder'] = 0 != show_obj.dvdorder
 
-            if indexer_lang and not indexer_lang == 'en':
+            if indexer_lang and not 'en' == indexer_lang:
                 lINDEXER_API_PARMS['language'] = indexer_lang
-
-            if show_obj.dvdorder != 0:
-                lINDEXER_API_PARMS['dvdorder'] = True
 
             t = sickbeard.indexerApi(show_obj.indexer).indexer(**lINDEXER_API_PARMS)
             indexer_show_obj = t[show_obj.indexerid]
@@ -767,30 +774,59 @@ class GenericMetadata():
                 show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
             return None
 
-        if image_type not in ('fanart', 'poster', 'banner', 'poster_thumb', 'banner_thumb'):
+        return_links = False
+        if 'fanart_all' == image_type:
+            return_links = True
+            image_type = 'fanart'
+
+        if image_type not in ('poster', 'banner', 'fanart', 'poster_thumb', 'banner_thumb'):
             logger.log(u"Invalid image type " + str(image_type) + ", couldn't find it in the " + sickbeard.indexerApi(
                 show_obj.indexer).name + " object", logger.ERROR)
             return None
 
-        if image_type == 'poster_thumb':
+        image_urls = []
+        init_url = None
+        if 'poster_thumb' == image_type:
             if getattr(indexer_show_obj, 'poster', None) is not None:
                 image_url = re.sub('posters', '_cache/posters', indexer_show_obj['poster'])
-        elif image_type == 'banner_thumb':
+                if image_url:
+                    image_urls.append(image_url)
+            for item in self._fanart_urls_from_show(show_obj, image_type, indexer_lang, True) or []:
+                image_urls.append(item[2])
+            if 0 == len(image_urls):
+                for item in self._tmdb_image_url(show_obj, image_type) or []:
+                    image_urls.append(item[2])
+
+        elif 'banner_thumb' == image_type:
             if getattr(indexer_show_obj, 'banner', None) is not None:
                 image_url = re.sub('graphical', '_cache/graphical', indexer_show_obj['banner'])
+                if image_url:
+                    image_urls.append(image_url)
+            for item in self._fanart_urls_from_show(show_obj, image_type, indexer_lang, True) or []:
+                image_urls.append(item[2])
         else:
+            for item in self._fanart_urls_from_show(show_obj, image_type, indexer_lang) or []:
+                image_urls.append(item[2])
+
             if getattr(indexer_show_obj, image_type, None) is not None:
                 image_url = indexer_show_obj[image_type]
+                if image_url:
+                    image_urls.append(image_url)
+                    if 'poster' == image_type:
+                        init_url = image_url
 
-        # Try and get posters and fanart from TMDB
-        if image_url is None:
-            if image_type in ('poster', 'poster_thumb'):
-                image_url = self._retrieve_show_images_from_tmdb(show_obj, poster=True)
-            elif image_type == 'fanart':
-                image_url = self._retrieve_show_images_from_tmdb(show_obj, backdrop=True)
+            if 0 == len(image_urls) or 'fanart' == image_type:
+                for item in self._tmdb_image_url(show_obj, image_type) or []:
+                    image_urls.append('%s?%s' % (item[2], item[0]))
 
-        if image_url:
-            image_data = metadata_helpers.getShowImage(image_url, which)
+        image_data = len(image_urls) or None
+        if image_data:
+            if return_links:
+                return image_urls
+            else:
+                image_data = metadata_helpers.getShowImage((init_url, image_urls[0])[None is init_url], which)
+
+        if None is not image_data:
             return image_data
 
         return None
@@ -812,14 +848,11 @@ class GenericMetadata():
             # There's gotta be a better way of doing this but we don't wanna
             # change the language value elsewhere
             lINDEXER_API_PARMS = sickbeard.indexerApi(show_obj.indexer).api_params.copy()
-
             lINDEXER_API_PARMS['banners'] = True
+            lINDEXER_API_PARMS['dvdorder'] = 0 != show_obj.dvdorder
 
             if indexer_lang and not indexer_lang == 'en':
                 lINDEXER_API_PARMS['language'] = indexer_lang
-
-            if show_obj.dvdorder != 0:
-                lINDEXER_API_PARMS['dvdorder'] = True
 
             t = sickbeard.indexerApi(show_obj.indexer).indexer(**lINDEXER_API_PARMS)
             indexer_show_obj = t[show_obj.indexerid]
@@ -868,8 +901,8 @@ class GenericMetadata():
             # There's gotta be a better way of doing this but we don't wanna
             # change the language value elsewhere
             lINDEXER_API_PARMS = sickbeard.indexerApi(show_obj.indexer).api_params.copy()
-
             lINDEXER_API_PARMS['banners'] = True
+            lINDEXER_API_PARMS['dvdorder'] = 0 != show_obj.dvdorder
 
             if indexer_lang and not indexer_lang == 'en':
                 lINDEXER_API_PARMS['language'] = indexer_lang
@@ -910,6 +943,8 @@ class GenericMetadata():
         Used only when mass adding Existing Shows, using previously generated Show metadata to reduce the need to query TVDB.
         """
 
+        from sickbeard.indexers.indexer_config import INDEXER_TVDB
+
         empty_return = (None, None, None)
 
         metadata_path = ek.ek(os.path.join, folder, self._show_metadata_filename)
@@ -942,10 +977,15 @@ class GenericMetadata():
             except:
                 indexer = None
 
-            if showXML.findtext('tvdbid') != None:
+            if None is not showXML.findtext('tvdbid'):
                 indexer_id = int(showXML.findtext('tvdbid'))
-            elif showXML.findtext('id') != None:
+                indexer = INDEXER_TVDB
+            elif None is not showXML.findtext('id'):
                 indexer_id = int(showXML.findtext('id'))
+                try:
+                    indexer = INDEXER_TVDB if [s for s in showXML.findall('.//*') if s.text and s.text.find('thetvdb.com') != -1] else indexer
+                except:
+                    pass
             else:
                 logger.log(u"Empty <id> or <tvdbid> field in NFO, unable to find a ID", logger.WARNING)
                 return empty_return
@@ -962,7 +1002,15 @@ class GenericMetadata():
 
         return (indexer_id, name, indexer)
 
-    def _retrieve_show_images_from_tmdb(self, show, backdrop=False, poster=False):
+    @staticmethod
+    def _tmdb_image_url(show, image_type):
+        types = {'poster': 'poster_path',
+                 'banner': None,
+                 'fanart': 'backdrop_path',
+                 'fanart_all': 'backdrops',
+                 'poster_thumb': 'poster_path',
+                 'banner_thumb': None}
+
         # get TMDB configuration info
         tmdb = TMDB(sickbeard.TMDB_API_KEY)
         config = tmdb.Configuration()
@@ -971,21 +1019,90 @@ class GenericMetadata():
         sizes = response['images']['poster_sizes']
 
         def size_str_to_int(x):
-            return float("inf") if x == 'original' else int(x[1:])
+            return float('inf') if x == 'original' else int(x[1:])
 
         max_size = max(sizes, key=size_str_to_int)
 
         try:
-            search = tmdb.Search()
-            for show_name in set(allPossibleShowNames(show)):
-                for result in search.collection({'query': show_name})['results'] + search.tv({'query': show_name})[
-                    'results']:
-                    if backdrop and result['backdrop_path']:
-                        return "{0}{1}{2}".format(base_url, max_size, result['backdrop_path'])
-                    elif poster and result['poster_path']:
-                        return "{0}{1}{2}".format(base_url, max_size, result['poster_path'])
+            itemlist = []
+            for (src, name) in [(indexer_config.INDEXER_TVDB, 'tvdb'), (indexer_config.INDEXER_IMDB, 'imdb'),
+                                (indexer_config.INDEXER_TVRAGE, 'tvrage')]:
+                is_id = show.ids.get(src, {}).get('id', None)
+                if not is_id:
+                    continue
 
-        except Exception as e:
+                result = tmdb.Find(is_id).info({'external_source': '%s_id' % name})
+                if 'tv_results' not in result or not len(result['tv_results']):
+                    continue
+
+                tmdb_show = result['tv_results'][0]
+
+                if 'fanart' == image_type:
+                    tv_obj = tmdb.TV(tmdb_show['id'])
+                    rjson_info = tv_obj.info({'append_to_response': 'images', 'include_image_language': 'en,null'})
+                    rjson_img = rjson_info['images']
+                    for art in rjson_img[types['fanart_all']] or []:
+                        if 'vote_average' not in art or 'file_path' not in art:
+                            continue
+                        art_likes = art['vote_average']
+                        url = u'%s%s%s' % (base_url, max_size, art['file_path'])
+                        itemlist += [[tmdb_show['id'], art_likes, url]]
+
+                    itemlist.sort(lambda a, b: cmp((a[1]), (b[1])), reverse=True)
+                    return itemlist
+
+                elif tmdb_show[types[image_type]]:
+                    return [[tmdb_show['id'], tmdb_show['vote_average'], '%s%s%s' % (base_url, max_size, tmdb_show[types[image_type]])]]
+
+        except (StandardError, Exception):
             pass
 
-        logger.log(u"Could not find any posters or background for " + show.name, logger.DEBUG)
+        logger.log(u'Could not find any %s images on TMDB for %s' % (image_type, show.name), logger.DEBUG)
+
+    def _fanart_urls_from_show(self, show, image_type='banner', lang='en', thumb=False):
+        try:
+            tvdb_id = show.ids.get(indexer_config.INDEXER_TVDB, {}).get('id', None)
+            if tvdb_id:
+                return self._fanart_urls(tvdb_id, image_type, lang, thumb)
+        except (StandardError, Exception):
+            pass
+
+        logger.log(u'Could not find any %s images on Fanart.tv for %s' % (image_type, show.name), logger.DEBUG)
+
+    @staticmethod
+    def _fanart_urls(tvdb_id, image_type='banner', lang='en', thumb=False):
+        types = {'poster': fanart.TYPE.TV.POSTER,
+                 'banner': fanart.TYPE.TV.BANNER,
+                 'fanart': fanart.TYPE.TV.BACKGROUND,
+                 'poster_thumb': fanart.TYPE.TV.POSTER,
+                 'banner_thumb': fanart.TYPE.TV.BANNER}
+
+        try:
+            if tvdb_id:
+                request = fanartRequest(apikey=sickbeard.FANART_API_KEY, tvdb_id=tvdb_id)
+                resp = request.response()
+                itemlist = []
+                for art in resp[types[image_type]]:
+                    if ('url' in art and 10 > len(art['url']))\
+                            or ('lang' in art and lang != art['lang']):
+                        continue
+                    try:
+                        art_id = int(art['id'])
+                        art_likes = int(art['likes'])
+                        url = (art['url'], re.sub('/fanart/', '/preview/', art['url']))[thumb]
+                    except:
+                        continue
+
+                    itemlist += [[art_id, art_likes, url]]
+
+                itemlist.sort(lambda a, b: cmp((a[1], a[0]), (b[1], b[0])), reverse=True)
+                return itemlist
+
+        except Exception as e:
+            raise
+
+    def retrieve_show_image(self, image_type, show_obj, which=None):
+        return self._retrieve_show_image(image_type=image_type, show_obj=show_obj, which=which)
+
+    def write_image(self, image_data, image_path):
+        return self._write_image(image_data=image_data, image_path=image_path)

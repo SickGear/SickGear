@@ -10,7 +10,7 @@ var scrolltotop={
 	//scrollto: Keyword (Integer, or "Scroll_to_Element_ID"). How far to scroll document up when control is clicked on (0=top).
 	setting: {startline:100, scrollto: 0, scrollduration:1000, fadeduration:[500, 100]},
 	controlHTML: top_image_html,//set in inc_top.tmpl so it can be $sbRooted
-	controlattrs: {offsetx:10, offsety:10}, //offset of control relative to right/ bottom of window corner
+	controlattrs: {offsetx:5, offsety:5}, //offset of control relative to right/ bottom of window corner
 	anchorkeyword: '#top', //Enter href value of HTML anchors on the page that should also act as "Scroll Up" links
 
 	state: {isvisible:false, shouldvisible:false},
@@ -56,7 +56,7 @@ var scrolltotop={
 			mainobj.$body=(window.opera)? (document.compatMode=="CSS1Compat"? $('html') : $('body')) : $('html,body')
 			mainobj.$control=$('<div id="topcontrol">'+mainobj.controlHTML+'</div>')
 				.css({position:mainobj.cssfixedsupport? 'fixed' : 'absolute', bottom:mainobj.controlattrs.offsety, right:mainobj.controlattrs.offsetx, opacity:0, cursor:'pointer'})
-				.attr({title:'Scroll Back to Top'})
+				.attr({title:'Scroll to Top'})
 				.click(function(){mainobj.scrollup(); return false})
 				.appendTo('body')
 			if (document.all && !window.XMLHttpRequest && mainobj.$control.text()!='') //loose check for IE6 and below, plus whether control contains any text

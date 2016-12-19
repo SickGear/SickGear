@@ -2,12 +2,14 @@
 #from sickbeard import db
 #from sickbeard.helpers import anon_url
 #import os.path
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'Configuration'
 #set global $header = 'Configuration'
 #set global $sbPath = '..'
 #set global $topmenu = 'config'
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 ##
 #if $varExists('header')
 	<h1 class='header'>$header</h1>
@@ -20,23 +22,25 @@
 		<tr>
 			<td class="infoTableHeader">Version: </td>
 			<td class="infoTableCell">
-				BRANCH: #echo $sickbeard.BRANCH or 'UNKNOWN'# / COMMIT: #echo $sickbeard.CUR_COMMIT_HASH or 'UNKNOWN'#<br />
+				BRANCH: #echo $sg_str('BRANCH') or 'UNKNOWN'# / COMMIT: #echo $sg_str('CUR_COMMIT_HASH') or 'UNKNOWN'#<br />
 				<em class="red-text">This is BETA software</em><br />
-#if not $sickbeard.VERSION_NOTIFY:
+#if not $sg_var('VERSION_NOTIFY'):
 				You don't have version checking turned on, see "Check software updates" in Config > General.
 #end if
 			</td>
 		</tr>
-		<tr><td class="infoTableHeader">Config file:</td><td class="infoTableCell">$sickbeard.CONFIG_FILE</td></tr>
+		<tr><td class="infoTableHeader">Config file:</td><td class="infoTableCell">$sg_str('CONFIG_FILE')</td></tr>
 		<tr><td class="infoTableHeader">Database file:</td><td class="infoTableCell">$db.dbFilename()</td></tr>
-		<tr><td class="infoTableHeader">Cache Dir:</td><td class="infoTableCell">$sickbeard.CACHE_DIR</td></tr>
-		<tr><td class="infoTableHeader">Arguments:</td><td class="infoTableCell"><%= (sickbeard.MY_ARGS, 'None used')[0 == len(sickbeard.MY_ARGS)] %></td></tr>
-		<tr><td class="infoTableHeader">Web Root:</td><td class="infoTableCell">$sickbeard.WEB_ROOT</td></tr>
+		<tr><td class="infoTableHeader">Cache Dir:</td><td class="infoTableCell">$sg_str('CACHE_DIR')</td></tr>
+		<tr><td class="infoTableHeader">Arguments:</td><td class="infoTableCell">#echo $sg_var('MY_ARGS') or 'None used'#</td></tr>
+		<tr><td class="infoTableHeader">Web Root:</td><td class="infoTableCell">$sg_str('WEB_ROOT')</td></tr>
 		<tr><td class="infoTableHeader">Python Version:</td><td class="infoTableCell">$sys.version[:120]</td></tr>
 		<tr class="infoTableSeperator"><td class="infoTableHeader"><i class="icon16-sg"></i> Homepage</td><td class="infoTableCell"><a href="<%= anon_url('https://github.com/SickGear/SickGear/wiki') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://github.com/SickGear/SickGear/wiki</a></td></tr>
 		<tr><td class="infoTableHeader"><i class="icon16-github"></i> Source</td><td class="infoTableCell"><a href="<%= anon_url('https://github.com/SickGear/SickGear/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://github.com/SickGear/SickGear/</a></td></tr>
 		<tr><td class="infoTableHeader"><i class="icon16-mirc"></i> Internet Relay Chat</td><td class="infoTableCell"><a href="irc://irc.freenode.net/#SickGear" rel="noreferrer"><i>#SickGear</i> on <i>irc.freenode.net</i></a></td></tr>
+		<tr class="infoTableSeperator"><td class="infoTableHeader">Powered by</td><td class="infoTableCell">Python, HTML5, jQuery, SQLite, TheTVDB, Trakt.tv, Fanart.tv, TMDb, GitHub</td></tr>
+		<tr><td class="infoTableHeader">&nbsp;</td><td class="infoTableHeader">This project uses the TMDb API but is not endorsed or certified by TMDb.</td></tr>
 	</table>
 </div>
 
-#include $os.path.join($sickbeard.PROG_DIR,'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'),'gui/slick/interfaces/default/inc_bottom.tmpl')

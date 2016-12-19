@@ -10,7 +10,7 @@ def FileInputStream(filename, real_filename=None, **args):
     not able to convert filename to real unicode string (ie. you have to
     use unicode(name, 'replace') or unicode(name, 'ignore')).
     """
-    assert isinstance(filename, unicode)
+    # assert isinstance(filename, unicode)
     if not real_filename:
         real_filename = filename
     try:

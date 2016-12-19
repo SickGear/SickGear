@@ -1,6 +1,7 @@
 #import sickbeard
 #import datetime
 #import locale
+#import operator
 #from sickbeard.common import *
 #from sickbeard.sbdatetime import *
 #from sickbeard import config
@@ -9,14 +10,16 @@
 #from sickbeard.helpers import anon_url
 #from sickbeard.logger import reverseNames as file_logging_presets
 #from sickbeard.helpers import maybe_plural
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title  = 'Config - General'
-#set global $header = 'General Configuration'
+#set global $header = 'General Settings'
 #set global $sbPath = '../..'
 #set global $topmenu = 'config'
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -28,8 +31,8 @@
 #set $selected = ' selected="selected"'
 ##
 #set $indexer = 0
-#if $sickbeard.INDEXER_DEFAULT
-    #set $indexer = $sickbeard.INDEXER_DEFAULT
+#if $sg_var('INDEXER_DEFAULT')
+    #set $indexer = $sg_var('INDEXER_DEFAULT')
 #end if
 
 <script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
@@ -44,7 +47,7 @@
 				<ul>
 					<li><a href="#core-component-group1">Misc</a></li>
 					<li><a href="#core-component-group2">Interface</a></li>
-					<li><a href="#core-component-group3">Advanced Settings</a></li>
+					<li><a href="#core-component-group3">Advanced</a></li>
 				</ul>
 
 				<div id="core-component-group1">
@@ -61,7 +64,7 @@
 							<label for="launch_browser">
 								<span class="component-title">Launch browser</span>
 								<span class="component-desc">
-									<input type="checkbox" name="launch_browser" id="launch_browser"#echo ('', $checked)[$sickbeard.LAUNCH_BROWSER]#>
+									<input type="checkbox" name="launch_browser" id="launch_browser"#echo ('', $checked)[$sg_var('LAUNCH_BROWSER')]#>
 									<p>open the SickGear home page on startup</p>
 								</span>
 							</label>
@@ -71,8 +74,8 @@
 							<label for="update_shows_on_start">
 								<span class="component-title">Update shows on startup</span>
 								<span class="component-desc">
-									<input type="checkbox" name="update_shows_on_start" id="update_shows_on_start"#echo ('', $checked)[$sickbeard.UPDATE_SHOWS_ON_START]#>
-									<p>with show data; episode plot, images, air and end dates, etc. Disable for a quicker startup. Show data is scheduled to update during hour <span class="show_update_hour_value">$sickbeard.SHOW_UPDATE_HOUR</span></p>
+									<input type="checkbox" name="update_shows_on_start" id="update_shows_on_start"#echo ('', $checked)[$sg_var('UPDATE_SHOWS_ON_START')]#>
+									<p>with show data; episode plot, images, air and end dates, etc. Disable for a quicker startup. Show data is scheduled to update during hour <span class="show_update_hour_value">$sg_var('SHOW_UPDATE_HOUR', 3)</span></p>
 								</span>
 							</label>
 						</div>
@@ -81,33 +84,21 @@
 							<label for="show_update_hour">
 								<span class="component-title">Update shows during hour</span>
 								<span class="component-desc">
-									<input type="number" name="show_update_hour" id="show_update_hour" value="$sickbeard.SHOW_UPDATE_HOUR" class="form-control input-sm input75">
+									<input type="number" name="show_update_hour" id="show_update_hour" value="$sg_var('SHOW_UPDATE_HOUR', 3)" class="form-control input-sm input75">
 									<p>(0 ... 23) with show data; episode plot, images, air and end dates, etc.</p>
 								</span>
 							</label>
 						</div>
 
-#if hasattr($sickbeard, 'ALLOW_INCOMPLETE_SHOWDATA')
-						<div class="field-pair">
-							<label for="allow_incomplete_showdata">
-								<span class="component-title">Allow incomplete show data</span>
-								<span class="component-desc">
-									<input type="checkbox" name="allow_incomplete_showdata" id="allow_incomplete_showdata"#echo ('', $checked)[$sickbeard.ALLOW_INCOMPLETE_SHOWDATA]#>
-									<p>add partial show data for future updates to complete</p>
-								</span>
-							</label>
-						</div>
-#end if
-
 						<div class="field-pair">
 							<span class="component-title">Send to trash for actions</span>
 							<span class="component-desc">
 								<label for="trash_remove_show" class="nextline-block">
-									<input type="checkbox" name="trash_remove_show" id="trash_remove_show"#echo ('', $checked)[$sickbeard.TRASH_REMOVE_SHOW]#>
+									<input type="checkbox" name="trash_remove_show" id="trash_remove_show"#echo ('', $checked)[$sg_var('TRASH_REMOVE_SHOW')]#>
 									<p>when using show "Remove" and delete files</p>
 								</label>
 								<label for="trash_rotate_logs" class="nextline-block">
-									<input type="checkbox" name="trash_rotate_logs" id="trash_rotate_logs"#echo ('', $checked)[$sickbeard.TRASH_ROTATE_LOGS]#>
+									<input type="checkbox" name="trash_rotate_logs" id="trash_rotate_logs"#echo ('', $checked)[$sg_var('TRASH_ROTATE_LOGS')]#>
 									<p>on scheduled deletes of the oldest log files</p>
 								</label>
 								<div class="clear-left"><p>selected actions use trash (recycle bin) instead of the default permanent delete</p></div>
@@ -118,7 +109,7 @@
 							<label for="log_dir">
 								<span class="component-title">Log file folder location</span>
 								<span class="component-desc">
-									<input type="text" name="log_dir" id="log_dir" value="$sickbeard.ACTUAL_LOG_DIR" class="form-control input-sm input350">
+									<input type="text" name="log_dir" id="log_dir" value="$sg_str('ACTUAL_LOG_DIR')" class="form-control input-sm input350">
 								</span>
 							</label>
 						</div>
@@ -130,7 +121,7 @@
 									<select id="indexer_default" name="indexer_default" class="form-control input-sm">
 										<option value="0"#echo ('', $selected)[0 == $indexer]#>All Indexers</option>
     #for $indexer in $indexers
-										<option value="$indexer"#echo ('', $selected)[$indexer == $sickbeard.INDEXER_DEFAULT]#>$sickbeard.indexerApi().indexers[$indexer]</option>
+										<option value="$indexer"#echo ('', $selected)[$indexer == $sg_var('INDEXER_DEFAULT', 0)]#>$sickbeard.indexerApi().indexers[$indexer]</option>
     #end for
 									</select>
 									<span>as the default selection when adding new shows</span>
@@ -142,7 +133,7 @@
 							<label for="indexer_timeout">
 								<span class="component-title">Timeout show indexer at</span>
 								<span class="component-desc">
-									<input type="text" name="indexer_timeout" id="indexer_timeout" value="$sickbeard.INDEXER_TIMEOUT" class="form-control input-sm input75">
+									<input type="text" name="indexer_timeout" id="indexer_timeout" value="$sg_var('INDEXER_TIMEOUT', 20)" class="form-control input-sm input75">
 									<p>seconds of inactivity when finding new shows (default:10)</p>
 								</span>
 							</label>
@@ -152,9 +143,9 @@
 							<label>
 								<span class="component-title">Show root directories</span>
 								<span class="component-desc">
-								    <p>where the files of shows are located</p>
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
-							    </span>
+									<p>where the files of shows are located</p>
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
+								</span>
 							</label>
 						</div>
 
@@ -173,7 +164,7 @@
 							<label for="version_notify">
 								<span class="component-title">Check software updates</span>
 								<span class="component-desc">
-									<input type="checkbox" name="version_notify" id="version_notify"#echo ('', $checked)[$sickbeard.VERSION_NOTIFY]#>
+									<input type="checkbox" name="version_notify" id="version_notify"#echo ('', $checked)[$sg_var('VERSION_NOTIFY', True)]#>
 									<p>and display notifications when updates are available.
 									Checks are run on startup and at the frequency set below*</p>
 								</span>
@@ -184,7 +175,7 @@
 							<label for="auto_update">
 								<span class="component-title">Automatically update</span>
 								<span class="component-desc">
-									<input type="checkbox" name="auto_update" id="auto_update"#echo ('', $checked)[$sickbeard.AUTO_UPDATE]#>
+									<input type="checkbox" name="auto_update" id="auto_update"#echo ('', $checked)[$sg_var('AUTO_UPDATE')]#>
 									<p>fetch and install software updates.
 									Updates are run on startup and in the background at the frequency set below<sup>1</sup></p>
 								</span>
@@ -195,7 +186,7 @@
 							<label>
 								<span class="component-title">Check the server every<sup>1</sup></span>
 								<span class="component-desc">
-									<input type="text" name="update_frequency" id="update_frequency" value="$sickbeard.UPDATE_FREQUENCY" class="form-control input-sm input75">
+									<input type="text" name="update_frequency" id="update_frequency" value="$sg_var('UPDATE_FREQUENCY', 12)" class="form-control input-sm input75">
 									<p>hours for software updates (default:12)</p>
 								</span>
 							</label>
@@ -205,7 +196,7 @@
 							<label for="notify_on_update">
 								<span class="component-title">Notify on software update</span>
 								<span class="component-desc">
-									<input type="checkbox" name="notify_on_update" id="notify_on_update"#echo ('', $checked)[$sickbeard.NOTIFY_ON_UPDATE]#>
+									<input type="checkbox" name="notify_on_update" id="notify_on_update"#echo ('', $checked)[$sg_var('NOTIFY_ON_UPDATE')]#>
 									<p>send a message to all enabled notifiers when SickGear has been updated</p>
 								</span>
 							</label>
@@ -233,8 +224,8 @@
 								<span class="component-title">Display theme:</span>
 								<span class="component-desc">
 									<select id="theme_name" name="theme_name" class="form-control input-sm">
-										<option value="dark"#echo ('', $selected)['dark' == $sickbeard.THEME_NAME]#>Dark</option>
-										<option value="light"#echo ('', $selected)['light' == $sickbeard.THEME_NAME]#>Light</option>
+										<option value="dark"#echo ('', $selected)['dark' == $sg_str('THEME_NAME', 'dark')]#>Dark</option>
+										<option value="light"#echo ('', $selected)['light' == $sg_str('THEME_NAME')]#>Light</option>
 									</select>
 									<span class="red-text">for appearance to take effect, save then refresh your browser</span>
 								</span>
@@ -246,38 +237,49 @@
 								<span class="component-title">Use as default home page:</span>
 								<span class="component-desc">
 									<select id="default_home" name="default_home" class="form-control input-sm">
-										<option value="shows"#echo ('', $selected)['shows' == $sickbeard.DEFAULT_HOME]#>Shows</option>
-										<option value="episodes"#echo ('', $selected)['episodes' == $sickbeard.DEFAULT_HOME]#>Episodes</option>
-										<option value="history"#echo ('', $selected)['history' == $sickbeard.DEFAULT_HOME]#>History</option>
+										<option value="shows"#echo ('', $selected)['shows' == $sg_str('DEFAULT_HOME')]#>Shows</option>
+										<option value="episodes"#echo ('', $selected)['episodes' == $sg_str('DEFAULT_HOME')]#>Episodes</option>
+										<option value="history"#echo ('', $selected)['history' == $sg_str('DEFAULT_HOME')]#>History</option>
 									</select>
 								</span>
 							</label>
 						</div>
 
+#if not hasattr($sickbeard, 'FANART_LIMIT')#<span class="red-text">Restart SickGear to reveal new options here</span>#else#
+						<div class="field-pair">
+							<label for="fanart_limit">
+								<span class="component-title">Maximum fanart image files</span>
+								<span class="component-desc">
+									<input type="text" name="fanart_limit" id="fanart_limit" value="$sg_var('FANART_LIMIT', 3)" class="form-control input-sm input75">
+									<span>per show to cache (0 ... 500)</span>
+								</span>
+							</label>
+						</div>
+#end if
 						<div class="field-pair">
 							<label for="showlist_tagview">
 								<span class="component-title">Group show list shows into:</span>
 								<span class="component-desc">
 									<select id="showlist_tagview" name="showlist_tagview" class="form-control input-sm">
-										<option value="standard"#echo ('', $selected)['standard' == $sickbeard.SHOWLIST_TAGVIEW]#>One Show List</option>
-										<option value="anime"#echo ('', $selected)['anime' == $sickbeard.SHOWLIST_TAGVIEW]#>Show / Anime Lists</option>
-										<option value="custom"#echo ('', $selected)['custom' == $sickbeard.SHOWLIST_TAGVIEW]#>Custom Lists</option>
+										<option value="standard"#echo ('', $selected)['standard' == $sg_str('SHOWLIST_TAGVIEW', 'standard')]#>One Show List</option>
+										<option value="anime"#echo ('', $selected)['anime' == $sg_str('SHOWLIST_TAGVIEW')]#>Show / Anime Lists</option>
+										<option value="custom"#echo ('', $selected)['custom' == $sg_str('SHOWLIST_TAGVIEW')]#>Custom Lists</option>
 									</select>
 									#set $hidden = ' class="hidden"'
-									<span id="showlist_tagview_standard"#echo ('', $hidden)['standard' not in $sickbeard.SHOWLIST_TAGVIEW]#>that contains all shows (default)</span>
-                                    <span id="showlist_tagview_anime"#echo ('', $hidden)['anime' not in $sickbeard.SHOWLIST_TAGVIEW]#>two groups, the show list and anime</span>
-                                    <span id="showlist_tagview_custom"#echo ('', $hidden)['custom' not in $sickbeard.SHOWLIST_TAGVIEW]#>multiple custom<sup>1</sup> named groups and a "Show List"</span>
+									<span id="showlist_tagview_standard"#echo ('', $hidden)['standard' not in $sg_str('SHOWLIST_TAGVIEW', 'standard')]#>that contains all shows (default)</span>
+									<span id="showlist_tagview_anime"#echo ('', $hidden)['anime' not in $sg_str('SHOWLIST_TAGVIEW')]#>two groups, the show list and anime</span>
+									<span id="showlist_tagview_custom"#echo ('', $hidden)['custom' not in $sg_str('SHOWLIST_TAGVIEW')]#>multiple custom<sup>1</sup> named groups and a "Show List"</span>
 								</span>
 							</label>
 						</div>
 
-						<div id="showlist_tagview_custom_config" class="field-pair#if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then ' hidden' else ''#">
+						<div id="showlist_tagview_custom_config" class="field-pair#if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then ' hidden' else ''#">
 							<label for="show_tags">
 								<span class="component-title">Group names for show list<sup>1</sup></span>
 								<span class="component-desc">
 									<input type="text" name="show_tags" id="show_tags" value="$show_tags" class="form-control input-sm input300">
 									<span>comma separated names</span>
-                                    <p class="clear-left note">group shows to the order of this custom list (add shows to groups with <a href="/manage/">mass edit</a>)</p>
+									<p class="clear-left note">group shows to the order of this custom list (add shows to groups with <a href="$sbRoot/manage/">mass edit</a>)</p>
 								</span>
 							</label>
 						</div>
@@ -286,7 +288,7 @@
 							<label for="home_search_focus">
 								<span class="component-title">Give show list search focus</span>
 								<span class="component-desc">
-									<input type="checkbox" name="home_search_focus" id="home_search_focus"#echo ('', $checked)[$sickbeard.HOME_SEARCH_FOCUS]#>
+									<input type="checkbox" name="home_search_focus" id="home_search_focus"#echo ('', $checked)[$sg_var('HOME_SEARCH_FOCUS', True)]#>
 									<p>page refresh on "Show List" will start search box focused</p>
 								</span>
 							</label>
@@ -296,8 +298,39 @@
 							<label for="use_imdb_info">
 								<span class="component-title">Enable IMDb info</span>
 								<span class="component-desc">
-									<input type="checkbox" name="use_imdb_info" id="use_imdb_info"#echo ('', $checked)[$sickbeard.USE_IMDB_INFO]#>
+									<input type="checkbox" name="use_imdb_info" id="use_imdb_info"#echo ('', $checked)[$sg_var('USE_IMDB_INFO', True)]#>
 									<p>for ui links, display show; ratings, country flag, year, runtime, and genre tags</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="imdb-accounts">
+								<span class="component-title">Public IMDb watchlists:</span>
+#if not hasattr($sickbeard, 'IMDB_ACCOUNTS')#<span class="red-text">Restart SickGear to reveal new options here</span>#else#
+								<span class="component-desc">
+									<select id="imdb-accounts" class="pull-left form-control input-sm">
+										<option value="new" selected="selected">Add watchlist ...</option>
+    #for $i, $v in $enumerate($sg_str('IMDB_ACCOUNTS'))
+        #if not $i % 2
+            #set $id = $v
+        #else
+										<option value="$id">#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
+        #end if
+    #end for
+									</select>
+									<input type="button" class="btn btn-inline" value="Delete" id="imdb-list-del" disabled="disabled" />
+								</span>
+							</label>
+							<label for="imdb-url">
+								<span class="component-title">&nbsp</span>
+								<span class="component-desc">
+									<input type="text" id="imdb-url" value="" class="form-control input-sm input250" />
+									<input type="button" class="btn btn-inline" value="Enable" id="imdb-list-onoff" />
+									<div class="clear-left">
+									<p><code>imdb.com/user/ur64552276</code> or <code>ur64552276</code> to <span id="view-list">view list</span><a class="hide" id="link-list" href="$sbRoot/home/addShows/watchlist_imdb?account=64552276">view list</a> at "Add from IMDb"
+									</p></div>
+#end if
 								</span>
 							</label>
 						</div>
@@ -306,45 +339,49 @@
 							<label for="sort_article">
 								<span class="component-title">Sort with "The", "A", "An"</span>
 								<span class="component-desc">
-									<input type="checkbox" name="sort_article" id="sort_article"#echo ('', $checked)[$sickbeard.SORT_ARTICLE]#>
+									<input type="checkbox" name="sort_article" id="sort_article"#echo ('', $checked)[$sg_var('SORT_ARTICLE')]#>
 									<p>include articles ("The", "A", "An") when sorting show lists</p>
 								</span>
 							</label>
 						</div>
 
+#if not $sbdatetime.is_locale_eng()
+						<input type="hidden" name="fuzzy_dating" id="fuzzy_dating" value="false">
+						<input type="hidden" name="trim_zero" id="trim_zero" value="false">
+#else
 						<div class="field-pair">
 							<label for="fuzzy_dating">
 								<span class="component-title">Display fuzzy dates</span>
 								<span class="component-desc">
-									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="viewIf datePresets"#echo ('', $checked)[$sickbeard.FUZZY_DATING == True]#>
+									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="viewIf datePresets"#echo ('', $checked)[$sg_var('FUZZY_DATING') == True]#>
 									<p>move absolute dates into tooltips and display e.g. "Last Thu", "On Tue"</p>
 								</span>
 							</label>
 						</div>
-						<div class="field-pair show_if_fuzzy_dating#echo (' metadataDiv', '')[$sickbeard.FUZZY_DATING]#">
+						<div class="field-pair show_if_fuzzy_dating#echo (' metadataDiv', '')[$sg_var('FUZZY_DATING')]#">
 							<label for="trim_zero">
 								<span class="component-title">Trim date and time</span>
 								<span class="component-desc">
-									<input type="checkbox" name="trim_zero" id="trim_zero"#echo ('', $checked)[True == $sickbeard.TRIM_ZERO]#>
+									<input type="checkbox" name="trim_zero" id="trim_zero"#echo ('', $checked)[True == $sg_var('TRIM_ZERO')]#>
 									<p>display minimalist date and time i.e. <del>02:00</del> = 2:00, <del>02:00pm</del> = 2pm, <del>03 Jan</del> = 3 Jan</p>
 								</span>
 							</label>
 						</div>
-
+#end if
 						<div class="field-pair">
 							<label for="date_presets">
 								<span class="component-title">Date style:</span>
 								<span class="component-desc">
-									<select class="form-control input-sm#echo (' metadataDiv', '')[$sickbeard.FUZZY_DATING]#" id="date_presets#echo ('_na', '')[$sickbeard.FUZZY_DATING]#" name="date_preset#echo ('_na', '')[$sickbeard.FUZZY_DATING]#">
+									<select class="form-control input-sm#echo (' metadataDiv', '')[$sg_var('FUZZY_DATING')]#" id="date_presets#echo ('_na', '')[$sg_var('FUZZY_DATING')]#" name="date_preset#echo ('_na', '')[$sg_var('FUZZY_DATING')]#">
 #for $cur_preset in $date_presets
-										<option value="$cur_preset" #echo ('', $selected)[$cur_preset == $sickbeard.DATE_PRESET or ('%x' == $sickbeard.DATE_PRESET and '$cur_preset' == '%a, %b %d, %Y')]#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
+										<option value="$cur_preset" #echo ('', $selected)[$cur_preset == $sg_str('DATE_PRESET', '%x') or ('%x' == $sg_str('DATE_PRESET', '%x') and '$cur_preset' == '%a, %b %d, %Y')]#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
 #end for
 									</select>
 
-									<select class="form-control input-sm#echo ('', ' metadataDiv')[$sickbeard.FUZZY_DATING]#" id="date_presets#echo ('', '_na')[$sickbeard.FUZZY_DATING]#" name="date_preset#echo ('', '_na')[$sickbeard.FUZZY_DATING]#">
-										<option value="%x"#echo ('', $selected)['%x' == $sickbeard.DATE_PRESET]#>Use System Default</option>
+									<select class="form-control input-sm#echo ('', ' metadataDiv')[$sg_var('FUZZY_DATING')]#" id="date_presets#echo ('', '_na')[$sg_var('FUZZY_DATING')]#" name="date_preset#echo ('', '_na')[$sg_var('FUZZY_DATING')]#">
+										<option value="%x"#echo ('', $selected)['%x' == $sg_str('DATE_PRESET', '%x')]#>Use System Default</option>
 #for $cur_preset in $date_presets
-										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sickbeard.DATE_PRESET]#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
+										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sg_str('DATE_PRESET', '%x')]#>$datetime.datetime($datetime.datetime.now().year, 12, 31, 14, 30, 47).strftime($cur_preset)</option>
 #end for
 									</select>
 								</span>
@@ -357,8 +394,8 @@
 								<span class="component-desc">
 									<select id="time_presets" name="time_preset" class="form-control input-sm">
 #for $cur_preset in $time_presets
-    #set $show_seconds = not $sickbeard.FUZZY_DATING
-										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sickbeard.TIME_PRESET_W_SECONDS]#>$sbdatetime.now().sbftime(show_seconds=$show_seconds, t_preset=$cur_preset)</option>
+    #set $show_seconds = not $sg_var('FUZZY_DATING')
+										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sg_str('TIME_PRESET_W_SECONDS', '%I:%M:%S %p')]#>$sbdatetime.now().sbftime(show_seconds=$show_seconds, t_preset=$cur_preset)</option>
 #end for
 									</select>
 									<span id="trim_info_seconds"><b>note:</b> seconds are only shown on the History page</span>
@@ -370,10 +407,10 @@
 							<span class="component-title">Timezone:</span>
 							<span class="component-desc">
 								<label for="local" class="space-right">
-									<input type="radio" name="timezone_display" id="local" value="local"#echo ('', $checked)['local' == $sickbeard.TIMEZONE_DISPLAY]#>local
+									<input type="radio" name="timezone_display" id="local" value="local"#echo ('', $checked)['local' == $sg_str('TIMEZONE_DISPLAY')]#>local
 								</label>
 								<label for="network">
-									<input type="radio" name="timezone_display" id="network" value="network"#echo ('', $checked)['network' == $sickbeard.TIMEZONE_DISPLAY]#>network
+									<input type="radio" name="timezone_display" id="network" value="network"#echo ('', $checked)['network' == $sg_str('TIMEZONE_DISPLAY', 'network')]#>network
 								</label>
 								<div class="clear-left"><p>display dates and times in either your timezone or the shows network timezone</p></div>
 							</span>
@@ -399,7 +436,7 @@
 							<label for="web_username">
 								<span class="component-title">Username</span>
 								<span class="component-desc">
-									<input type="text" name="web_username" id="web_username" value="$sickbeard.WEB_USERNAME" class="form-control input-sm input300">
+									<input type="text" name="web_username" id="web_username" value="$sg_str('WEB_USERNAME')" class="form-control input-sm input300">
 									<p>blank for none</p>
 								</span>
 							</label>
@@ -409,7 +446,7 @@
 							<label for="web_password">
 								<span class="component-title">Password</span>
 								<span class="component-desc">
-									<input type="password" name="web_password" id="web_password" value="#echo '*' * len($sickbeard.WEB_PASSWORD)#" class="form-control input-sm input300">
+									<input type="password" autocomplete="nope" name="web_password" id="web_password" value="#echo '*' * len($sg_str('WEB_PASSWORD'))#" class="form-control input-sm input300">
 									<p>blank for none</p>
 									<span class="clear-left">check autoProcessTV.cfg is set up for external apps to use post processing scripts</span>
 								</span>
@@ -420,7 +457,7 @@
 							<label for="calendar_unprotected">
 								<span class="component-title">Unprotected calendar</span>
 								<span class="component-desc">
-									<input type="checkbox" name="calendar_unprotected" id="calendar_unprotected"#echo ('', $checked)[$sickbeard.CALENDAR_UNPROTECTED]#>
+									<input type="checkbox" name="calendar_unprotected" id="calendar_unprotected"#echo ('', $checked)[$sg_var('CALENDAR_UNPROTECTED')]#>
 									<p>permit subscribing to the calendar without username and password.
 									Some services like Google Calendar will only work with <b class="boldest">no</b> authentication</p>
 								</span>
@@ -432,7 +469,7 @@
 							<label for="use_api">
 								<span class="component-title">API enable</span>
 								<span class="component-desc">
-									<input type="checkbox" name="use_api" class="enabler" id="use_api"#echo ('', $checked)[$sickbeard.USE_API]#>
+									<input type="checkbox" name="use_api" class="enabler" id="use_api"#echo ('', $checked)[$sg_var('USE_API')]#>
 									<p>permit the use of the SickGear (SickBeard) API</p>
 								</span>
 							</label>
@@ -442,7 +479,7 @@
 								<label for="api_key">
 									<span class="component-title">API key</span>
 									<span class="component-desc">
-										<input type="text" name="api_key" id="api_key" value="$sickbeard.API_KEY" class="form-control input-sm input300" readonly="readonly">
+										<input type="text" name="api_key" id="api_key" value="$sg_str('API_KEY')" class="form-control input-sm input300" readonly="readonly">
 										<input class="btn btn-inline" type="button" id="generate_new_apikey" value="Generate">
 										<div class="clear-left"><p>used to give 3rd party programs limited access to SickGear</p></div>
 									</span>
@@ -454,7 +491,7 @@
 							<label for="web_port">
 								<span class="component-title">HTTP port</span>
 								<span class="component-desc">
-									<input type="text" name="web_port" id="web_port" value="$sickbeard.WEB_PORT" class="form-control input-sm input100">
+									<input type="text" name="web_port" id="web_port" value="$sg_var('WEB_PORT', 8081)" class="form-control input-sm input100">
 									<p>web port to access and browse SickGear (default:8081)</p>
 								</span>
 							</label>
@@ -464,7 +501,7 @@
 							<label for="web_log">
 								<span class="component-title">HTTP logs</span>
 								<span class="component-desc">
-									<input type="checkbox" name="web_log" id="web_log"#echo ('', $checked)[$sickbeard.WEB_LOG]#>
+									<input type="checkbox" name="web_log" id="web_log"#echo ('', $checked)[$sg_var('WEB_LOG')]#>
 									<p>enable logs from the internal web server</p>
 								</span>
 							</label>
@@ -474,7 +511,7 @@
 							<label for="enable_https">
 								<span class="component-title">SSL enable</span>
 								<span class="component-desc">
-									<input type="checkbox" name="enable_https" class="enabler" id="enable_https"#echo ('', $checked)[$sickbeard.ENABLE_HTTPS]#>
+									<input type="checkbox" name="enable_https" class="enabler" id="enable_https"#echo ('', $checked)[$sg_var('ENABLE_HTTPS')]#>
 									<p>use a HTTPS address to access the web interface</p>
 								</span>
 							</label>
@@ -484,7 +521,7 @@
 								<label for="https_cert">
 									<span class="component-title">HTTPS certificate</span>
 									<span class="component-desc">
-										<input type="text" name="https_cert" id="https_cert" value="$sickbeard.HTTPS_CERT" class="form-control input-sm input300">
+										<input type="text" name="https_cert" id="https_cert" value="$sg_str('HTTPS_CERT')" class="form-control input-sm input300">
 										<div class="clear-left"><p>file name or path to a <b class="boldest">server.crt</b> certificate file</p></div>
 									</span>
 								</label>
@@ -493,7 +530,7 @@
 								<label for="https_key">
 									<span class="component-title">HTTPS key</span>
 									<span class="component-desc">
-										<input type="text" name="https_key" id="https_key" value="$sickbeard.HTTPS_KEY" class="form-control input-sm input300">
+										<input type="text" name="https_key" id="https_key" value="$sg_str('HTTPS_KEY')" class="form-control input-sm input300">
 										<div class="clear-left"><p>file name or path to a <b class="boldest">server.key</b> file</p></div>
 									</span>
 								</label>
@@ -504,7 +541,7 @@
 							<label for="web_ipv6">
 								<span class="component-title">Listen on IPv6</span>
 								<span class="component-desc">
-									<input type="checkbox" name="web_ipv6" id="web_ipv6"#echo ('', $checked)[$sickbeard.WEB_IPV6]#>
+									<input type="checkbox" name="web_ipv6" id="web_ipv6"#echo ('', $checked)[$sg_var('WEB_IPV6')]#>
 									<p>attempt binding to any available IPv6 address</p>
 								</span>
 							</label>
@@ -514,7 +551,7 @@
 							<label for="handle_reverse_proxy">
 								<span class="component-title">Reverse proxy headers</span>
 								<span class="component-desc">
-									<input type="checkbox" name="handle_reverse_proxy" id="handle_reverse_proxy"#echo ('', $checked)[$sickbeard.HANDLE_REVERSE_PROXY]#>
+									<input type="checkbox" name="handle_reverse_proxy" id="handle_reverse_proxy"#echo ('', $checked)[$sg_var('HANDLE_REVERSE_PROXY')]#>
 									<p>accept the following reverse proxy headers (advanced)...<br />(X-Forwarded-For, X-Forwarded-Host, and X-Forwarded-Proto)</p>
 								</span>
 							</label>
@@ -531,7 +568,7 @@
 				<div id="core-component-group3" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>Advanced Settings</h3>
+						<h3>Advanced</h3>
 
 					</div>
 
@@ -550,7 +587,7 @@
 							</label>
 						</div>
 
-#if $sickbeard.BRANCH != 'master'
+#if $sg_str('BRANCH', 'master') != 'master'
 							<div class="field-pair">
 								<label>
 									<span class="component-title">Pull request:</span>
@@ -569,7 +606,7 @@
 							<label for="git_remote">
 								<span class="component-title">Git remote for branch</span>
 								<span class="component-desc">
-									<input type="text" name="git_remote" id="git_remote" value="$sickbeard.GIT_REMOTE" class="form-control input-sm input300">
+									<input type="text" name="git_remote" id="git_remote" value="$sg_str('GIT_REMOTE')" class="form-control input-sm input300">
 									<div class="clear-left"><p>default:origin. Access repo configured remotes (save then refresh browser)</p></div>
 								</span>
 							</label>
@@ -579,7 +616,7 @@
 							<label>
 								<span class="component-title">Git executable path</span>
 								<span class="component-desc">
-									<input type="text" name="git_path" value="$sickbeard.GIT_PATH" class="form-control input-sm input300">
+									<input type="text" name="git_path" value="$sg_str('GIT_PATH')" class="form-control input-sm input300">
 									<div class="clear-left"><p>only needed if OS is unable to locate git from env</p></div>
 								</span>
 							</label>
@@ -590,11 +627,11 @@
 								<span class="component-title">CPU throttling:</span>
 								<span class="component-desc">
 									<select id="cpu_presets" name="cpu_preset" class="form-control input-sm">
-#for $cur_preset in $cpu_presets
-										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sickbeard.CPU_PRESET]#>$cur_preset.capitalize()</option>
+#for $cur_preset in $sorted($cpu_presets.items(), key=$operator.itemgetter(1), reverse=True)
+										<option value="$cur_preset[0]"#echo ('', $selected)[$cur_preset[0] == $sg_str('CPU_PRESET', 'DISABLED')]#>$cur_preset[0].capitalize()</option>
 #end for
 									</select>
-									<span>Normal (default). High is lower and Low is higher CPU use</span>
+									<span>Disabled (default). High is lower and Low is higher CPU use</span>
 								</span>
 							</label>
 						</div>
@@ -603,7 +640,7 @@
 							<label>
 								<span class="component-title">Anonymous redirect</span>
 								<span class="component-desc">
-									<input type="text" name="anon_redirect" value="$sickbeard.ANON_REDIRECT" class="form-control input-sm input300">
+									<input type="text" name="anon_redirect" value="$sg_str('ANON_REDIRECT')" class="form-control input-sm input300">
 									<div class="clear-left"><p>backlink protection via anonymizer service, must end in "?"</p></div>
 								</span>
 							</label>
@@ -613,7 +650,7 @@
 							<label for="encryption_version">
 								<span class="component-title">Encrypt passwords</span>
 								<span class="component-desc">
-									<input type="checkbox" name="encryption_version" id="encryption_version"#echo ('', $checked)[$sickbeard.ENCRYPTION_VERSION]#>
+									<input type="checkbox" name="encryption_version" id="encryption_version"#echo ('', $checked)[$sg_var('ENCRYPTION_VERSION')]#>
 									<p>in the <code>config.ini</code> file.
 									<b>Warning:</b> Passwords must only contain <a target="_blank" href="<%= anon_url('http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters') %>">ASCII characters</a></p>
 								</span>
@@ -624,7 +661,7 @@
 							<label>
 								<span class="component-title">Proxy host</span>
 								<span class="component-desc">
-									<input type="text" name="proxy_setting" value="$sickbeard.PROXY_SETTING" class="form-control input-sm input300">
+									<input type="text" name="proxy_setting" value="$sg_str('PROXY_SETTING')" class="form-control input-sm input300">
 									<p>blank to disable</p>
 									<div class="clear-left"><p>proxy address for connecting to providers (use 'PAC:Url' for PAC support)</p></div>
 								</span>
@@ -635,7 +672,7 @@
 							<label for="proxy_indexers">
 								<span class="component-title">Use proxy for indexers</span>
 								<span class="component-desc">
-									<input type="checkbox" name="proxy_indexers" id="proxy_indexers"#echo ('', $checked)[True == $sickbeard.PROXY_INDEXERS]#>
+									<input type="checkbox" name="proxy_indexers" id="proxy_indexers"#echo ('', $checked)[True == $sg_var('PROXY_INDEXERS')]#>
 									<p>use proxy host for TV info source connections</p>
 								</span>
 							</label>
@@ -653,7 +690,7 @@
     #set $level_title = $level.title().upper()
     #set $level_count -= 1
     #set $level_text = '%s%s' % ($level.title(), (('', ' only')[0 == $level_count], ' and the next%s level%s' % ((' ' + str($level_count), '')[1 == $level_count], maybe_plural($level_count)))[0 < $level_count])
-										<option value="$level_title"#echo ('', $selected)[$level_title == $sickbeard.FILE_LOGGING_PRESET]#>$level_text</option>
+										<option value="$level_title"#echo ('', $selected)[$level_title == $sg_str('FILE_LOGGING_PRESET', 'DB')]#>$level_text</option>
 #end for
 									</select>
 									<span>(default: Db)</span>
@@ -667,7 +704,7 @@
 				</div><!-- /component-group3 //-->
 
 				<br/>
-				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sickbeard.DATA_DIR</span></b></h6>
+				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sg_str('DATA_DIR')</span></b></h6>
 				<input type="submit" class="btn pull-left config_submitter button" value="Save Changes">
 
 			</div><!-- /config-components -->
@@ -685,4 +722,4 @@
 //-->
 </script>
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

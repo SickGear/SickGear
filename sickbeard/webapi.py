@@ -39,6 +39,7 @@ from sickbeard.exceptions import ex
 from sickbeard.common import SNATCHED, SNATCHED_PROPER, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
 from sickbeard.helpers import remove_article
 from common import Quality, qualityPresetStrings, statusStrings
+from sickbeard.indexers.indexer_config import *
 from sickbeard.webserve import MainHandler
 
 try:
@@ -135,19 +136,19 @@ class Api(webserve.BaseHandler):
         self.finish(outputCallback(outDict))
 
     def _out_as_json(self, dict):
-        self.set_header('Content-Type', 'application/json')
+        self.set_header('Content-Type', 'application/json; charset=UTF-8')
         try:
             out = json.dumps(dict, indent=self.intent, sort_keys=True)
-            if 'jsonp' in self.request.query_arguments:
-                out = self.request.arguments['jsonp'] + '(' + out + ');'  # wrap with JSONP call if requested
+            callback = self.get_query_argument('callback', None) or self.get_query_argument('jsonp', None)
+            if None is not callback:
+                out = '%s(%s);' % (callback, out)  # wrap with JSONP call if requested
 
         except Exception as e:  # if we fail to generate the output fake an error
             logger.log(u'API :: ' + traceback.format_exc(), logger.DEBUG)
             out = '{"result":"' + result_type_map[RESULT_ERROR] + '", "message": "error while composing output: "' + ex(
                 e) + '"}'
 
-        tornado_write_hack_dict = {'unwrap_json': out}
-        return tornado_write_hack_dict
+        return out
 
     def _grand_access(self, realKey, apiKey, args, kwargs):
         """ validate api key and log result """
@@ -728,7 +729,7 @@ class CMD_ComingEpisodes(ApiCall):
 
         # make a dict out of the sql results
         sql_results = [dict(row) for row in sql_results]
-                
+
         # multi dimension sort
         sorts = {
             'date': (lambda a, b: cmp(
@@ -1096,7 +1097,7 @@ class CMD_Exceptions(ApiCall):
 
     def run(self):
         """ display scene exceptions for all or a given show """
-        myDB = db.DBConnection("cache.db", row_type="dict")
+        myDB = db.DBConnection(row_type="dict")
 
         if self.indexerid == None:
             sqlResults = myDB.select("SELECT show_name, indexer_id AS 'indexerid' FROM scene_exceptions")
@@ -1234,50 +1235,65 @@ class CMD_Logs(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ view sickbeard's log """
+        """ view sickgear's log """
         # 10 = Debug / 20 = Info / 30 = Warning / 40 = Error
-        minLevel = logger.reverseNames[str(self.min_level).upper()]
-
-        data = []
-        if os.path.isfile(logger.sb_log_instance.log_file_path):
-            with ek.ek(open, logger.sb_log_instance.log_file_path) as f:
-                data = f.readlines()
+        min_level = logger.reverseNames[str(self.min_level).upper()]
+        max_lines = 50
 
         regex = "^(\d\d\d\d)\-(\d\d)\-(\d\d)\s*(\d\d)\:(\d\d):(\d\d)\s*([A-Z]+)\s*(.+?)\s*\:\:\s*(.*)$"
 
-        finalData = []
+        final_data = []
+        normal_data = []
+        truncate = []
+        repeated = None
+        num_lines = 0
 
-        numLines = 0
-        lastLine = False
-        numToShow = min(50, len(data))
+        if os.path.isfile(logger.sb_log_instance.log_file_path):
+            for x in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
 
-        for x in reversed(data):
+                x = x.decode('utf-8')
+                match = re.match(regex, x)
 
-            x = x.decode('utf-8')
-            match = re.match(regex, x)
+                if match:
+                    level = match.group(7)
+                    if level not in logger.reverseNames:
+                        normal_data = []
+                        continue
 
-            if match:
-                level = match.group(7)
-                if level not in logger.reverseNames:
-                    lastLine = False
-                    continue
+                    if logger.reverseNames[level] >= min_level:
+                        if truncate and not normal_data and truncate[0] == match.group(8) + match.group(9):
+                            truncate += [match.group(8) + match.group(9)]
+                            repeated = x
+                            continue
 
-                if logger.reverseNames[level] >= minLevel:
-                    lastLine = True
-                    finalData.append(x.rstrip("\n"))
+                        if 1 < len(truncate):
+                            final_data[-1] = repeated.strip() + ' (... %s repeat lines)\n' % len(truncate)
+
+                        truncate = [match.group(8) + match.group(9)]
+
+                        final_data.append(x)
+                        if any(normal_data):
+                            final_data += ['%02s) %s' % (n + 1, x) for n, x in enumerate(normal_data[::-1])] + \
+                                          ['<br />']
+                            num_lines += len(normal_data)
+                            normal_data = []
+                    else:
+                        normal_data = []
+                        continue
+
                 else:
-                    lastLine = False
-                    continue
+                    if not any(normal_data) and not any([x.strip()]):
+                        continue
 
-            elif lastLine:
-                finalData.append("AA" + x)
+                    normal_data.append(re.sub(r'\r?\n', '<br />', x.replace('<', '&lt;').replace('>', '&gt;')))
 
-            numLines += 1
+                num_lines += 1
 
-            if numLines >= numToShow:
-                break
+                if num_lines >= max_lines:
+                    break
 
-        return _responds(RESULT_SUCCESS, finalData)
+        return _responds(RESULT_SUCCESS, final_data)
+
 
 class CMD_PostProcess(ApiCall):
     _help = {"desc": "Manual postprocess TV Download Dir",
@@ -1411,7 +1427,7 @@ class CMD_SickBeardCheckScheduler(ApiCall):
 
         backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()  #@UndefinedVariable
         backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()  #@UndefinedVariable
-        nextBacklog = sickbeard.backlogSearchScheduler.nextRun().strftime(dateFormat).decode(sickbeard.SYS_ENCODING)
+        nextBacklog = sickbeard.backlogSearchScheduler.next_run().strftime(dateFormat).decode(sickbeard.SYS_ENCODING)
 
         data = {"backlog_is_paused": int(backlogPaused), "backlog_is_running": int(backlogRunning),
                 "last_backlog": _ordinal_to_dateForm(sqlResults[0]["last_backlog"]),
@@ -1463,6 +1479,24 @@ class CMD_SickBeardDeleteRootDir(ApiCall):
         sickbeard.ROOT_DIRS = root_dirs_new
         # what if the root dir was not found?
         return _responds(RESULT_SUCCESS, _getRootDirs(), msg="Root directory deleted")
+
+
+class CMD_SickBeardForceSearch(ApiCall):
+    _help = {'desc': 'force the episode recent search early'}
+
+    def __init__(self, handler, args, kwargs):
+        # required
+        # optional
+        # super, missing, help
+        ApiCall.__init__(self, handler, args, kwargs)
+
+    def run(self):
+        """ force the episode search early """
+        # Searching all providers for any needed episodes
+        result = sickbeard.recentSearchScheduler.forceRun()
+        if result:
+            return _responds(RESULT_SUCCESS, msg='Episode recent search successfully forced')
+        return _responds(RESULT_FAILURE, msg='Can not force the episode recent search because it\'s already active')
 
 
 class CMD_SickBeardGetDefaults(ApiCall):
@@ -1801,7 +1835,7 @@ class CMD_Show(ApiCall):
         #clean up tvdb horrible airs field
         showDict["airs"] = str(showObj.airs).replace('am', ' AM').replace('pm', ' PM').replace('  ', ' ')
         showDict["indexerid"] = self.indexerid
-        showDict["tvrage_id"] = helpers.mapIndexersToShow(showObj)[2]
+        showDict["tvrage_id"] = showObj.ids.get(INDEXER_TVRAGE, {'id': 0})['id']
         showDict["tvrage_name"] = showObj.name
         showDict["network"] = showObj.network
         if not showDict["network"]:
@@ -2574,8 +2608,8 @@ class CMD_Shows(ApiCall):
                 "sports": curShow.sports,
                 "anime": curShow.anime,
                 "indexerid": curShow.indexerid,
-                "tvdbid": helpers.mapIndexersToShow(curShow)[1],
-                "tvrage_id": helpers.mapIndexersToShow(curShow)[2],
+                "tvdbid": curShow.ids.get(INDEXER_TVDB , {'id': 0})['id'],
+                "tvrage_id": curShow.ids.get(INDEXER_TVRAGE, {'id': 0})['id'],
                 "tvrage_name": curShow.name,
                 "network": curShow.network,
                 "show_name": curShow.name,
@@ -2651,6 +2685,7 @@ _functionMaper = {"help": CMD_Help,
                   "sb.addrootdir": CMD_SickBeardAddRootDir,
                   "sb.checkscheduler": CMD_SickBeardCheckScheduler,
                   "sb.deleterootdir": CMD_SickBeardDeleteRootDir,
+                  "sb.forcesearch": CMD_SickBeardForceSearch,
                   "sb.getdefaults": CMD_SickBeardGetDefaults,
                   "sb.getmessages": CMD_SickBeardGetMessages,
                   "sb.getrootdirs": CMD_SickBeardGetRootDirs,

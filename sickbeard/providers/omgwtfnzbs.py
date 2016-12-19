@@ -36,17 +36,16 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
     def __init__(self):
         generic.NZBProvider.__init__(self, 'omgwtfnzbs')
 
-        self.url = 'https://omgwtfnzbs.org/'
+        self.url = 'https://omgwtfnzbs.me/'
 
-        self.url_base = 'https://omgwtfnzbs.org/'
+        self.url_base = 'https://omgwtfnzbs.me/'
+        self.url_api = 'https://api.omgwtfnzbs.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'cache': 'https://rss.omgwtfnzbs.org/rss-download.php?%s',
-                     'search': self.url_base + 'json/?%s',
+                     'cache': 'https://rss.omgwtfnzbs.me/rss-download.php?%s',
+                     'search': self.url_api + 'json/?%s',
                      'get': self.url_base + '%s',
                      'cache_html': self.url_base + 'browse.php?cat=tv%s',
                      'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}
-
-        self.url = self.urls['config_provider_home_uri']
 
         self.needs_auth = True
         self.username, self.api_key, self.cookies = 3 * [None]
@@ -91,7 +90,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
     def _title_and_url(self, item):
 
-        return item['release'], item['getnzb']
+        return item['release'].replace('_', '.'), item['getnzb']
 
     def get_result(self, episodes, url):
 
@@ -100,8 +99,11 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             data = self.get_url(url, timeout=90)
             if not data:
                 return result
+            if '<strong>Limit Reached</strong>' in data:
+                logger.log('Daily Nzb Download limit reached', logger.DEBUG)
+                return result
             if '</nzb>' not in data or 'seem to be logged in' in data:
-                logger.log(u'Failed nzb data response: %s' % data, logger.DEBUG)
+                logger.log('Failed nzb data response: %s' % data, logger.DEBUG)
                 return result
             result = classes.NZBDataSearchResult(episodes)
             result.extraInfo += [data]
@@ -134,7 +136,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                 return data.entries
         return []
 
-    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0):
+    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0, **kwargs):
 
         api_key = self._init_api()
         if False is api_key:
@@ -144,6 +146,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             params = {'user': self.username,
                       'api': api_key,
                       'eng': 1,
+                      'nukes': 1,
                       'catid': '19,20',  # SD,HD
                       'retention': (sickbeard.USENET_RETENTION, retention)[retention or not sickbeard.USENET_RETENTION],
                       'search': search}
@@ -155,6 +158,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             if data_json and self._check_auth_from_data(data_json, is_xml=False):
                 for item in data_json:
                     if 'release' in item and 'getnzb' in item:
+                        if item.get('nuked', '').startswith('1'):
+                            continue
                         results.append(item)
         return results
 
@@ -201,7 +206,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         except generic.HaltParseException:
             time.sleep(1.1)
             pass
-        except Exception:
+        except (StandardError, Exception):
             logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
         mode = (mode, search_mode)['Propers' == search_mode]
@@ -220,7 +225,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                     title, url = self._title_and_url(item)
                     try:
                         result_date = datetime.fromtimestamp(int(item['usenetage']))
-                    except:
+                    except (StandardError, Exception):
                         result_date = None
 
                     if result_date:
@@ -234,7 +239,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             api_key = self._check_auth()
             if not api_key.startswith('cookie:'):
                 return api_key
-        except Exception:
+        except (StandardError, Exception):
             return None
 
         self.cookies = re.sub(r'(?i)([\s\']+|cookie\s*:)', '', api_key)

@@ -16,7 +16,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from . import generic
-from sickbeard import tvcache
 from sickbeard.rssfeeds import RSSFeeds
 from lib.unidecode import unidecode
 
@@ -24,7 +23,7 @@ from lib.unidecode import unidecode
 class PreToMeProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'PreToMe')
+        generic.TorrentProvider.__init__(self, 'PreToMe', cache_update_freq=6)
 
         self.url_base = 'https://pretome.info/'
 
@@ -35,7 +34,6 @@ class PreToMeProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.passkey = None
-        self.cache = PreToMeCache(self)
 
     def _authorised(self, **kwargs):
 
@@ -54,11 +52,11 @@ class PreToMeProvider(generic.TorrentProvider):
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                 search_url = url + (self.urls['search'] % search_string, '')['Cache' == mode]
 
-                data = RSSFeeds(self).get_feed(search_url)
+                xml_data = RSSFeeds(self).get_feed(search_url)
 
                 cnt = len(items[mode])
-                if data and 'entries' in data:
-                    for entry in data['entries']:
+                if xml_data and 'entries' in xml_data:
+                    for entry in xml_data['entries']:
                         try:
                             if entry['title'] and 'download' in entry['link']:
                                 items[mode].append((entry['title'], entry['link'], None, None))
@@ -70,18 +68,6 @@ class PreToMeProvider(generic.TorrentProvider):
             results = list(set(results + items[mode]))
 
         return results
-
-
-class PreToMeCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 6  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = PreToMeProvider()

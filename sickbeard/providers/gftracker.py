@@ -20,7 +20,7 @@ import time
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -29,7 +29,7 @@ from lib.unidecode import unidecode
 class GFTrackerProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'GFTracker')
+        generic.TorrentProvider.__init__(self, 'GFTracker', cache_update_freq=17)
 
         self.url_base = 'https://thegft.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -44,11 +44,10 @@ class GFTrackerProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = GFTrackerCache(self)
 
     def _authorised(self, **kwargs):
 
-        return super(GFTrackerProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies(pre='gft_')),
+        return super(GFTrackerProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies(pre='gft_')),
                                                           url=[self.urls['login_init']])
 
     def _search_provider(self, search_params, **kwargs):
@@ -82,19 +81,23 @@ class GFTrackerProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 3 > len(cells):
+                                continue
                             try:
-                                seeders, leechers = 2 * [tr.find_all('td')[-1].get_text().strip()]
+                                head = head if None is not head else self._header_row(tr)
+                                seeders, leechers = 2 * [cells[head['seed']].get_text().strip()]
                                 seeders, leechers = [tryInt(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = ('title' in info.attrs and info['title']) or info.get_text().strip()
-                                size = tr.find_all('td')[-2].get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                size = cells[head['size']].get_text().strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -103,13 +106,11 @@ class GFTrackerProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
@@ -120,18 +121,6 @@ class GFTrackerProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
-
-
-class GFTrackerCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 17  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = GFTrackerProvider()

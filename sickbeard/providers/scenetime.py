@@ -20,35 +20,38 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
+from sickbeard.helpers import tryInt, anon_url
 from lib.unidecode import unidecode
 
 
 class SceneTimeProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SceneTime')
+        generic.TorrentProvider.__init__(self, 'SceneTime', cache_update_freq=15)
 
-        self.url_base = 'https://www.scenetime.com/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
-                     'browse': self.url_base + 'browse_API.php',
-                     'params': {'sec': 'jax', 'cata': 'yes'},
-                     'get': self.url_base + 'download.php/%(id)s/%(title)s.torrent'}
+        self.url_home = ['https://%s.scenetime.com/' % u for u in 'www', 'uk']
 
-        self.categories = {'shows': [2, 43, 9, 63, 77, 79, 101]}
+        self.url_vars = {'login': 'support.php', 'browse': 'browse_API.php', 'get': 'download.php/%s.torrent'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
+                         'browse': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
-        self.url = self.urls['config_provider_home_uri']
+        self.categories = {'shows': [2, 43, 9, 63, 77, 79, 83]}
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = SceneTimeCache(self)
+        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(SceneTimeProvider, self)._authorised(post_params={'submit': 'Log in'})
+        return super(SceneTimeProvider, self)._authorised(
+            logged_in=(lambda y='': all(
+                ['staff-support' in y, self.has_all_cookies()] +
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+
+    @staticmethod
+    def _has_signature(data=None):
+        return generic.TorrentProvider._has_signature(data) or (data and re.search(r'(?i)<title[^<]+?(Scenetim)', data))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -58,15 +61,16 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': '.*id=(\d+).*', 'fl': '\[freeleech\]',
-                                                             'cats': 'cat=(?:%s)' % self._categories_string(template='', delimiter='|')
-                                                             }.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'info': 'detail', 'get': '.*id=(\d+).*', 'fl': '\[freeleech\]',
+            'cats': 'cat=(?:%s)' % self._categories_string(template='', delimiter='|')}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                post_data = self.urls['params'].copy()
-                post_data.update(ast.literal_eval('{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
+                post_data = {'sec': 'jax', 'cata': 'yes'}
+                post_data.update(ast.literal_eval(
+                    '{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
                 if 'Cache' != mode:
                     search_string = '+'.join(search_string.split())
                     post_data['search'] = search_string
@@ -89,21 +93,25 @@ class SceneTimeProvider(generic.TorrentProvider):
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 4 > len(cells):
+                                continue
                             try:
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    tr.find_all('td')[x].get_text().strip() for x in (-2, -1, -3)]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if None is tr.find('a', href=rc['cats'])\
-                                        or self.freeleech and None is rc['fl'].search(tr.find_all('td')[1].get_text())\
+                                        or self.freeleech and None is rc['fl'].search(cells[1].get_text())\
                                         or self._peers_fail(mode, seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
-
-                                download_url = self.urls['get'] % {'id': re.sub(rc['get'], r'\1', str(info.attrs['href'])),
-                                                                   'title': str(title).replace(' ', '.')}
-                            except (AttributeError, TypeError, ValueError):
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link('%s/%s' % (
+                                    re.sub(rc['get'], r'\1', str(info.attrs['href'])), str(title).replace(' ', '.')))
+                            except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
                             if title and download_url:
@@ -111,29 +119,23 @@ class SceneTimeProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt,
                                  ('search string: ' + search_string, self.name)['Cache' == mode])
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
-
-class SceneTimeCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 15  # cache update frequency
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
+    def ui_string(self, key):
+        if 'scenetime_digest' == key and self._valid_home():
+            current_url = getattr(self, 'urls', {}).get('config_provider_home_uri')
+            return ('use... \'uid=xx; pass=yy\'' +
+                    (current_url and (' from a session logged in at <a target="_blank" href="%s">%s</a>' %
+                                      (anon_url(current_url), current_url.strip('/'))) or ''))
+        return ''
 
 
 provider = SceneTimeProvider()

@@ -37,22 +37,46 @@
 			});
 	});
 
-	$('#testXBMC').click(function () {
-		var xbmc_host = $.trim($('#xbmc_host').val());
-		var xbmc_username = $.trim($('#xbmc_username').val());
-		var xbmc_password = $.trim($('#xbmc_password').val());
-		if (!xbmc_host) {
-			$('#testXBMC-result').html('Please fill out the necessary fields above.');
-			$('#xbmc_host').addClass('warning');
+	$('#discover-emby').click(function () {
+		$(this).prop('disabled', !0);
+		$('#emby_host,#emby_apikey').removeClass('warning');
+		$('#testEMBY-result').html(loading);
+		$.get(sbRoot + '/home/discover_emby')
+			.done(function (data) {
+				var result = 'Unable to discover a server, is one running?';
+				if ('' != data) {
+					$('#emby_host').val(data);
+					result = 'Server found.';
+				}
+				$('#testEMBY-result').html(result);
+				$('#discover-emby').prop('disabled', !1);
+			});
+	});
+
+	$('#testEMBY').click(function () {
+		var host$ = $('#emby_host'), host = $.trim(host$.val());
+		var apikey$ = $('#emby_apikey'), apikey = $.trim(apikey$.val());
+		if (!host || !apikey) {
+			$('#testEMBY-result').html('Please fill out the necessary fields above.');
+			if (!host) {
+				host$.addClass('warning');
+			} else {
+				host$.removeClass('warning');
+			}
+			if (!apikey) {
+				apikey$.addClass('warning');
+			} else {
+				apikey$.removeClass('warning');
+			}
 			return;
 		}
-		$('#xbmc_host').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testXBMC-result').html(loading);
-		$.get(sbRoot + '/home/testXBMC', {'host': xbmc_host, 'username': xbmc_username, 'password': xbmc_password})
+		$('#emby_host,#emby_apikey').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#testEMBY-result').html(loading);
+		$.get(sbRoot + '/home/testEMBY', {'host': host, 'apikey': apikey})
 			.done(function (data) {
-				$('#testXBMC-result').html(data);
-				$('#testXBMC').prop('disabled', false);
+				$('#testEMBY-result').html(data);
+				$('#testEMBY').prop('disabled', !1);
 			});
 	});
 
@@ -74,6 +98,35 @@
 				$('#testKODI').prop('disabled', false);
 			});
 	});
+
+	$('#testXBMC').click(function () {
+		var xbmc_host = $.trim($('#xbmc_host').val());
+		var xbmc_username = $.trim($('#xbmc_username').val());
+		var xbmc_password = $.trim($('#xbmc_password').val());
+		if (!xbmc_host) {
+			$('#testXBMC-result').html('Please fill out the necessary fields above.');
+			$('#xbmc_host').addClass('warning');
+			return;
+		}
+		$('#xbmc_host').removeClass('warning');
+		$(this).prop('disabled', true);
+		$('#testXBMC-result').html(loading);
+		$.get(sbRoot + '/home/testXBMC', {'host': xbmc_host, 'username': xbmc_username, 'password': xbmc_password})
+			.done(function (data) {
+				$('#testXBMC-result').html(data);
+				$('#testXBMC').prop('disabled', false);
+			});
+	});
+
+	// show instructions for plex when enabled
+	$('#use_plex').click(function() {
+		if ( $(this).is(':checked') ) {
+			$('.plexinfo').removeClass('hide');
+		} else {
+			$('.plexinfo').addClass('hide');
+		}
+	});
+	if ($('input[id="use_plex"]').is(':checked')) {$('.plexinfo').removeClass('hide')}
 
 	$('#testPMC').click(function () {
 		var plex_host = $.trim($('#plex_host').val());
@@ -224,30 +277,6 @@
 		$.get(sbRoot + '/home/testLibnotify',
 			function (data) { $('#testLibnotify-result').html(data); });
 	});
-  
-	$('#twitterStep1').click(function() {
-		$('#testTwitter-result').html(loading);
-		$.get(sbRoot + '/home/twitterStep1', function (data) {window.open(data); })
-			.done(function () { $('#testTwitter-result').html('<b>Step1:</b> Confirm Authorization'); });
-	});
-
-	$('#twitterStep2').click(function () {
-		var twitter_key = $.trim($('#twitter_key').val());
-		if (!twitter_key) {
-			$('#testTwitter-result').html('Please fill out the necessary fields above.');
-			$('#twitter_key').addClass('warning');
-			return;
-		}
-		$('#twitter_key').removeClass('warning');
-		$('#testTwitter-result').html(loading);
-		$.get(sbRoot + '/home/twitterStep2', {'key': twitter_key},
-			function (data) { $('#testTwitter-result').html(data); });
-	});
-
-	$('#testTwitter').click(function() {
-		$.get(sbRoot + '/home/testTwitter',
-			function (data) { $('#testTwitter-result').html(data); });
-	});
 
 	$('#settingsNMJ').click(function() {
 		if (!$('#nmj_host').val()) {
@@ -350,6 +379,139 @@
 				$('#testNMJv2-result').html(data);
 				$('#testNMJv2').prop('disabled', false);
 			});
+	});
+
+	$('#testNMA').click(function () {
+		var nma_api = $.trim($('#nma_api').val());
+		var nma_priority = $('#nma_priority').val();
+		if (!nma_api) {
+			$('#testNMA-result').html('Please fill out the necessary fields above.');
+			$('#nma_api').addClass('warning');
+			return;
+		}
+		$('#nma_api').removeClass('warning');
+		$(this).prop('disabled', true);
+		$('#testNMA-result').html(loading);
+		$.get(sbRoot + '/home/testNMA', {'nma_api': nma_api, 'nma_priority': nma_priority})
+			.done(function (data) {
+				$('#testNMA-result').html(data);
+				$('#testNMA').prop('disabled', false);
+			});
+	});
+
+	$('#testPushalot').click(function () {
+		var pushalot_authorizationtoken = $.trim($('#pushalot_authorizationtoken').val());
+		if (!pushalot_authorizationtoken) {
+			$('#testPushalot-result').html('Please fill out the necessary fields above.');
+			$('#pushalot_authorizationtoken').addClass('warning');
+			return;
+		}
+		$('#pushalot_authorizationtoken').removeClass('warning');
+		$(this).prop('disabled', true);
+		$('#testPushalot-result').html(loading);
+		$.get(sbRoot + '/home/testPushalot', {'authorizationToken': pushalot_authorizationtoken})
+			.done(function (data) {
+				$('#testPushalot-result').html(data);
+				$('#testPushalot').prop('disabled', false);
+			});
+	});
+
+	$('#testPushbullet').click(function () {
+		var pushbullet_access_token = $.trim($('#pushbullet_access_token').val());
+		var pushbullet_device_iden = $('#pushbullet_device_iden').val();
+		if (!pushbullet_access_token) {
+			$('#testPushbullet-result').html('Please fill out the necessary fields above.');
+			$('#pushbullet_access_token').addClass('warning');
+			return;
+		}
+		$('#pushbullet_access_token').removeClass('warning');
+		$(this).prop('disabled', true);
+		$('#testPushbullet-result').html(loading);
+		$.get(sbRoot + '/home/testPushbullet', {'accessToken': pushbullet_access_token, 'device_iden': pushbullet_device_iden})
+			.done(function (data) {
+				$('#testPushbullet-result').html(data);
+				$('#testPushbullet').prop('disabled', false);
+			});
+	});
+
+	function get_pushbullet_devices (msg) {
+		var pushbullet_access_token = $.trim($('#pushbullet_access_token').val());
+		if (!pushbullet_access_token) {
+			$('#testPushbullet-result').html('Please fill out the necessary fields above.');
+			$('#pushbullet_access_token').addClass('warning');
+			return;
+		}
+		$(this).prop("disabled", true);
+		if (msg) {
+			$('#testPushbullet-result').html(loading);
+		}
+		var current_pushbullet_device = $('#pushbullet_device_iden').val();
+		$.get(sbRoot + '/home/getPushbulletDevices', {'accessToken': pushbullet_access_token})
+			.done(function (data) {
+				var devices = jQuery.parseJSON(data || '{}').devices;
+				var error = jQuery.parseJSON(data || '{}').error;
+				$('#pushbullet_device_list').html('');
+				if (devices) {
+				// add default option to send to all devices
+				$('#pushbullet_device_list').append('<option value="" selected="selected">-- All Devices --</option>');
+					for (var i = 0; i < devices.length; i++) {
+						// only list active device targets
+						if (devices[i].active == true) {
+							// if a device in the list matches our current iden, select it
+							if (current_pushbullet_device == devices[i].iden) {
+								$('#pushbullet_device_list').append('<option value="' + devices[i].iden + '" selected="selected">' + devices[i].manufacturer + ' ' + devices[i].nickname + '</option>');
+							} else {
+								$('#pushbullet_device_list').append('<option value="' + devices[i].iden + '">' + devices[i].manufacturer + ' ' + devices[i].nickname + '</option>');
+							}
+						}
+					}
+				}
+				$('#getPushbulletDevices').prop('disabled', false);
+				if (msg) {
+					if (error.message) {
+						$('#testPushbullet-result').html(error.message);
+					} else {
+						$('#testPushbullet-result').html(msg);
+					}
+				}
+			});
+
+		$('#pushbullet_device_list').change(function () {
+			$('#pushbullet_device_iden').val($('#pushbullet_device_list').val());
+			$('#testPushbullet-result').html('Don\'t forget to save your new Pushbullet settings.');
+		});
+	}
+
+	$('#getPushbulletDevices').click(function () {
+		get_pushbullet_devices('Device list updated. Select specific device to use.');
+	});
+
+	if ($('#use_pushbullet').prop('checked')) {
+		get_pushbullet_devices();
+	}
+
+	$('#twitterStep1').click(function() {
+		$('#testTwitter-result').html(loading);
+		$.get(sbRoot + '/home/twitterStep1', function (data) {window.open(data); })
+			.done(function () { $('#testTwitter-result').html('<b>Step1:</b> Confirm Authorization'); });
+	});
+
+	$('#twitterStep2').click(function () {
+		var twitter_key = $.trim($('#twitter_key').val());
+		if (!twitter_key) {
+			$('#testTwitter-result').html('Please fill out the necessary fields above.');
+			$('#twitter_key').addClass('warning');
+			return;
+		}
+		$('#twitter_key').removeClass('warning');
+		$('#testTwitter-result').html(loading);
+		$.get(sbRoot + '/home/twitterStep2', {'key': twitter_key},
+			function (data) { $('#testTwitter-result').html(data); });
+	});
+
+	$('#testTwitter').click(function() {
+		$.get(sbRoot + '/home/testTwitter',
+			function (data) { $('#testTwitter-result').html(data); });
 	});
 
 	var elTraktAuth = $('#trakt-authenticate'), elTraktAuthResult = $('#trakt-authentication-result');
@@ -510,6 +672,67 @@
 		});
 	});
 
+	function load_show_notify_lists() {
+		$.get(sbRoot + '/home/loadShowNotifyLists', function (data) {
+			var list, html, item, len= 0, el;
+			list = $.parseJSON(data);
+			html = [];
+			for (item in list) {
+				for (var k in list[item]) {
+					if ($.isArray(list[item][k])) {
+						len += list[item][k].length;
+						html.push('\t<optgroup label="' + k + '">');
+						for (var show in list[item][k]) {
+							html.push('\t\t<option value="' + list[item][k][show].id + '"'
+								+ ' data="' + list[item][k][show].list + '"'
+								+ '>' + list[item][k][show].name + '</option>');
+						}
+						html.push('\t</optgroup>');
+					}
+				}
+			}
+
+			if (len) {
+				el = $('#email_show');
+				el.html('<option value="-1">-- Select show --</option>'
+					+ html.join('\n'));
+
+				$('#show_email_list').val('');
+
+				el.change(function () {
+					$('#show_email_list').val(
+						$(this).find('option[value="' + $(this).val() + '"]').attr('data'))
+				});
+			}
+		});
+	}
+	// Load the per show notify lists everytime this page is loaded
+	load_show_notify_lists();
+
+	// Update the internal data struct anytime settings are saved to the server
+	$('#email_show').bind('notify', function () { load_show_notify_lists(); });
+
+	$('#save_show_email').click(
+		function(){
+			var show = $('#email_show').val();
+			if ('-1' == show) {
+				$('#testEmail-result').html('No show selected for save.');
+				return
+			}
+			$.post(sbRoot + '/home/save_show_email', {
+				show: show,
+				emails: $('#show_email_list').val()},
+				function (data){
+					// Reload the per show notify lists to reflect changes
+					load_show_notify_lists();
+					var result = $.parseJSON(data),
+						show = $('#email_show').find('option[value="' + result.id + '"]').text();
+					$('#testEmail-result').html(result.success
+						? 'Success. Notify list updated for show "' + show + '". Click below to test.'
+						: 'Error saving notify list for show %s' % show);
+				});
+		});
+
 	$('#testEmail').click(function () {
 		var status, host, port, tls, from, user, pwd, err, to;
 		status = $('#testEmail-result');
@@ -523,174 +746,27 @@
 		from = from.length > 0 ? from : 'root@localhost';
 		user = $('#email_user').val().trim();
 		pwd = $('#email_password').val();
-		err = '';
-		if (host === null) {
-			err += '<li style="color: red;">You must specify an SMTP hostname!</li>';
+		err = [];
+		if (null == host) {
+			err.push('SMTP server hostname');
 		}
-		if (port === null) {
-			err += '<li style="color: red;">You must specify an SMTP port!</li>';
-		} else if (port.match(/^\d+$/) === null || parseInt(port, 10) > 65535) {
-			err += '<li style="color: red;">SMTP port must be between 0 and 65535!</li>';
+		if (null == port) {
+			err.push('SMTP server host port');
+		} else if (null == port.match(/^\d+$/) || parseInt(port, 10) > 65535) {
+			err.push('SMTP server host port must be between 0 and 65535');
 		}
-		if (err.length > 0) {
-			err = '<ol>' + err + '</ol>';
-			status.html(err);
+		if (0 < err.length) {
+			status.html('Required: ' + err.join(', '));
 		} else {
-			to = prompt('Enter an email address to send the test to:', null);
-			if (to === null || to.length === 0 || to.match(/.*@.*/) === null) {
-				status.html('<p style="color: red;">You must provide a recipient email address!</p>');
+			to = prompt('Enter an email address to send the test to:', '');
+			if (null == to || 0 == to.length || null == to.match(/.*@.*/)) {
+				status.html('Required: A valid address for email test');
 			} else {
-				$.get(sbRoot + '/home/testEmail', {host: host, port: port, smtp_from: from, use_tls: tls, user: user, pwd: pwd, to: to},
-					function (msg) { $('#testEmail-result').html(msg); });
+				$.get(sbRoot + '/home/testEmail',
+					{host:host, port:port, smtp_from:from, use_tls:tls, user:user, pwd:pwd, to:to},
+					function(msg) {$('#testEmail-result').html(msg);});
 			}
 		}
 	});
 
-	$('#testNMA').click(function () {
-		var nma_api = $.trim($('#nma_api').val());
-		var nma_priority = $('#nma_priority').val();
-		if (!nma_api) {
-			$('#testNMA-result').html('Please fill out the necessary fields above.');
-			$('#nma_api').addClass('warning');
-			return;
-		}
-		$('#nma_api').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testNMA-result').html(loading);
-		$.get(sbRoot + '/home/testNMA', {'nma_api': nma_api, 'nma_priority': nma_priority})
-			.done(function (data) {
-				$('#testNMA-result').html(data);
-				$('#testNMA').prop('disabled', false);
-			});
-	});
-
-	$('#testPushalot').click(function () {
-		var pushalot_authorizationtoken = $.trim($('#pushalot_authorizationtoken').val());
-		if (!pushalot_authorizationtoken) {
-			$('#testPushalot-result').html('Please fill out the necessary fields above.');
-			$('#pushalot_authorizationtoken').addClass('warning');
-			return;
-		}
-		$('#pushalot_authorizationtoken').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testPushalot-result').html(loading);
-		$.get(sbRoot + '/home/testPushalot', {'authorizationToken': pushalot_authorizationtoken})
-			.done(function (data) {
-				$('#testPushalot-result').html(data);
-				$('#testPushalot').prop('disabled', false);
-			});
-	});
-
-	$('#testPushbullet').click(function () {
-		var pushbullet_access_token = $.trim($('#pushbullet_access_token').val());
-		var pushbullet_device_iden = $('#pushbullet_device_iden').val();
-		if (!pushbullet_access_token) {
-			$('#testPushbullet-result').html('Please fill out the necessary fields above.');
-			$('#pushbullet_access_token').addClass('warning');
-			return;
-		}
-		$('#pushbullet_access_token').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testPushbullet-result').html(loading);
-		$.get(sbRoot + '/home/testPushbullet', {'accessToken': pushbullet_access_token, 'device_iden': pushbullet_device_iden})
-			.done(function (data) {
-				$('#testPushbullet-result').html(data);
-				$('#testPushbullet').prop('disabled', false);
-			});
-	});
-
-	function get_pushbullet_devices (msg) {
-		var pushbullet_access_token = $.trim($('#pushbullet_access_token').val());
-		if (!pushbullet_access_token) {
-			$('#testPushbullet-result').html('Please fill out the necessary fields above.');
-			$('#pushbullet_access_token').addClass('warning');
-			return;
-		}
-		$(this).prop("disabled", true);
-		if (msg) {
-			$('#testPushbullet-result').html(loading);
-		}
-		var current_pushbullet_device = $('#pushbullet_device_iden').val();
-		$.get(sbRoot + '/home/getPushbulletDevices', {'accessToken': pushbullet_access_token})
-			.done(function (data) {
-				var devices = jQuery.parseJSON(data || '{}').devices;
-				var error = jQuery.parseJSON(data || '{}').error;
-				$('#pushbullet_device_list').html('');
-				if (devices) {
-				// add default option to send to all devices
-				$('#pushbullet_device_list').append('<option value="" selected="selected">-- All Devices --</option>');
-					for (var i = 0; i < devices.length; i++) {
-						// only list active device targets
-						if (devices[i].active == true) {
-							// if a device in the list matches our current iden, select it
-							if (current_pushbullet_device == devices[i].iden) {
-								$('#pushbullet_device_list').append('<option value="' + devices[i].iden + '" selected="selected">' + devices[i].manufacturer + ' ' + devices[i].nickname + '</option>');
-							} else {
-								$('#pushbullet_device_list').append('<option value="' + devices[i].iden + '">' + devices[i].manufacturer + ' ' + devices[i].nickname + '</option>');
-							}
-						}
-					}
-				}
-				$('#getPushbulletDevices').prop('disabled', false);
-				if (msg) {
-					if (error.message) {
-						$('#testPushbullet-result').html(error.message);
-					} else {
-						$('#testPushbullet-result').html(msg);
-					}
-				}
-			});
-
-		$('#pushbullet_device_list').change(function () {
-			$('#pushbullet_device_iden').val($('#pushbullet_device_list').val());
-			$('#testPushbullet-result').html('Don\'t forget to save your new Pushbullet settings.');
-		});
-	}
-
-	$('#getPushbulletDevices').click(function () {
-		get_pushbullet_devices('Device list updated. Select specific device to use.');
-	});
-
-	if ($('#use_pushbullet').prop('checked')) {
-		get_pushbullet_devices();
-	}
-
-	$('#email_show').change(function () {
-		var key = parseInt($('#email_show').val(), 10);
-		$('#email_show_list').val(key >= 0 ? notify_data[key.toString()].list : '');
-	});
-
-	// Update the internal data struct anytime settings are saved to the server
-	$('#email_show').bind('notify', function () { load_show_notify_lists(); });
-
-	function load_show_notify_lists() {
-		$.get(sbRoot + "/home/loadShowNotifyLists", function (data) {
-			var list, html, s;
-			list = $.parseJSON(data);
-			notify_data = list;
-			if (list._size === 0) {
-				return;
-			}
-			html = '<option value="-1">-- Select --</option>';
-			for (s in list) {
-				if (s.charAt(0) !== '_') {
-					html += '<option value="' + list[s].id + '">' + $('<div/>').text(list[s].name).html() + '</option>';
-				}
-			}
-			$('#email_show').html(html);
-			$('#email_show_list').val('');
-		});
-	}
-	// Load the per show notify lists everytime this page is loaded
-	load_show_notify_lists();
-
-	// show instructions for plex when enabled
-	$('#use_plex').click(function() {
-		if ( $(this).is(':checked') ) {
-			$('.plexinfo').removeClass('hide');
-		} else {
-			$('.plexinfo').addClass('hide');
-		}
-	});
-	if ($('input[id="use_plex"]').is(':checked')) {$('.plexinfo').removeClass('hide')}
 });

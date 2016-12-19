@@ -52,69 +52,73 @@
     #set $totalQual += $showCounts[$curShow.indexerid][$Overview.QUAL]
 #end for
 ##
-<div class="h2footer pull-right">
-    <span class="listing-key wanted">Wanted: <b>$totalWanted</b></span>
-    <span class="listing-key qual">Low Quality: <b>$totalQual</b></span>
-</div>
-<br/>
+	<div class="h2footer pull-right">
+		<span class="listing-key wanted">Wanted: <b>$totalWanted</b></span>
+		<span class="listing-key qual">Low Quality: <b>$totalQual</b></span>
+	</div>
+	<br/>
 
-<div class="pull-left">
-Jump to Show
-	<select id="pickShow" class="form-control form-control-inline input-sm">
-#for $curShow in sorted($sickbeard.showList, key = operator.attrgetter('name')):
-    #if 0 != $showCounts[$curShow.indexerid][$Overview.QUAL] + $showCounts[$curShow.indexerid][$Overview.WANTED]:
-		<option value="$curShow.indexerid">$curShow.name</option>
-    #end if
-#end for
-	</select>
-</div>
+#if not $totalWanted
+	<h3>no shows require a <span class="grey-text">backlog search</span></h3>
+#else
+	<div class="pull-left">
+		Jump to Show
+		<select id="pickShow" class="form-control form-control-inline input-sm">
+    #for $curShow in sorted($sickbeard.showList, key = operator.attrgetter('name')):
+        #if 0 != $showCounts[$curShow.indexerid][$Overview.QUAL] + $showCounts[$curShow.indexerid][$Overview.WANTED]:
+			<option value="$curShow.indexerid">$curShow.name</option>
+        #end if
+    #end for
+		</select>
+	</div>
+#end if
 
-<table class="sickbeardTable" border="0">
-#for $curShow in sorted($sickbeard.showList, key = operator.attrgetter('name')):
-    ##
-    #if 0 == $showCounts[$curShow.indexerid][$Overview.QUAL] + $showCounts[$curShow.indexerid][$Overview.WANTED]:
-        #continue
-    #end if
-
-	<tr class="seasonheader" id="show-$curShow.indexerid">
-		<td colspan="3" class="text-left">
-			<br/>
-			<h2><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$curShow.name</a></h2>
-			<div class="pull-right">
-				<span class="listing-key wanted">Wanted: <b>$showCounts[$curShow.indexerid][$Overview.WANTED]</b></span>
-				<span class="listing-key qual">Low Quality: <b>$showCounts[$curShow.indexerid][$Overview.QUAL]</b></span>
-    #if not $curShow.paused:
-				<a class="btn btn-inline forceBacklog" href="$sbRoot/manage/backlogShow?indexer_id=$curShow.indexerid"><i class="sgicon-play"></i> Force Backlog</a>
-    #else
-				<span class="quality SD btn-inline forceBacklog" style="padding:4px 10px; margin-bottom:1px"><i class="sgicon-pause"></i> Paused</span>
-    #end if
-			</div>
-		</td>
-	</tr>
-
-	<tr class="seasoncols"><th>Episode</th><th class="text-left">Name</th><th class="text-nowrap">Airdate</th></tr>
-	##
-    #for $curResult in $showSQLResults[$curShow.indexerid]:
-        #set $whichStr = $str($curResult['season']) + 'x' + $str($curResult['episode'])
-        #try:
-            #set $overview = $showCats[$curShow.indexerid][$whichStr]
-        #except Exception
-            #continue
-        #end try
+	<table class="sickbeardTable" border="0">
+    #for $curShow in sorted($sickbeard.showList, key = operator.attrgetter('name')):
         ##
-        #if $overview not in ($Overview.QUAL, $Overview.WANTED):
+        #if 0 == $showCounts[$curShow.indexerid][$Overview.QUAL] + $showCounts[$curShow.indexerid][$Overview.WANTED]:
             #continue
         #end if
 
-	<tr class="seasonstyle $Overview.overviewStrings[$showCats[$curShow.indexerid][$whichStr]]">
-		<td>$whichStr</td>
-		<td class="text-left">$curResult["name"]</td>
-		<td class="text-nowrap"><div class="${fuzzydate}">#if int($curResult['airdate']) == 1 then 'never' else $sbdatetime.sbdatetime.sbfdate($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($curResult['airdate'],$curShow.airs,$curShow.network)))#</div></td>
-	</tr>
-    #end for
-#end for
+		<tr class="seasonheader" id="show-$curShow.indexerid">
+			<td colspan="3" class="text-left">
+				<br/>
+				<h2><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$curShow.name</a></h2>
+				<div class="pull-right">
+					<span class="listing-key wanted">Wanted: <b>$showCounts[$curShow.indexerid][$Overview.WANTED]</b></span>
+					<span class="listing-key qual">Low Quality: <b>$showCounts[$curShow.indexerid][$Overview.QUAL]</b></span>
+        #if not $curShow.paused:
+					<a class="btn btn-inline forceBacklog" href="$sbRoot/manage/backlogShow?indexer_id=$curShow.indexerid"><i class="sgicon-play"></i> Force Backlog</a>
+        #else
+					<span class="quality SD btn-inline forceBacklog" style="padding:4px 10px; margin-bottom:1px"><i class="sgicon-pause"></i> Paused</span>
+        #end if
+				</div>
+			</td>
+		</tr>
 
-</table>
+		<tr class="seasoncols"><th style="width:10%">Episode</th><th class="text-left">Name</th><th class="text-nowrap">Airdate</th></tr>
+        ##
+        #for $curResult in $showSQLResults[$curShow.indexerid]:
+            #set $whichStr = '%sx%s' % ($str($curResult['season']), $str($curResult['episode']))
+            #try:
+                #set $overview = $showCats[$curShow.indexerid][$whichStr]
+            #except Exception
+                #continue
+            #end try
+            ##
+            #if $overview in ($Overview.QUAL, $Overview.WANTED)
+            #
+		<tr class="seasonstyle $Overview.overviewStrings[$showCats[$curShow.indexerid][$whichStr]]">
+			<td>$whichStr</td>
+			<td class="text-left">$curResult['name']</td>
+			<td class="text-nowrap"><div class="${fuzzydate}">#if 1 == int($curResult['airdate']) then 'never' else $sbdatetime.sbdatetime.sbfdate($sbdatetime.sbdatetime.convert_to_setting($network_timezones.parse_date_time($curResult['airdate'], $curShow.airs,$curShow.network)))#</div></td>
+		</tr>
+            #
+            #end if
+        #end for
+    #end for
+
+	</table>
 </div>
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

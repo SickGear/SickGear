@@ -19,18 +19,19 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
 class TorrentLeechProvider(generic.TorrentProvider):
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'TorrentLeech')
+        generic.TorrentProvider.__init__(self, 'TorrentLeech', cache_update_freq=20)
 
         self.url_base = 'https://torrentleech.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'user/account/login/',
+                     'login_action': self.url_base,
                      'browse': self.url_base + 'torrents/browse/index/categories/%(cats)s',
                      'search': self.url_base + 'torrents/browse/index/query/%(query)s/categories/%(cats)s',
                      'get': self.url_base + '%s'}
@@ -40,12 +41,11 @@ class TorrentLeechProvider(generic.TorrentProvider):
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.cache = TorrentLeechCache(self)
 
     def _authorised(self, **kwargs):
 
-        return super(TorrentLeechProvider, self)._authorised(logged_in=(lambda x=None: self.has_all_cookies(pre='tl')),
-                                                             post_params={'remember_me': 'on', 'login': 'submit'})
+        return super(TorrentLeechProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies(pre='tl')),
+                                                             post_params={'remember_me': 'on', 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -70,24 +70,28 @@ class TorrentLeechProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'id': 'torrenttable'})
+                        torrent_table = soup.find(id='torrenttable')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if 6 > len(cells):
+                                continue
                             try:
-                                seeders, leechers = [int(tr.find('td', attrs={'class': x}).get_text().strip())
-                                                     for x in ('seeders', 'leechers')]
+                                head = head if None is not head else self._header_row(tr)
+                                seeders, leechers = [tryInt(n) for n in [
+                                    tr.find('td', class_=x).get_text().strip() for x in 'seeders', 'leechers']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                info = tr.find('td', {'class': 'name'}).a
-                                title = ('title' in info.attrs and info['title']) or info.get_text().strip()
-                                size = tr.find_all('td')[-5].get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
+                                info = tr.find('td', class_='name').a
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                size = cells[head['size']].get_text().strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -96,29 +100,17 @@ class TorrentLeechProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
-
-
-class TorrentLeechCache(tvcache.TVCache):
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20  # cache update frequency
-
-    def _cache_data(self):
-        return self.provider.cache_data()
 
 
 provider = TorrentLeechProvider()

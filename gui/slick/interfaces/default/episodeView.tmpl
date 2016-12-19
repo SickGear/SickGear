@@ -4,41 +4,53 @@
 #from sickbeard.common import *
 #from sickbeard import sbdatetime
 #from sickbeard.helpers import anon_url
+#from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_IMDB
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'Episode View'
 #set global $header = 'Episode View'
 #set global $sbPath = '..'
-#set global $topmenu = 'episodeView'
+#set global $topmenu = 'home'
+#set $css = $getVar('css', '')
+#set $has_art = $getVar('has_art', None)
+#set $restart = 'Restart SickGear for new features on this page'
+#set $show_message = (None, $restart)[not $varExists('fanart')]
+#set global $page_body_attr  = 'episode-view" class="' + $css
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
-#set $sort = $sickbeard.EPISODE_VIEW_SORT
+<script>
+<!--
+	var config = {hasArt: #echo ('!0', '!1')[not $has_art]#}
+//-->
+</script>
+
+#set $sort = $sg_var('EPISODE_VIEW_SORT')
 #set $table_sort_header_codes = {'time': 0, 'show': 1, 'network': 4}
-#if $sort not in $table_sort_header_codes:
+#if $sort not in $table_sort_header_codes
     #set $sort = 'time'
 #end if
 
-#if 'daybyday' != $layout:
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
-#end if
-
-#if $varExists('header')
-	<h1 class="header">$header</h1>
-#else
-	<h1 class="title">$title</h1>
-#end if
-
-#if 'daybyday' == $layout:
+#if $layout in ['daybyday', 'list']
 <script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
-<script type="text/javascript" charset="utf-8">
+#end if
+
+#if 'daybyday' != $layout
+<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
+<input type="hidden" id="sbRoot" value="$sbRoot" />
+#else
+<script>
 <!--
-    \$(document).ready(function(){
+#raw
+	$(document).ready(function(){
+		$('#Carousel div[title], #Carousel span[title]').tooltip({placement: 'top', html: !0});
 
-		var \$container = [];
-        \$.each(\$('[id^=day]'), function(){\$container.push(\$('#' + \$(this).attr('id')))});
+		$.sgDayContainer = [];
+		$.each($('[id^=day]'), function(){$.sgDayContainer.push($('#' + $(this).attr('id')))});
 
-		jQuery.each(\$container, function(j) {
+		jQuery.each($.sgDayContainer, function(j) {
 			this.isotope({
 				itemSelector: '.daybyday-show',
 				sortBy: '$sort',
@@ -46,21 +58,21 @@
 				transitionDuration: 0,
 				getSortData: {
 					network: function(itemElem) {
-						return \$(itemElem).attr('data-network') || '';
+						return $(itemElem).attr('data-network') || '';
 					},
 					showname: function(itemElem) {
-						return \$(itemElem).attr('data-name') || '';
+						return $(itemElem).attr('data-name') || '';
 					},
 					season: function(itemElem) {
-					    var season = \$(itemElem).attr('data-season') || '0';
+						var season = $(itemElem).attr('data-season') || '0';
 						return season.length && parseInt(season, 10);
 					},
 					episode: function(itemElem) {
-					    var episode = \$(itemElem).attr('data-episode') || '0';
+						var episode = $(itemElem).attr('data-episode') || '0';
 						return episode.length && parseInt(episode, 10);
 					},
 					time: function(itemElem) {
-						var time = \$(itemElem).attr('data-time') || '0';
+						var time = $(itemElem).attr('data-time') || '0';
 						return time.length && parseInt(time, 10);
 					}
 				}
@@ -68,12 +80,12 @@
 		});
 
 		imagesLoaded('.daybyday-show', function() {
-			jQuery.each(\$container, function(j) {
+			jQuery.each($.sgDayContainer, function(j) {
 				this.isotope('layout');
 			});
 		});
 
-		var uiSortBy = (function(sortBy) {
+		$.sgUiSortBy = (function(sortBy) {
 			var sortCriteria;
 			switch (sortBy) {
 				case 'network':
@@ -87,124 +99,167 @@
 					sortCriteria = ['time', 'showname', 'season', 'episode'];
 					break;
 			}
-			jQuery.each(\$container, function(j) {
+			jQuery.each($.sgDayContainer, function(j) {
 				this.isotope({
 					sortBy: sortCriteria,
-					sortAscending: 'asc' == \$('#sort-dir').attr('data-sort-dir')
+					sortAscending: 'asc' == $('#sort-dir').attr('data-sort-dir')
 				});
 			});
 		});
 
-		\$('#sort').on('change', function() {
-			uiSortBy(this.value);
-			\$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
+		$('#sort').on('change', function() {
+			$.sgUiSortBy(this.value);
+			$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
 		});
 
-		\$('#sort-dir').on('click', function() {
-			var sortdir = \$(this).attr('data-sort-dir'),
+		$('#sort-dir').on('click', function() {
+			var sortdir = $(this).attr('data-sort-dir'),
 				newdir = ('asc' == sortdir ? 'desc' : 'asc');
-			\$(this).attr('data-sort-dir', newdir);
-			\$(this).attr('title', 'Click to sort ' + sortdir + 'ending');
-			\$(this).removeClass(sortdir).addClass(newdir);
-			uiSortBy(\$('#sort').val());
+			$(this).attr('data-sort-dir', newdir);
+			$(this).attr('title', 'Click to sort ' + sortdir + 'ending');
+			$(this).removeClass(sortdir).addClass(newdir);
+			$.sgUiSortBy($('#sort').val());
 		});
 
-		\$('.carousel').on('slide.bs.carousel', function () {
+		$('.carousel').on('slide.bs.carousel', function () {
 			imagesLoaded('.daybyday-show', function() {
-				jQuery.each(\$container, function(j) {
-					this.isotope('layout');
+				jQuery.each($.sgDayContainer, function(j) {
+					$(this).isotope('layout');
 				});
 			});
 		});
 
-		\$('div[title!=""], span[title!=""]').qtip({style: {classes: 'qtip-rounded qtip-shadow'},
-			position: {viewport: \$(window), my: 'left center', adjust: {y: -10, x: 0}},
-			show: {solo: true}
+		$('#card-layout').on('click', function(e) {
+			var states$ = $('#episode-view.daybyday'), isPortrait = states$.hasClass('portrait'),
+				state = isPortrait ? ['landscape', 'portrait'] : ['portrait', 'landscape'],
+				img = isPortrait ? ['poster', 'banner'] : ['banner', 'poster'],
+				old = img[0] + '_thumb', repl = img[1] + '_thumb',
+				cachedImg = $.SickGear.Root + '/images/' + repl + '.jpg',
+				tid, interval = 250, timeout = (5 * 1000)/interval;
+
+			states$.addClass(state[0]).removeClass(state[1]);
+
+			tid = setInterval(function() {
+				if (0 < $('.poster').find('img[src*="' + old + '"]').length) {
+					timeout--;
+				} else {
+					timeout = 0;
+				}
+				if (0 == timeout) {
+					clearInterval(tid);
+					$.each($('.poster').find('img[src*="' + cachedImg + '"]'), function() {
+						$(this).attr('src', $(this).attr('data-src-new')).removeAttr('data-src-new');
+					});
+					$.sgUiSortBy($('#sort').val());
+					$.get($.SickGear.Root + '/setEpisodeViewCards');
+				}
+			}, interval);
+
+			$.each($('.poster').find('img[src*="' + old + '"]'), function() {
+				$(this).attr('data-src-new', $(this).attr('src').replace(old, repl));
+				$(this).attr('src', cachedImg);
+			});
+
+			return !1;
 		});
+
 	});
+#end raw
 //-->
 </script>
 #end if
 
 <style type="text/css">
-#SubMenu {display:none}
-#if 'daybyday' == $layout:
-.ep-caret {
-	cursor: pointer;
-	vertical-align: middle;
-	margin-right: 2px;
-}
-.asc {
-	border-top: 0;
-	border-bottom: 8px solid;
-}
-.desc {
-	border-top: 8px solid;
-	border-bottom: 0;
-}
+#SubMenu{display:none}
+#if 'daybyday' == $layout
+.ep-caret{cursor:pointer; vertical-align:middle; margin-right:2px}
+.asc{border-top:0; border-bottom:8px solid}
+.desc{border-top:8px solid; border-bottom:0}
 #end if
 </style>
+#if $show_message
 
-<div class="h2footer pull-right">
-	<span>Layout
-		<select name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
-			<option value="$sbRoot/setEpisodeViewLayout/?layout=banner" #if 'banner' == $sickbeard.EPISODE_VIEW_LAYOUT then 'selected="selected"' else ''#>Banner</option>
-			<option value="$sbRoot/setEpisodeViewLayout/?layout=daybyday" #if 'daybyday' == $sickbeard.EPISODE_VIEW_LAYOUT then 'selected="selected"' else ''#>Day by Day</option>
-			<option value="$sbRoot/setEpisodeViewLayout/?layout=list" #if 'list' == $sickbeard.EPISODE_VIEW_LAYOUT then 'selected="selected"' else ''#>List</option>
-			<option value="$sbRoot/setEpisodeViewLayout/?layout=poster" #if 'poster' == $sickbeard.EPISODE_VIEW_LAYOUT then 'selected="selected"' else ''#>Poster</option>
-		</select>
-	</span>
-	&nbsp;
-	<span>Sort
-#if 'daybyday' == $layout:
-		<span id="sort-dir" data-sort-dir="asc" class="caret ep-caret asc" title="Click to sort descending">&nbsp;</span>
+	<div class="alert alert-info" style="margin:-40px 0 50px">
+		$show_message
+	</div>
 #end if
-		 By
-#if 'daybyday' == $layout:
-		<select name="sort" id="sort" class="form-control form-control-inline input-sm">
-			<option value="network" data-sort="$sbRoot/setEpisodeViewSort/?sort=network&redir=0" #if 'network' == $sort then 'selected="selected"' else ''#>Network</option>
-			<option value="show" data-sort="$sbRoot/setEpisodeViewSort/?sort=show&redir=0" #if 'show' == $sort then 'selected="selected"' else ''#>Show</option>
-			<option value="time" data-sort="$sbRoot/setEpisodeViewSort/?sort=time&redir=0" #if 'time' == $sort then 'selected="selected"' else ''#>Time</option>
+
+#if $varExists('header')
+	<h1 class="header" style="margin-bottom:0">$header</h1>
 #else
-		<select name="sort" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
-			<option value="$sbRoot/setEpisodeViewSort/?sort=time" #if 'time' == $sort then 'selected="selected"' else ''#>Date/Time</option>
-			<option value="$sbRoot/setEpisodeViewSort/?sort=network" #if 'network' == $sort then 'selected="selected"' else ''#>Network</option>
-			<option value="$sbRoot/setEpisodeViewSort/?sort=show" #if 'show' == $sort then 'selected="selected"' else ''#>Show</option>
+	<h1 class="title" style="margin-bottom:0">$title</h1>
 #end if
-		</select>
-	</span>
-	&nbsp;
-	<span>View Paused
-		<select name="viewpaused" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
-			<option value="$sbRoot/toggleEpisodeViewDisplayPaused"<%= (' selected="selected"', '')[True == sickbeard.EPISODE_VIEW_DISPLAY_PAUSED] %>>Hidden</option>
-			<option value="$sbRoot/toggleEpisodeViewDisplayPaused"<%= ('', ' selected="selected"')[True == sickbeard.EPISODE_VIEW_DISPLAY_PAUSED] %>>Shown</option>
-		</select>
-	</span>
-</div>
 
-<div class="key pull-right">
-#if 'daybyday' != $layout:
-	<b>Key:</b>
-	<span class="listing-key listing-overdue">Missed</span>
-	<span class="listing-key listing-current">Current</span>
-	<span class="listing-key listing-default">Future</span>
-	<span class="listing-key listing-toofar">Distant</span>
+#set $selected = ' selected="selected"'
+	<div id="HomeLayout" class="pull-right">
+		<div id="top-row">
+			<span>Layout
+				<select name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
+					<option value="$sbRoot/setEpisodeViewLayout/?layout=banner" #if 'banner' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>Banner</option>
+					<option value="$sbRoot/setEpisodeViewLayout/?layout=daybyday" #if 'daybyday' == $sg_str('EPISODE_VIEW_LAYOUT', 'daybyday')#$selected#end if#>Day by Day</option>
+					<option value="$sbRoot/setEpisodeViewLayout/?layout=list" #if 'list' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>List</option>
+					<option value="$sbRoot/setEpisodeViewLayout/?layout=poster" #if 'poster' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>Poster</option>
+				</select>
+			</span>
+			&nbsp;
+			<span>Sort
+#if 'daybyday' == $layout
+				<span id="sort-dir" data-sort-dir="asc" class="caret ep-caret asc" title="Click to sort descending">&nbsp;</span>
 #end if
-	<a class="btn btn-inline forceBacklog" href="webcal://$sbHost:$sbHttpPort/calendar">
-	<i class="sgicon-rss"></i> Subscribe</a>
-</div>
+			By
+#if 'daybyday' == $layout
+				<select name="sort" id="sort" class="form-control form-control-inline input-sm">
+					<option value="network" data-sort="$sbRoot/setEpisodeViewSort/?sort=network&redir=0" #if 'network' == $sort#$selected#end if#>Network</option>
+					<option value="show" data-sort="$sbRoot/setEpisodeViewSort/?sort=show&redir=0" #if 'show' == $sort#$selected#end if#>Show</option>
+					<option value="time" data-sort="$sbRoot/setEpisodeViewSort/?sort=time&redir=0" #if 'time' == $sort#$selected#end if#>Time</option>
+#else
+				<select name="sort" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
+					<option value="$sbRoot/setEpisodeViewSort/?sort=time" #if 'time' == $sort#$selected#end if#>Date/Time</option>
+					<option value="$sbRoot/setEpisodeViewSort/?sort=network" #if 'network' == $sort#$selected#end if#>Network</option>
+					<option value="$sbRoot/setEpisodeViewSort/?sort=show" #if 'show' == $sort#$selected#end if#>Show</option>
+#end if
+				</select>
+			</span>
+			&nbsp;
+			<span class="no-marginr">View Paused
+				<select name="viewpaused" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" style="margin-bottom:10px">
+					<option value="$sbRoot/toggleEpisodeViewDisplayPaused"#if not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Hidden</option>
+					<option value="$sbRoot/toggleEpisodeViewDisplayPaused"#if $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Shown</option>
+				</select>
+			</span>
+		</div>
 
-<br>
+		<div class="key pull-right">
+#if 'daybyday' != $layout
+			<b>Key:</b>
+			<span class="listing-key listing-overdue">Missed</span>
+			<span class="listing-key listing-current">Current</span>
+			<span class="listing-key listing-default">Future</span>
+			<span class="listing-key listing-toofar">Distant</span>
+#end if
+#if 'daybyday' == $layout
+			<a id="card-layout" class="btn btn-inline" name="">
+				<span id="landscape">
+					<i class="sgicon-img-landscape"></i> Collapse Cards
+				</span>
+				<span id="portrait">
+					<i class="sgicon-img-portrait"></i> Expand Cards
+				</span>
+			</a>
+#end if
+			<a class="btn btn-inline forceBacklog" href="webcal://$sbHost:$sbHttpPort/calendar">
+			<i class="sgicon-cal" style="font-size:14px"></i> Webcal</a>
+		</div>
+	</div>
 
 
-
-#if 'list' == $layout:
+#if 'list' == $layout
 <!-- start list view //-->
 
-<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
-<script type="text/javascript" charset="utf-8">
+<script>
 <!--
-	\$.tablesorter.addParser({
+#raw
+	$.tablesorter.addParser({
 		id: 'loadingNames',
 		is: function(s) {
 			return false
@@ -216,7 +271,7 @@
 		},
 		type: 'text'
 	});
-	\$.tablesorter.addParser({
+	$.tablesorter.addParser({
 		id: 'quality',
 		is: function(s) {
 			return false
@@ -226,7 +281,7 @@
 		},
 		type: 'numeric'
 	});
-	\$.tablesorter.addParser({
+	$.tablesorter.addParser({
 		id: 'cDate',
 		is: function(s) {
 			return false
@@ -237,18 +292,18 @@
 		type: 'numeric'
 	});
 
-	\$(document).ready(function(){
+	$(document).ready(function(){
 
 		sortList = [[$table_sort_header_codes[$sort], 0]];
 
-		\$('#showListTable:has(tbody tr)').tablesorter({
+		$('#showListTable:has(tbody tr)').tablesorter({
 			widgets: ['stickyHeaders'],
 			sortList: sortList,
 			textExtraction: {
-				0: function(node) {return \$(node).find('span').text().toLowerCase() || ''},
-				1: function(node) {return \$(node).find('a').attr('data-name') || ''},
-				4: function(node) {return \$(node).find('span').attr('data-network') || ''},
-				5: function(node) {return \$(node).find('span').text().toLowerCase() || ''}
+				0: function(node) {return $(node).find('span').text().toLowerCase() || ''},
+				1: function(node) {return $(node).find('a').attr('data-name') || ''},
+				4: function(node) {return $(node).find('span').attr('data-network') || ''},
+				5: function(node) {return $(node).find('span').text().toLowerCase() || ''}
 			},
 			headers: {
 				0: {sorter: 'cDate'},
@@ -263,16 +318,17 @@
 			}
 		});
 
-		\$('#sbRoot').ajaxEpSearch();
+		$('#sbRoot').ajaxEpSearch();
+#end raw
 
     #set $fuzzydate = 'airdate'
-    #if $sickbeard.FUZZY_DATING:
+    #if $sg_var('FUZZY_DATING')
 		fuzzyMoment({
 			containerClass: '.${fuzzydate}',
 			dateHasTime: !0,
-			dateFormat: '${sickbeard.DATE_PRESET}',
-			timeFormat: '${sickbeard.TIME_PRESET}',
-			trimZero: #echo ('!1', '!0')[$sickbeard.TRIM_ZERO]#
+			dateFormat: '$sg_str('DATE_PRESET', '%x')',
+			timeFormat: '$sg_str('TIME_PRESET', '%I:%M %p')',
+			trimZero: #echo ('!1', '!0')[$sg_var('TRIM_ZERO')]#
 		});
     #end if
 
@@ -282,9 +338,7 @@
 
     #set $show_div = 'listing-default'
 
-<input type="hidden" id="sbRoot" value="$sbRoot" />
-
-<table id="showListTable" class="sickbeardTable tablesorter seasonstyle" cellspacing="1" border="0" cellpadding="0">
+<table id="showListTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
 
 	<thead>
 		<tr>
@@ -299,28 +353,29 @@
 		</tr>
 	</thead>
 
-	<tbody style="text-shadow:none;">
+	<tbody style="text-shadow:none">
 
-    #for $cur_result in $sql_results:
+    #for $cur_result in $sql_results
         #set $cur_indexer = int($cur_result['indexer'])
         #set $runtime = $cur_result['runtime']
+        #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_result['show_name']), $cur_result['show_name'])[$sg_var('SORT_ARTICLE')]
 
-        #if int($cur_result['paused']) and not $sickbeard.EPISODE_VIEW_DISPLAY_PAUSED:
+        #if int($cur_result['paused']) and not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')
             #continue
         #end if
 
         #set $cur_ep_airdate = $cur_result['localtime'].date()
 
-        #if $runtime:
+        #if $runtime
             #set $cur_ep_enddate = $cur_result['localtime'] + datetime.timedelta(minutes = $runtime)
-            #if $cur_ep_enddate < $today:
+            #if $cur_ep_enddate < $today
                 #set $show_div = 'listing-overdue'
-            #elif $cur_ep_airdate >= $next_week.date():
+            #elif $cur_ep_airdate >= $next_week.date()
                 #set $show_div = 'listing-toofar'
-            #elif $cur_ep_airdate >= $today.date() and $cur_ep_airdate < $next_week.date():
-                #if $cur_ep_airdate == $today.date():
+            #elif $cur_ep_airdate >= $today.date() and $cur_ep_airdate < $next_week.date()
+                #if $cur_ep_airdate == $today.date()
                     #set $show_div = 'listing-current'
-                #else:
+                #else
                     #set $show_div = 'listing-default'
                 #end if
             #end if
@@ -334,8 +389,8 @@
 				<div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</div><span class="sort-data">$cur_result['localtime'].strftime('%Y%m%d%H%M')</span>
 			</td>
 
-			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$cur_result['show_name']</a>
-        #if int($cur_result['paused']):
+			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$display_name</a>
+        #if int($cur_result['paused'])
 				<span class="pause">[paused]</span>
         #end if
 			</td>
@@ -345,10 +400,10 @@
 			</td>
 
 			<td>
-        #if $cur_result['description']:
+        #if $cur_result['description']
 				<img alt="" src="$sbRoot/images/info32.png" height="16" width="16" class="plotInfo" id="plot-${show_id}" />
-        #else:
-				<img alt="" src="$sbRoot/images/info32.png" width="16" height="16" class="plotInfoNone" />
+        #else
+				<img alt="" src="$sbRoot/images/info32.png" width="16" height="16" class="plotInfoNone opacity40" />
         #end if
 				$cur_result['name']
 			</td>
@@ -358,16 +413,16 @@
 			</td>
 
 			<td align="center">
-        #if int($cur_result['quality']) in $qualityPresets:
+        #if int($cur_result['quality']) in $qualityPresets
 				<span class="quality $qualityPresetStrings[int($cur_result['quality'])]">$qualityPresetStrings[int($cur_result['quality'])]</span>
-        #else:
+        #else
 				<span class="quality Custom">Custom</span>
         #end if
 			</td>
 
 			<td align="center" style="vertical-align:middle">
-        #if sickbeard.USE_IMDB_INFO and $cur_result['imdb_id']:
-				<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" /></a>
+        #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_id']
+				<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).config.get('name')]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
         #end if
 				<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'], cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="$sickbeard.indexerApi($cur_indexer).config['show_url']${cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
 			</td>
@@ -393,32 +448,34 @@
 
 
 
-#else if $layout in ['banner', 'poster']:
+#else if $layout in ['banner', 'poster']
 <!-- start non list view //-->
 
-<script type="text/javascript" charset="utf-8">
+<script>
 <!--
-	\$(document).ready(function(){
-		\$('#sbRoot').ajaxEpSearch({'size': 16, 'loadingImage': 'loading16' + themeSpinner + '.gif'});
-		\$('.ep_summary').hide();
-		\$('.ep_summaryTrigger').click(function() {
-			\$(this).next('.ep_summary').slideToggle('normal', function() {
-				\$(this).prev('.ep_summaryTrigger').attr('src', function(i, src) {
-					return \$(this).next('.ep_summary').is(':visible') ? src.replace('plus','minus') : src.replace('minus','plus')
+#raw
+	$(document).ready(function(){
+		$('#sbRoot').ajaxEpSearch({'size': 16, 'loadingImage': 'loading16' + themeSpinner + '.gif'});
+		$('.ep_summary').hide();
+		$('.ep_summaryTrigger').click(function() {
+			$(this).next('.ep_summary').slideToggle('normal', function() {
+				$(this).prev('.ep_summaryTrigger').attr('src', function(i, src) {
+					return $(this).next('.ep_summary').is(':visible') ? src.replace('plus','minus') : src.replace('minus','plus')
 				});
 			});
 		});
+#end raw
 
     #set $fuzzydate = 'airdate'
-    #if $sickbeard.FUZZY_DATING:
+    #if $sg_var('FUZZY_DATING')
 		fuzzyMoment({
 			dtInline: !0,
 			dtGlue: ' at ',
 			containerClass: '.${fuzzydate}',
 			dateHasTime: !0,
-			dateFormat: '${sickbeard.DATE_PRESET}',
-			timeFormat: '${sickbeard.TIME_PRESET}',
-			trimZero: #echo ('!1', '!0')[$sickbeard.TRIM_ZERO]#
+			dateFormat: '$sg_str('DATE_PRESET', '%x')',
+			timeFormat: '$sg_str('TIME_PRESET', '%I:%M %p')',
+			trimZero: #echo ('!1', '!0')[$sg_var('TRIM_ZERO')]#
 		});
     #end if
 	});
@@ -431,208 +488,213 @@
     #set $today_header = False
     #set $show_div = 'ep_listing listing-default'
 
-    #if 'show' == $sort:
-	<br /><br />
-    #end if
-
-    #for $cur_result in $sql_results:
+<div style="clear:both">
+    #for $x, $cur_result in $enumerate($sql_results)
+        #set $add_space = ('', ' add-space')[bool($x)]
         #set $cur_indexer = int($cur_result['indexer'])
-
-        #if int($cur_result['paused']) and not $sickbeard.EPISODE_VIEW_DISPLAY_PAUSED:
+        #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_result['show_name']), $cur_result['show_name'])[$sg_var('SORT_ARTICLE')]
+        ##
+        #if int($cur_result['paused']) and not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')
             #continue
         #end if
-
+        ##
         #set $runtime = $cur_result['runtime']
-
-        #if 'network' == $sort:
-
+        ##
+        #if 'network' == $sort
+            ##
             #set $show_network = $cur_result['network'] if $cur_result['network'] else 'no network'
-            #if $cur_segment != $show_network:
-			<div class="episode-view-header">
-				<br><h2 class="network">$show_network</h2>
+            #if $cur_segment != $show_network
                 #set $cur_segment = $cur_result['network']
+	<h2 class="network$add_space">$show_network</h2>
             #end if
             #set $cur_ep_airdate = $cur_result['localtime'].date()
-
-            #if $runtime:
+            ##
+            #if $runtime
                 #set $cur_ep_enddate = $cur_result['localtime'] + datetime.timedelta(minutes = $runtime)
-                #if $cur_ep_enddate < $today:
+                #if $cur_ep_enddate < $today
                     #set $show_div = 'ep_listing listing-overdue'
-                #elif $cur_ep_airdate >= $next_week.date():
+                #elif $cur_ep_airdate >= $next_week.date()
                     #set $show_div = 'ep_listing listing-toofar'
-                #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date():
-                    #if $cur_ep_airdate == $today.date():
+                #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date()
+                    #if $cur_ep_airdate == $today.date()
                         #set $show_div = 'ep_listing listing-current'
-                    #else:
+                    #else
                         #set $show_div = 'ep_listing listing-default'
                     #end if
                 #end if
             #end if
-
-        #elif 'time' == $sort:
-
+        #elif 'time' == $sort
+            ##
             #set $cur_ep_airdate = $cur_result['localtime'].date()
-
-            #if $cur_segment != $cur_ep_airdate:
-                #if $runtime:
+            ##
+            #if $cur_segment != $cur_ep_airdate
+                #if $runtime
                     #set $cur_ep_enddate = $cur_result['localtime'] + datetime.timedelta(minutes = $runtime)
-                    #if $cur_ep_enddate < $today and $cur_ep_airdate != $today.date() and not $missed_header:
-						<br /><h2 class="day">Missed</h2>
+                    #if $cur_ep_enddate < $today and $cur_ep_airdate != $today.date() and not $missed_header
+	<h2 class="day">Missed</h2>
                         #set $missed_header = True
-                    #elif $cur_ep_airdate >= $next_week.date() and not $too_late_header:
-						<br /><h2 class="day">Later</h2>
+                    #elif $cur_ep_airdate >= $next_week.date() and not $too_late_header
+	<h2 class="day">Later</h2>
                         #set $too_late_header = True
-                    #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date():
-                        #if $cur_ep_airdate == $today.date():
-						<br /><h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize() <span style="font-size: 14px; vertical-align: top;">[Today]</span></h2>
+                    #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date()
+                        #if $cur_ep_airdate == $today.date()
+	<h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize() <span style="font-size:14px; vertical-align:top">[Today]</span></h2>
                             #set $today_header = True
-                        #else:
-						<br /><h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize()</h2>
+                        #else
+	<h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize()</h2>
                         #end if
                     #end if
                 #end if
                 #set $cur_segment = $cur_ep_airdate
             #end if
-
-            #if $cur_ep_airdate == $today.date() and not $today_header:
-			<div class="episode-view-header">
-			<br /><h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize() <span style="font-size: 14px; vertical-align: top;">[Today]</span></h2>
+            ##
+            #if $cur_ep_airdate == $today.date() and not $today_header
+	<h2 class="day">$sbdatetime.sbdatetime.sbfdate($cur_ep_airdate, '%A').decode($sickbeard.SYS_ENCODING).capitalize() <span style="font-size:14px; vertical-align:top">[Today]</span></h2>
                 #set $today_header = True
             #end if
-
-            #if $runtime:
+            ##
+            #if $runtime
                 #set $cur_ep_enddate = $cur_result['localtime'] + datetime.timedelta(minutes = $runtime)
-                #if $cur_ep_enddate < $today:
+                #if $cur_ep_enddate < $today
                     #set $show_div = 'ep_listing listing-overdue'
-                #elif $cur_ep_airdate >= $next_week.date():
+                #elif $cur_ep_airdate >= $next_week.date()
                     #set $show_div = 'ep_listing listing-toofar'
-                #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date():
-                    #if $cur_ep_airdate == $today.date():
+                #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date()
+                    #if $cur_ep_airdate == $today.date()
                         #set $show_div = 'ep_listing listing-current'
-                    #else:
+                    #else
                         #set $show_div = 'ep_listing listing-default'
                     #end if
                 #end if
             #end if
 
-        #elif 'show' == $sort:
+        #elif 'show' == $sort
             #set $cur_ep_airdate = $cur_result['localtime'].date()
-
-            #if $runtime:
+#slurp
+            #if $runtime
                 #set $cur_ep_enddate = $cur_result['localtime'] + datetime.timedelta(minutes = $runtime)
-                #if $cur_ep_enddate < $today:
+                #if $cur_ep_enddate < $today
                     #set $show_div = 'ep_listing listing-overdue listingradius'
-                #elif $cur_ep_airdate >= $next_week.date():
+                #elif $cur_ep_airdate >= $next_week.date()
                     #set $show_div = 'ep_listing listing-toofar listingradius'
-                #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date():
-                    #if $cur_ep_airdate == $today.date():
+                #elif $cur_ep_enddate >= $today and $cur_ep_airdate < $next_week.date()
+                    #if $cur_ep_airdate == $today.date()
                         #set $show_div = 'ep_listing listing-current listingradius'
-                    #else:
+                    #else
                         #set $show_div = 'ep_listing listing-default listingradius'
                     #end if
                 #end if
             #end if
         #end if
+#slurp
+	<!-- start $cur_result['show_name'] //-->
+	<div class="$show_div" id="listing-${cur_result['showid']}">
+		<div class="tvshowDiv">
+			<table width="100%" border="0" cellpadding="0" cellspacing="0">
+				<tr>
+					<th #if 'banner' == $layout then 'class="nobg"' else 'rowspan="2"'# valign="top">
+						<a href="$sbRoot/home/displayShow?show=${cur_result['showid']}"><img alt="" class="#if 'banner' == $layout then 'bannerThumb' else 'posterThumb'#" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=#if 'poster' == $layout then 'poster_thumb' else $layout#" /></a>
+					</th>
 
-<!-- start $cur_result['show_name'] //-->
-<div class="$show_div" id="listing-${cur_result['showid']}">
-	<div class="tvshowDiv">
-		<table width="100%" border="0" cellpadding="0" cellspacing="0">
-		<tr>
-			<th #if 'banner' == $layout then 'class="nobg"' else 'rowspan="2"'# valign="top">
-				<a href="$sbRoot/home/displayShow?show=${cur_result['showid']}"><img alt="" class="#if 'banner' == $layout then 'bannerThumb' else 'posterThumb'#" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=#if 'poster' == $layout then 'poster_thumb' else $layout#" /></a>
-			</th>
-
-        #if 'banner' == $layout:
-		</tr>
-		<tr>
+        #if 'banner' == $layout
+				</tr>
+				<tr>
         #end if
-
-			<td class="next_episode">
-				<div class="clearfix">
-					<span class="tvshowTitle">
-						<a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$cur_result['show_name']
-        #if int($cur_result['paused']):
-						<span class="pause">[paused]</span>
+					<td class="next_episode">
+						<div class="clearfix">
+							<span class="tvshowTitle">
+								<a href="$sbRoot/home/displayShow?show=${cur_result['showid']}" data-name="$cur_result['data_show_name']">$display_name
+        #if int($cur_result['paused'])
+								<span class="pause">[paused]</span>
         #end if
-					</a></span>
+							</a></span>
 
-					<span class="tvshowTitleIcons">
-        #if sickbeard.USE_IMDB_INFO and $cur_result['imdb_id']:
-						<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[imdb]" height="16" width="16" src="$sbRoot/images/imdb.png" />
+							<span class="tvshowTitleIcons">
+        #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_id']
+                				<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).name]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
         #end if
-						<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'], cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="$sickbeard.indexerApi($cur_indexer).config['show_url']${cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
-						<span><a href="$sbRoot/home/searchEpisode?show=${cur_result['showid']}&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search" id="forceUpdate-${cur_result['showid']}" class="epSearch forceUpdate"><img alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" id="forceUpdateImage-${cur_result['showid']}" /></a></span>
-					</span>
-				</div>
+								<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'], cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="$sickbeard.indexerApi($cur_indexer).config['show_url']${cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
+								<span><a href="$sbRoot/home/searchEpisode?show=${cur_result['showid']}&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search" id="forceUpdate-${cur_result['showid']}" class="epSearch forceUpdate"><img alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" id="forceUpdateImage-${cur_result['showid']}" /></a></span>
+							</span>
+						</div>
 
-				<span class="title">Next Episode:</span> <span><%= 'S%02iE%02i' % (int(cur_result['season']), int(cur_result['episode'])) %> - $cur_result['name']</span>
+						<span class="title">Next Episode:</span> <span><%= 'S%02iE%02i' % (int(cur_result['season']), int(cur_result['episode'])) %> - $cur_result['name']</span>
 
-				<div class="clearfix">
+						<div class="clearfix">
+							<span class="title">Airdate: </span><span class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</span><%= ('', '<span> on %s</span>' % str(cur_result['network']))[None is not cur_result['network']] %>
+						</div>
 
-					<span class="title">Airdate: </span><span class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</span><%= ('', '<span> on %s</span>' % str(cur_result['network']))[None is not cur_result['network']] %>
-				</div>
-
-				<div class="clearfix">
-					<span class="title">Quality:</span>
-        #if int($cur_result['quality']) in $qualityPresets:
-						<span class="quality $qualityPresetStrings[int($cur_result['quality'])]">$qualityPresetStrings[int($cur_result['quality'])]</span>
-        #else:
-						<span class="quality Custom">Custom</span>
+						<div class="clearfix">
+							<span class="title">Quality:</span>
+        #if int($cur_result['quality']) in $qualityPresets
+							<span class="quality $qualityPresetStrings[int($cur_result['quality'])]">$qualityPresetStrings[int($cur_result['quality'])]</span>
+        #else
+							<span class="quality Custom">Custom</span>
         #end if
-				</div>
-			</td>
-		</tr>
-		<tr>
-			<td style="vertical-align: top;">
-				<div>
-        #if $cur_result['description']:
-						<span class="title" style="vertical-align:middle;">Plot:</span>
-						<img class="ep_summaryTrigger" src="$sbRoot/images/plus.png" height="16" width="16" alt="" title="Toggle Summary" /><div class="ep_summary">$cur_result['description']</div>
-        #else:
-						<span class="title ep_summaryTriggerNone" style="vertical-align:middle;">Plot:</span>
-						<img class="ep_summaryTriggerNone" src="$sbRoot/images/plus.png" height="16" width="16" alt="" />
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td style="vertical-align:top">
+						<div>
+        #if $cur_result['description']
+							<span class="title" style="vertical-align:middle">Plot:</span>
+							<img class="ep_summaryTrigger" src="$sbRoot/images/plus.png" height="16" width="16" alt="" title="Toggle Summary" /><div class="ep_summary">$cur_result['description']</div>
+        #else
+							<span class="title ep_summaryTriggerNone" style="vertical-align:middle">Plot:</span>
+							<img class="ep_summaryTriggerNone" src="$sbRoot/images/plus.png" height="16" width="16" alt="" />
         #end if
-				</div>
-		</td>
-		</tr>
-		</table>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
 	</div>
-</div>
-<!-- end $cur_result['show_name'] //-->
+	<!-- end $cur_result['show_name'] //-->
     #end for
+</div>
 <!-- end non list view //-->
 #end if
-
-#if 'daybyday' == $layout:
-
+##
+#if 'daybyday' == $layout
+##
     #set $shows_overdue = []
     #set $shows_soon = []
     #set $shows_future = []
+    #set $onair = []
+    #set $backart = []
 
     #set $state_overdue = 'listing-overdue'
     #set $state_current = 'listing-current'
     #set $state_soon = 'listing-soon'
     #set $state_future = 'listing-default'
 
-    #for $cur_result in $sql_results:
-        #if int($cur_result['paused']) and not $sickbeard.EPISODE_VIEW_DISPLAY_PAUSED:
+    #for $cur_result in $sql_results
+        #if int($cur_result['paused']) and not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')
             #continue
         #end if
-        #if $cur_result['runtime']:
+        #if $cur_result['runtime']
             #set $air_date = $cur_result['localtime'].date()
             #set $end_datetime = $cur_result['localtime'] + datetime.timedelta(minutes = $cur_result['runtime'])
-            #if $air_date >= $next_week.date():
+            #if $air_date >= $next_week.date()
                 #set $cur_result['state'] = ''
                 $shows_future.append($cur_result)
             #elif $cur_result['localtime'] > $today
                 #set $cur_result['state'] = ''
                 $shows_soon.append($cur_result)
+                #set $dif = $cur_result['localtime'] - $today
+                #set $until_hrs = (divmod($dif.days * 86400 + $dif.seconds, 60)[0]) / 60
+                #if 24 >= $until_hrs and $cur_result['showid'] not in $backart
+                    $backart.append($cur_result['showid'])
+                #end if
             #elif $end_datetime > $today
                 #set $cur_result['state'] = $state_current
                 #set $cur_result['state-title'] = 'Currently On Air'
                 $shows_soon.append($cur_result)
-            #elif $air_date == $today.date():
+                #if $cur_result['showid'] not in $onair
+                    $onair.append($cur_result['showid'])
+                #end if
+            #elif $air_date == $today.date()
                 #set $cur_result['state'] = $state_overdue
                 #set $cur_result['state-title'] = 'Overdue'
                 $shows_soon.append($cur_result)
@@ -655,29 +717,56 @@
     #set $rounded_week = len($dates_future)/7*7 + int(bool(len($dates_future)%7))*7
     #set $dates_future += [$dates_future[-1] + datetime.timedelta(days = 1 + $i) for $i in range($rounded_week - len($dates_future))]
     #set $num_weeks = $rounded_week/7
+#slurp
+<span style="position:absolute;left:-999px;height:0px">
+	<img src="$sbRoot/images/poster_thumb.jpg" alt=""><img src="$sbRoot/images/banner_thumb.jpg" alt="">
+</span>
+#if $varExists('fanart')
+<div id="background-container">
+    #set $backlist = $backart
+    #if $onair
+        #import random
+        $random.shuffle($onair)
+        #set $backlist = $onair
+    #end if
 
-<input type="hidden" id="sbRoot" value="$sbRoot" />
+    #if len($backlist)
+	<ul>
+        #set $start_image = True
+        #for $show_id in $backlist
+            #for ($image, $rating) in $fanart.get($show_id, [])
+		<li class="#echo ' '.join((x for x in ({10:'group', 20:'fave', 30:'avoid'}.get($rating, ''), ('', 'background first-load')[$start_image]) if x)) #" style="background-image:url($sbRoot/showPoster/?show=$show_id&which=fanart_$image)"></li>
+                #set $start_image = False
+            #end for
+        #end for
+	</ul>
+    #end if
+</div>
+#end if
 
 <div class="daybydayCarouselContainer">
 	<div id="Carousel" class="carousel slide">
 
-		<div class="controlsBlock">
+#set $wide = int(0 < len($shows_overdue)) + $num_weeks
+		<div class="controlsBlock" style="#if $wide#width:#echo 42 + (($wide + 1) * 22) + 15 #px#else#background:transparent#end if#">
+    #if $wide
 			<a class="left carousel-control" href="#Carousel" data-slide="prev"><i class="glyphicon glyphicon-chevron-left"></i></a>
 			<a class="right carousel-control" href="#Carousel" data-slide="next"><i class="glyphicon glyphicon-chevron-right"></i></a>
-			<div class="carousel-indicators">
+			<ul class="carousel-indicators">
 
-    #set $slide_id = 0
-    #if len($shows_overdue)
+        #set $slide_id = 0
+        #if len($shows_overdue)
 				<li data-target="#Carousel" data-slide-to="$slide_id" class="$state_overdue#if $state_init[1] == $state_overdue then ' active' else ''#"></li>
-        #set $slide_id = 1
-    #end if
+            #set $slide_id = 1
+        #end if
 				<li data-target="#Carousel" data-slide-to="$slide_id" class="$state_soon#if $state_init[1] == $state_soon then ' active' else ''#"></li>
         #set $slide_id += 1
 
-    #for $i in range($slide_id, $slide_id + $num_weeks)
+        #for $i in range($slide_id, $slide_id + $num_weeks)
 				<li data-target="#Carousel" data-slide-to="${i}" class="$state_future#if $state_init[1] == $state_future and $state_init[0] == $i then ' active' else ''#"></li>
-    #end for
-			</div>
+        #end for
+			</ul>
+    #end if
 		</div>
 
 		<div class="carousel-inner">
@@ -702,17 +791,16 @@
 
 			<div class="item#if $state_init[1] == $state then ' active' else ''#"> <!-- start $state -->
 				<div class="daybydayWrapper">
-
             #set $tbl_day = 0
             #for $day in $dates
-
+                ##
                 #set $tbl_day += 1
-
+                ##
                 #set $col_class = ''
                 #if 1 == $tbl_day and $state_soon == $state
-                    #set $col_class = 'today'
+                    #set $col_class = 'today '
                 #end if
-                #set $col_class = '%s %s' % ($col_class, ('even', 'odd')[1 == tbl_day % 2])
+                #set $col_class = '%s%s' % ($col_class, ('even', 'odd')[1 == tbl_day % 2])
 
 					<div class="day-of-week $col_class">
 						<div class="day-number">
@@ -730,8 +818,8 @@
 						<div id="$sbdatetime.sbdatetime.sbfdate($day, 'day%j')">
 
                 #set $day_has_show = False
-                #for $cur_result in $shows:
-                    #if $day == $cur_result['localtime'].date():
+                #for $cur_result in $shows
+                    #if $day == $cur_result['localtime'].date()
                         #set $day_has_show = True
                         #set $airtime = $sbdatetime.sbdatetime.sbftime($cur_result['localtime'], markup=True).decode($sickbeard.SYS_ENCODING)
                         #set $img_id = ''
@@ -744,7 +832,7 @@
 							<div id="show-${show_id}" class="daybyday-show" data-name="$cur_result['data_show_name']" data-season="$cur_result['season']" data-episode="$cur_result['episode']" data-network="$cur_result['data_network']" data-time="$cur_result['localtime'].strftime('%Y%m%d%H%M')" data-rawname="$cur_result['show_name']">
 								<div class="poster">
 									<a${title_text} href="$sbRoot/home/displayShow?show=${cur_result['showid']}">
-									<img${img_id} class="img-responsive${plot_class}" alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=poster_thumb" /></a>
+									<img${img_id} class="img-responsive${plot_class}" alt="" src="$sbRoot/showPoster/?show=${cur_result['showid']}&amp;which=#echo ('banner', 'poster')[$bool($sg_var('EPISODE_VIEW_POSTERS', True))]#_thumb" /></a>
 								</div>
 								<div class="state#if len($cur_result['state']) then ' %s" title="%s"' % ($cur_result['state'], $cur_result['state-title']) else '"' #></div>
 								<div class="text">
@@ -757,7 +845,7 @@
 										<span class="name">$cur_result['name']</span>
 									</div>
 								</div>
-                        #if int($cur_result['paused']):
+                        #if int($cur_result['paused'])
 								<span class="over-layer0">[paused]</span>
 								<span class="over-layer1">[paused]</span>
                         #elif $state_current == $cur_result['state']
@@ -769,7 +857,7 @@
 
                     #end if
                 #end for
-                #if not $day_has_show:
+                #if not $day_has_show
 							<div class="daybyday-show">
                     #set $theday = ('this ', 'to')[1 == $tbl_day and $state_soon == $state]
 								<span class="episode-blank">No shows ${theday}day</span>
@@ -785,31 +873,30 @@
 
 		</div> <!-- end carouselinner //-->
 	</div> <!-- end Carousel //-->
-</div> <!-- end daybydayCarouselContainer //--> 
+</div> <!-- end daybydayCarouselContainer //-->
 
 <!-- end calender view //-->
 #end if
 
 <div class="clearfix"></div>
 
-<script type="text/javascript" charset="utf-8">
+#raw
+<script>
 <!--
 window.setInterval('location.reload(true)', 30*60000); // Refresh every xx minutes
 
-\$('#Carousel').carousel({
-	interval: 0
-});
+$('#Carousel').carousel({interval: 0});
 
-\$(document).bind('keyup', function(e) {
-	if(e.which == 39){
-		\$('.carousel').carousel('next');
-	}
-	else if(e.which == 37){
-		\$('.carousel').carousel('prev');
-	}
+$(document).bind('keyup', function(e) {
+    return ((!(e.hasOwnProperty('ctrlKey') && e.ctrlKey) && !(e.hasOwnProperty('altKey') && e.altKey)) && (
+        (39 == e.which && $('.carousel').carousel('next')) ||
+        (37 == e.which && $('.carousel').carousel('prev'))) || !0);
 });
-
 //-->
 </script>
+#end raw
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#if $varExists('fanart') and $layout in 'daybyday'
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_livepanel.tmpl')
+#end if
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

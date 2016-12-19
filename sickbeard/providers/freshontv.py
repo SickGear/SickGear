@@ -15,11 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+try:
+    from collections import OrderedDict
+except ImportError:
+    from requests.compat import OrderedDict
 import re
 import traceback
 
 from . import generic
-from sickbeard import logger, tvcache
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
@@ -28,27 +32,30 @@ from lib.unidecode import unidecode
 class FreshOnTVProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'FreshOnTV')
+        generic.TorrentProvider.__init__(self, 'FreshOnTV', cache_update_freq=20)
 
         self.url_base = 'https://freshon.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'login.php?action=makelogin',
-                     'search': self.url_base + 'browse.php?incldead=%s&words=0&cat=0&search=%s',
+                     'login_action': self.url_base + 'login.php',
+                     'search': self.url_base + 'browse.php?incldead=0&words=0&%s&search=%s',
                      'get': self.url_base + '%s'}
+
+        self.categories = {'shows': 0, 'anime': 235}
 
         self.url = self.urls['config_provider_home_uri']
 
+        self.filter = []
+        self.may_filter = OrderedDict([
+            ('f0', ('not marked', False, '')), ('f50', ('50%', True)), ('f100', ('100%', True))])
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
-        self.freeleech = False
-        self.cache = FreshOnTVCache(self)
 
     def _authorised(self, **kwargs):
 
         return super(FreshOnTVProvider, self)._authorised(
-            post_params={'login': 'Do it!'},
-            failed_msg=(lambda x=None: 'DDoS protection by CloudFlare' in x and
+            post_params={'form_tmpl': True},
+            failed_msg=(lambda y=None: 'DDoS protection by CloudFlare' in y and
                                        u'Unable to login to %s due to CloudFlare DDoS javascript check' or
-                                       'Username does not exist' in x and
+                                       'Username does not exist' in y and
                                        u'Invalid username or password for %s. Check settings' or
                                        u'Failed to authenticate or parse a response from %s, abort provider'))
 
@@ -59,16 +66,25 @@ class FreshOnTVProvider(generic.TorrentProvider):
             return results
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
-        freeleech = (0, 3)[self.freeleech]
 
         rc = dict((k, re.compile('(?i)' + v))
                   for (k, v) in {'info': 'detail', 'get': 'download', 'name': '_name'}.items())
+        log = ''
+        if self.filter:
+            non_marked = 'f0' in self.filter
+            # if search_any, use unselected to exclude, else use selected to keep
+            filters = ([f for f in self.may_filter if f in self.filter],
+                       [f for f in self.may_filter if f not in self.filter])[non_marked]
+            rc['filter'] = re.compile('(?i)(%s).png' % '|'.join(
+                [f.replace('f', '') for f in filters if self.may_filter[f][1]]))
+            log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
         for mode in search_params.keys():
             for search_string in search_params[mode]:
 
-                search_string, search_url = self._title_and_url((
-                    isinstance(search_string, unicode) and unidecode(search_string) or search_string,
-                    self.urls['search'] % (freeleech, search_string)))
+                search_string, void = self._title_and_url((
+                    isinstance(search_string, unicode) and unidecode(search_string) or search_string, ''))
+                void, search_url = self._title_and_url((
+                    '', self.urls['search'] % (self._categories_string(mode, 'cat=%s'), search_string)))
 
                 # returns top 15 results by default, expandable in user profile to 100
                 html = self.get_url(search_url)
@@ -79,26 +95,30 @@ class FreshOnTVProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': 'frame'})
+                        torrent_table = soup.find('table', class_='frame')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
                             raise generic.HaltParseException
 
+                        head = None
                         for tr in torrent_rows[1:]:
+                            cells = tr.find_all('td')
+                            if (5 > len(cells) or tr.find('img', alt='Nuked')
+                                or (any(self.filter)
+                                    and ((non_marked and tr.find('img', src=rc['filter']))
+                                         or (not non_marked and not tr.find('img', src=rc['filter']))))):
+                                continue
                             try:
-                                if tr.find('img', alt='Nuked'):
-                                    continue
-
+                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    (tr.find_all('td')[x].get_text().strip()) for x in (-2, -1, -4)]]
+                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                info = tr.find('a', href=rc['info'], attrs={'class': rc['name']})
-                                title = 'title' in info.attrs and info.attrs['title'] or info.get_text().strip()
-
-                                download_url = self.urls['get'] % str(tr.find('a', href=rc['get'])['href']).lstrip('/')
+                                info = tr.find('a', href=rc['info'], class_=rc['name'])
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -107,31 +127,17 @@ class FreshOnTVProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
-                self._log_search(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, log + search_url)
 
-            self._sort_seeders(mode, items)
-
-            results = list(set(results + items[mode]))
+            results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
-    def _get_episode_search_strings(self, ep_obj, **kwargs):
+    def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
-
-
-class FreshOnTVCache(tvcache.TVCache):
-
-    def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 20
-
-    def _cache_data(self):
-
-        return self.provider.cache_data()
 
 
 provider = FreshOnTVProvider()

@@ -19,7 +19,7 @@ $(function () {
             }
         },
         style: {
-            classes: 'qtip-rounded qtip-shadow'
+            classes: 'qtip-dark qtip-rounded qtip-shadow'
         }
     });
 });

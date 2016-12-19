@@ -718,7 +718,7 @@ class Atom(FieldSet):
             # ipmc: IPMP control
         "moof": (AtomList, "moof", "movie fragment"),
             "mfhd": (MovieFragmentHeader, "mfhd", "movie fragment header"),
-            # traf: track fragment
+            "traf": (AtomList, "traf", "track fragment"),
                 # tfhd: track fragment header
                 # trun: track fragment run
                 # sdtp: independent and disposable samples

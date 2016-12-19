@@ -109,7 +109,7 @@ def snatch_episode(result, end_status=SNATCHED):
         for cur_ep in result.episodes:
             if datetime.date.today() - cur_ep.airdate <= datetime.timedelta(days=7):
                 result.priority = 1
-    if None is not re.search('(^|[\. _-])(proper|repack)([\. _-]|$)', result.name, re.I):
+    if None is not re.search('(^|[. _-])(proper|repack)([. _-]|$)', result.name, re.I):
         end_status = SNATCHED_PROPER
 
     # NZBs can be sent straight to SAB or saved to disk
@@ -120,7 +120,7 @@ def snatch_episode(result, end_status=SNATCHED):
             dl_result = sab.send_nzb(result)
         elif 'nzbget' == sickbeard.NZB_METHOD:
             is_proper = True if SNATCHED_PROPER == end_status else False
-            dl_result = nzbget.sendNZB(result, is_proper)
+            dl_result = nzbget.send_nzb(result, is_proper)
         else:
             logger.log(u'Unknown NZB action specified in config: %s' % sickbeard.NZB_METHOD, logger.ERROR)
             dl_result = False
@@ -138,8 +138,8 @@ def snatch_episode(result, end_status=SNATCHED):
                     logger.log(u'Torrent content failed to download from %s' % result.url, logger.ERROR)
                     return False
             # Snatches torrent with client
-            client = clients.getClientIstance(sickbeard.TORRENT_METHOD)()
-            dl_result = client.sendTORRENT(result)
+            client = clients.get_client_instance(sickbeard.TORRENT_METHOD)()
+            dl_result = client.send_torrent(result)
     else:
         logger.log(u'Unknown result type, unable to download it', logger.ERROR)
         dl_result = False
@@ -179,6 +179,21 @@ def snatch_episode(result, end_status=SNATCHED):
 
     return True
 
+
+def pass_show_wordlist_checks(name, show):
+    re_extras = dict(re_prefix='.*', re_suffix='.*')
+    result = show_name_helpers.contains_any(name, show.rls_ignore_words, **re_extras)
+    if None is not result and result:
+        logger.log(u'Ignored: %s for containing ignore word' % name)
+        return False
+
+    result = show_name_helpers.contains_any(name, show.rls_require_words, **re_extras)
+    if None is not result and not result:
+        logger.log(u'Ignored: %s for not containing any required word match' % name)
+        return False
+    return True
+
+
 def pick_best_result(results, show, quality_list=None):
     logger.log(u'Picking the best result out of %s' % [x.name for x in results], logger.DEBUG)
 
@@ -195,15 +210,7 @@ def pick_best_result(results, show, quality_list=None):
             logger.log(u'%s is an unwanted quality, rejecting it' % cur_result.name, logger.DEBUG)
             continue
 
-        re_extras = dict(re_prefix='.*', re_suffix='.*')
-        result = show_name_helpers.contains_any(cur_result.name, show.rls_ignore_words, **re_extras)
-        if None is not result and result:
-            logger.log(u'Ignored: %s for containing ignore word' % cur_result.name)
-            continue
-
-        result = show_name_helpers.contains_any(cur_result.name, show.rls_require_words, **re_extras)
-        if None is not result and not result:
-            logger.log(u'Ignored: %s for not containing any required word match' % cur_result.name)
+        if not pass_show_wordlist_checks(cur_result.name, show):
             continue
 
         cur_size = getattr(cur_result, 'size', None)
@@ -280,38 +287,57 @@ def is_first_best_match(result):
     Checks if the given result is a best quality match and if we want to archive the episode on first match.
     """
 
-    logger.log(u'Checking if the first best quality match should be archived for episode %s' % result.name, logger.DEBUG)
+    logger.log(u'Checking if the first best quality match should be archived for episode %s' %
+               result.name, logger.DEBUG)
 
     show_obj = result.episodes[0].show
 
     any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
 
-    # if there is a redownload that's a match to one of our best qualities and we want to archive the episode then we are done
+    # if there is a redownload that's a match to one of our best qualities and
+    # we want to archive the episode then we are done
     if best_qualities and show_obj.archive_firstmatch and result.quality in best_qualities:
         return True
 
     return False
 
 
-def wanted_episodes(show, from_date, make_dict=False):
-    initial_qualities, archive_qualities = common.Quality.splitQuality(show.quality)
-    all_qualities = list(set(initial_qualities + archive_qualities))
+def wanted_episodes(show, from_date, make_dict=False, unaired=False):
+    initial_qualities, upgrade_qualities = common.Quality.splitQuality(show.quality)
+    all_qualities = list(set(initial_qualities + upgrade_qualities))
 
     my_db = db.DBConnection()
 
     if show.air_by_date:
-        sql_string = 'SELECT ep.status, ep.season, ep.episode, ep.airdate FROM [tv_episodes] AS ep, [tv_shows] AS show WHERE season != 0 AND ep.showid = show.indexer_id AND show.paused = 0 AND ep.showid = ? AND show.air_by_date = 1'
+        sql_string = 'SELECT ep.status, ep.season, ep.scene_season, ep.episode, ep.airdate ' + \
+                     'FROM [tv_episodes] AS ep, [tv_shows] AS show ' + \
+                     'WHERE season != 0 AND ep.showid = show.indexer_id AND show.paused = 0 ' + \
+                     'AND ep.showid = ? AND ep.indexer = ? AND show.air_by_date = 1'
     else:
-        sql_string = 'SELECT status, season, episode, airdate FROM [tv_episodes] WHERE showid = ? AND season > 0'
+        sql_string = 'SELECT status, season, scene_season, episode, airdate ' + \
+                     'FROM [tv_episodes] ' + \
+                     'WHERE showid = ? AND indexer = ? AND season > 0'
 
-    if sickbeard.SEARCH_UNAIRED:
+    sql_results = my_db.select(sql_string, [show.indexerid, show.indexer])
+    ep_count = {}
+    ep_count_scene = {}
+    tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
+    for result in sql_results:
+        if 1 < helpers.tryInt(result['airdate']) <= tomorrow:
+            cur_season = helpers.tryInt(result['season'])
+            ep_count[cur_season] = ep_count.setdefault(cur_season, 0) + 1
+            cur_scene_season = helpers.tryInt(result['scene_season'], -1)
+            if -1 != cur_scene_season:
+                ep_count_scene[cur_scene_season] = ep_count.setdefault(cur_scene_season, 0) + 1
+
+    if unaired:
         status_list = [common.WANTED, common.FAILED, common.UNAIRED]
         sql_string += ' AND ( airdate > ? OR airdate = 1 )'
     else:
         status_list = [common.WANTED, common.FAILED]
         sql_string += ' AND airdate > ?'
 
-    sql_results = my_db.select(sql_string, [show.indexerid, from_date.toordinal()])
+    sql_results = my_db.select(sql_string, [show.indexerid, show.indexer, from_date.toordinal()])
 
     # check through the list of statuses to see if we want any
     if make_dict:
@@ -324,19 +350,20 @@ def wanted_episodes(show, from_date, make_dict=False):
         not_downloaded = True
         cur_composite_status = int(result['status'])
         cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_composite_status)
+        cur_snatched = cur_status in downloaded_status_list
 
-        if show.archive_firstmatch and cur_status in downloaded_status_list and cur_quality in archive_qualities:
+        if show.archive_firstmatch and cur_snatched and cur_quality in upgrade_qualities:
             continue
 
-        # special case: already downloaded quality is not in any of the wanted Qualities
+        # special case: already downloaded quality is not in any of the upgrade to Qualities
         other_quality_downloaded = False
-        if cur_status in downloaded_status_list and cur_quality not in all_qualities:
+        if len(upgrade_qualities) and cur_snatched and cur_quality not in all_qualities:
             other_quality_downloaded = True
             wanted_qualities = all_qualities
         else:
-            wanted_qualities = archive_qualities
+            wanted_qualities = upgrade_qualities
 
-        if archive_qualities:
+        if upgrade_qualities:
             highest_wanted_quality = max(wanted_qualities)
         else:
             if other_quality_downloaded:
@@ -345,11 +372,10 @@ def wanted_episodes(show, from_date, make_dict=False):
                 highest_wanted_quality = 0
 
         # if we need a better one then say yes
-        if (cur_status in downloaded_status_list and cur_quality < highest_wanted_quality) or \
-            cur_status in status_list or \
-                (sickbeard.SEARCH_UNAIRED and 1 == result['airdate'] and cur_status in (common.SKIPPED, common.IGNORED,
-                                                                                        common.UNAIRED, common.UNKNOWN,
-                                                                                        common.FAILED)):
+        if (cur_snatched and cur_quality < highest_wanted_quality) \
+                or cur_status in status_list \
+                or (sickbeard.SEARCH_UNAIRED and 1 == result['airdate']
+                    and cur_status in (common.SKIPPED, common.IGNORED, common.UNAIRED, common.UNKNOWN, common.FAILED)):
 
             if cur_status in (common.WANTED, common.FAILED):
                 total_wanted += 1
@@ -360,11 +386,14 @@ def wanted_episodes(show, from_date, make_dict=False):
                 not_downloaded = False
 
             ep_obj = show.getEpisode(int(result['season']), int(result['episode']))
+            ep_obj.wantedQuality = [i for i in (wanted_qualities, initial_qualities)[not_downloaded]
+                                    if cur_quality < i]
+            ep_obj.eps_aired_in_season = ep_count.get(helpers.tryInt(result['season']), 0)
+            ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
+                helpers.tryInt(result['scene_season']), 0) if result['scene_season'] else ep_obj.eps_aired_in_season
             if make_dict:
-                wanted.setdefault(ep_obj.season, []).append(ep_obj)
+                wanted.setdefault(ep_obj.scene_season if ep_obj.show.is_scene else ep_obj.season, []).append(ep_obj)
             else:
-                ep_obj.wantedQuality = [i for i in (initial_qualities if not_downloaded else
-                                                    wanted_qualities) if (i > cur_quality and i != common.Quality.UNKNOWN)]
                 wanted.append(ep_obj)
 
     if 0 < total_wanted + total_replacing + total_unaired:
@@ -399,8 +428,8 @@ def search_for_needed_episodes(episodes):
         for cur_ep in cur_found_results:
 
             if cur_ep.show.paused:
-                logger.log(u'Show %s is paused, ignoring all RSS items for %s' % (cur_ep.show.name, cur_ep.prettyName()),
-                           logger.DEBUG)
+                logger.log(u'Show %s is paused, ignoring all RSS items for %s' %
+                           (cur_ep.show.name, cur_ep.prettyName()), logger.DEBUG)
                 continue
 
             # find the best result for the current episode
@@ -427,13 +456,16 @@ def search_for_needed_episodes(episodes):
 
     threading.currentThread().name = orig_thread_name
 
-    if not search_done:
-        logger.log(u'No NZB/Torrent provider enabled to do recent searches. Please check provider options.', logger.ERROR)
+    if not len(providers):
+        logger.log('No NZB/Torrent sources enabled in Search Provider options to do recent searches', logger.WARNING)
+    elif not search_done:
+        logger.log('Failed recent search of %s enabled provider%s. More info in debug log.' % (
+            len(providers), helpers.maybe_plural(len(providers))), logger.ERROR)
 
     return found_results.values()
 
 
-def search_providers(show, episodes, manual_search=False):
+def search_providers(show, episodes, manual_search=False, torrent_only=False, try_other_searches=False):
     found_results = {}
     final_results = []
 
@@ -441,7 +473,8 @@ def search_providers(show, episodes, manual_search=False):
 
     orig_thread_name = threading.currentThread().name
 
-    provider_list = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog]
+    provider_list = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog and
+                     (not torrent_only or x.providerType == GenericProvider.TORRENT)]
     for cur_provider in provider_list:
         if cur_provider.anime_only and not show.is_anime:
             logger.log(u'%s is not an anime, skipping' % show.name, logger.DEBUG)
@@ -465,7 +498,12 @@ def search_providers(show, episodes, manual_search=False):
 
             try:
                 cur_provider.cache._clearCache()
-                search_results = cur_provider.find_search_results(show, episodes, search_mode, manual_search)
+                search_results = cur_provider.find_search_results(show, episodes, search_mode, manual_search,
+                                                                  try_other_searches=try_other_searches)
+                if any(search_results):
+                    logger.log(', '.join(['%s %s candidate%s' % (
+                        len(v), (('multiep', 'season')[SEASON_RESULT == k], 'episode')['ep' in search_mode],
+                        helpers.maybe_plural(len(v))) for (k, v) in search_results.iteritems()]))
             except exceptions.AuthException as e:
                 logger.log(u'Authentication error: %s' % ex(e), logger.ERROR)
                 break
@@ -483,8 +521,8 @@ def search_providers(show, episodes, manual_search=False):
                 for cur_ep in search_results:
                     # skip non-tv crap
                     search_results[cur_ep] = filter(
-                        lambda item: show_name_helpers.pass_wordlist_checks(item.name, parse=False) and
-                                     item.show == show, search_results[cur_ep])
+                        lambda ep_item: show_name_helpers.pass_wordlist_checks(
+                            ep_item.name, parse=False) and ep_item.show == show, search_results[cur_ep])
 
                     if cur_ep in found_results:
                         found_results[provider_id][cur_ep] += search_results[cur_ep]
@@ -542,7 +580,8 @@ def search_providers(show, episodes, manual_search=False):
                     else:
                         any_wanted = True
 
-            # if we need every ep in the season and there's nothing better then just download this and be done with it (unless single episodes are preferred)
+            # if we need every ep in the season and there's nothing better then just download this and
+            # be done with it (unless single episodes are preferred)
             if all_wanted and highest_quality_overall == best_season_result.quality:
                 logger.log(u'Every episode in this season is needed, downloading the whole %s %s' %
                            (best_season_result.provider.providerType, best_season_result.name))
@@ -565,7 +604,8 @@ def search_providers(show, episodes, manual_search=False):
                     individual_results = nzbSplitter.splitResult(best_season_result)
 
                     individual_results = filter(
-                        lambda r: show_name_helpers.pass_wordlist_checks(r.name, parse=False) and r.show == show, individual_results)
+                        lambda r: show_name_helpers.pass_wordlist_checks(
+                            r.name, parse=False) and r.show == show, individual_results)
 
                     for cur_result in individual_results:
                         if 1 == len(cur_result.episodes):
@@ -578,10 +618,11 @@ def search_providers(show, episodes, manual_search=False):
                         else:
                             found_results[provider_id][ep_num] = [cur_result]
 
-                # If this is a torrent all we can do is leech the entire torrent, user will have to select which eps not do download in his torrent client
+                # If this is a torrent all we can do is leech the entire torrent,
+                # user will have to select which eps not do download in his torrent client
                 else:
 
-                    # Season result from Torrent Provider must be a full-season torrent, creating multi-ep result for it.
+                    # Season result from Torrent Provider must be a full-season torrent, creating multi-ep result for it
                     logger.log(u'Adding multi episode result for full season torrent. In your torrent client, set ' +
                                u'the episodes that you do not want to "don\'t download"')
                     ep_objs = []
@@ -623,7 +664,8 @@ def search_providers(show, episodes, manual_search=False):
                            (needed_eps, not_needed_eps), logger.DEBUG)
 
                 if not not_needed_eps:
-                    logger.log(u'All of these episodes were covered by single episode results, ignoring this multi episode result', logger.DEBUG)
+                    logger.log(u'All of these episodes were covered by single episode results, ' +
+                               'ignoring this multi episode result', logger.DEBUG)
                     continue
 
                 # check if these eps are already covered by another multi-result
@@ -636,11 +678,12 @@ def search_providers(show, episodes, manual_search=False):
                     else:
                         multi_needed_eps.append(ep_num)
 
-                logger.log(u'Multi episode check result is... multi needed episodes: %s, multi not needed episodes: %s' %
-                           (multi_needed_eps, multi_not_needed_eps), logger.DEBUG)
+                logger.log(u'Multi episode check result is... multi needed episodes: ' +
+                           '%s, multi not needed episodes: %s' % (multi_needed_eps, multi_not_needed_eps), logger.DEBUG)
 
                 if not multi_needed_eps:
-                    logger.log(u'All of these episodes were covered by another multi episode nzb, ignoring this multi episode result',
+                    logger.log(u'All of these episodes were covered by another multi episode nzb, ' +
+                               'ignoring this multi episode result',
                                logger.DEBUG)
                     continue
 
@@ -652,8 +695,8 @@ def search_providers(show, episodes, manual_search=False):
                 for ep_obj in multi_result.episodes:
                     ep_num = ep_obj.episode
                     if ep_num in found_results[provider_id]:
-                        logger.log(u'A needed multi episode result overlaps with a single episode result for episode #%s, removing the single episode results from the list' %
-                                   ep_num, logger.DEBUG)
+                        logger.log(u'A needed multi episode result overlaps with a single episode result for episode ' +
+                                   '#%s, removing the single episode results from the list' % ep_num, logger.DEBUG)
                         del found_results[provider_id][ep_num]
 
         # of all the single ep results narrow it down to the best one for each episode
@@ -672,12 +715,39 @@ def search_providers(show, episodes, manual_search=False):
                 continue
 
             # filter out possible bad torrents from providers
-            if 'torrent' == best_result.resultType and 'blackhole' != sickbeard.TORRENT_METHOD:
-                best_result.content = None
-                if not best_result.url.startswith('magnet'):
-                    best_result.content = best_result.provider.get_url(best_result.url)
-                    if not best_result.content:
+            if 'torrent' == best_result.resultType:
+                if best_result.url.startswith('magnet'):
+                    if 'blackhole' != sickbeard.TORRENT_METHOD:
+                        best_result.content = None
+                else:
+                    td = best_result.provider.get_url(best_result.url)
+                    if not td:
                         continue
+                    if getattr(best_result.provider, 'chk_td', None):
+                        name = None
+                        try:
+                            hdr = re.findall('(\w+(\d+):)', td[0:6])[0]
+                            x, v = len(hdr[0]), int(hdr[1])
+                            for item in range(0, 12):
+                                y = x + v
+                                name = 'name' == td[x: y]
+                                w = re.findall('((?:i\d+e|d|l)?(\d+):)', td[y: y + 32])[0]
+                                x, v = y + len(w[0]), int(w[1])
+                                if name:
+                                    name = td[x: x + v]
+                                    break
+                        except:
+                            continue
+                        if name:
+                            if not pass_show_wordlist_checks(name, show):
+                                continue
+                            if not show_name_helpers.pass_wordlist_checks(name):
+                                logger.log(u'Ignored: %s (debug log has detail)' % name)
+                                continue
+                            best_result.name = name
+
+                    if 'blackhole' != sickbeard.TORRENT_METHOD:
+                        best_result.content = td
 
             # add result if its not a duplicate and
             found = False
@@ -702,8 +772,10 @@ def search_providers(show, episodes, manual_search=False):
         if len(episodes) == wanted_ep_count:
             break
 
-    if not search_done:
-        logger.log(u'No NZB/Torrent providers found or enabled in the SickGear config for backlog searches. Please check your settings.',
-                   logger.ERROR)
+    if not len(provider_list):
+        logger.log('No NZB/Torrent sources enabled in Search Provider options to do backlog searches', logger.WARNING)
+    elif not search_done:
+        logger.log('Failed backlog search of %s enabled provider%s. More info in debug log.' % (
+            len(provider_list), helpers.maybe_plural(len(provider_list))), logger.ERROR)
 
     return final_results

@@ -1,6 +1,8 @@
 #import sickbeard
 #from sickbeard import common
 #from sickbeard import exceptions
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'Mass Edit'
 #set global $header = 'Mass Edit'
@@ -8,7 +10,7 @@
 #set global $topmenu = 'manage'
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
 #if None is not $quality_value:
     #set $initial_quality = int($quality_value)
@@ -88,7 +90,7 @@
 	#set $isDisabled = $isSelected
 	#if $archive_firstmatch_value##set $isDisabled = ''##else##set $isEnabled = ''##end if#
 	<div class="optionWrapper clearfix">
-		<span class="selectTitle">End upgrade on first match</span>
+		<span class="selectTitle">Upgrade once</span>
 		<div class="selectChoices">
 			<select id="edit_archive_firstmatch" name="archive_firstmatch" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>
@@ -165,12 +167,12 @@
 		</div><br />
 	</div>
 
-	<div class="optionWrapper #if $sickbeard.SHOWLIST_TAGVIEW != 'custom' then 'hidden' else ''#">
+	<div class="optionWrapper #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#">
 		<span class="selectTitle">Show is grouped in</span>
 		<div class="selectChoices">
 			<select id="edit_tag" name="tag" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>
-#for $tag in $sickbeard.SHOW_TAGS:
+#for $tag in $sg_var('SHOW_TAGS', []):
 				<option value="$tag" #if $tag_value == $tag then $selected else ''#>$tag#echo ('', ' (default)')['Show List' == $tag]#</option>
 #end for
 			</select>
@@ -194,4 +196,4 @@
 //-->
 </script>
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')
