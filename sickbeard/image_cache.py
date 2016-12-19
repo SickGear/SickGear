@@ -193,7 +193,7 @@ class ImageCache:
         img_parser.stream._input.close()
 
         msg_success = u'Treating image as %s'\
-                      + u' with extracted aspect ratio from %s' % path
+                      + u' with extracted aspect ratio from %s' % path.replace('%', '%%')
         # most posters are around 0.68 width/height ratio (eg. 680/1000)
         if 0.55 < img_ratio < 0.8:
             logger.log(msg_success % 'poster', logger.DEBUG)
