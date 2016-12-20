@@ -5121,7 +5121,9 @@ class ConfigProviders(Config):
             return json.dumps({'success': False, 'error': error})
 
         if name in [n.name for n in sickbeard.newznabProviderList if n.url == url]:
-            tv_categories = newznab.NewznabProvider.clean_newznab_categories([n for n in sickbeard.newznabProviderList if n.name == name][0].all_cats)
+            provider = [n for n in sickbeard.newznabProviderList if n.name == name][0]
+            tv_categories = newznab.NewznabProvider.clean_newznab_categories(provider.all_cats)
+            state = provider.is_enabled()
         else:
             providers = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
             temp_provider = newznab.NewznabProvider(name, url, key)
@@ -5129,8 +5131,9 @@ class ConfigProviders(Config):
                 temp_provider.key = providers[temp_provider.get_id()].key
 
             tv_categories = newznab.NewznabProvider.clean_newznab_categories(temp_provider.all_cats)
+            state = False
 
-        return json.dumps({'success': True, 'tv_categories': tv_categories, 'error': ''})
+        return json.dumps({'success': True, 'tv_categories': tv_categories, 'state': state, 'error': ''})
 
     def deleteNewznabProvider(self, nnid):
 
