@@ -1,4 +1,9 @@
-﻿### 0.12.1 (2016-12-19 12:00:00 UTC)
+﻿### 0.12.2 (2016-12-20 16:00:00 UTC)
+
+* Change Rarbg and IPT urls
+
+
+### 0.12.1 (2016-12-19 12:00:00 UTC)
 
 * Fix image scan log for show titles that contain "%"
 

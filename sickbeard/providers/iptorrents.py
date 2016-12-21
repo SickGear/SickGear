@@ -31,7 +31,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'IPTorrents')
 
         self.url_home = (['https://iptorrents.%s/' % u for u in 'eu', 'com', 'me', 'ru'] +
-                         ['http://11111.workisboring.com/', 'https://ipt-update.com'])
+                         ['http://rss.workisboring.com/', 'https://ipt-update.com'])
 
         self.url_vars = {'login': 't', 'search': 't?%s;q=%s;qf=ti%s%s#torrents', 'get': '%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
