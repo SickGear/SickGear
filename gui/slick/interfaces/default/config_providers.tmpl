@@ -677,7 +677,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 									<span style="font-weight:normal">with.. (u)hd, sd, sport, anime</span>
 								</span>
 								<span class="component-desc">
-									<div id="nn-cats">
+									<div id="nn-cats" class="hide">
 										<div class="pull-left">
 											<select class="pull-left" id="newznab_cap" multiple="multiple" style="min-width:10em;min-height:72px"></select>
 											<input class="btn" type="button" class="newznab_cat_update" id="newznab_cat_update" value=">>" style="position:relative;bottom:-15px">
@@ -691,8 +691,11 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 									<div id="nn-nocats" class="hide">
 										<span>No extra categories found</span>
 									</div>
+									<div id="nn-enable-for-cats" class="hide">
+										<span class="grey-text">Enable provider for categories</span>
+									</div>
 									<div id="nn-loadcats" class="hide">
-										<span>Loading categories...</span>
+										<span class="grey-text">Loading categories...</span>
 									</div>
 								</span>
 							</label>

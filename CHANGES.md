@@ -1,5 +1,6 @@
 ﻿### 0.13.0 (2016-xx-xx xx:xx:xx UTC)
 
+* Change don't fetch caps for disabled nzb providers
 
 
 [develop changelog]

@@ -1,4 +1,4 @@
-# coding=utf-8
+﻿# coding=utf-8
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
@@ -5121,7 +5121,9 @@ class ConfigProviders(Config):
             return json.dumps({'success': False, 'error': error})
 
         if name in [n.name for n in sickbeard.newznabProviderList if n.url == url]:
-            tv_categories = newznab.NewznabProvider.clean_newznab_categories([n for n in sickbeard.newznabProviderList if n.name == name][0].all_cats)
+            provider = [n for n in sickbeard.newznabProviderList if n.name == name][0]
+            tv_categories = newznab.NewznabProvider.clean_newznab_categories(provider.all_cats)
+            state = provider.is_enabled()
         else:
             providers = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
             temp_provider = newznab.NewznabProvider(name, url, key)
@@ -5129,8 +5131,9 @@ class ConfigProviders(Config):
                 temp_provider.key = providers[temp_provider.get_id()].key
 
             tv_categories = newznab.NewznabProvider.clean_newznab_categories(temp_provider.all_cats)
+            state = False
 
-        return json.dumps({'success': True, 'tv_categories': tv_categories, 'error': ''})
+        return json.dumps({'success': True, 'tv_categories': tv_categories, 'state': state, 'error': ''})
 
     def deleteNewznabProvider(self, nnid):
 
@@ -5301,11 +5304,16 @@ class ConfigProviders(Config):
             src_enabled = bool(config.to_int(src_enabled))
 
             if '' != getattr(sources[src_name], 'enabled', '') and sources[src_name].is_enabled() != src_enabled:
+                if isinstance(sources[src_name], sickbeard.providers.newznab.NewznabProvider) and \
+                        not sources[src_name].enabled and src_enabled:
+                    reload_page = True
                 sources[src_name].enabled = src_enabled
                 if not reload_page and sickbeard.GenericProvider.TORRENT == sources[src_name].providerType:
                     reload_page = True
 
             if src_name in newznab_sources:
+                if not newznab_sources[src_name].enabled and src_enabled:
+                    reload_page = True
                 newznab_sources[src_name].enabled = src_enabled
             elif src_name in torrent_rss_sources:
                 torrent_rss_sources[src_name].enabled = src_enabled
