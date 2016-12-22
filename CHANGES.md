@@ -1,6 +1,7 @@
 ﻿### 0.13.0 (2016-xx-xx xx:xx:xx UTC)
 
 * Change don't fetch caps for disabled nzb providers
+* Change recent search to use centralised title and URL parser for newznab
 
 
 [develop changelog]
