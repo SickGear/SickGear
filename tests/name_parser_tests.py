@@ -143,6 +143,19 @@ simple_test_cases = {
             parser.ParseResult(None, 'Show Name', None, [], 'WEB-DL', None, datetime.date(2010, 11, 23)),
     },
 
+    'uk_date_format': {
+        'Show.Name.23.11.2010.Source.Quality.Etc-Group':
+            parser.ParseResult(None, 'Show Name', None, [], 'Source.Quality.Etc', 'Group', datetime.date(2010, 11, 23)),
+        'Show Name - 23.11.2010': parser.ParseResult(None, 'Show Name', air_date=datetime.date(2010, 11, 23)),
+        'Show.Name.11.23.2010.Source.Quality.Etc-Group':
+            parser.ParseResult(None, 'Show Name', None, [], 'Source.Quality.Etc', 'Group', datetime.date(2010, 11, 23)),
+        'Show Name - 23-11-2010 - Ep Name':
+            parser.ParseResult(None, 'Show Name', extra_info='Ep Name', air_date=datetime.date(2010, 11, 23)),
+        '23-11-2010 - Ep Name': parser.ParseResult(None, extra_info='Ep Name', air_date=datetime.date(2010, 11, 23)),
+        'Show.Name.23.11.2010.WEB-DL':
+            parser.ParseResult(None, 'Show Name', None, [], 'WEB-DL', None, datetime.date(2010, 11, 23)),
+    },
+
     'anime_ultimate': {
         '[Tsuki] Bleach - 301 [1280x720][61D1D4EE]':
             parser.ParseResult(None, 'Bleach', None, [], '1280x720', 'Tsuki', None, [301]),
@@ -308,10 +321,16 @@ combination_test_cases = [
 
 unicode_test_cases = [
     (u'The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
-     parser.ParseResult(None, 'The.Big.Bang.Theory', 2, [7], '720p.HDTV.x264.AC3', 'SHELDON')
+     parser.ParseResult(
+         u'The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
+         u'The Big Bang Theory', 2, [7], u'The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3', u'SHELDON',
+         version=-1)
      ),
     ('The.Big.Bang.Theory.2x07.The.Panty.Pi\xc3\xb1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
-     parser.ParseResult(None, 'The.Big.Bang.Theory', 2, [7], '720p.HDTV.x264.AC3', 'SHELDON')
+     parser.ParseResult(
+         u'The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
+         u'The Big Bang Theory', 2, [7], u'The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3', u'SHELDON',
+         version=-1)
      ),
 ]
 
@@ -319,14 +338,11 @@ failure_cases = ['7sins-jfcs01e09-720p-bluray-x264']
 
 
 class UnicodeTests(test.SickbeardTestDBCase):
-    @staticmethod
-    def _test_unicode(name, result):
-        np = parser.NameParser(True)
 
-        try:
-            parse_result = np.parse(name)
-        except parser.InvalidShowException:
-            return False
+    def _test_unicode(self, name, result):
+        result.which_regex = ['fov']
+        parse_result = parser.NameParser(True, testing=True).parse(name)
+        self.assertEqual(parse_result, result)
 
         # this shouldn't raise an exception
         void = repr(str(parse_result))
@@ -459,6 +475,10 @@ class BasicTests(test.SickbeardTestDBCase):
     def test_scene_date_format_names(self):
         np = parser.NameParser(False, testing=True)
         self._test_names(np, 'scene_date_format')
+
+    def test_uk_date_format_names(self):
+        np = parser.NameParser(False, testing=True)
+        self._test_names(np, 'uk_date_format')
 
     def test_standard_file_names(self):
         np = parser.NameParser(testing=True)
