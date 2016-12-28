@@ -1,4 +1,9 @@
-﻿### 0.12.2 (2016-12-20 16:00:00 UTC)
+﻿### 0.12.3 (2016-12-27 15:20:00 UTC)
+
+* Add UK date format handling to name parser
+
+
+### 0.12.2 (2016-12-20 16:00:00 UTC)
 
 * Change Rarbg and IPT urls
 
