@@ -414,13 +414,12 @@ class NewznabProvider(generic.NZBProvider):
     def _title_and_url(self, item):
         title, url = None, None
         try:
-            title = item.findtext('title')
-            url = item.findtext('link')
+            title = ('%s' % item.findtext('title')).strip()
+            for pattern, repl in ((r'\s+', '.'), (r'(?i)-Obfuscated$', '')):
+                title = re.sub(pattern, repl, title)
+            url = str(item.findtext('link')).replace('&amp;', '&')
         except (StandardError, Exception):
             pass
-
-        title = title and re.sub(r'\s+', '.', '%s' % title)
-        url = url and str(url).replace('&amp;', '&')
 
         return title, url
 
@@ -859,19 +858,14 @@ class NewznabCache(tvcache.TVCache):
     # overwrite method with that parses the rageid from the newznab feed
     def _parseItem(self, ns, item):
 
-        title = item.findtext('title')
-        url = item.findtext('link')
+        title, url = self._title_and_url(item)
 
         ids = self.parse_ids(item, ns)
-
-        self._checkItemAuth(title, url)
 
         if not title or not url:
             logger.log('The data returned from the %s feed is incomplete, this result is unusable'
                        % self.provider.name, logger.DEBUG)
             return None
-
-        url = self._translateLinkURL(url)
 
         logger.log('Attempting to add item from RSS to cache: %s' % title, logger.DEBUG)
         return self.add_cache_entry(title, url, id_dict=ids)
