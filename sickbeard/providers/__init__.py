@@ -24,7 +24,7 @@ import sickbeard
 from . import generic
 from sickbeard import logger, encodingKludge as ek
 # usenet
-from . import newznab, omgwtfnzbs, womble
+from . import newznab, omgwtfnzbs
 # torrent
 from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, btscene, dh, extratorrent, \
     fano, filelist, freshontv, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, hdtorrents, \
@@ -41,7 +41,6 @@ except:
     pass
 
 __all__ = ['omgwtfnzbs',
-           'womble',
            'alpharatio',
            'anizb',
            'beyondhd',

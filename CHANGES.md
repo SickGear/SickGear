@@ -1,4 +1,9 @@
-﻿### 0.12.3 (2016-12-27 15:20:00 UTC)
+﻿### 0.12.4 (2016-12-31 00:50:00 UTC)
+
+* Remove Wombles nzb provider
+
+
+### 0.12.3 (2016-12-27 15:20:00 UTC)
 
 * Add UK date format handling to name parser
 
