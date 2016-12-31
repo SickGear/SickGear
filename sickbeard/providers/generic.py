@@ -107,7 +107,7 @@ class GenericProvider:
 
     def is_public_access(self):
         try:
-            return bool(re.search('(?i)rarbg|sick|womble|anizb', self.name)) \
+            return bool(re.search('(?i)rarbg|sick|anizb', self.name)) \
                    or False is bool(('_authorised' in self.__class__.__dict__ or hasattr(self, 'digest')
                                      or self._check_auth(is_required=True)))
         except AuthException:
