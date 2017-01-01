@@ -5247,7 +5247,7 @@ class ConfigProviders(Config):
                     if cur_id + '_' + attr in kwargs:
                         setattr(nzb_src, attr, str(kwargs.get(cur_id + '_' + attr)).strip())
 
-                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog']:
+                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog']:
                         setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
 
                 else:
@@ -5350,7 +5350,7 @@ class ConfigProviders(Config):
                 setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
 
             for attr in [x for x in ['confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
-                                     'enable_backlog', 'search_fallback']
+                                     'enable_backlog', 'search_fallback', 'enable_scheduled_backlog']
                          if hasattr(torrent_src, x) and src_id_prefix + attr in kwargs]:
                 setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
@@ -5392,7 +5392,7 @@ class ConfigProviders(Config):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)) or
                         not getattr(nzb_src, 'supports_backlog', True))
 
-            for attr in [x for x in ['search_fallback', 'enable_backlog'] if hasattr(nzb_src, x)]:
+            for attr in [x for x in ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog'] if hasattr(nzb_src, x)]:
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
         sickbeard.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickbeard.newznabProviderList])

@@ -1145,6 +1145,8 @@ def initialize(console_logging=True):
                                                    not getattr(torrent_prov, 'supports_backlog')
             if hasattr(torrent_prov, 'enable_backlog'):
                 torrent_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
+            if hasattr(torrent_prov, 'enable_scheduled_backlog'):
+                torrent_prov.enable_scheduled_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
             if hasattr(torrent_prov, 'search_mode'):
                 torrent_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
             if hasattr(torrent_prov, 'search_fallback'):
@@ -1172,6 +1174,8 @@ def initialize(console_logging=True):
                                                not getattr(nzb_prov, 'supports_backlog')
             if hasattr(nzb_prov, 'enable_backlog'):
                 nzb_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
+            if hasattr(nzb_prov, 'enable_scheduled_backlog'):
+                nzb_prov.enable_scheduled_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
 
         if not os.path.isfile(CONFIG_FILE):
             logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
@@ -1562,7 +1566,7 @@ def save_config():
                 ('api_key', None), ('passkey', None), ('digest', None), ('hash', None), ('username', ''), ('uid', ''),
                 ('minseed', 1), ('minleech', 1), ('confirmed', 1), ('freeleech', 1), ('reject_m2ts', 1),
                 ('enable_recentsearch', 1), ('enable_backlog', 1), ('search_mode', None), ('search_fallback', 1),
-                ('seed_time', None)] if hasattr(src, k)]:
+                ('seed_time', None), ('enable_scheduled_backlog', 1)] if hasattr(src, k)]:
             new_config[src_id_uc][setting] = value
 
         if hasattr(src, '_seed_ratio'):
@@ -1579,7 +1583,8 @@ def save_config():
         for attr in [x for x in ['api_key', 'username', 'search_mode'] if hasattr(src, x)]:
             new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
-        for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'search_fallback'] if hasattr(src, x)]:
+        for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'search_fallback',
+                                 'enable_scheduled_backlog'] if hasattr(src, x)]:
             new_config[src_id_uc]['%s_%s' % (src_id, attr)] = helpers.tryInt(getattr(src, attr, None))
 
     new_config['SABnzbd'] = {}

@@ -144,6 +144,7 @@ def getNewznabProviderList(data):
             providerDict[curDefault.name].search_fallback = curDefault.search_fallback
             providerDict[curDefault.name].enable_recentsearch = curDefault.enable_recentsearch
             providerDict[curDefault.name].enable_backlog = curDefault.enable_backlog
+            providerDict[curDefault.name].enable_scheduled_backlog = curDefault.enable_scheduled_backlog
 
     return filter(lambda x: x, providerList)
 
@@ -156,10 +157,14 @@ def makeNewznabProvider(configString):
     search_fallback = 0
     enable_recentsearch = 0
     enable_backlog = 0
+    enable_scheduled_backlog = 1
 
     try:
         values = configString.split('|')
-        if len(values) == 9:
+        if len(values) == 10:
+            name, url, key, cat_ids, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog, \
+            enable_scheduled_backlog = values
+        elif len(values) == 9:
             name, url, key, cat_ids, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog = values
         else:
             name = values[0]
@@ -175,7 +180,7 @@ def makeNewznabProvider(configString):
 
     newProvider = newznab.NewznabProvider(name, url, key=key, cat_ids=cat_ids, search_mode=search_mode,
                                           search_fallback=search_fallback, enable_recentsearch=enable_recentsearch,
-                                          enable_backlog=enable_backlog)
+                                          enable_backlog=enable_backlog, enable_scheduled_backlog=enable_scheduled_backlog)
     newProvider.enabled = enabled == '1'
 
     return newProvider
@@ -204,10 +209,14 @@ def makeTorrentRssProvider(configString):
     search_fallback = 0
     enable_recentsearch = 0
     enable_backlog = 0
+    enable_scheduled_backlog = 1
 
     try:
         values = configString.split('|')
-        if len(values) == 8:
+        if len(values) == 9:
+            name, url, cookies, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog, \
+            enable_scheduled_backlog = values
+        elif len(values) == 8:
             name, url, cookies, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog = values
         else:
             name = values[0]
@@ -224,7 +233,7 @@ def makeTorrentRssProvider(configString):
         return
 
     newProvider = torrentRss.TorrentRssProvider(name, url, cookies, search_mode, search_fallback, enable_recentsearch,
-                                                enable_backlog)
+                                                enable_backlog, enable_scheduled_backlog)
     newProvider.enabled = enabled == '1'
 
     return newProvider

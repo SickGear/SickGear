@@ -70,6 +70,7 @@ class GenericProvider:
         self.enabled = False
         self.enable_recentsearch = False
         self.enable_backlog = False
+        self.enable_scheduled_backlog = True
         self.categories = None
 
         self.cache = tvcache.TVCache(self)

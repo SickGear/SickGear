@@ -28,8 +28,9 @@ from lib.bencode import bdecode
 class TorrentRssProvider(generic.TorrentProvider):
 
     def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False,
-                 enable_recentsearch=False, enable_backlog=False):
+                 enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False):
         self.enable_backlog = bool(tryInt(enable_backlog))
+        self.enable_scheduled_backlog = bool(tryInt(enable_scheduled_backlog))
         generic.TorrentProvider.__init__(self, name, supports_backlog=self.enable_backlog, cache_update_freq=15)
 
         self.url = url.rstrip('/')
@@ -48,9 +49,10 @@ class TorrentRssProvider(generic.TorrentProvider):
 
     def config_str(self):
 
-        return '%s|%s|%s|%d|%s|%d|%d|%d' % (
+        return '%s|%s|%s|%d|%s|%d|%d|%d|%d' % (
             self.name or '', self.url or '', self.cookies or '', self.enabled,
-            self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog)
+            self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog,
+            self.enable_scheduled_backlog)
 
     def _title_and_url(self, item):
 

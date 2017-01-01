@@ -429,7 +429,8 @@ class BacklogQueueItem(generic_queue.QueueItem):
             logger.log(u'Beginning backlog search for: [%s]' % self.show.name)
             search_result = search.search_providers(
                 self.show, self.segment, False,
-                try_other_searches=(not self.standard_backlog or not self.limited_backlog))
+                try_other_searches=(not self.standard_backlog or not self.limited_backlog),
+                scheduled=self.standard_backlog)
 
             if search_result:
                 for result in search_result:

@@ -465,7 +465,7 @@ def search_for_needed_episodes(episodes):
     return found_results.values()
 
 
-def search_providers(show, episodes, manual_search=False, torrent_only=False, try_other_searches=False):
+def search_providers(show, episodes, manual_search=False, torrent_only=False, try_other_searches=False, scheduled=False):
     found_results = {}
     final_results = []
 
@@ -474,7 +474,8 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
     orig_thread_name = threading.currentThread().name
 
     provider_list = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog and
-                     (not torrent_only or x.providerType == GenericProvider.TORRENT)]
+                     (not torrent_only or x.providerType == GenericProvider.TORRENT) and
+                     (not scheduled or x.enable_scheduled_backlog)]
     for cur_provider in provider_list:
         if cur_provider.anime_only and not show.is_anime:
             logger.log(u'%s is not an anime, skipping' % show.name, logger.DEBUG)
