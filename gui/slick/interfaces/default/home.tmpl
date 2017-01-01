@@ -1,5 +1,6 @@
 #import sickbeard
 #import datetime
+#from sickbeard import WEB_ROOT, THEME_NAME
 #from sickbeard.common import *
 #from sickbeard import sbdatetime, network_timezones
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
@@ -11,6 +12,7 @@
 #set global $topmenu = 'home'
 #set global $page_body_attr = 'show-list'
 #set fuzzydate = 'airdate'
+#set sg_root = $getVar('sbRoot', WEB_ROOT)
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
@@ -28,7 +30,13 @@
 			fuzzydate: ".$fuzzydate",
 			};
 	</script>
-	<script type="text/javascript" src="$sbRoot/js/home.js?v=$sbPID"></script>
+
+	<style>
+#set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
+		.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
+	</style>
+	<div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif" /></div>
+
 	<h1 class="header" style="margin-bottom:0">$showlists[0][1]</h1>
 
 	<div id="HomeLayout" class="pull-right">
@@ -38,18 +46,18 @@
 		<div id="top-row">
 			<span>Sort By:
 				<select id="postersort" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
-					<option value="name" data-sort="$sbRoot/setPosterSortBy/?sort=name"#echo $selected if 'name' == $sg_str('POSTER_SORTBY', 'name') else ''#>Name</option>
-					<option value="date" data-sort="$sbRoot/setPosterSortBy/?sort=date"#echo $selected if 'date' == $sg_str('POSTER_SORTBY') else ''#>Next Episode</option>
-					<option value="network" data-sort="$sbRoot/setPosterSortBy/?sort=network"#echo $selected if 'network' == $sg_str('POSTER_SORTBY') else ''#>Network</option>
-					<option value="progress" data-sort="$sbRoot/setPosterSortBy/?sort=progress"#echo $selected if 'progress' == $sg_str('POSTER_SORTBY') else ''#>Progress</option>
-					<option value="quality" data-sort="$sbRoot/setPosterSortBy/?sort=quality"#echo $selected if 'quality' == $sg_str('POSTER_SORTBY') else ''#>Quality</option>
+					<option value="name" data-sort="$sg_root/setPosterSortBy/?sort=name"#echo $selected if 'name' == $sg_str('POSTER_SORTBY', 'name') else ''#>Name</option>
+					<option value="date" data-sort="$sg_root/setPosterSortBy/?sort=date"#echo $selected if 'date' == $sg_str('POSTER_SORTBY') else ''#>Next Episode</option>
+					<option value="network" data-sort="$sg_root/setPosterSortBy/?sort=network"#echo $selected if 'network' == $sg_str('POSTER_SORTBY') else ''#>Network</option>
+					<option value="progress" data-sort="$sg_root/setPosterSortBy/?sort=progress"#echo $selected if 'progress' == $sg_str('POSTER_SORTBY') else ''#>Progress</option>
+					<option value="quality" data-sort="$sg_root/setPosterSortBy/?sort=quality"#echo $selected if 'quality' == $sg_str('POSTER_SORTBY') else ''#>Quality</option>
 				</select>
 			</span>
 
 			<span style="margin-left:5px">Sort Order:
 				<select id="postersortdirection" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
-					<option value="true" data-sort="$sbRoot/setPosterSortDir/?direction=1"#echo $selected if 1 == $sg_var('POSTER_SORTDIR', 1) else ''#>Asc</option>
-					<option value="false" data-sort="$sbRoot/setPosterSortDir/?direction=0"#echo $selected if 0 == $sg_var('POSTER_SORTDIR') else ''#>Desc</option>
+					<option value="true" data-sort="$sg_root/setPosterSortDir/?direction=1"#echo $selected if 1 == $sg_var('POSTER_SORTDIR', 1) else ''#>Asc</option>
+					<option value="false" data-sort="$sg_root/setPosterSortDir/?direction=0"#echo $selected if 0 == $sg_var('POSTER_SORTDIR') else ''#>Desc</option>
 				</select>
 			</span>
 
@@ -58,10 +66,10 @@
 			<span id="top-row" class="pull-right no-marginr">Layout:
 #end if
 				<select style="margin-bottom:10px" name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" tabindex="$tab#set $tab += 1#">
-					<option value="$sbRoot/setHomeLayout/?layout=poster"#echo $selected if 'poster' == $sg_str('HOME_LAYOUT', 'poster') else ''#>Poster</option>
-					<option value="$sbRoot/setHomeLayout/?layout=small"#echo $selected if 'small' == $sg_str('HOME_LAYOUT') else ''#>Small Poster</option>
-					<option value="$sbRoot/setHomeLayout/?layout=banner"#echo $selected if 'banner' == $sg_str('HOME_LAYOUT') else ''#>Banner</option>
-					<option value="$sbRoot/setHomeLayout/?layout=simple"#echo $selected if 'simple' == $sg_str('HOME_LAYOUT') else ''#>Simple</option>
+					<option value="$sg_root/setHomeLayout/?layout=poster"#echo $selected if 'poster' == $sg_str('HOME_LAYOUT', 'poster') else ''#>Poster</option>
+					<option value="$sg_root/setHomeLayout/?layout=small"#echo $selected if 'small' == $sg_str('HOME_LAYOUT') else ''#>Small Poster</option>
+					<option value="$sg_root/setHomeLayout/?layout=banner"#echo $selected if 'banner' == $sg_str('HOME_LAYOUT') else ''#>Banner</option>
+					<option value="$sg_root/setHomeLayout/?layout=simple"#echo $selected if 'simple' == $sg_str('HOME_LAYOUT') else ''#>Simple</option>
 				</select>
 			</span>
 
@@ -74,6 +82,8 @@
 		</div>
 	</div><!-- /HomeLayout -->
 ##
+#set $poster_id = 0
+#set $load_normal = 0
 #for $curShowlist in $showlists
     #set $curListID = $curShowlist[0]
     #set $curListName = $curShowlist[1]
@@ -98,7 +108,7 @@
             #if None is $curLoadingShow.show
             ##
 			<div class="show-card" data-name="0" data-date="010101" data-network="0">
-				<img alt="" title="$curLoadingShow.show_name" class="show-image" style="border-bottom:1px solid #111" src="$sbRoot/images/poster.png" />
+				<img alt="" title="$curLoadingShow.show_name" class="show-image" style="border-bottom:1px solid #111" src="$sg_root/images/poster.png" />
 				<div class="show-details">
 					<div class="show-add">Loading... ($curLoadingShow.show_name)</div>
 				</div>
@@ -119,6 +129,7 @@
             #set $download_stat_tip = ''
             #set $display_status = $curShow.status
             #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sg_var('SORT_ARTICLE')]
+            #set $poster_id += 1
             #if None is not $display_status
                 #if re.search(r'(?i)(?:new|returning)\s*series', $curShow.status)
                     #set $display_status = 'Continuing'
@@ -150,7 +161,7 @@
                 #set $download_stat = str($cur_downloaded)
                 #set $download_stat_tip = 'Downloaded: ' + str($cur_downloaded)
                 #if $cur_snatched > 0
-                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sbRoot, $cur_snatched)
+                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sg_root, $cur_snatched)
                     #set $download_stat_tip = download_stat_tip + '&#013;' + 'Snatched: ' + str($cur_snatched)
                 #end if
                 #set $download_stat = download_stat + ' / ' + str($cur_total)
@@ -184,7 +195,14 @@
 			<div id="show$curShow.indexerid" class="show-card" data-name="$curShow.name" data-date="$data_date" data-network="$curShow.network">
 				<div class="show-card-top">
 					<div class="show-image">
-						<a href="$sbRoot/home/displayShow?show=$curShow.indexerid"><img alt="" class="show-image" src="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" /></a>
+						<a href="$sg_root/home/displayShow?show=$curShow.indexerid">
+            #if $load_normal > $poster_id
+							<img alt="" class="show-image" src="$sg_root/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" />
+            #else
+							<img id="poster-$poster_id" alt="" class="show-image" data-original="$sg_root/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" />
+							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
+            #end if
+						</a>
 					</div>
 
 					<div style="border-top:1px solid black;height:1px"></div>
@@ -224,7 +242,7 @@
                 #if 'No Network' is not $img_text and 'nonetwork' in $network_images[$curShow.indexerid]
 								$curShow.network
                 #else
-								<img class="show-network-image" src="$sbRoot/images/network/$network_images[$curShow.indexerid]" alt="$img_text" title="$img_text" />
+								<img class="show-network-image" src="$sg_root/images/network/$network_images[$curShow.indexerid]" alt="$img_text" title="$img_text" />
                 #end if
             #end if
 							</td>
@@ -267,7 +285,7 @@
 
 		<tfoot>
 			<tr>
-				<th><a href="$sbRoot/home/addShows/">Add Show</a></th>
+				<th><a href="$sg_root/home/addShows/">Add Show</a></th>
 				<th colspan="6"></th>
 			</tr>
 		</tfoot>
@@ -284,7 +302,7 @@
             #if None is $curLoadingShow.show
 					Loading... ($curLoadingShow.show_name)
             #else
-					<a href="$sbRoot/home/displayShow?show=$curLoadingShow.show.indexerid">$curLoadingShow.show.name</a>
+					<a href="$sg_root/home/displayShow?show=$curLoadingShow.show.indexerid">$curLoadingShow.show.name</a>
             #end if
 				</td>
 				<td></td>
@@ -297,6 +315,8 @@
         ##
         #set void = $myShowList.sort(lambda x, y: cmp(x.name, y.name))
         ##
+        #set $poster_id = 0
+        #set $load_normal = 0
         #for $curShow in $myShowList
             ##
             #set $cur_airs_next = ''
@@ -305,6 +325,7 @@
             #set $cur_total = 0
             #set $download_stat_tip = ''
             #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sg_var('SORT_ARTICLE')]
+            #set $poster_id += 1
             ##
             #if $curShow.indexerid in $show_stat
                 #set $cur_airs_next = $show_stat[$curShow.indexerid]['ep_airs_next']
@@ -329,7 +350,7 @@
                 #set $download_stat = str($cur_downloaded)
                 #set $download_stat_tip = 'Downloaded: ' + str($cur_downloaded)
                 #if $cur_snatched > 0
-                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sbRoot, $cur_snatched)
+                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sg_root, $cur_snatched)
                     #set $download_stat_tip = download_stat_tip + '&#013;' + 'Snatched: ' + str($cur_snatched)
                 #end if
                 #set $download_stat = download_stat + ' / ' + str($cur_total)
@@ -361,25 +382,35 @@
 
 				<td class="tvShow text-left">
 					<div class="imgsmallposter $layout">
-						<a href="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=poster" rel="dialog" title="$curShow.name">
-							<img src="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" class="$layout" alt="$curShow.indexerid"/>
+						<a href="$sg_root/showPoster/?show=$curShow.indexerid&amp;which=poster" rel="dialog" title="$curShow.name">
+            #if $load_normal > $poster_id
+							<img src="$sg_root/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" class="$layout" alt="$curShow.indexerid" />
+            #else
+							<img id="poster-$poster_id" data-original="$sg_root/showPoster/?show=$curShow.indexerid&amp;which=poster_thumb" class="$layout" alt="$curShow.indexerid" />
+							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
+            #end if
 						</a>
-						<a href="$sbRoot/home/displayShow?show=$curShow.indexerid" style="vertical-align:middle">$display_name</a>
+						<a href="$sg_root/home/displayShow?show=$curShow.indexerid" style="vertical-align:middle">$display_name</a>
 					</div>
 				</td>
             #else if 'banner' == $layout
 
 				<td class="text-left">
 					<div class="imgbanner $layout">
-						<a href="$sbRoot/home/displayShow?show=$curShow.indexerid">
-						    <img src="$sbRoot/showPoster/?show=$curShow.indexerid&amp;which=banner" class="$layout" alt="$curShow.indexerid" title="$curShow.name" />
+						<a href="$sg_root/home/displayShow?show=$curShow.indexerid">
+                #if $load_normal > $poster_id
+							<img src="$sg_root/showPoster/?show=$curShow.indexerid&amp;which=banner" class="$layout" alt="$curShow.indexerid" title="$curShow.name" />
+                #else
+							<img id="poster-$poster_id" data-original="$sg_root/showPoster/?show=$curShow.indexerid&amp;which=banner" class="$layout" alt="$curShow.indexerid" title="$curShow.name" />
+							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
+                #end if
                         </a>
 					</div>
 					<span class="sort-data">$display_name</span>
 				</td>
             #else if 'simple' == $layout
 
-				<td class="tvShow text-left"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$display_name</a></td>
+				<td class="tvShow text-left"><a href="$sg_root/home/displayShow?show=$curShow.indexerid">$display_name</a></td>
             #end if
             #if 'simple' != $layout
                 #set $img_text = ($curShow.network, 'No Network')[None is $curShow.network]
@@ -388,7 +419,7 @@
                 #if 'No Network' is not $img_text and 'nonetwork' in $network_images[$curShow.indexerid]
 					$curShow.network
                 #else
-					<img width="54" height="27" src="$sbRoot/images/network/$network_images[$curShow.indexerid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
+					<img width="54" height="27" src="$sg_root/images/network/$network_images[$curShow.indexerid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
 					<span class="sort-data">$curShow.network</span>
                 #end if
 				</td>
@@ -438,5 +469,7 @@
 #end for
 ##
 
-
+<script type="text/javascript" src="$sg_root/js/lazyload/lazyload.min.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sg_root/js/inc_bottom.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sg_root/js/home.js?v=$sbPID"></script>
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')
