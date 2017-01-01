@@ -2,6 +2,7 @@
 
 * Change don't fetch caps for disabled nzb providers
 * Change recent search to use centralised title and URL parser for newznab
+* Add display unaired season 1 episodes of a new show in regular and pro I view modes
 
 
 [develop changelog]
