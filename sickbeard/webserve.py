@@ -1380,7 +1380,7 @@ class Home(MainHandler):
 
         for row in my_db.select('SELECT max(season) as latest FROM tv_episodes WHERE showid = ?'
                                 + ' and 1000 < airdate and ? < status', [showObj.indexerid, UNAIRED]):
-            t.latest_season = row['latest']
+            t.latest_season = row['latest'] or {0: 1, 1: 1, 2: None}.get(sickbeard.DISPLAY_SHOW_VIEWMODE)
 
         t.season_min = ([], [1])[2 < t.latest_season] + [t.latest_season]
         t.other_seasons = (list(set(all_seasons) - set(t.season_min)), [])[display_show_minimum]
