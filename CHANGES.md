@@ -3,6 +3,9 @@
 * Change don't fetch caps for disabled nzb providers
 * Change recent search to use centralised title and URL parser for newznab
 * Add display unaired season 1 episodes of a new show in regular and pro I view modes
+* Change improve page load time when loading images
+* Update isotope library 2.2.2 to 3.0.1
+* Add lazyload package 3.0.0 (2e318b1)
 
 
 [develop changelog]

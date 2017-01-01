@@ -3348,6 +3348,18 @@ img[src=""],img:not([src]){
 	margin:-1%
 }
 
+/* Fixes Firefox anomaly during image load */
+@-moz-document url-prefix(){
+	img:-moz-loading{visibility:hidden}
+}
+
+.lazy-loading-image{
+	display:inline-block;
+	position:absolute;
+	top:0;
+	left:0
+}
+
 /* =======================================================================
 bootstrap Overrides
 ========================================================================== */
