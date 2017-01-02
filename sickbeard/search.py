@@ -457,7 +457,7 @@ def search_for_needed_episodes(episodes):
     threading.currentThread().name = orig_thread_name
 
     if not len(providers):
-        logger.log('No NZB/Torrent sources enabled in Search Provider options to do recent searches', logger.WARNING)
+        logger.log('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes', logger.WARNING)
     elif not search_done:
         logger.log('Failed recent search of %s enabled provider%s. More info in debug log.' % (
             len(providers), helpers.maybe_plural(len(providers))), logger.ERROR)
@@ -774,9 +774,9 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
             break
 
     if not len(provider_list):
-        logger.log('No NZB/Torrent sources enabled in Search Provider options to do backlog searches', logger.WARNING)
+        logger.log('No NZB/Torrent providers in Media Providers/Options are allowed for active searching', logger.WARNING)
     elif not search_done:
-        logger.log('Failed backlog search of %s enabled provider%s. More info in debug log.' % (
+        logger.log('Failed active search of %s enabled provider%s. More info in debug log.' % (
             len(provider_list), helpers.maybe_plural(len(provider_list))), logger.ERROR)
 
     return final_results

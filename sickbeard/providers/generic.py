@@ -719,7 +719,7 @@ class NZBProvider(object, GenericProvider):
         if has_key:
             return has_key
         if None is has_key:
-            raise AuthException('%s for %s is empty in config provider options'
+            raise AuthException('%s for %s is empty in Media Providers/Options'
                                 % ('API key' + ('', ' and/or Username')[hasattr(self, 'username')], self.name))
 
         return GenericProvider._check_auth(self)
@@ -1118,7 +1118,7 @@ class TorrentProvider(object, GenericProvider):
         else:
             return not is_required and GenericProvider._check_auth(self)
 
-        raise AuthException('%s for %s is empty in config provider options' % (setting, self.name))
+        raise AuthException('%s for %s is empty in Media Providers/Options' % (setting, self.name))
 
     def find_propers(self, **kwargs):
         """

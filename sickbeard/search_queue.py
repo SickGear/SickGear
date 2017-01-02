@@ -339,7 +339,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
             threads[-1].start()
 
         if not len(providers):
-            logger.log('No NZB/Torrent sources enabled in Search Provider options for cache update', logger.WARNING)
+            logger.log('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes', logger.WARNING)
 
         if threads:
             # wait for all threads to finish
