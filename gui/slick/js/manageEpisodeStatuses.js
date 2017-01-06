@@ -46,19 +46,38 @@ $(document).ready(function() {
 		$('.' + indexer_id + '-epcheck').prop('checked', $(this).prop('checked'));
 	});
 
+	var lastCheck = null;
+	$('.manageTable').find('tbody').on('click', 'input[class$="epcheck"]', function(event) {
+		if (!lastCheck || !event.shiftKey) {
+			lastCheck = this;
+			return;
+		}
+		var check = this, found = 0;
+		$('.manageTable').find('input.' + check.name.replace(/[-]\d+x\d+$/, '') + '-epcheck').each(function() {
+			switch(found) {
+				case 2:
+					return !1;
+				case 1:
+					this.checked = lastCheck.checked;
+			}
+			(this === check || this === lastCheck) && found++;
+		});
+		lastCheck = this;
+	});
+
 	$('.get_more_eps').show();
 	function show_episodes(btn_element) {
 		var match = btn_element.attr('id').match(/(.*)[-](.*)/);
-		if (null == match)
+		if (null === match)
 			return false;
 
 		var cur_indexer_id = match[1], action = match[2], checked = $('#allCheck-' + cur_indexer_id).prop('checked'),
 			show_header = $('tr#' + cur_indexer_id), episode_rows = $('tr[id*="ep-' + cur_indexer_id + '"]'),
-			void_var = 'more' == action && episode_rows.show() ||  episode_rows.hide();
+			void_var = 'more' === action && episode_rows.show() ||  episode_rows.hide();
 
-		$('input#' + match[0]).val('more' == action ? 'Expanding...' : 'Collapsing...');
+		$('input#' + match[0]).val('more' === action ? 'Expanding...' : 'Collapsing...');
 
-		if (0 == episode_rows.length) {
+		if (0 === episode_rows.length) {
 			$.getJSON(sbRoot + '/manage/show_episode_statuses',
 				{
 					indexer_id: cur_indexer_id,
@@ -82,21 +101,21 @@ $(document).ready(function() {
 						setStatus$.find('option').last().after('<optgroup class="recommended" label="whatever is"><option value="recommended">suggested</option></optgroup>');
 						selectRecommended();
 					}
-					$('input#' + match[0]).val('more' == action ? 'Expand' : 'Collapse');
+					$('input#' + match[0]).val('more' === action ? 'Expand' : 'Collapse');
 					btn_element.hide();
-					$('input[id="' + cur_indexer_id + '-' + ('more' == action ? 'less' : 'more') + '"]').show();
+					$('input[id="' + cur_indexer_id + '-' + ('more' === action ? 'less' : 'more') + '"]').show();
 				});
 		} else {
-			$('input#' + match[0]).val('more' == action ? 'Expand' : 'Collapse');
+			$('input#' + match[0]).val('more' === action ? 'Expand' : 'Collapse');
 			btn_element.hide();
-			$('input[id="' + cur_indexer_id + '-' + ('more' == action ? 'less' : 'more') + '"]').show();
+			$('input[id="' + cur_indexer_id + '-' + ('more' === action ? 'less' : 'more') + '"]').show();
 		}
 
 	}
 
 	$('.get_more_eps,.get_less_eps').on('click', function(){
 		show_episodes($(this));
-		($('.get_more_eps:visible').length == 0 ? $('.expandAll').hide() : '');
+		($('.get_more_eps:visible').length === 0 ? $('.expandAll').hide() : '');
 	});
 
 	$('.expandAll').on('click', function(){

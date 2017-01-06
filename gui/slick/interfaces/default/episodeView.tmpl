@@ -35,12 +35,12 @@
 #end if
 
 #if $layout in ['daybyday', 'list']
-<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
+<script src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
 #end if
 
 #if 'daybyday' != $layout
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
-<input type="hidden" id="sbRoot" value="$sbRoot" />
+<script src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
+<input type="hidden" id="sbRoot" value="$sbRoot">
 #else
 <script>
 <!--
@@ -54,7 +54,7 @@
 		jQuery.each($.sgDayContainer, function(j) {
 			this.isotope({
 				itemSelector: '.daybyday-show',
-				sortBy: '$sort',
+				sortBy: '#end raw#$sort#raw#',
 				layoutMode: 'vertical',
 				transitionDuration: 0,
 				getSortData: {
@@ -86,9 +86,9 @@
 			});
 		});
 
-		$.sgUiSortBy = (function(sortBy) {
+		$.sgUiSortBy = (function() {
 			var sortCriteria;
-			switch (sortBy) {
+			switch ($('#card-sort').find('.selected').not('option[value^="order"]').val()){
 				case 'network':
 					sortCriteria = ['network', 'time', 'showname', 'season', 'episode'];
 					break;
@@ -103,23 +103,9 @@
 			jQuery.each($.sgDayContainer, function(j) {
 				this.isotope({
 					sortBy: sortCriteria,
-					sortAscending: 'asc' == $('#sort-dir').attr('data-sort-dir')
+					sortAscending: 'order-asc' === $('#card-sort').find('option[value^="order"].selected').val()
 				});
 			});
-		});
-
-		$('#sort').on('change', function() {
-			$.sgUiSortBy(this.value);
-			$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
-		});
-
-		$('#sort-dir').on('click', function() {
-			var sortdir = $(this).attr('data-sort-dir'),
-				newdir = ('asc' == sortdir ? 'desc' : 'asc');
-			$(this).attr('data-sort-dir', newdir);
-			$(this).attr('title', 'Click to sort ' + sortdir + 'ending');
-			$(this).removeClass(sortdir).addClass(newdir);
-			$.sgUiSortBy($('#sort').val());
 		});
 
 		$('.carousel').on('slide.bs.carousel', function () {
@@ -141,17 +127,18 @@
 			states$.addClass(state[0]).removeClass(state[1]);
 
 			tid = setInterval(function() {
-				if (0 < $('.poster').find('img[src*="' + old + '"]').length) {
+				var image$ = $('.poster');
+				if (0 < image$.find('img[src*="' + old + '"]').length) {
 					timeout--;
 				} else {
 					timeout = 0;
 				}
-				if (0 == timeout) {
+				if (0 === timeout) {
 					clearInterval(tid);
-					$.each($('.poster').find('img[src*="' + cachedImg + '"]'), function() {
+					$.each(image$.find('img[src*="' + cachedImg + '"]'), function() {
 						$(this).attr('src', $(this).attr('data-src-new')).removeAttr('data-src-new');
 					});
-					$.sgUiSortBy($('#sort').val());
+					$.sgUiSortBy();
 					$.get($.SickGear.Root + '/setEpisodeViewCards');
 				}
 			}, interval);
@@ -170,13 +157,8 @@
 </script>
 #end if
 
-<style type="text/css">
-#SubMenu{display:none}
-#if 'daybyday' == $layout
-.ep-caret{cursor:pointer; vertical-align:middle; margin-right:2px}
-.asc{border-top:0; border-bottom:8px solid}
-.desc{border-top:8px solid; border-bottom:0}
-#end if
+<style>
+#SubMenu,.toolbar select{display:none}
 .bfr{position:absolute;left:-999px;top:-999px}.bfr img,img.spinner,.spinner2,img.queued,img.search{display:inline-block;width:16px;height:16px}img.spinner{background:url(${sbRoot}/images/loading16${theme_suffix}.gif) no-repeat 0 0}.spinner2{background:url(${sbRoot}/images/loading16-red.gif) no-repeat 0 0;margin-top:3px !important}img.queued{background:url(${sbRoot}/images/queued.png) no-repeat 0 0}img.search{background:url(${sbRoot}/images/search16.png) no-repeat 0 0}
 </style>
 <div class="bfr"><img src="$sbRoot/images/loading16${theme_suffix}.gif"><img src="$sbRoot/images/loading16-red.gif"><img src="$sbRoot/images/queued.png"><img src="$sbRoot/images/search16.png"><img src="$sbRoot/images/no16.png"><img src="$sbRoot/images/yes16.png"></div>
@@ -196,40 +178,47 @@
 #set $selected = ' selected="selected"'
 	<div id="HomeLayout" class="pull-right">
 		<div id="top-row">
-			<span>Layout
-				<select name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
-					<option value="$sbRoot/setEpisodeViewLayout/?layout=banner" #if 'banner' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>Banner</option>
-					<option value="$sbRoot/setEpisodeViewLayout/?layout=daybyday" #if 'daybyday' == $sg_str('EPISODE_VIEW_LAYOUT', 'daybyday')#$selected#end if#>Day by Day</option>
-					<option value="$sbRoot/setEpisodeViewLayout/?layout=list" #if 'list' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>List</option>
-					<option value="$sbRoot/setEpisodeViewLayout/?layout=poster" #if 'poster' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>Poster</option>
+			<div class="toolbar pull-right">
+				<select name="layout" id="layout">
+					<optgroup label="Layout">
+						<option value="$sbRoot/setEpisodeViewLayout/?layout=banner" #if 'banner' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>Banner</option>
+						<option value="$sbRoot/setEpisodeViewLayout/?layout=daybyday" #if 'daybyday' == $sg_str('EPISODE_VIEW_LAYOUT', 'daybyday')#$selected#end if#>Day by Day</option>
+						<option value="$sbRoot/setEpisodeViewLayout/?layout=list" #if 'list' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>List</option>
+						<option value="$sbRoot/setEpisodeViewLayout/?layout=poster" #if 'poster' == $sg_str('EPISODE_VIEW_LAYOUT')#$selected#end if#>Poster</option>
+					</optgroup>
 				</select>
-			</span>
-			&nbsp;
-			<span>Sort
+
 #if 'daybyday' == $layout
-				<span id="sort-dir" data-sort-dir="asc" class="caret ep-caret asc" title="Click to sort descending">&nbsp;</span>
-#end if
-			By
-#if 'daybyday' == $layout
-				<select name="sort" id="sort" class="form-control form-control-inline input-sm">
-					<option value="network" data-sort="$sbRoot/setEpisodeViewSort/?sort=network&redir=0" #if 'network' == $sort#$selected#end if#>Network</option>
-					<option value="show" data-sort="$sbRoot/setEpisodeViewSort/?sort=show&redir=0" #if 'show' == $sort#$selected#end if#>Show</option>
-					<option value="time" data-sort="$sbRoot/setEpisodeViewSort/?sort=time&redir=0" #if 'time' == $sort#$selected#end if#>Time</option>
+    #set $multi_selected = ' class="selected" selected="selected"'
+				<select name="sort" id="card-sort">
+					<optgroup label="Sort by">
+						<option value="network" data-sort="$sbRoot/setEpisodeViewSort/?sort=network&redir=0"#if 'network' == $sort#$multi_selected#end if#>Network</option>
+						<option value="show" data-sort="$sbRoot/setEpisodeViewSort/?sort=show&redir=0"#if 'show' == $sort#$multi_selected#end if#>Show</option>
+						<option value="time" data-sort="$sbRoot/setEpisodeViewSort/?sort=time&redir=0"#if 'time' == $sort#$multi_selected#end if#>Time</option>
+					</optgroup>
+					<optgroup label="Order">
+						<option value="order-asc"#if 1 == $sg_var('POSTER_SORTDIR', 1)# class="selected"#end if#>Asc</option>
+						<option value="order-desc"#if 0 == $sg_var('POSTER_SORTDIR')# class="selected"#end if#>Desc</option>
+					</optgroup>
+				</select>
+
 #else
-				<select name="sort" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;">
-					<option value="$sbRoot/setEpisodeViewSort/?sort=time" #if 'time' == $sort#$selected#end if#>Date/Time</option>
-					<option value="$sbRoot/setEpisodeViewSort/?sort=network" #if 'network' == $sort#$selected#end if#>Network</option>
-					<option value="$sbRoot/setEpisodeViewSort/?sort=show" #if 'show' == $sort#$selected#end if#>Show</option>
+				<select name="sort" id="sort">
+					<optgroup label="Sort by">
+						<option value="$sbRoot/setEpisodeViewSort/?sort=time" #if 'time' == $sort#$selected#end if#>Date/Time</option>
+						<option value="$sbRoot/setEpisodeViewSort/?sort=network" #if 'network' == $sort#$selected#end if#>Network</option>
+						<option value="$sbRoot/setEpisodeViewSort/?sort=show" #if 'show' == $sort#$selected#end if#>Show</option>
+					</optgroup>
+				</select>
 #end if
+
+				<select name="viewpaused" id="viewpaused" data-paused="#if $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#yes#end if#">
+					<optgroup label="Paused Shows">
+						<option value="$sbRoot/toggleEpisodeViewDisplayPaused"#if not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>No Paused</option>
+						<option value="$sbRoot/toggleEpisodeViewDisplayPaused"#if $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>All Shown</option>
+					</optgroup>
 				</select>
-			</span>
-			&nbsp;
-			<span class="no-marginr">View Paused
-				<select name="viewpaused" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" style="margin-bottom:10px">
-					<option value="$sbRoot/toggleEpisodeViewDisplayPaused"#if not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Hidden</option>
-					<option value="$sbRoot/toggleEpisodeViewDisplayPaused"#if $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Shown</option>
-				</select>
-			</span>
+			</div>
 		</div>
 
 		<div class="key pull-right">
@@ -265,10 +254,10 @@
 	$.tablesorter.addParser({
 		id: 'loadingNames',
 		is: function(s) {
-			return false
+			return !1
 		},
 		format: function(s) {
-			if(0 == s.indexOf('Loading...'))
+			if(0 === s.indexOf('Loading...'))
 				return s.replace('Loading...', '000')
 			return (s || '')
 		},
@@ -277,7 +266,7 @@
 	$.tablesorter.addParser({
 		id: 'quality',
 		is: function(s) {
-			return false
+			return !1
 		},
 		format: function(s) {
 			return s.replace('hd1080p', 5).replace('hd720p', 4).replace('hd', 3).replace('sd', 2).replace('any', 1).replace('best', 0).replace('custom', 7)
@@ -287,7 +276,7 @@
 	$.tablesorter.addParser({
 		id: 'cDate',
 		is: function(s) {
-			return false
+			return !1
 		},
 		format: function(s) {
 			return s
@@ -296,9 +285,11 @@
 	});
 
 	$(document).ready(function(){
+
 #end raw
-		var sortList = [[$table_sort_header_codes[$sort], 0]];
+		sortList = [[$table_sort_header_codes[$sort], 0]];
 #raw
+
 		$('#showListTable:has(tbody tr)').tablesorter({
 			widgets: ['stickyHeaders'],
 			sortList: sortList,
@@ -311,13 +302,13 @@
 			headers: {
 				0: {sorter: 'cDate'},
 				1: {sorter: 'loadingNames'},
-				2: {sorter: false},
-				3: {sorter: false},
+				2: {sorter: !1},
+				3: {sorter: !1},
 				4: {sorter: 'loadingNames'},
 				5: {sorter: 'quality'},
-				6: {sorter: false},
-				7: {sorter: false},
-				8: {sorter: false}
+				6: {sorter: !1},
+				7: {sorter: !1},
+				8: {sorter: !1}
 			}
 		});
 
@@ -426,9 +417,9 @@
 
 			<td align="center" style="vertical-align:middle">
         #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_url']
-				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).config.get('name')]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
+				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1" title="${cur_result['imdb_url']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).config.get('name')]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
         #end if
-				<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickbeard.indexerApi($cur_indexer).config['show_url'] % cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
+				<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1" title="${sickbeard.indexerApi($cur_indexer).config['show_url'] % cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
 			</td>
 
 			<td align="center">
@@ -443,7 +434,7 @@
 
 	<tfoot>
 		<tr>
-			<th rowspan="1" colspan="10" align="center">&nbsp</th>
+			<th rowspan="1" colspan="10" align="center">&nbsp;</th>
 		</tr>
 	</tfoot>
 
@@ -616,9 +607,9 @@
 
 							<span class="tvshowTitleIcons">
         #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_url']
-                				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).name]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
+                				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1" title="${cur_result['imdb_url']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).name]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
         #end if
-								<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickbeard.indexerApi($cur_indexer).config['show_url'] % cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
+								<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1" title="${sickbeard.indexerApi($cur_indexer).config['show_url'] % cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
 								<span><a class="ep-search" href="$sbRoot/home/episode_search?show=${cur_result['showid']}&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search"><img title="[search]" alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" /></a></span>
 							</span>
 						</div>
@@ -895,8 +886,51 @@ $('#Carousel').carousel({interval: 0});
 $(document).bind('keyup', function(e) {
 	return (/undefined/i.test($.SickGear.PauseCarousel) &&
 		(!(e.hasOwnProperty('ctrlKey') && e.ctrlKey) && !(e.hasOwnProperty('altKey') && e.altKey)) && (
-		(39 == e.which && $('.carousel').carousel('next')) ||
-		(37 == e.which && $('.carousel').carousel('prev'))) || !0);
+		(39 === e.which && $('.carousel').carousel('next')) ||
+		(37 === e.which && $('.carousel').carousel('prev'))) || !0);
+});
+
+var widgetRefresh = function(ctrlElId){
+	// update the ui-controlgroup widget classes from DOM class states
+	var widgetItems$ = $(ctrlElId + '-menu').find('.ui-menu-item');
+	widgetItems$.filter('.selected').removeClass('selected');
+	$(ctrlElId).find('.selected').each(function(i, elSelected){
+		widgetItems$.eq(elSelected.index).addClass('selected');
+	});
+}
+
+$(document).ready(function(){
+	if ('yes' !== $('#viewpaused').attr('data-paused')){
+		$('#viewpaused').selectmenu({
+			classes: {'ui-selectmenu-button': 'hide-paused'}
+			});
+	}
+
+	$('#layout, #sort, #viewpaused').on('selectmenuchange', function(){
+		if ('viewpaused' === $(this).attr('id'))
+			$('#viewpaused-button').removeClass('hide-paused');
+		location.href = this.options[this.selectedIndex].value;
+	});
+
+	$('#card-sort').on('selectmenuselect', function(event, ui){
+		var sortBy = this.value, ctrlElId = '#' + this.id, elOptions$;
+
+		// update DOM ctrl
+		if (0 !== sortBy.indexOf('order')) {
+			elOptions$ = $(this).find('option').not('option[value^="order"], option[disabled]');
+		} else {
+			elOptions$ = $(this).find('option[value^="order"]');
+		}
+		elOptions$.filter('.selected').removeClass('selected');
+		ui.item.element.addClass('selected');
+
+		widgetRefresh(ctrlElId);
+
+		$.sgUiSortBy();
+
+		if (0 !== sortBy.indexOf('order'))
+			$.get(this.options[this.selectedIndex].getAttribute('data-sort'));
+	});
 });
 //-->
 </script>

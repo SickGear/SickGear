@@ -364,7 +364,7 @@ class SickGear(object):
         if sickbeard.WEB_HOST and sickbeard.WEB_HOST != '0.0.0.0':
             self.webhost = sickbeard.WEB_HOST
         else:
-            self.webhost = (('0.0.0.0', '::')[sickbeard.WEB_IPV6], '')[sickbeard.WEB_IPV64]
+            self.webhost = ('0.0.0.0', ('::', '')[sickbeard.WEB_IPV64])[sickbeard.WEB_IPV6]
 
         # web server options
         self.web_options = dict(

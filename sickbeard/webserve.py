@@ -108,13 +108,6 @@ class PageTemplate(Template):
             self.log_num_not_found_shows = len([x for x in sickbeard.showList if 0 < x.not_found_count])
             self.log_num_not_found_shows_all = len([x for x in sickbeard.showList if 0 != x.not_found_count])
         self.sbPID = str(sickbeard.PID)
-        self.menu = [
-            {'title': 'Home', 'key': 'home'},
-            {'title': 'Episodes', 'key': 'episodeView'},
-            {'title': 'History', 'key': 'history'},
-            {'title': 'Manage', 'key': 'manage'},
-            {'title': 'Config', 'key': 'config'},
-        ]
 
         kwargs['file'] = os.path.join(sickbeard.PROG_DIR, 'gui/%s/interfaces/default/' %
                                       sickbeard.GUI_NAME, kwargs['file'])
@@ -723,7 +716,7 @@ class MainHandler(WebHandler):
             <title>%s</title>
         </head>
         <body>
-            <br/>
+            <br />
             <font color="#0000FF">Error %s: You need to provide a valid username and password.</font>
         </body>
     </html>
@@ -736,8 +729,8 @@ class MainHandler(WebHandler):
             self.redirect(sickbeard.WEB_ROOT + '/home/')
         elif self.settings.get('debug') and 'exc_info' in kwargs:
             exc_info = kwargs['exc_info']
-            trace_info = ''.join(['%s<br/>' % line for line in traceback.format_exception(*exc_info)])
-            request_info = ''.join(['<strong>%s</strong>: %s<br/>' % (k, self.request.__dict__[k]) for k in
+            trace_info = ''.join(['%s<br />' % line for line in traceback.format_exception(*exc_info)])
+            request_info = ''.join(['<strong>%s</strong>: %s<br />' % (k, self.request.__dict__[k]) for k in
                                     self.request.__dict__.keys()])
             error = exc_info[1]
 
@@ -780,6 +773,13 @@ class MainHandler(WebHandler):
     def setPosterSortDir(self, direction):
 
         sickbeard.POSTER_SORTDIR = int(direction)
+        sickbeard.save_config()
+
+    def set_showlist_flexible(self, state):
+
+        if state not in ('tt', 'ts', 'ss', 'ws', 'wt'):
+            state = 'tt'
+        sickbeard.SHOWLIST_FLEXIBLE = state
         sickbeard.save_config()
 
     def setEpisodeViewLayout(self, layout):
@@ -971,7 +971,7 @@ class MainHandler(WebHandler):
             backart = bool(config.minimax(kwargs.get('backart'), 0, 0, 1))
             viewmode = config.minimax(kwargs.get('viewmode'), 0, 0, 2)
 
-            if 'ds' == kwargs.get('pg', None):
+            if 'full' == kwargs.get('p', ''):
                 if 'viewart' in kwargs:
                     sickbeard.DISPLAY_SHOW_VIEWART = config.minimax(kwargs['viewart'], 0, 0, 2)
                 elif 'translucent' in kwargs:
@@ -980,7 +980,7 @@ class MainHandler(WebHandler):
                     sickbeard.DISPLAY_SHOW_BACKGROUND = backart
                 elif 'viewmode' in kwargs:
                     sickbeard.DISPLAY_SHOW_VIEWMODE = viewmode
-            elif 'ev' == kwargs.get('pg', None):
+            elif 'min' == kwargs.get('p', ''):
                 if 'translucent' in kwargs:
                     sickbeard.EPISODE_VIEW_BACKGROUND_TRANSLUCENT = translucent
                 elif 'backart' in kwargs:
@@ -1156,6 +1156,23 @@ r.close()
 
             return json.dumps(data)
 
+    def toggle_paused(self, show):
+
+        show_obj = None
+        if None is not show:
+            show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
+
+        if not show_obj:
+            return self._genericMessage('Error', 'Unable to find the specified show: %s' % show)
+
+        with show_obj.lock:
+            show_obj.paused = not show_obj.paused
+
+            # save it to the DB
+            show_obj.saveToDB()
+
+        self.redirect('/home/displayShow?show=%s' % show)
+
     def toggleDisplayShowSpecials(self, show):
 
         sickbeard.DISPLAY_SHOW_SPECIALS = not sickbeard.DISPLAY_SHOW_SPECIALS
@@ -1172,6 +1189,9 @@ r.close()
 
         self.redirect('/history/')
 
+    def HomeMenu(self):
+        return []
+
     def _genericMessage(self, subject, message):
         t = PageTemplate(web_handler=self, file='genericMessage.tmpl')
         t.submenu = Home(self.application, self.request).HomeMenu()
@@ -1183,11 +1203,11 @@ r.close()
 class Home(MainHandler):
     def HomeMenu(self):
         return [
-            {'title': 'Process Media', 'path': 'home/postprocess/'},
-            {'title': 'Update Emby', 'path': 'home/update_emby/', 'requires': self.haveEMBY},
-            {'title': 'Update Kodi', 'path': 'home/update_kodi/', 'requires': self.haveKODI},
-            {'title': 'Update XBMC', 'path': 'home/update_xbmc/', 'requires': self.haveXBMC},
-            {'title': 'Update Plex', 'path': 'home/update_plex/', 'requires': self.havePLEX}
+            {'title': 'Process Media', 'icon': 'postprocess', 'path': 'home/postprocess/'},
+            {'title': 'Update Emby', 'icon': 'emby', 'requires': self.haveEMBY, 'path': 'home/update_emby/'},
+            {'title': 'Update Kodi', 'icon': 'kodi', 'requires': self.haveKODI, 'path': 'home/update_kodi/'},
+            {'title': 'Update XBMC', 'icon': 'xbmc', 'requires': self.haveXBMC, 'path': 'home/update_xbmc/'},
+            {'title': 'Update Plex', 'icon': 'plex', 'requires': self.havePLEX, 'path': 'home/update_plex/'}
         ]
 
     @staticmethod
@@ -1299,9 +1319,56 @@ class Home(MainHandler):
         sql_result = myDB.select(sql_statement % (status_quality, status_download, today, status_total, status_quality, status_download, today, UNAIRED, WANTED))
 
         t.show_stat = {}
+        t.fanart = {}
+        cache_obj = image_cache.ImageCache()
 
-        for cur_result in sql_result:
-            t.show_stat[cur_result['showid']] = cur_result
+        sid_airs = []
+        today = datetime.date.today().toordinal()
+        for item in sql_result:
+            t.show_stat[item['showid']] = item
+            if today <= item['ep_airs_next']:
+                sid_airs.append((item['showid'], item['ep_airs_next']))
+        sid_airs.sort(key=lambda tup: tup[1])
+        fid = []
+        airdate = None
+        roof = 3
+        for sid, airs in sid_airs:
+            if not airdate or airdate == airs or roof > len(fid):
+                airdate = airs
+                fid += [sid]
+            else:
+                break
+
+        for showid in fid:
+            images = []
+            for img in ek.ek(glob.glob, cache_obj.fanart_path(showid).replace('fanart.jpg', '*')) or []:
+                match = re.search(r'\.(\d+(?:\.\w*)?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+                if match:
+                    images.append(
+                        (match.group(1), sickbeard.FANART_RATINGS.get(str(showid), {}).get(match.group(1), '')))
+            if images:
+                t.fanart[showid] = images
+
+        for show in t.fanart:
+            fanart_rating = [(n, v) for n, v in t.fanart[show] if 20 == v]
+            if fanart_rating:
+                t.fanart[show] = fanart_rating
+            else:
+                rnd = [(n, v) for (n, v) in t.fanart[show] if 30 != v]
+                grouped = [(n, v) for (n, v) in rnd if 10 == v]
+                if grouped:
+                    t.fanart[show] = [grouped[random.randint(0, len(grouped) - 1)]]
+                elif rnd:
+                    t.fanart[show] = [rnd[random.randint(0, len(rnd) - 1)]]
+
+        t.has_art = bool(len(t.fanart))
+        t.css = ' '.join([('', 'poster')['poster' == sickbeard.HOME_LAYOUT]] +
+                         [{'tt': '', 'ts': 'tallscape', 'ss': 'smallscape', 'ws': 'widescape', 'wt': 'widetrait'}.get(
+                             sickbeard.SHOWLIST_FLEXIBLE, '')] +
+                         ([], ['back-art'])[sickbeard.EPISODE_VIEW_BACKGROUND and t.has_art] +
+                         ([], ['translucent'])[sickbeard.EPISODE_VIEW_BACKGROUND_TRANSLUCENT] +
+                         [{0: 'reg', 1: 'pro', 2: 'pro ii'}.get(sickbeard.EPISODE_VIEW_VIEWMODE)])
+        t.fanart_panel = sickbeard.FANART_PANEL
 
         return t.respond()
 
@@ -1784,14 +1851,12 @@ class Home(MainHandler):
 
         if show is None:
             return self._genericMessage('Error', 'Invalid show ID')
-        else:
-            showObj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
 
-            if showObj is None:
-                return self._genericMessage('Error', 'Show not in show list')
+        showObj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
+        if showObj is None:
+            return self._genericMessage('Error', 'Show not in show list')
 
         t = PageTemplate(web_handler=self, file='displayShow.tmpl')
-        t.submenu = [{'title': 'Edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
 
         try:
             t.showLoc = (showObj.location, True)
@@ -1830,30 +1895,6 @@ class Home(MainHandler):
                 + '<a href="%s/home/editShow?show=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>' % (
                     sickbeard.WEB_ROOT, show, show)
                 + ('', '<br>%s' % show_message)[0 < len(show_message)])
-        t.force_update = 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid
-        if not sickbeard.showQueueScheduler.action.isBeingAdded(showObj):  # @UndefinedVariable
-            if not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
-                t.submenu.append(
-                    {'title': 'Remove', 'path': 'home/deleteShow?show=%d' % showObj.indexerid, 'confirm': True})
-                t.submenu.append({'title': 'Re-scan files', 'path': 'home/refreshShow?show=%d' % showObj.indexerid})
-                t.submenu.append(
-                    {'title': 'Force Full Update', 'path': t.force_update})
-                t.submenu.append({'title': 'Update show in Emby',
-                                  'path': 'home/update_emby%s' %
-                                          (INDEXER_TVDB == showObj.indexer and ('?show=%s' % showObj.indexerid) or '/'),
-                                  'requires': self.haveEMBY})
-                t.submenu.append({'title': 'Update show in Kodi',
-                                  'path': 'home/update_kodi?show_name=%s' % urllib.quote_plus(
-                                  showObj.name.encode('utf-8')), 'requires': self.haveKODI})
-                t.submenu.append({'title': 'Update show in XBMC',
-                                  'path': 'home/update_xbmc?show_name=%s' % urllib.quote_plus(
-                                  showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
-                t.submenu.append({'title': 'Media Renamer', 'path': 'home/testRename?show=%d' % showObj.indexerid})
-                if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
-                        showObj) and showObj.subtitles:
-                    t.submenu.append(
-                        {'title': 'Download Subtitles', 'path': 'home/subtitleShow?show=%d' % showObj.indexerid})
-
         t.show = showObj
         with BS4Parser('<html><body>%s</body></html>' % showObj.overview, features=['html5lib', 'permissive']) as soup:
             try:
@@ -1893,7 +1934,6 @@ class Home(MainHandler):
                 del(ep_counts['totals'][0])
 
         ep_counts['eps_all'] = sum(ep_counts['totals'].values())
-        ep_counts['eps_most'] = max(ep_counts['totals'].values() + [0])
         all_seasons = sorted(ep_counts['totals'].keys(), reverse=True)
         t.lowest_season, t.highest_season = all_seasons and (all_seasons[-1], all_seasons[0]) or (0, 0)
 
@@ -2001,7 +2041,59 @@ class Home(MainHandler):
         t.xem_numbering = get_xem_numbering_for_show(indexerid, indexer)
         t.xem_absolute_numbering = get_xem_absolute_numbering_for_show(indexerid, indexer)
 
+        t.submenu = [
+            {'title': '%s Show' % (('Pause', 'Unpause')[bool(showObj.paused)]), 'icon': 'pause',
+             'path': 'toggle_paused/?show=%d' % showObj.indexerid},
+            {'title': 'Edit', 'icon': 'edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
+
+        if t.has_special or (t.seasons and 0 == t.seasons[-1][0]):
+            t.submenu += [{'title': '%s Specials' % (('Unhide', 'Hide')[bool(sickbeard.DISPLAY_SHOW_SPECIALS)]),
+                           'icon': 'specials', 'path': 'toggleDisplayShowSpecials/?show=%d' % showObj.indexerid}]
+
+        t.force_update = 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid
+        if (not sickbeard.showQueueScheduler.action.isBeingAdded(showObj)
+                and not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj)):
+            t.submenu += [
+                {'title': 'Remove', 'icon': 'delete', 'confirm': True,
+                 'path': 'home/deleteShow?show=%d' % showObj.indexerid},
+                {'title': 'Media Renamer', 'icon': 'rename', 'path': 'home/testRename?show=%d' % showObj.indexerid},
+                {'title': 'Re-scan files', 'icon': 'refresh', 'newrow': True,
+                 'path': 'home/refreshShow?show=%d' % showObj.indexerid},
+                {'title': 'Force Full Update', 'icon': 'fullupdate', 'path': t.force_update},
+                {'title': 'Update show in Emby', 'icon': 'emby', 'requires': self.haveEMBY,
+                 'path': 'home/update_emby' + (('/', '?show=%s' % showObj.indexerid)[INDEXER_TVDB == showObj.indexer])},
+                {'title': 'Update show in Kodi', 'icon': 'kodi', 'requires': self.haveKODI,
+                 'path': 'home/update_kodi?show_name=%s' % urllib.quote_plus(showObj.name.encode('utf-8'))},
+                {'title': 'Update show in XBMC', 'icon': 'xbmc', 'requires': self.haveXBMC,
+                 'path': 'home/update_xbmc?show_name=%s' % urllib.quote_plus(showObj.name.encode('utf-8'))}
+            ]
+            if (sickbeard.USE_SUBTITLES
+                    and not sickbeard.showQueueScheduler.action.isBeingSubtitled(showObj) and showObj.subtitles):
+                t.submenu += [{'title': 'Download Subtitles', 'icon': 'subtitles',
+                               'path': 'home/subtitleShow?show=%d' % showObj.indexerid}]
+
         return t.respond()
+
+
+    @staticmethod
+    def set_tab_layout(tabs=None):
+
+        if 'anime' == sickbeard.SHOWLIST_TAGVIEW:
+            sickbeard.SHOWLIST_TAGVIEW = 'custom'
+            sickbeard.SHOW_TAGS = ['Shows', 'Anime']
+
+        if 'custom' == sickbeard.SHOWLIST_TAGVIEW:
+            tag_list = re.sub(r'\[\d+\]', '', tabs).split('|||')
+            new_tags = [sickbeard.SHOW_TAGS[sickbeard.SHOW_TAGS.index(tag)]
+                        for i, tag in enumerate(tag_list) if tag in sickbeard.SHOW_TAGS]
+            if 1 < len(sickbeard.SHOW_TAGS):
+                for item in [i for i, tag in enumerate(sickbeard.SHOW_TAGS) if tag not in tag_list]:
+                    new_tags.insert(item, sickbeard.SHOW_TAGS[item])
+
+            if ''.join(new_tags) != ''.join(sickbeard.SHOW_TAGS):
+                sickbeard.SHOW_TAGS = list(new_tags)
+                sickbeard.save_config()
+
 
     @staticmethod
     def sorted_show_lists():
@@ -2768,7 +2860,7 @@ class Home(MainHandler):
             ep_obj_rename_list.reverse()
 
         t = PageTemplate(web_handler=self, file='testRename.tmpl')
-        t.submenu = [{'title': 'Edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
+        t.submenu = [{'title': 'Edit', 'icon': 'edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
         t.ep_obj_list = ep_obj_rename_list
         t.show = showObj
 
@@ -3468,7 +3560,7 @@ class NewHomeAddShows(Home):
 
         return t.respond()
 
-    def randomhot_anidb(self, *args, **kwargs):
+    def anidb_randomhot(self, *args, **kwargs):
 
         try:
             import xml.etree.cElementTree as etree
@@ -3545,9 +3637,9 @@ class NewHomeAddShows(Home):
 
         return self.browse_shows(browse_type, 'Random and Hot at AniDB', filtered, **kwargs)
 
-    def anime_default(self):
+    def anidb_default(self):
 
-        return self.redirect('/home/addShows/randomhot_anidb')
+        return self.redirect('/home/addShows/anidb_randomhot')
 
     def addAniDBShow(self, indexer_id, showName):
 
@@ -3783,7 +3875,7 @@ class NewHomeAddShows(Home):
 
         return show_list and True or None
 
-    def watchlist_imdb(self, *args, **kwargs):
+    def imdb_watchlist(self, *args, **kwargs):
 
         if 'add' == kwargs.get('action'):
             return self.redirect('/config/general/#core-component-group2')
@@ -3835,7 +3927,7 @@ class NewHomeAddShows(Home):
         kwargs.update(dict(footnote=footnote, mode='watchlist-%s' % acc_id, periods=periods))
         return self.browse_shows(browse_type, '%s IMDb Watchlist' % list_name, filtered, **kwargs)
 
-    def popular_imdb(self, *args, **kwargs):
+    def imdb_popular(self, *args, **kwargs):
 
         browse_type = 'IMDb'
 
@@ -3877,7 +3969,7 @@ class NewHomeAddShows(Home):
 
     def imdb_default(self):
 
-        return self.redirect('/home/addShows/popular_imdb')
+        return self.redirect('/home/addShows/imdb_popular')
 
     def addIMDbShow(self, indexer_id, showName):
         return self.new_show('|'.join(['', '', '', re.search(r'(?i)tt\d+$', indexer_id) and indexer_id or showName]),
@@ -4385,22 +4477,25 @@ class NewHomeAddShows(Home):
 class Manage(MainHandler):
     def ManageMenu(self, exclude='n/a'):
         menu = [
-            {'title': 'Backlog Overview', 'path': 'manage/backlogOverview/'},
-            {'title': 'Media Search', 'path': 'manage/manageSearches/'},
-            {'title': 'Show Processes', 'path': 'manage/showProcesses/'},
-            {'title': 'Episode Status', 'path': 'manage/episode_statuses/'}, ]
+            {'title': 'Backlog Overview', 'icon': 'backlog', 'path': 'manage/backlogOverview/'},
+            {'title': 'Media Search', 'icon': 'search', 'path': 'manage/manageSearches/'},
+            {'title': 'Show Processes', 'icon': 'showqueue', 'path': 'manage/showProcesses/'},
+            {'title': 'Episode Status', 'icon': 'episodestatus', 'path': 'manage/episode_statuses/'}]
 
         if sickbeard.USE_SUBTITLES:
-            menu.append({'title': 'Missed Subtitle Management', 'path': 'manage/subtitleMissed/'})
+            menu.append({'title': 'Missed Subtitle Management', 'icon': 'subtitles', 'path': 'manage/subtitleMissed/'})
 
         if sickbeard.USE_FAILED_DOWNLOADS:
-            menu.append({'title': 'Failed Downloads', 'path': 'manage/failedDownloads/'})
+            menu.append({'title': 'Failed Downloads', 'icon': 'failed', 'path': 'manage/failedDownloads/'})
 
         return [x for x in menu if exclude not in x['title']]
 
     def index(self, *args, **kwargs):
+        self.redirect('/manage/bulk/')
+
+    def bulk(self, *args, **kwargs):
         t = PageTemplate(web_handler=self, file='manage.tmpl')
-        t.submenu = self.ManageMenu('Bulk')
+        t.submenu = self.ManageMenu()
         return t.respond()
 
     def show_episode_statuses(self, indexer_id, which_status):
@@ -5834,17 +5929,20 @@ class Config(MainHandler):
     @staticmethod
     def ConfigMenu(exclude='n/a'):
         menu = [
-            {'title': 'General', 'path': 'config/general/'},
-            {'title': 'Media Providers', 'path': 'config/providers/'},
-            {'title': 'Search', 'path': 'config/search/'},
-            {'title': 'Subtitles', 'path': 'config/subtitles/'},
-            {'title': 'Post Processing', 'path': 'config/postProcessing/'},
-            {'title': 'Notifications', 'path': 'config/notifications/'},
-            {'title': 'Anime', 'path': 'config/anime/'},
+            {'title': 'General', 'icon': 'config', 'path': 'config/general/'},
+            {'title': 'Media Providers', 'icon': 'book', 'path': 'config/providers/'},
+            {'title': 'Search', 'icon': 'search', 'path': 'config/search/'},
+            {'title': 'Subtitles', 'icon': 'subtitles', 'path': 'config/subtitles/'},
+            {'title': 'Post Processing', 'icon': 'postprocess', 'path': 'config/postProcessing/'},
+            {'title': 'Notifications', 'icon': 'notification', 'path': 'config/notifications/'},
+            {'title': 'Anime', 'icon': 'anime', 'path': 'config/anime/'},
         ]
         return [x for x in menu if exclude not in x['title']]
 
     def index(self, *args, **kwargs):
+        self.redirect('/config/about/')
+
+    def about(self, *args, **kwargs):
         t = PageTemplate(web_handler=self, file='config.tmpl')
         t.submenu = self.ConfigMenu()
 
@@ -7229,10 +7327,10 @@ class UI(MainHandler):
 class ErrorLogs(MainHandler):
     @staticmethod
     def ErrorLogsMenu():
+        submenu = [{'title': 'Download Log', 'icon': 'download', 'path': 'errorlogs/downloadlog/'}]
         if len(classes.ErrorViewer.errors):
-            return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'},
-                    {'title': 'Clear Errors', 'path': 'errorlogs/clearerrors/'}]
-        return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'}]
+            submenu += [{'title': 'Clear Errors', 'icon': 'delete', 'path': 'errorlogs/clearerrors/'}]
+        return submenu
 
     def index(self, *args, **kwargs):
 

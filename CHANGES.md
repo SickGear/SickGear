@@ -1065,6 +1065,43 @@
 * Change layout of quality custom to improve clarity
 * Change tweak text of SD DVD to include BD/BR
 * Change TBy prov add UHD cat
+* Update jquery confirm 1.x to 2.7.0
+* Update jQuery-UI 1.10.4 to 1.12.1
+* Update fancybox 2.1.5 to 2.1.6 (c00852a)
+* Add jquery-throttle-debounce 1.1 to regulate methods called in rapid succession
+* Add mousetrap 1.6.0 keyboard shortcut handler
+* Change reorder displayshow submenu items and remove button display lag
+* Change add Pause/Unpause and Hide/Unhide Specials to displayshow submenu
+* Change highlight menu item of current viewed page
+* Change darken the lighter panels of the dark theme
+* Change color on hover of 'Edit' and 'Remove' buttons on displayshow submenu
+* Change color on hover of 'Logout', 'Restart' and 'Shutdown' menu items
+* Change displayshow, rename key item "Low Quality" to "Upgradable" and hide when not in use
+* Change displayshow, explicitly display counts of episodes and specials in description
+* Change reword text of remove show dialog
+* Change color headings of 'Logout', 'Restart', 'Shutdown' and show 'Remove' confirmation dialogs
+* Change add confirmation dialog to 'Clear errors' button on 'View Errors' page
+* Change refactor CSS to improve browser processing time (removed ~20% redundancy)
+* Change remove redundant html attributes
+* Change vastly simplify config pages with a button to display More/Less Gear
+* Change only show More/Less Gear button when more options are available
+* Change use a distinguishable text label color to highlight exposed options
+* Change Show List, display tag groups as reorderable tabs with number of visible shows
+* Change Show List, simplify page with new layout, sort and search controls
+* Change Show List, add a layout called 'Flexible' with some new show card sizes, the old 'Posters' is 'Talltrait'
+* Change Show List, rename 'Small Poster' to 'Poster'
+* Change Episode View, new sort controls
+* Add fanart to Show List
+* Change move menu item config/"About" to "Tools" menu
+* Add key shortcuts and list them on the "About" page
+* Add Esc key on Show List focuses the search box so can disable config/general/interface/"Give show list search focus"
+  in order to use other key sequences easier by no longer requiring an initial Esc to defocus the search box
+* Fix (forever) bug, remove never used fileBrowser ctor that was raising browser errors
+* Change add a short delay to the menu hover-over to prevent a false positive display
+* Change add a short delay to the menu move-away to prevent a false positive hide
+* Add filter helper button to toggle filter between contains, starts, and ends with) on Show List
+* Change Show List, filter accepts JS regular expressions (e.g. ^e and e$ filters shows that start, end 'e' respectively)
+* Add lamp under config menu to override default light or dark theme on a per browser basis
 
 
 ### 0.13.15 (2018-01-26 10:30:00 UTC)
@@ -1194,11 +1231,10 @@
 * Update jquery.form plugin 3.35.0 to 3.51.0 (6bf24a5)
 * Update jQuery SelectBoxes 2.2.4 to 2.2.6
 * Update jquery-tokeninput 1.60 to 1.62 (9c36e19)
-* Update jQuery-UI 1.10.4 to 1.12.1 - minimum supported IE is 8
 * Update jQuery UI Touch Punch 0.2.2 to 0.2.3
 * Update qTip 2.2.1 to 2.2.2
 * Update tablesorter 2.17.7 to 2.28.5
-* Update jQuery 1.8.3 to 2.2.4
+* Update jQuery 1.8.3 to 2.2.4 minimum supported IE is 9+
 * Add one time run to start up that deletes troublemaking compiled files
 * Fix reload of homepage after restart in some browsers
 * Add detection of '1080p Remux' releases as fullhdbluray

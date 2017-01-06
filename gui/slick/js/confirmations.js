@@ -1,89 +1,43 @@
+function bindConfirm(selector, title, text, addShowName, funcParams){
+
+	selector.on('click', function(e){
+		e.preventDefault();
+
+		if (!/undefined/i.test(addShowName))
+			text = text.replace('%showname%', document.getElementById('showtitle').getAttribute('data-showname'));
+
+		var href = $(this).attr('href');
+
+		$.confirm({
+			title		: title,
+			text		: text,
+			dialogClass	: 'modal-dialog' +
+				(/Logout/.test(title) ? ' gold' :
+					/Restart/.test(title) ? ' green' :
+						/(Shutdown|Remove\sShow)/.test(title) ? ' red' : ''),
+			confirm: function(){location.href = href + (/undefined/i.test(funcParams) ? '' : funcParams())},
+			cancel: function(){},
+			confirmButton: 'Yes', confirmButtonClass: 'green', cancelButton: 'No', cancelButtonClass: 'red'
+		});
+	});
+}
+
 $(document).ready(function () {
-	$('a.logout').bind('click',function(e) {
-		e.preventDefault();
-		var target = $( this ).attr('href');
-		$.confirm({
-			'title'		: 'Logout',
-			'message'	: 'Are you sure you want to Logout from SickGear ?',
-			'buttons'	: {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function(){
-						location.href = target;
-					}
-				},
-				'No'	: {
-					'class'	: 'red',
-					'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
-				}
-			}
-		});
-	});
+	var nav$ = $('nav'), menu$ = $('#SubMenu'), sure = 'Are you sure you want to ';
 
-	$('a.shutdown').bind('click',function(e) {
-		e.preventDefault();
-		var target = $( this ).attr('href');
-		$.confirm({
-			'title'		: 'Shutdown',
-			'message'	: 'Are you sure you want to shutdown SickGear ?',
-			'buttons'	: {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function(){
-						location.href = target;
-					}
-				},
-				'No'	: {
-					'class'	: 'red',
-					'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
-				}
-			}
+	bindConfirm(nav$.find('a.logout'), 'Logout', sure + 'logout SickGear ?');
+	bindConfirm(nav$.find('a.restart'), 'Restart', sure + 'restart SickGear ?');
+	bindConfirm(nav$.find('a.shutdown'), 'Shutdown', sure + 'shutdown SickGear ?');
+	bindConfirm(menu$.find('a[href$="/clearHistory/"]'), 'Clear History', sure + 'clear all download history ?');
+	bindConfirm(menu$.find('a[href$="/trimHistory/"]'), 'Trim History', sure + 'trim all download history<br />older than 30 days ?');
+	bindConfirm(menu$.find('a[href$="/clearerrors/"]'), 'Clear Errors', sure + 'clear all errors ?');
+	bindConfirm(menu$.find('a[href*="home/deleteShow"]'), 'Remove Show',
+		'Remove <span class="footerhighlight">%showname%</span><br />'
+		+ 'from the database, are you sure ?<br /><br />'
+		+ '<input type="checkbox" id="delete-files">&nbsp;<span class="red-text">Delete media and meta files as well ?</span></input>',
+		!0, function(){ // If checkbox is ticked, remove show and delete files. Else just remove show.
+			return document.getElementById('delete-files').checked ? '&full=1' : '';
 		});
-	});
-
-	$('a.restart').bind('click',function(e) {
-		e.preventDefault();
-		var target = $( this ).attr('href');
-		$.confirm({
-			'title'		: 'Restart',
-			'message'	: 'Are you sure you want to restart SickGear ?',
-			'buttons'	: {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function(){
-						location.href = target;
-					}
-				},
-				'No'	: {
-					'class'	: 'red',
-					'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
-				}
-			}
-		});
-	});
-
-	$('a.remove').bind('click',function(e) {
-		e.preventDefault();
-		var target = $( this ).attr('href');
-		var showname = document.getElementById('showtitle').getAttribute('data-showname');
-		$.confirm({
-			'title'		: 'Remove Show',
-			'message'	: 'Are you sure you want to remove <span class="footerhighlight">' + showname + '</span> from the database ?<br /><br /><input type="checkbox" id="delete-files"> <span class="red-text">Check to delete files as well. IRREVERSIBLE</span>',
-			'buttons'	: {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function(){
-						location.href = target + (document.getElementById('delete-files').checked ? '&full=1' : '');
-						// If checkbox is ticked, remove show and delete files. Else just remove show.
-					}
-				},
-				'No'	: {
-					'class'	: 'red',
-					'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
-				}
-			}
-		});
-	});
 
 	$('#del-watched').bind('click', function(e) {
 		e.preventDefault();
@@ -119,54 +73,47 @@ $(document).ready(function () {
 		/** @namespace $.SickGear.history.lastDeleteFiles */
 		/** @namespace $.SickGear.history.lastDeleteRecords */
 		var action = $.SickGear.history.isTrashit ? 'Trash' : 'Delete',
-			btns = {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function(){
-						var deleteFiles = !!$('#delete-files:checked').length,
-							deleteRecords = !!$('#delete-records:checked').length,
-							checked = ' checked="checked"';
-						$.SickGear.history.lastDeleteFiles = deleteFiles ? checked : '';
-						$.SickGear.history.lastDeleteRecords = deleteRecords ? checked : '';
-						$.post($.SickGear.Root + '/history/watched',
-							{
-								_xsrf: Cookies.get('_xsrf'),
-								tvew_id: delArr.join('|'),
-								files: (deleteFiles ? '1' : ''),
-								records: (deleteRecords ? '1' : '')
-							},
-							function(data){
-								var result = $.parseJSON(data);
-								result.success && window.location.reload(true);
-								/* using window.location as the following is
-								   sluggish when deleting 20 of 100 records
-								*/
-								/*
-								result.success && $.each(result.success, function(){
-									var tr = $('#del-' + this).closest('tr');
-									var t = tr.closest('table');
-									tr.addClass('delete-me').fadeToggle('fast', 'linear').promise().done(
-										function(){
-											$('.delete-me').html('');
-											t.trigger('update');
-											$.SickGear.sumChecked();
-										});
-								});*/
-						});
-					}
-				}
+			onConfirm = function(){
+				var deleteFiles = !!$('#delete-files:checked').length,
+					deleteRecords = !!$('#delete-records:checked').length,
+					checked = ' checked="checked"';
+				$.SickGear.history.lastDeleteFiles = deleteFiles ? checked : '';
+				$.SickGear.history.lastDeleteRecords = deleteRecords ? checked : '';
+				$.post($.SickGear.Root + '/history/watched',
+					{
+						_xsrf: Cookies.get('_xsrf'),
+						tvew_id: delArr.join('|'),
+						files: (deleteFiles ? '1' : ''),
+						records: (deleteRecords ? '1' : '')
+					},
+					function(data){
+						var result = $.parseJSON(data);
+						result.success && window.location.reload(true);
+						/* using window.location as the following is
+						   sluggish when deleting 20 of 100 records
+						*/
+						/*
+						result.success && $.each(result.success, function(){
+							var tr = $('#del-' + this).closest('tr');
+							var t = tr.closest('table');
+							tr.addClass('delete-me').fadeToggle('fast', 'linear').promise().done(
+								function(){
+									$('.delete-me').html('');
+									t.trigger('update');
+									$.SickGear.sumChecked();
+								});
+						});*/
+				});
 			};
 
-		// btn pre-created here in order to use a custom btn text as named key to object
-		btns['No' + (0 < mFiles ? ', abort ' + ($.SickGear.history.isTrashit ? 'trash' : 'permanent delete') : '')] = {'class' : 'red'};
 		$.confirm({
-			'title'		: (action + (0 < mFiles ? ' media' : ' records')
-				+ '<span style="float:right;font-size:12px">(<a class="highlight-text contrast-text" href="/config/general/">"Send to trash" options</a>)</span>'),
-			'message'	: (0 < mFiles
-					? '<input id="delete-files" style="margin-right:6px"' + $.SickGear.history.lastDeleteFiles + ' type="checkbox">'
-					+ '<span>' + action + ' <span class="footerhighlight">' + mFiles + '</span>'
-					+ ' media file' + (1===mFiles?'':'s') + ' from disk</span>'
-					: ''
+			title: (action + (0 < mFiles ? ' media' : ' records') +
+				'<span style="float:right;font-size:12px">(<a class="highlight-text contrast-text" href="/config/general/">"Send to trash" options</a>)</span>'),
+			text: (0 < mFiles
+				? '<input id="delete-files" style="margin-right:6px"' + $.SickGear.history.lastDeleteFiles + ' type="checkbox">'
+				+ '<span>' + action + ' <span class="footerhighlight">' + mFiles + '</span>'
+				+ ' media file' + (1===mFiles?'':'s') + ' from disk</span>'
+				: ''
 			)
 			+ '<span style="display:block;margin-top:20px">'
 			+ '<input id="delete-records" style="margin-right:6px"' + $.SickGear.history.lastDeleteRecords + ' type="checkbox">'
@@ -174,49 +121,10 @@ $(document).ready(function () {
 			+ delArr.length + '</span> history record' + (1===delArr.length?'':'s')
 			+ '</span>'
 			+ '<span class="red-text" style="display:block;margin-top:20px">Are you sure ?</span>',
-			'buttons'	: btns
-		});
-	});
-
-	$('a.clearhistory').bind('click',function(e) {
-		e.preventDefault();
-		var target = $( this ).attr('href');
-		$.confirm({
-			'title'		: 'Clear History',
-			'message'	: 'Are you sure you want to clear all download history ?',
-			'buttons'	: {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function(){
-						location.href = target;
-					}
-				},
-				'No'	: {
-					'class'	: 'red',
-					'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
-				}
-			}
-		});
-	});
-
-	$('a.trimhistory').bind('click',function(e) {
-		e.preventDefault();
-		var target = $( this ).attr('href');
-		$.confirm({
-			'title'		: 'Trim History',
-			'message'	: 'Are you sure you want to trim all download history older than 30 days ?',
-			'buttons'	: {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function(){
-						location.href = target;
-					}
-				},
-				'No'	: {
-					'class'	: 'red',
-					'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
-				}
-			}
+			dialogClass	: 'modal-dialog red',
+			confirmButton: 'Yes', confirmButtonClass: 'green', confirm: onConfirm,
+			cancelButton: 'No' + (0 < mFiles ? ', abort ' + ($.SickGear.history.isTrashit ? 'trash' : 'permanent delete') : ''),
+			cancelButtonClass: 'red', cancel: function(){}
 		});
 	});
 

@@ -10,7 +10,7 @@ $(document).ready(function() {
 	// handle the show selection dropbox
 	$('#pickShow').change(function() {
 		var val = $(this).val();
-		if (val != 0)
+		if (0 !== val)
 			window.location.href = $.SickGear.Root + '/home/displayShow?show=' + val;
 	});
 
@@ -27,7 +27,7 @@ $(document).ready(function() {
 
 	$('#seasonJump').change(function() {
 		var id = $(this).val();
-		if (id && 'jump' != id) {
+		if (id && 'jump' !== id) {
 			$('html,body').animate({scrollTop: $(id).offset().top}, 'slow');
 			location.hash = id;
 		}
@@ -89,7 +89,7 @@ $(document).ready(function() {
 				numRows++
 			});
 			var el = $('#' + seasonNo + '-cols');
-			if (0 == numRows) {
+			if (0 === numRows) {
 				$(this).hide();
 				el.hide();
 			} else {
@@ -173,8 +173,9 @@ $(document).ready(function() {
 	qTips($('.addQTip'));
 
 	function table_init(table$) {
-		$('#sbRoot').ajaxEpSearch();
-		$('#sbRoot').ajaxEpSubtitlesSearch();
+		var sbroot$ = $('#sbRoot');
+		sbroot$.ajaxEpSearch();
+		sbroot$.ajaxEpSubtitlesSearch();
 
 		if ($.SickGear.config.useFuzzy) {
 			fuzzyMoment({
@@ -192,7 +193,7 @@ $(document).ready(function() {
 				selectorHeaders: '> thead tr.tablesorter-headerRow th',
 				textExtraction: {
 					'.tablesorter-ep-num': function(node) {
-						var n = /(\d+)\)?$/img.exec(''+$(node).find('span').text()); return (null == n ? '' : n[1]); },
+						var n = /(\d+)\)?$/img.exec(''+$(node).find('span').text()); return (null === n ? '' : n[1]); },
 					'.tablesorter-ep-scene': function(node) {
 							var n = $(node).find('input'); return n.val() || n.attr('placeholder'); },
 					'.tablesorter-airdate': function(node) { return $(node).find('span').attr('data-airdate') || ''; }
@@ -209,7 +210,7 @@ $(document).ready(function() {
 
 				$(obj).find('.epCheck:visible').each(function() {
 					var epParts = $(this).attr('id').split('x');
-					if (epParts[0] == seasNo)
+					if (epParts[0] === seasNo)
 						this.checked = seasCheck.checked
 
 				});
@@ -231,7 +232,7 @@ $(document).ready(function() {
 						case 1:
 							this.checked = lastCheck.checked;
 					}
-					(this == check || this == lastCheck) && found++;
+					(this === check || this === lastCheck) && found++;
 				});
 				lastCheck = this;
 			});
@@ -277,7 +278,7 @@ $(document).ready(function() {
 			table$.find('span.images').toggleClass('hide');
 			this$.toggleClass('hide');
 			function fetchSeason() {
-				if (0 == $.SickGear.season.length)
+				if (0 === $.SickGear.season.length)
 					return;
 
 				var season = $.SickGear.season[0];
@@ -293,17 +294,26 @@ $(document).ready(function() {
 						table$.toggleClass('open');
 						this$.toggleClass('hide');
 						table$.find('span.images').toggleClass('hide');
-						fetchSeason()
+
+						var el = $('#checkboxControls').find('input');
+						el.each(function() {
+							var status = this.checked;
+							$('tr.' + $(this).attr('id')).each(function() {
+								status && $(this).show() || $(this).hide();
+							});
+						});
+
+						fetchSeason();
 					}
 				);
 			}
 			$.SickGear.season.push(this.id);
 			var result = [];
 			$.each($.SickGear.season, function(i, e) {
-				if (-1 == $.inArray(e, result)) result.push(e);
+				if (-1 === $.inArray(e, result)) result.push(e);
 			});
 			$.SickGear.season = result;
-			if (!$.SickGear.run && 1 == $.SickGear.season.length) $.SickGear.run = !0 && fetchSeason();
+			if (!$.SickGear.run && 1 === $.SickGear.season.length) $.SickGear.run = !0 && fetchSeason();
 		}
 		return !1;
 	});

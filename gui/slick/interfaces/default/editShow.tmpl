@@ -22,9 +22,9 @@
 <script>
 	var config = {showLang: '$show.lang', showIsAnime: #echo ('!1','!0')[$show.is_anime]#, expandIds: #echo ('!1','!0')[$expand_ids]#}
 </script>
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/editShow.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
+<script src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script src="$sbRoot/js/editShow.js?v=$sbPID"></script>
+<script src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
 #if $varExists('header')
 	<h1 class="header"><span class="grey-text">Edit&nbsp;</span>$header</h1>
 #else
@@ -93,7 +93,7 @@
 						<span class="label-container">
 							<span class="component-title">Alternative release name(s)</span>
 							<span class="component-desc">
-								<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200" placeholder="Enter one title here, then 'Add'">
+								<input type="text" id="SceneName" class="form-control form-control-inline input-sm input200" placeholder="Enter one title here, then 'Add'" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 								<select id="SceneNameSeason" class="form-control form-control-inline input-sm input100" style="#echo ('visibility:hidden','float:left')[$show.anime]#">
 									<option value="-1">Series</option>
 #if $show.anime:
@@ -108,7 +108,7 @@
 							</span>
 							<span id="SceneException" class="component-desc" style="display:none">
 								<h4 class="grey-text">Alternative a.k.a scene exceptions list (multi-selectable)</h4>
-								<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="input350" style="min-height:90px; float:left" >
+								<select id="exceptions_list" name="exceptions_list" multiple="multiple" class="form-control form-control-inline input-sm input350" style="min-height:90px; float:left">
 #for $cur_exception_season in $show.exceptions:
     #for $cur_exception in $show.exceptions[$cur_exception_season]:
 									<option value="$cur_exception_season|$cur_exception">#if $show.is_anime#S#echo ($cur_exception_season, '*')[$cur_exception_season == -1]#: #end if#$cur_exception</option>
@@ -117,7 +117,7 @@
 								</select>
 								<span><p class="note">#if $show.is_anime#S* = Any series. #end if#The original name is used along<br />with this case insensitive list</p></span>
 								<div>
-									<input id="removeSceneName" value="Remove" class="btn pull-left" type="button" style="margin-top: 10px;"/>
+									<input id="removeSceneName" value="Remove" class="btn pull-left" type="button" style="margin-top:10px">
 								</div>
 							</span>
 						</span>
@@ -127,7 +127,7 @@
 						<label for="rls_ignore_words">
 							<span class="component-title">Ignore result with any word</span>
 							<span class="component-desc">
-								<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="$show.rls_ignore_words" class="form-control form-control-inline input-sm input350">
+								<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="$show.rls_ignore_words" class="form-control form-control-inline input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 								<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
 								<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma seperated words or regular expressions</p>
 							</span>
@@ -138,7 +138,7 @@
 						<label for="rls_require_words">
 							<span class="component-title">Require at least one word</span>
 							<span class="component-desc">
-								<input type="text" name="rls_require_words" id="rls_require_words" value="$show.rls_require_words" class="form-control form-control-inline input-sm input350">
+								<input type="text" name="rls_require_words" id="rls_require_words" value="$show.rls_require_words" class="form-control form-control-inline input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 								<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
 								<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma seperated words or regular expressions</p>
 							</span>
@@ -221,7 +221,7 @@
 #if $show.is_anime
     #import sickbeard.blackandwhitelist
     #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
-					<script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
+					<script src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
 #end if
 				</div><!-- /component-group2 //-->
 
@@ -241,7 +241,7 @@
 						<label for="location">
 							<span class="component-title">Location for files</span>
 							<span class="component-desc">
-								<input type="text" name="location" id="location" value="$show._location" class="form-control form-control-inline input-sm input350">
+								<input type="text" name="location" id="location" value="$show._location" class="form-control form-control-inline input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 							</span>
 						</label>
 					</div>
@@ -278,9 +278,9 @@
 #end if
 								<p>
 								<span class="grey-text">fanart usage:&nbsp;</span>maximum $sg_var('FANART_LIMIT', 3) fanart images downloaded per show, <a href="$sbRoot/config/general/#core-component-group2">change limit</a><br />
-								<span class="grey-text">fanart keys:&nbsp;</span>hold down Ctrl+Alt (mac: Command+Option) and then press any of... left or right to change image, and<br />
-								's' to change and save ratings where 'a'/down = avoid, 'f' = fave, 'g'/up = group (repeat keypress to toggle rating)
-								with the livepanel not in 's'ave mode; up = change view mode, down = toggle translucency
+								<span class="grey-text">fanart keys:&nbsp;</span>hold <b class="keyb">Ctrl</b>+<b class="keyb">Alt</b> (mac: Command+Option) for any fanart action then, <b class="keyb">left</b> or <b class="keyb">right</b> view images,<br />
+								<b class="keyb">s</b>ave ratings mode where <b class="keyb">a</b> or <b class="keyb">down</b> = avoid, <b class="keyb">f</b>ave, <b class="keyb">g</b> or <b class="keyb">up</b> = group (repeat press to toggle rating),<br />
+								when livepanel is not in save ratings mode; <b class="keyb">up</b> = change view mode, <b class="keyb">down</b> = toggle translucency
 							</span>
 						</label>
 					</div>
@@ -334,7 +334,7 @@
 								<span class="component-desc">
 
     #set $current_showid = $show.ids.get($src_id, {'id': 0}).get('id')
-									<input type="text" data-maybe-master="#echo ('0', '1')[bool($maybe_master)]#" name="mid-$src_id" id="#echo ('mid-%s' % $src_id, 'source-id')[$src_id == $show.indexer]#" value="#echo ($current_showid, $srcid)[$expand_ids and ($src_id == $tvsrc)]#" class="form-control form-control-inline input-sm#if $src_id == $show.indexer and $unlock_master_id# warning" title="Abandoned master ID#end if#" #echo ('', $html_disabled)[$src_id == $show.indexer and not $unlock_master_id]#>
+									<input type="text" data-maybe-master="#echo ('0', '1')[bool($maybe_master)]#" name="mid-$src_id" id="#echo ('mid-%s' % $src_id, 'source-id')[$src_id == $show.indexer]#" value="#echo ($current_showid, $srcid)[$expand_ids and ($src_id == $tvsrc)]#" class="form-control form-control-inline input-sm#if $src_id == $show.indexer and $unlock_master_id# warning" title="Abandoned master ID#end if#" #echo ('', $html_disabled)[$src_id == $show.indexer and not $unlock_master_id]# autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 
     #if $src_id == $show.indexer
 									<label for="the-master">
@@ -376,7 +376,7 @@
 			</div>
 
 			<div style="margin-top:15px">
-				<input type="submit" id="submit" value="Update Show" class="btn btn-primary" />
+				<input type="submit" id="submit" value="Update Show" class="btn btn-primary">
 				<a href="$sbRoot/home/displayShow?show=$show.indexerid" class="btn btn-primary" style="margin-left:10px">Cancel Edit</a>
 			</div>
 		</form>

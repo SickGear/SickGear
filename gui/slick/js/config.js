@@ -1,12 +1,8 @@
 function toggle$(el, cond){
-	var ifId = '-if-' + $(el).attr('id');
-	if(cond){
-		$('.hide' + ifId).fadeOut('fast', 'linear');
-		$('.show' + ifId).fadeIn('fast', 'linear');
-	} else {
-		$('.show' + ifId).fadeOut('fast', 'linear');
-		$('.hide' + ifId).fadeIn('fast', 'linear');
-	}
+	var hide = '.hide', show = '.show', ifId = '-if-' + $(el).attr('id'), t;
+	!cond && (t = hide) && (hide = show) && (show = t);
+	$(hide + ifId).fadeOut('fast', 'linear');
+	$(show + ifId).fadeIn('fast', 'linear');
 }
 
 $(document).ready(function () {
@@ -35,6 +31,39 @@ $(document).ready(function () {
 		toggle$(this, $(this).prop('checked'));
 	});
 
+	var classHas = function(haystack, needle){
+		var match = !1, items = haystack.split(' '), regex = new RegExp(needle);
+		$.each(items, function(k, v){
+			if (match = regex.exec(v) || !1)
+				return !1;
+		});
+		return match;
+	};
+
+	$('.feature-toggle').click(function(e) {
+		e.preventDefault();
+
+		var that$ = $('.feature-toggle'), btnOld = 'More', btnNew = 'Less', state, t;
+
+		that$.attr('data-state', !0 === (state = /on/.test($('.feature-toggle:first').attr('data-state'))) ? '' : 'on');
+		if (state) {
+			$('.adv, .adv-hide').fadeOut('fast', 'linear');
+			t = btnOld; btnOld = btnNew; btnNew = t;
+		} else {
+			$('.adv').filter(function () {
+				// skip elements hidden due to option defaults
+				var sClasses = $(this).attr('class'),
+					hideIf = classHas(sClasses, '^hide_if_(.*)'),
+					showIf = classHas(sClasses, '^show_if_(.*)');
+				return (!1 === hideIf && !1 === showIf) ? !0 :
+					!1 !== hideIf ? !$('#' + hideIf[1]).prop('checked') : $('#' + showIf[1]).prop('checked');
+			}).fadeIn('fast', 'linear');
+
+			!/undefined/.test($.fn.torrentMethodAdvHandler) && $.fn.torrentMethodAdvHandler();
+		}
+		that$.val(that$.val().replace(btnOld, btnNew));
+	});
+
 	viewIfSel.each(function () {
 		$((0 < $(this).find('option:selected').val() ? '.hide-if-' : '.show-if-') + $(this).attr('id')).hide();
 	});
@@ -50,16 +79,16 @@ $(document).ready(function () {
 	function accId() {return elDropDown.find(selOpt).val();}
 	function nameList() {return elDropDown.find(selOpt).text();}
 	function isAdd() {return 'new' === accId();}
-	function isOff() {return 0 == nameList().indexOf('(Off) ');}
+	function isOff() {return 0 === nameList().indexOf('(Off) ');}
 	function warnMessage(msg) { elInput.addClass('warning').prop('title', msg); }
-	function all(state) {$([idSelect, idDel, idInput, idOnOff].join()).prop('disabled', 'on' == state ? !1 : !0)}
+	function all(state) {$([idSelect, idDel, idInput, idOnOff].join()).prop('disabled', 'on' === state ? !1 : !0)}
 	function setOnOff() {elOnOff.val(isAdd() || isOff() ? 'Enable' : 'Disable');}
 	function setLink() {
 		var idView = '#view-list', idLink = '#link-list';
 		return $([idView, idLink].join()).removeClass() &&
 			((isAdd() || isOff()) && $(idLink).addClass('hide') || $(idView).addClass('hide')) &&
 			(!isOff() && $(idLink)
-				.attr('href', sbRoot + '/home/addShows/watchlist_imdb?account=' + accId())
+				.attr('href', sbRoot + '/home/addShows/imdb_watchlist?account=' + accId())
 				.attr('title', 'View ' + nameList()));
 	}
 
@@ -86,7 +115,7 @@ $(document).ready(function () {
 		var i, l, accounts = response.accounts, options = elDropDown.get(0).options;
 		for (i = 0, l = accounts.length; i < l; i = i + 2) {
 			options[options.length] = new Option(accounts[i + 1] +
-				(0 == accounts[i + 1].replace('(Off) ', '').toLowerCase().indexOf('your') ? '' : '\'s') + ' list', accounts[i]);
+				(0 === accounts[i + 1].replace('(Off) ', '').toLowerCase().indexOf('your') ? '' : '\'s') + ' list', accounts[i]);
 			if (0 <= $.trim(elInput.val()).indexOf(accounts[i])) {
 				elDropDown.find(opt).prop(sel, !1);
 				elDropDown.find('option[value="' + accounts[i] + '"]').prop(sel, sel);
@@ -105,27 +134,20 @@ $(document).ready(function () {
 	elDel.on('click', function(e) {
 		all('off');
 		$.confirm({
-			'title'		: 'Remove the "' + nameList().replace('\'s', '').replace(' list', '') + '" IMDb Watchlist',
-			'message'	: 'Are you sure you want to remove <span class="footerhighlight">' + nameList() + '</span> ?<br /><br />',
-			'buttons'	: {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function() {
+			title	: 'Remove the "' + nameList().replace('\'s', '').replace(' list', '') + '" IMDb Watchlist',
+			text	: 'Are you sure you want to remove <span class="footerhighlight">' + nameList() + '</span> ?<br /><br />',
+			confirm	: function() {
 						all('off');
-						$.get(sbRoot + '/home/addShows/watchlist_imdb', {
+						$.get(sbRoot + '/home/addShows/imdb_watchlist', {
 							'action': elDel.val().toLowerCase(),
 							'select': accId()})
 							.done(function(response) {
 								all('on'); setControls(!populateSelect(response), !1); setOnOff(); })
 							.fail(function() {
 								all('on'); setControls(!0, 'Invalid ID'); setOnOff(); });
-					}
-				},
-				'No'	: {
-					'class'	: 'red',
-					'action': function() { e.preventDefault(); all('on'); defaultControls();}
-				}
-			}
+			},
+			cancel	: function() {e.preventDefault(); all('on'); defaultControls();},
+			confirmButton: 'Yes', confirmButtonClass: 'green', cancelButton: 'No', cancelButtonClass: 'red'
 		});
 	});
 
@@ -138,12 +160,12 @@ $(document).ready(function () {
 		} else {
 			all('off');
 			var params = {'action': elOnOff.val().toLowerCase()};
-			if ('enable' == params.action)
+			if ('enable' === params.action)
 				params.input = strList;
 			else
 				params.select = accId();
 
-			$.get(sbRoot + '/home/addShows/watchlist_imdb', params)
+			$.get(sbRoot + '/home/addShows/imdb_watchlist', params)
 				.done(function(data) { setControls(!populateSelect(data), !1); })
 				.fail(function() { setControls(!0, 'Failed to load list'); });
 		}
@@ -196,10 +218,10 @@ $(document).ready(function () {
 	$('.datePresets').click(function () {
 		var elDatePresets = $('#date_presets'),
 			defaultPreset = elDatePresets.val();
-		if ($(this).prop('checked') && '%x' == defaultPreset) {
+		if ($(this).prop('checked') && '%x' === defaultPreset) {
 			defaultPreset = '%a, %b %d, %Y';
 			$('#date_use_system_default').html('1')
-		} else if (!$(this).prop('checked') && '1' == $('#date_use_system_default').html())
+		} else if (!$(this).prop('checked') && '1' === $('#date_use_system_default').html())
 			defaultPreset = '%x';
 
 		elDatePresets.attr('name', 'date_preset_old');
@@ -350,7 +372,7 @@ $(document).ready(function () {
 });
 
 function config_success(response) {
-	if ('reload' == response) {
+	if ('reload' === response) {
 		window.location.reload(true);
 	} else if ('restart' == response) {
 		window.location.href = sbRoot + $('a.restart').attr('href')
@@ -366,15 +388,20 @@ function config_success(response) {
 	if('saveSearch' == $('#configForm').attr('action')){
 		getFooterTime({'change_layout': 0});
 	}
+
+	var theme = $('#theme_name').find(':selected').val();
+	if (!/undefined/i.test(typeof theme)) {
+		setStyle(theme);
+	}
 }
 
 function fetch_pullrequests() {
 	$.getJSON(sbRoot + '/config/general/fetch_pullrequests', function (data) {
 		$('#pullRequestVersion').find('option').remove();
-		if (data['result'] == 'success') {
+		if (data['result'] === 'success') {
 			var pulls = [];
 			$.each(data['pulls'], function (i, pull) {
-				if (pull[0] != '') {
+				if (pull[0] !== '') {
 					pulls.push(pull);
 				}
 			});
@@ -395,10 +422,10 @@ function fetch_pullrequests() {
 function fetch_branches() {
 	$.getJSON(sbRoot + '/config/general/fetch_branches', function (data) {
 		$('#branchVersion').find('option').remove();
-		if (data['result'] == 'success') {
+		if (data['result'] === 'success') {
 			var branches = [];
 			$.each(data['branches'], function (i, branch) {
-				if (branch != '') {
+				if (branch !== '') {
 					branches.push(branch);
 				}
 			});

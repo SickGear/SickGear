@@ -19,8 +19,8 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<script type="text/javascript" src="$sbRoot/js/configProviders.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script src="$sbRoot/js/configProviders.js?v=$sbPID"></script>
+<script src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #set $methods_notused = []
 #if not $sickbeard.USE_NZBS
@@ -31,7 +31,7 @@
 #end if
 #slurp
 #if $sickbeard.USE_NZBS or $sickbeard.USE_TORRENTS
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 \$(document).ready(function(){
     #if $sickbeard.USE_NZBS
@@ -84,7 +84,7 @@
 #if $methods_notused
 							<blockquote style="margin:20px 0"><%= '/'.join(x for x in methods_notused) %> providers can be enabled in <a href="$sbRoot/config/search/">Search Settings</a></blockquote>
 #else
-							<br/>
+							<br />
 #end if
 						</div>
 
@@ -103,7 +103,7 @@
         'Site Down')[$bad_url]
     #set $state = ('', ' <span class="red-text">(Site Down?)</span>')[$bad_url]
 							<li class="ui-state-default row-#echo ('odd', 'even')[$show_type or not $sickbeard.USE_TORRENTS]##echo ('', ' provider-enabled')[$cur_provider.is_enabled()]#" id="$cur_name">
-								<input type="checkbox" id="enable_$cur_name" class="provider_enabler" <%= html_checked if cur_provider.is_enabled() else '' %>/>
+								<input type="checkbox" id="enable_$cur_name" class="provider_enabler" <%= html_checked if cur_provider.is_enabled() else '' %>>
 								<a class="imgLink" #if $cur_url#href="<%= anon_url(cur_url) %>" onclick="window.open(this.href,'_blank');return false;"#else#name=""#end if# rel="noreferrer"><img src="$sbRoot/images/providers/$cur_provider.image_name()" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle" /></a>
 								<span style="vertical-align:middle">$cur_provider.name$state</span>
     #if $cur_provider.is_public_access() and type($cur_provider).__name__ not in ['TorrentRssProvider']#
@@ -118,7 +118,7 @@
 #end for
 						</ul>
 
-						<input type="hidden" name="provider_order" id="provider_order" value="<%=' '.join([x.get_id()+':'+str(int(x.is_enabled())) for x in sickbeard.providers.sortedProviderList()])%>"/>
+						<input type="hidden" name="provider_order" id="provider_order" value="<%=' '.join([x.get_id()+':'+str(int(x.is_enabled())) for x in sickbeard.providers.sortedProviderList()])%>">
 #if $sickbeard.USE_NZBS or $sickbeard.USE_TORRENTS
 						<div id="provider_key">
 							<span style="float:left;font-size:10px;vertical-align:top;font-weight:normal">(PA)</span><p class="note">Public access, no account required</p>
@@ -133,7 +133,7 @@
 
 						<div style="width: 300px; float: right">
 							<div style="margin: 0px auto; width: 101px">
-								<input type="submit" class="btn config_submitter" value="Save Changes" />
+								<input type="submit" class="btn config_submitter" value="Save Changes">
 							</div>
 						</div>
 #end if
@@ -213,20 +213,20 @@
 							<span class="component-desc">
         #if $can_recent
 								<label for="${cur_newznab_provider.get_id()}_enable_recentsearch" style="display:inline">
-									<input class="view-if" type="checkbox" name="${cur_newznab_provider.get_id()}_enable_recentsearch" id="${cur_newznab_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_newznab_provider.enable_recentsearch else '' %>/>
+									<input class="view-if" type="checkbox" name="${cur_newznab_provider.get_id()}_enable_recentsearch" id="${cur_newznab_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_newznab_provider.enable_recentsearch else '' %>>
 									<p>$recentsearch_tip</p>
 								</label>
 		#end if
         #if $can_backlog
 								<label for="${cur_newznab_provider.get_id()}_enable_backlog" style="display:inline">
-									<input class="enabler view-if" type="checkbox" name="${cur_newznab_provider.get_id()}_enable_backlog" id="${cur_newznab_provider.get_id()}_enable_backlog" <%= html_checked if cur_newznab_provider.enable_backlog else '' %>/>
+									<input class="enabler view-if" type="checkbox" name="${cur_newznab_provider.get_id()}_enable_backlog" id="${cur_newznab_provider.get_id()}_enable_backlog" <%= html_checked if cur_newznab_provider.enable_backlog else '' %>>
 									<p>$backlogsearch_tip</p>
 								</label>
 		#end if
         #if $can_schedule_backlog
         						<div id="content_${cur_newznab_provider.get_id()}_enable_backlog">
 									<label for="${cur_newznab_provider.get_id()}_enable_scheduled_backlog" style="display:inline">
-										<input type="checkbox" name="${cur_newznab_provider.get_id()}_enable_scheduled_backlog" id="${cur_newznab_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_newznab_provider.enable_scheduled_backlog else '' %>/>
+										<input type="checkbox" name="${cur_newznab_provider.get_id()}_enable_scheduled_backlog" id="${cur_newznab_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_newznab_provider.enable_scheduled_backlog else '' %>>
 										<p>$scheduled_backlog_tip</p>
 									</label>
 								</div>
@@ -239,7 +239,7 @@
 							<label for="${cur_newznab_provider.get_id()}_url">
 								<span class="component-title">URL</span>
 								<span class="component-desc">
-									<input type="text" id="${cur_newznab_provider.get_id()}_url" value="$cur_newznab_provider.url" class="form-control input-sm input350" disabled/>
+									<input type="text" id="${cur_newznab_provider.get_id()}_url" value="$cur_newznab_provider.url" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false" disabled>
 								</span>
 							</label>
 						</div>
@@ -248,7 +248,7 @@
 							<label for="${cur_newznab_provider.get_id()}_hash">
 								<span class="component-title">API key</span>
 								<span class="component-desc">
-									<input type="text" id="${cur_newznab_provider.get_id()}_hash" value="<%= starify(cur_newznab_provider.key) %>" newznab_name="${cur_newznab_provider.get_id()}_hash" class="newznab_key form-control input-sm input350" />
+									<input type="text" id="${cur_newznab_provider.get_id()}_hash" value="<%= starify(cur_newznab_provider.key) %>" newznab_name="${cur_newznab_provider.get_id()}_hash" class="newznab_key form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<div class="clear-left"><p>get API key from provider website</p></div>
 								</span>
 							</label>
@@ -264,7 +264,7 @@
 											<span>$filter_scene_only_desc</span>
 										</label>
 										<label for="${cur_newznab_provider.get_id()}_scene_or_contain">
-											$filter_scene_or_contain_desc<input style="float:right;margin-left:4px;padding:2px 4px;height:24px;width:144px" type="text" name="${cur_newznab_provider.get_id()}_scene_or_contain" placeholder="(opt: start 'regex:')" value="<%= cur_newznab_provider.scene_or_contain %>" class="form-control input-sm input150">
+											$filter_scene_or_contain_desc<input style="float:right;margin-left:4px;padding:2px 4px;height:24px;width:144px" type="text" name="${cur_newznab_provider.get_id()}_scene_or_contain" placeholder="(opt: start 'regex:')" value="<%= cur_newznab_provider.scene_or_contain %>" class="form-control input-sm input150" autocorrect="off" autocapitalize="off" spellcheck="false">
 										</label>
 									</div>
 									<div style="margin-left:230px">
@@ -309,10 +309,10 @@
 							<span class="component-title">Episode search mode</span>
 							<span class="component-desc">
 								<label class="space-right">
-									<input type="radio" name="${cur_newznab_provider.get_id()}_search_mode" id="${cur_newznab_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_newznab_provider.search_mode else '' %>/>episodes only (normal use)
+									<input type="radio" name="${cur_newznab_provider.get_id()}_search_mode" id="${cur_newznab_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_newznab_provider.search_mode else '' %>>episodes only (normal use)
 								</label>
 								<label>
-									<input type="radio" name="${cur_newznab_provider.get_id()}_search_mode" id="${cur_newznab_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_newznab_provider.search_mode else '' %>/>season packs only
+									<input type="radio" name="${cur_newznab_provider.get_id()}_search_mode" id="${cur_newznab_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_newznab_provider.search_mode else '' %>>season packs only
 								</label>
 								<p>when searching for episodes, collect single episodes or search for packs</p>
 							</span>
@@ -323,7 +323,7 @@
 							<label for="${cur_newznab_provider.get_id()}_search_fallback">
 								<span class="component-title">Episode search fallback</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${cur_newznab_provider.get_id()}_search_fallback" id="${cur_newznab_provider.get_id()}_search_fallback" <%= html_checked if cur_newznab_provider.search_fallback else '' %>/>
+									<input type="checkbox" name="${cur_newznab_provider.get_id()}_search_fallback" id="${cur_newznab_provider.get_id()}_search_fallback" <%= html_checked if cur_newznab_provider.search_fallback else '' %>>
 									<p>use the alternate episode search mode if no match is found -- warning; may result in a heavy block hit -- best use: manually collect a season, disable after.</p>
 								</span>
 							</label>
@@ -346,20 +346,20 @@
 							<span class="component-desc">
         #if $can_recent
 								<label for="${cur_nzb_provider.get_id()}_enable_recentsearch" style="display:inline">
-									<input class="view-if" type="checkbox" name="${cur_nzb_provider.get_id()}_enable_recentsearch" id="${cur_nzb_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_nzb_provider.enable_recentsearch else '' %>/>
+									<input class="view-if" type="checkbox" name="${cur_nzb_provider.get_id()}_enable_recentsearch" id="${cur_nzb_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_nzb_provider.enable_recentsearch else '' %>>
 									<p>$recentsearch_tip</p>
 								</label>
 		#end if
         #if $can_backlog
 								<label for="${cur_nzb_provider.get_id()}_enable_backlog" style="display:inline">
-									<input class="enabler view-if" type="checkbox" name="${cur_nzb_provider.get_id()}_enable_backlog" id="${cur_nzb_provider.get_id()}_enable_backlog" <%= html_checked if cur_nzb_provider.enable_backlog else '' %>/>
+									<input class="enabler view-if" type="checkbox" name="${cur_nzb_provider.get_id()}_enable_backlog" id="${cur_nzb_provider.get_id()}_enable_backlog" <%= html_checked if cur_nzb_provider.enable_backlog else '' %>>
 									<p>$backlogsearch_tip</p>
 								</label>
 		#end if
         #if $can_schedule_backlog
         						<div id="content_${cur_nzb_provider.get_id()}_enable_backlog">
 									<label for="${cur_nzb_provider.get_id()}_enable_scheduled_backlog" style="display:inline">
-										<input type="checkbox" name="${cur_nzb_provider.get_id()}_enable_scheduled_backlog" id="${cur_nzb_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_nzb_provider.enable_scheduled_backlog else '' %>/>
+										<input type="checkbox" name="${cur_nzb_provider.get_id()}_enable_scheduled_backlog" id="${cur_nzb_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_nzb_provider.enable_scheduled_backlog else '' %>>
 										<p>$scheduled_backlog_tip</p>
 									</label>
 								</div>
@@ -372,7 +372,7 @@
 							<label for="${cur_nzb_provider.get_id()}_username">
 								<span class="component-title">Username</span>
 								<span class="component-desc">
-									<input type="text" name="${cur_nzb_provider.get_id()}_username" value="$cur_nzb_provider.username" class="form-control input-sm input350" />
+									<input type="text" name="${cur_nzb_provider.get_id()}_username" value="$cur_nzb_provider.username" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -383,7 +383,7 @@
 								<span class="component-title">API key</span>
 								<span class="component-desc">
         #set $field_name = cur_nzb_provider.get_id() + '_api_key'
-									<input type="text" name="$field_name" value="<%= starify(cur_nzb_provider.api_key) %>" class="form-control input-sm input350" />
+									<input type="text" name="$field_name" value="<%= starify(cur_nzb_provider.api_key) %>" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
         #if callable(getattr(cur_nzb_provider, 'ui_string', None))
 									<div class="clear-left"><p>${cur_nzb_provider.ui_string($field_name)}</p></div>
         #end if
@@ -401,7 +401,7 @@
 											<span>$filter_scene_only_desc</span>
 										</label>
 										<label for="${cur_nzb_provider.get_id()}_scene_or_contain">
-											$filter_scene_or_contain_desc<input style="float:right;margin-left:4px;padding:2px 4px;height:24px;width:144px" type="text" name="${cur_nzb_provider.get_id()}_scene_or_contain" placeholder="(opt: start 'regex:')" value="<%= cur_nzb_provider.scene_or_contain %>" class="form-control input-sm input150">
+											$filter_scene_or_contain_desc<input style="float:right;margin-left:4px;padding:2px 4px;height:24px;width:144px" type="text" name="${cur_nzb_provider.get_id()}_scene_or_contain" placeholder="(opt: start 'regex:')" value="<%= cur_nzb_provider.scene_or_contain %>" class="form-control input-sm input150" autocorrect="off" autocapitalize="off" spellcheck="false">
 										</label>
 									</div>
 									<div style="margin-left:230px">
@@ -433,10 +433,10 @@
 							<span class="component-title">Episode search mode</span>
 							<span class="component-desc">
 								<label class="space-right">
-									<input type="radio" name="${cur_nzb_provider.get_id()}_search_mode" id="${cur_nzb_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_nzb_provider.search_mode else '' %>/>episodes only (normal use)
+									<input type="radio" name="${cur_nzb_provider.get_id()}_search_mode" id="${cur_nzb_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_nzb_provider.search_mode else '' %>>episodes only (normal use)
 								</label>
 								<label>
-									<input type="radio" name="${cur_nzb_provider.get_id()}_search_mode" id="${cur_nzb_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_nzb_provider.search_mode else '' %>/>season packs only
+									<input type="radio" name="${cur_nzb_provider.get_id()}_search_mode" id="${cur_nzb_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_nzb_provider.search_mode else '' %>>season packs only
 								</label>
 								<p>when searching for episodes, collect single episodes or search for packs</p>
 							</span>
@@ -447,7 +447,7 @@
 							<label for="${cur_nzb_provider.get_id()}_search_fallback">
 								<span class="component-title">Episode search fallback</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${cur_nzb_provider.get_id()}_search_fallback" id="${cur_nzb_provider.get_id()}_search_fallback" <%= html_checked if cur_nzb_provider.search_fallback else '' %>/>
+									<input type="checkbox" name="${cur_nzb_provider.get_id()}_search_fallback" id="${cur_nzb_provider.get_id()}_search_fallback" <%= html_checked if cur_nzb_provider.search_fallback else '' %>>
 									<p>use the alternate episode search mode if no match is found -- warning; may result in a heavy block hit -- best use: manually collect a season, disable after.</p>
 								</span>
 							</label>
@@ -486,20 +486,20 @@
 							<span class="component-desc">
         #if $can_recent
 								<label for="${cur_torrent_provider.get_id()}_enable_recentsearch" style="display:inline">
-									<input class="view-if" type="checkbox" name="${cur_torrent_provider.get_id()}_enable_recentsearch" id="${cur_torrent_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_torrent_provider.enable_recentsearch else '' %>/>
+									<input class="view-if" type="checkbox" name="${cur_torrent_provider.get_id()}_enable_recentsearch" id="${cur_torrent_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_torrent_provider.enable_recentsearch else '' %>>
 									<p>$recentsearch_tip</p>
 								</label>
 		#end if
         #if $can_backlog
 								<label for="${cur_torrent_provider.get_id()}_enable_backlog" style="display:inline">
-									<input class="enabler view-if" type="checkbox" name="${cur_torrent_provider.get_id()}_enable_backlog" id="${cur_torrent_provider.get_id()}_enable_backlog" <%= html_checked if cur_torrent_provider.enable_backlog else '' %>/>
+									<input class="enabler view-if" type="checkbox" name="${cur_torrent_provider.get_id()}_enable_backlog" id="${cur_torrent_provider.get_id()}_enable_backlog" <%= html_checked if cur_torrent_provider.enable_backlog else '' %>>
 									<p>$backlogsearch_tip</p>
 								</label>
 		#end if
         #if $can_schedule_backlog
         						<div id="content_${cur_torrent_provider.get_id()}_enable_backlog">
 									<label for="${cur_torrent_provider.get_id()}_enable_scheduled_backlog" style="display:inline">
-										<input type="checkbox" name="${cur_torrent_provider.get_id()}_enable_scheduled_backlog" id="${cur_torrent_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_torrent_provider.enable_scheduled_backlog else '' %>/>
+										<input type="checkbox" name="${cur_torrent_provider.get_id()}_enable_scheduled_backlog" id="${cur_torrent_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_torrent_provider.enable_scheduled_backlog else '' %>>
 										<p>$scheduled_backlog_tip</p>
 									</label>
 								</div>
@@ -514,7 +514,7 @@
 								<span class="component-title">$url_label</span>
 								<span class="component-desc">
         #set $field_name = cur_torrent_provider.get_id() + '_url_edit'
-									<input type="text" name="$field_name" id="$field_name" value="<%= ', '.join(cur_torrent_provider.url_home) %>" class="form-control input-sm input350" />
+									<input type="text" name="$field_name" id="$field_name" value="<%= ', '.join(cur_torrent_provider.url_home) %>" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
         #if callable(getattr(cur_torrent_provider, 'ui_string', None))
 									<div class="clear-left"><p>${cur_torrent_provider.ui_string($field_name)}</p></div>
         #end if
@@ -529,7 +529,7 @@
         #set $url_label = callable(getattr(cur_torrent_provider, 'ui_string', None)) and cur_torrent_provider.ui_string($field_name) or 'Api key'
 								<span class="component-title">$url_label</span>
 								<span class="component-desc">
-									<input type="text" name="$field_name" id="$field_name" value="<%= starify(cur_torrent_provider.api_key) %>" class="form-control input-sm input350" />
+									<input type="text" name="$field_name" id="$field_name" value="<%= starify(cur_torrent_provider.api_key) %>" class="form-control input-sm input350"  autocorrect="off" autocapitalize="off" spellcheck="false">
         #if callable(getattr(cur_torrent_provider, 'ui_string', None))
             #set $tip_text = cur_torrent_provider.ui_string($field_name + '_tip')
 									<div class="clear-left"><p>$tip_text</p></div>
@@ -544,7 +544,7 @@
 							<label for="$field_name">
 								<span class="component-title">Cookies:</span>
 								<span class="component-desc">
-									<input type="text" name="$field_name" id="$field_name" value="<%= starify(cur_torrent_provider.digest) %>" class="form-control input-sm input350" />
+									<input type="text" name="$field_name" id="$field_name" value="<%= starify(cur_torrent_provider.digest) %>" class="form-control input-sm input350" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         #if callable(getattr(cur_torrent_provider, 'ui_string', None))
 									<div class="clear-left"><p>${cur_torrent_provider.ui_string($field_name)}</p></div>
         #end if
@@ -557,7 +557,7 @@
 							<label for="${cur_torrent_provider.get_id()}_hash">
 								<span class="component-title">Hash:</span>
 								<span class="component-desc">
-									<input type="text" name="${cur_torrent_provider.get_id()}_hash" id="${cur_torrent_provider.get_id()}_hash" value="$cur_torrent_provider.hash" class="form-control input-sm input350" />
+									<input type="text" name="${cur_torrent_provider.get_id()}_hash" id="${cur_torrent_provider.get_id()}_hash" value="$cur_torrent_provider.hash" class="form-control input-sm input350" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -570,7 +570,7 @@
 							<label for="$prov_type">
 								<span class="component-title">#if $hasattr($cur_torrent_provider, 'email')#User email#else#$user_type.capitalize():#end if#</span>
 								<span class="component-desc">
-									<input type="text" name="$prov_type" id="$prov_type" value="$user_value" class="form-control input-sm input350" />
+									<input type="text" name="$prov_type" id="$prov_type" value="$user_value" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -592,7 +592,7 @@
 							<label for="${cur_torrent_provider.get_id()}_passkey">
 								<span class="component-title">Passkey:</span>
 								<span class="component-desc">
-									<input type="text" name="${cur_torrent_provider.get_id()}_passkey" id="${cur_torrent_provider.get_id()}_passkey" value="<%= starify(cur_torrent_provider.passkey) %>" class="form-control input-sm input350" />
+									<input type="text" name="${cur_torrent_provider.get_id()}_passkey" id="${cur_torrent_provider.get_id()}_passkey" value="<%= starify(cur_torrent_provider.passkey) %>" class="form-control input-sm input350" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -606,7 +606,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="${cur_torrent_provider.get_id()}_ratio">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_ratio_desc">Seed until ratio (the goal)</span>
 								<span class="component-desc">
-									<input type="number" name="${cur_torrent_provider.get_id()}_ratio" id="${cur_torrent_provider.get_id()}_ratio" value="$cur_torrent_provider._seed_ratio" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_ratio" id="${cur_torrent_provider.get_id()}_ratio" value="$cur_torrent_provider._seed_ratio" class="form-control input-sm input75">
 									<p>this ratio is requested of each item sent to $name</p>
 									<div class="clear-left"><p>(#if 'transmission' == $sickbeard.TORRENT_METHOD#set -1 to seed forever, or #end if#leave blank for the $name setting)</p></div>
 								</span>
@@ -619,7 +619,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="${cur_torrent_provider.get_id()}_seed_time">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_seed_time_desc">Seed time (provider default)</span>
 								<span class="component-desc">
-									<input type="number" name="${cur_torrent_provider.get_id()}_seed_time" id="${cur_torrent_provider.get_id()}_seed_time" value="$cur_torrent_provider.seed_time" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_seed_time" id="${cur_torrent_provider.get_id()}_seed_time" value="$cur_torrent_provider.seed_time" class="form-control input-sm input75">
 									<p>set 1 or more minimum minutes for each item sent to $name</p>
 									<div class="clear-left"><p>(leave blank $use_default)</p></div>
 								</span>
@@ -631,7 +631,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="${cur_torrent_provider.get_id()}_minseed">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_minseed_desc">Minimum seeders</span>
 								<span class="component-desc">
-									<input type="number" name="${cur_torrent_provider.get_id()}_minseed" id="${cur_torrent_provider.get_id()}_minseed" value="$cur_torrent_provider.minseed" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_minseed" id="${cur_torrent_provider.get_id()}_minseed" value="$cur_torrent_provider.minseed" class="form-control input-sm input75">
 									<p>a release must have to be snatch worthy</p>
 								</span>
 							</label>
@@ -642,7 +642,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="${cur_torrent_provider.get_id()}_minleech">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_minleech_desc">Minimum leechers</span>
 								<span class="component-desc">
-									<input type="number" name="${cur_torrent_provider.get_id()}_minleech" id="${cur_torrent_provider.get_id()}_minleech" value="$cur_torrent_provider.minleech" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_minleech" id="${cur_torrent_provider.get_id()}_minleech" value="$cur_torrent_provider.minleech" class="form-control input-sm input75">
 									<p>a release must have to be snatch worthy</p>
 								</span>
 							</label>
@@ -674,7 +674,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 											<span>$filter_scene_only_desc</span>
 										</label>
 										<label for="${cur_torrent_provider.get_id()}_scene_or_contain">
-											$filter_scene_or_contain_desc<input style="float:right;margin-left:4px;padding:2px 4px;height:24px;width:144px" type="text" name="${cur_torrent_provider.get_id()}_scene_or_contain" placeholder="(opt: start 'regex:')" value="<%= cur_torrent_provider.scene_or_contain %>" class="form-control input-sm input150">
+											$filter_scene_or_contain_desc<input style="float:right;margin-left:4px;padding:2px 4px;height:24px;width:144px" type="text" name="${cur_torrent_provider.get_id()}_scene_or_contain" placeholder="(opt: start 'regex:')" value="<%= cur_torrent_provider.scene_or_contain %>" class="form-control input-sm input150" autocorrect="off" autocapitalize="off" spellcheck="false">
 										</label>
 									</div>
 									<div style="margin-left:230px">
@@ -706,7 +706,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
     #if $hasattr($cur_torrent_provider, 'freeleech'):
 								<div>
 									<label for="${cur_torrent_provider.get_id()}_freeleech" class="space-right">
-										<input type="checkbox" name="${cur_torrent_provider.get_id()}_freeleech" id="${cur_torrent_provider.get_id()}_freeleech" <%= html_checked if cur_torrent_provider.freeleech else '' %>/>
+										<input type="checkbox" name="${cur_torrent_provider.get_id()}_freeleech" id="${cur_torrent_provider.get_id()}_freeleech" <%= html_checked if cur_torrent_provider.freeleech else '' %>>
 										<span><b>[FreeLeech]</b> only</span>
 									</label>
 								</div>
@@ -726,7 +726,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
             #set $cur_fname, $cur_is_default = $filter[0], $filter[1]
             #set $filter_id = '%s_filter_%s' % ($cur_torrent_provider.get_id(), $cur_fval)
 									<label class="space-right">
-										<input type="checkbox" name="$filter_id" id="$filter_id" #echo ('', $html_checked)[$cur_fval in $cur_torrent_provider.filter]#/>
+										<input type="checkbox" name="$filter_id" id="$filter_id" #echo ('', $html_checked)[$cur_fval in $cur_torrent_provider.filter]#>
 										<span>$cur_fname</span>
 									</label>
         #end for
@@ -736,7 +736,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
     #if $hasattr($cur_torrent_provider, 'reject_m2ts'):
 								<div>
 									<label for="${cur_torrent_provider.get_id()}_reject_m2ts">
-										<input type="checkbox" name="${cur_torrent_provider.get_id()}_reject_m2ts" id="${cur_torrent_provider.get_id()}_reject_m2ts" <%= html_checked if cur_torrent_provider.reject_m2ts else '' %>/>
+										<input type="checkbox" name="${cur_torrent_provider.get_id()}_reject_m2ts" id="${cur_torrent_provider.get_id()}_reject_m2ts" <%= html_checked if cur_torrent_provider.reject_m2ts else '' %>>
 										<span>not Blu-ray M2TS (MPEG-2 Transport Stream) container releases</span>
 									</label>
 								</div>
@@ -749,10 +749,10 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<span class="component-title">Episode search mode</span>
 							<span class="component-desc">
 								<label class="space-right">
-									<input type="radio" name="${cur_torrent_provider.get_id()}_search_mode" id="${cur_torrent_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_torrent_provider.search_mode else '' %>/>episodes only (normal use)
+									<input type="radio" name="${cur_torrent_provider.get_id()}_search_mode" id="${cur_torrent_provider.get_id()}_search_mode_eponly" value="eponly" <%= html_checked if 'eponly' == cur_torrent_provider.search_mode else '' %>>episodes only (normal use)
 								</label>
 								<label>
-									<input type="radio" name="${cur_torrent_provider.get_id()}_search_mode" id="${cur_torrent_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_torrent_provider.search_mode else '' %>/>season packs only
+									<input type="radio" name="${cur_torrent_provider.get_id()}_search_mode" id="${cur_torrent_provider.get_id()}_search_mode_sponly" value="sponly" <%= html_checked if 'sponly' == cur_torrent_provider.search_mode else '' %>>season packs only
 								</label>
 								<p>when searching for episodes, collect single episodes or search for packs</p>
 							</span>
@@ -763,7 +763,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="${cur_torrent_provider.get_id()}_search_fallback">
 								<span class="component-title">Episode search fallback</span>
 								<span class="component-desc">
-									<input type="checkbox" name="${cur_torrent_provider.get_id()}_search_fallback" id="${cur_torrent_provider.get_id()}_search_fallback" <%= html_checked if cur_torrent_provider.search_fallback else '' %>/>
+									<input type="checkbox" name="${cur_torrent_provider.get_id()}_search_fallback" id="${cur_torrent_provider.get_id()}_search_fallback" <%= html_checked if cur_torrent_provider.search_fallback else '' %>>
 									<p>use alternate episode search mode if no match is found -- warning; may result in duplicates or a heavy ratio hit -- best use: manually collect a season, disable after</p>
 								</span>
 							</label>
@@ -779,7 +779,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 #end for
 					<!-- end div for editing providers -->
 #if $provider_config_list
-					<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+					<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 #end  if
 					</fieldset>
 				</div><!-- /component-group2 //-->
@@ -800,7 +800,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="newznab_string">
 								<span class="component-title">Select provider:</span>
 								<span class="component-desc">
-									<input type="hidden" name="newznab_string" id="newznab_string" />
+									<input type="hidden" name="newznab_string" id="newznab_string">
 									<select id="editANewznabProvider" class="form-control input-sm">
 										<option value="addNewznab">-- add new provider --</option>
 									</select>
@@ -813,7 +813,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="newznab_name">
 								<span class="component-title">Provider name</span>
 								<span class="component-desc">
-									<input type="text" id="newznab_name" class="form-control input-sm input200" />
+									<input type="text" id="newznab_name" class="form-control input-sm input200" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -822,7 +822,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="newznab_url">
 								<span class="component-title">Site URL</span>
 								<span class="component-desc">
-									<input type="text" id="newznab_url" class="form-control input-sm input350" />
+									<input type="text" id="newznab_url" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -831,7 +831,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="newznab_key">
 								<span class="component-title">API key</span>
 								<span class="component-desc">
-									<input type="text" id="newznab_key" class="form-control input-sm input350" />
+									<input type="text" id="newznab_key" class="form-control input-sm input350" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 								<span class="component-desc">
 									<div class="clear-left"><p>note: enter 0 (zero) if not required</p></div>
@@ -870,10 +870,10 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 						</div>
 
 						<div id="newznab_add_div">
-							<input class="btn" type="button" class="newznab_save" id="newznab_add" value="Add" />
+							<input class="btn" type="button" class="newznab_save" id="newznab_add" value="Add">
 						</div>
 						<div id="newznab_update_div" style="display: none;">
-							<input class="btn btn-danger newznab_delete" type="button" class="newznab_delete" id="newznab_delete" value="Delete" />
+							<input class="btn btn-danger newznab_delete" type="button" class="newznab_delete" id="newznab_delete" value="Delete">
 						</div>
 					</div>
 
@@ -897,7 +897,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 						<label for="torrentrss_string">
 							<span class="component-title">Select provider</span>
 							<span class="component-desc">
-								<input type="hidden" name="torrentrss_string" id="torrentrss_string" />
+								<input type="hidden" name="torrentrss_string" id="torrentrss_string">
 								<select id="editATorrentRssProvider" class="form-control input-sm">
 									<option value="addTorrentRss">-- add new provider --</option>
 								</select>
@@ -910,7 +910,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="torrentrss_name">
 								<span class="component-title">Provider name</span>
 								<span class="component-desc">
-									<input type="text" id="torrentrss_name" class="form-control input-sm input200" />
+									<input type="text" id="torrentrss_name" class="form-control input-sm input200" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -919,7 +919,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="torrentrss_url">
 								<span class="component-title">RSS URL</span>
 								<span class="component-desc">
-									<input type="text" id="torrentrss_url" class="form-control input-sm input350" />
+									<input type="text" id="torrentrss_url" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -928,7 +928,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							<label for="torrentrss_cookies">
 								<span class="component-title">Cookies:</span>
 								<span class="component-desc">
-									<input type="text" id="torrentrss_cookies" class="form-control input-sm input350" />
+									<input type="text" id="torrentrss_cookies" class="form-control input-sm input350" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<p>eg. uid=xx;pass=yy</p>
 									<div class="clear-left"><p>enter [ <span class="grey-text">sg=0</span> ] if not required (a URL containing a key may not need cookies)</p></div>
 								</span>
@@ -936,10 +936,10 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 						</div>
 
 						<div id="torrentrss_add_div">
-							<input type="button" class="btn torrentrss_save" id="torrentrss_add" value="Add" />
+							<input type="button" class="btn torrentrss_save" id="torrentrss_add" value="Add">
 						</div>
 						<div id="torrentrss_update_div" style="display: none;">
-							<input type="button" class="btn btn-danger torrentrss_delete" id="torrentrss_delete" value="Delete" />
+							<input type="button" class="btn btn-danger torrentrss_delete" id="torrentrss_delete" value="Delete">
 						</div>
 					</div>
 				</fieldset>
@@ -947,7 +947,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 #end if
 
 
-			<br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+			<br /><input type="submit" class="btn config_submitter" value="Save Changes"><br />
 
 			</div><!-- /config-components //-->
 
@@ -955,7 +955,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 	</div>
 </div>
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
     jQuery('#config-components').tabs();
 //-->

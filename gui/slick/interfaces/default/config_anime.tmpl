@@ -8,7 +8,7 @@
 ##
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -41,13 +41,13 @@
 							<label for="anime_treat_as_hdtv">
 								<span class="component-title">Quality control</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="anime_treat_as_hdtv" id="anime_treat_as_hdtv" #if $sickbeard.ANIME_TREAT_AS_HDTV then 'checked="checked"' else ""# />
+									<input type="checkbox" class="enabler" name="anime_treat_as_hdtv" id="anime_treat_as_hdtv"#if $sickbeard.ANIME_TREAT_AS_HDTV# checked="checked"#end if#>
 									<p>treat anime releases that lack a quality tag as HDTV instead of "unknown".&nbsp;This may improve snatch success</p>
 								</span>
 							</label>
 						</div>
 
-						<input type="submit" class="btn config_submitter" value="Save Changes" />
+						<input type="submit" class="btn config_submitter" value="Save Changes">
 					</fieldset>
 				</div><!-- /component-group //-->
 
@@ -64,7 +64,7 @@
 							<label for="use_anidb">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_anidb" id="use_anidb" #if $sickbeard.USE_ANIDB then 'checked="checked"' else ""# />
+									<input type="checkbox" class="enabler" name="use_anidb" id="use_anidb"#if $sickbeard.USE_ANIDB# checked="checked"#end if#>
 									<p>fetch data for scene exceptions (alternative release names) and available 'release groups' per show</p>
 								</span>
 							</label>
@@ -75,7 +75,7 @@
 								<label for="anidb_username">
 									<span class="component-title">AniDB username</span>
 									<span class="component-desc">
-										<input type="text" name="anidb_username" id="anidb_username" value="$sickbeard.ANIDB_USERNAME" class="form-control input-sm input350" />
+										<input type="text" name="anidb_username" id="anidb_username" value="$sickbeard.ANIDB_USERNAME" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 									</span>
 								</label>
 							</div>
@@ -93,20 +93,20 @@
 								<label>
 									<span class="component-title">Sync AniDB</span>
 									<span class="component-desc">
-										<input type="checkbox" name="anidb_use_mylist" id="anidb_use_mylist" #if $sickbeard.ANIDB_USE_MYLIST then 'checked="checked"' else ""# />
+										<input type="checkbox" name="anidb_use_mylist" id="anidb_use_mylist"#if $sickbeard.ANIDB_USE_MYLIST# checked="checked"#end if#>
 										<p>add post-processed anime episodes to your "AniDB Mylist"</p>
 									</span>
 								</label>
 							</div>
 						</div>
 
-						<input type="submit" class="btn config_submitter" value="Save Changes" />
+						<input type="submit" class="btn config_submitter" value="Save Changes">
 					</fieldset>
 				</div><!-- /component-group //-->
 
 				</div><!-- /component-group1 //-->
 
-				<br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+				<br /><input type="submit" class="btn config_submitter" value="Save Changes"><br />
 
 			</div><!-- /config-components //-->
 

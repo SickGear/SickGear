@@ -9,40 +9,40 @@
 			<div class="blackwhitelist all">
 
 				<div class="blackwhitelist anidb">
-					<div class="inuse" style="padding:0">
+					<div class="inuse">
 						<div class="blackwhitelist white" style="margin-bottom:10px">
-							<h4 style="margin:0 41px 6px 0">Whitelist<br /><span class="grey-text">Only snatch releases by group(s)</span></h4>
-							<div style="width:243px; height:110px">
-								<select style="width:202px" class="pull-left" id="white" multiple="multiple" size="12">
+							<h4>Whitelist<br /><span class="grey-text">Only snatch releases by group(s)</span></h4>
+							<div class="bwl-content">
+								<select id="white" size="12" class="pull-left form-control form-control-inline input-sm" multiple="multiple">
 #for $keyword in sorted($whitelist):
 									<option value="$keyword">$keyword</option>
 #end for
 								</select>
-								<div style="position:relative; width:36px; height:64px; margin: -32px 0 0; top: 50%;" class="pull-right">
-									<input id="add-white" class="btn" value="<<" type="button">
-									<input id="remove-white" class="btn clear:right" value=">>" type="button">
+								<div class="pull-right">
+									<input class="btn" class="btn" id="add-white" value="<<" type="button">
+									<input class="btn" id="remove-white" class="btn clear:right" value=">>" type="button">
 								</div>
 							</div>
 						</div>
 
-						<div class="blackwhitelist black" style="position:relative; bottom: -1px">
-							<h4 style="margin:0 41px 6px 0">Blacklist<br /><span class="grey-text">Ignore releases by group(s)</span></h4>
-							<div style="width:243px; height:110px">
-								<select style="width:202px" class="pull-left" id="black" multiple="multiple" size="12">
+						<div class="blackwhitelist black" style="position:relative;bottom:-1px">
+							<h4>Blacklist<br /><span class="grey-text">Ignore releases by group(s)</span></h4>
+							<div class="bwl-content">
+								<select id="black" size="12" class="pull-left form-control form-control-inline input-sm" multiple="multiple">
 #for $keyword in sorted($blacklist):
 									<option value="$keyword">$keyword</option>
 #end for
 								</select>
-								<div style="position:relative; width:36px; height:64px; margin: -32px 0 0; top: 50%;" class="pull-right">
-									<input id="add-black" class="btn" value="<<" type="button">
-									<input id="remove-black" class="btn clear:right" value=">>" type="button">
+								<div class="pull-right">
+									<input class="btn" id="add-black" class="btn" value="<<" type="button">
+									<input class="btn" id="remove-black" class="btn clear:right" value=">>" type="button">
 								</div>
 							</div>
 						</div>
 					</div>
 					<div class="blackwhitelist pool">
 						<h4 style="margin:0 0 6px 0">Available groups<br /><span class="grey-text">Name (Rating) Number of subbed episodes</span></h4>
-						<select id="pool" multiple="multiple" size="12">
+						<select id="pool" size="12" class="form-control form-control-inline input-sm" multiple="multiple">
 #for $group in sorted($groups)
 	#if $group not in $whitelist and $group['name'] not in $blacklist:
 							<option value="$group['name']">$group['name'] ($group['rating']) $group['range']</option>
@@ -55,7 +55,7 @@
 				<div style="clear:both">&nbsp;</div>
 				<div class="blackwhitelist manual">
 					<div class="pull-left">
-						<input type="text" id="addToPoolText" class="form-control form-control-inline input-sm input200" style="width:202px">
+						<input type="text" id="addToPoolText" class="form-control form-control-inline input-sm input200" autocorrect="off" autocapitalize="off" spellcheck="false">
 						<input class="btn btn-inline" type="button" value="Add to Whitelist" id="new-white">
 						<input style="margin-right:0" class="btn btn-inline" type="button" value="Add to Blacklist" id="new-black">
 					</div>

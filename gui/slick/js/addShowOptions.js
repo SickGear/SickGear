@@ -3,10 +3,10 @@ $(function(){
 	$('#saveDefaultsButton').click(function() {
 		var anyQualArray = [], bestQualArray = [];
 
-		$('#wanted-qualities option:selected').each(function(i, d) {
+		$('#wanted-qualities').find('option:selected').each(function(i, d) {
 			anyQualArray.push($(d).val());
 		});
-		$('#upgrade-qualities option:selected').each(function(i, d) {
+		$('#upgrade-qualities').find('option:selected').each(function(i, d) {
 			bestQualArray.push($(d).val());
 		});
 

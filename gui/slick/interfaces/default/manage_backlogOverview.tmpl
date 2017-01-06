@@ -12,7 +12,7 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript">
+<script>
 <!--
 \$(document).ready(function()
 {
@@ -54,9 +54,11 @@
 ##
 	<div class="h2footer pull-right">
 		<span class="listing-key wanted">Wanted: <b>$totalWanted</b></span>
-		<span class="listing-key qual">Low Quality: <b>$totalQual</b></span>
+    #if $totalQual
+		<span class="listing-key qual">Upgradable: <b>$totalQual</b></span>
+	#end if
 	</div>
-	<br/>
+	<br />
 
 #if not $totalWanted
 	<h3>no shows require a <span class="grey-text">backlog search</span></h3>
@@ -82,11 +84,14 @@
 
 		<tr class="seasonheader" id="show-$curShow.indexerid">
 			<td colspan="3" class="text-left">
-				<br/>
+				<br />
 				<h2><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$curShow.name</a></h2>
 				<div class="pull-right">
 					<span class="listing-key wanted">Wanted: <b>$showCounts[$curShow.indexerid][$Overview.WANTED]</b></span>
-					<span class="listing-key qual">Low Quality: <b>$showCounts[$curShow.indexerid][$Overview.QUAL]</b></span>
+		#set $upg = $showCounts[$curShow.indexerid][$Overview.QUAL]
+		#if $upg
+					<span class="listing-key qual">Upgradable: <b>$upg</b></span>
+		#end if
         #if not $curShow.paused:
 					<a class="btn btn-inline forceBacklog" href="$sbRoot/manage/backlogShow?indexer_id=$curShow.indexerid"><i class="sgicon-play"></i> Force Backlog</a>
         #else

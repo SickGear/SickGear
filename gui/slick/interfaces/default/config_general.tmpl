@@ -35,8 +35,8 @@
     #set $indexer = $sg_var('INDEXER_DEFAULT')
 #end if
 
-<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
+<script src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
 
 <div id="config">
 	<div id="config-content">
@@ -54,6 +54,7 @@
 
 				<div id="core-component-group1">
 				<div class="component-group">
+					<input class="btn btn-yellow feature-toggle pull-right" type="submit" value="More Gear">
 
 					<div class="component-group-desc">
 						<h3>Misc</h3>
@@ -72,7 +73,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="update_shows_on_start">
 								<span class="component-title">Update shows on startup</span>
 								<span class="component-desc">
@@ -82,7 +83,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="show_update_hour">
 								<span class="component-title">Update shows during hour</span>
 								<span class="component-desc">
@@ -92,7 +93,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<span class="component-title">Send to trash for actions</span>
 							<span class="component-desc">
 								<label for="trash_remove_show" class="nextline-block">
@@ -111,7 +112,7 @@
 							<label for="log_dir">
 								<span class="component-title">Log file folder location</span>
 								<span class="component-desc">
-									<input type="text" name="log_dir" id="log_dir" value="$sg_str('ACTUAL_LOG_DIR')" class="form-control input-sm input350">
+									<input type="text" name="log_dir" id="log_dir" value="$sg_str('ACTUAL_LOG_DIR')" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 								</span>
 							</label>
 						</div>
@@ -131,11 +132,11 @@
 							</label>
 						</div>
 #end if
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="indexer_timeout">
-								<span class="component-title">Timeout show indexer at</span>
+								<span class="component-title">Timeout TV info source at</span>
 								<span class="component-desc">
-									<input type="text" name="indexer_timeout" id="indexer_timeout" value="$sg_var('INDEXER_TIMEOUT', 20)" class="form-control input-sm input75">
+									<input type="text" name="indexer_timeout" id="indexer_timeout" value="$sg_var('INDEXER_TIMEOUT', 20)" class="form-control input-sm input75" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<p>seconds of inactivity when finding new shows (default:10)</p>
 								</span>
 							</label>
@@ -194,17 +195,17 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label>
 								<span class="component-title">Check the server every<sup>1</sup></span>
 								<span class="component-desc">
-									<input type="text" name="update_frequency" id="update_frequency" value="$sg_var('UPDATE_FREQUENCY', 12)" class="form-control input-sm input75">
+									<input type="text" name="update_frequency" id="update_frequency" value="$sg_var('UPDATE_FREQUENCY', 12)" class="form-control input-sm input75" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<p>hours for software updates (default:12)</p>
 								</span>
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="notify_on_update">
 								<span class="component-title">Notify on software update</span>
 								<span class="component-desc">
@@ -226,6 +227,7 @@
 
 				<div id="core-component-group2">
 				<div class="component-group">
+					<input class="btn btn-yellow feature-toggle pull-right" type="submit" value="More Gear">
 
 					<div class="component-group-desc">
 						<h3>User Interface</h3>
@@ -236,13 +238,13 @@
 
 						<div class="field-pair">
 							<label for="theme_name">
-								<span class="component-title">Display theme:</span>
+								<span class="component-title">Default display theme:</span>
 								<span class="component-desc">
 									<select id="theme_name" name="theme_name" class="form-control input-sm">
 										<option value="dark"#echo ('', $selected)['dark' == $sg_str('THEME_NAME', 'dark')]#>Dark</option>
 										<option value="light"#echo ('', $selected)['light' == $sg_str('THEME_NAME')]#>Light</option>
 									</select>
-									<span class="red-text">for appearance to take effect, save then refresh your browser</span>
+									<span>the theme button uses a browser cookie to override this default</span>
 								</span>
 							</label>
 						</div>
@@ -265,13 +267,13 @@
 							<label for="fanart_limit">
 								<span class="component-title">Maximum fanart image files</span>
 								<span class="component-desc">
-									<input type="text" name="fanart_limit" id="fanart_limit" value="$sg_var('FANART_LIMIT', 3)" class="form-control input-sm input75">
-									<span>per show to cache (0 ... 500)</span>
+									<input type="text" name="fanart_limit" id="fanart_limit" value="$sg_var('FANART_LIMIT', 3)" class="form-control input-sm input75" autocorrect="off" autocapitalize="off" spellcheck="false">
+									<span>to cache per show (0 ... 500)</span>
 								</span>
 							</label>
 						</div>
 #end if
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="showlist_tagview">
 								<span class="component-title">Group show list shows into:</span>
 								<span class="component-desc">
@@ -288,18 +290,18 @@
 							</label>
 						</div>
 
-						<div id="showlist_tagview_custom_config" class="field-pair#if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then ' hidden' else ''#">
+						<div id="showlist_tagview_custom_config" class="field-pair#if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then ' hidden' else ''# adv">
 							<label for="show_tags">
 								<span class="component-title">Group names for show list<sup>1</sup></span>
 								<span class="component-desc">
-									<input type="text" name="show_tags" id="show_tags" value="$show_tags" class="form-control input-sm input300">
+									<input type="text" name="show_tags" id="show_tags" value="$show_tags" class="form-control input-sm input300" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<span>comma separated names</span>
 									<p class="clear-left note">group shows to the order of this custom list (add shows to groups with <a href="$sbRoot/manage/">mass edit</a>)</p>
 								</span>
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="home_search_focus">
 								<span class="component-title">Give show list search focus</span>
 								<span class="component-desc">
@@ -309,7 +311,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="use_imdb_info">
 								<span class="component-title">Enable IMDb info</span>
 								<span class="component-desc">
@@ -334,16 +336,16 @@
         #end if
     #end for
 									</select>
-									<input type="button" class="btn btn-inline" value="Delete" id="imdb-list-del" disabled="disabled" />
+									<input type="button" class="btn btn-inline" value="Delete" id="imdb-list-del" disabled="disabled">
 								</span>
 							</label>
 							<label for="imdb-url">
-								<span class="component-title">&nbsp</span>
+								<span class="component-title">&nbsp;</span>
 								<span class="component-desc">
-									<input type="text" id="imdb-url" value="" class="form-control input-sm input250" />
-									<input type="button" class="btn btn-inline" value="Enable" id="imdb-list-onoff" />
+									<input type="text" id="imdb-url" value="" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
+									<input type="button" class="btn btn-inline" value="Enable" id="imdb-list-onoff">
 									<div class="clear-left">
-									<p><code>imdb.com/user/ur64552276</code> or <code>ur64552276</code> to <span id="view-list">view list</span><a class="hide" id="link-list" href="$sbRoot/home/addShows/watchlist_imdb?account=64552276">view list</a> at "Add from IMDb"
+									<p><code>imdb.com/user/ur64552276</code> or <code>ur64552276</code> to <span id="view-list">view list</span><a class="hide" id="link-list" href="$sbRoot/home/addShows/imdb_watchlist?account=64552276">view list</a> at "Add from IMDb"
 									</p></div>
 #end if
 								</span>
@@ -380,7 +382,7 @@
 								<span class="component-title">Display fuzzy dates</span>
 								<span class="component-desc">
 									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="view-if datePresets"#echo ('', $checked)[$sg_var('FUZZY_DATING') == True]#>
-									<p>move absolute dates into tooltips and display e.g. "Last Thu", "On Tue"</p>
+									<p>display relative e.g. "Last Thu", "On Tue" and absolute dates in tooltips</p>
 								</span>
 							</label>
 						</div>
@@ -394,7 +396,7 @@
 							</label>
 						</div>
 #end if
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="date_presets">
 								<span class="component-title">Date style:</span>
 								<span class="component-desc">
@@ -414,7 +416,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="time_presets">
 								<span class="component-title">Time style:</span>
 								<span class="component-desc">
@@ -429,7 +431,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<span class="component-title">Timezone:</span>
 							<span class="component-desc">
 								<label for="local" class="space-right">
@@ -462,7 +464,7 @@
 							<label for="web_username">
 								<span class="component-title">Username</span>
 								<span class="component-desc">
-									<input type="text" name="web_username" id="web_username" value="$sg_str('WEB_USERNAME')" class="form-control input-sm input300">
+									<input type="text" name="web_username" id="web_username" value="$sg_str('WEB_USERNAME')" class="form-control input-sm input300" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<p>blank for none</p>
 								</span>
 							</label>
@@ -479,7 +481,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="calendar_unprotected">
 								<span class="component-title">Unprotected calendar</span>
 								<span class="component-desc">
@@ -505,7 +507,7 @@
 								<label for="api_key">
 									<span class="component-title">API key</span>
 									<span class="component-desc">
-										<input id="app-name" type="text" placeholder="enter app name" class="form-control input-sm input150">
+										<input id="app-name" type="text" placeholder="enter app name" class="form-control input-sm input150" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<input id="generate-api-key" value="Generate" type="button" class="btn btn-inline">
 										<span id="generate-result">&nbsp;</span>
 										<p class="clear-left">apps using SickGear API calls gain full access, legacy SickBeard endpoints are limited to thetvdb.com shows</p>
@@ -530,13 +532,13 @@
 							<label for="web_port">
 								<span class="component-title">HTTP port</span>
 								<span class="component-desc">
-									<input type="text" name="web_port" id="web_port" value="$sg_var('WEB_PORT', 8081)" class="form-control input-sm input100">
+									<input type="text" name="web_port" id="web_port" value="$sg_var('WEB_PORT', 8081)" class="form-control input-sm input100" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<p>web port to access and browse SickGear (default:8081)</p>
 								</span>
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="web_log">
 								<span class="component-title">HTTP logs</span>
 								<span class="component-desc">
@@ -546,7 +548,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="enable_https">
 								<span class="component-title">SSL enable</span>
 								<span class="component-desc">
@@ -556,27 +558,27 @@
 							</label>
 						</div>
 						<div id="content_enable_https">
-							<div class="field-pair">
+							<div class="field-pair adv">
 								<label for="https_cert">
 									<span class="component-title">HTTPS certificate</span>
 									<span class="component-desc">
-										<input type="text" name="https_cert" id="https_cert" value="$sg_str('HTTPS_CERT')" class="form-control input-sm input300">
+										<input type="text" name="https_cert" id="https_cert" value="$sg_str('HTTPS_CERT')" class="form-control input-sm input300" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left"><p>file name or path to a <b class="boldest">server.crt</b> certificate file</p></div>
 									</span>
 								</label>
 							</div>
-							<div class="field-pair">
+							<div class="field-pair adv">
 								<label for="https_key">
 									<span class="component-title">HTTPS key</span>
 									<span class="component-desc">
-										<input type="text" name="https_key" id="https_key" value="$sg_str('HTTPS_KEY')" class="form-control input-sm input300">
+										<input type="text" name="https_key" id="https_key" value="$sg_str('HTTPS_KEY')" class="form-control input-sm input300" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left"><p>file name or path to a <b class="boldest">server.key</b> file</p></div>
 									</span>
 								</label>
 							</div>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="web_ipv6">
 								<span class="component-title">Listen on IPv6</span>
 								<span class="component-desc">
@@ -585,7 +587,7 @@
 								</span>
 							</label>
 						</div>
-						<div id="content_web_ipv6">
+						<div id="content_web_ipv6" class="adv">
 							<div class="field-pair" style="margin-top:-24px">
 								<label for="web_ipv64">
 									<span class="component-desc">
@@ -596,7 +598,7 @@
 							</div>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="handle_reverse_proxy">
 								<span class="component-title">Reverse proxy headers</span>
 								<span class="component-desc">
@@ -646,6 +648,7 @@
 
 
 				<div id="core-component-group3" class="component-group">
+					<input class="btn btn-yellow feature-toggle pull-right" type="submit" value="More Gear">
 
 					<div class="component-group-desc">
 						<h3>Advanced</h3>
@@ -655,7 +658,7 @@
 					<fieldset class="component-group-list">
 
 #if not $sg_var('EXT_UPDATES')
-						<div class="field-pair">
+						<div class="field-pair#if $sg_str('BRANCH', 'master') == 'master'# adv#end if#">
 							<label>
 								<span class="component-title">Branch version:</span>
 								<span class="component-desc">
@@ -683,28 +686,28 @@
 							</div>
 #end if
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="git_remote">
 								<span class="component-title">Git remote for branch</span>
 								<span class="component-desc">
-									<input type="text" name="git_remote" id="git_remote" value="$sg_str('GIT_REMOTE')" class="form-control input-sm input300">
+									<input type="text" name="git_remote" id="git_remote" value="$sg_str('GIT_REMOTE')" class="form-control input-sm input300" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<div class="clear-left"><p>default:origin. Access repo configured remotes (save then refresh browser)</p></div>
 								</span>
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label>
 								<span class="component-title">Git executable path</span>
 								<span class="component-desc">
-									<input type="text" name="git_path" value="$sg_str('GIT_PATH')" class="form-control input-sm input300">
+									<input type="text" name="git_path" value="$sg_str('GIT_PATH')" class="form-control input-sm input300" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<div class="clear-left"><p>only needed if OS is unable to locate git from env</p></div>
 								</span>
 							</label>
 						</div>
 #end if
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label>
 								<span class="component-title">CPU throttling:</span>
 								<span class="component-desc">
@@ -718,17 +721,17 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label>
 								<span class="component-title">Anonymous redirect</span>
 								<span class="component-desc">
-									<input type="text" name="anon_redirect" value="$sg_str('ANON_REDIRECT')" class="form-control input-sm input300">
+									<input type="text" name="anon_redirect" value="$sg_str('ANON_REDIRECT')" class="form-control input-sm input300" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<div class="clear-left"><p>backlink protection via anonymizer service, must end in "?"</p></div>
 								</span>
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="encryption_version">
 								<span class="component-title">Encrypt passwords</span>
 								<span class="component-desc">
@@ -743,7 +746,7 @@
 							<label>
 								<span class="component-title">Proxy host</span>
 								<span class="component-desc">
-									<input type="text" name="proxy_setting" value="$sg_str('PROXY_SETTING')" class="form-control input-sm input300">
+									<input type="text" name="proxy_setting" value="$sg_str('PROXY_SETTING')" class="form-control input-sm input300" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<p>blank to disable</p>
 									<div class="clear-left"><p>proxy address for connecting to providers (use 'PAC:Url' for PAC support)</p></div>
 								</span>
@@ -785,7 +788,7 @@
 					</fieldset>
 				</div><!-- /component-group3 //-->
 
-				<br/>
+				<br />
 				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sg_str('DATA_DIR')</span></b></h6>
 				<input type="submit" class="btn pull-left config_submitter button" value="Save Changes">
 
@@ -797,7 +800,7 @@
 
 <div></div>
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 	jQuery('#log_dir').fileBrowser({ title: 'Select log file folder location' });
 	jQuery('#config-components').tabs();

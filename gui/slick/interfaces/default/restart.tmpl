@@ -15,7 +15,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-<title>SickGear - #echo ('Restart', 'Shutdown')[$do_shutdown]#</title>
+<title>SickGear - #echo ('Restarting', 'Shutdown')[$do_shutdown]#</title>
 <link rel="shortcut icon" href="$sg_root/images/ico/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="$sg_root/images/ico/apple-touch-icon-180x180.png">
 <link rel="apple-touch-icon" sizes="152x152" href="$sg_root/images/ico/apple-touch-icon-152x152.png">
@@ -35,8 +35,8 @@
 <meta name="msapplication-TileImage" content="$sg_root/images/ico/mstile-144x144.png">
 <meta name="msapplication-config" content="$sg_root/css/browserconfig.xml">
 
-<script type="text/javascript" src="$sg_root/js/lib/jquery-2.2.4.min.js?v=$sg_pid"></script>
-<script type="text/javascript" charset="utf-8">
+<script src="$sg_root/js/lib/jquery-2.2.4.min.js?v=$sg_pid"></script>
+<script charset="utf-8">
 <!--
 	\$.SickGear = {
 		Host: '$sg_host',
@@ -48,14 +48,14 @@
 //-->
 </script>
 
-<script type="text/javascript" src="$sg_root/js/restart.js?v=$sg_pid"></script>
+<script src="$sg_root/js/restart.js?v=$sg_pid"></script>
 
 <style>
 body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;margin-bottom:-10px;background:url(${sg_root}/images/sickgear.png) no-repeat 0 0}.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}.sub-title{padding-bottom:10px}.desc, .images i{margin-right:6px}.images i{vertical-align:middle}.hide,.hide-yes,.hide-no{display:none}#restart_fail_message{padding-top:10px}
 </style>
 
-<link rel="stylesheet" type="text/css" href="$sg_root/css/style.css?v=$sg_pid">
-<link rel="stylesheet" type="text/css" href="$sg_root/css/#echo ('dark', 'light')['' == $theme_suffix]#.css?v=$sg_pid">
+<link rel="stylesheet" href="$sg_root/css/style.css?v=$sg_pid">
+<link rel="stylesheet" href="$sg_root/css/#echo ('dark', 'light')['' == $theme_suffix]#.css?v=$sg_pid">
 
 </head><body><span class="sglogo"></span>
 <div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif" /><img src="$sg_root/images/yes16.png" /><img src="$sg_root/images/no16.png" /></div>

@@ -1,19 +1,19 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"> 
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>API Builder</title>
 <link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID">
 <link rel="stylesheet" type="text/css" href="$sbRoot/css/light.css?v=$sbPID">
-    <script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 sbRoot = "$sbRoot";
 //-->
 </script>
-<script type="text/javascript" src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/apibuilder.js?v=$sbPID"></script>
+<script src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
+<script src="$sbRoot/js/apibuilder.js?v=$sbPID"></script>
 
-<style type="text/css">
+<style>
 <!--
 #apibuilder select { padding: 2px 2px 2px 6px; display: block; float: left; margin: auto 8px 4px auto;
 }
@@ -25,8 +25,8 @@ sbRoot = "$sbRoot";
 -->
 </style>
 
-<script type="text/javascript">
-var hide_empty_list=true; 
+<script>
+var hide_empty_list=true;
 var disable_empty_list=true;
 
 addListGroup("api", "Command");
@@ -592,38 +592,37 @@ addOption("show.pause-opt", "Pause", "&pause=1");
 
 <body style="padding-top: 0 !important;" onload="initListGroup('api', document.apibuilder.firstlevel, document.apibuilder.secondlevel, document.apibuilder.thirdlevel, document.apibuilder.forthlevel, document.apibuilder.fifthlevel, document.apibuilder.sixthlevel, document.apibuilder.seventhlevel, document.apibuilder.eigthlevel)">
 
-<form name="apibuilder" id="apibuilder" action="">
-<table align="center">
-    <tr>
-        <td>
-            <input type="text" size="40" id="apikey" name="apikey" value="$apikey">
-            <input type="checkbox" id="debug" class="global"><label for="debug"> Debug?</label>
-            <input type="checkbox" id="profile" class="global"><label for="profile"> Profile?</label>
-            <input type="checkbox" id="jsonp" class="global"><label for="jsonp"> JSONP?</label>
-            <input type="checkbox" id="help" class="global"><label for="help"> Help?</label>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <select name="firstlevel"><option></option></select>
-            <select name="secondlevel"><option></option></select>
-            <select name="thirdlevel"><option></option></select>
-            <select name="forthlevel"><option></option></select>
-            <select name="fifthlevel"><option></option></select>
-            <select name="sixthlevel"><option></option></select>
-            <select name="seventhlevel"><option></option></select>
-            <select name="eigthlevel"><option></option></select>
-            <div style="float: left; ">
-                <input class="btn" type="button" value="Reset" onclick="resetListGroup('api',1)" />
-                <input class="btn" type="button" value="Go" onclick="goListGroup(this.form['apikey'].value, this.form['eigthlevel'].value, this.form['seventhlevel'].value, this.form['sixthlevel'].value, this.form['fifthlevel'].value, this.form['forthlevel'].value, this.form['thirdlevel'].value, this.form['secondlevel'].value, this.form['firstlevel'].value)" />
-            </div>
-        </td>
-    </tr>
-</table>
-</form>
+	<form name="apibuilder" id="apibuilder" action="">
+		<table align="center">
+			<tr>
+				<td>
+					<input type="text" size="40" id="apikey" name="apikey" value="$apikey">
+					<input type="checkbox" id="debug" class="global"><label for="debug"> Debug?</label>
+					<input type="checkbox" id="profile" class="global"><label for="profile"> Profile?</label>
+					<input type="checkbox" id="jsonp" class="global"><label for="jsonp"> JSONP?</label>
+					<input type="checkbox" id="help" class="global"><label for="help"> Help?</label>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<select name="firstlevel"><option></option></select>
+					<select name="secondlevel"><option></option></select>
+					<select name="thirdlevel"><option></option></select>
+					<select name="forthlevel"><option></option></select>
+					<select name="fifthlevel"><option></option></select>
+					<select name="sixthlevel"><option></option></select>
+					<select name="seventhlevel"><option></option></select>
+					<select name="eigthlevel"><option></option></select>
+					<div style="float:left">
+						<input class="btn" type="button" value="Reset" onclick="resetListGroup('api',1)">
+						<input class="btn" type="button" value="Go" onclick="goListGroup(this.form['apikey'].value, this.form['eigthlevel'].value, this.form['seventhlevel'].value, this.form['sixthlevel'].value, this.form['fifthlevel'].value, this.form['forthlevel'].value, this.form['thirdlevel'].value, this.form['secondlevel'].value, this.form['firstlevel'].value)">
+					</div>
+				</td>
+			</tr>
+		</table>
+	</form>
 
-<div id="apiResponse"></div>
+	<div id="apiResponse"></div>
 
 </body>
-
 </html>

@@ -14,8 +14,8 @@
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/configPostProcessing.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script src="$sbRoot/js/configPostProcessing.js?v=$sbPID"></script>
+<script src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -41,8 +41,9 @@
 
 				<div id="core-component-group1">
 				<div class="component-group">
+					<input class="btn btn-yellow feature-toggle pull-right" type="submit" value="More Gear">
 
-				<div class="component-group-desc">
+					<div class="component-group-desc">
 						<h3>Post-Processing</h3>
 						<p>SickGear options to process completed downloads.</p>
 					</div>
@@ -54,7 +55,7 @@
 									<p class="red-text" style="line-height:20px;margin:0"><em class="boldest">must not</em> be where files are downloading in progress</p>
 								</span>
 								<span class="component-desc">
-									<input type="text" name="tv_download_dir" id="tv_download_dir" value="$sickbeard.TV_DOWNLOAD_DIR" class="form-control input-sm input350">
+									<input type="text" name="tv_download_dir" id="tv_download_dir" value="$sickbeard.TV_DOWNLOAD_DIR" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<div class="pull-left">
 										<p class="note">folder where download clients save <b><em class="boldest">completed</em></b> downloads.&nbsp;
 										<b>note:</b> only use if not using SABnzbd post processing <em>or</em> if SABnzbd is on a different PC to SickGear</p>
@@ -90,17 +91,17 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="autopostprocesser_frequency">
 								<span class="component-title">Run post process every</span>
 								<span class="component-desc">
-									<input type="text" name="autopostprocesser_frequency" id="autopostprocesser_frequency" value="$sickbeard.AUTOPOSTPROCESSER_FREQUENCY" class="form-control input-sm input75">
+									<input type="text" name="autopostprocesser_frequency" id="autopostprocesser_frequency" value="$sickbeard.AUTOPOSTPROCESSER_FREQUENCY" class="form-control input-sm input75" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<p>minutes to check for new files to process (e.g. 10)</p>
 								</span>
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="postpone_if_sync_files">
 								<span class="component-title">Postpone post processing</span>
 								<span class="component-desc">
@@ -110,17 +111,17 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="extra_scripts">
 								<span class="component-title">Extra scripts</span>
 								<span class="component-desc">
-									<input type="text" name="extra_scripts" id="extra_scripts" value="<%='|'.join(sickbeard.EXTRA_SCRIPTS)%>" class="form-control input-sm input350">
+									<input type="text" name="extra_scripts" id="extra_scripts" value="<%='|'.join(sickbeard.EXTRA_SCRIPTS)%>" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_extra_params" title="Toggle info for script arguments">
 									<div class="clear-left">
 										<p class="note">scripts are called after built-in post processing.
 										&nbsp;<b>note:</b> use <b class="grey-text boldest">|</b> to separate additional extra scripts
 										 (e.g. <span class="grey-text">inside_SG_root_folder.sh|/other/path/to/script.py</span>)</p>
-										<div id="extra_params" style="display: none">
+										<div id="extra_params" style="display:none">
 											<table class="Key" style="width:auto">
 												<thead>
 													<tr>
@@ -177,7 +178,7 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="skip_removed_files">
 								<span class="component-title">Status of removed episodes</span>
 								<span class="component-desc">
@@ -204,22 +205,12 @@
 							</label>
 						</div>
 
-						<div class="field-pair">
+						<div class="field-pair adv">
 							<label for="nfo_rename">
 								<span class="component-title">Rename .nfo file</span>
 								<span class="component-desc">
 									<input type="checkbox" name="nfo_rename" id="nfo_rename" #if $sickbeard.NFO_RENAME == True then $checked else ''#>
 									<p>rename the original .nfo file to .nfo-orig to avoid conflicts</p>
-								</span>
-							</label>
-						</div>
-
-						<div class="field-pair">
-							<label for="rename_episodes">
-								<span class="component-title">Rename episodes</span>
-								<span class="component-desc">
-									<input type="checkbox" name="rename_episodes" id="rename_episodes" #if $sickbeard.RENAME_EPISODES == True then $checked else ''#>
-									<p>rename episodes using the Episode Naming settings</p>
 								</span>
 							</label>
 						</div>
@@ -276,7 +267,7 @@
 									<span class="component-title">Delete failed downloads</span>
 									<span class="component-desc">
 										<input id="delete_failed" type="checkbox" name="delete_failed" #if $sickbeard.DELETE_FAILED == True then $checked else ''#>
-										<p>delete left over files from a failed download<br />
+										<p>delete left over files from a failed download</p><br />
 									</span>
 								</label>
 							</div>
@@ -303,10 +294,20 @@
 
 					<div class="component-group-desc">
 						<h3>Episode Naming</h3>
-						<p>Regular episode naming.</p>
+						<p class="show_if_rename_episodes">Regular episode naming.</p>
 					</div>
 
-					<fieldset class="component-group-list">
+					<div class="field-pair">
+						<label for="rename_episodes">
+							<span class="component-title">Rename episodes</span>
+							<span class="component-desc">
+								<input type="checkbox" name="rename_episodes" id="rename_episodes" class="viewIf" #if $sickbeard.RENAME_EPISODES == True then $checked else ''#>
+								<p>rename episodes using the Episode Naming settings</p>
+							</span>
+						</label>
+					</div>
+
+					<fieldset class="component-group-list show_if_rename_episodes">
 
 						<div class="field-pair">
 							<label for="name_presets">
@@ -328,17 +329,17 @@
 						</div>
 
 						<div id="naming_custom">
-							<div class="field-pair" style="padding-top: 0;">
+							<div class="field-pair" style="padding-top:0">
 								<label for="naming_pattern">
 									<span class="component-title"></span>
 									<span class="component-desc">
-										<input type="text" name="naming_pattern" id="naming_pattern" value="$sickbeard.NAMING_PATTERN" class="form-control input-sm input350 custom-pattern">
+										<input type="text" name="naming_pattern" id="naming_pattern" value="$sickbeard.NAMING_PATTERN" class="form-control input-sm input350 custom-pattern" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_naming_key" title="Toggle Naming Legend">
 									</span>
 								</label>
 							</div>
 
-							<div id="naming_key" style="display: none;">
+							<div id="naming_key" style="display:none">
 								<table class="Key">
 									<thead>
 										<tr>
@@ -476,7 +477,7 @@
 							<label for="naming_strip_year">
 								<span class="component-title">Strip show year</span>
 								<span class="component-desc">
-									<input type="checkbox" id="naming_strip_year"	name="naming_strip_year" #if $sickbeard.NAMING_STRIP_YEAR then $checked else ''#/>
+									<input type="checkbox" id="naming_strip_year"	name="naming_strip_year" #if $sickbeard.NAMING_STRIP_YEAR then $checked else ''#>
 									<p>when renaming files, remove years that are inside parentheses #if True then 'e.g. "(%s)"' % str(time.strftime('%Y')) else ''#</p>
 								</span>
 							</label>
@@ -484,7 +485,7 @@
 
 					</fieldset>
 
-					<fieldset class="component-group-list">
+					<fieldset class="component-group-list show_if_rename_episodes">
 
 						<div id="naming_example_div">
 							<div class="component-group-desc episode-sample">
@@ -513,22 +514,24 @@
 <% ##                      ## %>
 <% ## Start of Air-by-Date ## %>
 <% ########################## %>
-					<div class="component-group-desc">
-						<p>Air-by-date episode naming.</p>
-					</div>
 
-					<div class="field-pair right">
-						<label for="naming_custom_abd">
-							<span class="component-title">Custom air-by-date</span>
-							<span class="component-desc">
-								<input type="checkbox" class="enabler" id="naming_custom_abd" name="naming_custom_abd" #if $sickbeard.NAMING_CUSTOM_ABD then $checked else ''#/>
-								<p>name air-by-date shows differently than regular shows</p>
-							</span>
-						</label>
-					</div>
-					<div id="content_naming_custom_abd">
+					<fieldset class="component-group-list show_if_rename_episodes">
+						<div class="component-group-desc">
+							<p>Air-by-date episode naming.</p>
+						</div>
 
-						<fieldset class="component-group-list">
+						<div class="field-pair right">
+							<label for="naming_custom_abd">
+								<span class="component-title">Custom air-by-date</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" id="naming_custom_abd" name="naming_custom_abd" #if $sickbeard.NAMING_CUSTOM_ABD then $checked else ''#>
+									<p>name air-by-date shows differently than regular shows</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_naming_custom_abd">
+
 							<div class="field-pair right">
 								<label for="name_abd_presets">
 									<span class="component-title">Air-by-date name pattern</span>
@@ -552,13 +555,13 @@
 										<label for="naming_abd_pattern">
 											<span class="component-title"></span>
 											<span class="component-desc">
-												<input type="text" name="naming_abd_pattern" id="naming_abd_pattern" value="$sickbeard.NAMING_ABD_PATTERN" class="form-control input-sm input350 custom-pattern">
+												<input type="text" name="naming_abd_pattern" id="naming_abd_pattern" value="$sickbeard.NAMING_ABD_PATTERN" class="form-control input-sm input350 custom-pattern" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 												<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_naming_abd_key" title="Toggle ABD Naming Legend">
 											</span>
 										</label>
 									</div>
 
-									<div id="naming_abd_key" style="display: none;">
+									<div id="naming_abd_key" style="display:none">
 										<table class="Key">
 											<thead>
 												<tr>
@@ -682,11 +685,9 @@
 										</table>
 										<br />
 									</div>
-								</div><!-- /naming_abd_custom -->
+								</div>
 							</div>
-						</fieldset>
 
-						<fieldset class="component-group-list">
 							<div class="component-group-list">
 								<div id="naming_abd_example_div">
 									<div class="component-group-desc episode-sample">
@@ -698,35 +699,39 @@
 									<br />
 								</div>
 							</div>
-						</fieldset>
 
-						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
-						</div>
+							<div class="field-pair right">
+								<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+							</div>
 
-					</div><!-- /naming_abd_different -->
+						</div><!-- /naming_abd_custom -->
+
+					</fieldset>
 
 <% ######################## %>
 <% ## End of Air-by-Date ## %>
 <% ##                    ## %>
 <% ##  Start of Sports   ## %>
 <% ######################## %>
-					<div class="component-group-desc">
-						<p>Sport episode naming.</p>
-					</div>
 
-					<div class="field-pair right">
-						<label for="naming_custom_sports">
-							<span class="component-title">Custom sports</span>
-							<span class="component-desc">
-								<input type="checkbox" class="enabler" id="naming_custom_sports" name="naming_custom_sports" #if $sickbeard.NAMING_CUSTOM_SPORTS then $checked else ''#/>
-								<p>name sports shows differently than regular shows</p>
-							</span>
-						</label>
-					</div>
-					<div id="content_naming_custom_sports">
+					<fieldset class="component-group-list show_if_rename_episodes">
 
-						<fieldset class="component-group-list">
+						<div class="component-group-desc">
+							<p>Sport episode naming.</p>
+						</div>
+
+						<div class="field-pair right show_if_rename_episodes">
+							<label for="naming_custom_sports">
+								<span class="component-title">Custom sports</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" id="naming_custom_sports" name="naming_custom_sports" #if $sickbeard.NAMING_CUSTOM_SPORTS then $checked else ''#>
+									<p>name sports shows differently than regular shows</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_naming_custom_sports">
+
 							<div class="field-pair right">
 								<label for="name_sports_presets">
 									<span class="component-title">Sports name pattern</span>
@@ -750,13 +755,13 @@
 										<label for="naming_sports_pattern">
 											<span class="component-title"></span>
 											<span class="component-desc">
-												<input type="text" name="naming_sports_pattern" id="naming_sports_pattern" value="$sickbeard.NAMING_SPORTS_PATTERN" class="form-control input-sm input350 custom-pattern">
+												<input type="text" name="naming_sports_pattern" id="naming_sports_pattern" value="$sickbeard.NAMING_SPORTS_PATTERN" class="form-control input-sm input350 custom-pattern" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 												<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_naming_sports_key" title="Toggle Sports Naming Legend">
 											</span>
 										</label>
 									</div>
 
-									<div id="naming_sports_key" style="display: none;">
+									<div id="naming_sports_key" style="display:none">
 										<table class="Key">
 											<thead>
 												<tr>
@@ -880,14 +885,11 @@
 										</table>
 										<br />
 									</div>
-								</div><!-- /naming_sports_custom -->
+								</div>
 							</div>
 
-						</fieldset>
-
-						<fieldset class="component-group-list">
-
 							<div class="component-group-list">
+
 								<div id="naming_sports_example_div">
 									<div class="component-group-desc episode-sample">
 										<h3>Sports sample:</h3>
@@ -897,39 +899,40 @@
 									</div>
 									<br />
 								</div>
-
 							</div>
 
-						</fieldset>
+							<div class="field-pair right">
+								<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+							</div>
 
-						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
-						</div>
+						</div><!-- /naming_sports_custom -->
 
-					</div><!-- /naming_sports_different -->
+					</fieldset>
 
 <% #################### %>
 <% ## End of Sports  ## %>
 <% ##                ## %>
 <% ## Start of Anime ## %>
 <% #################### %>
-					<div class="component-group-desc">
-						<p>Anime episode naming.</p>
-					</div>
+					<fieldset class="component-group-list show_if_rename_episodes">
 
-					<!-- naming_anime_custom -->
-					<div class="field-pair right">
-						<label for="naming_custom_anime">
-							<span class="component-title">Custom anime</span>
-							<span class="component-desc">
-								<input type="checkbox" class="enabler" id="naming_custom_anime" name="naming_custom_anime" #if $sickbeard.NAMING_CUSTOM_ANIME then $checked else ''#/>
-								<p>name anime shows differently than regular shows</p>
-							</span>
-						</label>
-					</div>
-					<div id="content_naming_custom_anime">
+						<div class="component-group-desc">
+							<p>Anime episode naming.</p>
+						</div>
 
-						<fieldset class="component-group-list">
+						<!-- naming_anime_custom -->
+						<div class="field-pair right">
+							<label for="naming_custom_anime">
+								<span class="component-title">Custom anime</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" id="naming_custom_anime" name="naming_custom_anime" #if $sickbeard.NAMING_CUSTOM_ANIME then $checked else ''#>
+									<p>name anime shows differently than regular shows</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_naming_custom_anime">
+
 							<div class="field-pair right">
 								<label for="name_anime_presets">
 									<span class="component-title">Anime name pattern</span>
@@ -953,13 +956,13 @@
 										<label for="naming_anime_pattern">
 											<span class="component-title"></span>
 											<span class="component-desc">
-												<input type="text" name="naming_anime_pattern" id="naming_anime_pattern" value="$sickbeard.NAMING_ANIME_PATTERN" class="form-control input-sm input350 custom-pattern">
+												<input type="text" name="naming_anime_pattern" id="naming_anime_pattern" value="$sickbeard.NAMING_ANIME_PATTERN" class="form-control input-sm input350 custom-pattern" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 												<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_naming_anime_key" title="Toggle Anime Naming Legend">
 											</span>
 										</label>
 									</div>
 
-									<div id="naming_anime_key" style="display: none;">
+									<div id="naming_anime_key" style="display:none">
 										<table class="Key">
 											<thead>
 												<tr>
@@ -1083,7 +1086,7 @@
 										</table>
 										<br />
 									</div>
-								</div><!-- /naming_anime_custom -->
+								</div>
 
 								<div class="field-pair">
 									<label for="naming_anime_multi_ep">
@@ -1097,75 +1100,74 @@
 										</span>
 									</label>
 								</div>
-
 							</div>
 
-						</fieldset>
+							<div class="component-group-list">
 
-						<fieldset class="component-group-list">
-
-							<div id="naming_example_anime_div">
-								<div class="component-group-desc episode-sample">
-									<h3>Single anime sample:</h3>
+								<div id="naming_example_anime_div">
+									<div class="component-group-desc episode-sample">
+										<h3>Single anime sample:</h3>
+									</div>
+									<div class="example">
+										<span class="jumbo" id="naming_example_anime">&nbsp;</span>
+									</div>
+									<br />
 								</div>
-								<div class="example">
-									<span class="jumbo" id="naming_example_anime">&nbsp;</span>
+
+								<div id="naming_example_multi_anime_div">
+									<div class="component-group-desc episode-sample">
+										<h3>Multi anime sample:</h3>
+									</div>
+									<div class="example">
+										<span class="jumbo" id="naming_example_multi_anime">&nbsp;</span>
+									</div>
+									<br />
 								</div>
-								<br />
+
 							</div>
 
-							<div id="naming_example_multi_anime_div">
-								<div class="component-group-desc episode-sample">
-									<h3>Multi anime sample:</h3>
+							<div class="component-group-list right">
+
+								<div class="field-pair">
+									<label for="naming_anime">
+										<span class="component-title">Add absolute numbering</span>
+										<span class="component-desc">
+											<input type="radio" name="naming_anime" id="naming_anime" value="1" #if $sickbeard.NAMING_ANIME == 1 then $checked else ''#>
+											<p>add the absolute number to the season/episode format</p>
+											<p class="note">(eg. S15E45 - 310 vs S15E45)</p>
+										</span>
+									</label>
 								</div>
-								<div class="example">
-									<span class="jumbo" id="naming_example_multi_anime">&nbsp;</span>
+
+								<div class="field-pair">
+									<label for="naming_anime_only">
+										<span class="component-title">Only absolute numbering</span>
+										<span class="component-desc">
+											<input type="radio" name="naming_anime" id="naming_anime_only" value="2" #if $sickbeard.NAMING_ANIME == 2 then $checked else ''#>
+											<p>replace season/episode format with absolute numbering</p>
+										</span>
+									</label>
 								</div>
-								<br />
+
+								<div class="field-pair">
+									<label for="naming_anime_none">
+										<span class="component-title">No absolute numbering</span>
+										<span class="component-desc">
+											<input type="radio" name="naming_anime" id="naming_anime_none" value="3" #if $sickbeard.NAMING_ANIME == 3 then $checked else ''#>
+											<p>do <b>not</b> include absolute numbering</p>
+										</span>
+									</label>
+								</div>
+
 							</div>
 
-						</fieldset>
-
-						<fieldset class="component-group-list right">
-
-							<div class="field-pair">
-								<label for="naming_anime">
-									<span class="component-title">Add absolute numbering</span>
-									<span class="component-desc">
-										<input type="radio" name="naming_anime" id="naming_anime" value="1" #if $sickbeard.NAMING_ANIME == 1 then $checked else ''#/>
-										<p>add the absolute number to the season/episode format</p>
-										<p class="note">(eg. S15E45 - 310 vs S15E45)</p>
-									</span>
-								</label>
+							<div class="field-pair right">
+								<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 							</div>
 
-							<div class="field-pair">
-								<label for="naming_anime_only">
-									<span class="component-title">Only absolute numbering</span>
-									<span class="component-desc">
-										<input type="radio" name="naming_anime" id="naming_anime_only" value="2" #if $sickbeard.NAMING_ANIME == 2 then $checked else ''#/>
-										<p>replace season/episode format with absolute numbering</p>
-									</span>
-								</label>
-							</div>
+						</div><!-- /naming_anime_custom -->
 
-							<div class="field-pair">
-								<label for="naming_anime_none">
-									<span class="component-title">No absolute numbering</span>
-									<span class="component-desc">
-										<input type="radio" name="naming_anime" id="naming_anime_none" value="3" #if $sickbeard.NAMING_ANIME == 3 then $checked else ''#/>
-										<p>do <b>not</b> include absolute numbering</p>
-									</span>
-								</label>
-							</div>
-
-						</fieldset>
-
-						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
-						</div>
-
-					</div><!-- /naming_anime_different -->
+					</fieldset>
 
 					<div></div>
 
@@ -1208,57 +1210,59 @@
 #for ($cur_name, $cur_generator) in $m_dict.items():
     #set $cur_metadata_inst = $sickbeard.metadata_provider_dict[$cur_generator.name]
     #set $cur_id = $cur_generator.get_id()
-						<div class="metadataDiv" id="$cur_id">
-							<div class="metadata_options_wrapper">
-								<h4>Create:</h4>
-								<div class="metadata_options">
-									<label for="${cur_id}_show_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_show_metadata" #if $cur_metadata_inst.show_metadata then $checked else ''#/>&nbsp;Show Metadata</label>
-									<label for="${cur_id}_episode_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_metadata" #if $cur_metadata_inst.episode_metadata then $checked else ''#/>&nbsp;Episode Metadata</label>
-									<label for="${cur_id}_fanart"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_fanart" #if $cur_metadata_inst.fanart then $checked else ''#/>&nbsp;Show Fanart</label>
-									<label for="${cur_id}_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_poster" #if $cur_metadata_inst.poster then $checked else ''#/>&nbsp;Show Poster</label>
-									<label for="${cur_id}_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_banner" #if $cur_metadata_inst.banner then $checked else ''#/>&nbsp;Show Banner</label>
-									<label for="${cur_id}_episode_thumbnails"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_thumbnails" #if $cur_metadata_inst.episode_thumbnails then $checked else ''#/>&nbsp;Episode Thumbnails</label>
-									<label for="${cur_id}_season_posters"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_posters" #if $cur_metadata_inst.season_posters then $checked else ''#/>&nbsp;Season Posters</label>
-									<label for="${cur_id}_season_banners"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_banners" #if $cur_metadata_inst.season_banners then $checked else ''#/>&nbsp;Season Banners</label>
-									<label for="${cur_id}_season_all_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_poster" #if $cur_metadata_inst.season_all_poster then $checked else ''#/>&nbsp;Season All Poster</label>
-									<label for="${cur_id}_season_all_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_banner" #if $cur_metadata_inst.season_all_banner then $checked else ''#/>&nbsp;Season All Banner</label>
+							<div class="metadataDiv" id="$cur_id">
+								<div class="metadata_options_wrapper">
+									<h4>Create:</h4>
+									<div class="metadata_options">
+										<label for="${cur_id}_show_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_show_metadata" #if $cur_metadata_inst.show_metadata then $checked else ''#>&nbsp;Show Metadata</label>
+										<label for="${cur_id}_episode_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_metadata" #if $cur_metadata_inst.episode_metadata then $checked else ''#>&nbsp;Episode Metadata</label>
+										<label for="${cur_id}_fanart"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_fanart" #if $cur_metadata_inst.fanart then $checked else ''#>&nbsp;Show Fanart</label>
+										<label for="${cur_id}_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_poster" #if $cur_metadata_inst.poster then $checked else ''#>&nbsp;Show Poster</label>
+										<label for="${cur_id}_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_banner" #if $cur_metadata_inst.banner then $checked else ''#>&nbsp;Show Banner</label>
+										<label for="${cur_id}_episode_thumbnails"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_thumbnails" #if $cur_metadata_inst.episode_thumbnails then $checked else ''#>&nbsp;Episode Thumbnails</label>
+										<label for="${cur_id}_season_posters"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_posters" #if $cur_metadata_inst.season_posters then $checked else ''#>&nbsp;Season Posters</label>
+										<label for="${cur_id}_season_banners"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_banners" #if $cur_metadata_inst.season_banners then $checked else ''#>&nbsp;Season Banners</label>
+										<label for="${cur_id}_season_all_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_poster" #if $cur_metadata_inst.season_all_poster then $checked else ''#>&nbsp;Season All Poster</label>
+										<label for="${cur_id}_season_all_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_banner" #if $cur_metadata_inst.season_all_banner then $checked else ''#>&nbsp;Season All Banner</label>
+									</div>
 								</div>
-							</div>
-							<div class="metadata_example_wrapper">
-								<h4>Results:</h4>
-								<div class="metadata_example">
-									<label for="${cur_id}_show_metadata"><span id="${cur_id}_eg_show_metadata">$cur_metadata_inst.eg_show_metadata</span></label>
-									<label for="${cur_id}_episode_metadata"><span id="${cur_id}_eg_episode_metadata">$cur_metadata_inst.eg_episode_metadata</span></label>
-									<label for="${cur_id}_fanart"><span id="${cur_id}_eg_fanart">$cur_metadata_inst.eg_fanart</span></label>
-									<label for="${cur_id}_poster"><span id="${cur_id}_eg_poster">$cur_metadata_inst.eg_poster</span></label>
-									<label for="${cur_id}_banner"><span id="${cur_id}_eg_banner">$cur_metadata_inst.eg_banner</span></label>
-									<label for="${cur_id}_episode_thumbnails"><span id="${cur_id}_eg_episode_thumbnails">$cur_metadata_inst.eg_episode_thumbnails</span></label>
-									<label for="${cur_id}_season_posters"><span id="${cur_id}_eg_season_posters">$cur_metadata_inst.eg_season_posters</span></label>
-									<label for="${cur_id}_season_banners"><span id="${cur_id}_eg_season_banners">$cur_metadata_inst.eg_season_banners</span></label>
-									<label for="${cur_id}_season_all_poster"><span id="${cur_id}_eg_season_all_poster">$cur_metadata_inst.eg_season_all_poster</span></label>
-									<label for="${cur_id}_season_all_banner"><span id="${cur_id}_eg_season_all_banner">$cur_metadata_inst.eg_season_all_banner</span></label>
+								<div class="metadata_example_wrapper">
+									<h4>Results:</h4>
+									<div class="metadata_example">
+										<label for="${cur_id}_show_metadata"><span id="${cur_id}_eg_show_metadata">$cur_metadata_inst.eg_show_metadata</span></label>
+										<label for="${cur_id}_episode_metadata"><span id="${cur_id}_eg_episode_metadata">$cur_metadata_inst.eg_episode_metadata</span></label>
+										<label for="${cur_id}_fanart"><span id="${cur_id}_eg_fanart">$cur_metadata_inst.eg_fanart</span></label>
+										<label for="${cur_id}_poster"><span id="${cur_id}_eg_poster">$cur_metadata_inst.eg_poster</span></label>
+										<label for="${cur_id}_banner"><span id="${cur_id}_eg_banner">$cur_metadata_inst.eg_banner</span></label>
+										<label for="${cur_id}_episode_thumbnails"><span id="${cur_id}_eg_episode_thumbnails">$cur_metadata_inst.eg_episode_thumbnails</span></label>
+										<label for="${cur_id}_season_posters"><span id="${cur_id}_eg_season_posters">$cur_metadata_inst.eg_season_posters</span></label>
+										<label for="${cur_id}_season_banners"><span id="${cur_id}_eg_season_banners">$cur_metadata_inst.eg_season_banners</span></label>
+										<label for="${cur_id}_season_all_poster"><span id="${cur_id}_eg_season_all_poster">$cur_metadata_inst.eg_season_all_poster</span></label>
+										<label for="${cur_id}_season_all_banner"><span id="${cur_id}_eg_season_all_banner">$cur_metadata_inst.eg_season_all_banner</span></label>
+									</div>
 								</div>
+								<input type="hidden" name="${cur_id}_data" id="${cur_id}_data" value="$cur_metadata_inst.get_config()">
 							</div>
-							<input type="hidden" name="${cur_id}_data" id="${cur_id}_data" value="$cur_metadata_inst.get_config()">
-						</div>
 #end for
-						<div class="clearfix"></div><br />
+							<div class="clearfix"></div><br />
 
-						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+						</div>
 					</fieldset>
 				</div><!-- /component-group3 //-->
 
 				<br />
-				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sickbeard.DATA_DIR</span></b> </h6>
+				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sickbeard.DATA_DIR</span></b></h6>
 				<input type="submit" class="btn pull-left config_submitter button" value="Save Changes">
 
+			</div>
 		</form>
 	</div>
 </div>
 
 <div class="clearfix"></div>
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 	jQuery('#config-components').tabs();
 	jQuery('#tv_download_dir').fileBrowser({ title: 'Select completed TV downloads directory' });

@@ -22,10 +22,10 @@
 		}
 </script>
 
-<script type="text/javascript" src="$sbRoot/js/formwizard.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/newShow.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/addShowOptions.js?v=$sbPID"></script>
+<script src="$sbRoot/js/formwizard.js?v=$sbPID"></script>
+<script src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script src="$sbRoot/js/newShow.js?v=$sbPID"></script>
+<script src="$sbRoot/js/addShowOptions.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -59,6 +59,7 @@
 	.formpaginate .next{visibility:hidden !important}
 </style>
 #end if
+#set $infosrc_name = 'all sources' if 0 == $provided_indexer else $indexers[$provided_indexer]
 #if $use_provided_info
     #set $provided_indexer_local = $provided_indexer
     #set $provided_indexer_id_local = $provided_indexer_id
@@ -66,15 +67,15 @@
 				<input type="hidden" name="indexerLang" value="en">
 				<input type="hidden" name="whichSeries" value="#echo '|'.join([str($provided_indexer), '', str($provided_indexer_id), $provided_indexer_name])#">
 				<input type="hidden" id="providedName" value="$provided_indexer_name">
-				<input type="hidden" id="providedIndexer" value="$provided_indexer">
+				<input type="hidden" id="providedIndexer" value="$provided_indexer" data-text="$infosrc_name">
 #else
     #if 2 > $len($indexers)
 <style>
 	#addShowForm input#nameToSearch{width:611px}
 </style>
-				<input type="hidden" id="providedIndexer" value="$provided_indexer">
+				<input type="hidden" id="providedIndexer" value="$provided_indexer" data-text="$infosrc_name">
     #end if
-				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Enter a show name, TVDB ID/Url, IMDb ID/Url" class="form-control form-control-inline input-sm input350">
+				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Enter a show name, TVDB ID/Url, IMDb ID/Url" class="form-control form-control-inline input-sm input350 mt-esc" autocorrect="off" autocapitalize="off" spellcheck="false">
 				&nbsp;
 				<span style="float:right">
 					<select name="indexerLang" id="indexerLangSelect" class="form-control form-control-inline input-sm">
@@ -148,8 +149,8 @@
 #end if
 	</div>
 
-<script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
+<script src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
+<script src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
 
 </div>
 

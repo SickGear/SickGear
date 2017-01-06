@@ -8,7 +8,7 @@
 var sgRoot = $.SickGear.Root,
 	browserUrl = window.location.protocol + '//' + window.location.host + sgRoot,
 	baseUrl = 'http' + ($.SickGear.UseHttps ? 's' : '') + '://' + $.SickGear.Host + ':'
-		+ (('' == sgRoot) ? $.SickGear.Port : location.port) + sgRoot,
+		+ (('' === sgRoot) ? $.SickGear.Port : location.port) + sgRoot,
 	isAliveUrl = sgRoot + '/home/is_alive/',
 	timeoutId;
 $.SickGear.numRestartWaits = 0;
@@ -23,14 +23,14 @@ function is_alive() {
 		'dataType': 'jsonp',
 		'success': function(data) {
 			var resp = data.msg.toString();
-			if ('nope' == resp) {
+			if ('nope' === resp) {
 				// if initialising then just wait and try again
 
 				$('#shut_down_message').find('.spinner,.hide-yes').removeClass();
 				$('#restart_message').removeClass();
 				setTimeout(is_alive, 100);
 
-			} else if (/undefined/i.test($.SickGear.PID) || $.SickGear.PID == resp) {
+			} else if (/undefined/i.test($.SickGear.PID) || $.SickGear.PID === resp) {
 				// if this is before we've even shut down then just try again later
 
 				setTimeout(is_alive, 100);
@@ -66,8 +66,8 @@ $(document).ready(function() {
 
 		// If using https and the port or protocol changed, then wait 5 seconds before redirect because ajax calls will
 		// fail with untrusted certs or when a http ajax request is made from https with a mixed content error.
-		if ($.SickGear.UseHttps || 'https:' == window.location.protocol) {
-			if (browserUrl != baseUrl) {
+		if ($.SickGear.UseHttps || 'https:' === window.location.protocol) {
+			if (browserUrl !== baseUrl) {
 
 				timeoutId = 1;
 				setTimeout(function() {
@@ -88,7 +88,7 @@ $(document).ready(function() {
 			return;
 		}
 
-		if (0 == timeoutId) {
+		if (0 === timeoutId) {
 
 			timeoutId = setTimeout(is_alive, 100);
 		}

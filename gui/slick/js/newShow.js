@@ -19,7 +19,7 @@ $(document).ready(function () {
 				} else {
 					$.each(data.results, function (index, obj) {
 						resultStr += '<option value="' + obj + '"'
-							+ ('' == resultStr ? selected : '')
+							+ ('' === resultStr ? selected : '')
 							+ '>' + obj + '</option>';
 					});
 				}
@@ -33,7 +33,7 @@ $(document).ready(function () {
 	}
 
 	function cleanseText(text, toDisplay) {
-		return (!0 == toDisplay
+		return (!0 === toDisplay
 			? text
 			.replace(/["]/g, '&quot;')
 			: text
@@ -56,7 +56,7 @@ $(document).ready(function () {
 
 		var elTvDatabase = $('#providedIndexer'),
 			elIndexerLang = $('#indexerLangSelect'),
-			tvsrcName = elTvDatabase.find('option:selected').text(),
+			tvsrcName = elTvDatabase.find('option:selected').text() || elTvDatabase.attr('data-text'),
 			tvSearchSrc = 0 < tvsrcName.length ? ' on ' + tvsrcName : '';
 
 		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
@@ -126,7 +126,7 @@ $(document).ready(function () {
 							+ (0 < item[result.Overview].length ? '<p style=\'margin:0 0 2px\'>' + item[result.Overview] + '</p>' : '')
 							+ '<span style=\'float:right;clear:both\'>Click for more</span>'
 							+ '"'
-							+ ' href="' + anonURL + item[result.SrcUrl] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
+							+ ' href="' + anonURL + item[result.SrcUrl] + ((data.langid && '' !== data.langid) ? '&lid=' + data.langid : '') + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return !1;"'
 							+ '>' + (config.sortArticle ? displayShowName : displayShowName.replace(/^((?:A(?!\s+to)n?)|The)(\s)+(.*)/i, '$3$2<span class="article">($1)</span>')) + '</a>'
 							+ showstartdate
@@ -309,7 +309,7 @@ $(document).ready(function () {
 
 	function goToStep(num) {
 		$('.step').each(function () {
-			if ($.data(this, 'section') + 1 == num) {
+			if ($.data(this, 'section') + 1 === num) {
 				$(this).click();
 			}
 		});
@@ -346,7 +346,7 @@ $(document).ready(function () {
 		}
 		update_bwlist(show_name);
 		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(show_name, !0) + '</span>'
-			+ ('' == show_name ? 'into<br />' : '<br />into')
+			+ ('' === show_name ? 'into<br />' : '<br />into')
 			+ ' <span class="show-dest">';
 
 		// if we have a root dir selected, figure out the path
@@ -360,7 +360,7 @@ $(document).ready(function () {
 				sep_char = '';
 			}
 
-			if (root_dir_text.substr(sample_text.length - 1) != sep_char) {
+			if (root_dir_text.substr(sample_text.length - 1) !== sep_char) {
 				root_dir_text += sep_char;
 			}
 			root_dir_text += '<i>||</i>' + sep_char;
@@ -398,7 +398,7 @@ $(document).ready(function () {
 	$('#search-results').on('click', '.stepone-result-radio', updateSampleText);
 
 	elNameToSearch.keydown(function (event) {
-		if (event.keyCode == 13) {
+		if (event.keyCode === 13) {
 			event.preventDefault();
 			elSearchName.click();
 		}
@@ -423,7 +423,7 @@ $(document).ready(function () {
 					corner: !0,
 					method: 'polygon'
 				},
-				classes: 'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'
+				classes: 'qtip-rounded qtip-bootstrap qtip-shadow'
 			}
 		});
 	});
@@ -438,7 +438,7 @@ $(document).ready(function () {
 			option = $('<option>'),
 			match = /^(.*?)#<3SG#(.*)$/m.exec(text);
 
-		if (match != null) {
+		if (match !== null) {
 			groupvalue = match[1];
 			groupview = groupvalue + match[2];
 		}
@@ -455,10 +455,10 @@ $(document).ready(function () {
 			$('#blackwhitelist').show();
 			if (show_name) {
 				$.getJSON(sbRoot + '/home/fetch_releasegroups', {'show_name': cleanseText(show_name, !1)}, function (data) {
-					if ('success' == data['result']) {
+					if ('success' === data['result']) {
 						var groups = [];
 						$.each(data.groups, function (i, group) {
-							if ('' != group.name) {
+							if ('' !== group.name) {
 								groups.push(group.name + '#<3SG#' + ' (' + group.rating + ') ' + group.range)
 							}
 						});
@@ -470,10 +470,10 @@ $(document).ready(function () {
 						} else {
 							add_option_to_pool('No groups returned from AniDB');
 						}
-					} else if ('fail' == data['result']) {
-						if ('connect' == data['resp']) {
+					} else if ('fail' === data['result']) {
+						if ('connect' === data['resp']) {
 							add_option_to_pool('Fail:AniDB connect. Restart sg else check debug log');
-						} else if ('init' == data['resp']) {
+						} else if ('init' === data['resp']) {
 							add_option_to_pool('Did not initialise AniDB. Check debug log if reqd.');
 						}
 					}

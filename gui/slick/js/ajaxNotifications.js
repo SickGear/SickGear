@@ -24,7 +24,7 @@ function displayPNotify(type, title, message) {
 }
 
 function check_notifications() {
-	if ('visible' == document.visibilityState) {
+	if ('visible' === document.visibilityState) {
 		$.getJSON(message_url, function (data) {
 			$.each(data, function (name, data) {
 				displayPNotify(data.type, data.title, data.message)
@@ -37,7 +37,7 @@ function check_notifications() {
 $(document).ready(function(){
 	check_notifications();
 	if (test) {
-		displayPNotify('notice', 'test', 'test<br/><i class="test-class">hello <b>world</b></i><ul><li>item 1</li><li>item 2</li></ul>');
+		displayPNotify('notice', 'test', 'test<br /><i class="test-class">hello <b>world</b></i><ul><li>item 1</li><li>item 2</li></ul>');
 		//setInterval(function () {displayPNotify('success', 'test2', 'test<br/><b>body2</b>')}, 2000);
 		//setInterval(function () {displayPNotify('error', 'test3', 'hola<br/><b>body2</b>')}, 2100);
 	}

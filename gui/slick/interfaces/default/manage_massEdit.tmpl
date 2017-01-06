@@ -18,8 +18,8 @@
     #set $initial_quality = $common.SD
 #end if
 #set $anyQualities, $bestQualities = $common.Quality.splitQuality($initial_quality)
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/massEdit.js?v=$sbPID"></script>
+<script src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script src="$sbRoot/js/massEdit.js?v=$sbPID"></script>
 
 <form action="massEditSubmit" method="post">
 	$xsrf_form_html
@@ -37,7 +37,7 @@
 			$cur_dir => <span id="display_new_root_dir_$cur_index">$cur_dir</span>
 		</div>
 		<input type="hidden" name="orig_root_dir_$cur_index" value="$cur_dir">
-		<input type="text" style="display:none" name="new_root_dir_$cur_index" id="new_root_dir_$cur_index" class="new_root_dir" value="$cur_dir">
+		<input type="text" style="display:none" name="new_root_dir_$cur_index" id="new_root_dir_$cur_index" class="new_root_dir" value="$cur_dir" autocorrect="off" autocapitalize="off" spellcheck="false">
 #end for
 	</div>
 
@@ -200,7 +200,7 @@
 </form>
 <br />
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 	jQuery('#location').fileBrowser({ title:'Select Show Location' });
 //-->

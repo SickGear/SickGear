@@ -27,11 +27,11 @@
 			for (var i = 0; i < str.length; i++)
 				if (/[aAbBdmyYxHIMSpP]/.test(str[i])) {
 					for (var t = 0; t < token_map.length; t = t + 2)
-						if (str[i] == token_map[t]) {
+						if (str[i] === token_map[t]) {
 							result += token_map[t + 1];
 							break;
 						}
-				} else if ('%' != str[i])
+				} else if ('%' !== str[i])
 					result += str[i];
 
 			return result;
@@ -69,18 +69,18 @@
 
 		if (dateWithTime) {
 			var timeMeta = input.match(/([,\s]+)(\d{1,2})(?:(.)(\d\d)(?:(.)(\d\d))?)?(?:\s?([ap]m))?$/im);
-			if (null != timeMeta) {
+			if (null !== timeMeta) {
 				dtSeparator = (! /undefined/i.test(typeof(timeMeta[1])) ? timeMeta[1] : dtSeparator);
 				// adjust timeToken to num digits of input hours
-				timeToken = (! /undefined/i.test(typeof(timeMeta[2])) && 1 == timeMeta[2].length ? timeToken.replace(/hh/ig, 'h') : timeToken);
+				timeToken = (! /undefined/i.test(typeof(timeMeta[2])) && 1 === timeMeta[2].length ? timeToken.replace(/hh/ig, 'h') : timeToken);
 				// adjust timeToken to remove min if input has one and there is a pm
 				timeToken = (trimZero && ! /undefined/i.test(typeof(timeMeta[7]))
 					&& (/undefined/i.test(typeof(timeMeta[4]))
-						|| '00' == timeMeta[4]) ? timeToken.replace(/.mm/ig, '') : timeToken);
+						|| '00' === timeMeta[4]) ? timeToken.replace(/.mm/ig, '') : timeToken);
 				// adjust timeToken to use seconds if input has them
-				timeToken = (! /undefined/i.test(typeof(timeMeta[5])) && 2 == timeMeta[5].length ? timeToken : timeToken.replace(/.ss/, ''));
+				timeToken = (! /undefined/i.test(typeof(timeMeta[5])) && 2 === timeMeta[5].length ? timeToken : timeToken.replace(/.ss/, ''));
 				// adjust timeToken to am/pm or AM/PM if input has it
-				timeToken = (! /undefined/i.test(typeof(timeMeta[7])) && 2 == timeMeta[7].length ? timeToken.replace(/A$/, (/[ap]m/.test(timeMeta[7]) ? 'a' : 'A')) : timeToken);
+				timeToken = (! /undefined/i.test(typeof(timeMeta[7])) && 2 === timeMeta[7].length ? timeToken.replace(/A$/, (/[ap]m/.test(timeMeta[7]) ? 'a' : 'A')) : timeToken);
 			}
 
 			var token_build = (/h+/i.test(timeToken) ? timeToken.replace(/^(h+).*/i, '[<span class="time-hr">]$1[</span>]') : '');
@@ -122,16 +122,16 @@
 			day = Math.abs(airdate.diff(today, 'days')),
 			week = Math.abs(weekdiff = airdate.diff(today, 'week')), isPast = weekdiff < 0,
 			titleThis = false, qTipTime = false,
-			result = (0 == week ? airdatetime.calendar() : '');
+			result = (0 === week ? airdatetime.calendar() : '');
 
 		if (/\bOn\b/i.test(result)) {
 		   var fuzzer = false, weekday = today.day();
-			if (3 == weekday)
+			if (3 === weekday)
 				fuzzer = (5 <= day);
-			else if (4 == weekday || 5 == weekday)
+			else if (4 === weekday || 5 === weekday)
 				fuzzer = (4 <= day);
 			else
-				fuzzer = (6 == day);
+				fuzzer = (6 === day);
 			if (fuzzer)
 				result = result.replace(/\bOn\b/i, 'Next');
 
@@ -139,13 +139,13 @@
 			if (14 > day)
 				result = airdate.from(today) + (dateWithTime ? dtGlue + airdatetime.format(timeToken) : '');
 			else if (4 > week) {
-				result = (isPast ? '' : 'in ') + (1 == week ? 'a' : week) + ' week' + (1 == week ? '' : 's') + (isPast ? ' ago' : '');
+				result = (isPast ? '' : 'in ') + (1 === week ? 'a' : week) + ' week' + (1 === week ? '' : 's') + (isPast ? ' ago' : '');
 				qTipTime = true;
 			} else {
 				result = airdate.from(today);
 				qTipTime = true;
 				var month = airdate.diff(today, 'month');
-				if (1 == parseInt(airdate.year() - today.year()))
+				if (1 === parseInt(airdate.year() - today.year()))
 					result += (dtInline ? ' ' : '<br />') + '(Next Year)';
 			}
 			titleThis = true;

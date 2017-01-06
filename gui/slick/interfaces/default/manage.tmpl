@@ -19,7 +19,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
     #set $has_any_anime |= bool($curShow.anime)
     #set $has_any_flat_folders |= $bool(curShow.flatten_folders)
 #end for
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 \$.tablesorter.addParser({
 	id: 'showNames',
@@ -76,7 +76,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 });
 //-->
 </script>
-<script type="text/javascript" src="$sbRoot/js/bulkChange.js?v=$sbPID"></script>
+<script src="$sbRoot/js/bulkChange.js?v=$sbPID"></script>
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else

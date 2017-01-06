@@ -9,12 +9,12 @@ $(document).ready(function() {
 		var removeArr = [];
 
 		$('.removeCheck').each(function() {
-			if (!0 == this.checked) {
+			if (!0 === this.checked) {
 				removeArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 
-		if (0 == removeArr.length)
+		if (0 === removeArr.length)
 			return !1;
 
 		window.location.href = sbRoot + '/manage/failedDownloads?toRemove=' + removeArr.join('|');
@@ -54,7 +54,7 @@ $(document).ready(function() {
 						$(this).parent('td').attr('data-order', this.checked ? '1' : '0');
 				}
 
-				if (this == check || this == lastCheck)
+				if (this === check || this === lastCheck)
 					found++;
 			});
 

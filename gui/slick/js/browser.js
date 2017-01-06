@@ -31,7 +31,7 @@
 			fileBrowserDialog.empty();
 			var firstVal = data[0], i = 0, list, link = null;
 			data = $.grep(data, function(){
-				return i++ != 0;
+				return i++ !== 0;
 			});
 			$('<input type="text" class="form-control input-sm">')
 				.val(firstVal.currentPath)
@@ -176,7 +176,7 @@
 		if (ls && options.key) {
 			path = localStorage['fileBrowser-' + options.key];
 		}
-		if (options.key && options.field.val().length == 0 && (path)) {
+		if (options.key && options.field.val().length === 0 && (path)) {
 			options.field.val(path);
 		}
 

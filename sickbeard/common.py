@@ -93,7 +93,6 @@ class Quality:
     UNKNOWN = 1 << 15  # 32768
 
     qualityStrings = {NONE: 'N/A',
-                      UNKNOWN: 'Unknown',
                       SDTV: 'SD TV',
                       SDDVD: 'SD DVD',
                       HDTV: 'HD TV',
@@ -103,7 +102,8 @@ class Quality:
                       FULLHDWEBDL: '1080p WEB-DL',
                       HDBLURAY: '720p BluRay',
                       FULLHDBLURAY: '1080p BluRay',
-                      UHD4KWEB: '2160p UHD 4K WEB'}
+                      UHD4KWEB: '2160p UHD 4K WEB',
+                      UNKNOWN: 'Unknown'}
 
     statusPrefixes = {DOWNLOADED: 'Downloaded',
                       SNATCHED: 'Snatched',
@@ -136,8 +136,8 @@ class Quality:
 
     @staticmethod
     def get_quality_css(quality):
-        return (Quality.qualityStrings[quality].replace('2160p', 'UHD2160p').replace('1080p', 'HD1080p')
-                .replace('720p', 'HD720p').replace('HD TV', 'HD720p').replace('RawHD TV', 'RawHD'))
+        return (Quality.qualityStrings[quality].replace('2160p', 'UHD2160p').replace('RawHD TV', 'RawHD')
+                .replace('10', 'HD10').replace('80p HD TV', '80p').replace('7', 'HD7').replace('HD TV', 'HD720p'))
 
     @staticmethod
     def get_quality_ui(quality):

@@ -8,7 +8,7 @@
 #set global $title = 'Configuration'
 #set global $header = 'Configuration'
 #set global $sbPath = '..'
-#set global $topmenu = 'config'
+#set global $topmenu = 'tools'
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 ##
 #if $varExists('header')
@@ -20,7 +20,7 @@
 <div id="config-content">
 	<table class="infoTable" cellspacing="1" border="0" cellpadding="0" width="100%">
 		<tr>
-			<td class="infoTableHeader">Version: </td>
+			<td class="infoTableHeader">Version</td>
 			<td class="infoTableCell">
 				BRANCH: #echo $sg_str('BRANCH') or 'UNKNOWN'# / COMMIT: #echo ($sg_str('CUR_COMMIT_HASH')[0:7] or 'UNKNOWN') + ('', ' @ ')[bool($version)]#$version<br />
 				<em class="red-text">This is BETA software</em><br />
@@ -29,19 +29,84 @@
 #end if
 			</td>
 		</tr>
-		<tr><td class="infoTableHeader">Config file:</td><td class="infoTableCell">$sg_str('CONFIG_FILE')</td></tr>
-		<tr><td class="infoTableHeader">Database file:</td><td class="infoTableCell">$db.dbFilename()</td></tr>
-		<tr><td class="infoTableHeader">Cache Dir:</td><td class="infoTableCell">$sg_str('CACHE_DIR')</td></tr>
-		<tr><td class="infoTableHeader">Arguments:</td><td class="infoTableCell">#echo $sg_var('MY_ARGS') or 'None used'#</td></tr>
-		<tr><td class="infoTableHeader">Web Root:</td><td class="infoTableCell">$sg_str('WEB_ROOT')</td></tr>
-		<tr><td class="infoTableHeader">Python Version:</td><td class="infoTableCell">$sys.version[:120]</td></tr>
+		<tr><td class="infoTableHeader">Config file</td><td class="infoTableCell">$sg_str('CONFIG_FILE')</td></tr>
+		<tr><td class="infoTableHeader">Database file</td><td class="infoTableCell">$db.dbFilename()</td></tr>
+		<tr><td class="infoTableHeader">Cache Dir</td><td class="infoTableCell">$sg_str('CACHE_DIR')</td></tr>
+		<tr><td class="infoTableHeader">Arguments</td><td class="infoTableCell">#echo $sg_var('MY_ARGS') or 'None used'#</td></tr>
+		<tr><td class="infoTableHeader">Web Root</td><td class="infoTableCell">#echo $sg_str('WEB_ROOT') or "<em>manually configure in Config file</em>"#</td></tr>
+		<tr><td class="infoTableHeader">Python Version</td><td class="infoTableCell">$sys.version[:120]</td></tr>
+		<tr class="infoTableSeperator">
+			<td class="infoTableHeader" style="vertical-align:top">Keyboard sequences</td>
+			<td class="infoTableCell">
+				<p><b class="keyb">Esc</b> switch between text and window focus to use any of the following key sequence...</p>
+
+				<ul class="inline-column">
+					<li><b class="keyb">s</b>hows then...</li>
+					<li><b class="keyb">l</b>ist</li><li><b class="keyb">e</b>pisodes</li><li><b class="keyb">h</b>istory</li>
+					<li><b class="keyb">s</b>earch</li><li><b class="keyb">t</b>rakt</li><li><b class="keyb">i</b>mdb</li>
+#if $sg_var('USE_ANIDB')
+					<li><b class="keyb">a</b>nidb</li>
+#end if
+				</ul>
+
+				<ul class="inline-column">
+					<li><b class="keyb">m</b>anage then... </li>
+					<li>process <b class="keyb">m</b>edia</li><li><b class="keyb">b</b>ulk change</li>
+					<li>backlog <b class="keyb">o</b>verview</li><li>media <b class="keyb">s</b>earch</li>
+					<li>show <b class="keyb">p</b>rocesses</li><li>episode <b class="keyb">s</b>tatus</li>
+#if hasattr($sickbeard, 'USE_FAILED_DOWNLOADS') and $sg_var('USE_FAILED_DOWNLOADS')
+					<li><b class="keyb">f</b>ailed downloads</li>
+#end if
+#if hasattr($sickbeard, 'USE_SUBTITLES') and $sg_var('USE_SUBTITLES')
+					<li>missing s<b class="keyb">u</b>btitles</li>
+#end if
+				</ul>
+
+				<ul class="inline-column">
+					<li><b class="keyb">c</b>onfig then...<img width="16px" src="/images/menu/system18.png"></img></li>
+					<li><b class="keyb">g</b>eneral</li><li><b class="keyb">m</b>edia providers</li><li><b class="keyb">s</b>earch</li><li>s<b class="keyb">u</b>btitles</li>
+					<li><b class="keyb">p</b>ost processing</li><li><b class="keyb">n</b>otifications</li><li><b class="keyb">a</b>nime</li>
+				</ul>
+
+				<ul class="inline-column">
+					<li><b class="keyb">t</b>ools then... <img width="16px" src="/images/menu/system18-2.png"></img></li>
+					<li><b class="keyb">a</b>bout</li><li><b class="keyb">u</b>pdates</li><li><b class="keyb">c</b>hange list</li>
+					<li><b class="keyb">e</b>rror logs</li><li>log <b class="keyb">f</b>ile</li><li><b class="keyb">i</b>mport</li>
+#if $sg_str('WEB_USERNAME') or $sg_str('WEB_PASSWORD')
+					<li><b class="keyb">l</b>ogout</li>
+#end if
+					<li><b class="keyb">r</b>estart</li><li><b class="keyb">s</b>hutdown</li>
+				</ul>
+
+				<br style="clear:both" />
+				<ul class="inline-row"><li>at displayshow...</li><li><b class="keyb">e</b>dit show</li><li><b class="keyb">p</b>ause show</li></ul>
+				<ul class="inline-row"><li>at editshow...</li><li><b class="keyb">Esc</b> cancel edit</li></ul>
+				<ul class="inline-row"><li>at config...</li><li><b class="keyb">m</b>ore <b class="keyb">g</b>ear</li><li><b class="keyb">l</b>ess <b class="keyb">g</b>ear</li><li><b class="keyb">ctrl</b> + <b class="keyb">s</b>ave config</li></ul>
+				<ul class="inline-row"><li>view any tab <em>num</em>...</li><li><b class="keyb">t</b><b class="keyb">1</b> ... <b class="keyb">t</b><b class="keyb"><em>num</em></b></li></ul>
+
+				<div style="clear:both;padding-top:10px">examples,</div>
+				<ul style="padding:0 15px"><li>view episodes; currently at show list page and search box has focus, sequence is <b class="keyb">Esc</b><b class="keyb">s</b><b class="keyb">e</b></li>
+				<li>view <em>all</em> interface settings; currently at episode view, sequence is <b class="keyb">c</b><b class="keyb">g</b> then <b class="keyb">m</b><b class="keyb">g</b> and <b class="keyb">t</b><b class="keyb">2</b> at config</li>
+				<li>view latest changes; currently at interface settings, sequence is <b class="keyb">t</b><b class="keyb">c</b></li></ul>
+			</td>
+		</tr>
 		<tr class="infoTableSeperator"><td class="infoTableHeader"><i class="icon16-sg"></i> Homepage</td><td class="infoTableCell"><a href="<%= anon_url('https://github.com/SickGear/SickGear/wiki') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://github.com/SickGear/SickGear/wiki</a></td></tr>
 		<tr><td class="infoTableHeader"><i class="icon16-github"></i> Source</td><td class="infoTableCell"><a href="<%= anon_url('https://github.com/SickGear/SickGear/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://github.com/SickGear/SickGear/</a></td></tr>
 		<tr><td class="infoTableHeader"><i class="icon16-mirc"></i> Internet Relay Chat</td><td class="infoTableCell"><a href="irc://irc.freenode.net/#SickGear" rel="noreferrer"><i>#SickGear</i> on <i>irc.freenode.net</i></a></td></tr>
-		<tr class="infoTableSeperator"><td class="infoTableHeader">Powered by</td><td class="infoTableCell">Python, HTML5, jQuery, SQLite, Regex, CSS, Javascript, Tornado webserver</td></tr>
-		<tr><td class="infoTableHeader">&nbsp;</td><td class="infoTableHeader">Huge thanks to Jetbrains for PyCharm IDE, trust them with your development project</td></tr>
-		<tr><td class="infoTableHeader">Credits to</td><td class="infoTableHeader">Also; TheTVDB, Trakt.tv, TVMaze, Fanart.tv, IMDb, TheXem, srrDB, Predb, and GitHub</td></tr>
-		<tr><td class="infoTableHeader">&nbsp;</td><td class="infoTableHeader">This project uses the TMDb API but is not endorsed or certified by TMDb</td></tr>
+		<tr class="infoTableSeperator">
+			<td class="infoTableHeader" style="vertical-align:top">Powered by</td>
+			<td class="infoTableCell">
+				<p>Python, HTML5, jQuery, SQLite, Regex, CSS, Javascript, Tornado webserver</p>
+				<p>Huge thanks to Jetbrains for PyCharm IDE, trust them with your development project</p>
+			</td>
+		</tr>
+		<tr>
+			<td class="infoTableHeader" style="vertical-align:top">Credits to</td>
+			<td class="infoTableCell">
+				<p>TheTVDB, Trakt.tv, TVMaze, Fanart.tv, IMDb, TheXem, srrDB, Predb, and GitHub</p>
+				<p>This project uses the TMDb API but is not endorsed or certified by TMDb</p>
+			</td>
+		</tr>
 	</table>
 </div>
 

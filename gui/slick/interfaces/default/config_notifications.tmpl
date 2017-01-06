@@ -14,8 +14,8 @@
 ##
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/configNotifications.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script src="$sbRoot/js/configNotifications.js?v=$sbPID"></script>
+<script src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -114,7 +114,7 @@
 								<label for="emby-host">
 									<span class="component-title">Host(s) running Emby</span>
 									<span class="component-desc">
-										<input type="text" name="emby_host" id="emby-host" value="$sickbeard.EMBY_HOST" class="form-control input-sm input250">
+										<input type="text" name="emby_host" id="emby-host" value="$sickbeard.EMBY_HOST" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<input type="button" class="btn" value="Discover" id="discover-emby">
 										<div class="clear-left"><p>IP:Port [, IP:Port] (e.g. 192.168.0.1:8096, 192.168.1.2:8096)</p></div>
 									</span>
@@ -124,7 +124,7 @@
 								<label for="emby-apikey">
 									<span class="component-title">API key(s)</span>
 									<span class="component-desc">
-										<input type="text" name="emby_apikey" id="emby-apikey" value="<%= starify(sickbeard.EMBY_APIKEY) %>" class="form-control input-sm input250">
+										<input type="text" name="emby_apikey" id="emby-apikey" value="<%= starify(sickbeard.EMBY_APIKEY) %>" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<p>(comma separated)</p>
 										<div class="clear-left"><p>one key per host from Emby/Manage Server/Advanced/Security</p></div>
 									</span>
@@ -208,7 +208,7 @@
 								<label for="kodi-host">
 									<span class="component-title">Host(s) running Kodi</span>
 									<span class="component-desc">
-										<input type="text" name="kodi_host" id="kodi-host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350">
+										<input type="text" name="kodi_host" id="kodi-host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left"><p>IP:Port [, IP:Port] (e.g. 192.168.0.1:8080, 192.168.1.2:8080)</p></div>
 									</span>
 								</label>
@@ -217,7 +217,7 @@
 								<label for="kodi-username">
 									<span class="component-title">Kodi web server username</span>
 									<span class="component-desc">
-										<input type="text" name="kodi_username" id="kodi-username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250">
+										<input type="text" name="kodi_username" id="kodi-username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<p>(blank for none)</p>
 										<div class="clear-left"><p>in Kodi System/Settings/Services/Web server</p></div>
 									</span>
@@ -294,7 +294,7 @@
 									<label for="plex-username">
 										<span class="component-title">Server/client username</span>
 										<span class="component-desc">
-											<input type="text" name="plex_username" id="plex-username" value="$sickbeard.PLEX_USERNAME" class="form-control input-sm input250">
+											<input type="text" name="plex_username" id="plex-username" value="$sickbeard.PLEX_USERNAME" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 											<p>blank = no authentication</p>
 										</span>
 									</label>
@@ -315,7 +315,7 @@
 									<label for="plex-update-library">
 										<span class="component-title">Update server library</span>
 										<span class="component-desc">
-											<input type="checkbox" name="plex_update_library" id="plex-update-library" #if $sickbeard.PLEX_UPDATE_LIBRARY then 'checked="checked" ' else ''#/>
+											<input type="checkbox" name="plex_update_library" id="plex-update-library" #if $sickbeard.PLEX_UPDATE_LIBRARY then 'checked="checked" ' else ''#>
 											<p>update Plex Media Server library when a download finishes</p>
 										</span>
 									</label>
@@ -350,7 +350,7 @@
 									<label for="plex-server-host">
 										<span class="component-title">Plex Media Server IP:Port</span>
 										<span class="component-desc">
-											<input type="text" name="plex_server_host" id="plex-server-host" value="<%= re.sub(r'\b,\b', ', ', sickbeard.PLEX_SERVER_HOST) %>" class="form-control input-sm input350">
+											<input type="text" name="plex_server_host" id="plex-server-host" value="<%= re.sub(r'\b,\b', ', ', sickbeard.PLEX_SERVER_HOST) %>" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 											<div class="clear-left">
 												<p>one or more hosts running Plex Media Server<br>(eg. 192.168.1.1:32400, 192.168.1.2:32400)</p>
 											</div>
@@ -398,7 +398,7 @@
 									<label for="plex-host">
 										<span class="component-title">Plex client IP:Port</span>
 										<span class="component-desc">
-											<input type="text" name="plex_host" id="plex-host" value="<%= re.sub(r'\b,\b', ', ', sickbeard.PLEX_HOST) %>" class="form-control input-sm input350">
+											<input type="text" name="plex_host" id="plex-host" value="<%= re.sub(r'\b,\b', ', ', sickbeard.PLEX_HOST) %>" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 											<div class="clear-left">
 												<p>one or more hosts running Plex client<br>(eg. 192.168.1.100:3000, 192.168.1.101:3000)</p>
 											</div>
@@ -560,7 +560,7 @@
 								<label for="nmj-host">
 									<span class="component-title">Popcorn IP address</span>
 									<span class="component-desc">
-										<input type="text" name="nmj_host" id="nmj-host" value="$sickbeard.NMJ_HOST" class="form-control input-sm input250">
+										<input type="text" name="nmj_host" id="nmj-host" value="$sickbeard.NMJ_HOST" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">IP address of Popcorn 200-series (eg. 192.168.1.100)</div>
 									</span>
 								</label>
@@ -578,7 +578,7 @@
 								<label for="nmj-database">
 									<span class="component-title">NMJ database</span>
 									<span class="component-desc">
-										<input type="text" name="nmj_database" id="nmj-database" value="$sickbeard.NMJ_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJ_DATABASE then "readonly=\"readonly\"" else ''#>
+										<input type="text" name="nmj_database" id="nmj-database" value="$sickbeard.NMJ_DATABASE" class="form-control input-sm input250"#if $sickbeard.NMJ_DATABASE# readonly="readonly"#end if# autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">automatically filled via the 'Get Settings' button</div>
 									</span>
 								</label>
@@ -587,7 +587,7 @@
 								<label for="nmj-mount">
 									<span class="component-title">NMJ mount url</span>
 									<span class="component-desc">
-										<input type="text" name="nmj_mount" id="nmj-mount" value="$sickbeard.NMJ_MOUNT" class="form-control input-sm input250" #if $sickbeard.NMJ_MOUNT then "readonly=\"readonly\"" else ''#>
+										<input type="text" name="nmj_mount" id="nmj-mount" value="$sickbeard.NMJ_MOUNT" class="form-control input-sm input250"#if $sickbeard.NMJ_MOUNT# readonly="readonly"#end if# autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">automatically filled via the 'Get Settings' button</div>
 									</span>
 								</label>
@@ -623,7 +623,7 @@
 								<label for="nmjv2-host">
 									<span class="component-title">Popcorn IP address</span>
 									<span class="component-desc">
-										<input type="text" name="nmjv2_host" id="nmjv2-host" value="$sickbeard.NMJv2_HOST" class="form-control input-sm input250">
+										<input type="text" name="nmjv2_host" id="nmjv2-host" value="$sickbeard.NMJv2_HOST" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">IP address of Popcorn 300/400-series (eg. 192.168.1.100)</div>
 									</span>
 								</label>
@@ -635,7 +635,7 @@
 										<input type="radio" NAME="nmjv2_dbloc" VALUE="local" id="NMJV2_DBLOC_A" #if $sickbeard.NMJv2_DBLOC=='local' then 'checked="checked"' else ''#>PCH Local Media
 									</label>
 									<label for="NMJV2_DBLOC_B">
-										<input type="radio" NAME="nmjv2_dbloc" VALUE="network" id="NMJV2_DBLOC_B" #if $sickbeard.NMJv2_DBLOC=='network' then 'checked="checked"' else ''#/>PCH Network Media
+										<input type="radio" NAME="nmjv2_dbloc" VALUE="network" id="NMJV2_DBLOC_B" #if $sickbeard.NMJv2_DBLOC=='network' then 'checked="checked"' else ''#>PCH Network Media
 									</label>
 								</span>
 							</div>
@@ -669,7 +669,7 @@
 								<label for="nmjv2-database">
 									<span class="component-title">NMJv2 database</span>
 									<span class="component-desc">
-										<input type="text" name="nmjv2_database" id="nmjv2-database" value="$sickbeard.NMJv2_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJv2_DATABASE then "readonly=\"readonly\"" else ''#>
+										<input type="text" name="nmjv2_database" id="nmjv2-database" value="$sickbeard.NMJv2_DATABASE" class="form-control input-sm input250"#if $sickbeard.NMJv2_DATABASE# readonly="readonly"#end if# autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">automatically filled via the 'Find Database' buttons</div>
 									</span>
 								</label>
@@ -795,7 +795,7 @@
 								<label for="pytivo-host">
 									<span class="component-title">pyTivo IP:Port</span>
 									<span class="component-desc">
-										<input type="text" name="pytivo_host" id="pytivo-host" value="$sickbeard.PYTIVO_HOST" class="form-control input-sm input250">
+										<input type="text" name="pytivo_host" id="pytivo-host" value="$sickbeard.PYTIVO_HOST" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">host running pyTivo (eg. 192.168.1.1:9032)</div>
 									</span>
 								</label>
@@ -804,7 +804,7 @@
 								<label for="pytivo-share-name">
 									<span class="component-title">pyTivo share name</span>
 									<span class="component-desc">
-										<input type="text" name="pytivo_share_name" id="pytivo-share-name" value="$sickbeard.PYTIVO_SHARE_NAME" class="form-control input-sm input250">
+										<input type="text" name="pytivo_share_name" id="pytivo-share-name" value="$sickbeard.PYTIVO_SHARE_NAME" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">value used in pyTivo Web Configuration to name the share</div>
 									</span>
 								</label>
@@ -813,7 +813,7 @@
 								<label for="pytivo-tivo-name">
 									<span class="component-title">Tivo name</span>
 									<span class="component-desc">
-										<input type="text" name="pytivo_tivo_name" id="pytivo-tivo-name" value="$sickbeard.PYTIVO_TIVO_NAME" class="form-control input-sm input250">
+										<input type="text" name="pytivo_tivo_name" id="pytivo-tivo-name" value="$sickbeard.PYTIVO_TIVO_NAME" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">in pyTivo use DVR name in ...<br>Messages & Settings > Account & System Information > System Information</div>
 									</span>
 								</label>
@@ -895,7 +895,7 @@
 								<label for="boxcar2-access-token">
 									<span class="component-title">Boxcar2 access token</span>
 									<span class="component-desc">
-										<input type="text" name="boxcar2_access_token" id="boxcar2-access-token" value="<%= starify(sickbeard.BOXCAR2_ACCESSTOKEN) %>" class="form-control input-sm input250">
+										<input type="text" name="boxcar2_access_token" id="boxcar2-access-token" value="<%= starify(sickbeard.BOXCAR2_ACCESSTOKEN) %>" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 									</span>
 								</label>
 							</div>
@@ -998,7 +998,7 @@
 								<label for="pushalot-authorizationtoken">
 									<span class="component-title">Pushalot auth token</span>
 									<span class="component-desc">
-										<input type="text" name="pushalot_authorizationtoken" id="pushalot-authorizationtoken" value="<%= starify(sickbeard.PUSHALOT_AUTHORIZATIONTOKEN) %>" class="form-control input-sm input350">
+										<input type="text" name="pushalot_authorizationtoken" id="pushalot-authorizationtoken" value="<%= starify(sickbeard.PUSHALOT_AUTHORIZATIONTOKEN) %>" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">authorization token of Pushalot account</div>
 									</span>
 								</label>
@@ -1136,7 +1136,7 @@
 								<label for="pushover-userkey">
 									<span class="component-title">Pushover account user key</span>
 									<span class="component-desc">
-										<input type="text" name="pushover_userkey" id="pushover-userkey" value="<%= starify(sickbeard.PUSHOVER_USERKEY) %>" class="form-control input-sm input250">
+										<input type="text" name="pushover_userkey" id="pushover-userkey" value="<%= starify(sickbeard.PUSHOVER_USERKEY) %>" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 									</span>
 								</label>
 							</div>
@@ -1144,7 +1144,7 @@
 								<label for="pushover-apikey">
 									<span class="component-title">Pushover API key</span>
 									<span class="component-desc">
-										<input type="text" name="pushover_apikey" id="pushover-apikey" value="<%= starify(sickbeard.PUSHOVER_APIKEY) %>" class="form-control input-sm input250">
+										<input type="text" name="pushover_apikey" id="pushover-apikey" value="<%= starify(sickbeard.PUSHOVER_APIKEY) %>" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left"><a href="<%= anon_url('https://pushover.net/apps/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</div>
 									</span>
 								</label>
@@ -1338,7 +1338,7 @@
 								<label for="prowl-api">
 									<span class="component-title">Prowl API key:</span>
 									<span class="component-desc">
-										<input type="text" name="prowl_api" id="prowl-api" value="<%= starify(sickbeard.PROWL_API) %>" class="form-control input-sm input250">
+										<input type="text" name="prowl_api" id="prowl-api" value="<%= starify(sickbeard.PROWL_API) %>" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left">get key at: <a href="<%= anon_url('https://www.prowlapp.com/api_settings.php') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://www.prowlapp.com/api_settings.php</a></div>
 									</span>
 								</label>
@@ -2016,15 +2016,15 @@
 								<label for="email-from">
 									<span class="component-title">SMTP sender email address</span>
 									<span class="component-desc">
-										<input type="text" name="email_from" id="email-from" value="$sickbeard.EMAIL_FROM" class="form-control input-sm input250">
+										<input type="text" name="email_from" id="email-from" value="$sickbeard.EMAIL_FROM" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left"><p>some recipient hosts require a real address</p></div>
 									</span>
 								</label>
 								<div style="margin-bottom:5px;display:inline-block">
 									<span class="component-title">SMTP server hostname</span>
 									<span class="component-desc">
-										<input type="text" name="email_host" id="email-host" value="$sickbeard.EMAIL_HOST" class="form-control input-sm input250">
-										<span style="float:left;margin-right:6px">and port</span><input type="text" name="email_port" id="email-port" value="$sickbeard.EMAIL_PORT" class="form-control input-sm input75" style="width:60px">
+										<input type="text" name="email_host" id="email-host" value="$sickbeard.EMAIL_HOST" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
+										<span style="float:left;margin-right:6px">and port</span><input type="text" name="email_port" id="email-port" value="$sickbeard.EMAIL_PORT" class="form-control input-sm input75" style="width:60px" autocorrect="off" autocapitalize="off" spellcheck="false">
 									</span>
 								</div>
 								<label for="email-tls">
@@ -2036,7 +2036,7 @@
 								<label for="email-user">
 									<span class="component-title">SMTP server username</span>
 									<span class="component-desc">
-										<input type="text" name="email_user" id="email-user" value="$sickbeard.EMAIL_USER" class="form-control input-sm input250">
+										<input type="text" name="email_user" id="email-user" value="$sickbeard.EMAIL_USER" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<p>(optional)</p>
 									</span>
 								</label>
@@ -2052,7 +2052,7 @@
 								<label for="email-list">
 									<span class="component-title">Notify for every show</span>
 									<span class="component-desc">
-										<input type="text" name="email_list" id="email-list" value="$sickbeard.EMAIL_LIST" class="form-control input-sm input350">
+										<input type="text" name="email_list" id="email-list" value="$sickbeard.EMAIL_LIST" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<div class="clear-left"><p>comma separated email list</p></div>
 									</span>
 								</label>
@@ -2067,7 +2067,7 @@
 								<label>
 									<span class="component-title">&nbsp;</span>
 									<span class="component-desc">
-										<input type="text" id="show-email-list" class="form-control input-sm input350">
+										<input type="text" id="show-email-list" class="form-control input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 										<input type="button" value="Save Show" id="save-show-email" class="btn">
 										<div class="clear-left"><p>comma separated email list for each show</p></div>
 									</span>

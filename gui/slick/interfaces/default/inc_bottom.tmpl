@@ -136,5 +136,16 @@ $(function(){
 #end raw
 </script>
 	</footer>
+
+	<script src="$sbRoot/js/mousetrap/mousetrap.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/mousetrap/mousetrap-bind-dictionary.min.js?v=$sbPID"></script>
+#if $varExists('header') and $header in ('Browse Shows', 'Show List')
+	<script src="$sg_root/js/lazyload/lazyload.min.js?v=$sbPID"></script>
+	<script src="$sg_root/js/footer.js?v=$sbPID"></script>
+    #if 'Show List' == $header
+	<script src="$sg_root/js/home.js?v=$sbPID"></script>
+    #end if
+#end if
+	<script src="$sbRoot/js/inc_bottom.js?v=$sbPID"></script>
 </body>
 </html>

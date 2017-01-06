@@ -1,47 +1,187 @@
-function initActions() {
-	var menu$ = $('#SubMenu');
-	menu$.find('a[href*="/home/restart/"]').addClass('btn restart').html('<i class="sgicon-restart"></i>Restart');
-	menu$.find('a[href*="/home/shutdown/"]').addClass('btn shutdown').html('<i class="sgicon-shutdown"></i>Shutdown');
-	menu$.find('a[href*="/home/logout/"]').addClass('btn').html('<i class="sgicon-logout"></i>Logout');
-	menu$.find('a:contains("Edit")').addClass('btn').html('<i class="sgicon-edit"></i>Edit');
-	menu$.find('a:contains("Remove")').addClass('btn remove').html('<i class="sgicon-delete"></i>Remove');
-	menu$.find('a:contains("Clear History")').addClass('btn clearhistory').html('<i class="sgicon-delete"></i>Clear History');
-	menu$.find('a:contains("Trim History")').addClass('btn trimhistory').html('<i class="sgicon-trim"></i>Trim History');
-	menu$.find('a[href$="/errorlogs/downloadlog/"]').addClass('btn').html('<i class="sgicon-download"></i>Download Log');
-	menu$.find('a[href$="/errorlogs/clearerrors/"]').addClass('btn').html('<i class="sgicon-delete"></i>Clear Errors');
-	menu$.find('a:contains("Re-scan")').addClass('btn').html('<i class="sgicon-refresh"></i>Re-scan');
-	menu$.find('a:contains("Backlog Overview")').addClass('btn').html('<i class="sgicon-backlog"></i>Backlog Overview');
-	menu$.find('a[href$="/home/update_plex/"]').addClass('btn').html('<i class="sgicon-plex"></i>Update PLEX');
-	menu$.find('a:contains("Force")').addClass('btn').html('<i class="sgicon-fullupdate"></i>Force Full Update');
-	menu$.find('a:contains("Rename")').addClass('btn').html('<i class="sgicon-rename"></i>Media Renamer');
-	menu$.find('a[href$="/config/subtitles/"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Subtitles');
-	menu$.find('a[href*="/home/subtitleShow"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Download Subtitles');
-	menu$.find('a:contains("Anime")').addClass('btn').html('<i class="sgicon-anime"></i>Anime');
-	menu$.find('a:contains("Search")').addClass('btn').html('<i class="sgicon-search"></i>Search');
-	menu$.find('a:contains("Provider")').addClass('btn').html('<i class="sgicon-book"></i>Media Providers');
-	menu$.find('a:contains("General")').addClass('btn').html('<i class="sgicon-config"></i>General');
-	menu$.find('a:contains("Episode Status")').addClass('btn').html('<i class="sgicon-episodestatus"></i>Episode Status');
-	menu$.find('a:contains("Missed Subtitle")').addClass('btn').html('<i class="sgicon-subtitles"></i>Missed Subtitles');
-	menu$.find('a[href$="/config/postProcessing/"]').addClass('btn').html('<i class="sgicon-postprocess"></i>Post Processing');
-	menu$.find('a[href$="/postprocess/"]').addClass('btn').html('<i class="sgicon-postprocess"></i>Process Media');
-	menu$.find('a:contains("Media Search")').addClass('btn').html('<i class="sgicon-search"></i>Media Search');
-	menu$.find('a:contains("Manage Torrents")').addClass('btn').html('<i class="sgicon-bittorrent"></i>Manage Torrents');
-	menu$.find('a:contains("Show Processes")').addClass('btn').html('<i class="sgicon-showqueue"></i>Show Processes');
-	menu$.find('a[href$="/manage/failedDownloads/"]').addClass('btn').html('<i class="sgicon-failed"></i>Failed Downloads');
-	menu$.find('a:contains("Notification")').addClass('btn').html('<i class="sgicon-notification"></i>Notifications');
-	menu$.find('a[href$="/home/update_emby/"]').addClass('btn').html('<i class="sgicon-emby"></i>Update Emby');
-	menu$.find('a[href$="/home/update_kodi/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
-	// menu$.find('a[href$="/home/update_xbmc/"]').addClass('btn').html('<i class="sgicon-xbmc"></i>Update XBMC');
-	menu$.find('a:contains("Update show in Emby")').addClass('btn').html('<i class="sgicon-emby"></i>Update show in Emby');
-	menu$.find('a:contains("Update show in Kodi")').addClass('btn').html('<i class="sgicon-kodi"></i>Update show in Kodi');
-	// menu$.find('a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
+/** @namespace $.SickGear.Root */
+/** @namespace style.sheet */
+
+function initHeader(){
+	//settings
+	var header = $('.header'), fadeSpeed = 100, fadeTo = 0.8, topDistance = 20, inside = !1;
+	var topbarML = function(){$(header).fadeTo(fadeSpeed, fadeTo);},
+		topbarME = function(){$(header).fadeTo(fadeSpeed, 1);};
+
+	$(window).scroll($.debounce(250, function(){
+		var position = $(window).scrollTop();
+		if (position > topDistance && !inside){
+			//add events
+			topbarML();
+			$(header).bind('mouseenter', topbarME);
+			$(header).bind('mouseleave', topbarML);
+			inside = !0;
+		} else if (position < topDistance){
+			topbarME();
+			$(header).unbind('mouseenter', topbarME);
+			$(header).unbind('mouseleave', topbarML);
+			inside = !1;
+		}
+	}));
 }
 
+function showMsg(msg, loader, timeout, ms){
+	var feedback = $('#ajaxMsg'), update = $('#updatebar');
+
+	if (update.is(':visible')){
+		var height = update.height() + 35;
+		feedback.css('bottom', height + 'px');
+	} else {
+		feedback.removeAttr('style');
+	}
+	feedback.fadeIn();
+
+	var message = $('<div class="msg">' + msg + '</div>');
+	if (loader){
+		message = $('<div class="msg"><img src="interfaces/default/images/loader_black.gif" alt="loading" class="loader" style="position:relative;top:10px;margin-top:-15px;margin-left:-10px">' + msg + "</div>");
+		feedback.css('padding', '14px 10px')
+	}
+	$(feedback).prepend(message);
+	if (timeout){
+		setTimeout(function(){
+			message.fadeOut(function(){
+				$(this).remove();
+				feedback.fadeOut();
+			});
+		}, ms);
+	}
+}
+
+function preventDefault(){
+	$('a[href="#"]').on('click', function(){
+		return !1;
+	});
+}
+
+function initFancybox(){
+	if (0 < $('a[rel*=dialog]').length){
+		$.getScript($.SickGear.Root + '/js/fancybox/jquery.fancybox.js', function(){
+			$('head').append('<link rel="stylesheet" href="' + $.SickGear.Root + '/js/fancybox/jquery.fancybox.css">');
+			$('a[rel*=dialog]').fancybox({
+				type: 'image',
+				padding: 0,
+				helpers : {title : null, overlay : {locked: !1, css : {'background': 'rgba(0, 0, 0, 0.4)'}}}
+			});
+		});
+	}
+}
+
+function initTabs(){
+	$('#config-components').tabs({
+		activate: function(event, ui){
+
+			var lastOpenedPanel = $(this).data('lastOpenedPanel');
+			var selected = $(this).tabs('option', 'selected');
+
+			if (lastOpenedPanel){
+			} else {
+				lastOpenedPanel = $(ui.oldPanel)
+			}
+
+			if (!$(this).data('topPositionTab')){
+				$(this).data('topPositionTab', $(ui.newPanel).position()['top'])
+			}
+
+			//Dont use the builtin fx effects. This will fade in/out both tabs, we dont want that
+			//Fadein the new tab yourself
+			$(ui.newPanel).hide().fadeIn(0);
+
+			if (lastOpenedPanel){
+
+				// 1. Show the previous opened tab by removing the jQuery UI class
+				// 2. Make the tab temporary position:absolute so the two tabs will overlap
+				// 3. Set topposition so they will overlap if you go from tab 1 to tab 0
+				// 4. Remove position:absolute after animation
+				lastOpenedPanel
+					.toggleClass('ui-tabs-hide')
+					.css('position', 'absolute')
+					.css('top', $(this).data('topPositionTab') + 'px')
+					.fadeOut(0, function(){
+						$(this)
+							.css('position', '');
+					});
+			}
+			//Saving the last tab has been opened
+			$(this).data('lastOpenedPanel', $(ui.newPanel));
+		}
+	});
+}
+
+var isFontFaceSupported = (function(){
+	var ua = navigator.userAgent;
+	if (!!ua.match(/Android 2.[01]/)) return !1;
+
+	var sheet, doc = document, head = doc.head || doc.getElementsByTagName('head')[0] || doc.documentElement,
+		style = doc.createElement('style'), impl = doc.implementation || {hasFeature: function(){return !1;}};
+	style.type = 'text/css';
+	head.insertBefore(style, head.firstChild);
+	sheet = style.sheet || style.styleSheet;
+
+	var supportAtRule = impl.hasFeature('CSS2', '') ?
+		function(rule){
+			if (!(sheet && rule)) return !1;
+			var result = !1;
+			try {
+				sheet.insertRule(rule, 0);
+				result = !(/unknown/i).test(sheet.cssRules[0].cssText);
+				sheet.deleteRule(sheet.cssRules.length - 1);
+			} catch(e){}
+			return result;
+		} :
+		function(rule){
+			if (!(sheet && rule)) return !1;
+			sheet.cssText = rule;
+
+			return 0 !== sheet.cssText.length
+				&& !(/unknown/i).test(sheet.cssText)
+				&& 0 === sheet.cssText
+					.replace(/\r+|\n+/g, '')
+					.indexOf(rule.split(' ')[0]);
+		};
+	return supportAtRule('@font-face {font-family:"font";src:"' + $.SickGear.Root + '/fonts/isfontface.otf";}');
+})();
+
+function setStyle(theme){
+	var style$;
+	$(['light','dark']).each(function(i, e){
+		if ((style$ = $('link[rel*="stylesheet"][href*="' + e + '"]')).length){
+			style$.disabled = !0;
+			if (/undefined/i.test(typeof theme))
+				theme = 'light' === e ? 'dark' : 'light'; // toggle style
+			style$.attr('href', style$.attr('href').replace(e, theme));
+			$.cookieJar('sg').set('theme', theme);
+			style$.disabled = !1;
+			return !1;
+		}
+	});
+}
+$.cookie = !0;
+var theme = $.cookieJar('sg').get('theme'), set = !/undefined/i.test(typeof theme) && setStyle(theme);
+
 $(function(){
-	initActions();
-	$('#NAV' + topmenu).addClass('active');
+	initHeader();
+	preventDefault();
+	initFancybox();
+	initTabs();
+
+	var body$ = $('body'), tailloc = location.href.replace(/.*([/][^_/?]+)[\w_/?].*?$/, '$1'),
+		activemenu$ = $('.dropdown.active .dropdown-menu li');
+	if (-1 !== tailloc.indexOf('displayShow')){
+		tailloc = location.href.replace(/.*([/].*?)$/, '$1');
+	}
+	if (!activemenu$.find('a[href$="' + tailloc + '/"]').addClass('active').length)
+		activemenu$.find('a[href*="' + tailloc + '"]').addClass('active');
 	$('.dropdown-toggle').dropdownHover();
-	(/undefined/i.test(document.createElement('input').placeholder)) && $('body').addClass('no-placeholders');
+	$('#theme').click(function(){setStyle();});
+	(/undefined/i.test(document.createElement('input').placeholder)) && body$.addClass('no-placeholders');
+	if (isFontFaceSupported){
+		body$.removeClass('noicons');
+		$('nav').find('.text-home').hide();
+	}
 
 	$('.bubblelist').on('click', '.list .item a', function(){
 		var bubbleAfter$ = $('#bubble-after'),

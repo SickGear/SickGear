@@ -484,6 +484,7 @@ HOME_LAYOUT = None
 FOOTER_TIME_LAYOUT = 0
 POSTER_SORTBY = None
 POSTER_SORTDIR = None
+SHOWLIST_FLEXIBLE = None
 DISPLAY_SHOW_VIEWMODE = 0
 DISPLAY_SHOW_BACKGROUND = False
 DISPLAY_SHOW_BACKGROUND_TRANSLUCENT = False
@@ -607,7 +608,8 @@ def init_stage_1(console_logging):
     # Post processing
     global KEEP_PROCESSED_DIR
     # Views
-    global GUI_NAME, HOME_LAYOUT, FOOTER_TIME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
+    global GUI_NAME, HOME_LAYOUT, FOOTER_TIME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, \
+        SHOWLIST_FLEXIBLE, DISPLAY_SHOW_SPECIALS, \
         EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, \
         EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
         EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
@@ -1219,6 +1221,7 @@ def init_stage_1(console_logging):
     FOOTER_TIME_LAYOUT = check_setting_int(CFG, 'GUI', 'footer_time_layout', 0)
     POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
     POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
+    SHOWLIST_FLEXIBLE = check_setting_str(CFG, 'GUI', 'showlist_flexible', 'tt')
     DISPLAY_SHOW_VIEWMODE = check_setting_int(CFG, 'GUI', 'display_show_viewmode', 2)
     DISPLAY_SHOW_BACKGROUND = bool(check_setting_int(CFG, 'GUI', 'display_show_background', 1))
     DISPLAY_SHOW_BACKGROUND_TRANSLUCENT = bool(check_setting_int(
@@ -2100,6 +2103,7 @@ def save_config():
     new_config['GUI']['footer_time_layout'] = FOOTER_TIME_LAYOUT
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
+    new_config['GUI']['showlist_flexible'] = SHOWLIST_FLEXIBLE
 
     new_config['GUI']['display_show_viewmode'] = int(DISPLAY_SHOW_VIEWMODE)
     new_config['GUI']['display_show_background'] = int(DISPLAY_SHOW_BACKGROUND)
@@ -2116,10 +2120,7 @@ def save_config():
     new_config['GUI']['episode_view_display_paused'] = int(EPISODE_VIEW_DISPLAY_PAUSED)
     new_config['GUI']['episode_view_posters'] = int(EPISODE_VIEW_POSTERS)
     new_config['GUI']['episode_view_missed_range'] = int(EPISODE_VIEW_MISSED_RANGE)
-    new_config['GUI']['poster_sortby'] = POSTER_SORTBY
-    new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
-    new_config['GUI']['show_tags'] = ','.join(SHOW_TAGS)
-    new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
+
     new_config['GUI']['show_tag_default'] = SHOW_TAG_DEFAULT
     new_config['GUI']['history_layout'] = HISTORY_LAYOUT
     new_config['GUI']['browselist_hidden'] = '|~|'.join(BROWSELIST_HIDDEN)

@@ -612,7 +612,7 @@
 </style>
         #set dev = (1, 3)[False]
         #if 1 < len([$prov for $prov in $provider_fail_stats * $dev if len($prov['fails'])])
-		<div class="component-group bubblelist" style="margin:0 0 3px">
+		<div class="component-group bubblelist" style="margin:0 0 3px;border:1px solid #282828">
 			<div class="type bgcol">
 				<span class="list"><div class="item text">Bubble links:</div>
             #for $n, $prov in enumerate($provider_fail_stats * $dev)

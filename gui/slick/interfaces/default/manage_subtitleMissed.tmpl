@@ -41,7 +41,7 @@
 	</form>
 #else
 
-<script type="text/javascript" src="$sbRoot/js/manageSubtitleMissed.js?v=$sbPID"></script>
+<script src="$sbRoot/js/manageSubtitleMissed.js?v=$sbPID"></script>
 	<input type="hidden" id="selectSubLang" name="selectSubLang" value="$whichSubs">
 
 	<form action="$sbRoot/manage/downloadSubtitleMissed" method="post">
@@ -49,7 +49,7 @@
 
 		<h2>Episodes without $subsLanguage subtitles.</h2>
 		<br />
-		Download missed subtitles for selected episodes <input class="btn btn-inline" type="submit" value="Go" />
+		Download missed subtitles for selected episodes <input class="btn btn-inline" type="submit" value="Go">
 		<div>
 			<button type="button" class="btn btn-xs selectAllShows">Select all</a></button>
 			<button type="button" class="btn btn-xs unselectAllShows">Clear all</a></button>

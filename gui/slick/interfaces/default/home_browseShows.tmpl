@@ -14,31 +14,41 @@
 #set global $sbPath='..'
 #set global $topmenu='home'
 #set global $page_body_attr = 'browse-list'
-#set sg_root = $getVar('sbRoot', WEB_ROOT)
+#set global $sg_root = $getVar('sbRoot', WEB_ROOT)
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sg_root/js/plotTooltip.js?v=$sbPID"></script>
+<script src="$sg_root/js/plotTooltip.js?v=$sbPID"></script>
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 #raw
-	var addQTip = (function(){
-		$(this).css('cursor', 'help');
-		$(this).qtip({
-			show: {solo:true},
-			position: {viewport:$(window), my:'left center', adjust:{y: -10,x: 2 }},
-			style: {tip: {corner:true, method:'polygon'}, classes:'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'}
-		});
-	}),
-	llUpdate = (function(){
-		$.ll.handleScroll();
+var addQTip = (function(){
+	$(this).css('cursor', 'help');
+	$(this).qtip({
+		show: {solo:true},
+		position: {viewport:$(window), my:'left center', adjust:{y: -10,x: 2 }},
+		style: {tip: {corner:true, method:'polygon'}, classes:'qtip-rounded qtip-bootstrap qtip-shadow'}
 	});
+}),
+
+llUpdate = (function(){
+	$.ll.handleScroll();
+}),
+
+widgetRefresh = function(ctrlElId){
+	// update the ui-controlgroup widget classes from DOM class states
+	var widgetItems$ = $(ctrlElId + '-menu').find('.ui-menu-item');
+	widgetItems$.filter('.selected').removeClass('selected');
+	$(ctrlElId).find('.selected').each(function(i, elSelected){
+		widgetItems$.eq(elSelected.index).addClass('selected');
+	});
+};
 
 $(document).ready(function(){
 	// initialise combos for dirty page refreshes
-	$('#showsort').val('*');
+	$('#card-sort').val('*');
 
 	$('#container').isotope({
 		itemSelector: '.show-card',
@@ -65,82 +75,78 @@ $(document).ready(function(){
 		}
 	});
 
-	$('#showsort').on('change', function(){
-		var sortCriteria, el$ = $('#container'), shuffle = !1;
-		switch (this.value.replace('by_', '')) {
-			case 'asc':
-			case 'desc':
-				sortCriteria = 'order';
-				break;
+	$('#card-sort').on('selectmenuselect', function(event, ui){
+		var sortBy = this.value, criteria, ctrlElId = '#' + this.id, elOptions$, el$ = $('#container'), shuffle = !1;
+		event.preventBubble = !0;
+
+		// update DOM ctrl
+		if (0 !== sortBy.indexOf('order')) {
+			elOptions$ = $(this).find('option').not('option[value^="order"]');
+		} else {
+			elOptions$ = $(this).find('option[value^="order"]');
+		}
+		elOptions$.filter('.selected').removeClass('selected');
+		ui.item.element.addClass('selected');
+		widgetRefresh(ctrlElId);
+
+		switch (sortBy.replace('by-', '')) {
 			case 'original':
-				sortCriteria = 'original-order'
+				criteria = 'original-order'
 				break;
 			case 'rating':
-				sortCriteria = 'rating';
+				criteria = 'rating';
 				shuffle = !0;
 				break;
 			case 'rating_votes':
-				sortCriteria = ['rating', 'votes'];
+				criteria = ['rating', 'votes'];
 				shuffle = !0;
 				break;
 			case 'votes':
-				sortCriteria = 'votes';
+				criteria = 'votes';
 				break;
 			case 'premiered':
-				sortCriteria = 'premiered';
+				criteria = 'premiered';
 				break;
 			default:
-				sortCriteria = 'name'
+				criteria = 'name'
 				break;
 		}
 
-		var showSort = $('#showsort option');
-		if('order' === sortCriteria){
-			showSort.filter($('option[value="asc"], option[value="desc"]')).removeClass('selected');
-			showSort.filter($('option[value="' + this.value + '"]')).addClass('selected');
-
-			el$.one('layoutComplete', llUpdate);
-			el$.isotope({sortAscending: 'asc' == this.value});
-		} else if(0 == this.value.indexOf('by_')){
-			showSort.filter($('option[value^="by_"][class*="selected"]')).removeClass('selected');
-			showSort.filter($('option[value="' + this.value + '"]')).addClass('selected');
-
+		if(0 === sortBy.indexOf('order')){
+			el$.off('layoutComplete', llUpdate)
+				.isotope({sortAscending: 'order-asc' === sortBy});
+		} else if(0 == sortBy.indexOf('by-')){
 			if (!shuffle){
-				el$.one('layoutComplete', llUpdate);
-				el$.isotope({sortBy: sortCriteria});
+				el$.one('layoutComplete', llUpdate)
+					.isotope({sortBy: criteria});
 			} else {
 				// shuffle rating_votes where it can already be sorted by ratings which leaves it nothing to do.
-				function t(sortCriteria, lastPhase){
+				function t(criteria, lastPhase){
 					return function(){
-						var el$ = $('#container');
 						if (!lastPhase){
 							lastPhase = !0;
-							el$.isotope({sortBy: sortCriteria});
+							el$.isotope({sortBy: criteria});
 						} else {
-							el$.off('layoutComplete');
-							el$.isotope('layout');
+							el$.off('layoutComplete')
+								.isotope('layout');
 							llUpdate();
 						}
 					}
 				}
-				el$.on('layoutComplete', t(sortCriteria, !1));
+				el$.on('layoutComplete', t(criteria, !1));
 				el$.isotope({sortBy: 'random'});
 			}
 		} else {
-			showSort.filter($('option[value^="*"], #showsort option[value^="."]')).removeClass('selected');
-			showSort.filter($('option[value="' + this.value + '"]')).addClass('selected');
-
-			var showCards = $('.show-card'), filter = this.value;
-			if('.hide' === this.value){
-				showCards.filter($('.hide')).removeClass('hide').addClass('to-hide');
+			var showCards$ = $('.show-card'), filter = sortBy;
+			if('.hide' === sortBy){
+				showCards$.filter($('.hide')).removeClass('hide').addClass('to-hide');
 				filter = '.to-hide';
 			} else {
-				showCards.filter($('.to-hide')).removeClass('to-hide').addClass('hide');
+				showCards$.filter($('.to-hide')).removeClass('to-hide').addClass('hide');
 			}
 
-			var el$ = $('#container');
 			el$.one('layoutComplete', llUpdate);
-			el$.isotope({ filter: filter });
+			el$.isotope({filter: filter});
 		}
 	});
 
@@ -150,31 +156,51 @@ $(document).ready(function(){
 
 		$.getJSON(this.href, function(data){
 			if(data.success){
-				var showCards = $('.show-card'), thisCard = $(that).parents('div[class*="show-card "]'),
-					numShows = showCards.length, numHidden, showSort = $('#showsort option'), filter = 'to-hide';
+				var thisCard = that.parents('div[class*="show-card "]'), filter = 'to-hide', title;
 
 				if(thisCard.hasClass(filter)){
-					title = 'Hide';
 					thisCard.removeClass(filter);
+					title = 'Hide';
 				} else {
 					filter = 'hide';
-					title = 'Unhide';
 					thisCard.addClass(filter);
+					title = 'Unhide';
 				}
-				numHidden = showCards.filter($('.' + filter)).length;
 				that.attr('title', title);
 
-				showSort.filter($('option[value=".hide"]')).text('Hidden (' + numHidden + ')');
-				showSort.filter($('option[value="*"]')).text('All (' + (0 == numHidden ? '' : (numShows - numHidden) + '/') + numShows + ')');
+				var showCards$ = $('.show-card'), numShows = showCards$.length,
+					numHidden = showCards$.filter($('.' + filter)).length,
+					all = 'All (' + (0 == numHidden ? '' : (numShows - numHidden) + '/') + numShows + ')',
+					hidden = 'Hidden (' + numHidden + ')',
+					ctrlElId = '#card-sort',
+					cardSortOptions$ = $(ctrlElId).find('option'),
+					all$ = cardSortOptions$.filter($('option[value="*"]')),
+					hidden$ = cardSortOptions$.filter($('option[value=".hide"]')),
+					selectMenu$ = $(ctrlElId + '-menu').find('.ui-menu-item');
+
+				all$.text(all);
+				hidden$.text(hidden);
+				$('.toolbar' ).controlgroup('refresh');
+				widgetRefresh(ctrlElId);
+
+				var btnText$ = $(ctrlElId + '-button').find('.ui-selectmenu-text');
+				if (0 === btnText$.text().indexOf('All ')){
+					btnText$.text(all);
+				} else if (0 === btnText$.text().indexOf('Hidden ')) {
+					btnText$.text(hidden);
+				} else {
+					btnText$.text(hidden.replace('den', 'ing'));
+				}
 
 				var el$ = $('#container')
 				el$.on('layoutComplete', llUpdate);
 				el$.isotope();
+//				el$.isotope('layout').on('layoutComplete', llUpdate);
 			}
 		});
 	});
 
-	$('#showfilter').on('change', function(){
+	$('#card-filter').on('selectmenuselect', function(event, ui){
 		var filterValue = this.value;
 		if (-1 == filterValue.indexOf('trakt') && -1 == filterValue.indexOf('imdb') && -1 == filterValue.indexOf('default')) {
 			var el$ = $('#container')
@@ -200,6 +226,7 @@ $(document).ready(function(){
 <style>
 #set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
 .bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
+.toolbar select{display:none}
 </style>
 <div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif" /></div>
 
@@ -213,104 +240,106 @@ $(document).ready(function(){
 #set $mode = $kwargs and $kwargs.get('mode', '')
 #if $all_shows or ($kwargs and $kwargs.get('show_header'))
 <div class="pull-right" style="margin-top:-35px">
-	<select id="showsort" class="form-control form-control-inline input-sm">
+	<div class="toolbar">
+		<select id="card-sort" class="form-control form-control-inline input-sm">
     #set $num_all = len($all_shows)
     #set $selected = ' class="selected"'
-		<optgroup label="View">
-			<option value="*"#echo selected# selected="selected">All (#echo ('', '%s/' % ($num_all - $num_hidden))[0 < $num_hidden]#$num_all)</option>
-			<option value=".notinlibrary">Not In Library (#echo $num_all - $num_inlibrary#)</option>
-			<option value=".inlibrary">In Library ($num_inlibrary)</option>
+			<optgroup label="View">
+				<option value="*"#echo selected# selected="selected">All (#echo ('', '%s/' % ($num_all - $num_hidden))[0 < $num_hidden]#$num_all)</option>
+				<option value=".notinlibrary">Not In Library (#echo $num_all - $num_inlibrary#)</option>
+				<option value=".inlibrary">In Library ($num_inlibrary)</option>
     #if 'Ani' not in $browse_type
-			<option value=".hide">Hidden ($num_hidden)</option>
+				<option value=".hide">Hidden ($num_hidden)</option>
     #end if
-		</optgroup>
-		<optgroup label="Sort order">
-			<option value="asc"#echo selected#>Asc</option>
-			<option value="desc">Desc</option>
-		</optgroup>
-		<optgroup label="Sort by">
-			<option value="by_name">Name</option>
-			<option value="by_original" #echo selected#>Original</option>
-			<option value="by_premiered">First aired</option>
-			<option value="by_votes">Votes</option>
-			<option value="by_rating">% Rating</option>
-			<option value="by_rating_votes">% Rating > Votes</option>
-		</optgroup>
-	</select>
+			</optgroup>
+			<optgroup label="Sort order">
+				<option value="order-asc"#echo selected#>Asc</option>
+				<option value="order-desc">Desc</option>
+			</optgroup>
+			<optgroup label="Sort by">
+				<option value="by-name">Name</option>
+				<option value="by-original" #echo selected#>Original</option>
+				<option value="by-premiered">First aired</option>
+				<option value="by-votes">Votes</option>
+				<option value="by-rating">% Rating</option>
+				<option value="by-rating_votes">% Rating > Votes</option>
+			</optgroup>
+		</select>
 
     #if 'Ani' not in $browse_type
-	<select id="showfilter" class="form-control form-control-inline input-sm">
-        #set $selected = ' class="selected" selected="selected"'
+		<select id="card-filter" class="form-control form-control-inline input-sm">
+        #set $selected = ' selected="selected"'
         #if 'Trakt' == $browse_type
-		<optgroup label="Trakt">
-			<option value="trakt_anticipated"#echo ('', selected)['anticipated' == $mode]#>Anticipating</option>
-			<option value="trakt_newseasons"#echo ('', selected)['newseasons' == $mode]#>New Seasons</option>
-			<option value="trakt_newshows"#echo ('', selected)['newshows' == $mode]#>New Shows</option>
-			<option value="trakt_popular"#echo ('', selected)['popular' == $mode]#>Popular</option>
-			<option value="trakt_trending"#echo ('', selected)['trending' == $mode]#>Trending</option>
-		</optgroup>
-		<optgroup label="Trakt last month">
-			<option value="trakt_watched"#echo ('', selected)['watched' == $mode]#>Most Watched</option>
-			<option value="trakt_played"#echo ('', selected)['played' == $mode]#>Most Played</option>
-			<option value="trakt_collected"#echo ('', selected)['collected' == $mode]#>Most Collected</option>
-		</optgroup>
-		<optgroup label="Trakt last 12 months">
-			<option value="trakt_watched?period=year"#echo ('', selected)['watched-year' == $mode]#>Most Watched</option>
-			<option value="trakt_played?period=year"#echo ('', selected)['played-year' == $mode]#>Most Played</option>
-			<option value="trakt_collected?period=year"#echo ('', selected)['collected-year' == $mode]#>Most Collected</option>
-		</optgroup>
+			<optgroup label="Trakt">
+				<option value="trakt_anticipated"#echo ('', selected)['anticipated' == $mode]#>Anticipating</option>
+				<option value="trakt_newseasons"#echo ('', selected)['newseasons' == $mode]#>New Seasons</option>
+				<option value="trakt_newshows"#echo ('', selected)['newshows' == $mode]#>New Shows</option>
+				<option value="trakt_popular"#echo ('', selected)['popular' == $mode]#>Popular</option>
+				<option value="trakt_trending"#echo ('', selected)['trending' == $mode]#>Trending</option>
+			</optgroup>
+			<optgroup label="Trakt last month">
+				<option value="trakt_watched"#echo ('', selected)['watched' == $mode]#>Most Watched</option>
+				<option value="trakt_played"#echo ('', selected)['played' == $mode]#>Most Played</option>
+				<option value="trakt_collected"#echo ('', selected)['collected' == $mode]#>Most Collected</option>
+			</optgroup>
+			<optgroup label="Trakt last 12 months">
+				<option value="trakt_watched?period=year"#echo ('', selected)['watched-year' == $mode]#>Most Watched</option>
+				<option value="trakt_played?period=year"#echo ('', selected)['played-year' == $mode]#>Most Played</option>
+				<option value="trakt_collected?period=year"#echo ('', selected)['collected-year' == $mode]#>Most Collected</option>
+			</optgroup>
     		#if any($sg_var('TRAKT_ACCOUNTS', []))
-		<optgroup label="Trakt recommended">
+			<optgroup label="Trakt recommended">
                 #for $account in $sg_var('TRAKT_ACCOUNTS')
                     #if $sg_var('TRAKT_ACCOUNTS').get($account).active and $sg_var('TRAKT_ACCOUNTS').get($account).name
-			<option value="trakt_recommended?account=$account"#echo ('', selected)[('recommended-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
+				<option value="trakt_recommended?account=$account"#echo ('', selected)[('recommended-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
                     #end if
                 #end for
             #else
-		<optgroup label="To get recommended">
-			<option value="trakt_recommended?action=add">Enable Trakt here</option>
+			<optgroup label="To get recommended">
+				<option value="trakt_recommended?action=add">Enable Trakt here</option>
             #end if
-		</optgroup>
+			</optgroup>
     		#if any($sg_var('TRAKT_ACCOUNTS', []))
-		<optgroup label="Trakt watchlisted">
+			<optgroup label="Trakt watchlisted">
                 #for $account in $sg_var('TRAKT_ACCOUNTS')
                     #if $sg_var('TRAKT_ACCOUNTS').get($account).active and $sg_var('TRAKT_ACCOUNTS').get($account).name
-			<option value="trakt_watchlist?account=$account"#echo ('', selected)[('watchlist-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
+				<option value="trakt_watchlist?account=$account"#echo ('', selected)[('watchlist-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
                     #end if
                 #end for
             #else
-		<optgroup label="To get watchlisted">
-			<option value="trakt_watchlist?action=add">Enable Trakt here</option>
+			<optgroup label="To get watchlisted">
+				<option value="trakt_watchlist?action=add">Enable Trakt here</option>
             #end if
-		</optgroup>
+			</optgroup>
         #elif 'IMDb' == $browse_type
             #set $periods = $kwargs and $kwargs.get('periods')
             #if $periods
-		<optgroup label="IMDb Popular">
+			<optgroup label="IMDb popular">
                 #for $i, $p in enumerate($periods)
                     #set $period='%s,%s' % ($p[0], $p[1])
-			<option value="popular_imdb?period=$period"#echo ('', selected)[('popular-%s' % $period) in $mode]#>#echo '%s - %s' % (($p[1], 'Current')[not $i], $p[0])#</option>
+				<option value="imdb_popular?period=$period"#echo ('', selected)[('popular-%s' % $period) in $mode]#>#echo '%s - %s' % (($p[1], 'Current')[not $i], $p[0])#</option>
                 #end for
-			<option value="more_imdb"#echo ('', selected + ' disabled')[mode.endswith('more')]#>... list more</option>
-		</optgroup>
+				<option value="more_imdb"#echo ('', selected + ' disabled')[mode.endswith('more')]#>... list more</option>
+			</optgroup>
             #end if
             #if not hasattr($sickbeard, 'IMDB_ACCOUNTS')#<optgroup label="Restart SickGear to reveal"><option>new options after restart</option></optgroup>#else#
-		<optgroup label="IMDb Watchlists">
+			<optgroup label="IMDb watchlists">
                 #if any($sg_var('IMDB_ACCOUNTS', []))
                     #for $i, $v in $enumerate($sg_var('IMDB_ACCOUNTS'))
                         #if not $i % 2
                             #set $id = $v
                         #elif not $v.startswith('(Off) ')
-			<option value="watchlist_imdb?account=$id"#echo ('', selected)[('watchlist-%s' % $id) == $mode]#>#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
+				<option value="imdb_watchlist?account=$id"#echo ('', selected)[('watchlist-%s' % $id) == $mode]#>#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
                         #end if
                     #end for
                 #end if
-			<option value="watchlist_imdb?action=add"><< Add lists >></option>
-		</optgroup>
+				<option value="imdb_watchlist?action=add"><< Add lists >></option>
+			</optgroup>
             #end if
         #end if
-	</select>
+		</select>
     #end if
+	</div>
 </div>
 <h4 style="float:left;margin:0 0 0 2px">$browse_title</h4>
     #if $kwargs and $kwargs.get('oldest')
@@ -411,12 +440,10 @@ $(document).ready(function(){
 </div>
 #end if
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 window.setInterval('location.reload(true)', 600000); // Refresh every 10 minutes
 //-->
 </script>
 
-<script type="text/javascript" src="$sg_root/js/lazyload/lazyload.min.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sg_root/js/inc_bottom.js?v=$sbPID"></script>
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

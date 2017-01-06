@@ -26,7 +26,7 @@
 				<label for="episodeDir">
 					<span class="component-title input">Folder to process</span>
 					<span class="component-desc">
-						<input id="episodeDir" name="dir" type="text" class="form-control form-control-inline input-sm input350">
+						<input id="episodeDir" name="dir" type="text" class="form-control form-control-inline input-sm input350" autocorrect="off" autocapitalize="off" spellcheck="false">
 						<p class="clear-left">select a folder containing episode files</p>
 					</span>
 				</label>
@@ -92,7 +92,7 @@
 		</div><!-- /postProcess -->
 	</form>
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 #raw
 jQuery('#episodeDir').fileBrowser({title:'Select Unprocessed Episode Folder', key:'postprocessPath'});

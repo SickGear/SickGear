@@ -5,9 +5,10 @@ $(document).ready(function() {
 
 	var panel$ = $('#livepanel'),
 		pTitle = config.panelTitles || [],
-		isEpisodeView = !!$('#episode-view').length,
-		liveStates$ = $(isEpisodeView ? '#episode-view' : '#display-show'),
-		jqTooltipUsed = /(?!undefined)/i.test(typeof($('body').tooltip)),
+		body$ = $('body'),
+		liveStates$ = $('#' + body$.attr('id')),
+		isFullPanel = liveStates$.hasClass('fp'),
+		jqTooltipUsed = /(?!undefined)/i.test(typeof(body$.tooltip)),
 		group = 'group', fave = 'fave', avoid = 'avoid', ratingVerbs = [group, fave, avoid].join(' ');
 
 	panel$.removeClass('off');
@@ -15,7 +16,7 @@ $(document).ready(function() {
 	$('#viewart').on('click', function() {
 		var state = 0, on = '', result = !1;
 
-		if (isEpisodeView) {
+		if (!isFullPanel) {
 			if (isSet('open-gear')) {
 				state = 4; on = 'viewart';
 			} else if (!isSet('viewart')) {
@@ -65,7 +66,7 @@ $(document).ready(function() {
 	$('#proview').on('click', function() {
 		var state = 0, on = 'reg', result = !1;
 
-		if (!isEpisodeView && isSet('viewart')) {
+		if (isFullPanel && isSet('viewart')) {
 			liveStates$.toggleClass('allart');
 		} else {
 			if (isSet('reg')) {
@@ -94,8 +95,8 @@ $(document).ready(function() {
 		if (isSet('allart')
 			|| (!isSet(fave) &&
 				(1 < backArts$.find('li.' + group).length ||
-				(1 != backArts$.find('li.' + group).length && 1 < backArts$.find('li').not('.' + group + ',.' + avoid).length)))
-			|| (isEpisodeView &&
+				(1 !== backArts$.find('li.' + group).length && 1 < backArts$.find('li').not('.' + group + ',.' + avoid).length)))
+			|| (!isFullPanel &&
 				1 < (backArts$.find('li.' + group).length + backArts$.find('li.' + fave).length +
 				backArts$.find('li').not('.' + group + ',.' + avoid).length))) {
 			liveStates$.removeClass('oneof');
@@ -109,7 +110,7 @@ $(document).ready(function() {
 		var backArts$ = $('#background-container'), curArt$ = backArts$.find('li.background'),
 			faveArt$ = backArts$.find('li.' + fave), result = !0,
 			newArt$, init = !1, noArt = function(el) { return /undefined/i.test(typeof(el.css('background-image'))); },
-			viewable = !isSet('allart') && !!backArts$.find('li.' + group).length ? (isEpisodeView ? '': '.' + group) : '',
+			viewable = !isSet('allart') && !!backArts$.find('li.' + group).length ? (isFullPanel ? '.' + group : '') : '',
 			mayAvoid = !isSet('allart') ? '.' + avoid : '.showall',
 			artBefore$ = curArt$.prevAll(viewable).not(mayAvoid),
 			artAfter$ = curArt$.nextAll(viewable).not(mayAvoid);
@@ -135,7 +136,7 @@ $(document).ready(function() {
 				break;
 		}
 
-		if (!init || (null == newArt$))
+		if (!init || (null === newArt$))
 			curArt$.addClass('background-rem').removeClass('background')
 				.fadeOut(800, 'linear', function() {$(this).removeClass('background-rem')});
 
@@ -166,7 +167,7 @@ $(document).ready(function() {
 			if (backArts$.find('li.' + fave).not('.background').length) {
 				setArt(fave);
 			} else if (!!backArts$.find('li.' + avoid).length
-				&& backArts$.find('li.' + avoid).length == backArts$.find('li').length) {
+				&& backArts$.find('li.' + avoid).length === backArts$.find('li').length) {
 				backArts$.find('li.' + avoid).fadeOut(800, 'linear', function () {
 					$(this).removeClass('background')
 				});
@@ -183,9 +184,9 @@ $(document).ready(function() {
 	});
 
 	function key(e, kCode){
-		return e.hasOwnProperty('ctrlKey') && e.ctrlKey && e.hasOwnProperty('altKey') && e.altKey && (kCode == e.which)
+		return e.hasOwnProperty('ctrlKey') && e.ctrlKey && e.hasOwnProperty('altKey') && e.altKey && (kCode === e.which)
 	}
-	$(document).on('keyup', function(e) {
+	$(document).on('keyup', $.debounce(250, function(e) {
 		var left = key(e, 37), up = key(e, 38), right = key(e, 39), down = key(e, 40),
 			s = key(e, 83), a = key(e, 65), f = key(e, 70), g = key(e, 71);
 		return (
@@ -195,7 +196,7 @@ $(document).ready(function() {
 			|| (a && setAvoid()) || (down && setAvoid() && (!isSet('allart') && $('#translucent').click() || !0))
 			|| (f && setFave())
 		);
-	});
+	}));
 
 	function rate(state, rating) {
 		var result = !0;
@@ -211,7 +212,7 @@ $(document).ready(function() {
 
 			var curArt$ = $('#background-container').find('li.background'),
 				art = /\?([^"]+)"/i.exec(curArt$.css('background-image'));
-			if (null != art) {
+			if (null !== art) {
 				send('rate=' + state + '&' + art[1]);
 				curArt$.removeClass().addClass((!!rating.length ? rating + ' ' : '') + 'background');
 			}
@@ -235,7 +236,7 @@ $(document).ready(function() {
 	function isSet(name) {return liveStates$.hasClass(name)}
 
 	function send(value) {
-		return $.get($.SickGear.Root + '/live_panel/?' + value + '&pg=' + (isEpisodeView ? 'ev' : 'ds'))}
+		return $.get($.SickGear.Root + '/live_panel/?' + value + '&p=' + (isFullPanel ? 'full' : 'min'))}
 
 	if (jqTooltipUsed) {
 		panel$.find('a[title]').tooltip({placement: 'top', html: !0});
@@ -258,8 +259,8 @@ $(document).ready(function() {
 						(isSet('viewart') ? pTitle['viewart4']
 							: (isSet('open-gear') ? pTitle['viewart3']
 							: (isSet('poster-off') ? pTitle['viewart2']
-							: (isEpisodeView ? pTitle['viewmode0'] : pTitle['viewart0']))))
-						: (isEpisodeView ? pTitle['viewmode0'] : pTitle['viewart0'])),
+							: (isFullPanel ? pTitle['viewart0'] : pTitle['viewmode0']))))
+						: (isFullPanel ? pTitle['viewart0'] : pTitle['viewmode0'])),
 			refreshAll);
 		}
 		if ('translucent' === elId || refreshAll) {

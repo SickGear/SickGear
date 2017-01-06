@@ -6,12 +6,12 @@ $(document).ready(function() {
 		var editArr = [];
 
 		$('.editCheck').each(function() {
-			if (true == this.checked) {
+			if (true === this.checked) {
 				editArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 
-		if (0 == editArr.length)
+		if (0 === editArr.length)
 			return !1;
 
 		window.location.href = $.SickGear.Root + '/manage/massEdit?toEdit=' + editArr.join('|');
@@ -24,49 +24,49 @@ $(document).ready(function() {
 			deleteArr = [], removeArr = [], metadataArr = [];
 
 		$('.updateCheck').each(function() {
-			if (true == this.checked) {
+			if (!0 === this.checked) {
 				updateArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 
 		$('.refreshCheck').each(function() {
-			if (true == this.checked) {
+			if (!0 === this.checked) {
 				refreshArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 
 		$('.renameCheck').each(function() {
-			if (true == this.checked) {
+			if (!0 === this.checked) {
 				renameArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 
 		$('.subtitleCheck').each(function() {
-			if (true == this.checked) {
+			if (!0 === this.checked) {
 				subtitleArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 
 		$('.deleteCheck').each(function() {
-			if (true == this.checked) {
+			if (!0 === this.checked) {
 				deleteArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 
 		$('.removeCheck').each(function() {
-			if (true == this.checked) {
+			if (!0 === this.checked) {
 				removeArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 
 /*
 		$('.metadataCheck').each(function() {
-			if (true == this.checked) {
+			if (!0 === this.checked) {
 				metadataArr.push($(this).attr('id').split('-')[1])
 			}
 		});
 */
-		if (0 == updateArr.length + refreshArr.length + renameArr.length + subtitleArr.length + deleteArr.length + removeArr.length + metadataArr.length)
+		if (0 === updateArr.length + refreshArr.length + renameArr.length + subtitleArr.length + deleteArr.length + removeArr.length + metadataArr.length)
 			return !1;
 
 		window.location.href = $.SickGear.Root + '/manage/bulkChange?toUpdate=' + updateArr.join('|') + '&toRefresh=' + refreshArr.join('|') + '&toRename=' + renameArr.join('|') + '&toSubtitle=' + subtitleArr.join('|') + '&toDelete=' + deleteArr.join('|') + '&toRemove=' + removeArr.join('|') + '&toMetadata=' + metadataArr.join('|');
@@ -104,7 +104,7 @@ $(document).ready(function() {
 							this.checked = lastCheck.checked;
 				}
 
-				if (this == check || this == lastCheck)
+				if (this === check || this === lastCheck)
 					found++;
 			});
 		});

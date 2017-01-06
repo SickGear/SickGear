@@ -7,13 +7,13 @@
 #set global $header = $title
 #set global $sbPath = '../..'
 #set global $statpath = '../..'
-#set global $topmenu = 'home'
+#set global $topmenu = 'tools'
 #set global $page_body_attr = 'import-shows"'
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 \$.sgSid = '$kwargs.get('sid', '')';
@@ -23,10 +23,10 @@ var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 });
 //-->
 </script>
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/addExistingShow.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/addShowOptions.js?v=$sbPID"></script>
+<script src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script src="$sbRoot/js/addExistingShow.js?v=$sbPID"></script>
+<script src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
+<script src="$sbRoot/js/addShowOptions.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -44,7 +44,7 @@ var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 		<p>Tip: shows are added quicker when usable show nfo and xml metadata is found</p>
 
 		<p style="margin-top:15px">
-			<input type="checkbox" id="promptForSettings" name="promptForSettings" style="vertical-align: top;" />
+			<input type="checkbox" id="promptForSettings" name="promptForSettings" style="vertical-align: top;">
 			<label for="promptForSettings">Enable to change the following options per show, otherwise use these options with all shows added below</label>
 		</p>
 
@@ -88,7 +88,7 @@ var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 	<p>If you tried to add a show, arrived here and can't see the folder, then that show may already be in your show list.</p>
 #end if
 
-	<input class="btn btn-primary" type="button" value="#if $kwargs.get('hash_dir', None)#Redo Search#else#Submit#end if#" id="submitShowDirs" />
+	<input class="btn btn-primary" type="button" value="#if $kwargs.get('hash_dir', None)#Redo Search#else#Submit#end if#" id="submitShowDirs">
 
 </form>
 

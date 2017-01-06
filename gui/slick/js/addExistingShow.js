@@ -16,14 +16,14 @@ $(document).ready(function(){
 		var dirArr = [];
 
 		$('.dirCheck').each(function(){
-			if (true == this.checked){
+			if (!0 === this.checked){
 				var show = $(this).attr('id');
 				var indexer = $(this).closest('tr').find('select').val();
 				dirArr.push(encodeURIComponent(indexer + '|' + show));
 			}
 		});
 
-		if (0 == dirArr.length)
+		if (0 === dirArr.length)
 			return false;
 
 		window.location.href = sbRoot + '/home/addShows/addExistingShows'
@@ -74,7 +74,7 @@ $(document).ready(function(){
 
 	var last_txt = '', new_text = '', id;
 	$('#rootDirText').change(function(){
-		if (last_txt == (new_text = $('#rootDirText').val()))
+		if (last_txt === (new_text = $('#rootDirText').val()))
 			return false;
 
 		last_txt = new_text;
@@ -83,9 +83,8 @@ $(document).ready(function(){
 			id = $(w).val();
 			$('#rootDirStaticList').append('<li class="ui-state-default ui-corner-all">'
 				+ '<input id="' + id + '" type="checkbox"' + ' checked=checked'
-				+ ' class="dir_check"'
-				+ ' />'
-				+ ' <label for="' + id + '"'
+				+ ' class="dir_check">'
+				+ '<label for="' + id + '"'
 				+ ' style="color:#09A2FF">'
 				+ '<b>' + id + '</b></label>'
 				+ '</li>')
