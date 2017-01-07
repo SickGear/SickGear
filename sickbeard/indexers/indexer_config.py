@@ -41,7 +41,7 @@ indexerConfig = {
         icon='tvrage16.png',
     ),
     INDEXER_TVMAZE: dict(
-        main_url='http://www.tvmaze.com/',
+        main_url='https://www.tvmaze.com/',
         id=INDEXER_TVMAZE,
         name='TVmaze',
         module=None,
@@ -109,7 +109,7 @@ indexerConfig[info_src].update(dict(
 
 info_src = INDEXER_TVMAZE
 indexerConfig[info_src].update(dict(
-    base_url='http://api.tvmaze.com/',
+    base_url='https://api.tvmaze.com/',
     show_url='%sshows/' % indexerConfig[info_src]['main_url'],
     finder='%ssearch?q=%s' % (indexerConfig[info_src]['main_url'], '%s'),
 ))
