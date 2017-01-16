@@ -31,7 +31,7 @@ class TorrentDayProvider(generic.TorrentProvider):
         self.url_home = ['https://%s/' % u for u in 'torrentday.eu', 'secure.torrentday.com', 'tdonline.org',
                                                     'torrentday.it', 'www.td.af', 'www.torrentday.com']
 
-        self.url_vars = {'login': 'rss.php', 'search': 't?%s%s;q=%s%s', 'get': '%s'}
+        self.url_vars = {'login': 'rss.php', 'search': 'browse.php?cata=yes&%s%s&search=%s%s', 'get': '%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
@@ -69,8 +69,8 @@ class TorrentDayProvider(generic.TorrentProvider):
                 search_string = '+'.join(search_string.split())
 
                 search_url = self.urls['search'] % (
-                    self._categories_string(mode, '%s', ';'), (';free', '')[not self.freeleech],
-                    search_string, (';o=seeders', '')['Cache' == mode])
+                    self._categories_string(mode), ('&free=on', '')[not self.freeleech],
+                    search_string, ('&sort=7&type=desc', '')['Cache' == mode])
 
                 html = self.get_url(search_url)
 

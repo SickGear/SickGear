@@ -1,4 +1,10 @@
-﻿### 0.12.4 (2016-12-31 00:50:00 UTC)
+﻿### 0.12.5 (2017-01-16 16:22:00 UTC)
+
+* Change TD search URL
+* Fix saving Media Providers when either Search NZBs/Torrents is disabled
+
+
+### 0.12.4 (2016-12-31 00:50:00 UTC)
 
 * Remove Wombles nzb provider
 
