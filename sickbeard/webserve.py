@@ -5255,8 +5255,9 @@ class ConfigProviders(Config):
                 active_ids.append(cur_id)
 
         # delete anything that is missing
-        for source in [x for x in sickbeard.newznabProviderList if x.get_id() not in active_ids]:
-            sickbeard.newznabProviderList.remove(source)
+        if sickbeard.USE_NZBS:
+            for source in [x for x in sickbeard.newznabProviderList if x.get_id() not in active_ids]:
+                sickbeard.newznabProviderList.remove(source)
 
         # add all the torrent RSS info we have into our list
         torrent_rss_sources = dict(zip([x.get_id() for x in sickbeard.torrentRssProviderList],
@@ -5290,8 +5291,9 @@ class ConfigProviders(Config):
                 active_ids.append(cur_id)
 
         # delete anything that is missing
-        for source in [x for x in sickbeard.torrentRssProviderList if x.get_id() not in active_ids]:
-            sickbeard.torrentRssProviderList.remove(source)
+        if sickbeard.USE_TORRENTS:
+            for source in [x for x in sickbeard.torrentRssProviderList if x.get_id() not in active_ids]:
+                sickbeard.torrentRssProviderList.remove(source)
 
         # enable/disable states of source providers
         provider_str_list = provider_order.split()
