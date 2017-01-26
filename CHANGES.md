@@ -6,6 +6,7 @@
 * Change improve page load time when loading images
 * Update isotope library 2.2.2 to 3.0.1
 * Add lazyload package 3.0.0 (2e318b1)
+* Change improve add show search results by comparing search term to an additional unidecoded result set
 
 
 [develop changelog]
