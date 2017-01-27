@@ -10,6 +10,7 @@
 * Change webserver startup to correctly use xheaders in reverse proxy or load balance set-ups
 * Update backports_abc 0.4 to 0.5
 * Update Beautiful Soup 4.4.0 (r397) to 4.5.3 (r439)
+* Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
 
 
 [develop changelog]
