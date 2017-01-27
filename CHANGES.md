@@ -8,6 +8,7 @@
 * Add lazyload package 3.0.0 (2e318b1)
 * Change improve add show search results by comparing search term to an additional unidecoded result set
 * Change webserver startup to correctly use xheaders in reverse proxy or load balance set-ups
+* Update backports_abc 0.4 to 0.5
 
 
 [develop changelog]
