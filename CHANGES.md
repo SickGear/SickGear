@@ -9,6 +9,7 @@
 * Change improve add show search results by comparing search term to an additional unidecoded result set
 * Change webserver startup to correctly use xheaders in reverse proxy or load balance set-ups
 * Update backports_abc 0.4 to 0.5
+* Update Beautiful Soup 4.4.0 (r397) to 4.5.3 (r439)
 
 
 [develop changelog]
