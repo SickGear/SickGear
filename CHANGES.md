@@ -15,6 +15,7 @@
 * Update feedparser library 5.2.0 (8c62940) to 5.2.1 (f1dd1bb)
 * Update html5lib 0.99999999/1.0b9 (46dae3d) to (1a28d72)
 * Update IMDb 5.1dev20160106 to 5.1 (r907)
+* Update moment.js 2.15.1 to 2.17.1
 
 
 [develop changelog]
