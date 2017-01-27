@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
+import sys
 from types import ModuleType
 
 from six import text_type
@@ -12,8 +13,10 @@ except ImportError:
 
 __all__ = ["default_etree", "MethodDispatcher", "isSurrogatePair",
            "surrogatePairToCodepoint", "moduleFactoryFactory",
-           "supports_lone_surrogates"]
+           "supports_lone_surrogates", "PY27"]
 
+
+PY27 = sys.version_info[0] == 2 and sys.version_info[1] >= 7
 
 # Platforms not supporting lone surrogates (\uD800-\uDFFF) should be
 # caught by the below test. In general this would be any platform
@@ -22,12 +25,12 @@ __all__ = ["default_etree", "MethodDispatcher", "isSurrogatePair",
 # surrogates, and there is no mechanism to further escape such
 # escapes.
 try:
-    _x = eval('"\\uD800"')
+    _x = eval('"\\uD800"')  # pylint:disable=eval-used
     if not isinstance(_x, text_type):
         # We need this with u"" because of http://bugs.jython.org/issue2039
-        _x = eval('u"\\uD800"')
+        _x = eval('u"\\uD800"')  # pylint:disable=eval-used
         assert isinstance(_x, text_type)
-except:
+except:  # pylint:disable=bare-except
     supports_lone_surrogates = False
 else:
     supports_lone_surrogates = True
@@ -52,12 +55,13 @@ class MethodDispatcher(dict):
         # anything here.
         _dictEntries = []
         for name, value in items:
-            if type(name) in (list, tuple, frozenset, set):
+            if isinstance(name, (list, tuple, frozenset, set)):
                 for item in name:
                     _dictEntries.append((item, value))
             else:
                 _dictEntries.append((name, value))
         dict.__init__(self, _dictEntries)
+        assert len(self) == len(_dictEntries)
         self.default = None
 
     def __getitem__(self, key):
@@ -109,3 +113,15 @@ def moduleFactoryFactory(factory):
             return mod
 
     return moduleFactory
+
+
+def memoize(func):
+    cache = {}
+
+    def wrapped(*args, **kwargs):
+        key = (tuple(args), tuple(kwargs.items()))
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+
+    return wrapped
