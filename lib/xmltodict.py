@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 "Makes working with XML feel like you are working with JSON"
 
-from xml.parsers import expat
+try:
+    from defusedexpat import pyexpat as expat
+except ImportError:
+    from xml.parsers import expat
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
 try:  # pragma no cover
@@ -29,7 +32,7 @@ except NameError:  # pragma no cover
     _unicode = str
 
 __author__ = 'Martin Blech'
-__version__ = '0.9.2'
+__version__ = '0.10.2'
 __license__ = 'MIT'
 
 
@@ -51,7 +54,7 @@ class _DictSAXHandler(object):
                  strip_whitespace=True,
                  namespace_separator=':',
                  namespaces=None,
-                 force_list=()):
+                 force_list=None):
         self.path = []
         self.stack = []
         self.data = []
@@ -68,6 +71,7 @@ class _DictSAXHandler(object):
         self.strip_whitespace = strip_whitespace
         self.namespace_separator = namespace_separator
         self.namespaces = namespaces
+        self.namespace_declarations = OrderedDict()
         self.force_list = force_list
 
     def _build_name(self, full_name):
@@ -88,16 +92,29 @@ class _DictSAXHandler(object):
             return attrs
         return self.dict_constructor(zip(attrs[0::2], attrs[1::2]))
 
+    def startNamespaceDecl(self, prefix, uri):
+        self.namespace_declarations[prefix or ''] = uri
+
     def startElement(self, full_name, attrs):
         name = self._build_name(full_name)
         attrs = self._attrs_to_dict(attrs)
+        if attrs and self.namespace_declarations:
+            attrs['xmlns'] = self.namespace_declarations
+            self.namespace_declarations = OrderedDict()
         self.path.append((name, attrs or None))
         if len(self.path) > self.item_depth:
             self.stack.append((self.item, self.data))
             if self.xml_attribs:
-                attrs = self.dict_constructor(
-                    (self.attr_prefix+self._build_name(key), value)
-                    for (key, value) in attrs.items())
+                attr_entries = []
+                for key, value in attrs.items():
+                    key = self.attr_prefix+self._build_name(key)
+                    if self.postprocessor:
+                        entry = self.postprocessor(self.path, key, value)
+                    else:
+                        entry = (key, value)
+                    if entry:
+                        attr_entries.append(entry)
+                attrs = self.dict_constructor(attr_entries)
             else:
                 attrs = None
             self.item = attrs or None
@@ -155,11 +172,19 @@ class _DictSAXHandler(object):
             else:
                 item[key] = [value, data]
         except KeyError:
-            if key in self.force_list:
+            if self._should_force_list(key, data):
                 item[key] = [data]
             else:
                 item[key] = data
         return item
+
+    def _should_force_list(self, key, value):
+        if not self.force_list:
+            return False
+        try:
+            return key in self.force_list
+        except TypeError:
+            return self.force_list(self.path[:-1], key, value)
 
 
 def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
@@ -199,7 +224,7 @@ def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
     Streaming example::
 
         >>> def handle(path, item):
-        ...     print 'path:%s item:%s' % (path, item)
+        ...     print('path:%s item:%s' % (path, item))
         ...     return True
         ...
         >>> xmltodict.parse(\"\"\"
@@ -261,6 +286,10 @@ def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
              'interfaces':
               {'interface':
                 [ {'name': 'em0', 'ip_address': '10.0.0.1' } ] } } }
+
+        `force_list` can also be a callable that receives `path`, `key` and
+        `value`. This is helpful in cases where the logic that decides whether
+        a list should be forced is more complex.
     """
     handler = _DictSAXHandler(namespace_separator=namespace_separator,
                               **kwargs)
@@ -279,6 +308,7 @@ def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
     except AttributeError:
         # Jython's expat does not support ordered_attributes
         pass
+    parser.StartNamespaceDeclHandler = handler.startNamespaceDecl
     parser.StartElementHandler = handler.startElement
     parser.EndElementHandler = handler.endElement
     parser.CharacterDataHandler = handler.characters
@@ -290,6 +320,21 @@ def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
     return handler.item
 
 
+def _process_namespace(name, namespaces, ns_sep=':', attr_prefix='@'):
+    if not namespaces:
+        return name
+    try:
+        ns, name = name.rsplit(ns_sep, 1)
+    except ValueError:
+        pass
+    else:
+        ns_res = namespaces.get(ns.strip(attr_prefix))
+        name = '{0}{1}{2}{3}'.format(
+            attr_prefix if ns.startswith(attr_prefix) else '',
+            ns_res, ns_sep, name) if ns_res else name
+    return name
+
+
 def _emit(key, value, content_handler,
           attr_prefix='@',
           cdata_key='#text',
@@ -298,7 +343,10 @@ def _emit(key, value, content_handler,
           pretty=False,
           newl='\n',
           indent='\t',
+          namespace_separator=':',
+          namespaces=None,
           full_document=True):
+    key = _process_namespace(key, namespaces, namespace_separator, attr_prefix)
     if preprocessor is not None:
         result = preprocessor(key, value)
         if result is None:
@@ -325,6 +373,15 @@ def _emit(key, value, content_handler,
                 cdata = iv
                 continue
             if ik.startswith(attr_prefix):
+                ik = _process_namespace(ik, namespaces, namespace_separator,
+                                        attr_prefix)
+                if ik == '@xmlns' and isinstance(iv, dict):
+                    for k, v in iv.items():
+                        attr = 'xmlns{0}'.format(':{0}'.format(k) if k else '')
+                        attrs[attr] = _unicode(v)
+                    continue
+                if not isinstance(iv, _unicode):
+                    iv = _unicode(iv)
                 attrs[ik[len(attr_prefix):]] = iv
                 continue
             children.append((ik, iv))
@@ -336,7 +393,8 @@ def _emit(key, value, content_handler,
         for child_key, child_value in children:
             _emit(child_key, child_value, content_handler,
                   attr_prefix, cdata_key, depth+1, preprocessor,
-                  pretty, newl, indent)
+                  pretty, newl, indent, namespaces=namespaces,
+                  namespace_separator=namespace_separator)
         if cdata is not None:
             content_handler.characters(cdata)
         if pretty and children:
@@ -347,6 +405,7 @@ def _emit(key, value, content_handler,
 
 
 def unparse(input_dict, output=None, encoding='utf-8', full_document=True,
+            short_empty_elements=False,
             **kwargs):
     """Emit an XML document for the given `input_dict` (reverse of `parse`).
 
@@ -368,7 +427,10 @@ def unparse(input_dict, output=None, encoding='utf-8', full_document=True,
     if output is None:
         output = StringIO()
         must_return = True
-    content_handler = XMLGenerator(output, encoding)
+    if short_empty_elements:
+        content_handler = XMLGenerator(output, encoding, True)
+    else:
+        content_handler = XMLGenerator(output, encoding)
     if full_document:
         content_handler.startDocument()
     for key, value in input_dict.items():
@@ -387,16 +449,23 @@ def unparse(input_dict, output=None, encoding='utf-8', full_document=True,
 if __name__ == '__main__':  # pragma: no cover
     import sys
     import marshal
+    try:
+        stdin = sys.stdin.buffer
+        stdout = sys.stdout.buffer
+    except AttributeError:
+        stdin = sys.stdin
+        stdout = sys.stdout
 
     (item_depth,) = sys.argv[1:]
     item_depth = int(item_depth)
 
+
     def handle_item(path, item):
-        marshal.dump((path, item), sys.stdout)
+        marshal.dump((path, item), stdout)
         return True
 
     try:
-        root = parse(sys.stdin,
+        root = parse(stdin,
                      item_depth=item_depth,
                      item_callback=handle_item,
                      dict_constructor=dict)
