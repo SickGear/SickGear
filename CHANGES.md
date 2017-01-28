@@ -28,6 +28,7 @@
 * Update xmltodict library 0.9.2 (eac0031) to 0.10.2 (375d3a6)
 * Update Bootstrap 3.2.0 to 3.3.7
 * Update Bootstrap Hover Dropdown 2.0.11 to 2.2.1
+* Update jquery.cookie 1.0 (21349d9) to JS-Cookie 2.1.3 (c1aa987)
 
 
 [develop changelog]
