@@ -1450,65 +1450,18 @@ thead.tablesorter-stickyHeader{
 	color:#000
 }
 
-
 /* =======================================================================
-token-input.css
+token-input.css Overrides
 ========================================================================== */
 
-ul.token-input-list{
-	border:1px solid #ccc;
-	background-color:#ddd
-}
-
-ul.token-input-list li input{
-	border:0;
-	background-color:white
-}
-
-li.token-input-token{
-	background-color:#d0efa0;
-	color:#000
-}
-
-li.token-input-token span{
-	color:#777
-}
-
-li.token-input-selected-token{
-	background-color:#08844e;
-	color:#ddd
-}
-
-li.token-input-selected-token span{
-	color:#bbb
-}
-
-div.token-input-dropdown{
-	background-color:#ddd;
-	color:#000;
-	border-left-color:#ccc;
-	border-right-color:#ccc;
-	border-bottom-color:#ccc
-}
-
-div.token-input-dropdown p{
-	color:#777
-}
-
+ul.token-input-list,
+div.token-input-dropdown,
 div.token-input-dropdown ul li{
 	background-color:#ddd
 }
 
-div.token-input-dropdown ul li.token-input-dropdown-item{
-	background-color:#fafafa
-}
-
-div.token-input-dropdown ul li.token-input-dropdown-item2{
-	background-color:#ddd
-}
-
-div.token-input-dropdown ul li.token-input-selected-dropdown-item{
-	background-color:#6196c2
+li.token-input-selected-token{
+	color:#ddd
 }
 
 /* =======================================================================
