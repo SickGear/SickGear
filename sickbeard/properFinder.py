@@ -177,6 +177,11 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
                 or cur_proper.quality != old_quality:
             continue
 
+        # only take same release qroup for web dl's
+        if old_quality in (Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB) and \
+                cur_proper.release_group != sql_results[0]['release_group']:
+            continue
+
         # check if we actually want this proper (if it's the right release group and a higher version)
         if parse_result.is_anime:
             my_db = db.DBConnection()
