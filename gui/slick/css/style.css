@@ -3402,11 +3402,6 @@ input, textarea, select, .uneditable-input{
 	padding:0
 }
 
-/* navbar styling */
-.back-art.pro.ii .navbar-default{
-	background-image:none
-}
-
 .navbar-default .navbar-brand{
 	color:#ddd
 }
@@ -3460,6 +3455,12 @@ input, textarea, select, .uneditable-input{
 	background-color:#333
 }
 
+.navbar-default .navbar-toggle:hover,
+.navbar-default .navbar-toggle:focus,
+.navbar-default .navbar-toggle .icon-bar{
+	text-decoration:none
+}
+
 .navbar-default .navbar-collapse,
 .navbar-default .navbar-form{
 	border-color:#3e3f3a
@@ -3470,6 +3471,21 @@ input, textarea, select, .uneditable-input{
 .navbar-default .navbar-nav > .open > a:focus{
 	background-color:#333;
 	color:#ddd
+}
+
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus,
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus,
+.navbar-default .navbar-nav > .open > a,
+.navbar-default .navbar-nav > .open > a:hover,
+.navbar-default .navbar-nav > .open > a:focus,
+.back-art.pro.ii .navbar-default,
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > a:focus{
+	background-image:none;
+	text-decoration:none
 }
 
 @media(max-width:767px){
