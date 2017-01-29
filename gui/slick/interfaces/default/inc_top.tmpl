@@ -111,7 +111,7 @@
 			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 				<ul class="nav navbar-nav navbar-right">
 					<li id="NAVhome" class="dropdown">
-						<a href="$sbRoot/home/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#">Shows <b class="caret"></b></a>
+						<a href="$sbRoot/home/" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#">Shows <b class="caret"></b></a>
 #set $showlist_home, $episode_home, $history_home = 3 * ['(<i class="sgicon-home tight"></i>)']
 #if 'shows' == $sickbeard.DEFAULT_HOME
     #set $episode_home, $history_home = 2 * ['']
@@ -143,7 +143,7 @@
 					</li>
 
 					<li id="NAVmanage" class="dropdown">
-						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b></a>
+						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/home/postprocess/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Process Media</a></li>
 							<li class="divider"></li>
@@ -174,7 +174,7 @@
 					</li>
 
 					<li id="NAVconfig" class="dropdown">
-						<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
+						<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>About</a></li>
 							<li class="divider"></li>
@@ -192,7 +192,7 @@
 					<li class="dropdown">
 #set num_errors = $getVar('$log_num_errors', None)
 #set $err_class = ('', ' errors ' + (len('%s' % $num_errors ) * 'n')[0:4])[any([$num_errors])]
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown" data-delay="0" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"></i></span></a>
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown" tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"></i></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/manage/manageSearches/forceVersionCheck" tabindex="$tab#set $tab += 1#"><i class="sgicon-updatecheck"></i>Check for Updates</a></li>
 							<li><a href="$sbRoot/home/viewchanges" tabindex="$tab#set $tab += 1#"><i class="sgicon-changes"></i>View Changes</a></li>

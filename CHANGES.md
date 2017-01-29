@@ -27,6 +27,7 @@
 * Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
 * Update xmltodict library 0.9.2 (eac0031) to 0.10.2 (375d3a6)
 * Update Bootstrap 3.2.0 to 3.3.7
+* Update Bootstrap Hover Dropdown 2.0.11 to 2.2.1
 
 
 [develop changelog]
