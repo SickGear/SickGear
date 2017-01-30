@@ -67,7 +67,7 @@ $(document).ready(function () {
 		$('#SceneException').fadeIn('fast', 'linear');
 
 		var option = $('<option>');
-		option.attr('value', sceneExSeason + '|' + sceneEx);
+		option.val(sceneExSeason + '|' + sceneEx);
 		option.html((config.showIsAnime ? 'S' + ('-1' === sceneExSeason ? '*' : sceneExSeason) + ': ' : '') + sceneEx);
 
 		return option.appendTo($('#exceptions_list'));

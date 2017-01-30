@@ -545,7 +545,7 @@ $(document).ready(function(){
 
 		$.each(options, function(index, option){
 			$option = $('<option></option>')
-			.attr('value', option.value)
+			.val(option.value)
 			.text(option.text);
 			self.append($option);
 		});

@@ -309,7 +309,7 @@ $(document).ready(function () {
 			groupvalue = match[1];
 			groupview = groupvalue + match[2];
 		}
-		option.attr('value', groupvalue);
+		option.val(groupvalue);
 		option.html(groupview);
 		option.appendTo('#pool');
 	}
