@@ -35,6 +35,7 @@
 * Update jquery.form plugin 3.35.0 to 3.51.0 (6bf24a5)
 * Update jQuery SelectBoxes 2.2.4 to 2.2.6
 * Update jquery-tokeninput 1.60 to 1.62 (9c36e19)
+* Update jQuery-UI 1.10.4 to 1.12.1 - minimum supported IE is 8
 * Update jQuery UI Touch Punch 0.2.2 to 0.2.3
 * Update qTip 2.2.1 to 2.2.2
 * Update tablesorter 2.17.7 to 2.28.5
