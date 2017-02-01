@@ -74,7 +74,7 @@ Caveats
   executed.  For this reason coverage analysis now uses trace.py which is
   slower, but more accurate.
 
-Copyright (c) 2004--2014 Marius Gedminas <marius@pov.lt>
+Copyright (c) 2004--2016 Marius Gedminas <marius@pov.lt>
 Copyright (c) 2007 Hanno Schlichting
 Copyright (c) 2008 Florian Schulze
 
@@ -102,17 +102,17 @@ Released under the MIT licence since December 2006:
 """
 
 __author__ = "Marius Gedminas <marius@gedmin.as>"
-__copyright__ = "Copyright 2004-2015 Marius Gedminas and contributors"
+__copyright__ = "Copyright 2004-2017 Marius Gedminas and contributors"
 __license__ = "MIT"
-__version__ = '1.8.2.dev0'
-__date__ = "2015-11-21"
+__version__ = '1.9.0'
+__date__ = "2017-01-02"
 
 
 import atexit
 import inspect
-import sys
-import re
 import os
+import re
+import sys
 
 # For profiling
 from profile import Profile
@@ -127,6 +127,9 @@ except ImportError:
 
 # For trace.py coverage
 import trace
+import dis
+import token
+import tokenize
 
 # For hotshot coverage (inaccurate!; uses undocumented APIs; might break)
 if hotshot is not None:
@@ -225,7 +228,7 @@ def profile(fn=None, skip=0, filename=None, immediate=False, dirs=False,
             break
     else:
         raise ValueError('only these profilers are available: %s'
-                             % ', '.join(sorted(AVAILABLE_PROFILERS)))
+                         % ', '.join(sorted(AVAILABLE_PROFILERS)))
     fp = profiler_class(fn, skip=skip, filename=filename,
                         immediate=immediate, dirs=dirs,
                         sort=sort, entries=entries, stdout=stdout)
@@ -629,8 +632,9 @@ class FuncSource:
         """Mark all executable source lines in fn as executed 0 times."""
         if self.filename is None:
             return
-        strs = trace.find_strings(self.filename)
-        lines = trace.find_lines_from_code(self.fn.__code__, strs)
+        strs = self._find_docstrings(self.filename)
+        lines = {ln for off, ln in dis.findlinestarts(self.fn.__code__)
+                 if ln not in strs}
         for lineno in lines:
             self.sourcelines.setdefault(lineno, 0)
         if lines:
@@ -638,6 +642,18 @@ class FuncSource:
         else:  # pragma: nocover
             # This branch cannot be reached, I'm just being paranoid.
             self.firstcodelineno = self.firstlineno
+
+    def _find_docstrings(self, filename):
+        # A replacement for trace.find_strings() which was deprecated in
+        # Python 3.2 and removed in 3.6.
+        strs = set()
+        prev = token.INDENT  # so module docstring is detected as docstring
+        with open(filename) as f:
+            for ttype, tstr, start, end, line in tokenize.generate_tokens(f.readline):
+                if ttype == token.STRING and prev == token.INDENT:
+                    strs.update(range(start[0], end[0] + 1))
+                prev = ttype
+        return strs
 
     def mark(self, lineno, count=1):
         """Mark a given source line as executed count times.

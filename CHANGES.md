@@ -17,6 +17,7 @@
 * Update IMDb 5.1dev20160106 to 5.1 (r907)
 * Update moment.js 2.15.1 to 2.17.1
 * Update PNotify library 2.1.0 to 3.0.0 (175af26)
+* Update profilehooks 1.8.2.dev0 (ee3f1a8) to 1.9.0 (de7d59b)
 
 
 [develop changelog]
