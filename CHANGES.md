@@ -29,6 +29,7 @@
 * Update Bootstrap 3.2.0 to 3.3.7
 * Update Bootstrap Hover Dropdown 2.0.11 to 2.2.1
 * Update jquery.cookie 1.0 (21349d9) to JS-Cookie 2.1.3 (c1aa987)
+* Update jquery.cookiejar 1.0.1 to 1.0.2
 
 
 [develop changelog]
