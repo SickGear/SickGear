@@ -21,6 +21,7 @@ import datetime
 import sickbeard
 from lib.dateutil import parser
 from sickbeard.common import Quality
+from unidecode import unidecode
 
 try:
     from collections import OrderedDict
@@ -121,35 +122,36 @@ class AllShowsListUI:
         self.log = log
 
     def selectSeries(self, allSeries):
-        searchResults = []
-        seriesnames = []
+        search_results = []
 
         # get all available shows
         if allSeries:
-            if 'searchterm' in self.config:
-                searchterm = self.config['searchterm']
+            search_term = self.config.get('searchterm', '').lower()
+            if search_term:
                 # try to pick a show that's in my show list
-                for curShow in allSeries:
-                    if curShow in searchResults:
+                for cur_show in allSeries:
+                    if cur_show in search_results:
                         continue
 
-                    if 'seriesname' in curShow:
-                        seriesnames.append(curShow['seriesname'])
-                    if 'aliasnames' in curShow:
-                        seriesnames.extend(curShow['aliasnames'].split('|'))
+                    seriesnames = []
+                    if 'seriesname' in cur_show:
+                        name = cur_show['seriesname'].lower()
+                        seriesnames += [name, unidecode(name)]
+                    if 'aliasnames' in cur_show:
+                        name = cur_show['aliasnames'].lower()
+                        seriesnames += [name.split('|'), unidecode(name).split('|')]
 
-                    for name in seriesnames:
-                        if searchterm.lower() in name.lower():
-                            if 'firstaired' not in curShow:
-                                curShow['firstaired'] = str(datetime.date.fromordinal(1))
-                                curShow['firstaired'] = re.sub('([-]0{2}){1,}', '', curShow['firstaired'])
-                                fixDate = parser.parse(curShow['firstaired'], fuzzy=True).date()
-                                curShow['firstaired'] = fixDate.strftime('%Y-%m-%d')
+                    if search_term in seriesnames:
+                        if 'firstaired' not in cur_show:
+                            cur_show['firstaired'] = str(datetime.date.fromordinal(1))
+                            cur_show['firstaired'] = re.sub('([-]0{2})+', '', cur_show['firstaired'])
+                            fix_date = parser.parse(cur_show['firstaired'], fuzzy=True).date()
+                            cur_show['firstaired'] = fix_date.strftime('%Y-%m-%d')
 
-                            if curShow not in searchResults:
-                                searchResults += [curShow]
+                        if cur_show not in search_results:
+                            search_results += [cur_show]
 
-        return searchResults
+        return search_results
 
 
 class ShowListUI:
