@@ -245,6 +245,8 @@ static void
 encoder_dealloc(PyObject *self);
 static int
 encoder_clear(PyObject *self);
+static int
+is_raw_json(PyObject *obj);
 static PyObject *
 encoder_stringify_key(PyEncoderObject *s, PyObject *key);
 static int
@@ -276,6 +278,20 @@ moduleinit(void);
 #define IS_WHITESPACE(c) (((c) == ' ') || ((c) == '\t') || ((c) == '\n') || ((c) == '\r'))
 
 #define MIN_EXPANSION 6
+
+static PyObject* RawJSONType;
+static int
+is_raw_json(PyObject *obj)
+{
+    if (RawJSONType == NULL) {
+        PyObject *encoder_module = PyImport_ImportModule("simplejson.encoder");
+        RawJSONType = PyObject_GetAttrString(encoder_module, "RawJSON");
+        Py_DECREF(encoder_module);
+        if (RawJSONType == NULL)
+            return 0;
+    }
+    return PyObject_IsInstance(obj, RawJSONType) ? 1 : 0;
+}
 
 static int
 JSON_Accu_Init(JSON_Accu *acc)
@@ -2654,7 +2670,7 @@ encoder_init(PyObject *self, PyObject *args, PyObject *kwds)
     if (PyInt_Check(int_as_string_bitcount) || PyLong_Check(int_as_string_bitcount)) {
         static const unsigned int long_long_bitsize = SIZEOF_LONG_LONG * 8;
         int int_as_string_bitcount_val = (int)PyLong_AsLong(int_as_string_bitcount);
-        if (int_as_string_bitcount_val > 0 && int_as_string_bitcount_val < long_long_bitsize) {
+        if (int_as_string_bitcount_val > 0 && int_as_string_bitcount_val < (int)long_long_bitsize) {
             s->max_long_size = PyLong_FromUnsignedLongLong(1ULL << int_as_string_bitcount_val);
             s->min_long_size = PyLong_FromLongLong(-1LL << int_as_string_bitcount_val);
             if (s->min_long_size == NULL || s->max_long_size == NULL) {
@@ -2865,6 +2881,12 @@ encoder_listencode_obj(PyEncoderObject *s, JSON_Accu *rval, PyObject *obj, Py_ss
         else if (PyString_Check(obj) || PyUnicode_Check(obj))
         {
             PyObject *encoded = encoder_encode_string(s, obj);
+            if (encoded != NULL)
+                rv = _steal_accumulate(rval, encoded);
+        }
+        else if (is_raw_json(obj))
+        {
+            PyObject *encoded = PyObject_GetAttrString(obj, "encoded_json");
             if (encoded != NULL)
                 rv = _steal_accumulate(rval, encoded);
         }
