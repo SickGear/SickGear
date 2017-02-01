@@ -16,6 +16,7 @@
 * Update html5lib 0.99999999/1.0b9 (46dae3d) to (1a28d72)
 * Update IMDb 5.1dev20160106 to 5.1 (r907)
 * Update moment.js 2.15.1 to 2.17.1
+* Update PNotify library 2.1.0 to 3.0.0 (175af26)
 
 
 [develop changelog]
