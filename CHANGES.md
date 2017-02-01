@@ -23,6 +23,7 @@
 * Update SimpleJSON library 3.8.1 (6022794) to 3.10.0 (c52efea)
 * Update Six compatibility library 1.10.0 (r405) to 1.10.0 (r433)
 * Update socks from SocksiPy 1.0 to PySocks 1.6.5 (b4323df)
+* Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
 
 
 [develop changelog]
