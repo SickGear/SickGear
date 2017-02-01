@@ -32,6 +32,7 @@
 * Update jquery.cookie 1.0 (21349d9) to JS-Cookie 2.1.3 (c1aa987)
 * Update jquery.cookiejar 1.0.1 to 1.0.2
 * Update jQuery JSON 2.2 (c908771) to 2.6 (2339804)
+* Update jquery.form plugin 3.35.0 to 3.51.0 (6bf24a5)
 
 
 [develop changelog]
