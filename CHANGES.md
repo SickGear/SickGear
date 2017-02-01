@@ -21,6 +21,7 @@
 * Update rarfile to 3.0 (3e54b22)
 * Update Requests library 2.9.1 (a1c9b84) to 2.13.0 (fc54869)
 * Update SimpleJSON library 3.8.1 (6022794) to 3.10.0 (c52efea)
+* Update Six compatibility library 1.10.0 (r405) to 1.10.0 (r433)
 
 
 [develop changelog]
