@@ -25,7 +25,7 @@
 			currentRequest.abort();
 		}
 
-		fileBrowserDialog.dialog('option', 'dialogClass', 'browserDialog busy');
+		fileBrowserDialog.dialog('option', 'classes.ui-dialog', 'browserDialog busy');
 
 		currentRequest = $.getJSON(endpoint, {path: path, includeFiles: includeFiles}, function(data){
 			fileBrowserDialog.empty();
@@ -68,7 +68,7 @@
 				link.appendTo(list);
 			});
 			$('a', list).wrap('<li class="ui-state-default ui-corner-all">');
-			fileBrowserDialog.dialog('option', 'dialogClass', 'browserDialog');
+			fileBrowserDialog.dialog('option', 'classes.ui-dialog', 'browserDialog');
 		});
 	}
 
@@ -83,9 +83,10 @@
 			var docWidth = $(document).width(), dlgWidth = Math.min(docWidth - 80, 650),
 				docHeight = $(document).height() - 80, winHeight = $(window).height() - 80;
 			fileBrowserDialog = $('<div id="fileBrowserDialog" style="display:none"></div>').appendTo('body').dialog({
-				dialogClass: 'browserDialog',
+				classes: {'ui-dialog': 'browserDialog'},
 				title:       options.title,
-				position:    [(docWidth - dlgWidth)/2, 60],
+				position: {
+					my: 'left top', at: 'left+' + (docWidth - dlgWidth)/2 + ' top+60', of: $('body'), collision: 'fit'},
 				minWidth:    dlgWidth,
 				height:      Math.min(docHeight, winHeight),
 				maxHeight:   Math.min(docHeight, winHeight),
@@ -152,19 +153,19 @@
 					});
 				},
 				open: function(){
-					$('.ui-autocomplete li.ui-menu-item a').removeClass('ui-corner-all');
-					$('.ui-autocomplete li.ui-menu-item:odd a').addClass('ui-menu-item-alternate');
+					$('.ui-autocomplete li.ui-menu-item div').removeClass('ui-corner-all');
+					$('.ui-autocomplete li.ui-menu-item:odd div').addClass('ui-menu-item-alternate');
 				}
 			}).data('ui-autocomplete')._renderItem = function(ul, item){
 				//highlight the matched search term from the item -- note that this is global and will match anywhere
 				var resultItem = item.label;
 				var x = new RegExp('(?![^&;]+;)(?!<[^<>]*)(' + query + ')(?![^<>]*>)(?![^&;]+;)', 'gi');
 				resultItem = resultItem.replace(x, function(fullMatch){
-					return '<b>' + fullMatch + '</b>';
+					return fullMatch;
 				});
 				return $('<li></li>')
 					.data('ui-autocomplete-item', item)
-					.append('<a class="nowrap">' + resultItem + '</a>')
+					.append('<div class="nowrap">' + resultItem + '</div>')
 					.appendTo(ul);
 			};
 		}

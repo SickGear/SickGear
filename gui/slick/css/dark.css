@@ -62,6 +62,10 @@ pre .prelight-num{
 	color:#ddd
 }
 
+.ui-widget.ui-widget-content{
+	border-color:#222
+}
+
 .ui-widget-content a{
 	color:#2d8fbf
 }
@@ -77,11 +81,17 @@ pre .prelight-num{
 }
 
 .ui-state-default,
+.ui-widget.ui-button,
+.ui-widget.ui-button:active,
 .ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default{
 	background:#3d3d3d;
 	color:#fff;
 	border:1px solid #111
+}
+
+.ui-widget.ui-button:hover{
+	border-color:#111
 }
 
 .ui-state-hover,
@@ -125,21 +135,29 @@ pre .prelight-num{
 }
 
 .ui-state-hover .ui-icon,
-.ui-state-focus .ui-icon{
+.ui-state-focus .ui-icon,
+.ui-button:hover .ui-icon,
+.ui-button:focus .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_222222_256x240.png")
 }
 
-.ui-state-active .ui-icon{
+.ui-state-active .ui-icon,
+.ui-button:active .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_8c291d_256x240.png")
 }
 
-.ui-state-highlight .ui-icon{
+.ui-state-highlight .ui-icon,
+.ui-button .ui-state-highlight.ui-icon{
 	background-image:url("../css/lib/images/ui-icons_2e83ff_256x240.png")
 }
 
 .ui-state-error .ui-icon,
 .ui-state-error-text .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_cd0a0a_256x240.png")
+}
+
+.ui-button .ui-icon{
+	background-image:url("../css/lib/images/ui-icons_09a2ff_256x240.png")
 }
 
 .ui-widget-overlay{

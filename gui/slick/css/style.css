@@ -217,6 +217,10 @@ inc_top.tmpl
 	background:#dcdcdc url("../css/lib/images/ui-bg_highlight-soft_75_dcdcdc_1x100.png") 50% top repeat-x
 }
 
+.ui-widget.ui-widget-content{
+	border:1px solid
+}
+
 .ui-widget-content a{
 	text-decoration:none
 }
@@ -225,11 +229,19 @@ inc_top.tmpl
 	background:#ddd url("../css/lib/images/ui-bg_flat_0_ffffff_40x100.png") 50% 50% repeat-x
 }
 
+.ui-dialog-buttonpane .ui-widget.ui-button{
+	padding:0.8em 1.85em
+}
+
 .ui-state-default,
 .ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default{
 	background:#ddd;
 	border:1px solid #ccc
+}
+
+.ui-widget.ui-button:hover{
+	border:1px solid
 }
 
 .ui-state-hover,
@@ -295,6 +307,13 @@ inc_top.tmpl
 }
 
 .ui-widget-shadow{
+	margin:-8px 0 0 -8px;
+	padding:8px;
+	opacity:.35;
+	filter:alpha(opacity=35);
+	-webkit-border-radius:8px;
+	   -moz-border-radius:8px;
+		    border-radius:8px;
 	background:#000 url("../css/lib/images/ui-bg_flat_0_000000_40x100.png") 50% 50% repeat-x
 }
 
@@ -785,21 +804,27 @@ home.tmpl
 	height:8px !important
 }
 
-#show-list .show-card .ui-corner-all, .ui-corner-bottom, .ui-corner-right, .ui-corner-br{
+#show-list .show-card .ui-corner-all, #show-list .show-card .ui-corner-bottom,
+#show-list .show-card .ui-corner-right, #show-list .show-card .ui-corner-br{
 	border-bottom-right-radius:5px
 }
 
-#show-list .show-card .ui-corner-all, .ui-corner-bottom, .ui-corner-left, .ui-corner-bl{
+#show-list .show-card .ui-corner-all, #show-list .show-card .ui-corner-bottom,
+#show-list .show-card .ui-corner-left, #show-list .show-card .ui-corner-bl{
 	border-bottom-left-radius:5px
 }
 
-#browse-list .show-card .ui-corner-all,
-#show-list .show-card .ui-corner-all, .ui-corner-top, .ui-corner-right, .ui-corner-tr{
+#browse-list .show-card .ui-corner-all, #browse-list .show-card .ui-corner-top,
+#browse-list .show-card .ui-corner-right, #browse-list .show-card .ui-corner-tr,
+#show-list .show-card .ui-corner-all, #show-list .show-card .ui-corner-top,
+#show-list .show-card .ui-corner-right, #show-list .show-card .ui-corner-tr{
 	border-top-right-radius:0
 }
 
-#browse-list .show-card .ui-corner-all,
-#show-list .show-card .ui-corner-all, .ui-corner-top, .ui-corner-left, .ui-corner-tl{
+#browse-list .show-card .ui-corner-all, #browse-list .show-card .ui-corner-top,
+#browse-list .show-card .ui-corner-left, #browse-list .show-card .ui-corner-tl,
+#show-list .show-card .ui-corner-all, #show-list .show-card .ui-corner-top,
+#show-list .show-card .ui-corner-left, #show-list .show-card .ui-corner-tl{
 	border-top-left-radius:0
 }
 
@@ -2619,8 +2644,14 @@ config*.tmpl
 	text-align:left
 }
 
+.ui-tabs .ui-tabs-panel{
+	padding-left:15px;
+	padding-right:15px
+}
+
 .component-group{
-	padding:15px 15px 25px;
+	padding:0 0 13px;
+	margin: 0 0 12px;
 	border-bottom:1px dotted #ccc;
 	min-height:200px
 }
