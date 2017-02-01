@@ -6,6 +6,7 @@
 * Change improve page load time when loading images
 * Update isotope library 2.2.2 to 3.0.1
 * Add lazyload package 3.0.0 (2e318b1)
+* Add webencodings 0.5 (3970651) to assist parsing legacy web content
 * Change improve add show search results by comparing search term to an additional unidecoded result set
 * Change webserver startup to correctly use xheaders in reverse proxy or load balance set-ups
 * Update backports_abc 0.4 to 0.5
