@@ -19,6 +19,7 @@
 * Update PNotify library 2.1.0 to 3.0.0 (175af26)
 * Update profilehooks 1.8.2.dev0 (ee3f1a8) to 1.9.0 (de7d59b)
 * Update rarfile to 3.0 (3e54b22)
+* Update Requests library 2.9.1 (a1c9b84) to 2.13.0 (fc54869)
 
 
 [develop changelog]
