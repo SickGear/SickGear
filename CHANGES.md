@@ -24,6 +24,7 @@
 * Update Six compatibility library 1.10.0 (r405) to 1.10.0 (r433)
 * Update socks from SocksiPy 1.0 to PySocks 1.6.5 (b4323df)
 * Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
+* Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
 
 
 [develop changelog]
