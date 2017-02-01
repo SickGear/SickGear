@@ -40,6 +40,6 @@ function initActions() {
 $(document).ready(function(){
 	initActions();
 	$('#NAV' + topmenu).addClass('active');
-	$('.dropdown-toggle').dropdownHover();
+	$('.dropdown-toggle').dropdownHover({delay:500, hoverDelay:400});
 	(/undefined/i.test(document.createElement('input').placeholder)) && $('body').addClass('no-placeholders');
 });
