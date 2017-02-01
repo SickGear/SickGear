@@ -14,6 +14,7 @@
 * Update Certifi 2015.11.20.1 (385476b) to 2017.01.23 (9f9dc30)
 * Update feedparser library 5.2.0 (8c62940) to 5.2.1 (f1dd1bb)
 * Update html5lib 0.99999999/1.0b9 (46dae3d) to (1a28d72)
+* Update IMDb 5.1dev20160106 to 5.1 (r907)
 
 
 [develop changelog]
