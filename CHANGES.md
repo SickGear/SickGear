@@ -37,6 +37,7 @@
 * Update jquery-tokeninput 1.60 to 1.62 (9c36e19)
 * Update jQuery UI Touch Punch 0.2.2 to 0.2.3
 * Update qTip 2.2.1 to 2.2.2
+* Update tablesorter 2.17.7 to 2.28.5
 
 
 [develop changelog]
