@@ -12,6 +12,7 @@
 * Update Beautiful Soup 4.4.0 (r397) to 4.5.3 (r439)
 * Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
 * Update Certifi 2015.11.20.1 (385476b) to 2017.01.23 (9f9dc30)
+* Update feedparser library 5.2.0 (8c62940) to 5.2.1 (f1dd1bb)
 
 
 [develop changelog]
