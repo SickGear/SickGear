@@ -134,6 +134,12 @@ class Serializer(object):
 
         body_raw = cached["response"].pop("body")
 
+        headers = CaseInsensitiveDict(data=cached['response']['headers'])
+        if headers.get('transfer-encoding', '') == 'chunked':
+            headers.pop('transfer-encoding')
+
+        cached['response']['headers'] = headers
+
         try:
             body = io.BytesIO(body_raw)
         except TypeError:
@@ -168,7 +174,7 @@ class Serializer(object):
     def _loads_v2(self, request, data):
         try:
             cached = json.loads(zlib.decompress(data).decode("utf8"))
-        except ValueError:
+        except (ValueError, zlib.error):
             return
 
         # We need to decode the items that we've base64 encoded
