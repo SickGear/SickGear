@@ -1383,66 +1383,6 @@ thead.tablesorter-stickyHeader{
 }
 
 /* =======================================================================
-token-input.css
-========================================================================== */
-
-ul.token-input-list{
-	border:1px solid #ccc;
-	background-color:#fff
-}
-
-ul.token-input-list li input{
-	border:0;
-	background-color:white
-}
-
-li.token-input-token{
-	background-color:#d0efa0;
-	color:#000
-}
-
-li.token-input-token span{
-	color:#777
-}
-
-li.token-input-selected-token{
-	background-color:#08844e;
-	color:#fff
-}
-
-li.token-input-selected-token span{
-	color:#bbb
-}
-
-div.token-input-dropdown{
-	background-color:#fff;
-	color:#000;
-	border-left-color:#ccc;
-	border-right-color:#ccc;
-	border-bottom-color:#ccc
-}
-
-div.token-input-dropdown p{
-	color:#777
-}
-
-div.token-input-dropdown ul li{
-	background-color:#fff
-}
-
-div.token-input-dropdown ul li.token-input-dropdown-item{
-	background-color:#fafafa
-}
-
-div.token-input-dropdown ul li.token-input-dropdown-item2{
-	background-color:#fff
-}
-
-div.token-input-dropdown ul li.token-input-selected-dropdown-item{
-	background-color:#6196c2
-}
-
-/* =======================================================================
 jquery.confirm.css
 ========================================================================== */
 
