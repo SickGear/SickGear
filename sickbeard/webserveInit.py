@@ -61,34 +61,6 @@ class WebServer(threading.Thread):
                                cookie_secret=sickbeard.COOKIE_SECRET,
                                login_url='%s/login/' % self.options['web_root'])
 
-        # Main Handler
-        self.app.add_handlers('.*$', [
-            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
-            (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
-            (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
-            (r'%s/cache(/?.*)' % self.options['web_root'], webserve.Cache),
-            (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
-            (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
-            (r'%s/config/providers(/?.*)' % self.options['web_root'], webserve.ConfigProviders),
-            (r'%s/config/subtitles(/?.*)' % self.options['web_root'], webserve.ConfigSubtitles),
-            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigPostProcessing),
-            (r'%s/config/notifications(/?.*)' % self.options['web_root'], webserve.ConfigNotifications),
-            (r'%s/config/anime(/?.*)' % self.options['web_root'], webserve.ConfigAnime),
-            (r'%s/config(/?.*)' % self.options['web_root'], webserve.Config),
-            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.ErrorLogs),
-            (r'%s/history(/?.*)' % self.options['web_root'], webserve.History),
-            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
-            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.NewHomeAddShows),
-            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomePostProcess),
-            (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
-            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
-            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.showProcesses),
-            (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
-            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
-            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
-            (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
-        ])
-
         # webui login/logout handlers
         self.app.add_handlers('.*$', [
             (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),
@@ -121,6 +93,34 @@ class WebServer(threading.Thread):
             # javascript
             (r'%s/js/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'js')}),
+        ])
+
+        # Main Handler
+        self.app.add_handlers('.*$', [
+            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
+            (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
+            (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
+            (r'%s/cache(/?.*)' % self.options['web_root'], webserve.Cache),
+            (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
+            (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
+            (r'%s/config/providers(/?.*)' % self.options['web_root'], webserve.ConfigProviders),
+            (r'%s/config/subtitles(/?.*)' % self.options['web_root'], webserve.ConfigSubtitles),
+            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigPostProcessing),
+            (r'%s/config/notifications(/?.*)' % self.options['web_root'], webserve.ConfigNotifications),
+            (r'%s/config/anime(/?.*)' % self.options['web_root'], webserve.ConfigAnime),
+            (r'%s/config(/?.*)' % self.options['web_root'], webserve.Config),
+            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.ErrorLogs),
+            (r'%s/history(/?.*)' % self.options['web_root'], webserve.History),
+            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
+            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.NewHomeAddShows),
+            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomePostProcess),
+            (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
+            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
+            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.showProcesses),
+            (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
+            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
+            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
+            (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
 
     def run(self):

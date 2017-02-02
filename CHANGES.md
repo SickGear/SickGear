@@ -44,6 +44,7 @@
 
 [develop changelog]
 
+* Fix "too many redirects" or "no CSS/JS content" delivered
 
 
 ### 0.12.5 (2017-01-16 16:22:00 UTC)
