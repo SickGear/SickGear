@@ -315,14 +315,14 @@ function fetch_branches() {
 
 function add_option_to_pulls(text) {
 	var option = $('<option>');
-	option.attr('value', text[1]);
+	option.val(text[1]);
 	option.html(text[0]);
 	option.appendTo('#pullRequestVersion');
 }
 
 function add_option_to_branches(text) {
 	var option = $('<option>');
-	option.attr('value', text);
+	option.val(text);
 	option.html(text);
 	option.appendTo('#branchVersion');
 }

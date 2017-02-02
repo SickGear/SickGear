@@ -48,7 +48,7 @@ $(document).ready(function(){
         $(this).showHideServices();
     });
 
-    $('.service_enabler').live('click', function(){
+    $('.service_enabler').on('click', function(){
         $(this).refreshServiceList();
     }); 
     

@@ -19,12 +19,12 @@ $('#remove-white, #remove-black').click(function() {
 });
 
 $('#new-white, #new-black').click(function() {
-	var group = $('#addToPoolText').attr('value');
+	var group = $('#addToPoolText').val();
 	if ('' != group) {
 		var option = $('<option>');
-		option.attr('value', group);
+		option.val(group);
 		option.html(group);
 		option.appendTo('#' + $(this).attr('id').replace(/new[-]/i, ''));
-		$('#addToPoolText').attr('value', '');
+		$('#addToPoolText').val('');
 	}
 });

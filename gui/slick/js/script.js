@@ -62,7 +62,7 @@ function resetFilters(text) {
 }
 
 function preventDefault() {
-    $("a[href='#']").live('click', function () {
+    $("a[href='#']").on('click', function () {
         return false;
     });
 }

@@ -40,6 +40,7 @@
 * Update jQuery UI Touch Punch 0.2.2 to 0.2.3
 * Update qTip 2.2.1 to 2.2.2
 * Update tablesorter 2.17.7 to 2.28.5
+* Update jQuery 1.8.3 to 2.2.4
 
 
 [develop changelog]
