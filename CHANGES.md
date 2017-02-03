@@ -41,11 +41,13 @@
 * Update qTip 2.2.1 to 2.2.2
 * Update tablesorter 2.17.7 to 2.28.5
 * Update jQuery 1.8.3 to 2.2.4
+* Add one time run to start up that deletes troublemaking compiled files
 
 
 [develop changelog]
 
 * Fix "too many redirects" or "no CSS/JS content" delivered
+* Change restart/shutdown to use updated jQuery
 
 
 ### 0.12.5 (2017-01-16 16:22:00 UTC)
