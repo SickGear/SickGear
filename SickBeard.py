@@ -39,6 +39,11 @@ if not (2, 7, 9) <= sys.version_info < (3, 0):
     sys.exit(1)
 
 try:
+    import _cleaner
+except (StandardError, Exception):
+    pass
+
+try:
     import Cheetah
 
     if Cheetah.Version[0] != '2':
