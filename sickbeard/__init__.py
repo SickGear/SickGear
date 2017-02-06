@@ -120,6 +120,7 @@ WEB_USERNAME = None
 WEB_PASSWORD = None
 WEB_HOST = None
 WEB_IPV6 = None
+WEB_IPV64 = None
 
 HANDLE_REVERSE_PROXY = False
 PROXY_SETTING = None
@@ -545,7 +546,7 @@ def initialize(console_logging=True):
             HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
             DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, TIMEZONE_DISPLAY, \
             WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEY, WEB_PORT, WEB_LOG, \
-            ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, HANDLE_REVERSE_PROXY
+            ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, WEB_IPV64, HANDLE_REVERSE_PROXY
         # Gen Config/Advanced
         global BRANCH, CUR_COMMIT_BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, GIT_PATH, CPU_PRESET, ANON_REDIRECT, \
             ENCRYPTION_VERSION, PROXY_SETTING, PROXY_INDEXERS, FILE_LOGGING_PRESET
@@ -703,6 +704,7 @@ def initialize(console_logging=True):
         WEB_PORT = minimax(check_setting_int(CFG, 'General', 'web_port', 8081), 8081, 21, 65535)
         WEB_ROOT = check_setting_str(CFG, 'General', 'web_root', '').rstrip('/')
         WEB_IPV6 = bool(check_setting_int(CFG, 'General', 'web_ipv6', 0))
+        WEB_IPV64 = bool(check_setting_int(CFG, 'General', 'web_ipv64', 0))
         WEB_LOG = bool(check_setting_int(CFG, 'General', 'web_log', 0))
         ENCRYPTION_VERSION = check_setting_int(CFG, 'General', 'encryption_version', 0)
         WEB_USERNAME = check_setting_str(CFG, 'General', 'web_username', '')
@@ -1439,6 +1441,7 @@ def save_config():
     new_config['General']['web_host'] = WEB_HOST
     new_config['General']['web_port'] = WEB_PORT
     new_config['General']['web_ipv6'] = int(WEB_IPV6)
+    new_config['General']['web_ipv64'] = int(WEB_IPV64)
     new_config['General']['web_log'] = int(WEB_LOG)
     new_config['General']['web_root'] = WEB_ROOT
     new_config['General']['web_username'] = WEB_USERNAME

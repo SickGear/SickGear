@@ -364,10 +364,7 @@ class SickGear(object):
         if sickbeard.WEB_HOST and sickbeard.WEB_HOST != '0.0.0.0':
             self.webhost = sickbeard.WEB_HOST
         else:
-            if sickbeard.WEB_IPV6:
-                self.webhost = '::'
-            else:
-                self.webhost = '0.0.0.0'
+            self.webhost = (('0.0.0.0', '::')[sickbeard.WEB_IPV6], '')[sickbeard.WEB_IPV64]
 
         # web server options
         self.web_options = {
@@ -387,7 +384,8 @@ class SickGear(object):
         # start web server
         try:
             # used to check if existing SG instances have been started
-            sickbeard.helpers.wait_for_free_port(self.web_options['host'], self.web_options['port'])
+            sickbeard.helpers.wait_for_free_port(
+                sickbeard.WEB_IPV6 and '::1' or self.web_options['host'], self.web_options['port'])
 
             self.webserver = WebServer(self.web_options)
             self.webserver.start()

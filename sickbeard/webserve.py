@@ -4604,7 +4604,7 @@ class ConfigGeneral(Config):
         logger.log(u'New API generated')
         return m.hexdigest()
 
-    def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None,
+    def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None, web_ipv64=None,
                     update_shows_on_start=None, show_update_hour=None,
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
@@ -4694,6 +4694,7 @@ class ConfigGeneral(Config):
                 'Unable to create directory ' + os.path.normpath(https_key) + ', https key directory not changed.']
 
         sickbeard.WEB_IPV6 = config.checkbox_to_value(web_ipv6)
+        sickbeard.WEB_IPV64 = config.checkbox_to_value(web_ipv64)
         sickbeard.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
 
         # Advanced
