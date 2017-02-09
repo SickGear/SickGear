@@ -541,10 +541,20 @@
 							<label for="web_ipv6">
 								<span class="component-title">Listen on IPv6</span>
 								<span class="component-desc">
-									<input type="checkbox" name="web_ipv6" id="web_ipv6"#echo ('', $checked)[$sg_var('WEB_IPV6')]#>
+									<input type="checkbox" name="web_ipv6" id="web_ipv6" class="enabler"#echo ('', $checked)[$sg_var('WEB_IPV6')]#>
 									<p>attempt binding to any available IPv6 address</p>
 								</span>
 							</label>
+						</div>
+						<div id="content_web_ipv6">
+							<div class="field-pair" style="margin-top:-24px">
+								<label for="web_ipv64">
+									<span class="component-desc">
+										<input type="checkbox" name="web_ipv64" id="web_ipv64"#echo ('', $checked)[$sg_var('WEB_IPV64')]#>
+										<p>also listen on IPv4</p>
+									</span>
+								</label>
+							</div>
 						</div>
 
 						<div class="field-pair">
