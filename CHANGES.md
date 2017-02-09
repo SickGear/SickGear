@@ -42,6 +42,7 @@
 * Update tablesorter 2.17.7 to 2.28.5
 * Update jQuery 1.8.3 to 2.2.4
 * Add one time run to start up that deletes troublemaking compiled files
+* Fix reload of homepage after restart in some browsers
 
 
 [develop changelog]
