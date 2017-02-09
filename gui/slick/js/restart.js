@@ -15,7 +15,10 @@ $.SickGear.numRestartWaits = 0;
 
 function is_alive() {
 	timeoutId = 0;
-	$.get(isAliveUrl, function(data) {
+	$.ajax({url: isAliveUrl,
+		type: 'GET',
+		dataType: 'jsonp',
+		success: function(data) {
 
 		var resp = data.msg.toString();
 		if ('nope' == resp) {
@@ -37,7 +40,11 @@ function is_alive() {
 			$('#refresh_message').removeClass();
 			window.location = baseUrl + '/home/';
 		}
-	}, 'jsonp');
+	},
+	error: function(XMLHttpRequest, textStatus, errorThrown) {
+			setTimeout(is_alive, 100);
+	}
+	});
 }
 
 $(document).ready(function() {
