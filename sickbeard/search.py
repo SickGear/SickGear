@@ -72,10 +72,14 @@ def _download_result(result):
 
         # save the data to disk
         try:
-            with ek.ek(open, file_name, 'w') as file_out:
-                file_out.write(result.extraInfo[0])
+            data = result.get_data()
+            if not data:
+                new_result = False
+            else:
+                with ek.ek(open, file_name, 'w') as file_out:
+                    file_out.write(data)
 
-            helpers.chmodAsParent(file_name)
+                helpers.chmodAsParent(file_name)
 
         except EnvironmentError as e:
             logger.log(u'Error trying to save NZB to black hole: %s' % ex(e), logger.ERROR)
@@ -388,6 +392,9 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
             ep_obj = show.getEpisode(int(result['season']), int(result['episode']))
             ep_obj.wantedQuality = [i for i in (wanted_qualities, initial_qualities)[not_downloaded]
                                     if cur_quality < i]
+            # in case we don't want any quality for this episode, skip the episode
+            if 0 == len(ep_obj.wantedQuality):
+                continue
             ep_obj.eps_aired_in_season = ep_count.get(helpers.tryInt(result['season']), 0)
             ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
                 helpers.tryInt(result['scene_season']), 0) if result['scene_season'] else ep_obj.eps_aired_in_season

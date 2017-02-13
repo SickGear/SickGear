@@ -1,4 +1,10 @@
-﻿### 0.12.5 (2017-01-16 16:22:00 UTC)
+﻿### 0.12.6 (2017-02-17 03:48:00 UTC)
+
+* Change skip episodes that have no wanted qualities
+* Change download picked .nzb file on demand and not before
+
+
+### 0.12.5 (2017-01-16 16:22:00 UTC)
 
 * Change TD search URL
 * Fix saving Media Providers when either Search NZBs/Torrents is disabled
