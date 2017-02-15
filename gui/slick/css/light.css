@@ -631,6 +631,10 @@ config*.tmpl
 	border:1px dotted #ccc
 }
 
+.provider-enabled{
+	box-shadow:-26px 0 0 0 rgb(199, 219, 64) inset
+}
+
 .infoTableSeperator{
 	border-top:1px dotted #666
 }

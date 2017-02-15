@@ -44,6 +44,8 @@
 * Add one time run to start up that deletes troublemaking compiled files
 * Fix reload of homepage after restart in some browsers
 * Add detection of '1080p Remux' releases as fullhdbluray
+* Add "Perform search tasks" to Config/Media Providers/Options
+* Change improve clarity of enabled providers on Config/Media Providers
 * Change add IPv4 config option when enabling IPv6.
 
 

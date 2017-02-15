@@ -34,6 +34,7 @@ from sickbeard.indexers.indexer_config import *
 from io import BytesIO
 from lib.dateutil import parser
 from sickbeard.network_timezones import sb_timezone
+from sickbeard.helpers import tryInt
 
 try:
   from lxml import etree
@@ -90,7 +91,7 @@ class NewznabConstants:
 class NewznabProvider(generic.NZBProvider):
 
     def __init__(self, name, url, key='', cat_ids=None, search_mode=None,
-                 search_fallback=False, enable_recentsearch=False, enable_backlog=False):
+                 search_fallback=False, enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False):
         generic.NZBProvider.__init__(self, name, True, False)
 
         self.url = url
@@ -100,7 +101,8 @@ class NewznabProvider(generic.NZBProvider):
         self.search_mode = search_mode or 'eponly'
         self.search_fallback = search_fallback
         self.enable_recentsearch = enable_recentsearch
-        self.enable_backlog = enable_backlog
+        self.enable_backlog = bool(tryInt(enable_backlog))
+        self.enable_scheduled_backlog = bool(tryInt(enable_scheduled_backlog))
         self.needs_auth = '0' != self.key.strip()  # '0' in the key setting indicates that api_key is not needed
         self.default = False
         self._caps = {}
@@ -295,9 +297,10 @@ class NewznabProvider(generic.NZBProvider):
         return True
 
     def config_str(self):
-        return '%s|%s|%s|%s|%i|%s|%i|%i|%i' \
+        return '%s|%s|%s|%s|%i|%s|%i|%i|%i|%i' \
                % (self.name or '', self.url or '', self.maybe_apikey() or '', self.cat_ids or '', self.enabled,
-                  self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog)
+                  self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog,
+                  self.enable_scheduled_backlog)
 
     def _season_strings(self, ep_obj):
 

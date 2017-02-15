@@ -646,6 +646,10 @@ config*.tmpl
 	color:#ddd
 }
 
+.provider-enabled{
+	box-shadow:-26px 0 0 0 rgb(21, 82, 143) inset
+}
+
 #service_order_list li{
 	background:#333 !important;
 }

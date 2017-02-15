@@ -70,8 +70,8 @@
 
 			<div id="config-components">
 				<ul>
-					<li><a href="#core-component-group1">Provider Priorities</a></li>
-					<li><a href="#core-component-group2">Provider Options</a></li>
+					<li><a href="#core-component-group1">Priorities</a></li>
+					<li><a href="#core-component-group2">Options</a></li>
 
 #if $sickbeard.USE_NZBS
 					<li><a href="#core-component-group3">Custom Newznab</a></li>
@@ -86,9 +86,9 @@
 				<div id="core-component-group1" class="component-group">
 					<fieldset class="component-group-list">
 						<div class="component-group-desc">
-							<h3>Provider Priorities</h3>
+							<h3>Priorities</h3>
 							<p>Allows searching recent and past releases.</p>
-							<p>Check off and drag the providers into the order you want them to be used.</p>
+							<p>Check off and drag providers into the order you want them to be used.</p>
 							<p>At least one provider is required, two are recommended.</p>
 
 #if $methods_notused
@@ -110,7 +110,7 @@
     #set $tip = ($cur_provider.name + ('', ' (enable for link)')[not $cur_url and not cur_provider.is_enabled()],
         'Site Down')[$bad_url]
     #set $state = ('', ' <span class="red-text">(Site Down?)</span>')[$bad_url]
-							<li class="ui-state-default row-#echo ('odd', 'even')[$show_type or not $sickbeard.USE_TORRENTS]#" id="$cur_name">
+							<li class="ui-state-default row-#echo ('odd', 'even')[$show_type or not $sickbeard.USE_TORRENTS]##echo ('', ' provider-enabled')[$cur_provider.is_enabled()]#" id="$cur_name">
 								<input type="checkbox" id="enable_$cur_name" class="provider_enabler" <%= html_checked if cur_provider.is_enabled() else '' %>/>
 								<a class="imgLink" #if $cur_url#href="<%= anon_url(cur_url) %>" onclick="window.open(this.href,'_blank');return false;"#else#name=""#end if# rel="noreferrer"><img src="$sbRoot/images/providers/$cur_provider.image_name()" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle" /></a>
 								<span style="vertical-align:middle">$cur_provider.name$state</span>
@@ -150,8 +150,8 @@
 				<div id="core-component-group2" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>Provider Options</h3>
-						<p>Configure individual provider settings here.</p>
+						<h3>Options</h3>
+						<p>Individual provider settings.</p>
 					</div>
 
 					<fieldset class="component-group-list">
@@ -196,8 +196,41 @@
 						</div>
 
 					<!-- start div for editing providers //-->
+#set $recentsearch_tip = 'match recent episodes from results of latest releases'
+#set $backlogsearch_tip = 'allow active searching for individual episode releases'
+#set $scheduled_backlog_tip = 'enable scheduled searching for backlogged episodes'
 #for $cur_newznab_provider in [$cur_provider for $cur_provider in $sickbeard.newznabProviderList]
 					<div class="providerDiv" id="${cur_newznab_provider.get_id()}Div">
+    #set $can_recent = $hasattr($cur_newznab_provider, 'enable_recentsearch')
+    #set $can_backlog = $hasattr($cur_newznab_provider, 'enable_backlog')
+    #set $can_schedule_backlog = $hasattr($cur_newznab_provider, 'enable_scheduled_backlog')
+    #if $cur_newznab_provider.supports_backlog and ($can_recent or $can_backlog or $can_schedule_backlog)
+						<div class="field-pair">
+							<span class="component-title">Perform search tasks</span>
+							<span class="component-desc">
+        #if $can_recent
+								<label for="${cur_newznab_provider.get_id()}_enable_recentsearch" style="display:inline">
+									<input type="checkbox" name="${cur_newznab_provider.get_id()}_enable_recentsearch" id="${cur_newznab_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_newznab_provider.enable_recentsearch else '' %>/>
+									<p>$recentsearch_tip</p>
+								</label>
+		#end if
+        #if $can_backlog
+								<label for="${cur_newznab_provider.get_id()}_enable_backlog" style="display:inline">
+									<input class="enabler" type="checkbox" name="${cur_newznab_provider.get_id()}_enable_backlog" id="${cur_newznab_provider.get_id()}_enable_backlog" <%= html_checked if cur_newznab_provider.enable_backlog else '' %>/>
+									<p>$backlogsearch_tip</p>
+								</label>
+		#end if
+        #if $can_schedule_backlog
+        						<div id="content_${cur_newznab_provider.get_id()}_enable_backlog">
+									<label for="${cur_newznab_provider.get_id()}_enable_scheduled_backlog" style="display:inline">
+										<input type="checkbox" name="${cur_newznab_provider.get_id()}_enable_scheduled_backlog" id="${cur_newznab_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_newznab_provider.enable_scheduled_backlog else '' %>/>
+										<p>$scheduled_backlog_tip</p>
+									</label>
+								</div>
+		#end if
+							</span>
+						</div>
+    #end if
     #if $cur_newznab_provider.default and $cur_newznab_provider.needs_auth
 						<div class="field-pair">
 							<label for="${cur_newznab_provider.get_id()}_url">
@@ -214,28 +247,6 @@
 								<span class="component-desc">
 									<input type="text" id="${cur_newznab_provider.get_id()}_hash" value="<%= starify(cur_newznab_provider.key) %>" newznab_name="${cur_newznab_provider.get_id()}_hash" class="newznab_key form-control input-sm input350" />
 									<div class="clear-left"><p>get API key from provider website</p></div>
-								</span>
-							</label>
-						</div>
-    #end if
-    #if $hasattr($cur_newznab_provider, 'enable_recentsearch') and $cur_newznab_provider.supports_backlog:
-						<div class="field-pair">
-							<label for="${cur_newznab_provider.get_id()}_enable_recentsearch">
-								<span class="component-title">Enable recent searches</span>
-								<span class="component-desc">
-									<input type="checkbox" name="${cur_newznab_provider.get_id()}_enable_recentsearch" id="${cur_newznab_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_newznab_provider.enable_recentsearch else '' %>/>
-									<p>perform recent searches at provider</p>
-								</span>
-							</label>
-						</div>
-    #end if
-    #if $hasattr($cur_newznab_provider, 'enable_backlog') and $cur_newznab_provider.supports_backlog:
-						<div class="field-pair">
-							<label for="${cur_newznab_provider.get_id()}_enable_backlog">
-								<span class="component-title">Enable backlog searches</span>
-								<span class="component-desc">
-									<input type="checkbox" name="${cur_newznab_provider.get_id()}_enable_backlog" id="${cur_newznab_provider.get_id()}_enable_backlog" <%= html_checked if cur_newznab_provider.enable_backlog else '' %>/>
-									<p>perform backlog searches at provider</p>
 								</span>
 							</label>
 						</div>
@@ -273,6 +284,36 @@
 #for $cur_nzb_provider in [$cur_provider for $cur_provider in $sickbeard.providers.sortedProviderList()
     if $cur_provider.providerType == $GenericProvider.NZB and $cur_provider not in $sickbeard.newznabProviderList]:
 					<div class="providerDiv" id="${cur_nzb_provider.get_id()}Div">
+    #set $can_recent = $hasattr($cur_nzb_provider, 'enable_recentsearch')
+    #set $can_backlog = $hasattr($cur_nzb_provider, 'enable_backlog')
+    #set $can_schedule_backlog = $hasattr($cur_nzb_provider, 'enable_scheduled_backlog')
+    #if $cur_nzb_provider.supports_backlog and ($can_recent or $can_backlog or $can_schedule_backlog)
+						<div class="field-pair">
+							<span class="component-title">Perform search tasks</span>
+							<span class="component-desc">
+        #if $can_recent
+								<label for="${cur_nzb_provider.get_id()}_enable_recentsearch" style="display:inline">
+									<input type="checkbox" name="${cur_nzb_provider.get_id()}_enable_recentsearch" id="${cur_nzb_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_nzb_provider.enable_recentsearch else '' %>/>
+									<p>$recentsearch_tip</p>
+								</label>
+		#end if
+        #if $can_backlog
+								<label for="${cur_nzb_provider.get_id()}_enable_backlog" style="display:inline">
+									<input class="enabler" type="checkbox" name="${cur_nzb_provider.get_id()}_enable_backlog" id="${cur_nzb_provider.get_id()}_enable_backlog" <%= html_checked if cur_nzb_provider.enable_backlog else '' %>/>
+									<p>$backlogsearch_tip</p>
+								</label>
+		#end if
+        #if $can_schedule_backlog
+        						<div id="content_${cur_nzb_provider.get_id()}_enable_backlog">
+									<label for="${cur_nzb_provider.get_id()}_enable_scheduled_backlog" style="display:inline">
+										<input type="checkbox" name="${cur_nzb_provider.get_id()}_enable_scheduled_backlog" id="${cur_nzb_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_nzb_provider.enable_scheduled_backlog else '' %>/>
+										<p>$scheduled_backlog_tip</p>
+									</label>
+								</div>
+		#end if
+							</span>
+						</div>
+    #end if
     #if $hasattr($cur_nzb_provider, 'username'):
 						<div class="field-pair">
 							<label for="${cur_nzb_provider.get_id()}_username">
@@ -293,28 +334,6 @@
         #if callable(getattr(cur_nzb_provider, 'ui_string', None))
 									<div class="clear-left"><p>${cur_nzb_provider.ui_string($field_name)}</p></div>
         #end if
-								</span>
-							</label>
-						</div>
-    #end if
-    #if $hasattr($cur_nzb_provider, 'enable_recentsearch') and $cur_nzb_provider.supports_backlog:
-						<div class="field-pair">
-							<label for="${cur_nzb_provider.get_id()}_enable_recentsearch">
-								<span class="component-title">Enable recent searches</span>
-								<span class="component-desc">
-									<input type="checkbox" name="${cur_nzb_provider.get_id()}_enable_recentsearch" id="${cur_nzb_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_nzb_provider.enable_recentsearch else '' %>/>
-									<p>enable provider to perform recent searches</p>
-								</span>
-							</label>
-						</div>
-    #end if
-    #if $hasattr($cur_nzb_provider, 'enable_backlog') and $cur_nzb_provider.supports_backlog:
-						<div class="field-pair">
-							<label for="${cur_nzb_provider.get_id()}_enable_backlog">
-								<span class="component-title">Enable backlog searches</span>
-								<span class="component-desc">
-									<input type="checkbox" name="${cur_nzb_provider.get_id()}_enable_backlog" id="${cur_nzb_provider.get_id()}_enable_backlog" <%= html_checked if cur_nzb_provider.enable_backlog else '' %>/>
-									<p>enable provider to perform backlog searches</p>
 								</span>
 							</label>
 						</div>
@@ -367,6 +386,36 @@
 							</span>
 						</div>
         #end if
+    #end if
+    #set $can_recent = $hasattr($cur_torrent_provider, 'enable_recentsearch')
+    #set $can_backlog = $hasattr($cur_torrent_provider, 'enable_backlog')
+    #set $can_schedule_backlog = $hasattr($cur_torrent_provider, 'enable_scheduled_backlog')
+    #if $cur_torrent_provider.supports_backlog and ($can_recent or $can_backlog or $can_schedule_backlog)
+						<div class="field-pair">
+							<span class="component-title">Perform search tasks</span>
+							<span class="component-desc">
+        #if $can_recent
+								<label for="${cur_torrent_provider.get_id()}_enable_recentsearch" style="display:inline">
+									<input type="checkbox" name="${cur_torrent_provider.get_id()}_enable_recentsearch" id="${cur_torrent_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_torrent_provider.enable_recentsearch else '' %>/>
+									<p>$recentsearch_tip</p>
+								</label>
+		#end if
+        #if $can_backlog
+								<label for="${cur_torrent_provider.get_id()}_enable_backlog" style="display:inline">
+									<input class="enabler" type="checkbox" name="${cur_torrent_provider.get_id()}_enable_backlog" id="${cur_torrent_provider.get_id()}_enable_backlog" <%= html_checked if cur_torrent_provider.enable_backlog else '' %>/>
+									<p>$backlogsearch_tip</p>
+								</label>
+		#end if
+        #if $can_schedule_backlog
+        						<div id="content_${cur_torrent_provider.get_id()}_enable_backlog">
+									<label for="${cur_torrent_provider.get_id()}_enable_scheduled_backlog" style="display:inline">
+										<input type="checkbox" name="${cur_torrent_provider.get_id()}_enable_scheduled_backlog" id="${cur_torrent_provider.get_id()}_enable_scheduled_backlog" <%= html_checked if cur_torrent_provider.enable_scheduled_backlog else '' %>/>
+										<p>$scheduled_backlog_tip</p>
+									</label>
+								</div>
+		#end if
+							</span>
+						</div>
     #end if
     #if $getattr($cur_torrent_provider, 'url_edit', None):
 						<div class="field-pair">
@@ -553,28 +602,6 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							</label>
 						</div>
     #end if
-    #if $hasattr($cur_torrent_provider, 'enable_recentsearch') and $cur_torrent_provider.supports_backlog:
-						<div class="field-pair">
-							<label for="${cur_torrent_provider.get_id()}_enable_recentsearch">
-								<span class="component-title">Enable recent searches</span>
-								<span class="component-desc">
-									<input type="checkbox" name="${cur_torrent_provider.get_id()}_enable_recentsearch" id="${cur_torrent_provider.get_id()}_enable_recentsearch" <%= html_checked if cur_torrent_provider.enable_recentsearch else '' %>/>
-									<p>enable provider to perform recent searches</p>
-								</span>
-							</label>
-						</div>
-    #end if
-    #if $hasattr($cur_torrent_provider, 'enable_backlog') and $cur_torrent_provider.supports_backlog:
-						<div class="field-pair">
-							<label for="${cur_torrent_provider.get_id()}_enable_backlog">
-								<span class="component-title">Enable backlog searches</span>
-								<span class="component-desc">
-									<input type="checkbox" name="${cur_torrent_provider.get_id()}_enable_backlog" id="${cur_torrent_provider.get_id()}_enable_backlog" <%= html_checked if cur_torrent_provider.enable_backlog else '' %>/>
-									<p>enable provider to perform backlog searches</p>
-								</span>
-							</label>
-						</div>
-    #end if
     #if $hasattr($cur_torrent_provider, 'search_mode') and $cur_torrent_provider.supports_backlog:
 						<div class="field-pair">
 							<span class="component-title">Episode search mode</span>
@@ -622,8 +649,8 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 				<div id="core-component-group3" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>Custom Newznab Providers</h3>
-						<p>Add, setup or remove custom newznab providers.</p>
+						<h3>Custom Newznab</h3>
+						<p>Add, setup or remove newznab providers.</p>
 					</div>
 
 					<fieldset class="component-group-list">
@@ -719,8 +746,8 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 				<div id="core-component-group4" class="component-group">
 
 				<div class="component-group-desc">
-					<h3>Custom Torrent Providers</h3>
-					<p>Add or remove custom RSS providers.</p>
+					<h3>Custom Torrent</h3>
+					<p>Add, setup or remove torrent RSS providers.</p>
 				</div>
 
 				<fieldset class="component-group-list">
