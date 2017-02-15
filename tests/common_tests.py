@@ -135,7 +135,8 @@ class QualityTests(unittest.TestCase):
         self.check_quality_names(common.Quality.FULLHDBLURAY, [
             'Test.Show.S01E02.1080p.BluRay.x264-GROUP',
             'Test.Show.S01E02.1080p.HDDVD.x264-GROUP',
-            'Test.Show.S01E02.1080p.Blu-ray.x264-GROUP'])
+            'Test.Show.S01E02.1080p.Blu-ray.x264-GROUP',
+            'Test Show S02 1080p Remux AVC FLAC 5.1'])
 
     def test_UHD4KWEB(self):
         self.check_quality_names(common.Quality.UHD4KWEB, [

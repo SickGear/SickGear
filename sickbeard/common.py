@@ -237,7 +237,8 @@ class Quality:
             return Quality.FULLHDWEBDL
         elif checkName(['720p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all):
             return Quality.HDBLURAY
-        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all):
+        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all) or \
+                (checkName(['1080[pi]', 'remux'], all) and not checkName(['hdtv'], all)):
             return Quality.FULLHDBLURAY
         elif checkName(['2160p', 'web.?(dl|rip|.[hx]26[45])'], all):
             return Quality.UHD4KWEB
