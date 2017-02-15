@@ -46,6 +46,7 @@
 * Add detection of '1080p Remux' releases as fullhdbluray
 * Add "Perform search tasks" to Config/Media Providers/Options
 * Change improve clarity of enabled providers on Config/Media Providers
+* Add option to limit WebDL propers to original release group under Config/Search/Media Search
 * Change add IPv4 config option when enabling IPv6.
 
 
