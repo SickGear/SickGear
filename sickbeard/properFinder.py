@@ -87,7 +87,8 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
         logger.log(u'Searching for new PROPER releases')
 
         try:
-            found_propers = cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows, anime=recent_anime)
+            found_propers = cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows,
+                                                      anime=recent_anime)
         except exceptions.AuthException as e:
             logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
             continue
@@ -115,7 +116,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
                         count += 1
                 except (InvalidNameException, InvalidShowException):
                     continue
-                except Exception:
+                except (StandardError, Exception):
                     continue
 
         cur_provider.log_result('Propers', count, '%s' % cur_provider.name)
@@ -166,8 +167,9 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
 
         # check if we actually want this proper (if it's the right quality)
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT status FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
-                                   [cur_proper.indexerid, cur_proper.season, cur_proper.episode])
+        sql_results = my_db.select(
+            'SELECT release_group, status, version FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
+            [cur_proper.indexerid, cur_proper.season, cur_proper.episode])
         if not sql_results:
             continue
 
@@ -177,24 +179,28 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
                 or cur_proper.quality != old_quality:
             continue
 
+        old_release_group = sql_results[0]['release_group']
+        log_same_grp = 'Skipping proper from release group: [%s], does not match existing release group: [%s] for [%s]'\
+                       % (cur_proper.release_group, old_release_group, cur_proper.name)
+
+        # for webldls, prevent propers from different groups
+        if sickbeard.PROPERS_WEBDL_ONEGRP and \
+                old_quality in (Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB) and \
+                cur_proper.release_group != old_release_group:
+            logger.log(log_same_grp, logger.DEBUG)
+            continue
+
         # check if we actually want this proper (if it's the right release group and a higher version)
         if parse_result.is_anime:
-            my_db = db.DBConnection()
-            sql_results = my_db.select(
-                'SELECT release_group, version FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
-                [cur_proper.indexerid, cur_proper.season, cur_proper.episode])
 
             old_version = int(sql_results[0]['version'])
-            old_release_group = (sql_results[0]['release_group'])
-
             if -1 < old_version < cur_proper.version:
                 logger.log(u'Found new anime v%s to replace existing v%s' % (cur_proper.version, old_version))
             else:
                 continue
 
             if cur_proper.release_group != old_release_group:
-                logger.log(u'Skipping proper from release group: %s, does not match existing release group: %s' %
-                           (cur_proper.release_group, old_release_group))
+                logger.log(log_same_grp, logger.DEBUG)
                 continue
 
         # if the show is in our list and there hasn't been a proper already added for that particular episode
@@ -313,7 +319,7 @@ def _get_last_proper_search():
 
     try:
         last_proper_search = datetime.date.fromordinal(int(sql_results[0]['last_proper_search']))
-    except:
+    except (StandardError, Exception):
         return datetime.date.fromordinal(1)
 
     return last_proper_search
