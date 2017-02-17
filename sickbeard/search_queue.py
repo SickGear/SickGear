@@ -248,7 +248,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
                             helpers.cpu_sleep()
 
-                except Exception:
+                except (StandardError, Exception):
                     logger.log(traceback.format_exc(), logger.DEBUG)
 
                 if None is self.success:
@@ -270,8 +270,9 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         cur_time = datetime.datetime.now(network_timezones.sb_timezone)
 
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT * FROM tv_episodes WHERE status = ? AND season > 0 AND airdate <= ? AND airdate > 1',
-                                   [common.UNAIRED, cur_date])
+        sql_results = my_db.select(
+            'SELECT * FROM tv_episodes WHERE status = ? AND season > 0 AND airdate <= ? AND airdate > 1',
+            [common.UNAIRED, cur_date])
 
         sql_l = []
         show = None
@@ -296,7 +297,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 # filter out any episodes that haven't aired yet
                 if end_time > cur_time:
                     continue
-            except:
+            except (StandardError, Exception):
                 # if an error occurred assume the episode hasn't aired yet
                 continue
 
@@ -396,7 +397,7 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
 
                 logger.log(u'Unable to find a download for: [%s]' % self.segment.prettyName())
 
-        except Exception:
+        except (StandardError, Exception):
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         finally:
@@ -425,6 +426,7 @@ class BacklogQueueItem(generic_queue.QueueItem):
     def run(self):
         generic_queue.QueueItem.run(self)
 
+        is_error = False
         try:
             logger.log(u'Beginning backlog search for: [%s]' % self.show.name)
             search_result = search.search_providers(
@@ -440,10 +442,12 @@ class BacklogQueueItem(generic_queue.QueueItem):
                     helpers.cpu_sleep()
             else:
                 logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show.name)
-        except Exception:
+        except (StandardError, Exception):
+            is_error = True
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         finally:
+            logger.log('Completed backlog search %sfor: [%s]' % (('', 'with a debug error ')[is_error], self.show.name))
             self.finish()
 
 
@@ -462,21 +466,23 @@ class FailedQueueItem(generic_queue.QueueItem):
         self.started = True
 
         try:
-            for epObj in self.segment:
+            for ep_obj in self.segment:
 
-                logger.log(u'Marking episode as bad: [%s]' % epObj.prettyName())
+                logger.log(u'Marking episode as bad: [%s]' % ep_obj.prettyName())
 
-                failed_history.markFailed(epObj)
+                cur_status = ep_obj.status
 
-                (release, provider) = failed_history.findRelease(epObj)
+                failed_history.set_episode_failed(ep_obj)
+                (release, provider) = failed_history.find_release(ep_obj)
+                failed_history.revert_episode(ep_obj)
                 if release:
-                    failed_history.logFailed(release)
-                    history.logFailed(epObj, release, provider)
+                    failed_history.add_failed(release)
+                    history.logFailed(ep_obj, release, provider)
 
-                failed_history.revertEpisode(epObj)
-                logger.log(u'Beginning failed download search for: [%s]' % epObj.prettyName())
+                logger.log(u'Beginning failed download search for: [%s]' % ep_obj.prettyName())
 
-            search_result = search.search_providers(self.show, self.segment, True, try_other_searches=True)
+            search_result = search.search_providers(
+                self.show, self.segment, True, try_other_searches=True, old_status=cur_status)
 
             if search_result:
                 for result in search_result:
@@ -488,7 +494,7 @@ class FailedQueueItem(generic_queue.QueueItem):
             else:
                 pass
                 # logger.log(u'No valid episode found to retry for: [%s]' % self.segment.prettyName())
-        except Exception:
+        except (StandardError, Exception):
             logger.log(traceback.format_exc(), logger.DEBUG)
 
         finally:

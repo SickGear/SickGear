@@ -46,7 +46,7 @@ class ShowUpdater:
 
             # sure, why not?
             if sickbeard.USE_FAILED_DOWNLOADS:
-                failed_history.trimHistory()
+                failed_history.remove_old_history()
 
             # clear the data of unused providers
             sickbeard.helpers.clear_unused_providers()

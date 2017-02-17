@@ -33,6 +33,7 @@ from base64 import b16encode, b32decode
 import sickbeard
 import requests
 import requests.cookies
+from cfscrape import CloudflareScraper
 from hachoir_parser import guessParser
 from hachoir_core.error import HachoirError
 from hachoir_core.stream import FileInputStream
@@ -74,7 +75,7 @@ class GenericProvider:
 
         self.cache = tvcache.TVCache(self)
 
-        self.session = requests.session()
+        self.session = CloudflareScraper.create_scraper()
 
         self.headers = {
             # Using USER_AGENT instead of Mozilla to keep same user agent along authentication and download phases,
@@ -208,7 +209,7 @@ class GenericProvider:
             cache_file = ek.ek(os.path.join, cache_dir, base_name)
 
             self.session.headers['Referer'] = url
-            if helpers.download_file(url, cache_file, session=self.session):
+            if getattr(result, 'cache_file', None) or helpers.download_file(url, cache_file, session=self.session):
 
                 if self._verify_download(cache_file):
                     logger.log(u'Downloaded %s result from %s' % (self.name, url))

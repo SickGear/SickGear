@@ -72,10 +72,14 @@ def _download_result(result):
 
         # save the data to disk
         try:
-            with ek.ek(open, file_name, 'w') as file_out:
-                file_out.write(result.extraInfo[0])
+            data = result.get_data()
+            if not data:
+                new_result = False
+            else:
+                with ek.ek(open, file_name, 'w') as file_out:
+                    file_out.write(data)
 
-            helpers.chmodAsParent(file_name)
+                helpers.chmodAsParent(file_name)
 
         except EnvironmentError as e:
             logger.log(u'Error trying to save NZB to black hole: %s' % ex(e), logger.ERROR)
@@ -140,6 +144,9 @@ def snatch_episode(result, end_status=SNATCHED):
             # Snatches torrent with client
             client = clients.get_client_instance(sickbeard.TORRENT_METHOD)()
             dl_result = client.send_torrent(result)
+
+            if getattr(result, 'cache_file', None):
+                helpers.remove_file_failed(result.cache_file)
     else:
         logger.log(u'Unknown result type, unable to download it', logger.ERROR)
         dl_result = False
@@ -148,7 +155,7 @@ def snatch_episode(result, end_status=SNATCHED):
         return False
 
     if sickbeard.USE_FAILED_DOWNLOADS:
-        failed_history.logSnatch(result)
+        failed_history.add_snatched(result)
 
     ui.notifications.message(u'Episode snatched', result.name)
 
@@ -201,22 +208,22 @@ def pick_best_result(results, show, quality_list=None):
     best_result = None
     for cur_result in results:
 
-        logger.log(u'Quality is %s for %s' % (Quality.qualityStrings[cur_result.quality], cur_result.name))
+        logger.log(u'Quality is %s for [%s]' % (Quality.qualityStrings[cur_result.quality], cur_result.name))
 
         if show.is_anime and not show.release_groups.is_valid(cur_result):
             continue
 
         if quality_list and cur_result.quality not in quality_list:
-            logger.log(u'%s is an unwanted quality, rejecting it' % cur_result.name, logger.DEBUG)
+            logger.log(u'Rejecting unwanted quality [%s]' % cur_result.name, logger.DEBUG)
             continue
 
         if not pass_show_wordlist_checks(cur_result.name, show):
             continue
 
         cur_size = getattr(cur_result, 'size', None)
-        if sickbeard.USE_FAILED_DOWNLOADS and None is not cur_size and failed_history.hasFailed(
+        if sickbeard.USE_FAILED_DOWNLOADS and None is not cur_size and failed_history.has_failed(
                 cur_result.name, cur_size, cur_result.provider.name):
-            logger.log(u'%s has previously failed, rejecting it' % cur_result.name)
+            logger.log(u'Rejecting previously failed [%s]' % cur_result.name)
             continue
 
         if not best_result or best_result.quality < cur_result.quality != Quality.UNKNOWN:
@@ -229,11 +236,11 @@ def pick_best_result(results, show, quality_list=None):
             elif 'internal' in best_result.name.lower() and 'internal' not in cur_result.name.lower():
                 best_result = cur_result
             elif 'xvid' in best_result.name.lower() and 'x264' in cur_result.name.lower():
-                logger.log(u'Preferring %s (x264 over xvid)' % cur_result.name)
+                logger.log(u'Preferring (x264 over xvid) [%s]' % cur_result.name)
                 best_result = cur_result
 
     if best_result:
-        logger.log(u'Picked %s as the best' % best_result.name, logger.DEBUG)
+        logger.log(u'Picked as the best [%s]' % best_result.name, logger.DEBUG)
     else:
         logger.log(u'No result picked.', logger.DEBUG)
 
@@ -388,6 +395,11 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
             ep_obj = show.getEpisode(int(result['season']), int(result['episode']))
             ep_obj.wantedQuality = [i for i in (wanted_qualities, initial_qualities)[not_downloaded]
                                     if cur_quality < i]
+            # in case we don't want any quality for this episode, skip the episode
+            if 0 == len(ep_obj.wantedQuality):
+                logger.log('Dropped episode, no wanted quality for %sx%s: [%s]' % (
+                    ep_obj.season, ep_obj.episode, ep_obj.show.name), logger.ERROR)
+                continue
             ep_obj.eps_aired_in_season = ep_count.get(helpers.tryInt(result['season']), 0)
             ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
                 helpers.tryInt(result['scene_season']), 0) if result['scene_season'] else ep_obj.eps_aired_in_season
@@ -457,7 +469,7 @@ def search_for_needed_episodes(episodes):
     threading.currentThread().name = orig_thread_name
 
     if not len(providers):
-        logger.log('No NZB/Torrent sources enabled in Search Provider options to do recent searches', logger.WARNING)
+        logger.log('No NZB/Torrent sources enabled in Media Provider options to do recent searches', logger.WARNING)
     elif not search_done:
         logger.log('Failed recent search of %s enabled provider%s. More info in debug log.' % (
             len(providers), helpers.maybe_plural(len(providers))), logger.ERROR)
@@ -465,13 +477,21 @@ def search_for_needed_episodes(episodes):
     return found_results.values()
 
 
-def search_providers(show, episodes, manual_search=False, torrent_only=False, try_other_searches=False):
+def search_providers(show, episodes, manual_search=False, torrent_only=False, try_other_searches=False, old_status=None):
     found_results = {}
     final_results = []
 
     search_done = False
 
     orig_thread_name = threading.currentThread().name
+
+    use_quality_list = None
+    if any([episodes]):
+        old_status = old_status or failed_history.find_old_status(episodes[0]) or episodes[0].status
+        if old_status:
+            status, quality = Quality.splitCompositeStatus(old_status)
+            use_quality_list = (status not in (
+                common.WANTED, common.FAILED, common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN))
 
     provider_list = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog and
                      (not torrent_only or x.providerType == GenericProvider.TORRENT)]
@@ -642,11 +662,11 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
         if MULTI_EP_RESULT in found_results[provider_id]:
             for multi_result in found_results[provider_id][MULTI_EP_RESULT]:
 
-                logger.log(u'Checking usefulness of multi episode result %s' % multi_result.name, logger.DEBUG)
+                logger.log(u'Checking usefulness of multi episode result [%s]' % multi_result.name, logger.DEBUG)
 
-                if sickbeard.USE_FAILED_DOWNLOADS and failed_history.hasFailed(multi_result.name, multi_result.size,
-                                                                               multi_result.provider.name):
-                    logger.log(u'%s has previously failed, rejecting this multi episode result' % multi_result.name)
+                if sickbeard.USE_FAILED_DOWNLOADS and failed_history.has_failed(multi_result.name, multi_result.size,
+                                                                                multi_result.provider.name):
+                    logger.log(u'Rejecting previously failed multi episode result [%s]' % multi_result.name)
                     continue
 
                 # see how many of the eps that this result covers aren't covered by single results
@@ -701,6 +721,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
 
         # of all the single ep results narrow it down to the best one for each episode
         final_results += set(multi_results.values())
+        quality_list = use_quality_list and (None, best_qualities)[any(best_qualities)] or None
         for cur_ep in found_results[provider_id]:
             if cur_ep in (MULTI_EP_RESULT, SEASON_RESULT):
                 continue
@@ -708,7 +729,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
             if 0 == len(found_results[provider_id][cur_ep]):
                 continue
 
-            best_result = pick_best_result(found_results[provider_id][cur_ep], show)
+            best_result = pick_best_result(found_results[provider_id][cur_ep], show, quality_list)
 
             # if all results were rejected move on to the next episode
             if not best_result:
@@ -720,9 +741,18 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                     if 'blackhole' != sickbeard.TORRENT_METHOD:
                         best_result.content = None
                 else:
-                    td = best_result.provider.get_url(best_result.url)
-                    if not td:
+                    cache_file = ek.ek(os.path.join, sickbeard.CACHE_DIR or helpers._getTempDir(),
+                                       '%s.torrent' % (helpers.sanitizeFileName(best_result.name)))
+                    if not helpers.download_file(best_result.url, cache_file, session=best_result.provider.session):
                         continue
+
+                    try:
+                        with open(cache_file, 'rb') as fh:
+                            td = fh.read()
+                        setattr(best_result, 'cache_file', cache_file)
+                    except (StandardError, Exception):
+                        continue
+
                     if getattr(best_result.provider, 'chk_td', None):
                         name = None
                         try:
@@ -736,13 +766,13 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                                 if name:
                                     name = td[x: x + v]
                                     break
-                        except:
+                        except (StandardError, Exception):
                             continue
                         if name:
                             if not pass_show_wordlist_checks(name, show):
                                 continue
                             if not show_name_helpers.pass_wordlist_checks(name):
-                                logger.log(u'Ignored: %s (debug log has detail)' % name)
+                                logger.log('Ignored: %s (debug log has detail)' % name)
                                 continue
                             best_result.name = name
 
@@ -773,9 +803,11 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
             break
 
     if not len(provider_list):
-        logger.log('No NZB/Torrent sources enabled in Search Provider options to do backlog searches', logger.WARNING)
+        logger.log('No NZB/Torrent sources enabled in Media Provider options to do backlog searches', logger.WARNING)
     elif not search_done:
         logger.log('Failed backlog search of %s enabled provider%s. More info in debug log.' % (
             len(provider_list), helpers.maybe_plural(len(provider_list))), logger.ERROR)
+    elif not any(final_results):
+        logger.log('No suitable candidates')
 
     return final_results

@@ -95,7 +95,9 @@ def send_nzb(nzb, proper=False):
 
     nzbcontent64 = None
     if 'nzbdata' == nzb.resultType:
-        data = nzb.extraInfo[0]
+        data = nzb.get_data()
+        if not data:
+            return False
         nzbcontent64 = standard_b64encode(data)
     elif 'Anizb' == nzb.provider.name and 'nzb' == nzb.resultType:
         gen_provider = GenericProvider('')

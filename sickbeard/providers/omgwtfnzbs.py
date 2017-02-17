@@ -92,21 +92,26 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         return item['release'].replace('_', '.'), item['getnzb']
 
+    def get_data(self, url):
+        result = None
+        if url and False is self._init_api():
+            data = self.get_url(url, timeout=90)
+            if data:
+                if re.search('(?i)limit.*?reached', data):
+                    logger.log('Daily Nzb Download limit reached', logger.DEBUG)
+                elif '</nzb>' not in data or 'seem to be logged in' in data:
+                    logger.log('Failed nzb data response: %s' % data, logger.DEBUG)
+                else:
+                    result = data
+        return result
+
     def get_result(self, episodes, url):
 
         result = None
         if url and False is self._init_api():
-            data = self.get_url(url, timeout=90)
-            if not data:
-                return result
-            if '<strong>Limit Reached</strong>' in data:
-                logger.log('Daily Nzb Download limit reached', logger.DEBUG)
-                return result
-            if '</nzb>' not in data or 'seem to be logged in' in data:
-                logger.log('Failed nzb data response: %s' % data, logger.DEBUG)
-                return result
             result = classes.NZBDataSearchResult(episodes)
-            result.extraInfo += [data]
+            result.get_data_func = self.get_data
+            result.url = url
 
         if None is result:
             result = classes.NZBSearchResult(episodes)
@@ -193,7 +198,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         if tr.find('img', src=rc['nuked']) or not tr.find('a', href=rc['cat']):
                             continue
 
-                        title = tr.find('a', href=rc['info'])['title']
+                        title = tr.find('a', href=rc['info']).get_text().strip()
                         download_url = tr.find('a', href=rc['get'])
                         age = tr.find_all('td')[-1]['data-sort']
                     except (AttributeError, TypeError, ValueError):

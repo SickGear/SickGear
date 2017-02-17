@@ -63,12 +63,14 @@ from lib import adba
 from lib import subliminal
 from lib.dateutil import tz
 import lib.rarfile.rarfile as rarfile
+from unidecode import unidecode
 
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
 from trakt_helpers import build_config, trakt_collection_remove_account
 from sickbeard.bs4_parser import BS4Parser
 from lib.tmdb_api import TMDB
+from lib.tvdb_api.tvdb_exceptions import tvdb_exception
 
 try:
     import json
@@ -2552,8 +2554,14 @@ class NewHomeAddShows(Home):
     def searchIndexersForShowName(self, search_term, lang='en', indexer=None):
         if not lang or lang == 'null':
             lang = 'en'
-
-        search_term = search_term.strip().encode('utf-8')
+        term = search_term.decode('utf-8').strip()
+        terms = []
+        try:
+            for t in term.encode('utf-8'), unidecode(term), term:
+                if t not in terms:
+                    terms += [t]
+        except (StandardError, Exception):
+            terms = [search_term.strip().encode('utf-8')]
 
         results = {}
         final_results = []
@@ -2592,14 +2600,32 @@ class NewHomeAddShows(Home):
                 else:
                     logger.log('Searching for shows using search term: %s from tv datasource %s' % (
                         search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
-                    results.setdefault(indexer, []).extend(t[search_term])
+                    tvdb_ids = []
+                    for term in terms:
+                        try:
+                            for r in t[term]:
+                                tvdb_id = int(r['id'])
+                                if tvdb_id not in tvdb_ids:
+                                    tvdb_ids.append(tvdb_id)
+                                    results.setdefault(indexer, []).extend([r.copy()])
+                        except tvdb_exception:
+                            pass
             except Exception as e:
                 pass
 
             # Query trakt for tvdb ids
             try:
                 logger.log('Searching for show using search term: %s from tv datasource Trakt' % search_term, logger.DEBUG)
-                resp = self.getTrakt('/search/show?query=%s&extended=full' % search_term)
+                resp = []
+                for term in terms:
+                    result = self.getTrakt('/search/show?query=%s&extended=full' % term)
+                    resp += result
+                    match = False
+                    for r in result:
+                        if term == r.get('show', {}).get('title', ''):
+                            match = True
+                    if match:
+                        break
                 tvdb_ids = []
                 results_trakt = []
                 for item in resp:
