@@ -22,6 +22,7 @@ import time
 from . import generic
 from sickbeard import helpers, logger, scene_exceptions, tvcache
 from sickbeard.bs4_parser import BS4Parser
+from sickbeard.exceptions import AuthException
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
@@ -57,8 +58,12 @@ class BTNProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
+        return self._check_auth()
+
+    def _check_auth(self, **kwargs):
+
         if not self.api_key and not (self.username and self.password):
-            raise AuthException('Must set ApiKey or Username/Password for %s in config provider options' % self.name)
+            raise AuthException('Must set Api key or Username/Password for %s in config provider options' % self.name)
         return True
 
     def _search_provider(self, search_params, age=0, **kwargs):
@@ -67,6 +72,7 @@ class BTNProvider(generic.TorrentProvider):
         self.auth_html = None
 
         results = []
+        api_up = True
 
         for mode in search_params.keys():
             for search_param in search_params[mode]:
@@ -87,11 +93,12 @@ class BTNProvider(generic.TorrentProvider):
 
                 try:
                     response = None
-                    if self.api_key:
+                    if api_up and self.api_key:
                         self.session.headers['Content-Type'] = 'application/json-rpc'
                         response = helpers.getURL(
                             self.url_api, post_data=json_rpc(params), session=self.session, json=True)
                     if not response:
+                        api_up = False
                         results = self.html(mode, search_string, results)
                     error_text = response['error']['message']
                     logger.log(
@@ -100,9 +107,12 @@ class BTNProvider(generic.TorrentProvider):
                          or u'Action prematurely ended. %(prov)s server error response = %(desc)s') %
                         {'prov': self.name, 'desc': error_text}, logger.WARNING)
                     return results
+                except AuthException:
+                    logger.log('API looks to be down, add un/pw config detail to be used as a fallback', logger.WARNING)
                 except (KeyError, Exception):
-                    data_json = response and 'result' in response and response['result'] or {}
+                    pass
 
+                data_json = response and 'result' in response and response['result'] or {}
                 if data_json:
 
                     found_torrents = 'torrents' in data_json and data_json['torrents'] or {}
