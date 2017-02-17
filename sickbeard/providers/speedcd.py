@@ -67,7 +67,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    html = data_json.get('Fs')[0].get('Cn')[0].get('d')
+                    html = data_json.get('Fs', [{}])[0].get('Cn', [{}])[0].get('d')
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 

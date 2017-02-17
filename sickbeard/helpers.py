@@ -38,6 +38,7 @@ import subprocess
 import adba
 import requests
 import requests.exceptions
+from cfscrape import CloudflareScraper
 import sickbeard
 import subliminal
 
@@ -1106,7 +1107,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
     # request session
     if None is session:
-        session = requests.session()
+        session = CloudflareScraper.create_scraper()
 
     if not kwargs.get('nocache'):
         cache_dir = sickbeard.CACHE_DIR or _getTempDir()
@@ -1118,6 +1119,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     req_headers = {'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip,deflate'}
     if headers:
         req_headers.update(headers)
+    if hasattr(session, 'reserved') and 'headers' in session.reserved:
+        req_headers.update(session.reserved['headers'] or {})
     session.headers.update(req_headers)
 
     mute = []
@@ -1216,7 +1219,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
     if json:
         try:
-            return resp.json()
+            data_json = resp.json()
+            return ({}, data_json)[isinstance(data_json, dict)]
         except (TypeError, Exception) as e:
             logger.log(u'JSON data issue from URL %s\r\nDetail... %s' % (url, e.message), logger.WARNING)
             return None
@@ -1231,12 +1235,14 @@ def _maybe_request_url(e, def_url=''):
 def download_file(url, filename, session=None):
     # create session
     if None is session:
-        session = requests.session()
+        session = CloudflareScraper.create_scraper()
     cache_dir = sickbeard.CACHE_DIR or _getTempDir()
     session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
 
     # request session headers
     session.headers.update({'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip,deflate'})
+    if hasattr(session, 'reserved') and 'headers' in session.reserved:
+        session.headers.update(session.reserved['headers'] or {})
 
     # request session ssl verify
     session.verify = False

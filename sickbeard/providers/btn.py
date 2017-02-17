@@ -21,7 +21,9 @@ import time
 
 from . import generic
 from sickbeard import helpers, logger, scene_exceptions, tvcache
+from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
+from lib.unidecode import unidecode
 
 try:
     import json
@@ -35,24 +37,34 @@ class BTNProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'BTN')
 
-        self.url_base = 'https://broadcasthe.net'
+        self.url_base = 'https://broadcasthe.net/'
         self.url_api = 'https://api.btnapps.net'
 
-        self.proper_search_terms = ['%.proper.%', '%.repack.%']
-        self.url = self.url_base
+        self.urls = {'config_provider_home_uri': self.url_base, 'login': self.url_base + 'login.php',
+                     'search': self.url_base + 'torrents.php?searchstr=%s&action=basic&%s', 'get': self.url_base + '%s'}
 
-        self.api_key, self.minseed, self.minleech = 3 * [None]
+        self.proper_search_terms = ['%.proper.%', '%.repack.%']
+
+        self.categories = {'Season': [2], 'Episode': [1]}
+        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
+
+        self.url = self.urls['config_provider_home_uri']
+
+        self.api_key, self.username, self.password, self.auth_html, self.minseed, self.minleech = 6 * [None]
+        self.ua = self.session.headers['User-Agent']
         self.reject_m2ts = False
-        self.session.headers = {'Content-Type': 'application/json-rpc'}
         self.cache = BTNCache(self)
 
     def _authorised(self, **kwargs):
 
-        return self._check_auth()
+        if not self.api_key and not (self.username and self.password):
+            raise AuthException('Must set ApiKey or Username/Password for %s in config provider options' % self.name)
+        return True
 
     def _search_provider(self, search_params, age=0, **kwargs):
 
-        self._check_auth()
+        self._authorised()
+        self.auth_html = None
 
         results = []
 
@@ -66,6 +78,7 @@ class BTNProvider(generic.TorrentProvider):
                 else:
                     search_param and params.update(search_param)
                 age and params.update(dict(age='<=%i' % age))  # age in seconds
+                search_string = 'tvdb' in params and '%s %s' % (params.pop('series'), params['name']) or ''
 
                 json_rpc = (lambda param_dct, items_per_page=1000, offset=0:
                             '{"jsonrpc": "2.0", "id": "%s", "method": "getTorrents", "params": ["%s", %s, %s, %s]}' %
@@ -73,7 +86,13 @@ class BTNProvider(generic.TorrentProvider):
                              self.api_key, json.dumps(param_dct), items_per_page, offset))
 
                 try:
-                    response = helpers.getURL(self.url_api, post_data=json_rpc(params), session=self.session, json=True)
+                    response = None
+                    if self.api_key:
+                        self.session.headers['Content-Type'] = 'application/json-rpc'
+                        response = helpers.getURL(
+                            self.url_api, post_data=json_rpc(params), session=self.session, json=True)
+                    if not response:
+                        results = self.html(mode, search_string, results)
                     error_text = response['error']['message']
                     logger.log(
                         ('Call Limit' in error_text
@@ -138,6 +157,81 @@ class BTNProvider(generic.TorrentProvider):
                                      ('search_param: ' + str(search_param), self.name)['Cache' == mode])
 
                     results = self._sort_seeding(mode, results)
+                    break   # search first tvdb item only
+
+        return results
+
+    def _authorised_html(self):
+
+        if self.username and self.password:
+            return super(BTNProvider, self)._authorised(
+                post_params={'login': 'Log In!'}, logged_in=(lambda y='': 'casThe' in y[0:4096]))
+        raise AuthException('Password or Username for %s is empty in config provider options' % self.name)
+
+    def html(self, mode, search_string, results):
+
+        if 'Content-Type' in self.session.headers:
+            del (self.session.headers['Content-Type'])
+        setattr(self.session, 'reserved', {'headers': {
+            'Accept': 'text/html, application/xhtml+xml, */*', 'Accept-Language': 'en-GB',
+            'Cache-Control': 'no-cache', 'Referer': 'https://broadcasthe.net/login.php', 'User-Agent': self.ua}})
+        self.headers = None
+
+        if self.auth_html or self._authorised_html():
+            del (self.session.reserved['headers']['Referer'])
+            if 'Referer' in self.session.headers:
+                del (self.session.headers['Referer'])
+            self.auth_html = True
+
+            search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+            search_url = self.urls['search'] % (search_string, self._categories_string(mode, 'filter_cat[%s]=1'))
+
+            html = helpers.getURL(search_url, session=self.session)
+            cnt = len(results)
+            try:
+                if not html or self._has_no_results(html):
+                    raise generic.HaltParseException
+
+                with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                    torrent_table = soup.find(id='torrent_table')
+                    torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+
+                    if 2 > len(torrent_rows):
+                        raise generic.HaltParseException
+
+                    rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+                        'cats': '(?i)cat\[(?:%s)\]' % self._categories_string(mode, template='', delimiter='|'),
+                        'get': 'download'}.items())
+
+                    head = None
+                    for tr in torrent_rows[1:]:
+                        cells = tr.find_all('td')
+                        if 5 > len(cells):
+                            continue
+                        try:
+                            head = head if None is not head else self._header_row(tr)
+                            seeders, leechers, size = [tryInt(n, n) for n in [
+                                cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                            if ((self.reject_m2ts and re.search(r'(?i)\[.*?m2?ts.*?\]', tr.get_text('', strip=True))) or
+                                    self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats'])):
+                                continue
+
+                            title = tr.select('td span[title]')[0].attrs.get('title').strip()
+                            download_url = self._link(tr.find('a', href=rc['get'])['href'])
+                        except (AttributeError, TypeError, ValueError, KeyError, IndexError):
+                            continue
+
+                        if title and download_url:
+                            results.append((title, download_url, seeders, self._bytesizer(size)))
+
+            except generic.HaltParseException:
+                pass
+            except (StandardError, Exception):
+                logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+
+            self._log_search(mode, len(results) - cnt, search_url)
+
+            results = self._sort_seeding(mode, results)
 
         return results
 
@@ -187,17 +281,21 @@ class BTNProvider(generic.TorrentProvider):
 
         if 1 == ep_obj.show.indexer:
             base_params['tvdb'] = ep_obj.show.indexerid
+            base_params['series'] = ep_obj.show.name
             search_params.append(base_params)
         # elif 2 == ep_obj.show.indexer:
         #    current_params['tvrage'] = ep_obj.show.indexerid
         #    search_params.append(current_params)
-        else:
-            name_exceptions = list(
-                set([helpers.sanitizeSceneName(a) for a in
-                     scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
-            for name in name_exceptions:
-                series_param = {'series': name}
-                series_param.update(base_params)
+        # else:
+        name_exceptions = list(
+            set([helpers.sanitizeSceneName(a) for a in
+                 scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
+        dedupe = [ep_obj.show.name.replace(' ', '.')]
+        for name in name_exceptions:
+            if name.replace(' ', '.') not in dedupe:
+                dedupe += [name.replace(' ', '.')]
+                series_param = base_params.copy()
+                series_param['series'] = name
                 search_params.append(series_param)
 
         return [dict(Season=search_params)]
@@ -228,18 +326,23 @@ class BTNProvider(generic.TorrentProvider):
         # search
         if 1 == ep_obj.show.indexer:
             base_params['tvdb'] = ep_obj.show.indexerid
+            base_params['series'] = ep_obj.show.name
             search_params.append(base_params)
         # elif 2 == ep_obj.show.indexer:
         #    search_params['tvrage'] = ep_obj.show.indexerid
         #    to_return.append(search_params)
-        else:
+
+        # else:
             # add new query string for every exception
-            name_exceptions = list(
-                set([helpers.sanitizeSceneName(a) for a in
-                     scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
-            for name in name_exceptions:
-                series_param = {'series': name}
-                series_param.update(base_params)
+        name_exceptions = list(
+            set([helpers.sanitizeSceneName(a) for a in
+                 scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
+        dedupe = [ep_obj.show.name.replace(' ', '.')]
+        for name in name_exceptions:
+            if name.replace(' ', '.') not in dedupe:
+                dedupe += [name.replace(' ', '.')]
+                series_param = base_params.copy()
+                series_param['series'] = name
                 search_params.append(series_param)
 
         return [dict(Episode=search_params)]

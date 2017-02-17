@@ -46,6 +46,9 @@ class SearchResult:
         # used by some providers to store extra info associated with the result
         self.extraInfo = []
 
+        # assign function to get the data for the download
+        self.get_data_func = None
+
         # list of TVEpisode objects that this result is associated with
         self.episodes = episodes
 
@@ -84,6 +87,15 @@ class SearchResult:
     def fileName(self):
         return self.episodes[0].prettyName() + '.' + self.resultType
 
+    def get_data(self):
+        if None is not self.get_data_func:
+            try:
+                return self.get_data_func(self.url)
+            except (StandardError, Exception):
+                pass
+        if self.extraInfo and 0 < len(self.extraInfo):
+            return self.extraInfo[0]
+        return None
 
 class NZBSearchResult(SearchResult):
     """
@@ -136,12 +148,12 @@ class AllShowsListUI:
                     seriesnames = []
                     if 'seriesname' in cur_show:
                         name = cur_show['seriesname'].lower()
-                        seriesnames += [name, unidecode(name)]
+                        seriesnames += [name, unidecode(name.encode('utf-8').decode('utf-8'))]
                     if 'aliasnames' in cur_show:
                         name = cur_show['aliasnames'].lower()
-                        seriesnames += [name.split('|'), unidecode(name).split('|')]
+                        seriesnames += name.split('|') + unidecode(name.encode('utf-8').decode('utf-8')).split('|')
 
-                    if search_term in seriesnames:
+                    if search_term in set(seriesnames):
                         if 'firstaired' not in cur_show:
                             cur_show['firstaired'] = str(datetime.date.fromordinal(1))
                             cur_show['firstaired'] = re.sub('([-]0{2})+', '', cur_show['firstaired'])

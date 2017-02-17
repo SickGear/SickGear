@@ -423,9 +423,8 @@ class SickGear(object):
         startup_background_tasks = threading.Thread(name='FETCH-XEMDATA', target=sickbeard.scene_exceptions.get_xem_ids)
         startup_background_tasks.start()
 
-        # sure, why not?
         if sickbeard.USE_FAILED_DOWNLOADS:
-            failed_history.trimHistory()
+            failed_history.remove_old_history()
 
         # Start an update if we're supposed to
         if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:
