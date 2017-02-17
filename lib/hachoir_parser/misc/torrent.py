@@ -143,6 +143,7 @@ def Entry(parent, name):
 class TorrentFile(Parser):
     endian = LITTLE_ENDIAN
     MAGIC = "d8:announce"
+    MAGIC_EXTENSION = "d13:announce-list"
     PARSER_TAGS = {
         "id": "torrent",
         "category": "misc",
@@ -154,7 +155,8 @@ class TorrentFile(Parser):
     }
 
     def validate(self):
-        if self.stream.readBytes(0, len(self.MAGIC)) != self.MAGIC:
+        if self.stream.readBytes(0, len(self.MAGIC)) != self.MAGIC and \
+                        self.stream.readBytes(0, len(self.MAGIC_EXTENSION)) != self.MAGIC_EXTENSION:
             return "Invalid magic"
         return True
 

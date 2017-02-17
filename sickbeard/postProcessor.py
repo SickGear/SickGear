@@ -946,10 +946,10 @@ class PostProcessor(object):
 
         # Just want to keep this consistent for failed handling right now
         release_name = show_name_helpers.determineReleaseName(self.folder_path, self.nzb_name)
-        if None is not release_name:
-            failed_history.logSuccess(release_name)
-        else:
+        if None is release_name:
             self._log(u'No snatched release found in history', logger.WARNING)
+        elif sickbeard.USE_FAILED_DOWNLOADS:
+            failed_history.remove_failed(release_name)
 
         # find the destination folder
         try:

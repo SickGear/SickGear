@@ -2,6 +2,19 @@
 
 * Change skip episodes that have no wanted qualities
 * Change download picked .nzb file on demand and not before
+* Change improve provider title processing
+* Change improve handling erroneous JSON responses
+* Change improve find show with unicode characters
+* Change improve results for providers Omgwtf, SpeedCD, Transmithenet, Zoogle
+* Change validate .torrent files that contain optional header data
+* Fix case where an episode status was not restored on failure
+* Add raise log error if no wanted qualities are found
+* Change add un/pw to Config/Media providers/Options for BTN API graceful fallback (can remove Api key for security)
+* Change only download torrent once when using blackhole
+* Add Cloudflare module 1.6.8 (be0a536) to handle specific CF connections
+* Add Js2Py 0.43 (c1442f1) Cloudflare dependency
+* Add pyjsparser 2.4.5 (cd5b829) Js2Py dependency
+* Remove Torrentshack
 
 
 ### 0.12.5 (2017-01-16 16:22:00 UTC)

@@ -77,7 +77,7 @@ class TransmithenetProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    for item in data_json['response'].get('results', []):
+                    for item in data_json.get('response', {}).get('results', []):
                         if self.freeleech and not item.get('isFreeleech'):
                             continue
 
@@ -96,7 +96,7 @@ class TransmithenetProvider(generic.TorrentProvider):
                                 (maybe_res and [maybe_res[0]] or []) +
                                 [detail[0].strip(), detail[1], maybe_ext and maybe_ext[0].lower() or 'mkv']))
                         except (IndexError, KeyError):
-                            title = group_name
+                            title = self.regulate_title(item, group_name)
                         download_url = self.urls['get'] % (self.user_authkey, self.user_passkey, torrent_id)
 
                         if title and download_url:
@@ -109,6 +109,53 @@ class TransmithenetProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    @staticmethod
+    def regulate_title(item, t_param):
+
+        if 'tags' not in item or not any(item['tags']):
+            return t_param
+
+        t = ['']
+        bl = '[*\[({]+\s*'
+        br = '\s*[})\]*]+'
+        title = re.sub('(.*?)((?i)%sproper%s)(.*)' % (bl, br), r'\1\3\2', item['groupName'])
+        for r in '\s+-\s+', '(?:19|20)\d\d(?:\-\d\d\-\d\d)?', 'S\d\d+(?:E\d\d+)?':
+            m = re.findall('(.*%s)(.*)' % r, title)
+            if any(m) and len(m[0][0]) > len(t[0]):
+                t = m[0]
+        t = (tuple(title), t)[any(t)]
+
+        tag_str = '_'.join(item['tags'])
+        tags = [re.findall(x, tag_str, flags=re.X) for x in
+                ('(?i)%sProper%s|\bProper\b$' % (bl, br),
+                 '(?i)\d{3,4}(?:[pi]|hd)',
+                 '''
+                 (?i)(hr.ws.pdtv|blu.?ray|hddvd|
+                 pdtv|hdtv|dsr|tvrip|web.?(?:dl|rip)|dvd.?rip|b[r|d]rip|mpeg-?2)
+                 ''', '''
+                 (?i)([hx].?26[45]|divx|xvid)
+                 ''', '''
+                 (?i)(avi|mkv|mp4|sub(?:b?ed|pack|s))
+                 ''')]
+
+        title = ('%s`%s' % (
+            re.sub('|'.join(['|'.join([re.escape(y) for y in x]) for x in tags if x]).strip('|'), '', t[-1]),
+            re.sub('(?i)(\d{3,4})hd', r'\1p', '`'.join(['`'.join(x) for x in tags[:-1]]).rstrip('`')) +
+            ('', '`hdtv')[not any(tags[2])] + ('', '`x264')[not any(tags[3])]))
+        for r in [('(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
+                  ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), ('%s\s*%s' % (bl, br), '`')]:
+            title = re.sub(r[0], r[1], title)
+
+        grp = filter(lambda rn: '.release' in rn.lower(), item['tags'])
+        title = '%s%s-%s' % (('', t[0])[1 < len(t)], title,
+                             (any(grp) and grp[0] or 'nogrp').upper().replace('.RELEASE', ''))
+
+        for r in [('\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', '.')]:
+            title = re.sub(r[0], r[1], title)
+
+        title += + any(tags[4]) and ('.%s' % tags[4][0]) or ''
+        return title
 
     def _season_strings(self, ep_obj, **kwargs):
 

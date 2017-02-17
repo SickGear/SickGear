@@ -35,7 +35,6 @@ $(document).ready(function () {
 			? text
 			.replace(/["]/g, '&quot;')
 			: text
-			.replace(/Pokémon/, 'Pokemon')
 			.replace(/(?:["]|&quot;)/g, '')
 		);
 	}
