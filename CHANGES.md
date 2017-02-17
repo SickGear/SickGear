@@ -56,6 +56,14 @@
 * Change restart/shutdown to use updated jQuery
 
 
+### 0.12.7 (2017-02-17 15:00:00 UTC)
+
+* Change accept lists in JSON responses
+* Change do not log error for empty BTN un/pw in most cases
+* Change BTN to only try API once when doing alternative name searches
+* Change when API fails, warn users as a tip that they can configure un/pw
+
+
 ### 0.12.6 (2017-02-17 03:48:00 UTC)
 
 * Change skip episodes that have no wanted qualities

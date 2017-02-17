@@ -1220,7 +1220,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     if json:
         try:
             data_json = resp.json()
-            return ({}, data_json)[isinstance(data_json, dict)]
+            return ({}, data_json)[isinstance(data_json, (dict, list))]
         except (TypeError, Exception) as e:
             logger.log(u'JSON data issue from URL %s\r\nDetail... %s' % (url, e.message), logger.WARNING)
             return None

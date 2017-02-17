@@ -1099,7 +1099,7 @@ class TorrentProvider(object, GenericProvider):
         elif hasattr(self, 'username') and hasattr(self, 'api_key'):
             if self.username and self.api_key:
                 return True
-            setting = 'Apikey or Username'
+            setting = 'Api key or Username'
         elif hasattr(self, 'username') and hasattr(self, 'passkey'):
             if self.username and self.passkey:
                 return True
@@ -1111,7 +1111,7 @@ class TorrentProvider(object, GenericProvider):
         elif hasattr(self, 'api_key'):
             if self.api_key:
                 return True
-            setting = 'Apikey'
+            setting = 'Api key'
         elif hasattr(self, 'passkey'):
             if self.passkey:
                 return True
