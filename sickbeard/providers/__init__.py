@@ -29,7 +29,7 @@ from . import newznab, omgwtfnzbs
 from . import alpharatio, alphareign, beyondhd, bithdtv, bitmetv, btn, btscene, dh, extratorrent, \
     fano, filelist, freshontv, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, hdtorrents, \
     iptorrents, limetorrents, morethan, ncore, pisexy, pretome, privatehd, ptf, \
-    rarbg, revtt, scc, scenetime, shazbat, speedcd, \
+    rarbg, revtt, scc, scenetime, shazbat, skytorrents, speedcd, \
     thepiratebay, torlock, torrentday, torrenting, torrentleech, \
     torrentz2, transmithe_net, tvchaosuk, zooqle
 # anime
@@ -75,6 +75,7 @@ __all__ = ['omgwtfnzbs',
            'scc',
            'scenetime',
            'shazbat',
+           'skytorrents',
            'speedcd',
            'thepiratebay',
            'torlock',
