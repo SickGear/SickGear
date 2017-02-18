@@ -48,6 +48,7 @@
 * Change improve clarity of enabled providers on Config/Media Providers
 * Add option to limit WebDL propers to original release group under Config/Search/Media Search
 * Change add IPv4 config option when enabling IPv6.
+* Add AlphaReign torrent provider
 
 
 [develop changelog]
