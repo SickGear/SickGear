@@ -325,7 +325,7 @@ class GenericProvider:
             url_tmpl = url_tmpl or self.urls['get']
         except (StandardError, Exception):
             url_tmpl = '%s'
-        return url if re.match('(?i)https?://', url) else (url_tmpl % url.lstrip('/'))
+        return url if re.match('(?i)(https?://|magnet:)', url) else (url_tmpl % url.lstrip('/'))
 
     def _header_row(self, table_row, custom_match=None, header_strip=''):
         """
