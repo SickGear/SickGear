@@ -1,4 +1,9 @@
-﻿### 0.12.7 (2017-02-17 15:00:00 UTC)
+﻿### 0.12.8 (2017-02-19 13:50:00 UTC)
+
+* Change BTN API hostname
+
+
+### 0.12.7 (2017-02-17 15:00:00 UTC)
 
 * Change accept lists in JSON responses
 * Change do not log error for empty BTN un/pw in most cases
