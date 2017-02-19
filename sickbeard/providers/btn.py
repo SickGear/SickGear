@@ -39,7 +39,7 @@ class BTNProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'BTN')
 
         self.url_base = 'https://broadcasthe.net/'
-        self.url_api = 'https://api.btnapps.net'
+        self.url_api = 'https://api.broadcasthe.net'
 
         self.urls = {'config_provider_home_uri': self.url_base, 'login': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s&action=basic&%s', 'get': self.url_base + '%s'}
