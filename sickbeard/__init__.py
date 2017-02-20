@@ -90,6 +90,11 @@ showList = None
 UPDATE_SHOWS_ON_START = False
 SHOW_UPDATE_HOUR = 3
 
+# non ui settings
+REMOVE_FILENAME_CHARS = None
+IMPORT_DEFAULT_CHECKED_SHOWS = None
+# /non ui settings
+
 providerList = []
 newznabProviderList = []
 torrentRssProviderList = []
@@ -227,7 +232,6 @@ SEARCH_UNAIRED = False
 UNAIRED_RECENT_SEARCH_ONLY = True
 
 ADD_SHOWS_WO_DIR = False
-REMOVE_FILENAME_CHARS = None
 CREATE_MISSING_SHOW_DIRS = False
 RENAME_EPISODES = False
 AIRDATE_EPISODES = False
@@ -519,8 +523,8 @@ def initialize(console_logging=True):
         # Misc
         global __INITIALIZED__, showList, providerList, newznabProviderList, torrentRssProviderList, \
             WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, CREATE_MISSING_SHOW_DIRS, \
-            RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, REMOVE_FILENAME_CHARS, \
-            CONFIG_FILE
+            RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, CONFIG_FILE, \
+            REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS
         # Schedulers
         # global traktCheckerScheduler
         global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
@@ -840,6 +844,7 @@ def initialize(console_logging=True):
         CREATE_MISSING_SHOW_DIRS = bool(check_setting_int(CFG, 'General', 'create_missing_show_dirs', 0))
         ADD_SHOWS_WO_DIR = bool(check_setting_int(CFG, 'General', 'add_shows_wo_dir', 0))
         REMOVE_FILENAME_CHARS = check_setting_str(CFG, 'General', 'remove_filename_chars', '')
+        IMPORT_DEFAULT_CHECKED_SHOWS = bool(check_setting_int(CFG, 'General', 'import_default_checked_shows', 0))
 
         SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '')
         SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '')
@@ -1148,7 +1153,8 @@ def initialize(console_logging=True):
             if hasattr(torrent_prov, 'enable_backlog'):
                 torrent_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
             if hasattr(torrent_prov, 'enable_scheduled_backlog'):
-                torrent_prov.enable_scheduled_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
+                torrent_prov.enable_scheduled_backlog = bool(check_setting_int(
+                    CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
             if hasattr(torrent_prov, 'search_mode'):
                 torrent_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
             if hasattr(torrent_prov, 'search_fallback'):
@@ -1177,7 +1183,8 @@ def initialize(console_logging=True):
             if hasattr(nzb_prov, 'enable_backlog'):
                 nzb_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
             if hasattr(nzb_prov, 'enable_scheduled_backlog'):
-                nzb_prov.enable_scheduled_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
+                nzb_prov.enable_scheduled_backlog = bool(check_setting_int(
+                    CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
 
         if not os.path.isfile(CONFIG_FILE):
             logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
@@ -1541,6 +1548,7 @@ def save_config():
     new_config['General']['create_missing_show_dirs'] = int(CREATE_MISSING_SHOW_DIRS)
     new_config['General']['add_shows_wo_dir'] = int(ADD_SHOWS_WO_DIR)
     new_config['General']['remove_filename_chars'] = REMOVE_FILENAME_CHARS
+    new_config['General']['import_default_checked_shows'] = int(IMPORT_DEFAULT_CHECKED_SHOWS)
 
     new_config['General']['extra_scripts'] = '|'.join(EXTRA_SCRIPTS)
     new_config['General']['git_path'] = GIT_PATH
