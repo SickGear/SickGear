@@ -99,9 +99,9 @@ class NewznabProvider(generic.NZBProvider):
         self.cat_ids = cat_ids or ''
         self._cat_ids = None
         self.search_mode = search_mode or 'eponly'
-        self.search_fallback = search_fallback
-        self.enable_recentsearch = enable_recentsearch
-        self.enable_backlog = bool(tryInt(enable_backlog))
+        self.search_fallback = bool(helpers.tryInt(search_fallback))
+        self.enable_recentsearch = bool(helpers.tryInt(enable_recentsearch))
+        self.enable_backlog = bool(helpers.tryInt(enable_backlog))
         self.enable_scheduled_backlog = bool(tryInt(enable_scheduled_backlog))
         self.needs_auth = '0' != self.key.strip()  # '0' in the key setting indicates that api_key is not needed
         self.default = False
