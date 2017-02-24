@@ -1,4 +1,9 @@
-﻿### 0.12.8 (2017-02-19 13:50:00 UTC)
+﻿### 0.12.9 (2017-02-24 18:40:00 UTC)
+
+* Fix issue saving custom NewznabProviders
+
+
+### 0.12.8 (2017-02-19 13:50:00 UTC)
 
 * Change BTN API hostname
 
