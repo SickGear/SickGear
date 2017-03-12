@@ -47,7 +47,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
         return super(IPTorrentsProvider, self)._authorised(
             logged_in=(lambda y='': all(
-                ['IPTorrents' in y, self.has_all_cookies()] +
+                ['IPTorrents' in y, 'type="password"' not in y[0:2048], self.has_all_cookies()] +
                 [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
