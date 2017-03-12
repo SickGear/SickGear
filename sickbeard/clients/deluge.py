@@ -1,7 +1,8 @@
-# Author: Mr_Orange <mr_orange@hotmail.it>
-# URL: http://code.google.com/p/sickbeard/
+# coding=utf-8
 #
 # This file is part of SickGear.
+#
+# Original author: Mr_Orange <mr_orange@hotmail.it>
 #
 # SickGear is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,65 +31,37 @@ class DelugeAPI(GenericClient):
 
         super(DelugeAPI, self).__init__('Deluge', host, username, password)
 
-        self.url = self.host + 'json'
+        self.url = '%s/json' % self.host.rstrip('/')
+
+    def _post_json(self, data, process=True):
+        result = self.session.post(self.url, json=data, timeout=10, verify=sickbeard.TORRENT_VERIFY_CERT)
+        if process:
+            return result.json()['result']
+
+    def _request_json(self, data, process=None):
+        result = self._request(method='post', json=data, timeout=10)
+        if process:
+            return result.json()['result']
 
     def _get_auth(self):
 
-        post_data = json.dumps({'method': 'auth.login',
-                                'params': [self.password],
-                                'id': 1})
-
         try:
-            self.auth = self.session.post(
-                self.url,
-                data=post_data.encode('utf-8'),
-                verify=sickbeard.TORRENT_VERIFY_CERT
-            ).json()['result']
+            self.auth = self._post_json({'method': 'auth.login', 'params': [self.password], 'id': 1})
 
-            post_data = json.dumps({'method': 'web.connected',
-                                    'params': [],
-                                    'id': 10})
-
-            connected = self.session.post(
-                self.url,
-                data=post_data.encode('utf-8'),
-                verify=sickbeard.TORRENT_VERIFY_CERT
-            ).json()['result']
+            connected = self._post_json({'method': 'web.connected', 'params': [], 'id': 10})
 
             if not connected:
-                post_data = json.dumps({'method': 'web.get_hosts',
-                                        'params': [],
-                                        'id': 11})
-
-                hosts = self.session.post(
-                    self.url,
-                    data=post_data.encode('utf-8'),
-                    verify=sickbeard.TORRENT_VERIFY_CERT
-                ).json()['result']
-
-                if len(hosts) == 0:
-                    logger.log(self.name + u': WebUI does not contain daemons',
-                               logger.ERROR)
+                hosts = self._post_json({'method': 'web.get_hosts', 'params': [], 'id': 11})
+                if 0 == len(hosts):
+                    logger.log('%s: WebUI does not contain daemons' % self.name, logger.ERROR)
                     return None
 
-                post_data = json.dumps({'method': 'web.connect',
-                                        'params': [hosts[0][0]],
-                                        'id': 11})
-                self.session.post(self.url, data=post_data.encode('utf-8'),
-                                  verify=sickbeard.TORRENT_VERIFY_CERT)
+                self._post_json({'method': 'web.connect', 'params': [hosts[0][0]], 'id': 11}, False)
 
-                post_data = json.dumps({'method': 'web.connected',
-                                        'params': [],
-                                        'id': 10})
-                connected = self.session.post(
-                    self.url,
-                    data=post_data.encode('utf-8'),
-                    verify=sickbeard.TORRENT_VERIFY_CERT
-                ).json()['result']
+                connected = self._post_json({'method': 'web.connected', 'params': [], 'id': 10})
 
             if not connected:
-                logger.log(self.name + u': WebUI could not connect to daemon',
-                           logger.ERROR)
+                logger.log('%s: WebUI could not connect to daemon' % self.name, logger.ERROR)
                 return None
         except RequestException:
             return None
@@ -97,31 +70,24 @@ class DelugeAPI(GenericClient):
 
     def _add_torrent_uri(self, result):
 
-        post_data = json.dumps({
+        result.hash = self._request_json({
             'method': 'core.add_torrent_magnet',
-            'params': [result.url, {
-                'move_completed': 'true',
-                'move_completed_path': sickbeard.TV_DOWNLOAD_DIR
-            }],
-            'id': 2
-        })
-        result.hash = self._request(method='post',
-                                    data=post_data).json()['result']
+            'params': [result.url,
+                       {'move_completed': 'true',
+                        'move_completed_path': sickbeard.TV_DOWNLOAD_DIR}],
+            'id': 2}, True)
 
         return result.hash
 
     def _add_torrent_file(self, result):
 
-        post_data = json.dumps({'method':
-                                'core.add_torrent_file',
-                                'params': [result.name + '.torrent',
-                                           b64encode(result.content),
-                                           {'move_completed': 'true',
-                                            'move_completed_path':
-                                            sickbeard.TV_DOWNLOAD_DIR}],
-                                'id': 2})
-        result.hash = self._request(method='post',
-                                    data=post_data).json()['result']
+        result.hash = self._request_json({
+            'method': 'core.add_torrent_file',
+            'params': ['%s.torrent' % result.name,
+                       b64encode(result.content),
+                       {'move_completed': 'true',
+                        'move_completed_path': sickbeard.TV_DOWNLOAD_DIR}],
+            'id': 2}, True)
 
         return result.hash
 
@@ -129,50 +95,34 @@ class DelugeAPI(GenericClient):
 
         label = sickbeard.TORRENT_LABEL
         if ' ' in label:
-            logger.log(self.name +
-                       u': Invalid label. Label must not contain a space',
-                       logger.ERROR)
+            logger.log('%s: Invalid label. Label must not contain a space' % self.name, logger.ERROR)
             return False
 
         if label:
             # check if label already exists and create it if not
-            post_data = json.dumps({
+            labels = self._request_json({
                 'method': 'label.get_labels',
                 'params': [],
-                'id': 3
-            })
-            labels = self._request(method='post',
-                                   data=post_data).json()['result']
+                'id': 3}, True)
 
-            if labels is not None:
+            if None is not labels:
                 if label not in labels:
-                    logger.log(self.name + ': ' + label +
-                               u' label does not exist in ' +
-                               u'Deluge we must add it',
+                    logger.log('%s: %s label does not exist in Deluge we must add it' % (self.name, label),
                                logger.DEBUG)
-                    post_data = json.dumps({
+                    self._request_json({
                         'method': 'label.add',
                         'params': [label],
-                        'id': 4
-                    })
-                    self._request(method='post', data=post_data)
-                    logger.log(self.name + ': ' + label +
-                               u' label added to Deluge', logger.DEBUG)
+                        'id': 4})
+                    logger.log('%s: %s label added to Deluge' % (self.name, label), logger.DEBUG)
 
                 # add label to torrent
-                post_data = json.dumps({
+                self._request_json({
                     'method': 'label.set_torrent',
                     'params': [result.hash, label],
-                    'id': 5
-                })
-                self._request(method='post', data=post_data)
-                logger.log(self.name + ': ' + label +
-                           u' label added to torrent',
-                           logger.DEBUG)
+                    'id': 5})
+                logger.log('%s: %s label added to torrent' % (self.name, label), logger.DEBUG)
             else:
-                logger.log(self.name + ': ' +
-                           u'label plugin not detected',
-                           logger.DEBUG)
+                logger.log('%s: label plugin not detected' % self.name, logger.DEBUG)
                 return False
 
         return True
@@ -184,42 +134,38 @@ class DelugeAPI(GenericClient):
             ratio = result.ratio
 
         if ratio:
-            post_data = json.dumps({'method': 'core.set_torrent_stop_at_ratio',
-                                    'params': [result.hash, True],
-                                    'id': 5})
-            self._request(method='post', data=post_data)
+            self._request_json({
+                'method': 'core.set_torrent_stop_at_ratio',
+                'params': [result.hash, True],
+                'id': 5})
 
-            post_data = json.dumps({'method': 'core.set_torrent_stop_ratio',
-                                    'params': [result.hash, float(ratio)],
-                                    'id': 6})
-            self._request(method='post', data=post_data)
+            self._request_json({
+                'method': 'core.set_torrent_stop_ratio',
+                'params': [result.hash, float(ratio)],
+                'id': 6})
         return True
 
     def _set_torrent_path(self, result):
 
         if sickbeard.TORRENT_PATH:
-            post_data = json.dumps({
+            self._request_json({
                 'method': 'core.set_torrent_move_completed',
                 'params': [result.hash, True],
-                'id': 7
-            })
-            self._request(method='post', data=post_data)
+                'id': 7})
 
-            post_data = json.dumps({
+            self._request_json({
                 'method': 'core.set_torrent_move_completed_path',
                 'params': [result.hash, sickbeard.TORRENT_PATH],
-                'id': 8
-            })
-            self._request(method='post', data=post_data)
+                'id': 8})
         return True
 
     def _set_torrent_pause(self, result):
 
         if sickbeard.TORRENT_PAUSED:
-            post_data = json.dumps({'method': 'core.pause_torrent',
-                                    'params': [[result.hash]],
-                                    'id': 9})
-            self._request(method='post', data=post_data)
+            self._request_json({
+                'method': 'core.pause_torrent',
+                'params': [[result.hash]],
+                'id': 9})
         return True
 
 

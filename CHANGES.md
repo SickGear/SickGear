@@ -60,6 +60,12 @@
 * Change restart/shutdown to use updated jQuery
 
 
+### 0.12.10 (2017-03-12 16:00:00 UTC)
+
+* Change refactor client for Deluge 1.3.14 compatibility
+* Change ensure IPT authentication is valid before use
+
+
 ### 0.12.9 (2017-02-24 18:40:00 UTC)
 
 * Fix issue saving custom NewznabProviders
