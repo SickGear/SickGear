@@ -647,7 +647,7 @@ class GenericProvider:
         if hasattr(self, 'cookies'):
             cookies = self.cookies
 
-            if not (cookies and re.match('^(\w+=\w+[;\s]*)+$', cookies)):
+            if not (cookies and re.match('^(?:\w+=[^;\s]+[;\s]*)+$', cookies)):
                 return False
 
             cj = requests.utils.add_dict_to_cookiejar(self.session.cookies,

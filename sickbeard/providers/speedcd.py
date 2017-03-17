@@ -30,7 +30,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         self.url_base = 'https://speed.cd/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
+                     'login': self.url_base + 'rss.php',
                      'search': self.url_base + 'V3/API/API.php',
                      'get': self.url_base + '%s'}
 
@@ -39,12 +39,15 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
 
     def _authorised(self, **kwargs):
 
         return super(SpeedCDProvider, self)._authorised(
-            logged_in=(lambda y=None: self.has_all_cookies('inSpeed_speedian')))
+            logged_in=(lambda y='': all(
+                ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['uid', 'speedian'], 'inSpeed_')] +
+                [(self.session.cookies.get('inSpeed_' + x) or 'sg!no!pw') in self.digest for x in 'uid', 'speedian'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -114,6 +117,11 @@ class SpeedCDProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
+
+    @staticmethod
+    def ui_string(key):
+
+        return 'speedcd_digest' == key and 'use... \'inSpeed_uid=xx; inSpeed_speedian=yy\'' or ''
 
 
 provider = SpeedCDProvider()
