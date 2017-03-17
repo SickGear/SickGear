@@ -1,4 +1,10 @@
-﻿### 0.12.10 (2017-03-12 16:00:00 UTC)
+﻿### 0.12.11 (2017-03-17 02:00:00 UTC)
+
+* Change SpeedCD to cookie auth as username/password is not reliable
+* Change Usenet-Crawler media provider icon
+
+
+### 0.12.10 (2017-03-12 16:00:00 UTC)
 
 * Change refactor client for Deluge 1.3.14 compatibility
 * Change ensure IPT authentication is valid before use
