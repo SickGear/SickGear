@@ -62,7 +62,6 @@ class SpeedCDProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = '+'.join(search_string.split())
                 post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')), search=search_string,
                                  jxt=2, jxw='b', freeleech=('on', None)[not self.freeleech])
 
@@ -116,7 +115,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
+        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, sep_date='.', **kwargs)
 
     @staticmethod
     def ui_string(key):

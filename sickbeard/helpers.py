@@ -614,7 +614,7 @@ def sanitizeSceneName(name):
     """
 
     if name:
-        bad_chars = u",:()'!?\u2019"
+        bad_chars = u",:()£'!?\u2019"
 
         # strip out any bad chars
         for x in bad_chars:

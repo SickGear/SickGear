@@ -1,4 +1,9 @@
-﻿### 0.12.11 (2017-03-17 02:00:00 UTC)
+﻿### 0.12.12 (2017-03-30 03:15:00 UTC)
+
+* Change search of SpeedCD, TVChaos and parse of TorrentDay.
+
+
+### 0.12.11 (2017-03-17 02:00:00 UTC)
 
 * Change SpeedCD to cookie auth as username/password is not reliable
 * Change Usenet-Crawler media provider icon
