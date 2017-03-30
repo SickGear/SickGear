@@ -59,6 +59,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download', 'fl': 'free'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
+                search_string = search_string.replace(u'£', '%')
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 kwargs = dict(post_data={'keywords': search_string, 'do': 'quick_sort', 'page': '0',

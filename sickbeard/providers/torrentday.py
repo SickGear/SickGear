@@ -79,7 +79,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                    with BS4Parser(html, features=['html5lib', 'permissive'], tag='table', attr='torrentTable') as soup:
                         torrent_table = soup.find('table', id='torrentTable')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
