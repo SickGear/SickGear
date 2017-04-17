@@ -258,7 +258,8 @@ class TVCache:
 
     def listPropers(self, date=None):
         myDB = self.get_db()
-        sql = "SELECT * FROM provider_cache WHERE name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%' AND provider = ?"
+        sql = "SELECT * FROM provider_cache WHERE (name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%' OR version > 1) " \
+              'AND provider = ?'
 
         if date:
             sql += ' AND time >= ' + str(int(time.mktime(date.timetuple())))
