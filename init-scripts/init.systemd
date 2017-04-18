@@ -43,5 +43,8 @@ ExecStart=/usr/bin/python2 /opt/sickgear/app/SickBeard.py --systemd --datadir=/o
 KillMode=process
 Restart=on-failure
 
+CPUAccounting=true
+CPUQuota=50%
+
 [Install]
 WantedBy=multi-user.target
