@@ -3321,6 +3321,20 @@ class NewHomeAddShows(Home):
                 'recommendations/shows?limit=%s&' % 100, 'Recommended for <b class="grey-text">%s</b> by Trakt' % name,
                 mode='recommended-%s' % account, send_oauth=account)
 
+    def trakt_watchlist(self, *args, **kwargs):
+
+        if 'add' == kwargs.get('action'):
+            return self.redirect('/config/notifications/#tabs-3')
+
+        account = sickbeard.helpers.tryInt(kwargs.get('account'), None)
+        try:
+            name = sickbeard.TRAKT_ACCOUNTS[account].name
+        except KeyError:
+            return self.trakt_default()
+        return self.browse_trakt(
+                'users/%s/watchlist/shows?limit=%s&' % (sickbeard.TRAKT_ACCOUNTS[account].slug, 100), 'WatchList for <b class="grey-text">%s</b> by Trakt' % name,
+                mode='watchlist-%s' % account, send_oauth=account)
+
     def trakt_default(self):
 
         return self.redirect('/home/addShows/%s' % ('trakt_trending', sickbeard.TRAKT_MRU)[any(sickbeard.TRAKT_MRU)])
@@ -3330,7 +3344,7 @@ class NewHomeAddShows(Home):
         browse_type = 'Trakt'
         normalised, filtered = ([], [])
 
-        if not sickbeard.USE_TRAKT and 'recommended' in kwargs.get('mode', ''):
+        if not sickbeard.USE_TRAKT and ('recommended' in kwargs.get('mode', '') or 'watchlist' in kwargs.get('mode', '')):
             error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
