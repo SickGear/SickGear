@@ -23,7 +23,7 @@ indexerConfig = {
         id=INDEXER_TVDB,
         name='TheTVDB',
         module=Tvdb,
-        api_params=dict(apikey='F9C450E78D99172E', language='en', useZip=True),
+        api_params=dict(apikey='F9C450E78D99172E', language='en'),
         active=True,
         dupekey='',
         mapped_only=False,

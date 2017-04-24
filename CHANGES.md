@@ -57,6 +57,7 @@
 * Add persistent hide/unhide cards to Add show/Trakt and Add show/IMDb Cards
 * Change simplify dropdowns at all Add show/Cards
 * Change cosmetic title on shutdown
+* Change use TVDb API v2
 
 
 [develop changelog]
