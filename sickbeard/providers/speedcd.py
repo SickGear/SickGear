@@ -45,8 +45,8 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         return super(SpeedCDProvider, self)._authorised(
             logged_in=(lambda y='': all(
-                ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['uid', 'speedian'], 'inSpeed_')] +
-                [(self.session.cookies.get('inSpeed_' + x) or 'sg!no!pw') in self.digest for x in 'uid', 'speedian'])),
+                ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
+                [(self.session.cookies.get('inSpeed_' + x) or 'sg!no!pw') in self.digest for x in ['speedian']])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
@@ -120,7 +120,7 @@ class SpeedCDProvider(generic.TorrentProvider):
     @staticmethod
     def ui_string(key):
 
-        return 'speedcd_digest' == key and 'use... \'inSpeed_uid=xx; inSpeed_speedian=yy\'' or ''
+        return 'speedcd_digest' == key and 'use... \'inSpeed_speedian=yy\'' or ''
 
 
 provider = SpeedCDProvider()
