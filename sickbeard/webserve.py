@@ -1341,6 +1341,13 @@ class Home(MainHandler):
                         {'title': 'Download Subtitles', 'path': 'home/subtitleShow?show=%d' % showObj.indexerid})
 
         t.show = showObj
+        with BS4Parser('<html><body>%s</body></html>' % showObj.overview, features=['html5lib', 'permissive']) as soup:
+            try:
+                soup.a.replace_with(soup.new_tag(''))
+            except(StandardError, Exception):
+                pass
+            overview = re.sub('(?i)full streaming', '', soup.get_text().strip())
+        t.show.overview = overview
         t.show_message = show_message
 
         ep_counts = {}

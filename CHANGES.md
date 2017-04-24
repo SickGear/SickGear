@@ -60,9 +60,15 @@
 * Change restart/shutdown to use updated jQuery
 
 
+### 0.12.13 (2017-04-23 18:50:00 UTC)
+
+* Change add filter for thetvdb show overview
+* Change remove SpeedCD 'inspeed_uid' cookie requirement
+
+
 ### 0.12.12 (2017-03-30 03:15:00 UTC)
 
-* Change search of SpeedCD, TVChaos and parse of TorrentDay.
+* Change search of SpeedCD, TVChaos and parse of TorrentDay
 
 
 ### 0.12.11 (2017-03-17 02:00:00 UTC)
