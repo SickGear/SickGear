@@ -28,10 +28,10 @@ from . import newznab, omgwtfnzbs
 # torrent
 from . import alpharatio, alphareign, beyondhd, bithdtv, bitmetv, btn, btscene, dh, extratorrent, \
     fano, filelist, freshontv, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, hdtorrents, \
-    iptorrents, limetorrents, morethan, ncore, pisexy, pretome, privatehd, ptf, \
+    iptorrents, limetorrents, morethan, nebulance, ncore, pisexy, pretome, privatehd, ptf, \
     rarbg, revtt, scc, scenetime, shazbat, skytorrents, speedcd, \
     thepiratebay, torlock, torrentday, torrenting, torrentleech, \
-    torrentz2, transmithe_net, tvchaosuk, zooqle
+    torrentz2, tvchaosuk, zooqle
 # anime
 from . import anizb, nyaatorrents, tokyotoshokan
 # custom
@@ -65,6 +65,7 @@ __all__ = ['omgwtfnzbs',
            'iptorrents',
            'limetorrents',
            'morethan',
+           'nebulance',
            'ncore',
            'pisexy',
            'pretome',
@@ -83,7 +84,6 @@ __all__ = ['omgwtfnzbs',
            'torrenting',
            'torrentleech',
            'torrentz2',
-           'transmithe_net',
            'tvchaosuk',
            'zooqle',
            'nyaatorrents',

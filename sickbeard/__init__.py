@@ -59,7 +59,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 14
+CONFIG_VERSION = 15
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0

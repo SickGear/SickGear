@@ -25,12 +25,12 @@ from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
-class TransmithenetProvider(generic.TorrentProvider):
+class NebulanceProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'Transmithe.net', cache_update_freq=17)
+        generic.TorrentProvider.__init__(self, 'Nebulance', cache_update_freq=17)
 
-        self.url_base = 'https://transmithe.net/'
+        self.url_base = 'https://nebulance.io/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
                      'user': self.url_base + 'ajax.php?action=index',
@@ -46,7 +46,7 @@ class TransmithenetProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
 
-        if not super(TransmithenetProvider, self)._authorised(
+        if not super(NebulanceProvider, self)._authorised(
                 logged_in=(lambda y=None: self.has_all_cookies('session')),
                 post_params={'keeplogged': '1', 'form_tmpl': True}):
             return False
@@ -166,4 +166,4 @@ class TransmithenetProvider(generic.TorrentProvider):
         return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
 
-provider = TransmithenetProvider()
+provider = NebulanceProvider()

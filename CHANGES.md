@@ -60,6 +60,11 @@
 * Change restart/shutdown to use updated jQuery
 
 
+### 0.12.14 (2017-05-02 17:10:00 UTC)
+
+* Change provider Transmithe.net is now Nebulance
+
+
 ### 0.12.13 (2017-04-23 18:50:00 UTC)
 
 * Change add filter for thetvdb show overview
