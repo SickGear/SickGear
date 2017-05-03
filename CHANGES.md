@@ -60,6 +60,13 @@
 * Change restart/shutdown to use updated jQuery
 
 
+### 0.12.15 (2017-05-04 00:40:00 UTC)
+
+* Remove provider Nyaa
+* Change improve RSS validation (particularly for anime)
+* Change improve support for legacy magnet encoding
+
+
 ### 0.12.14 (2017-05-02 17:10:00 UTC)
 
 * Change provider Transmithe.net is now Nebulance

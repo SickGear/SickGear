@@ -177,17 +177,21 @@ class GenericProvider:
             final_dir = sickbeard.TORRENT_DIR
             link_type = 'magnet'
             try:
-                torrent_hash = re.findall('(?i)urn:btih:([0-9a-f]{32,40})', result.url)[0].upper()
+                btih = None
+                try:
+                    btih = re.findall('urn:btih:([\w]{32,40})', result.url)[0]
+                    if 32 == len(btih):
+                        from base64 import b16encode, b32decode
+                        btih = b16encode(b32decode(btih))
+                except (StandardError, Exception):
+                    pass
 
-                if 32 == len(torrent_hash):
-                    torrent_hash = b16encode(b32decode(torrent_hash)).lower()
-
-                if not torrent_hash:
+                if not btih or not re.search('(?i)[0-9a-f]{32,40}', btih):
                     logger.log('Unable to extract torrent hash from link: ' + ex(result.url), logger.ERROR)
                     return False
 
-                urls = ['http%s://%s/torrent/%s.torrent' % (u + (torrent_hash,))
-                        for u in (('s', 'itorrents.org'), ('s', 'torra.pro'), ('s', 'torra.click'),
+                urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
+                        for u in (('s', 'itorrents.org'), ('s', 'torra.pro'), ('s', 'torrasave.site'),
                                   ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
                                   ('s', 'torrentproject.se'), ('', 'thetorrent.org'))]
             except (StandardError, Exception):

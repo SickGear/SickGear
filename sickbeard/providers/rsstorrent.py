@@ -90,7 +90,15 @@ class TorrentRssProvider(generic.TorrentProvider):
                 if not (title and url):
                     continue
                 if url.startswith('magnet:'):
-                    if re.search('urn:btih:([0-9a-f]{32,40})', url):
+                    btih = None
+                    try:
+                        btih = re.findall('urn:btih:([\w]{32,40})', url)[0]
+                        if 32 == len(btih):
+                            from base64 import b16encode, b32decode
+                            btih = b16encode(b32decode(btih))
+                    except (StandardError, Exception):
+                        pass
+                    if re.search('(?i)[0-9a-f]{32,40}', btih):
                         break
                 else:
                     torrent_file = self.get_url(url)

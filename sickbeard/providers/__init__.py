@@ -33,7 +33,7 @@ from . import alpharatio, alphareign, beyondhd, bithdtv, bitmetv, btn, btscene, 
     thepiratebay, torlock, torrentday, torrenting, torrentleech, \
     torrentz2, tvchaosuk, zooqle
 # anime
-from . import anizb, nyaatorrents, tokyotoshokan
+from . import anizb, tokyotoshokan
 # custom
 try:
     from . import custom01
@@ -86,7 +86,6 @@ __all__ = ['omgwtfnzbs',
            'torrentz2',
            'tvchaosuk',
            'zooqle',
-           'nyaatorrents',
            'tokyotoshokan',
            ]
 
