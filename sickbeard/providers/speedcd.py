@@ -45,6 +45,8 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         return super(SpeedCDProvider, self)._authorised(
             logged_in=(lambda y='': all(
+                [self.session.cookies.get_dict(domain='.speed.cd') and
+                 self.session.cookies.clear('.speed.cd') is None or True] +
                 ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
                 [(self.session.cookies.get('inSpeed_' + x) or 'sg!no!pw') in self.digest for x in ['speedian']])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))

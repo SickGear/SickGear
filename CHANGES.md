@@ -60,6 +60,11 @@
 * Change restart/shutdown to use updated jQuery
 
 
+### 0.12.16 (2017-05-05 16:40:00 UTC)
+
+* Fix multiple SpeedCD cookie
+
+
 ### 0.12.15 (2017-05-04 00:40:00 UTC)
 
 * Remove provider Nyaa
