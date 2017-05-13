@@ -52,6 +52,7 @@
 * Add Skytorrents torrent provider
 * Change do not have shows checked by default on import page. To re-enable import shows checked by default,
   1) On config page 'Save' 2) Stop SG 3) Find 'import_default_checked_shows' in config.ini and set '1' 4) Start SG
+* Add Nyaa (.si) torrent provider
 
 
 [develop changelog]
