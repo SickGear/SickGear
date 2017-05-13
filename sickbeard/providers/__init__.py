@@ -28,7 +28,7 @@ from . import newznab, omgwtfnzbs
 # torrent
 from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, btscene, dh, extratorrent, \
     fano, filelist, freshontv, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, hdtorrents, \
-    iptorrents, limetorrents, morethan, nebulance, ncore, pisexy, pretome, privatehd, ptf, \
+    iptorrents, limetorrents, morethan, nebulance, ncore, nyaa, pisexy, pretome, privatehd, ptf, \
     rarbg, revtt, scc, scenetime, shazbat, skytorrents, speedcd, \
     thepiratebay, torlock, torrentday, torrenting, torrentleech, \
     torrentz2, tvchaosuk, zooqle
@@ -66,6 +66,7 @@ __all__ = ['omgwtfnzbs',
            'morethan',
            'nebulance',
            'ncore',
+           'nyaa',
            'pisexy',
            'pretome',
            'privatehd',
