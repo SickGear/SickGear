@@ -103,7 +103,8 @@ indexerConfig[info_src].update(dict(
               'showinfo.php?key=%(apikey)s&sid=' % indexerConfig[info_src]['api_params']),
     show_url='%sshows/id-' % indexerConfig[info_src]['main_url'],
     scene_url='https://sickgear.github.io/sg_tvrage_scene_exceptions/exceptions.txt',
-    xem_origin='rage',
+    # thexem tvrage mappings are deprecated, disable data fetch
+    # xem_origin='rage',
     defunct=True,
 ))
 
