@@ -1,4 +1,10 @@
-﻿### 0.12.16 (2017-05-05 16:40:00 UTC)
+﻿### 0.12.17 (2017-05-15 22:10:00 UTC)
+
+* Remove provider ExtraTorrent
+* Change thexem tvrage mappings are deprecated, data fetch disabled
+
+
+### 0.12.16 (2017-05-05 16:40:00 UTC)
 
 * Fix multiple SpeedCD cookie
 
