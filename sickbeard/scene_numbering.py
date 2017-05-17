@@ -461,7 +461,7 @@ def xem_refresh(indexer_id, indexer, force=False):
     indexer_id = int(indexer_id)
     indexer = int(indexer)
 
-    if indexer_id not in xem_ids_list[indexer]:
+    if 'xem_origin' not in sickbeard.indexerApi(indexer).config or indexer_id not in xem_ids_list.get(indexer, []):
         return
 
     # XEM API URL
