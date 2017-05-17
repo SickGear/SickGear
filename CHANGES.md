@@ -1,4 +1,9 @@
-﻿### 0.12.17 (2017-05-15 22:10:00 UTC)
+﻿### 0.12.18 (2017-05-15 23:00:00 UTC)
+
+* Change thexem, remove tvrage from xem
+
+
+### 0.12.17 (2017-05-15 22:10:00 UTC)
 
 * Remove provider ExtraTorrent
 * Change thexem tvrage mappings are deprecated, data fetch disabled

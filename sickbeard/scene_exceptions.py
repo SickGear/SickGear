@@ -289,7 +289,7 @@ def _xem_exceptions_fetcher():
             break
 
     if shouldRefresh(xem_list):
-        for indexer in sickbeard.indexerApi().indexers:
+        for indexer in [i for i in sickbeard.indexerApi().indexers if 'xem_origin' in sickbeard.indexerApi(i).config]:
             logger.log(u'Checking for XEM scene exception updates for %s' % sickbeard.indexerApi(indexer).name)
 
             url = 'http://thexem.de/map/allNames?origin=%s%s&seasonNumbers=1'\
