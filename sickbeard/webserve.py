@@ -3321,6 +3321,20 @@ class NewHomeAddShows(Home):
                 'recommendations/shows?limit=%s&' % 100, 'Recommended for <b class="grey-text">%s</b> by Trakt' % name,
                 mode='recommended-%s' % account, send_oauth=account)
 
+    def trakt_watchlist(self, *args, **kwargs):
+
+        if 'add' == kwargs.get('action'):
+            return self.redirect('/config/notifications/#tabs-3')
+
+        account = sickbeard.helpers.tryInt(kwargs.get('account'), None)
+        try:
+            name = sickbeard.TRAKT_ACCOUNTS[account].name
+        except KeyError:
+            return self.trakt_default()
+        return self.browse_trakt(
+                'users/%s/watchlist/shows?limit=%s&' % (sickbeard.TRAKT_ACCOUNTS[account].slug, 100), 'WatchList for <b class="grey-text">%s</b> by Trakt' % name,
+                mode='watchlist-%s' % account, send_oauth=account)
+
     def trakt_default(self):
 
         return self.redirect('/home/addShows/%s' % ('trakt_trending', sickbeard.TRAKT_MRU)[any(sickbeard.TRAKT_MRU)])
@@ -3330,7 +3344,7 @@ class NewHomeAddShows(Home):
         browse_type = 'Trakt'
         normalised, filtered = ([], [])
 
-        if not sickbeard.USE_TRAKT and 'recommended' in kwargs.get('mode', ''):
+        if not sickbeard.USE_TRAKT and ('recommended' in kwargs.get('mode', '') or 'watchlist' in kwargs.get('mode', '')):
             error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
@@ -3358,6 +3372,10 @@ class NewHomeAddShows(Home):
             logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
         except (IndexError, KeyError):
             pass
+
+        if not normalised:
+            error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
         oldest_dt = 9999999
         newest_dt = 0
@@ -3413,7 +3431,7 @@ class NewHomeAddShows(Home):
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
 
-        if 'recommended' not in kwargs.get('mode', ''):
+        if 'recommended' not in kwargs.get('mode', '') and 'watchlist' not in kwargs.get('mode', ''):
             mode = kwargs.get('mode', '').split('-')
             if mode:
                 func = 'trakt_%s' % mode[0]
@@ -3423,6 +3441,20 @@ class NewHomeAddShows(Home):
                     sickbeard.TRAKT_MRU = '%s%s' % (func, param)
                     sickbeard.save_config()
         return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    @staticmethod
+    def show_toggle_hide(ids):
+        save_config = False
+        for sid in ids.split(':'):
+            if 3 < len(sid) < 12:
+                save_config = True
+                if sid in sickbeard.BROWSELIST_HIDDEN:
+                    sickbeard.BROWSELIST_HIDDEN.remove(sid)
+                else:
+                    sickbeard.BROWSELIST_HIDDEN += [sid]
+        if save_config:
+            sickbeard.save_config()
+        return json.dumps({'success': save_config})
 
     @staticmethod
     def encode_html(text):
@@ -3449,7 +3481,8 @@ class NewHomeAddShows(Home):
         t.kwargs = kwargs
         dedupe = []
 
-        t.all_shows_inlibrary = 0
+        t.num_inlibrary = 0
+        t.num_hidden = 0
         for item in shows:
             item['show_id'] = ''
             for index, tvdb in enumerate(['tvdb', 'tvrage']):
@@ -3461,7 +3494,7 @@ class NewHomeAddShows(Home):
                 # check tvshow indexer is not using the same id from another indexer
                 if tvshow and (index + 1) == tvshow.indexer:
                     item['show_id'] = u'%s:%s' % (tvshow.indexer, tvshow.indexerid)
-                    t.all_shows_inlibrary += 1
+                    t.num_inlibrary += 1
                     break
 
                 if None is not config.to_int(item['show_id'], None):
@@ -3473,6 +3506,9 @@ class NewHomeAddShows(Home):
             if item['show_id'] not in dedupe:
                 dedupe.append(item['show_id'])
                 t.all_shows.append(item)
+
+                if item['show_id'].split(':')[-1] in sickbeard.BROWSELIST_HIDDEN:
+                    t.num_hidden += 1
 
         return t.respond()
 

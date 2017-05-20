@@ -882,6 +882,12 @@ home.tmpl
 	background-image:linear-gradient(to left, rgba(223, 218, 207, 1), rgba(223, 218, 207, 0))
 }
 
+.show-toggle-hide{
+	position:absolute;
+	top:272px;
+	right:2px
+}
+
 .show-date{
 	position:relative;
 	overflow:hidden;

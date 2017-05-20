@@ -52,6 +52,10 @@
 * Change do not have shows checked by default on import page. To re-enable import shows checked by default,
   1) On config page 'Save' 2) Stop SG 3) Find 'import_default_checked_shows' in config.ini and set '1' 4) Start SG
 * Add Nyaa (.si) torrent provider
+* Add Trakt watchlist to Add show/Trakt Cards
+* Change revoke application access at Trakt when account is deleted in SG
+* Add persistent hide/unhide cards to Add show/Trakt and Add show/IMDb Cards
+* Change simplify dropdowns at all Add show/Cards
 
 
 [develop changelog]

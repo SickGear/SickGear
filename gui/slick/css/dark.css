@@ -293,11 +293,13 @@ a.ui-font{
 	background-image:linear-gradient(to left, rgba(51, 51, 51, 1), rgba(51, 51, 51, 0))
 }
 
+.show-toggle-hide,
 td.tvShow a{
 	color:#ddd;
 	text-decoration:none
 }
 
+.show-toggle-hide:hover,
 td.tvShow a:hover span,
 td.tvShow a:hover{
 	cursor:pointer;
@@ -1288,6 +1290,7 @@ input sizing (for config pages)
 .showlist-select optgroup,
 #pickShow optgroup,
 #showfilter optgroup,
+#showsort optgroup,
 #editAProvider optgroup{
 	color:#eee;
 	background-color:rgb(51, 51, 51)
@@ -1296,6 +1299,7 @@ input sizing (for config pages)
 .showlist-select optgroup option,
 #pickShow optgroup option,
 #showfilter optgroup option,
+#showsort optgroup option,
 #editAProvider optgroup option{
 	color:#222;
 	background-color:#ddd

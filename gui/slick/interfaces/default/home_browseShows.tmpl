@@ -38,41 +38,40 @@
 
 $(document).ready(function(){
 	// initialise combos for dirty page refreshes
-	$('#showsort').val('original');
-	$('#showsortdirection').val('asc');
-	$('#showfilter').val('*');
+	$('#showsort').val('*');
 
-	var $container = [$('#container')];
-	jQuery.each($container, function(j){
-		this.isotope({
-			itemSelector: '.show-card',
-			sortBy: 'original-order',
-			layoutMode: 'masonry',
-			masonry: {
-				columnWidth: 188,
-				isFitWidth: !0,
-				gutter: 12
-			},
-			getSortData: {
-				premiered: '[data-premiered] parseInt',
-				name: function( itemElem ) {
-					var name = $( itemElem ).attr('data-name') || '';
+	$('#container').isotope({
+		itemSelector: '.show-card',
+		sortBy: 'original-order',
+		layoutMode: 'masonry',
+		masonry: {
+			columnWidth: 188,
+			isFitWidth: !0,
+			gutter: 12
+		},
+		getSortData: {
+			premiered: '[data-premiered] parseInt',
+			name: function( itemElem ) {
+				var name = $( itemElem ).attr('data-name') || '';
 #end raw
-#if not $sg_var('SORT_ARTICLE'):
-					name = name.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
+#if not $sg_var('SORT_ARTICLE')
+				name = name.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1');
 #end if
 #raw
-					return name.toLowerCase();
-				},
-				rating: '[data-rating] parseInt',
-				votes: '[data-votes] parseInt',
-			}
-		});
+				return name.toLowerCase();
+			},
+			rating: '[data-rating] parseInt',
+			votes: '[data-votes] parseInt',
+		}
 	});
 
 	$('#showsort').on('change', function(){
 		var sortCriteria, el$ = $('#container'), shuffle = !1;
-		switch (this.value) {
+		switch (this.value.replace('by_', '')) {
+			case 'asc':
+			case 'desc':
+				sortCriteria = 'order';
+				break;
 			case 'original':
 				sortCriteria = 'original-order'
 				break;
@@ -95,33 +94,84 @@ $(document).ready(function(){
 				break;
 		}
 
-		if (!shuffle){
+		var showSort = $('#showsort option');
+		if('order' === sortCriteria){
+			showSort.filter($('option[value="asc"], option[value="desc"]')).removeClass('selected');
+			showSort.filter($('option[value="' + this.value + '"]')).addClass('selected');
+
 			el$.one('layoutComplete', llUpdate);
-			el$.isotope({sortBy: sortCriteria});
-		} else {
-			// shuffle rating_votes where it can already be sorted by ratings which leaves it nothing to do.
-			function t(sortCriteria, lastPhase){
-				return function(){
-					var el$ = $('#container');
-					if (!lastPhase){
-						lastPhase = !0;
-						el$.isotope({sortBy: sortCriteria});
-					} else {
-						el$.off('layoutComplete');
-						el$.isotope('layout');
-						llUpdate();
+			el$.isotope({sortAscending: 'asc' == this.value});
+		} else if(0 == this.value.indexOf('by_')){
+			showSort.filter($('option[value^="by_"][class*="selected"]')).removeClass('selected');
+			showSort.filter($('option[value="' + this.value + '"]')).addClass('selected');
+
+			if (!shuffle){
+				el$.one('layoutComplete', llUpdate);
+				el$.isotope({sortBy: sortCriteria});
+			} else {
+				// shuffle rating_votes where it can already be sorted by ratings which leaves it nothing to do.
+				function t(sortCriteria, lastPhase){
+					return function(){
+						var el$ = $('#container');
+						if (!lastPhase){
+							lastPhase = !0;
+							el$.isotope({sortBy: sortCriteria});
+						} else {
+							el$.off('layoutComplete');
+							el$.isotope('layout');
+							llUpdate();
+						}
 					}
 				}
+				el$.on('layoutComplete', t(sortCriteria, !1));
+				el$.isotope({sortBy: 'random'});
 			}
-			el$.on('layoutComplete', t(sortCriteria, !1));
-			el$.isotope({sortBy: 'random'});
+		} else {
+			showSort.filter($('option[value^="*"], #showsort option[value^="."]')).removeClass('selected');
+			showSort.filter($('option[value="' + this.value + '"]')).addClass('selected');
+
+			var showCards = $('.show-card'), filter = this.value;
+			if('.hide' === this.value){
+				showCards.filter($('.hide')).removeClass('hide').addClass('to-hide');
+				filter = '.to-hide';
+			} else {
+				showCards.filter($('.to-hide')).removeClass('to-hide').addClass('hide');
+			}
+
+			var el$ = $('#container');
+			el$.one('layoutComplete', llUpdate);
+			el$.isotope({ filter: filter });
 		}
 	});
 
-	$('#showsortdirection').on('change', function(){
-		var el$ = $('#container')
-		el$.one('layoutComplete', llUpdate);
-		el$.isotope({sortAscending: ('asc' == this.value)});
+	$('#container').on('click', '.show-toggle-hide', function(event){
+		var that = $(this);
+		event.preventDefault();
+
+		$.getJSON(this.href, function(data){
+			if(data.success){
+				var showCards = $('.show-card'), thisCard = $(that).parents('div[class*="show-card "]'),
+					numShows = showCards.length, numHidden, showSort = $('#showsort option'), filter = 'to-hide';
+
+				if(thisCard.hasClass(filter)){
+					title = 'Hide';
+					thisCard.removeClass(filter);
+				} else {
+					filter = 'hide';
+					title = 'Unhide';
+					thisCard.addClass(filter);
+				}
+				numHidden = showCards.filter($('.' + filter)).length;
+				that.attr('title', title);
+
+				showSort.filter($('option[value=".hide"]')).text('Hidden (' + numHidden + ')');
+				showSort.filter($('option[value="*"]')).text('All (' + (0 == numHidden ? '' : (numShows - numHidden) + '/') + numShows + ')');
+
+				var el$ = $('#container')
+				el$.on('layoutComplete', llUpdate);
+				el$.isotope();
+			}
+		});
 	});
 
 	$('#showfilter').on('change', function(){
@@ -160,15 +210,35 @@ $(document).ready(function(){
 #set $mode = $kwargs and $kwargs.get('mode', '')
 #if $all_shows or ($kwargs and $kwargs.get('show_header'))
 <div class="pull-right" style="margin-top:-35px">
-	<span>View:</span>
-	<select id="showfilter" class="form-control form-control-inline input-sm">
-    #set $count_all_shows = len($all_shows)
-    #set $count_inlibrary = $all_shows_inlibrary
-		<option value="*" selected="selected">All<%= ' (%d)' % count_all_shows %></option>
-		<option value=".notinlibrary">Not In Library<%= ' (%d)' % (count_all_shows - count_inlibrary) %></option>
-		<option value=".inlibrary">In Library<%= ' (%d)' % count_inlibrary %></option>
+	<select id="showsort" class="form-control form-control-inline input-sm">
+    #set $num_all = len($all_shows)
     #set $selected = ' class="selected"'
-    #if 'Trakt' == $browse_type
+		<optgroup label="View">
+			<option value="*"#echo selected# selected="selected">All (#echo ('', '%s/' % ($num_all - $num_hidden))[0 < $num_hidden]#$num_all)</option>
+			<option value=".notinlibrary">Not In Library (#echo $num_all - $num_inlibrary#)</option>
+			<option value=".inlibrary">In Library ($num_inlibrary)</option>
+    #if 'Ani' not in $browse_type
+			<option value=".hide">Hidden ($num_hidden)</option>
+    #end if
+		</optgroup>
+		<optgroup label="Sort order">
+			<option value="asc"#echo selected#>Asc</option>
+			<option value="desc">Desc</option>
+		</optgroup>
+		<optgroup label="Sort by">
+			<option value="by_name">Name</option>
+			<option value="by_original" #echo selected#>Original</option>
+			<option value="by_premiered">First aired</option>
+			<option value="by_votes">Votes</option>
+			<option value="by_rating">% Rating</option>
+			<option value="by_rating_votes">% Rating > Votes</option>
+		</optgroup>
+	</select>
+
+    #if 'Ani' not in $browse_type
+	<select id="showfilter" class="form-control form-control-inline input-sm">
+        #set $selected = ' class="selected" selected="selected"'
+        #if 'Trakt' == $browse_type
 		<optgroup label="Trakt">
 			<option value="trakt_anticipated"#echo ('', selected)['anticipated' == $mode]#>Anticipating</option>
 			<option value="trakt_newseasons"#echo ('', selected)['newseasons' == $mode]#>New Seasons</option>
@@ -186,63 +256,60 @@ $(document).ready(function(){
 			<option value="trakt_played?period=year"#echo ('', selected)['played-year' == $mode]#>Most Played</option>
 			<option value="trakt_collected?period=year"#echo ('', selected)['collected-year' == $mode]#>Most Collected</option>
 		</optgroup>
-		#if any($sg_var('TRAKT_ACCOUNTS', []))
+    		#if any($sg_var('TRAKT_ACCOUNTS', []))
 		<optgroup label="Trakt recommended">
-            #for $account in $sg_var('TRAKT_ACCOUNTS')
-                #if $sg_var('TRAKT_ACCOUNTS').get($account).active and $sg_var('TRAKT_ACCOUNTS').get($account).name
+                #for $account in $sg_var('TRAKT_ACCOUNTS')
+                    #if $sg_var('TRAKT_ACCOUNTS').get($account).active and $sg_var('TRAKT_ACCOUNTS').get($account).name
 			<option value="trakt_recommended?account=$account"#echo ('', selected)[('recommended-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
-                #end if
-            #end for
-        #else
-		<optgroup label="To get recommended">
-			<option value="trakt_recommended?action=add">Enable Trakt here</option>
-        #end if
-		</optgroup>
-    #elif 'IMDb' == $browse_type
-        #set $periods = $kwargs and $kwargs.get('periods')
-        #if $periods
-		<optgroup label="IMDb Popular">
-            #for $i, $p in enumerate($periods)
-                #set $period='%s,%s' % ($p[0], $p[1])
-			<option value="popular_imdb?period=$period"#echo ('', selected)[('popular-%s' % $period) == $mode]#>#echo '%s - %s' % (($p[1], 'Current')[not $i], $p[0])#</option>
-            #end for
-		</optgroup>
-        #end if
-        #if not hasattr($sickbeard, 'IMDB_ACCOUNTS')#<optgroup label="Restart SickGear to reveal"><option>new options after restart</option></optgroup>#else#
-		<optgroup label="IMDb Watchlists">
-            #if any($sg_var('IMDB_ACCOUNTS', []))
-                #for $i, $v in $enumerate($sg_var('IMDB_ACCOUNTS'))
-                    #if not $i % 2
-                        #set $id = $v
-                    #elif not $v.startswith('(Off) ')
-			<option value="watchlist_imdb?account=$id"#echo ('', selected)[('watchlist-%s' % $id) == $mode]#>#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
                     #end if
                 #end for
+            #else
+		<optgroup label="To get recommended">
+			<option value="trakt_recommended?action=add">Enable Trakt here</option>
             #end if
+		</optgroup>
+    		#if any($sg_var('TRAKT_ACCOUNTS', []))
+		<optgroup label="Trakt watchlisted">
+                #for $account in $sg_var('TRAKT_ACCOUNTS')
+                    #if $sg_var('TRAKT_ACCOUNTS').get($account).active and $sg_var('TRAKT_ACCOUNTS').get($account).name
+			<option value="trakt_watchlist?account=$account"#echo ('', selected)[('watchlist-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
+                    #end if
+                #end for
+            #else
+		<optgroup label="To get watchlisted">
+			<option value="trakt_watchlist?action=add">Enable Trakt here</option>
+            #end if
+		</optgroup>
+        #elif 'IMDb' == $browse_type
+            #set $periods = $kwargs and $kwargs.get('periods')
+            #if $periods
+		<optgroup label="IMDb Popular">
+                #for $i, $p in enumerate($periods)
+                    #set $period='%s,%s' % ($p[0], $p[1])
+			<option value="popular_imdb?period=$period"#echo ('', selected)[('popular-%s' % $period) == $mode]#>#echo '%s - %s' % (($p[1], 'Current')[not $i], $p[0])#</option>
+                #end for
+		</optgroup>
+            #end if
+            #if not hasattr($sickbeard, 'IMDB_ACCOUNTS')#<optgroup label="Restart SickGear to reveal"><option>new options after restart</option></optgroup>#else#
+		<optgroup label="IMDb Watchlists">
+                #if any($sg_var('IMDB_ACCOUNTS', []))
+                    #for $i, $v in $enumerate($sg_var('IMDB_ACCOUNTS'))
+                        #if not $i % 2
+                            #set $id = $v
+                        #elif not $v.startswith('(Off) ')
+			<option value="watchlist_imdb?account=$id"#echo ('', selected)[('watchlist-%s' % $id) == $mode]#>#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
+                        #end if
+                    #end for
+                #end if
 			<option value="watchlist_imdb?action=add"><< Add lists >></option>
 		</optgroup>
+            #end if
         #end if
+	</select>
     #end if
-	</select>
-
-	<span style="margin-left:12px">Sort By:</span>
-	<select id="showsort" class="form-control form-control-inline input-sm">
-		<option value="name">Name</option>
-		<option value="original" selected="selected">Original</option>
-		<option value="premiered">First aired</option>
-		<option value="votes">Votes</option>
-		<option value="rating">% Rating</option>
-		<option value="rating_votes">% Rating > Votes</option>
-	</select>
-
-	<span style="margin-left:12px">Sort Order:</span>
-	<select id="showsortdirection" class="form-control form-control-inline input-sm">
-		<option value="asc" selected="selected">Asc</option>
-		<option value="desc">Desc</option>
-	</select>
 </div>
 <h4 style="float:left;margin:0 0 0 2px">$browse_title</h4>
-    #if $kwargs and $kwargs.get('oldest'):
+    #if $kwargs and $kwargs.get('oldest')
 <div class="grey-text" style="clear:both;margin-left:2px;font-size:0.85em">
 	First aired from $kwargs['oldest'] until $kwargs['newest']
 </div>
@@ -252,7 +319,7 @@ $(document).ready(function(){
 <div id="container">
 #if $all_shows
     #set $poster_id = 0
-    #for $this_show in $all_shows:
+    #for $this_show in $all_shows
         #set $poster_id += 1
 
         #set $title_html = $this_show['title'].replace('"', '&quot;').replace("'", '&#39;')
@@ -264,7 +331,15 @@ $(document).ready(function(){
             #set $overview = $this_show['overview']
         #end if
 
-	<div class="show-card <%= ('notinlibrary', 'inlibrary')[':' in this_show['show_id']] %>" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data-rating="$this_show['rating']" data-votes="$this_show['votes']" data-premiered="$this_show['premiered']">
+        #set $known = 'not'
+        #set $show_id = $this_show['show_id']
+        #if ':' in $show_id
+            #set $known = ''
+            #set $show_id = $show_id[2:]
+        #end if
+        #set $hide = ('', 'hide ')[$show_id in $sickbeard.BROWSELIST_HIDDEN]
+
+	<div class="show-card ${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data_id="$show_id" data-rating="$this_show['rating']" data-votes="$this_show['votes']" data-premiered="$this_show['premiered']">
 		<div class="show-card-inner">
 			<div class="browse-image">
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
@@ -273,11 +348,11 @@ $(document).ready(function(){
 					<p><span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if $kwargs and 'newseasons' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['when_past']]#: $this_show['premiered_str']</em></span>
 					#if $this_show.get('ended_str')# - <span style='font-weight:bold;font-size:0.9em;color:#888'><em>Ended: $this_show['ended_str']</em></span>#end if#</p>
 					<span style='float:right'>Click for more at <span class='boldest'>$browse_type</span></span>">
-        #if 'poster' in $this_show['images']:
+        #if 'poster' in $this_show['images']
             #set $image = $this_show['images']['poster']['thumb']
 					<img id="poster-$poster_id" alt="" class="browse-image" data-original="#if $image and 'http' != $image[:4]#$sg_root/#end if#$image" />
 					<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
-        #else:
+        #else
 					<span>&nbsp;</span>
         #end if
 				</a>
@@ -286,17 +361,19 @@ $(document).ready(function(){
 			<div class="show-title">
 				#echo ((re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#
 			</div>
-
+        #if 'Ani' not in $browse_type
+			<a class="show-toggle-hide" href="$sg_root/home/addShows/show_toggle_hide?ids=$show_id#echo ('', ':%s' % $this_show['ids'].get('imdb', '-'))['Trakt' == $browse_type]#" title="#echo ('H', 'Unh')[any($hide)]#ide"><i class="sgicon-delete"></i></a>
+        #end if
 			<div class="clearfix">
 				<p>$this_show['rating']%<i class="heart icon-glyph"></i><i>$this_show['votes'] votes</i></p>
-        #if 'url_tvdb' in $this_show and $this_show['url_tvdb']:
+        #if 'url_tvdb' in $this_show and $this_show['url_tvdb']
 				<a class="service" href="<%= anon_url(this_show['url_tvdb']) %>" onclick="window.open(this.href, '_blank'); return false;"
 				title="View <span class='boldest'>tvdb</span> detail for <span style='color: rgb(66, 139, 202)'>$title_html</span>">
 				<i><img style="margin-top:5px" alt="tvdb" height="16" width="16" src="$sg_root/images/$sickbeard.indexerApi($sickbeard.indexers.indexer_config.INDEXER_TVDB).config['icon']" /></i></a>
         #end if
 
 				<div class="browse-add-show-holder">
-        #if ':' in $this_show['show_id']:
+        #if ':' in $this_show['show_id']
 					<p style="line-height:1.5;padding:2px 5px 3px" title="#echo '%s added' % $sickbeard.indexerApi(this_show['show_id'][:1]).config.get('name')#">In library</p>
         #else
 					<a href="$sg_root/home/addShows/add${browse_type}Show?indexer_id=${this_show['show_id']}&amp;showName=${urllib.quote($this_show['title'].encode("utf-8"))}" class="btn btn-xs">Add Show</a>
@@ -311,7 +388,7 @@ $(document).ready(function(){
 	</div>
     #end for
 </div>
-    #if $kwargs and $kwargs.get('footnote'):
+    #if $kwargs and $kwargs.get('footnote')
 <div style="clear:both">
     $kwargs['footnote']
 </div>
@@ -319,7 +396,7 @@ $(document).ready(function(){
 #else
 	<div class="show-card" style="width:100%; margin-top:20px; padding:20px">
 		<p class="red-text">
-    #if $kwargs and $kwargs.get('error_msg'):
+    #if $kwargs and $kwargs.get('error_msg')
 			$kwargs['error_msg']
 	#else
 			$browse_type API did not return results, this can happen from time to time.
