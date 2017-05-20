@@ -450,6 +450,7 @@ EPISODE_VIEW_DISPLAY_PAUSED = False
 EPISODE_VIEW_POSTERS = True
 EPISODE_VIEW_MISSED_RANGE = None
 HISTORY_LAYOUT = None
+BROWSELIST_HIDDEN = []
 
 FUZZY_DATING = False
 TRIM_ZERO = False
@@ -541,7 +542,7 @@ def initialize(console_logging=True):
             EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
             EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
             DISPLAY_SHOW_VIEWMODE, DISPLAY_SHOW_BACKGROUND, DISPLAY_SHOW_BACKGROUND_TRANSLUCENT, \
-            DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT
+            DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT, BROWSELIST_HIDDEN
         # Gen Config/Misc
         global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, INDEXER_TIMEOUT, ROOT_DIRS, \
@@ -1099,6 +1100,9 @@ def initialize(console_logging=True):
         EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
 
         HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
+        BROWSELIST_HIDDEN = [
+            x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()]
+
         # initialize NZB and TORRENT providers
         providerList = providers.makeProviderList()
 
@@ -1849,6 +1853,7 @@ def save_config():
     new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
     new_config['GUI']['show_tag_default'] = SHOW_TAG_DEFAULT
     new_config['GUI']['history_layout'] = HISTORY_LAYOUT
+    new_config['GUI']['browselist_hidden'] = '|~|'.join(BROWSELIST_HIDDEN)
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)

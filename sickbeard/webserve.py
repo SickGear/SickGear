@@ -3373,6 +3373,10 @@ class NewHomeAddShows(Home):
         except (IndexError, KeyError):
             pass
 
+        if not normalised:
+            error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+
         oldest_dt = 9999999
         newest_dt = 0
         oldest = None
@@ -3427,7 +3431,7 @@ class NewHomeAddShows(Home):
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
 
-        if 'recommended' not in kwargs.get('mode', ''):
+        if 'recommended' not in kwargs.get('mode', '') and 'watchlist' not in kwargs.get('mode', ''):
             mode = kwargs.get('mode', '').split('-')
             if mode:
                 func = 'trakt_%s' % mode[0]
@@ -3437,6 +3441,20 @@ class NewHomeAddShows(Home):
                     sickbeard.TRAKT_MRU = '%s%s' % (func, param)
                     sickbeard.save_config()
         return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    @staticmethod
+    def show_toggle_hide(ids):
+        save_config = False
+        for sid in ids.split(':'):
+            if 3 < len(sid) < 12:
+                save_config = True
+                if sid in sickbeard.BROWSELIST_HIDDEN:
+                    sickbeard.BROWSELIST_HIDDEN.remove(sid)
+                else:
+                    sickbeard.BROWSELIST_HIDDEN += [sid]
+        if save_config:
+            sickbeard.save_config()
+        return json.dumps({'success': save_config})
 
     @staticmethod
     def encode_html(text):
@@ -3463,7 +3481,8 @@ class NewHomeAddShows(Home):
         t.kwargs = kwargs
         dedupe = []
 
-        t.all_shows_inlibrary = 0
+        t.num_inlibrary = 0
+        t.num_hidden = 0
         for item in shows:
             item['show_id'] = ''
             for index, tvdb in enumerate(['tvdb', 'tvrage']):
@@ -3475,7 +3494,7 @@ class NewHomeAddShows(Home):
                 # check tvshow indexer is not using the same id from another indexer
                 if tvshow and (index + 1) == tvshow.indexer:
                     item['show_id'] = u'%s:%s' % (tvshow.indexer, tvshow.indexerid)
-                    t.all_shows_inlibrary += 1
+                    t.num_inlibrary += 1
                     break
 
                 if None is not config.to_int(item['show_id'], None):
@@ -3487,6 +3506,9 @@ class NewHomeAddShows(Home):
             if item['show_id'] not in dedupe:
                 dedupe.append(item['show_id'])
                 t.all_shows.append(item)
+
+                if item['show_id'].split(':')[-1] in sickbeard.BROWSELIST_HIDDEN:
+                    t.num_hidden += 1
 
         return t.respond()
 
