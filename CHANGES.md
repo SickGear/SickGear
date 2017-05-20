@@ -1,4 +1,9 @@
-﻿### 0.12.18 (2017-05-15 23:00:00 UTC)
+﻿### 0.12.19 (2017-05-20 10:30:00 UTC)
+
+* Remove provider Freshon.tv
+
+
+### 0.12.18 (2017-05-15 23:00:00 UTC)
 
 * Change thexem, remove tvrage from xem
 
