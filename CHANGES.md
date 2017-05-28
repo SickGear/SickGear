@@ -58,6 +58,7 @@
 * Change simplify dropdowns at all Add show/Cards
 * Change cosmetic title on shutdown
 * Change use TVDb API v2
+* Change improve search for PROPERS
 
 
 [develop changelog]
