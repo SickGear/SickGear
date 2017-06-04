@@ -530,7 +530,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                 break
             except Exception as e:
                 logger.log(u'Error while searching %s, skipping: %s' % (cur_provider.name, ex(e)), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.DEBUG)
+                logger.log(traceback.format_exc(), logger.ERROR)
                 break
             finally:
                 threading.currentThread().name = orig_thread_name

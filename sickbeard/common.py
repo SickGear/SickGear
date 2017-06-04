@@ -264,7 +264,7 @@ class Quality:
                 logger.log(msg % (filename, e.text), logger.WARNING)
             except Exception as e:
                 logger.log(msg % (filename, ex(e)), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.DEBUG)
+                logger.log(traceback.format_exc(), logger.ERROR)
 
             if parser:
                 if '.avi' == filename[-4::].lower():

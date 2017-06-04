@@ -369,7 +369,7 @@ class QueueItemAdd(ShowQueueItem):
 
         except Exception as e:
             logger.log('Error trying to add show: %s' % ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
             self._finishEarly()
             raise
 
@@ -379,7 +379,7 @@ class QueueItemAdd(ShowQueueItem):
             self.show.saveToDB()
         except Exception as e:
             logger.log('Error saving the show to the database: %s' % ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
             self._finishEarly()
             raise
 
@@ -392,13 +392,13 @@ class QueueItemAdd(ShowQueueItem):
             logger.log(
                 'Error with %s, not creating episode list: %s' % (sickbeard.indexerApi(self.show.indexer).name, ex(e)),
                 logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         try:
             self.show.loadEpisodesFromDir()
         except Exception as e:
             logger.log('Error searching directory for episodes: %s' % ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         # if they gave a custom status then change all the eps to it
         my_db = db.DBConnection()
@@ -616,7 +616,7 @@ class QueueItemUpdate(ShowQueueItem):
             self.show.saveToDB()
         except Exception as e:
             logger.log('Error saving the episode to the database: %s' % ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         # get episode list from DB
         logger.log('Loading all episodes from the database', logger.DEBUG)
