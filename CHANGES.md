@@ -56,6 +56,7 @@
 * Change revoke application access at Trakt when account is deleted in SG
 * Add persistent hide/unhide cards to Add show/Trakt and Add show/IMDb Cards
 * Change simplify dropdowns at all Add show/Cards
+* Change cosmetic title on shutdown
 
 
 [develop changelog]
