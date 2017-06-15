@@ -69,6 +69,11 @@
 * Remove AlphaReign torrent provider
 
 
+### 0.12.20 (2017-06-14 22:00:00 UTC)
+
+* Change send info now required by qBittorrent 3.13+ clients
+
+
 ### 0.12.19 (2017-05-20 10:30:00 UTC)
 
 * Remove provider Freshon.tv
