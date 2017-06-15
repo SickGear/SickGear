@@ -18,19 +18,16 @@
 
 import datetime
 import operator
+import os
 import threading
 import traceback
 
 import sickbeard
 
-from sickbeard import db
-from sickbeard import exceptions
-from sickbeard.exceptions import ex
-from sickbeard import helpers, logger, show_name_helpers
-from sickbeard import search
-from sickbeard import history
-
+from sickbeard import db, exceptions, helpers, history, logger, search, show_name_helpers
+from sickbeard import encodingKludge as ek
 from sickbeard.common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, Quality, ARCHIVED, SNATCHED_BEST
+from sickbeard.exceptions import ex
 
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
@@ -224,7 +221,8 @@ def _download_propers(proper_list):
         history_results = my_db.select(
             'SELECT resource FROM history ' +
             'WHERE showid = ? AND season = ? AND episode = ? AND quality = ? AND date >= ? ' +
-            'AND action IN (' + ','.join([str(x) for x in Quality.SNATCHED]) + ')',
+            'AND (' + ' OR '.join("action LIKE '%%%02d'" % x for x in (SNATCHED, DOWNLOADED, SNATCHED_PROPER,
+                                                                       SNATCHED_BEST, ARCHIVED)) + ')',
             [cur_proper.indexerid, cur_proper.season, cur_proper.episode, cur_proper.quality,
              history_limit.strftime(history.dateFormat)])
 
@@ -247,7 +245,8 @@ def _download_propers(proper_list):
             is_same = False
             for result in history_results:
                 # if the result exists in history already we need to skip it
-                if clean_proper_name == _generic_name(helpers.remove_non_release_groups(result['resource'])):
+                if clean_proper_name == _generic_name(helpers.remove_non_release_groups(
+                        ek.ek(os.path.basename, result['resource']))):
                     is_same = True
                     break
             if is_same:
