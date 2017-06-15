@@ -151,7 +151,7 @@ class Show(dict):
             # doesn't exist, so attribute error.
             raise tvrage_attributenotfound("Cannot find attribute %s" % (repr(key)))
 
-    def airedOn(self, date):
+    def aired_on(self, date):
         ret = self.search(str(date), 'firstaired')
         if len(ret) == 0:
             raise tvrage_episodenotfound("Could not find any episodes that aired on %s" % date)

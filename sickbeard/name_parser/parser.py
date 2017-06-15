@@ -272,7 +272,7 @@ class NameParser(object):
 
                             t = sickbeard.indexerApi(show.indexer).indexer(**lindexer_api_parms)
 
-                            ep_obj = t[show.indexerid].airedOn(best_result.air_date)[0]
+                            ep_obj = t[show.indexerid].aired_on(best_result.air_date)[0]
 
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]

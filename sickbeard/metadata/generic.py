@@ -761,7 +761,10 @@ class GenericMetadata():
             # There's gotta be a better way of doing this but we don't wanna
             # change the language value elsewhere
             lINDEXER_API_PARMS = sickbeard.indexerApi(show_obj.indexer).api_params.copy()
-            lINDEXER_API_PARMS['banners'] = True
+            if image_type.startswith('fanart'):
+                lINDEXER_API_PARMS['fanart'] = True
+            else:
+                lINDEXER_API_PARMS['banners'] = True
             lINDEXER_API_PARMS['dvdorder'] = 0 != show_obj.dvdorder
 
             if indexer_lang and not 'en' == indexer_lang:
