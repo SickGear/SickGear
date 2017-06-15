@@ -90,7 +90,7 @@ class Scheduler(threading.Thread):
                         self.action.run()
                     except Exception as e:
                         logger.log(u"Exception generated in thread " + self.name + ": " + ex(e), logger.ERROR)
-                        logger.log(repr(traceback.format_exc()), logger.DEBUG)
+                        logger.log(repr(traceback.format_exc()), logger.ERROR)
 
             finally:
                 if self.force:

@@ -17,6 +17,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import traceback
 
 import sickbeard
 from sickbeard import logger, exceptions, ui, db, network_timezones, failed_history
@@ -36,36 +37,68 @@ class ShowUpdater:
             update_date = update_datetime.date()
 
             # refresh network timezones
-            network_timezones.update_network_dict()
+            try:
+                network_timezones.update_network_dict()
+            except Exception:
+                logger.log('network timezone update error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
 
             # update xem id lists
-            sickbeard.scene_exceptions.get_xem_ids()
+            try:
+                sickbeard.scene_exceptions.get_xem_ids()
+            except Exception:
+                logger.log('xem id list update error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
 
             # update scene exceptions
-            sickbeard.scene_exceptions.retrieve_exceptions()
+            try:
+                sickbeard.scene_exceptions.retrieve_exceptions()
+            except Exception:
+                logger.log('scene exceptions update error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
 
             # sure, why not?
             if sickbeard.USE_FAILED_DOWNLOADS:
-                failed_history.remove_old_history()
+                try:
+                    failed_history.remove_old_history()
+                except Exception:
+                    logger.log('Failed History cleanup error', logger.ERROR)
+                    logger.log(traceback.format_exc(), logger.ERROR)
 
             # clear the data of unused providers
-            sickbeard.helpers.clear_unused_providers()
+            try:
+                sickbeard.helpers.clear_unused_providers()
+            except Exception:
+                logger.log('unused provider cleanup error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
 
             # cleanup image cache
-            sickbeard.helpers.cleanup_cache()
+            try:
+                sickbeard.helpers.cleanup_cache()
+            except Exception:
+                logger.log('image cache cleanup error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
 
             # add missing mapped ids
             if not sickbeard.background_mapping_task.is_alive():
                 logger.log(u'Updating the Indexer mappings')
                 import threading
-                sickbeard.background_mapping_task = threading.Thread(
-                    name='LOAD-MAPPINGS', target=sickbeard.indexermapper.load_mapped_ids, kwargs={'update': True})
-                sickbeard.background_mapping_task.start()
+                try:
+                    sickbeard.background_mapping_task = threading.Thread(
+                        name='LOAD-MAPPINGS', target=sickbeard.indexermapper.load_mapped_ids, kwargs={'update': True})
+                    sickbeard.background_mapping_task.start()
+                except Exception:
+                    logger.log('missing mapped ids update error', logger.ERROR)
+                    logger.log(traceback.format_exc(), logger.ERROR)
 
             logger.log(u'Doing full update on all shows')
 
             # clean out cache directory, remove everything > 12 hours old
-            sickbeard.helpers.clearCache()
+            try:
+                sickbeard.helpers.clearCache()
+            except Exception:
+                logger.log('cache dir cleanup error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
 
             # select 10 'Ended' tv_shows updated more than 90 days ago
             # and all shows not updated more then 180 days ago to include in this update

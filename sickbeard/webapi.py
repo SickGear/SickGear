@@ -144,7 +144,7 @@ class Api(webserve.BaseHandler):
                 out = '%s(%s);' % (callback, out)  # wrap with JSONP call if requested
 
         except Exception as e:  # if we fail to generate the output fake an error
-            logger.log(u'API :: ' + traceback.format_exc(), logger.DEBUG)
+            logger.log(u'API :: ' + traceback.format_exc(), logger.ERROR)
             out = '{"result":"' + result_type_map[RESULT_ERROR] + '", "message": "error while composing output: "' + ex(
                 e) + '"}'
 

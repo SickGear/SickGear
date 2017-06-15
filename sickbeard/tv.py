@@ -471,7 +471,7 @@ class TVShow(object):
                         curEpisode.refreshSubtitles()
                     except:
                         logger.log('%s: Could not refresh subtitles' % self.indexerid, logger.ERROR)
-                        logger.log(traceback.format_exc(), logger.DEBUG)
+                        logger.log(traceback.format_exc(), logger.ERROR)
 
                 result = curEpisode.get_sql()
                 if None is not result:
@@ -953,7 +953,7 @@ class TVShow(object):
             logger.log('Something is wrong with IMDb api: %s' % ex(e), logger.WARNING)
         except Exception as e:
             logger.log('Error loading IMDb info: %s' % ex(e), logger.ERROR)
-            logger.log('%s' % traceback.format_exc(), logger.DEBUG)
+            logger.log('%s' % traceback.format_exc(), logger.ERROR)
 
     def _get_imdb_info(self):
 
@@ -1203,7 +1203,7 @@ class TVShow(object):
                 episode = self.makeEpFromFile(episodeLoc['location'])
                 subtitles = episode.downloadSubtitles(force=force)
         except Exception as e:
-            logger.log('Error occurred when downloading subtitles: %s' % traceback.format_exc(), logger.DEBUG)
+            logger.log('Error occurred when downloading subtitles: %s' % traceback.format_exc(), logger.ERROR)
             return
 
     def switchIndexer(self, old_indexer, old_indexerid, pausestatus_after=None):

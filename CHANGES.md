@@ -59,6 +59,7 @@
 * Change cosmetic title on shutdown
 * Change use TVDb API v2
 * Change improve search for PROPERS
+* Change catch show update task errors
 
 
 [develop changelog]

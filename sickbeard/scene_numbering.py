@@ -529,7 +529,7 @@ def xem_refresh(indexer_id, indexer, force=False):
             logger.log(
                 u'Exception while refreshing XEM data for show ' + str(indexer_id) + ' on ' + sickbeard.indexerApi(
                     indexer).name + ': ' + ex(e), logger.WARNING)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
 
 def fix_xem_numbering(indexer_id, indexer):

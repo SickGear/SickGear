@@ -249,7 +249,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                             helpers.cpu_sleep()
 
                 except (StandardError, Exception):
-                    logger.log(traceback.format_exc(), logger.DEBUG)
+                    logger.log(traceback.format_exc(), logger.ERROR)
 
                 if None is self.success:
                     self.success = False
@@ -398,7 +398,7 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
                 logger.log(u'Unable to find a download for: [%s]' % self.segment.prettyName())
 
         except (StandardError, Exception):
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
             # Keep a list with the 100 last executed searches
@@ -445,7 +445,7 @@ class BacklogQueueItem(generic_queue.QueueItem):
                 logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show.name)
         except (StandardError, Exception):
             is_error = True
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
             logger.log('Completed backlog search %sfor: [%s]' % (('', 'with a debug error ')[is_error], self.show.name))
@@ -496,7 +496,7 @@ class FailedQueueItem(generic_queue.QueueItem):
                 pass
                 # logger.log(u'No valid episode found to retry for: [%s]' % self.segment.prettyName())
         except (StandardError, Exception):
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
             # Keep a list with the 100 last executed searches

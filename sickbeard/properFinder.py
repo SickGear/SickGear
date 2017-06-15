@@ -91,7 +91,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
             continue
         except Exception as e:
             logger.log(u'Error while searching ' + cur_provider.name + ', skipping: ' + ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
             continue
         finally:
             threading.currentThread().name = orig_thread_name
