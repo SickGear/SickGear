@@ -1,4 +1,9 @@
-﻿### 0.12.20 (2017-06-14 22:00:00 UTC)
+﻿### 0.12.21 (2017-06-19 23:35:00 UTC)
+
+* Change provider Bit-HDTV user/pass to cookie
+
+
+### 0.12.20 (2017-06-14 22:00:00 UTC)
 
 * Change send info now required by qBittorrent 3.13+ clients
 
