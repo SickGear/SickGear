@@ -32,19 +32,23 @@ class BitHDTVProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.bit-hdtv.com/']
 
-        self.url_vars = {'login_action': 'login.php', 'search': 'torrents.php?search=%s&%s', 'get': '%s'}
-        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
+        self.url_vars = {'login': 'getrss.php', 'search': 'torrents.php?search=%s&%s', 'get': '%s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
         self.categories = {'Season': [12], 'Episode': [4, 5, 10], 'anime': [1]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
 
     def _authorised(self, **kwargs):
 
         return super(BitHDTVProvider, self)._authorised(
-            logged_in=(lambda y=None: self.has_all_cookies(['h_sl', 'h_sp', 'h_su']))) and 'search' in self.urls
+            logged_in=(lambda y=None: all(
+                [(None is y or re.search('(?i)rss\slink', y)),
+                 self.has_all_cookies(['su', 'sp', 'sl'], 'h_'), 'search' in self.urls] +
+                [(self.session.cookies.get('h_' + x) or 'sg!no!pw') in self.digest for x in 'su', 'sp', 'sl'])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):
@@ -69,12 +73,13 @@ class BitHDTVProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html) or 'width=750' not in html:
+                    if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
                     html = re.sub(r'</td>([^<]*)<tr>', '</td></tr>\1<tr>', html)
-                    with BS4Parser(html, 'html.parser', attr='width=750') as soup:
-                        torrent_table = soup.find('table', attrs={'width': 750})
+                    html = re.sub(r'(?sim)(.*<[/]table>\s*)(<table\s)', r'\2', html)
+                    with BS4Parser(html, 'html.parser') as soup:
+                        torrent_table = soup.find('table')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -112,6 +117,11 @@ class BitHDTVProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    @staticmethod
+    def ui_string(key):
+
+        return 'bithdtv_digest' == key and 'use... \'h_su=xx; h_sp=yy; h_sl=zz\'' or ''
 
 
 provider = BitHDTVProvider()
