@@ -50,6 +50,7 @@
 * Add option to limit WebDL propers to original release group under Config/Search/Media Search
 * Change add IPv4 config option when enabling IPv6.
 * Add autoProcessTV/onTxComplete.bat to improve Windows clients Deluge, qBittorrent, Tranmission, and uTorrent
+* Add MagnetDL torrent provider
 * Add Skytorrents torrent provider
 * Change do not have shows checked by default on import page. To re-enable import shows checked by default,
   1) On config page 'Save' 2) Stop SG 3) Find 'import_default_checked_shows' in config.ini and set '1' 4) Start SG

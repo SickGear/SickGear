@@ -1103,46 +1103,58 @@ def proxy_setting(proxy_setting, request_url, force=False):
 def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False,
            raise_status_code=False, raise_exceptions=False, **kwargs):
     """
-    Returns a byte-string retrieved from the url provider.
+    Either
+    1) Returns a byte-string retrieved from the url provider.
+    2) Return True/False if success after using kwargs 'savefile' set to file pathname.
     """
 
-    # request session
-    if None is session:
-        session = CloudflareScraper.create_scraper()
+    # download and save file or simply fetch url
+    savename = None
+    if 'savename' in kwargs:
+        # session streaming
+        session.stream = True
+        savename = kwargs.pop('savename')
 
-    if not kwargs.get('nocache'):
-        cache_dir = sickbeard.CACHE_DIR or _getTempDir()
-        session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
-    else:
-        del(kwargs['nocache'])
-
-    # request session headers
-    req_headers = {'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip,deflate'}
-    if headers:
-        req_headers.update(headers)
-    if hasattr(session, 'reserved') and 'headers' in session.reserved:
-        req_headers.update(session.reserved['headers'] or {})
-    session.headers.update(req_headers)
-
+    # selectively mute some errors
     mute = []
     for muted in filter(
             lambda x: kwargs.get(x, False), ['mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout']):
         mute += [muted]
         del kwargs[muted]
 
-    # request session ssl verify
-    session.verify = False
+    # reuse or instantiate request session
+    if None is session:
+        session = CloudflareScraper.create_scraper()
 
-    # request session paramaters
+    if 'nocache' in kwargs:
+        del kwargs['nocache']
+    else:
+        cache_dir = sickbeard.CACHE_DIR or _getTempDir()
+        session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
+
+    # session master headers
+    req_headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                   'Accept-Encoding': 'gzip,deflate', 'User-Agent': USER_AGENT}
+    if headers:
+        req_headers.update(headers)
+    if hasattr(session, 'reserved') and 'headers' in session.reserved:
+        req_headers.update(session.reserved['headers'] or {})
+    session.headers.update(req_headers)
+
+    # session paramaters
     session.params = params
 
+    # session ssl verify
+    session.verify = False
+
+    response = None
     try:
-        # Remove double-slashes from url
+        # sanitise url
         parsed = list(urlparse.urlparse(url))
-        parsed[2] = re.sub("/{2,}", "/", parsed[2])  # replace two or more / with one
+        parsed[2] = re.sub('/{2,}', '/', parsed[2])  # replace two or more / with one
         url = urlparse.urlunparse(parsed)
 
-        # request session proxies
+        # session proxies
         if sickbeard.PROXY_SETTING:
             (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING, url)
             msg = '%sproxy for url: %s' % (('', 'PAC parsed ')[pac_found], url)
@@ -1151,46 +1163,45 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                 return
             elif proxy_address:
                 logger.log('Using %s' % msg, logger.DEBUG)
-                session.proxies = {
-                    'http': proxy_address,
-                    'https': proxy_address
-                }
+                session.proxies = {'http': proxy_address, 'https': proxy_address}
 
         # decide if we get or post data to server
         if 'post_json' in kwargs:
-            kwargs.setdefault('json', kwargs.get('post_json'))
-            del(kwargs['post_json'])
+            kwargs.setdefault('json', kwargs.pop('post_json'))
+
         if post_data:
             kwargs.setdefault('data', post_data)
+
         if 'data' in kwargs or 'json' in kwargs:
-            resp = session.post(url, timeout=timeout, **kwargs)
+            response = session.post(url, timeout=timeout, **kwargs)
         else:
-            resp = session.get(url, timeout=timeout, **kwargs)
-            if resp.ok and not resp.content and 'url=' in resp.headers.get('Refresh', '').lower():
-                url = resp.headers.get('Refresh').lower().split('url=')[1].strip('/')
+            response = session.get(url, timeout=timeout, **kwargs)
+            if response.ok and not response.content and 'url=' in response.headers.get('Refresh', '').lower():
+                url = response.headers.get('Refresh').lower().split('url=')[1].strip('/')
                 if not url.startswith('http'):
                     parsed[2] = '/%s' % url
                     url = urlparse.urlunparse(parsed)
-                resp = session.get(url, timeout=timeout, **kwargs)
+                response = session.get(url, timeout=timeout, **kwargs)
 
         if raise_status_code:
-            resp.raise_for_status()
+            response.raise_for_status()
 
-        if not resp.ok:
-            http_err_text = 'CloudFlare Ray ID' in resp.content and 'CloudFlare reports, "Website is offline"; ' or ''
-            if resp.status_code in clients.http_error_code:
-                http_err_text += clients.http_error_code[resp.status_code]
-            elif resp.status_code in range(520, 527):
+        if not response.ok:
+            http_err_text = 'CloudFlare Ray ID' in response.content and \
+                            'CloudFlare reports, "Website is offline"; ' or ''
+            if response.status_code in clients.http_error_code:
+                http_err_text += clients.http_error_code[response.status_code]
+            elif response.status_code in range(520, 527):
                 http_err_text += 'Origin server connection failure'
             else:
                 http_err_text = 'Custom HTTP error code'
             logger.log(u'Response not ok. %s: %s from requested url %s'
-                       % (resp.status_code, http_err_text, url), logger.DEBUG)
+                       % (response.status_code, http_err_text, url), logger.DEBUG)
             return
 
     except requests.exceptions.HTTPError as e:
         if raise_status_code:
-            resp.raise_for_status()
+            response.raise_for_status()
         logger.log(u'HTTP error %s while loading URL%s' % (
             e.errno, _maybe_request_url(e)), logger.WARNING)
         return
@@ -1228,7 +1239,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
     if json:
         try:
-            data_json = resp.json()
+            data_json = response.json()
             return ({}, data_json)[isinstance(data_json, (dict, list))]
         except (TypeError, Exception) as e:
             logger.log(u'JSON data issue from URL %s\r\nDetail... %s' % (url, e.message), logger.WARNING)
@@ -1236,81 +1247,36 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                 raise e
             return None
 
-    return resp.content
+    if savename:
+        try:
+            with open(savename, 'wb') as fp:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        fp.write(chunk)
+                        fp.flush()
+                ek.ek(os.fsync, fp.fileno())
+
+            chmodAsParent(savename)
+
+        except EnvironmentError as e:
+            logger.log(u'Unable to save the file: ' + ex(e), logger.ERROR)
+            if raise_exceptions:
+                raise e
+            return
+        return True
+
+    return response.content
 
 
 def _maybe_request_url(e, def_url=''):
     return hasattr(e, 'request') and hasattr(e.request, 'url') and ' ' + e.request.url or def_url
 
 
-def download_file(url, filename, session=None):
-    # create session
-    if None is session:
-        session = CloudflareScraper.create_scraper()
-    cache_dir = sickbeard.CACHE_DIR or _getTempDir()
-    session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
+def download_file(url, filename, session=None, **kwargs):
 
-    # request session headers
-    session.headers.update({'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip,deflate'})
-    if hasattr(session, 'reserved') and 'headers' in session.reserved:
-        session.headers.update(session.reserved['headers'] or {})
-
-    # request session ssl verify
-    session.verify = False
-
-    # request session streaming
-    session.stream = True
-
-    # request session proxies
-    if sickbeard.PROXY_SETTING:
-        (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING, url)
-        msg = '%sproxy for url: %s' % (('', 'PAC parsed ')[pac_found], url)
-        if None is proxy_address:
-            logger.log('Proxy error, aborted the request using %s' % msg, logger.DEBUG)
-            return
-        elif proxy_address:
-            logger.log('Using %s' % msg, logger.DEBUG)
-            session.proxies = {
-                'http': proxy_address,
-                'https': proxy_address
-            }
-
-    try:
-        resp = session.get(url)
-        if not resp.ok:
-            logger.log(u"Requested url " + url + " returned status code is " + str(
-                resp.status_code) + ': ' + clients.http_error_code[resp.status_code], logger.DEBUG)
-            return False
-
-        with open(filename, 'wb') as fp:
-            for chunk in resp.iter_content(chunk_size=1024):
-                if chunk:
-                    fp.write(chunk)
-                    fp.flush()
-            ek.ek(os.fsync, fp.fileno())
-
-        chmodAsParent(filename)
-    except requests.exceptions.HTTPError as e:
+    if None is getURL(url, session=session, savename=filename, **kwargs):
         remove_file_failed(filename)
-        logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
         return False
-    except requests.exceptions.ConnectionError as e:
-        remove_file_failed(filename)
-        logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
-        return False
-    except requests.exceptions.Timeout as e:
-        remove_file_failed(filename)
-        logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
-        return False
-    except EnvironmentError as e:
-        remove_file_failed(filename)
-        logger.log(u"Unable to save the file: " + ex(e), logger.ERROR)
-        return False
-    except Exception:
-        remove_file_failed(filename)
-        logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)
-        return False
-
     return True
 
 

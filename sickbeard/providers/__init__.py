@@ -28,7 +28,7 @@ from . import newznab, omgwtfnzbs
 # torrent
 from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, btscene, dh, \
     fano, filelist, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, hdtorrents, \
-    iptorrents, limetorrents, morethan, nebulance, ncore, nyaa, pisexy, pretome, privatehd, ptf, \
+    iptorrents, limetorrents, magnetdl, morethan, nebulance, ncore, nyaa, pisexy, pretome, privatehd, ptf, \
     rarbg, revtt, scenetime, shazbat, skytorrents, speedcd, \
     thepiratebay, torlock, torrentday, torrenting, torrentleech, \
     torrentz2, tvchaosuk, zooqle
@@ -37,7 +37,7 @@ from . import anizb, tokyotoshokan
 # custom
 try:
     from . import custom01
-except:
+except (StandardError, Exception):
     pass
 
 __all__ = ['omgwtfnzbs',
@@ -61,6 +61,7 @@ __all__ = ['omgwtfnzbs',
            'hdtorrents',
            'iptorrents',
            'limetorrents',
+           'magnetdl',
            'morethan',
            'nebulance',
            'ncore',
