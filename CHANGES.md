@@ -61,6 +61,7 @@
 * Change improve search for PROPERS
 * Change catch show update task errors
 * Change simplify and update FreeBSD init script
+* Change only use newznab Api key if needed
 
 
 [develop changelog]

@@ -178,13 +178,14 @@ class NewznabProvider(generic.NZBProvider):
                 data = self.get_url('%s/api?t=caps' % self.url)
                 if data:
                     xml_caps = helpers.parse_xml(data)
-            if (xml_caps is None or not hasattr(xml_caps, 'tag') or xml_caps.tag == 'error' or xml_caps.tag != 'caps') and \
-                    self.maybe_apikey():
-                data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, self.maybe_apikey()))
-                if data:
-                    xml_caps = helpers.parse_xml(data)
-                    if xml_caps and hasattr(xml_caps, 'tag') and xml_caps.tag == 'caps':
-                        self._caps_need_apikey = {'need': True, 'date': datetime.date.today()}
+            if xml_caps is None or not hasattr(xml_caps, 'tag') or xml_caps.tag == 'error' or xml_caps.tag != 'caps':
+                api_key = self.maybe_apikey()
+                if isinstance(api_key, basestring) and api_key not in ('0', ''):
+                    data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, api_key))
+                    if data:
+                        xml_caps = helpers.parse_xml(data)
+                        if xml_caps and hasattr(xml_caps, 'tag') and xml_caps.tag == 'caps':
+                            self._caps_need_apikey = {'need': True, 'date': datetime.date.today()}
         return xml_caps
 
     def get_caps(self):
@@ -579,7 +580,7 @@ class NewznabProvider(generic.NZBProvider):
                                           if v in self.caps]),
                        'offset': 0}
 
-        if isinstance(api_key, basestring):
+        if isinstance(api_key, basestring) and api_key not in ('0', ''):
             base_params['apikey'] = api_key
 
         results, n_spaces = [], {}
