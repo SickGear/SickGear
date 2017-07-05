@@ -7,22 +7,16 @@
 # Add the following lines to /etc/rc.conf.local or /etc/rc.conf
 # to enable this service:
 #
-# sickgear_enable (bool):	Set to NO by default.
-#			Set it to YES to enable it.
-# sickgear_user:  The user account SickGear daemon runs as what
-#			you want it to be. It uses '_sabnzbd' user by
-#			default. Do not sets it as empty or it will run
-#			as root.
+# sickgear_enable: Set YES to enable.
+#    Default: NO
+# sickgear_user: The user account SickGear daemon runs as.
+#    Default: '_sickgear' -- do not set empty or SG will run as root.
 # sickgear_dir:	Directory where SickGear lives.
-#			Default: /usr/local/sickgear
-# sickgear_chdir:  Change to this directory before running SickGear.
-#     Default is same as sickgear_dir.
-# sickgear_datadir:  Data directory for Sick Beard (DB, Logs, config)
-#     Default is same as sickgear_chdir
+#    Default: /usr/local/sickgear
+# sickgear_datadir:  Data directory for SickGear (DB, Logs, config)
+#    Default: same as sickgear_dir
 # sickgear_pidfile:  The name of the pidfile to create.
-#     Default is sickgear.pid in sickgear_dir.
-# sickgear_port: The port SickGear is listening on
-#     Default is 8081
+#    Default: sickgear.pid in sickgear_dir.
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 
 . /etc/rc.subr
@@ -33,13 +27,10 @@ rcvar=${name}_enable
 load_rc_config ${name}
 
 : ${sickgear_enable:="NO"}
-: ${sickgear_user:="_sabnzbd"}
+: ${sickgear_user:="_sickgear"}
 : ${sickgear_dir:="/usr/local/sickgear"}
-: ${sickgear_chdir:="${sickgear_dir}"}
-: ${sickgear_datadir:="${sickgear_chdir}"}
+: ${sickgear_datadir:="${sickgear_dir}"}
 : ${sickgear_pidfile:="${sickgear_dir}/sickgear.pid"}
-: ${sickgear_host:="127.0.0.1"}
-: ${sickgear_port:="8081"}
 
 command="/usr/local/bin/python"
 command_args="${sickgear_dir}/SickBeard.py --daemon --pidfile ${sickgear_pidfile}"
