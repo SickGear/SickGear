@@ -62,6 +62,7 @@
 * Change catch show update task errors
 * Change simplify and update FreeBSD init script
 * Change only use newznab Api key if needed
+* Change editshow saving empty scene exceptions
 
 
 [develop changelog]
