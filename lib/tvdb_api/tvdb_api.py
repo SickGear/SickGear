@@ -134,7 +134,7 @@ class Show(dict):
             return dict.__getitem__(self.data, key)
 
         # Data wasn't found, raise appropriate error
-        if isinstance(key, int) or key.isdigit():
+        if isinstance(key, (int, long)) or isinstance(key, basestring) and key.isdigit():
             # Episode number x was not found
             raise tvdb_seasonnotfound('Could not find season %s' % (repr(key)))
         else:
@@ -761,7 +761,7 @@ class Tvdb:
         show_data = self._getetsrc(url, language=language)
 
         # check and make sure we have data to process and that it contains a series name
-        if not isinstance(show_data, dict) or 'seriesname' not in show_data['data']:
+        if not isinstance(show_data, dict) or 'data' not in show_data or not isinstance(show_data['data'], dict) or 'seriesname' not in show_data['data']:
             return False
 
         for k, v in show_data['data'].iteritems():
@@ -769,28 +769,31 @@ class Tvdb:
 
         if self.config['banners_enabled']:
             poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'poster'), language=language)
-            self._set_show_data(sid, u'poster',
-                                ('', self.config['url_artworkPrefix'] % poster_data['data'][0]['filename'])[
-                                    poster_data and 'data' in poster_data and len(poster_data['data']) > 0])
-            if poster_data and 'data' in poster_data and len(poster_data['data']) > 1:
+            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 1:
+                b = self.config['url_artworkPrefix'] % poster_data['data'][0]['filename']
                 self._parse_banners(sid, poster_data['data'])
+            else:
+                b = ''
+            self._set_show_data(sid, u'poster', b)
 
         if self.config['fanart_enabled']:
             fanart_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'fanart'), language=language)
-            self._set_show_data(sid, u'fanart',
-                                ('', self.config['url_artworkPrefix'] % fanart_data['data'][0]['filename'])[
-                                    fanart_data and 'data' in fanart_data and len(fanart_data['data']) > 0])
-            if fanart_data and 'data' in fanart_data and len(fanart_data['data']) > 1:
+            if fanart_data and 'data' in fanart_data and fanart_data['data'] and len(fanart_data['data']) > 1:
+                f = self.config['url_artworkPrefix'] % fanart_data['data'][0]['filename']
                 self._parse_banners(sid, fanart_data['data'])
+            else:
+                f = ''
+            self._set_show_data(sid, u'fanart', f)
 
         if self.config['actors_enabled']:
             actor_data = self._getetsrc(self.config['url_actorsInfo'] % sid, language=language)
-            self._set_show_data(sid, u'actors',
-                                ('||', '|%s|' % '|'.join([n.get('name', '') for n in sorted(
-                                    actor_data['data'], key=lambda x: x['sortorder'])]))[
-                                    actor_data and 'data' in actor_data and len(actor_data['data']) > 0])
-            if actor_data and 'data' in actor_data and len(actor_data['data']) > 0:
+            if actor_data and 'data' in actor_data and actor_data['data'] and len(actor_data['data']) > 0:
+                a = '|%s|' % '|'.join([n.get('name', '') for n in sorted(
+                                        actor_data['data'], key=lambda x: x['sortorder'])])
                 self._parse_actors(sid, actor_data['data'])
+            else:
+                a = '||'
+            self._set_show_data(sid, u'actors', a)
 
         if get_ep_info:
             # Parse episode data
