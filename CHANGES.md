@@ -11,7 +11,7 @@
 * Change webserver startup to correctly use xheaders in reverse proxy or load balance set-ups
 * Update backports_abc 0.4 to 0.5
 * Update Beautiful Soup 4.4.0 (r397) to 4.5.3 (r439)
-* Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
+* Update cachecontrol library 0.11.5 to 0.12.3 (db54c40)
 * Update Certifi 2015.11.20.1 (385476b) to 2017.01.23 (9f9dc30)
 * Update feedparser library 5.2.0 (8c62940) to 5.2.1 (f1dd1bb)
 * Update html5lib 0.99999999/1.0b9 (46dae3d) to (1a28d72)
@@ -68,6 +68,7 @@
 * Fix "too many redirects" or "no CSS/JS content" delivered
 * Change restart/shutdown to use updated jQuery
 * Remove AlphaReign torrent provider
+* Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
 
 
 ### 0.12.21 (2017-06-19 23:35:00 UTC)
