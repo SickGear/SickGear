@@ -63,6 +63,7 @@
 * Change simplify and update FreeBSD init script
 * Change only use newznab Api key if needed
 * Change editshow saving empty scene exceptions
+* Change improve TVDB data handling
 
 
 [develop changelog]
