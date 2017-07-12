@@ -60,6 +60,7 @@
 * Change use TVDb API v2
 * Change improve search for PROPERS
 * Change catch show update task errors
+* Change simplify and update FreeBSD init script
 
 
 [develop changelog]
