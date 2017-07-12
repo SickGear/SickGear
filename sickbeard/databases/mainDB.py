@@ -37,6 +37,7 @@ class MainSanityCheck(db.DBSanityCheck):
         self.fix_duplicate_episodes()
         self.fix_orphan_episodes()
         self.fix_unaired_episodes()
+        self.fix_scene_exceptions()
 
     def fix_duplicate_shows(self, column='indexer_id'):
 
@@ -159,6 +160,14 @@ class MainSanityCheck(db.DBSanityCheck):
         else:
             logger.log(u'No UNAIRED episodes, check passed')
 
+    def fix_scene_exceptions(self):
+
+        sql_results = self.connection.select(
+            'SELECT exception_id FROM scene_exceptions WHERE season = "null"')
+
+        if 0 < len(sql_results):
+            logger.log('Fixing invalid scene exceptions')
+            self.connection.action('UPDATE scene_exceptions SET season = -1 WHERE season = "null"')
 
 # ======================
 # = Main DB Migrations =
