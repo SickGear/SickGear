@@ -335,6 +335,7 @@ home_newShow.tmpl
 #addRootDirTable td label .filepath,
 .grey-text{color:#999}
 .highlight-text{color:#fff}
+#display-show.back-art.pro.ii .tablesorter tr .grey-text{color:#555}
 
 #newShowPortal #displayText .show-name,
 #newShowPortal #displayText .show-dest,

@@ -1811,6 +1811,25 @@ a.service img{
 	vertical-align:-2px
 }
 
+.airdate-never,
+#display-show .tablesorter tr.airdate-never{
+	background-color:#eae2c8;
+	color:#666
+}
+#display-show.back-art.pro.ii .tablesorter tr.airdate-never{
+	background-color:rgba(234,226,200,0.7);
+	color:#666
+}
+
+.unaired,
+#display-show .tablesorter tr.unaired{
+	background-color:#f5f1e4
+}
+#display-show.back-art.pro.ii .tablesorter tr.unaired{
+	background-color:rgba(245,241,228,0.7);
+	color:#584b20
+}
+
 .good,
 #display-show .tablesorter tr.good{
 	background-color:#c3e3c8
@@ -1869,25 +1888,6 @@ a.service img{
 #display-show.back-art.pro.ii .tablesorter tr.archived{
 	background-color:rgba(213,227,216,0.7);
 	color:#295730
-}
-
-.airdate-never,
-#display-show .tablesorter tr.airdate-never{
-	background-color:#eae2c8;
-	color:#666
-}
-#display-show.back-art.pro.ii .tablesorter tr.airdate-never{
-	background-color:rgba(234,226,200,0.7);
-	color:#666
-}
-
-.unaired,
-#display-show .tablesorter tr.unaired{
-	background-color:#f5f1e4
-}
-#display-show.back-art.pro.ii .tablesorter tr.unaired{
-	background-color:rgba(245,241,228,0.7);
-	color:#584b20
 }
 
 span.good{

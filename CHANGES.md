@@ -74,6 +74,13 @@
 * Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
 
 
+### 0.12.22 (2017-07-13 20:20:00 UTC)
+
+* Fix "Server failed to return anything useful" when should be using cached .torrent file
+* Fix displayShow 'Unaired' episode rows change state where appropriate
+* Change displayShow to stop requiring an airdate for checkboxes
+
+
 ### 0.12.21 (2017-06-19 23:35:00 UTC)
 
 * Change provider Bit-HDTV user/pass to cookie

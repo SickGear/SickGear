@@ -191,9 +191,8 @@ class GenericProvider:
                     return False
 
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
-                        for u in (('s', 'itorrents.org'), ('s', 'torra.pro'), ('s', 'torrasave.site'),
-                                  ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
-                                  ('s', 'torrentproject.se'), ('', 'thetorrent.org'))]
+                        for u in (('s', 'itorrents.org'), ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
+                                  ('s', 'torrentproject.se'), ('', 'thetorrent.org'), ('s', 'torcache.to'))]
             except (StandardError, Exception):
                 link_type = 'torrent'
                 urls = [result.url]
@@ -211,20 +210,24 @@ class GenericProvider:
         for url in urls:
             cache_dir = sickbeard.CACHE_DIR or helpers._getTempDir()
             base_name = '%s.%s' % (helpers.sanitizeFileName(result.name), self.providerType)
+            final_file = ek.ek(os.path.join, final_dir, base_name)
+            cached = getattr(result, 'cache_file', None)
+            if cached and ek.ek(os.path.isfile, cached):
+                base_name = ek.ek(os.path.basename, cached)
             cache_file = ek.ek(os.path.join, cache_dir, base_name)
 
             self.session.headers['Referer'] = url
-            if getattr(result, 'cache_file', None) or helpers.download_file(url, cache_file, session=self.session):
+            if cached or helpers.download_file(url, cache_file, session=self.session):
 
                 if self._verify_download(cache_file):
                     logger.log(u'Downloaded %s result from %s' % (self.name, url))
-                    final_file = ek.ek(os.path.join, final_dir, base_name)
                     try:
                         helpers.moveFile(cache_file, final_file)
                         msg = 'moved'
                     except (OSError, Exception):
                         msg = 'copied cached file'
-                    logger.log(u'Saved %s link and %s to %s' % (link_type, msg, final_file))
+                    logger.log(u'Saved .%s data and %s to %s' % (
+                        (link_type, 'torrent cache')['magnet' == link_type], msg, final_file))
                     saved = True
                     break
 
@@ -237,9 +240,7 @@ class GenericProvider:
                 del(self.session.headers['Referer'])
 
         if not saved and 'magnet' == link_type:
-            logger.log(u'All torrent cache servers failed to return a downloadable result', logger.ERROR)
-            logger.log(u'Advice: in search settings, change from method blackhole to direct torrent client connect',
-                       logger.ERROR)
+            logger.log(u'All torrent cache servers failed to return a downloadable result', logger.DEBUG)
             final_file = ek.ek(os.path.join, final_dir, '%s.%s' % (helpers.sanitizeFileName(result.name), link_type))
             try:
                 with open(final_file, 'wb') as fp:
@@ -247,9 +248,11 @@ class GenericProvider:
                     fp.flush()
                     os.fsync(fp.fileno())
                 logger.log(u'Saved magnet link to file as some clients (or plugins) support this, %s' % final_file)
-
+                if 'blackhole' == sickbeard.TORRENT_METHOD:
+                    logger.log('Tip: If your client fails to load magnet in files, ' +
+                               'change blackhole to a client connection method in search settings')
             except (StandardError, Exception):
-                pass
+                logger.log(u'Failed to save magnet link to file, %s' % final_file)
         elif not saved:
             logger.log(u'Server failed to return anything useful', logger.ERROR)
 
