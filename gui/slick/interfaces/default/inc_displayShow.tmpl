@@ -23,17 +23,17 @@
     #set $ep_str = '%sx%s' % ($ep['season'], $ep['episode'])
     #set $epLoc = $ep['location']
     #set never_aired = 0 < int($ep['season']) and 1 == int($ep['airdate'])
-		<tr class="#echo ($Overview.overviewStrings[$ep_cats[$ep_str]], 'airdate-never')[$never_aired]##echo ('', ' archived')[ARCHIVED == int($ep['status'])]#">
+		<tr class="#echo ' '.join([$Overview.overviewStrings[$ep_cats[$ep_str]], ('', 'airdate-never')[$never_aired], ('', 'archived')[ARCHIVED == int($ep['status'])]])#">
 			<td class="col-checkbox">
-    #if $UNAIRED != int($ep['status']) and not $never_aired
+    #if $UNAIRED != int($ep['status'])
 				<input type="checkbox" class="epCheck" id="$ep_str" name="$ep_str">
     #end if
 			</td>
 
     #set $nfo, $nfo_img = (('No', '-no'), ('Yes', ''))[int($ep['hasnfo'])]
     #set $tbn, $tbn_img = (('No', '-no'), ('Yes', ''))[int($ep['hastbn'])]
-			<td align="center" class="meta"><img src="$sbRoot/images/nfo${nfo_img}.gif" alt="$nfo" title="$nfo" width="23" height="11" /><br />
-			<img src="$sbRoot/images/tbn${tbn_img}.gif" alt="$tbn" title="$tbn" width="23" height="11" /></td>
+			<td align="center" class="meta"><img src="$sbRoot/images/nfo${nfo_img}.gif" alt="$nfo" title="$nfo" width="23" height="11"><br />
+			<img src="$sbRoot/images/tbn${tbn_img}.gif" alt="$tbn" title="$tbn" width="23" height="11"></td>
 
     #if $epLoc and $show._location and $epLoc.lower().startswith($show._location.lower())
         #set $epLoc = $epLoc[len($show._location)+1:]
@@ -76,14 +76,15 @@
         #else
 					value=""
         #end if
-					style="padding:0; text-align:center; max-width:60px" />
+					style="padding:0; text-align:center; max-width:60px">
 			</td>
     #end if
     #slurp
 			<td class="col-name">
-				<img src="$sbRoot/images/info32.png" width="16" height="16" alt="" class="plotInfo#echo '%s" />' %\
-                    ('None opacity40', ('" id="plot_info_%s_%s_%s' % ($show.indexerid, $ep['season'], $ep['episode'])))[None is not $ep['description'] and '' != $ep['description']]#
-    				#if not $ep['name'] or 'TBA' == $ep['name']#<em class="tba grey-text">TBA</em>#else#$ep['name']#end if#
+				<img src="$sbRoot/images/info32.png" width="16" height="16" alt="" class="plotInfo#echo '%s' %\
+                    ('None opacity40', ('" id="plot_info_%s_%s_%s' % ($show.indexerid, $ep['season'], $ep['episode'])))[None is not $ep['description'] and '' != $ep['description']]#">
+    #set $cls = (' class="tba grey-text"', '')['good' == $Overview.overviewStrings[$ep_cats[$ep_str]]]
+				#if not $ep['name'] or 'TBA' == $ep['name']#<em${cls}>TBA</em>#else#$ep['name']#end if#
 			</td>
 
 			<td class="col-airdate">
@@ -95,7 +96,7 @@
         #if $ep['subtitles']
             #for $sub_lang in subliminal.language.language_list($ep['subtitles'].split(','))
                 #if '' != sub_lang.alpha2
-				<img src="$sbRoot/images/flags/${sub_lang.alpha2}.png" width="16" height="11" alt="${sub_lang}" />
+				<img src="$sbRoot/images/flags/${sub_lang.alpha2}.png" width="16" height="11" alt="${sub_lang}">
                 #end if
             #end for
         #end if
@@ -111,14 +112,14 @@
 			<td class="col-search">
     #if 0 != int($ep['season'])
         #if (int($ep['status']) in $Quality.SNATCHED or int($ep['status']) in $Quality.DOWNLOADED) and $sg_var('USE_FAILED_DOWNLOADS')
-				<a class="epRetry" id="$ep_str" name="$ep_str" href="$sbRoot/home/retryEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download" /></a>
+				<a class="epRetry" id="$ep_str" name="$ep_str" href="$sbRoot/home/retryEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download"></a>
         #else
-				<a class="epSearch" id="$ep_str" name="$ep_str" href="$sbRoot/home/searchEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search" /></a>
+				<a class="epSearch" id="$ep_str" name="$ep_str" href="$sbRoot/home/searchEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search"></a>
         #end if
     #end if
     #slurp
     #if $sg_var('USE_SUBTITLES') and $show.subtitles and len(set(str($ep['subtitles']).split(',')).intersection(set($subtitles.wantedLanguages()))) < len($subtitles.wantedLanguages()) and $ep['location']
-				<a class="epSubtitlesSearch" href="$sbRoot/home/searchEpisodeSubtitles?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/closed_captioning.png" height="16" alt="search subtitles" title="Search subtitles" /></a>
+				<a class="epSubtitlesSearch" href="$sbRoot/home/searchEpisodeSubtitles?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/closed_captioning.png" height="16" alt="search subtitles" title="Search subtitles"></a>
     #end if
 			</td>
 		</tr>
