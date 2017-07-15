@@ -35,7 +35,9 @@ from sickbeard.exceptions import ex
 from sickbeard import logger
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard import common
+from sickbeard.common import SNATCHED, SNATCHED_PROPER, SNATCHED_BEST
 from sickbeard.history import reset_status
+from sickbeard.exceptions import MultipleShowObjectsException
 
 from sickbeard import failedProcessor
 
@@ -161,6 +163,50 @@ class ProcessTVShow(object):
 
         return result
 
+    def check_name(self, name):
+        so = None
+        my_db = db.DBConnection()
+        sql_results = my_db.select('SELECT showid FROM history WHERE resource = ?'
+                                   'AND (' + ' OR '.join(
+            "action LIKE '%%%02d'" % x for x in (SNATCHED, SNATCHED_PROPER,
+                                                 SNATCHED_BEST)) + ') ORDER BY rowid', [name])
+        if sql_results:
+            try:
+                so = helpers.findCertainShow(sickbeard.showList, int(sql_results[-1]['showid']))
+                if hasattr(so, 'name'):
+                    logger.log('Found Show: %s in snatch history for: %s' % (so.name, name), logger.DEBUG)
+            except MultipleShowObjectsException:
+                so = None
+        return so
+
+    def showObj_helper(self, showObj, base_dir, dir_name, nzb_name, pp_type, alt_showObj=None):
+        if None is showObj and base_dir == sickbeard.TV_DOWNLOAD_DIR and not nzb_name or 'manual' == pp_type:  # Scheduled Post Processing Active
+            return self.check_name(dir_name)
+        return (showObj, alt_showObj)[None is showObj and None is not alt_showObj]
+
+    def check_video_filenames(self, path, videofiles):
+        video_pick = None
+        video_size = 0
+        for cur_video_file in videofiles:
+            try:
+                cur_video_size = ek.ek(os.path.getsize, ek.ek(os.path.join, path, cur_video_file))
+            except (StandardError, Exception):
+                continue
+
+            if 0 == video_size or cur_video_size > video_size:
+                video_size = cur_video_size
+                video_pick = cur_video_file
+
+        if video_pick:
+            vid_filename = ek.ek(os.path.splitext, video_pick)[0]
+            # check if filename is garbage, disregard it
+            if re.search(r'^[a-zA-Z0-9]+$', vid_filename):
+                return None
+
+            return self.check_name(vid_filename)
+
+        return None
+
     def process_dir(self, dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, pp_type='auto', cleanup=False, showObj=None):
         """
         Scans through the files in dir_name and processes whatever media files it finds
@@ -194,6 +240,13 @@ class ProcessTVShow(object):
                                  u'If your downloader and SickGear aren\'t on the same PC then make sure ' +
                                  u'you fill out your completed TV download folder in the PP config.')
             return self.result
+
+        if None is showObj:
+            if isinstance(nzb_name, basestring):
+                showObj = self.check_name(re.sub(r'\.(nzb|torrent)$', '', nzb_name, flags=re.I))
+
+            if None is showObj and dir_name:
+                showObj = self.check_name(ek.ek(os.path.basename, dir_name))
 
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
 
@@ -236,11 +289,17 @@ class ProcessTVShow(object):
         if 2 <= len(video_files):
             nzb_name = None
 
+        if None is showObj and 0 < len(video_files):
+            showObj = self.check_video_filenames(path, video_files)
+
         # self._set_process_success()
 
         # Don't Link media when the media is extracted from a rar in the same path
         if process_method in ('hardlink', 'symlink') and video_in_rar:
-            self._process_media(path, video_in_rar, nzb_name, 'move', force, force_replace, showObj=showObj)
+            soh = showObj
+            if None is showObj:
+                soh = self.check_video_filenames(path, video_in_rar)
+            self._process_media(path, video_in_rar, nzb_name, 'move', force, force_replace, showObj=soh)
             self._delete_files(path, [ek.ek(os.path.relpath, item, path) for item in work_files], force=True)
             video_batch = set(video_files) - set(video_in_rar)
         else:
@@ -265,7 +324,7 @@ class ProcessTVShow(object):
                        (ex(e), e.filename and (' (file %s)' % e.filename) or ''), logger.WARNING)
 
         # Process video files in TV subdirectories
-        for directory in [x for x in dirs if self._validate_dir(path, x, nzb_name_original, failed, showObj=showObj)]:
+        for directory in [x for x in dirs if self._validate_dir(path, x, nzb_name_original, failed, showObj=self.showObj_helper(showObj, dir_name, x, nzb_name, pp_type))]:
 
             # self._set_process_success(reset=True)
 
@@ -280,7 +339,7 @@ class ProcessTVShow(object):
                 rar_content = self._unrar(walk_path, rar_files, force)
                 work_files += [ek.ek(os.path.join, walk_path, item) for item in rar_content]
                 if self.fail_detected:
-                    self._process_failed(dir_name, nzb_name, showObj=showObj)
+                    self._process_failed(dir_name, nzb_name, showObj=self.showObj_helper(showObj, directory))
                     continue
                 files = list(set(files + rar_content))
                 video_files = filter(helpers.has_media_ext, files)
@@ -289,7 +348,7 @@ class ProcessTVShow(object):
 
                 # Don't Link media when the media is extracted from a rar in the same path
                 if process_method in ('hardlink', 'symlink') and video_in_rar:
-                    self._process_media(walk_path, video_in_rar, nzb_name, 'move', force, force_replace, showObj=showObj)
+                    self._process_media(walk_path, video_in_rar, nzb_name, 'move', force, force_replace, showObj=self.showObj_helper(showObj, dir_name, directory, nzb_name, pp_type, self.check_video_filenames(walk_dir, video_in_rar)))
                     video_batch = set(video_files) - set(video_in_rar)
                 else:
                     video_batch = video_files
@@ -307,7 +366,7 @@ class ProcessTVShow(object):
 
                         video_batch = set(video_batch) - set(video_pick)
 
-                        self._process_media(walk_path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup, showObj=showObj)
+                        self._process_media(walk_path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup, showObj=self.showObj_helper(showObj, dir_name, directory, nzb_name, pp_type, self.check_video_filenames(walk_dir, video_pick)))
 
                 except OSError as e:
                     logger.log('Batch skipped, %s%s' %

@@ -64,6 +64,7 @@
 * Change only use newznab Api key if needed
 * Change editshow saving empty scene exceptions
 * Change improve TVDB data handling
+* Change improve post processing by using more snatch history data
 
 
 [develop changelog]
