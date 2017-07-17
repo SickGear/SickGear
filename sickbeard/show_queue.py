@@ -22,12 +22,13 @@ import traceback
 
 import sickbeard
 
-from sickbeard.common import SKIPPED, WANTED, UNAIRED
+from sickbeard.common import SKIPPED, WANTED, UNAIRED, statusStrings
 from sickbeard.tv import TVShow
 from sickbeard import exceptions, logger, ui, db
 from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
+from sickbeard.helpers import should_delete_episode
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 
 
@@ -615,7 +616,7 @@ class QueueItemUpdate(ShowQueueItem):
         try:
             self.show.saveToDB()
         except Exception as e:
-            logger.log('Error saving the episode to the database: %s' % ex(e), logger.ERROR)
+            logger.log('Error saving the show to the database: %s' % ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.ERROR)
 
         # get episode list from DB
@@ -631,9 +632,12 @@ class QueueItemUpdate(ShowQueueItem):
                        (sickbeard.indexerApi(self.show.indexer).name, ex(e)), logger.ERROR)
             IndexerEpList = None
 
-        if IndexerEpList == None:
-            logger.log('No data returned from %s, unable to update this show' %
-                       sickbeard.indexerApi(self.show.indexer).name, logger.ERROR)
+        if None is IndexerEpList:
+            logger.log('No data returned from %s, unable to update episodes for show: %s' %
+                       (sickbeard.indexerApi(self.show.indexer).name, self.show.name), logger.ERROR)
+        elif not IndexerEpList or 0 == len(IndexerEpList):
+            logger.log('No episodes returned from %s for show: %s' %
+                       (sickbeard.indexerApi(self.show.indexer).name, self.show.name), logger.WARNING)
         else:
             # for each ep we found on TVDB delete it from the DB list
             for curSeason in IndexerEpList:
@@ -645,13 +649,18 @@ class QueueItemUpdate(ShowQueueItem):
             # for the remaining episodes in the DB list just delete them from the DB
             for curSeason in DBEpList:
                 for curEpisode in DBEpList[curSeason]:
-                    logger.log('Permanently deleting episode %sx%s from the database' %
-                               (curSeason, curEpisode), logger.MESSAGE)
                     curEp = self.show.getEpisode(curSeason, curEpisode)
-                    try:
-                        curEp.deleteEpisode()
-                    except exceptions.EpisodeDeletedException:
-                        pass
+                    status = sickbeard.common.Quality.splitCompositeStatus(curEp.status)[0]
+                    if should_delete_episode(status):
+                        logger.log('Permanently deleting episode %sx%s from the database' %
+                                   (curSeason, curEpisode), logger.MESSAGE)
+                        try:
+                            curEp.deleteEpisode()
+                        except exceptions.EpisodeDeletedException:
+                            pass
+                    else:
+                        logger.log('Not deleting episode %sx%s from the database because status is: %s' %
+                                   (curSeason, curEpisode, statusStrings[status]), logger.MESSAGE)
 
         if self.priority != generic_queue.QueuePriorities.NORMAL:
             self.kwargs['priority'] = self.priority

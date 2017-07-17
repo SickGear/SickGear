@@ -65,6 +65,14 @@
 * Change editshow saving empty scene exceptions
 * Change improve TVDB data handling
 * Change improve post processing by using more snatch history data
+* Change show update, don't delete any ep in DB if eps are not returned from indexer
+* Change prevent unneeded error message during show update
+* Change improve performance, don't fetch episode list when retrieving a show image
+* Change don't remove episodes from DB with status: SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED, ARCHIVED, IGNORED
+* Change add additional episode removal protections for TVDb_api v2
+* Change filter SKIPPED items from episode view
+* Change improve clarity of various error message by including relevant show name
+* Change extend WEB PROPER release group check to ignore SD releases
 
 
 [develop changelog]
