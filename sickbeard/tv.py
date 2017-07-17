@@ -531,7 +531,7 @@ class TVShow(object):
                 curEp = self.getEpisode(curSeason, curEpisode)
 
                 # if we found out that the ep is no longer on TVDB then delete it from our database too
-                if deleteEp:
+                if deleteEp and helpers.should_delete_episode(curEp.status):
                     curEp.deleteEpisode()
 
                 curEp.loadFromDB(curSeason, curEpisode)
@@ -912,7 +912,7 @@ class TVShow(object):
 
         myEp = t[self.indexerid, False]
         if None is myEp:
-            logger.log('Show not found (maybe even removed?)', logger.WARNING)
+            logger.log('Show [%s] not found (maybe even removed?)' % self.name, logger.WARNING)
             return False
 
         try:
@@ -1783,7 +1783,7 @@ class TVEpisode(object):
             logger.log('Unable to find the episode on %s... has it been removed? Should I delete from db?' %
                        sickbeard.indexerApi(self.indexer).name, logger.DEBUG)
             # if I'm no longer on the Indexers but I once was then delete myself from the DB
-            if -1 != self.indexerid:
+            if -1 != self.indexerid and helpers.should_delete_episode(self.status):
                 self.deleteEpisode()
             return
 
@@ -1827,7 +1827,7 @@ class TVEpisode(object):
             logger.log('Malformed air date retrieved from %s (%s - %sx%s)' %
                        (sickbeard.indexerApi(self.indexer).name, self.show.name, season, episode), logger.ERROR)
             # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
-            if -1 != self.indexerid:
+            if -1 != self.indexerid and helpers.should_delete_episode(self.status):
                 self.deleteEpisode()
             return False
 
@@ -1835,7 +1835,8 @@ class TVEpisode(object):
         self.indexerid = getattr(myEp, 'id', None)
         if None is self.indexerid:
             logger.log('Failed to retrieve ID from %s' % sickbeard.indexerApi(self.indexer).name, logger.ERROR)
-            self.deleteEpisode()
+            if helpers.should_delete_episode(self.status):
+                self.deleteEpisode()
             return False
 
         # don't update show status if show dir is missing, unless it's missing on purpose
