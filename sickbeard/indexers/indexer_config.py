@@ -1,5 +1,4 @@
 from lib.tvdb_api.tvdb_api import Tvdb
-from lib.tvrage_api.tvrage_api import TVRage
 
 INDEXER_TVDB = 1
 INDEXER_TVRAGE = 2
@@ -33,7 +32,7 @@ indexerConfig = {
         main_url='http://tvrage.com/',
         id=INDEXER_TVRAGE,
         name='TVRage',
-        module=TVRage,
+        module=None,
         api_params=dict(apikey='Uhewg1Rr0o62fvZvUIZt', language='en'),
         active=False,
         dupekey='tvr',
