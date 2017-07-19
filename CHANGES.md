@@ -73,6 +73,7 @@
 * Change filter SKIPPED items from episode view
 * Change improve clarity of various error message by including relevant show name
 * Change extend WEB PROPER release group check to ignore SD releases
+* Change increase performance by reducing TVDb API requests with a global token
 
 
 [develop changelog]

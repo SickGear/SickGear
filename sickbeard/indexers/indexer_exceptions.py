@@ -7,17 +7,22 @@
 
 from lib.tvdb_api.tvdb_exceptions import \
     tvdb_exception, tvdb_attributenotfound, tvdb_episodenotfound, tvdb_error, \
-    tvdb_seasonnotfound, tvdb_shownotfound, tvdb_userabort
+    tvdb_seasonnotfound, tvdb_shownotfound, tvdb_userabort, tvdb_tokenexpired
 
-indexerExcepts = ["indexer_exception", "indexer_error", "indexer_userabort", "indexer_shownotfound",
-                  "indexer_seasonnotfound", "indexer_episodenotfound", "indexer_attributenotfound"]
+indexerExcepts = [
+    'indexer_exception', 'indexer_error', 'indexer_userabort',
+    'indexer_shownotfound', 'indexer_seasonnotfound', 'indexer_episodenotfound',
+    'indexer_attributenotfound', 'indexer_authenticationerror']
 
-tvdbExcepts = ["tvdb_exception", "tvdb_error", "tvdb_userabort", "tvdb_shownotfound",
-               "tvdb_seasonnotfound", "tvdb_episodenotfound", "tvdb_attributenotfound"]
+tvdbExcepts = [
+    'tvdb_exception', 'tvdb_error', 'tvdb_userabort', 'tvdb_shownotfound',
+    'tvdb_seasonnotfound', 'tvdb_episodenotfound', 'tvdb_attributenotfound',
+    'tvdb_tokenexpired']
 
 # link API exceptions to our exception handler
 indexer_exception = tvdb_exception
 indexer_error = tvdb_error
+indexer_authenticationerror = tvdb_tokenexpired
 indexer_userabort = tvdb_userabort
 indexer_attributenotfound = tvdb_attributenotfound
 indexer_episodenotfound = tvdb_episodenotfound
