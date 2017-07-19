@@ -64,6 +64,7 @@
 * Change only use newznab Api key if needed
 * Change editshow saving empty scene exceptions
 * Change improve TVDB data handling
+* Change increase performance by reducing TVDb API requests with a global token
 
 
 [develop changelog]
