@@ -21,6 +21,7 @@ import operator
 import os
 import threading
 import traceback
+import re
 
 import sickbeard
 
@@ -165,7 +166,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
         # check if we actually want this proper (if it's the right quality)
         my_db = db.DBConnection()
         sql_results = my_db.select(
-            'SELECT release_group, status, version FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
+            'SELECT release_group, status, version, release_name FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
             [cur_proper.indexerid, cur_proper.season, cur_proper.episode])
         if not sql_results:
             continue
@@ -182,7 +183,8 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
 
         # for webldls, prevent propers from different groups
         if sickbeard.PROPERS_WEBDL_ONEGRP and \
-                old_quality in (Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB) and \
+                (old_quality in (Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB) or
+                     (old_quality == Quality.SDTV and re.search(r'\Wweb.?(dl|rip|.[hx]26[45])\W', str(sql_results[0]['release_name']), re.I))) and \
                 cur_proper.release_group != old_release_group:
             logger.log(log_same_grp, logger.DEBUG)
             continue
