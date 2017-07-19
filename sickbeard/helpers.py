@@ -1100,7 +1100,8 @@ def proxy_setting(proxy_setting, request_url, force=False):
     return (False, proxy_address)[request_url_match], True
 
 
-def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False, raise_status_code=False, **kwargs):
+def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False,
+           raise_status_code=False, raise_exceptions=False, **kwargs):
     """
     Returns a byte-string retrieved from the url provider.
     """
@@ -1197,16 +1198,22 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         if 'mute_connect_err' not in mute:
             logger.log(u'Connection error msg:%s while loading URL%s' % (
                 e.message, _maybe_request_url(e)), logger.WARNING)
+        if raise_exceptions:
+            raise e
         return
     except requests.exceptions.ReadTimeout as e:
         if 'mute_read_timeout' not in mute:
             logger.log(u'Read timed out msg:%s while loading URL%s' % (
                 e.message, _maybe_request_url(e)), logger.WARNING)
+        if raise_exceptions:
+            raise e
         return
     except (requests.exceptions.Timeout, socket.timeout) as e:
         if 'mute_connect_timeout' not in mute:
             logger.log(u'Connection timed out msg:%s while loading URL %s' % (
                 e.message, _maybe_request_url(e, url)), logger.WARNING)
+        if raise_exceptions:
+            raise e
         return
     except Exception as e:
         if e.message:
@@ -1215,6 +1222,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         else:
             logger.log(u'Unknown exception while loading URL %s\r\nDetail... %s'
                        % (url, traceback.format_exc()), logger.WARNING)
+        if raise_exceptions:
+            raise e
         return
 
     if json:
@@ -1223,6 +1232,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
             return ({}, data_json)[isinstance(data_json, (dict, list))]
         except (TypeError, Exception) as e:
             logger.log(u'JSON data issue from URL %s\r\nDetail... %s' % (url, e.message), logger.WARNING)
+            if raise_exceptions:
+                raise e
             return None
 
     return resp.content
