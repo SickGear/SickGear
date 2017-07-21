@@ -21,13 +21,15 @@ import requests
 import requests.exceptions
 import datetime
 from sickbeard.helpers import getURL
+import sickbeard
 
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
 
 from tvdb_ui import BaseUI, ConsoleUI
-from tvdb_exceptions import (tvdb_error, tvdb_shownotfound,
-                             tvdb_seasonnotfound, tvdb_episodenotfound, tvdb_attributenotfound)
+from tvdb_exceptions import (
+    tvdb_error, tvdb_shownotfound, tvdb_seasonnotfound, tvdb_episodenotfound,
+    tvdb_attributenotfound, tvdb_tokenexpired)
 
 
 def log():
@@ -59,6 +61,7 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
         @wraps(f)
         def f_retry(*args, **kwargs):
             mtries, mdelay = tries, delay
+            auth_error = 0
             while mtries > 1:
                 try:
                     return f(*args, **kwargs)
@@ -69,9 +72,17 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
                     else:
                         print msg
                     time.sleep(mdelay)
-                    mtries -= 1
-                    mdelay *= backoff
-            return f(*args, **kwargs)
+                    if isinstance(e, tvdb_tokenexpired) and not auth_error:
+                        auth_error += 1
+                    else:
+                        mtries -= 1
+                        mdelay *= backoff
+            try:
+                return f(*args, **kwargs)
+            except tvdb_tokenexpired:
+                if not auth_error:
+                    return f(*args, **kwargs)
+                raise tvdb_tokenexpired
 
         return f_retry  # true decorator
 
@@ -423,8 +434,6 @@ class Tvdb:
         else:
             self.config['apikey'] = '0629B785CE550C8D'  # tvdb_api's API key
 
-        self.token = {'token': None, 'datetime': datetime.datetime.fromordinal(1)}
-
         self.config['debug_enabled'] = debug  # show debugging messages
 
         self.config['custom_ui'] = custom_ui
@@ -501,23 +510,25 @@ class Tvdb:
         self.config['url_artworkPrefix'] = 'https://thetvdb.com/banners/%s'
 
     def get_new_token(self):
-        token = None
+        token = sickbeard.THETVDB_V2_API_TOKEN.get('token', None)
+        dt = sickbeard.THETVDB_V2_API_TOKEN.get('datetime', datetime.datetime.fromordinal(1))
         url = '%s%s' % (self.config['base_url'], 'login')
         params = {'apikey': self.config['apikey']}
         resp = getURL(url.strip(), post_json=params, json=True)
         if resp:
             if 'token' in resp:
                 token = resp['token']
+                dt = datetime.datetime.now()
 
-        return {'token': token, 'datetime': datetime.datetime.now()}
+        return {'token': token, 'datetime': dt}
 
     def get_token(self):
-        if self.token.get('token') is None or datetime.datetime.now() - self.token.get(
+        if sickbeard.THETVDB_V2_API_TOKEN.get('token') is None or datetime.datetime.now() - sickbeard.THETVDB_V2_API_TOKEN.get(
                 'datetime', datetime.datetime.fromordinal(1)) > datetime.timedelta(hours=23):
-            self.token = self.get_new_token()
-        if not self.token.get('token'):
+            sickbeard.THETVDB_V2_API_TOKEN = self.get_new_token()
+        if not sickbeard.THETVDB_V2_API_TOKEN.get('token'):
             raise tvdb_error('Could not get Authentification Token')
-        return self.token.get('token')
+        return sickbeard.THETVDB_V2_API_TOKEN.get('token')
 
     @staticmethod
     def _get_temp_dir():
@@ -535,7 +546,7 @@ class Tvdb:
 
         return os.path.join(tempfile.gettempdir(), 'tvdb_api-%s' % uid)
 
-    @retry(tvdb_error)
+    @retry((tvdb_error, tvdb_tokenexpired))
     def _load_url(self, url, params=None, language=None):
         log().debug('Retrieving URL %s' % url)
 
@@ -554,7 +565,19 @@ class Tvdb:
         if None is not language and language in self.config['valid_languages']:
             session.headers.update({'Accept-Language': language})
 
-        resp = getURL(url.strip(), params=params, session=session, json=True)
+        resp = None
+        try:
+            resp = getURL(url.strip(), params=params, session=session, json=True, raise_status_code=True,
+                          raise_exceptions=True)
+        except requests.exceptions.HTTPError as e:
+            if 401 == e.response.status_code:
+                # token expired, get new token, raise error to retry
+                sickbeard.THETVDB_V2_API_TOKEN = self.get_new_token()
+                raise tvdb_tokenexpired
+            elif 404 != e.response.status_code:
+                raise tvdb_error
+        except (StandardError, Exception):
+            raise tvdb_error
 
         map_show = {'airstime': 'airs_time', 'airsdayofweek': 'airs_dayofweek', 'imdbid': 'imdb_id'}
 
@@ -803,6 +826,8 @@ class Tvdb:
             episodes = []
             while page is not None:
                 episode_data = self._getetsrc(self.config['url_epInfo'] % (sid, page), language=language)
+                if [] is episode_data:
+                    raise tvdb_error('Exception retrieving episodes for show')
                 if isinstance(episode_data, dict) and episode_data['data'] is not None:
                     episodes.extend(episode_data['data'])
                 page = episode_data['links']['next'] if isinstance(episode_data, dict) \

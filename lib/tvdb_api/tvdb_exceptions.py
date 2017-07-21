@@ -50,3 +50,8 @@ class tvdb_attributenotfound(tvdb_exception):
     attribute (such as a episode name)
     """
     pass
+
+class tvdb_tokenexpired(tvdb_exception):
+    """token expired or missing thetvdb.com
+    """
+    pass
