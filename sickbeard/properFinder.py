@@ -76,7 +76,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
     # for each provider get a list of the
     orig_thread_name = threading.currentThread().name
     providers = [x for x in sickbeard.providers.sortedProviderList() if x.is_active()]
-    np = NameParser(False, try_scene_exceptions=True)
+    np = NameParser(False, try_scene_exceptions=True, indexer_lookup=False)
     for cur_provider in providers:
         if not recent_anime and cur_provider.anime_only:
             continue
@@ -103,7 +103,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
             name = _generic_name(x.name)
             if name not in propers:
                 try:
-                    np = NameParser(False, try_scene_exceptions=True, showObj=x.parsed_show)
+                    np = NameParser(False, try_scene_exceptions=True, showObj=x.parsed_show, indexer_lookup=False)
                     parse_result = np.parse(x.name)
                     if parse_result.series_name and parse_result.episode_numbers and \
                             parse_result.show.indexerid in recent_shows + recent_anime:
@@ -147,7 +147,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
                            logger.DEBUG)
                 continue
 
-        if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False):
+        if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False, indexer_lookup=False):
             logger.log(u'Proper %s isn\'t a valid scene release that we want, ignoring it' % cur_proper.name,
                        logger.DEBUG)
             continue

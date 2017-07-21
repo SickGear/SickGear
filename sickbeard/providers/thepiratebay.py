@@ -95,7 +95,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
             return None
 
         try:
-            my_parser = NameParser(showObj=self.show)
+            my_parser = NameParser(showObj=self.show, indexer_lookup=False)
             parse_result = my_parser.parse(file_name)
         except (InvalidNameException, InvalidShowException):
             return None
