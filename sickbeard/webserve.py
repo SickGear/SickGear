@@ -447,7 +447,7 @@ class MainHandler(WebHandler):
         recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
 
         done_show_list = []
-        qualities = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
+        qualities = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED, SKIPPED]
 
         myDB = db.DBConnection()
         sql_results = myDB.select(
@@ -475,7 +475,7 @@ class MainHandler(WebHandler):
         # make a dict out of the sql results
         sql_results = [dict(row) for row in sql_results
                        if Quality.splitCompositeStatus(helpers.tryInt(row['status']))[0] not in
-                       [DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVED, IGNORED]]
+                       [DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVED, IGNORED, SKIPPED]]
 
         # multi dimension sort
         sorts = {

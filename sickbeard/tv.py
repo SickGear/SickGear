@@ -484,7 +484,7 @@ class TVShow(object):
 
     def loadEpisodesFromDB(self, update=False):
 
-        logger.log('Loading all episodes from the DB')
+        logger.log('Loading all episodes for [%s] from the DB' % self.name)
 
         myDB = db.DBConnection()
         sql = 'SELECT * FROM tv_episodes WHERE showid = ? AND indexer = ?'
@@ -518,27 +518,27 @@ class TVShow(object):
                 try:
                     cachedSeasons[curSeason] = cachedShow[curSeason]
                 except sickbeard.indexer_seasonnotfound as e:
-                    logger.log('Error when trying to load the episode from %s: %s' %
-                               (sickbeard.indexerApi(self.indexer).name, e.message), logger.WARNING)
+                    logger.log('Error when trying to load the episode for [%s] from %s: %s' %
+                               (self.name, sickbeard.indexerApi(self.indexer).name, e.message), logger.WARNING)
                     deleteEp = True
 
             if not curSeason in scannedEps:
                 scannedEps[curSeason] = {}
 
-            logger.log('Loading episode %sx%s from the DB' % (curSeason, curEpisode), logger.DEBUG)
+            logger.log('Loading episode %sx%s for [%s] from the DB' % (curSeason, curEpisode, self.name), logger.DEBUG)
 
             try:
                 curEp = self.getEpisode(curSeason, curEpisode)
 
                 # if we found out that the ep is no longer on TVDB then delete it from our database too
-                if deleteEp:
+                if deleteEp and helpers.should_delete_episode(curEp.status):
                     curEp.deleteEpisode()
 
                 curEp.loadFromDB(curSeason, curEpisode)
                 curEp.loadFromIndexer(tvapi=t, cachedSeason=cachedSeasons[curSeason], update=update)
                 scannedEps[curSeason][curEpisode] = True
             except exceptions.EpisodeDeletedException:
-                logger.log('Tried loading an episode from the DB that should have been deleted, skipping it',
+                logger.log('Tried loading an episode from [%s] from the DB that should have been deleted, skipping it' % self.name,
                            logger.DEBUG)
                 continue
 
@@ -557,14 +557,14 @@ class TVShow(object):
         if self.dvdorder != 0:
             lINDEXER_API_PARMS['dvdorder'] = True
 
-        logger.log('%s: Loading all episodes from %s..' % (self.indexerid, sickbeard.indexerApi(self.indexer).name))
+        logger.log('%s: Loading all episodes for [%s] from %s..' % (self.indexerid, self.name, sickbeard.indexerApi(self.indexer).name))
 
         try:
             t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
             showObj = t[self.indexerid]
         except sickbeard.indexer_error:
-            logger.log('%s timed out, unable to update episodes from %s' %
-                       (sickbeard.indexerApi(self.indexer).name, sickbeard.indexerApi(self.indexer).name), logger.ERROR)
+            logger.log('%s timed out, unable to update episodes for [%s] from %s' %
+                       (sickbeard.indexerApi(self.indexer).name, self.name, sickbeard.indexerApi(self.indexer).name), logger.ERROR)
             return None
 
         scannedEps = {}
@@ -579,19 +579,19 @@ class TVShow(object):
                 try:
                     ep = self.getEpisode(season, episode)
                 except exceptions.EpisodeNotFoundException:
-                    logger.log('%s: %s object for %sx%s is incomplete, skipping this episode' %
-                               (self.indexerid, sickbeard.indexerApi(self.indexer).name, season, episode))
+                    logger.log('%s: %s object for %sx%s from [%s] is incomplete, skipping this episode' %
+                               (self.indexerid, sickbeard.indexerApi(self.indexer).name, season, episode, self.name))
                     continue
                 else:
                     try:
                         ep.loadFromIndexer(tvapi=t, update=update)
                     except exceptions.EpisodeDeletedException:
-                        logger.log('The episode was deleted, skipping the rest of the load')
+                        logger.log('The episode from [%s] was deleted, skipping the rest of the load' % self.name)
                         continue
 
                 with ep.lock:
-                    logger.log('%s: Loading info from %s for episode %sx%s' %
-                               (self.indexerid, sickbeard.indexerApi(self.indexer).name, season, episode), logger.DEBUG)
+                    logger.log('%s: Loading info from %s for episode %sx%s from [%s]' %
+                               (self.indexerid, sickbeard.indexerApi(self.indexer).name, season, episode, self.name), logger.DEBUG)
                     ep.loadFromIndexer(season, episode, tvapi=t, update=update)
 
                     result = ep.get_sql()
@@ -779,10 +779,10 @@ class TVShow(object):
         sqlResults = myDB.select('SELECT * FROM tv_shows WHERE indexer_id = ?', [self.indexerid])
 
         if len(sqlResults) > 1:
-            logger.log('%s: Loading show info from database' % self.indexerid)
+            logger.log('%s: Loading show info [%s] from database' % (self.indexerid, self.name))
             raise exceptions.MultipleDBShowsException()
         elif len(sqlResults) == 0:
-            logger.log('%s: Unable to find the show in the database' % self.indexerid)
+            logger.log('%s: Unable to find the show [%s] in the database' % (self.indexerid, self.name))
             return
         else:
             if not self.indexer:
@@ -889,7 +889,7 @@ class TVShow(object):
 
     def loadFromIndexer(self, cache=True, tvapi=None, cachedSeason=None):
 
-        logger.log('%s: Loading show info from %s' % (self.indexerid, sickbeard.indexerApi(self.indexer).name))
+        logger.log('%s: Loading show info [%s] from %s' % (self.indexerid, self.name, sickbeard.indexerApi(self.indexer).name))
 
         # There's gotta be a better way of doing this but we don't wanna
         # change the cache value elsewhere
@@ -912,7 +912,7 @@ class TVShow(object):
 
         myEp = t[self.indexerid, False]
         if None is myEp:
-            logger.log('Show not found (maybe even removed?)', logger.WARNING)
+            logger.log('Show [%s] not found (maybe even removed?)' % self.name, logger.WARNING)
             return False
 
         try:
@@ -944,7 +944,7 @@ class TVShow(object):
 
         from lib.imdb import _exceptions as imdb_exceptions
 
-        logger.log('Retrieving show info from IMDb', logger.DEBUG)
+        logger.log('Retrieving show info [%s] from IMDb' % self.name, logger.DEBUG)
         try:
             self._get_imdb_info()
         except imdb_exceptions.IMDbDataAccessError as e:
@@ -1029,7 +1029,7 @@ class TVShow(object):
         logger.log('%s: Parsed latest IMDb show info for [%s]' % (self.indexerid, self.name))
 
     def nextEpisode(self):
-        logger.log('%s: Finding the episode which airs next' % self.indexerid, logger.DEBUG)
+        logger.log('%s: Finding the episode which airs next for: %s' % (self.indexerid, self.name), logger.DEBUG)
 
         curDate = datetime.date.today().toordinal()
         if not self.nextaired or self.nextaired and curDate > self.nextaired:
@@ -1135,7 +1135,7 @@ class TVShow(object):
         self.loadEpisodesFromDir()
 
         # run through all locations from DB, check that they exist
-        logger.log('%s: Loading all episodes with a location from the database' % self.indexerid)
+        logger.log('%s: Loading all episodes for [%s] with a location from the database' % (self.indexerid, self.name))
 
         myDB = db.DBConnection()
         sqlResults = myDB.select("SELECT * FROM tv_episodes WHERE showid = ? AND location != ''", [self.indexerid])
@@ -1149,7 +1149,7 @@ class TVShow(object):
             try:
                 curEp = self.getEpisode(season, episode)
             except exceptions.EpisodeDeletedException:
-                logger.log('The episode was deleted while we were refreshing it, moving on to the next one',
+                logger.log('The episode from [%s] was deleted while we were refreshing it, moving on to the next one' % self.name,
                            logger.DEBUG)
                 continue
 
@@ -1783,7 +1783,7 @@ class TVEpisode(object):
             logger.log('Unable to find the episode on %s... has it been removed? Should I delete from db?' %
                        sickbeard.indexerApi(self.indexer).name, logger.DEBUG)
             # if I'm no longer on the Indexers but I once was then delete myself from the DB
-            if -1 != self.indexerid:
+            if -1 != self.indexerid and helpers.should_delete_episode(self.status):
                 self.deleteEpisode()
             return
 
@@ -1827,7 +1827,7 @@ class TVEpisode(object):
             logger.log('Malformed air date retrieved from %s (%s - %sx%s)' %
                        (sickbeard.indexerApi(self.indexer).name, self.show.name, season, episode), logger.ERROR)
             # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
-            if -1 != self.indexerid:
+            if -1 != self.indexerid and helpers.should_delete_episode(self.status):
                 self.deleteEpisode()
             return False
 
@@ -1835,7 +1835,8 @@ class TVEpisode(object):
         self.indexerid = getattr(myEp, 'id', None)
         if None is self.indexerid:
             logger.log('Failed to retrieve ID from %s' % sickbeard.indexerApi(self.indexer).name, logger.ERROR)
-            self.deleteEpisode()
+            if helpers.should_delete_episode(self.status):
+                self.deleteEpisode()
             return False
 
         # don't update show status if show dir is missing, unless it's missing on purpose
