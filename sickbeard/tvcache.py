@@ -208,7 +208,7 @@ class TVCache:
                     return None
 
             try:
-                np = NameParser(showObj=showObj, convert=True)
+                np = NameParser(showObj=showObj, convert=True, indexer_lookup=False)
                 parse_result = np.parse(name)
             except InvalidNameException:
                 logger.log(u'Unable to parse the filename ' + name + ' into a valid episode', logger.DEBUG)
@@ -292,7 +292,7 @@ class TVCache:
         for curResult in sqlResults:
 
             # skip non-tv crap
-            if not show_name_helpers.pass_wordlist_checks(curResult['name'], parse=False):
+            if not show_name_helpers.pass_wordlist_checks(curResult['name'], parse=False, indexer_lookup=False):
                 continue
 
             # get the show object, or if it's not one of our shows then ignore it

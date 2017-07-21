@@ -484,7 +484,7 @@ class GenericProvider:
         for item in item_list:
             (title, url) = self._title_and_url(item)
 
-            parser = NameParser(False, showObj=self.get_show(item, **kwargs), convert=True)
+            parser = NameParser(False, showObj=self.get_show(item, **kwargs), convert=True, indexer_lookup=False)
             # parse the file name
             try:
                 parse_result = parser.parse(title)

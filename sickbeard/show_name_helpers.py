@@ -31,7 +31,7 @@ from sickbeard import encodingKludge as ek
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 
-def pass_wordlist_checks(name, parse=True):
+def pass_wordlist_checks(name, parse=True, indexer_lookup=True):
     """
     Filters out non-english and just all-around stupid releases by comparing
     the word list contents at boundaries or the end of name.
@@ -44,7 +44,7 @@ def pass_wordlist_checks(name, parse=True):
     if parse:
         err_msg = u'Unable to parse the filename %s into a valid ' % name
         try:
-            NameParser().parse(name)
+            NameParser(indexer_lookup=indexer_lookup).parse(name)
         except InvalidNameException:
             logger.log(err_msg + 'episode', logger.DEBUG)
             return False

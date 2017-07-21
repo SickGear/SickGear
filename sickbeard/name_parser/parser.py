@@ -36,7 +36,7 @@ class NameParser(object):
     ANIME_REGEX = 2
 
     def __init__(self, file_name=True, showObj=None, try_scene_exceptions=False, convert=False,
-                 naming_pattern=False, testing=False):
+                 naming_pattern=False, testing=False, indexer_lookup=True):
 
         self.file_name = file_name
         self.showObj = showObj
@@ -44,6 +44,7 @@ class NameParser(object):
         self.convert = convert
         self.naming_pattern = naming_pattern
         self.testing = testing
+        self.indexer_lookup = indexer_lookup
 
         if self.showObj and not self.showObj.is_anime:
             self._compile_regexes(self.NORMAL_REGEX)
@@ -263,7 +264,7 @@ class NameParser(object):
                         season_number = int(sql_result[0][0])
                         episode_numbers = [int(sql_result[0][1])]
 
-                    if not season_number or not len(episode_numbers):
+                    if self.indexer_lookup and not season_number or not len(episode_numbers):
                         try:
                             lindexer_api_parms = sickbeard.indexerApi(show.indexer).api_params.copy()
 

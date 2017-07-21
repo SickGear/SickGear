@@ -543,7 +543,8 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                     # skip non-tv crap
                     search_results[cur_ep] = filter(
                         lambda ep_item: show_name_helpers.pass_wordlist_checks(
-                            ep_item.name, parse=False) and ep_item.show == show, search_results[cur_ep])
+                            ep_item.name, parse=False, indexer_lookup=False) and
+                                        ep_item.show == show, search_results[cur_ep])
 
                     if cur_ep in found_results:
                         found_results[provider_id][cur_ep] += search_results[cur_ep]
@@ -626,7 +627,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
 
                     individual_results = filter(
                         lambda r: show_name_helpers.pass_wordlist_checks(
-                            r.name, parse=False) and r.show == show, individual_results)
+                            r.name, parse=False, indexer_lookup=False) and r.show == show, individual_results)
 
                     for cur_result in individual_results:
                         if 1 == len(cur_result.episodes):
@@ -772,7 +773,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                         if name:
                             if not pass_show_wordlist_checks(name, show):
                                 continue
-                            if not show_name_helpers.pass_wordlist_checks(name):
+                            if not show_name_helpers.pass_wordlist_checks(name, indexer_lookup=False):
                                 logger.log('Ignored: %s (debug log has detail)' % name)
                                 continue
                             best_result.name = name
