@@ -1427,6 +1427,9 @@ def save_config():
     # For passwords you must include the word `password` in the item_name and
     # add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
     new_config['General'] = {}
+    s_z = check_setting_int(CFG, 'General', 'stack_size', 0)
+    if s_z:
+        new_config['General']['stack_size'] = s_z
     new_config['General']['config_version'] = CONFIG_VERSION
     new_config['General']['branch'] = BRANCH
     new_config['General']['git_remote'] = GIT_REMOTE
