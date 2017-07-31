@@ -59,11 +59,18 @@ def callPeopleStupid(x):
         return x.encode(sickbeard.SYS_ENCODING, 'ignore')
 
 
+def fixParaLists(x):
+    if type(x) == list:
+        return [callPeopleStupid(a) if type(a) in (str, unicode) else a for a in x]
+    else:
+        return x
+
+
 def ek(func, *args, **kwargs):
     if os.name == 'nt':
         result = func(*args, **kwargs)
     else:
-        result = func(*[callPeopleStupid(x) if type(x) in (str, unicode) else x for x in args], **kwargs)
+        result = func(*[callPeopleStupid(x) if type(x) in (str, unicode) else fixParaLists(x) for x in args], **kwargs)
 
     if type(result) in (list, tuple):
         return fixListEncodings(result)
