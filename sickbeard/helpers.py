@@ -299,7 +299,7 @@ def listMediaFiles(path):
 
 def copyFile(srcFile, destFile):
     if os.name.startswith('posix'):
-        subprocess.call(['cp', srcFile, destFile])
+        ek.ek(subprocess.call, ['cp', srcFile, destFile])
     else:
         ek.ek(shutil.copyfile, srcFile, destFile)
 
