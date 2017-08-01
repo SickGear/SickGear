@@ -85,6 +85,11 @@
 * Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
 
 
+### 0.12.21 (2017-06-19 23:35:00 UTC)
+
+* Remove provider SceneAccess
+
+
 ### 0.12.24 (2017-07-31 20:42:00 UTC)
 
 * Fix copy post process method on posix
