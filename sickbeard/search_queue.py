@@ -191,39 +191,27 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
             show_list = sickbeard.showList
             from_date = datetime.date.fromordinal(1)
-            need_anime = need_sports = need_sd = need_hd = need_uhd = False
-            max_sd = Quality.SDDVD
-            hd_qualities = [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
-                            Quality.HDBLURAY, Quality.FULLHDBLURAY]
-            max_hd = Quality.FULLHDBLURAY
+            needed = common.neededQualities()
             for curShow in show_list:
                 if curShow.paused:
                     continue
 
                 wanted_eps = wanted_episodes(curShow, from_date, unaired=sickbeard.SEARCH_UNAIRED)
-                if wanted_eps:
-                    if not need_anime and curShow.is_anime:
-                        need_anime = True
-                    if not need_sports and curShow.is_sports:
-                        need_sports = True
-                    if not need_sd or not need_hd or not need_uhd:
-                        for w in wanted_eps:
-                            if need_sd and need_hd and need_uhd:
-                                break
-                            if not w.show.is_anime and not w.show.is_sports:
-                                if Quality.UNKNOWN in w.wantedQuality:
-                                    need_sd = need_hd = need_uhd = True
-                                else:
-                                    if not need_sd and max_sd >= min(w.wantedQuality):
-                                        need_sd = True
-                                    if not need_hd and any(i in hd_qualities for i in w.wantedQuality):
-                                        need_hd = True
-                                    if not need_uhd and max_hd < max(w.wantedQuality):
-                                        need_uhd = True
-                self.episodes.extend(wanted_eps)
 
-            self.update_providers(need_anime=need_anime, need_sports=need_sports,
-                                  need_sd=need_sd, need_hd=need_hd, need_uhd=need_uhd)
+                if wanted_eps:
+                    if not needed.all_needed:
+                        if not needed.all_types_needed:
+                            needed.check_needed_types(curShow)
+                        if not needed.all_qualities_needed:
+                            for w in wanted_eps:
+                                if needed.all_qualities_needed:
+                                    break
+                                if not w.show.is_anime and not w.show.is_sports:
+                                    needed.check_needed_qualities(w.wantedQuality)
+
+                    self.episodes.extend(wanted_eps)
+
+            self.update_providers(needed=needed)
 
             if not self.episodes:
                 logger.log(u'No search of cache for episodes required')
@@ -319,7 +307,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 logger.log(u'Found new episodes marked wanted')
 
     @staticmethod
-    def update_providers(need_anime=True, need_sports=True, need_sd=True, need_hd=True, need_uhd=True):
+    def update_providers(needed=common.neededQualities(need_all=True)):
         orig_thread_name = threading.currentThread().name
         threads = []
 
@@ -333,8 +321,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
             # spawn a thread for each provider to save time waiting for slow response providers
             threads.append(threading.Thread(target=cur_provider.cache.updateCache,
-                                            kwargs={'need_anime': need_anime, 'need_sports': need_sports,
-                                                    'need_sd': need_sd, 'need_hd': need_hd, 'need_uhd': need_uhd},
+                                            kwargs={'needed': needed},
                                             name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
             # start the thread we just created
             threads[-1].start()

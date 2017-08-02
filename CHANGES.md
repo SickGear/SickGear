@@ -76,6 +76,8 @@
 * Change extend WEB PROPER release group check to ignore SD releases
 * Change increase performance by reducing TVDb API requests with a global token
 * Change make indexer lookup optional in NameParser, and deactivate during searches
+* Change improve newnab autoselect categories
+* Change add nzb.org BoxSD and BoxHD categories
 
 
 [develop changelog]

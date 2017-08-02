@@ -5194,7 +5194,7 @@ class ConfigProviders(Config):
 
         if name in [n.name for n in sickbeard.newznabProviderList if n.url == url]:
             provider = [n for n in sickbeard.newznabProviderList if n.name == name][0]
-            tv_categories = newznab.NewznabProvider.clean_newznab_categories(provider.all_cats)
+            tv_categories = provider.clean_newznab_categories(provider.all_cats)
             state = provider.is_enabled()
         else:
             providers = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
@@ -5202,7 +5202,7 @@ class ConfigProviders(Config):
             if None is not key and starify(key, True):
                 temp_provider.key = providers[temp_provider.get_id()].key
 
-            tv_categories = newznab.NewznabProvider.clean_newznab_categories(temp_provider.all_cats)
+            tv_categories = temp_provider.clean_newznab_categories(temp_provider.all_cats)
             state = False
 
         return json.dumps({'success': True, 'tv_categories': tv_categories, 'state': state, 'error': ''})

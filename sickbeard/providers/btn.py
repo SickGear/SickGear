@@ -384,7 +384,7 @@ class BTNCache(tvcache.TVCache):
 
         self.update_freq = 15
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
 
         return self.provider.cache_data(age=self._getLastUpdate().timetuple(), min_time=self.update_freq)
 
