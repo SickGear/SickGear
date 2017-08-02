@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import warnings
 import json
+import os
 
 from tarfile import TarFile
 from pkgutil import get_data
@@ -8,6 +9,9 @@ from io import BytesIO
 from contextlib import closing
 
 from dateutil.tz import tzfile
+
+from sickbeard import encodingKludge as ek
+import sickbeard
 
 __all__ = ["get_zonefile_instance", "gettz", "gettz_db_metadata", "rebuild"]
 
@@ -22,7 +26,9 @@ class tzfile(tzfile):
 
 def getzoneinfofile_stream():
     try:
-        return BytesIO(get_data(__name__, ZONEFILENAME))
+        # return BytesIO(get_data(__name__, ZONEFILENAME))
+        with open(ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, ZONEFILENAME), 'rb') as f:
+            return BytesIO(f.read())
     except IOError as e:  # TODO  switch to FileNotFoundError?
         warnings.warn("I/O error({0}): {1}".format(e.errno, e.strerror))
         return None

@@ -1347,7 +1347,7 @@ else:
     TZPATHS = []
 
 
-def gettz(name=None):
+def gettz(name=None, zoneinfo_priority=False):
     tz = None
     if not name:
         try:
@@ -1381,43 +1381,47 @@ def gettz(name=None):
             else:
                 tz = None
         else:
-            for path in TZPATHS:
-                filepath = os.path.join(path, name)
-                if not os.path.isfile(filepath):
-                    filepath = filepath.replace(' ', '_')
+            if zoneinfo_priority:
+                from dateutil.zoneinfo import get_zonefile_instance
+                tz = get_zonefile_instance().get(name)
+            if not tz:
+                for path in TZPATHS:
+                    filepath = os.path.join(path, name)
                     if not os.path.isfile(filepath):
-                        continue
-                try:
-                    tz = tzfile(filepath)
-                    break
-                except (IOError, OSError, ValueError):
-                    pass
-            else:
-                tz = None
-                if tzwin is not None:
+                        filepath = filepath.replace(' ', '_')
+                        if not os.path.isfile(filepath):
+                            continue
                     try:
-                        tz = tzwin(name)
-                    except WindowsError:
-                        tz = None
+                        tz = tzfile(filepath)
+                        break
+                    except (IOError, OSError, ValueError):
+                        pass
+                else:
+                    tz = None
+                    if tzwin is not None:
+                        try:
+                            tz = tzwin(name)
+                        except WindowsError:
+                            tz = None
 
-                if not tz:
-                    from dateutil.zoneinfo import get_zonefile_instance
-                    tz = get_zonefile_instance().get(name)
+                    if not zoneinfo_priority and not tz:
+                        from dateutil.zoneinfo import get_zonefile_instance
+                        tz = get_zonefile_instance().get(name)
 
-                if not tz:
-                    for c in name:
-                        # name must have at least one offset to be a tzstr
-                        if c in "0123456789":
-                            try:
-                                tz = tzstr(name)
-                            except ValueError:
-                                pass
-                            break
-                    else:
-                        if name in ("GMT", "UTC"):
-                            tz = tzutc()
-                        elif name in time.tzname:
-                            tz = tzlocal()
+                    if not tz:
+                        for c in name:
+                            # name must have at least one offset to be a tzstr
+                            if c in "0123456789":
+                                try:
+                                    tz = tzstr(name)
+                                except ValueError:
+                                    pass
+                                break
+                        else:
+                            if name in ("GMT", "UTC"):
+                                tz = tzutc()
+                            elif name in time.tzname:
+                                tz = tzlocal()
     return tz
 
 
