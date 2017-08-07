@@ -24,7 +24,7 @@
 * Update SimpleJSON library 3.8.1 (6022794) to 3.10.0 (c52efea)
 * Update Six compatibility library 1.10.0 (r405) to 1.10.0 (r433)
 * Update socks from SocksiPy 1.0 to PySocks 1.6.5 (b4323df)
-* Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
+* Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.1 (79b2683)
 * Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
 * Update xmltodict library 0.9.2 (eac0031) to 0.10.2 (375d3a6)
 * Update Bootstrap 3.2.0 to 3.3.7
@@ -87,6 +87,7 @@
 * Change restart/shutdown to use updated jQuery
 * Remove AlphaReign torrent provider
 * Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
+* Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
 
 
 ### 0.12.26 (2017-08-20 13:05:00 UTC)

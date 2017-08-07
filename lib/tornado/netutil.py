@@ -16,7 +16,7 @@
 
 """Miscellaneous network utility code."""
 
-from __future__ import absolute_import, division, print_function, with_statement
+from __future__ import absolute_import, division, print_function
 
 import errno
 import os
@@ -199,6 +199,7 @@ def bind_sockets(port, address=None, family=socket.AF_UNSPEC,
         sock.listen(backlog)
         sockets.append(sock)
     return sockets
+
 
 if hasattr(socket, 'AF_UNIX'):
     def bind_unix_socket(file, mode=0o600, backlog=_DEFAULT_BACKLOG):
