@@ -52,6 +52,7 @@ from sickbeard import postProcessor
 from sickbeard import subtitles
 from sickbeard import history
 from sickbeard import network_timezones
+from sickbeard.sbdatetime import sbdatetime
 from sickbeard.blackandwhitelist import BlackAndWhiteList
 from sickbeard.indexermapper import del_mapping, save_mapping, MapStatus
 from sickbeard.generic_queue import QueuePriorities
@@ -64,6 +65,8 @@ from common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVE
 from common import NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMING_SEPARATED_REPEAT, \
     NAMING_LIMITED_EXTEND_E_PREFIXED
 
+concurrent_show_not_found_days = 7
+show_not_found_retry_days = 7
 
 def dirty_setter(attr_name, types=None):
     def wrapper(self, val):
@@ -114,6 +117,8 @@ class TVShow(object):
         self._overview = ''
         self._tag = ''
         self._mapped_ids = {}
+        self._not_found_count = -1
+        self._last_found_on_indexer = -1
 
         self.dirty = True
 
@@ -159,6 +164,53 @@ class TVShow(object):
     rls_require_words = property(lambda self: self._rls_require_words, dirty_setter('_rls_require_words'))
     overview = property(lambda self: self._overview, dirty_setter('_overview'))
     tag = property(lambda self: self._tag, dirty_setter('_tag'))
+
+    def _helper_load_failed_db(self):
+        if self._not_found_count == -1 or self._last_found_on_indexer == -1:
+            myDB = db.DBConnection()
+            results = myDB.select('SELECT fail_count, last_success FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
+                                  [self.indexer, self.indexerid])
+            if results:
+                self._not_found_count = helpers.tryInt(results[0]['fail_count'])
+                self._last_found_on_indexer = helpers.tryInt(results[0]['last_success'])
+            else:
+                self._not_found_count = 0
+                self._last_found_on_indexer = 0
+
+    @property
+    def not_found_count(self):
+        self._helper_load_failed_db()
+        return self._not_found_count
+
+    @not_found_count.setter
+    def not_found_count(self, v):
+        self._not_found_count = v
+
+    @property
+    def last_found_on_indexer(self):
+        self._helper_load_failed_db()
+        return (self._last_found_on_indexer, self.last_update_indexer)[self._last_found_on_indexer <= 0]
+
+    def inc_not_found_count(self):
+        myDB = db.DBConnection()
+        results = myDB.select('SELECT fail_count, last_check, last_success FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
+                              [self.indexer, self.indexerid])
+        days = (show_not_found_retry_days - 1, 0)[self.not_found_count <= concurrent_show_not_found_days]
+        if not results or datetime.datetime.fromtimestamp(helpers.tryInt(results[0]['last_check'])) + datetime.timedelta(days=days, hours=18) < datetime.datetime.now():
+            if self.not_found_count <= 0:
+                last_success = self.last_update_indexer
+            else:
+                last_success = helpers.tryInt(results[0]['last_success'], self.last_update_indexer)
+            self._last_found_on_indexer = last_success
+            self.not_found_count += 1
+            myDB.upsert('tv_shows_not_found', {'fail_count': self.not_found_count, 'last_check': sbdatetime.now().totimestamp(default=0), 'last_success': last_success},
+                        {'indexer': self.indexer, 'indexer_id': self.indexerid})
+
+    def reset_not_found_count(self):
+        if self.not_found_count > 0:
+            self._not_found_count = 0
+            myDB = db.DBConnection()
+            myDB.action('DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?', [self.indexer, self.indexerid])
 
     @property
     def ids(self):
@@ -327,6 +379,12 @@ class TVShow(object):
             logger.log('Status missing for showid: [%s] with status: [%s]' %
                        (cur_indexerid, self.status), logger.DEBUG)
 
+        last_update_indexer = datetime.date.fromordinal(self.last_update_indexer)
+
+        # if show was not found for 1 week, only retry to update once a week
+        if concurrent_show_not_found_days < self.not_found_count and (update_date - last_update_indexer) < datetime.timedelta(days=show_not_found_retry_days):
+            return False
+
         myDB = db.DBConnection()
         sql_result = myDB.mass_action(
             [['SELECT airdate FROM [tv_episodes] WHERE showid = ? AND season > "0" ORDER BY season DESC, episode DESC LIMIT 1', [cur_indexerid]],
@@ -335,8 +393,6 @@ class TVShow(object):
         last_airdate_unknown = int(sql_result[0][0]['airdate']) <= 1 if sql_result and sql_result[0] else True
 
         last_airdate = datetime.date.fromordinal(sql_result[1][0]['airdate']) if sql_result and sql_result[1] else datetime.date.fromordinal(1)
-
-        last_update_indexer = datetime.date.fromordinal(self.last_update_indexer)
 
         # if show is not 'Ended' and last episode aired less then 460 days ago or don't have an airdate for the last episode always update (status 'Continuing' or '')
         update_days_limit = 2013
@@ -921,8 +977,13 @@ class TVShow(object):
 
         myEp = t[self.indexerid, False]
         if None is myEp:
-            logger.log('Show [%s] not found (maybe even removed?)' % self.name, logger.WARNING)
+            if hasattr(t, 'show_not_found') and t.show_not_found:
+                self.inc_not_found_count()
+                logger.log('Show [%s] not found (maybe even removed?)' % self.name, logger.WARNING)
+            else:
+                logger.log('Show data [%s] not found' % self.name, logger.WARNING)
             return False
+        self.reset_not_found_count()
 
         try:
             self.name = myEp['seriesname'].strip()
@@ -1066,7 +1127,8 @@ class TVShow(object):
                  ["DELETE FROM scene_numbering WHERE indexer_id = ? AND indexer = ?", [self.indexerid, self.indexer]],
                  ["DELETE FROM whitelist WHERE show_id = ?", [self.indexerid]],
                  ["DELETE FROM blacklist WHERE show_id = ?", [self.indexerid]],
-                 ["DELETE FROM indexer_mapping WHERE indexer_id = ? AND indexer = ?", [self.indexerid, self.indexer]]]
+                 ["DELETE FROM indexer_mapping WHERE indexer_id = ? AND indexer = ?", [self.indexerid, self.indexer]],
+                 ["DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?", [self.indexer, self.indexerid]]]
 
         myDB = db.DBConnection()
         myDB.mass_action(sql_l)
@@ -1229,13 +1291,15 @@ class TVShow(object):
                         [self.indexer, self.indexerid, old_indexer, old_indexerid]],
                     ['UPDATE whitelist SET show_id = ? WHERE show_id = ?', [self.indexerid, old_indexerid]],
                     ['UPDATE xem_refresh SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
-                        [self.indexer, self.indexerid, old_indexer, old_indexerid]]])
+                        [self.indexer, self.indexerid, old_indexer, old_indexerid]],
+                    ['DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?', [old_indexer, old_indexerid]]])
 
         myFailedDB = db.DBConnection('failed.db')
         myFailedDB.action('UPDATE history SET showid = ? WHERE showid = ?', [self.indexerid, old_indexerid])
         del_mapping(old_indexer, old_indexerid)
         self.ids[old_indexer]['status'] = MapStatus.NONE
         self.ids[self.indexer]['status'] = MapStatus.SOURCE
+        self.ids[self.indexer]['id'] = self.indexerid
         save_mapping(self)
         name_cache.remove_from_namecache(old_indexerid)
 
@@ -1266,6 +1330,7 @@ class TVShow(object):
             sickbeard.save_config()
 
         name_cache.buildNameCache(self)
+        self.reset_not_found_count()
 
         # force the update
         try:

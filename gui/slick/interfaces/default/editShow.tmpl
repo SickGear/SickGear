@@ -12,7 +12,7 @@
 #set $css = $getVar('css', 'reg')
 #set $has_art = $getVar('has_art', None)
 #set $restart = 'Restart SickGear for new features on this page'
-#set $show_message = (None, $restart)[None is $has_art]
+#set $show_message = ($show_message, $restart)[None is $has_art]
 #set global $page_body_attr = 'edit-show" class="' + $css
 ##
 #import os.path

@@ -26,6 +26,48 @@
 	Currently running<br />
 #end if
 </br>
+#if $NotFoundShows
+<h3>Shows not found previously:</h3>
+	<input type="button" class="shows-more btn" id="notfound-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="notfound-btn-less" value="Collapse"></br>
+	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+		<thead></thead>
+		<tbody>
+		<tr>
+			<th>Show Name</th>
+			<th>Last Found</th>
+		</tr>
+		#set $row = 0
+		#for $cur_show in $NotFoundShows:
+			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+				<td style="width:80%;text-align:left">
+					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexer_id']">$cur_show['show_name']</a>
+				</td>
+				<td style="width:20%;text-align:center;color:white">$cur_show['last_success']</td>
+			</tr>
+		#end for
+		</tbody>
+	</table>
+#end if
+#if $DefunctIndexer
+<h3>Shows from defunct indexers:</h3>
+	<input type="button" class="shows-more btn" id="defunct-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="defunct-btn-less" value="Collapse"></br>
+	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+		<thead></thead>
+		<tbody>
+		<tr>
+			<th>Show Name</th>
+		</tr>
+		#set $row = 0
+		#for $cur_show in $DefunctIndexer:
+			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+				<td style="width:80%;text-align:left">
+					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexer_id']">$cur_show['show_name']</a>
+				</td>
+			</tr>
+		#end for
+		</tbody>
+	</table>
+#end if
 <h3>Show Queue:</h3>
 </br>
 #if $queueLength['add'] or $queueLength['update'] or $queueLength['refresh'] or $queueLength['rename'] or $queueLength['subtitle']
@@ -38,6 +80,10 @@ Add: <i>$len($queueLength['add']) show$sickbeard.helpers.maybe_plural($len($queu
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
+		<tr>
+			<th>Show Name</th>
+			<th></th>
+		</tr>
 		#set $row = 0
 		#for $cur_show in $queueLength['add']:
 			#set $show_name = str($cur_show['name'])
@@ -58,6 +104,10 @@ Update <span class="grey-text">(Forced / Forced Web)</span>: <i>$len($queueLengt
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
+		<tr>
+			<th>Show Name</th>
+			<th>Schedule Type</th>
+		</tr>
 		#set $row = 0
 		#for $cur_show in $queueLength['update']:
 			#set $show = $findCertainShow($showList, $cur_show['indexerid'])
@@ -81,6 +131,10 @@ Refresh: <i>$len($queueLength['refresh']) show$sickbeard.helpers.maybe_plural($l
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
+		<tr>
+			<th>Show Name</th>
+			<th>Schedule Type</th>
+		</tr>
 		#set $row = 0
 		#for $cur_show in $queueLength['refresh']:
 			#set $show = $findCertainShow($showList, $cur_show['indexerid'])
@@ -105,6 +159,10 @@ Rename: <i>$len($queueLength['rename']) show$sickbeard.helpers.maybe_plural($len
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 	<thead></thead>
 	<tbody>
+	<tr>
+			<th>Show Name</th>
+			<th>Schedule Type</th>
+	</tr>
 	#set $row = 0
 	#for $cur_show in $queueLength['rename']:
 		#set $show = $findCertainShow($showList, $cur_show['indexerid'])
@@ -129,6 +187,10 @@ Rename: <i>$len($queueLength['rename']) show$sickbeard.helpers.maybe_plural($len
 		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 			<thead></thead>
 			<tbody>
+			<tr>
+				<th>Show Name</th>
+				<th>Schedule Type</th>
+			</tr>
 			#set $row = 0
 			#for $cur_show in $queueLength['subtitle']:
 				#set $show = $findCertainShow($showList, $cur_show['indexerid'])
