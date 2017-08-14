@@ -481,7 +481,7 @@ class PostProcessor(object):
         parse_result = np.parse(name)
         self._log(u'Parsed %s<br />.. from %s' % (str(parse_result).decode('utf-8', 'xmlcharrefreplace'), name), logger.DEBUG)
 
-        if parse_result.is_air_by_date:
+        if parse_result.is_air_by_date and (None is parse_result.season_number or not parse_result.episode_numbers):
             season = -1
             episodes = [parse_result.air_date]
         else:

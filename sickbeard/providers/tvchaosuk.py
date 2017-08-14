@@ -129,7 +129,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string.replace('%', ' '), self.name)['Cache' == mode])
+                                 ('search string: ' + search_string.replace('%', '%%'), self.name)['Cache' == mode])
 
                 if mode in 'Season' and len(items[mode]):
                     break
@@ -251,6 +251,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, prefix='%', date_detail=(
             lambda d: [x.strip('0') for x in (
+                ['{0} {1}% {2}'.format(d.strftime('%d')[-1], d.strftime('%b'), d.strftime('%Y'))] +
                 [d.strftime('%d %b %Y')] + ([d.strftime('%d %B %Y')], [])[d.strftime('%b') == d.strftime('%B')])]),
             ep_detail=(lambda e: [naming_ep_type[2] % e] + (
                 [], ['%(episodenumber)dof' % e])[1 == tryInt(e.get('seasonnumber'))]), **kwargs)

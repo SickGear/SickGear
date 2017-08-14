@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import base64
 import re
 import traceback
 
@@ -31,7 +32,21 @@ class IPTorrentsProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'IPTorrents')
 
         self.url_home = (['https://iptorrents.%s/' % u for u in 'eu', 'com', 'me', 'ru'] +
-                         ['http://rss.workisboring.com/', 'https://ipt-update.com'])
+                         ['http://rss.workisboring.com/', 'https://ipt-update.com'] +
+                         [base64.b64decode(x) for x in [''.join(x) for x in [
+                             [re.sub('(?i)[q\s1]+', '', x[::-1]) for x in [
+                                 'c0RHa', 'vo1QD', 'hJ2L', 'GdhdXe', 'vdnLoN', 'J21cptmc', '5yZulmcv', '02bj', '=iq=']],
+                             [re.sub('(?i)[q\seg]+', '', x[::-1]) for x in [
+                                 'RqHEa', 'LvEoDc0', 'Zvex2', 'LuF2', 'NXdu Vn', 'XZwQxeWY1', 'Yu42bzJ', 'tgG92']],
+                             [re.sub('(?i)[q\sek]+', '', x[::-1]) for x in [
+                                 'H qa', 'vQoDc0R', '2L ', 'bod', 'hNmLk0N3', 'WLlxemY', 'LtVGZv1', 'wZy9m', '=kQ=']],
+                             [re.sub('(?i)[q\seg1]+', '', x[::-1]) for x in [
+                                 'HGa', 'voDc0R', '21L', 'bucmbvt', 'ZyZWQ1L0Vm', 'ycrFW', '02bej5', 'e=gq']],
+                             [re.sub('(?i)[q\sei]+', '', x[::-1]) for x in [
+                                 'Q0RHa', 'voiQDc', 'asF2L', 'hVmLuVW', 'yZulGd', 'mbhdmcv1', 'Adl5mLjl', '==Qe']],
+                             [re.sub('(?i)[q\si1g]+', '', x[::-1]) for x in [
+                                 'Dc0GRHa', 'vo', 'Cdwl2L', 'FWZy5', 'bvJWL1k', '9mLzt2', 'wZy', '=GG=q']]
+                         ]]])
 
         self.url_vars = {'login': 't', 'search': 't?%s;q=%s;qf=ti%s%s#torrents', 'get': '%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
