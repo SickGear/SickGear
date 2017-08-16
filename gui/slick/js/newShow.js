@@ -53,11 +53,13 @@ $(document).ready(function () {
 			searchRequestXhr.abort();
 
 		var elTvDatabase = $('#providedIndexer'),
-			elIndexerLang = $('#indexerLangSelect');
+			elIndexerLang = $('#indexerLangSelect'),
+			tvsrcName = elTvDatabase.find('option:selected').text(),
+			tvSearchSrc = 0 < tvsrcName.length ? ' on ' + tvsrcName : '';
 
 		$('#searchResults').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
 			+ ' searching <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
-			+ ' on ' + elTvDatabase.find('option:selected').text() + ' in ' + elIndexerLang.val()
+			+ tvSearchSrc + ' in ' + elIndexerLang.val()
 			+ '...');
 
 		searchRequestXhr = $.ajax({
@@ -122,7 +124,7 @@ $(document).ready(function () {
 							+ '<span style=\'float:right;clear:both\'>Click for more</span>'
 							+ '"'
 							+ ' href="' + anonURL + item[result.SrcUrl] + item[result.ShowID] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
-							+ ' onclick="window.open(this.href, \'_blank\'); return false;"'
+							+ ' onclick="window.open(this.href, \'_blank\'); return !1;"'
 							+ '>' + (config.sortArticle ? displayShowName : displayShowName.replace(/^((?:A(?!\s+to)n?)|The)(\s)+(.*)/i, '$3$2<span class="article">($1)</span>')) + '</a>'
 							+ showstartdate
 							+ ('' === srcState ? ''
@@ -229,14 +231,18 @@ $(document).ready(function () {
 		elSearchName.click();
 	}
 
-	$('#addShowButton').click(function () {
-		// if they haven't picked a show don't let them submit
-		if (!$('input:radio[name="whichSeries"]:checked').val()
-			&& !$('input:hidden[name="whichSeries"]').val().length) {
-				alert('You must choose a show to continue');
-				return false;
+	$('#addShowButton, #cancelShowButton').click(function () {
+		if (/cancel/.test(this.id)){
+			$('input[name=cancel_form]').val('1');
+		} else {
+			// if they haven't picked a show don't let them submit
+			if (!$('input:radio[name="whichSeries"]:checked').val()
+				&& !$('input:hidden[name="whichSeries"]').val().length) {
+					alert('You must choose a show to continue');
+					return !1;
+			}
+			generate_bwlist();
 		}
-		generate_bwlist();
 		$('#addShowForm').submit();
 	});
 
@@ -279,6 +285,11 @@ $(document).ready(function () {
 	elNameToSearch.focus();
 
 	function updateSampleText() {
+		if (0 === $('#displayText').length) {
+			$('#cancelShowButton').attr('disabled', !1);
+			$('#addShowButton').attr('disabled', 0 === $('#holder').find('.results-item').length);
+			return;
+		}
 		// if something's selected then we have some behavior to figure out
 
 		var show_name = '',
@@ -343,9 +354,9 @@ $(document).ready(function () {
 		// also toggle the add show button
 		if ((elRootDirs.find('option:selected').length || (elFullShowPath.length && elFullShowPath.val().length)) &&
 			(elRadio.length) || (elInput.length && elInput.val().length)) {
-			$('#addShowButton').attr('disabled', false);
+			$('#addShowButton').attr('disabled', !1);
 		} else {
-			$('#addShowButton').attr('disabled', true);
+			$('#addShowButton').attr('disabled', !0);
 		}
 	}
 
@@ -363,7 +374,7 @@ $(document).ready(function () {
 		$(this).css('cursor', 'help');
 		$(this).qtip({
 			show: {
-				solo: true
+				solo: !0
 			},
 			position: {
 				viewport: $(window),
@@ -375,7 +386,7 @@ $(document).ready(function () {
 			},
 			style: {
 				tip: {
-					corner: true,
+					corner: !0,
 					method: 'polygon'
 				},
 				classes: 'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'

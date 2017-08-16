@@ -18,23 +18,23 @@
 #end if
 
 <div id="summary2" class="align-left">
-<h3> Daily Show Update:</h3>
+<h3> Daily show update:</h3>
 <a id="showupdatebutton" class="btn#if $ShowUpdateRunning# disabled#end if#" href="$sbRoot/manage/showProcesses/forceShowUpdate"><i class="sgicon-play"></i> Force</a>
 #if not $ShowUpdateRunning:
 	Not in progress<br />
 #else:
 	Currently running<br />
 #end if
-</br>
+<br>
 #if $NotFoundShows
-<h3>Shows not found previously:</h3>
-	<input type="button" class="shows-more btn" id="notfound-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="notfound-btn-less" value="Collapse"></br>
+<h3>Shows with abandoned master IDs:</h3>
+	<input type="button" class="shows-more btn" id="notfound-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="notfound-btn-less" value="Collapse"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
 		<thead></thead>
 		<tbody>
 		<tr>
-			<th>Show Name</th>
-			<th>Last Found</th>
+			<th style="text-align:left">Show name</th>
+			<th>Last found</th>
 		</tr>
 		#set $row = 0
 		#for $cur_show in $NotFoundShows:
@@ -49,13 +49,13 @@
 	</table>
 #end if
 #if $DefunctIndexer
-<h3>Shows from defunct indexers:</h3>
-	<input type="button" class="shows-more btn" id="defunct-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="defunct-btn-less" value="Collapse"></br>
+<h3>Shows from defunct TV info sources:</h3>
+	<input type="button" class="shows-more btn" id="defunct-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="defunct-btn-less" value="Collapse"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
 		<thead></thead>
 		<tbody>
 		<tr>
-			<th>Show Name</th>
+			<th style="text-align:left">Show name</th>
 		</tr>
 		#set $row = 0
 		#for $cur_show in $DefunctIndexer:
@@ -68,20 +68,20 @@
 		</tbody>
 	</table>
 #end if
-<h3>Show Queue:</h3>
-</br>
+<h3>Show queue:</h3>
+<br>
 #if $queueLength['add'] or $queueLength['update'] or $queueLength['refresh'] or $queueLength['rename'] or $queueLength['subtitle']
-	<input type="button" class="show-all-more btn" id="all-btn-more" value="Expand All"><input type="button" class="show-all-less btn" id="all-btn-less" value="Collapse All"></br>
+	<input type="button" class="show-all-more btn" id="all-btn-more" value="Expand All"><input type="button" class="show-all-less btn" id="all-btn-less" value="Collapse All"><br>
 #end if
-</br>
+<br>
 Add: <i>$len($queueLength['add']) show$sickbeard.helpers.maybe_plural($len($queueLength['add']))</i>
 #if $queueLength['add']
-	<input type="button" class="shows-more btn" id="add-btn-more" value="Expand" #if not $queueLength['add']# style="display:none" #end if#><input type="button" class="shows-less btn" id="add-btn-less" value="Collapse"  style="display:none"></br>
+	<input type="button" class="shows-more btn" id="add-btn-more" value="Expand" #if not $queueLength['add']# style="display:none" #end if#><input type="button" class="shows-less btn" id="add-btn-less" value="Collapse"  style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
 		<tr>
-			<th>Show Name</th>
+			<th>Show name</th>
 			<th></th>
 		</tr>
 		#set $row = 0
@@ -95,18 +95,18 @@ Add: <i>$len($queueLength['add']) show$sickbeard.helpers.maybe_plural($len($queu
 		</tbody>
 	</table>
 #else
-	</br>
+	<br>
 #end if
-</br>
+<br>
 Update <span class="grey-text">(Forced / Forced Web)</span>: <i>$len($queueLength['update']) <span class="grey-text">($len($queueLength['forceupdate']) / $len($queueLength['forceupdateweb']))</span> show$sickbeard.helpers.maybe_plural($len($queueLength['update']))</i>
 #if $queueLength['update']
-	<input type="button" class="shows-more btn" id="update-btn-more" value="Expand" #if not $queueLength['update']# style="display:none" #end if#><input type="button" class="shows-less btn" id="update-btn-less" value="Collapse" style="display:none"></br>
+	<input type="button" class="shows-more btn" id="update-btn-more" value="Expand" #if not $queueLength['update']# style="display:none" #end if#><input type="button" class="shows-less btn" id="update-btn-less" value="Collapse" style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
 		<tr>
-			<th>Show Name</th>
-			<th>Schedule Type</th>
+			<th>Show name</th>
+			<th>Schedule type</th>
 		</tr>
 		#set $row = 0
 		#for $cur_show in $queueLength['update']:
@@ -122,18 +122,18 @@ Update <span class="grey-text">(Forced / Forced Web)</span>: <i>$len($queueLengt
 		</tbody>
 	</table>
 #else
-	</br>
+	<br>
 #end if
-</br>
+<br>
 Refresh: <i>$len($queueLength['refresh']) show$sickbeard.helpers.maybe_plural($len($queueLength['refresh']))</i>
 #if $queueLength['refresh']
-	<input type="button" class="shows-more btn" id="refresh-btn-more" value="Expand" #if not $queueLength['refresh']# style="display:none" #end if#><input type="button" class="shows-less btn" id="refresh-btn-less" value="Collapse" style="display:none"></br>
+	<input type="button" class="shows-more btn" id="refresh-btn-more" value="Expand" #if not $queueLength['refresh']# style="display:none" #end if#><input type="button" class="shows-less btn" id="refresh-btn-less" value="Collapse" style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
 		<tr>
-			<th>Show Name</th>
-			<th>Schedule Type</th>
+			<th>Show name</th>
+			<th>Schedule type</th>
 		</tr>
 		#set $row = 0
 		#for $cur_show in $queueLength['refresh']:
@@ -149,19 +149,19 @@ Refresh: <i>$len($queueLength['refresh']) show$sickbeard.helpers.maybe_plural($l
 		</tbody>
 	</table>
 #else
-	</br>
+	<br>
 #end if
-</br>
+<br>
 Rename: <i>$len($queueLength['rename']) show$sickbeard.helpers.maybe_plural($len($queueLength['rename']))</i>
 #if $queueLength['rename']
-<input type="button" class="shows-more btn" id="rename-btn-more" value="Expand" #if not $queueLength['rename']# style="display:none" #end if#><input type="button" class="shows-less btn" id="rename-btn-less" value="Collapse" style="display:none"></br>
+<input type="button" class="shows-more btn" id="rename-btn-more" value="Expand" #if not $queueLength['rename']# style="display:none" #end if#><input type="button" class="shows-less btn" id="rename-btn-less" value="Collapse" style="display:none"><br>
 
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 	<thead></thead>
 	<tbody>
 	<tr>
-			<th>Show Name</th>
-			<th>Schedule Type</th>
+			<th>Show name</th>
+			<th>Schedule type</th>
 	</tr>
 	#set $row = 0
 	#for $cur_show in $queueLength['rename']:
@@ -177,19 +177,19 @@ Rename: <i>$len($queueLength['rename']) show$sickbeard.helpers.maybe_plural($len
 	</tbody>
 </table>
 #else
-	</br>
+	<br>
 #end if
 #if $sickbeard.USE_SUBTITLES
-	</br>
+	<br>
 	Subtitle: <i>$len($queueLength['subtitle']) show$sickbeard.helpers.maybe_plural($len($queueLength['subtitle']))</i>
 	#if $queueLength['subtitle']
-		<input type="button" class="shows-more btn" id="subtitle-btn-more" value="Expand" #if not $queueLength['subtitle']# style="display:none" #end if#><input type="button" class="shows-less btn" id="subtitle-btn-less" value="Collapse" style="display:none"></br>
+		<input type="button" class="shows-more btn" id="subtitle-btn-more" value="Expand" #if not $queueLength['subtitle']# style="display:none" #end if#><input type="button" class="shows-less btn" id="subtitle-btn-less" value="Collapse" style="display:none"><br>
 		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 			<thead></thead>
 			<tbody>
 			<tr>
-				<th>Show Name</th>
-				<th>Schedule Type</th>
+				<th>Show name</th>
+				<th>Schedule type</th>
 			</tr>
 			#set $row = 0
 			#for $cur_show in $queueLength['subtitle']:
@@ -205,7 +205,7 @@ Rename: <i>$len($queueLength['rename']) show$sickbeard.helpers.maybe_plural($len
 			</tbody>
 		</table>
 	#else
-		</br>
+		<br>
 	#end if
 #end if
 </div>

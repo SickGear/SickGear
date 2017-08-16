@@ -1319,11 +1319,14 @@ class Home(MainHandler):
         elif sickbeard.showQueueScheduler.action.isInSubtitleQueue(showObj):  # @UndefinedVariable
             show_message = 'This show is queued and awaiting subtitles download.'
 
-        if showObj.not_found_count > 0:
-            # noinspection PyUnresolvedReferences
-            last_found = ('never', sbdatetime.sbdatetime.fromordinal(showObj.last_found_on_indexer).sbfdate())[showObj.last_found_on_indexer > 1]
-            show_message = 'This show was not found (last time found: %s) on the Source Indexer%s' % (last_found, ('', '<br>%s' % show_message)[len(show_message) > 0])
-
+        if 0 < showObj.not_found_count:
+            last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
+                showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
+            show_message = (
+                'The master ID of this show has been abandoned%s, ' % last_found
+                + '<a href="%s/home/editShow?show=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>' % (
+                    sickbeard.WEB_ROOT, show, show)
+                + ('', '<br>%s' % show_message)[0 < len(show_message)])
         t.force_update = 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid
         if not sickbeard.showQueueScheduler.action.isBeingAdded(showObj):  # @UndefinedVariable
             if not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
@@ -1749,6 +1752,10 @@ class Home(MainHandler):
             t = PageTemplate(headers=self.request.headers, file='editShow.tmpl')
             t.submenu = self.HomeMenu()
 
+            t.expand_ids = all([kwargs.get('tvsrc'), kwargs.get('srcid')])
+            t.tvsrc = int(kwargs.get('tvsrc', 0))
+            t.srcid = kwargs.get('srcid')
+
             myDB = db.DBConnection()
             t.seasonResults = myDB.select(
                 'SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season asc', [showObj.indexerid])
@@ -1777,14 +1784,17 @@ class Home(MainHandler):
             self.fanart_tmpl(t)
             t.num_ratings = len(sickbeard.FANART_RATINGS.get(str(t.show.indexerid), {}))
 
+            t.unlock_master_id = 0 < showObj.not_found_count
+            t.showname_enc = urllib.quote_plus(showObj.name.encode('utf-8'))
 
             show_message = ''
 
-            if showObj.not_found_count > 0:
+            if 0 < showObj.not_found_count:
                 # noinspection PyUnresolvedReferences
-                last_found = ('never', sbdatetime.sbdatetime.fromordinal(showObj.last_found_on_indexer).sbfdate())[
-                    showObj.last_found_on_indexer > 1]
-                show_message = 'This show was not found (last time found: %s) on the Source Indexer' % last_found
+                last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
+                    showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
+                show_message = 'The master ID of this show has been abandoned%s<br>search for ' % last_found + \
+                               'a replacement in the "<b>Related show IDs</b>" section of the "<b>Other</b>" tab'
 
             t.show_message = show_message
 
@@ -3625,11 +3635,18 @@ class NewHomeAddShows(Home):
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
                    quality_preset=None, anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None):
+                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None,
+                   return_to=None, cancel_form=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
         """
+        if None is not return_to:
+            indexer, void, indexer_id, show_name = self.split_extra_show(whichSeries)
+            if bool(helpers.tryInt(cancel_form)):
+                indexer = indexer or providedIndexer or '1'
+                indexer_id = re.findall('show=([\d]+)', return_to)[0]
+            return self.redirect(return_to % (indexer, indexer_id))
 
         # grab our list of other dirs if given
         if not other_shows:
