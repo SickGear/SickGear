@@ -66,7 +66,7 @@ class TVCache:
         # override this in the provider if recent search has a different data layout to backlog searches
         return self.provider._title_and_url(item)
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
         data = None
         return data
 
@@ -84,7 +84,7 @@ class TVCache:
             return []
 
         if self.should_update():
-            data = self._cache_data()
+            data = self._cache_data(**kwargs)
 
             # clear cache
             if data:

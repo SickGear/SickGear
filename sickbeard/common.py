@@ -428,3 +428,50 @@ class Overview:
 countryList = {'Australia': 'AU',
                'Canada': 'CA',
                'USA': 'US'}
+
+
+class neededQualities:
+    def __init__(self, need_anime=False, need_sports=False, need_sd=False, need_hd=False, need_uhd=False,
+                 need_webdl=False, need_all_qualities=False, need_all_types=False, need_all=False):
+        self.need_anime = need_anime or need_all_types or need_all
+        self.need_sports = need_sports or need_all_types or need_all
+        self.need_sd = need_sd or need_all_qualities or need_all
+        self.need_hd = need_hd or need_all_qualities or need_all
+        self.need_uhd = need_uhd or need_all_qualities or need_all
+        self.need_webdl = need_webdl or need_all_qualities or need_all
+
+    max_sd = Quality.SDDVD
+    hd_qualities = [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.HDBLURAY, Quality.FULLHDBLURAY]
+    webdl_qualities = [Quality.SDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB]
+    max_hd = Quality.FULLHDBLURAY
+
+    @property
+    def all_needed(self):
+        return self.all_qualities_needed and self.all_types_needed
+
+    @property
+    def all_types_needed(self):
+        return self.need_anime and self.need_sports
+
+    @property
+    def all_qualities_needed(self):
+        return self.need_sd and self.need_hd and self.need_uhd and self.need_webdl
+
+    def check_needed_types(self, show):
+        if show.is_anime:
+            self.need_anime = True
+        if show.is_sports:
+            self.need_sports = True
+
+    def check_needed_qualities(self, wantedQualities):
+        if Quality.UNKNOWN in wantedQualities:
+            self.need_sd = self.need_hd = self.need_uhd = self.need_webdl = True
+        else:
+            if not self.need_sd and min(wantedQualities) <= neededQualities.max_sd:
+                self.need_sd = True
+            if not self.need_hd and any(i in neededQualities.hd_qualities for i in wantedQualities):
+                self.need_hd = True
+            if not self.need_webdl and any(i in neededQualities.webdl_qualities for i in wantedQualities):
+                self.need_webdl = True
+            if not self.need_uhd and max(wantedQualities) > neededQualities.max_hd:
+                self.need_uhd = True

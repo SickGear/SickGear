@@ -28,7 +28,7 @@ from math import ceil
 from sickbeard.sbdatetime import sbdatetime
 from . import generic
 from sickbeard import helpers, logger, scene_exceptions, tvcache, classes, db
-from sickbeard.common import Quality
+from sickbeard.common import neededQualities
 from sickbeard.exceptions import AuthException, MultipleShowObjectsException
 from sickbeard.indexers.indexer_config import *
 from io import BytesIO
@@ -37,7 +37,7 @@ from sickbeard.network_timezones import sb_timezone
 from sickbeard.helpers import tryInt
 
 try:
-  from lxml import etree
+    from lxml import etree
 except ImportError:
     try:
         import xml.etree.cElementTree as etree
@@ -56,14 +56,18 @@ class NewznabConstants:
     CAT_HEVC = -203
     CAT_ANIME = -204
     CAT_SPORT = -205
+    CAT_WEBDL = -206
 
     catSearchStrings = {r'^Anime$': CAT_ANIME,
                         r'^Sport$': CAT_SPORT,
                         r'^SD$': CAT_SD,
+                        r'^BoxSD$': CAT_SD,
                         r'^HD$': CAT_HD,
+                        r'^BoxHD$': CAT_HD,
                         r'^UHD$': CAT_UHD,
                         r'^4K$': CAT_UHD,
-                        r'^HEVC$': CAT_HEVC}
+                        #r'^HEVC$': CAT_HEVC,
+                        r'^WEB.?DL$': CAT_WEBDL}
 
     providerToIndexerMapping = {'tvdbid': INDEXER_TVDB,
                                 'rageid': INDEXER_TVRAGE,
@@ -96,6 +100,7 @@ class NewznabProvider(generic.NZBProvider):
 
         self.url = url
         self.key = key
+        self._exclude = set()
         self.cat_ids = cat_ids or ''
         self._cat_ids = None
         self.search_mode = search_mode or 'eponly'
@@ -131,6 +136,11 @@ class NewznabProvider(generic.NZBProvider):
     def cats(self):
         self.check_cap_update()
         return self._caps_cats
+
+    @property
+    def excludes(self):
+        self.check_cap_update()
+        return self._exclude
 
     @property
     def all_cats(self):
@@ -188,6 +198,15 @@ class NewznabProvider(generic.NZBProvider):
                             self._caps_need_apikey = {'need': True, 'date': datetime.date.today()}
         return xml_caps
 
+    def _check_excludes(self, cats):
+        if isinstance(cats, dict):
+            c = []
+            for v in cats.itervalues():
+                c.extend(v)
+            self._exclude = set(c)
+        else:
+            self._exclude = set(v for v in cats)
+
     def get_caps(self):
         caps = {}
         cats = {}
@@ -231,6 +250,7 @@ class NewznabProvider(generic.NZBProvider):
                 logger.log('Error parsing result for [%s]' % self.name, logger.DEBUG)
 
         if not caps and self._caps and not all_cats and self._caps_all_cats and not cats and self._caps_cats:
+            self._check_excludes(cats)
             return
 
         if self.enabled:
@@ -248,27 +268,26 @@ class NewznabProvider(generic.NZBProvider):
             caps[INDEXER_TVRAGE] = 'rid'
 
         if NewznabConstants.CAT_HD not in cats or not cats.get(NewznabConstants.CAT_HD):
-            cats[NewznabConstants.CAT_HD] = ['5040']
+            cats[NewznabConstants.CAT_HD] = (['5040'], ['5040', '5090'])['nzbs_org' == self.get_id()]
         if NewznabConstants.CAT_SD not in cats or not cats.get(NewznabConstants.CAT_SD):
-            cats[NewznabConstants.CAT_SD] = ['5030']
+            cats[NewznabConstants.CAT_SD] = (['5030'], ['5030', '5070'])['nzbs_org' == self.get_id()]
         if NewznabConstants.CAT_ANIME not in cats or not cats.get(NewznabConstants.CAT_ANIME):
-            cats[NewznabConstants.CAT_ANIME] = (['5070'], ['6070,7040'])['nzbs_org' == self.get_id()]
+            cats[NewznabConstants.CAT_ANIME] = (['5070'], ['6070', '7040'])['nzbs_org' == self.get_id()]
         if NewznabConstants.CAT_SPORT not in cats or not cats.get(NewznabConstants.CAT_SPORT):
             cats[NewznabConstants.CAT_SPORT] = ['5060']
 
+        self._check_excludes(cats)
         self._caps = caps
         self._caps_cats = cats
         self._caps_all_cats = all_cats
 
-    @staticmethod
-    def clean_newznab_categories(cats):
+    def clean_newznab_categories(self, cats):
         """
-        Removes the anime (5070), sports (5060), HD (5040), UHD (5045), SD (5030) categories from the list
+        Removes automatically mapped categories from the list
         """
-        exclude = {'5070', '5060', '5040', '5045', '5030'}
         if isinstance(cats, list):
-            return [x for x in cats if x['id'] not in exclude]
-        return ','.join(set(cats.split(',')) - exclude)
+            return [x for x in cats if x['id'] not in self.excludes]
+        return ','.join(set(cats.split(',')) - self.excludes)
 
     def check_auth_from_data(self, data):
 
@@ -441,36 +460,26 @@ class NewznabProvider(generic.NZBProvider):
 
     def choose_search_mode(self, episodes, ep_obj, hits_per_page=100):
         if not hasattr(ep_obj, 'eps_aired_in_season'):
-            return None, True, True, True, hits_per_page
+            return None, neededQualities(need_all_qualities=True), hits_per_page
         searches = [e for e in episodes if (not ep_obj.show.is_scene and e.season == ep_obj.season) or
                     (ep_obj.show.is_scene and e.scene_season == ep_obj.scene_season)]
-        need_sd = need_hd = need_uhd = False
-        max_sd = Quality.SDDVD
-        hd_qualities = [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
-                        Quality.HDBLURAY, Quality.FULLHDBLURAY]
-        max_hd = Quality.FULLHDBLURAY
+
+        needed = neededQualities()
         for s in searches:
-            if need_sd and need_hd and need_uhd:
+            if needed.all_qualities_needed:
                 break
             if not s.show.is_anime and not s.show.is_sports:
-                if Quality.UNKNOWN in s.wantedQuality:
-                    need_sd = need_hd = need_uhd = True
-                else:
-                    if not need_sd and min(s.wantedQuality) <= max_sd:
-                        need_sd = True
-                    if not need_hd and any(i in hd_qualities for i in s.wantedQuality):
-                        need_hd = True
-                    if not need_uhd and max(s.wantedQuality) > max_hd:
-                        need_uhd = True
+                needed.check_needed_qualities(s.wantedQuality)
+
         per_ep, limit_per_ep = 0, 0
-        if need_sd and not need_hd:
+        if needed.need_sd and not needed.need_hd:
             per_ep, limit_per_ep = 10, 25
-        if need_hd:
-            if not need_sd:
+        if needed.need_hd:
+            if not needed.need_sd:
                 per_ep, limit_per_ep = 30, 90
             else:
                 per_ep, limit_per_ep = 40, 120
-        if need_uhd or (need_hd and not self.cats.get(NewznabConstants.CAT_UHD)):
+        if needed.need_uhd or (needed.need_hd and not self.cats.get(NewznabConstants.CAT_UHD)):
             per_ep += 4
             limit_per_ep += 10
         if ep_obj.show.is_anime or ep_obj.show.is_sports or ep_obj.show.air_by_date:
@@ -483,18 +492,10 @@ class NewznabProvider(generic.NZBProvider):
                               ep_obj.eps_aired_in_season * limit_per_ep) / hits_per_page))
         season_search = rel < (len(searches) * 100 // hits_per_page)
         if not season_search:
-            need_sd = need_hd = need_uhd = False
+            needed = neededQualities()
             if not ep_obj.show.is_anime and not ep_obj.show.is_sports:
-                if Quality.UNKNOWN in ep_obj.wantedQuality:
-                    need_sd = need_hd = need_uhd = True
-                else:
-                    if min(ep_obj.wantedQuality) <= max_sd:
-                        need_sd = True
-                    if any(i in hd_qualities for i in ep_obj.wantedQuality):
-                        need_hd = True
-                    if max(ep_obj.wantedQuality) > max_hd:
-                        need_uhd = True
-        return (season_search, need_sd, need_hd, need_uhd,
+                needed.check_needed_qualities(ep_obj.wantedQuality)
+        return (season_search, needed,
                 (hits_per_page * 100 // hits_per_page * 2, hits_per_page * int(ceil(rel_limit * 1.5)))[season_search])
 
     def find_search_results(self, show, episodes, search_mode, manual_search=False, try_other_searches=False, **kwargs):
@@ -523,8 +524,8 @@ class NewznabProvider(generic.NZBProvider):
                 # found result, search next episode
                 continue
 
-            s_mode, need_sd, need_hd, need_uhd, max_items = self.choose_search_mode(
-                episodes, ep_obj, hits_per_page=self.limits)
+            s_mode, needed, max_items = self.choose_search_mode(episodes, ep_obj, hits_per_page=self.limits)
+            needed.check_needed_types(self.show)
 
             if 'sponly' == search_mode:
                 searched_scene_season = ep_obj.scene_season
@@ -541,9 +542,8 @@ class NewznabProvider(generic.NZBProvider):
 
             for cur_param in search_params:
                 items, n_space = self._search_provider(cur_param, search_mode=search_mode, epcount=len(episodes),
-                                                       need_anime=self.show.is_anime, need_sports=self.show.is_sports,
-                                                       need_sd=need_sd, need_hd=need_hd, need_uhd=need_uhd,
-                                                       max_items=max_items, try_all_searches=try_other_searches)
+                                                       needed=needed, max_items=max_items,
+                                                       try_all_searches=try_other_searches)
                 item_list += items
                 name_space.update(n_space)
 
@@ -568,8 +568,8 @@ class NewznabProvider(generic.NZBProvider):
 
         return parsed_date
 
-    def _search_provider(self, search_params, need_anime=True, need_sports=True, need_sd=True, need_hd=True,
-                         need_uhd=True, max_items=400, try_all_searches=False, **kwargs):
+    def _search_provider(self, search_params, needed=neededQualities(need_all=True), max_items=400,
+                         try_all_searches=False, **kwargs):
 
         api_key = self._check_auth()
 
@@ -591,6 +591,7 @@ class NewznabProvider(generic.NZBProvider):
         cat_hd = self.cats.get(NewznabConstants.CAT_HD, ['5040'])
         cat_sd = self.cats.get(NewznabConstants.CAT_SD, ['5030'])
         cat_uhd = self.cats.get(NewznabConstants.CAT_UHD)
+        cat_webdl = self.cats.get(NewznabConstants.CAT_WEBDL)
 
         for mode in search_params.keys():
             for i, params in enumerate(search_params[mode]):
@@ -604,17 +605,19 @@ class NewznabProvider(generic.NZBProvider):
                         logger.log('Show is missing either an id or search term for search')
                         continue
 
-                if need_anime:
+                if needed.need_anime:
                     cat.extend(cat_anime)
-                if need_sports:
+                if needed.need_sports:
                     cat.extend(cat_sport)
 
-                if need_hd:
+                if needed.need_hd:
                     cat.extend(cat_hd)
-                if need_sd:
+                if needed.need_sd:
                     cat.extend(cat_sd)
-                if need_uhd and cat_uhd is not None:
+                if needed.need_uhd and cat_uhd is not None:
                     cat.extend(cat_uhd)
+                if needed.need_webdl and cat_webdl is not None:
+                    cat.extend(cat_webdl)
 
                 if self.cat_ids or len(cat):
                     base_params['cat'] = ','.join(sorted(set((self.cat_ids.split(',') if self.cat_ids else []) + cat)))
@@ -816,7 +819,7 @@ class NewznabCache(tvcache.TVCache):
                     root = elem
         return root, ns
 
-    def updateCache(self, need_anime=True, need_sports=True, need_sd=True, need_hd=True, need_uhd=True, **kwargs):
+    def updateCache(self, needed=neededQualities(need_all=True), **kwargs):
 
         result = []
 
@@ -824,8 +827,7 @@ class NewznabCache(tvcache.TVCache):
             n_spaces = {}
             try:
                 self._checkAuth()
-                (items, n_spaces) = self.provider.cache_data(need_anime=need_anime, need_sports=need_sports,
-                                                             need_sd=need_sd, need_hd=need_hd, need_uhd=need_uhd)
+                (items, n_spaces) = self.provider.cache_data(needed=needed)
             except (StandardError, Exception):
                 items = None
 

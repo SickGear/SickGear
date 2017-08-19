@@ -29,6 +29,7 @@ from sickbeard import classes, logger, show_name_helpers, tvcache
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.exceptions import AuthException
 from sickbeard.rssfeeds import RSSFeeds
+from sickbeard.common import neededQualities
 
 
 class OmgwtfnzbsProvider(generic.NZBProvider):
@@ -50,6 +51,10 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         self.needs_auth = True
         self.username, self.api_key, self.cookies = 3 * [None]
         self.cache = OmgwtfnzbsCache(self)
+
+    cat_sd = ['19']
+    cat_hd = ['20']
+    cat_uhd = ['30']
 
     def _check_auth_from_data(self, parsed_data, is_xml=True):
 
@@ -121,16 +126,27 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         return result
 
-    def cache_data(self):
+    def _get_cats(self, needed):
+        cats = []
+        if needed.need_sd:
+            cats.extend(OmgwtfnzbsProvider.cat_sd)
+        if needed.need_hd:
+            cats.extend(OmgwtfnzbsProvider.cat_hd)
+        if needed.need_uhd:
+            cats.extend(OmgwtfnzbsProvider.cat_uhd)
+        return cats
+
+    def cache_data(self, needed=neededQualities(need_all=True), **kwargs):
 
         api_key = self._init_api()
         if False is api_key:
-            return self.search_html()
+            return self.search_html(needed=needed, **kwargs)
+        cats = self._get_cats(needed=needed)
         if None is not api_key:
             params = {'user': self.username,
                       'api': api_key,
                       'eng': 1,
-                      'catid': '19,20'}  # SD,HD
+                      'catid': ','.join(cats)}  # SD,HD
 
             rss_url = self.urls['cache'] % urllib.urlencode(params)
 
@@ -141,18 +157,20 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                 return data.entries
         return []
 
-    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0, **kwargs):
+    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0,
+                         needed=neededQualities(need_all=True), **kwargs):
 
         api_key = self._init_api()
         if False is api_key:
-            return self.search_html(search, search_mode)
+            return self.search_html(search, search_mode, needed=needed, **kwargs)
         results = []
+        cats = self._get_cats(needed=needed)
         if None is not api_key:
             params = {'user': self.username,
                       'api': api_key,
                       'eng': 1,
                       'nukes': 1,
-                      'catid': '19,20',  # SD,HD
+                      'catid': ','.join(cats),  # SD,HD
                       'retention': (sickbeard.USENET_RETENTION, retention)[retention or not sickbeard.USENET_RETENTION],
                       'search': search}
 
@@ -168,14 +186,16 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         results.append(item)
         return results
 
-    def search_html(self, search='', search_mode=''):
+    def search_html(self, search='', search_mode='', needed=neededQualities(need_all=True), **kwargs):
 
         results = []
         if None is self.cookies:
             return results
 
+        cats = self._get_cats(needed=needed)
+
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': r'send\?', 'nuked': r'\bnuked',
-                                                             'cat': 'cat=(?:19|20)'}.items())
+                                                             'cat': 'cat=(?:%s)' % '|'.join(cats)}.items())
         mode = ('search', 'cache')['' == search]
         search_url = self.urls[mode + '_html'] % search
         html = self.get_url(search_url)
@@ -268,9 +288,9 @@ class OmgwtfnzbsCache(tvcache.TVCache):
 
         self.update_freq = 20
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
 
-        return self.provider.cache_data()
+        return self.provider.cache_data(**kwargs)
 
 
 provider = OmgwtfnzbsProvider()
