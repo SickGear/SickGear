@@ -88,7 +88,15 @@
 * Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
 
 
-### 0.12.21 (2017-06-19 23:35:00 UTC)
+### 0.12.26 (2017-08-20 13:05:00 UTC)
+
+* Fix infinite loop loading network_timezones
+* Change add optional "stack_size" setting as integer to config.ini under "General" stanza
+* Change prevent too many retries when loading network timezones, conversions, and zoneinfo in a short time
+* Update to UnRar 5.50 beta 6
+
+
+### 0.12.25 (2017-06-19 23:35:00 UTC)
 
 * Remove provider SceneAccess
 
