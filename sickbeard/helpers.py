@@ -34,6 +34,7 @@ import traceback
 import urlparse
 import uuid
 import subprocess
+import sys
 
 import adba
 import requests
@@ -1559,3 +1560,24 @@ def should_delete_episode(status):
         return True
     logger.log('not safe to delete episode from db because of status: %s' % statusStrings[s], logger.DEBUG)
     return False
+
+
+def is_link(filepath):
+    """
+    Check if given file/pathname is symbolic link
+
+    :param filepath: file or path to check
+    :return: True or False
+    """
+    if 'win32' == sys.platform:
+        if not ek.ek(os.path.exists, filepath):
+            return False
+
+        import ctypes
+        invalid_file_attributes = 0xFFFFFFFF
+        file_attribute_reparse_point = 0x0400
+
+        attr = ctypes.windll.kernel32.GetFileAttributesW(unicode(filepath))
+        return invalid_file_attributes != attr and 0 != attr & file_attribute_reparse_point
+
+    return ek.ek(os.path.islink, filepath)

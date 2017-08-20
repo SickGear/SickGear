@@ -276,7 +276,9 @@ class ProcessTVShow(object):
         if self.fail_detected:
             self._process_failed(dir_name, nzb_name, showObj=showObj)
             return self.result
+        rar_content = [x for x in rar_content if not helpers.is_link(ek.ek(os.path.join, path, x))]
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
+        files = [x for x in files if not helpers.is_link(ek.ek(os.path.join, path, x))]
         video_files = filter(helpers.has_media_ext, files)
         video_in_rar = filter(helpers.has_media_ext, rar_content)
         work_files += [ek.ek(os.path.join, path, item) for item in rar_content]
@@ -343,6 +345,9 @@ class ProcessTVShow(object):
                     self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
                     return self.result
 
+                # Ignore any symlinks at this stage to avoid the potential for unraring a symlinked archive
+                files = [x for x in files if not helpers.is_link(ek.ek(os.path.join, walk_path, x))]
+
                 rar_files, rarfile_history = self.unused_archives(
                     walk_path, filter(helpers.is_first_rar_volume, files), pp_type, process_method, rarfile_history)
                 rar_content = self._unrar(walk_path, rar_files, force)
@@ -350,6 +355,7 @@ class ProcessTVShow(object):
                 if self.fail_detected:
                     self._process_failed(dir_name, nzb_name, showObj=self.showObj_helper(showObj, directory))
                     continue
+                rar_content = [x for x in rar_content if not helpers.is_link(ek.ek(os.path.join, walk_path, x))]
                 files = list(set(files + rar_content))
                 video_files = filter(helpers.has_media_ext, files)
                 video_in_rar = filter(helpers.has_media_ext, rar_content)
@@ -886,6 +892,7 @@ class ProcessTVShow(object):
             # Scheduled Post Processing Active
             # Get at first all the subdir in the dir_name
             for path, dirs, files in ek.ek(os.walk, dir_name):
+                files = [x for x in files if not helpers.is_link(ek.ek(os.path.join, path, x))]
                 break
         else:
             path, dirs = ek.ek(os.path.split, dir_name)  # Script Post Processing

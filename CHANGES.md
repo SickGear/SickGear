@@ -78,6 +78,7 @@
 * Change make indexer lookup optional in NameParser, and deactivate during searches
 * Change improve newnab autoselect categories
 * Change add nzb.org BoxSD and BoxHD categories
+* Change post processor, ignore symlinks found in process_dir
 
 
 [develop changelog]
