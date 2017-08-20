@@ -65,11 +65,15 @@ from common import NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMIN
     NAMING_LIMITED_EXTEND_E_PREFIXED
 
 
-def dirty_setter(attr_name):
+def dirty_setter(attr_name, types=None):
     def wrapper(self, val):
         if getattr(self, attr_name) != val:
-            setattr(self, attr_name, val)
-            self.dirty = True
+            if None is types or isinstance(val, types):
+                setattr(self, attr_name, val)
+                self.dirty = True
+            else:
+                logger.log('Didn\'t change property "%s" because expected: %s, but got: %s with value: %s' %
+                           (attr_name, types, type(val), val), logger.WARNING)
 
     return wrapper
 
@@ -1486,7 +1490,7 @@ class TVEpisode(object):
 
         self.wantedQuality = []
 
-    name = property(lambda self: self._name, dirty_setter('_name'))
+    name = property(lambda self: self._name, dirty_setter('_name', basestring))
     season = property(lambda self: self._season, dirty_setter('_season'))
     episode = property(lambda self: self._episode, dirty_setter('_episode'))
     absolute_number = property(lambda self: self._absolute_number, dirty_setter('_absolute_number'))
