@@ -302,6 +302,17 @@ class SickGear(object):
             print(u'Unable to find "%s", all settings will be default!' % sickbeard.CONFIG_FILE)
 
         sickbeard.CFG = ConfigObj(sickbeard.CONFIG_FILE)
+        stack_size = None
+        try:
+            stack_size = int(sickbeard.CFG['General']['stack_size'])
+        except:
+            stack_size = None
+
+        if stack_size:
+            try:
+                threading.stack_size(stack_size)
+            except (StandardError, Exception) as e:
+                print('Stack Size %s not set: %s' % (stack_size, e.message))
 
         # check all db versions
         for d, min_v, max_v, mo in [
