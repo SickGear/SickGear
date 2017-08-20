@@ -1017,15 +1017,14 @@ def set_up_anidb_connection():
     return sickbeard.ADBA_CONNECTION.authed()
 
 
-def touchFile(fname, atime=None):
-    if None != atime:
+def touch_file(fname, atime=None):
+    if None is not atime:
         try:
             with open(fname, 'a'):
                 ek.ek(os.utime, fname, (atime, atime))
-                return True
-        except:
-            logger.log(u"File air date stamping not available on your OS", logger.DEBUG)
-            pass
+            return True
+        except (StandardError, Exception):
+            logger.log('File air date stamping not available on your OS', logger.DEBUG)
 
     return False
 
@@ -1581,3 +1580,13 @@ def is_link(filepath):
         return invalid_file_attributes != attr and 0 != attr & file_attribute_reparse_point
 
     return ek.ek(os.path.islink, filepath)
+
+
+def datetime_to_epoch(dt):
+    """ convert a datetime to seconds after (or possibly before) 1970-1-1 """
+    """ can raise an error with dates pre 1970-1-1 """
+    if not isinstance(getattr(dt, 'tzinfo'), datetime.tzinfo):
+        from sickbeard.network_timezones import sb_timezone
+        dt = dt.replace(tzinfo=sb_timezone)
+    utc_naive = dt.replace(tzinfo=None) - dt.utcoffset()
+    return int((utc_naive - datetime.datetime(1970, 1, 1)).total_seconds())
