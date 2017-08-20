@@ -163,13 +163,16 @@ class ProcessTVShow(object):
 
         return result
 
-    def check_name(self, name):
+    @staticmethod
+    def check_name(name):
         so = None
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT showid FROM history WHERE resource = ?'
-                                   'AND (' + ' OR '.join(
-            "action LIKE '%%%02d'" % x for x in (SNATCHED, SNATCHED_PROPER,
-                                                 SNATCHED_BEST)) + ') ORDER BY rowid', [name])
+        sql_results = my_db.select(
+            'SELECT showid FROM history' +
+            ' WHERE resource = ?' +
+            ' AND (%s)' % ' OR '.join('action LIKE "%%%02d"' % x for x in (
+                SNATCHED, SNATCHED_PROPER, SNATCHED_BEST)) +
+            ' ORDER BY rowid', [name])
         if sql_results:
             try:
                 so = helpers.findCertainShow(sickbeard.showList, int(sql_results[-1]['showid']))
@@ -180,7 +183,8 @@ class ProcessTVShow(object):
         return so
 
     def showObj_helper(self, showObj, base_dir, dir_name, nzb_name, pp_type, alt_showObj=None):
-        if None is showObj and base_dir == sickbeard.TV_DOWNLOAD_DIR and not nzb_name or 'manual' == pp_type:  # Scheduled Post Processing Active
+        if None is showObj and base_dir == sickbeard.TV_DOWNLOAD_DIR and not nzb_name or 'manual' == pp_type:
+            # Scheduled Post Processing Active
             return self.check_name(dir_name)
         return (showObj, alt_showObj)[None is showObj and None is not alt_showObj]
 
@@ -207,7 +211,8 @@ class ProcessTVShow(object):
 
         return None
 
-    def process_dir(self, dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, pp_type='auto', cleanup=False, showObj=None):
+    def process_dir(self, dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
+                    failed=False, pp_type='auto', cleanup=False, showObj=None):
         """
         Scans through the files in dir_name and processes whatever media files it finds
 
@@ -225,7 +230,8 @@ class ProcessTVShow(object):
         # if the client and SickGear are not on the same machine translate the directory in a network directory
         elif dir_name and sickbeard.TV_DOWNLOAD_DIR and ek.ek(os.path.isdir, sickbeard.TV_DOWNLOAD_DIR)\
                 and ek.ek(os.path.normpath, dir_name) != ek.ek(os.path.normpath, sickbeard.TV_DOWNLOAD_DIR):
-            dir_name = ek.ek(os.path.join, sickbeard.TV_DOWNLOAD_DIR, ek.ek(os.path.abspath, dir_name).split(os.path.sep)[-1])
+            dir_name = ek.ek(os.path.join, sickbeard.TV_DOWNLOAD_DIR,
+                             ek.ek(os.path.abspath, dir_name).split(os.path.sep)[-1])
             self._log_helper(u'SickGear PP Config, completed TV downloads folder: ' + sickbeard.TV_DOWNLOAD_DIR)
 
         if dir_name:
@@ -317,14 +323,17 @@ class ProcessTVShow(object):
 
                 video_batch = set(video_batch) - set(video_pick)
 
-                self._process_media(path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup, showObj=showObj)
+                self._process_media(path, video_pick, nzb_name, process_method, force, force_replace,
+                                    use_trash=cleanup, showObj=showObj)
 
         except OSError as e:
             logger.log('Batch skipped, %s%s' %
                        (ex(e), e.filename and (' (file %s)' % e.filename) or ''), logger.WARNING)
 
         # Process video files in TV subdirectories
-        for directory in [x for x in dirs if self._validate_dir(path, x, nzb_name_original, failed, showObj=self.showObj_helper(showObj, dir_name, x, nzb_name, pp_type))]:
+        for directory in [x for x in dirs if self._validate_dir(
+                path, x, nzb_name_original, failed,
+                showObj=self.showObj_helper(showObj, dir_name, x, nzb_name, pp_type))]:
 
             # self._set_process_success(reset=True)
 
@@ -348,7 +357,9 @@ class ProcessTVShow(object):
 
                 # Don't Link media when the media is extracted from a rar in the same path
                 if process_method in ('hardlink', 'symlink') and video_in_rar:
-                    self._process_media(walk_path, video_in_rar, nzb_name, 'move', force, force_replace, showObj=self.showObj_helper(showObj, dir_name, directory, nzb_name, pp_type, self.check_video_filenames(walk_dir, video_in_rar)))
+                    self._process_media(walk_path, video_in_rar, nzb_name, 'move', force, force_replace,
+                                        showObj=self.showObj_helper(showObj, dir_name, directory, nzb_name, pp_type,
+                                                                    self.check_video_filenames(walk_dir, video_in_rar)))
                     video_batch = set(video_files) - set(video_in_rar)
                 else:
                     video_batch = video_files
@@ -366,7 +377,10 @@ class ProcessTVShow(object):
 
                         video_batch = set(video_batch) - set(video_pick)
 
-                        self._process_media(walk_path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup, showObj=self.showObj_helper(showObj, dir_name, directory, nzb_name, pp_type, self.check_video_filenames(walk_dir, video_pick)))
+                        self._process_media(
+                            walk_path, video_pick, nzb_name, process_method, force, force_replace, use_trash=cleanup,
+                            showObj=self.showObj_helper(showObj, dir_name, directory, nzb_name, pp_type,
+                                                        self.check_video_filenames(walk_dir, video_pick)))
 
                 except OSError as e:
                     logger.log('Batch skipped, %s%s' %
@@ -732,10 +746,10 @@ class ProcessTVShow(object):
                             for wdata in iter(partial(part.read, 4096), b''):
                                 try:
                                     newfile.write(wdata)
-                                except:
+                                except (StandardError, Exception):
                                     logger.log('Failed write to file %s' % f)
                                     return result
-                    except:
+                    except (StandardError, Exception):
                         logger.log('Failed read from file %s' % f)
                         return result
             result = base_filepath
@@ -759,22 +773,23 @@ class ProcessTVShow(object):
             pass
         if None is parse_result:
             try:
-                parse_result = NameParser(try_scene_exceptions=True,convert=True).parse(dir_name, cache_result=False)
+                parse_result = NameParser(try_scene_exceptions=True, convert=True).parse(dir_name, cache_result=False)
             except (InvalidNameException, InvalidShowException):
                 # If the filename doesn't parse, then return false as last
                 # resort. We can assume that unparseable filenames are not
                 # processed in the past
                 return False
 
-        showlink = ('for "<a href="%s/home/displayShow?show=%s" target="_blank">%s</a>"' % (sickbeard.WEB_ROOT, parse_result.show.indexerid, parse_result.show.name),
-                    parse_result.show.name)[self.any_vid_processed]
+        showlink = ('for "<a href="%s/home/displayShow?show=%s" target="_blank">%s</a>"' % (
+            sickbeard.WEB_ROOT, parse_result.show.indexerid, parse_result.show.name),
+            parse_result.show.name)[self.any_vid_processed]
 
         ep_detail_sql = ''
         if parse_result.show.indexerid and 0 < len(parse_result.episode_numbers) and parse_result.season_number:
             ep_detail_sql = " and tv_episodes.showid='%s' and tv_episodes.season='%s' and tv_episodes.episode='%s'"\
                             % (str(parse_result.show.indexerid),
-                                str(parse_result.season_number),
-                                str(parse_result.episode_numbers[0]))
+                               str(parse_result.season_number),
+                               str(parse_result.episode_numbers[0]))
 
         # Avoid processing the same directory again if we use a process method <> move
         my_db = db.DBConnection()
@@ -793,7 +808,8 @@ class ProcessTVShow(object):
             if not isinstance(videofile, unicode):
                 videofile = unicode(videofile, 'utf_8')
 
-            sql_result = my_db.select('SELECT * FROM tv_episodes WHERE release_name = ?', [videofile.rpartition('.')[0]])
+            sql_result = my_db.select(
+                'SELECT * FROM tv_episodes WHERE release_name = ?', [videofile.rpartition('.')[0]])
             if sql_result:
                 self._log_helper(u'Found a video, but that release %s was already processed,<br />.. skipping: %s'
                                  % (showlink, videofile))
@@ -823,7 +839,8 @@ class ProcessTVShow(object):
 
         return False
 
-    def _process_media(self, process_path, video_files, nzb_name, process_method, force, force_replace, use_trash=False, showObj=None):
+    def _process_media(self, process_path, video_files, nzb_name, process_method, force, force_replace,
+                       use_trash=False, showObj=None):
 
         processor = None
         for cur_video_file in video_files:
@@ -835,7 +852,10 @@ class ProcessTVShow(object):
             cur_video_file_path = ek.ek(os.path.join, process_path, cur_video_file)
 
             try:
-                processor = postProcessor.PostProcessor(cur_video_file_path, nzb_name, process_method, force_replace, use_trash=use_trash, webhandler=self.webhandler, showObj=showObj)
+                processor = postProcessor.PostProcessor(
+                    cur_video_file_path, nzb_name, process_method, force_replace,
+                    use_trash=use_trash, webhandler=self.webhandler, showObj=showObj)
+
                 file_success = processor.process()
                 process_fail_message = ''
             except exceptions.PostProcessingFailed:
@@ -862,14 +882,16 @@ class ProcessTVShow(object):
         dirs = []
         files = []
 
-        if dir_name == sickbeard.TV_DOWNLOAD_DIR and not nzb_name or 'manual' == pp_type:  # Scheduled Post Processing Active
+        if dir_name == sickbeard.TV_DOWNLOAD_DIR and not nzb_name or 'manual' == pp_type:
+            # Scheduled Post Processing Active
             # Get at first all the subdir in the dir_name
             for path, dirs, files in ek.ek(os.walk, dir_name):
                 break
         else:
             path, dirs = ek.ek(os.path.split, dir_name)  # Script Post Processing
             if None is not nzb_name and not nzb_name.endswith('.nzb') and \
-                    ek.ek(os.path.isfile, ek.ek(os.path.join, dir_name, nzb_name)):  # For single torrent file without directory
+                    ek.ek(os.path.isfile, ek.ek(os.path.join, dir_name, nzb_name)):
+                # For single torrent file without directory
                 dirs = []
                 files = [ek.ek(os.path.join, dir_name, nzb_name)]
             else:
@@ -909,6 +931,9 @@ class ProcessTVShow(object):
 
 
 # backward compatibility prevents the case of this function name from being updated to PEP8
-def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None, failed=False, type='auto', cleanup=False, webhandler=None, showObj=None):
+def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
+               failed=False, type='auto', cleanup=False, webhandler=None, showObj=None):
+
     # backward compatibility prevents the case of this function name from being updated to PEP8
-    return ProcessTVShow(webhandler).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed, type, cleanup, showObj)
+    return ProcessTVShow(webhandler).process_dir(
+        dir_name, nzb_name, process_method, force, force_replace, failed, type, cleanup, showObj)

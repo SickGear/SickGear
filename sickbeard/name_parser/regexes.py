@@ -104,11 +104,13 @@ normal_regexes = [
     ('uk_date_format',
      # Show.Name.23.11.2010.Source.Quality.Etc-Group
      # Show Name - 23-11-2010 - Ep Name
+     # Show Name - 14-08-17 - Ep Name
+     # Show Name - 14 Jan 17 - Ep Name
      '''
      ^((?P<series_name>.+?)[. _-]+)?               # Show_Name and separator
-     (?P<air_day>\d{2})[. _-]+                     # 23 and separator
-     (?P<air_month>\d{2})[. _-]+                   # 11 and separator
-     (?P<air_year>(?:19|20)\d{2})                  # 2010 and separator
+     \(?(?P<air_day>\d{2})[. _-]+                  # 23 and separator
+     (?P<air_month>(?:\d{2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*))[. _-]+ # 11 and separator
+     (?P<air_year>(?:19|20)?\d{2})\)?              # 2010 and separator
      [. _-]*((?P<extra_info>.+?)                   # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
@@ -198,8 +200,9 @@ normal_regexes = [
      # 01 - Ep Name
      '''
      ^((?P<series_name>.+?)(?:[. _-]{2,}|[. _]))?  # Show_Name and separator
-     (?P<ep_num>\d{1,2})                           # 01
-     (?:-(?P<extra_ep_num>\d{1,2}))*               # 02
+     (?P<ep_num>\d{1,3}(?!\d))                     # 01
+     (?:-(?P<extra_ep_num>\d{1,3}(?!\d)))*         # 02
+     (\s*(?:of)?\s*\d{1,3})?                       # of num eps
      [. _-]+((?P<extra_info>.+?)                   # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group

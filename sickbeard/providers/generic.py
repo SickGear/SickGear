@@ -540,19 +540,14 @@ class GenericProvider:
                                u' didn\'t parse as one, skipping it', logger.DEBUG)
                     add_cache_entry = True
                 else:
-                    airdate = parse_result.air_date.toordinal()
-                    my_db = db.DBConnection()
-                    sql_results = my_db.select('SELECT season, episode FROM tv_episodes ' +
-                                               'WHERE showid = ? AND airdate = ?', [show_obj.indexerid, airdate])
+                    actual_season = parse_result.season_number
+                    actual_episodes = parse_result.episode_numbers
 
-                    if 1 != len(sql_results):
-                        logger.log(u'Tried to look up the date for the episode ' + title + ' but the database didn\'t' +
-                                   u' give proper results, skipping it', logger.WARNING)
+                    if not actual_episodes or \
+                            not [ep for ep in episodes if ep.season == actual_season and ep.episode in actual_episodes]:
+                        logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
+                                   u' to snatch, ignoring', logger.DEBUG)
                         add_cache_entry = True
-
-                if not add_cache_entry:
-                    actual_season = int(sql_results[0]['season'])
-                    actual_episodes = [int(sql_results[0]['episode'])]
 
             # add parsed result to cache for usage later on
             if add_cache_entry:
@@ -1165,6 +1160,6 @@ class TorrentProvider(object, GenericProvider):
                          '[^<]*?no\shits\.\sTry\sadding' +
                          ')', html)
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
 
         return self._search_provider({'Cache': ['']})

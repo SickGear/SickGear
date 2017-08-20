@@ -242,6 +242,9 @@ class Quality:
             return Quality.FULLHDBLURAY
         elif checkName(['2160p', 'web.?(dl|rip|.[hx]26[45])'], all):
             return Quality.UHD4KWEB
+        # p2p
+        elif checkName(['720HD'], all) and not checkName(['(1080|2160)[pi]'], all):
+            return Quality.HDTV
         else:
             return Quality.UNKNOWN
 

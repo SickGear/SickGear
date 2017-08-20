@@ -125,6 +125,13 @@ class NameParser(object):
                     result.series_name = match.group('series_name')
                     if result.series_name:
                         result.series_name = self.clean_series_name(result.series_name)
+                        name_parts = re.match('(?i)(.*)[ -]((?:part|pt)[ -]?\w+)$', result.series_name)
+                        try:
+                            result.series_name = name_parts.group(1)
+                            result.extra_info = name_parts.group(2)
+                        except (AttributeError, IndexError):
+                            pass
+
                         result.score += 1
 
                 if 'series_num' in named_groups and match.group('series_num'):
@@ -151,7 +158,7 @@ class NameParser(object):
                                     ep = tmp_show.getEpisode(parse_result.season_number, ep_num)
                                 else:
                                     ep = None
-                        except:
+                        except (StandardError, Exception):
                             ep = None
                         en = ep and ep.name and re.match(r'^\W*(\d+)', ep.name) or None
                         es = en and en.group(1) or None
@@ -174,7 +181,13 @@ class NameParser(object):
 
                 if 'air_year' in named_groups and 'air_month' in named_groups and 'air_day' in named_groups:
                     year = int(match.group('air_year'))
-                    month = int(match.group('air_month'))
+                    try:
+                        month = int(match.group('air_month'))
+                    except ValueError:
+                        try:
+                            month = time.strptime(match.group('air_month')[0:3], '%b').tm_mon
+                        except ValueError as e:
+                            raise InvalidNameException(ex(e))
                     day = int(match.group('air_day'))
                     # make an attempt to detect YYYY-DD-MM formats
                     if 12 < month:
@@ -182,7 +195,8 @@ class NameParser(object):
                         month = day
                         day = tmp_month
                     try:
-                        result.air_date = datetime.date(year, month, day)
+                        result.air_date = datetime.date(
+                            year + ((1900, 2000)[0 < year < 28], 0)[1900 < year], month, day)
                     except ValueError as e:
                         raise InvalidNameException(ex(e))
 
@@ -193,7 +207,10 @@ class NameParser(object):
                     if tmp_extra_info and 'season_only' == cur_regex_name and re.search(
                             r'([. _-]|^)(special|extra)s?\w*([. _-]|$)', tmp_extra_info, re.I):
                         continue
-                    result.extra_info = tmp_extra_info
+                    if tmp_extra_info:
+                        if result.extra_info:
+                            tmp_extra_info = '%s %s' % (result.extra_info, tmp_extra_info)
+                        result.extra_info = tmp_extra_info
                     result.score += 1
 
                 if 'release_group' in named_groups:
@@ -251,18 +268,33 @@ class NameParser(object):
 
                 # if we have an air-by-date show then get the real season/episode numbers
                 if best_result.is_air_by_date:
+                    season_number, episode_numbers = None, []
+
                     airdate = best_result.air_date.toordinal()
                     my_db = db.DBConnection()
                     sql_result = my_db.select(
-                        'SELECT season, episode FROM tv_episodes WHERE showid = ? and indexer = ? and airdate = ?',
-                        [show.indexerid, show.indexer, airdate])
-
-                    season_number = None
-                    episode_numbers = []
+                        'SELECT season, episode, name FROM tv_episodes ' +
+                        'WHERE showid = ? and indexer = ? and airdate = ?', [show.indexerid, show.indexer, airdate])
 
                     if sql_result:
-                        season_number = int(sql_result[0][0])
-                        episode_numbers = [int(sql_result[0][1])]
+                        season_number = int(sql_result[0]['season'])
+                        episode_numbers = [int(sql_result[0]['episode'])]
+                        if 1 < len(sql_result):
+                            # multi-eps broadcast on this day
+                            nums = {'1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five',
+                                    '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine', '10': 'ten'}
+                            patt = '(?i)(?:e(?:p(?:isode)?)?|part|pt)[. _-]?(%s)'
+                            try:
+                                src_num = str(re.findall(patt % '\w+', best_result.extra_info)[0])
+                                alt_num = nums.get(src_num) or list(nums.keys())[list(nums.values()).index(src_num)]
+                                re_partnum = re.compile(patt % ('%s|%s' % (src_num, alt_num)))
+                                for ep_details in sql_result:
+                                    if re_partnum.search(ep_details['name']):
+                                        season_number = int(ep_details['season'])
+                                        episode_numbers = [int(ep_details['episode'])]
+                                        break
+                            except (StandardError, Exception):
+                                pass
 
                     if self.indexer_lookup and not season_number or not len(episode_numbers):
                         try:
@@ -278,10 +310,12 @@ class NameParser(object):
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
                         except sickbeard.indexer_episodenotfound:
-                            logger.log(u'Unable to find episode with date ' + str(best_result.air_date) + ' for show ' + show.name + ', skipping', logger.WARNING)
+                            logger.log(u'Unable to find episode with date ' + str(best_result.air_date)
+                                       + ' for show ' + show.name + ', skipping', logger.WARNING)
                             episode_numbers = []
                         except sickbeard.indexer_error as e:
-                            logger.log(u'Unable to contact ' + sickbeard.indexerApi(show.indexer).name + ': ' + ex(e), logger.WARNING)
+                            logger.log(u'Unable to contact ' + sickbeard.indexerApi(show.indexer).name
+                                       + ': ' + ex(e), logger.WARNING)
                             episode_numbers = []
 
                     for epNo in episode_numbers:
@@ -411,7 +445,7 @@ class NameParser(object):
             else:
                 number = 0
 
-        except:
+        except (StandardError, Exception):
             # on error try converting from Roman numerals
             roman_to_int_map = (('M', 1000), ('CM', 900), ('D', 500), ('CD', 400), ('C', 100),
                                 ('XC', 90), ('L', 50), ('XL', 40), ('X', 10),
@@ -496,7 +530,8 @@ class NameParser(object):
                                            % name.encode(sickbeard.SYS_ENCODING, 'xmlcharrefreplace'))
 
         # if there's no useful info in it then raise an exception
-        if None is final_result.season_number and not final_result.episode_numbers and None is final_result.air_date and not final_result.ab_episode_numbers and not final_result.series_name:
+        if None is final_result.season_number and not final_result.episode_numbers and None is final_result.air_date \
+                and not final_result.ab_episode_numbers and not final_result.series_name:
             raise InvalidNameException('Unable to parse %s' % name.encode(sickbeard.SYS_ENCODING, 'xmlcharrefreplace'))
 
         if cache_result:
