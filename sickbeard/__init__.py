@@ -1348,9 +1348,10 @@ def start():
             background_mapping_task.start()
 
             for p in providers.sortedProviderList():
-                if p.is_active() and hasattr(p, 'ping'):
-                    provider_ping_thread_pool[p.get_id()] = threading.Thread(name='PING-PROVIDER %s' % p.get_id(),
-                                                                             target=p.ping)
+                if p.is_active() and getattr(p, 'ping_freq', None):
+                    # noinspection PyProtectedMember
+                    provider_ping_thread_pool[p.get_id()] = threading.Thread(
+                        name='PING-PROVIDER %s' % p.name, target=p._ping)
                     provider_ping_thread_pool[p.get_id()].start()
 
             for thread in enabled_schedulers(is_init=True):

@@ -5236,10 +5236,12 @@ class ConfigProviders(Config):
 
     def checkProvidersPing(self):
         for p in sickbeard.providers.sortedProviderList():
-            if hasattr(p, 'ping'):
-                if p.is_active() and (p.get_id() not in sickbeard.provider_ping_thread_pool or not sickbeard.provider_ping_thread_pool[p.get_id()].is_alive()):
-                    sickbeard.provider_ping_thread_pool[p.get_id()] = threading.Thread(name='PING-PROVIDER %s' %
-                                                                                            p.get_id(), target=p.ping)
+            if getattr(p, 'ping_freq', None):
+                if p.is_active() and (p.get_id() not in sickbeard.provider_ping_thread_pool
+                                      or not sickbeard.provider_ping_thread_pool[p.get_id()].is_alive()):
+                    # noinspection PyProtectedMember
+                    sickbeard.provider_ping_thread_pool[p.get_id()] = threading.Thread(
+                        name='PING-PROVIDER %s' % p.name, target=p._ping)
                     sickbeard.provider_ping_thread_pool[p.get_id()].start()
                 elif not p.is_active() and p.get_id() in sickbeard.provider_ping_thread_pool:
                     sickbeard.provider_ping_thread_pool[p.get_id()].stop = True

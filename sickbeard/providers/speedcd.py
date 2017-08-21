@@ -26,7 +26,7 @@ from sickbeard.helpers import tryInt
 class SpeedCDProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SpeedCD', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'SpeedCD', cache_update_freq=20, update_freq=4*60)
 
         self.url_base = 'https://speed.cd/'
         self.urls = {'config_provider_home_uri': self.url_base,

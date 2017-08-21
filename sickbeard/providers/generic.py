@@ -813,7 +813,7 @@ class NZBProvider(object, GenericProvider):
 
 class TorrentProvider(object, GenericProvider):
 
-    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=None):
+    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=None, update_freq=None):
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
 
         self.providerType = GenericProvider.TORRENT
@@ -825,6 +825,8 @@ class TorrentProvider(object, GenericProvider):
         self.cache._cache_data = self._cache_data
         if cache_update_freq:
             self.cache.update_freq = cache_update_freq
+        self.ping_freq = update_freq
+        self.ping_skip = None
 
     @property
     def url(self):
@@ -1181,3 +1183,12 @@ class TorrentProvider(object, GenericProvider):
     def _cache_data(self):
 
         return self._search_provider({'Cache': ['']})
+
+    def _ping(self):
+        while not self._should_stop():
+            if self.ping_skip:
+                self.ping_skip -= 1
+            else:
+                self.ping_skip = ((60*60)/self.ping_freq, None)[self._authorised()]
+
+            self._sleep_with_stop(self.ping_freq)
