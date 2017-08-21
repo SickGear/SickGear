@@ -26,6 +26,7 @@ import os
 import re
 import time
 import urlparse
+import threading
 from urllib import quote_plus
 import zlib
 from base64 import b16encode, b32decode
@@ -701,6 +702,19 @@ class GenericProvider:
         except IndexError:
             pass
         return long(math.ceil(value))
+
+    def _should_stop(self):
+        if getattr(threading.currentThread(), 'stop', False):
+            return True
+        return False
+
+    def _sleep_with_stop(self, t):
+        t_l = t
+        while t_l > 0:
+            time.sleep(3)
+            t_l -= 3
+            if self._should_stop():
+                return
 
 
 class NZBProvider(object, GenericProvider):
