@@ -1,4 +1,9 @@
-﻿### 0.12.26 (2017-08-20 13:05:00 UTC)
+﻿### 0.12.27 (2017-08-22 19:00:00 UTC)
+
+* Update to UnRar 5.50 release
+
+
+### 0.12.26 (2017-08-20 13:05:00 UTC)
 
 * Fix infinite loop loading network_timezones
 * Change add optional "stack_size" setting as integer to config.ini under "General" stanza
