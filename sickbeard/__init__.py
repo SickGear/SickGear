@@ -86,6 +86,8 @@ subtitlesFinderScheduler = None
 # traktCheckerScheduler = None
 background_mapping_task = None
 
+provider_ping_thread_pool = {}
+
 showList = None
 UPDATE_SHOWS_ON_START = False
 SHOW_UPDATE_HOUR = 3
@@ -532,7 +534,8 @@ def initialize(console_logging=True):
         # global traktCheckerScheduler
         global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
             versionCheckScheduler, showQueueScheduler, searchQueueScheduler, \
-            properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, background_mapping_task
+            properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, background_mapping_task, \
+            provider_ping_thread_pool
         # Add Show Defaults
         global STATUS_DEFAULT, QUALITY_DEFAULT, SHOW_TAG_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, \
             WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SCENE_DEFAULT, ANIME_DEFAULT
@@ -1365,6 +1368,13 @@ def start():
             indexermapper.indexer_list = [i for i in indexerApi().all_indexers]
             background_mapping_task.start()
 
+            for p in providers.sortedProviderList():
+                if p.is_active() and getattr(p, 'ping_freq', None):
+                    # noinspection PyProtectedMember
+                    provider_ping_thread_pool[p.get_id()] = threading.Thread(
+                        name='PING-PROVIDER %s' % p.name, target=p._ping)
+                    provider_ping_thread_pool[p.get_id()].start()
+
             for thread in enabled_schedulers(is_init=True):
                 thread.start()
 
@@ -1408,6 +1418,15 @@ def halt():
                 logger.log('Waiting for the %s thread to exit' % thread.name)
                 try:
                     thread.join(10)
+                except RuntimeError:
+                    pass
+
+            for p in provider_ping_thread_pool:
+                provider_ping_thread_pool[p].stop = True
+
+            for p in provider_ping_thread_pool:
+                try:
+                    provider_ping_thread_pool[p].join(10)
                 except RuntimeError:
                     pass
 

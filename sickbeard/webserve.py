@@ -5276,6 +5276,35 @@ class ConfigProviders(Config):
 
         return '1'
 
+    def checkProvidersPing(self):
+        for p in sickbeard.providers.sortedProviderList():
+            if getattr(p, 'ping_freq', None):
+                if p.is_active() and (p.get_id() not in sickbeard.provider_ping_thread_pool
+                                      or not sickbeard.provider_ping_thread_pool[p.get_id()].is_alive()):
+                    # noinspection PyProtectedMember
+                    sickbeard.provider_ping_thread_pool[p.get_id()] = threading.Thread(
+                        name='PING-PROVIDER %s' % p.name, target=p._ping)
+                    sickbeard.provider_ping_thread_pool[p.get_id()].start()
+                elif not p.is_active() and p.get_id() in sickbeard.provider_ping_thread_pool:
+                    sickbeard.provider_ping_thread_pool[p.get_id()].stop = True
+                    try:
+                        sickbeard.provider_ping_thread_pool[p.get_id()].join(120)
+                        if not sickbeard.provider_ping_thread_pool[p.get_id()].is_alive():
+                            sickbeard.provider_ping_thread_pool.pop(p.get_id())
+                    except RuntimeError:
+                        pass
+
+        # stop removed providers
+        prov = [n.get_id() for n in sickbeard.providers.sortedProviderList()]
+        for p in [x for x in sickbeard.provider_ping_thread_pool if x not in prov]:
+            sickbeard.provider_ping_thread_pool[p].stop = True
+            try:
+                sickbeard.provider_ping_thread_pool[p].join(120)
+                if not sickbeard.provider_ping_thread_pool[p].is_alive():
+                    sickbeard.provider_ping_thread_pool.pop(p)
+            except RuntimeError:
+                pass
+
     def saveProviders(self, newznab_string='', torrentrss_string='', provider_order=None, **kwargs):
 
         results = []
@@ -5472,6 +5501,9 @@ class ConfigProviders(Config):
         helpers.clear_unused_providers()
 
         sickbeard.save_config()
+
+        cp = threading.Thread(name='Check-Ping-Providers', target=self.checkProvidersPing)
+        cp.start()
 
         if 0 < len(results):
             for x in results:

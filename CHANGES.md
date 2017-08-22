@@ -92,6 +92,11 @@
 * Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
 
 
+### 0.12.27 (2017-08-22 19:00:00 UTC)
+
+* Update to UnRar 5.50 release
+
+
 ### 0.12.26 (2017-08-20 13:05:00 UTC)
 
 * Fix infinite loop loading network_timezones
