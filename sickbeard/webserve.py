@@ -224,7 +224,7 @@ class CalendarHandler(BaseHandler):
         # Limit dates
         past_date = (datetime.date.today() + datetime.timedelta(weeks=-52)).toordinal()
         future_date = (datetime.date.today() + datetime.timedelta(weeks=52)).toordinal()
-        utc = tz.gettz('GMT')
+        utc = tz.gettz('GMT', zoneinfo_priority=True)
 
         # Get all the shows that are not paused and are currently on air
         myDB = db.DBConnection()

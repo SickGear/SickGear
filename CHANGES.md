@@ -13,6 +13,7 @@
 * Update Beautiful Soup 4.4.0 (r397) to 4.5.3 (r439)
 * Update cachecontrol library 0.11.5 to 0.12.3 (db54c40)
 * Update Certifi 2015.11.20.1 (385476b) to 2017.01.23 (9f9dc30)
+* Update dateutil library 2.4.2 (d4baf97) to 2.6.1 (2f3a160)
 * Update feedparser library 5.2.0 (8c62940) to 5.2.1 (f1dd1bb)
 * Update html5lib 0.99999999/1.0b9 (46dae3d) to (1a28d72)
 * Update IMDb 5.1dev20160106 to 5.1 (r907)
@@ -79,6 +80,7 @@
 * Change improve newnab autoselect categories
 * Change add nzb.org BoxSD and BoxHD categories
 * Change post processor, ignore symlinks found in process_dir
+* Change file modify date of episodes older than 1970 can be changed to airdate, log warning on set fail
 
 
 [develop changelog]

@@ -2623,26 +2623,25 @@ class TVEpisode(object):
                        % (self.show.indexerid, ek.ek(os.path.basename, self.location)), logger.DEBUG)
             return
 
-        hr = m = 0
-        airs = re.search('.*?(\d{1,2})(?::\s*?(\d{2}))?\s*(pm)?', self.show.airs, re.I)
-        if airs:
-            hr = int(airs.group(1))
-            hr = (12 + hr, hr)[None is airs.group(3)]
-            hr = (hr, hr - 12)[0 == hr % 12 and 0 != hr]
-            m = int((airs.group(2), m)[None is airs.group(2)])
+        hr, m = network_timezones.parse_time(self.show.airs)
         airtime = datetime.time(hr, m)
 
-        airdatetime = datetime.datetime.combine(self.airdate, airtime)
+        aired_dt = datetime.datetime.combine(self.airdate, airtime)
+        try:
+            aired_epoch = helpers.datetime_to_epoch(aired_dt)
+            filemtime = int(ek.ek(os.path.getmtime, self.location))
+        except (StandardError, Exception):
+            return
 
-        filemtime = datetime.datetime.fromtimestamp(ek.ek(os.path.getmtime, self.location))
+        if filemtime != aired_epoch:
 
-        if filemtime != airdatetime:
-            import time
+            result, loglevel = 'Changed', logger.MESSAGE
+            if not helpers.touch_file(self.location, aired_epoch):
+                result, loglevel = 'Error changing', logger.WARNING
 
-            airdatetime = airdatetime.timetuple()
-            if helpers.touchFile(self.location, time.mktime(airdatetime)):
-                logger.log('%s: Changed modify date of %s to show air date %s'
-                           % (self.show.indexerid, ek.ek(os.path.basename, self.location), time.strftime('%b %d,%Y (%H:%M)', airdatetime)))
+            logger.log('%s: %s modify date of %s to show air date %s'
+                       % (self.show.indexerid, result, ek.ek(os.path.basename, self.location),
+                          aired_dt.strftime('%b %d,%Y (%H:%M)')), loglevel)
 
     def __getstate__(self):
         d = dict(self.__dict__)

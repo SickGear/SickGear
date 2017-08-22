@@ -1,6 +1,7 @@
 Libs with customisations...
 
 /lib/dateutil/zoneinfo/__init__.py
+/lib/dateutil/tz/tz.py
 /lib/hachoir_core/config.py
 /lib/hachoir_core/stream/input_helpers.py
 /lib/hachoir_metadata/jpeg.py

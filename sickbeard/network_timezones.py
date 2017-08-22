@@ -78,7 +78,7 @@ def get_tz():
     t = get_localzone()
     if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone and hasattr(sickbeard, 'ZONEINFO_DIR'):
         try:
-            t = tz_fallback(tz.gettz(t.zone))
+            t = tz_fallback(tz.gettz(t.zone, zoneinfo_priority=True))
         except:
             t = tz_fallback(t)
     else:
@@ -303,14 +303,15 @@ def get_network_timezone(network):
             if not network_dict:
                 load_network_dict()
             try:
-                timezone = tz.gettz(network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower()))
+                timezone = tz.gettz(network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower()),
+                                    zoneinfo_priority=True)
             except:
                 pass
 
             if timezone is None:
                 cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
                 try:
-                    timezone = tz.gettz(country_timezones.get(cc.group(1).upper()))
+                    timezone = tz.gettz(country_timezones.get(cc.group(1).upper()), zoneinfo_priority=True)
                 except:
                     pass
     except:
