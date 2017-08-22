@@ -38,7 +38,7 @@ To select ``curl_httpclient``, call `AsyncHTTPClient.configure` at startup::
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 """
 
-from __future__ import absolute_import, division, print_function, with_statement
+from __future__ import absolute_import, division, print_function
 
 import functools
 import time
@@ -423,6 +423,9 @@ class HTTPRequest(object):
 
         .. versionadded:: 4.2
            The ``ssl_options`` argument.
+
+        .. versionadded:: 4.5
+           The ``proxy_auth_mode`` argument.
         """
         # Note that some of these attributes go through property setters
         # defined below.
@@ -669,6 +672,7 @@ def main():
         if options.print_body:
             print(native_str(response.body))
     client.close()
+
 
 if __name__ == "__main__":
     main()

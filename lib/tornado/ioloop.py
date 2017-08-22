@@ -26,7 +26,7 @@ In addition to I/O events, the `IOLoop` can also schedule time-based events.
 `IOLoop.add_timeout` is a non-blocking alternative to `time.sleep`.
 """
 
-from __future__ import absolute_import, division, print_function, with_statement
+from __future__ import absolute_import, division, print_function
 
 import collections
 import datetime
@@ -715,7 +715,7 @@ class PollIOLoop(IOLoop):
         self._closing = True
         self.remove_handler(self._waker.fileno())
         if all_fds:
-            for fd, handler in self._handlers.values():
+            for fd, handler in list(self._handlers.values()):
                 self.close_fd(fd)
         self._waker.close()
         self._impl.close()

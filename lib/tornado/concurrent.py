@@ -21,7 +21,7 @@ a mostly-compatible `Future` class designed for use from coroutines,
 as well as some utility functions for interacting with the
 `concurrent.futures` package.
 """
-from __future__ import absolute_import, division, print_function, with_statement
+from __future__ import absolute_import, division, print_function
 
 import functools
 import platform
@@ -234,7 +234,10 @@ class Future(object):
         if self._result is not None:
             return self._result
         if self._exc_info is not None:
-            raise_exc_info(self._exc_info)
+            try:
+                raise_exc_info(self._exc_info)
+            finally:
+                self = None
         self._check_done()
         return self._result
 
@@ -340,6 +343,7 @@ class Future(object):
             app_log.error('Future %r exception was never retrieved: %s',
                           self, ''.join(tb).rstrip())
 
+
 TracebackFuture = Future
 
 if futures is None:
@@ -363,6 +367,7 @@ class DummyExecutor(object):
 
     def shutdown(self, wait=True):
         pass
+
 
 dummy_executor = DummyExecutor()
 
