@@ -449,7 +449,8 @@ class ConfigMigrator():
                                 12: 'Add "hevc" and some non-english languages to ignore words if not found',
                                 13: 'Change default dereferrer url to blank',
                                 14: 'Convert Trakt to multi-account',
-                                15: 'Transmithe.net rebranded Nebulance'}
+                                15: 'Transmithe.net rebranded Nebulance',
+                                16: 'Purge old cache image folders'}
 
     def migrate_config(self):
         """ Calls each successive migration until the config is the same version as SG expects """
@@ -807,3 +808,18 @@ class ConfigMigrator():
         neb.search_fallback = bool(check_setting_int(self.config_obj, old_id_uc, old_id + '_search_fallback', 0))
         neb.seed_time = check_setting_int(self.config_obj, old_id_uc, old_id + '_seed_time', '')
         neb._seed_ratio = check_setting_str(self.config_obj, old_id_uc, old_id + '_seed_ratio', '')
+
+    # Migration v16: Purge old cache image folder name
+    @staticmethod
+    def _migrate_v16():
+        if sickbeard.CACHE_DIR and ek.ek(os.path.isdir, sickbeard.CACHE_DIR):
+            cache_default = sickbeard.CACHE_DIR
+            dead_paths = ['anidb', 'imdb', 'trakt']
+            for path in dead_paths:
+                sickbeard.CACHE_DIR = '%s/images/%s' % (cache_default, path)
+                helpers.clearCache(True)
+                try:
+                    ek.ek(os.rmdir, sickbeard.CACHE_DIR)
+                except OSError:
+                    pass
+            sickbeard.CACHE_DIR = cache_default
