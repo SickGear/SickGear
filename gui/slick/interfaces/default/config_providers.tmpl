@@ -558,7 +558,8 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 								<span class="component-title">Confirmed download</span>
 								<span class="component-desc">
 									<input type="checkbox" name="${cur_torrent_provider.get_id()}_confirmed" id="${cur_torrent_provider.get_id()}_confirmed" <%= html_checked if cur_torrent_provider.confirmed else '' %>/>
-									<p>only download torrents from trusted or verified uploaders ?</p>
+        #set $confirm_label = callable(getattr(cur_torrent_provider, 'ui_string', None)) and cur_torrent_provider.ui_string(cur_torrent_provider.get_id() + '_confirm') or 'only download torrents from trusted or verified uploaders ?'
+									<p>$confirm_label</p>
 								</span>
 							</label>
 						</div>
@@ -622,7 +623,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 								<span class="component-title">Episode search fallback</span>
 								<span class="component-desc">
 									<input type="checkbox" name="${cur_torrent_provider.get_id()}_search_fallback" id="${cur_torrent_provider.get_id()}_search_fallback" <%= html_checked if cur_torrent_provider.search_fallback else '' %>/>
-									<p>use the alternate episode search mode if no match is found -- warning; may result in duplicates or a heavy ratio hit -- best use: manually collect a season, disable after.</p>
+									<p>use alternate episode search mode if no match is found -- warning; may result in duplicates or a heavy ratio hit -- best use: manually collect a season, disable after</p>
 								</span>
 							</label>
 						</div>
