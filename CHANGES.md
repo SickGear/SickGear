@@ -26,7 +26,7 @@
 * Update Six compatibility library 1.10.0 (r405) to 1.10.0 (r433)
 * Update socks from SocksiPy 1.0 to PySocks 1.6.5 (b4323df)
 * Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.1 (79b2683)
-* Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
+* Update unidecode library 0.04.18 to 0.04.21 (e99b0e3)
 * Update xmltodict library 0.9.2 (eac0031) to 0.10.2 (375d3a6)
 * Update Bootstrap 3.2.0 to 3.3.7
 * Update Bootstrap Hover Dropdown 2.0.11 to 2.2.1
@@ -95,6 +95,7 @@
 * Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
 * Update Certifi 2015.11.20.1 (385476b) to 2017.01.23 (9f9dc30)
 * Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
+* Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
 
 
 ### 0.12.27 (2017-08-22 19:00:00 UTC)
