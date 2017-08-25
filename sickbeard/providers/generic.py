@@ -335,10 +335,12 @@ class GenericProvider:
             url_tmpl = '%s'
         return url if re.match('(?i)(https?://|magnet:)', url) else (url_tmpl % url.lstrip('/'))
 
-    def _header_row(self, table_row, custom_match=None, header_strip=''):
+    @staticmethod
+    def _header_row(table_row, custom_match=None, custom_tags=None, header_strip=''):
         """
         :param header_row: Soup resultset of table header row
         :param custom_match: Dict key/values to override one or more default regexes
+        :param custom_tags: List of tuples with tag and attribute
         :param header_strip: String regex of ambiguities to remove from headers
         :return: dict column indices or None for leech, seeds, and size
         """
@@ -363,7 +365,7 @@ class GenericProvider:
                     cell.find(tag, **p) for p in [{attr: rc[x]} for x in rc.keys()]]))), {}).get(attr)
                 for (tag, attr) in [
                     ('img', 'title'), ('img', 'src'), ('i', 'title'), ('i', 'class'),
-                    ('abbr', 'title'), ('a', 'title'), ('a', 'href')]]))), '')
+                    ('abbr', 'title'), ('a', 'title'), ('a', 'href')] + (custom_tags or [])]))), '')
              or cell.get_text()
              )).strip() for cell in all_cells]
         headers = [re.sub(header_strip, '', x) for x in headers]
@@ -523,9 +525,8 @@ class GenericProvider:
                         logger.log(u'The result ' + title + u' doesn\'t seem to be a valid season that we are trying' +
                                    u' to snatch, ignoring', logger.DEBUG)
                         add_cache_entry = True
-                    elif len(parse_result.episode_numbers)\
-                            and not [ep for ep in episodes
-                                     if ep.season == parse_result.season_number and
+                    elif len(parse_result.episode_numbers) and not [
+                        ep for ep in episodes if ep.season == parse_result.season_number and
                             ep.episode in parse_result.episode_numbers]:
                         logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
                                    u' to snatch, ignoring', logger.DEBUG)
@@ -699,7 +700,8 @@ class GenericProvider:
             pass
         return long(math.ceil(value))
 
-    def _should_stop(self):
+    @staticmethod
+    def _should_stop():
         if getattr(threading.currentThread(), 'stop', False):
             return True
         return False
@@ -954,8 +956,8 @@ class TorrentProvider(object, GenericProvider):
 
     @staticmethod
     def _has_signature(data=None):
-        return data and re.search(r'(?sim)<input[^<]+name="password"', data) and \
-               re.search(r'(?sim)<input[^<]+name="username"', data)
+        return data and re.search(r'(?sim)<input[^<]+?name=["\'\s]*?password', data) and \
+               re.search(r'(?sim)<input[^<]+?name=["\'\s]*?username', data)
 
     def _valid_home(self, attempt_fetch=True):
         """
