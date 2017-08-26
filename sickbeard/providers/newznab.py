@@ -438,8 +438,15 @@ class NewznabProvider(generic.NZBProvider):
         title, url = None, None
         try:
             title = ('%s' % item.findtext('title')).strip()
-            for pattern, repl in ((r'\s+', '.'), (r'(?i)-Obfuscated$', '')):
-                title = re.sub(pattern, repl, title)
+            title = re.sub(r'\s+', '.', title)
+            # remove indexer specific release name parts
+            r_found = True
+            while r_found:
+                r_found = False
+                for pattern, repl in ((r'(?i)-Obfuscated$', ''), (r'(?i)-postbot$', '')):
+                    if re.search(pattern, title):
+                        r_found = True
+                        title = re.sub(pattern, repl, title)
             url = str(item.findtext('link')).replace('&amp;', '&')
         except (StandardError, Exception):
             pass

@@ -100,6 +100,11 @@
 * Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
 
 
+### 0.12.28 (2017-08-26 18:15:00 UTC)
+
+* Change prevent indexer specific release name parts from fudging search logic
+
+
 ### 0.12.27 (2017-08-22 19:00:00 UTC)
 
 * Update to UnRar 5.50 release
