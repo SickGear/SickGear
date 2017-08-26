@@ -10,7 +10,7 @@
 * Change improve add show search results by comparing search term to an additional unidecoded result set
 * Change webserver startup to correctly use xheaders in reverse proxy or load balance set-ups
 * Update backports_abc 0.4 to 0.5
-* Update Beautiful Soup 4.4.0 (r397) to 4.5.3 (r439)
+* Update Beautiful Soup 4.4.0 (r397) to 4.6.0 (r449)
 * Update cachecontrol library 0.11.5 to 0.12.3 (db54c40)
 * Update Certifi 2015.11.20.1 (385476b) to 2017.07.27 (f808089)
 * Update chardet packages 2.3.0 (d7fae98) to 3.0.4 (9b8c5c2)
@@ -93,6 +93,7 @@
 * Fix "too many redirects" or "no CSS/JS content" delivered
 * Change restart/shutdown to use updated jQuery
 * Remove AlphaReign torrent provider
+* Update Beautiful Soup 4.4.0 (r397) to 4.5.3 (r439)
 * Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
 * Update Certifi 2015.11.20.1 (385476b) to 2017.01.23 (9f9dc30)
 * Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
