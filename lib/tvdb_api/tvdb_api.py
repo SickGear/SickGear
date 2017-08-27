@@ -20,7 +20,7 @@ import logging
 import requests
 import requests.exceptions
 import datetime
-from sickbeard.helpers import getURL
+from sickbeard.helpers import getURL, tryInt
 import sickbeard
 
 from lib.dateutil.parser import parse
@@ -354,6 +354,9 @@ class Tvdb:
                  cache=True,
                  banners=False,
                  fanart=False,
+                 posters=False,
+                 seasons=False,
+                 seasonwides=False,
                  actors=False,
                  custom_ui=None,
                  language=None,
@@ -460,6 +463,9 @@ class Tvdb:
             raise ValueError('Invalid value for Cache %r (type was %s)' % (cache, type(cache)))
 
         self.config['banners_enabled'] = banners
+        self.config['posters_enabled'] = posters
+        self.config['seasons_enabled'] = seasons
+        self.config['seasonwides_enabled'] = seasonwides
         self.config['fanart_enabled'] = fanart
         self.config['actors_enabled'] = actors
 
@@ -586,7 +592,7 @@ class Tvdb:
                 k_org = k
                 k = k.lower()
                 if None is not v:
-                    if k in ['banner', 'fanart', 'poster']:
+                    if k in ['banner', 'fanart', 'poster'] and v:
                         v = self.config['url_artworkPrefix'] % v
                     elif 'genre' == k:
                         v = '|%s|' % '|'.join([self._clean_data(c) for c in v if isinstance(c, basestring)])
@@ -721,8 +727,8 @@ class Tvdb:
         try:
             for cur_banner in img_list:
                 bid = cur_banner['id']
-                btype = cur_banner['keytype']
-                btype2 = cur_banner['resolution']
+                btype = (cur_banner['keytype'], 'banner')['series' == cur_banner['keytype']]
+                btype2 = (cur_banner['resolution'], tryInt(cur_banner['subkey'], cur_banner['subkey']))[btype in ('season', 'seasonwide')]
                 if None is btype or None is btype2:
                     continue
                 if btype not in banners:
@@ -790,22 +796,51 @@ class Tvdb:
         for k, v in show_data['data'].iteritems():
             self._set_show_data(sid, k, v)
 
-        if self.config['banners_enabled']:
+        p = ''
+        if self.config['posters_enabled']:
             poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'poster'), language=language)
-            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 1:
+            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 0:
+                poster_data['data'] = sorted(poster_data['data'], reverse=True,
+                                             key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
+                p = self.config['url_artworkPrefix'] % poster_data['data'][0]['filename']
+                self._parse_banners(sid, poster_data['data'])
+        if p:
+            self._set_show_data(sid, u'poster', p)
+
+        b = ''
+        if self.config['banners_enabled']:
+            poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'series'), language=language)
+            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 0:
+                poster_data['data'] = sorted(poster_data['data'], reverse=True,
+                                             key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
                 b = self.config['url_artworkPrefix'] % poster_data['data'][0]['filename']
                 self._parse_banners(sid, poster_data['data'])
-            else:
-                b = ''
-            self._set_show_data(sid, u'poster', b)
+        if b:
+            self._set_show_data(sid, u'banner', b)
 
+        if self.config['seasons_enabled']:
+            poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'season'), language=language)
+            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 0:
+                poster_data['data'] = sorted(poster_data['data'], reverse=True,
+                                             key=lambda x: (-1 * tryInt(x['subkey']), x['ratingsinfo']['average'], x['ratingsinfo']['count']))
+                self._parse_banners(sid, poster_data['data'])
+
+        if self.config['seasonwides_enabled']:
+            poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'seasonwide'), language=language)
+            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 0:
+                poster_data['data'] = sorted(poster_data['data'], reverse=True,
+                                             key=lambda x: (-1 * tryInt(x['subkey']), x['ratingsinfo']['average'], x['ratingsinfo']['count']))
+                self._parse_banners(sid, poster_data['data'])
+
+        f = ''
         if self.config['fanart_enabled']:
             fanart_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'fanart'), language=language)
-            if fanart_data and 'data' in fanart_data and fanart_data['data'] and len(fanart_data['data']) > 1:
+            if fanart_data and 'data' in fanart_data and fanart_data['data'] and len(fanart_data['data']) > 0:
+                fanart_data['data'] = sorted(fanart_data['data'], reverse=True,
+                                             key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
                 f = self.config['url_artworkPrefix'] % fanart_data['data'][0]['filename']
                 self._parse_banners(sid, fanart_data['data'])
-            else:
-                f = ''
+        if f:
             self._set_show_data(sid, u'fanart', f)
 
         if self.config['actors_enabled']:

@@ -86,6 +86,9 @@
 * Change add nzb.org BoxSD and BoxHD categories
 * Change post processor, ignore symlinks found in process_dir
 * Change file modify date of episodes older than 1970 can be changed to airdate, log warning on set fail
+* Add new parameter 'poster' to indexer api
+* Add optional tvdb_api load season image: lINDEXER_API_PARMS['seasons'] = True
+* Add optional tvdb_api load season wide image: lINDEXER_API_PARMS['seasonwides'] = True
 
 
 [develop changelog]
@@ -98,6 +101,8 @@
 * Update Certifi 2015.11.20.1 (385476b) to 2017.01.23 (9f9dc30)
 * Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
 * Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
+* Fix image not loaded from tvdb_api if there is only one poster/banner
+* Change prevent setting show/episode attr to None from indexer data
 
 
 ### 0.12.28 (2017-08-26 18:15:00 UTC)

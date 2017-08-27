@@ -763,6 +763,8 @@ class GenericMetadata():
             lINDEXER_API_PARMS = sickbeard.indexerApi(show_obj.indexer).api_params.copy()
             if image_type.startswith('fanart'):
                 lINDEXER_API_PARMS['fanart'] = True
+            elif image_type.startswith('poster'):
+                lINDEXER_API_PARMS['posters'] = True
             else:
                 lINDEXER_API_PARMS['banners'] = True
             lINDEXER_API_PARMS['dvdorder'] = 0 != show_obj.dvdorder
