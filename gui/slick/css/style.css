@@ -1113,17 +1113,27 @@ div.formpaginate{
 	margin-left:10px
 }
 
-.stepDiv #searchResults div{
+.stepDiv #searchResults .results-item{
+	width:100%;
 	line-height:1.7
 }
 
-.stepDiv #searchResults div .exists-db{
+.stepDiv #searchResults .results-item input[disabled=disabled]{
+	visibility:hidden
+}
+
+.stepDiv #searchResults .results-item .exists-db{
 	font-weight:800;
 	font-style:italic
 }
 
 .stepDiv #searchResults #searchingAnim{
 	margin-right:6px
+}
+
+a span.article,
+a:hover span.article{
+	color:#2f4799
 }
 
 .stepone-result-title{
@@ -2785,6 +2795,7 @@ config*.tmpl
 	padding-top:10px
 }
 
+select .selected-text,
 select .selected{
 	font-weight:700;
 	color:#888

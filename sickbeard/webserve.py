@@ -2560,8 +2560,9 @@ class NewHomeAddShows(Home):
     def sanitizeFileName(self, name):
         return helpers.sanitizeFileName(name)
 
+    # noinspection PyPep8Naming
     def searchIndexersForShowName(self, search_term, lang='en', indexer=None):
-        if not lang or lang == 'null':
+        if not lang or 'null' == lang:
             lang = 'en'
         term = search_term.decode('utf-8').strip()
         terms = []
@@ -2595,7 +2596,7 @@ class NewHomeAddShows(Home):
         except (StandardError, Exception):
             search_term = (search_term, '')['tt' in search_id]
 
-        # Query Indexers for each search term and build the list of results
+        # query Indexers for search term and build list of results
         for indexer in sickbeard.indexerApi().indexers if not int(indexer) else [int(indexer)]:
             lINDEXER_API_PARMS = sickbeard.indexerApi(indexer).api_params.copy()
             lINDEXER_API_PARMS['language'] = lang
@@ -2608,7 +2609,7 @@ class NewHomeAddShows(Home):
                     logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
                         search_id, search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
                     r = t[indexer_id, False]
-                    results.setdefault('tt' in search_id and INDEXER_TVDB_X or indexer, {})[int(indexer_id)] = {
+                    results.setdefault((indexer, INDEXER_TVDB_X)['tt' in search_id], {})[int(indexer_id)] = {
                         'id': indexer_id, 'seriesname': r['seriesname'], 'firstaired': r['firstaired'],
                         'network': r['network'], 'overview': r['overview'],
                         'genres': '' if not r['genre'] else r['genre'].lower().strip('|').replace('|', ', '),
@@ -2632,7 +2633,7 @@ class NewHomeAddShows(Home):
             except (StandardError, Exception):
                 pass
 
-        # Query trakt for tvdb ids
+        # query trakt for tvdb ids
         try:
             logger.log('Searching for show using search term: %s from tv datasource Trakt' % search_term, logger.DEBUG)
             resp = []
@@ -2674,34 +2675,74 @@ class NewHomeAddShows(Home):
                     for iid, name in sickbeard.indexerApi().all_indexers.iteritems()}
         # noinspection PyUnboundLocalVariable
         map(final_results.extend,
-            ([['%s%s' % (id_names[id], helpers.find_show_by_id(sickbeard.showList, {(id, INDEXER_TVDB)[id == INDEXER_TVDB_X]: int(show['id'])}, no_mapped_ids=False) and ' - <span class="exists-db">exists in db</span>' or ''),
-               (id, INDEXER_TVDB)[id == INDEXER_TVDB_X], sickbeard.indexerApi((id, INDEXER_TVDB)[id == INDEXER_TVDB_X]).config['show_url'], int(show['id']),
+            ([[id_names[iid], any([helpers.find_show_by_id(
+                sickbeard.showList, {(iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]: int(show['id'])},
+                no_mapped_ids=False)]),
+               iid, (iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid],
+               sickbeard.indexerApi((iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]).config['show_url'], int(show['id']),
                show['seriesname'], self.encode_html(show['seriesname']), show['firstaired'],
                show.get('network', '') or '', show.get('genres', '') or '',
-               re.sub(r'([,\.!][^,\.!]*?)$', '...',
-                      re.sub(r'([!\?\.])(?=\w)', r'\1 ',
+               re.sub(r'([,.!][^,.!]*?)$', '...',
+                      re.sub(r'([.!?])(?=\w)', r'\1 ',
                              self.encode_html((show.get('overview', '') or '')[:250:].strip()))),
                self._get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None,
                self._make_search_image_url(iid, show)
                ] for show in shows.itervalues()] for iid, shows in results.iteritems()))
 
-        lang_id = sickbeard.indexerApi().config['langabbv_to_id'][lang]
-        return json.dumps({
-            'results': sorted(final_results, reverse=True, key=lambda x: x[10]),
-            'langid': lang_id})
-        # return json.dumps({
-        #     'results': sorted(final_results, reverse=True, key=lambda x: dateutil.parser.parse(
-        #         re.match('^(?:19|20)\d\d$', str(x[6])) and ('%s-12-31' % str(x[6])) or (x[6] and str(x[6])) or '1900')),
-        #     'langid': lang_id})
+        def final_order(sortby_index, data, final_sort):
+            idx_is_indb = 1
+            for (n, x) in enumerate(data):
+                x[sortby_index] = n + (1000, 0)[x[idx_is_indb] and 'notop' not in sickbeard.RESULTS_SORTBY]
+            return data if not final_sort else sorted(data, reverse=False, key=lambda x: x[sortby_index])
+
+        def sort_date(data_result, is_last_sort):
+            idx_date_sort, idx_src, idx_aired = 13, 2, 8
+            return final_order(
+                idx_date_sort,
+                sorted(
+                    sorted(data_result, reverse=True, key=lambda x: (dateutil.parser.parse(
+                        re.match('^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
+                        or (x[idx_aired] and str(x[idx_aired])) or '1900'))),
+                    reverse=False, key=lambda x: x[idx_src]), is_last_sort)
+
+        def sort_az(data_result, is_last_sort):
+            idx_az_sort, idx_src, idx_title = 14, 2, 6
+            return final_order(
+                idx_az_sort,
+                sorted(
+                    data_result, reverse=False, key=lambda x: (
+                        x[idx_src],
+                        (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE])),
+                is_last_sort)
+
+        def sort_rel(data_result, is_last_sort):
+            idx_rel_sort, idx_src, idx_rel = 12, 2, 12
+            return final_order(
+                idx_rel_sort,
+                sorted(
+                    sorted(data_result, reverse=True, key=lambda x: x[idx_rel]),
+                    reverse=False, key=lambda x: x[idx_src]), is_last_sort)
+
+        if 'az' == sickbeard.RESULTS_SORTBY[:2]:
+            sort_results = [sort_date, sort_rel, sort_az]
+        elif 'date' == sickbeard.RESULTS_SORTBY[:4]:
+            sort_results = [sort_az, sort_rel, sort_date]
+        else:
+            sort_results = [sort_az, sort_date, sort_rel]
+
+        for n, func in enumerate(sort_results):
+            final_results = func(final_results, n == len(sort_results) - 1)
+
+        return json.dumps({'results': final_results, 'langid': sickbeard.indexerApi().config['langabbv_to_id'][lang]})
 
     @staticmethod
     def _make_search_image_url(iid, show):
         img_url = ''
         if INDEXER_TRAKT == iid:
-            img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&tmdbid=%s&tvdbid=%s' % \
+            img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=0&tmdbid=%s&tvdbid=%s' % \
                       ('%s.jpg' % show['trakt_id'], show.get('tmdb_id'), show.get('id'))
         elif INDEXER_TVDB == iid:
-            img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&tvdbid=%s' % \
+            img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&tvdbid=%s' % \
                       ('%s.jpg' % show['id'], show['id'])
         return img_url
 
@@ -4658,6 +4699,19 @@ class ConfigGeneral(Config):
     def saveRootDirs(self, rootDirString=None):
         sickbeard.ROOT_DIRS = rootDirString
 
+    def saveResultPrefs(self, ui_results_sortby=None):
+
+        if ui_results_sortby in ('az', 'date', 'rel', 'notop', 'ontop'):
+            was_ontop = 'notop' not in sickbeard.RESULTS_SORTBY
+            if 'top' == ui_results_sortby[-3:]:
+                maybe_ontop = ('', ' notop')[was_ontop]
+                sortby = sickbeard.RESULTS_SORTBY.replace(' notop', '')
+                sickbeard.RESULTS_SORTBY = '%s%s' % (('rel', sortby)[any([sortby])], maybe_ontop)
+            else:
+                sickbeard.RESULTS_SORTBY = '%s%s' % (ui_results_sortby, (' notop', '')[was_ontop])
+
+            sickbeard.save_config()
+
     def saveAddShowDefaults(self, default_status, any_qualities='', best_qualities='', default_wanted_begin=None,
                             default_wanted_latest=None, default_flatten_folders=False, default_scene=False,
                             default_subtitles=False, default_anime=False, default_tag=''):
@@ -6171,7 +6225,8 @@ class CachedImages(MainHandler):
                 self.delete_all_dummy_images(static_image_path)
 
         if not ek.ek(os.path.isfile, static_image_path):
-            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'trans.png')
+            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick',
+                                      'images', ('image-light.png', 'trans.png')[bool(int(kwargs.get('trans', 1)))])
         else:
             helpers.set_file_timestamp(static_image_path, min_age=3, new_time=None)
 

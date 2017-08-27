@@ -89,6 +89,16 @@
 * Add new parameter 'poster' to indexer api
 * Add optional tvdb_api load season image: lINDEXER_API_PARMS['seasons'] = True
 * Add optional tvdb_api load season wide image: lINDEXER_API_PARMS['seasonwides'] = True
+* Add Fuzzywuzzy 0.15.1 to sort search results
+* Change remove search results filtering from tv info source
+* Change suppress startup warnings for Fuzzywuzzy and Cheetah libs
+* Change show search, add options to choose order of search results
+* Add option to sort search results by 'A to Z' or 'First aired'
+* Add option to sort search results by 'Relevancy' using Fuzzywuzzy lib
+* Change search result anchor text uses SORT_ARTICLE setting for display
+* Change existing shows in DB are no longer selectable in result list
+* Change add image to search result item hover over
+* Change improve image load speed on browse Trakt/IMDb/AniDB pages
 
 
 [develop changelog]

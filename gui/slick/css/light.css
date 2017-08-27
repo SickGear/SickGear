@@ -1254,6 +1254,7 @@ input sizing (for config pages)
 ========================================================================== */
 
 .showlist-select optgroup,
+#results-sortby optgroup,
 #pickShow optgroup,
 #showfilter optgroup,
 #showsort optgroup,
@@ -1263,6 +1264,7 @@ input sizing (for config pages)
 }
 
 .showlist-select optgroup option,
+#results-sortby optgroup option,
 #pickShow optgroup option,
 #showfilter optgroup option,
 #showsort optgroup option,

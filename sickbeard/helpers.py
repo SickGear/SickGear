@@ -1108,13 +1108,6 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     2) Return True/False if success after using kwargs 'savefile' set to file pathname.
     """
 
-    # download and save file or simply fetch url
-    savename = None
-    if 'savename' in kwargs:
-        # session streaming
-        session.stream = True
-        savename = kwargs.pop('savename')
-
     # selectively mute some errors
     mute = []
     for muted in filter(
@@ -1125,6 +1118,13 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     # reuse or instantiate request session
     if None is session:
         session = CloudflareScraper.create_scraper()
+
+    # download and save file or simply fetch url
+    savename = None
+    if 'savename' in kwargs:
+        # session streaming
+        session.stream = True
+        savename = kwargs.pop('savename')
 
     if 'nocache' in kwargs:
         del kwargs['nocache']

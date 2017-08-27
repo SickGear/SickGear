@@ -15,7 +15,11 @@
 #set indexer_count = len([$i for $i in $sickbeard.indexerApi().indexers if $sickbeard.indexerApi(i).config.get('active', False) and not $sickbeard.indexerApi(i).config.get('defunct', False)]) + 1
 
 <script>
-	var show_scene_maps = ${show_scene_maps}
+	var show_scene_maps = ${show_scene_maps},
+		config = {
+			sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]#,
+			resultsSortby: '#echo $sg_str('RESULTS_SORTBY', 'rel')#'
+		}
 </script>
 
 <script type="text/javascript" src="$sbRoot/js/formwizard.js?v=$sbPID"></script>
