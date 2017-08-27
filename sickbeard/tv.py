@@ -78,6 +78,11 @@ def dirty_setter(attr_name, types=None):
     return wrapper
 
 
+def dict_prevent_None(d, key, default):
+    v = getattr(d, key, default)
+    return (v, default)[None is v]
+
+
 class TVShow(object):
     def __init__(self, indexer, indexerid, lang=''):
         self._indexerid = int(indexerid)
@@ -925,12 +930,12 @@ class TVShow(object):
             raise sickbeard.indexer_attributenotfound(
                 "Found %s, but attribute 'seriesname' was empty." % (self.indexerid))
 
-        self.classification = getattr(myEp, 'classification', 'Scripted')
-        self.genre = getattr(myEp, 'genre', '')
-        self.network = getattr(myEp, 'network', '')
-        self.runtime = getattr(myEp, 'runtime', '')
+        self.classification = dict_prevent_None(myEp, 'classification', 'Scripted')
+        self.genre = dict_prevent_None(myEp, 'genre', '')
+        self.network = dict_prevent_None(myEp, 'network', '')
+        self.runtime = dict_prevent_None(myEp, 'runtime', '')
 
-        self.imdbid = getattr(myEp, 'imdb_id', '')
+        self.imdbid = dict_prevent_None(myEp, 'imdb_id', '')
 
         if getattr(myEp, 'airs_dayofweek', None) is not None and getattr(myEp, 'airs_time', None) is not None:
             self.airs = ('%s %s' % (myEp['airs_dayofweek'], myEp['airs_time'])).strip()
@@ -938,8 +943,8 @@ class TVShow(object):
         if getattr(myEp, 'firstaired', None) is not None:
             self.startyear = int(str(myEp["firstaired"]).split('-')[0])
 
-        self.status = getattr(myEp, 'status', '')
-        self.overview = getattr(myEp, 'overview', '')
+        self.status = dict_prevent_None(myEp, 'status', '')
+        self.overview = dict_prevent_None(myEp, 'overview', '')
 
     def load_imdb_info(self):
 
@@ -1799,7 +1804,7 @@ class TVEpisode(object):
                        (self.show.indexerid, season, episode, myEp['absolute_number']), logger.DEBUG)
             self.absolute_number = int(myEp['absolute_number'])
 
-        self.name = getattr(myEp, 'episodename', '')
+        self.name = dict_prevent_None(myEp, 'episodename', '')
         self.season = season
         self.episode = episode
 
@@ -1817,7 +1822,7 @@ class TVEpisode(object):
             self.season, self.episode
         )
 
-        self.description = getattr(myEp, 'overview', '')
+        self.description = dict_prevent_None(myEp, 'overview', '')
 
         firstaired = getattr(myEp, 'firstaired', None)
         if None is firstaired or firstaired in '0000-00-00':
