@@ -2362,6 +2362,7 @@ class Home(MainHandler):
                              'status' : statusStrings[epObj.status],
                              'quality': self.getQualityClass(epObj)})
 
+        retry_statues = [SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, DOWNLOADED, ARCHIVED]
         if currentManualSearchThreadActive:
             searchThread = currentManualSearchThreadActive
             searchstatus = 'searching'
@@ -2374,6 +2375,7 @@ class Home(MainHandler):
                                  'episodeindexid': searchThread.segment.indexerid,
                                  'season' : searchThread.segment.season,
                                  'searchstatus' : searchstatus,
+                                 'retrystatus': Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
                                  'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
             elif hasattr(searchThread, 'segment'):
@@ -2382,6 +2384,7 @@ class Home(MainHandler):
                                      'episodeindexid': epObj.indexerid,
                                      'season' : epObj.season,
                                      'searchstatus' : searchstatus,
+                                     'retrystatus': Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
                                      'status' : statusStrings[epObj.status],
                                      'quality': self.getQualityClass(epObj)})
 
@@ -2394,6 +2397,7 @@ class Home(MainHandler):
                                          'episodeindexid': searchThread.segment.indexerid,
                                  'season' : searchThread.segment.season,
                                  'searchstatus' : searchstatus,
+                                 'retrystatus': Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
                                  'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
                 ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
@@ -2405,6 +2409,7 @@ class Home(MainHandler):
                                              'episodeindexid': epObj.indexerid,
                                      'season' : epObj.season,
                                      'searchstatus' : searchstatus,
+                                     'retrystatus': Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
                                      'status' : statusStrings[epObj.status],
                                      'quality': self.getQualityClass(epObj)})
 

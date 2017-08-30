@@ -67,7 +67,7 @@ function updateImages(data) {
 				//el=$('td#' + ep.season + 'x' + ep.episode + '.search img');
 				img.attr('title','Searching');
 				img.attr('alt','searching');
-				img.parent().attr('class','epRetry');
+				if (ep.retrystatus) {img.parent().attr('class','epRetry');} else {img.parent().attr('class','epSearch');}
 				img.attr('src',sbRoot+'/images/' + searchImage);
 				enableLink(el);
 				
