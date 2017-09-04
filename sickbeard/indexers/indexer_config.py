@@ -1,4 +1,5 @@
 from lib.tvdb_api.tvdb_api import Tvdb
+from lib.libtrakt.indexerapiinterface import TraktIndexer
 
 INDEXER_TVDB = 1
 INDEXER_TVRAGE = 2
@@ -65,9 +66,9 @@ indexerConfig = {
         main_url='https://www.trakt.tv/',
         id=INDEXER_TRAKT,
         name='Trakt',
-        module=None,
+        module=TraktIndexer,
         api_params={},
-        active=False,
+        active=True,
         dupekey='trakt',
         mapped_only=True,
         icon='trakt16.png',

@@ -8,3 +8,7 @@ class TraktAuthException(TraktException):
 
 class TraktServerBusy(TraktException):
     pass
+
+
+class TraktShowNotFound(TraktException):
+    pass

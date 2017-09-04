@@ -59,7 +59,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 15
+CONFIG_VERSION = 16
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -166,6 +166,8 @@ METADATA_WDTV = None
 METADATA_TIVO = None
 METADATA_MEDE8ER = None
 METADATA_KODI = None
+
+RESULTS_SORTBY = None
 
 QUALITY_DEFAULT = None
 STATUS_DEFAULT = None
@@ -536,6 +538,8 @@ def initialize(console_logging=True):
             versionCheckScheduler, showQueueScheduler, searchQueueScheduler, \
             properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, background_mapping_task, \
             provider_ping_thread_pool
+        # Add Show Search
+        global RESULTS_SORTBY
         # Add Show Defaults
         global STATUS_DEFAULT, QUALITY_DEFAULT, SHOW_TAG_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, \
             WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SCENE_DEFAULT, ANIME_DEFAULT
@@ -753,6 +757,8 @@ def initialize(console_logging=True):
         ROOT_DIRS = check_setting_str(CFG, 'General', 'root_dirs', '')
         if not re.match(r'\d+\|[^|]+(?:\|[^|]+)*', ROOT_DIRS):
             ROOT_DIRS = ''
+
+        RESULTS_SORTBY = check_setting_str(CFG, 'General', 'results_sortby', '')
 
         QUALITY_DEFAULT = check_setting_int(CFG, 'General', 'quality_default', SD)
         STATUS_DEFAULT = check_setting_int(CFG, 'General', 'status_default', SKIPPED)
@@ -1512,6 +1518,7 @@ def save_config():
     new_config['General']['recentsearch_startup'] = int(RECENTSEARCH_STARTUP)
     new_config['General']['backlog_nofull'] = int(BACKLOG_NOFULL)
     new_config['General']['skip_removed_files'] = int(SKIP_REMOVED_FILES)
+    new_config['General']['results_sortby'] = str(RESULTS_SORTBY)
     new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
     new_config['General']['status_default'] = int(STATUS_DEFAULT)
     new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)

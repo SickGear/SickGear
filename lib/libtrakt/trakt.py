@@ -6,7 +6,7 @@ import time
 import datetime
 from sickbeard import logger
 
-from exceptions import TraktException, TraktAuthException  # , TraktServerBusy
+from .exceptions import TraktException, TraktAuthException  # , TraktServerBusy
 
 
 class TraktAccount:

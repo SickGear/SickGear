@@ -32,6 +32,10 @@ import shutil
 import subprocess
 import time
 import threading
+import warnings
+
+warnings.filterwarnings('ignore', module=r'.*fuzzywuzzy.*')
+warnings.filterwarnings('ignore', module=r'.*Cheetah.*')
 
 if not (2, 7, 9) <= sys.version_info < (3, 0):
     print('Python %s.%s.%s detected.' % sys.version_info[:3])

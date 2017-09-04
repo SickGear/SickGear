@@ -174,9 +174,9 @@ class Show(dict):
         Search terms are converted to lower case (unicode) strings.
 
         # Examples
-        
+
         These examples assume t is an instance of Tvdb():
-        
+
         >> t = Tvdb()
         >>
 
@@ -347,6 +347,7 @@ class Tvdb:
     u'My Last Day'
     """
 
+    # noinspection PyUnusedLocal
     def __init__(self,
                  interactive=False,
                  select_first=False,
@@ -363,7 +364,9 @@ class Tvdb:
                  search_all_languages=False,
                  apikey=None,
                  dvdorder=False,
-                 proxy=None):
+                 proxy=None,
+                 *args,
+                 **kwargs):
 
         """interactive (True/False):
             When True, uses built-in console UI is used to select the correct show.
@@ -665,15 +668,18 @@ class Tvdb:
         else:
             self.shows[sid].data[key] = value
 
-    @staticmethod
-    def _clean_data(data):
-        """Cleans up strings returned by TheTVDB.com
+    def _clean_data(self, data):
+        """Cleans up strings, lists, dicts returned
 
         Issues corrected:
         - Replaces &amp; with &
         - Trailing whitespace
         """
-        return data if not isinstance(data, basestring) else data.strip().replace(u'&amp;', u'&')
+        if isinstance(data, list):
+            return [self._clean_data(d) for d in data]
+        if isinstance(data, dict):
+            return {k: self._clean_data(v) for k, v in data.iteritems()}
+        return data if not isinstance(data, (str, unicode)) else data.strip().replace(u'&amp;', u'&')
 
     def search(self, series):
         """This searches TheTVDB.com for the series name
@@ -719,7 +725,7 @@ class Tvdb:
                 log().debug('Interactively selecting show using ConsoleUI')
                 ui = ConsoleUI(config=self.config)
 
-        return ui.selectSeries(all_series)
+        return ui.select_series(all_series)
 
     def _parse_banners(self, sid, img_list):
         banners = {}
