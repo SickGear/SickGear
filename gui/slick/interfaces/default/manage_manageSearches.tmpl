@@ -51,14 +51,14 @@
 
 		<h3>Search Queue:</h3>
 #if $queueLength['backlog'] or $queueLength['manual'] or $queueLength['failed']
-		<input type="button" class="show-all-more btn" id="all-btn-more" value="Expand All"><input type="button" class="show-all-less btn" id="all-btn-less" value="Collapse All"></br>
+		<input type="button" class="show-all-more btn" id="all-btn-more" value="Expand All"><input type="button" class="show-all-less btn" id="all-btn-less" value="Collapse All"><br>
 #end if
-</br>
-Recent: <i>$queueLength['recent'] item$sickbeard.helpers.maybe_plural($queueLength['recent'])</i></br></br>
-Proper: <i>$queueLength['proper'] item$sickbeard.helpers.maybe_plural($queueLength['proper'])</i></br></br>
+<br>
+Recent: <i>$queueLength['recent'] item$sickbeard.helpers.maybe_plural($queueLength['recent'])</i><br><br>
+Proper: <i>$queueLength['proper'] item$sickbeard.helpers.maybe_plural($queueLength['proper'])</i><br><br>
 Backlog: <i>$len($queueLength['backlog']) item$sickbeard.helpers.maybe_plural($len($queueLength['backlog']))</i>
 #if $queueLength['backlog']
-	<input type="button" class="shows-more btn" id="backlog-btn-more" value="Expand" #if not $queueLength['backlog']# style="display:none" #end if#><input type="button" class="shows-less btn" id="backlog-btn-less" value="Collapse" style="display:none"></br>
+	<input type="button" class="shows-more btn" id="backlog-btn-more" value="Expand" #if not $queueLength['backlog']# style="display:none" #end if#><input type="button" class="shows-less btn" id="backlog-btn-less" value="Collapse" style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
@@ -90,12 +90,12 @@ Backlog: <i>$len($queueLength['backlog']) item$sickbeard.helpers.maybe_plural($l
 		</tbody>
 	</table>
 #else
-	</br>
+	<br>
 #end if
-</br>
+<br>
 Manual: <i>$len($queueLength['manual']) item$sickbeard.helpers.maybe_plural($len($queueLength['manual']))</i>
 #if $queueLength['manual']
-	<input type="button" class="shows-more btn" id="manual-btn-more" value="Expand" #if not $queueLength['manual']# style="display:none" #end if#><input type="button" class="shows-less btn" id="manual-btn-less" value="Collapse" style="display:none"></br>
+	<input type="button" class="shows-more btn" id="manual-btn-more" value="Expand" #if not $queueLength['manual']# style="display:none" #end if#><input type="button" class="shows-less btn" id="manual-btn-less" value="Collapse" style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
@@ -110,12 +110,12 @@ Manual: <i>$len($queueLength['manual']) item$sickbeard.helpers.maybe_plural($len
 		</tbody>
 	</table>
 #else
-	</br>
+	<br>
 #end if
-</br>
+<br>
 Failed: <i>$len($queueLength['failed']) item$sickbeard.helpers.maybe_plural($len($queueLength['failed']))</i>
 #if $queueLength['failed']
-	<input type="button" class="shows-more btn" id="failed-btn-more" value="Expand" #if not $queueLength['failed']# style="display:none" #end if#><input type="button" class="shows-less btn" id="failed-btn-less" value="Collapse" style="display:none"></br>
+	<input type="button" class="shows-more btn" id="failed-btn-more" value="Expand" #if not $queueLength['failed']# style="display:none" #end if#><input type="button" class="shows-less btn" id="failed-btn-less" value="Collapse" style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
@@ -130,7 +130,7 @@ Failed: <i>$len($queueLength['failed']) item$sickbeard.helpers.maybe_plural($len
 		</tbody>
 	</table>
 #else
-	</br>
+	<br>
 #end if
 	</div>
 </div>

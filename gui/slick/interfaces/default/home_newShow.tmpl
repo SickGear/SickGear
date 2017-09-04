@@ -1,8 +1,8 @@
 #import sickbeard
 #from sickbeard.helpers import anon_url
 ##
-#set global $header = 'Add from TV info source'
-#set global $title = $header
+#set global $header = ('Add from TV info source', '<span class="grey-text">%s::</span>%s' % ($kwargs.get('action'), $default_show_name))[any([$kwargs.get('action')])]
+#set global $title = ('Add from TV info source', '%s::%s' % ($kwargs.get('action'), $default_show_name))[any([$kwargs.get('action')])]
 #set global $sbPath = '../..'
 #set global $statpath = '../..'
 #set global $topmenu = 'home'
@@ -33,38 +33,47 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0">
+<span class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0"></span>
 
 <div id="newShowPortal">
 
+#if not $kwargs.get('action')
 	<div id="displayText">aoeu</div>
-	<br />
+	<br>
+#end if
 
-	<form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
+	<form id="addShowForm"#if $kwargs.get('action')# class="fullwidth"#end if# method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
 
 		<fieldset class="sectionwrap step-one">
 			<legend class="legendStep"><p>#if $use_provided_info#Using known show information#else#Find show at TV info source#end if#</p></legend>
 
 			<div class="stepDiv">
-				<input type="hidden" id="indexer_timeout" value="$sg_var('INDEXER_TIMEOUT', 20)" />
-				<input type="hidden" id="indexer_count" value="$indexer_count" />
-
+				<input type="hidden" id="indexer_timeout" value="$sg_var('INDEXER_TIMEOUT', 20)">
+				<input type="hidden" id="indexer_count" value="$indexer_count">
+#if $kwargs.get('action')
+				<input type="hidden" name="providedIndexer" value="$provided_indexer">
+				<input type="hidden" name="return_to" value="$kwargs.get('return_to')">
+				<input type="hidden" name="cancel_form" value="0">
+<style>
+	.formpaginate .next{visibility:hidden !important}
+</style>
+#end if
 #if $use_provided_info
     #set $provided_indexer_local = $provided_indexer
     #set $provided_indexer_id_local = $provided_indexer_id
 				Show: <a href="<%= anon_url(sickbeard.indexerApi(provided_indexer_local).config['show_url'], provided_indexer_id_local) %>">$provided_indexer_name</a>
-				<input type="hidden" name="indexerLang" value="en" />
-				<input type="hidden" name="whichSeries" value="#echo '|'.join([str($provided_indexer), '', str($provided_indexer_id), $provided_indexer_name])#" />
-				<input type="hidden" id="providedName" value="$provided_indexer_name" />
-				<input type="hidden" id="providedIndexer" value="$provided_indexer" />
+				<input type="hidden" name="indexerLang" value="en">
+				<input type="hidden" name="whichSeries" value="#echo '|'.join([str($provided_indexer), '', str($provided_indexer_id), $provided_indexer_name])#">
+				<input type="hidden" id="providedName" value="$provided_indexer_name">
+				<input type="hidden" id="providedIndexer" value="$provided_indexer">
 #else
     #if 2 > $len($indexers)
 <style>
 	#addShowForm input#nameToSearch{width:611px}
 </style>
-				<input type="hidden" id="providedIndexer" value="$provided_indexer" />
+				<input type="hidden" id="providedIndexer" value="$provided_indexer">
     #end if
-				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Enter a show name, TVDB ID, IMDb Url, or IMDb ID" class="form-control form-control-inline input-sm input350" />
+				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Enter a show name, TVDB ID, IMDb Url, or IMDb ID" class="form-control form-control-inline input-sm input350">
 				&nbsp;
 				<span style="float:right">
 					<select name="indexerLang" id="indexerLangSelect" class="form-control form-control-inline input-sm">
@@ -80,9 +89,9 @@
 					</select>
     #end if
 					&nbsp;
-					<input class="btn btn-inline" type="button" id="searchName" value="Search" />
+					<input class="btn btn-inline" type="button" id="searchName" value="Search">
 				</span>
-				<br />
+				<br>
 				<p style="margin:5px 0 15px"><span class="add-tip">Enter show name, TVDB ID, IMDb Url, or IMDb ID.&nbsp;&nbsp;</span><b>*</b>SickGear supports english, language is used for show/episode data</p>
 
 				<div id="searchResults" style="height: 100%"></div>
@@ -92,16 +101,17 @@
 			<div style="clear:both">&nbsp;</div>
 		</fieldset>
 
+#if not $kwargs.get('action')
 		<fieldset class="sectionwrap step-two" style="visibility:hidden">
 			<legend class="legendStep"><p>Pick parent folder</p></legend>
 
 			<div class="stepDiv parent-folder">
-#if $provided_show_dir
-				Pre-chosen Destination Folder: <b>$provided_show_dir</b> <br />
-				<input type="hidden" id="fullShowPath" name="fullShowPath" value="$provided_show_dir" /><br />
-#else
+    #if $provided_show_dir
+				Pre-chosen Destination Folder: <b>$provided_show_dir</b> <br>
+				<input type="hidden" id="fullShowPath" name="fullShowPath" value="$provided_show_dir"><br>
+    #else
     #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
-#end if
+    #end if
 			</div>
 			<div style="clear:both">&nbsp;</div>
 		</fieldset>
@@ -114,24 +124,30 @@
 				<div style="clear:both">&nbsp;</div>
 		</fieldset>
 
-#for $curNextDir in $other_shows
-		<input type="hidden" name="other_shows" value="$curNextDir" />
-#end for
-		<input type="hidden" name="skipShow" id="skipShow" value="" />
+    #for $curNextDir in $other_shows
+		<input type="hidden" name="other_shows" value="$curNextDir">
+    #end for
+		<input type="hidden" name="skipShow" id="skipShow" value="">
+#end if
 	</form>
 
-	<br />
+	<br>
 
 	<div style="width: 100%; text-align: center;">
-		<input class="btn" type="button" id="addShowButton" value="Add Show" disabled="disabled" />
+#if not $kwargs.get('action')
+		<input class="btn" type="button" id="addShowButton" value="Add Show" disabled="disabled">
+#else
+		<input class="btn" type="button" id="addShowButton" value="Select Show" disabled="disabled">
+		<input class="btn btn-danger" type="button" id="cancelShowButton" value="Cancel Select" style="margin-left:10px" disabled="disabled">
+#end if
 #if $provided_show_dir
-		<input class="btn" type="button" id="skipShowButton" value="Skip Show" />
+		<input class="btn" type="button" id="skipShowButton" value="Skip Show">
 #end if
 	</div>
 
 <script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/blackwhite.js?v=$sbPID"></script>
 
-</div></div>
+</div>
 
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

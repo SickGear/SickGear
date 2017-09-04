@@ -12,7 +12,7 @@
 #set $css = $getVar('css', 'reg')
 #set $has_art = $getVar('has_art', None)
 #set $restart = 'Restart SickGear for new features on this page'
-#set $show_message = (None, $restart)[None is $has_art]
+#set $show_message = ($show_message, $restart)[None is $has_art]
 #set global $page_body_attr = 'edit-show" class="' + $css
 ##
 #import os.path
@@ -20,7 +20,7 @@
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script>
-	var config = {showLang: '$show.lang', showIsAnime: #echo ('!1','!0')[$show.is_anime]#}
+	var config = {showLang: '$show.lang', showIsAnime: #echo ('!1','!0')[$show.is_anime]#, expandIds: #echo ('!1','!0')[$expand_ids]#}
 </script>
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/editShow.js?v=$sbPID"></script>
@@ -301,7 +301,7 @@
 #set $dev = True
 #set $dev = None
 					<div id="idmapping-options" style="display:#if $dev#--#end if#none">
-#set $is_master_settable = False
+#set $is_master_settable = False | $unlock_master_id
 #for $src_id, $src_name in $sickbeard.indexerApi().all_indexers.iteritems()
     #set $is_master_settable |= ($dev or
         ($src_id != $show.indexer and $show.ids[$src_id].get('id', 0) > 0 and
@@ -328,13 +328,23 @@
             #set $data_link = ''
             #set $use_search_url = False
         #end if
-									<a id="src-mid-$src_id" class="service" style="margin-right:6px" data-search="#if $use_search_url#y#else#n#end if#" #if $src_search_url#data-search-href="$anon_url($src_search_url % $search_name)" data-search-onclick="window.open(this.href, '_blank'); return !1;" data-search-title="Search for show at $src_name" #end if##if $use_search_url#href="$anon_url($src_search_url % $search_name)" onclick="window.open(this.href, '_blank'); return !1;" title="Search for show at $src_name" #end if#$(data_link)href="$anon_url(sickbeard.indexerApi($src_id).config['show_url'], $show.ids[$src_id]['id'])" $(data_link)onclick="window.open(this.href, '_blank'); return !1;" $(data_link)title="View $src_name info in new tab"><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($src_id).config['icon']" /></a>
+									<a id="src-mid-$src_id" class="service" style="margin-right:6px" data-search="#if $use_search_url#y#else#n#end if#" #if $src_search_url#data-search-href="$anon_url($src_search_url % $search_name)" data-search-onclick="window.open(this.href, '_blank'); return !1;" data-search-title="Search for show at $src_name" #end if##if $use_search_url#href="$anon_url($src_search_url % $search_name)" onclick="window.open(this.href, '_blank'); return !1;" title="Search for show at $src_name" #end if#$(data_link)href="$anon_url(sickbeard.indexerApi($src_id).config['show_url'], ($show.ids[$src_id]['id'], $srcid)[$expand_ids and ($src_id == $tvsrc)])" $(data_link)onclick="window.open(this.href, '_blank'); return !1;" $(data_link)title="View $src_name info in new tab"><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($src_id).config['icon']" /></a>
     #end if
 									$src_name
 								</span>
 								<span class="component-desc">
-									<input type="text" data-maybe-master="#echo ('0', '1')[bool($maybe_master)]#" name="mid-$src_id" id="#echo ('mid-%s' % $src_id, 'source-id')[$src_id == $show.indexer]#" value="$show.ids.get($src_id, {'id': 0}).get('id')" class="form-control form-control-inline input-sm" #echo ('', $html_disabled)[$src_id == $show.indexer]#>
-    #if $src_id != $show.indexer
+
+    #set $current_showid = $show.ids.get($src_id, {'id': 0}).get('id')
+									<input type="text" data-maybe-master="#echo ('0', '1')[bool($maybe_master)]#" name="mid-$src_id" id="#echo ('mid-%s' % $src_id, 'source-id')[$src_id == $show.indexer]#" value="#echo ($current_showid, $srcid)[$expand_ids and ($src_id == $tvsrc)]#" class="form-control form-control-inline input-sm#if $src_id == $show.indexer and $unlock_master_id# warning#end if#" #echo ('', $html_disabled)[$src_id == $show.indexer and not $unlock_master_id]#>
+
+    #if $src_id == $show.indexer
+									<label for="the-master">
+        #if $is_master_settable
+										<input type="radio" name="set-master" id="the-master" checked data-indexer="$src_id" data-indexerid="$show.ids[$src_id].get('id', 0)">
+        #end if
+										<p#if $is_master_settable# style="padding-left:19px"#end if#>#if $unlock_master_id#master id may have changed, <a href="$sbRoot/home/addShows/new_show?show_to_add=$show.indexer|||$showname_enc&use_show_name=True&action=Find&return_to=$sbRoot%2Fhome%2FeditShow%3Fshow%3D$current_showid%26tvsrc%3D%25s%26srcid%3D%25s%23core-component-group3">search replacement here</a>#else#locked master, can't be edited#end if#</p>
+									</label>
+    #else
 									<label for="lockid-$src_id">
 										<input type="checkbox" name="lockid-$src_id" id="lockid-$src_id"#echo ('', $html_checked)[$show.ids.get($src_id, {'status': $sickbeard.indexermapper.MapStatus.NONE}).get('status') == $sickbeard.indexermapper.MapStatus.NO_AUTOMATIC_CHANGE]#>
 										<p style="padding-left:19px;margin-right:24px">lock this ID</p>
@@ -344,13 +354,6 @@
 										<input type="radio" name="set-master" id="set-master-$src_id" data-indexer="$src_id" data-indexerid="$show.ids[$src_id].get('id', 0)">set master
 									</label>
         #end if
-    #else
-									<label for="the-master">
-        #if $is_master_settable
-										<input type="radio" name="set-master" id="the-master" checked>
-        #end if
-										<p#if $is_master_settable# style="padding-left:19px"#end if#>locked master, can't be edited</p>
-									</label>
     #end if
 								</span>
 						</div>

@@ -4147,6 +4147,13 @@ fieldset.sectionwrap{
 	margin-top:10px
 }
 
+.fullwidth,
+.fullwidth div.stepsguide,
+.fullwidth div.stepsguide .step{
+	width:100%;
+	cursor:default
+}
+
 div.stepsguide .step,
 legend.legendStep{
 	margin-bottom:0

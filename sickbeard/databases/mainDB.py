@@ -27,7 +27,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20004
+MAX_DB_VERSION = 20005
 
 
 class MainSanityCheck(db.DBSanityCheck):
@@ -38,6 +38,7 @@ class MainSanityCheck(db.DBSanityCheck):
         self.fix_orphan_episodes()
         self.fix_unaired_episodes()
         self.fix_scene_exceptions()
+        self.fix_orphan_not_found_show()
 
     def fix_duplicate_shows(self, column='indexer_id'):
 
@@ -168,6 +169,13 @@ class MainSanityCheck(db.DBSanityCheck):
         if 0 < len(sql_results):
             logger.log('Fixing invalid scene exceptions')
             self.connection.action('UPDATE scene_exceptions SET season = -1 WHERE season = "null"')
+
+    def fix_orphan_not_found_show(self):
+        sql_result = self.connection.action('DELETE FROM tv_shows_not_found WHERE NOT EXISTS (SELECT NULL FROM '
+                                            'tv_shows WHERE tv_shows_not_found.indexer == tv_shows.indexer AND '
+                                            'tv_shows_not_found.indexer_id == tv_shows.indexer_id)')
+        if sql_result.rowcount:
+            logger.log('Fixed orphaned not found shows')
 
 # ======================
 # = Main DB Migrations =
@@ -1219,4 +1227,17 @@ class ChangeMapIndexer(db.SchemaUpgrade):
         self.connection.action('VACUUM')
 
         self.setDBVersion(20004)
+        return self.checkDBVersion()
+
+
+# 20004 -> 20005
+class AddShowNotFoundCounter(db.SchemaUpgrade):
+    def execute(self):
+        if not self.hasTable('tv_shows_not_found'):
+            logger.log(u'Adding table tv_shows_not_found')
+
+            db.backup_database('sickbeard.db', self.checkDBVersion())
+            self.connection.action('CREATE TABLE tv_shows_not_found (indexer NUMERIC NOT NULL, indexer_id NUMERIC NOT NULL, fail_count NUMERIC NOT NULL DEFAULT 0, last_check NUMERIC NOT NULL, last_success NUMERIC, PRIMARY KEY (indexer_id, indexer))')
+
+        self.setDBVersion(20005)
         return self.checkDBVersion()

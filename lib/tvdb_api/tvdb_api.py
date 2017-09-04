@@ -20,6 +20,8 @@ import logging
 import requests
 import requests.exceptions
 import datetime
+import re
+
 from sickbeard.helpers import getURL, tryInt
 import sickbeard
 
@@ -432,6 +434,8 @@ class Tvdb:
 
         self.shows = ShowContainer()  # Holds all Show classes
         self.corrections = {}  # Holds show-name to show_id mapping
+        self.show_not_found = False
+        self.not_found = False
 
         self.config = {}
 
@@ -575,6 +579,9 @@ class Tvdb:
             session.headers.update({'Accept-Language': language})
 
         resp = None
+        if re.search(re.escape(self.config['url_seriesInfo']).replace('%s', '.*'), url):
+            self.show_not_found = False
+        self.not_found = False
         try:
             resp = getURL(url.strip(), params=params, session=session, json=True, raise_status_code=True,
                           raise_exceptions=True)
@@ -583,6 +590,10 @@ class Tvdb:
                 # token expired, get new token, raise error to retry
                 sickbeard.THETVDB_V2_API_TOKEN = self.get_new_token()
                 raise tvdb_tokenexpired
+            elif 404 == e.response.status_code:
+                if re.search(re.escape(self.config['url_seriesInfo']).replace('%s', '.*'), url):
+                    self.show_not_found = True
+                self.not_found = True
             elif 404 != e.response.status_code:
                 raise tvdb_error
         except (StandardError, Exception):

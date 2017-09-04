@@ -46,7 +46,7 @@ from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
 from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED, SNATCHED_BEST, SNATCHED_PROPER
 from sickbeard.common import SD, HD720p, HD1080p, UHD2160p
-from sickbeard.exceptions import ex
+from sickbeard.exceptions import ex, MultipleShowObjectsException
 from sickbeard.helpers import has_image_ext, remove_article, starify
 from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_TRAKT
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
@@ -57,6 +57,7 @@ from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
 from sickbeard.search_backlog import FORCED_BACKLOG
 from sickbeard.indexermapper import MapStatus, save_mapping, map_indexers_to_show
+from sickbeard.tv import show_not_found_retry_days, concurrent_show_not_found_days
 from tornado import gen
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from lib import adba
@@ -1318,6 +1319,14 @@ class Home(MainHandler):
         elif sickbeard.showQueueScheduler.action.isInSubtitleQueue(showObj):  # @UndefinedVariable
             show_message = 'This show is queued and awaiting subtitles download.'
 
+        if 0 < showObj.not_found_count:
+            last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
+                showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
+            show_message = (
+                'The master ID of this show has been abandoned%s, ' % last_found
+                + '<a href="%s/home/editShow?show=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>' % (
+                    sickbeard.WEB_ROOT, show, show)
+                + ('', '<br>%s' % show_message)[0 < len(show_message)])
         t.force_update = 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid
         if not sickbeard.showQueueScheduler.action.isBeingAdded(showObj):  # @UndefinedVariable
             if not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
@@ -1592,7 +1601,8 @@ class Home(MainHandler):
         return {'Success': 'Switched to new TV info source'}
 
     def saveMapping(self, show, **kwargs):
-        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
+        show = helpers.tryInt(show)
+        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, show)
         response = {}
         if not show_obj:
             return json.dumps(response)
@@ -1632,10 +1642,22 @@ class Home(MainHandler):
             else:
                 ui.notifications.message('Mappings unchanged, not saving.')
 
-        master_ids = [show] + [kwargs.get(x) for x in 'indexer', 'mindexerid', 'mindexer']
-        if all([helpers.tryInt(x) > 0 for x in master_ids]):
-            master_ids += [bool(helpers.tryInt(kwargs.get(x))) for x in 'paused', 'markwanted']
-            response = {'switch': self.switchIndexer(*master_ids), 'mid': kwargs['mindexerid']}
+        master_ids = [show] + [helpers.tryInt(kwargs.get(x)) for x in 'indexer', 'mindexerid', 'mindexer']
+        if all([x > 0 for x in master_ids]) and sickbeard.indexerApi(kwargs['mindexer']).config.get('active') and \
+                not sickbeard.indexerApi(kwargs['mindexer']).config.get('defunct') and \
+                not sickbeard.indexerApi(kwargs['mindexer']).config.get('mapped_only') and \
+                (helpers.tryInt(kwargs['mindexer']) != helpers.tryInt(kwargs['indexer']) or
+                    helpers.tryInt(kwargs['mindexerid']) != show):
+            try:
+                new_show_obj = helpers.find_show_by_id(sickbeard.showList, {helpers.tryInt(kwargs['mindexer']): helpers.tryInt(kwargs['mindexerid'])},no_mapped_ids=False)
+                if not new_show_obj or (new_show_obj.indexer == show_obj.indexer and new_show_obj.indexerid == show_obj.indexerid):
+                    master_ids += [bool(helpers.tryInt(kwargs.get(x))) for x in 'paused', 'markwanted']
+                    response = {'switch': self.switchIndexer(*master_ids), 'mid': kwargs['mindexerid']}
+                else:
+                    ui.notifications.message('Master ID unchanged, because show from %s with ID: %s exists in DB.' %
+                                             (sickbeard.indexerApi(kwargs['mindexer']).name, kwargs['mindexerid']))
+            except MultipleShowObjectsException:
+                pass
 
         response.update({
             'map': {k: {r: w for r, w in v.iteritems() if r != 'date'} for k, v in show_obj.ids.iteritems()}
@@ -1730,6 +1752,10 @@ class Home(MainHandler):
             t = PageTemplate(headers=self.request.headers, file='editShow.tmpl')
             t.submenu = self.HomeMenu()
 
+            t.expand_ids = all([kwargs.get('tvsrc'), kwargs.get('srcid')])
+            t.tvsrc = int(kwargs.get('tvsrc', 0))
+            t.srcid = kwargs.get('srcid')
+
             myDB = db.DBConnection()
             t.seasonResults = myDB.select(
                 'SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season asc', [showObj.indexerid])
@@ -1757,6 +1783,20 @@ class Home(MainHandler):
             # noinspection PyTypeChecker
             self.fanart_tmpl(t)
             t.num_ratings = len(sickbeard.FANART_RATINGS.get(str(t.show.indexerid), {}))
+
+            t.unlock_master_id = 0 < showObj.not_found_count
+            t.showname_enc = urllib.quote_plus(showObj.name.encode('utf-8'))
+
+            show_message = ''
+
+            if 0 < showObj.not_found_count:
+                # noinspection PyUnresolvedReferences
+                last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
+                    showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
+                show_message = 'The master ID of this show has been abandoned%s<br>search for ' % last_found + \
+                               'a replacement in the "<b>Related show IDs</b>" section of the "<b>Other</b>" tab'
+
+            t.show_message = show_message
 
             return t.respond()
 
@@ -3595,11 +3635,18 @@ class NewHomeAddShows(Home):
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
                    quality_preset=None, anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None):
+                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None,
+                   return_to=None, cancel_form=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
         """
+        if None is not return_to:
+            indexer, void, indexer_id, show_name = self.split_extra_show(whichSeries)
+            if bool(helpers.tryInt(cancel_form)):
+                indexer = indexer or providedIndexer or '1'
+                indexer_id = re.findall('show=([\d]+)', return_to)[0]
+            return self.redirect(return_to % (indexer, indexer_id))
 
         # grab our list of other dirs if given
         if not other_shows:
@@ -4560,6 +4607,18 @@ class showProcesses(Manage):
         t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
         t.showList = sickbeard.showList
         t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
+
+        myDb = db.DBConnection(row_type='dict')
+        sql_results = myDb.select('SELECT n.indexer, n.indexer_id, n.last_success, s.show_name FROM tv_shows_not_found as n INNER JOIN tv_shows as s ON (n.indexer == s.indexer AND n.indexer_id == s.indexer_id)')
+        for s in sql_results:
+            date = helpers.tryInt(s['last_success'])
+            s['last_success'] = ('never', sbdatetime.sbdatetime.fromordinal(date).sbfdate())[date > 1]
+        defunct_indexer = [i for i in sickbeard.indexerApi().all_indexers if sickbeard.indexerApi(i).config.get('defunct')]
+        sql_r = None
+        if defunct_indexer:
+            sql_r = myDb.select('SELECT indexer, indexer_id, show_name FROM tv_shows WHERE indexer IN (%s)' % ','.join(['?'] * len(defunct_indexer)), defunct_indexer)
+        t.DefunctIndexer = sql_r
+        t.NotFoundShows = sql_results
 
         t.submenu = self.ManageMenu('Processes')
 

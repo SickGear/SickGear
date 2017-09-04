@@ -99,6 +99,13 @@
 * Change existing shows in DB are no longer selectable in result list
 * Change add image to search result item hover over
 * Change improve image load speed on browse Trakt/IMDb/AniDB pages
+* Add a changeable master Show ID when show no longer found at TV info source due to an ID change
+* Add guiding links to assist user to change TV Info Source ID
+* Add "Shows with abandoned master IDs" to Manage/Show Processes Page to link shows that can have their show IDs
+  adjusted in order to sustain TV info updates
+* Add "Shows from defunct TV info sources" to Manage/Show Processes page to link shows that can be switched to a
+  different default TV info source
+* Add shows not found at a TV info source for over 7 days will only be retried once a week
 
 
 [develop changelog]
