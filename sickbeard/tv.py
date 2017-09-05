@@ -117,7 +117,7 @@ class TVShow(object):
         self._overview = ''
         self._tag = ''
         self._mapped_ids = {}
-        self._not_found_count = -1
+        self._not_found_count = None
         self._last_found_on_indexer = -1
 
         self.dirty = True
@@ -166,7 +166,7 @@ class TVShow(object):
     tag = property(lambda self: self._tag, dirty_setter('_tag'))
 
     def _helper_load_failed_db(self):
-        if self._not_found_count == -1 or self._last_found_on_indexer == -1:
+        if None is self._not_found_count or self._last_found_on_indexer == -1:
             myDB = db.DBConnection()
             results = myDB.select('SELECT fail_count, last_success FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
                                   [self.indexer, self.indexerid])
@@ -184,7 +184,22 @@ class TVShow(object):
 
     @not_found_count.setter
     def not_found_count(self, v):
-        self._not_found_count = v
+        if isinstance(v, (int, long)) and v != self._not_found_count:
+            self._last_found_on_indexer = self.last_found_on_indexer
+            myDB = db.DBConnection()
+            # noinspection PyUnresolvedReferences
+            last_check = sbdatetime.now().totimestamp(default=0)
+            # in case of flag change (+/-) don't change last_check date
+            if abs(v) == abs(self._not_found_count):
+                results = myDB.select('SELECT last_check FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
+                                      [self.indexer, self.indexerid])
+                if results:
+                    last_check = helpers.tryInt(results[0]['last_check'])
+            myDB.upsert('tv_shows_not_found',
+                        {'fail_count': v, 'last_check': last_check,
+                         'last_success': self._last_found_on_indexer},
+                        {'indexer': self.indexer, 'indexer_id': self.indexerid})
+            self._not_found_count = v
 
     @property
     def last_found_on_indexer(self):
@@ -193,24 +208,20 @@ class TVShow(object):
 
     def inc_not_found_count(self):
         myDB = db.DBConnection()
-        results = myDB.select('SELECT fail_count, last_check, last_success FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
+        results = myDB.select('SELECT last_check FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
                               [self.indexer, self.indexerid])
-        days = (show_not_found_retry_days - 1, 0)[self.not_found_count <= concurrent_show_not_found_days]
-        if not results or datetime.datetime.fromtimestamp(helpers.tryInt(results[0]['last_check'])) + datetime.timedelta(days=days, hours=18) < datetime.datetime.now():
-            if self.not_found_count <= 0:
-                last_success = self.last_update_indexer
-            else:
-                last_success = helpers.tryInt(results[0]['last_success'], self.last_update_indexer)
-            self._last_found_on_indexer = last_success
-            self.not_found_count += 1
-            myDB.upsert('tv_shows_not_found', {'fail_count': self.not_found_count, 'last_check': sbdatetime.now().totimestamp(default=0), 'last_success': last_success},
-                        {'indexer': self.indexer, 'indexer_id': self.indexerid})
+        days = (show_not_found_retry_days - 1, 0)[abs(self.not_found_count) <= concurrent_show_not_found_days]
+        if not results or datetime.datetime.fromtimestamp(helpers.tryInt(results[0]['last_check'])) + \
+                datetime.timedelta(days=days, hours=18) < datetime.datetime.now():
+            self.not_found_count += (-1, 1)[0 <= self.not_found_count]
 
     def reset_not_found_count(self):
-        if self.not_found_count > 0:
+        if 0 != self.not_found_count:
             self._not_found_count = 0
+            self._last_found_on_indexer = 0
             myDB = db.DBConnection()
-            myDB.action('DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?', [self.indexer, self.indexerid])
+            myDB.action('DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
+                        [self.indexer, self.indexerid])
 
     @property
     def ids(self):
@@ -382,7 +393,8 @@ class TVShow(object):
         last_update_indexer = datetime.date.fromordinal(self.last_update_indexer)
 
         # if show was not found for 1 week, only retry to update once a week
-        if concurrent_show_not_found_days < self.not_found_count and (update_date - last_update_indexer) < datetime.timedelta(days=show_not_found_retry_days):
+        if (concurrent_show_not_found_days < abs(self.not_found_count)) \
+                and (update_date - last_update_indexer) < datetime.timedelta(days=show_not_found_retry_days):
             return False
 
         myDB = db.DBConnection()

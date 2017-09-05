@@ -96,6 +96,7 @@ class PageTemplate(Template):
         self.sbThemeName = sickbeard.THEME_NAME
 
         self.log_num_errors = len(classes.ErrorViewer.errors)
+        self.log_num_not_found_shows = len([x for x in sickbeard.showList if 0 < x.not_found_count])
         self.sbPID = str(sickbeard.PID)
         self.menu = [
             {'title': 'Home', 'key': 'home'},
@@ -1319,7 +1320,7 @@ class Home(MainHandler):
         elif sickbeard.showQueueScheduler.action.isInSubtitleQueue(showObj):  # @UndefinedVariable
             show_message = 'This show is queued and awaiting subtitles download.'
 
-        if 0 < showObj.not_found_count:
+        if 0 != showObj.not_found_count:
             last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
                 showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
             show_message = (
@@ -1784,12 +1785,12 @@ class Home(MainHandler):
             self.fanart_tmpl(t)
             t.num_ratings = len(sickbeard.FANART_RATINGS.get(str(t.show.indexerid), {}))
 
-            t.unlock_master_id = 0 < showObj.not_found_count
+            t.unlock_master_id = 0 != showObj.not_found_count
             t.showname_enc = urllib.quote_plus(showObj.name.encode('utf-8'))
 
             show_message = ''
 
-            if 0 < showObj.not_found_count:
+            if 0 != showObj.not_found_count:
                 # noinspection PyUnresolvedReferences
                 last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
                     showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
@@ -4614,10 +4615,11 @@ class showProcesses(Manage):
         t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
 
         myDb = db.DBConnection(row_type='dict')
-        sql_results = myDb.select('SELECT n.indexer, n.indexer_id, n.last_success, s.show_name FROM tv_shows_not_found as n INNER JOIN tv_shows as s ON (n.indexer == s.indexer AND n.indexer_id == s.indexer_id)')
+        sql_results = myDb.select('SELECT n.indexer, n.indexer_id, n.last_success, n.fail_count, s.show_name FROM tv_shows_not_found as n INNER JOIN tv_shows as s ON (n.indexer == s.indexer AND n.indexer_id == s.indexer_id)')
         for s in sql_results:
             date = helpers.tryInt(s['last_success'])
             s['last_success'] = ('never', sbdatetime.sbdatetime.fromordinal(date).sbfdate())[date > 1]
+            s['ignore_warning'] = 0 > s['fail_count']
         defunct_indexer = [i for i in sickbeard.indexerApi().all_indexers if sickbeard.indexerApi(i).config.get('defunct')]
         sql_r = None
         if defunct_indexer:
@@ -4638,6 +4640,18 @@ class showProcesses(Manage):
 
         time.sleep(5)
         self.redirect('/manage/showProcesses/')
+
+    def switchIgnoreWarning(self, indexer=None, indexer_id=None, *args, **kwargs):
+        indexer = helpers.tryInt(indexer)
+        indexer_id = helpers.tryInt(indexer_id)
+        showObj = helpers.find_show_by_id(sickbeard.showList, {indexer: indexer_id})
+
+        if not showObj:
+            return json.dumps({'indexer': indexer, 'indexer_id': indexer_id, 'error': 'Show not found'})
+
+        showObj.not_found_count *= -1
+
+        return json.dumps({'indexer': indexer, 'indexer_id': indexer_id, 'ignore_warning': 0 > showObj.not_found_count})
 
 
 class History(MainHandler):

@@ -35,6 +35,7 @@
 		<tr>
 			<th style="text-align:left">Show name</th>
 			<th>Last found</th>
+			<th>No warn icon</th>
 		</tr>
 		#set $row = 0
 		#for $cur_show in $NotFoundShows:
@@ -43,6 +44,9 @@
 					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexer_id']">$cur_show['show_name']</a>
 				</td>
 				<td style="width:20%;text-align:center;color:white">$cur_show['last_success']</td>
+				<td>
+				    <input type="checkbox" #if $cur_show['ignore_warning'] then 'checked="checked"' else ''#>
+				</td>
 			</tr>
 		#end for
 		</tbody>
