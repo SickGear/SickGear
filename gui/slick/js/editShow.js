@@ -160,12 +160,20 @@ $(document).ready(function () {
 					elService.attr(attr, elService.attr(search + '-' + attr));
 				elService.attr(search, linkOnly ? 'y' : 'n')
 			});
+			var title;
 			if (('' === Off) && !linkOnly) {
 				preventSave = !0;
+				title = elSelected.attr('title');
+				if (!/undefined/.test(title))
+					elSelected.attr({'data-title': title});
 				elSelected.addClass('warning').attr({title: 'Use digits (0-9)'});
 				elLock.prop('disabled', !0);
 			} else {
-				elSelected.removeClass('warning').removeAttr('title');
+				title = elSelected.attr('data-title');
+				if (!/undefined/.test(title))
+					elSelected.attr({'title': title}).removeAttr('data-title');
+				else
+					elSelected.removeClass('warning').removeAttr('title');
 				elLock.prop('disabled', !1);
 				if (!undef(elService.attr('href'))) {
 					if (!undef(elService.attr('data-href')) && linkOnly) {

@@ -1,21 +1,25 @@
 /* =======================================================================
 inc_top.tmpl
 ========================================================================== */
+.shows-not-found.n .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.n,
 pre .prelight{
 	color:#c3ed9b
 }
 
+.shows-not-found.nn .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.nn,
 pre .prelight2{
 	color:#f6ff41
 }
 
+.shows-not-found.nnn .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.nnn,
 pre .prelight-num{
 	color:#ffba57
 }
 
+.shows-not-found.nnnn .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.nnnn{
 	color:#ff6d5e
 }
