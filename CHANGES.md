@@ -106,6 +106,7 @@
 * Add "Shows from defunct TV info sources" to Manage/Show Processes page to link shows that can be switched to a
   different default TV info source
 * Add shows not found at a TV info source for over 7 days will only be retried once a week
+* Change prevent showing 'Mark download as bad and retry?' dialog when status doesn't require it
 
 
 [develop changelog]
