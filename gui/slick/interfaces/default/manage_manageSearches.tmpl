@@ -19,19 +19,19 @@
 
 	<div id="summary2" class="align-left">
 		<h3>Backlog Search:</h3>
-		<a id="forcebacklog" class="btn#if $standardBacklogRunning or $backlogIsActive# disabled#end if#" href="$sbRoot/manage/manageSearches/forceBacklog"><i class="sgicon-play"></i> Force</a>
-		<a id="pausebacklog" class="btn" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlogPaused then "0" else "1"#"><i class="#if $backlogPaused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlogPaused then "Unpause" else "Pause"#</a>
-#if $backlogPaused then 'Paused: ' else ''#
-#if not $backlogRunning and not $backlogIsActive:
+		<a id="forcebacklog" class="btn#if $standard_backlog_running or $backlog_is_active# disabled#end if#" href="$sbRoot/manage/manageSearches/forceBacklog"><i class="sgicon-play"></i> Force</a>
+		<a id="pausebacklog" class="btn" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlog_paused then "0" else "1"#"><i class="#if $backlog_paused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlog_paused then "Unpause" else "Pause"#</a>
+#if $backlog_paused then 'Paused: ' else ''#
+#if not $backlog_running and not $backlog_is_active:
 		Not in progress<br />
 #else
-		Currently running#if $backlogRunningType != "None"# ($backlogRunningType)#end if#<br />
+		Currently running#if $backlog_running_type != "None"# ($backlog_running_type)#end if#<br />
 #end if
 		<br />
 
 		<h3>Recent Search:</h3>
-		<a id="recentsearch" class="btn#if $recentSearchStatus# disabled#end if#" href="$sbRoot/manage/manageSearches/forceSearch"><i class="sgicon-play"></i> Force</a>
-#if not $recentSearchStatus
+		<a id="recentsearch" class="btn#if $recent_search_status# disabled#end if#" href="$sbRoot/manage/manageSearches/forceSearch"><i class="sgicon-play"></i> Force</a>
+#if not $recent_search_status
 		Not in progress<br />
 #else
 		In Progress<br />
@@ -39,8 +39,8 @@
 		<br />
 
 		<h3>Find Propers Search:</h3>
-		<a id="propersearch" class="btn#if $findPropersStatus# disabled#end if#" href="$sbRoot/manage/manageSearches/forceFindPropers"><i class="sgicon-play"></i> Force</a>
-#if not $findPropersStatus
+		<a id="propersearch" class="btn#if $find_propers_status# disabled#end if#" href="$sbRoot/manage/manageSearches/forceFindPropers"><i class="sgicon-play"></i> Force</a>
+#if not $find_propers_status
 		Not in progress<br />
 #else
 		In Progress<br />
@@ -50,20 +50,20 @@
 		<br /><br />
 
 		<h3>Search Queue:</h3>
-#if $queueLength['backlog'] or $queueLength['manual'] or $queueLength['failed']
+#if $queue_length['backlog'] or $queue_length['manual'] or $queue_length['failed']
 		<input type="button" class="show-all-more btn" id="all-btn-more" value="Expand All"><input type="button" class="show-all-less btn" id="all-btn-less" value="Collapse All"><br>
 #end if
 <br>
-Recent: <i>$queueLength['recent'] item$sickbeard.helpers.maybe_plural($queueLength['recent'])</i><br><br>
-Proper: <i>$queueLength['proper'] item$sickbeard.helpers.maybe_plural($queueLength['proper'])</i><br><br>
-Backlog: <i>$len($queueLength['backlog']) item$sickbeard.helpers.maybe_plural($len($queueLength['backlog']))</i>
-#if $queueLength['backlog']
-	<input type="button" class="shows-more btn" id="backlog-btn-more" value="Expand" #if not $queueLength['backlog']# style="display:none" #end if#><input type="button" class="shows-less btn" id="backlog-btn-less" value="Collapse" style="display:none"><br>
+Recent: <i>$queue_length['recent'] item$sickbeard.helpers.maybe_plural($queue_length['recent'])</i><br><br>
+Proper: <i>$queue_length['proper'] item$sickbeard.helpers.maybe_plural($queue_length['proper'])</i><br><br>
+Backlog: <i>$len($queue_length['backlog']) item$sickbeard.helpers.maybe_plural($len($queue_length['backlog']))</i>
+#if $queue_length['backlog']
+	<input type="button" class="shows-more btn" id="backlog-btn-more" value="Expand" #if not $queue_length['backlog']# style="display:none" #end if#><input type="button" class="shows-less btn" id="backlog-btn-less" value="Collapse" style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
 		#set $row = 0
-		#for $cur_item in $queueLength['backlog']:
+		#for $cur_item in $queue_length['backlog']:
 			#set $search_type = 'On Demand'
 			#if $cur_item['standard_backlog']:
 				#if $cur_item['forced']:
@@ -93,14 +93,14 @@ Backlog: <i>$len($queueLength['backlog']) item$sickbeard.helpers.maybe_plural($l
 	<br>
 #end if
 <br>
-Manual: <i>$len($queueLength['manual']) item$sickbeard.helpers.maybe_plural($len($queueLength['manual']))</i>
-#if $queueLength['manual']
-	<input type="button" class="shows-more btn" id="manual-btn-more" value="Expand" #if not $queueLength['manual']# style="display:none" #end if#><input type="button" class="shows-less btn" id="manual-btn-less" value="Collapse" style="display:none"><br>
+Manual: <i>$len($queue_length['manual']) item$sickbeard.helpers.maybe_plural($len($queue_length['manual']))</i>
+#if $queue_length['manual']
+	<input type="button" class="shows-more btn" id="manual-btn-more" value="Expand" #if not $queue_length['manual']# style="display:none" #end if#><input type="button" class="shows-less btn" id="manual-btn-less" value="Collapse" style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
 		#set $row = 0
-		#for $cur_item in $queueLength['manual']:
+		#for $cur_item in $queue_length['manual']:
 			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 				<td style="width:100%;text-align:left;color:white">
 					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
@@ -113,14 +113,14 @@ Manual: <i>$len($queueLength['manual']) item$sickbeard.helpers.maybe_plural($len
 	<br>
 #end if
 <br>
-Failed: <i>$len($queueLength['failed']) item$sickbeard.helpers.maybe_plural($len($queueLength['failed']))</i>
-#if $queueLength['failed']
-	<input type="button" class="shows-more btn" id="failed-btn-more" value="Expand" #if not $queueLength['failed']# style="display:none" #end if#><input type="button" class="shows-less btn" id="failed-btn-less" value="Collapse" style="display:none"><br>
+Failed: <i>$len($queue_length['failed']) item$sickbeard.helpers.maybe_plural($len($queue_length['failed']))</i>
+#if $queue_length['failed']
+	<input type="button" class="shows-more btn" id="failed-btn-more" value="Expand" #if not $queue_length['failed']# style="display:none" #end if#><input type="button" class="shows-less btn" id="failed-btn-less" value="Collapse" style="display:none"><br>
 	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
 		<thead></thead>
 		<tbody>
 		#set $row = 0
-		#for $cur_item in $queueLength['failed']:
+		#for $cur_item in $queue_length['failed']:
 			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 				<td style="width:100%;text-align:left;color:white">
 					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])

@@ -94,6 +94,13 @@
     #set $parts = $body_attr.split('class="')
     #set $body_attr = ('class="%s '.join($parts), $parts[0] + ' class="%s"')[1 == len($parts)] % {0: '', 1: 'pro', 2: 'pro ii'}.get(getattr($sickbeard, 'DISPLAY_SHOW_VIEWMODE', 0))
 #end if
+
+#set $classes = ' '.join(([], ['shows-not-found'])[any([$getVar('log_num_not_found_shows_all', 0)])] \
+    + ([], [($getVar('log_num_not_found_shows', 0) * 'n')[0:4]])[any([$getVar('log_num_not_found_shows', 0)])])
+#if any($classes)
+    #set $body_attr = $body_attr.rstrip('"') + (' class="%s"', ' %s"')['class=' in $body_attr] % $classes
+#end if
+
 <body$body_attr>
 	<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
 		<div class="container-fluid">
@@ -143,14 +150,14 @@
 					</li>
 
 					<li id="NAVmanage" class="dropdown">
-						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b></a>
+						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b><span class="snf bar"><i class="sgicon-warning"></i></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/home/postprocess/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Process Media</a></li>
 							<li class="divider"></li>
 							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-bulk-change"></i>Bulk Change</a></li>
 							<li><a href="$sbRoot/manage/backlogOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-backlog"></i>Backlog Overview</a></li>
 							<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Media Search</a></li>
-							<li><a href="$sbRoot/manage/showProcesses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-showqueue"></i>Show Processes</a></li>
+							<li><a href="$sbRoot/manage/showProcesses/" tabindex="$tab#set $tab += 1#"><span class="snf item"><i class="sgicon-warning"></i><i class="sgicon-showqueue"></i></span>Show Processes</a></li>
 							<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status</a></li>
 #if hasattr($sickbeard, 'USE_EMBY') and $sg_var('USE_EMBY') and $sg_str('EMBY_HOST') != '' and $sg_str('EMBY_APIKEY') != ''
 							<li><a href="$sbRoot/home/updateEMBY/" tabindex="$tab#set $tab += 1#"><i class="sgicon-emby"></i>Update Emby</a></li>

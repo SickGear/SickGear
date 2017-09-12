@@ -335,7 +335,7 @@
 								<span class="component-desc">
 
     #set $current_showid = $show.ids.get($src_id, {'id': 0}).get('id')
-									<input type="text" data-maybe-master="#echo ('0', '1')[bool($maybe_master)]#" name="mid-$src_id" id="#echo ('mid-%s' % $src_id, 'source-id')[$src_id == $show.indexer]#" value="#echo ($current_showid, $srcid)[$expand_ids and ($src_id == $tvsrc)]#" class="form-control form-control-inline input-sm#if $src_id == $show.indexer and $unlock_master_id# warning#end if#" #echo ('', $html_disabled)[$src_id == $show.indexer and not $unlock_master_id]#>
+									<input type="text" data-maybe-master="#echo ('0', '1')[bool($maybe_master)]#" name="mid-$src_id" id="#echo ('mid-%s' % $src_id, 'source-id')[$src_id == $show.indexer]#" value="#echo ($current_showid, $srcid)[$expand_ids and ($src_id == $tvsrc)]#" class="form-control form-control-inline input-sm#if $src_id == $show.indexer and $unlock_master_id# warning" title="Abandoned master ID#end if#" #echo ('', $html_disabled)[$src_id == $show.indexer and not $unlock_master_id]#>
 
     #if $src_id == $show.indexer
 									<label for="the-master">

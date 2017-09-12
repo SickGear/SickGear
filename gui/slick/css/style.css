@@ -161,6 +161,7 @@ inc_top.tmpl
 	margin-bottom:-15px
 }
 
+.navbar-default .navbar-nav .snf.bar,
 .navbar-default .navbar-nav .logger.bar{
 	position: absolute;
 	display:none;
@@ -169,16 +170,30 @@ inc_top.tmpl
 	right:12px
 }
 
+.navbar-default .navbar-nav .item .sgicon-showqueue,
+.shows-not-found .navbar-default .navbar-nav .snf.item .sgicon-warning,
+.shows-not-found.n .navbar-default .navbar-nav .snf.bar, .shows-not-found.nn .navbar-default .navbar-nav .snf.bar,
+.shows-not-found.nnn .navbar-default .navbar-nav .snf.bar, .shows-not-found.nnnn .navbar-default .navbar-nav .snf.bar,
+.n .navbar-default .navbar-nav .snf.item .sgicon-showqueue, .nn .navbar-default .navbar-nav .snf.item .sgicon-showqueue,
+.nnn .navbar-default .navbar-nav .snf.item .sgicon-showqueue, .nnnn .navbar-default .navbar-nav .snf.item .sgicon-showqueue,
 .navbar-default .navbar-nav .logger.errors{
 	display:block;
 }
 
+.navbar-default .navbar-nav .snf.item,
 .navbar-default .navbar-nav .logger.errors.item{
 	display:inline-block
 }
 
+.navbar-default .navbar-nav .snf,
 .navbar-default .navbar-nav .logger{
 	height:14px
+}
+
+.shows-not-found .navbar-default .navbar-nav .snf.bar,
+.shows-not-found .navbar-default .navbar-nav .snf.item .sgicon-showqueue,
+.navbar-default .navbar-nav .snf.item .sgicon-warning{
+	display:none
 }
 
 [class^="icon-"],
@@ -1131,8 +1146,8 @@ div.formpaginate{
 	margin-right:6px
 }
 
-a span.article,
-a:hover span.article{
+#addShowForm a span.article,
+#addShowForm a:hover span.article{
 	color:#2f4799
 }
 

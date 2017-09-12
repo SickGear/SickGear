@@ -107,6 +107,8 @@
   different default TV info source
 * Add shows not found at a TV info source for over 7 days will only be retried once a week
 * Change prevent showing 'Mark download as bad and retry?' dialog when status doesn't require it
+* Add warn icon indicator of abandoned IDs to "Manage" menu bar and "Manage/Show Processes" menu item
+* Add shows that have no replacement ID can be ignored at "Manage/Show Processes", the menu bar warn icon hides if all are ignored
 
 
 [develop changelog]
@@ -121,6 +123,7 @@
 * Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
 * Fix image not loaded from tvdb_api if there is only one poster/banner
 * Change prevent setting show/episode attr to None from indexer data
+* Fix article link color on some page were changed blue
 
 
 ### 0.12.28 (2017-08-26 18:15:00 UTC)

@@ -96,6 +96,8 @@ class PageTemplate(Template):
         self.sbThemeName = sickbeard.THEME_NAME
 
         self.log_num_errors = len(classes.ErrorViewer.errors)
+        self.log_num_not_found_shows = len([x for x in sickbeard.showList if 0 < x.not_found_count])
+        self.log_num_not_found_shows_all = len([x for x in sickbeard.showList if 0 != x.not_found_count])
         self.sbPID = str(sickbeard.PID)
         self.menu = [
             {'title': 'Home', 'key': 'home'},
@@ -1319,7 +1321,7 @@ class Home(MainHandler):
         elif sickbeard.showQueueScheduler.action.isInSubtitleQueue(showObj):  # @UndefinedVariable
             show_message = 'This show is queued and awaiting subtitles download.'
 
-        if 0 < showObj.not_found_count:
+        if 0 != showObj.not_found_count:
             last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
                 showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
             show_message = (
@@ -1784,12 +1786,12 @@ class Home(MainHandler):
             self.fanart_tmpl(t)
             t.num_ratings = len(sickbeard.FANART_RATINGS.get(str(t.show.indexerid), {}))
 
-            t.unlock_master_id = 0 < showObj.not_found_count
+            t.unlock_master_id = 0 != showObj.not_found_count
             t.showname_enc = urllib.quote_plus(showObj.name.encode('utf-8'))
 
             show_message = ''
 
-            if 0 < showObj.not_found_count:
+            if 0 != showObj.not_found_count:
                 # noinspection PyUnresolvedReferences
                 last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
                     showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
@@ -3649,7 +3651,7 @@ class NewHomeAddShows(Home):
         if None is not return_to:
             indexer, void, indexer_id, show_name = self.split_extra_show(whichSeries)
             if bool(helpers.tryInt(cancel_form)):
-                indexer = indexer or providedIndexer or '1'
+                indexer = indexer or providedIndexer or '0'
                 indexer_id = re.findall('show=([\d]+)', return_to)[0]
             return self.redirect(return_to % (indexer, indexer_id))
 
@@ -4542,15 +4544,15 @@ class Manage(MainHandler):
 class ManageSearches(Manage):
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='manage_manageSearches.tmpl')
-        # t.backlogPI = sickbeard.backlogSearchScheduler.action.get_progress_indicator()
-        t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
-        t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
-        t.backlogIsActive = sickbeard.backlogSearchScheduler.action.am_running()
-        t.standardBacklogRunning = sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress()
-        t.backlogRunningType = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
-        t.recentSearchStatus = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
-        t.findPropersStatus = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
-        t.queueLength = sickbeard.searchQueueScheduler.action.queue_length()
+        # t.backlog_pi = sickbeard.backlogSearchScheduler.action.get_progress_indicator()
+        t.backlog_paused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
+        t.backlog_running = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
+        t.backlog_is_active = sickbeard.backlogSearchScheduler.action.am_running()
+        t.standard_backlog_running = sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress()
+        t.backlog_running_type = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
+        t.recent_search_status = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
+        t.find_propers_status = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
+        t.queue_length = sickbeard.searchQueueScheduler.action.queue_length()
 
         t.submenu = self.ManageMenu('Search')
 
@@ -4609,21 +4611,22 @@ class ManageSearches(Manage):
 class showProcesses(Manage):
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='manage_showProcesses.tmpl')
-        t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
-        t.showList = sickbeard.showList
-        t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
+        t.queue_length = sickbeard.showQueueScheduler.action.queue_length()
+        t.show_list = sickbeard.showList
+        t.show_update_running = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
 
         myDb = db.DBConnection(row_type='dict')
-        sql_results = myDb.select('SELECT n.indexer, n.indexer_id, n.last_success, s.show_name FROM tv_shows_not_found as n INNER JOIN tv_shows as s ON (n.indexer == s.indexer AND n.indexer_id == s.indexer_id)')
+        sql_results = myDb.select('SELECT n.indexer, n.indexer_id, n.last_success, n.fail_count, s.show_name FROM tv_shows_not_found as n INNER JOIN tv_shows as s ON (n.indexer == s.indexer AND n.indexer_id == s.indexer_id)')
         for s in sql_results:
             date = helpers.tryInt(s['last_success'])
             s['last_success'] = ('never', sbdatetime.sbdatetime.fromordinal(date).sbfdate())[date > 1]
+            s['ignore_warning'] = 0 > s['fail_count']
         defunct_indexer = [i for i in sickbeard.indexerApi().all_indexers if sickbeard.indexerApi(i).config.get('defunct')]
         sql_r = None
         if defunct_indexer:
             sql_r = myDb.select('SELECT indexer, indexer_id, show_name FROM tv_shows WHERE indexer IN (%s)' % ','.join(['?'] * len(defunct_indexer)), defunct_indexer)
-        t.DefunctIndexer = sql_r
-        t.NotFoundShows = sql_results
+        t.defunct_indexer = sql_r
+        t.not_found_shows = sql_results
 
         t.submenu = self.ManageMenu('Processes')
 
@@ -4638,6 +4641,28 @@ class showProcesses(Manage):
 
         time.sleep(5)
         self.redirect('/manage/showProcesses/')
+
+    @staticmethod
+    def switch_ignore_warning(*args, **kwargs):
+
+        for k, v in kwargs.iteritems():
+            try:
+                indexer_id, state = k.split('|')
+            except ValueError:
+                continue
+            indexer, indexer_id = helpers.tryInt(v), helpers.tryInt(indexer_id)
+            if 0 < indexer and 0 < indexer_id:
+                show_obj = helpers.find_show_by_id(sickbeard.showList, {indexer: indexer_id})
+                if show_obj:
+                    change = -1
+                    if 'true' == state:
+                        if 0 > show_obj.not_found_count:
+                            change = 1
+                    elif 0 < show_obj.not_found_count:
+                        change = 1
+                    show_obj.not_found_count *= change
+
+        return json.dumps({})
 
 
 class History(MainHandler):
