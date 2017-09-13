@@ -109,6 +109,7 @@
 * Change prevent showing 'Mark download as bad and retry?' dialog when status doesn't require it
 * Add warn icon indicator of abandoned IDs to "Manage" menu bar and "Manage/Show Processes" menu item
 * Add shows that have no replacement ID can be ignored at "Manage/Show Processes", the menu bar warn icon hides if all are ignored
+* Change FreeBSD initscript to use command_interpreter
 
 
 [develop changelog]

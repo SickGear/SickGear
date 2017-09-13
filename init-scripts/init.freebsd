@@ -32,8 +32,9 @@ load_rc_config ${name}
 : ${sickgear_datadir:="${sickgear_dir}"}
 : ${sickgear_pidfile:="${sickgear_dir}/sickgear.pid"}
 
-command="/usr/local/bin/python"
-command_args="${sickgear_dir}/SickBeard.py --daemon --pidfile ${sickgear_pidfile}"
+command="${sickgear_dir}/SickBeard.py"
+command_interpreter="/usr/local/bin/python"
+command_args="--daemon --pidfile ${sickgear_pidfile}"
 
 # Add datadir to the command if set
 [ ! -z "${sickgear_datadir}" ] && \
