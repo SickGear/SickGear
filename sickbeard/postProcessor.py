@@ -504,8 +504,9 @@ class PostProcessor(object):
         self.release_group = parse_result.release_group
 
         # remember whether it's a proper
-        if parse_result.extra_info:
-            self.is_proper = None is not re.search('(^|[\. _-])(proper|repack)([\. _-]|$)', parse_result.extra_info, re.I)
+        if parse_result.extra_info_no_name:
+            self.is_proper = 0 < common.Quality.get_proper_level(parse_result.extra_info_no_name, parse_result.version,
+                                                                 parse_result.is_anime)
 
         # if the result is complete then set release name
         if parse_result.series_name and\
@@ -775,10 +776,27 @@ class PostProcessor(object):
 
         # if there's an existing downloaded file with same quality, check filesize to decide
         if new_ep_quality == old_ep_quality:
-            if (isinstance(self.nzb_name, basestring) and re.search(r'\bproper|repack\b', self.nzb_name, re.I)) or \
-                    (isinstance(self.file_name, basestring) and re.search(r'\bproper|repack\b', self.file_name, re.I)):
-                self._log(u'Proper or repack with same quality, marking it safe to replace', logger.DEBUG)
-                return True
+            np = NameParser(showObj=self.showObj)
+            cur_proper_level = 0
+            try:
+                pr = np.parse(ep_obj.release_name)
+                cur_proper_level = common.Quality.get_proper_level(pr.extra_info_no_name, pr.version, pr.is_anime)
+            except (StandardError, Exception):
+                pass
+            new_name = (('', self.file_name)[isinstance(self.file_name, basestring)], self.nzb_name)[isinstance(
+                self.nzb_name, basestring)]
+            if new_name:
+                try:
+                    npr = np.parse(new_name)
+                except (StandardError, Exception):
+                    npr = None
+                if npr:
+                    is_repack, new_proper_level = common.Quality.get_proper_level(npr.extra_info_no_name, npr.version,
+                                                                                  npr.is_anime, check_is_repack=True)
+                    if new_proper_level > cur_proper_level and \
+                            (not is_repack or npr.release_group == ep_obj.release_group):
+                        self._log(u'Proper or repack with same quality, marking it safe to replace', logger.DEBUG)
+                        return True
 
             self._log(u'An episode exists in the database with the same quality as the episode to process', logger.DEBUG)
 
@@ -1049,7 +1067,7 @@ class PostProcessor(object):
         ep_obj.createMetaFiles()
 
         # log it to history
-        history.logDownload(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version)
+        history.log_download(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version)
 
         # send notifications
         notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))

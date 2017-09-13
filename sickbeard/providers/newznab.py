@@ -28,7 +28,7 @@ from math import ceil
 from sickbeard.sbdatetime import sbdatetime
 from . import generic
 from sickbeard import helpers, logger, scene_exceptions, tvcache, classes, db
-from sickbeard.common import neededQualities
+from sickbeard.common import neededQualities, Quality
 from sickbeard.exceptions import AuthException, MultipleShowObjectsException
 from sickbeard.indexers.indexer_config import *
 from io import BytesIO
@@ -453,6 +453,13 @@ class NewznabProvider(generic.NZBProvider):
 
         return title, url
 
+    def get_size_uid(self, item, **kwargs):
+        size = -1
+        uid = None
+        if 'name_space' in kwargs and 'newznab' in kwargs['name_space']:
+            size, uid = self._parse_size_uid(item, kwargs['name_space'])
+        return size, uid
+
     def get_show(self, item, **kwargs):
         show_obj = None
         if 'name_space' in kwargs and 'newznab' in kwargs['name_space']:
@@ -574,6 +581,21 @@ class NewznabProvider(generic.NZBProvider):
             pass
 
         return parsed_date
+
+    @staticmethod
+    def _parse_size_uid(item, ns, default=-1):
+        parsed_size = default
+        uid = None
+        try:
+            if ns and 'newznab' in ns:
+                for attr in item.findall('%sattr' % ns['newznab']):
+                    if 'size' == attr.get('name', ''):
+                        parsed_size = helpers.tryInt(attr.get('value'), -1)
+                    elif 'guid' == attr.get('name', ''):
+                        uid = attr.get('value')
+        except (StandardError, Exception):
+            pass
+        return parsed_size, uid
 
     def _search_provider(self, search_params, needed=neededQualities(need_all=True), max_items=400,
                          try_all_searches=False, **kwargs):
@@ -751,8 +773,8 @@ class NewznabProvider(generic.NZBProvider):
         search_terms = []
         regex = []
         if shows:
-            search_terms += ['.proper.', '.repack.']
-            regex += ['proper|repack']
+            search_terms += ['.proper.', '.repack.', '.real.']
+            regex += ['proper|repack', Quality.real_check]
             proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
         if anime:
             terms = 'v1|v2|v3|v4|v5'
@@ -789,9 +811,11 @@ class NewznabProvider(generic.NZBProvider):
                     logger.log(u'Unable to figure out the date for entry %s, skipping it' % title)
                     continue
 
+                result_size, result_uid = self._parse_size_uid(item, ns=n_space)
                 if not search_date or search_date < result_date:
                     show_obj = self.get_show(item, name_space=n_space)
-                    search_result = classes.Proper(title, url, result_date, self.show, parsed_show=show_obj)
+                    search_result = classes.Proper(title, url, result_date, self.show, parsed_show=show_obj,
+                                                   size=result_size, puid=result_uid)
                     results.append(search_result)
 
             time.sleep(0.5)

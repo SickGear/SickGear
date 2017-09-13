@@ -231,6 +231,20 @@ class DBConnection(object):
         self.action('ALTER TABLE [%s] ADD %s %s' % (table, column, type))
         self.action('UPDATE [%s] SET %s = ?' % (table, column), (default,))
 
+    def has_flag(self, flag_name):
+        sql_result = self.select('SELECT flag FROM flags WHERE flag = ?', [flag_name])
+        if 0 < len(sql_result):
+            return True
+        return False
+
+    def add_flag(self, flag_name):
+        if not self.has_flag(flag_name):
+            self.action('INSERT INTO flags (flag) VALUES (?)', [flag_name])
+
+    def remove_flag(self, flag_name):
+        if self.has_flag(flag_name):
+            self.action('DELETE FROM flags WHERE flag = ?', [flag_name])
+
     def close(self):
         """Close database connection"""
         if getattr(self, 'connection', None) is not None:
@@ -454,7 +468,8 @@ def MigrationCode(myDB):
         20001: sickbeard.mainDB.AddTvShowOverview,
         20002: sickbeard.mainDB.AddTvShowTags,
         20003: sickbeard.mainDB.ChangeMapIndexer,
-        20004: sickbeard.mainDB.AddShowNotFoundCounter
+        20004: sickbeard.mainDB.AddShowNotFoundCounter,
+        20005: sickbeard.mainDB.AddFlagTable
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

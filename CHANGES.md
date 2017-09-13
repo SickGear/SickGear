@@ -130,6 +130,10 @@
 * Change subtitle addons no longer need to be saved before Search Subtitles is enabled as a
   forbidden action to reuse an exited FindSubtitles thread is no longer attempted
 * Fix tools menu not opening for some browsers
+* Change overhaul handling of PROPERS/REPACKS/REAL
+* Add restriction to allow only same release group for repacks
+* Change try all episode names with 'real', 'repack', 'proper'
+* Add tip to search settings/media search about improved matching with optional regex library
 
 
 [develop changelog]

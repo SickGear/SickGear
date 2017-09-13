@@ -27,7 +27,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20005
+MAX_DB_VERSION = 20006
 
 
 class MainSanityCheck(db.DBSanityCheck):
@@ -116,28 +116,32 @@ class MainSanityCheck(db.DBSanityCheck):
 
     def fix_missing_table_indexes(self):
         if not self.connection.select('PRAGMA index_info("idx_indexer_id")'):
-            logger.log(u'Missing idx_indexer_id for TV Shows table detected!, fixing...')
-            self.connection.action('CREATE UNIQUE INDEX idx_indexer_id ON tv_shows (indexer_id);')
+            logger.log('Updating TV Shows table with index idx_indexer_id')
+            self.connection.action('CREATE UNIQUE INDEX idx_indexer_id ON tv_shows (indexer_id)')
 
         if not self.connection.select('PRAGMA index_info("idx_tv_episodes_showid_airdate")'):
-            logger.log(u'Missing idx_tv_episodes_showid_airdate for TV Episodes table detected!, fixing...')
-            self.connection.action('CREATE INDEX idx_tv_episodes_showid_airdate ON tv_episodes(showid,airdate);')
+            logger.log('Updating TV Episode table with index idx_tv_episodes_showid_airdate')
+            self.connection.action('CREATE INDEX idx_tv_episodes_showid_airdate ON tv_episodes(showid, airdate)')
 
         if not self.connection.select('PRAGMA index_info("idx_showid")'):
-            logger.log(u'Missing idx_showid for TV Episodes table detected!, fixing...')
-            self.connection.action('CREATE INDEX idx_showid ON tv_episodes (showid);')
+            logger.log('Updating TV Episode table with index idx_showid')
+            self.connection.action('CREATE INDEX idx_showid ON tv_episodes (showid)')
 
         if not self.connection.select('PRAGMA index_info("idx_status")'):
-            logger.log(u'Missing idx_status for TV Episodes table detected!, fixing...')
-            self.connection.action('CREATE INDEX idx_status ON tv_episodes (status,season,episode,airdate)')
+            logger.log('Updating TV Episode table with index idx_status')
+            self.connection.action('CREATE INDEX idx_status ON tv_episodes (status, season, episode, airdate)')
 
         if not self.connection.select('PRAGMA index_info("idx_sta_epi_air")'):
-            logger.log(u'Missing idx_sta_epi_air for TV Episodes table detected!, fixing...')
-            self.connection.action('CREATE INDEX idx_sta_epi_air ON tv_episodes (status,episode, airdate)')
+            logger.log('Updating TV Episode table with index idx_sta_epi_air')
+            self.connection.action('CREATE INDEX idx_sta_epi_air ON tv_episodes (status, episode, airdate)')
 
         if not self.connection.select('PRAGMA index_info("idx_sta_epi_sta_air")'):
-            logger.log(u'Missing idx_sta_epi_sta_air for TV Episodes table detected!, fixing...')
-            self.connection.action('CREATE INDEX idx_sta_epi_sta_air ON tv_episodes (season,episode, status, airdate)')
+            logger.log('Updating TV Episode table with index idx_sta_epi_sta_air')
+            self.connection.action('CREATE INDEX idx_sta_epi_sta_air ON tv_episodes (season, episode, status, airdate)')
+
+        if not self.connection.hasIndex('tv_episodes', 'idx_tv_ep_ids'):
+            logger.log('Updating TV Episode table with index idx_tv_ep_ids')
+            self.connection.action('CREATE INDEX idx_tv_ep_ids ON tv_episodes (indexer, showid)')
 
     def fix_unaired_episodes(self):
 
@@ -1240,4 +1244,17 @@ class AddShowNotFoundCounter(db.SchemaUpgrade):
             self.connection.action('CREATE TABLE tv_shows_not_found (indexer NUMERIC NOT NULL, indexer_id NUMERIC NOT NULL, fail_count NUMERIC NOT NULL DEFAULT 0, last_check NUMERIC NOT NULL, last_success NUMERIC, PRIMARY KEY (indexer_id, indexer))')
 
         self.setDBVersion(20005)
+        return self.checkDBVersion()
+
+
+# 20005 -> 20006
+class AddFlagTable(db.SchemaUpgrade):
+    def execute(self):
+        if not self.hasTable('flags'):
+            logger.log(u'Adding table flags')
+
+            db.backup_database('sickbeard.db', self.checkDBVersion())
+            self.connection.action('CREATE TABLE flags (flag  PRIMARY KEY  NOT NULL )')
+
+        self.setDBVersion(20006)
         return self.checkDBVersion()

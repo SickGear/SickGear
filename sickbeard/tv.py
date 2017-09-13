@@ -311,37 +311,43 @@ class TVShow(object):
                 self.episodes[curSeason][curEp] = None
                 del myEp
 
-    def getAllEpisodes(self, season=None, has_location=False):
+    def getAllEpisodes(self, season=None, has_location=False, check_related_eps=True):
 
-        sql_selection = 'SELECT season, episode, '
+        sql_selection = 'SELECT season, episode'
 
-        # subselection to detect multi-episodes early, share_location > 0
-        sql_selection = sql_selection + ' (SELECT COUNT (*) FROM tv_episodes WHERE showid = tve.showid AND season = tve.season AND location != "" AND location = tve.location AND episode != tve.episode) AS share_location '
+        if check_related_eps:
+            # subselection to detect multi-episodes early, share_location > 0
+            sql_selection += ' , (SELECT COUNT (*) FROM tv_episodes WHERE showid = tve.showid AND season = ' \
+                             'tve.season AND location != "" AND location = tve.location AND episode != tve.episode) ' \
+                             'AS share_location '
 
-        sql_selection = sql_selection + ' FROM tv_episodes tve WHERE showid = ' + str(self.indexerid)
+        sql_selection += ' FROM tv_episodes tve WHERE indexer = ? AND showid = ?'
+        sql_parameter = [self.indexer, self.indexerid]
 
         if season is not None:
-            sql_selection = sql_selection + ' AND season = ' + str(season)
+            sql_selection += ' AND season = ?'
+            sql_parameter += [season]
 
         if has_location:
-            sql_selection = sql_selection + ' AND location != "" '
+            sql_selection += ' AND location != "" '
 
         # need ORDER episode ASC to rename multi-episodes in order S01E01-02
-        sql_selection = sql_selection + ' ORDER BY season ASC, episode ASC'
+        sql_selection += ' ORDER BY season ASC, episode ASC'
 
         myDB = db.DBConnection()
-        results = myDB.select(sql_selection)
+        results = myDB.select(sql_selection, sql_parameter)
 
         ep_list = []
         for cur_result in results:
             cur_ep = self.getEpisode(int(cur_result['season']), int(cur_result['episode']))
             if cur_ep:
                 cur_ep.relatedEps = []
-                if cur_ep.location:
+                if check_related_eps and cur_ep.location:
                     # if there is a location, check if it's a multi-episode (share_location > 0) and put them in relatedEps
                     if cur_result['share_location'] > 0:
                         related_eps_result = myDB.select(
-                            'SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND location = ? AND episode != ? ORDER BY episode ASC',
+                            'SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND location = ? AND '
+                            'episode != ? ORDER BY episode ASC',
                             [self.indexerid, cur_ep.season, cur_ep.location, cur_ep.episode])
                         for cur_related_ep in related_eps_result:
                             related_ep = self.getEpisode(int(cur_related_ep["season"]), int(cur_related_ep["episode"]))
@@ -350,7 +356,6 @@ class TVShow(object):
                 ep_list.append(cur_ep)
 
         return ep_list
-
 
     def getEpisode(self, season=None, episode=None, file=None, noCreate=False, absolute_number=None, forceUpdate=False):
 
@@ -1690,7 +1695,7 @@ class TVEpisode(object):
         if sickbeard.SUBTITLES_HISTORY:
             for video in subtitles:
                 for subtitle in subtitles.get(video):
-                    history.logSubtitle(self.show.indexerid, self.season, self.episode, self.status, subtitle)
+                    history.log_subtitle(self.show.indexerid, self.season, self.episode, self.status, subtitle)
 
         return subtitles
 

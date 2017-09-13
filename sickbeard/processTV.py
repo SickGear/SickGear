@@ -645,7 +645,7 @@ class ProcessTVShow(object):
             'media_pattern': re.compile('|'.join([
                 r'\.s\d{2}e\d{2}\.', r'\.(?:36|72|216)0p\.', r'\.(?:480|576|1080)[pi]\.', r'\.[xh]26[45]\b',
                 r'\.bluray\.', r'\.[hp]dtv\.', r'\.web(?:[.-]?dl)?\.', r'\.(?:vhs|vod|dvd|web|bd|br).?rip\.',
-                r'\.dvdr\b', r'\.(?:stv|vcd)\.', r'\bhd(?:cam|rip)\b', r'\.(?:internal|proper|repack|screener)\.',
+                r'\.dvdr\b', r'\.(?:stv|vcd)\.', r'\bhd(?:cam|rip)\b', r'\.(?:internal|real|proper|repack|screener)\.',
                 r'\b(?:aac|ac3|mp3)\b', r'\.(?:ntsc|pal|secam)\.', r'\.r5\.', r'\bscr\b', r'\b(?:divx|xvid)\b'
             ]), flags=re.IGNORECASE)
         }
