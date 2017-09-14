@@ -418,6 +418,15 @@ PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = False
 PUSHBULLET_ACCESS_TOKEN = None
 PUSHBULLET_DEVICE_IDEN = None
 
+USE_SLACK = False
+SLACK_NOTIFY_ONSNATCH = False
+SLACK_NOTIFY_ONDOWNLOAD = False
+SLACK_ACCESS_TOKEN = None
+SLACK_CHANNEL = None
+SLACK_AS_USER = False
+SLACK_BOT_NAME = None
+SLACK_ICON_URL = None
+
 USE_EMAIL = False
 EMAIL_OLD_SUBJECTS = None
 EMAIL_NOTIFY_ONSNATCH = False
@@ -631,6 +640,7 @@ def initialize(console_logging=True):
             USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
             TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
             TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
+            USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_ACCESS_TOKEN, SLACK_CHANNEL, SLACK_AS_USER, SLACK_BOT_NAME, SLACK_ICON_URL, \
             USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
             EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_LIST, EMAIL_OLD_SUBJECTS
         # Anime Settings
@@ -640,7 +650,7 @@ def initialize(console_logging=True):
             return False
 
         for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBget', 'Emby', 'Kodi', 'XBMC', 'PLEX',
-                       'Growl', 'Prowl', 'Twitter', 'Boxcar2', 'NMJ', 'NMJv2', 'Synology', 'SynologyNotifier',
+                       'Growl', 'Prowl', 'Twitter', 'Slack', 'Boxcar2', 'NMJ', 'NMJv2', 'Synology', 'SynologyNotifier',
                        'pyTivo', 'NMA', 'Pushalot', 'Pushbullet', 'Subtitles'):
             CheckSection(CFG, stanza)
 
@@ -1032,6 +1042,15 @@ def initialize(console_logging=True):
             check_setting_int(CFG, 'Pushbullet', 'pushbullet_notify_onsubtitledownload', 0))
         PUSHBULLET_ACCESS_TOKEN = check_setting_str(CFG, 'Pushbullet', 'pushbullet_access_token', '')
         PUSHBULLET_DEVICE_IDEN = check_setting_str(CFG, 'Pushbullet', 'pushbullet_device_iden', '')
+
+        USE_SLACK = bool(check_setting_int(CFG, 'Slack', 'use_slack', 0))
+        SLACK_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Slack', 'slack_notify_onsnatch', 0))
+        SLACK_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Slack', 'slack_notify_ondownload', 0))
+        SLACK_ACCESS_TOKEN = check_setting_str(CFG, 'Slack', 'slack_access_token', '')
+        SLACK_CHANNEL = check_setting_str(CFG, 'Slack', 'slack_channel', '')
+        SLACK_AS_USER = bool(check_setting_int(CFG, 'Slack', 'slack_as_user', 0))
+        SLACK_BOT_NAME = check_setting_str(CFG, 'Slack', 'slack_bot_name', '')
+        SLACK_ICON_URL = check_setting_str(CFG, 'Slack', 'slack_icon_url', '')
 
         USE_EMAIL = bool(check_setting_int(CFG, 'Email', 'use_email', 0))
         EMAIL_OLD_SUBJECTS = bool(check_setting_int(CFG, 'Email', 'email_old_subjects',
@@ -1820,6 +1839,16 @@ def save_config():
     new_config['Pushbullet']['pushbullet_notify_onsubtitledownload'] = int(PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['Pushbullet']['pushbullet_access_token'] = PUSHBULLET_ACCESS_TOKEN
     new_config['Pushbullet']['pushbullet_device_iden'] = PUSHBULLET_DEVICE_IDEN
+
+    new_config['Slack'] = {}
+    new_config['Slack']['use_slack'] = int(USE_SLACK)
+    new_config['Slack']['slack_notify_onsnatch'] = int(SLACK_NOTIFY_ONSNATCH)
+    new_config['Slack']['slack_notify_ondownload'] = int(SLACK_NOTIFY_ONDOWNLOAD)
+    new_config['Slack']['slack_access_token'] = SLACK_ACCESS_TOKEN
+    new_config['Slack']['slack_channel'] = SLACK_CHANNEL
+    new_config['Slack']['slack_as_user'] = int(SLACK_AS_USER)
+    new_config['Slack']['slack_bot_name'] = SLACK_BOT_NAME
+    new_config['Slack']['slack_icon_url'] = SLACK_ICON_URL
 
     new_config['Email'] = {}
     new_config['Email']['use_email'] = int(USE_EMAIL)
