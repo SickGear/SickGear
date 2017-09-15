@@ -1150,14 +1150,12 @@ class Home(MainHandler):
 
         return notifiers.pushbullet_notifier.get_devices(accessToken)
 
-    def testSlack(self, accessToken=None, channel=None, as_user=False, bot_name=None, icon_url=None):
+    def testSlack(self, access_token=None, channel=None, as_user=False, bot_name=None, icon_url=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        result = notifiers.slack_notifier.test_notify(accessToken, channel, as_user, bot_name, icon_url)
-        if result:
-            return "Slack notification succeeded. Check your Slack clients to make sure it worked"
-        else:
-            return "Error sending Slack notification"
+        result = notifiers.slack_notifier.test_notify(channel, 'true' == as_user, bot_name, icon_url, access_token)
+        return ('Error sending notification, Slack response: "%s"' % result,
+                'Successful test notice sent. (Note: Slack clients display icon once in a sequence)')[True is result]
 
     def viewchanges(self):
 

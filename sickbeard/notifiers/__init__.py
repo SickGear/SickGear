@@ -61,9 +61,9 @@ nma_notifier = nma.NMA_Notifier()
 pushalot_notifier = pushalot.PushalotNotifier()
 pushbullet_notifier = pushbullet.PushbulletNotifier()
 # social
-slack_notifier = slack.SlackNotifier()
 twitter_notifier = tweet.TwitterNotifier()
 trakt_notifier = trakt.TraktNotifier()
+slack_notifier = slack.SlackNotifier()
 email_notifier = emailnotify.EmailNotifier()
 
 notifiers = [
@@ -83,9 +83,9 @@ notifiers = [
     nma_notifier,
     pushalot_notifier,
     pushbullet_notifier,
-    slack_notifier,
     twitter_notifier,
     trakt_notifier,
+    slack_notifier,
     email_notifier,
 ]
 

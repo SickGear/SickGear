@@ -434,23 +434,30 @@
 			});
 	});
 
-	$("#testSlack").click(function () {
-		var slack_access_token = $("#slack_access_token").val();
-		var slack_channel = $("#slack_channel").val();
-		var slack_as_user = $("#slack_as_user").attr('checked');
-		var slack_bot_name = $("#slack_bot_name").val();
-		var slack_icon_url = $("#slack_icon_url").val();
-		if (!slack_access_token || !slack_channel || !(slack_as_user || slack_bot_name)) {
-			$("#testSlack-result").html("Please fill out the necessary fields above.");
-			return;
+	$('#testSlack').click(function () {
+		var channel = '#slack_channel', slack_channel = $(channel).val(),
+			slack_as_user = $('#slack_as_user').prop('checked'),
+			slack_bot_name = $('#slack_bot_name').val(), slack_icon_url = $('#slack_icon_url').val(),
+			access_token = '#slack_access_token', slack_access_token = $(access_token).val();
+
+		$(channel + ', ' + access_token).removeClass('warning');
+		if (!slack_channel || !slack_access_token) {
+			$('#testSlack-result').html('Please fill out the necessary fields above.');
+			if (!slack_channel)
+				$(channel).addClass('warning');
+			if (!slack_access_token)
+				$(access_token).addClass('warning');
+		} else {
+			$(this).prop('disabled', true);
+			$('#testSlack-result').html(loading);
+			$.get(sbRoot + '/home/testSlack', {
+				'channel': slack_channel, 'as_user': slack_as_user,
+				'bot_name': slack_bot_name, 'icon_url': slack_icon_url, 'access_token': slack_access_token})
+				.done(function (data) {
+					$('#testSlack-result').html(data);
+					$('#testSlack').prop('disabled', false);
+				});
 		}
-		$(this).prop("disabled", true);
-		$("#testSlack-result").html(loading);
-		$.get(sbRoot + "/home/testSlack", {'accessToken': slack_access_token, 'channel': slack_channel, 'as_user': slack_as_user, 'bot_name': slack_bot_name, 'icon_url': slack_icon_url})
-		  .done(function (data) {
-			  $("#testSlack-result").html(data);
-			  $("#testSlack").prop("disabled", false);
-		  });
 	});
 
 	function get_pushbullet_devices (msg) {
