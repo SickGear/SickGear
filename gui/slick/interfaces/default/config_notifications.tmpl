@@ -1685,6 +1685,112 @@
 
 				<div class="component-group">
 					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/slack.png" alt="" title="Slack" />
+						<h3><a href="<%= anon_url('https://slack.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Slack</a></h3>
+						<p>Team, group, and direct communication.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use_slack">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_slack" id="use_slack" #if $sickbeard.USE_SLACK then 'checked="checked"' else ''#>
+									<p>should SickGear send Slack notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use_slack">
+							<div class="field-pair">
+								<label for="slack_notify_onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="slack_notify_onsnatch" id="slack_notify_onsnatch" #if $sickbeard.SLACK_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="slack_notify_ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="slack_notify_ondownload" id="slack_notify_ondownload" #if $sickbeard.SLACK_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="slack_notify_onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="slack_notify_onsubtitledownload" id="slack_notify_onsubtitledownload" #if $sickbeard.SLACK_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label for="slack_channel">
+									<span class="component-title">Slack channel</span>
+									<span class="component-desc">
+										<input type="text" name="slack_channel" id="slack_channel" value="$sickbeard.SLACK_CHANNEL" class="form-control input-sm input250">
+										<span style="float:left">channel to send notifications to</span>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="slack_as_user">
+									<span class="component-title">Post as authed user</span>
+									<span class="component-desc">
+										<input type="checkbox" class="viewIf" name="slack_as_user" id="slack_as_user" #if $sickbeard.SLACK_AS_USER then 'checked="checked"' else ''#>
+										<p>send notifications using the profile name and photo of the access token</p>
+									</span>
+								</label>
+							</div>
+							<div class="hide_if_slack_as_user">
+								<div class="field-pair">
+									<label for="slack_bot_name">
+										<span class="component-title">Post as a custom name</span>
+										<span class="component-desc">
+											<input type="text" name="slack_bot_name" id="slack_bot_name" value="$sickbeard.SLACK_BOT_NAME" class="form-control input-sm input250">
+											<p>blank for 'SickGear'</p>
+										</span>
+									</label>
+								</div>
+								<div class="field-pair">
+									<label for="slack_icon_url">
+										<span class="component-title">Custom icon image url</span>
+										<span class="component-desc">
+											<input type="text" name="slack_icon_url" id="slack_icon_url" value="$sickbeard.SLACK_ICON_URL" class="form-control input-sm input250">
+											<p>blank for SickGear image</p>
+										</span>
+									</label>
+								</div>
+							</div>
+							<div class="field-pair">
+								<label for="slack_access_token">
+									<span class="component-title">Slack oauth access token</span>
+									<span class="component-desc">
+										<input type="text" name="slack_access_token" id="slack_access_token" value="$sickbeard.SLACK_ACCESS_TOKEN" class="form-control input-sm input350">
+										<div class="clear-left"><p>1. <a href="<%= anon_url('https://api.slack.com/apps/new') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">create a Slack app</a> name for SickGear and select a workspace<br>
+										2. under the 'Features' section of the left sidebar, click 'OAuth & Perms'<br>
+										3. scroll page to section 'Scopes' and open the menu 'Select Permission Scopes'<br>
+										4. in the 'Chat' menu section, select 'Send messages as <em class="grey-text">appname</em>' - (<em class="grey-text">set in step 1</em>)<br>
+										5. also, in the 'Chat' menu section, select 'Send messages as user'<br>
+										6. after 'Save', go to page top, click 'Install App to Workspace'<br>
+										7. click 'Authorize' to view the 'OAuth Access Token', paste it to the above field</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="testNotification" id="testSlack-result">Click below to test.</div>
+							<input type="button" class="btn" value="Test Slack" id="testSlack" />
+							<input type="submit" class="btn config_submitter" value="Save Changes" />
+						</div><!-- /content_use_slack //-->
+					</fieldset>
+				</div><!-- /slack component-group //-->
+
+				<div class="component-group">
+					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/email.png" alt="" title="Email" />
 						<h3><a href="<%= anon_url('http://en.wikipedia.org/wiki/Comparison_of_webmail_providers') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Email</a></h3>
 						<p>Email notification settings.</p>

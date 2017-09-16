@@ -1150,6 +1150,13 @@ class Home(MainHandler):
 
         return notifiers.pushbullet_notifier.get_devices(accessToken)
 
+    def testSlack(self, access_token=None, channel=None, as_user=False, bot_name=None, icon_url=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        result = notifiers.slack_notifier.test_notify(channel, 'true' == as_user, bot_name, icon_url, access_token)
+        return ('Error sending notification, Slack response: "%s"' % result,
+                'Successful test notice sent. (Note: Slack clients display icon once in a sequence)')[True is result]
+
     def viewchanges(self):
 
         t = PageTemplate(headers=self.request.headers, file='viewchanges.tmpl')
@@ -5750,7 +5757,8 @@ class ConfigNotifications(Config):
                           use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
                           email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
                           email_tls=None, email_user=None, email_password=None, email_list=None, email_show_list=None,
-                          email_show=None, **kwargs):
+                          email_show=None, use_slack=None, slack_notify_onsnatch=None, slack_notify_ondownload=None,
+                          slack_access_token=None, slack_channel=None, slack_as_user=None, slack_bot_name=None, slack_icon_url=None, **kwargs):
 
         results = []
 
@@ -5888,6 +5896,15 @@ class ConfigNotifications(Config):
         # sickbeard.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
         # sickbeard.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
         # sickbeard.TRAKT_START_PAUSED = config.checkbox_to_value(trakt_start_paused)
+
+        sickbeard.USE_SLACK = config.checkbox_to_value(use_slack)
+        sickbeard.SLACK_NOTIFY_ONSNATCH = config.checkbox_to_value(slack_notify_onsnatch)
+        sickbeard.SLACK_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(slack_notify_ondownload)
+        sickbeard.SLACK_ACCESS_TOKEN = slack_access_token
+        sickbeard.SLACK_CHANNEL = slack_channel
+        sickbeard.SLACK_AS_USER = config.checkbox_to_value(slack_as_user)
+        sickbeard.SLACK_BOT_NAME = slack_bot_name
+        sickbeard.SLACK_ICON_URL = slack_icon_url
 
         sickbeard.USE_EMAIL = config.checkbox_to_value(use_email)
         sickbeard.EMAIL_NOTIFY_ONSNATCH = config.checkbox_to_value(email_notify_onsnatch)
@@ -6323,4 +6340,3 @@ class CachedImages(MainHandler):
         self.set_header('Content-Type', mime_type)
         with open(static_image_path, 'rb') as img:
             return img.read()
-
