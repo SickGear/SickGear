@@ -760,10 +760,10 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                         try:
                             hdr = re.findall('(\w+(\d+):)', td[0:6])[0]
                             x, v = len(hdr[0]), int(hdr[1])
-                            for item in range(0, 12):
+                            while x < len(td):
                                 y = x + v
                                 name = 'name' == td[x: y]
-                                w = re.findall('((?:i\d+e|d|l)?(\d+):)', td[y: y + 32])[0]
+                                w = re.findall('((?:i-?\d+e|e+|d|l+)*(\d+):)', td[y: y + 32])[0]
                                 x, v = y + len(w[0]), int(w[1])
                                 if name:
                                     name = td[x: x + v]

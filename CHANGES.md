@@ -128,6 +128,12 @@
 * Fix article link color on some page were changed blue
 
 
+### 0.12.29 (2017-09-17 09:00:00 UTC)
+
+* Fix provider nCore
+* Change .torrent checker due to files created with qB 3.3.16 (affects nCore and NBL)
+
+
 ### 0.12.28 (2017-08-26 18:15:00 UTC)
 
 * Change prevent indexer specific release name parts from fudging search logic
