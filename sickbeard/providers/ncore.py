@@ -38,7 +38,7 @@ class NcoreProvider(generic.TorrentProvider):
                      'search': self.url_base + 'torrents.php?mire=%s&' + '&'.join([
                          'miszerint=fid', 'hogyan=DESC', 'tipus=kivalasztottak_kozott',
                          'kivalasztott_tipus=xvidser,dvdser,hdser', 'miben=name']),
-                     'get': self.url_base + '%s'}
+                     'get': self.url_base + '%s&key='}
 
         self.url = self.urls['config_provider_home_uri']
 
@@ -59,7 +59,8 @@ class NcoreProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'list': '.*?torrent_all', 'info': 'details'}.iteritems())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'list': '.*?torrent_all', 'info': 'details', 'key': 'key=([^"]+)">Torrent let'}.iteritems())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
@@ -76,6 +77,7 @@ class NcoreProvider(generic.TorrentProvider):
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
                         torrent_table = soup.find('div', class_=rc['list'])
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('div', class_='box_torrent')
+                        key = rc['key'].findall(html)[0]
 
                         if not len(torrent_rows):
                             raise generic.HaltParseException
@@ -90,7 +92,7 @@ class NcoreProvider(generic.TorrentProvider):
 
                                 anchor = tr.find('a', href=rc['info'])
                                 title = (anchor.get('title') or anchor.get_text()).strip()
-                                download_url = self._link(anchor.get('href').replace('details', 'download'))
+                                download_url = self._link(anchor.get('href').replace('details', 'download')) + key
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
