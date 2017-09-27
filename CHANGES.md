@@ -1,6 +1,7 @@
 ﻿### 0.12.30 (2017-09-29 00:20:00 UTC)
 
 * Fix Media Providers/Custom Newznab tab action 'Delete' then 'Save Changes'
+* Fix enforce value API expects for paused show flag
 
 
 ### 0.12.29 (2017-09-17 09:00:00 UTC)

@@ -136,7 +136,6 @@ class TVShow(object):
     status = property(lambda self: self._status, dirty_setter('_status'))
     airs = property(lambda self: self._airs, dirty_setter('_airs'))
     startyear = property(lambda self: self._startyear, dirty_setter('_startyear'))
-    paused = property(lambda self: self._paused, dirty_setter('_paused'))
     air_by_date = property(lambda self: self._air_by_date, dirty_setter('_air_by_date'))
     subtitles = property(lambda self: self._subtitles, dirty_setter('_subtitles'))
     dvdorder = property(lambda self: self._dvdorder, dirty_setter('_dvdorder'))
@@ -150,6 +149,20 @@ class TVShow(object):
     rls_require_words = property(lambda self: self._rls_require_words, dirty_setter('_rls_require_words'))
     overview = property(lambda self: self._overview, dirty_setter('_overview'))
     tag = property(lambda self: self._tag, dirty_setter('_tag'))
+
+    @property
+    def paused(self):
+        return self._paused
+
+    @paused.setter
+    def paused(self, value):
+        if value != self._paused:
+            if isinstance(value, bool) or (isinstance(value, (int, long)) and value in [0, 1]):
+                self._paused = int(value)
+                self.dirty = True
+            else:
+                logger.log('tried to set paused property to invalid value: %s of type: %s' % (value, type(value)),
+                           logger.ERROR)
 
     @property
     def ids(self):
