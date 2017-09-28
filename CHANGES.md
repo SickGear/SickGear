@@ -1,4 +1,9 @@
-﻿### 0.12.29 (2017-09-17 09:00:00 UTC)
+﻿### 0.12.30 (2017-09-29 00:20:00 UTC)
+
+* Fix Media Providers/Custom Newznab tab action 'Delete' then 'Save Changes'
+
+
+### 0.12.29 (2017-09-17 09:00:00 UTC)
 
 * Fix provider nCore
 * Change .torrent checker due to files created with qB 3.3.16 (affects nCore and NBL)

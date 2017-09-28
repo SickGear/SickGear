@@ -5364,7 +5364,8 @@ class ConfigProviders(Config):
             provider_list.append(src_name)
             src_enabled = bool(config.to_int(src_enabled))
 
-            if '' != getattr(sources[src_name], 'enabled', '') and sources[src_name].is_enabled() != src_enabled:
+            if src_name in sources and '' != getattr(sources[src_name], 'enabled', '') \
+                    and sources[src_name].is_enabled() != src_enabled:
                 sources[src_name].enabled = src_enabled
                 if not reload_page and sickbeard.GenericProvider.TORRENT == sources[src_name].providerType:
                     reload_page = True
