@@ -1,4 +1,4 @@
-﻿# coding=utf-8
+# coding=utf-8
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
@@ -5583,7 +5583,8 @@ class ConfigProviders(Config):
             provider_list.append(src_name)
             src_enabled = bool(config.to_int(src_enabled))
 
-            if '' != getattr(sources[src_name], 'enabled', '') and sources[src_name].is_enabled() != src_enabled:
+            if src_name in sources and '' != getattr(sources[src_name], 'enabled', '') \
+                    and sources[src_name].is_enabled() != src_enabled:
                 if isinstance(sources[src_name], sickbeard.providers.newznab.NewznabProvider) and \
                         not sources[src_name].enabled and src_enabled:
                     reload_page = True
