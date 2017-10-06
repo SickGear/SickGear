@@ -417,7 +417,7 @@ class PostProcessor(object):
         self.in_history = False
 
         # if we don't have either of these then there's nothing to use to search the history for anyway
-        if not self.nzb_name and not self.folder_name:
+        if not self.nzb_name and not self.file_name and not self.folder_name:
             return to_return
 
         # make a list of possible names to use in the search
@@ -426,6 +426,10 @@ class PostProcessor(object):
             names.append(self.nzb_name)
             if '.' in self.nzb_name:
                 names.append(self.nzb_name.rpartition('.')[0])
+        if self.file_name:
+            names.append(self.file_name)
+            if '.' in self.file_name:
+                names.append(self.file_name.rpartition('.')[0])
         if self.folder_name:
             names.append(self.folder_name)
 

@@ -109,6 +109,8 @@ def processEpisode(dir_to_process, org_NZB_name=None, status=None):
 
     params = {}
 
+    params['is_basedir'] = 0
+
     params['quiet'] = 1
 
     params['dir'] = dir_to_process
