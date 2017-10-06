@@ -36,6 +36,8 @@ from name_parser.parser import NameParser, InvalidNameException, InvalidShowExce
 from lib import subliminal
 import fnmatch
 
+from imdb._exceptions import IMDbError
+
 try:
     from lib.send2trash import send2trash
 except ImportError:
@@ -1068,8 +1070,12 @@ class TVShow(object):
                      'votes': '',
                      'last_update': ''}
 
-        i = imdb.IMDb()
-        imdbTv = i.get_movie(str(re.sub('[^0-9]', '', self.imdbid or '%07d' % self.ids[indexermapper.INDEXER_IMDB]['id'])))
+        try:
+            i = imdb.IMDb()
+            imdbTv = i.get_movie(
+                str(re.sub('[^0-9]', '', self.imdbid or '%07d' % self.ids[indexermapper.INDEXER_IMDB]['id'])))
+        except IMDbError:
+            return
 
         for key in filter(lambda x: x.replace('_', ' ') in imdbTv.keys(), imdb_info.keys()):
             # Store only the first value for string type
