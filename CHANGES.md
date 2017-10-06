@@ -1,4 +1,9 @@
-﻿### 0.12.30 (2017-09-29 00:20:00 UTC)
+﻿### 0.12.31 (2017-10-06 22:30:00 UTC)
+
+* Change improve handling of connection failures for metadata during media processing
+
+
+### 0.12.30 (2017-09-29 00:20:00 UTC)
 
 * Fix Media Providers/Custom Newznab tab action 'Delete' then 'Save Changes'
 * Fix enforce value API expects for paused show flag
