@@ -30,7 +30,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorrentBytes', cache_update_freq=20)
 
-        self.url_home = ['https://www.torrentbytes.net/']
+        self.url_home = ['https://www.torrentbytes.%s/' % u for u in 'net', 'me']
 
         self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&%s', 'get': '%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',

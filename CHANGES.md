@@ -1,4 +1,9 @@
-﻿### 0.12.31 (2017-10-06 22:30:00 UTC)
+﻿### 0.12.32 (2017-10-11 02:05:00 UTC)
+
+* Change improve PA torrent access
+
+
+### 0.12.31 (2017-10-06 22:30:00 UTC)
 
 * Change improve handling of connection failures for metadata during media processing
 
