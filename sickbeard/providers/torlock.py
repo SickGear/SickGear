@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import base64
 import re
 import traceback
 import urllib
@@ -31,7 +32,15 @@ class TorLockProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorLock')
 
-        self.url_home = ['https://www.torlock.com/']
+        self.url_home = ['https://www.torlock.com/'] + \
+                        ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                            [re.sub('[X\sI]+', '', x[::-1]) for x in [
+                                'yX9G d', 'j9 IGb', '1 I5ya', 'sJmX b', 'rN2I b', 'uQXXWZ', '0IVmIY']],
+                            [re.sub('[w\sP]+', '', x[::-1]) for x in [
+                                'y9PPGd', 'jPw9Gb', '1wP5ya', 's JmPb', 'rPN2wb', 'uQPPWZ', 'klm wY']],
+                            [re.sub('[g\sv]+', '', x[::-1]) for x in [
+                                'yB Dgd', 'jgg9Gb', '1vv5ya', 'svvJmb', 'rN2vgb', 'uQ vWZ', 'sg9 Gb']],
+                        ]]]
 
         self.url_vars = {'search': 'television/torrents/%s.html?sort=added&order=desc',
                          'browse': 'television/1/added/desc.html', 'get': 'tor/%s.torrent'}
