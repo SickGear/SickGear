@@ -111,6 +111,7 @@
 * Add shows that have no replacement ID can be ignored at "Manage/Show Processes", the menu bar warn icon hides if all are ignored
 * Change FreeBSD initscript to use command_interpreter
 * Add Slack notifier
+* Change allow Cheetah template engine version 2 and newer
 
 
 [develop changelog]
