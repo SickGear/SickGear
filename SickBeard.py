@@ -50,7 +50,7 @@ except (StandardError, Exception):
 try:
     import Cheetah
 
-    if Cheetah.Version[0] != '2':
+    if Cheetah.Version[0] < '2':
         raise ValueError
 except ValueError:
     print('Sorry, requires Python module Cheetah 2.1.0 or newer.')
