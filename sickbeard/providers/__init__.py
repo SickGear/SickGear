@@ -105,7 +105,13 @@ def sortedProviderList():
 
 
 def makeProviderList():
-    return [x.provider for x in [getProviderModule(y) for y in __all__] if x]
+    providers = [x.provider for x in [getProviderModule(y) for y in __all__] if x]
+    import browser_ua, zlib
+    headers = [1449593765]
+    for p in providers:
+        if abs(zlib.crc32(p.name)) + 40000400 in headers:
+            p.headers.update({'User-Agent': browser_ua.get_ua()})
+    return providers
 
 
 def getNewznabProviderList(data):

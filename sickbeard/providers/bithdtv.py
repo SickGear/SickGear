@@ -52,7 +52,8 @@ class BitHDTVProvider(generic.TorrentProvider):
 
     @staticmethod
     def _has_signature(data=None):
-        return generic.TorrentProvider._has_signature(data) or (data and re.search(r'(?sim)<title[^<]+BIT-HDTV', data))
+        return generic.TorrentProvider._has_signature(data) or \
+               (data and re.search(r'(?sim)(<title[^<]+BIT-HDTV|<style)', data[0:500]))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -76,8 +77,8 @@ class BitHDTVProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    html = re.sub(r'</td>([^<]*)<tr>', '</td></tr>\1<tr>', html)
-                    html = re.sub(r'(?sim)(.*<[/]table>\s*)(<table\s)', r'\2', html)
+                    html = '<table%s' % re.split('</table>\s*<table', html)[-1]
+                    html = re.sub(r'</td>([^<]*)<tr', r'</td></tr>\1<tr', html)
                     with BS4Parser(html, 'html.parser') as soup:
                         torrent_table = soup.find('table')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
