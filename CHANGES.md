@@ -129,6 +129,11 @@
 * Fix article link color on some page were changed blue
 
 
+### 0.12.33 (2017-10-12 13:00:00 UTC)
+
+* Change improve handling of torrent auth failures
+
+
 ### 0.12.32 (2017-10-11 02:05:00 UTC)
 
 * Change improve PA torrent access
