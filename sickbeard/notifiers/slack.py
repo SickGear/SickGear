@@ -37,9 +37,9 @@ class SlackNotifier:
                       ('icon_url', (icon_url, sickbeard.SLACK_ICON_URL or self.sg_logo_url)[not icon_url])])[custom]),
             json=True)
 
-        result = resp and resp['ok'] or resp['error']
+        result = resp and resp.get('ok', resp.get('error')) or not (sickbeard.USE_SLACK or force)
         if True is not result:
-            logger.log(u'Slack failed sending message, response: "%s"' % resp['error'], logger.ERROR)
+            logger.log(u'Slack failed sending message, response: "%s"' % result, logger.ERROR)
         return result
 
     def _notify_str(self, pre_text, post_text):

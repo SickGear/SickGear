@@ -114,6 +114,7 @@
 * Change allow Cheetah template engine version 2 and newer
 * Change improve handling of relative download links from providers
 * Change enable TorrentBytes provider
+* Change after SG is updated, don't attempt to send a Plex client notifications if there is no client host set
 
 
 [develop changelog]
@@ -129,6 +130,7 @@
 * Fix image not loaded from tvdb_api if there is only one poster/banner
 * Change prevent setting show/episode attr to None from indexer data
 * Fix article link color on some page were changed blue
+* Fix error after SG is updated and where Slack notifier is not enabled
 
 
 ### 0.12.33 (2017-10-12 13:00:00 UTC)

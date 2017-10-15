@@ -157,7 +157,7 @@ class PLEXNotifier:
             self._notify_pmc(ep_name + ': ' + lang, common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD])
 
     def notify_git_update(self, new_version='??'):
-        if sickbeard.USE_PLEX:
+        if sickbeard.USE_PLEX and sickbeard.PLEX_HOST:
             update_text = common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
             title = common.notifyStrings[common.NOTIFY_GIT_UPDATE]
             self._notify_pmc(update_text + new_version, title)
