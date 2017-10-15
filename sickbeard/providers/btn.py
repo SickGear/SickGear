@@ -42,7 +42,7 @@ class BTNProvider(generic.TorrentProvider):
         self.url_api = 'https://api.broadcasthe.net'
 
         self.urls = {'config_provider_home_uri': self.url_base, 'login': self.url_base + 'login.php',
-                     'search': self.url_base + 'torrents.php?searchstr=%s&action=basic&%s', 'get': self.url_base + '%s'}
+                     'search': self.url_base + 'torrents.php?searchstr=%s&action=basic&%s'}
 
         self.proper_search_terms = ['%.proper.%', '%.repack.%']
 

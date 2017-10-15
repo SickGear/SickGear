@@ -33,9 +33,9 @@ class TorrentVaultProvider(generic.TorrentProvider):
         self.url_home = ['https://www.torrentvault.org/']
 
         self.url_vars = {'login_action': 'login.php', 'search': 'torrents.php?%s' % '&'.join(
-            ['searchstr=%s', 'order_by=s3', 'order_way=desc', 'action=basic', '%s']), 'get': '%s'}
+            ['searchstr=%s', 'order_by=s3', 'order_way=desc', 'action=basic', '%s'])}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'Season': [7, 32], 'Episode': [4, 8, 9]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']

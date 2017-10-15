@@ -38,7 +38,7 @@ class FanoProvider(generic.TorrentProvider):
 
         self.url_base = 'https://www.fano.in/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php', 'get': self.url_base + '%s',
+                     'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'browse_old.php?search=%s&%s&incldead=0'}
 
         self.categories = {'Season': [49], 'Episode': [6, 23, 32, 35], 'anime': [27]}

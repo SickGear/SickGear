@@ -44,7 +44,6 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         self.urls = {'config_provider_home_uri': self.url_base,
                      'cache': 'https://rss.omgwtfnzbs.me/rss-download.php?%s',
                      'search': self.url_api + 'json/?%s',
-                     'get': self.url_base + '%s',
                      'cache_html': self.url_base + 'browse.php?cat=tv%s',
                      'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}
 
@@ -225,7 +224,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         continue
 
                     if title and download_url and age:
-                        results.append({'release': title, 'getnzb': self.urls['get'] % download_url['href'].lstrip('/'),
+                        results.append({'release': title, 'getnzb': self._link(download_url['href']),
                                         'usenetage': int(age.strip())})
 
         except generic.HaltParseException:

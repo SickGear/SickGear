@@ -32,9 +32,9 @@ class SceneHDProvider(generic.TorrentProvider):
 
         self.url_home = ['https://scenehd.org/']
 
-        self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&cat=%s&sort=5', 'get': '%s'}
+        self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&cat=%s&sort=5'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'shows': [5, 6, 7]}
 

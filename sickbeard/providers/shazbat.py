@@ -40,8 +40,7 @@ class ShazbatProvider(generic.TorrentProvider):
                      'feeds': self.url_base + 'rss_feeds',
                      'browse': self.url_base + 'torrents?portlet=true',
                      'search': self.url_base + 'search?portlet=true&search=%s',
-                     'show': self.url_base + 'show?id=%s&show_mode=torrents',
-                     'get': self.url_base + '%s'}
+                     'show': self.url_base + 'show?id=%s&show_mode=torrents'}
 
         self.url = self.urls['config_provider_home_uri']
 

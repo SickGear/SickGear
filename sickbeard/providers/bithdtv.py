@@ -32,9 +32,9 @@ class BitHDTVProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.bit-hdtv.com/']
 
-        self.url_vars = {'login': 'getrss.php', 'search': 'torrents.php?search=%s&%s', 'get': '%s'}
+        self.url_vars = {'login': 'getrss.php', 'search': 'torrents.php?search=%s&%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'Season': [12], 'Episode': [4, 5, 10], 'anime': [1]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']

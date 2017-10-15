@@ -36,8 +36,7 @@ class GFTrackerProvider(generic.TorrentProvider):
                      'login_init': self.url_base + 'login.php',
                      'login': self.url_base + 'loginsite.php',
                      'browse': self.url_base + 'browse.php?view=0&%s&searchtype=1%s',
-                     'search': '&search=%s',
-                     'get': self.url_base + '%s'}
+                     'search': '&search=%s'}
 
         self.categories = {'shows': [4, 17, 19, 26, 37, 47], 'anime': [16]}
 

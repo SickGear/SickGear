@@ -329,11 +329,9 @@ class GenericProvider:
     def _link(self, url, url_tmpl=None):
 
         url = url and str(url).strip().replace('&amp;', '&') or ''
-        try:
-            url_tmpl = url_tmpl or self.urls['get']
-        except (StandardError, Exception):
-            url_tmpl = '%s'
-        return url if re.match('(?i)(https?://|magnet:)', url) else (url_tmpl % url.lstrip('/'))
+        return url if re.match('(?i)(https?://|magnet:)', url) \
+            else (url_tmpl or self.urls.get('get', (getattr(self, 'url', '') or
+                                                    getattr(self, 'url_base')) + '%s')) % url.lstrip('/')
 
     @staticmethod
     def _header_row(table_row, custom_match=None, custom_tags=None, header_strip=''):

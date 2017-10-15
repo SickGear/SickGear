@@ -48,9 +48,9 @@ class IPTorrentsProvider(generic.TorrentProvider):
                                  'Dc0GRHa', 'vo', 'Cdwl2L', 'FWZy5', 'bvJWL1k', '9mLzt2', 'wZy', '=GG=q']]
                          ]]])
 
-        self.url_vars = {'login': 't', 'search': 't?%s;q=%s;qf=ti%s%s#torrents', 'get': '%s'}
+        self.url_vars = {'login': 't', 'search': 't?%s;q=%s;qf=ti%s%s#torrents'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'shows': [4, 5, 22, 23, 24, 25, 26, 55, 65, 66, 78, 79, 99], 'anime': [60]}
 

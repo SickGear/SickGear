@@ -39,8 +39,7 @@ class HDSpaceProvider(generic.TorrentProvider):
                      'login_action': self.url_base + 'index.php?page=login',
                      'browse': self.url_base + 'index.php?page=torrents&' + '&'.join(
                          ['options=0', 'active=1', 'category=']),
-                     'search': '&search=%s',
-                     'get': self.url_base + '%s'}
+                     'search': '&search=%s'}
 
         self.categories = {'shows': [21, 22, 24, 25, 27, 28]}
 

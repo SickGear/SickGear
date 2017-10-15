@@ -33,8 +33,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base,
                      'browse': self.url_base + 'torrents/browse/index/categories/%(cats)s',
-                     'search': self.url_base + 'torrents/browse/index/query/%(query)s/categories/%(cats)s',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'torrents/browse/index/query/%(query)s/categories/%(cats)s'}
 
         self.categories = {'shows': [2, 26, 27, 32], 'anime': [7, 34, 35]}
 

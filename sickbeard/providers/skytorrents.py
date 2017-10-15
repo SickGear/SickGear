@@ -34,7 +34,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
         self.url_base = 'https://www.skytorrents.in/'
 
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': self.url_base + 'search/all/ad/1/%s?l=en-us', 'get': self.url_base + '%s'}
+                     'search': self.url_base + 'search/all/ad/1/%s?l=en-us'}
 
         self.minseed, self.minleech = 2 * [None]
         self.confirmed = False

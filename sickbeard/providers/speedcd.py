@@ -31,8 +31,7 @@ class SpeedCDProvider(generic.TorrentProvider):
         self.url_base = 'https://speed.cd/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'rss.php',
-                     'search': self.url_base + 'V3/API/API.php',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'V3/API/API.php'}
 
         self.categories = {'Season': [41, 53], 'Episode': [2, 49, 50, 55], 'anime': [30]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
