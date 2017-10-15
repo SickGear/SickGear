@@ -39,8 +39,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
                      'search': self.url_base + 'torrents.php?searchstr=%s%s&' + '&'.join(
                          ['tags_type=1', 'order_by=time', 'order_way=desc'] +
                          ['filter_cat[%s]=1' % c for c in 1, 2, 3, 4, 5] +
-                         ['action=basic', 'searchsubmit=1']),
-                     'get': self.url_base + '%s'}
+                         ['action=basic', 'searchsubmit=1'])}
 
         self.url = self.urls['config_provider_home_uri']
 

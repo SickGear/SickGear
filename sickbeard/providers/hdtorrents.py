@@ -37,9 +37,9 @@ class HDTorrentsProvider(generic.TorrentProvider):
         self.url_home = ['https://hd-torrents.%s/' % x for x in 'org', 'net', 'me'] + ['https://hdts.ru/']
 
         self.url_vars = {'login_action': 'index.php',
-                         'search': 'torrents.php?search=%s&active=0&options=0&%s', 'get': '%s'}
+                         'search': 'torrents.php?search=%s&active=0&options=0&%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'Episode': [59, 60, 30, 38, 65], 'anime': ['Animation']}
         self.categories['Season'] = self.categories['Cache'] = self.categories['Episode']

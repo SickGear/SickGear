@@ -38,8 +38,7 @@ class PTFProvider(generic.TorrentProvider):
         self.url_base = 'https://ptfiles.net/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'panel.php?tool=links',
-                     'search': self.url_base + 'browse.php?search=%s&%s&incldead=0&title=0',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'browse.php?search=%s&%s&incldead=0&title=0'}
 
         self.categories = {'Season': [39], 'Episode': [7, 33, 42], 'anime': [23]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']

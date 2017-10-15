@@ -33,8 +33,7 @@ class DHProvider(generic.TorrentProvider):
         self.url_base = 'https://www.digitalhive.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'getrss.php',
-                     'search': self.url_base + 'browse.php?search=%s&%s&titleonly=1&incldead=%s',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'browse.php?search=%s&%s&titleonly=1&incldead=%s'}
 
         self.categories = {'Season': [34], 'Episode': [7, 32, 55, 57], 'anime': [2]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']

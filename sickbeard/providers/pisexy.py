@@ -31,8 +31,7 @@ class PiSexyProvider(generic.TorrentProvider):
         self.url_base = 'https://pisexy.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'takelogin.php',
-                     'search': self.url_base + 'browseall.php?search=%s',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'browseall.php?search=%s'}
 
         self.url = self.urls['config_provider_home_uri']
 

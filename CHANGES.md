@@ -112,6 +112,8 @@
 * Change FreeBSD initscript to use command_interpreter
 * Add Slack notifier
 * Change allow Cheetah template engine version 2 and newer
+* Change improve handling of relative download links from providers
+* Change enable TorrentBytes provider
 
 
 [develop changelog]

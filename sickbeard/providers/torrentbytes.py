@@ -32,9 +32,9 @@ class TorrentBytesProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.torrentbytes.%s/' % u for u in 'net', 'me']
 
-        self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&%s', 'get': '%s'}
+        self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'Season': [41, 32], 'Episode': [33, 37, 38]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']

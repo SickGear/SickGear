@@ -35,8 +35,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         self.url_base = 'https://www.tvchaosuk.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse.php',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'browse.php'}
 
         self.url = self.urls['config_provider_home_uri']
 

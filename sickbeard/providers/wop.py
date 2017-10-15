@@ -33,9 +33,9 @@ class WOPProvider(generic.TorrentProvider):
         self.url_home = ['https://www.worldofp2p.net/']
 
         self.url_vars = {'login': 'getrss.php', 'search': 'browse.php?%s' % '&'.join(
-            ['search=%s', 'searchin=title', 'incldead=0', 'sort=4', 'type=desc', '%s']), 'get': '%s'}
+            ['search=%s', 'searchin=title', 'incldead=0', 'sort=4', 'type=desc', '%s'])}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'Season': [41], 'Episode': [35, 5, 58, 42, 36, 55, 39, 37, 54, 38]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']

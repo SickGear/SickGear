@@ -44,9 +44,9 @@ class TorrentDayProvider(generic.TorrentProvider):
                                 'Vmbq', 'WL10', 'ZyZ', 'rFW', '5yc', '12bj', 'q=0']]
                         ]]]
 
-        self.url_vars = {'login': 'rss.php', 'search': 'browse.php?cata=yes&%s%s&search=%s%s', 'get': '%s'}
+        self.url_vars = {'login': 'rss.php', 'search': 'browse.php?cata=yes&%s%s&search=%s%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'Season': [31, 33, 14], 'Episode': [24, 32, 26, 7, 34, 2], 'anime': [29]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']

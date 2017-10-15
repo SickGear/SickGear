@@ -32,9 +32,9 @@ class TorrentingProvider(generic.TorrentProvider):
 
         self.url_home = ['https://%s/' % u for u in 'www.torrenting.com', 'ttonline.us']
 
-        self.url_vars = {'login': 'rss.php', 'search': 'browse.php?%s&search=%s', 'get': '%s'}
+        self.url_vars = {'login': 'rss.php', 'search': 'browse.php?%s&search=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'shows': [4, 5]}
 

@@ -34,8 +34,7 @@ class FunFileProvider(generic.TorrentProvider):
         self.url_base = 'https://www.funfile.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse.php?%s&search=%s&incldead=0&showspam=1',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'browse.php?%s&search=%s&incldead=0&showspam=1'}
 
         self.categories = {'shows': [7], 'anime': [44]}
 
