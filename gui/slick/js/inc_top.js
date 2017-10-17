@@ -11,7 +11,7 @@ function initActions() {
 	menu$.find('a[href$="/errorlogs/clearerrors/"]').addClass('btn').html('<i class="sgicon-delete"></i>Clear Errors');
 	menu$.find('a:contains("Re-scan")').addClass('btn').html('<i class="sgicon-refresh"></i>Re-scan');
 	menu$.find('a:contains("Backlog Overview")').addClass('btn').html('<i class="sgicon-backlog"></i>Backlog Overview');
-	menu$.find('a[href$="/home/updatePLEX/"]').addClass('btn').html('<i class="sgicon-plex"></i>Update PLEX');
+	menu$.find('a[href$="/home/update_plex/"]').addClass('btn').html('<i class="sgicon-plex"></i>Update PLEX');
 	menu$.find('a:contains("Force")').addClass('btn').html('<i class="sgicon-fullupdate"></i>Force Full Update');
 	menu$.find('a:contains("Rename")').addClass('btn').html('<i class="sgicon-rename"></i>Media Renamer');
 	menu$.find('a[href$="/config/subtitles/"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Subtitles');
@@ -29,12 +29,12 @@ function initActions() {
 	menu$.find('a:contains("Show Processes")').addClass('btn').html('<i class="sgicon-showqueue"></i>Show Processes');
 	menu$.find('a[href$="/manage/failedDownloads/"]').addClass('btn').html('<i class="sgicon-failed"></i>Failed Downloads');
 	menu$.find('a:contains("Notification")').addClass('btn').html('<i class="sgicon-notification"></i>Notifications');
-	menu$.find('a[href$="/home/updateEMBY/"]').addClass('btn').html('<i class="sgicon-emby"></i>Update Emby');
-	menu$.find('a[href$="/home/updateKODI/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
-	menu$.find('a[href$="/home/updateXBMC/"]').addClass('btn').html('<i class="sgicon-xbmc"></i>Update XBMC');
+	menu$.find('a[href$="/home/update_emby/"]').addClass('btn').html('<i class="sgicon-emby"></i>Update Emby');
+	menu$.find('a[href$="/home/update_kodi/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
+	// menu$.find('a[href$="/home/update_xbmc/"]').addClass('btn').html('<i class="sgicon-xbmc"></i>Update XBMC');
 	menu$.find('a:contains("Update show in Emby")').addClass('btn').html('<i class="sgicon-emby"></i>Update show in Emby');
 	menu$.find('a:contains("Update show in Kodi")').addClass('btn').html('<i class="sgicon-kodi"></i>Update show in Kodi');
-	menu$.find('a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
+	// menu$.find('a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
 }
 
 $(document).ready(function(){

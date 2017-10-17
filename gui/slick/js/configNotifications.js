@@ -1,63 +1,76 @@
-﻿$(document).ready(function(){
+﻿/** @namespace JSONData.account_id */
+/** @namespace JSONData.account_name */
+/** @namespace JSONData.error_message */
+/** @namespace JSONData.num_accounts */
+$(document).ready(function(){
 	var loading = '<img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />';
 
-	$('#testGrowl').click(function () {
-		var growl_host = $.trim($('#growl_host').val());
-		var growl_password = $.trim($('#growl_password').val());
-		if (!growl_host) {
-			$('#testGrowl-result').html('Please fill out the necessary fields above.');
-			$('#growl_host').addClass('warning');
+	$('.typelist').on('click', '.list .item a', function(){
+		$(this).closest('.component-group').after(
+			$('[name=' + $(this).attr('href').replace('#','') + ']').closest('.component-group')
+		);
+		return !1;
+	});
+
+	$('#test-growl').click(function () {
+		var growlHost = $.trim($('#growl-host').val());
+		var growlPassword = $.trim($('#growl-password').val());
+		if (!growlHost) {
+			$('#test-growl-result').html('Please fill out the necessary fields above.');
+			$('#growl-host').addClass('warning');
 			return;
 		}
-		$('#growl_host').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testGrowl-result').html(loading);
-		$.get(sbRoot + '/home/testGrowl', {'host': growl_host, 'password': growl_password})
+		$('#growl-host').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-growl-result').html(loading);
+		$.get(sbRoot + '/home/test_growl',
+			{host: growlHost, password: growlPassword})
 			.done(function (data) {
-				$('#testGrowl-result').html(data);
-				$('#testGrowl').prop('disabled', false);
+				$('#test-growl-result').html(data);
+				$('#test-growl').prop('disabled', !1);
 			});
 	});
 
-	$('#testProwl').click(function () {
-		var prowl_api = $.trim($('#prowl_api').val());
-		var prowl_priority = $('#prowl_priority').val();
-		if (!prowl_api) {
-			$('#testProwl-result').html('Please fill out the necessary fields above.');
-			$('#prowl_api').addClass('warning');
+	$('#test-prowl').click(function () {
+		var prowlApi = $.trim($('#prowl-api').val());
+		var prowlPriority = $('#prowl-priority').val();
+		if (!prowlApi) {
+			$('#test-prowl-result').html('Please fill out the necessary fields above.');
+			$('#prowl-api').addClass('warning');
 			return;
 		}
-		$('#prowl_api').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testProwl-result').html(loading);
-		$.get(sbRoot + '/home/testProwl', {'prowl_api': prowl_api, 'prowl_priority': prowl_priority})
+		$('#prowl-api').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-prowl-result').html(loading);
+		$.get(sbRoot + '/home/test_prowl',
+			{prowl_api: prowlApi, prowl_priority: prowlPriority})
 			.done(function (data) {
-				$('#testProwl-result').html(data);
-				$('#testProwl').prop('disabled', false);
+				$('#test-prowl-result').html(data);
+				$('#test-prowl').prop('disabled', !1);
 			});
 	});
 
 	$('#discover-emby').click(function () {
 		$(this).prop('disabled', !0);
-		$('#emby_host,#emby_apikey').removeClass('warning');
-		$('#testEMBY-result').html(loading);
+		$('#emby-host,#emby-apikey').removeClass('warning');
+		$('#test-emby-result').html(loading);
 		$.get(sbRoot + '/home/discover_emby')
 			.done(function (data) {
 				var result = 'Unable to discover a server, is one running?';
-				if ('' != data) {
-					$('#emby_host').val(data);
+				if ('' !== data) {
+					$('#emby-host').val(data);
 					result = 'Server found.';
 				}
-				$('#testEMBY-result').html(result);
+				$('#test-emby-result').html(result);
 				$('#discover-emby').prop('disabled', !1);
 			});
 	});
 
-	$('#testEMBY').click(function () {
-		var host$ = $('#emby_host'), host = $.trim(host$.val());
-		var apikey$ = $('#emby_apikey'), apikey = $.trim(apikey$.val());
+	$('#test-emby').click(function () {
+		var host$ = $('#emby-host'), host = $.trim(host$.val());
+		var apikey$ = $('#emby-apikey'), apikey = $.trim(apikey$.val());
 		if (!host || !apikey) {
-			$('#testEMBY-result').html('Please fill out the necessary fields above.');
+			$('#test-emby-result').html('Please fill out the necessary fields above.');
 			if (!host) {
 				host$.addClass('warning');
 			} else {
@@ -70,508 +83,575 @@
 			}
 			return;
 		}
-		$('#emby_host,#emby_apikey').removeClass('warning');
+		$('#emby-host,#emby-apikey').removeClass('warning');
 		$(this).prop('disabled', !0);
-		$('#testEMBY-result').html(loading);
-		$.get(sbRoot + '/home/testEMBY', {'host': host, 'apikey': apikey})
+		$('#test-emby-result').html(loading);
+		$.get(sbRoot + '/home/test_emby',
+			{host: host, apikey: apikey})
 			.done(function (data) {
-				$('#testEMBY-result').html(data);
-				$('#testEMBY').prop('disabled', !1);
+				$('#test-emby-result').html(data);
+				$('#test-emby').prop('disabled', !1);
 			});
 	});
 
-	$('#testKODI').click(function () {
-		var kodi_host = $.trim($('#kodi_host').val());
-		var kodi_username = $.trim($('#kodi_username').val());
-		var kodi_password = $.trim($('#kodi_password').val());
-		if (!kodi_host) {
-			$('#testKODI-result').html('Please fill out the necessary fields above.');
-			$('#kodi_host').addClass('warning');
+	$('#test-kodi').click(function () {
+		var kodiHost = $.trim($('#kodi-host').val());
+		var kodiUsername = $.trim($('#kodi-username').val());
+		var kodiPassword = $.trim($('#kodi-password').val());
+		if (!kodiHost) {
+			$('#test-kodi-result').html('Please fill out the necessary fields above.');
+			$('#kodi-host').addClass('warning');
 			return;
 		}
-		$('#kodi_host').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testKODI-result').html(loading);
-		$.get(sbRoot + '/home/testKODI', {'host': kodi_host, 'username': kodi_username, 'password': kodi_password})
+		$('#kodi-host').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-kodi-result').html(loading);
+		$.get(sbRoot + '/home/test_kodi',
+			{host: kodiHost, username: kodiUsername, password: kodiPassword})
 			.done(function (data) {
-				$('#testKODI-result').html(data);
-				$('#testKODI').prop('disabled', false);
+				$('#test-kodi-result').html(data);
+				$('#test-kodi').prop('disabled', !1);
 			});
 	});
 
-	$('#testXBMC').click(function () {
-		var xbmc_host = $.trim($('#xbmc_host').val());
-		var xbmc_username = $.trim($('#xbmc_username').val());
-		var xbmc_password = $.trim($('#xbmc_password').val());
-		if (!xbmc_host) {
-			$('#testXBMC-result').html('Please fill out the necessary fields above.');
-			$('#xbmc_host').addClass('warning');
+	$('#test-xbmc').click(function () {
+		var xbmcHost = $.trim($('#xbmc-host').val());
+		var xbmcUsername = $.trim($('#xbmc-username').val());
+		var xbmcPassword = $.trim($('#xbmc-password').val());
+		if (!xbmcHost) {
+			$('#test-xbmc-result').html('Please fill out the necessary fields above.');
+			$('#xbmc-host').addClass('warning');
 			return;
 		}
-		$('#xbmc_host').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testXBMC-result').html(loading);
-		$.get(sbRoot + '/home/testXBMC', {'host': xbmc_host, 'username': xbmc_username, 'password': xbmc_password})
+		$('#xbmc-host').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-xbmc-result').html(loading);
+		$.get(sbRoot + '/home/test_xbmc',
+			{host: xbmcHost, username: xbmcUsername, password: xbmcPassword})
 			.done(function (data) {
-				$('#testXBMC-result').html(data);
-				$('#testXBMC').prop('disabled', false);
+				$('#test-xbmc-result').html(data);
+				$('#test-xbmc').prop('disabled', !1);
 			});
 	});
 
 	// show instructions for plex when enabled
-	$('#use_plex').click(function() {
+	$('#use-plex').click(function() {
 		if ( $(this).is(':checked') ) {
 			$('.plexinfo').removeClass('hide');
 		} else {
 			$('.plexinfo').addClass('hide');
 		}
 	});
-	if ($('input[id="use_plex"]').is(':checked')) {$('.plexinfo').removeClass('hide')}
+	if ($('input[id="use-plex"]').is(':checked')) {$('.plexinfo').removeClass('hide')}
 
-	$('#testPMC').click(function () {
-		var plex_host = $.trim($('#plex_host').val());
-		var plex_username = $.trim($('#plex_username').val());
-		var plex_password = $.trim($('#plex_password').val());
-		if (!plex_host) {
-			$('#testPMC-result').html('Please fill out the necessary fields above.');
-			$('#plex_host').addClass('warning');
+	$('#test-pmc').click(function () {
+		var plexHost = $.trim($('#plex-host').val());
+		var plexUsername = $.trim($('#plex-username').val());
+		var plexPassword = $.trim($('#plex-password').val());
+		if (!plexHost) {
+			$('#test-pmc-result').html('Please fill out the necessary fields above.');
+			$('#plex-host').addClass('warning');
 			return;
 		}
-		$('#plex_host').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testPMC-result').html(loading);
-		$.get(sbRoot + '/home/testPMC', {'host': plex_host, 'username': plex_username, 'password': plex_password})
+		$('#plex-host').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-pmc-result').html(loading);
+		$.get(sbRoot + '/home/test_plex',
+			{host: plexHost, username: plexUsername, password: plexPassword})
 			.done(function (data) {
-				$('#testPMC-result').html(data);
-				$('#testPMC').prop('disabled', false);
+				$('#test-pmc-result').html(data);
+				$('#test-pmc').prop('disabled', !1);
 			});
 	});
 
-	$('#testPMS').click(function () {
-		var plex_server_host = $.trim($('#plex_server_host').val());
-		var plex_username = $.trim($('#plex_username').val());
-		var plex_password = $.trim($('#plex_password').val());
-		if (!plex_server_host) {
-			$('#testPMS-result').html('Please fill out the necessary fields above.');
-			$('#plex_server_host').addClass('warning');
+	$('#test-pms').click(function () {
+		var plexServerHost = $.trim($('#plex-server-host').val());
+		var plexUsername = $.trim($('#plex-username').val());
+		var plexPassword = $.trim($('#plex-password').val());
+		if (!plexServerHost) {
+			$('#test-pms-result').html('Please fill out the necessary fields above.');
+			$('#plex-server-host').addClass('warning');
 			return;
 		}
-		$('#plex_server_host').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testPMS-result').html(loading);
-		$.get(sbRoot + '/home/testPMS', {'host': plex_server_host, 'username': plex_username, 'password': plex_password})
+		$('#plex-server-host').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-pms-result').html(loading);
+		$.get(sbRoot + '/home/test_plex',
+			{host: plexServerHost, username: plexUsername, password: plexPassword, server: !0})
 			.done(function (data) {
-				$('#testPMS-result').html(data);
-				$('#testPMS').prop('disabled', false);
+				$('#test-pms-result').html(data);
+				$('#test-pms').prop('disabled', !1);
 			});
 	});
 
-	$('#testBoxcar2').click(function () {
-		var boxcar2_accesstoken = $.trim($('#boxcar2_accesstoken').val());
-		var boxcar2_sound = $('#boxcar2_sound').val() || 'default';
-		if (!boxcar2_accesstoken) {
-			$('#testBoxcar2-result').html('Please fill out the necessary fields above.');
-			$('#boxcar2_accesstoken').addClass('warning');
+	$('#test-boxcar2').click(function () {
+		var boxcarAccesstoken = $.trim($('#boxcar2-access-token').val());
+		var boxcarSound = $('#boxcar2-sound').val() || 'default';
+		if (!boxcarAccesstoken) {
+			$('#test-boxcar2-result').html('Please fill out the necessary fields above.');
+			$('#boxcar2-access-token').addClass('warning');
 			return;
 		}
-		$('#boxcar2_accesstoken').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testBoxcar2-result').html(loading);
-		$.get(sbRoot + '/home/testBoxcar2', {'accesstoken': boxcar2_accesstoken, 'sound': boxcar2_sound})
+		$('#boxcar2-access-token').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-boxcar2-result').html(loading);
+		$.get(sbRoot + '/home/test_boxcar2',
+			{access_token: boxcarAccesstoken, sound: boxcarSound})
 			.done(function (data) {
-				$('#testBoxcar2-result').html(data);
-				$('#testBoxcar2').prop('disabled', false);
+				$('#test-boxcar2-result').html(data);
+				$('#test-boxcar2').prop('disabled', !1);
 			});
 	});
 
-	$('#testPushover').click(function () {
-		var pushover_userkey = $.trim($('#pushover_userkey').val());
-		var pushover_apikey = $.trim($('#pushover_apikey').val());
-		var pushover_priority = $("#pushover_priority").val();
-		var pushover_device = $("#pushover_device").val();
-		var pushover_sound = $("#pushover_sound").val();
-		if (!pushover_userkey || !pushover_apikey) {
-			$('#testPushover-result').html('Please fill out the necessary fields above.');
-			if (!pushover_userkey) {
-				$('#pushover_userkey').addClass('warning');
+	$('#test-pushover').click(function () {
+		var pushover$ = $('#pushover-userkey'), pushoverUserkey = $.trim(pushover$.val()),
+			pushoverApikey$ = $('#pushover-apikey'), pushoverApikey = $.trim(pushoverApikey$.val()),
+			pushoverPriority = $('#pushover-priority').val(),
+			pushoverDevice = $('#pushover-device').val(),
+			pushoverSound = $('#pushover-sound').val(),
+			testResult$ = $('#test-pushover-result');
+
+		if (!pushoverUserkey || !pushoverApikey) {
+			testResult$.html('Please fill out the necessary fields above.');
+			if (!pushoverUserkey) {
+				pushover$.addClass('warning');
 			} else {
-				$('#pushover_userkey').removeClass('warning');
+				pushover$.removeClass('warning');
 			}
-			if (!pushover_apikey) {
-				$('#pushover_apikey').addClass('warning');
+			if (!pushoverApikey) {
+				pushoverApikey$.addClass('warning');
 			} else {
-				$('#pushover_apikey').removeClass('warning');
+				pushoverApikey$.removeClass('warning');
 			}
 			return;
 		}
-		$('#pushover_userkey,#pushover_apikey').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testPushover-result').html(loading);
-		$.get(sbRoot + '/home/testPushover', {'userKey': pushover_userkey, 'apiKey': pushover_apikey, 'priority': pushover_priority, 'device': pushover_device, 'sound': pushover_sound})
+		$('#pushover-userkey,#pushover-apikey').removeClass('warning');
+		$(this).prop('disabled', !0);
+		testResult$.html(loading);
+		$.get(sbRoot + '/home/test_pushover',
+			{user_key: pushoverUserkey, api_key: pushoverApikey, priority: pushoverPriority,
+				device: pushoverDevice, sound: pushoverSound})
 			.done(function (data) {
-				$('#testPushover-result').html(data);
-				$('#testPushover').prop('disabled', false);
+				testResult$.html(data);
+				$('#test-pushover').prop('disabled', !1);
 			});
 	});
 
-	function get_pushover_devices (msg) {
-		var pushover_userkey = $.trim($('#pushover_userkey').val());
-		var pushover_apikey = $.trim($('#pushover_apikey').val());
-		if (!pushover_userkey || !pushover_apikey) {
-			$('#testPushover-result').html('Please fill out the necessary fields above.');
-			if (!pushover_userkey) {
-				$('#pushover_userkey').addClass('warning');
+	function getPushoverDevices (msg) {
+		var pushoverUserkey = $.trim($('#pushover-userkey').val());
+		var pushoverApikey = $.trim($('#pushover-apikey').val());
+		if (!pushoverUserkey || !pushoverApikey) {
+			$('#test-pushover-result').html('Please fill out the necessary fields above.');
+			if (!pushoverUserkey) {
+				$('#pushover-userkey').addClass('warning');
 			} else {
-				$('#pushover_userkey').removeClass('warning');
+				$('#pushover-userkey').removeClass('warning');
 			}
-			if (!pushover_apikey) {
-				$('#pushover_apikey').addClass('warning');
+			if (!pushoverApikey) {
+				$('#pushover-apikey').addClass('warning');
 			} else {
-				$('#pushover_apikey').removeClass('warning');
+				$('#pushover-apikey').removeClass('warning');
 			}
 			return;
 		}
-		$(this).prop('disabled', true);
+		$(this).prop('disabled', !0);
 		if (msg) {
-			$('#testPushover-result').html(loading);
+			$('#test-pushover-result').html(loading);
 		}
-		var current_pushover_device = $('#pushover_device').val();
-		$.get(sbRoot + "/home/getPushoverDevices", {'userKey': pushover_userkey, 'apiKey': pushover_apikey})
+		var currentPushoverDevice = $('#pushover-device').val();
+		$.get(sbRoot + '/home/get_pushover_devices',
+			{user_key: pushoverUserkey, api_key: pushoverApikey})
 			.done(function (data) {
 				var devices = jQuery.parseJSON(data || '{}').devices;
-				$('#pushover_device_list').html('');
+				$('#pushover-device-list').html('');
 				// add default option to send to all devices
-				$('#pushover_device_list').append('<option value="all" selected="selected">-- All Devices --</option>');
+				$('#pushover-device-list').append('<option value="all" selected="selected">-- All Devices --</option>');
 				if (devices) {
 					for (var i = 0; i < devices.length; i++) {
 						// if a device in the list matches our current iden, select it
-						if (current_pushover_device == devices[i]) {
-							$('#pushover_device_list').append('<option value="' + devices[i] + '" selected="selected">' + devices[i] + '</option>');
+						if (currentPushoverDevice === devices[i]) {
+							$('#pushover-device-list').append('<option value="' + devices[i] + '" selected="selected">' + devices[i] + '</option>');
 						} else {
-							$('#pushover_device_list').append('<option value="' + devices[i] + '">' + devices[i] + '</option>');
+							$('#pushover-device-list').append('<option value="' + devices[i] + '">' + devices[i] + '</option>');
 						}
 					}
 				}
-				$('#getPushoverDevices').prop('disabled', false);
+				$('#get-pushoverDevices').prop('disabled', !1);
 				if (msg) {
-					$('#testPushover-result').html(msg);
+					$('#test-pushover-result').html(msg);
 				}
 			});
 
-		$('#pushover_device_list').change(function () {
-			$('#pushover_device').val($('#pushover_device_list').val());
-			$('#testPushover-result').html('Don\'t forget to save your new Pushover settings.');
+		$('#pushover-device-list').change(function () {
+			$('#pushover-device').val($('#pushover-device-list').val());
+			$('#test-pushover-result').html('Don\'t forget to save your new Pushover settings.');
 		});
 	}
 
-	$('#getPushoverDevices').click(function () {
-		get_pushover_devices('Device list updated. Select specific device to use.');
+	$('#get-pushoverDevices').click(function () {
+		getPushoverDevices('Device list updated. Select specific device to use.');
 	});
 
-	if ($('#use_pushover').prop('checked')) {
-		get_pushover_devices();
+	if ($('#use-pushover').prop('checked')) {
+		getPushoverDevices();
 	}
 
-	$('#testLibnotify').click(function() {
-		$('#testLibnotify-result').html(loading);
-		$.get(sbRoot + '/home/testLibnotify',
-			function (data) { $('#testLibnotify-result').html(data); });
+	$('#test-libnotify').click(function() {
+		$('#test-libnotify-result').html(loading);
+		$.get(sbRoot + '/home/test_libnotify',
+			function (data) { $('#test-libnotify-result').html(data); });
 	});
 
-	$('#settingsNMJ').click(function() {
-		if (!$('#nmj_host').val()) {
+	$('#settings-nmj').click(function() {
+		if (!$('#nmj-host').val()) {
 			alert('Please fill in the Popcorn IP address');
-			$('#nmj_host').focus();
+			$('#nmj-host').focus();
 			return;
 		}
-		$('#testNMJ-result').html(loading);
-		var nmj_host = $('#nmj_host').val();
+		$('#test-nmj-result').html(loading);
+		var nmjHost = $('#nmj-host').val();
 
-		$.get(sbRoot + '/home/settingsNMJ', {'host': nmj_host},
+		$.get(sbRoot + '/home/settings_nmj',
+			{host: nmjHost},
 			function (data) {
-				if (data === null) {
-					$('#nmj_database').removeAttr('readonly');
-					$('#nmj_mount').removeAttr('readonly');
+				if (null === data) {
+					$('#nmj-database').removeAttr('readonly');
+					$('#nmj-mount').removeAttr('readonly');
 				}
 				var JSONData = $.parseJSON(data);
-				$('#testNMJ-result').html(JSONData.message);
-				$('#nmj_database').val(JSONData.database);
-				$('#nmj_mount').val(JSONData.mount);
+				$('#test-nmj-result').html(JSONData.message);
+				$('#nmj-database').val(JSONData.database);
+				$('#nmj-mount').val(JSONData.mount);
 
 				if (JSONData.database) {
-					$('#nmj_database').attr('readonly', true);
+					$('#nmj-database').attr('readonly', !0);
 				} else {
-					$('#nmj_database').removeAttr('readonly');
+					$('#nmj-database').removeAttr('readonly');
 				}
 				if (JSONData.mount) {
-					$('#nmj_mount').attr('readonly', true);
+					$('#nmj-mount').attr('readonly', !0);
 				} else {
-					$('#nmj_mount').removeAttr('readonly');
+					$('#nmj-mount').removeAttr('readonly');
 				}
 			});
 	});
 
-	$('#testNMJ').click(function () {
-		var nmj_host = $.trim($('#nmj_host').val());
-		var nmj_database = $('#nmj_database').val();
-		var nmj_mount = $('#nmj_mount').val();
-		if (!nmj_host) {
-			$('#testNMJ-result').html('Please fill out the necessary fields above.');
-			$('#nmj_host').addClass('warning');
+	$('#test-nmj').click(function () {
+		var nmjHost = $.trim($('#nmj-host').val());
+		var nmjDatabase = $('#nmj-database').val();
+		var nmjMount = $('#nmj-mount').val();
+		if (!nmjHost) {
+			$('#test-nmj-result').html('Please fill out the necessary fields above.');
+			$('#nmj-host').addClass('warning');
 			return;
 		}
-		$('#nmj_host').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testNMJ-result').html(loading);
-		$.get(sbRoot + '/home/testNMJ', {'host': nmj_host, 'database': nmj_database, 'mount': nmj_mount})
+		$('#nmj-host').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-nmj-result').html(loading);
+		$.get(sbRoot + '/home/test_nmj',
+			{host: nmjHost, database: nmjDatabase, mount: nmjMount})
 			.done(function (data) {
-				$('#testNMJ-result').html(data);
-				$('#testNMJ').prop('disabled', false);
+				$('#test-nmj-result').html(data);
+				$('#test-nmj').prop('disabled', !1);
 			});
 	});
 
-	$('#settingsNMJv2').click(function() {
-		if (!$('#nmjv2_host').val()) {
+	$('#settings-nmjv2').click(function() {
+		if (!$('#nmjv2-host').val()) {
 			alert('Please fill in the Popcorn IP address');
-			$('#nmjv2_host').focus();
+			$('#nmjv2-host').focus();
 			return;
 		}
-		$('#testNMJv2-result').html(loading);
-		var nmjv2_host = $('#nmjv2_host').val();
-		var nmjv2_dbloc;
+		$('#test-nmjv2-result').html(loading);
+		var nmjv2Host = $('#nmjv2-host').val();
+		var nmjv2Dbloc;
 		var radios = document.getElementsByName('nmjv2_dbloc');
 		for (var i = 0; i < radios.length; i++) {
 			if (radios[i].checked) {
-				nmjv2_dbloc=radios[i].value;
+				nmjv2Dbloc=radios[i].value;
 				break;
 			}
 		}
 
-		var nmjv2_dbinstance=$('#NMJv2db_instance').val();
-		$.get(sbRoot + '/home/settingsNMJv2', {'host': nmjv2_host,'dbloc': nmjv2_dbloc,'instance': nmjv2_dbinstance},
-		function (data){
-			if (data == null) {
-				$('#nmjv2_database').removeAttr('readonly');
-			}
-			var JSONData = $.parseJSON(data);
-			$('#testNMJv2-result').html(JSONData.message);
-			$('#nmjv2_database').val(JSONData.database);
+		var nmjv2Dbinstance=$('#NMJv2db-instance').val();
+		$.get(sbRoot + '/home/settings_nmj2',
+			{host: nmjv2Host,dbloc: nmjv2Dbloc,instance: nmjv2Dbinstance},
+			function (data){
+				if (null === data) {
+					$('#nmjv2-database').removeAttr('readonly');
+				}
+				var JSONData = $.parseJSON(data);
+				$('#test-nmjv2-result').html(JSONData.message);
+				$('#nmjv2-database').val(JSONData.database);
 
-			if (JSONData.database)
-				$('#nmjv2_database').attr('readonly', true);
-			else
-				$('#nmjv2_database').removeAttr('readonly');
-		});
-	});
-
-	$('#testNMJv2').click(function () {
-		var nmjv2_host = $.trim($('#nmjv2_host').val());
-		if (!nmjv2_host) {
-			$('#testNMJv2-result').html('Please fill out the necessary fields above.');
-			$('#nmjv2_host').addClass('warning');
-			return;
-		}
-		$('#nmjv2_host').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testNMJv2-result').html(loading);
-		$.get(sbRoot + '/home/testNMJv2', {'host': nmjv2_host})
-			.done(function (data) {
-				$('#testNMJv2-result').html(data);
-				$('#testNMJv2').prop('disabled', false);
+				if (JSONData.database)
+					$('#nmjv2-database').attr('readonly', !0);
+				else
+					$('#nmjv2-database').removeAttr('readonly');
 			});
 	});
 
-	$('#testNMA').click(function () {
-		var nma_api = $.trim($('#nma_api').val());
-		var nma_priority = $('#nma_priority').val();
-		if (!nma_api) {
-			$('#testNMA-result').html('Please fill out the necessary fields above.');
-			$('#nma_api').addClass('warning');
+	$('#test-nmjv2').click(function () {
+		var nmjv2Host = $.trim($('#nmjv2-host').val());
+		if (!nmjv2Host) {
+			$('#test-nmjv2-result').html('Please fill out the necessary fields above.');
+			$('#nmjv2-host').addClass('warning');
 			return;
 		}
-		$('#nma_api').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testNMA-result').html(loading);
-		$.get(sbRoot + '/home/testNMA', {'nma_api': nma_api, 'nma_priority': nma_priority})
+		$('#nmjv2-host').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-nmjv2-result').html(loading);
+		$.get(sbRoot + '/home/test_nmj2',
+			{host: nmjv2Host})
 			.done(function (data) {
-				$('#testNMA-result').html(data);
-				$('#testNMA').prop('disabled', false);
+				$('#test-nmjv2-result').html(data);
+				$('#test-nmjv2').prop('disabled', !1);
 			});
 	});
 
-	$('#testPushalot').click(function () {
-		var pushalot_authorizationtoken = $.trim($('#pushalot_authorizationtoken').val());
-		if (!pushalot_authorizationtoken) {
-			$('#testPushalot-result').html('Please fill out the necessary fields above.');
-			$('#pushalot_authorizationtoken').addClass('warning');
+	$('#test-nma').click(function () {
+		var nmaApi = $.trim($('#nma-api').val());
+		var nmaPriority = $('#nma-priority').val();
+		if (!nmaApi) {
+			$('#test-nma-result').html('Please fill out the necessary fields above.');
+			$('#nma-api').addClass('warning');
 			return;
 		}
-		$('#pushalot_authorizationtoken').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testPushalot-result').html(loading);
-		$.get(sbRoot + '/home/testPushalot', {'authorizationToken': pushalot_authorizationtoken})
+		$('#nma-api').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-nma-result').html(loading);
+		$.get(sbRoot + '/home/test_nma',
+			{nma_api: nmaApi, nma_priority: nmaPriority})
 			.done(function (data) {
-				$('#testPushalot-result').html(data);
-				$('#testPushalot').prop('disabled', false);
+				$('#test-nma-result').html(data);
+				$('#test-nma').prop('disabled', !1);
 			});
 	});
 
-	$('#testPushbullet').click(function () {
-		var pushbullet_access_token = $.trim($('#pushbullet_access_token').val());
-		var pushbullet_device_iden = $('#pushbullet_device_iden').val();
-		if (!pushbullet_access_token) {
-			$('#testPushbullet-result').html('Please fill out the necessary fields above.');
-			$('#pushbullet_access_token').addClass('warning');
+	$('#test-pushalot').click(function () {
+		var pushalotAuthorizationtoken = $.trim($('#pushalot-authorizationtoken').val());
+		if (!pushalotAuthorizationtoken) {
+			$('#test-pushalot-result').html('Please fill out the necessary fields above.');
+			$('#pushalot-authorizationtoken').addClass('warning');
 			return;
 		}
-		$('#pushbullet_access_token').removeClass('warning');
-		$(this).prop('disabled', true);
-		$('#testPushbullet-result').html(loading);
-		$.get(sbRoot + '/home/testPushbullet', {'accessToken': pushbullet_access_token, 'device_iden': pushbullet_device_iden})
+		$('#pushalot-authorizationtoken').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-pushalot-result').html(loading);
+		$.get(sbRoot + '/home/test_pushalot',
+			{authorization_token: pushalotAuthorizationtoken})
 			.done(function (data) {
-				$('#testPushbullet-result').html(data);
-				$('#testPushbullet').prop('disabled', false);
+				$('#test-pushalot-result').html(data);
+				$('#test-pushalot').prop('disabled', !1);
 			});
 	});
 
-	$('#testSlack').click(function () {
-		var channel = '#slack_channel', slack_channel = $(channel).val(),
-			slack_as_user = $('#slack_as_user').prop('checked'),
-			slack_bot_name = $('#slack_bot_name').val(), slack_icon_url = $('#slack_icon_url').val(),
-			access_token = '#slack_access_token', slack_access_token = $(access_token).val();
+	$('#test-pushbullet').click(function () {
+		var pushbulletAccessToken = $.trim($('#pushbullet-access-token').val());
+		var pushbulletDeviceIden = $('#pushbullet-device-iden').val();
+		if (!pushbulletAccessToken) {
+			$('#test-pushbullet-result').html('Please fill out the necessary fields above.');
+			$('#pushbullet-access-token').addClass('warning');
+			return;
+		}
+		$('#pushbullet-access-token').removeClass('warning');
+		$(this).prop('disabled', !0);
+		$('#test-pushbullet-result').html(loading);
+		$.get(sbRoot + '/home/test_pushbullet',
+			{access_token: pushbulletAccessToken, device_iden: pushbulletDeviceIden})
+			.done(function (data) {
+				$('#test-pushbullet-result').html(data);
+				$('#test-pushbullet').prop('disabled', !1);
+			});
+	});
 
-		$(channel + ', ' + access_token).removeClass('warning');
-		if (!slack_channel || !slack_access_token) {
-			$('#testSlack-result').html('Please fill out the necessary fields above.');
-			if (!slack_channel)
+	$('#test-slack').click(function () {
+		var channel = '#slack-channel', slackChannel = $(channel).val(),
+			slackAsAuthed = $('#slack-as-authed').prop('checked'),
+			slackBotName = $('#slack-bot-name').val(), slackIconUrl = $('#slack-icon-url').val(),
+			accessToken = '#slack-access-token', slackAccessToken = $(accessToken).val();
+
+		$(channel + ', ' + accessToken).removeClass('warning');
+		if (!slackChannel || !slackAccessToken) {
+			$('#test-slack-result').html('Please fill out the necessary fields above.');
+			if (!slackChannel)
 				$(channel).addClass('warning');
-			if (!slack_access_token)
-				$(access_token).addClass('warning');
+			if (!slackAccessToken)
+				$(accessToken).addClass('warning');
 		} else {
-			$(this).prop('disabled', true);
-			$('#testSlack-result').html(loading);
-			$.get(sbRoot + '/home/testSlack', {
-				'channel': slack_channel, 'as_user': slack_as_user,
-				'bot_name': slack_bot_name, 'icon_url': slack_icon_url, 'access_token': slack_access_token})
+			$(this).prop('disabled', !0);
+			$('#test-slack-result').html(loading);
+			$.get(sbRoot + '/home/test_slack',
+				{channel: slackChannel, as_authed: slackAsAuthed, bot_name: slackBotName,
+					icon_url: slackIconUrl, access_token: slackAccessToken})
 				.done(function (data) {
-					$('#testSlack-result').html(data);
-					$('#testSlack').prop('disabled', false);
+					$('#test-slack-result').html(data);
+					$('#test-slack').prop('disabled', !1);
 				});
 		}
 	});
 
-	function get_pushbullet_devices (msg) {
-		var pushbullet_access_token = $.trim($('#pushbullet_access_token').val());
-		if (!pushbullet_access_token) {
-			$('#testPushbullet-result').html('Please fill out the necessary fields above.');
-			$('#pushbullet_access_token').addClass('warning');
+	$('#test-discordapp').click(function () {
+		var discordappAsAuthed = $('#discordapp-as-authed').prop('checked'),
+			discordappUsername = $('#discordapp-username').val(), discordappIconUrl = $('#discordapp-icon-url').val(),
+			discordappAsTts = $('#discordapp-as-tts').prop('checked'),
+			accessToken = '#discordapp-access-token', discordappAccessToken = $(accessToken).val();
+
+		$(accessToken).removeClass('warning');
+		if (!discordappAccessToken) {
+			$('#test-discordapp-result').html('Please fill out the necessary fields above.');
+			if (!discordappAccessToken)
+				$(accessToken).addClass('warning');
+		} else {
+			$(this).prop('disabled', !0);
+			$('#test-discordapp-result').html(loading);
+			$.get(sbRoot + '/home/test_discordapp',
+				{as_authed: discordappAsAuthed, username: discordappUsername, icon_url: discordappIconUrl,
+					as_tts: discordappAsTts, access_token: discordappAccessToken})
+				.done(function (data) {
+					$('#test-discordapp-result').html(data);
+					$('#test-discordapp').prop('disabled', !1);
+				});
+		}
+	});
+
+	$('#test-gitter').click(function () {
+		var gitterRoom = $('#gitter-room').val(),
+			accessToken = '#gitter-access-token', gitterAccessToken = $(accessToken).val();
+
+		$(accessToken).removeClass('warning');
+		if (!gitterAccessToken) {
+			$('#test-gitter-result').html('Please fill out the necessary fields above.');
+			if (!gitterAccessToken)
+				$(accessToken).addClass('warning');
+		} else {
+			$(this).prop('disabled', !0);
+			$('#test-gitter-result').html(loading);
+			$.get(sbRoot + '/home/test_gitter',
+				{room_name: gitterRoom, access_token: gitterAccessToken})
+				.done(function (data) {
+					$('#test-gitter-result').html(data);
+					$('#test-gitter').prop('disabled', !1);
+				});
+		}
+	});
+
+	function getPushbulletDevices (msg) {
+		var pushbulletAccessToken = $.trim($('#pushbullet-access-token').val());
+		if (!pushbulletAccessToken) {
+			$('#test-pushbullet-result').html('Please fill out the necessary fields above.');
+			$('#pushbullet-access-token').addClass('warning');
 			return;
 		}
-		$(this).prop("disabled", true);
+		$(this).prop('disabled', !0);
 		if (msg) {
-			$('#testPushbullet-result').html(loading);
+			$('#test-pushbullet-result').html(loading);
 		}
-		var current_pushbullet_device = $('#pushbullet_device_iden').val();
-		$.get(sbRoot + '/home/getPushbulletDevices', {'accessToken': pushbullet_access_token})
+		var currentPushbulletDevice = $('#pushbullet-device-iden').val();
+		$.get(sbRoot + '/home/get_pushbullet_devices',
+			{access_token: pushbulletAccessToken})
 			.done(function (data) {
 				var devices = jQuery.parseJSON(data || '{}').devices;
 				var error = jQuery.parseJSON(data || '{}').error;
-				$('#pushbullet_device_list').html('');
+				$('#pushbullet-device-list').html('');
 				if (devices) {
 				// add default option to send to all devices
-				$('#pushbullet_device_list').append('<option value="" selected="selected">-- All Devices --</option>');
+				$('#pushbullet-device-list').append('<option value="" selected="selected">-- All Devices --</option>');
 					for (var i = 0; i < devices.length; i++) {
 						// only list active device targets
-						if (devices[i].active == true) {
+						if (!0 === devices[i].active) {
 							// if a device in the list matches our current iden, select it
-							if (current_pushbullet_device == devices[i].iden) {
-								$('#pushbullet_device_list').append('<option value="' + devices[i].iden + '" selected="selected">' + devices[i].manufacturer + ' ' + devices[i].nickname + '</option>');
+							if (currentPushbulletDevice === devices[i].iden) {
+								$('#pushbullet-device-list').append('<option value="' + devices[i].iden + '" selected="selected">' + devices[i].manufacturer + ' ' + devices[i].nickname + '</option>');
 							} else {
-								$('#pushbullet_device_list').append('<option value="' + devices[i].iden + '">' + devices[i].manufacturer + ' ' + devices[i].nickname + '</option>');
+								$('#pushbullet-device-list').append('<option value="' + devices[i].iden + '">' + devices[i].manufacturer + ' ' + devices[i].nickname + '</option>');
 							}
 						}
 					}
 				}
-				$('#getPushbulletDevices').prop('disabled', false);
+				$('#get-pushbulletDevices').prop('disabled', !1);
 				if (msg) {
 					if (error.message) {
-						$('#testPushbullet-result').html(error.message);
+						$('#test-pushbullet-result').html(error.message);
 					} else {
-						$('#testPushbullet-result').html(msg);
+						$('#test-pushbullet-result').html(msg);
 					}
 				}
 			});
 
-		$('#pushbullet_device_list').change(function () {
-			$('#pushbullet_device_iden').val($('#pushbullet_device_list').val());
-			$('#testPushbullet-result').html('Don\'t forget to save your new Pushbullet settings.');
+		$('#pushbullet-device-list').change(function () {
+			$('#pushbullet-device-iden').val($('#pushbullet-device-list').val());
+			$('#test-pushbullet-result').html('Don\'t forget to save your new Pushbullet settings.');
 		});
 	}
 
-	$('#getPushbulletDevices').click(function () {
-		get_pushbullet_devices('Device list updated. Select specific device to use.');
+	$('#get-pushbulletDevices').click(function () {
+		getPushbulletDevices('Device list updated. Select specific device to use.');
 	});
 
-	if ($('#use_pushbullet').prop('checked')) {
-		get_pushbullet_devices();
+	if ($('#use-pushbullet').prop('checked')) {
+		getPushbulletDevices();
 	}
 
-	$('#twitterStep1').click(function() {
-		$('#testTwitter-result').html(loading);
-		$.get(sbRoot + '/home/twitterStep1', function (data) {window.open(data); })
-			.done(function () { $('#testTwitter-result').html('<b>Step1:</b> Confirm Authorization'); });
+	$('#twitter-step1').click(function() {
+		$('#test-twitter-result').html(loading);
+		$.get(sbRoot + '/home/twitter_step1',
+			function (data) {window.open(data); })
+			.done(function () { $('#test-twitter-result').html('<b>Step1:</b> Confirm Authorization'); });
 	});
 
-	$('#twitterStep2').click(function () {
-		var twitter_key = $.trim($('#twitter_key').val());
-		if (!twitter_key) {
-			$('#testTwitter-result').html('Please fill out the necessary fields above.');
-			$('#twitter_key').addClass('warning');
+	$('#twitter-step2').click(function () {
+		var twitterKey = $.trim($('#twitter-key').val());
+		if (!twitterKey) {
+			$('#test-twitter-result').html('Please fill out the necessary fields above.');
+			$('#twitter-key').addClass('warning');
 			return;
 		}
-		$('#twitter_key').removeClass('warning');
-		$('#testTwitter-result').html(loading);
-		$.get(sbRoot + '/home/twitterStep2', {'key': twitter_key},
-			function (data) { $('#testTwitter-result').html(data); });
+		$('#twitter-key').removeClass('warning');
+		$('#test-twitter-result').html(loading);
+		$.get(sbRoot + '/home/twitter_step2',
+			{key: twitterKey},
+			function (data) { $('#test-twitter-result').html(data); });
 	});
 
-	$('#testTwitter').click(function() {
-		$.get(sbRoot + '/home/testTwitter',
-			function (data) { $('#testTwitter-result').html(data); });
+	$('#test-twitter').click(function() {
+		$.get(sbRoot + '/home/test_twitter',
+			function (data) { $('#test-twitter-result').html(data); });
 	});
 
 	var elTraktAuth = $('#trakt-authenticate'), elTraktAuthResult = $('#trakt-authentication-result');
 
-	function trakt_send_auth(){
-		var elAccountSelect = $('#trakt_accounts'), strCurAccountId = elAccountSelect.find('option:selected').val(),
-			elTraktPin = $('#trakt_pin'), strPin = $.trim(elTraktPin.val());
+	function traktSendAuth(){
+		var elAccountSelect = $('#trakt-accounts'), strCurAccountId = elAccountSelect.find('option:selected').val(),
+			elTraktPin = $('#trakt-pin'), strPin = $.trim(elTraktPin.val());
 
 		elTraktAuthResult.html(loading);
 
-		$.get(sbRoot + '/home/trakt_authenticate', {'pin': strPin, 'account': strCurAccountId})
+		$.get(sbRoot + '/home/trakt_authenticate',
+			{pin: strPin, account: strCurAccountId})
 			.done(function(data) {
 				elTraktAuth.prop('disabled', !1);
 				elTraktPin.val('');
 
 				var JSONData = $.parseJSON(data);
 
-				elTraktAuthResult.html('Success' == JSONData.result
+				elTraktAuthResult.html('Success' === JSONData.result
 					? JSONData.result + ' account: ' + JSONData.account_name
 					: JSONData.result + ' ' + JSONData.error_message);
 
-				if ('Success' == JSONData.result) {
+				if ('Success' === JSONData.result) {
 					var elUpdateRows = $('#trakt-collection').find('tr');
-					if ('new' == strCurAccountId) {
+					if ('new' === strCurAccountId) {
 						elAccountSelect.append($('<option>', {value: JSONData.account_id, text: JSONData.account_id + ' - '  + JSONData.account_name + ' (ok)'}));
 
-						if ('Connect New Pin' == elUpdateRows.eq(0).find('th').last().text()) {
+						if ('Connect New Pin' === elUpdateRows.eq(0).find('th').last().text()) {
 							elUpdateRows.eq(0).find('th').last().html('Account');
 							elUpdateRows.eq(1).find('th').last().html(JSONData.account_name);
 							elUpdateRows.eq(1).find('th').last().addClass('tid-' + JSONData.account_id);
 							elUpdateRows.has('td').each(function(nRow) {
 								var elCells = $(this).find('td');
 								if (!(nRow % 2)) {
-									var IdLoc = 'update_trakt_' + JSONData.account_id + '_' + elCells.eq(0).find('span').attr('data-loc');
+									var IdLoc = 'update-trakt-' + JSONData.account_id + '-' + elCells.eq(0).find('span').attr('data-loc');
 									elCells.last().html('<input type="checkbox" id="' + IdLoc + '" name="' + IdLoc + '">');
 								} else {
 									elCells.attr('colspan', 1);
@@ -587,7 +667,7 @@
 							elUpdateRows.has('td').each(function(nRow) {
 								var elCells = $(this).find('td');
 								if (!(nRow % 2)) {
-									var IdLoc = 'update_trakt_' + JSONData.account_id + '_' + elCells.eq(0).find('span').attr('data-loc');
+									var IdLoc = 'update-trakt-' + JSONData.account_id + '-' + elCells.eq(0).find('span').attr('data-loc');
 									elCells.last().after('<td class="opt"><input type="checkbox" id="' + IdLoc + '" name="' + IdLoc + '"></td>');
 								} else {
 									elCells.attr('colspan', 1 + parseInt(elCells.attr('colspan'), 10));
@@ -605,16 +685,16 @@
 	}
 
 	elTraktAuth.click(function(e) {
-		var elTraktPin = $('#trakt_pin');
+		var elTraktPin = $('#trakt-pin');
 
 		elTraktPin.removeClass('warning');
 		if (!$.trim(elTraktPin.val())) {
 			elTraktPin.addClass('warning');
 			elTraktAuthResult.html('Please enter a required PIN above.');
 		} else {
-			var elAccountSelect = $('#trakt_accounts'), elSelected = elAccountSelect.find('option:selected');
+			var elAccountSelect = $('#trakt-accounts'), elSelected = elAccountSelect.find('option:selected');
 			$(this).prop('disabled', !0);
-			if ('new' != elSelected.val()) {
+			if ('new' !== elSelected.val()) {
 				$.confirm({
 					'title'		: 'Replace Trakt Account',
 					'message'	: 'Are you sure you want to replace <span class="footerhighlight">' + elSelected.text() + '</span> ?<br /><br />',
@@ -622,7 +702,7 @@
 						'Yes'	: {
 							'class'	: 'green',
 							'action': function() {
-									trakt_send_auth();
+									traktSendAuth();
 								}
 						},
 						'No'	: {
@@ -637,17 +717,17 @@
 			}
 			else
 			{
-				trakt_send_auth();
+				traktSendAuth();
 			}
 		}
 	});
 
-	$('#trakt_accounts').change(function() {
-		$('#trakt-delete').prop('disabled', 'new' == $('#trakt_accounts').val());
+	$('#trakt-accounts').change(function() {
+		$('#trakt-delete').prop('disabled', 'new' === $('#trakt-accounts').val());
 	});
 
 	$('#trakt-delete').click(function(e) {
-		var elAccountSelect = $('#trakt_accounts'), elSelected = elAccountSelect.find('option:selected'), that = $(this);
+		var elAccountSelect = $('#trakt-accounts'), elSelected = elAccountSelect.find('option:selected'), that = $(this);
 
 		that.prop('disabled', !0);
 		$.confirm({
@@ -657,30 +737,31 @@
 				'Yes'	: {
 					'class'	: 'green',
 					'action': function() {
-						$.get(sbRoot + '/home/trakt_delete', {'accountid': elSelected.val()})
+						$.get(sbRoot + '/home/trakt_delete',
+							{accountid: elSelected.val()})
 							.done(function(data) {
 								that.prop('disabled', !1);
 								var JSONData = $.parseJSON(data);
-								if ('Success' == JSONData.result) {
+								if ('Success' === JSONData.result) {
 									var elCollection = $('#trakt-collection'), elUpdateRows = elCollection.find('tr'),
 										header = elCollection.find('th[class*="tid-' + JSONData.account_id + '"]'),
-										num_acc = parseInt(JSONData.num_accounts, 10);
+										numAcc = parseInt(JSONData.num_accounts, 10);
 
-									elUpdateRows.eq(0).find('th').last().html(!num_acc && '<i>Connect New Pin</i>' ||
-										(1 < num_acc ? 'Trakt accounts' : 'Account'));
-									elUpdateRows.find('th[colspan]').attr('colspan', 1 < num_acc ? num_acc : 1);
+									elUpdateRows.eq(0).find('th').last().html(!numAcc && '<i>Connect New Pin</i>' ||
+										(1 < numAcc ? 'Trakt accounts' : 'Account'));
+									elUpdateRows.find('th[colspan]').attr('colspan', 1 < numAcc ? numAcc : 1);
 
-									!num_acc && header.html('..') || header.remove();
+									!numAcc && header.html('..') || header.remove();
 
-									var elInputs = elUpdateRows.find('input[id*=update_trakt_' + JSONData.account_id + ']');
-									!num_acc && elInputs.parent().html('..') || elInputs.parent().remove();
+									var elInputs = elUpdateRows.find('input[id*=update-trakt-' + JSONData.account_id + ']');
+									!numAcc && elInputs.parent().html('..') || elInputs.parent().remove();
 
 									elUpdateRows.find('td[colspan]').each(function() {
-										$(this).attr('colspan', (num_acc ? 1 + num_acc : 2))
+										$(this).attr('colspan', (numAcc ? 1 + numAcc : 2))
 									});
 
 									elSelected.remove();
-									$('#trakt_accounts').change();
+									$('#trakt-accounts').change();
 
 									elTraktAuthResult.html('Deleted account: ' + JSONData.account_name);
 								}
@@ -691,15 +772,15 @@
 					'class'	: 'red',
 					'action': function() {
 						e.preventDefault();
-						$('#trakt_accounts').change();
+						$('#trakt-accounts').change();
 					}
 				}
 			}
 		});
 	});
 
-	function load_show_notify_lists() {
-		$.get(sbRoot + '/home/loadShowNotifyLists', function (data) {
+	function loadShowNotifyLists() {
+		$.get(sbRoot + '/home/load_show_notify_lists', function (data) {
 			var list, html, item, len= 0, el;
 			list = $.parseJSON(data);
 			html = [];
@@ -719,78 +800,78 @@
 			}
 
 			if (len) {
-				el = $('#email_show');
+				el = $('#email-show');
 				el.html('<option value="-1">-- Select show --</option>'
 					+ html.join('\n'));
 
-				$('#show_email_list').val('');
+				$('#show-email-list').val('');
 
 				el.change(function () {
-					$('#show_email_list').val(
+					$('#show-email-list').val(
 						$(this).find('option[value="' + $(this).val() + '"]').attr('data'))
 				});
 			}
 		});
 	}
 	// Load the per show notify lists everytime this page is loaded
-	load_show_notify_lists();
+	loadShowNotifyLists();
 
 	// Update the internal data struct anytime settings are saved to the server
-	$('#email_show').bind('notify', function () { load_show_notify_lists(); });
+	$('#email-show').bind('notify', function () { loadShowNotifyLists(); });
 
-	$('#save_show_email').click(
+	$('#save-show-email').click(
 		function(){
-			var show = $('#email_show').val();
-			if ('-1' == show) {
-				$('#testEmail-result').html('No show selected for save.');
+			var show = $('#email-show').val();
+			if ('-1' === show) {
+				$('#test-email-result').html('No show selected for save.');
 				return
 			}
 			$.post(sbRoot + '/home/save_show_email', {
 				show: show,
-				emails: $('#show_email_list').val()},
+				emails: $('#show-email-list').val()},
 				function (data){
 					// Reload the per show notify lists to reflect changes
-					load_show_notify_lists();
+					loadShowNotifyLists();
 					var result = $.parseJSON(data),
-						show = $('#email_show').find('option[value="' + result.id + '"]').text();
-					$('#testEmail-result').html(result.success
+						show = $('#email-show').find('option[value="' + result.id + '"]').text();
+					$('#test-email-result').html(result.success
 						? 'Success. Notify list updated for show "' + show + '". Click below to test.'
 						: 'Error saving notify list for show %s' % show);
 				});
 		});
 
-	$('#testEmail').click(function () {
+	$('#test-email').click(function () {
 		var status, host, port, tls, from, user, pwd, err, to;
-		status = $('#testEmail-result');
+		status = $('#test-email-result');
 		status.html(loading);
-		host = $('#email_host').val();
+		host = $('#email-host').val();
 		host = host.length > 0 ? host : null;
-		port = $('#email_port').val();
+		port = $('#email-port').val();
 		port = port.length > 0 ? port : null;
-		tls = $('#email_tls').attr('checked') !== undefined ? 1 : 0;
-		from = $('#email_from').val();
+		tls = $('#email-tls').attr('checked') !== undefined ? 1 : 0;
+		from = $('#email-from').val();
 		from = from.length > 0 ? from : 'root@localhost';
-		user = $('#email_user').val().trim();
-		pwd = $('#email_password').val();
+		user = $('#email-user').val().trim();
+		pwd = $('#email-password').val();
 		err = [];
-		if (null == host) {
+		if (null === host) {
 			err.push('SMTP server hostname');
 		}
-		if (null == port) {
+		if (null === port) {
 			err.push('SMTP server host port');
-		} else if (null == port.match(/^\d+$/) || parseInt(port, 10) > 65535) {
+		} else if (null === port.match(/^\d+$/) || parseInt(port, 10) > 65535) {
 			err.push('SMTP server host port must be between 0 and 65535');
 		}
 		if (0 < err.length) {
 			status.html('Required: ' + err.join(', '));
 		} else {
 			to = prompt('Enter an email address to send the test to:', '');
-			if (null == to || 0 == to.length || null == to.match(/.*@.*/)) {
+			if (null === to || 0 === to.length || null === to.match(/.*@.*/)) {
 				status.html('Required: A valid address for email test');
 			} else {
-				$.get(sbRoot + '/home/testEmail',
+				$.get(sbRoot + '/home/test_email',
 					{host:host, port:port, smtp_from:from, use_tls:tls, user:user, pwd:pwd, to:to},
-					function(msg) {$('#testEmail-result').html(msg);});
+					function(msg) {$('#test-email-result').html(msg);});
 			}
 		}
 	});

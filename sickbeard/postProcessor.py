@@ -247,7 +247,7 @@ class PostProcessor(object):
                     self._log(u'Deleted file ' + cur_file, logger.DEBUG)
 
                 # do the library update for synoindex
-                notifiers.synoindex_notifier.deleteFile(cur_file)
+                notifiers.NotifierFactory().get('SYNOINDEX').deleteFile(cur_file)
 
     def _combined_file_operation(self, file_path, new_path, new_base_name, associated_files=False, action=None,
                                  subtitles=False, action_tmpl=None):
@@ -900,7 +900,7 @@ class PostProcessor(object):
             try:
                 ek.ek(os.mkdir, ep_obj.show.location)
                 # do the library update for synoindex
-                notifiers.synoindex_notifier.addFolder(ep_obj.show.location)
+                notifiers.NotifierFactory().get('SYNOINDEX').addFolder(ep_obj.show.location)
             except (OSError, IOError):
                 raise exceptions.PostProcessingFailed(u'Unable to create show directory: ' + ep_obj.show.location)
 
@@ -1054,29 +1054,8 @@ class PostProcessor(object):
         # send notifications
         notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
 
-        # do the library update for Emby
-        notifiers.emby_notifier.update_library(ep_obj.show)
-
-        # do the library update for Kodi
-        notifiers.kodi_notifier.update_library(ep_obj.show.name)
-
-        # do the library update for XBMC
-        notifiers.xbmc_notifier.update_library(ep_obj.show.name)
-
-        # do the library update for Plex
-        notifiers.plex_notifier.update_library(ep_obj)
-
-        # do the library update for NMJ
-        # nmj_notifier kicks off its library update when the notify_download is issued (inside notifiers)
-
-        # do the library update for Synology Indexer
-        notifiers.synoindex_notifier.addFile(ep_obj.location)
-
-        # do the library update for pyTivo
-        notifiers.pytivo_notifier.update_library(ep_obj)
-
-        # do the library update for Trakt
-        notifiers.trakt_notifier.update_collection(ep_obj)
+        # trigger library updates
+        notifiers.notify_update_library(ep_obj=ep_obj)
 
         self._run_extra_scripts(ep_obj)
 

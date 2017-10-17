@@ -16,22 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from urlparse import parse_qsl
+
 import sickbeard
-
-from sickbeard import logger, common
 from sickbeard.exceptions import ex
-
-# parse_qsl moved to urlparse module in v2.6
-try:
-    from urlparse import parse_qsl  #@UnusedImport
-except:
-    from cgi import parse_qsl  #@Reimport
+from sickbeard.notifiers.generic import Notifier
 
 import lib.oauth2 as oauth
 import lib.pythontwitter as twitter
 
 
-class TwitterNotifier:
+class TwitterNotifier(Notifier):
+
     consumer_key = 'vHHtcB6WzpWDG6KYlBMr8g'
     consumer_secret = 'zMqq5CB3f8cWKiRO2KzWPTlBanYmV0VYxSXZ0Pxds0E'
 
@@ -40,39 +36,19 @@ class TwitterNotifier:
     AUTHORIZATION_URL = 'https://api.twitter.com/oauth/authorize'
     SIGNIN_URL = 'https://api.twitter.com/oauth/authenticate'
 
-    def notify_snatch(self, ep_name):
-        if sickbeard.TWITTER_NOTIFY_ONSNATCH:
-            self._notifyTwitter(common.notifyStrings[common.NOTIFY_SNATCH] + ': ' + ep_name)
+    def get_authorization(self):
 
-    def notify_download(self, ep_name):
-        if sickbeard.TWITTER_NOTIFY_ONDOWNLOAD:
-            self._notifyTwitter(common.notifyStrings[common.NOTIFY_DOWNLOAD] + ': ' + ep_name)
-
-    def notify_subtitle_download(self, ep_name, lang):
-        if sickbeard.TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD:
-            self._notifyTwitter(common.notifyStrings[common.NOTIFY_SUBTITLE_DOWNLOAD] + ' ' + ep_name + ': ' + lang)
-            
-    def notify_git_update(self, new_version = '??'):
-        if sickbeard.USE_TWITTER:
-            update_text=common.notifyStrings[common.NOTIFY_GIT_UPDATE_TEXT]
-            title=common.notifyStrings[common.NOTIFY_GIT_UPDATE]
-            self._notifyTwitter(title + ' - ' + update_text + new_version)
-
-    def test_notify(self):
-        return self._notifyTwitter('This is a test notification from SickGear', force=True)
-
-    def _get_authorization(self):
-
-        signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()  #@UnusedVariable
+        # noinspection PyUnusedLocal
+        signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
         oauth_consumer = oauth.Consumer(key=self.consumer_key, secret=self.consumer_secret)
         oauth_client = oauth.Client(oauth_consumer)
 
-        logger.log('Requesting temp token from Twitter', logger.DEBUG)
+        self._log_debug('Requesting temp token from Twitter')
 
         resp, content = oauth_client.request(self.REQUEST_TOKEN_URL, 'GET')
 
-        if resp['status'] != '200':
-            logger.log('Invalid response from Twitter requesting temp token: %s' % resp['status'], logger.ERROR)
+        if '200' != resp['status']:
+            self._log_error('Invalid response from Twitter requesting temp token: %s' % resp['status'])
         else:
             request_token = dict(parse_qsl(content))
 
@@ -81,67 +57,62 @@ class TwitterNotifier:
 
             return self.AUTHORIZATION_URL + '?oauth_token=' + request_token['oauth_token']
 
-    def _get_credentials(self, key):
-        request_token = {}
-
-        request_token['oauth_token'] = sickbeard.TWITTER_USERNAME
-        request_token['oauth_token_secret'] = sickbeard.TWITTER_PASSWORD
-        request_token['oauth_callback_confirmed'] = 'true'
+    def get_credentials(self, key):
+        request_token = dict(oauth_token=sickbeard.TWITTER_USERNAME, oauth_token_secret=sickbeard.TWITTER_PASSWORD,
+                             oauth_callback_confirmed='true')
 
         token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
         token.set_verifier(key)
 
-        logger.log('Generating and signing request for an access token using key ' + key, logger.DEBUG)
+        self._log_debug('Generating and signing request for an access token using key ' + key)
 
-        signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()  #@UnusedVariable
+        # noinspection PyUnusedLocal
+        signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
         oauth_consumer = oauth.Consumer(key=self.consumer_key, secret=self.consumer_secret)
-        logger.log('oauth_consumer: ' + str(oauth_consumer), logger.DEBUG)
+        self._log_debug('oauth_consumer: ' + str(oauth_consumer))
         oauth_client = oauth.Client(oauth_consumer, token)
-        logger.log('oauth_client: ' + str(oauth_client), logger.DEBUG)
+        self._log_debug('oauth_client: ' + str(oauth_client))
         resp, content = oauth_client.request(self.ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % key)
-        logger.log('resp, content: ' + str(resp) + ',' + str(content), logger.DEBUG)
+        self._log_debug('resp, content: ' + str(resp) + ',' + str(content))
 
         access_token = dict(parse_qsl(content))
-        logger.log('access_token: ' + str(access_token), logger.DEBUG)
+        self._log_debug('access_token: ' + str(access_token))
 
-        logger.log('resp[status] = ' + str(resp['status']), logger.DEBUG)
-        if resp['status'] != '200':
-            logger.log('The request for a token with did not succeed: ' + str(resp['status']), logger.ERROR)
-            return False
+        self._log_debug('resp[status] = ' + str(resp['status']))
+        if '200' != resp['status']:
+            self._log_error('The request for a token with did not succeed: ' + str(resp['status']))
+            result = False
         else:
-            logger.log('Your Twitter Access Token key: %s' % access_token['oauth_token'], logger.DEBUG)
-            logger.log('Access Token secret: %s' % access_token['oauth_token_secret'], logger.DEBUG)
+            self._log_debug('Your Twitter Access Token key: %s' % access_token['oauth_token'])
+            self._log_debug('Access Token secret: %s' % access_token['oauth_token_secret'])
             sickbeard.TWITTER_USERNAME = access_token['oauth_token']
             sickbeard.TWITTER_PASSWORD = access_token['oauth_token_secret']
-            return True
+            result = True
 
+        message = ('Key verification successful', 'Unable to verify key')[not result]
+        logger.log(u'%s result: %s' % (self.name, message))
+        return self._choose(message, result)
 
-    def _send_tweet(self, message=None):
+    def _notify(self, title, body, **kwargs):
+
+        # don't use title with updates or testing, as only one str is used
+        body = '::'.join(([], [sickbeard.TWITTER_PREFIX])[bool(sickbeard.TWITTER_PREFIX)]
+                         + [body.replace('#: ', ': ') if 'SickGear' in title else body])
 
         username = self.consumer_key
         password = self.consumer_secret
         access_token_key = sickbeard.TWITTER_USERNAME
         access_token_secret = sickbeard.TWITTER_PASSWORD
 
-        logger.log(u'Sending tweet: ' + message, logger.DEBUG)
-
         api = twitter.Api(username, password, access_token_key, access_token_secret)
 
         try:
-            api.PostUpdate(message.encode('utf8'))
+            api.PostUpdate(body.encode('utf8'))
         except Exception as e:
-            logger.log(u'Error Sending Tweet: ' + ex(e), logger.ERROR)
+            self._log_error(u'Error sending Tweet: ' + ex(e))
             return False
 
         return True
-
-    def _notifyTwitter(self, message='', force=False):
-        prefix = sickbeard.TWITTER_PREFIX
-
-        if not sickbeard.USE_TWITTER and not force:
-            return False
-
-        return self._send_tweet(prefix + ': ' + message)
 
 
 notifier = TwitterNotifier

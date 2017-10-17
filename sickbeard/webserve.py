@@ -625,10 +625,10 @@ class Home(MainHandler):
     def HomeMenu(self):
         return [
             {'title': 'Process Media', 'path': 'home/postprocess/'},
-            {'title': 'Update Emby', 'path': 'home/updateEMBY/', 'requires': self.haveEMBY},
-            {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
-            {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
-            {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX}
+            {'title': 'Update Emby', 'path': 'home/update_emby/', 'requires': self.haveEMBY},
+            {'title': 'Update Kodi', 'path': 'home/update_kodi/', 'requires': self.haveKODI},
+            {'title': 'Update XBMC', 'path': 'home/update_xbmc/', 'requires': self.haveXBMC},
+            {'title': 'Update Plex', 'path': 'home/update_plex/', 'requires': self.havePLEX}
         ]
 
     @staticmethod
@@ -783,236 +783,191 @@ class Home(MainHandler):
 
         client = clients.get_client_instance(torrent_method)
 
-        connection, accesMsg = client(host, username, password).test_authentication()
+        connection, acces_msg = client(host, username, password).test_authentication()
 
-        return accesMsg
+        return acces_msg
 
-    def testGrowl(self, host=None, password=None):
+    @staticmethod
+    def discover_emby():
+        return notifiers.NotifierFactory().get('EMBY').discover_server()
+
+    def test_emby(self, host=None, apikey=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host, default_port=8096)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        result = notifiers.NotifierFactory().get('EMBY').test_notify(hosts, apikey)
+
+        ui.notifications.message('Tested Emby:', urllib.unquote_plus(hosts.replace(',', ', ')))
+        return result
+
+    def test_kodi(self, host=None, username=None, password=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host, default_port=8080)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        if None is not password and set('*') == set(password):
+            password = sickbeard.KODI_PASSWORD
+
+        result = notifiers.NotifierFactory().get('KODI').test_notify(hosts, username, password)
+
+        ui.notifications.message('Tested Kodi:', urllib.unquote_plus(hosts.replace(',', ', ')))
+        return result
+
+    def test_plex(self, host=None, username=None, password=None, server=False):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host, default_port=32400)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        if None is not password and set('*') == set(password):
+            password = sickbeard.PLEX_PASSWORD
+
+        server = 'true' == server
+        n = notifiers.NotifierFactory().get('PLEX')
+        method = n.test_update_library if server else n.test_notify
+        result = method(hosts, username, password)
+
+        ui.notifications.message('Tested Plex %s(s): ' % ('client', 'Media Server host')[server],
+                                 urllib.unquote_plus(hosts.replace(',', ', ')))
+        return result
+
+    # def test_xbmc(self, host=None, username=None, password=None):
+    #     self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+    #
+    #     hosts = config.clean_hosts(host, default_port=80)
+    #     if not hosts:
+    #         return 'Fail: No valid host(s)'
+    #
+    #     if None is not password and set('*') == set(password):
+    #         password = sickbeard.XBMC_PASSWORD
+    #
+    #     result = notifiers.NotifierFactory().get('XBMC').test_notify(hosts, username, password)
+    #
+    #     ui.notifications.message('Tested XBMC: ', urllib.unquote_plus(hosts.replace(',', ', ')))
+    #     return result
+
+    def test_nmj(self, host=None, database=None, mount=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_host(host)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        return notifiers.NotifierFactory().get('NMJ').test_notify(urllib.unquote_plus(host), database, mount)
+
+    def settings_nmj(self, host=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_host(host)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        return notifiers.NotifierFactory().get('NMJ').notify_settings(urllib.unquote_plus(host))
+
+    def test_nmj2(self, host=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_host(host)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        return notifiers.NotifierFactory().get('NMJV2').test_notify(urllib.unquote_plus(host))
+
+    def settings_nmj2(self, host=None, dbloc=None, instance=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_host(host)
+        return notifiers.NotifierFactory().get('NMJV2').notify_settings(urllib.unquote_plus(host), dbloc, instance)
+
+    def test_boxcar2(self, access_token=None, sound=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not access_token and starify(access_token, True):
+            access_token = sickbeard.BOXCAR2_ACCESSTOKEN
+
+        return notifiers.NotifierFactory().get('BOXCAR2').test_notify(access_token, sound)
+
+    def test_pushbullet(self, access_token=None, device_iden=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not access_token and starify(access_token, True):
+            access_token = sickbeard.PUSHBULLET_ACCESS_TOKEN
+
+        return notifiers.NotifierFactory().get('PUSHBULLET').test_notify(access_token, device_iden)
+
+    def get_pushbullet_devices(self, access_token=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not access_token and starify(access_token, True):
+            access_token = sickbeard.PUSHBULLET_ACCESS_TOKEN
+
+        return notifiers.NotifierFactory().get('PUSHBULLET').get_devices(access_token)
+
+    def test_pushover(self, user_key=None, api_key=None, priority=None, device=None, sound=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not user_key and starify(user_key, True):
+            user_key = sickbeard.PUSHOVER_USERKEY
+
+        if None is not api_key and starify(api_key, True):
+            api_key = sickbeard.PUSHOVER_APIKEY
+
+        return notifiers.NotifierFactory().get('PUSHOVER').test_notify(user_key, api_key, priority, device, sound)
+
+    def get_pushover_devices(self, user_key=None, api_key=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not user_key and starify(user_key, True):
+            user_key = sickbeard.PUSHOVER_USERKEY
+
+        if None is not api_key and starify(api_key, True):
+            api_key = sickbeard.PUSHOVER_APIKEY
+
+        return notifiers.NotifierFactory().get('PUSHOVER').get_devices(user_key, api_key)
+
+    def test_growl(self, host=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_host(host, default_port=23053)
         if None is not password and set('*') == set(password):
             password = sickbeard.GROWL_PASSWORD
 
-        result = notifiers.growl_notifier.test_notify(host, password)
-        if password is None or password == '':
-            pw_append = ''
-        else:
-            pw_append = ' with password: ' + password
+        return notifiers.NotifierFactory().get('GROWL').test_notify(host, password)
 
-        if result:
-            return 'Registered and Tested growl successfully ' + urllib.unquote_plus(host) + pw_append
-        else:
-            return 'Registration and Testing of growl failed ' + urllib.unquote_plus(host) + pw_append
-
-    def testProwl(self, prowl_api=None, prowl_priority=0):
+    def test_prowl(self, prowl_api=None, prowl_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         if None is not prowl_api and starify(prowl_api, True):
             prowl_api = sickbeard.PROWL_API
 
-        result = notifiers.prowl_notifier.test_notify(prowl_api, prowl_priority)
-        if result:
-            return 'Test prowl notice sent successfully'
-        else:
-            return 'Test prowl notice failed'
+        return notifiers.NotifierFactory().get('PROWL').test_notify(prowl_api, prowl_priority)
 
-    def testBoxcar2(self, accesstoken=None, sound=None):
+    def test_nma(self, nma_api=None, nma_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        if None is not accesstoken and starify(accesstoken, True):
-            accesstoken = sickbeard.BOXCAR2_ACCESSTOKEN
+        if None is not nma_api and starify(nma_api, True):
+            nma_api = sickbeard.NMA_API
 
-        result = notifiers.boxcar2_notifier.test_notify(accesstoken, sound)
-        if result:
-            return 'Boxcar2 notification succeeded. Check your Boxcar2 clients to make sure it worked'
-        else:
-            return 'Error sending Boxcar2 notification'
+        return notifiers.NotifierFactory().get('NMA').test_notify(nma_api, nma_priority)
 
-    def testPushover(self, userKey=None, apiKey=None, priority=None, device=None, sound=None):
+    def test_libnotify(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        if None is not userKey and starify(userKey, True):
-            userKey = sickbeard.PUSHOVER_USERKEY
+        return notifiers.NotifierFactory().get('LIBNOTIFY').test_notify()
 
-        if None is not apiKey and starify(apiKey, True):
-            apiKey = sickbeard.PUSHOVER_APIKEY
-
-        result = notifiers.pushover_notifier.test_notify(userKey, apiKey, priority, device, sound)
-        if result:
-            return 'Pushover notification succeeded. Check your Pushover clients to make sure it worked'
-        else:
-            return 'Error sending Pushover notification'
-
-    def getPushoverDevices(self, userKey=None, apiKey=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not userKey and starify(userKey, True):
-            userKey = sickbeard.PUSHOVER_USERKEY
-
-        if None is not apiKey and starify(apiKey, True):
-            apiKey = sickbeard.PUSHOVER_APIKEY
-
-        result = notifiers.pushover_notifier.get_devices(userKey, apiKey)
-        if result:
-            return result
-        else:
-            return "{}"
-
-    def twitterStep1(self, *args, **kwargs):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        return notifiers.twitter_notifier._get_authorization()
-
-    def twitterStep2(self, key):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        result = notifiers.twitter_notifier._get_credentials(key)
-        logger.log(u'result: ' + str(result))
-        if result:
-            return 'Key verification successful'
-        else:
-            return 'Unable to verify key'
-
-    def testTwitter(self, *args, **kwargs):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        result = notifiers.twitter_notifier.test_notify()
-        if result:
-            return 'Tweet successful, check your twitter to make sure it worked'
-        else:
-            return 'Error sending tweet'
-
-    @staticmethod
-    def discover_emby():
-        return notifiers.emby_notifier.discover_server()
-
-    def testEMBY(self, host=None, apikey=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        hosts = config.clean_hosts(host)
-        if not hosts:
-            return 'Fail: At least one invalid host'
-
-        total_success, cur_message = notifiers.emby_notifier.test_notify(hosts, apikey)
-        return (cur_message, u'Success. All Emby hosts tested.')[total_success]
-
-    def testKODI(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        hosts = config.clean_hosts(host)
-        if not hosts:
-            return 'Fail: At least one invalid host'
-
-        if None is not password and set('*') == set(password):
-            password = sickbeard.KODI_PASSWORD
-
-        total_success, cur_message = notifiers.kodi_notifier.test_notify(hosts, username, password)
-        return (cur_message, u'Success. All Kodi hosts tested.')[total_success]
-
-    def testXBMC(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_hosts(host)
-        if None is not password and set('*') == set(password):
-            password = sickbeard.XBMC_PASSWORD
-
-        finalResult = ''
-        for curHost in [x.strip() for x in host.split(',')]:
-            curResult = notifiers.xbmc_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
-            if len(curResult.split(':')) > 2 and 'OK' in curResult.split(':')[2]:
-                finalResult += 'Test XBMC notice sent successfully to ' + urllib.unquote_plus(curHost)
-            else:
-                finalResult += 'Test XBMC notice failed to ' + urllib.unquote_plus(curHost)
-            finalResult += "<br />\n"
-
-        return finalResult
-
-    def testPMC(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not password and set('*') == set(password):
-            password = sickbeard.PLEX_PASSWORD
-
-        finalResult = ''
-        for curHost in [x.strip() for x in host.split(',')]:
-            curResult = notifiers.plex_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
-            if len(curResult.split(':')) > 2 and 'OK' in curResult.split(':')[2]:
-                finalResult += 'Successful test notice sent to Plex client ... ' + urllib.unquote_plus(curHost)
-            else:
-                finalResult += 'Test failed for Plex client ... ' + urllib.unquote_plus(curHost)
-            finalResult += '<br />' + '\n'
-
-        ui.notifications.message('Tested Plex client(s): ', urllib.unquote_plus(host.replace(',', ', ')))
-
-        return finalResult
-
-    def testPMS(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not password and set('*') == set(password):
-            password = sickbeard.PLEX_PASSWORD
-
-        cur_result = notifiers.plex_notifier.test_notify(urllib.unquote_plus(host), username, password, server=True)
-        if '<br />' == cur_result:
-            cur_result += 'Fail: No valid host set to connect with'
-        final_result = (('Test result for', 'Successful test of')['Fail' not in cur_result]
-                        + ' Plex server(s) ... %s<br />\n' % cur_result)
-
-        ui.notifications.message('Tested Plex Media Server host(s): ', urllib.unquote_plus(host.replace(',', ', ')))
-
-        return final_result
-
-    def testLibnotify(self, *args, **kwargs):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if notifiers.libnotify_notifier.test_notify():
-            return 'Tried sending desktop notification via libnotify'
-        else:
-            return notifiers.libnotify.diagnose()
-
-    def testNMJ(self, host=None, database=None, mount=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_host(host)
-        result = notifiers.nmj_notifier.test_notify(urllib.unquote_plus(host), database, mount)
-        if result:
-            return 'Successfully started the scan update'
-        else:
-            return 'Test failed to start the scan update'
-
-    def settingsNMJ(self, host=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_host(host)
-        result = notifiers.nmj_notifier.notify_settings(urllib.unquote_plus(host))
-        if result:
-            return '{"message": "Got settings from %(host)s", "database": "%(database)s", "mount": "%(mount)s"}' % {
-                "host": host, "database": sickbeard.NMJ_DATABASE, "mount": sickbeard.NMJ_MOUNT}
-        else:
-            return '{"message": "Failed! Make sure your Popcorn is on and NMJ is running. (see Log & Errors -> Debug for detailed info)", "database": "", "mount": ""}'
-
-    def testNMJv2(self, host=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_host(host)
-        result = notifiers.nmjv2_notifier.test_notify(urllib.unquote_plus(host))
-        if result:
-            return 'Test notice sent successfully to ' + urllib.unquote_plus(host)
-        else:
-            return 'Test notice failed to ' + urllib.unquote_plus(host)
-
-    def settingsNMJv2(self, host=None, dbloc=None, instance=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_host(host)
-        result = notifiers.nmjv2_notifier.notify_settings(urllib.unquote_plus(host), dbloc, instance)
-        if result:
-            return '{"message": "NMJ Database found at: %(host)s", "database": "%(database)s"}' % {"host": host,
-                                                                                                   "database": sickbeard.NMJv2_DATABASE}
-        else:
-            return '{"message": "Unable to find NMJ Database at location: %(dbloc)s. Is the right location selected and PCH running?", "database": ""}' % {
-                "dbloc": dbloc}
+    # def test_pushalot(self, authorization_token=None):
+    #     self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+    #
+    #     if None is not authorization_token and starify(authorization_token, True):
+    #         authorization_token = sickbeard.PUSHALOT_AUTHORIZATIONTOKEN
+    #
+    #     return notifiers.NotifierFactory().get('PUSHALOT').test_notify(authorization_token)
 
     def trakt_authenticate(self, pin=None, account=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1063,7 +1018,7 @@ class Home(MainHandler):
                 return json.dumps({'result': 'Not found: Account to delete'})
         return json.dumps({'result': 'Not found: Invalid account id'})
 
-    def loadShowNotifyLists(self, *args, **kwargs):
+    def load_show_notify_lists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         my_db = db.DBConnection()
@@ -1086,6 +1041,51 @@ class Home(MainHandler):
 
         return json.dumps(response)
 
+    def test_slack(self, channel=None, as_authed=False, bot_name=None, icon_url=None, access_token=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('SLACK').test_notify(
+            channel=channel, as_authed='true' == as_authed,
+            bot_name=bot_name, icon_url=icon_url, access_token=access_token)
+
+    def test_discordapp(self, as_authed=False, username=None, icon_url=None, as_tts=False, access_token=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('DISCORDAPP').test_notify(
+            as_authed='true' == as_authed, username=username, icon_url=icon_url,
+            as_tts='true' == as_tts, access_token=access_token)
+
+    def test_gitter(self, room_name=None, access_token=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('GITTER').test_notify(
+            room_name=room_name, access_token=access_token)
+
+    def test_twitter(self, *args, **kwargs):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('TWITTER').test_notify()
+
+    def twitter_step1(self, *args, **kwargs):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('TWITTER').get_authorization()
+
+    def twitter_step2(self, key):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('TWITTER').get_credentials(key)
+
+    def test_email(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not pwd and set('*') == set(pwd):
+            pwd = sickbeard.EMAIL_PASSWORD
+
+        host = config.clean_host(host)
+
+        return notifiers.NotifierFactory().get('EMAIL').test_notify(host, port, smtp_from, use_tls, user, pwd, to)
+
     @staticmethod
     def save_show_email(show=None, emails=None):
         # self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1098,64 +1098,6 @@ class Home(MainHandler):
                              [emails, parse[0], parse[1]]):
             success = True
         return json.dumps({'id': show, 'success': success})
-
-    def testEmail(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not pwd and set('*') == set(pwd):
-            pwd = sickbeard.EMAIL_PASSWORD
-        host = config.clean_host(host)
-
-        if notifiers.email_notifier.test_notify(host, port, smtp_from, use_tls, user, pwd, to):
-            return 'Success. Test email sent. Check inbox.'
-        return 'ERROR: %s' % notifiers.email_notifier.last_err
-
-    def testNMA(self, nma_api=None, nma_priority=0):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not nma_api and starify(nma_api, True):
-            nma_api = sickbeard.NMA_API
-
-        result = notifiers.nma_notifier.test_notify(nma_api, nma_priority)
-        if result:
-            return 'Test NMA notice sent successfully'
-        else:
-            return 'Test NMA notice failed'
-
-    def testPushalot(self, authorizationToken=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not authorizationToken and starify(authorizationToken, True):
-            authorizationToken = sickbeard.PUSHALOT_AUTHORIZATIONTOKEN
-
-        result = notifiers.pushalot_notifier.test_notify(authorizationToken)
-        if result:
-            return 'Pushalot notification succeeded. Check your Pushalot clients to make sure it worked'
-        else:
-            return 'Error sending Pushalot notification'
-
-    def testPushbullet(self, accessToken=None, device_iden=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not accessToken and starify(accessToken, True):
-            accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
-
-        return notifiers.pushbullet_notifier.test_notify(accessToken, device_iden)
-
-    def getPushbulletDevices(self, accessToken=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not accessToken and starify(accessToken, True):
-            accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
-
-        return notifiers.pushbullet_notifier.get_devices(accessToken)
-
-    def testSlack(self, access_token=None, channel=None, as_user=False, bot_name=None, icon_url=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        result = notifiers.slack_notifier.test_notify(channel, 'true' == as_user, bot_name, icon_url, access_token)
-        return ('Error sending notification, Slack response: "%s"' % result,
-                'Successful test notice sent. (Note: Slack clients display icon once in a sequence)')[True is result]
 
     def viewchanges(self):
 
@@ -1345,14 +1287,14 @@ class Home(MainHandler):
                 t.submenu.append(
                     {'title': 'Force Full Update', 'path': t.force_update})
                 t.submenu.append({'title': 'Update show in Emby',
-                                  'path': 'home/updateEMBY%s' %
+                                  'path': 'home/update_emby%s' %
                                           (INDEXER_TVDB == showObj.indexer and ('?show=%s' % showObj.indexerid) or '/'),
                                   'requires': self.haveEMBY})
                 t.submenu.append({'title': 'Update show in Kodi',
-                                  'path': 'home/updateKODI?showName=%s' % urllib.quote_plus(
+                                  'path': 'home/update_kodi?show_name=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveKODI})
                 t.submenu.append({'title': 'Update show in XBMC',
-                                  'path': 'home/updateXBMC?showName=%s' % urllib.quote_plus(
+                                  'path': 'home/update_xbmc?show_name=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
                 t.submenu.append({'title': 'Media Renamer', 'path': 'home/testRename?show=%d' % showObj.indexerid})
                 if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
@@ -2039,16 +1981,16 @@ class Home(MainHandler):
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 
-    def updateEMBY(self, show=None):
+    def update_emby(self, show=None):
 
-        if notifiers.emby_notifier.update_library(
-                sickbeard.helpers.findCertainShow(sickbeard.showList,helpers.tryInt(show, None)), force=True):
+        if notifiers.NotifierFactory().get('EMBY').update_library(
+                sickbeard.helpers.findCertainShow(sickbeard.showList, helpers.tryInt(show, None))):
             ui.notifications.message('Library update command sent to Emby host(s): ' + sickbeard.EMBY_HOST)
         else:
             ui.notifications.error('Unable to contact one or more Emby host(s): ' + sickbeard.EMBY_HOST)
         self.redirect('/home/')
 
-    def updateKODI(self, showName=None):
+    def update_kodi(self, show_name=None):
 
         # only send update to first host in the list -- workaround for kodi sql backend users
         if sickbeard.KODI_UPDATE_ONLYFIRST:
@@ -2057,35 +1999,35 @@ class Home(MainHandler):
         else:
             host = sickbeard.KODI_HOST
 
-        if notifiers.kodi_notifier.update_library(showName=showName, force=True):
+        if notifiers.NotifierFactory().get('KODI').update_library(show_name=show_name):
             ui.notifications.message('Library update command sent to Kodi host(s): ' + host)
         else:
             ui.notifications.error('Unable to contact one or more Kodi host(s): ' + host)
         self.redirect('/home/')
 
-    def updateXBMC(self, showName=None):
-
-        # only send update to first host in the list -- workaround for xbmc sql backend users
-        if sickbeard.XBMC_UPDATE_ONLYFIRST:
-            # only send update to first host in the list -- workaround for xbmc sql backend users
-            host = sickbeard.XBMC_HOST.split(',')[0].strip()
-        else:
-            host = sickbeard.XBMC_HOST
-
-        if notifiers.xbmc_notifier.update_library(showName=showName):
-            ui.notifications.message('Library update command sent to XBMC host(s): ' + host)
-        else:
-            ui.notifications.error('Unable to contact one or more XBMC host(s): ' + host)
-        self.redirect('/home/')
-
-    def updatePLEX(self, *args, **kwargs):
-        result = notifiers.plex_notifier.update_library()
+    def update_plex(self, *args, **kwargs):
+        result = notifiers.NotifierFactory().get('PLEX').update_library()
         if 'Fail' not in result:
             ui.notifications.message(
                 'Library update command sent to', 'Plex Media Server host(s): ' + sickbeard.PLEX_SERVER_HOST.replace(',', ', '))
         else:
             ui.notifications.error('Unable to contact', 'Plex Media Server host(s): ' + result)
         self.redirect('/home/')
+
+    # def update_xbmc(self, show_name=None):
+    #
+    #     # only send update to first host in the list -- workaround for xbmc sql backend users
+    #     if sickbeard.XBMC_UPDATE_ONLYFIRST:
+    #         # only send update to first host in the list -- workaround for xbmc sql backend users
+    #         host = sickbeard.XBMC_HOST.split(',')[0].strip()
+    #     else:
+    #         host = sickbeard.XBMC_HOST
+    #
+    #     if notifiers.NotifierFactory().get('XBMC').update_library(show_name=show_name):
+    #         ui.notifications.message('Library update command sent to XBMC host(s): ' + host)
+    #     else:
+    #         ui.notifications.error('Unable to contact one or more XBMC host(s): ' + host)
+    #     self.redirect('/home/')
 
     def setStatus(self, show=None, eps=None, status=None, direct=False):
 
@@ -5711,55 +5653,64 @@ class ConfigNotifications(Config):
                                     'b64': base64.urlsafe_b64encode(location)})
         return t.respond()
 
-    def saveNotifications(self,
-                          use_emby=None, emby_update_library=None, emby_host=None, emby_apikey=None,
-                          use_kodi=None, kodi_always_on=None, kodi_notify_onsnatch=None, kodi_notify_ondownload=None,
-                          kodi_notify_onsubtitledownload=None, kodi_update_onlyfirst=None,
-                          kodi_update_library=None, kodi_update_full=None,
-                          kodi_host=None, kodi_username=None, kodi_password=None,
-                          use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None, xbmc_notify_ondownload=None,
-                          xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
-                          xbmc_update_library=None, xbmc_update_full=None,
-                          xbmc_host=None, xbmc_username=None, xbmc_password=None,
-                          use_plex=None, plex_notify_onsnatch=None, plex_notify_ondownload=None,
-                          plex_notify_onsubtitledownload=None, plex_update_library=None,
-                          plex_server_host=None, plex_host=None, plex_username=None, plex_password=None,
-                          use_growl=None, growl_notify_onsnatch=None, growl_notify_ondownload=None,
-                          growl_notify_onsubtitledownload=None, growl_host=None, growl_password=None,
-                          use_prowl=None, prowl_notify_onsnatch=None, prowl_notify_ondownload=None,
-                          prowl_notify_onsubtitledownload=None, prowl_api=None, prowl_priority=0,
-                          use_twitter=None, twitter_notify_onsnatch=None, twitter_notify_ondownload=None,
-                          twitter_notify_onsubtitledownload=None,
-                          use_boxcar2=None, boxcar2_notify_onsnatch=None, boxcar2_notify_ondownload=None,
-                          boxcar2_notify_onsubtitledownload=None, boxcar2_accesstoken=None, boxcar2_sound=None,
-                          use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None,
-                          pushover_notify_onsubtitledownload=None, pushover_userkey=None, pushover_apikey=None,
-                          pushover_priority=None, pushover_device=None, pushover_sound=None, pushover_device_list=None,
-                          use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
-                          libnotify_notify_onsubtitledownload=None,
-                          use_nmj=None, nmj_host=None, nmj_database=None, nmj_mount=None, use_synoindex=None,
-                          use_nmjv2=None, nmjv2_host=None, nmjv2_dbloc=None, nmjv2_database=None,
-                          use_trakt=None, trakt_pin=None,
-                          trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
-                          trakt_start_paused=None, trakt_sync=None,
-                          trakt_default_indexer=None, trakt_remove_serieslist=None, trakt_collection=None, trakt_accounts=None,
-                          use_synologynotifier=None, synologynotifier_notify_onsnatch=None,
-                          synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
-                          use_pytivo=None, pytivo_notify_onsnatch=None, pytivo_notify_ondownload=None,
-                          pytivo_notify_onsubtitledownload=None, pytivo_update_library=None,
-                          pytivo_host=None, pytivo_share_name=None, pytivo_tivo_name=None,
-                          use_nma=None, nma_notify_onsnatch=None, nma_notify_ondownload=None,
-                          nma_notify_onsubtitledownload=None, nma_api=None, nma_priority=0,
-                          use_pushalot=None, pushalot_notify_onsnatch=None, pushalot_notify_ondownload=None,
-                          pushalot_notify_onsubtitledownload=None, pushalot_authorizationtoken=None,
-                          use_pushbullet=None, pushbullet_notify_onsnatch=None, pushbullet_notify_ondownload=None,
-                          pushbullet_notify_onsubtitledownload=None, pushbullet_access_token=None,
-                          pushbullet_device_iden=None, pushbullet_device_list=None,
-                          use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
-                          email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
-                          email_tls=None, email_user=None, email_password=None, email_list=None, email_show_list=None,
-                          email_show=None, use_slack=None, slack_notify_onsnatch=None, slack_notify_ondownload=None,
-                          slack_access_token=None, slack_channel=None, slack_as_user=None, slack_bot_name=None, slack_icon_url=None, **kwargs):
+    def save_notifications(
+            self,
+            use_emby=None, emby_update_library=None, emby_host=None, emby_apikey=None,
+            use_kodi=None, kodi_always_on=None, kodi_update_library=None, kodi_update_full=None,
+            kodi_update_onlyfirst=None, kodi_host=None, kodi_username=None, kodi_password=None,
+            kodi_notify_onsnatch=None, kodi_notify_ondownload=None, kodi_notify_onsubtitledownload=None,
+            use_plex=None, plex_update_library=None, plex_username=None, plex_password=None, plex_server_host=None,
+            plex_notify_onsnatch=None, plex_notify_ondownload=None, plex_notify_onsubtitledownload=None, plex_host=None,
+            # use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None, xbmc_notify_ondownload=None,
+            # xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
+            # xbmc_update_library=None, xbmc_update_full=None,
+            # xbmc_host=None, xbmc_username=None, xbmc_password=None,
+            use_nmj=None, nmj_host=None, nmj_database=None, nmj_mount=None,
+            use_nmjv2=None, nmjv2_host=None, nmjv2_dbloc=None, nmjv2_database=None,
+            use_synoindex=None, use_synologynotifier=None, synologynotifier_notify_onsnatch=None,
+            synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
+            use_pytivo=None, pytivo_host=None, pytivo_share_name=None, pytivo_tivo_name=None,
+            # pytivo_notify_onsnatch=None, pytivo_notify_ondownload=None, pytivo_notify_onsubtitledownload=None,
+            # pytivo_update_library=None,
+
+            use_boxcar2=None, boxcar2_notify_onsnatch=None, boxcar2_notify_ondownload=None,
+            boxcar2_notify_onsubtitledownload=None, boxcar2_access_token=None, boxcar2_sound=None,
+            use_pushbullet=None, pushbullet_notify_onsnatch=None, pushbullet_notify_ondownload=None,
+            pushbullet_notify_onsubtitledownload=None, pushbullet_access_token=None, pushbullet_device_iden=None,
+            use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None,
+            pushover_notify_onsubtitledownload=None, pushover_userkey=None, pushover_apikey=None,
+            pushover_priority=None, pushover_device=None, pushover_sound=None, pushover_device_list=None,
+            use_growl=None, growl_notify_onsnatch=None, growl_notify_ondownload=None,
+            growl_notify_onsubtitledownload=None, growl_host=None, growl_password=None,
+            use_prowl=None, prowl_notify_onsnatch=None, prowl_notify_ondownload=None,
+            prowl_notify_onsubtitledownload=None, prowl_api=None, prowl_priority=0,
+            use_nma=None, nma_notify_onsnatch=None, nma_notify_ondownload=None,
+            nma_notify_onsubtitledownload=None, nma_api=None, nma_priority=0,
+            use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
+            libnotify_notify_onsubtitledownload=None,
+            # use_pushalot=None, pushalot_notify_onsnatch=None, pushalot_notify_ondownload=None,
+            # pushalot_notify_onsubtitledownload=None, pushalot_authorizationtoken=None,
+
+            use_trakt=None,
+            # trakt_pin=None, trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
+            # trakt_start_paused=None, trakt_sync=None, trakt_default_indexer=None, trakt_remove_serieslist=None,
+            # trakt_collection=None, trakt_accounts=None,
+            use_slack=None, slack_notify_onsnatch=None, slack_notify_ondownload=None,
+            slack_notify_onsubtitledownload=None, slack_access_token=None, slack_channel=None,
+            slack_as_authed=None, slack_bot_name=None, slack_icon_url=None,
+            use_discordapp=None, discordapp_notify_onsnatch=None, discordapp_notify_ondownload=None,
+            discordapp_notify_onsubtitledownload=None, discordapp_access_token=None,
+            discordapp_as_authed=None, discordapp_username=None, discordapp_icon_url=None,
+            discordapp_as_tts=None,
+            use_gitter=None, gitter_notify_onsnatch=None, gitter_notify_ondownload=None,
+            gitter_notify_onsubtitledownload=None, gitter_access_token=None, gitter_room=None,
+            use_twitter=None, twitter_notify_onsnatch=None, twitter_notify_ondownload=None,
+            twitter_notify_onsubtitledownload=None,
+            use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
+            email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
+            email_tls=None, email_user=None, email_password=None, email_list=None,
+            # email_show_list=None, email_show=None,
+            **kwargs):
 
         results = []
 
@@ -5795,18 +5746,18 @@ class ConfigNotifications(Config):
         if set('*') != set(kodi_password):
             sickbeard.KODI_PASSWORD = kodi_password
 
-        sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
-        sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
-        sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
-        sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
-        sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
-        sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
-        sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
-        sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
-        sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
-        sickbeard.XBMC_USERNAME = xbmc_username
-        if set('*') != set(xbmc_password):
-            sickbeard.XBMC_PASSWORD = xbmc_password
+        # sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
+        # sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
+        # sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
+        # sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
+        # sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
+        # sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
+        # sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
+        # sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
+        # sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
+        # sickbeard.XBMC_USERNAME = xbmc_username
+        # if set('*') != set(xbmc_password):
+        #     sickbeard.XBMC_PASSWORD = xbmc_password
 
         sickbeard.USE_PLEX = config.checkbox_to_value(use_plex)
         sickbeard.PLEX_NOTIFY_ONSNATCH = config.checkbox_to_value(plex_notify_onsnatch)
@@ -5845,7 +5796,7 @@ class ConfigNotifications(Config):
         sickbeard.BOXCAR2_NOTIFY_ONSNATCH = config.checkbox_to_value(boxcar2_notify_onsnatch)
         sickbeard.BOXCAR2_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(boxcar2_notify_ondownload)
         sickbeard.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(boxcar2_notify_onsubtitledownload)
-        key = boxcar2_accesstoken.strip()
+        key = boxcar2_access_token.strip()
         if not starify(key, True):
             sickbeard.BOXCAR2_ACCESSTOKEN = key
         sickbeard.BOXCAR2_SOUND = boxcar2_sound
@@ -5888,8 +5839,8 @@ class ConfigNotifications(Config):
             synologynotifier_notify_onsubtitledownload)
 
         sickbeard.USE_TRAKT = config.checkbox_to_value(use_trakt)
-        # sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
         sickbeard.TRAKT_UPDATE_COLLECTION = build_config(**kwargs)
+        # sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
         # sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
         # sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
         # sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
@@ -5901,11 +5852,29 @@ class ConfigNotifications(Config):
         sickbeard.USE_SLACK = config.checkbox_to_value(use_slack)
         sickbeard.SLACK_NOTIFY_ONSNATCH = config.checkbox_to_value(slack_notify_onsnatch)
         sickbeard.SLACK_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(slack_notify_ondownload)
+        sickbeard.SLACK_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(slack_notify_onsubtitledownload)
         sickbeard.SLACK_ACCESS_TOKEN = slack_access_token
         sickbeard.SLACK_CHANNEL = slack_channel
-        sickbeard.SLACK_AS_USER = config.checkbox_to_value(slack_as_user)
+        sickbeard.SLACK_AS_AUTHED = config.checkbox_to_value(slack_as_authed)
         sickbeard.SLACK_BOT_NAME = slack_bot_name
         sickbeard.SLACK_ICON_URL = slack_icon_url
+
+        sickbeard.USE_DISCORDAPP = config.checkbox_to_value(use_discordapp)
+        sickbeard.DISCORDAPP_NOTIFY_ONSNATCH = config.checkbox_to_value(discordapp_notify_onsnatch)
+        sickbeard.DISCORDAPP_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(discordapp_notify_ondownload)
+        sickbeard.DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(discordapp_notify_onsubtitledownload)
+        sickbeard.DISCORDAPP_ACCESS_TOKEN = discordapp_access_token
+        sickbeard.DISCORDAPP_AS_AUTHED = config.checkbox_to_value(discordapp_as_authed)
+        sickbeard.DISCORDAPP_USERNAME = discordapp_username
+        sickbeard.DISCORDAPP_ICON_URL = discordapp_icon_url
+        sickbeard.DISCORDAPP_AS_TTS = config.checkbox_to_value(discordapp_as_tts)
+
+        sickbeard.USE_GITTER = config.checkbox_to_value(use_gitter)
+        sickbeard.GITTER_NOTIFY_ONSNATCH = config.checkbox_to_value(gitter_notify_onsnatch)
+        sickbeard.GITTER_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(gitter_notify_ondownload)
+        sickbeard.GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(gitter_notify_onsubtitledownload)
+        sickbeard.GITTER_ACCESS_TOKEN = gitter_access_token
+        sickbeard.GITTER_ROOM = gitter_room
 
         sickbeard.USE_EMAIL = config.checkbox_to_value(use_email)
         sickbeard.EMAIL_NOTIFY_ONSNATCH = config.checkbox_to_value(email_notify_onsnatch)
@@ -5921,13 +5890,13 @@ class ConfigNotifications(Config):
         sickbeard.EMAIL_LIST = email_list
 
         sickbeard.USE_PYTIVO = config.checkbox_to_value(use_pytivo)
-        sickbeard.PYTIVO_NOTIFY_ONSNATCH = config.checkbox_to_value(pytivo_notify_onsnatch)
-        sickbeard.PYTIVO_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pytivo_notify_ondownload)
-        sickbeard.PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pytivo_notify_onsubtitledownload)
-        sickbeard.PYTIVO_UPDATE_LIBRARY = config.checkbox_to_value(pytivo_update_library)
         sickbeard.PYTIVO_HOST = config.clean_host(pytivo_host)
         sickbeard.PYTIVO_SHARE_NAME = pytivo_share_name
         sickbeard.PYTIVO_TIVO_NAME = pytivo_tivo_name
+        # sickbeard.PYTIVO_NOTIFY_ONSNATCH = config.checkbox_to_value(pytivo_notify_onsnatch)
+        # sickbeard.PYTIVO_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pytivo_notify_ondownload)
+        # sickbeard.PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pytivo_notify_onsubtitledownload)
+        # sickbeard.PYTIVO_UPDATE_LIBRARY = config.checkbox_to_value(pytivo_update_library)
 
         sickbeard.USE_NMA = config.checkbox_to_value(use_nma)
         sickbeard.NMA_NOTIFY_ONSNATCH = config.checkbox_to_value(nma_notify_onsnatch)
@@ -5938,13 +5907,13 @@ class ConfigNotifications(Config):
             sickbeard.NMA_API = key
         sickbeard.NMA_PRIORITY = nma_priority
 
-        sickbeard.USE_PUSHALOT = config.checkbox_to_value(use_pushalot)
-        sickbeard.PUSHALOT_NOTIFY_ONSNATCH = config.checkbox_to_value(pushalot_notify_onsnatch)
-        sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pushalot_notify_ondownload)
-        sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pushalot_notify_onsubtitledownload)
-        key = pushalot_authorizationtoken.strip()
-        if not starify(key, True):
-            sickbeard.PUSHALOT_AUTHORIZATIONTOKEN = key
+        # sickbeard.USE_PUSHALOT = config.checkbox_to_value(use_pushalot)
+        # sickbeard.PUSHALOT_NOTIFY_ONSNATCH = config.checkbox_to_value(pushalot_notify_onsnatch)
+        # sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pushalot_notify_ondownload)
+        # sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pushalot_notify_onsubtitledownload)
+        # key = pushalot_authorizationtoken.strip()
+        # if not starify(key, True):
+        #     sickbeard.PUSHALOT_AUTHORIZATIONTOKEN = key
 
         sickbeard.USE_PUSHBULLET = config.checkbox_to_value(use_pushbullet)
         sickbeard.PUSHBULLET_NOTIFY_ONSNATCH = config.checkbox_to_value(pushbullet_notify_onsnatch)

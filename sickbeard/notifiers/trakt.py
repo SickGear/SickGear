@@ -16,52 +16,36 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import sickbeard
-from sickbeard import logger
-from lib.libtrakt import TraktAPI, exceptions
 import os
 
+import sickbeard
+from sickbeard.notifiers.generic import BaseNotifier
 
-class TraktNotifier:
-    def __init__(self):
-        pass
+from lib.libtrakt import TraktAPI, exceptions
 
+
+class TraktNotifier(BaseNotifier):
     """
     A "notifier" for trakt.tv which keeps track of what has and hasn't been added to your library.
     """
 
-    def notify_snatch(self, ep_name):
-        pass
+    def update_library(self, ep_obj=None, **kwargs):
 
-    def notify_download(self, ep_name):
-        pass
+        self._update_collection(ep_obj)
 
-    def notify_subtitle_download(self, ep_name, lang):
-        pass
-
-    def notify_git_update(self, new_version):
-        pass
-
-    @staticmethod
-    def update_collection(ep_obj):
+    def _update_collection(self, ep_obj):
         """
         Sends a request to trakt indicating that the given episode is part of our collection.
 
         :param ep_obj: The TVEpisode object to add to trakt
         """
 
-        if sickbeard.USE_TRAKT and sickbeard.TRAKT_ACCOUNTS:
+        if sickbeard.TRAKT_ACCOUNTS:
 
             # URL parameters
-            data = {
-                'shows': [
-                    {
-                        'title': ep_obj.show.name,
-                        'year': ep_obj.show.startyear,
-                        'ids': {},
-                    }
-                ]
-            }
+            data = dict(shows=[
+                dict(title=ep_obj.show.name, year=ep_obj.show.startyear, ids={})
+            ])
 
             from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_IMDB, INDEXER_TMDB, \
                 INDEXER_TRAKT
@@ -75,12 +59,12 @@ class TraktNotifier:
                 indexer, indexerid = supported_indexer[ep_obj.show.indexer], ep_obj.show.indexerid
             else:
                 for i in indexer_priorities:
-                    if ep_obj.show.ids.get(i, {'id': 0}).get('id', 0) > 0:
+                    if 0 < ep_obj.show.ids.get(i, {'id': 0}).get('id', 0):
                         indexer, indexerid = supported_indexer[i], ep_obj.show.ids[i]['id']
                         break
 
-            if indexer is None or indexerid is None:
-                logger.log('Missing trakt supported id, could not add to collection.', logger.WARNING)
+            if None is indexer or None is indexerid:
+                self._log_warning('Missing trakt supported id, could not add to collection')
                 return
 
             data['shows'][0]['ids'][indexer] = indexerid
@@ -101,13 +85,17 @@ class TraktNotifier:
                     warn, msg = False, ''
                     try:
                         resp = TraktAPI().trakt_request('sync/collection', data, send_oauth=tid)
-                        if 'added' in resp and 'episodes' in resp['added'] and 0 < sickbeard.helpers.tryInt(resp['added']['episodes']):
+                        if 'added' in resp and 'episodes' in resp['added'] \
+                                and 0 < sickbeard.helpers.tryInt(resp['added']['episodes']):
                             msg = 'Added episode to'
-                        elif 'updated' in resp and 'episodes' in resp['updated'] and 0 < sickbeard.helpers.tryInt(resp['updated']['episodes']):
+                        elif 'updated' in resp and 'episodes' in resp['updated'] \
+                                and 0 < sickbeard.helpers.tryInt(resp['updated']['episodes']):
                             msg = 'Updated episode in'
-                        elif 'existing' in resp and 'episodes' in resp['existing'] and 0 < sickbeard.helpers.tryInt(resp['existing']['episodes']):
+                        elif 'existing' in resp and 'episodes' in resp['existing'] \
+                                and 0 < sickbeard.helpers.tryInt(resp['existing']['episodes']):
                             msg = 'Episode is already in'
-                        elif 'not_found' in resp and 'episodes' in resp['not_found'] and 0 < sickbeard.helpers.tryInt(resp['not_found']['episodes']):
+                        elif 'not_found' in resp and 'episodes' in resp['not_found'] \
+                                and 0 < sickbeard.helpers.tryInt(resp['not_found']['episodes']):
                             msg = 'Episode not found on Trakt, not adding to'
                         else:
                             warn, msg = True, 'Could not add episode to'
@@ -115,14 +103,9 @@ class TraktNotifier:
                         warn, msg = True, 'Error adding episode to'
                     msg = 'Trakt: %s your %s collection' % (msg, sickbeard.TRAKT_ACCOUNTS[tid].name)
                     if not warn:
-                        logger.log(msg)
+                        self._log(msg)
                     else:
-                        logger.log(msg, logger.WARNING)
-
-
-    @staticmethod
-    def _use_me():
-        return sickbeard.USE_TRAKT
+                        self._log_warning(msg)
 
 
 notifier = TraktNotifier

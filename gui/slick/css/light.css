@@ -633,7 +633,7 @@ config*.tmpl
 	color:#666
 }
 
-.testNotification{
+.test-notification{
 	border:1px dotted #ccc
 }
 
@@ -907,6 +907,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-color:#333
 }
 
+.component-group.typelist .bgcol,
 .dropdown-menu{
 	background-color:#f5f1e4;
 	border:1px solid rgba(0, 0, 0, 0.15);

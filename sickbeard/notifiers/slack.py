@@ -18,49 +18,34 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import sickbeard
-from sickbeard import common, logger
+from sickbeard.notifiers.generic import Notifier
 
 
-class SlackNotifier:
+class SlackNotifier(Notifier):
+
     def __init__(self):
-        self.sg_logo_url = 'https://raw.githubusercontent.com/SickGear/SickGear/master' + \
-                           '/gui/slick/images/ico/apple-touch-icon-precomposed.png'
+        super(SlackNotifier, self).__init__()
 
-    def _notify(self, msg, channel='', as_user=False, bot_name='', icon_url='', access_token='', force=False):
-        custom = (force and not as_user) or (not (force or sickbeard.SLACK_AS_USER))
-        resp = (sickbeard.USE_SLACK or force) and sickbeard.helpers.getURL(
+    def _notify(self, title, body, channel='', as_authed=None, bot_name='', icon_url='', access_token='', **kwargs):
+
+        custom = not self._choose(as_authed, sickbeard.SLACK_AS_AUTHED)
+        resp = sickbeard.helpers.getURL(
             url='https://slack.com/api/chat.postMessage',
             post_data=dict(
-                [('text', msg), ('token', (access_token, sickbeard.SLACK_ACCESS_TOKEN)[not access_token]),
-                 ('channel', (channel, sickbeard.SLACK_CHANNEL)[not channel]), ('as_user', not custom)] +
-                ([], [('username', (bot_name, sickbeard.SLACK_BOT_NAME or 'SickGear')[not bot_name]),
-                      ('icon_url', (icon_url, sickbeard.SLACK_ICON_URL or self.sg_logo_url)[not icon_url])])[custom]),
+                [('text', self._body_only(title, body)),
+                 ('channel', self._choose(channel, sickbeard.SLACK_CHANNEL)), ('as_authed', not custom),
+                 ('token', self._choose(access_token, sickbeard.SLACK_ACCESS_TOKEN))]
+                + ([], [('username', self._choose(bot_name, sickbeard.SLACK_BOT_NAME) or 'SickGear'),
+                        ('icon_url', self._choose(icon_url, sickbeard.SLACK_ICON_URL) or self._sg_logo_url)])[custom]),
             json=True)
 
-        result = resp and resp.get('ok', resp.get('error')) or not (sickbeard.USE_SLACK or force)
+        result = resp and resp.get('ok') or 'response: "%s"' % (resp.get('error') or self._choose(
+            'bad oath access token?', None))
         if True is not result:
-            logger.log(u'Slack failed sending message, response: "%s"' % result, logger.ERROR)
-        return result
+            self._log_error('Failed to send message, %s' % result)
 
-    def _notify_str(self, pre_text, post_text):
-        return self._notify('%s: %s' % (common.notifyStrings[pre_text].strip('#: '), post_text))
-
-    def test_notify(self, channel, as_user, bot_name, icon_url, access_token):
-        return self._notify('This is a test notification from SickGear',
-                            channel, as_user, bot_name, icon_url, access_token, force=True)
-
-    def notify_snatch(self, ep_name):
-        return sickbeard.SLACK_NOTIFY_ONSNATCH and self._notify_str(common.NOTIFY_SNATCH, ep_name)
-
-    def notify_download(self, ep_name):
-        return sickbeard.SLACK_NOTIFY_ONDOWNLOAD and self._notify_str(common.NOTIFY_DOWNLOAD, ep_name)
-
-    def notify_subtitle_download(self, ep_name, lang):
-        return sickbeard.SLACK_NOTIFY_ONSUBTITLEDOWNLOAD and \
-               self._notify_str(common.NOTIFY_SUBTITLE_DOWNLOAD, '%s: %s' % (ep_name, lang))
-
-    def notify_git_update(self, new_version='??'):
-        return self._notify_str(common.NOTIFY_GIT_UPDATE_TEXT, new_version)
+        return self._choose(('Successful test notice sent. (Note: %s clients display icon once in a sequence)'
+                             % self.name, 'Error sending notification, %s' % result)[True is not result], result)
 
 
 notifier = SlackNotifier

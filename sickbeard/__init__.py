@@ -249,18 +249,18 @@ TV_DOWNLOAD_DIR = None
 UNPACK = False
 SKIP_REMOVED_FILES = False
 
-SAB_USERNAME = None
-SAB_PASSWORD = None
-SAB_APIKEY = None
-SAB_CATEGORY = None
-SAB_HOST = ''
-
 NZBGET_USERNAME = None
 NZBGET_PASSWORD = None
 NZBGET_CATEGORY = None
 NZBGET_HOST = None
 NZBGET_USE_HTTPS = False
 NZBGET_PRIORITY = 100
+
+SAB_USERNAME = None
+SAB_PASSWORD = None
+SAB_APIKEY = None
+SAB_CATEGORY = None
+SAB_HOST = ''
 
 TORRENT_USERNAME = None
 TORRENT_PASSWORD = None
@@ -289,6 +289,16 @@ KODI_HOST = ''
 KODI_USERNAME = None
 KODI_PASSWORD = None
 
+USE_PLEX = False
+PLEX_NOTIFY_ONSNATCH = False
+PLEX_NOTIFY_ONDOWNLOAD = False
+PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = False
+PLEX_UPDATE_LIBRARY = False
+PLEX_SERVER_HOST = None
+PLEX_HOST = None
+PLEX_USERNAME = None
+PLEX_PASSWORD = None
+
 USE_XBMC = False
 XBMC_ALWAYS_ON = True
 XBMC_NOTIFY_ONSNATCH = False
@@ -301,15 +311,57 @@ XBMC_HOST = ''
 XBMC_USERNAME = None
 XBMC_PASSWORD = None
 
-USE_PLEX = False
-PLEX_NOTIFY_ONSNATCH = False
-PLEX_NOTIFY_ONDOWNLOAD = False
-PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PLEX_UPDATE_LIBRARY = False
-PLEX_SERVER_HOST = None
-PLEX_HOST = None
-PLEX_USERNAME = None
-PLEX_PASSWORD = None
+USE_NMJ = False
+NMJ_HOST = None
+NMJ_DATABASE = None
+NMJ_MOUNT = None
+
+USE_NMJv2 = False
+NMJv2_HOST = None
+NMJv2_DATABASE = None
+NMJv2_DBLOC = None
+
+USE_SYNOINDEX = False
+SYNOINDEX_UPDATE_LIBRARY = True
+
+USE_SYNOLOGYNOTIFIER = False
+SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH = False
+SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD = False
+SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+
+USE_PYTIVO = False
+PYTIVO_HOST = ''
+PYTIVO_SHARE_NAME = ''
+PYTIVO_TIVO_NAME = ''
+PYTIVO_UPDATE_LIBRARY = True
+# PYTIVO_NOTIFY_ONSNATCH = False
+# PYTIVO_NOTIFY_ONDOWNLOAD = False
+# PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = False
+# PYTIVO_UPDATE_LIBRARY = False
+
+USE_BOXCAR2 = False
+BOXCAR2_NOTIFY_ONSNATCH = False
+BOXCAR2_NOTIFY_ONDOWNLOAD = False
+BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = False
+BOXCAR2_ACCESSTOKEN = None
+BOXCAR2_SOUND = None
+
+USE_PUSHBULLET = False
+PUSHBULLET_NOTIFY_ONSNATCH = False
+PUSHBULLET_NOTIFY_ONDOWNLOAD = False
+PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = False
+PUSHBULLET_ACCESS_TOKEN = None
+PUSHBULLET_DEVICE_IDEN = None
+
+USE_PUSHOVER = False
+PUSHOVER_NOTIFY_ONSNATCH = False
+PUSHOVER_NOTIFY_ONDOWNLOAD = False
+PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+PUSHOVER_USERKEY = None
+PUSHOVER_APIKEY = None
+PUSHOVER_PRIORITY = 0
+PUSHOVER_DEVICE = None
+PUSHOVER_SOUND = None
 
 USE_GROWL = False
 GROWL_NOTIFY_ONSNATCH = False
@@ -325,59 +377,23 @@ PROWL_NOTIFY_ONSUBTITLEDOWNLOAD = False
 PROWL_API = None
 PROWL_PRIORITY = 0
 
-USE_TWITTER = False
-TWITTER_NOTIFY_ONSNATCH = False
-TWITTER_NOTIFY_ONDOWNLOAD = False
-TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
-TWITTER_USERNAME = None
-TWITTER_PASSWORD = None
-TWITTER_PREFIX = None
-
-USE_BOXCAR2 = False
-BOXCAR2_NOTIFY_ONSNATCH = False
-BOXCAR2_NOTIFY_ONDOWNLOAD = False
-BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = False
-BOXCAR2_ACCESSTOKEN = None
-BOXCAR2_SOUND = None
-
-USE_PUSHOVER = False
-PUSHOVER_NOTIFY_ONSNATCH = False
-PUSHOVER_NOTIFY_ONDOWNLOAD = False
-PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PUSHOVER_USERKEY = None
-PUSHOVER_APIKEY = None
-PUSHOVER_PRIORITY = 0
-PUSHOVER_DEVICE = None
-PUSHOVER_SOUND = None
+USE_NMA = False
+NMA_NOTIFY_ONSNATCH = False
+NMA_NOTIFY_ONDOWNLOAD = False
+NMA_NOTIFY_ONSUBTITLEDOWNLOAD = False
+NMA_API = None
+NMA_PRIORITY = 0
 
 USE_LIBNOTIFY = False
 LIBNOTIFY_NOTIFY_ONSNATCH = False
 LIBNOTIFY_NOTIFY_ONDOWNLOAD = False
 LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD = False
 
-USE_NMJ = False
-NMJ_HOST = None
-NMJ_DATABASE = None
-NMJ_MOUNT = None
-
-USE_ANIDB = False
-ANIDB_USERNAME = None
-ANIDB_PASSWORD = None
-ANIDB_USE_MYLIST = False
-ADBA_CONNECTION = None
-ANIME_TREAT_AS_HDTV = False
-
-USE_SYNOINDEX = False
-
-USE_NMJv2 = False
-NMJv2_HOST = None
-NMJv2_DATABASE = None
-NMJv2_DBLOC = None
-
-USE_SYNOLOGYNOTIFIER = False
-SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH = False
-SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD = False
-SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+USE_PUSHALOT = False
+PUSHALOT_NOTIFY_ONSNATCH = False
+PUSHALOT_NOTIFY_ONDOWNLOAD = False
+PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = False
+PUSHALOT_AUTHORIZATIONTOKEN = None
 
 USE_TRAKT = False
 TRAKT_REMOVE_WATCHLIST = False
@@ -389,44 +405,40 @@ TRAKT_SYNC = False
 TRAKT_DEFAULT_INDEXER = None
 TRAKT_UPDATE_COLLECTION = {}
 
-USE_PYTIVO = False
-PYTIVO_NOTIFY_ONSNATCH = False
-PYTIVO_NOTIFY_ONDOWNLOAD = False
-PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PYTIVO_UPDATE_LIBRARY = False
-PYTIVO_HOST = ''
-PYTIVO_SHARE_NAME = ''
-PYTIVO_TIVO_NAME = ''
-
-USE_NMA = False
-NMA_NOTIFY_ONSNATCH = False
-NMA_NOTIFY_ONDOWNLOAD = False
-NMA_NOTIFY_ONSUBTITLEDOWNLOAD = False
-NMA_API = None
-NMA_PRIORITY = 0
-
-USE_PUSHALOT = False
-PUSHALOT_NOTIFY_ONSNATCH = False
-PUSHALOT_NOTIFY_ONDOWNLOAD = False
-PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PUSHALOT_AUTHORIZATIONTOKEN = None
-
-USE_PUSHBULLET = False
-PUSHBULLET_NOTIFY_ONSNATCH = False
-PUSHBULLET_NOTIFY_ONDOWNLOAD = False
-PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PUSHBULLET_ACCESS_TOKEN = None
-PUSHBULLET_DEVICE_IDEN = None
-
 USE_SLACK = False
 SLACK_NOTIFY_ONSNATCH = False
 SLACK_NOTIFY_ONDOWNLOAD = False
 SLACK_NOTIFY_ONSUBTITLEDOWNLOAD = False
 SLACK_CHANNEL = None
-SLACK_AS_USER = False
+SLACK_AS_AUTHED = False
 SLACK_BOT_NAME = None
 SLACK_ICON_URL = None
 SLACK_ACCESS_TOKEN = None
+
+USE_DISCORDAPP = False
+DISCORDAPP_NOTIFY_ONSNATCH = False
+DISCORDAPP_NOTIFY_ONDOWNLOAD = False
+DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = False
+DISCORDAPP_AS_AUTHED = False
+DISCORDAPP_USERNAME = None
+DISCORDAPP_ICON_URL = None
+DISCORDAPP_AS_TTS = None
+DISCORDAPP_ACCESS_TOKEN = None
+
+USE_GITTER = False
+GITTER_NOTIFY_ONSNATCH = False
+GITTER_NOTIFY_ONDOWNLOAD = False
+GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+GITTER_ROOM = None
+GITTER_ACCESS_TOKEN = None
+
+USE_TWITTER = False
+TWITTER_NOTIFY_ONSNATCH = False
+TWITTER_NOTIFY_ONDOWNLOAD = False
+TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+TWITTER_USERNAME = None
+TWITTER_PASSWORD = None
+TWITTER_PREFIX = None
 
 USE_EMAIL = False
 EMAIL_OLD_SUBJECTS = None
@@ -440,6 +452,13 @@ EMAIL_USER = None
 EMAIL_PASSWORD = None
 EMAIL_FROM = None
 EMAIL_LIST = None
+
+USE_ANIDB = False
+ANIDB_USERNAME = None
+ANIDB_PASSWORD = None
+ANIDB_USE_MYLIST = False
+ADBA_CONNECTION = None
+ANIME_TREAT_AS_HDTV = False
 
 GUI_NAME = None
 DEFAULT_HOME = None
@@ -617,8 +636,9 @@ def initialize(console_logging=True):
             USE_SYNOINDEX, \
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, \
             SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
-            USE_PYTIVO, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME, \
-            PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY
+            USE_PYTIVO, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME
+            # , \
+            # PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY
         # Notification Settings/Devices
         global USE_GROWL, GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, \
             GROWL_HOST, GROWL_PASSWORD, \
@@ -642,7 +662,12 @@ def initialize(console_logging=True):
             TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
             TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
             USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
-            SLACK_CHANNEL, SLACK_AS_USER, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
+            SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
+            USE_DISCORDAPP, DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, \
+            DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            DISCORDAPP_AS_AUTHED, DISCORDAPP_USERNAME, DISCORDAPP_ICON_URL, DISCORDAPP_AS_TTS, DISCORDAPP_ACCESS_TOKEN,\
+            USE_GITTER, GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD,\
+            GITTER_ROOM, GITTER_ACCESS_TOKEN, \
             USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
             EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_LIST, EMAIL_OLD_SUBJECTS
         # Anime Settings
@@ -652,7 +677,8 @@ def initialize(console_logging=True):
             return False
 
         for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBget', 'Emby', 'Kodi', 'XBMC', 'PLEX',
-                       'Growl', 'Prowl', 'Twitter', 'Slack', 'Boxcar2', 'NMJ', 'NMJv2', 'Synology', 'SynologyNotifier',
+                       'Growl', 'Prowl', 'Twitter', 'Slack', 'Discordapp', 'Boxcar2', 'NMJ', 'NMJv2',
+                       'Synology', 'SynologyNotifier',
                        'pyTivo', 'NMA', 'Pushalot', 'Pushbullet', 'Subtitles'):
             CheckSection(CFG, stanza)
 
@@ -1015,13 +1041,13 @@ def initialize(console_logging=True):
 
         CheckSection(CFG, 'pyTivo')
         USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
-        PYTIVO_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsnatch', 0))
-        PYTIVO_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_ondownload', 0))
-        PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsubtitledownload', 0))
-        PYTIVO_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'pyTivo', 'pyTivo_update_library', 0))
         PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
         PYTIVO_SHARE_NAME = check_setting_str(CFG, 'pyTivo', 'pytivo_share_name', '')
         PYTIVO_TIVO_NAME = check_setting_str(CFG, 'pyTivo', 'pytivo_tivo_name', '')
+        # PYTIVO_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsnatch', 0))
+        # PYTIVO_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_ondownload', 0))
+        # PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsubtitledownload', 0))
+        # PYTIVO_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'pyTivo', 'pyTivo_update_library', 0))
 
         USE_NMA = bool(check_setting_int(CFG, 'NMA', 'use_nma', 0))
         NMA_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'NMA', 'nma_notify_onsnatch', 0))
@@ -1050,10 +1076,28 @@ def initialize(console_logging=True):
         SLACK_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Slack', 'slack_notify_ondownload', 0))
         SLACK_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Slack', 'slack_notify_onsubtitledownload', 0))
         SLACK_CHANNEL = check_setting_str(CFG, 'Slack', 'slack_channel', '')
-        SLACK_AS_USER = bool(check_setting_int(CFG, 'Slack', 'slack_as_user', 0))
+        SLACK_AS_AUTHED = bool(check_setting_int(CFG, 'Slack', 'slack_as_authed', 0))
         SLACK_BOT_NAME = check_setting_str(CFG, 'Slack', 'slack_bot_name', '')
         SLACK_ICON_URL = check_setting_str(CFG, 'Slack', 'slack_icon_url', '')
         SLACK_ACCESS_TOKEN = check_setting_str(CFG, 'Slack', 'slack_access_token', '')
+
+        USE_DISCORDAPP = bool(check_setting_int(CFG, 'Discordapp', 'use_discordapp', 0))
+        DISCORDAPP_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_notify_onsnatch', 0))
+        DISCORDAPP_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_notify_ondownload', 0))
+        DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
+            check_setting_int(CFG, 'Discordapp', 'discordapp_notify_onsubtitledownload', 0))
+        DISCORDAPP_AS_AUTHED = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_as_authed', 0))
+        DISCORDAPP_USERNAME = check_setting_str(CFG, 'Discordapp', 'discordapp_username', '')
+        DISCORDAPP_ICON_URL = check_setting_str(CFG, 'Discordapp', 'discordapp_icon_url', '')
+        DISCORDAPP_AS_TTS = bool(check_setting_str(CFG, 'Discordapp', 'discordapp_as_tts', 0))
+        DISCORDAPP_ACCESS_TOKEN = check_setting_str(CFG, 'Discordapp', 'discordapp_access_token', '')
+
+        USE_GITTER = bool(check_setting_int(CFG, 'Gitter', 'use_gitter', 0))
+        GITTER_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsnatch', 0))
+        GITTER_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_ondownload', 0))
+        GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsubtitledownload', 0))
+        GITTER_ROOM = check_setting_str(CFG, 'Gitter', 'gitter_room', '')
+        GITTER_ACCESS_TOKEN = check_setting_str(CFG, 'Gitter', 'gitter_access_token', '')
 
         USE_EMAIL = bool(check_setting_int(CFG, 'Email', 'use_email', 0))
         EMAIL_OLD_SUBJECTS = bool(check_setting_int(CFG, 'Email', 'email_old_subjects',
@@ -1691,89 +1735,39 @@ def save_config():
     new_config['Kodi'] = {}
     new_config['Kodi']['use_kodi'] = int(USE_KODI)
     new_config['Kodi']['kodi_always_on'] = int(KODI_ALWAYS_ON)
-    new_config['Kodi']['kodi_notify_onsnatch'] = int(KODI_NOTIFY_ONSNATCH)
-    new_config['Kodi']['kodi_notify_ondownload'] = int(KODI_NOTIFY_ONDOWNLOAD)
-    new_config['Kodi']['kodi_notify_onsubtitledownload'] = int(KODI_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['Kodi']['kodi_update_library'] = int(KODI_UPDATE_LIBRARY)
     new_config['Kodi']['kodi_update_full'] = int(KODI_UPDATE_FULL)
     new_config['Kodi']['kodi_update_onlyfirst'] = int(KODI_UPDATE_ONLYFIRST)
     new_config['Kodi']['kodi_host'] = KODI_HOST
     new_config['Kodi']['kodi_username'] = KODI_USERNAME
     new_config['Kodi']['kodi_password'] = helpers.encrypt(KODI_PASSWORD, ENCRYPTION_VERSION)
+    new_config['Kodi']['kodi_notify_onsnatch'] = int(KODI_NOTIFY_ONSNATCH)
+    new_config['Kodi']['kodi_notify_ondownload'] = int(KODI_NOTIFY_ONDOWNLOAD)
+    new_config['Kodi']['kodi_notify_onsubtitledownload'] = int(KODI_NOTIFY_ONSUBTITLEDOWNLOAD)
+
+    new_config['Plex'] = {}
+    new_config['Plex']['use_plex'] = int(USE_PLEX)
+    new_config['Plex']['plex_username'] = PLEX_USERNAME
+    new_config['Plex']['plex_password'] = helpers.encrypt(PLEX_PASSWORD, ENCRYPTION_VERSION)
+    new_config['Plex']['plex_update_library'] = int(PLEX_UPDATE_LIBRARY)
+    new_config['Plex']['plex_server_host'] = PLEX_SERVER_HOST
+    new_config['Plex']['plex_notify_onsnatch'] = int(PLEX_NOTIFY_ONSNATCH)
+    new_config['Plex']['plex_notify_ondownload'] = int(PLEX_NOTIFY_ONDOWNLOAD)
+    new_config['Plex']['plex_notify_onsubtitledownload'] = int(PLEX_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Plex']['plex_host'] = PLEX_HOST
 
     new_config['XBMC'] = {}
     new_config['XBMC']['use_xbmc'] = int(USE_XBMC)
     new_config['XBMC']['xbmc_always_on'] = int(XBMC_ALWAYS_ON)
-    new_config['XBMC']['xbmc_notify_onsnatch'] = int(XBMC_NOTIFY_ONSNATCH)
-    new_config['XBMC']['xbmc_notify_ondownload'] = int(XBMC_NOTIFY_ONDOWNLOAD)
-    new_config['XBMC']['xbmc_notify_onsubtitledownload'] = int(XBMC_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['XBMC']['xbmc_update_library'] = int(XBMC_UPDATE_LIBRARY)
     new_config['XBMC']['xbmc_update_full'] = int(XBMC_UPDATE_FULL)
     new_config['XBMC']['xbmc_update_onlyfirst'] = int(XBMC_UPDATE_ONLYFIRST)
+    new_config['XBMC']['xbmc_notify_onsnatch'] = int(XBMC_NOTIFY_ONSNATCH)
+    new_config['XBMC']['xbmc_notify_ondownload'] = int(XBMC_NOTIFY_ONDOWNLOAD)
+    new_config['XBMC']['xbmc_notify_onsubtitledownload'] = int(XBMC_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['XBMC']['xbmc_host'] = XBMC_HOST
     new_config['XBMC']['xbmc_username'] = XBMC_USERNAME
     new_config['XBMC']['xbmc_password'] = helpers.encrypt(XBMC_PASSWORD, ENCRYPTION_VERSION)
-
-    new_config['Plex'] = {}
-    new_config['Plex']['use_plex'] = int(USE_PLEX)
-    new_config['Plex']['plex_notify_onsnatch'] = int(PLEX_NOTIFY_ONSNATCH)
-    new_config['Plex']['plex_notify_ondownload'] = int(PLEX_NOTIFY_ONDOWNLOAD)
-    new_config['Plex']['plex_notify_onsubtitledownload'] = int(PLEX_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Plex']['plex_update_library'] = int(PLEX_UPDATE_LIBRARY)
-    new_config['Plex']['plex_server_host'] = PLEX_SERVER_HOST
-    new_config['Plex']['plex_host'] = PLEX_HOST
-    new_config['Plex']['plex_username'] = PLEX_USERNAME
-    new_config['Plex']['plex_password'] = helpers.encrypt(PLEX_PASSWORD, ENCRYPTION_VERSION)
-
-    new_config['Growl'] = {}
-    new_config['Growl']['use_growl'] = int(USE_GROWL)
-    new_config['Growl']['growl_notify_onsnatch'] = int(GROWL_NOTIFY_ONSNATCH)
-    new_config['Growl']['growl_notify_ondownload'] = int(GROWL_NOTIFY_ONDOWNLOAD)
-    new_config['Growl']['growl_notify_onsubtitledownload'] = int(GROWL_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Growl']['growl_host'] = GROWL_HOST
-    new_config['Growl']['growl_password'] = helpers.encrypt(GROWL_PASSWORD, ENCRYPTION_VERSION)
-
-    new_config['Prowl'] = {}
-    new_config['Prowl']['use_prowl'] = int(USE_PROWL)
-    new_config['Prowl']['prowl_notify_onsnatch'] = int(PROWL_NOTIFY_ONSNATCH)
-    new_config['Prowl']['prowl_notify_ondownload'] = int(PROWL_NOTIFY_ONDOWNLOAD)
-    new_config['Prowl']['prowl_notify_onsubtitledownload'] = int(PROWL_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Prowl']['prowl_api'] = PROWL_API
-    new_config['Prowl']['prowl_priority'] = PROWL_PRIORITY
-
-    new_config['Twitter'] = {}
-    new_config['Twitter']['use_twitter'] = int(USE_TWITTER)
-    new_config['Twitter']['twitter_notify_onsnatch'] = int(TWITTER_NOTIFY_ONSNATCH)
-    new_config['Twitter']['twitter_notify_ondownload'] = int(TWITTER_NOTIFY_ONDOWNLOAD)
-    new_config['Twitter']['twitter_notify_onsubtitledownload'] = int(TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Twitter']['twitter_username'] = TWITTER_USERNAME
-    new_config['Twitter']['twitter_password'] = helpers.encrypt(TWITTER_PASSWORD, ENCRYPTION_VERSION)
-    new_config['Twitter']['twitter_prefix'] = TWITTER_PREFIX
-
-    new_config['Boxcar2'] = {}
-    new_config['Boxcar2']['use_boxcar2'] = int(USE_BOXCAR2)
-    new_config['Boxcar2']['boxcar2_notify_onsnatch'] = int(BOXCAR2_NOTIFY_ONSNATCH)
-    new_config['Boxcar2']['boxcar2_notify_ondownload'] = int(BOXCAR2_NOTIFY_ONDOWNLOAD)
-    new_config['Boxcar2']['boxcar2_notify_onsubtitledownload'] = int(BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Boxcar2']['boxcar2_accesstoken'] = BOXCAR2_ACCESSTOKEN
-    new_config['Boxcar2']['boxcar2_sound'] = BOXCAR2_SOUND
-
-    new_config['Pushover'] = {}
-    new_config['Pushover']['use_pushover'] = int(USE_PUSHOVER)
-    new_config['Pushover']['pushover_notify_onsnatch'] = int(PUSHOVER_NOTIFY_ONSNATCH)
-    new_config['Pushover']['pushover_notify_ondownload'] = int(PUSHOVER_NOTIFY_ONDOWNLOAD)
-    new_config['Pushover']['pushover_notify_onsubtitledownload'] = int(PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Pushover']['pushover_userkey'] = PUSHOVER_USERKEY
-    new_config['Pushover']['pushover_apikey'] = PUSHOVER_APIKEY
-    new_config['Pushover']['pushover_priority'] = int(PUSHOVER_PRIORITY)
-    new_config['Pushover']['pushover_device'] = PUSHOVER_DEVICE
-    new_config['Pushover']['pushover_sound'] = PUSHOVER_SOUND
-
-    new_config['Libnotify'] = {}
-    new_config['Libnotify']['use_libnotify'] = int(USE_LIBNOTIFY)
-    new_config['Libnotify']['libnotify_notify_onsnatch'] = int(LIBNOTIFY_NOTIFY_ONSNATCH)
-    new_config['Libnotify']['libnotify_notify_ondownload'] = int(LIBNOTIFY_NOTIFY_ONDOWNLOAD)
-    new_config['Libnotify']['libnotify_notify_onsubtitledownload'] = int(LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD)
 
     new_config['NMJ'] = {}
     new_config['NMJ']['use_nmj'] = int(USE_NMJ)
@@ -1797,6 +1791,80 @@ def save_config():
     new_config['SynologyNotifier']['synologynotifier_notify_onsubtitledownload'] = int(
         SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD)
 
+    new_config['pyTivo'] = {}
+    new_config['pyTivo']['use_pytivo'] = int(USE_PYTIVO)
+    new_config['pyTivo']['pytivo_host'] = PYTIVO_HOST
+    new_config['pyTivo']['pytivo_share_name'] = PYTIVO_SHARE_NAME
+    new_config['pyTivo']['pytivo_tivo_name'] = PYTIVO_TIVO_NAME
+    # new_config['pyTivo']['pytivo_notify_onsnatch'] = int(PYTIVO_NOTIFY_ONSNATCH)
+    # new_config['pyTivo']['pytivo_notify_ondownload'] = int(PYTIVO_NOTIFY_ONDOWNLOAD)
+    # new_config['pyTivo']['pytivo_notify_onsubtitledownload'] = int(PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD)
+    # new_config['pyTivo']['pyTivo_update_library'] = int(PYTIVO_UPDATE_LIBRARY)
+
+    new_config['Boxcar2'] = {}
+    new_config['Boxcar2']['use_boxcar2'] = int(USE_BOXCAR2)
+    new_config['Boxcar2']['boxcar2_notify_onsnatch'] = int(BOXCAR2_NOTIFY_ONSNATCH)
+    new_config['Boxcar2']['boxcar2_notify_ondownload'] = int(BOXCAR2_NOTIFY_ONDOWNLOAD)
+    new_config['Boxcar2']['boxcar2_notify_onsubtitledownload'] = int(BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Boxcar2']['boxcar2_accesstoken'] = BOXCAR2_ACCESSTOKEN
+    new_config['Boxcar2']['boxcar2_sound'] = BOXCAR2_SOUND
+
+    new_config['Pushbullet'] = {}
+    new_config['Pushbullet']['use_pushbullet'] = int(USE_PUSHBULLET)
+    new_config['Pushbullet']['pushbullet_notify_onsnatch'] = int(PUSHBULLET_NOTIFY_ONSNATCH)
+    new_config['Pushbullet']['pushbullet_notify_ondownload'] = int(PUSHBULLET_NOTIFY_ONDOWNLOAD)
+    new_config['Pushbullet']['pushbullet_notify_onsubtitledownload'] = int(PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Pushbullet']['pushbullet_access_token'] = PUSHBULLET_ACCESS_TOKEN
+    new_config['Pushbullet']['pushbullet_device_iden'] = PUSHBULLET_DEVICE_IDEN
+
+    new_config['Pushover'] = {}
+    new_config['Pushover']['use_pushover'] = int(USE_PUSHOVER)
+    new_config['Pushover']['pushover_notify_onsnatch'] = int(PUSHOVER_NOTIFY_ONSNATCH)
+    new_config['Pushover']['pushover_notify_ondownload'] = int(PUSHOVER_NOTIFY_ONDOWNLOAD)
+    new_config['Pushover']['pushover_notify_onsubtitledownload'] = int(PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Pushover']['pushover_userkey'] = PUSHOVER_USERKEY
+    new_config['Pushover']['pushover_apikey'] = PUSHOVER_APIKEY
+    new_config['Pushover']['pushover_priority'] = int(PUSHOVER_PRIORITY)
+    new_config['Pushover']['pushover_device'] = PUSHOVER_DEVICE
+    new_config['Pushover']['pushover_sound'] = PUSHOVER_SOUND
+
+    new_config['Growl'] = {}
+    new_config['Growl']['use_growl'] = int(USE_GROWL)
+    new_config['Growl']['growl_notify_onsnatch'] = int(GROWL_NOTIFY_ONSNATCH)
+    new_config['Growl']['growl_notify_ondownload'] = int(GROWL_NOTIFY_ONDOWNLOAD)
+    new_config['Growl']['growl_notify_onsubtitledownload'] = int(GROWL_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Growl']['growl_host'] = GROWL_HOST
+    new_config['Growl']['growl_password'] = helpers.encrypt(GROWL_PASSWORD, ENCRYPTION_VERSION)
+
+    new_config['Prowl'] = {}
+    new_config['Prowl']['use_prowl'] = int(USE_PROWL)
+    new_config['Prowl']['prowl_notify_onsnatch'] = int(PROWL_NOTIFY_ONSNATCH)
+    new_config['Prowl']['prowl_notify_ondownload'] = int(PROWL_NOTIFY_ONDOWNLOAD)
+    new_config['Prowl']['prowl_notify_onsubtitledownload'] = int(PROWL_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Prowl']['prowl_api'] = PROWL_API
+    new_config['Prowl']['prowl_priority'] = PROWL_PRIORITY
+
+    new_config['NMA'] = {}
+    new_config['NMA']['use_nma'] = int(USE_NMA)
+    new_config['NMA']['nma_notify_onsnatch'] = int(NMA_NOTIFY_ONSNATCH)
+    new_config['NMA']['nma_notify_ondownload'] = int(NMA_NOTIFY_ONDOWNLOAD)
+    new_config['NMA']['nma_notify_onsubtitledownload'] = int(NMA_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['NMA']['nma_api'] = NMA_API
+    new_config['NMA']['nma_priority'] = NMA_PRIORITY
+
+    new_config['Libnotify'] = {}
+    new_config['Libnotify']['use_libnotify'] = int(USE_LIBNOTIFY)
+    new_config['Libnotify']['libnotify_notify_onsnatch'] = int(LIBNOTIFY_NOTIFY_ONSNATCH)
+    new_config['Libnotify']['libnotify_notify_ondownload'] = int(LIBNOTIFY_NOTIFY_ONDOWNLOAD)
+    new_config['Libnotify']['libnotify_notify_onsubtitledownload'] = int(LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD)
+
+    new_config['Pushalot'] = {}
+    new_config['Pushalot']['use_pushalot'] = int(USE_PUSHALOT)
+    new_config['Pushalot']['pushalot_notify_onsnatch'] = int(PUSHALOT_NOTIFY_ONSNATCH)
+    new_config['Pushalot']['pushalot_notify_ondownload'] = int(PUSHALOT_NOTIFY_ONDOWNLOAD)
+    new_config['Pushalot']['pushalot_notify_onsubtitledownload'] = int(PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Pushalot']['pushalot_authorizationtoken'] = PUSHALOT_AUTHORIZATIONTOKEN
+
     new_config['Trakt'] = {}
     new_config['Trakt']['use_trakt'] = int(USE_TRAKT)
     new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
@@ -1810,49 +1878,44 @@ def save_config():
     new_config['Trakt']['trakt_accounts'] = TraktAPI.build_config_string(TRAKT_ACCOUNTS)
     new_config['Trakt']['trakt_mru'] = TRAKT_MRU
 
-    new_config['pyTivo'] = {}
-    new_config['pyTivo']['use_pytivo'] = int(USE_PYTIVO)
-    new_config['pyTivo']['pytivo_notify_onsnatch'] = int(PYTIVO_NOTIFY_ONSNATCH)
-    new_config['pyTivo']['pytivo_notify_ondownload'] = int(PYTIVO_NOTIFY_ONDOWNLOAD)
-    new_config['pyTivo']['pytivo_notify_onsubtitledownload'] = int(PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['pyTivo']['pyTivo_update_library'] = int(PYTIVO_UPDATE_LIBRARY)
-    new_config['pyTivo']['pytivo_host'] = PYTIVO_HOST
-    new_config['pyTivo']['pytivo_share_name'] = PYTIVO_SHARE_NAME
-    new_config['pyTivo']['pytivo_tivo_name'] = PYTIVO_TIVO_NAME
-
-    new_config['NMA'] = {}
-    new_config['NMA']['use_nma'] = int(USE_NMA)
-    new_config['NMA']['nma_notify_onsnatch'] = int(NMA_NOTIFY_ONSNATCH)
-    new_config['NMA']['nma_notify_ondownload'] = int(NMA_NOTIFY_ONDOWNLOAD)
-    new_config['NMA']['nma_notify_onsubtitledownload'] = int(NMA_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['NMA']['nma_api'] = NMA_API
-    new_config['NMA']['nma_priority'] = NMA_PRIORITY
-
-    new_config['Pushalot'] = {}
-    new_config['Pushalot']['use_pushalot'] = int(USE_PUSHALOT)
-    new_config['Pushalot']['pushalot_notify_onsnatch'] = int(PUSHALOT_NOTIFY_ONSNATCH)
-    new_config['Pushalot']['pushalot_notify_ondownload'] = int(PUSHALOT_NOTIFY_ONDOWNLOAD)
-    new_config['Pushalot']['pushalot_notify_onsubtitledownload'] = int(PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Pushalot']['pushalot_authorizationtoken'] = PUSHALOT_AUTHORIZATIONTOKEN
-
-    new_config['Pushbullet'] = {}
-    new_config['Pushbullet']['use_pushbullet'] = int(USE_PUSHBULLET)
-    new_config['Pushbullet']['pushbullet_notify_onsnatch'] = int(PUSHBULLET_NOTIFY_ONSNATCH)
-    new_config['Pushbullet']['pushbullet_notify_ondownload'] = int(PUSHBULLET_NOTIFY_ONDOWNLOAD)
-    new_config['Pushbullet']['pushbullet_notify_onsubtitledownload'] = int(PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Pushbullet']['pushbullet_access_token'] = PUSHBULLET_ACCESS_TOKEN
-    new_config['Pushbullet']['pushbullet_device_iden'] = PUSHBULLET_DEVICE_IDEN
-
     new_config['Slack'] = {}
     new_config['Slack']['use_slack'] = int(USE_SLACK)
     new_config['Slack']['slack_notify_onsnatch'] = int(SLACK_NOTIFY_ONSNATCH)
     new_config['Slack']['slack_notify_ondownload'] = int(SLACK_NOTIFY_ONDOWNLOAD)
     new_config['Slack']['slack_notify_onsubtitledownload'] = int(SLACK_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['Slack']['slack_channel'] = SLACK_CHANNEL
-    new_config['Slack']['slack_as_user'] = int(SLACK_AS_USER)
+    new_config['Slack']['slack_as_authed'] = int(SLACK_AS_AUTHED)
     new_config['Slack']['slack_bot_name'] = SLACK_BOT_NAME
     new_config['Slack']['slack_icon_url'] = SLACK_ICON_URL
     new_config['Slack']['slack_access_token'] = SLACK_ACCESS_TOKEN
+
+    new_config['Discordapp'] = {}
+    new_config['Discordapp']['use_discordapp'] = int(USE_DISCORDAPP)
+    new_config['Discordapp']['discordapp_notify_onsnatch'] = int(DISCORDAPP_NOTIFY_ONSNATCH)
+    new_config['Discordapp']['discordapp_notify_ondownload'] = int(DISCORDAPP_NOTIFY_ONDOWNLOAD)
+    new_config['Discordapp']['discordapp_notify_onsubtitledownload'] = int(DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Discordapp']['discordapp_as_authed'] = int(DISCORDAPP_AS_AUTHED)
+    new_config['Discordapp']['discordapp_username'] = DISCORDAPP_USERNAME
+    new_config['Discordapp']['discordapp_icon_url'] = DISCORDAPP_ICON_URL
+    new_config['Discordapp']['discordapp_as_tts'] = int(DISCORDAPP_AS_TTS)
+    new_config['Discordapp']['discordapp_access_token'] = DISCORDAPP_ACCESS_TOKEN
+
+    new_config['Gitter'] = {}
+    new_config['Gitter']['use_gitter'] = int(USE_GITTER)
+    new_config['Gitter']['gitter_notify_onsnatch'] = int(GITTER_NOTIFY_ONSNATCH)
+    new_config['Gitter']['gitter_notify_ondownload'] = int(GITTER_NOTIFY_ONDOWNLOAD)
+    new_config['Gitter']['gitter_notify_onsubtitledownload'] = int(GITTER_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Gitter']['gitter_room'] = GITTER_ROOM
+    new_config['Gitter']['gitter_access_token'] = GITTER_ACCESS_TOKEN
+
+    new_config['Twitter'] = {}
+    new_config['Twitter']['use_twitter'] = int(USE_TWITTER)
+    new_config['Twitter']['twitter_notify_onsnatch'] = int(TWITTER_NOTIFY_ONSNATCH)
+    new_config['Twitter']['twitter_notify_ondownload'] = int(TWITTER_NOTIFY_ONDOWNLOAD)
+    new_config['Twitter']['twitter_notify_onsubtitledownload'] = int(TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Twitter']['twitter_username'] = TWITTER_USERNAME
+    new_config['Twitter']['twitter_password'] = helpers.encrypt(TWITTER_PASSWORD, ENCRYPTION_VERSION)
+    new_config['Twitter']['twitter_prefix'] = TWITTER_PREFIX
 
     new_config['Email'] = {}
     new_config['Email']['use_email'] = int(USE_EMAIL)
