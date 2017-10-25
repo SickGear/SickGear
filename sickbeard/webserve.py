@@ -2558,7 +2558,7 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, **kwargs):
+                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, is_basedir='1', **kwargs):
 
         if not dir and ('0' == failed or not nzbName):
             self.redirect('/home/postprocess/')
@@ -2582,7 +2582,7 @@ class HomePostProcess(Home):
                                           force_replace=force_replace in ['on', '1'],
                                           failed='0' != failed,
                                           webhandler=self.send_message if stream != '0' else None,
-                                          showObj=showObj)
+                                          showObj=showObj, is_basedir=is_basedir in ['on', '1'])
 
             if '0' != stream:
                 return

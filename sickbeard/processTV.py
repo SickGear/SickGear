@@ -58,12 +58,13 @@ except ImportError:
 class ProcessTVShow(object):
     """ Process a TV Show """
 
-    def __init__(self, webhandler=None):
+    def __init__(self, webhandler=None, is_basedir=True):
         self.files_passed = 0
         self.files_failed = 0
         self.fail_detected = False
         self._output = []
         self.webhandler = webhandler
+        self.is_basedir = is_basedir
 
     @property
     def any_vid_processed(self):
@@ -163,8 +164,10 @@ class ProcessTVShow(object):
 
         return result
 
-    @staticmethod
-    def check_name(name):
+    def check_name(self, name):
+        if self.is_basedir:
+            return None
+
         so = None
         my_db = db.DBConnection()
         sql_results = my_db.select(
@@ -189,6 +192,9 @@ class ProcessTVShow(object):
         return (showObj, alt_showObj)[None is showObj and None is not alt_showObj]
 
     def check_video_filenames(self, path, videofiles):
+        if self.is_basedir:
+            return None
+
         video_pick = None
         video_size = 0
         for cur_video_file in videofiles:
@@ -246,6 +252,9 @@ class ProcessTVShow(object):
                                  u'If your downloader and SickGear aren\'t on the same PC then make sure ' +
                                  u'you fill out your completed TV download folder in the PP config.')
             return self.result
+
+        if dir_name == sickbeard.TV_DOWNLOAD_DIR:
+            self.is_basedir = True
 
         if None is showObj:
             if isinstance(nzb_name, basestring):
@@ -939,8 +948,8 @@ class ProcessTVShow(object):
 
 # backward compatibility prevents the case of this function name from being updated to PEP8
 def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
-               failed=False, type='auto', cleanup=False, webhandler=None, showObj=None):
+               failed=False, type='auto', cleanup=False, webhandler=None, showObj=None, is_basedir=True):
 
     # backward compatibility prevents the case of this function name from being updated to PEP8
-    return ProcessTVShow(webhandler).process_dir(
+    return ProcessTVShow(webhandler, is_basedir).process_dir(
         dir_name, nzb_name, process_method, force, force_replace, failed, type, cleanup, showObj)

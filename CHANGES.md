@@ -115,6 +115,8 @@
 * Change improve handling of relative download links from providers
 * Change enable TorrentBytes provider
 * Change after SG is updated, don't attempt to send a Plex client notifications if there is no client host set
+* Add file name to possible names in history lookup post processing
+* Add garbage name handling to name parser
 
 
 [develop changelog]
