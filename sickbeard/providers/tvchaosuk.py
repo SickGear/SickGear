@@ -164,7 +164,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         for yr in years:
             title = re.sub('\{\{yr\}\}', yr, title, count=1)
 
-        date_re = '(?i)([(\s]*)((?:\d+\s)?)([adfjmnos]\w{2,}\s+)((?:19|20)\d\d)([)\s]*)'
+        date_re = '(?i)([(\s.]*)((?:\d+[\s.]*(?:st|nd|rd|th)?[\s.])?)([adfjmnos]\w{2,}[\s.]+)((?:19|20)\d\d)([)\s.]*)'
         dated = re.findall(date_re, title)
         dnew = None
         for d in dated:
