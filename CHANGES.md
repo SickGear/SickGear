@@ -110,13 +110,21 @@
 * Add warn icon indicator of abandoned IDs to "Manage" menu bar and "Manage/Show Processes" menu item
 * Add shows that have no replacement ID can be ignored at "Manage/Show Processes", the menu bar warn icon hides if all are ignored
 * Change FreeBSD initscript to use command_interpreter
-* Add Slack notifier
+* Add Slack notifier to Notifications config/Social
 * Change allow Cheetah template engine version 2 and newer
 * Change improve handling of relative download links from providers
 * Change enable TorrentBytes provider
 * Change after SG is updated, don't attempt to send a Plex client notifications if there is no client host set
 * Add file name to possible names in history lookup post processing
 * Add garbage name handling to name parser
+* Change overhaul Notifications, add Notifier Factory and DRY refactoring
+* Notifiers are now loaded into memory on demand
+* Add bubble links to Notifications config tabs
+* Add Discordapp notifier to Notifications config/Social
+* Add Gitter notifier to Notifications config/Social
+* Change order of notifiers in Notifications config tabs
+* Remove Pushalot notifier
+* Remove XBMC notifier
 
 
 [develop changelog]

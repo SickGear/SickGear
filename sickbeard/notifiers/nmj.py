@@ -16,188 +16,159 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import urllib, urllib2
-import sickbeard
-import telnetlib
 import re
+import telnetlib
+import urllib
+import urllib2
+import xml.etree.cElementTree as XmlEtree
 
-from sickbeard import logger
+import sickbeard
 from sickbeard.exceptions import ex
-
-try:
-    import xml.etree.cElementTree as etree
-except ImportError:
-    import xml.etree.ElementTree as etree
+from sickbeard.notifiers.generic import BaseNotifier
 
 
-class NMJNotifier:
+class NMJNotifier(BaseNotifier):
+
     def notify_settings(self, host):
         """
         Retrieves the settings from a NMJ/Popcorn hour
-        
+
         host: The hostname/IP of the Popcorn Hour server
-        
+
         Returns: True if the settings were retrieved successfully, False otherwise
         """
 
         # establish a terminal session to the PC
-        terminal = False
+        result, terminal = False, None
         try:
             terminal = telnetlib.Telnet(host)
-        except Exception:
-            logger.log(u'Warning: unable to get a telnet session to %s' % (host), logger.WARNING)
-            return False
+        except (StandardError, Exception):
+            self._log_warning(u'Unable to get a telnet session to %s' % host)
 
-        # tell the terminal to output the necessary info to the screen so we can search it later
-        logger.log(u'Connected to %s via telnet' % (host), logger.DEBUG)
-        terminal.read_until('sh-3.00# ')
-        terminal.write('cat /tmp/source\n')
-        terminal.write('cat /tmp/netshare\n')
-        terminal.write('exit\n')
-        tnoutput = terminal.read_all()
+        if result:
+            # tell the terminal to output the necessary info to the screen so we can search it later
+            self._log_debug(u'Connected to %s via telnet' % host)
+            terminal.read_until('sh-3.00# ')
+            terminal.write('cat /tmp/source\n')
+            terminal.write('cat /tmp/netshare\n')
+            terminal.write('exit\n')
+            tnoutput = terminal.read_all()
 
-        database = ''
-        device = ''
-        match = re.search(r'(.+\.db)\r\n?(.+)(?=sh-3.00# cat /tmp/netshare)', tnoutput)
-
-        # if we found the database in the terminal output then save that database to the config
-        if match:
-            database = match.group(1)
-            device = match.group(2)
-            logger.log(u'Found NMJ database %s on device %s' % (database, device), logger.DEBUG)
-            sickbeard.NMJ_DATABASE = database
-        else:
-            logger.log(u'Could not get current NMJ database on %s, NMJ is probably not running!' % (host), logger.WARNING)
-            return False
-
-        # if the device is a remote host then try to parse the mounting URL and save it to the config
-        if device.startswith('NETWORK_SHARE/'):
-            match = re.search('.*(?=\r\n?%s)' % (re.escape(device[14:])), tnoutput)
-
-            if match:
-                mount = match.group().replace('127.0.0.1', host)
-                logger.log(u'Found mounting url on the Popcorn Hour in configuration: %s' % (mount), logger.DEBUG)
-                sickbeard.NMJ_MOUNT = mount
+            match = re.search(r'(.+\.db)\r\n?(.+)(?=sh-3.00# cat /tmp/netshare)', tnoutput)
+            # if we found the database in the terminal output then save that database to the config
+            if not match:
+                self._log_warning(u'Could not get current NMJ database on %s, NMJ is probably not running!' % host)
             else:
-                logger.log(u'Detected a network share on the Popcorn Hour, but could not get the mounting url',
-                           logger.WARNING)
-                return False
+                database = match.group(1)
+                device = match.group(2)
+                self._log_debug(u'Found NMJ database %s on device %s' % (database, device))
+                sickbeard.NMJ_DATABASE = database
+                # if the device is a remote host then try to parse the mounting URL and save it to the config
+                if device.startswith('NETWORK_SHARE/'):
+                    match = re.search('.*(?=\r\n?%s)' % (re.escape(device[14:])), tnoutput)
 
-        return True
+                    if not match:
+                        self._log_warning('Detected a network share on the Popcorn Hour, '
+                                          'but could not get the mounting url')
+                    else:
+                        mount = match.group().replace('127.0.0.1', host)
+                        self._log_debug(u'Found mounting url on the Popcorn Hour in configuration: %s' % mount)
+                        sickbeard.NMJ_MOUNT = mount
+                        result = True
 
-    def notify_snatch(self, ep_name):
-        return False
-        #Not implemented: Start the scanner when snatched does not make any sense
+        if result:
+            return '{"message": "Got settings from %(host)s", "database": "%(database)s", "mount": "%(mount)s"}' % {
+                "host": host, "database": sickbeard.NMJ_DATABASE, "mount": sickbeard.NMJ_MOUNT}
+        return '{"message": "Failed! Make sure your Popcorn is on and NMJ is running. ' \
+               '(see Error Log -> Debug for detailed info)", "database": "", "mount": ""}'
 
-    def notify_download(self, ep_name):
-        if sickbeard.USE_NMJ:
-            self._notifyNMJ()
-
-    def notify_subtitle_download(self, ep_name, lang):
-        if sickbeard.USE_NMJ:
-            self._notifyNMJ()
-            
-    def notify_git_update(self, new_version):
-        return False
-        # Not implemented, no reason to start scanner.
-
-    def test_notify(self, host, database, mount):
-        return self._sendNMJ(host, database, mount)
-
-    def _sendNMJ(self, host, database, mount=None):
+    def _send(self, host=None, database=None, mount=None):
         """
         Sends a NMJ update command to the specified machine
-        
+
         host: The hostname/IP to send the request to (no port)
         database: The database to send the requst to
         mount: The mount URL to use (optional)
-        
+
         Returns: True if the request succeeded, False otherwise
         """
+        host = self._choose(host, sickbeard.NMJ_HOST)
+        database = self._choose(database, sickbeard.NMJ_DATABASE)
+        mount = self._choose(mount, sickbeard.NMJ_MOUNT)
+
+        self._log_debug(u'Sending scan command for NMJ ')
 
         # if a mount URL is provided then attempt to open a handle to that URL
         if mount:
             try:
                 req = urllib2.Request(mount)
-                logger.log(u'Try to mount network drive via url: %s' % (mount), logger.DEBUG)
-                handle = urllib2.urlopen(req)
+                self._log_debug(u'Try to mount network drive via url: %s' % mount)
+                urllib2.urlopen(req)
             except IOError as e:
                 if hasattr(e, 'reason'):
-                    logger.log(u'NMJ: Could not contact Popcorn Hour on host %s: %s' % (host, e.reason), logger.WARNING)
+                    self._log_warning(u'Could not contact Popcorn Hour on host %s: %s' % (host, e.reason))
                 elif hasattr(e, 'code'):
-                    logger.log(u'NMJ: Problem with Popcorn Hour on host %s: %s' % (host, e.code), logger.WARNING)
+                    self._log_warning(u'Problem with Popcorn Hour on host %s: %s' % (host, e.code))
                 return False
             except Exception as e:
-                logger.log(u'NMJ: Unknown exception: ' + ex(e), logger.ERROR)
+                self._log_error(u'Unknown exception: ' + ex(e))
                 return False
 
         # build up the request URL and parameters
-        UPDATE_URL = 'http://%(host)s:8008/metadata_database?%(params)s'
-        params = {
-            'arg0': 'scanner_start',
-            'arg1': database,
-            'arg2': 'background',
-            'arg3': ''
-        }
+        params = dict(arg0='scanner_start', arg1=database, arg2='background', arg3='')
         params = urllib.urlencode(params)
-        updateUrl = UPDATE_URL % {'host': host, 'params': params}
+        update_url = 'http://%(host)s:8008/metadata_database?%(params)s' % {'host': host, 'params': params}
 
         # send the request to the server
         try:
-            req = urllib2.Request(updateUrl)
-            logger.log(u'Sending NMJ scan update command via url: %s' % (updateUrl), logger.DEBUG)
+            req = urllib2.Request(update_url)
+            self._log_debug(u'Sending scan update command via url: %s' % update_url)
             handle = urllib2.urlopen(req)
             response = handle.read()
         except IOError as e:
             if hasattr(e, 'reason'):
-                logger.log(u'NMJ: Could not contact Popcorn Hour on host %s: %s' % (host, e.reason), logger.WARNING)
+                self._log_warning(u'Could not contact Popcorn Hour on host %s: %s' % (host, e.reason))
             elif hasattr(e, 'code'):
-                logger.log(u'NMJ: Problem with Popcorn Hour on host %s: %s' % (host, e.code), logger.WARNING)
+                self._log_warning(u'Problem with Popcorn Hour on host %s: %s' % (host, e.code))
             return False
         except Exception as e:
-            logger.log(u'NMJ: Unknown exception: ' + ex(e), logger.ERROR)
+            self._log_error(u'Unknown exception: ' + ex(e))
             return False
 
         # try to parse the resulting XML
         try:
-            et = etree.fromstring(response)
+            et = XmlEtree.fromstring(response)
             result = et.findtext('returnValue')
         except SyntaxError as e:
-            logger.log(u'Unable to parse XML returned from the Popcorn Hour: %s' % (e), logger.ERROR)
+            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: %s' % e)
             return False
 
         # if the result was a number then consider that an error
-        if int(result) > 0:
-            logger.log(u'Popcorn Hour returned an errorcode: %s' % (result), logger.ERROR)
-            return False
-        else:
-            logger.log(u'NMJ started background scan', logger.MESSAGE)
-            return True
-
-    def _notifyNMJ(self, host=None, database=None, mount=None, force=False):
-        """
-        Sends a NMJ update command based on the SB config settings
-        
-        host: The host to send the command to (optional, defaults to the host in the config)
-        database: The database to use (optional, defaults to the database in the config)
-        mount: The mount URL (optional, defaults to the mount URL in the config)
-        force: If True then the notification will be sent even if NMJ is disabled in the config
-        """
-        if not sickbeard.USE_NMJ and not force:
-            logger.log('Notification for NMJ scan update not enabled, skipping this notification', logger.DEBUG)
+        if 0 < int(result):
+            self._log_error(u'Popcorn Hour returned an errorcode: %s' % result)
             return False
 
-        # fill in omitted parameters
-        if not host:
-            host = sickbeard.NMJ_HOST
-        if not database:
-            database = sickbeard.NMJ_DATABASE
-        if not mount:
-            mount = sickbeard.NMJ_MOUNT
+        self._log(u'NMJ started background scan')
+        return True
 
-        logger.log(u'Sending scan command for NMJ ', logger.DEBUG)
+    def _notify(self, host=None, database=None, mount=None, **kwargs):
 
-        return self._sendNMJ(host, database, mount)
+        result = self._send(host, database, mount)
+
+        return self._choose((('Success, started %s', 'Failed to start %s')[not result] % 'the scan update'), result)
+
+    def test_notify(self, host, database, mount):
+        self._testing = True
+        return self._notify(host, database, mount)
+
+    # notify_snatch() Not implemented: Start the scanner when snatched does not make sense
+    # notify_git_update() Not implemented, no reason to start scanner
+
+    def notify_download(self):
+        self._notify()
+
+    def notify_subtitle_download(self):
+        self._notify()
 
 
 notifier = NMJNotifier

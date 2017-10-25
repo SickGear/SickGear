@@ -2839,7 +2839,7 @@ select .selected:before{
 	line-height:normal
 }
 
-.testNotification{
+.test-notification{
 	padding:5px;
 	margin-bottom:10px;
 	line-height:20px;

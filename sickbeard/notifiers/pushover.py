@@ -18,171 +18,114 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import base64
+import socket
+import time
 import urllib
 import urllib2
-import time
-import socket
-import base64
 
 import sickbeard
-from sickbeard import logger
-from sickbeard.common import notifyStrings, NOTIFY_SNATCH, NOTIFY_DOWNLOAD, NOTIFY_SUBTITLE_DOWNLOAD, NOTIFY_GIT_UPDATE, NOTIFY_GIT_UPDATE_TEXT
 from sickbeard.exceptions import ex
+from sickbeard.notifiers.generic import Notifier
 
 API_URL = 'https://api.pushover.net/1/messages.json'
 DEVICE_URL = 'https://api.pushover.net/1/users/validate.json'
 
 
-class PushoverNotifier:
+class PushoverNotifier(Notifier):
 
-    def get_devices(self, userKey=None, apiKey=None):
-        # fill in omitted parameters
-        if not userKey:
-            userKey = sickbeard.PUSHOVER_USERKEY
-        if not apiKey:
-            apiKey = sickbeard.PUSHOVER_APIKEY
+    def get_devices(self, user_key=None, api_key=None):
 
-        data = urllib.urlencode({
-            'token': apiKey,
-            'user': userKey
-            })
+        user_key = self._choose(user_key, sickbeard.PUSHOVER_USERKEY)
+        api_key = self._choose(api_key, sickbeard.PUSHOVER_APIKEY)
+
+        data = urllib.urlencode(dict(token=api_key, user=user_key))
 
         # get devices from pushover
+        result = False
         try:
             req = urllib2.Request(DEVICE_URL)
             handle = urllib2.urlopen(req, data)
             if handle:
                 result = handle.read()
             handle.close()
-            return result
-        except urllib2.URLError:
-            return None
-        except socket.timeout:
-            return None
+        except (urllib2.URLError, socket.timeout):
+            pass
 
-    def _sendPushover(self, title, msg, userKey, apiKey, priority, device, sound):
+        return ('{}', result)[bool(result)]
+
+    def _notify(self, title, body, user_key=None, api_key=None, priority=None, device=None, sound=None, **kwargs):
         """
         Sends a pushover notification to the address provided
-        
-        msg: The message to send (unicode)
+
         title: The title of the message
-        userKey: The pushover user id to send the message to (or to subscribe with)
-        
+        msg: The message to send (unicode)
+        user_key: The pushover user id to send the message to (or to subscribe with)
+
         returns: True if the message succeeded, False otherwise
         """
-
-        # fill in omitted parameters
-        if not userKey:
-            userKey = sickbeard.PUSHOVER_USERKEY
-        if not apiKey:
-            apiKey = sickbeard.PUSHOVER_APIKEY
+        user_key = self._choose(user_key, sickbeard.PUSHOVER_USERKEY)
+        api_key = self._choose(api_key, sickbeard.PUSHOVER_APIKEY)
+        priority = self._choose(priority, sickbeard.PUSHOVER_PRIORITY)
+        device = self._choose(device, sickbeard.PUSHOVER_DEVICE)
+        sound = self._choose(sound, sickbeard.PUSHOVER_SOUND)
 
         # build up the URL and parameters
-        msg = msg.strip()
-
-        data = urllib.urlencode({
-            'token': apiKey,
-            'title': title,
-            'user': userKey,
-            'message': msg.encode('utf-8'),
-            'priority': priority,
-            'device': device,
-            'sound': sound,
-            'timestamp': int(time.time())
-            })
+        params = dict(title=title, message=body.strip().encode('utf-8'), user=user_key, timestamp=int(time.time()))
+        if api_key:
+            params.update(token=api_key)
+        if priority:
+            params.update(priority=priority)
+        if not device:
+            params.update(device=device)
+        if not sound:
+            params.update(sound=sound)
 
         # send the request to pushover
+        result = None
         try:
             req = urllib2.Request(API_URL)
-            handle = urllib2.urlopen(req, data)
+            handle = urllib2.urlopen(req, urllib.urlencode(params))
             handle.close()
 
         except urllib2.URLError as e:
             # HTTP status 404 if the provided email address isn't a Pushover user.
-            if e.code == 404:
-                logger.log(u'PUSHOVER: Username is wrong/not a Pushover email. Pushover will send an email to it', logger.WARNING)
-                return False
+            if 404 == e.code:
+                result = 'Username is wrong/not a Pushover email. Pushover will send an email to it'
+                self._log_warning(result)
 
-            # For HTTP status code 401's, it is because you are passing in either an invalid token, or the user has not added your service.
-            elif e.code == 401:
+            # For HTTP status code 401's, it is because you are passing in either an invalid token,
+            # or the user has not added your service.
+            elif 401 == e.code:
 
                 # HTTP status 401 if the user doesn't have the service added
-                subscribeNote = self._sendPushover(title, msg, userKey)
-                if subscribeNote:
-                    logger.log(u'PUSHOVER: Subscription sent', logger.DEBUG)
-                    return True
+                subscribe_note = self._send_pushover(title, body, user_key)
+                if subscribe_note:
+                    self._log_debug('Subscription sent')
+                    # return True
                 else:
-                    logger.log(u'PUSHOVER: Subscription could not be sent', logger.ERROR)
-                    return False
+                    result = 'Subscription could not be sent'
+                    self._log_error(result)
+            else:
+                # If you receive an HTTP status code of 400, it is because you failed to send the proper parameters
+                if 400 == e.code:
+                    result = 'Wrong data sent to Pushover'
 
-            # If you receive an HTTP status code of 400, it is because you failed to send the proper parameters
-            elif e.code == 400:
-                logger.log(u'PUSHOVER: Wrong data sent to Pushover', logger.ERROR)
-                return False
+                # If you receive a HTTP status code of 429,
+                #  it is because the message limit has been reached (free limit is 7,500)
+                elif 429 == e.code:
+                    result = 'API message limit reached - try a different API key'
 
-            # If you receive a HTTP status code of 429, it is because the message limit has been reached (free limit is 7,500)
-            elif e.code == 429:
-                logger.log(u'PUSHOVER: API message limit reached - try a different API key', logger.ERROR)
-                return False
+                # If you receive a HTTP status code of 500, service is unavailable
+                elif 500 == e.code:
+                    result = 'Unable to connect to API, service unavailable'
 
-            # If you receive a HTTP status code of 500, service is unavailable
-            elif e.code == 500:
-                logger.log(u'PUSHOVER: Unable to connect to API, service unavailable', logger.ERROR)
-                return False
+                else:
+                    result = 'Http response code "%s"' % response.status
 
-        logger.log(u'PUSHOVER: Notification successful.', logger.MESSAGE)
-        return True
+                self._log_error(result)
 
-    def _notifyPushover(self, title, message, userKey=None, apiKey=None, priority=None, device=None, sound=None, force=False):
-        """
-        Sends a pushover notification based on the provided info or SG config
+        return self._choose((True, 'Failed to send notification: %s' % result)[bool(result)], not bool(result))
 
-        title: The title of the notification to send
-        message: The message string to send
-        userKey: The userKey to send the notification to 
-        force: Enforce sending, for instance for testing
-        """
-
-        # suppress notifications if the notifier is disabled but the notify options are checked
-        if not sickbeard.USE_PUSHOVER and not force:
-            logger.log(u'PUSHOVER: Notifications not enabled, skipping this notification', logger.DEBUG)
-            return False
-
-        # fill in omitted parameters
-        if not userKey:
-            userKey = sickbeard.PUSHOVER_USERKEY
-        if not apiKey:
-            apiKey = sickbeard.PUSHOVER_APIKEY
-        if not priority:
-            priority = sickbeard.PUSHOVER_PRIORITY
-        if not device:
-            device = sickbeard.PUSHOVER_DEVICE
-        if not sound:
-            sound = sickbeard.PUSHOVER_SOUND
-
-        logger.log(u'PUSHOVER: Sending notice with details: %s - %s, priority: %s, device: %s, sound: %s' % (title, message, priority, device, sound), logger.DEBUG)
-
-        return self._sendPushover(title, message, userKey, apiKey, priority, device, sound)
-
-    def test_notify(self, userKey, apiKey, priority, device, sound):
-        return self._notifyPushover('Test', 'This is a test notification from SickGear', userKey, apiKey, priority, device, sound, force=True)
-
-    def notify_snatch(self, ep_name):
-        if sickbeard.PUSHOVER_NOTIFY_ONSNATCH:
-            self._notifyPushover(notifyStrings[NOTIFY_SNATCH], ep_name)
-
-    def notify_download(self, ep_name):
-        if sickbeard.PUSHOVER_NOTIFY_ONDOWNLOAD:
-            self._notifyPushover(notifyStrings[NOTIFY_DOWNLOAD], ep_name)
-
-    def notify_subtitle_download(self, ep_name, lang):
-        if sickbeard.PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD:
-            self._notifyPushover(notifyStrings[NOTIFY_SUBTITLE_DOWNLOAD], ep_name + ': ' + lang)
-            
-    def notify_git_update(self, new_version = '??'):
-        if sickbeard.USE_PUSHOVER:
-            update_text=notifyStrings[NOTIFY_GIT_UPDATE_TEXT]
-            title=notifyStrings[NOTIFY_GIT_UPDATE]
-            self._notifyPushover(title, update_text + new_version) 
 
 notifier = PushoverNotifier

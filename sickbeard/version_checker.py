@@ -410,8 +410,7 @@ class GitUpdateManager(UpdateManager):
             self._find_installed_version()
 
             # Notify update successful
-            if sickbeard.NOTIFY_ON_UPDATE:
-                notifiers.notify_git_update(sickbeard.CUR_COMMIT_HASH if sickbeard.CUR_COMMIT_HASH else "")
+            notifiers.notify_git_update(sickbeard.CUR_COMMIT_HASH if sickbeard.CUR_COMMIT_HASH else "")
             return True
 
         return False
