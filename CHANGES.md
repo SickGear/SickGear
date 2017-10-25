@@ -1,4 +1,9 @@
-﻿### 0.12.33 (2017-10-12 13:00:00 UTC)
+﻿### 0.12.34 (2017-10-25 15:20:00 UTC)
+
+* Change improve TVChaos parser
+
+
+### 0.12.33 (2017-10-12 13:00:00 UTC)
 
 * Change improve handling of torrent auth failures
 
