@@ -19,6 +19,11 @@
 # all regexes are case insensitive
 
 normal_regexes = [
+    ('garbage_name',
+     '''
+     ^[a-zA-Z0-9]{3,}$
+     '''
+     ),
     ('standard_repeat',
      # Show.Name.S01E02.S01E03.Source.Quality.Etc-Group
      # Show Name - S01E02 - S01E03 - S01E04 - Ep Name

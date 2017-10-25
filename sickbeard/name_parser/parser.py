@@ -115,6 +115,9 @@ class NameParser(object):
                 if not match:
                     continue
 
+                if 'garbage_name' == cur_regex_name:
+                    return
+
                 result = ParseResult(new_name)
                 result.which_regex = [cur_regex_name]
                 result.score = 0 - cur_regex_num
