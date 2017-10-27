@@ -1,4 +1,9 @@
-﻿### 0.12.34 (2017-10-25 15:20:00 UTC)
+﻿### 0.12.35 (2017-10-27 20:30:00 UTC)
+
+* Change and add some network logos
+
+
+### 0.12.34 (2017-10-25 15:20:00 UTC)
 
 * Change improve TVChaos parser
 
