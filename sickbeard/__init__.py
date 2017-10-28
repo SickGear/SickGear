@@ -333,11 +333,6 @@ USE_PYTIVO = False
 PYTIVO_HOST = ''
 PYTIVO_SHARE_NAME = ''
 PYTIVO_TIVO_NAME = ''
-PYTIVO_UPDATE_LIBRARY = True
-# PYTIVO_NOTIFY_ONSNATCH = False
-# PYTIVO_NOTIFY_ONDOWNLOAD = False
-# PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = False
-# PYTIVO_UPDATE_LIBRARY = False
 
 USE_BOXCAR2 = False
 BOXCAR2_NOTIFY_ONSNATCH = False
@@ -637,8 +632,6 @@ def initialize(console_logging=True):
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, \
             SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_PYTIVO, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME
-            # , \
-            # PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY
         # Notification Settings/Devices
         global USE_GROWL, GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, \
             GROWL_HOST, GROWL_PASSWORD, \
@@ -1044,10 +1037,6 @@ def initialize(console_logging=True):
         PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
         PYTIVO_SHARE_NAME = check_setting_str(CFG, 'pyTivo', 'pytivo_share_name', '')
         PYTIVO_TIVO_NAME = check_setting_str(CFG, 'pyTivo', 'pytivo_tivo_name', '')
-        # PYTIVO_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsnatch', 0))
-        # PYTIVO_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_ondownload', 0))
-        # PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsubtitledownload', 0))
-        # PYTIVO_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'pyTivo', 'pyTivo_update_library', 0))
 
         USE_NMA = bool(check_setting_int(CFG, 'NMA', 'use_nma', 0))
         NMA_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'NMA', 'nma_notify_onsnatch', 0))
@@ -1481,17 +1470,7 @@ def halt():
 
         if __INITIALIZED__:
 
-            logger.log(u'Aborting all threads')
-
-            for thread in enabled_schedulers():
-                thread.stop.set()
-
-            for thread in enabled_schedulers():
-                logger.log('Waiting for the %s thread to exit' % thread.name)
-                try:
-                    thread.join(10)
-                except RuntimeError:
-                    pass
+            logger.log('Exiting threads')
 
             for p in provider_ping_thread_pool:
                 provider_ping_thread_pool[p].stop = True
@@ -1499,21 +1478,33 @@ def halt():
             for p in provider_ping_thread_pool:
                 try:
                     provider_ping_thread_pool[p].join(10)
+                    logger.log('Thread %s has exit' % provider_ping_thread_pool[p].name)
                 except RuntimeError:
+                    logger.log('Fail, thread %s did not exit' % provider_ping_thread_pool[p].name)
                     pass
 
             if ADBA_CONNECTION:
                 try:
                     ADBA_CONNECTION.logout()
                 except AniDBBannedError as e:
-                    logger.log(u'ANIDB Error %s' % ex(e), logger.DEBUG)
+                    logger.log('AniDB Error %s' % ex(e), logger.DEBUG)
                 except AniDBError:
                     pass
-                logger.log(u'Waiting for the ANIDB CONNECTION thread to exit')
                 try:
                     ADBA_CONNECTION.join(10)
+                    logger.log('Thread %s has exit' % ADBA_CONNECTION.name)
                 except (StandardError, Exception):
-                    pass
+                    logger.log('Fail, thread %s did not exit' % ADBA_CONNECTION.name)
+
+            for thread in enabled_schedulers():
+                thread.stop.set()
+
+            for thread in enabled_schedulers():
+                try:
+                    thread.join(10)
+                    logger.log('Thread %s has exit' % thread.name)
+                except RuntimeError:
+                    logger.log('Thread %s did not exit' % thread.name)
 
             __INITIALIZED__ = False
             started = False
@@ -1796,10 +1787,6 @@ def save_config():
     new_config['pyTivo']['pytivo_host'] = PYTIVO_HOST
     new_config['pyTivo']['pytivo_share_name'] = PYTIVO_SHARE_NAME
     new_config['pyTivo']['pytivo_tivo_name'] = PYTIVO_TIVO_NAME
-    # new_config['pyTivo']['pytivo_notify_onsnatch'] = int(PYTIVO_NOTIFY_ONSNATCH)
-    # new_config['pyTivo']['pytivo_notify_ondownload'] = int(PYTIVO_NOTIFY_ONDOWNLOAD)
-    # new_config['pyTivo']['pytivo_notify_onsubtitledownload'] = int(PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD)
-    # new_config['pyTivo']['pyTivo_update_library'] = int(PYTIVO_UPDATE_LIBRARY)
 
     new_config['Boxcar2'] = {}
     new_config['Boxcar2']['use_boxcar2'] = int(USE_BOXCAR2)

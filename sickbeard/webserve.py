@@ -1278,7 +1278,7 @@ class Home(MainHandler):
                 + '<a href="%s/home/editShow?show=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>' % (
                     sickbeard.WEB_ROOT, show, show)
                 + ('', '<br>%s' % show_message)[0 < len(show_message)])
-        t.force_update = '%s/home/updateShow?show=%d&amp;force=1&amp;web=1' % (sickbeard.WEB_ROOT, showObj.indexerid)
+        t.force_update = 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid
         if not sickbeard.showQueueScheduler.action.isBeingAdded(showObj):  # @UndefinedVariable
             if not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
                 t.submenu.append(
@@ -5670,8 +5670,6 @@ class ConfigNotifications(Config):
             use_synoindex=None, use_synologynotifier=None, synologynotifier_notify_onsnatch=None,
             synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
             use_pytivo=None, pytivo_host=None, pytivo_share_name=None, pytivo_tivo_name=None,
-            # pytivo_notify_onsnatch=None, pytivo_notify_ondownload=None, pytivo_notify_onsubtitledownload=None,
-            # pytivo_update_library=None,
 
             use_boxcar2=None, boxcar2_notify_onsnatch=None, boxcar2_notify_ondownload=None,
             boxcar2_notify_onsubtitledownload=None, boxcar2_access_token=None, boxcar2_sound=None,
@@ -5893,10 +5891,6 @@ class ConfigNotifications(Config):
         sickbeard.PYTIVO_HOST = config.clean_host(pytivo_host)
         sickbeard.PYTIVO_SHARE_NAME = pytivo_share_name
         sickbeard.PYTIVO_TIVO_NAME = pytivo_tivo_name
-        # sickbeard.PYTIVO_NOTIFY_ONSNATCH = config.checkbox_to_value(pytivo_notify_onsnatch)
-        # sickbeard.PYTIVO_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pytivo_notify_ondownload)
-        # sickbeard.PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pytivo_notify_onsubtitledownload)
-        # sickbeard.PYTIVO_UPDATE_LIBRARY = config.checkbox_to_value(pytivo_update_library)
 
         sickbeard.USE_NMA = config.checkbox_to_value(use_nma)
         sickbeard.NMA_NOTIFY_ONSNATCH = config.checkbox_to_value(nma_notify_onsnatch)
@@ -5950,19 +5944,7 @@ class ConfigSubtitles(Config):
         if subtitles_finder_frequency == '' or subtitles_finder_frequency is None:
             subtitles_finder_frequency = 1
 
-        if use_subtitles == 'on' and not sickbeard.subtitlesFinderScheduler.isAlive():
-            sickbeard.subtitlesFinderScheduler.silent = False
-            sickbeard.subtitlesFinderScheduler.start()
-        else:
-            sickbeard.subtitlesFinderScheduler.stop.set()
-            sickbeard.subtitlesFinderScheduler.silent = True
-            logger.log(u'Waiting for the SUBTITLESFINDER thread to exit')
-            try:
-                sickbeard.subtitlesFinderScheduler.join(5)
-            except:
-                pass
-
-        sickbeard.USE_SUBTITLES = config.checkbox_to_value(use_subtitles)
+        config.change_USE_SUBTITLES(config.checkbox_to_value(use_subtitles))
         sickbeard.SUBTITLES_LANGUAGES = [lang.alpha2 for lang in subtitles.isValidLanguage(
             subtitles_languages.replace(' ', '').split(','))] if subtitles_languages != '' else ''
         sickbeard.SUBTITLES_DIR = subtitles_dir

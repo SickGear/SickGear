@@ -126,6 +126,10 @@
 * Remove Pushalot notifier
 * Remove XBMC notifier
 * Change a link to include webroot for "plot overview for this ended show"
+* Change Bulk Changes and Notifications save to be web_root setting aware
+* Change subtitle addons no longer need to be saved before Search Subtitles is enabled as a
+  forbidden action to reuse an exited FindSubtitles thread is no longer attempted
+* Fix tools menu not opening for some browsers
 
 
 [develop changelog]
