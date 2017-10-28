@@ -1278,7 +1278,7 @@ class Home(MainHandler):
                 + '<a href="%s/home/editShow?show=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>' % (
                     sickbeard.WEB_ROOT, show, show)
                 + ('', '<br>%s' % show_message)[0 < len(show_message)])
-        t.force_update = 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid
+        t.force_update = '%s/home/updateShow?show=%d&amp;force=1&amp;web=1' % (sickbeard.WEB_ROOT, showObj.indexerid)
         if not sickbeard.showQueueScheduler.action.isBeingAdded(showObj):  # @UndefinedVariable
             if not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
                 t.submenu.append(
