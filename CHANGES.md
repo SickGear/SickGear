@@ -125,6 +125,7 @@
 * Change order of notifiers in Notifications config tabs
 * Remove Pushalot notifier
 * Remove XBMC notifier
+* Change a link to include webroot for "plot overview for this ended show"
 
 
 [develop changelog]
