@@ -229,15 +229,21 @@ def change_USE_SUBTITLES(use_subtitles):
         return
 
     sickbeard.USE_SUBTITLES = use_subtitles
-    if sickbeard.USE_SUBTITLES:
+    if sickbeard.USE_SUBTITLES and not sickbeard.subtitlesFinderScheduler.isAlive():
+        sickbeard.subtitlesFinderScheduler = sickbeard.scheduler.Scheduler(
+            sickbeard.subtitles.SubtitlesFinder(),
+            cycleTime=datetime.timedelta(hours=sickbeard.SUBTITLES_FINDER_FREQUENCY),
+            threadName='FINDSUBTITLES', silent=False)
         sickbeard.subtitlesFinderScheduler.start()
     else:
         sickbeard.subtitlesFinderScheduler.stop.set()
-        logger.log(u'Waiting for the SUBTITLESFINDER thread to exit')
+        sickbeard.subtitlesFinderScheduler.silent = True
+        threadname = sickbeard.subtitlesFinderScheduler.name
         try:
             sickbeard.subtitlesFinderScheduler.join(10)
-        except:
-            pass
+            logger.log('Thread %s has exit' % threadname)
+        except RuntimeError:
+            logger.log('Fail, thread %s did not exit' % threadname)
 
 
 def CheckSection(CFG, sec):
