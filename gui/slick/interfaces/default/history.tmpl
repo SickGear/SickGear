@@ -1,10 +1,9 @@
-#import sickbeard
 #import datetime
 #import re
-#from sickbeard.common import *
-#from sickbeard import sbdatetime
-#from sickbeard import history
-#from sickbeard import providers
+
+#import sickbeard
+#from sickbeard import history, providers, sbdatetime
+#from sickbeard.common import Quality, statusStrings, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED, SUBTITLED, ARCHIVED, FAILED
 #from sickbeard.providers import generic
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
@@ -130,21 +129,21 @@
 			<tr>
         #set $curdatetime = $datetime.datetime.strptime(str($hItem['date']), $history.dateFormat)
 				<td><div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($curdatetime, show_seconds=True)</div><span class="sort-data">$time.mktime($curdatetime.timetuple())</span></td>
-				<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$hItem['showid']#season-$hItem['season']">$display_name#if 'proper' in $hItem['resource'].lower or 'repack' in $hItem['resource'].lower then ' <span class="quality Proper">Proper</span>' else ''#</a></td>
-				<td#echo ('', ' class="subtitles_column"')[SUBTITLED == $curStatus]#>
-        #if SUBTITLED == $curStatus
+				<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$hItem['showid']#season-$hItem['season']">$display_name#if $Quality.splitCompositeStatus($hItem['action'])[0] == $SNATCHED_PROPER then ' <span class="quality Proper">Proper</span>' else ''#</a></td>
+				<td#echo ('', ' class="subtitles_column"')[$SUBTITLED == $curStatus]#>
+        #if $SUBTITLED == $curStatus
 					<img width="16" height="11" src="$sbRoot/images/flags/<%= hItem["resource"][len(hItem["resource"])-6:len(hItem["resource"])-4] + '.png' %>">
         #end if
 					<span class="help" title="$os.path.basename($hItem["resource"])">$statusStrings[$curStatus]</span>
 				</td>
 				<td class="provider">
-        #if DOWNLOADED == $curStatus
+        #if $DOWNLOADED == $curStatus
             #if '-1' != $hItem['provider']
 					<span><i>$hItem['provider']</i></span>
             #end if
         #else
             #if 0 < $hItem['provider']
-                #if $curStatus in [SNATCHED, FAILED]
+                #if $curStatus in [$SNATCHED, $SNATCHED_PROPER, $SNATCHED_BEST, $FAILED]
                     #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
                     #if None is not $provider
 					<img src="$sbRoot/images/providers/<%= provider.image_name() %>" width="16" height="16" /><span>$provider.name</span>
@@ -196,20 +195,20 @@
         #for $action in reversed($hItem['actions'])
             #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
             #set $basename = $os.path.basename($action['resource'])
-            #if $curStatus in [SNATCHED, FAILED]
+            #if $curStatus in [$SNATCHED, $SNATCHED_PROPER, $SNATCHED_BEST, $FAILED]
                 #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($action['provider']))
                 #if None is not $provider
                     #set $prov_list += ['<span%s><img class="help" src="%s/images/providers/%s" width="16" height="16" alt="%s" title="%s.. %s: %s" /></span>'\
-                        % (('', ' class="fail"')[FAILED == $curStatus], $sbRoot, $provider.image_name(), $provider.name,
-                        ('%s%s' % ($order, 'th' if $order in [11, 12, 13] or str($order)[-1] not in $ordinal_indicators else $ordinal_indicators[str($order)[-1]]), 'Snatch failed')[FAILED == $curStatus],
+                        % (('', ' class="fail"')[$FAILED == $curStatus], $sbRoot, $provider.image_name(), $provider.name,
+                        ('%s%s' % ($order, 'th' if $order in [11, 12, 13] or str($order)[-1] not in $ordinal_indicators else $ordinal_indicators[str($order)[-1]]), 'Snatch failed')[$FAILED == $curStatus],
                         $provider.name, $basename)]
-                    #set $order += (0, 1)[SNATCHED == $curStatus]
+                    #set $order += (0, 1)[$curStatus in ($SNATCHED, $SNATCHED_PROPER, $SNATCHED_BEST)]
                 #else
 					#set $prov_list += ['<img src="%s/images/providers/missing.png" width="16" height="16" alt="missing provider" title="missing provider" />'\
 					    % $sbRoot]
                 #end if
             #end if
-            #if $curStatus in [DOWNLOADED, ARCHIVED]
+            #if $curStatus in [$DOWNLOADED, $ARCHIVED]
                 #set $match = $re.search('\-(\w+)\.\w{3}\Z', $basename)
                 #set $non_scene_note = ''
                 #if not $match
@@ -250,7 +249,7 @@
 				<td>
             #for $action in reversed($hItem['actions'])
                 #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
-                #if SUBTITLED == $curStatus
+                #if $SUBTITLED == $curStatus
 					<img src="$sbRoot/images/subtitles/<%= action['provider'] + '.png' %>" width="16" height="16" alt="$action['provider']" title="<%= action['provider'].capitalize() %>:$os.path.basename($action['resource'])" />
 					<span> / </span>
 					<img width="16" height="11" src="$sbRoot/images/flags/<%= action['resource'][len(action['resource'])-6:len(action['resource'])-4] + '.png' %>" style="vertical-align:middle !important">

@@ -418,6 +418,9 @@ class GenericProvider:
     def get_show(self, item, **kwargs):
         return None
 
+    def get_size_uid(self, item, **kwargs):
+        return -1, None
+
     def find_search_results(self, show, episodes, search_mode, manual_search=False, **kwargs):
 
         self._check_auth()
@@ -585,6 +588,10 @@ class GenericProvider:
             result.release_group = release_group
             result.content = None
             result.version = version
+            result.size, result.puid = self.get_size_uid(item, **kwargs)
+            result.is_repack, result.properlevel = Quality.get_proper_level(parse_result.extra_info_no_name,
+                                                                            parse_result.version, show_obj.is_anime,
+                                                                            check_is_repack=True)
 
             if 1 == len(ep_obj):
                 ep_num = ep_obj[0].episode
@@ -754,8 +761,8 @@ class NZBProvider(object, GenericProvider):
         search_terms = []
         regex = []
         if shows:
-            search_terms += ['.proper.', '.repack.']
-            regex += ['proper|repack']
+            search_terms += ['.proper.', '.repack.', '.real.']
+            regex += ['proper|repack', Quality.real_check]
             proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
         if anime:
             terms = 'v1|v2|v3|v4|v5'
@@ -1146,10 +1153,10 @@ class TorrentProvider(object, GenericProvider):
         """
         results = []
 
-        search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack'])
+        search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack', 'real'])
         if not isinstance(search_terms, list):
             if None is search_terms:
-                search_terms = 'proper|repack'
+                search_terms = 'proper|repack|real'
             search_terms = [search_terms]
 
         items = self._search_provider({'Propers': search_terms})

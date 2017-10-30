@@ -239,7 +239,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
     def find_propers(self, **kwargs):
 
-        search_terms = ['.PROPER.', '.REPACK.']
+        search_terms = ['.PROPER.', '.REPACK.', '.REAL.']
         results = []
 
         for term in search_terms:

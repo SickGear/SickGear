@@ -465,7 +465,7 @@ class FailedQueueItem(generic_queue.QueueItem):
                 failed_history.revert_episode(ep_obj)
                 if release:
                     failed_history.add_failed(release)
-                    history.logFailed(ep_obj, release, provider)
+                    history.log_failed(ep_obj, release, provider)
 
                 logger.log(u'Beginning failed download search for: [%s]' % ep_obj.prettyName())
 

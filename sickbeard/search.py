@@ -113,7 +113,7 @@ def snatch_episode(result, end_status=SNATCHED):
         for cur_ep in result.episodes:
             if datetime.date.today() - cur_ep.airdate <= datetime.timedelta(days=7):
                 result.priority = 1
-    if None is not re.search('(^|[. _-])(proper|repack)([. _-]|$)', result.name, re.I):
+    if 0 < result.properlevel:
         end_status = SNATCHED_PROPER
 
     # NZBs can be sent straight to SAB or saved to disk
@@ -123,8 +123,7 @@ def snatch_episode(result, end_status=SNATCHED):
         elif 'sabnzbd' == sickbeard.NZB_METHOD:
             dl_result = sab.send_nzb(result)
         elif 'nzbget' == sickbeard.NZB_METHOD:
-            is_proper = True if SNATCHED_PROPER == end_status else False
-            dl_result = nzbget.send_nzb(result, is_proper)
+            dl_result = nzbget.send_nzb(result)
         else:
             logger.log(u'Unknown NZB action specified in config: %s' % sickbeard.NZB_METHOD, logger.ERROR)
             dl_result = False
@@ -159,7 +158,7 @@ def snatch_episode(result, end_status=SNATCHED):
 
     ui.notifications.message(u'Episode snatched', result.name)
 
-    history.logSnatch(result)
+    history.log_snatch(result)
 
     # don't notify when we re-download an episode
     sql_l = []
@@ -230,14 +229,15 @@ def pick_best_result(results, show, quality_list=None):
             best_result = cur_result
 
         elif best_result.quality == cur_result.quality:
-            if re.search('(?i)(proper|repack)', cur_result.name) or \
-                    show.is_anime and re.search('(?i)(v1|v2|v3|v4|v5)', cur_result.name):
+            if cur_result.properlevel > best_result.properlevel and \
+                    (not cur_result.is_repack or cur_result.release_group == best_result.release_group):
                 best_result = cur_result
-            elif 'internal' in best_result.name.lower() and 'internal' not in cur_result.name.lower():
-                best_result = cur_result
-            elif 'xvid' in best_result.name.lower() and 'x264' in cur_result.name.lower():
-                logger.log(u'Preferring (x264 over xvid) [%s]' % cur_result.name)
-                best_result = cur_result
+            elif cur_result.properlevel == best_result.properlevel:
+                if 'xvid' in best_result.name.lower() and 'x264' in cur_result.name.lower():
+                    logger.log(u'Preferring (x264 over xvid) [%s]' % cur_result.name)
+                    best_result = cur_result
+                elif 'internal' in best_result.name.lower() and 'internal' not in cur_result.name.lower():
+                    best_result = cur_result
 
     if best_result:
         logger.log(u'Picked as the best [%s]' % best_result.name, logger.DEBUG)

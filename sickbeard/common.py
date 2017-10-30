@@ -120,6 +120,31 @@ class Quality:
                       FAILED: 'Failed',
                       SNATCHED_BEST: 'Snatched (Best)'}
 
+    real_check = r'\breal\b\W?(?=proper|repack|e?ac3|aac|dts|read\Wnfo|(ws\W)?[ph]dtv|(ws\W)?dsr|web|dvd|blu|\d{2,3}0(p|i))(?!.*\d+(e|x)\d+)'
+
+    proper_levels = [(re.compile(r'\brepack\b(?!.*\d+(e|x)\d+)', flags=re.I), True),
+                     (re.compile(r'\bproper\b(?!.*\d+(e|x)\d+)', flags=re.I), False),
+                     (re.compile(real_check, flags=re.I), False)]
+
+    @staticmethod
+    def get_proper_level(extra_no_name, version, is_anime=False, check_is_repack=False):
+        level = 0
+        is_repack = False
+        if is_anime:
+            if isinstance(version, (int, long)):
+                level = version
+            else:
+                level = 1
+        elif isinstance(extra_no_name, basestring):
+            for p, r_check in Quality.proper_levels:
+                a = len(p.findall(extra_no_name))
+                level += a
+                if 0 < a and r_check:
+                    is_repack = True
+        if check_is_repack:
+            return is_repack, level
+        return level
+
     @staticmethod
     def get_quality_css(quality):
         return (Quality.qualityStrings[quality].replace('2160p', 'UHD2160p').replace('1080p', 'HD1080p')

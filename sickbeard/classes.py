@@ -28,7 +28,7 @@ except ImportError:
     from requests.compat import OrderedDict
 
 
-class SearchResult:
+class SearchResult(object):
     """
     Represents a search result from an indexer.
     """
@@ -65,6 +65,24 @@ class SearchResult:
 
         # version
         self.version = -1
+
+        # proper level
+        self._properlevel = 0
+
+        # is a repack
+        self.is_repack = False
+
+        # provider unique id
+        self.puid = None
+
+    @property
+    def properlevel(self):
+        return self._properlevel
+
+    @properlevel.setter
+    def properlevel(self, v):
+        if isinstance(v, (int, long)):
+            self._properlevel = v
 
     def __str__(self):
 
@@ -248,10 +266,12 @@ class ShowListUI(ShowFilter):
 
 
 class Proper:
-    def __init__(self, name, url, date, show, parsed_show=None):
+    def __init__(self, name, url, date, show, parsed_show=None, size=-1, puid=None):
         self.name = name
         self.url = url
         self.date = date
+        self.size = size
+        self.puid = puid
         self.provider = None
         self.quality = Quality.UNKNOWN
         self.release_group = None

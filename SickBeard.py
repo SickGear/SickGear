@@ -438,6 +438,13 @@ class SickGear(object):
         startup_background_tasks = threading.Thread(name='FETCH-XEMDATA', target=sickbeard.scene_exceptions.get_xem_ids)
         startup_background_tasks.start()
 
+        # check history snatched_proper update
+        if not db.DBConnection().has_flag('history_snatch_proper'):
+            # noinspection PyUnresolvedReferences
+            history_snatched_proper_task = threading.Thread(name='UPGRADE-HISTORY-ACTION',
+                                                            target=sickbeard.history.history_snatched_proper_fix)
+            history_snatched_proper_task.start()
+
         if sickbeard.USE_FAILED_DOWNLOADS:
             failed_history.remove_old_history()
 
