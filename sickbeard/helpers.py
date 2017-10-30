@@ -1334,12 +1334,7 @@ def human(size):
 def get_size(start_path='.'):
     if ek.ek(os.path.isfile, start_path):
         return ek.ek(os.path.getsize, start_path)
-    total_size = 0
-    for dirpath, dirnames, filenames in ek.ek(os.walk, start_path):
-        for f in filenames:
-            fp = ek.ek(os.path.join, dirpath, f)
-            total_size += ek.ek(os.path.getsize, fp)
-    return total_size
+    return sum(map((lambda x: x.stat(follow_symlinks=False).st_size), scantree(start_path)))
 
 
 def remove_article(text=''):
