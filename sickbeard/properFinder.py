@@ -97,9 +97,9 @@ def get_old_proper_level(showObj, indexer, indexerid, season, episodes, old_stat
                 p = np.parse(result[0]['resource'])
             except (StandardError, Exception):
                 continue
-            level = Quality.get_proper_level(p.extra_info_no_name, p.version, showObj.is_anime)
-            is_internal = p.extra_info_no_name and re.search(r'\binternal\b', p.extra_info_no_name, flags=re.I)
-            codec = _get_codec(p.extra_info_no_name)
+            level = Quality.get_proper_level(p.extra_info_no_name(), p.version, showObj.is_anime)
+            is_internal = p.extra_info_no_name() and re.search(r'\binternal\b', p.extra_info_no_name(), flags=re.I)
+            codec = _get_codec(p.extra_info_no_name())
             break
     return level, is_internal, codec
 
@@ -158,13 +158,13 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
                         logger.log(u'Found new proper: ' + x.name, logger.DEBUG)
                         x.show = parse_result.show.indexerid
                         x.provider = cur_provider
-                        x.is_repack, x.properlevel = Quality.get_proper_level(parse_result.extra_info_no_name,
+                        x.is_repack, x.properlevel = Quality.get_proper_level(parse_result.extra_info_no_name(),
                                                                               parse_result.version,
                                                                               parse_result.is_anime,
                                                                               check_is_repack=True)
-                        x.is_internal = parse_result.extra_info_no_name and \
-                                        re.search(r'\binternal\b', parse_result.extra_info_no_name, flags=re.I)
-                        x.codec = _get_codec(parse_result.extra_info_no_name)
+                        x.is_internal = parse_result.extra_info_no_name() and \
+                                        re.search(r'\binternal\b', parse_result.extra_info_no_name(), flags=re.I)
+                        x.codec = _get_codec(parse_result.extra_info_no_name())
                         propers[name] = x
                         count += 1
                 except (InvalidNameException, InvalidShowException):
@@ -237,7 +237,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
         # only keep the proper if we have already retrieved the same quality ep (don't get better/worse ones)
         # don't take proper of the same level we already downloaded
         old_status, old_quality = Quality.splitCompositeStatus(int(sql_results[0]['status']))
-        cur_proper.is_repack, cur_proper.proper_level = Quality.get_proper_level(cur_proper.extra_info_no_name,
+        cur_proper.is_repack, cur_proper.proper_level = Quality.get_proper_level(cur_proper.extra_info_no_name(),
                                                                                  cur_proper.version,
                                                                                  cur_proper.is_anime,
                                                                                  check_is_repack=True)
@@ -252,7 +252,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
 
         np = NameParser(False, try_scene_exceptions=True, showObj=parse_result.show, indexer_lookup=False)
         try:
-            extra_info = np.parse(sql_results[0]['release_name']).extra_info_no_name
+            extra_info = np.parse(sql_results[0]['release_name']).extra_info_no_name()
         except (StandardError, Exception):
             extra_info = None
 

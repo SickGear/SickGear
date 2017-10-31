@@ -472,32 +472,6 @@ class NameParser(object):
 
         return number
 
-    @staticmethod
-    def _replace_ep_name_helper(e_i_n_n, n):
-        ep_regex = r'\W*%s\W*' % re.sub(r' ', r'\W', re.sub(r'[^a-zA-Z0-9 ]', r'\W?',
-                                                            re.sub(r'\W+$', '', n.strip())))
-        if None is regex:
-            return re.sub(ep_regex, '', e_i_n_n, flags=re.I)
-
-        return regex.sub(r'(%s){e<=%d}' % (
-            ep_regex, trunc(len(re.findall(r'\w', ep_regex)) / 5)), '', e_i_n_n, flags=regex.I | regex.B)
-
-    def _extra_info_no_name(self, extra_info, show, season, episodes):
-        extra_info_no_name = extra_info
-        if isinstance(extra_info_no_name, basestring) and show and hasattr(show, 'indexer'):
-            for e in episodes:
-                if not hasattr(show, 'getEpisode'):
-                    continue
-                ep = show.getEpisode(season, e)
-                if ep and isinstance(getattr(ep, 'name', None), basestring) and ep.name.strip():
-                    extra_info_no_name = self._replace_ep_name_helper(extra_info_no_name, ep.name)
-            if hasattr(show, 'getAllEpisodes'):
-                for e in [ep.name for ep in show.getAllEpisodes(check_related_eps=False) if getattr(ep, 'name', None)
-                          and re.search(r'real|proper|repack', ep.name, re.I)]:
-                    extra_info_no_name = self._replace_ep_name_helper(extra_info_no_name, e)
-
-        return extra_info_no_name
-
     def parse(self, name, cache_result=True):
         name = self._unicodify(name)
 
@@ -558,10 +532,6 @@ class NameParser(object):
         final_result.show = self._combine_results(file_name_result, dir_name_result, 'show')
         final_result.quality = self._combine_results(file_name_result, dir_name_result, 'quality')
 
-        final_result.extra_info_no_name = self._extra_info_no_name(final_result.extra_info, final_result.show,
-                                                                   final_result.season_number,
-                                                                   final_result.episode_numbers)
-
         if not final_result.show:
             if self.testing:
                 pass
@@ -594,8 +564,7 @@ class ParseResult(object):
                  show=None,
                  score=None,
                  quality=None,
-                 version=None,
-                 extra_info_no_name=None):
+                 version=None):
 
         self.original_name = original_name
 
@@ -617,7 +586,7 @@ class ParseResult(object):
             self.quality = quality
 
         self.extra_info = extra_info
-        self.extra_info_no_name = extra_info_no_name
+        self._extra_info_no_name = None
         self.release_group = release_group
 
         self.air_date = air_date
@@ -676,6 +645,37 @@ class ParseResult(object):
         to_return += ' [whichReg: %s]' % str(self.which_regex)
 
         return to_return.encode('utf-8')
+
+    @staticmethod
+    def _replace_ep_name_helper(e_i_n_n, n):
+        ep_regex = r'\W*%s\W*' % re.sub(r' ', r'\W', re.sub(r'[^a-zA-Z0-9 ]', r'\W?',
+                                                            re.sub(r'\W+$', '', n.strip())))
+        if None is regex:
+            return re.sub(ep_regex, '', e_i_n_n, flags=re.I)
+
+        return regex.sub(r'(%s){e<=%d}' % (
+            ep_regex, trunc(len(re.findall(r'\w', ep_regex)) / 5)), '', e_i_n_n, flags=regex.I | regex.B)
+
+    def get_extra_info_no_name(self):
+        extra_info_no_name = self.extra_info
+        if isinstance(extra_info_no_name, basestring) and self.show and hasattr(self.show, 'indexer'):
+            for e in self.episode_numbers:
+                if not hasattr(self.show, 'getEpisode'):
+                    continue
+                ep = self.show.getEpisode(self.season_number, e)
+                if ep and isinstance(getattr(ep, 'name', None), basestring) and ep.name.strip():
+                    extra_info_no_name = self._replace_ep_name_helper(extra_info_no_name, ep.name)
+            if hasattr(self.show, 'getAllEpisodes'):
+                for e in [ep.name for ep in self.show.getAllEpisodes(check_related_eps=False) if getattr(ep, 'name', None)
+                          and re.search(r'real|proper|repack', ep.name, re.I)]:
+                    extra_info_no_name = self._replace_ep_name_helper(extra_info_no_name, e)
+
+        return extra_info_no_name
+
+    def extra_info_no_name(self):
+        if None is self._extra_info_no_name and None is not self.extra_info:
+            self._extra_info_no_name = self.get_extra_info_no_name()
+        return self._extra_info_no_name
 
     @property
     def is_air_by_date(self):

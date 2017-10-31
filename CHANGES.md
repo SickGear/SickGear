@@ -150,6 +150,8 @@
 * Change prevent setting show/episode attr to None from indexer data
 * Fix article link color on some page were changed blue
 * Fix error after SG is updated and where Slack notifier is not enabled
+* Change reduce number of DB calls for extra_info_no_name
+* Add parse repack, proper level to recent search flow
 
 
 ### 0.12.35 (2017-10-27 20:30:00 UTC)

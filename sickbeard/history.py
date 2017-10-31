@@ -155,7 +155,7 @@ def history_snatched_proper_fix():
                     pr = np.parse(r['resource'])
                 except (StandardError, Exception):
                     continue
-                if 0 < Quality.get_proper_level(pr.extra_info_no_name, pr.version, pr.is_anime):
+                if 0 < Quality.get_proper_level(pr.extra_info_no_name(), pr.version, pr.is_anime):
                     cl.append(['UPDATE history SET action = ? WHERE rowid = ?',
                                [Quality.compositeStatus(SNATCHED_PROPER, int(r['quality'])),
                                 r['rowid']]])
