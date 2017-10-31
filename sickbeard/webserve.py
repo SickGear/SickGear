@@ -727,7 +727,7 @@ class Home(MainHandler):
         # Get all show snatched / downloaded / next air date stats
         myDB = db.DBConnection()
         today = datetime.date.today().toordinal()
-        status_quality = ','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER])
+        status_quality = ','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST])
         status_download = ','.join([str(x) for x in Quality.DOWNLOADED + [ARCHIVED]])
         status_total = '%s, %s, %s' % (SKIPPED, WANTED, FAILED)
 
@@ -3814,7 +3814,7 @@ class Manage(MainHandler):
     def showEpisodeStatuses(self, indexer_id, whichStatus):
         status_list = [int(whichStatus)]
         if status_list[0] == SNATCHED:
-            status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER
+            status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
 
         myDB = db.DBConnection()
         cur_show_results = myDB.select(
@@ -3841,7 +3841,7 @@ class Manage(MainHandler):
             whichStatus = int(whichStatus)
             status_list = [whichStatus]
             if status_list[0] == SNATCHED:
-                status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER
+                status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
         else:
             status_list = []
 
@@ -3852,7 +3852,7 @@ class Manage(MainHandler):
         my_db = db.DBConnection()
         sql_result = my_db.select(
             'SELECT COUNT(*) AS snatched FROM [tv_episodes] WHERE season > 0 AND episode > 0 AND airdate > 1 AND ' +
-            'status IN (%s)' % ','.join([str(quality) for quality in Quality.SNATCHED + Quality.SNATCHED_PROPER]))
+            'status IN (%s)' % ','.join([str(quality) for quality in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST]))
         t.default_manage = sql_result and sql_result[0]['snatched'] and SNATCHED or WANTED
 
         # if we have no status then this is as far as we need to go
@@ -3898,7 +3898,7 @@ class Manage(MainHandler):
     def changeEpisodeStatuses(self, oldStatus, newStatus, wantedStatus=sickbeard.common.UNKNOWN, *args, **kwargs):
         status_list = [int(oldStatus)]
         if status_list[0] == SNATCHED:
-            status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER
+            status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
 
         to_change = {}
 
