@@ -342,6 +342,18 @@ class TVCache:
             result.release_group = curReleaseGroup
             result.version = curVersion
             result.content = None
+            np = NameParser(False, showObj=showObj)
+            try:
+                parsed_result = np.parse(title)
+                extra_info_no_name = parsed_result.extra_info_no_name()
+                version = parsed_result.version
+                is_anime = parsed_result.is_anime
+            except (StandardError, Exception):
+                extra_info_no_name = None
+                version = -1
+                is_anime = False
+            result.is_repack, result.properlevel = Quality.get_proper_level(extra_info_no_name, version, is_anime,
+                                                                            check_is_repack=True)
 
             # add it to the list
             if epObj not in neededEps:

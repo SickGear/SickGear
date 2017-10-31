@@ -589,7 +589,7 @@ class GenericProvider:
             result.content = None
             result.version = version
             result.size, result.puid = self.get_size_uid(item, **kwargs)
-            result.is_repack, result.properlevel = Quality.get_proper_level(parse_result.extra_info_no_name,
+            result.is_repack, result.properlevel = Quality.get_proper_level(parse_result.extra_info_no_name(),
                                                                             parse_result.version, show_obj.is_anime,
                                                                             check_is_repack=True)
 
