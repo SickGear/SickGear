@@ -49,7 +49,7 @@
         $statusList.remove($int($whichStatus))
     #end if
 
-    #if $int($whichStatus) in [$common.SNATCHED, $common.SNATCHED_PROPER]
+    #if $int($whichStatus) in [$common.SNATCHED, $common.SNATCHED_PROPER, $common.SNATCHED_BEST]
         $statusList.append($common.FAILED)
     #end if
 

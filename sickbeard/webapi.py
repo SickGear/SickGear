@@ -36,7 +36,7 @@ from sickbeard import classes
 from sickbeard import processTV
 from sickbeard import network_timezones, sbdatetime
 from sickbeard.exceptions import ex
-from sickbeard.common import SNATCHED, SNATCHED_PROPER, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
+from sickbeard.common import SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
 from sickbeard.helpers import remove_article
 from common import Quality, qualityPresetStrings, statusStrings
 from sickbeard.indexers.indexer_config import *
@@ -2469,7 +2469,7 @@ class CMD_ShowStats(ApiCall):
         episode_status_counts_total = {}
         episode_status_counts_total["total"] = 0
         for status in statusStrings.statusStrings.keys():
-            if status in [UNKNOWN, DOWNLOADED, SNATCHED, SNATCHED_PROPER]:
+            if status in [UNKNOWN, DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST]:
                 continue
             episode_status_counts_total[status] = 0
 
@@ -2485,7 +2485,7 @@ class CMD_ShowStats(ApiCall):
         # add all snatched qualities
         episode_qualities_counts_snatch = {}
         episode_qualities_counts_snatch["total"] = 0
-        for statusCode in Quality.SNATCHED + Quality.SNATCHED_PROPER:
+        for statusCode in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST:
             status, quality = Quality.splitCompositeStatus(statusCode)
             if quality in [Quality.NONE]:
                 continue
@@ -2503,7 +2503,7 @@ class CMD_ShowStats(ApiCall):
             if status in Quality.DOWNLOADED:
                 episode_qualities_counts_download["total"] += 1
                 episode_qualities_counts_download[int(row["status"])] += 1
-            elif status in Quality.SNATCHED + Quality.SNATCHED_PROPER:
+            elif status in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST:
                 episode_qualities_counts_snatch["total"] += 1
                 episode_qualities_counts_snatch[int(row["status"])] += 1
             elif status == 0:  # we dont count NONE = 0 = N/A
@@ -2659,7 +2659,7 @@ class CMD_ShowsStats(ApiCall):
             0]
         stats["ep_total"] = myDB.select(
             "SELECT COUNT(*) FROM tv_episodes WHERE season != 0 AND episode != 0 AND (airdate != 1 OR status IN (" + ",".join(
-                [str(show) for show in (Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER) + [
+                [str(show) for show in (Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST) + [
                     ARCHIVED]]) + ")) AND airdate <= " + today + " AND status != " + str(IGNORED) + "")[0][0]
 
         return _responds(RESULT_SUCCESS, stats)

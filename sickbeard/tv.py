@@ -845,7 +845,7 @@ class TVShow(object):
                                % (Quality.qualityStrings[old_quality], Quality.qualityStrings[new_quality]), logger.DEBUG)
                     new_status = DOWNLOADED
 
-                elif old_status not in (SNATCHED, SNATCHED_PROPER):
+                elif old_status not in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST):
                     new_status = DOWNLOADED
 
                 if None is not new_status:
@@ -2011,7 +2011,7 @@ class TVEpisode(object):
         # if we have a media file then it's downloaded
         elif sickbeard.helpers.has_media_ext(self.location):
             # leave propers alone, you have to either post-process them or manually change them back
-            if self.status not in Quality.SNATCHED_PROPER + Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED]:
+            if self.status not in Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED]:
                 msg = '(1) Status changes from %s to ' % statusStrings[self.status]
                 self.status = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
                 logger.log('%s%s' % (msg, statusStrings[self.status]), logger.DEBUG)
