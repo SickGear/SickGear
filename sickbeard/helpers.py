@@ -1334,7 +1334,10 @@ def human(size):
 def get_size(start_path='.'):
     if ek.ek(os.path.isfile, start_path):
         return ek.ek(os.path.getsize, start_path)
-    return sum(map((lambda x: x.stat(follow_symlinks=False).st_size), scantree(start_path)))
+    try:
+        return sum(map((lambda x: x.stat(follow_symlinks=False).st_size), scantree(start_path)))
+    except OSError:
+        return 0
 
 
 def remove_article(text=''):
