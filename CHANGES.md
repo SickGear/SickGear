@@ -1,4 +1,9 @@
-﻿### 0.12.35 (2017-10-27 20:30:00 UTC)
+﻿### 0.12.36 (2017-11-01 11:45:00 UTC)
+
+* Change qBittorent to handle the change to its API success/fail response
+
+
+### 0.12.35 (2017-10-27 20:30:00 UTC)
 
 * Change and add some network logos
 
