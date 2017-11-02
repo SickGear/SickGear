@@ -19,7 +19,7 @@
 from sickbeard import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 3
+MAX_DB_VERSION = 4
 
 
 # Add new migrations at the bottom of the list; subclass the previous migration.
@@ -102,6 +102,29 @@ class AddBacklogParts(ConsolidateProviders):
             self.connection.action('DROP TABLE scene_exceptions_refresh')
         if self.hasTable('scene_exceptions'):
             self.connection.action('DROP TABLE scene_exceptions')
+        self.connection.action('VACUUM')
+
+        self.incDBVersion()
+
+
+class AddProviderErrors(AddBacklogParts):
+    def test(self):
+        return self.checkDBVersion() > 3
+
+    def execute(self):
+
+        db.backup_database('cache.db', self.checkDBVersion())
+        if not self.hasTable('providererrors'):
+            self.connection.action('CREATE TABLE providererrors ("prov_name" TEXT, "error_type" INTEGER, '
+                                   '"error_code" INTEGER, "error_time" NUMERIC)')
+            self.connection.action('CREATE INDEX idx_prov_name_error ON providererrors (prov_name)')
+            self.connection.action('CREATE UNIQUE INDEX idx_prov_errors ON providererrors (prov_name, error_time)')
+
+        if not self.hasTable('providererrorcount'):
+            self.connection.action('CREATE TABLE providererrorcount (prov_name TEXT PRIMARY KEY , '
+                                   'failure_count NUMERIC, failure_time NUMERIC, hit_limit_count NUMERIC, '
+                                   'hit_limit_time NUMERIC, hit_limit_wait NUMERIC)')
+
         self.connection.action('VACUUM')
 
         self.incDBVersion()

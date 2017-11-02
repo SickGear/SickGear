@@ -1,4 +1,4 @@
-$(document).ready(function() { 
+$(document).ready(function() {
 	$('#recentsearch,#propersearch').click(function(){
 		$(this).addClass('disabled');
 	})
@@ -29,5 +29,16 @@ $(document).ready(function() {
 		$(this).nextAll('table:first').show();
 		$(this).hide();
 		$(this).nextAll('input:first').show();
+	})
+	$('.prov-retry').click(function () {
+		$(this).addClass('disabled');
+		var match = $(this).attr('id').match(/^(.+)-btn-retry$/);
+		$.ajax({
+			url: sbRoot + '/manage/manageSearches/retryProvider?provider=' + match[1],
+			type: 'GET',
+			complete: function () {
+				window.location.reload(true);
+            }
+		});
 	})
 });

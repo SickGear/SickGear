@@ -1,4 +1,5 @@
 #import sickbeard
+#from sickbeard import sbdatetime
 ##
 #set global $title = 'Media Search'
 #set global $header = 'Media Search'
@@ -7,6 +8,7 @@
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+<input type="hidden" id="sbRoot" value="$sbRoot">
 
 <script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/manageSearches.js?v=$sbPID"></script>
@@ -46,9 +48,45 @@
 		In Progress<br />
 #end if
 		<br />
-
+#if $provider_errors
+<h3>Provider Errors:</h3><br>
+#for $prov in $provider_error_stats
+	#if $len($prov['errors'])
+		$prov['name']<input type="button" class="shows-more btn" id="$prov['name']-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="$prov['name']-btn-less" value="Collapse">
+		#if $prov['next_try']
+		#set nt = $str($prov['next_try']).split('.', 2)
+		Next try in: $nt[0] <input type="button" class="prov-retry btn" id="$prov['prov_id']-btn-retry" value="Retry">
+		#end if
+		<br>
+		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+			<thead><th>Day</th><th>http</th><th>connection</th><th>connection timeout</th><th>timeout</th><th>unknown</th><th>no data</th>
+			#if $prov['has_limit']
+			<th>Hit Limit</th>
+			#end if
+			</thead>
+			<tbody>
+			#set $row = 0
+		#for $error in $prov['errors']
+			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+				<td style="color:white">$sbdatetime.sbdatetime.sbfdate($error['date'])</td>
+				<td style="color:white">$error['http'].get('count', 0)</td>
+				<td style="color:white">$error['connection'].get('count', 0)</td>
+				<td style="color:white">$error['connection_timeout'].get('count', 0)</td>
+				<td style="color:white">$error['timeout'].get('count', 0)</td>
+				<td style="color:white">$error['unknown'].get('count', 0)</td>
+				<td style="color:white">$error['nodata'].get('count', 0)</td>
+				#if $prov['has_limit']
+				<td style="color:white">$error.get('limit', {}).get('count', 0)</td>
+				#end if
+			</tr>
+		#end for
+			</tbody>
+		</table>
+	#end if
+#end for
+<br>
 		<br /><br />
-
+#end if
 		<h3>Search Queue:</h3>
 #if $queue_length['backlog'] or $queue_length['manual'] or $queue_length['failed']
 		<input type="button" class="show-all-more btn" id="all-btn-more" value="Expand All"><input type="button" class="show-all-less btn" id="all-btn-less" value="Collapse All"><br>

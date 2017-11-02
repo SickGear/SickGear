@@ -99,7 +99,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
     def get_data(self, url):
         result = None
         if url and False is self._init_api():
-            data = self.get_url(url, timeout=90)
+            data = self.getURL(url, timeout=90)
             if data:
                 if re.search('(?i)limit.*?reached', data):
                     logger.log('Daily Nzb Download limit reached', logger.DEBUG)
@@ -137,6 +137,9 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         return cats
 
     def cache_data(self, needed=neededQualities(need_all=True), **kwargs):
+
+        if self.should_skip():
+            return []
 
         api_key = self._init_api()
         if False is api_key:
@@ -182,7 +185,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
             search_url = self.urls['search'] % urllib.urlencode(params)
 
-            data_json = self.get_url(search_url, json=True)
+            data_json = self.getURL(search_url, json=True)
             if data_json and self._check_auth_from_data(data_json, is_xml=False):
                 for item in data_json:
                     if 'release' in item and 'getnzb' in item:
@@ -210,7 +213,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                                                              'cat': 'cat=(?:%s)' % '|'.join(cats)}.items())
         mode = ('search', 'cache')['' == search]
         search_url = self.urls[mode + '_html'] % search
-        html = self.get_url(search_url)
+        html = self.getURL(search_url)
         cnt = len(results)
         try:
             if not html:
@@ -254,6 +257,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         search_terms = ['.PROPER.', '.REPACK.', '.REAL.']
         results = []
+        if self.should_skip():
+            return results
 
         for term in search_terms:
             for item in self._search_provider(term, search_mode='Propers', retention=4):
@@ -271,6 +276,9 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         return results
 
     def _init_api(self):
+
+        if self.should_skip():
+            return None
 
         try:
             api_key = self._check_auth()

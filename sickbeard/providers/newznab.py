@@ -28,7 +28,7 @@ from math import ceil
 from sickbeard.sbdatetime import sbdatetime
 from . import generic
 from sickbeard import helpers, logger, tvcache, classes, db
-from sickbeard.common import neededQualities, Quality
+from sickbeard.common import neededQualities, Quality, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED
 from sickbeard.exceptions import AuthException, MultipleShowObjectsException
 from sickbeard.indexers.indexer_config import *
 from io import BytesIO
@@ -187,13 +187,13 @@ class NewznabProvider(generic.NZBProvider):
             if datetime.date.today() - self._caps_need_apikey['date'] > datetime.timedelta(days=30) or \
                     not self._caps_need_apikey['need']:
                 self._caps_need_apikey['need'] = False
-                data = self.get_url('%s/api?t=caps' % self.url)
+                data = self.getURL('%s/api?t=caps' % self.url)
                 if data:
                     xml_caps = helpers.parse_xml(data)
             if xml_caps is None or not hasattr(xml_caps, 'tag') or xml_caps.tag == 'error' or xml_caps.tag != 'caps':
                 api_key = self.maybe_apikey()
                 if isinstance(api_key, basestring) and api_key not in ('0', ''):
-                    data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, api_key))
+                    data = self.getURL('%s/api?t=caps&apikey=%s' % (self.url, api_key))
                     if data:
                         xml_caps = helpers.parse_xml(data)
                         if xml_caps and hasattr(xml_caps, 'tag') and xml_caps.tag == 'caps':
@@ -291,6 +291,11 @@ class NewznabProvider(generic.NZBProvider):
             return [x for x in cats if x['id'] not in self.excludes]
         return ','.join(set(cats.split(',')) - self.excludes)
 
+    def _check_auth(self, is_required=None):
+        if self.should_skip():
+            return False
+        return super(NewznabProvider, self)._check_auth(is_required)
+
     def check_auth_from_data(self, data):
 
         if data is None or not hasattr(data, 'tag'):
@@ -306,6 +311,24 @@ class NewznabProvider(generic.NZBProvider):
                 raise AuthException('Your account on %s has been suspended, contact the admin.' % self.name)
             elif '102' == code:
                 raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.' % self.name)
+            elif '500' == code:
+                self.hit_limit_time = datetime.datetime.now()
+                self.hit_limit_count += 1
+                retry_time = re.search(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)
+                if retry_time:
+                    if retry_time.group(2) in ('s', 'sec', 'secs', 'seconds', 'second'):
+                        self.hit_limit_wait = datetime.timedelta(seconds=helpers.tryInt(retry_time.group(1)))
+                    elif retry_time.group(2) in ('m', 'min', 'mins', 'minutes', 'minute'):
+                        self.hit_limit_wait = datetime.timedelta(minutes=helpers.tryInt(retry_time.group(1)))
+                    elif retry_time.group(2) in ('h', 'hr', 'hrs', 'hours', 'hour'):
+                        self.hit_limit_wait = datetime.timedelta(hours=helpers.tryInt(retry_time.group(1)))
+                    elif retry_time.group(2) in ('d', 'days', 'day'):
+                        self.hit_limit_wait = datetime.timedelta(days=helpers.tryInt(retry_time.group(1)))
+                if not self.hit_limit_wait:
+                    fc = self.fail_time_index(base_limit=0)
+                    self.hit_limit_wait = self.wait_time(fc)
+                logger.log('Request limit reached. Waiting for %s until next retry. Message: %s' %
+                           (self.hit_limit_wait, description), logger.WARNING)
             elif '910' == code:
                 logger.log(
                     '%s %s, please check with provider.' %
@@ -316,6 +339,7 @@ class NewznabProvider(generic.NZBProvider):
                            logger.WARNING)
             return False
 
+        self.hit_limit_count = 0
         return True
 
     def config_str(self):
@@ -530,15 +554,20 @@ class NewznabProvider(generic.NZBProvider):
                 (hits_per_page * 100 // hits_per_page * 2, hits_per_page * int(ceil(rel_limit * 1.5)))[season_search])
 
     def find_search_results(self, show, episodes, search_mode, manual_search=False, try_other_searches=False, **kwargs):
-        self._check_auth()
+        check = self._check_auth()
+        results = {}
+        if (isinstance(check, bool) and not check) or self.should_skip():
+            return results
+
         self.show = show
 
-        results = {}
         item_list = []
         name_space = {}
 
         searched_scene_season = s_mode = None
         for ep_obj in episodes:
+            if self.should_skip(log_warning=False):
+                break
             # skip if season already searched
             if (s_mode or 'sponly' == search_mode) and 1 < len(episodes) \
                     and searched_scene_season == ep_obj.scene_season:
@@ -577,6 +606,8 @@ class NewznabProvider(generic.NZBProvider):
                                                        try_all_searches=try_other_searches)
                 item_list += items
                 name_space.update(n_space)
+                if self.should_skip():
+                    break
 
         return self.finish_find_search_results(
             show, episodes, search_mode, manual_search, results, item_list, name_space=name_space)
@@ -617,7 +648,13 @@ class NewznabProvider(generic.NZBProvider):
     def _search_provider(self, search_params, needed=neededQualities(need_all=True), max_items=400,
                          try_all_searches=False, **kwargs):
 
+        results, n_spaces = [], {}
+        if self.should_skip():
+            return results, n_spaces
+
         api_key = self._check_auth()
+        if isinstance(api_key, bool) and not api_key:
+            return results, n_spaces
 
         base_params = {'t': 'tvsearch',
                        'maxage': sickbeard.USENET_RETENTION or 0,
@@ -644,7 +681,12 @@ class NewznabProvider(generic.NZBProvider):
         cat_webdl = self.cats.get(NewznabConstants.CAT_WEBDL)
 
         for mode in search_params.keys():
+            if self.should_skip(log_warning=False):
+                break
             for i, params in enumerate(search_params[mode]):
+
+                if self.should_skip(log_warning=False):
+                    break
 
                 # category ids
                 cat = []
@@ -697,7 +739,10 @@ class NewznabProvider(generic.NZBProvider):
                         search_url = '%sapi?%s' % (self.url, urllib.urlencode(request_params))
                     i and time.sleep(2.1)
 
-                    data = helpers.getURL(search_url)
+                    data = self.getURL(search_url)
+
+                    if self.should_skip():
+                        break
 
                     if not data:
                         logger.log('No Data returned from %s' % self.name, logger.WARNING)
@@ -794,6 +839,10 @@ class NewznabProvider(generic.NZBProvider):
         results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show) for x in
                    cache_results]
 
+        check = self._check_auth()
+        if isinstance(check, bool) and not check:
+            return results
+
         index = 0
         alt_search = ('nzbs_org' == self.get_id())
         do_search_alt = False
@@ -812,6 +861,9 @@ class NewznabProvider(generic.NZBProvider):
 
         urls = []
         while index < len(search_terms):
+            if self.should_skip(log_warning=False):
+                break
+
             search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
             if alt_search:
 
@@ -885,8 +937,11 @@ class NewznabCache(tvcache.TVCache):
         if 4489 != sickbeard.RECENTSEARCH_FREQUENCY or self.should_update():
             n_spaces = {}
             try:
-                self._checkAuth()
-                (items, n_spaces) = self.provider.cache_data(needed=needed)
+                check = self._checkAuth()
+                if isinstance(check, bool) and not check:
+                    items = None
+                else:
+                    (items, n_spaces) = self.provider.cache_data(needed=needed)
             except (StandardError, Exception):
                 items = None
 

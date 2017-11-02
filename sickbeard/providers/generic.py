@@ -27,6 +27,7 @@ import re
 import time
 import urlparse
 import threading
+import socket
 from urllib import quote_plus
 import zlib
 from base64 import b16encode, b32decode
@@ -45,13 +46,124 @@ from sickbeard.exceptions import SickBeardException, AuthException, ex
 from sickbeard.helpers import maybe_plural, remove_file_failed
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard.show_name_helpers import get_show_names_all_possible
-
+from sickbeard.sbdatetime import sbdatetime
 
 class HaltParseException(SickBeardException):
     """Something requires the current processing to abort"""
 
 
-class GenericProvider:
+class ProviderErrorTypes:
+    http = 1
+    connection = 2
+    connection_timeout = 3
+    timeout = 4
+    unknown = 5
+    limit = 6
+    nodata = 7
+
+    names = {1: 'http', 2: 'connection', 3: 'connection_timeout', 4: 'timeout', 5: 'unknown', 6: 'limit', 7: 'nodata'}
+
+    def __init__(self):
+        pass
+
+
+class ProviderError(object):
+    def __init__(self, error_type=ProviderErrorTypes.unknown, code=None, error_time=None):
+        self.code = code
+        self.error_type = error_type
+        self.error_time = (datetime.datetime.now(), error_time)[isinstance(error_time, datetime.datetime)]
+
+
+class ProviderErrorList(object):
+    def __init__(self, provider_name):
+        self.provider_name = provider_name
+        self._errors = []
+        self.lock = threading.Lock()
+        self.clear_old()
+        self.load_list()
+        self.last_save = datetime.datetime.now()
+        self.dirty = False
+
+    @property
+    def errors(self):
+        return self._errors
+
+    @property
+    def errors_sorted(self):
+        error_dict = {}
+        b_d = {'count': 0, 'code': None}
+        for e in self._errors:
+            dd = e.error_time.date()
+            if ProviderErrorTypes.names[e.error_type] not in error_dict.get(dd, {}):
+                error_dict.setdefault(dd,
+                                      {'date': dd, 'http': b_d.copy(), 'connection': b_d.copy(),
+                                       'connection_timeout': b_d.copy(), 'timeout': b_d.copy(),
+                                       'unknown': b_d.copy(), 'limit': b_d.copy(),
+                                       'nodata': b_d.copy()})[ProviderErrorTypes.names[e.error_type]]['count'] = 1
+            else:
+                error_dict[dd][ProviderErrorTypes.names[e.error_type]]['count'] += 1
+            if ProviderErrorTypes.http == e.error_type:
+                if e.code in error_dict[dd].get(ProviderErrorTypes.names[e.error_type], {}):
+                    error_dict[dd][ProviderErrorTypes.names[e.error_type]][e.code] += 1
+                else:
+                    error_dict[dd][ProviderErrorTypes.names[e.error_type]][e.code] = 1
+        error_list = sorted([error_dict[k] for k in error_dict.iterkeys()], key=lambda x: x.get('date'), reverse=True)
+        return error_list
+
+    def add_error(self, error):
+        if isinstance(error, ProviderError):
+            with self.lock:
+                self.dirty = True
+                self._errors.append(error)
+                logger.log('Adding error: %s for %s' %
+                           (ProviderErrorTypes.names.get(error.error_type, 'unknown'), self.provider_name()),
+                           logger.DEBUG)
+            self.save_list()
+
+    def save_list(self):
+        if self.dirty:
+            self.clear_old()
+            with self.lock:
+                myDB = db.DBConnection('cache.db')
+                cl = []
+                for e in self._errors:
+                    cl.append(['INSERT OR IGNORE INTO providererrors (prov_name, error_type, error_code, error_time) '
+                               'VALUES (?,?,?,?)', [self.provider_name(), e.error_type, e.code,
+                                                    sbdatetime.totimestamp(e.error_time)]])
+                self.dirty = False
+                if cl:
+                    myDB.mass_action(cl)
+        self.last_save = datetime.datetime.now()
+
+    def load_list(self):
+        with self.lock:
+            try:
+                myDB = db.DBConnection('cache.db')
+                if myDB.hasTable('providererrors'):
+                    results = myDB.select('SELECT * FROM providererrors WHERE prov_name = ?', [self.provider_name()])
+                    self._errors = []
+                    for r in results:
+                        try:
+                            self._errors.append(ProviderError(
+                                error_type=helpers.tryInt(r['error_type']), code=helpers.tryInt(r['error_code']),
+                                error_time=datetime.datetime.fromtimestamp(helpers.tryInt(r['error_time']))))
+                        except (StandardError, Exception):
+                            continue
+            except (StandardError, Exception):
+                pass
+
+    def clear_old(self):
+        with self.lock:
+            try:
+                myDB = db.DBConnection('cache.db')
+                if myDB.hasTable('providererrors'):
+                    time_limit = sbdatetime.totimestamp(datetime.datetime.now() - datetime.timedelta(days=28))
+                    myDB.action('DELETE FROM providererrors WHERE error_time < ?', [time_limit])
+            except (StandardError, Exception):
+                pass
+
+
+class GenericProvider(object):
     NZB = 'nzb'
     TORRENT = 'torrent'
 
@@ -85,6 +197,226 @@ class GenericProvider:
             # 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
             #              'Chrome/32.0.1700.107 Safari/537.36'}
             'User-Agent': USER_AGENT}
+
+        self._failure_count = 0
+        self._failure_time = None
+        self.errors = ProviderErrorList(self.get_id)
+        self._hit_limit_count = 0
+        self._hit_limit_time = None
+        self._hit_limit_wait = None
+        self._last_error_type = None
+        self.has_limit = False
+        self.fail_times = {1: (0, 15), 2: (0, 30), 3: (1, 0), 4: (2, 0), 5: (3, 0), 6: (6, 0), 7: (12, 0), 8: (24, 0)}
+        self._load_error_values()
+
+    def _load_error_values(self):
+        if hasattr(sickbeard, 'DATA_DIR'):
+            myDB = db.DBConnection('cache.db')
+            if myDB.hasTable('providererrorcount'):
+                r = myDB.select('SELECT * FROM providererrorcount WHERE prov_name = ?', [self.get_id()])
+                if r:
+                    self._failure_count = helpers.tryInt(r[0]['failure_count'], 0)
+                    if r[0]['failure_time']:
+                        self._failure_time = datetime.datetime.fromtimestamp(r[0]['failure_time'])
+                    else:
+                        self._failure_time = None
+                    self._hit_limit_count = helpers.tryInt(r[0]['hit_limit_count'], 0)
+                    if r[0]['hit_limit_time']:
+                        self._hit_limit_time = datetime.datetime.fromtimestamp(r[0]['hit_limit_time'])
+                    else:
+                        self._hit_limit_time = None
+                    if r[0]['hit_limit_wait']:
+                        self._hit_limit_wait = datetime.timedelta(seconds=helpers.tryInt(r[0]['hit_limit_wait'], 0))
+                    else:
+                        self._hit_limit_wait = None
+                self._last_error_type = self.last_error
+
+    def _save_error_value(self, field, value):
+        myDB = db.DBConnection('cache.db')
+        if myDB.hasTable('providererrorcount'):
+            r = myDB.action('UPDATE providererrorcount SET %s = ? WHERE prov_name = ?' % field, [value, self.get_id()])
+            if 0 == r.rowcount:
+                myDB.action('REPLACE INTO providererrorcount (prov_name, %s) VALUES (?,?)' % field,
+                            [self.get_id(), value])
+
+    @property
+    def last_error(self):
+        try:
+            return sorted(self.errors.errors, key=lambda x: x.error_time, reverse=True)[0].error_type
+        except (StandardError, Exception):
+            return None
+
+    @property
+    def failure_count(self):
+        return self._failure_count
+
+    @failure_count.setter
+    def failure_count(self, value):
+        changed_val = self._failure_count != value
+        self._failure_count = value
+        if changed_val:
+            self._save_error_value('failure_count', value)
+
+    @property
+    def failure_time(self):
+        return self._failure_time
+
+    @failure_time.setter
+    def failure_time(self, value):
+        if None is value or isinstance(value, datetime.datetime):
+            changed_val = self._failure_time != value
+            self._failure_time = value
+            if None is value:
+                v = value
+            else:
+                v = sbdatetime.totimestamp(value)
+            if changed_val:
+                self._save_error_value('failure_time', v)
+
+    @property
+    def hit_limit_count(self):
+        return self._hit_limit_count
+
+    @hit_limit_count.setter
+    def hit_limit_count(self, value):
+        changed_val = self._hit_limit_count != value
+        self._hit_limit_count = value
+        if changed_val:
+            self._save_error_value('hit_limit_count', value)
+
+    @property
+    def hit_limit_time(self):
+        return self._hit_limit_time
+
+    @hit_limit_time.setter
+    def hit_limit_time(self, value):
+        if None is value or isinstance(value, datetime.datetime):
+            changed_val = self._hit_limit_time != value
+            self._hit_limit_time = value
+            if None is value:
+                v = value
+            else:
+                v = sbdatetime.totimestamp(value)
+            if changed_val:
+                self._save_error_value('hit_limit_time', v)
+
+    @property
+    def max_index(self):
+        return len(self.fail_times)
+
+    @property
+    def hit_limit_wait(self):
+        return self._hit_limit_wait
+
+    @hit_limit_wait.setter
+    def hit_limit_wait(self, value):
+        if isinstance(getattr(self, 'errors', None), ProviderErrorList) and isinstance(value, datetime.timedelta):
+            self.errors.add_error(ProviderError(error_type=ProviderErrorTypes.limit))
+        changed_val = self._hit_limit_wait != value
+        self._hit_limit_wait = value
+        if changed_val:
+            if None is value:
+                self._save_error_value('hit_limit_wait', value)
+            elif isinstance(value, datetime.timedelta):
+                self._save_error_value('hit_limit_wait', value.total_seconds())
+
+    def fail_time_index(self, base_limit=2):
+        i = self.failure_count - base_limit
+        return (i, self.max_index)[i >= self.max_index]
+
+    def wait_time(self, fc):
+        return datetime.timedelta(hours=self.fail_times[fc][0], minutes=self.fail_times[fc][1])
+
+    @property
+    def get_next_try_time(self):
+        n = None
+        h = datetime.timedelta(seconds=0)
+        f = datetime.timedelta(seconds=0)
+        if isinstance(self.hit_limit_wait, datetime.timedelta) and isinstance(self.hit_limit_time, datetime.datetime):
+            h = self.hit_limit_time + self.hit_limit_wait - datetime.datetime.now()
+        if 3 <= self.failure_count and isinstance(self.failure_time, datetime.datetime):
+            fc = self.fail_time_index()
+            if datetime.datetime.now() - self.failure_time < self.wait_time(fc):
+                h = self.failure_time + self.wait_time(fc) - datetime.datetime.now()
+        if datetime.timedelta(seconds=0) < max((h, f)):
+            n = max((h, f))
+        return n
+
+    def retry_next(self):
+        if isinstance(self.hit_limit_wait, datetime.timedelta) and isinstance(self.hit_limit_time, datetime.datetime):
+            self.hit_limit_time = datetime.datetime.now() - self.hit_limit_wait
+        if 3 <= self.failure_count and isinstance(self.failure_time, datetime.datetime):
+            fc = self.fail_time_index()
+            if datetime.datetime.now() - self.failure_time < self.wait_time(fc):
+                self.failure_time = datetime.datetime.now() - self.wait_time(fc)
+
+    def should_skip(self, log_warning=True):
+        if isinstance(self.hit_limit_wait, datetime.timedelta) and isinstance(self.hit_limit_time, datetime.datetime):
+            time_left = self.hit_limit_time + self.hit_limit_wait - datetime.datetime.now()
+            if time_left > datetime.timedelta(seconds=0):
+                if log_warning:
+                    logger.log('Hit limited reached, waiting for %s' % time_left, logger.WARNING)
+                return True
+            else:
+                self.hit_limit_time = None
+                self.hit_limit_wait = None
+        if 3 <= self.failure_count:
+            if None is self.failure_time:
+                self.failure_time = datetime.datetime.now()
+            fc = self.fail_time_index()
+            if datetime.datetime.now() - self.failure_time < self.wait_time(fc):
+                if log_warning:
+                    time_left = self.wait_time(fc) - (datetime.datetime.now() - self.failure_time)
+                    logger.log('Failed %s times, skipping provider for %s' % (self.failure_count, time_left),
+                               logger.WARNING)
+                return True
+        return False
+
+    def inc_failure_count(self, *args, **kwargs):
+        error_type = ('error_type' in kwargs and kwargs['error_type'].error_type) or \
+                     (isinstance(args, tuple) and isinstance(args[0], ProviderError) and args[0].error_type)
+        if not isinstance(self.failure_time, datetime.datetime) or \
+                error_type != self._last_error_type or \
+                datetime.datetime.now() - self.failure_time > datetime.timedelta(seconds=3):
+            self.failure_count += 1
+            self.failure_time = datetime.datetime.now()
+            self._last_error_type = error_type
+            self.errors.add_error(*args, **kwargs)
+        else:
+            logger.log('%s: Not logging same error within 3 seconds' % self.name, logger.DEBUG)
+
+    def getURL(self, *args, **kwargs):
+        data = None
+
+        # check for auth
+        if not self._authorised() or self.should_skip():
+            return data
+
+        kwargs['raise_exceptions'] = True
+        kwargs['raise_status_code'] = True
+
+        try:
+            data = helpers.getURL(*args, **kwargs)
+            if data:
+                if 0 != self.failure_count:
+                    logger.log('Unblocking provider: %s' % self.get_id(), logger.DEBUG)
+                self.failure_count = 0
+                self.failure_time = None
+            else:
+                self.inc_failure_count(ProviderError(error_type=ProviderErrorTypes.nodata))
+        except requests.exceptions.HTTPError as e:
+            self.inc_failure_count(ProviderError(error_type=ProviderErrorTypes.http, code=e.response.status_code))
+        except requests.exceptions.ConnectionError as e:
+            self.inc_failure_count(ProviderError(error_type=ProviderErrorTypes.connection))
+        except requests.exceptions.ReadTimeout as e:
+            self.inc_failure_count(ProviderError(error_type=ProviderErrorTypes.timeout))
+        except (requests.exceptions.Timeout, socket.timeout) as e:
+            self.inc_failure_count(ProviderError(error_type=ProviderErrorTypes.connection_timeout))
+        except (StandardError, Exception) as e:
+            self.inc_failure_count(ProviderError(error_type=ProviderErrorTypes.unknown))
+
+        self.errors.save_list()
+        return data
 
     def get_id(self):
         return GenericProvider.make_id(self.name)
@@ -428,9 +760,13 @@ class GenericProvider:
 
         results = {}
         item_list = []
+        if self.should_skip():
+            return results
 
         searched_scene_season = None
         for ep_obj in episodes:
+            if self.should_skip(log_warning=False):
+                break
             # search cache for episode result
             cache_result = self.cache.searchCache(ep_obj, manual_search)
             if cache_result:
@@ -457,6 +793,8 @@ class GenericProvider:
 
             for cur_param in search_params:
                 item_list += self._search_provider(cur_param, search_mode=search_mode, epcount=len(episodes))
+                if self.should_skip():
+                    break
 
         return self.finish_find_search_results(show, episodes, search_mode, manual_search, results, item_list)
 
@@ -649,10 +987,11 @@ class GenericProvider:
         :param count: count of successfully processed items
         :param url: source url of item(s)
         """
-        str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
-        logger.log(u'%s %s in response from %s' % (('No' + str1, count)[0 < count], (
-            '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
-            re.sub('(\s)\s+', r'\1', url)))
+        if not self.should_skip():
+            str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
+            logger.log(u'%s %s in response from %s' % (('No' + str1, count)[0 < count], (
+                '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
+                re.sub('(\s)\s+', r'\1', url)))
 
     def check_auth_cookie(self):
 
@@ -723,12 +1062,13 @@ class GenericProvider:
                 return
 
 
-class NZBProvider(object, GenericProvider):
+class NZBProvider(GenericProvider):
 
     def __init__(self, name, supports_backlog=True, anime_only=False):
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
 
         self.providerType = GenericProvider.NZB
+        self.has_limit = True
 
     def image_name(self):
 
@@ -757,6 +1097,9 @@ class NZBProvider(object, GenericProvider):
         results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show) for x in
                    cache_results]
 
+        if self.should_skip():
+            return results
+
         index = 0
         alt_search = ('nzbs_org' == self.get_id())
         do_search_alt = False
@@ -775,6 +1118,9 @@ class NZBProvider(object, GenericProvider):
 
         urls = []
         while index < len(search_terms):
+            if self.should_skip(log_warning=False):
+                break
+
             search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
             if alt_search:
 
@@ -817,7 +1163,7 @@ class NZBProvider(object, GenericProvider):
         return self._search_provider(search_params=search_params, **kwargs)
 
 
-class TorrentProvider(object, GenericProvider):
+class TorrentProvider(GenericProvider):
 
     def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=None, update_freq=None):
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
@@ -1153,6 +1499,8 @@ class TorrentProvider(object, GenericProvider):
         :return: list of Proper objects
         """
         results = []
+        if self.should_skip():
+            return results
 
         search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack', 'real'])
         if not isinstance(search_terms, list):
@@ -1164,9 +1512,14 @@ class TorrentProvider(object, GenericProvider):
 
         clean_term = re.compile(r'(?i)[^a-z1-9|.]+')
         for proper_term in search_terms:
+            if self.should_skip(log_warning=False):
+                break
 
             proper_check = re.compile(r'(?i)(?:%s)' % clean_term.sub('', proper_term))
             for item in items:
+                if self.should_skip(log_warning=False):
+                    break
+
                 title, url = self._title_and_url(item)
                 if proper_check.search(title):
                     results.append(classes.Proper(title, url, datetime.datetime.today(),

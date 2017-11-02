@@ -470,6 +470,11 @@ def search_for_needed_episodes(episodes):
 
             found_results[cur_ep] = best_result
 
+            try:
+                cur_provider.save_list()
+            except (StandardError, Exception):
+                pass
+
     threading.currentThread().name = orig_thread_name
 
     if not len(providers):
