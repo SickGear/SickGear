@@ -39,6 +39,7 @@ class Scheduler(threading.Thread):
         self.name = threadName
         self.silent = silent
         self.stop = threading.Event()
+        self.lock = threading.Lock()
         self.force = False
 
     def timeLeft(self):

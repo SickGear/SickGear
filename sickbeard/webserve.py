@@ -4809,6 +4809,11 @@ class ConfigGeneral(Config):
         sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
         sickbeard.UPDATE_SHOWS_ON_START = config.checkbox_to_value(update_shows_on_start)
         sickbeard.SHOW_UPDATE_HOUR = config.minimax(show_update_hour, 3, 0, 23)
+        try:
+            with sickbeard.showUpdateScheduler.lock:
+                sickbeard.showUpdateScheduler.start_time = datetime.time(hour=sickbeard.SHOW_UPDATE_HOUR)
+        except (StandardError, Exception) as e:
+            logger.log('Could not change Show Update Scheduler time: %s' % ex(e), logger.ERROR)
         sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
         sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
         if not config.change_LOG_DIR(log_dir, web_log):
