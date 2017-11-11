@@ -1,4 +1,4 @@
-﻿### 0.13.0 (2016-xx-xx xx:xx:xx UTC)
+﻿### 0.13.0 (2017-xx-xx xx:xx:xx UTC)
 
 * Change don't fetch caps for disabled nzb providers
 * Change recent search to use centralised title and URL parser for newznab
@@ -134,6 +134,7 @@
 * Add restriction to allow only same release group for repacks
 * Change try all episode names with 'real', 'repack', 'proper'
 * Add tip to search settings/media search about improved matching with optional regex library
+* Change use value of "Update shows during hour" in General Settings straight after it is saved instead of after restart
 
 
 [develop changelog]
