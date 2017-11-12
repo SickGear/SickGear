@@ -155,6 +155,11 @@
 * Add parse repack, proper level to recent search flow
 
 
+### 0.12.37 (2017-11-12 10:35:00 UTC)
+
+* Change improve .nzb handling
+
+
 ### 0.12.36 (2017-11-01 11:45:00 UTC)
 
 * Change qBittorent to handle the change to its API success/fail response
