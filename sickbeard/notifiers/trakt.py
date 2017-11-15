@@ -28,6 +28,13 @@ class TraktNotifier(BaseNotifier):
     """
     A "notifier" for trakt.tv which keeps track of what has and hasn't been added to your library.
     """
+    @classmethod
+    def is_enabled_library(cls):
+        if sickbeard.TRAKT_ACCOUNTS:
+            for tid, locations in sickbeard.TRAKT_UPDATE_COLLECTION.items():
+                if tid in sickbeard.TRAKT_ACCOUNTS.keys():
+                    return True
+        return False
 
     def update_library(self, ep_obj=None, **kwargs):
 

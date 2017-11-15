@@ -135,6 +135,7 @@
 * Change try all episode names with 'real', 'repack', 'proper'
 * Add tip to search settings/media search about improved matching with optional regex library
 * Change use value of "Update shows during hour" in General Settings straight after it is saved instead of after restart
+* Change add tips for what to use for Growl notifications on Windows
 
 
 [develop changelog]
@@ -153,6 +154,7 @@
 * Fix error after SG is updated and where Slack notifier is not enabled
 * Change reduce number of DB calls for extra_info_no_name
 * Add parse repack, proper level to recent search flow
+* Change reenable Trakt Notifier to update collections at end of PP
 
 
 ### 0.12.37 (2017-11-12 10:35:00 UTC)
