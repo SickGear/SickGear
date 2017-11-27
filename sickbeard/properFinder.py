@@ -27,7 +27,7 @@ import sickbeard
 
 from sickbeard import db, exceptions, helpers, history, logger, search, show_name_helpers
 from sickbeard import encodingKludge as ek
-from sickbeard.common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, Quality, ARCHIVED, SNATCHED_BEST, FAILED
+from sickbeard.common import DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER, Quality, ARCHIVED, FAILED
 from sickbeard.exceptions import ex, MultipleShowObjectsException
 from sickbeard import failed_history
 from sickbeard.history import dateFormat
@@ -77,15 +77,14 @@ def get_old_proper_level(showObj, indexer, indexerid, season, episodes, old_stat
     level = 0
     is_internal = False
     codec = ''
-    if old_status not in (SNATCHED, SNATCHED_BEST, SNATCHED_PROPER):
+    if old_status not in SNATCHED_ANY:
         level = Quality.get_proper_level(extra_no_name, version, is_anime)
     elif showObj:
         myDB = db.DBConnection()
         np = NameParser(False, showObj=showObj)
         for episode in episodes:
             result = myDB.select('SELECT resource FROM history WHERE showid = ? AND season = ? AND episode = ? AND '
-                                 '(' + ' OR '.join("action LIKE '%%%02d'" %
-                                                   x for x in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST)) + ') '
+                                 '(' + ' OR '.join("action LIKE '%%%02d'" % x for x in SNATCHED_ANY) + ') '
                                  'ORDER BY date DESC LIMIT 1',
                                  [indexerid, season, episode])
             if not result or not isinstance(result[0]['resource'], basestring) or not result[0]['resource']:
@@ -245,7 +244,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
         old_release_group = sql_results[0]['release_group']
         # check if we want this release: same quality as current, current has correct status
         # restrict other release group releases to proper's
-        if old_status not in (DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, ARCHIVED) \
+        if old_status not in SNATCHED_ANY + [DOWNLOADED, ARCHIVED] \
                 or cur_proper.quality != old_quality \
                 or (cur_proper.is_repack and cur_proper.release_group != old_release_group):
             continue
@@ -328,8 +327,7 @@ def _download_propers(proper_list):
         history_results = my_db.select(
             'SELECT resource FROM history ' +
             'WHERE showid = ? AND season = ? AND episode = ? AND quality = ? AND date >= ? ' +
-            'AND (' + ' OR '.join("action LIKE '%%%02d'" % x for x in (SNATCHED, DOWNLOADED, SNATCHED_PROPER,
-                                                                       SNATCHED_BEST, ARCHIVED)) + ')',
+            'AND (' + ' OR '.join("action LIKE '%%%02d'" % x for x in SNATCHED_ANY + [DOWNLOADED, ARCHIVED]) + ')',
             [cur_proper.indexerid, cur_proper.season, cur_proper.episode, cur_proper.quality,
              history_limit.strftime(history.dateFormat)])
 
@@ -388,8 +386,7 @@ def _recent_history(aired_since_shows, aired_since_anime):
         ' INNER JOIN tv_episodes AS e ON (h.showid == e.showid AND h.season == e.season AND h.episode == e.episode)' +
         ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
         ' WHERE h.date >= %s' % min(aired_since_shows, aired_since_anime).strftime(dateFormat) +
-        ' AND (%s)' % ' OR '.join(['h.action LIKE "%%%02d"' % x for x in (DOWNLOADED, SNATCHED, SNATCHED_PROPER,
-                                                                          SNATCHED_BEST, FAILED)])
+        ' AND (%s)' % ' OR '.join(['h.action LIKE "%%%02d"' % x for x in SNATCHED_ANY + [DOWNLOADED, FAILED]])
     )
 
     for sqlshow in sql_results:

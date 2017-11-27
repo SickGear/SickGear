@@ -44,7 +44,7 @@ from sickbeard import config, sab, nzbget, clients, history, notifiers, processT
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
-from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED, SNATCHED_BEST, SNATCHED_PROPER
+from sickbeard.common import SNATCHED, SNATCHED_ANY, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED
 from sickbeard.common import SD, HD720p, HD1080p, UHD2160p
 from sickbeard.exceptions import ex, MultipleShowObjectsException
 from sickbeard.helpers import has_image_ext, remove_article, starify
@@ -452,7 +452,7 @@ class MainHandler(WebHandler):
         recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
 
         done_show_list = []
-        qualities = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED, SKIPPED]
+        qualities = Quality.SNATCHED + Quality.DOWNLOADED + Quality.ARCHIVED + [IGNORED, SKIPPED]
 
         myDB = db.DBConnection()
         sql_results = myDB.select(
@@ -467,8 +467,8 @@ class MainHandler(WebHandler):
             'SELECT *, tv_shows.status as show_status FROM tv_episodes outer_eps, tv_shows WHERE season != 0 AND showid NOT IN (%s)'
             % ','.join(['?'] * len(done_show_list))
             + ' AND tv_shows.indexer_id = outer_eps.showid AND airdate = (SELECT airdate FROM tv_episodes inner_eps WHERE inner_eps.season != 0 AND inner_eps.showid = outer_eps.showid AND inner_eps.airdate >= ? ORDER BY inner_eps.airdate ASC LIMIT 1) AND outer_eps.status NOT IN (%s)'
-            % ','.join(['?'] * len(Quality.DOWNLOADED + Quality.SNATCHED)),
-            done_show_list + [next_week] + Quality.DOWNLOADED + Quality.SNATCHED)
+            % ','.join(['?'] * len(Quality.SNATCHED + Quality.DOWNLOADED)),
+            done_show_list + [next_week] + Quality.SNATCHED + Quality.DOWNLOADED)
 
         sql_results += myDB.select(
             'SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate <= ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (%s)'
@@ -480,7 +480,7 @@ class MainHandler(WebHandler):
         # make a dict out of the sql results
         sql_results = [dict(row) for row in sql_results
                        if Quality.splitCompositeStatus(helpers.tryInt(row['status']))[0] not in
-                       [DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVED, IGNORED, SKIPPED]]
+                       SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED, SKIPPED]]
 
         # multi dimension sort
         sorts = {
@@ -727,8 +727,8 @@ class Home(MainHandler):
         # Get all show snatched / downloaded / next air date stats
         myDB = db.DBConnection()
         today = datetime.date.today().toordinal()
-        status_quality = ','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST])
-        status_download = ','.join([str(x) for x in Quality.DOWNLOADED + [ARCHIVED]])
+        status_quality = ','.join([str(x) for x in Quality.SNATCHED_ANY])
+        status_download = ','.join([str(x) for x in Quality.DOWNLOADED + Quality.ARCHIVED])
         status_total = '%s, %s, %s' % (SKIPPED, WANTED, FAILED)
 
         sql_statement = 'SELECT showid, '
@@ -1374,7 +1374,7 @@ class Home(MainHandler):
             status_overview = showObj.getOverview(row['status'])
             if status_overview:
                 ep_counts[status_overview] += row['cnt']
-                if ARCHIVED == row['status']:
+                if ARCHIVED == Quality.splitCompositeStatus(row['status'])[0]:
                     ep_counts['archived'].setdefault(row['season'], row['cnt'])
                 else:
                     ep_counts['status'].setdefault(row['season'], {status_overview: row['cnt']})
@@ -1439,6 +1439,7 @@ class Home(MainHandler):
 
         indexerid = int(showObj.indexerid)
         indexer = int(showObj.indexer)
+        t.min_initial = Quality.qualityStrings[min(Quality.splitQuality(showObj.quality)[0])]
         t.all_scene_exceptions = showObj.exceptions
         t.scene_numbering = get_scene_numbering_for_show(indexerid, indexer)
         t.scene_absolute_numbering = get_scene_absolute_numbering_for_show(indexerid, indexer)
@@ -2032,31 +2033,35 @@ class Home(MainHandler):
     def setStatus(self, show=None, eps=None, status=None, direct=False):
 
         if show is None or eps is None or status is None:
-            errMsg = 'You must specify a show and at least one episode'
+            err_msg = 'You must specify a show and at least one episode'
             if direct:
-                ui.notifications.error('Error', errMsg)
+                ui.notifications.error('Error', err_msg)
                 return json.dumps({'result': 'error'})
-            else:
-                return self._genericMessage('Error', errMsg)
+            return self._genericMessage('Error', err_msg)
 
-        if not statusStrings.has_key(int(status)):
-            errMsg = 'Invalid status'
+        use_default = False
+        if '-' in status:
+            use_default = True
+            status = status.replace('-', '')
+        status = int(status)
+
+        if not statusStrings.has_key(status):
+            err_msg = 'Invalid status'
             if direct:
-                ui.notifications.error('Error', errMsg)
+                ui.notifications.error('Error', err_msg)
                 return json.dumps({'result': 'error'})
-            else:
-                return self._genericMessage('Error', errMsg)
+            return self._genericMessage('Error', err_msg)
 
         showObj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
 
         if showObj is None:
-            errMsg = 'Error', 'Show not in show list'
+            err_msg = 'Error', 'Show not in show list'
             if direct:
-                ui.notifications.error('Error', errMsg)
+                ui.notifications.error('Error', err_msg)
                 return json.dumps({'result': 'error'})
-            else:
-                return self._genericMessage('Error', errMsg)
+            return self._genericMessage('Error', err_msg)
 
+        min_initial = min(Quality.splitQuality(showObj.quality)[0])
         segments = {}
         if eps is not None:
 
@@ -2065,53 +2070,58 @@ class Home(MainHandler):
 
                 logger.log(u'Attempting to set status on episode %s to %s' % (curEp, status), logger.DEBUG)
 
-                epInfo = curEp.split('x')
+                ep_obj = showObj.getEpisode(*tuple(curEp.split('x')))
 
-                epObj = showObj.getEpisode(int(epInfo[0]), int(epInfo[1]))
+                if ep_obj is None:
+                    return self._genericMessage('Error', 'Episode couldn\'t be retrieved')
 
-                if epObj is None:
-                    return self._genericMessage("Error", "Episode couldn't be retrieved")
-
-                if int(status) in [WANTED, FAILED]:
+                if status in [WANTED, FAILED]:
                     # figure out what episodes are wanted so we can backlog them
-                    if epObj.season in segments:
-                        segments[epObj.season].append(epObj)
+                    if ep_obj.season in segments:
+                        segments[ep_obj.season].append(ep_obj)
                     else:
-                        segments[epObj.season] = [epObj]
+                        segments[ep_obj.season] = [ep_obj]
 
-                with epObj.lock:
+                with ep_obj.lock:
+                    required = Quality.SNATCHED_ANY + Quality.DOWNLOADED
+                    err_msg = ''
                     # don't let them mess up UNAIRED episodes
-                    if epObj.status == UNAIRED:
-                        logger.log(u'Refusing to change status of ' + curEp + ' because it is UNAIRED', logger.ERROR)
+                    if UNAIRED == ep_obj.status:
+                        err_msg = 'because it is unaired'
+
+                    elif FAILED == status and ep_obj.status not in required:
+                        err_msg = 'to failed because it\'s not snatched/downloaded'
+
+                    elif status in Quality.DOWNLOADED\
+                            and ep_obj.status not in required + Quality.ARCHIVED + [IGNORED, SKIPPED]\
+                            and not ek.ek(os.path.isfile, ep_obj.location):
+                        err_msg = 'to downloaded because it\'s not snatched/downloaded/archived'
+
+                    if err_msg:
+                        logger.log('Refusing to change status of %s %s' % (curEp, err_msg), logger.ERROR)
                         continue
 
-                    if int(
-                            status) in Quality.DOWNLOADED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.DOWNLOADED + [
-                        IGNORED, SKIPPED] and not ek.ek(os.path.isfile, epObj.location):
-                        logger.log(
-                            u'Refusing to change status of ' + curEp + " to DOWNLOADED because it's not SNATCHED/DOWNLOADED",
-                            logger.ERROR)
-                        continue
-
-                    if int(
-                            status) == FAILED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.DOWNLOADED:
-                        logger.log(
-                            u'Refusing to change status of ' + curEp + " to FAILED because it's not SNATCHED/DOWNLOADED",
-                            logger.ERROR)
-                        continue
-
-                    epObj.status = int(status)
+                    if ARCHIVED == status:
+                        if ep_obj.status in Quality.DOWNLOADED:
+                            ep_obj.status = Quality.compositeStatus(
+                                ARCHIVED, (Quality.splitCompositeStatus(ep_obj.status)[1], min_initial)[use_default])
+                    elif DOWNLOADED == status:
+                        if ep_obj.status in Quality.ARCHIVED:
+                            ep_obj.status = Quality.compositeStatus(
+                                DOWNLOADED, Quality.splitCompositeStatus(ep_obj.status)[1])
+                    else:
+                        ep_obj.status = status
 
                     # mass add to database
-                    result = epObj.get_sql()
+                    result = ep_obj.get_sql()
                     if None is not result:
                         sql_l.append(result)
 
             if 0 < len(sql_l):
-                myDB = db.DBConnection()
-                myDB.mass_action(sql_l)
+                my_db = db.DBConnection()
+                my_db.mass_action(sql_l)
 
-        if WANTED == int(status):
+        if WANTED == status:
             season_list = ''
             season_wanted = []
             for season, segment in segments.items():
@@ -2134,27 +2144,25 @@ class Home(MainHandler):
                                          u'%s for the following seasons of <b>%s</b>:<br /><ul>%s</ul>'
                                          % (msg, showObj.name, season_list))
 
-        elif FAILED == int(status):
-            msg = 'Retrying Search was automatically started for the following season of <b>' + showObj.name + '</b>:<br />'
-            msg += '<ul>'
+        elif FAILED == status:
+            msg = u'Retrying search automatically for the following season of <b>%s</b>:<br><ul>' % showObj.name
 
             for season, segment in segments.items():
                 cur_failed_queue_item = search_queue.FailedQueueItem(showObj, segment)
-                sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)  # @UndefinedVariable
+                sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)
 
-                msg += '<li>Season ' + str(season) + '</li>'
-                logger.log(u'Retrying Search for ' + showObj.name + ' season ' + str(
-                    season) + ' because some eps were set to failed')
+                msg += '<li>Season %s</li>' % season
+                logger.log(u'Retrying search for %s season %s because some eps were set to failed',
+                           (showObj.name, season))
 
             msg += '</ul>'
 
             if segments:
-                ui.notifications.message('Retry Search started', msg)
+                ui.notifications.message('Retry search started', msg)
 
         if direct:
             return json.dumps({'result': 'success'})
-        else:
-            self.redirect('/home/displayShow?show=' + show)
+        self.redirect('/home/displayShow?show=' + show)
 
     def testRename(self, show=None):
 
@@ -2313,7 +2321,7 @@ class Home(MainHandler):
                              'status' : statusStrings[epObj.status],
                              'quality': self.getQualityClass(epObj)})
 
-        retry_statues = [SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, DOWNLOADED, ARCHIVED]
+        retry_statues = SNATCHED_ANY + [DOWNLOADED, ARCHIVED]
         if currentManualSearchThreadActive:
             searchThread = currentManualSearchThreadActive
             searchstatus = 'searching'
@@ -3814,13 +3822,15 @@ class Manage(MainHandler):
         return t.respond()
 
     def showEpisodeStatuses(self, indexer_id, whichStatus):
-        status_list = [int(whichStatus)]
-        if status_list[0] == SNATCHED:
-            status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
+        whichStatus = helpers.tryInt(whichStatus)
+        status_list = ((([whichStatus],
+                         Quality.SNATCHED_ANY)[SNATCHED == whichStatus],
+                        Quality.DOWNLOADED)[DOWNLOADED == whichStatus],
+                       Quality.ARCHIVED)[ARCHIVED == whichStatus]
 
         myDB = db.DBConnection()
         cur_show_results = myDB.select(
-            'SELECT season, episode, name, airdate FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
+            'SELECT season, episode, name, airdate, status FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
                 ['?'] * len(status_list)) + ')', [int(indexer_id)] + status_list)
 
         result = {}
@@ -3833,17 +3843,23 @@ class Manage(MainHandler):
             if cur_season not in result:
                 result[cur_season] = {}
 
-            result[cur_season][cur_episode] = {'name': cur_result['name'], 'airdate_never': 1000 > int(cur_result['airdate'])}
+            cur_quality = Quality.splitCompositeStatus(int(cur_result['status']))[1]
+            result[cur_season][cur_episode] = {'name': cur_result['name'],
+                                               'airdate_never': 1000 > int(cur_result['airdate']),
+                                               'qualityCss': Quality.get_quality_css(cur_quality),
+                                               'qualityStr': Quality.qualityStrings[cur_quality],
+                                               'sxe': '%d x %02d' % (cur_season, cur_episode)}
 
         return json.dumps(result)
 
     def episodeStatuses(self, whichStatus=None):
 
+        whichStatus = helpers.tryInt(whichStatus)
         if whichStatus:
-            whichStatus = int(whichStatus)
-            status_list = [whichStatus]
-            if status_list[0] == SNATCHED:
-                status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
+            status_list = ((([whichStatus],
+                             Quality.SNATCHED_ANY)[SNATCHED == whichStatus],
+                            Quality.DOWNLOADED)[DOWNLOADED == whichStatus],
+                           Quality.ARCHIVED)[ARCHIVED == whichStatus]
         else:
             status_list = []
 
@@ -3854,7 +3870,7 @@ class Manage(MainHandler):
         my_db = db.DBConnection()
         sql_result = my_db.select(
             'SELECT COUNT(*) AS snatched FROM [tv_episodes] WHERE season > 0 AND episode > 0 AND airdate > 1 AND ' +
-            'status IN (%s)' % ','.join([str(quality) for quality in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST]))
+            'status IN (%s)' % ','.join([str(quality) for quality in Quality.SNATCHED_ANY]))
         t.default_manage = sql_result and sql_result[0]['snatched'] and SNATCHED or WANTED
 
         # if we have no status then this is as far as we need to go
@@ -3864,7 +3880,7 @@ class Manage(MainHandler):
         status_results = my_db.select(
             'SELECT show_name, tv_shows.indexer_id as indexer_id, airdate FROM tv_episodes, tv_shows WHERE tv_episodes.status IN (' + ','.join(
                 ['?'] * len(
-                    status_list)) + ') AND season != 0 AND tv_episodes.showid = tv_shows.indexer_id ORDER BY show_name',
+                    status_list)) + ') AND season != 0 AND tv_episodes.showid = tv_shows.indexer_id ORDER BY show_name COLLATE NOCASE',
             status_list)
 
         ep_counts = {}
@@ -3898,9 +3914,11 @@ class Manage(MainHandler):
         return t.respond()
 
     def changeEpisodeStatuses(self, oldStatus, newStatus, wantedStatus=sickbeard.common.UNKNOWN, *args, **kwargs):
-        status_list = [int(oldStatus)]
-        if status_list[0] == SNATCHED:
-            status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
+        status = int(oldStatus)
+        status_list = ((([status],
+                         Quality.SNATCHED_ANY)[SNATCHED == status],
+                        Quality.DOWNLOADED)[DOWNLOADED == status],
+                       Quality.ARCHIVED)[ARCHIVED == status]
 
         to_change = {}
 

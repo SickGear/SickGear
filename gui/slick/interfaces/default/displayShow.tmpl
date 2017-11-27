@@ -17,7 +17,7 @@
 #set global $page_body_attr = 'display-show" class="' + $css
 #set theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
 ##
-#import os.path, os
+#import os.path, os, re
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 <input type="hidden" id="sbRoot" value="$sbRoot">
 <script>
@@ -389,13 +389,22 @@
 
 	<div id="change-status" class="pull-left">
 		<p style="margin-bottom:5px">Change selected episodes to</p>
-		<select id="statusSelect" class="form-control form-control-inline input-sm">
-#for $curStatus in [$WANTED, $SKIPPED, $ARCHIVED, $IGNORED, $FAILED] + sorted($Quality.DOWNLOADED)
-    #if $DOWNLOADED == $curStatus
-        #continue
-    #end if
+		<select id="statusSelect" class="form-control form-control-inline input-sm showlist-select">
+#for $curStatus in [$WANTED, $SKIPPED, $IGNORED, $FAILED]
 			<option value="$curStatus">$statusStrings[$curStatus]</option>
 #end for
+			<optgroup label="Downloaded">
+#for $curStatus in sorted($Quality.DOWNLOADED)
+    #if $DOWNLOADED != $curStatus
+				<option value="$curStatus">$re.sub('Downloaded\s*\(([^\)]+)\)', r'\1', $statusStrings[$curStatus])</option>
+    #end if
+#end for
+			<option value="$DOWNLOADED">with archived quality</option>
+			</optgroup>
+			<optgroup label="Archived with">
+				<option value="$ARCHIVED">downloaded quality</option>
+				<option value="-$ARCHIVED">default ($min_initial)</option>
+			</optgroup>
 		</select>
 		<input type="hidden" id="showID" value="$show.indexerid">
 		<input type="hidden" id="indexer" value="$show.indexer">

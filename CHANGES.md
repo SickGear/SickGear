@@ -139,6 +139,16 @@
 * Change add tips for what to use for Growl notifications on Windows
 * Change if a newly added show is not found on indexer, remove already created empty folder
 * Change parse 1080p Bluray AVC/VC1 to a quality instead of unknown
+* Add quality tag to archived items, improve displayShow/"Change selected episodes to"
+* Use to prevent "Update to" on those select episodes while preserving the downloaded quality
+* Change group "Downloaded" status qualities into one section
+* Add "Downloaded/with archived quality" to set shows as downloaded using quality of archived status
+* Add "Archived with/downloaded quality" to set shows as archived using quality of downloaded status
+* Add "Archived with/default (min. initial quality of show here)"
+* Change when settings/Post Processing/File Handling/Status of removed episodes/Set Archived is enabled, set status and quality accordingly
+* Add downloaded and archived statuses to Manage/Episode Status
+* Add quality pills to Manage/Episode Status
+* Change Manage/Episode Status season output format to be more readable
 
 
 [develop changelog]

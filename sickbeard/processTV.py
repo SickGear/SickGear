@@ -35,7 +35,7 @@ from sickbeard.exceptions import ex
 from sickbeard import logger
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard import common
-from sickbeard.common import SNATCHED, SNATCHED_PROPER, SNATCHED_BEST
+from sickbeard.common import SNATCHED_ANY
 from sickbeard.history import reset_status
 from sickbeard.exceptions import MultipleShowObjectsException
 
@@ -173,8 +173,7 @@ class ProcessTVShow(object):
         sql_results = my_db.select(
             'SELECT showid FROM history' +
             ' WHERE resource = ?' +
-            ' AND (%s)' % ' OR '.join('action LIKE "%%%02d"' % x for x in (
-                SNATCHED, SNATCHED_PROPER, SNATCHED_BEST)) +
+            ' AND (%s)' % ' OR '.join('action LIKE "%%%02d"' % x for x in SNATCHED_ANY) +
             ' ORDER BY rowid', [name])
         if sql_results:
             try:

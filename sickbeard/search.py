@@ -352,7 +352,7 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
     else:
         wanted = []
     total_wanted = total_replacing = total_unaired = 0
-    downloaded_status_list = (common.DOWNLOADED, common.SNATCHED, common.SNATCHED_PROPER, common.SNATCHED_BEST)
+    downloaded_status_list = common.SNATCHED_ANY + [common.DOWNLOADED]
     for result in sql_results:
         not_downloaded = True
         cur_composite_status = int(result['status'])

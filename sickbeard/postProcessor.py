@@ -657,7 +657,7 @@ class PostProcessor(object):
         """
 
         # if there is a quality available in the status then we don't need to bother guessing from the filename
-        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
+        if ep_obj.status in common.Quality.SNATCHED_ANY:
             old_status, ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)  # @UnusedVariable
             if common.Quality.UNKNOWN != ep_quality:
                 self._log(
@@ -742,7 +742,7 @@ class PostProcessor(object):
         """
 
         # if SickGear snatched this then assume it's safe
-        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
+        if ep_obj.status in common.Quality.SNATCHED_ANY:
             self._log(u'SickGear snatched this episode, marking it safe to replace', logger.DEBUG)
             return True
 
