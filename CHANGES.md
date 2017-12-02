@@ -136,6 +136,7 @@
 * Add tip to search settings/media search about improved matching with optional regex library
 * Change use value of "Update shows during hour" in General Settings straight after it is saved instead of after restart
 * Change add tips for what to use for Growl notifications on Windows
+* Change if a newly added show is not found on indexer, remove already created empty folder
 
 
 [develop changelog]

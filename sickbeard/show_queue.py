@@ -19,6 +19,7 @@
 from __future__ import with_statement
 
 import traceback
+import os
 
 import sickbeard
 
@@ -30,6 +31,7 @@ from sickbeard import name_cache
 from sickbeard.exceptions import ex
 from sickbeard.helpers import should_delete_episode
 from sickbeard.blackandwhitelist import BlackAndWhiteList
+from sickbeard import encodingKludge as ek
 
 
 class ShowQueue(generic_queue.GenericQueue):
@@ -175,10 +177,10 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
                 lang='en', subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
-                wanted_begin=None, wanted_latest=None, tag=None):
+                wanted_begin=None, wanted_latest=None, tag=None, new_show=False):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
                                     subtitles, anime, scene, paused, blacklist, whitelist,
-                                    wanted_begin, wanted_latest, tag)
+                                    wanted_begin, wanted_latest, tag, new_show=new_show)
 
         self.add_item(queueItemObj)
 
@@ -235,7 +237,8 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, tag, scheduled_update=False):
+                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, tag,
+                 scheduled_update=False, new_show=False):
 
         self.indexer = indexer
         self.indexer_id = indexer_id
@@ -253,6 +256,7 @@ class QueueItemAdd(ShowQueueItem):
         self.blacklist = blacklist
         self.whitelist = whitelist
         self.tag = tag
+        self.new_show = new_show
 
         self.show = None
 
@@ -482,8 +486,15 @@ class QueueItemAdd(ShowQueueItem):
         self.finish()
 
     def _finishEarly(self):
-        if self.show != None:
+        if self.show is not None:
             self.show.deleteShow()
+
+        if self.new_show:
+            # if we adding a new show, delete the empty folder that was already created
+            try:
+                ek.ek(os.rmdir, self.showDir)
+            except (StandardError, Exception):
+                pass
 
         self.finish()
 

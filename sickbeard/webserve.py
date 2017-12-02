@@ -3655,8 +3655,10 @@ class NewHomeAddShows(Home):
         # use the whole path if it's given, or else append the show name to the root dir to get the full show path
         if fullShowPath:
             show_dir = ek.ek(os.path.normpath, fullShowPath)
+            new_show = False
         else:
             show_dir = ek.ek(os.path.join, rootDir, helpers.sanitizeFileName(show_name))
+            new_show = True
 
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
         if ek.ek(os.path.isdir, show_dir) and not fullShowPath:
@@ -3704,7 +3706,7 @@ class NewHomeAddShows(Home):
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
-                                                    wanted_begin, wanted_latest, tag)  # @UndefinedVariable
+                                                    wanted_begin, wanted_latest, tag, new_show=new_show)  # @UndefinedVariable
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()
