@@ -1682,7 +1682,12 @@ class TVEpisode(object):
         newsubtitles = set(self.subtitles).difference(set(previous_subtitles))
 
         if newsubtitles:
-            subtitleList = ", ".join(subliminal.language.Language(x).name for x in newsubtitles)
+            try:
+                subtitleList = ", ".join(subliminal.language.Language(x).name for x in newsubtitles)
+            except(StandardError, Exception):
+                logger.log('Could not parse a language to use to fetch subtitles for episode %sx%s' %
+                           (self.season, self.episode), logger.DEBUG)
+                return
             logger.log('%s: Downloaded %s subtitles for episode %sx%s' %
                        (self.show.indexerid, subtitleList, self.season, self.episode), logger.DEBUG)
 

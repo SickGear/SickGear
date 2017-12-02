@@ -143,7 +143,7 @@ def notify_download(ep_name):
 
 
 def notify_subtitle_download(ep_name, lang):
-    for n in NotifierFactory().get_enabled('ondownloadsubtitles'):
+    for n in NotifierFactory().get_enabled('onsubtitledownload'):
         n.notify_subtitle_download(ep_name, lang)
 
 
