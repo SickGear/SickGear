@@ -137,6 +137,7 @@
 * Change use value of "Update shows during hour" in General Settings straight after it is saved instead of after restart
 * Change add tips for what to use for Growl notifications on Windows
 * Change if a newly added show is not found on indexer, remove already created empty folder
+* Change parse 1080p Bluray AVC/VC1 to a quality instead of unknown
 
 
 [develop changelog]

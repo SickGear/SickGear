@@ -270,6 +270,8 @@ class Quality:
         # p2p
         elif checkName(['720HD'], all) and not checkName(['(1080|2160)[pi]'], all):
             return Quality.HDTV
+        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'avc|vc[-\s.]?1'], all):
+            return Quality.FULLHDBLURAY
         else:
             return Quality.UNKNOWN
 
