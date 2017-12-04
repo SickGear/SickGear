@@ -42,7 +42,7 @@ class NebulanceProvider(generic.TorrentProvider):
         self.user_authkey, self.user_passkey = 2 * [None]
         self.chk_td = True
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.username, self.password, self.freeleech, self.scene, self.minseed, self.minleech = 6 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -156,14 +156,6 @@ class NebulanceProvider(generic.TorrentProvider):
 
         title += + any(tags[4]) and ('.%s' % tags[4][0]) or ''
         return title
-
-    def _season_strings(self, ep_obj, **kwargs):
-
-        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False)
-
-    def _episode_strings(self, ep_obj, **kwargs):
-
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
 
 provider = NebulanceProvider()

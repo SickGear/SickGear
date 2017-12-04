@@ -109,7 +109,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
+        return super(TorrentLeechProvider, self)._episode_strings(ep_obj, sep_date='|', **kwargs)
 
 
 provider = TorrentLeechProvider()

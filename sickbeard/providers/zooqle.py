@@ -107,9 +107,10 @@ class ZooqleProvider(generic.TorrentProvider):
         return results
 
     def _episode_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
+        return super(ZooqleProvider, self)._episode_strings(ep_obj, sep_date='.', **kwargs)
 
     def _cache_data(self, **kwargs):
         return self._search_provider({'Cache': ['*']})
+
 
 provider = ZooqleProvider()

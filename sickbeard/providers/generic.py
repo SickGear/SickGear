@@ -953,7 +953,7 @@ class TorrentProvider(object, GenericProvider):
         search_params = []
         crop = re.compile(r'([.\s])(?:\1)+')
         for name in set(allPossibleShowNames(self.show)):
-            if process_name:
+            if process_name and getattr(self, 'scene', True):
                 name = helpers.sanitizeSceneName(name)
             for detail in ep_detail:
                 search_params += [crop.sub(r'\1', '%s %s%s' % (name, x, detail)) for x in prefix]

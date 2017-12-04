@@ -118,11 +118,11 @@ class WOPProvider(generic.TorrentProvider):
 
     def _season_strings(self, ep_obj, **kwargs):
 
-        return self._search_params(generic.TorrentProvider._season_strings(self, ep_obj, **kwargs))
+        return self._search_params(super(WOPProvider, self)._season_strings(ep_obj, **kwargs))
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return self._search_params(generic.TorrentProvider._episode_strings(self, ep_obj, **kwargs))
+        return self._search_params(super(WOPProvider, self)._episode_strings(ep_obj, **kwargs))
 
     @staticmethod
     def _search_params(search_params):

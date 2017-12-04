@@ -49,7 +49,7 @@ class BlutopiaProvider(generic.TorrentProvider):
         self.may_filter = OrderedDict([
             ('f0', ('not marked', False)), ('free', ('free', True)),
             ('double', ('2x up', True)), ('feat', ('featured', True))])
-        self.digest, self.token, self.resp, self.minseed, self.minleech = 5 * [None]
+        self.digest, self.token, self.resp, self.scene, self.minseed, self.minleech = 6 * [None]
 
     def logged_in(self, resp):
         try:
@@ -159,14 +159,6 @@ class BlutopiaProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-    def _season_strings(self, ep_obj, **kwargs):
-
-        return super(BlutopiaProvider, self)._season_strings(ep_obj, scene=False, **kwargs)
-
-    def _episode_strings(self, ep_obj, **kwargs):
-
-        return super(BlutopiaProvider, self)._episode_strings(ep_obj, scene=False, **kwargs)
 
     @staticmethod
     def ui_string(key):
