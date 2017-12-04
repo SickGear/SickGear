@@ -44,7 +44,7 @@ class ShazbatProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.username, self.password, self.scene, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -137,11 +137,11 @@ class ShazbatProvider(generic.TorrentProvider):
 
     def _season_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._season_strings(self, ep_obj, detail_only=True, scene=False)
+        return super(ShazbatProvider, self)._season_strings(ep_obj, detail_only=True)
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, detail_only=True, scene=False, **kwargs)
+        return super(ShazbatProvider, self)._episode_strings(ep_obj, detail_only=True, **kwargs)
 
 
 provider = ShazbatProvider()

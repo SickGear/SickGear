@@ -116,7 +116,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, sep_date='.', **kwargs)
+        return super(SpeedCDProvider, self)._episode_strings(ep_obj, scene=False, sep_date='.', **kwargs)
 
     @staticmethod
     def ui_string(key):

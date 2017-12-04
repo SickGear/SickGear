@@ -248,7 +248,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, prefix='%', date_detail=(
+        return super(TVChaosUKProvider, self)._episode_strings(ep_obj, scene=False, prefix='%', date_detail=(
             lambda d: [x.strip('0') for x in (
                 ['{0} {1}% {2}'.format(d.strftime('%d')[-1], d.strftime('%b'), d.strftime('%Y'))] +
                 [d.strftime('%d %b %Y')] + ([d.strftime('%d %B %Y')], [])[d.strftime('%b') == d.strftime('%B')])]),

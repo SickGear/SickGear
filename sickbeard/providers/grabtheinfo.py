@@ -123,7 +123,7 @@ class GrabTheInfoProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
+        return super(GrabTheInfoProvider, self)._episode_strings(ep_obj, sep_date='|', **kwargs)
 
 
 provider = GrabTheInfoProvider()

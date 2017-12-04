@@ -133,7 +133,7 @@ class TorrentDayProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', date_or=True, **kwargs)
+        return super(TorrentDayProvider, self)._episode_strings(ep_obj, sep_date='.', date_or=True, **kwargs)
 
     def ui_string(self, key):
         if 'torrentday_digest' == key and self._valid_home():

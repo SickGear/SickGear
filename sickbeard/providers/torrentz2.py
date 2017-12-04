@@ -138,8 +138,8 @@ class Torrentz2Provider(generic.TorrentProvider):
         return results
 
     def _episode_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._episode_strings(
-            self, ep_obj, date_detail=(lambda d: [x % str(d).replace('-', '.') for x in ('"%s"', '%s')]),
+        return super(Torrentz2Provider, self)._episode_strings(
+            ep_obj, date_detail=(lambda d: [x % str(d).replace('-', '.') for x in ('"%s"', '%s')]),
             ep_detail=(lambda ep_dict: [x % (config.naming_ep_type[2] % ep_dict) for x in ('"%s"', '%s')]), **kwargs)
 
 
