@@ -62,13 +62,14 @@ from sickbeard.generic_queue import QueuePriorities
 from sickbeard import encodingKludge as ek
 
 from common import Quality, Overview, statusStrings
-from common import DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVED, IGNORED, UNAIRED, WANTED, SKIPPED, \
-    UNKNOWN, FAILED, SUBTITLED
+from common import SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, SNATCHED_ANY, DOWNLOADED, ARCHIVED, \
+    IGNORED, UNAIRED, WANTED, SKIPPED, UNKNOWN, FAILED, SUBTITLED
 from common import NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMING_SEPARATED_REPEAT, \
     NAMING_LIMITED_EXTEND_E_PREFIXED
 
 concurrent_show_not_found_days = 7
 show_not_found_retry_days = 7
+
 
 def dirty_setter(attr_name, types=None):
     def wrapper(self, val):
@@ -822,7 +823,7 @@ class TVShow(object):
 
             # check for status/quality changes as long as it's a new file
             elif not same_file and sickbeard.helpers.has_media_ext(file)\
-                    and cur_ep.status not in Quality.DOWNLOADED + [ARCHIVED, IGNORED]:
+                    and cur_ep.status not in Quality.DOWNLOADED + Quality.ARCHIVED + [IGNORED]:
 
                 old_status, old_quality = Quality.splitCompositeStatus(cur_ep.status)
                 new_quality = Quality.nameQuality(file, self.is_anime)
@@ -845,7 +846,7 @@ class TVShow(object):
                                % (Quality.qualityStrings[old_quality], Quality.qualityStrings[new_quality]), logger.DEBUG)
                     new_status = DOWNLOADED
 
-                elif old_status not in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST):
+                elif old_status not in SNATCHED_ANY:
                     new_status = DOWNLOADED
 
                 if None is not new_status:
@@ -1269,7 +1270,11 @@ class TVShow(object):
                     with curEp.lock:
                         # if it used to have a file associated with it and it doesn't anymore then set it to IGNORED
                         if curEp.location and curEp.status in Quality.DOWNLOADED:
-                            curEp.status = (sickbeard.SKIP_REMOVED_FILES, IGNORED)[not sickbeard.SKIP_REMOVED_FILES]
+                            if ARCHIVED == sickbeard.SKIP_REMOVED_FILES:
+                                curEp.status = Quality.compositeStatus(
+                                    ARCHIVED, Quality.qualityDownloaded(curEp.status))
+                            else:
+                                curEp.status = (sickbeard.SKIP_REMOVED_FILES, IGNORED)[not sickbeard.SKIP_REMOVED_FILES]
                             logger.log('%s: File no longer at location for s%02de%02d, episode removed and status changed to %s'
                                        % (str(self.indexerid), season, episode, statusStrings[curEp.status]),
                                        logger.DEBUG)
@@ -1468,7 +1473,7 @@ class TVShow(object):
             logger.log('Unable to find a matching episode in database, ignoring found episode', logger.DEBUG)
             return False
 
-        epStatus = int(sqlResults[0]["status"])
+        epStatus = Quality.splitCompositeStatus(int(sqlResults[0]['status']))[0]
         epStatus_text = statusStrings[epStatus]
 
         logger.log('Existing episode status: %s (%s)' % (statusStrings[epStatus], epStatus_text), logger.DEBUG)
@@ -1493,7 +1498,7 @@ class TVShow(object):
                            logger.DEBUG)
 
         curStatus, curQuality = Quality.splitCompositeStatus(epStatus)
-        downloadedStatusList = (DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST)
+        downloadedStatusList = SNATCHED_ANY + [DOWNLOADED]
         # special case: already downloaded quality is not in any of the wanted Qualities
         if curStatus in downloadedStatusList and curQuality not in allQualities:
             wantedQualities = allQualities
@@ -1523,11 +1528,11 @@ class TVShow(object):
             return Overview.SKIPPED
         if status in (UNAIRED, UNKNOWN):
             return Overview.UNAIRED
-        if status in [SUBTITLED] + Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.FAILED + Quality.SNATCHED_BEST:
+        if status in [SUBTITLED] + Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.FAILED:
 
             if FAILED == status:
                 return Overview.WANTED
-            if status in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST):
+            if status in SNATCHED_ANY:
                 return Overview.SNATCHED
 
             void, best_qualities = Quality.splitQuality(self.quality)
@@ -2016,7 +2021,7 @@ class TVEpisode(object):
         # if we have a media file then it's downloaded
         elif sickbeard.helpers.has_media_ext(self.location):
             # leave propers alone, you have to either post-process them or manually change them back
-            if self.status not in Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED]:
+            if self.status not in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED:
                 msg = '(1) Status changes from %s to ' % statusStrings[self.status]
                 self.status = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
                 logger.log('%s%s' % (msg, statusStrings[self.status]), logger.DEBUG)
