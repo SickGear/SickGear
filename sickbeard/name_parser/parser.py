@@ -597,6 +597,9 @@ class ParseResult(object):
 
         self.version = version
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __eq__(self, other):
         if not other:
             return False
