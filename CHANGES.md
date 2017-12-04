@@ -51,6 +51,7 @@
 * Add option to limit WebDL propers to original release group under Config/Search/Media Search
 * Change add IPv4 config option when enabling IPv6.
 * Add autoProcessTV/onTxComplete.bat to improve Windows clients Deluge, qBittorrent, Tranmission, and uTorrent
+* Add Blutopia torrent provider
 * Add MagnetDL torrent provider
 * Add SceneHD torrent provider
 * Add Skytorrents torrent provider
