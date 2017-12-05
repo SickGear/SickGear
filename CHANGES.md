@@ -169,6 +169,8 @@
 * Add parse repack, proper level to recent search flow
 * Change reenable Trakt Notifier to update collections at end of PP
 * Fix NotifierFactory attribute enabled_ondownloadsubtitles should be enabled_onsubtitlesdownload
+* Change, decouple files exist count from status set as downloaded count
+* Change displayShow to include all qualities in snatch/download/archived counts
 
 
 ### 0.12.37 (2017-11-12 10:35:00 UTC)
