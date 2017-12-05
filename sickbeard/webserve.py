@@ -1375,9 +1375,12 @@ class Home(MainHandler):
             if status_overview:
                 ep_counts[status_overview] += row['cnt']
                 if ARCHIVED == Quality.splitCompositeStatus(row['status'])[0]:
-                    ep_counts['archived'].setdefault(row['season'], row['cnt'])
+                    ep_counts['archived'].setdefault(row['season'], 0)
+                    ep_counts['archived'][row['season']] = row['cnt'] + ep_counts['archived'].get(row['season'], 0)
                 else:
-                    ep_counts['status'].setdefault(row['season'], {status_overview: row['cnt']})
+                    ep_counts['status'].setdefault(row['season'], {})
+                    ep_counts['status'][row['season']][status_overview] = row['cnt'] + \
+                        ep_counts['status'][row['season']].get(status_overview, 0)
 
         for row in my_db.select('SELECT season, count(*) AS cnt FROM tv_episodes WHERE showid = ?'
                                 + ' AND \'\' != location GROUP BY season', [showObj.indexerid]):
