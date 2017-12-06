@@ -29,6 +29,7 @@ from sickbeard import classes, logger, show_name_helpers, tvcache
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.exceptions import AuthException
 from sickbeard.rssfeeds import RSSFeeds
+from sickbeard.common import neededQualities
 
 
 class OmgwtfnzbsProvider(generic.NZBProvider):
@@ -43,13 +44,16 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         self.urls = {'config_provider_home_uri': self.url_base,
                      'cache': 'https://rss.omgwtfnzbs.me/rss-download.php?%s',
                      'search': self.url_api + 'json/?%s',
-                     'get': self.url_base + '%s',
                      'cache_html': self.url_base + 'browse.php?cat=tv%s',
                      'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}
 
         self.needs_auth = True
         self.username, self.api_key, self.cookies = 3 * [None]
         self.cache = OmgwtfnzbsCache(self)
+
+    cat_sd = ['19']
+    cat_hd = ['20']
+    cat_uhd = ['30']
 
     def _check_auth_from_data(self, parsed_data, is_xml=True):
 
@@ -92,21 +96,26 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         return item['release'].replace('_', '.'), item['getnzb']
 
+    def get_data(self, url):
+        result = None
+        if url and False is self._init_api():
+            data = self.get_url(url, timeout=90)
+            if data:
+                if re.search('(?i)limit.*?reached', data):
+                    logger.log('Daily Nzb Download limit reached', logger.DEBUG)
+                elif '</nzb>' not in data or 'seem to be logged in' in data:
+                    logger.log('Failed nzb data response: %s' % data, logger.DEBUG)
+                else:
+                    result = data
+        return result
+
     def get_result(self, episodes, url):
 
         result = None
         if url and False is self._init_api():
-            data = self.get_url(url, timeout=90)
-            if not data:
-                return result
-            if '<strong>Limit Reached</strong>' in data:
-                logger.log('Daily Nzb Download limit reached', logger.DEBUG)
-                return result
-            if '</nzb>' not in data or 'seem to be logged in' in data:
-                logger.log('Failed nzb data response: %s' % data, logger.DEBUG)
-                return result
             result = classes.NZBDataSearchResult(episodes)
-            result.extraInfo += [data]
+            result.get_data_func = self.get_data
+            result.url = url
 
         if None is result:
             result = classes.NZBSearchResult(episodes)
@@ -116,16 +125,27 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         return result
 
-    def cache_data(self):
+    def _get_cats(self, needed):
+        cats = []
+        if needed.need_sd:
+            cats.extend(OmgwtfnzbsProvider.cat_sd)
+        if needed.need_hd:
+            cats.extend(OmgwtfnzbsProvider.cat_hd)
+        if needed.need_uhd:
+            cats.extend(OmgwtfnzbsProvider.cat_uhd)
+        return cats
+
+    def cache_data(self, needed=neededQualities(need_all=True), **kwargs):
 
         api_key = self._init_api()
         if False is api_key:
-            return self.search_html()
+            return self.search_html(needed=needed, **kwargs)
+        cats = self._get_cats(needed=needed)
         if None is not api_key:
             params = {'user': self.username,
                       'api': api_key,
                       'eng': 1,
-                      'catid': '19,20'}  # SD,HD
+                      'catid': ','.join(cats)}  # SD,HD
 
             rss_url = self.urls['cache'] % urllib.urlencode(params)
 
@@ -136,18 +156,20 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                 return data.entries
         return []
 
-    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0, **kwargs):
+    def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0,
+                         needed=neededQualities(need_all=True), **kwargs):
 
         api_key = self._init_api()
         if False is api_key:
-            return self.search_html(search, search_mode)
+            return self.search_html(search, search_mode, needed=needed, **kwargs)
         results = []
+        cats = self._get_cats(needed=needed)
         if None is not api_key:
             params = {'user': self.username,
                       'api': api_key,
                       'eng': 1,
                       'nukes': 1,
-                      'catid': '19,20',  # SD,HD
+                      'catid': ','.join(cats),  # SD,HD
                       'retention': (sickbeard.USENET_RETENTION, retention)[retention or not sickbeard.USENET_RETENTION],
                       'search': search}
 
@@ -163,14 +185,16 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         results.append(item)
         return results
 
-    def search_html(self, search='', search_mode=''):
+    def search_html(self, search='', search_mode='', needed=neededQualities(need_all=True), **kwargs):
 
         results = []
         if None is self.cookies:
             return results
 
+        cats = self._get_cats(needed=needed)
+
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': r'send\?', 'nuked': r'\bnuked',
-                                                             'cat': 'cat=(?:19|20)'}.items())
+                                                             'cat': 'cat=(?:%s)' % '|'.join(cats)}.items())
         mode = ('search', 'cache')['' == search]
         search_url = self.urls[mode + '_html'] % search
         html = self.get_url(search_url)
@@ -193,14 +217,14 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         if tr.find('img', src=rc['nuked']) or not tr.find('a', href=rc['cat']):
                             continue
 
-                        title = tr.find('a', href=rc['info'])['title']
+                        title = tr.find('a', href=rc['info']).get_text().strip()
                         download_url = tr.find('a', href=rc['get'])
                         age = tr.find_all('td')[-1]['data-sort']
                     except (AttributeError, TypeError, ValueError):
                         continue
 
                     if title and download_url and age:
-                        results.append({'release': title, 'getnzb': self.urls['get'] % download_url['href'].lstrip('/'),
+                        results.append({'release': title, 'getnzb': self._link(download_url['href']),
                                         'usenetage': int(age.strip())})
 
         except generic.HaltParseException:
@@ -215,7 +239,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
     def find_propers(self, **kwargs):
 
-        search_terms = ['.PROPER.', '.REPACK.']
+        search_terms = ['.PROPER.', '.REPACK.', '.REAL.']
         results = []
 
         for term in search_terms:
@@ -263,9 +287,9 @@ class OmgwtfnzbsCache(tvcache.TVCache):
 
         self.update_freq = 20
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
 
-        return self.provider.cache_data()
+        return self.provider.cache_data(**kwargs)
 
 
 provider = OmgwtfnzbsProvider()

@@ -26,25 +26,29 @@ from sickbeard.helpers import tryInt
 class SpeedCDProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SpeedCD', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'SpeedCD', cache_update_freq=20, update_freq=4*60)
 
         self.url_base = 'https://speed.cd/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'V3/API/API.php',
-                     'get': self.url_base + '%s'}
+                     'login': self.url_base + 'rss.php',
+                     'search': self.url_base + 'V3/API/API.php'}
 
         self.categories = {'Season': [41, 53], 'Episode': [2, 49, 50, 55], 'anime': [30]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
 
     def _authorised(self, **kwargs):
 
         return super(SpeedCDProvider, self)._authorised(
-            logged_in=(lambda y=None: self.has_all_cookies('inSpeed_speedian')))
+            logged_in=(lambda y='': all(
+                [self.session.cookies.get_dict(domain='.speed.cd') and
+                 self.session.cookies.clear('.speed.cd') is None or True] +
+                ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
+                [(self.session.cookies.get('inSpeed_' + x) or 'sg!no!pw') in self.digest for x in ['speedian']])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -59,7 +63,6 @@ class SpeedCDProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = '+'.join(search_string.split())
                 post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')), search=search_string,
                                  jxt=2, jxw='b', freeleech=('on', None)[not self.freeleech])
 
@@ -67,7 +70,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    html = data_json.get('Fs')[0].get('Cn')[0].get('d')
+                    html = data_json.get('Fs', [{}])[0].get('Cn', [{}])[0].get('d')
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
@@ -113,7 +116,12 @@ class SpeedCDProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
+        return super(SpeedCDProvider, self)._episode_strings(ep_obj, scene=False, sep_date='.', **kwargs)
+
+    @staticmethod
+    def ui_string(key):
+
+        return 'speedcd_digest' == key and 'use... \'inSpeed_speedian=yy\'' or ''
 
 
 provider = SpeedCDProvider()

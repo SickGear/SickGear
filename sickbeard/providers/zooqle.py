@@ -32,7 +32,7 @@ class ZooqleProvider(generic.TorrentProvider):
 
         self.url_base = 'https://zooqle.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': self.url_base + 'search?q=%s category:%s&s=dt&v=t&sd=d',
+                     'search': self.url_base + 'search?q=%s category:%s&s=ns&v=t&sd=d',
                      'get': self.url_base + 'download/%s.torrent'}
 
         self.categories = {'Season': ['TV'], 'Episode': ['TV'], 'anime': ['Anime']}
@@ -107,9 +107,10 @@ class ZooqleProvider(generic.TorrentProvider):
         return results
 
     def _episode_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
+        return super(ZooqleProvider, self)._episode_strings(ep_obj, sep_date='.', **kwargs)
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
         return self._search_provider({'Cache': ['*']})
+
 
 provider = ZooqleProvider()

@@ -36,14 +36,13 @@ class GFTrackerProvider(generic.TorrentProvider):
                      'login_init': self.url_base + 'login.php',
                      'login': self.url_base + 'loginsite.php',
                      'browse': self.url_base + 'browse.php?view=0&%s&searchtype=1%s',
-                     'search': '&search=%s',
-                     'get': self.url_base + '%s'}
+                     'search': '&search=%s'}
 
         self.categories = {'shows': [4, 17, 19, 26, 37, 47], 'anime': [16]}
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.username, self.password, self.scene, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -113,14 +112,6 @@ class GFTrackerProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-    def _season_strings(self, ep_obj, **kwargs):
-
-        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False)
-
-    def _episode_strings(self, ep_obj, **kwargs):
-
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
 
 provider = GFTrackerProvider()

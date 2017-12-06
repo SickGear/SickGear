@@ -33,8 +33,7 @@ class RevTTProvider(generic.TorrentProvider):
         self.url_base = 'https://revolutiontt.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse.php?search=%s&%s&titleonly=1&incldead=0',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'browse.php?search=%s&%s&titleonly=1&incldead=0'}
 
         self.categories = {'Season': [43, 45], 'Episode': [7, 41, 42], 'anime': [23]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']

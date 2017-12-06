@@ -47,6 +47,29 @@ def dbFilename(filename='sickbeard.db', suffix=None):
     return ek.ek(os.path.join, sickbeard.DATA_DIR, filename)
 
 
+def mass_upsert_sql(tableName, valueDict, keyDict):
+
+    """
+    use with cl.extend(mass_upsert_sql(tableName, valueDict, keyDict))
+
+    :param tableName: table name
+    :param valueDict: dict of values to be set {'table_fieldname': value}
+    :param keyDict: dict of restrains for update {'table_fieldname': value}
+    :return: list of 2 sql command
+    """
+    cl = []
+
+    genParams = lambda myDict: [x + ' = ?' for x in myDict.keys()]
+
+    cl.append(['UPDATE [%s] SET %s WHERE %s' % (
+        tableName, ', '.join(genParams(valueDict)), ' AND '.join(genParams(keyDict))), valueDict.values() + keyDict.values()])
+
+
+    cl.append(['INSERT INTO [' + tableName + '] (' + ', '.join(["'%s'" % ('%s' % v).replace("'", "''") for v in valueDict.keys() + keyDict.keys()]) + ')' +
+                ' SELECT ' + ', '.join(["'%s'" % ('%s' % v).replace("'", "''") for v in valueDict.values() + keyDict.values()]) + ' WHERE changes() = 0'])
+    return cl
+
+
 class DBConnection(object):
     def __init__(self, filename='sickbeard.db', suffix=None, row_type=None):
 
@@ -230,6 +253,20 @@ class DBConnection(object):
     def addColumn(self, table, column, type='NUMERIC', default=0):
         self.action('ALTER TABLE [%s] ADD %s %s' % (table, column, type))
         self.action('UPDATE [%s] SET %s = ?' % (table, column), (default,))
+
+    def has_flag(self, flag_name):
+        sql_result = self.select('SELECT flag FROM flags WHERE flag = ?', [flag_name])
+        if 0 < len(sql_result):
+            return True
+        return False
+
+    def add_flag(self, flag_name):
+        if not self.has_flag(flag_name):
+            self.action('INSERT INTO flags (flag) VALUES (?)', [flag_name])
+
+    def remove_flag(self, flag_name):
+        if self.has_flag(flag_name):
+            self.action('DELETE FROM flags WHERE flag = ?', [flag_name])
 
     def close(self):
         """Close database connection"""
@@ -453,7 +490,9 @@ def MigrationCode(myDB):
         20000: sickbeard.mainDB.DBIncreaseTo20001,
         20001: sickbeard.mainDB.AddTvShowOverview,
         20002: sickbeard.mainDB.AddTvShowTags,
-        20003: sickbeard.mainDB.ChangeMapIndexer
+        20003: sickbeard.mainDB.ChangeMapIndexer,
+        20004: sickbeard.mainDB.AddShowNotFoundCounter,
+        20005: sickbeard.mainDB.AddFlagTable
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

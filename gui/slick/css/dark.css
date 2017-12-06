@@ -1,21 +1,25 @@
 /* =======================================================================
 inc_top.tmpl
 ========================================================================== */
+.shows-not-found.n .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.n,
 pre .prelight{
 	color:#c3ed9b
 }
 
+.shows-not-found.nn .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.nn,
 pre .prelight2{
 	color:#f6ff41
 }
 
+.shows-not-found.nnn .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.nnn,
 pre .prelight-num{
 	color:#ffba57
 }
 
+.shows-not-found.nnnn .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.nnnn{
 	color:#ff6d5e
 }
@@ -62,6 +66,10 @@ pre .prelight-num{
 	color:#ddd
 }
 
+.ui-widget.ui-widget-content{
+	border-color:#222
+}
+
 .ui-widget-content a{
 	color:#2d8fbf
 }
@@ -77,11 +85,17 @@ pre .prelight-num{
 }
 
 .ui-state-default,
+.ui-widget.ui-button,
+.ui-widget.ui-button:active,
 .ui-widget-content .ui-state-default,
 .ui-widget-header .ui-state-default{
 	background:#3d3d3d;
 	color:#fff;
 	border:1px solid #111
+}
+
+.ui-widget.ui-button:hover{
+	border-color:#111
 }
 
 .ui-state-hover,
@@ -125,21 +139,29 @@ pre .prelight-num{
 }
 
 .ui-state-hover .ui-icon,
-.ui-state-focus .ui-icon{
+.ui-state-focus .ui-icon,
+.ui-button:hover .ui-icon,
+.ui-button:focus .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_222222_256x240.png")
 }
 
-.ui-state-active .ui-icon{
+.ui-state-active .ui-icon,
+.ui-button:active .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_8c291d_256x240.png")
 }
 
-.ui-state-highlight .ui-icon{
+.ui-state-highlight .ui-icon,
+.ui-button .ui-state-highlight.ui-icon{
 	background-image:url("../css/lib/images/ui-icons_2e83ff_256x240.png")
 }
 
 .ui-state-error .ui-icon,
 .ui-state-error-text .ui-icon{
 	background-image:url("../css/lib/images/ui-icons_cd0a0a_256x240.png")
+}
+
+.ui-button .ui-icon{
+	background-image:url("../css/lib/images/ui-icons_09a2ff_256x240.png")
 }
 
 .ui-widget-overlay{
@@ -275,11 +297,13 @@ a.ui-font{
 	background-image:linear-gradient(to left, rgba(51, 51, 51, 1), rgba(51, 51, 51, 0))
 }
 
+.show-toggle-hide,
 td.tvShow a{
 	color:#ddd;
 	text-decoration:none
 }
 
+.show-toggle-hide:hover,
 td.tvShow a:hover span,
 td.tvShow a:hover{
 	cursor:pointer;
@@ -315,6 +339,7 @@ home_newShow.tmpl
 #addRootDirTable td label .filepath,
 .grey-text{color:#999}
 .highlight-text{color:#fff}
+#display-show.back-art.pro.ii .tablesorter tr .grey-text{color:#555}
 
 #newShowPortal #displayText .show-name,
 #newShowPortal #displayText .show-dest,
@@ -619,13 +644,17 @@ config*.tmpl
 	color:#ddd
 }
 
-.testNotification{
+.test-notification{
 	border:1px dotted #ccc
 }
 
 #provider_order_list li,
 #service_order_list li{
 	color:#ddd
+}
+
+.provider-enabled{
+	box-shadow:-26px 0 0 0 rgb(21, 82, 143) inset
 }
 
 #service_order_list li{
@@ -906,6 +935,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	color:#ddd
 }
 
+.component-group.typelist .bgcol,
 .dropdown-menu{
 	background-color:#333;
 	border:1px solid rgba(0, 0, 0, 0.15);
@@ -1264,16 +1294,20 @@ input sizing (for config pages)
 ========================================================================== */
 
 .showlist-select optgroup,
+#results-sortby optgroup,
 #pickShow optgroup,
 #showfilter optgroup,
+#showsort optgroup,
 #editAProvider optgroup{
 	color:#eee;
 	background-color:rgb(51, 51, 51)
 }
 
 .showlist-select optgroup option,
+#results-sortby optgroup option,
 #pickShow optgroup option,
 #showfilter optgroup option,
+#showsort optgroup option,
 #editAProvider optgroup option{
 	color:#222;
 	background-color:#ddd
@@ -1450,65 +1484,18 @@ thead.tablesorter-stickyHeader{
 	color:#000
 }
 
-
 /* =======================================================================
-token-input.css
+token-input.css Overrides
 ========================================================================== */
 
-ul.token-input-list{
-	border:1px solid #ccc;
-	background-color:#ddd
-}
-
-ul.token-input-list li input{
-	border:0;
-	background-color:white
-}
-
-li.token-input-token{
-	background-color:#d0efa0;
-	color:#000
-}
-
-li.token-input-token span{
-	color:#777
-}
-
-li.token-input-selected-token{
-	background-color:#08844e;
-	color:#ddd
-}
-
-li.token-input-selected-token span{
-	color:#bbb
-}
-
-div.token-input-dropdown{
-	background-color:#ddd;
-	color:#000;
-	border-left-color:#ccc;
-	border-right-color:#ccc;
-	border-bottom-color:#ccc
-}
-
-div.token-input-dropdown p{
-	color:#777
-}
-
+ul.token-input-list,
+div.token-input-dropdown,
 div.token-input-dropdown ul li{
 	background-color:#ddd
 }
 
-div.token-input-dropdown ul li.token-input-dropdown-item{
-	background-color:#fafafa
-}
-
-div.token-input-dropdown ul li.token-input-dropdown-item2{
-	background-color:#ddd
-}
-
-div.token-input-dropdown ul li.token-input-selected-dropdown-item{
-	background-color:#6196c2
+li.token-input-selected-token{
+	color:#ddd
 }
 
 /* =======================================================================

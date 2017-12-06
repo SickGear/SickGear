@@ -66,7 +66,7 @@ class TVCache:
         # override this in the provider if recent search has a different data layout to backlog searches
         return self.provider._title_and_url(item)
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
         data = None
         return data
 
@@ -84,7 +84,7 @@ class TVCache:
             return []
 
         if self.should_update():
-            data = self._cache_data()
+            data = self._cache_data(**kwargs)
 
             # clear cache
             if data:
@@ -208,7 +208,7 @@ class TVCache:
                     return None
 
             try:
-                np = NameParser(showObj=showObj, convert=True)
+                np = NameParser(showObj=showObj, convert=True, indexer_lookup=False)
                 parse_result = np.parse(name)
             except InvalidNameException:
                 logger.log(u'Unable to parse the filename ' + name + ' into a valid episode', logger.DEBUG)
@@ -258,7 +258,8 @@ class TVCache:
 
     def listPropers(self, date=None):
         myDB = self.get_db()
-        sql = "SELECT * FROM provider_cache WHERE name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%' AND provider = ?"
+        sql = "SELECT * FROM provider_cache WHERE name LIKE '%.PROPER.%' OR name LIKE '%.REPACK.%' " \
+              "OR name LIKE '%.REAL.%' AND provider = ?"
 
         if date:
             sql += ' AND time >= ' + str(int(time.mktime(date.timetuple())))
@@ -292,7 +293,7 @@ class TVCache:
         for curResult in sqlResults:
 
             # skip non-tv crap
-            if not show_name_helpers.pass_wordlist_checks(curResult['name'], parse=False):
+            if not show_name_helpers.pass_wordlist_checks(curResult['name'], parse=False, indexer_lookup=False):
                 continue
 
             # get the show object, or if it's not one of our shows then ignore it
@@ -341,6 +342,18 @@ class TVCache:
             result.release_group = curReleaseGroup
             result.version = curVersion
             result.content = None
+            np = NameParser(False, showObj=showObj)
+            try:
+                parsed_result = np.parse(title)
+                extra_info_no_name = parsed_result.extra_info_no_name()
+                version = parsed_result.version
+                is_anime = parsed_result.is_anime
+            except (StandardError, Exception):
+                extra_info_no_name = None
+                version = -1
+                is_anime = False
+            result.is_repack, result.properlevel = Quality.get_proper_level(extra_info_no_name, version, is_anime,
+                                                                            check_is_repack=True)
 
             # add it to the list
             if epObj not in neededEps:

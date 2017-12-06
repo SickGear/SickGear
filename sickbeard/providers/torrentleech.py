@@ -33,8 +33,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base,
                      'browse': self.url_base + 'torrents/browse/index/categories/%(cats)s',
-                     'search': self.url_base + 'torrents/browse/index/query/%(query)s/categories/%(cats)s',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'torrents/browse/index/query/%(query)s/categories/%(cats)s'}
 
         self.categories = {'shows': [2, 26, 27, 32], 'anime': [7, 34, 35]}
 
@@ -110,7 +109,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
+        return super(TorrentLeechProvider, self)._episode_strings(ep_obj, sep_date='|', **kwargs)
 
 
 provider = TorrentLeechProvider()

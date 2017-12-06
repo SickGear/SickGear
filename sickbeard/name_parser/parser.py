@@ -18,13 +18,20 @@
 
 from __future__ import with_statement
 
-import os
-import time
-import re
 import datetime
+import os
 import os.path
+import re
+import time
+
 import regexes
 import sickbeard
+
+try:
+    import regex
+    from math import trunc  # positioned here to import only if regex is available
+except ImportError:
+    regex = None
 
 from sickbeard import logger, helpers, scene_numbering, common, scene_exceptions, encodingKludge as ek, db
 from sickbeard.exceptions import ex
@@ -36,7 +43,7 @@ class NameParser(object):
     ANIME_REGEX = 2
 
     def __init__(self, file_name=True, showObj=None, try_scene_exceptions=False, convert=False,
-                 naming_pattern=False, testing=False):
+                 naming_pattern=False, testing=False, indexer_lookup=True):
 
         self.file_name = file_name
         self.showObj = showObj
@@ -44,6 +51,7 @@ class NameParser(object):
         self.convert = convert
         self.naming_pattern = naming_pattern
         self.testing = testing
+        self.indexer_lookup = indexer_lookup
 
         if self.showObj and not self.showObj.is_anime:
             self._compile_regexes(self.NORMAL_REGEX)
@@ -51,6 +59,29 @@ class NameParser(object):
             self._compile_regexes(self.ANIME_REGEX)
         else:
             self._compile_regexes(self.ALL_REGEX)
+
+    def _compile_regexes(self, regex_mode):
+        if self.ANIME_REGEX == regex_mode:
+            logger.log(u'Using ANIME regexs', logger.DEBUG)
+            uncompiled_regex = [regexes.anime_regexes]
+        elif self.NORMAL_REGEX == regex_mode:
+            logger.log(u'Using NORMAL regexs', logger.DEBUG)
+            uncompiled_regex = [regexes.normal_regexes]
+        else:
+            logger.log(u'Using ALL regexes', logger.DEBUG)
+            uncompiled_regex = [regexes.normal_regexes, regexes.anime_regexes]
+
+        self.compiled_regexes = {0: [], 1: []}
+        index = 0
+        for regexItem in uncompiled_regex:
+            for cur_pattern_num, (cur_pattern_name, cur_pattern) in enumerate(regexItem):
+                try:
+                    cur_regex = re.compile(cur_pattern, re.VERBOSE | re.IGNORECASE)
+                except re.error as errormsg:
+                    logger.log(u'WARNING: Invalid episode_pattern, %s. %s' % (errormsg, cur_pattern))
+                else:
+                    self.compiled_regexes[index].append([cur_pattern_num, cur_pattern_name, cur_regex])
+            index += 1
 
     @staticmethod
     def clean_series_name(series_name):
@@ -77,42 +108,22 @@ class NameParser(object):
         series_name = re.sub('^\[.*\]', '', series_name)
         return series_name.strip()
 
-    def _compile_regexes(self, regexMode):
-        if self.ANIME_REGEX == regexMode:
-            logger.log(u'Using ANIME regexs', logger.DEBUG)
-            uncompiled_regex = [regexes.anime_regexes]
-        elif self.NORMAL_REGEX == regexMode:
-            logger.log(u'Using NORMAL regexs', logger.DEBUG)
-            uncompiled_regex = [regexes.normal_regexes]
-        else:
-            logger.log(u'Using ALL regexes', logger.DEBUG)
-            uncompiled_regex = [regexes.normal_regexes, regexes.anime_regexes]
-
-        self.compiled_regexes = {0: [], 1: []}
-        index = 0
-        for regexItem in uncompiled_regex:
-            for cur_pattern_num, (cur_pattern_name, cur_pattern) in enumerate(regexItem):
-                try:
-                    cur_regex = re.compile(cur_pattern, re.VERBOSE | re.IGNORECASE)
-                except re.error as errormsg:
-                    logger.log(u'WARNING: Invalid episode_pattern, %s. %s' % (errormsg, cur_pattern))
-                else:
-                    self.compiled_regexes[index].append([cur_pattern_num, cur_pattern_name, cur_regex])
-            index += 1
-
     def _parse_string(self, name):
         if not name:
             return
 
         matches = []
 
-        for regex in self.compiled_regexes:
-            for (cur_regex_num, cur_regex_name, cur_regex) in self.compiled_regexes[regex]:
+        for reg_ex in self.compiled_regexes:
+            for (cur_regex_num, cur_regex_name, cur_regex) in self.compiled_regexes[reg_ex]:
                 new_name = helpers.remove_non_release_groups(name, 'anime' in cur_regex_name)
                 match = cur_regex.match(new_name)
 
                 if not match:
                     continue
+
+                if 'garbage_name' == cur_regex_name:
+                    return
 
                 result = ParseResult(new_name)
                 result.which_regex = [cur_regex_name]
@@ -124,6 +135,13 @@ class NameParser(object):
                     result.series_name = match.group('series_name')
                     if result.series_name:
                         result.series_name = self.clean_series_name(result.series_name)
+                        name_parts = re.match('(?i)(.*)[ -]((?:part|pt)[ -]?\w+)$', result.series_name)
+                        try:
+                            result.series_name = name_parts.group(1)
+                            result.extra_info = name_parts.group(2)
+                        except (AttributeError, IndexError):
+                            pass
+
                         result.score += 1
 
                 if 'series_num' in named_groups and match.group('series_num'):
@@ -150,7 +168,7 @@ class NameParser(object):
                                     ep = tmp_show.getEpisode(parse_result.season_number, ep_num)
                                 else:
                                     ep = None
-                        except:
+                        except (StandardError, Exception):
                             ep = None
                         en = ep and ep.name and re.match(r'^\W*(\d+)', ep.name) or None
                         es = en and en.group(1) or None
@@ -173,7 +191,13 @@ class NameParser(object):
 
                 if 'air_year' in named_groups and 'air_month' in named_groups and 'air_day' in named_groups:
                     year = int(match.group('air_year'))
-                    month = int(match.group('air_month'))
+                    try:
+                        month = int(match.group('air_month'))
+                    except ValueError:
+                        try:
+                            month = time.strptime(match.group('air_month')[0:3], '%b').tm_mon
+                        except ValueError as e:
+                            raise InvalidNameException(ex(e))
                     day = int(match.group('air_day'))
                     # make an attempt to detect YYYY-DD-MM formats
                     if 12 < month:
@@ -181,7 +205,8 @@ class NameParser(object):
                         month = day
                         day = tmp_month
                     try:
-                        result.air_date = datetime.date(year, month, day)
+                        result.air_date = datetime.date(
+                            year + ((1900, 2000)[0 < year < 28], 0)[1900 < year], month, day)
                     except ValueError as e:
                         raise InvalidNameException(ex(e))
 
@@ -192,7 +217,10 @@ class NameParser(object):
                     if tmp_extra_info and 'season_only' == cur_regex_name and re.search(
                             r'([. _-]|^)(special|extra)s?\w*([. _-]|$)', tmp_extra_info, re.I):
                         continue
-                    result.extra_info = tmp_extra_info
+                    if tmp_extra_info:
+                        if result.extra_info:
+                            tmp_extra_info = '%s %s' % (result.extra_info, tmp_extra_info)
+                        result.extra_info = tmp_extra_info
                     result.score += 1
 
                 if 'release_group' in named_groups:
@@ -233,7 +261,7 @@ class NameParser(object):
                     show = self.showObj
                 best_result.show = show
 
-                if show and show.is_anime and 1 < len(self.compiled_regexes[1]) and 1 != regex:
+                if show and show.is_anime and 1 < len(self.compiled_regexes[1]) and 1 != reg_ex:
                     continue
 
                 # if this is a naming pattern test then return best result
@@ -250,20 +278,35 @@ class NameParser(object):
 
                 # if we have an air-by-date show then get the real season/episode numbers
                 if best_result.is_air_by_date:
+                    season_number, episode_numbers = None, []
+
                     airdate = best_result.air_date.toordinal()
                     my_db = db.DBConnection()
                     sql_result = my_db.select(
-                        'SELECT season, episode FROM tv_episodes WHERE showid = ? and indexer = ? and airdate = ?',
-                        [show.indexerid, show.indexer, airdate])
-
-                    season_number = None
-                    episode_numbers = []
+                        'SELECT season, episode, name FROM tv_episodes ' +
+                        'WHERE showid = ? and indexer = ? and airdate = ?', [show.indexerid, show.indexer, airdate])
 
                     if sql_result:
-                        season_number = int(sql_result[0][0])
-                        episode_numbers = [int(sql_result[0][1])]
+                        season_number = int(sql_result[0]['season'])
+                        episode_numbers = [int(sql_result[0]['episode'])]
+                        if 1 < len(sql_result):
+                            # multi-eps broadcast on this day
+                            nums = {'1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five',
+                                    '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine', '10': 'ten'}
+                            patt = '(?i)(?:e(?:p(?:isode)?)?|part|pt)[. _-]?(%s)'
+                            try:
+                                src_num = str(re.findall(patt % '\w+', best_result.extra_info)[0])
+                                alt_num = nums.get(src_num) or list(nums.keys())[list(nums.values()).index(src_num)]
+                                re_partnum = re.compile(patt % ('%s|%s' % (src_num, alt_num)))
+                                for ep_details in sql_result:
+                                    if re_partnum.search(ep_details['name']):
+                                        season_number = int(ep_details['season'])
+                                        episode_numbers = [int(ep_details['episode'])]
+                                        break
+                            except (StandardError, Exception):
+                                pass
 
-                    if not season_number or not len(episode_numbers):
+                    if self.indexer_lookup and not season_number or not len(episode_numbers):
                         try:
                             lindexer_api_parms = sickbeard.indexerApi(show.indexer).api_params.copy()
 
@@ -272,15 +315,17 @@ class NameParser(object):
 
                             t = sickbeard.indexerApi(show.indexer).indexer(**lindexer_api_parms)
 
-                            ep_obj = t[show.indexerid].airedOn(best_result.air_date)[0]
+                            ep_obj = t[show.indexerid].aired_on(best_result.air_date)[0]
 
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
                         except sickbeard.indexer_episodenotfound:
-                            logger.log(u'Unable to find episode with date ' + str(best_result.air_date) + ' for show ' + show.name + ', skipping', logger.WARNING)
+                            logger.log(u'Unable to find episode with date ' + str(best_result.air_date)
+                                       + ' for show ' + show.name + ', skipping', logger.WARNING)
                             episode_numbers = []
                         except sickbeard.indexer_error as e:
-                            logger.log(u'Unable to contact ' + sickbeard.indexerApi(show.indexer).name + ': ' + ex(e), logger.WARNING)
+                            logger.log(u'Unable to contact ' + sickbeard.indexerApi(show.indexer).name
+                                       + ': ' + ex(e), logger.WARNING)
                             episode_numbers = []
 
                     for epNo in episode_numbers:
@@ -410,7 +455,7 @@ class NameParser(object):
             else:
                 number = 0
 
-        except:
+        except (StandardError, Exception):
             # on error try converting from Roman numerals
             roman_to_int_map = (('M', 1000), ('CM', 900), ('D', 500), ('CD', 400), ('C', 100),
                                 ('XC', 90), ('L', 50), ('XL', 40), ('X', 10),
@@ -495,7 +540,8 @@ class NameParser(object):
                                            % name.encode(sickbeard.SYS_ENCODING, 'xmlcharrefreplace'))
 
         # if there's no useful info in it then raise an exception
-        if None is final_result.season_number and not final_result.episode_numbers and None is final_result.air_date and not final_result.ab_episode_numbers and not final_result.series_name:
+        if None is final_result.season_number and not final_result.episode_numbers and None is final_result.air_date \
+                and not final_result.ab_episode_numbers and not final_result.series_name:
             raise InvalidNameException('Unable to parse %s' % name.encode(sickbeard.SYS_ENCODING, 'xmlcharrefreplace'))
 
         if cache_result:
@@ -540,6 +586,7 @@ class ParseResult(object):
             self.quality = quality
 
         self.extra_info = extra_info
+        self._extra_info_no_name = None
         self.release_group = release_group
 
         self.air_date = air_date
@@ -549,6 +596,9 @@ class ParseResult(object):
         self.score = score
 
         self.version = version
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __eq__(self, other):
         if not other:
@@ -598,6 +648,37 @@ class ParseResult(object):
         to_return += ' [whichReg: %s]' % str(self.which_regex)
 
         return to_return.encode('utf-8')
+
+    @staticmethod
+    def _replace_ep_name_helper(e_i_n_n, n):
+        ep_regex = r'\W*%s\W*' % re.sub(r' ', r'\W', re.sub(r'[^a-zA-Z0-9 ]', r'\W?',
+                                                            re.sub(r'\W+$', '', n.strip())))
+        if None is regex:
+            return re.sub(ep_regex, '', e_i_n_n, flags=re.I)
+
+        return regex.sub(r'(%s){e<=%d}' % (
+            ep_regex, trunc(len(re.findall(r'\w', ep_regex)) / 5)), '', e_i_n_n, flags=regex.I | regex.B)
+
+    def get_extra_info_no_name(self):
+        extra_info_no_name = self.extra_info
+        if isinstance(extra_info_no_name, basestring) and self.show and hasattr(self.show, 'indexer'):
+            for e in self.episode_numbers:
+                if not hasattr(self.show, 'getEpisode'):
+                    continue
+                ep = self.show.getEpisode(self.season_number, e)
+                if ep and isinstance(getattr(ep, 'name', None), basestring) and ep.name.strip():
+                    extra_info_no_name = self._replace_ep_name_helper(extra_info_no_name, ep.name)
+            if hasattr(self.show, 'getAllEpisodes'):
+                for e in [ep.name for ep in self.show.getAllEpisodes(check_related_eps=False) if getattr(ep, 'name', None)
+                          and re.search(r'real|proper|repack', ep.name, re.I)]:
+                    extra_info_no_name = self._replace_ep_name_helper(extra_info_no_name, e)
+
+        return extra_info_no_name
+
+    def extra_info_no_name(self):
+        if None is self._extra_info_no_name and None is not self.extra_info:
+            self._extra_info_no_name = self.get_extra_info_no_name()
+        return self._extra_info_no_name
 
     @property
     def is_air_by_date(self):

@@ -44,11 +44,11 @@ from sickbeard import config, sab, nzbget, clients, history, notifiers, processT
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
-from sickbeard.common import SNATCHED, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED, SNATCHED_BEST, SNATCHED_PROPER
+from sickbeard.common import SNATCHED, SNATCHED_ANY, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED
 from sickbeard.common import SD, HD720p, HD1080p, UHD2160p
-from sickbeard.exceptions import ex
+from sickbeard.exceptions import ex, MultipleShowObjectsException
 from sickbeard.helpers import has_image_ext, remove_article, starify
-from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE
+from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_TRAKT
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
     get_scene_absolute_numbering
@@ -57,18 +57,23 @@ from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
 from sickbeard.search_backlog import FORCED_BACKLOG
 from sickbeard.indexermapper import MapStatus, save_mapping, map_indexers_to_show
+from sickbeard.tv import show_not_found_retry_days, concurrent_show_not_found_days
 from tornado import gen
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from lib import adba
 from lib import subliminal
 from lib.dateutil import tz
 import lib.rarfile.rarfile as rarfile
+from unidecode import unidecode
 
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
+from lib.libtrakt.indexerapiinterface import TraktSearchTypes
 from trakt_helpers import build_config, trakt_collection_remove_account
 from sickbeard.bs4_parser import BS4Parser
 from lib.tmdb_api import TMDB
+from lib.tvdb_api.tvdb_exceptions import tvdb_exception
+from lib.fuzzywuzzy import fuzz
 
 try:
     import json
@@ -91,6 +96,8 @@ class PageTemplate(Template):
         self.sbThemeName = sickbeard.THEME_NAME
 
         self.log_num_errors = len(classes.ErrorViewer.errors)
+        self.log_num_not_found_shows = len([x for x in sickbeard.showList if 0 < x.not_found_count])
+        self.log_num_not_found_shows_all = len([x for x in sickbeard.showList if 0 != x.not_found_count])
         self.sbPID = str(sickbeard.PID)
         self.menu = [
             {'title': 'Home', 'key': 'home'},
@@ -222,7 +229,7 @@ class CalendarHandler(BaseHandler):
         # Limit dates
         past_date = (datetime.date.today() + datetime.timedelta(weeks=-52)).toordinal()
         future_date = (datetime.date.today() + datetime.timedelta(weeks=52)).toordinal()
-        utc = tz.gettz('GMT')
+        utc = tz.gettz('GMT', zoneinfo_priority=True)
 
         # Get all the shows that are not paused and are currently on air
         myDB = db.DBConnection()
@@ -445,7 +452,7 @@ class MainHandler(WebHandler):
         recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
 
         done_show_list = []
-        qualities = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
+        qualities = Quality.SNATCHED + Quality.DOWNLOADED + Quality.ARCHIVED + [IGNORED, SKIPPED]
 
         myDB = db.DBConnection()
         sql_results = myDB.select(
@@ -460,8 +467,8 @@ class MainHandler(WebHandler):
             'SELECT *, tv_shows.status as show_status FROM tv_episodes outer_eps, tv_shows WHERE season != 0 AND showid NOT IN (%s)'
             % ','.join(['?'] * len(done_show_list))
             + ' AND tv_shows.indexer_id = outer_eps.showid AND airdate = (SELECT airdate FROM tv_episodes inner_eps WHERE inner_eps.season != 0 AND inner_eps.showid = outer_eps.showid AND inner_eps.airdate >= ? ORDER BY inner_eps.airdate ASC LIMIT 1) AND outer_eps.status NOT IN (%s)'
-            % ','.join(['?'] * len(Quality.DOWNLOADED + Quality.SNATCHED)),
-            done_show_list + [next_week] + Quality.DOWNLOADED + Quality.SNATCHED)
+            % ','.join(['?'] * len(Quality.SNATCHED + Quality.DOWNLOADED)),
+            done_show_list + [next_week] + Quality.SNATCHED + Quality.DOWNLOADED)
 
         sql_results += myDB.select(
             'SELECT *, tv_shows.status as show_status FROM tv_episodes, tv_shows WHERE season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND airdate <= ? AND airdate >= ? AND tv_episodes.status = ? AND tv_episodes.status NOT IN (%s)'
@@ -473,7 +480,7 @@ class MainHandler(WebHandler):
         # make a dict out of the sql results
         sql_results = [dict(row) for row in sql_results
                        if Quality.splitCompositeStatus(helpers.tryInt(row['status']))[0] not in
-                       [DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVED, IGNORED]]
+                       SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED, SKIPPED]]
 
         # multi dimension sort
         sorts = {
@@ -618,10 +625,10 @@ class Home(MainHandler):
     def HomeMenu(self):
         return [
             {'title': 'Process Media', 'path': 'home/postprocess/'},
-            {'title': 'Update Emby', 'path': 'home/updateEMBY/', 'requires': self.haveEMBY},
-            {'title': 'Update Kodi', 'path': 'home/updateKODI/', 'requires': self.haveKODI},
-            {'title': 'Update XBMC', 'path': 'home/updateXBMC/', 'requires': self.haveXBMC},
-            {'title': 'Update Plex', 'path': 'home/updatePLEX/', 'requires': self.havePLEX}
+            {'title': 'Update Emby', 'path': 'home/update_emby/', 'requires': self.haveEMBY},
+            {'title': 'Update Kodi', 'path': 'home/update_kodi/', 'requires': self.haveKODI},
+            {'title': 'Update XBMC', 'path': 'home/update_xbmc/', 'requires': self.haveXBMC},
+            {'title': 'Update Plex', 'path': 'home/update_plex/', 'requires': self.havePLEX}
         ]
 
     @staticmethod
@@ -720,8 +727,8 @@ class Home(MainHandler):
         # Get all show snatched / downloaded / next air date stats
         myDB = db.DBConnection()
         today = datetime.date.today().toordinal()
-        status_quality = ','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER])
-        status_download = ','.join([str(x) for x in Quality.DOWNLOADED + [ARCHIVED]])
+        status_quality = ','.join([str(x) for x in Quality.SNATCHED_ANY])
+        status_download = ','.join([str(x) for x in Quality.DOWNLOADED + Quality.ARCHIVED])
         status_total = '%s, %s, %s' % (SKIPPED, WANTED, FAILED)
 
         sql_statement = 'SELECT showid, '
@@ -776,236 +783,191 @@ class Home(MainHandler):
 
         client = clients.get_client_instance(torrent_method)
 
-        connection, accesMsg = client(host, username, password).test_authentication()
+        connection, acces_msg = client(host, username, password).test_authentication()
 
-        return accesMsg
+        return acces_msg
 
-    def testGrowl(self, host=None, password=None):
+    @staticmethod
+    def discover_emby():
+        return notifiers.NotifierFactory().get('EMBY').discover_server()
+
+    def test_emby(self, host=None, apikey=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host, default_port=8096)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        result = notifiers.NotifierFactory().get('EMBY').test_notify(hosts, apikey)
+
+        ui.notifications.message('Tested Emby:', urllib.unquote_plus(hosts.replace(',', ', ')))
+        return result
+
+    def test_kodi(self, host=None, username=None, password=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host, default_port=8080)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        if None is not password and set('*') == set(password):
+            password = sickbeard.KODI_PASSWORD
+
+        result = notifiers.NotifierFactory().get('KODI').test_notify(hosts, username, password)
+
+        ui.notifications.message('Tested Kodi:', urllib.unquote_plus(hosts.replace(',', ', ')))
+        return result
+
+    def test_plex(self, host=None, username=None, password=None, server=False):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host, default_port=32400)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        if None is not password and set('*') == set(password):
+            password = sickbeard.PLEX_PASSWORD
+
+        server = 'true' == server
+        n = notifiers.NotifierFactory().get('PLEX')
+        method = n.test_update_library if server else n.test_notify
+        result = method(hosts, username, password)
+
+        ui.notifications.message('Tested Plex %s(s): ' % ('client', 'Media Server host')[server],
+                                 urllib.unquote_plus(hosts.replace(',', ', ')))
+        return result
+
+    # def test_xbmc(self, host=None, username=None, password=None):
+    #     self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+    #
+    #     hosts = config.clean_hosts(host, default_port=80)
+    #     if not hosts:
+    #         return 'Fail: No valid host(s)'
+    #
+    #     if None is not password and set('*') == set(password):
+    #         password = sickbeard.XBMC_PASSWORD
+    #
+    #     result = notifiers.NotifierFactory().get('XBMC').test_notify(hosts, username, password)
+    #
+    #     ui.notifications.message('Tested XBMC: ', urllib.unquote_plus(hosts.replace(',', ', ')))
+    #     return result
+
+    def test_nmj(self, host=None, database=None, mount=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_host(host)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        return notifiers.NotifierFactory().get('NMJ').test_notify(urllib.unquote_plus(host), database, mount)
+
+    def settings_nmj(self, host=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_host(host)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        return notifiers.NotifierFactory().get('NMJ').notify_settings(urllib.unquote_plus(host))
+
+    def test_nmj2(self, host=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_host(host)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        return notifiers.NotifierFactory().get('NMJV2').test_notify(urllib.unquote_plus(host))
+
+    def settings_nmj2(self, host=None, dbloc=None, instance=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        host = config.clean_host(host)
+        return notifiers.NotifierFactory().get('NMJV2').notify_settings(urllib.unquote_plus(host), dbloc, instance)
+
+    def test_boxcar2(self, access_token=None, sound=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not access_token and starify(access_token, True):
+            access_token = sickbeard.BOXCAR2_ACCESSTOKEN
+
+        return notifiers.NotifierFactory().get('BOXCAR2').test_notify(access_token, sound)
+
+    def test_pushbullet(self, access_token=None, device_iden=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not access_token and starify(access_token, True):
+            access_token = sickbeard.PUSHBULLET_ACCESS_TOKEN
+
+        return notifiers.NotifierFactory().get('PUSHBULLET').test_notify(access_token, device_iden)
+
+    def get_pushbullet_devices(self, access_token=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not access_token and starify(access_token, True):
+            access_token = sickbeard.PUSHBULLET_ACCESS_TOKEN
+
+        return notifiers.NotifierFactory().get('PUSHBULLET').get_devices(access_token)
+
+    def test_pushover(self, user_key=None, api_key=None, priority=None, device=None, sound=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not user_key and starify(user_key, True):
+            user_key = sickbeard.PUSHOVER_USERKEY
+
+        if None is not api_key and starify(api_key, True):
+            api_key = sickbeard.PUSHOVER_APIKEY
+
+        return notifiers.NotifierFactory().get('PUSHOVER').test_notify(user_key, api_key, priority, device, sound)
+
+    def get_pushover_devices(self, user_key=None, api_key=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not user_key and starify(user_key, True):
+            user_key = sickbeard.PUSHOVER_USERKEY
+
+        if None is not api_key and starify(api_key, True):
+            api_key = sickbeard.PUSHOVER_APIKEY
+
+        return notifiers.NotifierFactory().get('PUSHOVER').get_devices(user_key, api_key)
+
+    def test_growl(self, host=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_host(host, default_port=23053)
         if None is not password and set('*') == set(password):
             password = sickbeard.GROWL_PASSWORD
 
-        result = notifiers.growl_notifier.test_notify(host, password)
-        if password is None or password == '':
-            pw_append = ''
-        else:
-            pw_append = ' with password: ' + password
+        return notifiers.NotifierFactory().get('GROWL').test_notify(host, password)
 
-        if result:
-            return 'Registered and Tested growl successfully ' + urllib.unquote_plus(host) + pw_append
-        else:
-            return 'Registration and Testing of growl failed ' + urllib.unquote_plus(host) + pw_append
-
-    def testProwl(self, prowl_api=None, prowl_priority=0):
+    def test_prowl(self, prowl_api=None, prowl_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         if None is not prowl_api and starify(prowl_api, True):
             prowl_api = sickbeard.PROWL_API
 
-        result = notifiers.prowl_notifier.test_notify(prowl_api, prowl_priority)
-        if result:
-            return 'Test prowl notice sent successfully'
-        else:
-            return 'Test prowl notice failed'
+        return notifiers.NotifierFactory().get('PROWL').test_notify(prowl_api, prowl_priority)
 
-    def testBoxcar2(self, accesstoken=None, sound=None):
+    def test_nma(self, nma_api=None, nma_priority=0):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        if None is not accesstoken and starify(accesstoken, True):
-            accesstoken = sickbeard.BOXCAR2_ACCESSTOKEN
+        if None is not nma_api and starify(nma_api, True):
+            nma_api = sickbeard.NMA_API
 
-        result = notifiers.boxcar2_notifier.test_notify(accesstoken, sound)
-        if result:
-            return 'Boxcar2 notification succeeded. Check your Boxcar2 clients to make sure it worked'
-        else:
-            return 'Error sending Boxcar2 notification'
+        return notifiers.NotifierFactory().get('NMA').test_notify(nma_api, nma_priority)
 
-    def testPushover(self, userKey=None, apiKey=None, priority=None, device=None, sound=None):
+    def test_libnotify(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        if None is not userKey and starify(userKey, True):
-            userKey = sickbeard.PUSHOVER_USERKEY
+        return notifiers.NotifierFactory().get('LIBNOTIFY').test_notify()
 
-        if None is not apiKey and starify(apiKey, True):
-            apiKey = sickbeard.PUSHOVER_APIKEY
-
-        result = notifiers.pushover_notifier.test_notify(userKey, apiKey, priority, device, sound)
-        if result:
-            return 'Pushover notification succeeded. Check your Pushover clients to make sure it worked'
-        else:
-            return 'Error sending Pushover notification'
-
-    def getPushoverDevices(self, userKey=None, apiKey=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not userKey and starify(userKey, True):
-            userKey = sickbeard.PUSHOVER_USERKEY
-
-        if None is not apiKey and starify(apiKey, True):
-            apiKey = sickbeard.PUSHOVER_APIKEY
-
-        result = notifiers.pushover_notifier.get_devices(userKey, apiKey)
-        if result:
-            return result
-        else:
-            return "{}"
-
-    def twitterStep1(self, *args, **kwargs):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        return notifiers.twitter_notifier._get_authorization()
-
-    def twitterStep2(self, key):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        result = notifiers.twitter_notifier._get_credentials(key)
-        logger.log(u'result: ' + str(result))
-        if result:
-            return 'Key verification successful'
-        else:
-            return 'Unable to verify key'
-
-    def testTwitter(self, *args, **kwargs):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        result = notifiers.twitter_notifier.test_notify()
-        if result:
-            return 'Tweet successful, check your twitter to make sure it worked'
-        else:
-            return 'Error sending tweet'
-
-    @staticmethod
-    def discover_emby():
-        return notifiers.emby_notifier.discover_server()
-
-    def testEMBY(self, host=None, apikey=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        hosts = config.clean_hosts(host)
-        if not hosts:
-            return 'Fail: At least one invalid host'
-
-        total_success, cur_message = notifiers.emby_notifier.test_notify(hosts, apikey)
-        return (cur_message, u'Success. All Emby hosts tested.')[total_success]
-
-    def testKODI(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        hosts = config.clean_hosts(host)
-        if not hosts:
-            return 'Fail: At least one invalid host'
-
-        if None is not password and set('*') == set(password):
-            password = sickbeard.KODI_PASSWORD
-
-        total_success, cur_message = notifiers.kodi_notifier.test_notify(hosts, username, password)
-        return (cur_message, u'Success. All Kodi hosts tested.')[total_success]
-
-    def testXBMC(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_hosts(host)
-        if None is not password and set('*') == set(password):
-            password = sickbeard.XBMC_PASSWORD
-
-        finalResult = ''
-        for curHost in [x.strip() for x in host.split(',')]:
-            curResult = notifiers.xbmc_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
-            if len(curResult.split(':')) > 2 and 'OK' in curResult.split(':')[2]:
-                finalResult += 'Test XBMC notice sent successfully to ' + urllib.unquote_plus(curHost)
-            else:
-                finalResult += 'Test XBMC notice failed to ' + urllib.unquote_plus(curHost)
-            finalResult += "<br />\n"
-
-        return finalResult
-
-    def testPMC(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not password and set('*') == set(password):
-            password = sickbeard.PLEX_PASSWORD
-
-        finalResult = ''
-        for curHost in [x.strip() for x in host.split(',')]:
-            curResult = notifiers.plex_notifier.test_notify(urllib.unquote_plus(curHost), username, password)
-            if len(curResult.split(':')) > 2 and 'OK' in curResult.split(':')[2]:
-                finalResult += 'Successful test notice sent to Plex client ... ' + urllib.unquote_plus(curHost)
-            else:
-                finalResult += 'Test failed for Plex client ... ' + urllib.unquote_plus(curHost)
-            finalResult += '<br />' + '\n'
-
-        ui.notifications.message('Tested Plex client(s): ', urllib.unquote_plus(host.replace(',', ', ')))
-
-        return finalResult
-
-    def testPMS(self, host=None, username=None, password=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not password and set('*') == set(password):
-            password = sickbeard.PLEX_PASSWORD
-
-        cur_result = notifiers.plex_notifier.test_notify(urllib.unquote_plus(host), username, password, server=True)
-        if '<br />' == cur_result:
-            cur_result += 'Fail: No valid host set to connect with'
-        final_result = (('Test result for', 'Successful test of')['Fail' not in cur_result]
-                        + ' Plex server(s) ... %s<br />\n' % cur_result)
-
-        ui.notifications.message('Tested Plex Media Server host(s): ', urllib.unquote_plus(host.replace(',', ', ')))
-
-        return final_result
-
-    def testLibnotify(self, *args, **kwargs):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if notifiers.libnotify_notifier.test_notify():
-            return 'Tried sending desktop notification via libnotify'
-        else:
-            return notifiers.libnotify.diagnose()
-
-    def testNMJ(self, host=None, database=None, mount=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_host(host)
-        result = notifiers.nmj_notifier.test_notify(urllib.unquote_plus(host), database, mount)
-        if result:
-            return 'Successfully started the scan update'
-        else:
-            return 'Test failed to start the scan update'
-
-    def settingsNMJ(self, host=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_host(host)
-        result = notifiers.nmj_notifier.notify_settings(urllib.unquote_plus(host))
-        if result:
-            return '{"message": "Got settings from %(host)s", "database": "%(database)s", "mount": "%(mount)s"}' % {
-                "host": host, "database": sickbeard.NMJ_DATABASE, "mount": sickbeard.NMJ_MOUNT}
-        else:
-            return '{"message": "Failed! Make sure your Popcorn is on and NMJ is running. (see Log & Errors -> Debug for detailed info)", "database": "", "mount": ""}'
-
-    def testNMJv2(self, host=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_host(host)
-        result = notifiers.nmjv2_notifier.test_notify(urllib.unquote_plus(host))
-        if result:
-            return 'Test notice sent successfully to ' + urllib.unquote_plus(host)
-        else:
-            return 'Test notice failed to ' + urllib.unquote_plus(host)
-
-    def settingsNMJv2(self, host=None, dbloc=None, instance=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        host = config.clean_host(host)
-        result = notifiers.nmjv2_notifier.notify_settings(urllib.unquote_plus(host), dbloc, instance)
-        if result:
-            return '{"message": "NMJ Database found at: %(host)s", "database": "%(database)s"}' % {"host": host,
-                                                                                                   "database": sickbeard.NMJv2_DATABASE}
-        else:
-            return '{"message": "Unable to find NMJ Database at location: %(dbloc)s. Is the right location selected and PCH running?", "database": ""}' % {
-                "dbloc": dbloc}
+    # def test_pushalot(self, authorization_token=None):
+    #     self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+    #
+    #     if None is not authorization_token and starify(authorization_token, True):
+    #         authorization_token = sickbeard.PUSHALOT_AUTHORIZATIONTOKEN
+    #
+    #     return notifiers.NotifierFactory().get('PUSHALOT').test_notify(authorization_token)
 
     def trakt_authenticate(self, pin=None, account=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1056,7 +1018,7 @@ class Home(MainHandler):
                 return json.dumps({'result': 'Not found: Account to delete'})
         return json.dumps({'result': 'Not found: Invalid account id'})
 
-    def loadShowNotifyLists(self, *args, **kwargs):
+    def load_show_notify_lists(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         my_db = db.DBConnection()
@@ -1079,6 +1041,51 @@ class Home(MainHandler):
 
         return json.dumps(response)
 
+    def test_slack(self, channel=None, as_authed=False, bot_name=None, icon_url=None, access_token=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('SLACK').test_notify(
+            channel=channel, as_authed='true' == as_authed,
+            bot_name=bot_name, icon_url=icon_url, access_token=access_token)
+
+    def test_discordapp(self, as_authed=False, username=None, icon_url=None, as_tts=False, access_token=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('DISCORDAPP').test_notify(
+            as_authed='true' == as_authed, username=username, icon_url=icon_url,
+            as_tts='true' == as_tts, access_token=access_token)
+
+    def test_gitter(self, room_name=None, access_token=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('GITTER').test_notify(
+            room_name=room_name, access_token=access_token)
+
+    def test_twitter(self, *args, **kwargs):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('TWITTER').test_notify()
+
+    def twitter_step1(self, *args, **kwargs):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('TWITTER').get_authorization()
+
+    def twitter_step2(self, key):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        return notifiers.NotifierFactory().get('TWITTER').get_credentials(key)
+
+    def test_email(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        if None is not pwd and set('*') == set(pwd):
+            pwd = sickbeard.EMAIL_PASSWORD
+
+        host = config.clean_host(host)
+
+        return notifiers.NotifierFactory().get('EMAIL').test_notify(host, port, smtp_from, use_tls, user, pwd, to)
+
     @staticmethod
     def save_show_email(show=None, emails=None):
         # self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1091,57 +1098,6 @@ class Home(MainHandler):
                              [emails, parse[0], parse[1]]):
             success = True
         return json.dumps({'id': show, 'success': success})
-
-    def testEmail(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not pwd and set('*') == set(pwd):
-            pwd = sickbeard.EMAIL_PASSWORD
-        host = config.clean_host(host)
-
-        if notifiers.email_notifier.test_notify(host, port, smtp_from, use_tls, user, pwd, to):
-            return 'Success. Test email sent. Check inbox.'
-        return 'ERROR: %s' % notifiers.email_notifier.last_err
-
-    def testNMA(self, nma_api=None, nma_priority=0):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not nma_api and starify(nma_api, True):
-            nma_api = sickbeard.NMA_API
-
-        result = notifiers.nma_notifier.test_notify(nma_api, nma_priority)
-        if result:
-            return 'Test NMA notice sent successfully'
-        else:
-            return 'Test NMA notice failed'
-
-    def testPushalot(self, authorizationToken=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not authorizationToken and starify(authorizationToken, True):
-            authorizationToken = sickbeard.PUSHALOT_AUTHORIZATIONTOKEN
-
-        result = notifiers.pushalot_notifier.test_notify(authorizationToken)
-        if result:
-            return 'Pushalot notification succeeded. Check your Pushalot clients to make sure it worked'
-        else:
-            return 'Error sending Pushalot notification'
-
-    def testPushbullet(self, accessToken=None, device_iden=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not accessToken and starify(accessToken, True):
-            accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
-
-        return notifiers.pushbullet_notifier.test_notify(accessToken, device_iden)
-
-    def getPushbulletDevices(self, accessToken=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not accessToken and starify(accessToken, True):
-            accessToken = sickbeard.PUSHBULLET_ACCESS_TOKEN
-
-        return notifiers.pushbullet_notifier.get_devices(accessToken)
 
     def viewchanges(self):
 
@@ -1314,6 +1270,14 @@ class Home(MainHandler):
         elif sickbeard.showQueueScheduler.action.isInSubtitleQueue(showObj):  # @UndefinedVariable
             show_message = 'This show is queued and awaiting subtitles download.'
 
+        if 0 != showObj.not_found_count:
+            last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
+                showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
+            show_message = (
+                'The master ID of this show has been abandoned%s, ' % last_found
+                + '<a href="%s/home/editShow?show=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>' % (
+                    sickbeard.WEB_ROOT, show, show)
+                + ('', '<br>%s' % show_message)[0 < len(show_message)])
         t.force_update = 'home/updateShow?show=%d&amp;force=1&amp;web=1' % showObj.indexerid
         if not sickbeard.showQueueScheduler.action.isBeingAdded(showObj):  # @UndefinedVariable
             if not sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  # @UndefinedVariable
@@ -1323,14 +1287,14 @@ class Home(MainHandler):
                 t.submenu.append(
                     {'title': 'Force Full Update', 'path': t.force_update})
                 t.submenu.append({'title': 'Update show in Emby',
-                                  'path': 'home/updateEMBY%s' %
+                                  'path': 'home/update_emby%s' %
                                           (INDEXER_TVDB == showObj.indexer and ('?show=%s' % showObj.indexerid) or '/'),
                                   'requires': self.haveEMBY})
                 t.submenu.append({'title': 'Update show in Kodi',
-                                  'path': 'home/updateKODI?showName=%s' % urllib.quote_plus(
+                                  'path': 'home/update_kodi?show_name=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveKODI})
                 t.submenu.append({'title': 'Update show in XBMC',
-                                  'path': 'home/updateXBMC?showName=%s' % urllib.quote_plus(
+                                  'path': 'home/update_xbmc?show_name=%s' % urllib.quote_plus(
                                   showObj.name.encode('utf-8')), 'requires': self.haveXBMC})
                 t.submenu.append({'title': 'Media Renamer', 'path': 'home/testRename?show=%d' % showObj.indexerid})
                 if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
@@ -1339,6 +1303,13 @@ class Home(MainHandler):
                         {'title': 'Download Subtitles', 'path': 'home/subtitleShow?show=%d' % showObj.indexerid})
 
         t.show = showObj
+        with BS4Parser('<html><body>%s</body></html>' % showObj.overview, features=['html5lib', 'permissive']) as soup:
+            try:
+                soup.a.replace_with(soup.new_tag(''))
+            except(StandardError, Exception):
+                pass
+            overview = re.sub('(?i)full streaming', '', soup.get_text().strip())
+        t.show.overview = overview
         t.show_message = show_message
 
         ep_counts = {}
@@ -1380,7 +1351,7 @@ class Home(MainHandler):
 
         for row in my_db.select('SELECT max(season) as latest FROM tv_episodes WHERE showid = ?'
                                 + ' and 1000 < airdate and ? < status', [showObj.indexerid, UNAIRED]):
-            t.latest_season = row['latest']
+            t.latest_season = row['latest'] or {0: 1, 1: 1, 2: None}.get(sickbeard.DISPLAY_SHOW_VIEWMODE)
 
         t.season_min = ([], [1])[2 < t.latest_season] + [t.latest_season]
         t.other_seasons = (list(set(all_seasons) - set(t.season_min)), [])[display_show_minimum]
@@ -1403,10 +1374,13 @@ class Home(MainHandler):
             status_overview = showObj.getOverview(row['status'])
             if status_overview:
                 ep_counts[status_overview] += row['cnt']
-                if ARCHIVED == row['status']:
-                    ep_counts['archived'].setdefault(row['season'], row['cnt'])
+                if ARCHIVED == Quality.splitCompositeStatus(row['status'])[0]:
+                    ep_counts['archived'].setdefault(row['season'], 0)
+                    ep_counts['archived'][row['season']] = row['cnt'] + ep_counts['archived'].get(row['season'], 0)
                 else:
-                    ep_counts['status'].setdefault(row['season'], {status_overview: row['cnt']})
+                    ep_counts['status'].setdefault(row['season'], {})
+                    ep_counts['status'][row['season']][status_overview] = row['cnt'] + \
+                        ep_counts['status'][row['season']].get(status_overview, 0)
 
         for row in my_db.select('SELECT season, count(*) AS cnt FROM tv_episodes WHERE showid = ?'
                                 + ' AND \'\' != location GROUP BY season', [showObj.indexerid]):
@@ -1468,6 +1442,7 @@ class Home(MainHandler):
 
         indexerid = int(showObj.indexerid)
         indexer = int(showObj.indexer)
+        t.min_initial = Quality.qualityStrings[min(Quality.splitQuality(showObj.quality)[0])]
         t.all_scene_exceptions = showObj.exceptions
         t.scene_numbering = get_scene_numbering_for_show(indexerid, indexer)
         t.scene_absolute_numbering = get_scene_absolute_numbering_for_show(indexerid, indexer)
@@ -1581,7 +1556,8 @@ class Home(MainHandler):
         return {'Success': 'Switched to new TV info source'}
 
     def saveMapping(self, show, **kwargs):
-        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
+        show = helpers.tryInt(show)
+        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, show)
         response = {}
         if not show_obj:
             return json.dumps(response)
@@ -1621,10 +1597,22 @@ class Home(MainHandler):
             else:
                 ui.notifications.message('Mappings unchanged, not saving.')
 
-        master_ids = [show] + [kwargs.get(x) for x in 'indexer', 'mindexerid', 'mindexer']
-        if all([helpers.tryInt(x) > 0 for x in master_ids]):
-            master_ids += [bool(helpers.tryInt(kwargs.get(x))) for x in 'paused', 'markwanted']
-            response = {'switch': self.switchIndexer(*master_ids), 'mid': kwargs['mindexerid']}
+        master_ids = [show] + [helpers.tryInt(kwargs.get(x)) for x in 'indexer', 'mindexerid', 'mindexer']
+        if all([x > 0 for x in master_ids]) and sickbeard.indexerApi(kwargs['mindexer']).config.get('active') and \
+                not sickbeard.indexerApi(kwargs['mindexer']).config.get('defunct') and \
+                not sickbeard.indexerApi(kwargs['mindexer']).config.get('mapped_only') and \
+                (helpers.tryInt(kwargs['mindexer']) != helpers.tryInt(kwargs['indexer']) or
+                    helpers.tryInt(kwargs['mindexerid']) != show):
+            try:
+                new_show_obj = helpers.find_show_by_id(sickbeard.showList, {helpers.tryInt(kwargs['mindexer']): helpers.tryInt(kwargs['mindexerid'])},no_mapped_ids=False)
+                if not new_show_obj or (new_show_obj.indexer == show_obj.indexer and new_show_obj.indexerid == show_obj.indexerid):
+                    master_ids += [bool(helpers.tryInt(kwargs.get(x))) for x in 'paused', 'markwanted']
+                    response = {'switch': self.switchIndexer(*master_ids), 'mid': kwargs['mindexerid']}
+                else:
+                    ui.notifications.message('Master ID unchanged, because show from %s with ID: %s exists in DB.' %
+                                             (sickbeard.indexerApi(kwargs['mindexer']).name, kwargs['mindexerid']))
+            except MultipleShowObjectsException:
+                pass
 
         response.update({
             'map': {k: {r: w for r, w in v.iteritems() if r != 'date'} for k, v in show_obj.ids.iteritems()}
@@ -1719,6 +1707,10 @@ class Home(MainHandler):
             t = PageTemplate(headers=self.request.headers, file='editShow.tmpl')
             t.submenu = self.HomeMenu()
 
+            t.expand_ids = all([kwargs.get('tvsrc'), kwargs.get('srcid')])
+            t.tvsrc = int(kwargs.get('tvsrc', 0))
+            t.srcid = kwargs.get('srcid')
+
             myDB = db.DBConnection()
             t.seasonResults = myDB.select(
                 'SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season asc', [showObj.indexerid])
@@ -1746,6 +1738,20 @@ class Home(MainHandler):
             # noinspection PyTypeChecker
             self.fanart_tmpl(t)
             t.num_ratings = len(sickbeard.FANART_RATINGS.get(str(t.show.indexerid), {}))
+
+            t.unlock_master_id = 0 != showObj.not_found_count
+            t.showname_enc = urllib.quote_plus(showObj.name.encode('utf-8'))
+
+            show_message = ''
+
+            if 0 != showObj.not_found_count:
+                # noinspection PyUnresolvedReferences
+                last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
+                    showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
+                show_message = 'The master ID of this show has been abandoned%s<br>search for ' % last_found + \
+                               'a replacement in the "<b>Related show IDs</b>" section of the "<b>Other</b>" tab'
+
+            t.show_message = show_message
 
             return t.respond()
 
@@ -1979,16 +1985,16 @@ class Home(MainHandler):
 
         self.redirect('/home/displayShow?show=' + str(showObj.indexerid))
 
-    def updateEMBY(self, show=None):
+    def update_emby(self, show=None):
 
-        if notifiers.emby_notifier.update_library(
-                sickbeard.helpers.findCertainShow(sickbeard.showList,helpers.tryInt(show, None)), force=True):
+        if notifiers.NotifierFactory().get('EMBY').update_library(
+                sickbeard.helpers.findCertainShow(sickbeard.showList, helpers.tryInt(show, None))):
             ui.notifications.message('Library update command sent to Emby host(s): ' + sickbeard.EMBY_HOST)
         else:
             ui.notifications.error('Unable to contact one or more Emby host(s): ' + sickbeard.EMBY_HOST)
         self.redirect('/home/')
 
-    def updateKODI(self, showName=None):
+    def update_kodi(self, show_name=None):
 
         # only send update to first host in the list -- workaround for kodi sql backend users
         if sickbeard.KODI_UPDATE_ONLYFIRST:
@@ -1997,29 +2003,14 @@ class Home(MainHandler):
         else:
             host = sickbeard.KODI_HOST
 
-        if notifiers.kodi_notifier.update_library(showName=showName, force=True):
+        if notifiers.NotifierFactory().get('KODI').update_library(show_name=show_name):
             ui.notifications.message('Library update command sent to Kodi host(s): ' + host)
         else:
             ui.notifications.error('Unable to contact one or more Kodi host(s): ' + host)
         self.redirect('/home/')
 
-    def updateXBMC(self, showName=None):
-
-        # only send update to first host in the list -- workaround for xbmc sql backend users
-        if sickbeard.XBMC_UPDATE_ONLYFIRST:
-            # only send update to first host in the list -- workaround for xbmc sql backend users
-            host = sickbeard.XBMC_HOST.split(',')[0].strip()
-        else:
-            host = sickbeard.XBMC_HOST
-
-        if notifiers.xbmc_notifier.update_library(showName=showName):
-            ui.notifications.message('Library update command sent to XBMC host(s): ' + host)
-        else:
-            ui.notifications.error('Unable to contact one or more XBMC host(s): ' + host)
-        self.redirect('/home/')
-
-    def updatePLEX(self, *args, **kwargs):
-        result = notifiers.plex_notifier.update_library()
+    def update_plex(self, *args, **kwargs):
+        result = notifiers.NotifierFactory().get('PLEX').update_library()
         if 'Fail' not in result:
             ui.notifications.message(
                 'Library update command sent to', 'Plex Media Server host(s): ' + sickbeard.PLEX_SERVER_HOST.replace(',', ', '))
@@ -2027,34 +2018,53 @@ class Home(MainHandler):
             ui.notifications.error('Unable to contact', 'Plex Media Server host(s): ' + result)
         self.redirect('/home/')
 
+    # def update_xbmc(self, show_name=None):
+    #
+    #     # only send update to first host in the list -- workaround for xbmc sql backend users
+    #     if sickbeard.XBMC_UPDATE_ONLYFIRST:
+    #         # only send update to first host in the list -- workaround for xbmc sql backend users
+    #         host = sickbeard.XBMC_HOST.split(',')[0].strip()
+    #     else:
+    #         host = sickbeard.XBMC_HOST
+    #
+    #     if notifiers.NotifierFactory().get('XBMC').update_library(show_name=show_name):
+    #         ui.notifications.message('Library update command sent to XBMC host(s): ' + host)
+    #     else:
+    #         ui.notifications.error('Unable to contact one or more XBMC host(s): ' + host)
+    #     self.redirect('/home/')
+
     def setStatus(self, show=None, eps=None, status=None, direct=False):
 
         if show is None or eps is None or status is None:
-            errMsg = 'You must specify a show and at least one episode'
+            err_msg = 'You must specify a show and at least one episode'
             if direct:
-                ui.notifications.error('Error', errMsg)
+                ui.notifications.error('Error', err_msg)
                 return json.dumps({'result': 'error'})
-            else:
-                return self._genericMessage('Error', errMsg)
+            return self._genericMessage('Error', err_msg)
 
-        if not statusStrings.has_key(int(status)):
-            errMsg = 'Invalid status'
+        use_default = False
+        if '-' in status:
+            use_default = True
+            status = status.replace('-', '')
+        status = int(status)
+
+        if not statusStrings.has_key(status):
+            err_msg = 'Invalid status'
             if direct:
-                ui.notifications.error('Error', errMsg)
+                ui.notifications.error('Error', err_msg)
                 return json.dumps({'result': 'error'})
-            else:
-                return self._genericMessage('Error', errMsg)
+            return self._genericMessage('Error', err_msg)
 
         showObj = sickbeard.helpers.findCertainShow(sickbeard.showList, int(show))
 
         if showObj is None:
-            errMsg = 'Error', 'Show not in show list'
+            err_msg = 'Error', 'Show not in show list'
             if direct:
-                ui.notifications.error('Error', errMsg)
+                ui.notifications.error('Error', err_msg)
                 return json.dumps({'result': 'error'})
-            else:
-                return self._genericMessage('Error', errMsg)
+            return self._genericMessage('Error', err_msg)
 
+        min_initial = min(Quality.splitQuality(showObj.quality)[0])
         segments = {}
         if eps is not None:
 
@@ -2063,53 +2073,58 @@ class Home(MainHandler):
 
                 logger.log(u'Attempting to set status on episode %s to %s' % (curEp, status), logger.DEBUG)
 
-                epInfo = curEp.split('x')
+                ep_obj = showObj.getEpisode(*tuple([int(x) for x in curEp.split('x')]))
 
-                epObj = showObj.getEpisode(int(epInfo[0]), int(epInfo[1]))
+                if ep_obj is None:
+                    return self._genericMessage('Error', 'Episode couldn\'t be retrieved')
 
-                if epObj is None:
-                    return self._genericMessage("Error", "Episode couldn't be retrieved")
-
-                if int(status) in [WANTED, FAILED]:
+                if status in [WANTED, FAILED]:
                     # figure out what episodes are wanted so we can backlog them
-                    if epObj.season in segments:
-                        segments[epObj.season].append(epObj)
+                    if ep_obj.season in segments:
+                        segments[ep_obj.season].append(ep_obj)
                     else:
-                        segments[epObj.season] = [epObj]
+                        segments[ep_obj.season] = [ep_obj]
 
-                with epObj.lock:
+                with ep_obj.lock:
+                    required = Quality.SNATCHED_ANY + Quality.DOWNLOADED
+                    err_msg = ''
                     # don't let them mess up UNAIRED episodes
-                    if epObj.status == UNAIRED:
-                        logger.log(u'Refusing to change status of ' + curEp + ' because it is UNAIRED', logger.ERROR)
+                    if UNAIRED == ep_obj.status:
+                        err_msg = 'because it is unaired'
+
+                    elif FAILED == status and ep_obj.status not in required:
+                        err_msg = 'to failed because it\'s not snatched/downloaded'
+
+                    elif status in Quality.DOWNLOADED\
+                            and ep_obj.status not in required + Quality.ARCHIVED + [IGNORED, SKIPPED]\
+                            and not ek.ek(os.path.isfile, ep_obj.location):
+                        err_msg = 'to downloaded because it\'s not snatched/downloaded/archived'
+
+                    if err_msg:
+                        logger.log('Refusing to change status of %s %s' % (curEp, err_msg), logger.ERROR)
                         continue
 
-                    if int(
-                            status) in Quality.DOWNLOADED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.DOWNLOADED + [
-                        IGNORED, SKIPPED] and not ek.ek(os.path.isfile, epObj.location):
-                        logger.log(
-                            u'Refusing to change status of ' + curEp + " to DOWNLOADED because it's not SNATCHED/DOWNLOADED",
-                            logger.ERROR)
-                        continue
-
-                    if int(
-                            status) == FAILED and epObj.status not in Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST + Quality.DOWNLOADED:
-                        logger.log(
-                            u'Refusing to change status of ' + curEp + " to FAILED because it's not SNATCHED/DOWNLOADED",
-                            logger.ERROR)
-                        continue
-
-                    epObj.status = int(status)
+                    if ARCHIVED == status:
+                        if ep_obj.status in Quality.DOWNLOADED:
+                            ep_obj.status = Quality.compositeStatus(
+                                ARCHIVED, (Quality.splitCompositeStatus(ep_obj.status)[1], min_initial)[use_default])
+                    elif DOWNLOADED == status:
+                        if ep_obj.status in Quality.ARCHIVED:
+                            ep_obj.status = Quality.compositeStatus(
+                                DOWNLOADED, Quality.splitCompositeStatus(ep_obj.status)[1])
+                    else:
+                        ep_obj.status = status
 
                     # mass add to database
-                    result = epObj.get_sql()
+                    result = ep_obj.get_sql()
                     if None is not result:
                         sql_l.append(result)
 
             if 0 < len(sql_l):
-                myDB = db.DBConnection()
-                myDB.mass_action(sql_l)
+                my_db = db.DBConnection()
+                my_db.mass_action(sql_l)
 
-        if WANTED == int(status):
+        if WANTED == status:
             season_list = ''
             season_wanted = []
             for season, segment in segments.items():
@@ -2132,27 +2147,25 @@ class Home(MainHandler):
                                          u'%s for the following seasons of <b>%s</b>:<br /><ul>%s</ul>'
                                          % (msg, showObj.name, season_list))
 
-        elif FAILED == int(status):
-            msg = 'Retrying Search was automatically started for the following season of <b>' + showObj.name + '</b>:<br />'
-            msg += '<ul>'
+        elif FAILED == status:
+            msg = u'Retrying search automatically for the following season of <b>%s</b>:<br><ul>' % showObj.name
 
             for season, segment in segments.items():
                 cur_failed_queue_item = search_queue.FailedQueueItem(showObj, segment)
-                sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)  # @UndefinedVariable
+                sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)
 
-                msg += '<li>Season ' + str(season) + '</li>'
-                logger.log(u'Retrying Search for ' + showObj.name + ' season ' + str(
-                    season) + ' because some eps were set to failed')
+                msg += '<li>Season %s</li>' % season
+                logger.log(u'Retrying search for %s season %s because some eps were set to failed' %
+                           (showObj.name, season))
 
             msg += '</ul>'
 
             if segments:
-                ui.notifications.message('Retry Search started', msg)
+                ui.notifications.message('Retry search started', msg)
 
         if direct:
             return json.dumps({'result': 'success'})
-        else:
-            self.redirect('/home/displayShow?show=' + show)
+        self.redirect('/home/displayShow?show=' + show)
 
     def testRename(self, show=None):
 
@@ -2311,6 +2324,7 @@ class Home(MainHandler):
                              'status' : statusStrings[epObj.status],
                              'quality': self.getQualityClass(epObj)})
 
+        retry_statues = SNATCHED_ANY + [DOWNLOADED, ARCHIVED]
         if currentManualSearchThreadActive:
             searchThread = currentManualSearchThreadActive
             searchstatus = 'searching'
@@ -2323,6 +2337,7 @@ class Home(MainHandler):
                                  'episodeindexid': searchThread.segment.indexerid,
                                  'season' : searchThread.segment.season,
                                  'searchstatus' : searchstatus,
+                                 'retrystatus': Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
                                  'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
             elif hasattr(searchThread, 'segment'):
@@ -2331,6 +2346,7 @@ class Home(MainHandler):
                                      'episodeindexid': epObj.indexerid,
                                      'season' : epObj.season,
                                      'searchstatus' : searchstatus,
+                                     'retrystatus': Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
                                      'status' : statusStrings[epObj.status],
                                      'quality': self.getQualityClass(epObj)})
 
@@ -2343,6 +2359,7 @@ class Home(MainHandler):
                                          'episodeindexid': searchThread.segment.indexerid,
                                  'season' : searchThread.segment.season,
                                  'searchstatus' : searchstatus,
+                                 'retrystatus': Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
                                  'status' : statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
                 ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
@@ -2354,6 +2371,7 @@ class Home(MainHandler):
                                              'episodeindexid': epObj.indexerid,
                                      'season' : epObj.season,
                                      'searchstatus' : searchstatus,
+                                     'retrystatus': Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
                                      'status' : statusStrings[epObj.status],
                                      'quality': self.getQualityClass(epObj)})
 
@@ -2493,7 +2511,7 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, **kwargs):
+                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, is_basedir='1', **kwargs):
 
         if not dir and ('0' == failed or not nzbName):
             self.redirect('/home/postprocess/')
@@ -2517,7 +2535,7 @@ class HomePostProcess(Home):
                                           force_replace=force_replace in ['on', '1'],
                                           failed='0' != failed,
                                           webhandler=self.send_message if stream != '0' else None,
-                                          showObj=showObj)
+                                          showObj=showObj, is_basedir=is_basedir in ['on', '1'])
 
             if '0' != stream:
                 return
@@ -2549,31 +2567,47 @@ class NewHomeAddShows(Home):
     def sanitizeFileName(self, name):
         return helpers.sanitizeFileName(name)
 
+    # noinspection PyPep8Naming
     def searchIndexersForShowName(self, search_term, lang='en', indexer=None):
-        if not lang or lang == 'null':
+        if not lang or 'null' == lang:
             lang = 'en'
-
-        search_term = search_term.strip().encode('utf-8')
+        term = search_term.decode('utf-8').strip()
+        terms = []
+        try:
+            for t in term.encode('utf-8'), unidecode(term), term:
+                if t not in terms:
+                    terms += [t]
+        except (StandardError, Exception):
+            terms = [search_term.strip().encode('utf-8')]
 
         results = {}
         final_results = []
 
-        search_id, indexer_id = '', None
-        search_id = ''
+        search_id, indexer_id, trakt_id, tmdb_id, INDEXER_TVDB_X = '', None, None, None, INDEXER_TRAKT
         try:
             search_id = re.search(r'(?m)((?:tt\d{4,})|^\d{4,}$)', search_term).group(1)
-            resp = [r for r in self.getTrakt('/search/%s/%s?type=show&extended=full' % (
-                ('tvdb', 'imdb')['tt' in search_id], search_id)) if 'show' == r['type']][0]
-            search_term = resp['show']['title']
-            indexer_id = resp['show']['ids']['tvdb']
-        except:
+
+            lINDEXER_API_PARMS = sickbeard.indexerApi(INDEXER_TVDB_X).api_params.copy()
+            lINDEXER_API_PARMS['language'] = lang
+            lINDEXER_API_PARMS['custom_ui'] = classes.AllShowsNoFilterListUI
+            lINDEXER_API_PARMS['sleep_retry'] = 5
+            lINDEXER_API_PARMS['search_type'] = (TraktSearchTypes.tvdb_id, TraktSearchTypes.imdb_id)['tt' in search_id]
+            t = sickbeard.indexerApi(INDEXER_TVDB_X).indexer(**lINDEXER_API_PARMS)
+
+            resp = t[search_id][0]
+            search_term = resp['seriesname']
+            indexer_id = resp['ids']['tvdb']
+            trakt_id = resp['ids'].get('trakt')
+            tmdb_id = resp['ids'].get('tmdb')
+
+        except (StandardError, Exception):
             search_term = (search_term, '')['tt' in search_id]
 
-        # Query Indexers for each search term and build the list of results
+        # query Indexers for search term and build list of results
         for indexer in sickbeard.indexerApi().indexers if not int(indexer) else [int(indexer)]:
             lINDEXER_API_PARMS = sickbeard.indexerApi(indexer).api_params.copy()
             lINDEXER_API_PARMS['language'] = lang
-            lINDEXER_API_PARMS['custom_ui'] = classes.AllShowsListUI
+            lINDEXER_API_PARMS['custom_ui'] = classes.AllShowsNoFilterListUI
             t = sickbeard.indexerApi(indexer).indexer(**lINDEXER_API_PARMS)
 
             try:
@@ -2581,78 +2615,152 @@ class NewHomeAddShows(Home):
                 if bool(indexer_id):
                     logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
                         search_id, search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
-                    results.setdefault('tt' in search_id and 3 or indexer, []).extend(
-                        [{'id': indexer_id, 'seriesname': t[indexer_id, False]['seriesname'],
-                          'firstaired': t[indexer_id, False]['firstaired'], 'network': t[indexer_id, False]['network'],
-                          'overview': t[indexer_id, False]['overview'],
-                          'genres': '' if not t[indexer_id, False]['genre'] else
-                            t[indexer_id, False]['genre'].lower().strip('|').replace('|', ', '),
-                          }])
+                    r = t[indexer_id, False]
+                    results.setdefault((indexer, INDEXER_TVDB_X)['tt' in search_id], {})[int(indexer_id)] = {
+                        'id': indexer_id, 'seriesname': r['seriesname'], 'firstaired': r['firstaired'],
+                        'network': r['network'], 'overview': r['overview'],
+                        'genres': '' if not r['genre'] else r['genre'].lower().strip('|').replace('|', ', '),
+                        'trakt_id': trakt_id, 'tmdb_id': tmdb_id
+                    }
                     break
                 else:
                     logger.log('Searching for shows using search term: %s from tv datasource %s' % (
                         search_term, sickbeard.indexerApi(indexer).name), logger.DEBUG)
-                    results.setdefault(indexer, []).extend(t[search_term])
-            except Exception as e:
+                    results.setdefault(indexer, {})
+                    for term in terms:
+                        try:
+                            for r in t[term]:
+                                tvdb_id = int(r['id'])
+                                if tvdb_id not in results[indexer]:
+                                    results.setdefault(indexer, {})[tvdb_id] = r.copy()
+                                elif r['seriesname'] != results[indexer][tvdb_id]['seriesname']:
+                                    results[indexer][tvdb_id].setdefault('aliases', []).append(r['seriesname'])
+                        except tvdb_exception:
+                            pass
+            except (StandardError, Exception):
                 pass
 
-            # Query trakt for tvdb ids
-            try:
-                logger.log('Searching for show using search term: %s from tv datasource Trakt' % search_term, logger.DEBUG)
-                resp = self.getTrakt('/search/show?query=%s&extended=full' % search_term)
-                tvdb_ids = []
-                results_trakt = []
-                for item in resp:
-                    show = item['show']
-                    if 'tvdb' in show['ids'] and show['ids']['tvdb'] and show['ids']['tvdb'] not in tvdb_ids:
-                        results_trakt.append({
-                            'id': show['ids']['tvdb'], 'seriesname': show['title'],
-                            'firstaired': (show['first_aired'] and re.sub(r'T.*$', '', str(show['first_aired'])) or show['year']),
-                            'network': show['network'], 'overview': show['overview'],
-                            'genres': ', '.join(['%s' % v.lower() for v in show.get('genres', {}) or []])})
-                        tvdb_ids.append(show['ids']['tvdb'])
-                results.update({3: results_trakt})
-                if INDEXER_TVDB in results:
-                    tvdb_filtered = []
-                    for tvdb_item in results[INDEXER_TVDB]:
-                        if int(tvdb_item['id']) not in tvdb_ids:
-                            tvdb_filtered.append(tvdb_item)
-                    if tvdb_filtered:
-                        results[INDEXER_TVDB] = tvdb_filtered
-                    else:
-                        del(results[INDEXER_TVDB])
-            except:
-                pass
+        # query trakt for tvdb ids
+        try:
+            logger.log('Searching for show using search term: %s from tv datasource Trakt' % search_term, logger.DEBUG)
+            resp = []
+            lINDEXER_API_PARMS = sickbeard.indexerApi(INDEXER_TVDB_X).api_params.copy()
+            lINDEXER_API_PARMS['language'] = lang
+            lINDEXER_API_PARMS['custom_ui'] = classes.AllShowsNoFilterListUI
+            lINDEXER_API_PARMS['sleep_retry'] = 5
+            lINDEXER_API_PARMS['search_type'] = TraktSearchTypes.text
+            t = sickbeard.indexerApi(INDEXER_TVDB_X).indexer(**lINDEXER_API_PARMS)
 
-        id_names = [None, sickbeard.indexerApi(INDEXER_TVDB).name, sickbeard.indexerApi(INDEXER_TVRAGE).name,
-                    '%s via Trakt' % sickbeard.indexerApi(INDEXER_TVDB).name]
+            for term in terms:
+                result = t[term]
+                resp += result
+                match = False
+                for r in result:
+                    if isinstance(r.get('seriesname'), (str, unicode)) \
+                            and term.lower() == r.get('seriesname', '').lower():
+                        match = True
+                        break
+                if match:
+                    break
+            results_trakt = {}
+            for item in resp:
+                if 'tvdb' in item['ids'] and item['ids']['tvdb']:
+                    if item['ids']['tvdb'] not in results[INDEXER_TVDB]:
+                        results_trakt[int(item['ids']['tvdb'])] = {
+                            'id': item['ids']['tvdb'], 'seriesname': item['seriesname'],
+                            'genres': item['genres'].lower(), 'network': item['network'],
+                            'overview': item['overview'], 'firstaired': item['firstaired'],
+                            'trakt_id': item['ids']['trakt'], 'tmdb_id': item['ids']['tmdb']}
+                    elif item['seriesname'] != results[INDEXER_TVDB][int(item['ids']['tvdb'])]['seriesname']:
+                        results[INDEXER_TVDB][int(item['ids']['tvdb'])].setdefault(
+                            'aliases', []).append(item['seriesname'])
+            results.setdefault(INDEXER_TVDB_X, {}).update(results_trakt)
+        except (StandardError, Exception):
+            pass
+
+        id_names = {iid: (name, '%s via %s' % (sickbeard.indexerApi(INDEXER_TVDB).name, name))[INDEXER_TVDB_X == iid]
+                    for iid, name in sickbeard.indexerApi().all_indexers.iteritems()}
+        # noinspection PyUnboundLocalVariable
         map(final_results.extend,
-            ([['%s%s' % (id_names[id], helpers.findCertainShow(sickbeard.showList, int(show['id'])) and ' - <span class="exists-db">exists in db</span>' or ''),
-               (id, INDEXER_TVDB)[id == 3], sickbeard.indexerApi((id, INDEXER_TVDB)[id == 3]).config['show_url'], int(show['id']),
+            ([[id_names[iid], any([helpers.find_show_by_id(
+                sickbeard.showList, {(iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]: int(show['id'])},
+                no_mapped_ids=False)]),
+               iid, (iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid],
+               sickbeard.indexerApi((iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]).config['show_url'], int(show['id']),
                show['seriesname'], self.encode_html(show['seriesname']), show['firstaired'],
                show.get('network', '') or '', show.get('genres', '') or '',
-               re.sub(r'([,\.!][^,\.!]*?)$', '...',
-                      re.sub(r'([!\?\.])(?=\w)', r'\1 ',
-                             self.encode_html((show.get('overview', '') or '')[:250:].strip())))
-               ] for show in shows] for id, shows in results.items()))
+               re.sub(r'([,.!][^,.!]*?)$', '...',
+                      re.sub(r'([.!?])(?=\w)', r'\1 ',
+                             self.encode_html((show.get('overview', '') or '')[:250:].strip()))),
+               self._get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None,
+               self._make_search_image_url(iid, show)
+               ] for show in shows.itervalues()] for iid, shows in results.iteritems()))
 
-        lang_id = sickbeard.indexerApi().config['langabbv_to_id'][lang]
-        return json.dumps({
-            'results': sorted(final_results, reverse=True, key=lambda x: dateutil.parser.parse(
-                re.match('^(?:19|20)\d\d$', str(x[6])) and ('%s-12-31' % str(x[6])) or (x[6] and str(x[6])) or '1900')),
-            'langid': lang_id})
+        def final_order(sortby_index, data, final_sort):
+            idx_is_indb = 1
+            for (n, x) in enumerate(data):
+                x[sortby_index] = n + (1000, 0)[x[idx_is_indb] and 'notop' not in sickbeard.RESULTS_SORTBY]
+            return data if not final_sort else sorted(data, reverse=False, key=lambda x: x[sortby_index])
 
-    def getTrakt(self, url, *args, **kwargs):
+        def sort_date(data_result, is_last_sort):
+            idx_date_sort, idx_src, idx_aired = 13, 2, 8
+            return final_order(
+                idx_date_sort,
+                sorted(
+                    sorted(data_result, reverse=True, key=lambda x: (dateutil.parser.parse(
+                        re.match('^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
+                        or (x[idx_aired] and str(x[idx_aired])) or '1900'))),
+                    reverse=False, key=lambda x: x[idx_src]), is_last_sort)
 
-        filtered = []
-        try:
-            resp = TraktAPI().trakt_request(url, sleep_retry=5)
-            if len(resp):
-                filtered = resp
-        except TraktException as e:
-            logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
+        def sort_az(data_result, is_last_sort):
+            idx_az_sort, idx_src, idx_title = 14, 2, 6
+            return final_order(
+                idx_az_sort,
+                sorted(
+                    data_result, reverse=False, key=lambda x: (
+                        x[idx_src],
+                        (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE])),
+                is_last_sort)
 
-        return filtered
+        def sort_rel(data_result, is_last_sort):
+            idx_rel_sort, idx_src, idx_rel = 12, 2, 12
+            return final_order(
+                idx_rel_sort,
+                sorted(
+                    sorted(data_result, reverse=True, key=lambda x: x[idx_rel]),
+                    reverse=False, key=lambda x: x[idx_src]), is_last_sort)
+
+        if 'az' == sickbeard.RESULTS_SORTBY[:2]:
+            sort_results = [sort_date, sort_rel, sort_az]
+        elif 'date' == sickbeard.RESULTS_SORTBY[:4]:
+            sort_results = [sort_az, sort_rel, sort_date]
+        else:
+            sort_results = [sort_az, sort_date, sort_rel]
+
+        for n, func in enumerate(sort_results):
+            final_results = func(final_results, n == len(sort_results) - 1)
+
+        return json.dumps({'results': final_results, 'langid': sickbeard.indexerApi().config['langabbv_to_id'][lang]})
+
+    @staticmethod
+    def _make_search_image_url(iid, show):
+        img_url = ''
+        if INDEXER_TRAKT == iid:
+            img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=0&tmdbid=%s&tvdbid=%s' % \
+                      ('%s.jpg' % show['trakt_id'], show.get('tmdb_id'), show.get('id'))
+        elif INDEXER_TVDB == iid:
+            img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&tvdbid=%s' % \
+                      ('%s.jpg' % show['id'], show['id'])
+        return img_url
+
+    def _get_UWRatio(self, search_term, showname, aliases):
+        s = fuzz.UWRatio(search_term, showname)
+        # check aliases and give them a little lower score
+        for a in aliases:
+            ns = fuzz.UWRatio(search_term, a) - 1
+            if ns > s:
+                s = ns
+        return s
 
     def massAddTable(self, rootDir=None, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='home_massAddTable.tmpl')
@@ -2867,7 +2975,7 @@ class NewHomeAddShows(Home):
                             newest = dt_string
 
                         img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
-                        images = dict(poster=dict(thumb='imagecache?path=anidb&source=%s' % img_uri))
+                        images = dict(poster=dict(thumb='imagecache?path=browse/thumb/anidb&source=%s' % img_uri))
                         sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
                         votes = rating = 0
@@ -3017,7 +3125,7 @@ class NewHomeAddShows(Home):
                     dims = [row.get('poster', {}).get('width', 0), row.get('poster', {}).get('height', 0)]
                     s = [scale(x, int(max(dims))) for x in dims]
                     img_uri = re.sub('(?im)(.*V1_?)(\..*?)$', r'\1UX%s_CR0,0,%s,%s_AL_\2' % (s[0], s[0], s[1]), img_uri)
-                    images = dict(poster=dict(thumb='imagecache?path=imdb&source=%s' % img_uri))
+                    images = dict(poster=dict(thumb='imagecache?path=browse/thumb/imdb&source=%s' % img_uri))
                     sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
                 filtered.append(dict(
@@ -3100,7 +3208,7 @@ class NewHomeAddShows(Home):
                                      match.group(12)]
                             img_uri = img_uri.replace(match.group(), ''.join(
                                 [str(y) for x in map(None, parts, scaled) for y in x if y is not None]))
-                            images = dict(poster=dict(thumb='imagecache?path=imdb&source=%s' % img_uri))
+                            images = dict(poster=dict(thumb='imagecache?path=browse/thumb/imdb&source=%s' % img_uri))
                             sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
                     filtered.append(dict(
@@ -3288,6 +3396,20 @@ class NewHomeAddShows(Home):
                 'recommendations/shows?limit=%s&' % 100, 'Recommended for <b class="grey-text">%s</b> by Trakt' % name,
                 mode='recommended-%s' % account, send_oauth=account)
 
+    def trakt_watchlist(self, *args, **kwargs):
+
+        if 'add' == kwargs.get('action'):
+            return self.redirect('/config/notifications/#tabs-3')
+
+        account = sickbeard.helpers.tryInt(kwargs.get('account'), None)
+        try:
+            name = sickbeard.TRAKT_ACCOUNTS[account].name
+        except KeyError:
+            return self.trakt_default()
+        return self.browse_trakt(
+                'users/%s/watchlist/shows?limit=%s&' % (sickbeard.TRAKT_ACCOUNTS[account].slug, 100), 'WatchList for <b class="grey-text">%s</b> by Trakt' % name,
+                mode='watchlist-%s' % account, send_oauth=account)
+
     def trakt_default(self):
 
         return self.redirect('/home/addShows/%s' % ('trakt_trending', sickbeard.TRAKT_MRU)[any(sickbeard.TRAKT_MRU)])
@@ -3297,7 +3419,7 @@ class NewHomeAddShows(Home):
         browse_type = 'Trakt'
         normalised, filtered = ([], [])
 
-        if not sickbeard.USE_TRAKT and 'recommended' in kwargs.get('mode', ''):
+        if not sickbeard.USE_TRAKT and ('recommended' in kwargs.get('mode', '') or 'watchlist' in kwargs.get('mode', '')):
             error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
@@ -3326,6 +3448,10 @@ class NewHomeAddShows(Home):
         except (IndexError, KeyError):
             pass
 
+        if not normalised:
+            error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+
         oldest_dt = 9999999
         newest_dt = 0
         oldest = None
@@ -3350,7 +3476,7 @@ class NewHomeAddShows(Home):
                 tmdbid = item.get('show', {}).get('ids', {}).get('tmdb', 0)
                 tvdbid = item.get('show', {}).get('ids', {}).get('tvdb', 0)
                 traktid = item.get('show', {}).get('ids', {}).get('trakt', 0)
-                images = dict(poster=dict(thumb='imagecache?path=trakt/poster/thumb&filename=%s&tmdbid=%s&tvdbid=%s' %
+                images = dict(poster=dict(thumb='imagecache?path=browse/thumb/trakt&filename=%s&tmdbid=%s&tvdbid=%s' %
                                                 ('%s.jpg' % traktid, tmdbid, tvdbid)))
 
                 filtered.append(dict(
@@ -3380,7 +3506,7 @@ class NewHomeAddShows(Home):
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
 
-        if 'recommended' not in kwargs.get('mode', ''):
+        if 'recommended' not in kwargs.get('mode', '') and 'watchlist' not in kwargs.get('mode', ''):
             mode = kwargs.get('mode', '').split('-')
             if mode:
                 func = 'trakt_%s' % mode[0]
@@ -3390,6 +3516,20 @@ class NewHomeAddShows(Home):
                     sickbeard.TRAKT_MRU = '%s%s' % (func, param)
                     sickbeard.save_config()
         return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    @staticmethod
+    def show_toggle_hide(ids):
+        save_config = False
+        for sid in ids.split(':'):
+            if 3 < len(sid) < 12:
+                save_config = True
+                if sid in sickbeard.BROWSELIST_HIDDEN:
+                    sickbeard.BROWSELIST_HIDDEN.remove(sid)
+                else:
+                    sickbeard.BROWSELIST_HIDDEN += [sid]
+        if save_config:
+            sickbeard.save_config()
+        return json.dumps({'success': save_config})
 
     @staticmethod
     def encode_html(text):
@@ -3416,7 +3556,8 @@ class NewHomeAddShows(Home):
         t.kwargs = kwargs
         dedupe = []
 
-        t.all_shows_inlibrary = 0
+        t.num_inlibrary = 0
+        t.num_hidden = 0
         for item in shows:
             item['show_id'] = ''
             for index, tvdb in enumerate(['tvdb', 'tvrage']):
@@ -3428,7 +3569,7 @@ class NewHomeAddShows(Home):
                 # check tvshow indexer is not using the same id from another indexer
                 if tvshow and (index + 1) == tvshow.indexer:
                     item['show_id'] = u'%s:%s' % (tvshow.indexer, tvshow.indexerid)
-                    t.all_shows_inlibrary += 1
+                    t.num_inlibrary += 1
                     break
 
                 if None is not config.to_int(item['show_id'], None):
@@ -3440,6 +3581,9 @@ class NewHomeAddShows(Home):
             if item['show_id'] not in dedupe:
                 dedupe.append(item['show_id'])
                 t.all_shows.append(item)
+
+                if item['show_id'].split(':')[-1] in sickbeard.BROWSELIST_HIDDEN:
+                    t.num_hidden += 1
 
         return t.respond()
 
@@ -3458,11 +3602,18 @@ class NewHomeAddShows(Home):
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
                    quality_preset=None, anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None):
+                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None,
+                   return_to=None, cancel_form=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
         """
+        if None is not return_to:
+            indexer, void, indexer_id, show_name = self.split_extra_show(whichSeries)
+            if bool(helpers.tryInt(cancel_form)):
+                indexer = indexer or providedIndexer or '0'
+                indexer_id = re.findall('show=([\d]+)', return_to)[0]
+            return self.redirect(return_to % (indexer, indexer_id))
 
         # grab our list of other dirs if given
         if not other_shows:
@@ -3515,8 +3666,10 @@ class NewHomeAddShows(Home):
         # use the whole path if it's given, or else append the show name to the root dir to get the full show path
         if fullShowPath:
             show_dir = ek.ek(os.path.normpath, fullShowPath)
+            new_show = False
         else:
             show_dir = ek.ek(os.path.join, rootDir, helpers.sanitizeFileName(show_name))
+            new_show = True
 
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
         if ek.ek(os.path.isdir, show_dir) and not fullShowPath:
@@ -3564,7 +3717,7 @@ class NewHomeAddShows(Home):
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
-                                                    wanted_begin, wanted_latest, tag)  # @UndefinedVariable
+                                                    wanted_begin, wanted_latest, tag, new_show=new_show)  # @UndefinedVariable
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()
@@ -3672,13 +3825,15 @@ class Manage(MainHandler):
         return t.respond()
 
     def showEpisodeStatuses(self, indexer_id, whichStatus):
-        status_list = [int(whichStatus)]
-        if status_list[0] == SNATCHED:
-            status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER
+        whichStatus = helpers.tryInt(whichStatus)
+        status_list = ((([whichStatus],
+                         Quality.SNATCHED_ANY)[SNATCHED == whichStatus],
+                        Quality.DOWNLOADED)[DOWNLOADED == whichStatus],
+                       Quality.ARCHIVED)[ARCHIVED == whichStatus]
 
         myDB = db.DBConnection()
         cur_show_results = myDB.select(
-            'SELECT season, episode, name, airdate FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
+            'SELECT season, episode, name, airdate, status FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
                 ['?'] * len(status_list)) + ')', [int(indexer_id)] + status_list)
 
         result = {}
@@ -3691,17 +3846,23 @@ class Manage(MainHandler):
             if cur_season not in result:
                 result[cur_season] = {}
 
-            result[cur_season][cur_episode] = {'name': cur_result['name'], 'airdate_never': 1000 > int(cur_result['airdate'])}
+            cur_quality = Quality.splitCompositeStatus(int(cur_result['status']))[1]
+            result[cur_season][cur_episode] = {'name': cur_result['name'],
+                                               'airdate_never': 1000 > int(cur_result['airdate']),
+                                               'qualityCss': Quality.get_quality_css(cur_quality),
+                                               'qualityStr': Quality.qualityStrings[cur_quality],
+                                               'sxe': '%d x %02d' % (cur_season, cur_episode)}
 
         return json.dumps(result)
 
     def episodeStatuses(self, whichStatus=None):
 
+        whichStatus = helpers.tryInt(whichStatus)
         if whichStatus:
-            whichStatus = int(whichStatus)
-            status_list = [whichStatus]
-            if status_list[0] == SNATCHED:
-                status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER
+            status_list = ((([whichStatus],
+                             Quality.SNATCHED_ANY)[SNATCHED == whichStatus],
+                            Quality.DOWNLOADED)[DOWNLOADED == whichStatus],
+                           Quality.ARCHIVED)[ARCHIVED == whichStatus]
         else:
             status_list = []
 
@@ -3712,7 +3873,7 @@ class Manage(MainHandler):
         my_db = db.DBConnection()
         sql_result = my_db.select(
             'SELECT COUNT(*) AS snatched FROM [tv_episodes] WHERE season > 0 AND episode > 0 AND airdate > 1 AND ' +
-            'status IN (%s)' % ','.join([str(quality) for quality in Quality.SNATCHED + Quality.SNATCHED_PROPER]))
+            'status IN (%s)' % ','.join([str(quality) for quality in Quality.SNATCHED_ANY]))
         t.default_manage = sql_result and sql_result[0]['snatched'] and SNATCHED or WANTED
 
         # if we have no status then this is as far as we need to go
@@ -3722,7 +3883,7 @@ class Manage(MainHandler):
         status_results = my_db.select(
             'SELECT show_name, tv_shows.indexer_id as indexer_id, airdate FROM tv_episodes, tv_shows WHERE tv_episodes.status IN (' + ','.join(
                 ['?'] * len(
-                    status_list)) + ') AND season != 0 AND tv_episodes.showid = tv_shows.indexer_id ORDER BY show_name',
+                    status_list)) + ') AND season != 0 AND tv_episodes.showid = tv_shows.indexer_id ORDER BY show_name COLLATE NOCASE',
             status_list)
 
         ep_counts = {}
@@ -3756,9 +3917,11 @@ class Manage(MainHandler):
         return t.respond()
 
     def changeEpisodeStatuses(self, oldStatus, newStatus, wantedStatus=sickbeard.common.UNKNOWN, *args, **kwargs):
-        status_list = [int(oldStatus)]
-        if status_list[0] == SNATCHED:
-            status_list = Quality.SNATCHED + Quality.SNATCHED_PROPER
+        status = int(oldStatus)
+        status_list = ((([status],
+                         Quality.SNATCHED_ANY)[SNATCHED == status],
+                        Quality.DOWNLOADED)[DOWNLOADED == status],
+                       Quality.ARCHIVED)[ARCHIVED == status]
 
         to_change = {}
 
@@ -4353,15 +4516,15 @@ class Manage(MainHandler):
 class ManageSearches(Manage):
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='manage_manageSearches.tmpl')
-        # t.backlogPI = sickbeard.backlogSearchScheduler.action.get_progress_indicator()
-        t.backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
-        t.backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
-        t.backlogIsActive = sickbeard.backlogSearchScheduler.action.am_running()
-        t.standardBacklogRunning = sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress()
-        t.backlogRunningType = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
-        t.recentSearchStatus = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
-        t.findPropersStatus = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
-        t.queueLength = sickbeard.searchQueueScheduler.action.queue_length()
+        # t.backlog_pi = sickbeard.backlogSearchScheduler.action.get_progress_indicator()
+        t.backlog_paused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
+        t.backlog_running = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
+        t.backlog_is_active = sickbeard.backlogSearchScheduler.action.am_running()
+        t.standard_backlog_running = sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress()
+        t.backlog_running_type = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
+        t.recent_search_status = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
+        t.find_propers_status = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
+        t.queue_length = sickbeard.searchQueueScheduler.action.queue_length()
 
         t.submenu = self.ManageMenu('Search')
 
@@ -4420,9 +4583,22 @@ class ManageSearches(Manage):
 class showProcesses(Manage):
     def index(self, *args, **kwargs):
         t = PageTemplate(headers=self.request.headers, file='manage_showProcesses.tmpl')
-        t.queueLength = sickbeard.showQueueScheduler.action.queue_length()
-        t.showList = sickbeard.showList
-        t.ShowUpdateRunning = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
+        t.queue_length = sickbeard.showQueueScheduler.action.queue_length()
+        t.show_list = sickbeard.showList
+        t.show_update_running = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
+
+        myDb = db.DBConnection(row_type='dict')
+        sql_results = myDb.select('SELECT n.indexer, n.indexer_id, n.last_success, n.fail_count, s.show_name FROM tv_shows_not_found as n INNER JOIN tv_shows as s ON (n.indexer == s.indexer AND n.indexer_id == s.indexer_id)')
+        for s in sql_results:
+            date = helpers.tryInt(s['last_success'])
+            s['last_success'] = ('never', sbdatetime.sbdatetime.fromordinal(date).sbfdate())[date > 1]
+            s['ignore_warning'] = 0 > s['fail_count']
+        defunct_indexer = [i for i in sickbeard.indexerApi().all_indexers if sickbeard.indexerApi(i).config.get('defunct')]
+        sql_r = None
+        if defunct_indexer:
+            sql_r = myDb.select('SELECT indexer, indexer_id, show_name FROM tv_shows WHERE indexer IN (%s)' % ','.join(['?'] * len(defunct_indexer)), defunct_indexer)
+        t.defunct_indexer = sql_r
+        t.not_found_shows = sql_results
 
         t.submenu = self.ManageMenu('Processes')
 
@@ -4437,6 +4613,28 @@ class showProcesses(Manage):
 
         time.sleep(5)
         self.redirect('/manage/showProcesses/')
+
+    @staticmethod
+    def switch_ignore_warning(*args, **kwargs):
+
+        for k, v in kwargs.iteritems():
+            try:
+                indexer_id, state = k.split('|')
+            except ValueError:
+                continue
+            indexer, indexer_id = helpers.tryInt(v), helpers.tryInt(indexer_id)
+            if 0 < indexer and 0 < indexer_id:
+                show_obj = helpers.find_show_by_id(sickbeard.showList, {indexer: indexer_id})
+                if show_obj:
+                    change = -1
+                    if 'true' == state:
+                        if 0 > show_obj.not_found_count:
+                            change = 1
+                    elif 0 < show_obj.not_found_count:
+                        change = 1
+                    show_obj.not_found_count *= change
+
+        return json.dumps({})
 
 
 class History(MainHandler):
@@ -4562,6 +4760,19 @@ class ConfigGeneral(Config):
     def saveRootDirs(self, rootDirString=None):
         sickbeard.ROOT_DIRS = rootDirString
 
+    def saveResultPrefs(self, ui_results_sortby=None):
+
+        if ui_results_sortby in ('az', 'date', 'rel', 'notop', 'ontop'):
+            was_ontop = 'notop' not in sickbeard.RESULTS_SORTBY
+            if 'top' == ui_results_sortby[-3:]:
+                maybe_ontop = ('', ' notop')[was_ontop]
+                sortby = sickbeard.RESULTS_SORTBY.replace(' notop', '')
+                sickbeard.RESULTS_SORTBY = '%s%s' % (('rel', sortby)[any([sortby])], maybe_ontop)
+            else:
+                sickbeard.RESULTS_SORTBY = '%s%s' % (ui_results_sortby, (' notop', '')[was_ontop])
+
+            sickbeard.save_config()
+
     def saveAddShowDefaults(self, default_status, any_qualities='', best_qualities='', default_wanted_begin=None,
                             default_wanted_latest=None, default_flatten_folders=False, default_scene=False,
                             default_subtitles=False, default_anime=False, default_tag=''):
@@ -4604,7 +4815,7 @@ class ConfigGeneral(Config):
         logger.log(u'New API generated')
         return m.hexdigest()
 
-    def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None,
+    def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None, web_ipv64=None,
                     update_shows_on_start=None, show_update_hour=None,
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
@@ -4621,6 +4832,11 @@ class ConfigGeneral(Config):
         sickbeard.LAUNCH_BROWSER = config.checkbox_to_value(launch_browser)
         sickbeard.UPDATE_SHOWS_ON_START = config.checkbox_to_value(update_shows_on_start)
         sickbeard.SHOW_UPDATE_HOUR = config.minimax(show_update_hour, 3, 0, 23)
+        try:
+            with sickbeard.showUpdateScheduler.lock:
+                sickbeard.showUpdateScheduler.start_time = datetime.time(hour=sickbeard.SHOW_UPDATE_HOUR)
+        except (StandardError, Exception) as e:
+            logger.log('Could not change Show Update Scheduler time: %s' % ex(e), logger.ERROR)
         sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
         sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
         if not config.change_LOG_DIR(log_dir, web_log):
@@ -4694,6 +4910,7 @@ class ConfigGeneral(Config):
                 'Unable to create directory ' + os.path.normpath(https_key) + ', https key directory not changed.']
 
         sickbeard.WEB_IPV6 = config.checkbox_to_value(web_ipv6)
+        sickbeard.WEB_IPV64 = config.checkbox_to_value(web_ipv64)
         sickbeard.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
 
         # Advanced
@@ -4766,11 +4983,12 @@ class ConfigSearch(Config):
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
                    backlog_days=None, backlog_frequency=None, search_unaired=None, unaired_recent_search_only=None,
                    recentsearch_frequency=None, nzb_method=None, torrent_method=None, usenet_retention=None,
-                   download_propers=None, check_propers_interval=None, allow_high_priority=None,
+                   download_propers=None, propers_webdl_onegrp=None, check_propers_interval=None,
+                   allow_high_priority=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
                    torrent_label=None, torrent_path=None, torrent_verify_cert=None,
-                   torrent_seed_time=None, torrent_paused=None, torrent_high_bandwidth=None, ignore_words=None, require_words=None,
-                   backlog_nofull=None):
+                   torrent_seed_time=None, torrent_paused=None, torrent_high_bandwidth=None,
+                   ignore_words=None, require_words=None, backlog_nofull=None):
 
         results = []
 
@@ -4803,6 +5021,7 @@ class ConfigSearch(Config):
         sickbeard.REQUIRE_WORDS = require_words if require_words else ''
 
         sickbeard.DOWNLOAD_PROPERS = config.checkbox_to_value(download_propers)
+        sickbeard.PROPERS_WEBDL_ONEGRP = config.checkbox_to_value(propers_webdl_onegrp)
         if sickbeard.CHECK_PROPERS_INTERVAL != check_propers_interval:
             sickbeard.CHECK_PROPERS_INTERVAL = check_propers_interval
 
@@ -5121,16 +5340,19 @@ class ConfigProviders(Config):
             return json.dumps({'success': False, 'error': error})
 
         if name in [n.name for n in sickbeard.newznabProviderList if n.url == url]:
-            tv_categories = newznab.NewznabProvider.clean_newznab_categories([n for n in sickbeard.newznabProviderList if n.name == name][0].all_cats)
+            provider = [n for n in sickbeard.newznabProviderList if n.name == name][0]
+            tv_categories = provider.clean_newznab_categories(provider.all_cats)
+            state = provider.is_enabled()
         else:
             providers = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
             temp_provider = newznab.NewznabProvider(name, url, key)
             if None is not key and starify(key, True):
                 temp_provider.key = providers[temp_provider.get_id()].key
 
-            tv_categories = newznab.NewznabProvider.clean_newznab_categories(temp_provider.all_cats)
+            tv_categories = temp_provider.clean_newznab_categories(temp_provider.all_cats)
+            state = False
 
-        return json.dumps({'success': True, 'tv_categories': tv_categories, 'error': ''})
+        return json.dumps({'success': True, 'tv_categories': tv_categories, 'state': state, 'error': ''})
 
     def deleteNewznabProvider(self, nnid):
 
@@ -5201,6 +5423,35 @@ class ConfigProviders(Config):
 
         return '1'
 
+    def checkProvidersPing(self):
+        for p in sickbeard.providers.sortedProviderList():
+            if getattr(p, 'ping_freq', None):
+                if p.is_active() and (p.get_id() not in sickbeard.provider_ping_thread_pool
+                                      or not sickbeard.provider_ping_thread_pool[p.get_id()].is_alive()):
+                    # noinspection PyProtectedMember
+                    sickbeard.provider_ping_thread_pool[p.get_id()] = threading.Thread(
+                        name='PING-PROVIDER %s' % p.name, target=p._ping)
+                    sickbeard.provider_ping_thread_pool[p.get_id()].start()
+                elif not p.is_active() and p.get_id() in sickbeard.provider_ping_thread_pool:
+                    sickbeard.provider_ping_thread_pool[p.get_id()].stop = True
+                    try:
+                        sickbeard.provider_ping_thread_pool[p.get_id()].join(120)
+                        if not sickbeard.provider_ping_thread_pool[p.get_id()].is_alive():
+                            sickbeard.provider_ping_thread_pool.pop(p.get_id())
+                    except RuntimeError:
+                        pass
+
+        # stop removed providers
+        prov = [n.get_id() for n in sickbeard.providers.sortedProviderList()]
+        for p in [x for x in sickbeard.provider_ping_thread_pool if x not in prov]:
+            sickbeard.provider_ping_thread_pool[p].stop = True
+            try:
+                sickbeard.provider_ping_thread_pool[p].join(120)
+                if not sickbeard.provider_ping_thread_pool[p].is_alive():
+                    sickbeard.provider_ping_thread_pool.pop(p)
+            except RuntimeError:
+                pass
+
     def saveProviders(self, newznab_string='', torrentrss_string='', provider_order=None, **kwargs):
 
         results = []
@@ -5243,7 +5494,7 @@ class ConfigProviders(Config):
                     if cur_id + '_' + attr in kwargs:
                         setattr(nzb_src, attr, str(kwargs.get(cur_id + '_' + attr)).strip())
 
-                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog']:
+                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog']:
                         setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
 
                 else:
@@ -5252,8 +5503,9 @@ class ConfigProviders(Config):
                 active_ids.append(cur_id)
 
         # delete anything that is missing
-        for source in [x for x in sickbeard.newznabProviderList if x.get_id() not in active_ids]:
-            sickbeard.newznabProviderList.remove(source)
+        if sickbeard.USE_NZBS:
+            for source in [x for x in sickbeard.newznabProviderList if x.get_id() not in active_ids]:
+                sickbeard.newznabProviderList.remove(source)
 
         # add all the torrent RSS info we have into our list
         torrent_rss_sources = dict(zip([x.get_id() for x in sickbeard.torrentRssProviderList],
@@ -5287,8 +5539,9 @@ class ConfigProviders(Config):
                 active_ids.append(cur_id)
 
         # delete anything that is missing
-        for source in [x for x in sickbeard.torrentRssProviderList if x.get_id() not in active_ids]:
-            sickbeard.torrentRssProviderList.remove(source)
+        if sickbeard.USE_TORRENTS:
+            for source in [x for x in sickbeard.torrentRssProviderList if x.get_id() not in active_ids]:
+                sickbeard.torrentRssProviderList.remove(source)
 
         # enable/disable states of source providers
         provider_str_list = provider_order.split()
@@ -5300,12 +5553,18 @@ class ConfigProviders(Config):
             provider_list.append(src_name)
             src_enabled = bool(config.to_int(src_enabled))
 
-            if '' != getattr(sources[src_name], 'enabled', '') and sources[src_name].is_enabled() != src_enabled:
+            if src_name in sources and '' != getattr(sources[src_name], 'enabled', '') \
+                    and sources[src_name].is_enabled() != src_enabled:
+                if isinstance(sources[src_name], sickbeard.providers.newznab.NewznabProvider) and \
+                        not sources[src_name].enabled and src_enabled:
+                    reload_page = True
                 sources[src_name].enabled = src_enabled
                 if not reload_page and sickbeard.GenericProvider.TORRENT == sources[src_name].providerType:
                     reload_page = True
 
             if src_name in newznab_sources:
+                if not newznab_sources[src_name].enabled and src_enabled:
+                    reload_page = True
                 newznab_sources[src_name].enabled = src_enabled
             elif src_name in torrent_rss_sources:
                 torrent_rss_sources[src_name].enabled = src_enabled
@@ -5339,7 +5598,7 @@ class ConfigProviders(Config):
                 setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
 
             for attr in [x for x in ['confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
-                                     'enable_backlog', 'search_fallback']
+                                     'enable_backlog', 'search_fallback', 'enable_scheduled_backlog']
                          if hasattr(torrent_src, x) and src_id_prefix + attr in kwargs]:
                 setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
@@ -5381,7 +5640,7 @@ class ConfigProviders(Config):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)) or
                         not getattr(nzb_src, 'supports_backlog', True))
 
-            for attr in [x for x in ['search_fallback', 'enable_backlog'] if hasattr(nzb_src, x)]:
+            for attr in [x for x in ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog'] if hasattr(nzb_src, x)]:
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
         sickbeard.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickbeard.newznabProviderList])
@@ -5390,6 +5649,9 @@ class ConfigProviders(Config):
         helpers.clear_unused_providers()
 
         sickbeard.save_config()
+
+        cp = threading.Thread(name='Check-Ping-Providers', target=self.checkProvidersPing)
+        cp.start()
 
         if 0 < len(results):
             for x in results:
@@ -5419,54 +5681,62 @@ class ConfigNotifications(Config):
                                     'b64': base64.urlsafe_b64encode(location)})
         return t.respond()
 
-    def saveNotifications(self,
-                          use_emby=None, emby_update_library=None, emby_host=None, emby_apikey=None,
-                          use_kodi=None, kodi_always_on=None, kodi_notify_onsnatch=None, kodi_notify_ondownload=None,
-                          kodi_notify_onsubtitledownload=None, kodi_update_onlyfirst=None,
-                          kodi_update_library=None, kodi_update_full=None,
-                          kodi_host=None, kodi_username=None, kodi_password=None,
-                          use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None, xbmc_notify_ondownload=None,
-                          xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
-                          xbmc_update_library=None, xbmc_update_full=None,
-                          xbmc_host=None, xbmc_username=None, xbmc_password=None,
-                          use_plex=None, plex_notify_onsnatch=None, plex_notify_ondownload=None,
-                          plex_notify_onsubtitledownload=None, plex_update_library=None,
-                          plex_server_host=None, plex_host=None, plex_username=None, plex_password=None,
-                          use_growl=None, growl_notify_onsnatch=None, growl_notify_ondownload=None,
-                          growl_notify_onsubtitledownload=None, growl_host=None, growl_password=None,
-                          use_prowl=None, prowl_notify_onsnatch=None, prowl_notify_ondownload=None,
-                          prowl_notify_onsubtitledownload=None, prowl_api=None, prowl_priority=0,
-                          use_twitter=None, twitter_notify_onsnatch=None, twitter_notify_ondownload=None,
-                          twitter_notify_onsubtitledownload=None,
-                          use_boxcar2=None, boxcar2_notify_onsnatch=None, boxcar2_notify_ondownload=None,
-                          boxcar2_notify_onsubtitledownload=None, boxcar2_accesstoken=None, boxcar2_sound=None,
-                          use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None,
-                          pushover_notify_onsubtitledownload=None, pushover_userkey=None, pushover_apikey=None,
-                          pushover_priority=None, pushover_device=None, pushover_sound=None, pushover_device_list=None,
-                          use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
-                          libnotify_notify_onsubtitledownload=None,
-                          use_nmj=None, nmj_host=None, nmj_database=None, nmj_mount=None, use_synoindex=None,
-                          use_nmjv2=None, nmjv2_host=None, nmjv2_dbloc=None, nmjv2_database=None,
-                          use_trakt=None, trakt_pin=None,
-                          trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
-                          trakt_start_paused=None, trakt_sync=None,
-                          trakt_default_indexer=None, trakt_remove_serieslist=None, trakt_collection=None, trakt_accounts=None,
-                          use_synologynotifier=None, synologynotifier_notify_onsnatch=None,
-                          synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
-                          use_pytivo=None, pytivo_notify_onsnatch=None, pytivo_notify_ondownload=None,
-                          pytivo_notify_onsubtitledownload=None, pytivo_update_library=None,
-                          pytivo_host=None, pytivo_share_name=None, pytivo_tivo_name=None,
-                          use_nma=None, nma_notify_onsnatch=None, nma_notify_ondownload=None,
-                          nma_notify_onsubtitledownload=None, nma_api=None, nma_priority=0,
-                          use_pushalot=None, pushalot_notify_onsnatch=None, pushalot_notify_ondownload=None,
-                          pushalot_notify_onsubtitledownload=None, pushalot_authorizationtoken=None,
-                          use_pushbullet=None, pushbullet_notify_onsnatch=None, pushbullet_notify_ondownload=None,
-                          pushbullet_notify_onsubtitledownload=None, pushbullet_access_token=None,
-                          pushbullet_device_iden=None, pushbullet_device_list=None,
-                          use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
-                          email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
-                          email_tls=None, email_user=None, email_password=None, email_list=None, email_show_list=None,
-                          email_show=None, **kwargs):
+    def save_notifications(
+            self,
+            use_emby=None, emby_update_library=None, emby_host=None, emby_apikey=None,
+            use_kodi=None, kodi_always_on=None, kodi_update_library=None, kodi_update_full=None,
+            kodi_update_onlyfirst=None, kodi_host=None, kodi_username=None, kodi_password=None,
+            kodi_notify_onsnatch=None, kodi_notify_ondownload=None, kodi_notify_onsubtitledownload=None,
+            use_plex=None, plex_update_library=None, plex_username=None, plex_password=None, plex_server_host=None,
+            plex_notify_onsnatch=None, plex_notify_ondownload=None, plex_notify_onsubtitledownload=None, plex_host=None,
+            # use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None, xbmc_notify_ondownload=None,
+            # xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
+            # xbmc_update_library=None, xbmc_update_full=None,
+            # xbmc_host=None, xbmc_username=None, xbmc_password=None,
+            use_nmj=None, nmj_host=None, nmj_database=None, nmj_mount=None,
+            use_nmjv2=None, nmjv2_host=None, nmjv2_dbloc=None, nmjv2_database=None,
+            use_synoindex=None, use_synologynotifier=None, synologynotifier_notify_onsnatch=None,
+            synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
+            use_pytivo=None, pytivo_host=None, pytivo_share_name=None, pytivo_tivo_name=None,
+
+            use_boxcar2=None, boxcar2_notify_onsnatch=None, boxcar2_notify_ondownload=None,
+            boxcar2_notify_onsubtitledownload=None, boxcar2_access_token=None, boxcar2_sound=None,
+            use_pushbullet=None, pushbullet_notify_onsnatch=None, pushbullet_notify_ondownload=None,
+            pushbullet_notify_onsubtitledownload=None, pushbullet_access_token=None, pushbullet_device_iden=None,
+            use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None,
+            pushover_notify_onsubtitledownload=None, pushover_userkey=None, pushover_apikey=None,
+            pushover_priority=None, pushover_device=None, pushover_sound=None, pushover_device_list=None,
+            use_growl=None, growl_notify_onsnatch=None, growl_notify_ondownload=None,
+            growl_notify_onsubtitledownload=None, growl_host=None, growl_password=None,
+            use_prowl=None, prowl_notify_onsnatch=None, prowl_notify_ondownload=None,
+            prowl_notify_onsubtitledownload=None, prowl_api=None, prowl_priority=0,
+            use_nma=None, nma_notify_onsnatch=None, nma_notify_ondownload=None,
+            nma_notify_onsubtitledownload=None, nma_api=None, nma_priority=0,
+            use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
+            libnotify_notify_onsubtitledownload=None,
+            # use_pushalot=None, pushalot_notify_onsnatch=None, pushalot_notify_ondownload=None,
+            # pushalot_notify_onsubtitledownload=None, pushalot_authorizationtoken=None,
+
+            use_trakt=None,
+            # trakt_pin=None, trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
+            # trakt_start_paused=None, trakt_sync=None, trakt_default_indexer=None, trakt_remove_serieslist=None,
+            # trakt_collection=None, trakt_accounts=None,
+            use_slack=None, slack_notify_onsnatch=None, slack_notify_ondownload=None,
+            slack_notify_onsubtitledownload=None, slack_access_token=None, slack_channel=None,
+            slack_as_authed=None, slack_bot_name=None, slack_icon_url=None,
+            use_discordapp=None, discordapp_notify_onsnatch=None, discordapp_notify_ondownload=None,
+            discordapp_notify_onsubtitledownload=None, discordapp_access_token=None,
+            discordapp_as_authed=None, discordapp_username=None, discordapp_icon_url=None,
+            discordapp_as_tts=None,
+            use_gitter=None, gitter_notify_onsnatch=None, gitter_notify_ondownload=None,
+            gitter_notify_onsubtitledownload=None, gitter_access_token=None, gitter_room=None,
+            use_twitter=None, twitter_notify_onsnatch=None, twitter_notify_ondownload=None,
+            twitter_notify_onsubtitledownload=None,
+            use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
+            email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
+            email_tls=None, email_user=None, email_password=None, email_list=None,
+            # email_show_list=None, email_show=None,
+            **kwargs):
 
         results = []
 
@@ -5502,18 +5772,18 @@ class ConfigNotifications(Config):
         if set('*') != set(kodi_password):
             sickbeard.KODI_PASSWORD = kodi_password
 
-        sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
-        sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
-        sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
-        sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
-        sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
-        sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
-        sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
-        sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
-        sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
-        sickbeard.XBMC_USERNAME = xbmc_username
-        if set('*') != set(xbmc_password):
-            sickbeard.XBMC_PASSWORD = xbmc_password
+        # sickbeard.USE_XBMC = config.checkbox_to_value(use_xbmc)
+        # sickbeard.XBMC_ALWAYS_ON = config.checkbox_to_value(xbmc_always_on)
+        # sickbeard.XBMC_NOTIFY_ONSNATCH = config.checkbox_to_value(xbmc_notify_onsnatch)
+        # sickbeard.XBMC_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(xbmc_notify_ondownload)
+        # sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(xbmc_notify_onsubtitledownload)
+        # sickbeard.XBMC_UPDATE_LIBRARY = config.checkbox_to_value(xbmc_update_library)
+        # sickbeard.XBMC_UPDATE_FULL = config.checkbox_to_value(xbmc_update_full)
+        # sickbeard.XBMC_UPDATE_ONLYFIRST = config.checkbox_to_value(xbmc_update_onlyfirst)
+        # sickbeard.XBMC_HOST = config.clean_hosts(xbmc_host)
+        # sickbeard.XBMC_USERNAME = xbmc_username
+        # if set('*') != set(xbmc_password):
+        #     sickbeard.XBMC_PASSWORD = xbmc_password
 
         sickbeard.USE_PLEX = config.checkbox_to_value(use_plex)
         sickbeard.PLEX_NOTIFY_ONSNATCH = config.checkbox_to_value(plex_notify_onsnatch)
@@ -5552,7 +5822,7 @@ class ConfigNotifications(Config):
         sickbeard.BOXCAR2_NOTIFY_ONSNATCH = config.checkbox_to_value(boxcar2_notify_onsnatch)
         sickbeard.BOXCAR2_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(boxcar2_notify_ondownload)
         sickbeard.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(boxcar2_notify_onsubtitledownload)
-        key = boxcar2_accesstoken.strip()
+        key = boxcar2_access_token.strip()
         if not starify(key, True):
             sickbeard.BOXCAR2_ACCESSTOKEN = key
         sickbeard.BOXCAR2_SOUND = boxcar2_sound
@@ -5595,8 +5865,8 @@ class ConfigNotifications(Config):
             synologynotifier_notify_onsubtitledownload)
 
         sickbeard.USE_TRAKT = config.checkbox_to_value(use_trakt)
-        # sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
         sickbeard.TRAKT_UPDATE_COLLECTION = build_config(**kwargs)
+        # sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
         # sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
         # sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
         # sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
@@ -5604,6 +5874,33 @@ class ConfigNotifications(Config):
         # sickbeard.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
         # sickbeard.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
         # sickbeard.TRAKT_START_PAUSED = config.checkbox_to_value(trakt_start_paused)
+
+        sickbeard.USE_SLACK = config.checkbox_to_value(use_slack)
+        sickbeard.SLACK_NOTIFY_ONSNATCH = config.checkbox_to_value(slack_notify_onsnatch)
+        sickbeard.SLACK_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(slack_notify_ondownload)
+        sickbeard.SLACK_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(slack_notify_onsubtitledownload)
+        sickbeard.SLACK_ACCESS_TOKEN = slack_access_token
+        sickbeard.SLACK_CHANNEL = slack_channel
+        sickbeard.SLACK_AS_AUTHED = config.checkbox_to_value(slack_as_authed)
+        sickbeard.SLACK_BOT_NAME = slack_bot_name
+        sickbeard.SLACK_ICON_URL = slack_icon_url
+
+        sickbeard.USE_DISCORDAPP = config.checkbox_to_value(use_discordapp)
+        sickbeard.DISCORDAPP_NOTIFY_ONSNATCH = config.checkbox_to_value(discordapp_notify_onsnatch)
+        sickbeard.DISCORDAPP_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(discordapp_notify_ondownload)
+        sickbeard.DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(discordapp_notify_onsubtitledownload)
+        sickbeard.DISCORDAPP_ACCESS_TOKEN = discordapp_access_token
+        sickbeard.DISCORDAPP_AS_AUTHED = config.checkbox_to_value(discordapp_as_authed)
+        sickbeard.DISCORDAPP_USERNAME = discordapp_username
+        sickbeard.DISCORDAPP_ICON_URL = discordapp_icon_url
+        sickbeard.DISCORDAPP_AS_TTS = config.checkbox_to_value(discordapp_as_tts)
+
+        sickbeard.USE_GITTER = config.checkbox_to_value(use_gitter)
+        sickbeard.GITTER_NOTIFY_ONSNATCH = config.checkbox_to_value(gitter_notify_onsnatch)
+        sickbeard.GITTER_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(gitter_notify_ondownload)
+        sickbeard.GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(gitter_notify_onsubtitledownload)
+        sickbeard.GITTER_ACCESS_TOKEN = gitter_access_token
+        sickbeard.GITTER_ROOM = gitter_room
 
         sickbeard.USE_EMAIL = config.checkbox_to_value(use_email)
         sickbeard.EMAIL_NOTIFY_ONSNATCH = config.checkbox_to_value(email_notify_onsnatch)
@@ -5619,10 +5916,6 @@ class ConfigNotifications(Config):
         sickbeard.EMAIL_LIST = email_list
 
         sickbeard.USE_PYTIVO = config.checkbox_to_value(use_pytivo)
-        sickbeard.PYTIVO_NOTIFY_ONSNATCH = config.checkbox_to_value(pytivo_notify_onsnatch)
-        sickbeard.PYTIVO_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pytivo_notify_ondownload)
-        sickbeard.PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pytivo_notify_onsubtitledownload)
-        sickbeard.PYTIVO_UPDATE_LIBRARY = config.checkbox_to_value(pytivo_update_library)
         sickbeard.PYTIVO_HOST = config.clean_host(pytivo_host)
         sickbeard.PYTIVO_SHARE_NAME = pytivo_share_name
         sickbeard.PYTIVO_TIVO_NAME = pytivo_tivo_name
@@ -5636,13 +5929,13 @@ class ConfigNotifications(Config):
             sickbeard.NMA_API = key
         sickbeard.NMA_PRIORITY = nma_priority
 
-        sickbeard.USE_PUSHALOT = config.checkbox_to_value(use_pushalot)
-        sickbeard.PUSHALOT_NOTIFY_ONSNATCH = config.checkbox_to_value(pushalot_notify_onsnatch)
-        sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pushalot_notify_ondownload)
-        sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pushalot_notify_onsubtitledownload)
-        key = pushalot_authorizationtoken.strip()
-        if not starify(key, True):
-            sickbeard.PUSHALOT_AUTHORIZATIONTOKEN = key
+        # sickbeard.USE_PUSHALOT = config.checkbox_to_value(use_pushalot)
+        # sickbeard.PUSHALOT_NOTIFY_ONSNATCH = config.checkbox_to_value(pushalot_notify_onsnatch)
+        # sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(pushalot_notify_ondownload)
+        # sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(pushalot_notify_onsubtitledownload)
+        # key = pushalot_authorizationtoken.strip()
+        # if not starify(key, True):
+        #     sickbeard.PUSHALOT_AUTHORIZATIONTOKEN = key
 
         sickbeard.USE_PUSHBULLET = config.checkbox_to_value(use_pushbullet)
         sickbeard.PUSHBULLET_NOTIFY_ONSNATCH = config.checkbox_to_value(pushbullet_notify_onsnatch)
@@ -5679,19 +5972,7 @@ class ConfigSubtitles(Config):
         if subtitles_finder_frequency == '' or subtitles_finder_frequency is None:
             subtitles_finder_frequency = 1
 
-        if use_subtitles == 'on' and not sickbeard.subtitlesFinderScheduler.isAlive():
-            sickbeard.subtitlesFinderScheduler.silent = False
-            sickbeard.subtitlesFinderScheduler.start()
-        else:
-            sickbeard.subtitlesFinderScheduler.stop.set()
-            sickbeard.subtitlesFinderScheduler.silent = True
-            logger.log(u'Waiting for the SUBTITLESFINDER thread to exit')
-            try:
-                sickbeard.subtitlesFinderScheduler.join(5)
-            except:
-                pass
-
-        sickbeard.USE_SUBTITLES = config.checkbox_to_value(use_subtitles)
+        config.change_USE_SUBTITLES(config.checkbox_to_value(use_subtitles))
         sickbeard.SUBTITLES_LANGUAGES = [lang.alpha2 for lang in subtitles.isValidLanguage(
             subtitles_languages.replace(' ', '').split(','))] if subtitles_languages != '' else ''
         sickbeard.SUBTITLES_DIR = subtitles_dir
@@ -5993,26 +6274,33 @@ class CachedImages(MainHandler):
             tmdbimage = False
             if source is not None and source in sickbeard.CACHE_IMAGE_URL_LIST:
                 s = source
-            if source is None and tmdbid not in [None, 0, '0'] and self.should_try_image(static_image_path, 'tmdb'):
+            if source is None and tmdbid not in [None, 'None', 0, '0'] \
+                    and self.should_try_image(static_image_path, 'tmdb'):
                 tmdbimage = True
                 try:
                     tmdbapi = TMDB(sickbeard.TMDB_API_KEY)
                     tmdbconfig = tmdbapi.Configuration().info()
                     images = tmdbapi.TV(helpers.tryInt(tmdbid)).images()
-                    s = '%s%s%s' % (tmdbconfig['images']['base_url'], tmdbconfig['images']['poster_sizes'][3], sorted(images['posters'], key=lambda x: x['vote_average'], reverse=True)[0]['file_path']) if len(images['posters']) > 0 else ''
-                except:
+                    s = '%s%s%s' % (tmdbconfig['images']['base_url'], tmdbconfig['images']['poster_sizes'][3],
+                                    sorted(images['posters'], key=lambda x: x['vote_average'],
+                                           reverse=True)[0]['file_path']) if len(images['posters']) > 0 else ''
+                except (StandardError, Exception):
                     s = ''
             if s and not helpers.download_file(s, static_image_path) and s.find('trakt.us'):
                 helpers.download_file(s.replace('trakt.us', 'trakt.tv'), static_image_path)
             if tmdbimage and not ek.ek(os.path.isfile, static_image_path):
                 self.create_dummy_image(static_image_path, 'tmdb')
 
-            if source is None and tvdbid not in [None, 0, '0'] and not ek.ek(os.path.isfile, static_image_path) and self.should_try_image(static_image_path, 'tvdb'):
+            if source is None and tvdbid not in [None, 'None', 0, '0'] \
+                    and not ek.ek(os.path.isfile, static_image_path) \
+                    and self.should_try_image(static_image_path, 'tvdb'):
                 try:
-                    r = sickbeard.indexerApi(INDEXER_TVDB).indexer()[helpers.tryInt(tvdbid), False]
+                    lINDEXER_API_PARMS = sickbeard.indexerApi(INDEXER_TVDB).api_params.copy()
+                    lINDEXER_API_PARMS['posters'] = True
+                    r = sickbeard.indexerApi(INDEXER_TVDB).indexer(**lINDEXER_API_PARMS)[helpers.tryInt(tvdbid), False]
                     if hasattr(r, 'data') and 'poster' in r.data:
                         s = r.data['poster']
-                except:
+                except (StandardError, Exception):
                     s = ''
                 if s:
                     helpers.download_file(s, static_image_path)
@@ -6023,7 +6311,12 @@ class CachedImages(MainHandler):
                 self.delete_all_dummy_images(static_image_path)
 
         if not ek.ek(os.path.isfile, static_image_path):
-            self.redirect('images/trans.png')
+            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick',
+                                      'images', ('image-light.png', 'trans.png')[bool(int(kwargs.get('trans', 1)))])
         else:
             helpers.set_file_timestamp(static_image_path, min_age=3, new_time=None)
-            self.redirect('cache/images/%s/%s' % (path, file_name))
+
+        mime_type, encoding = MimeTypes().guess_type(static_image_path)
+        self.set_header('Content-Type', mime_type)
+        with open(static_image_path, 'rb') as img:
+            return img.read()

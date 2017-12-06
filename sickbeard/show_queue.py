@@ -19,16 +19,19 @@
 from __future__ import with_statement
 
 import traceback
+import os
 
 import sickbeard
 
-from sickbeard.common import SKIPPED, WANTED, UNAIRED
+from sickbeard.common import SKIPPED, WANTED, UNAIRED, statusStrings
 from sickbeard.tv import TVShow
 from sickbeard import exceptions, logger, ui, db
 from sickbeard import generic_queue
 from sickbeard import name_cache
 from sickbeard.exceptions import ex
+from sickbeard.helpers import should_delete_episode
 from sickbeard.blackandwhitelist import BlackAndWhiteList
+from sickbeard import encodingKludge as ek
 
 
 class ShowQueue(generic_queue.GenericQueue):
@@ -174,10 +177,10 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
                 lang='en', subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
-                wanted_begin=None, wanted_latest=None, tag=None):
+                wanted_begin=None, wanted_latest=None, tag=None, new_show=False):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
                                     subtitles, anime, scene, paused, blacklist, whitelist,
-                                    wanted_begin, wanted_latest, tag)
+                                    wanted_begin, wanted_latest, tag, new_show=new_show)
 
         self.add_item(queueItemObj)
 
@@ -234,7 +237,8 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, tag, scheduled_update=False):
+                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, tag,
+                 scheduled_update=False, new_show=False):
 
         self.indexer = indexer
         self.indexer_id = indexer_id
@@ -252,6 +256,7 @@ class QueueItemAdd(ShowQueueItem):
         self.blacklist = blacklist
         self.whitelist = whitelist
         self.tag = tag
+        self.new_show = new_show
 
         self.show = None
 
@@ -369,7 +374,7 @@ class QueueItemAdd(ShowQueueItem):
 
         except Exception as e:
             logger.log('Error trying to add show: %s' % ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
             self._finishEarly()
             raise
 
@@ -379,7 +384,7 @@ class QueueItemAdd(ShowQueueItem):
             self.show.saveToDB()
         except Exception as e:
             logger.log('Error saving the show to the database: %s' % ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
             self._finishEarly()
             raise
 
@@ -392,13 +397,13 @@ class QueueItemAdd(ShowQueueItem):
             logger.log(
                 'Error with %s, not creating episode list: %s' % (sickbeard.indexerApi(self.show.indexer).name, ex(e)),
                 logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         try:
             self.show.loadEpisodesFromDir()
         except Exception as e:
             logger.log('Error searching directory for episodes: %s' % ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         # if they gave a custom status then change all the eps to it
         my_db = db.DBConnection()
@@ -481,8 +486,15 @@ class QueueItemAdd(ShowQueueItem):
         self.finish()
 
     def _finishEarly(self):
-        if self.show != None:
+        if self.show is not None:
             self.show.deleteShow()
+
+        if self.new_show:
+            # if we adding a new show, delete the empty folder that was already created
+            try:
+                ek.ek(os.rmdir, self.showDir)
+            except (StandardError, Exception):
+                pass
 
         self.finish()
 
@@ -615,8 +627,8 @@ class QueueItemUpdate(ShowQueueItem):
         try:
             self.show.saveToDB()
         except Exception as e:
-            logger.log('Error saving the episode to the database: %s' % ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log('Error saving the show to the database: %s' % ex(e), logger.ERROR)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         # get episode list from DB
         logger.log('Loading all episodes from the database', logger.DEBUG)
@@ -631,9 +643,12 @@ class QueueItemUpdate(ShowQueueItem):
                        (sickbeard.indexerApi(self.show.indexer).name, ex(e)), logger.ERROR)
             IndexerEpList = None
 
-        if IndexerEpList == None:
-            logger.log('No data returned from %s, unable to update this show' %
-                       sickbeard.indexerApi(self.show.indexer).name, logger.ERROR)
+        if None is IndexerEpList:
+            logger.log('No data returned from %s, unable to update episodes for show: %s' %
+                       (sickbeard.indexerApi(self.show.indexer).name, self.show.name), logger.ERROR)
+        elif not IndexerEpList or 0 == len(IndexerEpList):
+            logger.log('No episodes returned from %s for show: %s' %
+                       (sickbeard.indexerApi(self.show.indexer).name, self.show.name), logger.WARNING)
         else:
             # for each ep we found on TVDB delete it from the DB list
             for curSeason in IndexerEpList:
@@ -645,13 +660,18 @@ class QueueItemUpdate(ShowQueueItem):
             # for the remaining episodes in the DB list just delete them from the DB
             for curSeason in DBEpList:
                 for curEpisode in DBEpList[curSeason]:
-                    logger.log('Permanently deleting episode %sx%s from the database' %
-                               (curSeason, curEpisode), logger.MESSAGE)
                     curEp = self.show.getEpisode(curSeason, curEpisode)
-                    try:
-                        curEp.deleteEpisode()
-                    except exceptions.EpisodeDeletedException:
-                        pass
+                    status = sickbeard.common.Quality.splitCompositeStatus(curEp.status)[0]
+                    if should_delete_episode(status):
+                        logger.log('Permanently deleting episode %sx%s from the database' %
+                                   (curSeason, curEpisode), logger.MESSAGE)
+                        try:
+                            curEp.deleteEpisode()
+                        except exceptions.EpisodeDeletedException:
+                            pass
+                    else:
+                        logger.log('Not deleting episode %sx%s from the database because status is: %s' %
+                                   (curSeason, curEpisode, statusStrings[status]), logger.MESSAGE)
 
         if self.priority != generic_queue.QueuePriorities.NORMAL:
             self.kwargs['priority'] = self.priority

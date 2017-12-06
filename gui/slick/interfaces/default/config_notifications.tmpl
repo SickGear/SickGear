@@ -3,6 +3,7 @@
 #import re
 #from lib.libtrakt import TraktAPI
 #from sickbeard.helpers import anon_url, starify
+#from sickbeard.notifiers import NotifierFactory
 ##
 #set global $title = 'Config - Notifications'
 #set global $header = 'Notifications'
@@ -20,10 +21,21 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#.gif" height="16" width="16" style="display:none" />
+<style>
+.component-group.typelist{min-height:30px}
+.component-group.typelist .type{padding:6px}
+.component-group.typelist .item{display:inline-block}
+.component-group.typelist .item img{margin-right:4px}
+.component-group.typelist .item.text{font-size:12px; padding-right:3px}
+.component-group.typelist .item a{font-size:16px;padding-right:20px}
+.component-group.typelist .item.text,
+.component-group.typelist .item a{line-height:16px;vertical-align:middle}
+</style>
+
+<img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#.gif" height="16" width="16" style="display:none">
 <div id="config">
 	<div id="config-content">
-		<form id="configForm" action="saveNotifications" method="post">
+		<form id="configForm" action="$sbRoot/config/notifications/save_notifications" method="post">
 			<div id="config-components">
 				<ul>
 					<li><a href="#tabs-1">Home Theater / NAS</a></li>
@@ -31,337 +43,237 @@
 					<li><a href="#tabs-3">Social</a></li>
 				</ul>
 
+
+
+
+
 				<div id="tabs-1">
-				<div class="component-group">
+				<div class="component-group typelist">
+					<div class="type bgcol">
+						<span class="list"><div class="item text">Bubble links:</div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/emby.png"><a href="#emby" rel="noreferrer">Emby</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/kodi.png"><a href="#kodi" rel="noreferrer">Kodi</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/plex.png"><a href="#plex" rel="noreferrer">Plex</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/nmj.png"><a href="#nmj" rel="noreferrer">NMJ</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/nmj.png"><a href="#nmjv2" rel="noreferrer">NMJv2</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/synoindex.png"><a href="#synoindexer" rel="noreferrer">Syno Indexer</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/synologynotifier.png"><a href="#synonotifier" rel="noreferrer">Syno Notifier</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pytivo.png"><a href="#pytivo" rel="noreferrer">pyTivo</a></div>
+						</span>
+					</div>
+				</div>
+
+				<div class="component-group clear-left">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/emby.png" alt="" title="Emby" />
-						<h3><a href="<%= anon_url('http://emby.media/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Emby</a></h3>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/emby.png" alt="" title="Emby">
+						<h3><a name="emby" href="<%= anon_url('http://emby.media/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Emby</a></h3>
 						<p>Have a central media database with strong user management, e.g. for improved Kodi profile(s). Gain deep viewing and granular control on any device, e.g. replace Plex entirely, Emby + Kodi > Plex.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
 #if not hasattr($sickbeard, 'EMBY_UPDATE_LIBRARY')#<span class="red-text">Restart SickGear to reveal new options here</span>#else#
-							<label class="cleafix" for="use_emby">
+							<label class="cleafix" for="use-emby">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_emby" id="use_emby" #if $sickbeard.USE_EMBY then 'checked="checked"' else ''#>
+									<input type="checkbox" class="enabler" name="use_emby" id="use-emby" #if $sickbeard.USE_EMBY then 'checked="checked"' else ''#>
 									<p>should SickGear enable features for Emby server(s) ?</p>
 								</span>
 							</label>
 						</div>
-						<div id="content_use_emby">
+
+						<div id="content_use-emby">
 							<div class="field-pair">
-								<label for="emby_update_library">
+								<label for="emby-update-library">
 									<span class="component-title">Update media library</span>
 									<span class="component-desc">
-										<input type="checkbox" name="emby_update_library" id="emby_update_library" #if $sickbeard.EMBY_UPDATE_LIBRARY then 'checked="checked"' else ''# />
+										<input type="checkbox" name="emby_update_library" id="emby-update-library" #if $sickbeard.EMBY_UPDATE_LIBRARY then 'checked="checked"' else ''#>
 										<p>push Emby to refresh a show that is post-processed</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="emby_host">
+								<label for="emby-host">
 									<span class="component-title">Host(s) running Emby</span>
 									<span class="component-desc">
-										<input type="text" name="emby_host" id="emby_host" value="$sickbeard.EMBY_HOST" class="form-control input-sm input250">
+										<input type="text" name="emby_host" id="emby-host" value="$sickbeard.EMBY_HOST" class="form-control input-sm input250">
 										<input type="button" class="btn" value="Discover" id="discover-emby">
 										<div class="clear-left"><p>IP:Port [, IP:Port] (e.g. 192.168.0.1:8096, 192.168.1.2:8096)</p></div>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="emby_apikey">
+								<label for="emby-apikey">
 									<span class="component-title">API key(s)</span>
 									<span class="component-desc">
-										<input type="text" name="emby_apikey" id="emby_apikey" value="<%= starify(sickbeard.EMBY_APIKEY) %>" class="form-control input-sm input250">
+										<input type="text" name="emby_apikey" id="emby-apikey" value="<%= starify(sickbeard.EMBY_APIKEY) %>" class="form-control input-sm input250">
 										<p>(comma separated)</p>
 										<div class="clear-left"><p>one key per host from Emby/Manage Server/Advanced/Security</p></div>
 									</span>
 								</label>
 							</div>
-							<div class="testNotification" id="testEMBY-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Emby" id="testEMBY">
+							<div class="test-notification" id="test-emby-result">Click below to test</div>
+							<input class="btn" type="button" value="Test Emby" id="test-emby">
 							<input type="submit" class="config_submitter btn" value="Save Changes">
 #end if
-						</div><!-- /content_use_emby //-->
+						</div><!-- /content_use-emby //-->
 					</fieldset>
 				</div><!-- /emby component-group //-->
 
+
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/kodi.png" alt="" title="Kodi" />
-						<h3><a href="<%= anon_url('http://kodi.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Kodi</a></h3>
-						<p>Kodi (formerly known as XBMC) is an award-winning free and open source (GPL) software media player and entertainment hub.</p>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/kodi.png" alt="" title="Kodi">
+						<h3><a name="kodi" href="<%= anon_url('http://kodi.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Kodi</a></h3>
+						<p>Kodi is a media player and entertainment hub.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label class="cleafix" for="use_kodi">
+							<label class="cleafix" for="use-kodi">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_kodi" id="use_kodi" #if $sickbeard.USE_KODI then 'checked="checked"' else ''# />
+									<input type="checkbox" class="enabler" name="use_kodi" id="use-kodi" #if $sickbeard.USE_KODI then 'checked="checked"' else ''#>
 									<p>should SickGear send Kodi commands ?</p>
 								</span>
 							</label>
 						</div>
-						<div id="content_use_kodi">
+
+						<div id="content_use-kodi">
 							<div class="field-pair">
-								<label for="kodi_always_on">
+								<label for="kodi-always-on">
 									<span class="component-title">Always on</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_always_on" id="kodi_always_on" #if $sickbeard.KODI_ALWAYS_ON then 'checked="checked"' else ''# />
+										<input type="checkbox" name="kodi_always_on" id="kodi-always-on" #if $sickbeard.KODI_ALWAYS_ON then 'checked="checked"' else ''#>
 										<p>log errors when unreachable</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_update_library">
+								<label for="kodi-update-library">
 									<span class="component-title">Update shows known to Kodi</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_library" id="kodi_update_library" #if $sickbeard.KODI_UPDATE_LIBRARY then 'checked="checked"' else ''# />
-    									<p>push Kodi to refresh a show that is post-processed</p>
+										<input type="checkbox" name="kodi_update_library" id="kodi-update-library" #if $sickbeard.KODI_UPDATE_LIBRARY then 'checked="checked"' else ''#>
+										<p>push Kodi to refresh a show that is post-processed</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_update_full">
+								<label for="kodi-update-full">
 									<span class="component-title">Perform full library update</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_full" id="kodi_update_full" #if $sickbeard.KODI_UPDATE_FULL then 'checked="checked"' else ''# />
+										<input type="checkbox" name="kodi_update_full" id="kodi-update-full" #if $sickbeard.KODI_UPDATE_FULL then 'checked="checked"' else ''#>
 										<p>only when "Update shows" fails. Tip: enables Kodi to add new shows</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_update_onlyfirst">
+								<label for="kodi-update-onlyfirst">
 									<span class="component-title">Only update first host</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_update_onlyfirst" id="kodi_update_onlyfirst" #if $sickbeard.KODI_UPDATE_ONLYFIRST then 'checked="checked"' else ''# />
+										<input type="checkbox" name="kodi_update_onlyfirst" id="kodi-update-onlyfirst" #if $sickbeard.KODI_UPDATE_ONLYFIRST then 'checked="checked"' else ''#>
 										<p>only send library updates to the first active host</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_host">
+								<label for="kodi-host">
 									<span class="component-title">Host(s) running Kodi</span>
 									<span class="component-desc">
-										<input type="text" name="kodi_host" id="kodi_host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350" />
+										<input type="text" name="kodi_host" id="kodi-host" value="$sickbeard.KODI_HOST" class="form-control input-sm input350">
 										<div class="clear-left"><p>IP:Port [, IP:Port] (e.g. 192.168.0.1:8080, 192.168.1.2:8080)</p></div>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_username">
+								<label for="kodi-username">
 									<span class="component-title">Kodi web server username</span>
 									<span class="component-desc">
-										<input type="text" name="kodi_username" id="kodi_username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250" />
+										<input type="text" name="kodi_username" id="kodi-username" value="$sickbeard.KODI_USERNAME" class="form-control input-sm input250">
 										<p>(blank for none)</p>
 										<div class="clear-left"><p>in Kodi System/Settings/Services/Web server</p></div>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_password">
+								<label for="kodi-password">
 									<span class="component-title">Kodi web server password</span>
 									<span class="component-desc">
-										<input type="password" autocomplete="nope" name="kodi_password" id="kodi_password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250">
+										<input type="password" autocomplete="nope" name="kodi_password" id="kodi-password" value="#echo '*' * len($sickbeard.KODI_PASSWORD)#" class="form-control input-sm input250">
 										<p>(blank for none)</p>
 										<div class="clear-left"><p>in Kodi System/Settings/Services/Web server</p></div>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_notify_onsnatch">
+								<label for="kodi-notify-onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_onsnatch" id="kodi_notify_onsnatch" #if $sickbeard.KODI_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+										<input type="checkbox" name="kodi_notify_onsnatch" id="kodi-notify-onsnatch" #if $sickbeard.KODI_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 										<p>download start notification</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_notify_ondownload">
+								<label for="kodi-notify-ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_ondownload" id="kodi_notify_ondownload" #if $sickbeard.KODI_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="kodi_notify_ondownload" id="kodi-notify-ondownload" #if $sickbeard.KODI_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 										<p>download finish notification</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="kodi_notify_onsubtitledownload">
+								<label for="kodi-notify-onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="kodi_notify_onsubtitledownload" id="kodi_notify_onsubtitledownload" #if $sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="kodi_notify_onsubtitledownload" id="kodi-notify-onsubtitledownload" #if $sickbeard.KODI_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 										<p>subtitle downloaded notification</p>
 									</span>
 								</label>
 							</div>
-							<div class="testNotification" id="testKODI-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Kodi" id="testKODI" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_kodi //-->
+							<div class="test-notification" id="test-kodi-result">Click below to test</div>
+							<input class="btn" type="button" value="Test Kodi" id="test-kodi">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-kodi //-->
 					</fieldset>
 				</div><!-- /kodi component-group //-->
 
-				<div class="component-group">
-
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/xbmc.png" alt="" title="XBMC" />
-						<h3><a href="<%= anon_url('http://kodi.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">XBMC</a></h3>
-						<p>A free and open source cross-platform media center and home entertainment system software with a 10-foot user interface designed for the living-room TV.</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label class="cleafix" for="use_xbmc">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_xbmc" id="use_xbmc" #if $sickbeard.USE_XBMC then 'checked="checked"' else ''# />
-									<p>should SickGear send XBMC commands ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use_xbmc">
-							<div class="field-pair">
-								<label for="xbmc_always_on">
-									<span class="component-title">Always on</span>
-									<span class="component-desc">
-										<input type="checkbox" name="xbmc_always_on" id="xbmc_always_on" #if $sickbeard.XBMC_ALWAYS_ON then 'checked="checked"' else ''# />
-										<p>log errors when unreachable ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_notify_onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="xbmc_notify_onsnatch" id="xbmc_notify_onsnatch" #if $sickbeard.XBMC_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_notify_ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="xbmc_notify_ondownload" id="xbmc_notify_ondownload" #if $sickbeard.XBMC_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_notify_onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="xbmc_notify_onsubtitledownload" id="xbmc_notify_onsubtitledownload" #if $sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_update_library">
-									<span class="component-title">Update library</span>
-									<span class="component-desc">
-										<input type="checkbox" name="xbmc_update_library" id="xbmc_update_library" #if $sickbeard.XBMC_UPDATE_LIBRARY then 'checked="checked"' else ''# />
-										<p>update XBMC library when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_update_full">
-									<span class="component-title">Full library update</span>
-									<span class="component-desc">
-										<input type="checkbox" name="xbmc_update_full" id="xbmc_update_full" #if $sickbeard.XBMC_UPDATE_FULL then 'checked="checked"' else ''# />
-										<p>perform a full library update if update per-show fails ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_update_onlyfirst">
-									<span class="component-title">Only update first host</span>
-									<span class="component-desc">
-										<input type="checkbox" name="xbmc_update_onlyfirst" id="xbmc_update_onlyfirst" #if $sickbeard.XBMC_UPDATE_ONLYFIRST then 'checked="checked"' else ''# />
-										<p>only send library updates to the first active host ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_host">
-									<span class="component-title">XBMC IP:Port</span>
-									<input type="text" name="xbmc_host" id="xbmc_host" value="$sickbeard.XBMC_HOST" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">host running XBMC (eg. 192.168.1.100:8080)</span>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(multiple host strings must be separated by commas)</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_username">
-									<span class="component-title">XBMC username</span>
-									<input type="text" name="xbmc_username" id="xbmc_username" value="$sickbeard.XBMC_USERNAME" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">username for your XBMC server (blank for none)</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="xbmc_password">
-									<span class="component-title">XBMC password</span>
-									<input type="password" autocomplete="nope" name="xbmc_password" id="xbmc_password" value="#echo '*' * len($sickbeard.XBMC_PASSWORD)#" class="form-control input-sm input250">
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">password for your XBMC server (blank for none)</span>
-								</label>
-							</div>
-							<div class="testNotification" id="testXBMC-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test XBMC" id="testXBMC" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_xbmc //-->
-
-					</fieldset>
-
-				</div><!-- /xbmc component-group //-->
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/plex.png" alt="" title="Plex Media Server" />
-						<h3><a href="<%= anon_url('http://www.plexapp.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Plex Media Server</a></h3>
-						<p>Plex organizes all of your personal media, wherever you keep it, so you can enjoy it on any device</p>
-						<p class="plexinfo hide"><span class="red-text">To send notifications to <span class="boldest">Plex Home Theater (PHT) clients</span>,</span> use the XBMC notifier with port <b>3005</b>.</p>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/plex.png" alt="" title="Plex Media Server">
+						<h3><a name="plex" href="<%= anon_url('http://www.plexapp.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Plex Media Server</a></h3>
+						<p>Plex organizes media, wherever stored, to be enjoyed anywhere.</p>
+#if 'XBMC' in NotifierFactory().notifiers
+						<p class="plexinfo hide"><span class="red-text">To send notifications to <span class="boldest">Plex Home Theater (PHT) clients</span>,</span> use the XBMC notifier with port <b>3005.</b></p>
+#end if
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_plex">
+							<label for="use-plex">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_plex" id="use_plex" #if $sickbeard.USE_PLEX then 'checked="checked" ' else ''# />
+									<input type="checkbox" class="enabler" name="use_plex" id="use-plex" #if $sickbeard.USE_PLEX then 'checked="checked" ' else ''#>
 									<p>should SickGear send Plex commands ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_plex">
+						<div id="content_use-plex">
 							<div class="component-group" style="padding: 0; min-height: 130px">
 								<div class="field-pair">
-									<label for="plex_username">
+									<label for="plex-username">
 										<span class="component-title">Server/client username</span>
 										<span class="component-desc">
-											<input type="text" name="plex_username" id="plex_username" value="$sickbeard.PLEX_USERNAME" class="form-control input-sm input250" />
+											<input type="text" name="plex_username" id="plex-username" value="$sickbeard.PLEX_USERNAME" class="form-control input-sm input250">
 											<p>blank = no authentication</p>
 										</span>
 									</label>
 								</div>
 								<div class="field-pair">
-									<label for="plex_password">
+									<label for="plex-password">
 										<span class="component-title">Server/client password</span>
 										<span class="component-desc">
-											<input type="password" autocomplete="nope" name="plex_password" id="plex_password" value="#echo '*' * len($sickbeard.PLEX_PASSWORD)#" class="form-control input-sm input250">
+											<input type="password" autocomplete="nope" name="plex_password" id="plex-password" value="#echo '*' * len($sickbeard.PLEX_PASSWORD)#" class="form-control input-sm input250">
 											<p>blank = no authentication</p>
 										</span>
 									</label>
@@ -370,31 +282,31 @@
 
 							<div class="component-group" style="padding: 0; min-height: 50px">
 								<div class="field-pair">
-									<label for="plex_update_library">
+									<label for="plex-update-library">
 										<span class="component-title">Update server library</span>
 										<span class="component-desc">
-											<input type="checkbox" class="enabler" name="plex_update_library" id="plex_update_library" #if $sickbeard.PLEX_UPDATE_LIBRARY then 'checked="checked" ' else ''#/>
+											<input type="checkbox" class="enabler" name="plex_update_library" id="plex-update-library" #if $sickbeard.PLEX_UPDATE_LIBRARY then 'checked="checked" ' else ''#/>
 											<p>update Plex Media Server library when a download finishes</p>
 										</span>
 									</label>
 								</div>
-								<div id="content_plex_update_library">
+								<div id="content_plex-update-library">
 									<div class="field-pair">
-										<label for="plex_server_host">
+										<label for="plex-server-host">
 											<span class="component-title">Plex Media Server IP:Port</span>
 											<span class="component-desc">
-												<input type="text" name="plex_server_host" id="plex_server_host" value="<%= re.sub(r'\b,\b', ', ', sickbeard.PLEX_SERVER_HOST) %>" class="form-control input-sm input350" />
+												<input type="text" name="plex_server_host" id="plex-server-host" value="<%= re.sub(r'\b,\b', ', ', sickbeard.PLEX_SERVER_HOST) %>" class="form-control input-sm input350">
 												<div class="clear-left">
-													<p>one or more hosts running Plex Media Server<br />(eg. 192.168.1.1:32400, 192.168.1.2:32400)</p>
+													<p>one or more hosts running Plex Media Server<br>(eg. 192.168.1.1:32400, 192.168.1.2:32400)</p>
 												</div>
 											</span>
 										</label>
 									</div>
 
 									<div class="field-pair">
-										<div class="testNotification" id="testPMS-result">Click below to test Plex server(s)</div>
-										<input class="btn" type="button" value="Test Plex Server" id="testPMS" />
-										<input type="submit" class="config_submitter btn" value="Save Changes" />
+										<div class="test-notification" id="test-pms-result">Click below to test Plex server(s)</div>
+										<input class="btn" type="button" value="Test Plex Server" id="test-pms">
+										<input type="submit" class="config_submitter btn" value="Save Changes">
 										<div class="clear-left">&nbsp;</div>
 									</div>
 								</div>
@@ -402,155 +314,271 @@
 
 							<div>
 								<div class="field-pair">
-									<label for="plex_notify_onsnatch">
+									<label for="plex-notify-onsnatch">
 										<span class="component-title">Notify on snatch</span>
 										<span class="component-desc">
-											<input type="checkbox" name="plex_notify_onsnatch" id="plex_notify_onsnatch" #if $sickbeard.PLEX_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+											<input type="checkbox" name="plex_notify_onsnatch" id="plex-notify-onsnatch" #if $sickbeard.PLEX_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 											<p>download start notification</p>
 										</span>
 									</label>
 								</div>
 								<div class="field-pair">
-									<label for="plex_notify_ondownload">
+									<label for="plex-notify-ondownload">
 										<span class="component-title">Notify on download</span>
 										<span class="component-desc">
-											<input type="checkbox" name="plex_notify_ondownload" id="plex_notify_ondownload" #if $sickbeard.PLEX_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+											<input type="checkbox" name="plex_notify_ondownload" id="plex-notify-ondownload" #if $sickbeard.PLEX_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 											<p>download finish notification</p>
 										</span>
 									</label>
 								</div>
 								<div class="field-pair">
-									<label for="plex_notify_onsubtitledownload">
+									<label for="plex-notify-onsubtitledownload">
 										<span class="component-title">Notify on subtitle download</span>
 										<span class="component-desc">
-											<input type="checkbox" name="plex_notify_onsubtitledownload" id="plex_notify_onsubtitledownload" #if $sickbeard.PLEX_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+											<input type="checkbox" name="plex_notify_onsubtitledownload" id="plex-notify-onsubtitledownload" #if $sickbeard.PLEX_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 											<p>subtitle downloaded notification</p>
 										</span>
 									</label>
 								</div>
 								<div class="field-pair">
-									<label for="plex_host">
+									<label for="plex-host">
 										<span class="component-title">Plex client IP:Port</span>
 										<span class="component-desc">
-											<input type="text" name="plex_host" id="plex_host" value="<%= re.sub(r'\b,\b', ', ', sickbeard.PLEX_HOST) %>" class="form-control input-sm input350" />
+											<input type="text" name="plex_host" id="plex-host" value="<%= re.sub(r'\b,\b', ', ', sickbeard.PLEX_HOST) %>" class="form-control input-sm input350">
 											<div class="clear-left">
-												<p>one or more hosts running Plex client<br />(eg. 192.168.1.100:3000, 192.168.1.101:3000)</p>
+												<p>one or more hosts running Plex client<br>(eg. 192.168.1.100:3000, 192.168.1.101:3000)</p>
 											</div>
 										</span>
 									</label>
 								</div>
 
 								<div class="field-pair">
-									<div class="testNotification" id="testPMC-result">Click below to test Plex client(s)</div>
-									<input class="btn" type="button" value="Test Plex Client" id="testPMC" />
-									<input type="submit" class="config_submitter btn" value="Save Changes" />
+									<div class="test-notification" id="test-pmc-result">Click below to test Plex client(s)</div>
+									<input class="btn" type="button" value="Test Plex Client" id="test-pmc">
+									<input type="submit" class="config_submitter btn" value="Save Changes">
 									<div class=clear-left><p>Note: some Plex clients <b class="boldest">do not</b> support notifications e.g. Plexapp for Samsung TVs</p></div>
 								</div>
 							</div><!-- /plex component-group -->
-						</div><!-- /content_use_plex -->
+						</div><!-- /content_use-plex -->
 
 					</fieldset>
 				</div><!-- /plex component-group -->
 
+
+#if 'XBMC' in NotifierFactory().notifiers
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/nmj.png" alt="" title="Networked Media Jukebox" />
-						<h3><a href="<%= anon_url('http://www.popcornhour.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">NMJ</a></h3>
-						<p>The Networked Media Jukebox, or NMJ, is the official media jukebox interface made available for the Popcorn Hour 200-series.</p>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/xbmc.png" alt="" title="XBMC">
+						<h3><a name="xbmc" href="<%= anon_url('http://kodi.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">XBMC</a></h3>
+						<p>A media center and home entertainment system software with a 10-foot user interface designed for the living-room TV.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_nmj">
+							<label class="cleafix" for="use-xbmc">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_nmj" id="use_nmj" #if $sickbeard.USE_NMJ then 'checked="checked"' else ''# />
+									<input type="checkbox" class="enabler" name="use_xbmc" id="use-xbmc" #if $sickbeard.USE_XBMC then 'checked="checked"' else ''#>
+									<p>should SickGear send XBMC commands ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-xbmc">
+							<div class="field-pair">
+								<label for="xbmc-always-on">
+									<span class="component-title">Always on</span>
+									<span class="component-desc">
+										<input type="checkbox" name="xbmc_always_on" id="xbmc-always-on" #if $sickbeard.XBMC_ALWAYS_ON then 'checked="checked"' else ''#>
+										<p>log errors when unreachable ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="xbmc_notify_onsnatch" id="xbmc-notify-onsnatch" #if $sickbeard.XBMC_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="xbmc_notify_ondownload" id="xbmc-notify-ondownload" #if $sickbeard.XBMC_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="xbmc_notify_onsubtitledownload" id="xbmc-notify-onsubtitledownload" #if $sickbeard.XBMC_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-update-library">
+									<span class="component-title">Update library</span>
+									<span class="component-desc">
+										<input type="checkbox" name="xbmc_update_library" id="xbmc-update-library" #if $sickbeard.XBMC_UPDATE_LIBRARY then 'checked="checked"' else ''#>
+										<p>update XBMC library when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-update-full">
+									<span class="component-title">Full library update</span>
+									<span class="component-desc">
+										<input type="checkbox" name="xbmc_update_full" id="xbmc-update-full" #if $sickbeard.XBMC_UPDATE_FULL then 'checked="checked"' else ''#>
+										<p>perform a full library update if update per-show fails ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-update-onlyfirst">
+									<span class="component-title">Only update first host</span>
+									<span class="component-desc">
+										<input type="checkbox" name="xbmc_update_onlyfirst" id="xbmc-update-onlyfirst" #if $sickbeard.XBMC_UPDATE_ONLYFIRST then 'checked="checked"' else ''#>
+										<p>only send library updates to the first active host ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-host">
+									<span class="component-title">XBMC IP:Port</span>
+									<span class="component-desc">
+										<input type="text" name="xbmc_host" id="xbmc-host" value="$sickbeard.XBMC_HOST" class="form-control input-sm input350">
+										<div class="clear-left"><p>host running XBMC (eg. 192.168.1.100:8080)<br>
+											(multiple host strings must be separated by commas)</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-username">
+									<span class="component-title">XBMC username</span>
+									<span class="component-desc">
+										<input type="text" name="xbmc_username" id="xbmc-username" value="$sickbeard.XBMC_USERNAME" class="form-control input-sm input250">
+										<p>blank = no authentication</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="xbmc-password">
+									<span class="component-title">XBMC password</span>
+									<span class="component-desc">
+										<input type="password" autocomplete="nope" name="xbmc_password" id="xbmc-password" value="#echo '*' * len($sickbeard.XBMC_PASSWORD)#" class="form-control input-sm input250">
+										<p>blank = no authentication</p>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-xbmc-result">Click below to test</div>
+							<input class="btn" type="button" value="Test XBMC" id="test-xbmc">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-xbmc //-->
+					</fieldset>
+				</div><!-- /xbmc component-group //-->
+#end if
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/nmj.png" alt="" title="Networked Media Jukebox">
+						<h3><a name="nmj" href="<%= anon_url('http://www.popcornhour.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">NMJ</a></h3>
+						<p>The Networked Media Jukebox, is the official media jukebox interface for the Popcorn Hour 200 series.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-nmj">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_nmj" id="use-nmj" #if $sickbeard.USE_NMJ then 'checked="checked"' else ''#>
 									<p>should SickGear send update commands to NMJ ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_nmj">
+						<div id="content_use-nmj">
 							<div class="field-pair">
-								<label for="nmj_host">
+								<label for="nmj-host">
 									<span class="component-title">Popcorn IP address</span>
-									<input type="text" name="nmj_host" id="nmj_host" value="$sickbeard.NMJ_HOST" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">IP address of Popcorn 200-series (eg. 192.168.1.100)</span>
+									<span class="component-desc">
+										<input type="text" name="nmj_host" id="nmj-host" value="$sickbeard.NMJ_HOST" class="form-control input-sm input250">
+										<div class="clear-left">IP address of Popcorn 200-series (eg. 192.168.1.100)</div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
 								<label>
 									<span class="component-title">Get settings</span>
-									<input class="btn btn-inline" type="button" value="Get Settings" id="settingsNMJ" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">the Popcorn Hour device must be powered on and NMJ running.</span>
+									<span class="component-desc">
+										<input class="btn btn-inline" type="button" value="Get Settings" id="settings-nmj">
+										<p>the Popcorn Hour device must be powered on and NMJ running</p>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="nmj_database">
+								<label for="nmj-database">
 									<span class="component-title">NMJ database</span>
-									<input type="text" name="nmj_database" id="nmj_database" value="$sickbeard.NMJ_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJ_DATABASE then "readonly=\"readonly\"" else ''# />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">automatically filled via the 'Get Settings' button.</span>
+									<span class="component-desc">
+										<input type="text" name="nmj_database" id="nmj-database" value="$sickbeard.NMJ_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJ_DATABASE then "readonly=\"readonly\"" else ''#>
+										<div class="clear-left">automatically filled via the 'Get Settings' button</div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="nmj_mount">
+								<label for="nmj-mount">
 									<span class="component-title">NMJ mount url</span>
-									<input type="text" name="nmj_mount" id="nmj_mount" value="$sickbeard.NMJ_MOUNT" class="form-control input-sm input250" #if $sickbeard.NMJ_MOUNT then "readonly=\"readonly\"" else ''# />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">automatically filled via the 'Get Settings' button.</span>
+									<span class="component-desc">
+										<input type="text" name="nmj_mount" id="nmj-mount" value="$sickbeard.NMJ_MOUNT" class="form-control input-sm input250" #if $sickbeard.NMJ_MOUNT then "readonly=\"readonly\"" else ''#>
+										<div class="clear-left">automatically filled via the 'Get Settings' button</div>
+									</span>
 								</label>
 							</div>
-							<div class="testNotification" id="testNMJ-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test NMJ" id="testNMJ" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_nmj //-->
+							<div class="test-notification" id="test-nmj-result">Click below to test</div>
+							<input class="btn" type="button" value="Test NMJ" id="test-nmj">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-nmj //-->
 
 					</fieldset>
 				</div><!-- /nmj component-group //-->
 
+
 				<div class="component-group">
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/nmj.png" alt="" title="Networked Media Jukebox v2"/>
-						<h3><a href="<%= anon_url('http://www.popcornhour.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">NMJv2</a></h3>
-						<p>The Networked Media Jukebox, or NMJv2, is the official media jukebox interface made available for the Popcorn Hour 300 & 400-series.</p>
+						<h3><a name="nmjv2" href="<%= anon_url('http://www.popcornhour.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">NMJv2</a></h3>
+						<p>The Networked Media Jukebox, is the official media jukebox interface for Popcorn Hour 300/400 series.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_nmjv2">
+							<label for="use-nmjv2">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_nmjv2" id="use_nmjv2" #if $sickbeard.USE_NMJv2 then 'checked="checked"' else ''# />
+									<input type="checkbox" class="enabler" name="use_nmjv2" id="use-nmjv2" #if $sickbeard.USE_NMJv2 then 'checked="checked"' else ''#>
 									<p>should SickGear send update commands to NMJv2 ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_nmjv2">
+						<div id="content_use-nmjv2">
 							<div class="field-pair">
-								<label for="nmjv2_host">
+								<label for="nmjv2-host">
 									<span class="component-title">Popcorn IP address</span>
-									<input type="text" name="nmjv2_host" id="nmjv2_host" value="$sickbeard.NMJv2_HOST" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">IP address of Popcorn 300/400-series (eg. 192.168.1.100)</span>
+									<span class="component-desc">
+										<input type="text" name="nmjv2_host" id="nmjv2-host" value="$sickbeard.NMJv2_HOST" class="form-control input-sm input250">
+										<div class="clear-left">IP address of Popcorn 300/400-series (eg. 192.168.1.100)</div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
 								<span class="component-title">Database location</span>
 								<span class="component-desc">
 									<label for="NMJV2_DBLOC_A" class="space-right">
-										<input type="radio" NAME="nmjv2_dbloc" VALUE="local" id="NMJV2_DBLOC_A" #if $sickbeard.NMJv2_DBLOC=='local' then 'checked="checked"' else ''# />PCH Local Media
+										<input type="radio" NAME="nmjv2_dbloc" VALUE="local" id="NMJV2_DBLOC_A" #if $sickbeard.NMJv2_DBLOC=='local' then 'checked="checked"' else ''#>PCH Local Media
 									</label>
 									<label for="NMJV2_DBLOC_B">
 										<input type="radio" NAME="nmjv2_dbloc" VALUE="network" id="NMJV2_DBLOC_B" #if $sickbeard.NMJv2_DBLOC=='network' then 'checked="checked"' else ''#/>PCH Network Media
@@ -558,49 +586,44 @@
 								</span>
 							</div>
 							<div class="field-pair">
-								<label for="NMJv2db_instance">
+								<label for="NMJv2db-instance">
 									<span class="component-title">Database instance</span>
 									<span class="component-desc">
-									<select id="NMJv2db_instance" class="form-control input-sm">
-										<option value="0">#1 </option>
-										<option value="1">#2 </option>
-										<option value="2">#3 </option>
-										<option value="3">#4 </option>
-										<option value="4">#5 </option>
-										<option value="5">#6 </option>
-										<option value="6">#7 </option>
-									</select>
+										<select id="NMJv2db-instance" class="form-control input-sm">
+											<option value="0">#1 </option>
+											<option value="1">#2 </option>
+											<option value="2">#3 </option>
+											<option value="3">#4 </option>
+											<option value="4">#5 </option>
+											<option value="5">#6 </option>
+											<option value="6">#7 </option>
+										</select>
+										<span>adjust this value if the wrong database is selected</span>
 									</span>
 								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">adjust this value if the wrong database is selected.</span>
-								</label>
 							</div>
 							<div class="field-pair">
-								<label for="settingsNMJv2">
+								<label for="settings-nmjv2">
 									<span class="component-title">Find database</span>
-									<input type="button" class="btn btn-inline" value="Find Database" id="settingsNMJv2" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">the Popcorn Hour device must be powered on.</span>
+									<span class="component-desc">
+										<input type="button" class="btn btn-inline" value="Find Database" id="settings-nmjv2">
+										<p>the Popcorn Hour device must be powered on</p>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="nmjv2_database">
+								<label for="nmjv2-database">
 									<span class="component-title">NMJv2 database</span>
-									<input type="text" name="nmjv2_database" id="nmjv2_database" value="$sickbeard.NMJv2_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJv2_DATABASE then "readonly=\"readonly\"" else ''# />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">automatically filled via the 'Find Database' buttons.</span>
+									<span class="component-desc">
+										<input type="text" name="nmjv2_database" id="nmjv2-database" value="$sickbeard.NMJv2_DATABASE" class="form-control input-sm input250" #if $sickbeard.NMJv2_DATABASE then "readonly=\"readonly\"" else ''#>
+										<div class="clear-left">automatically filled via the 'Find Database' buttons</div>
+									</span>
 								</label>
 							</div>
-						<div class="testNotification" id="testNMJv2-result">Click below to test.</div>
-						<input class="btn" type="button" value="Test NMJv2" id="testNMJv2" />
-						<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_nmjv2 //-->
+						<div class="test-notification" id="test-nmjv2-result">Click below to test</div>
+						<input class="btn" type="button" value="Test NMJv2" id="test-nmjv2">
+						<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-nmjv2 //-->
 
 					</fieldset>
 				</div><!-- /nmjv2 component-group //-->
@@ -608,30 +631,30 @@
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/synoindex.png" alt="" title="Synology" />
-						<h3><a href="<%= anon_url('http://synology.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Synology</a></h3>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/synoindex.png" alt="" title="Syno Indexer">
+						<h3><a name="synoindexer" href="<%= anon_url('http://synology.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Syno Indexer</a></h3>
 						<p>The Synology DiskStation NAS.</p>
 						<p>Synology Indexer is the daemon running on the Synology NAS to build its media database.</p>
 					</div>
 
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_synoindex">
+							<label for="use-synoindex">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_synoindex" id="use_synoindex" #if $sickbeard.USE_SYNOINDEX then 'checked="checked"' else ''# />
-									<p>should SickGear send Synology notifications ?</p>
+									<input type="checkbox" class="enabler" name="use_synoindex" id="use-synoindex" #if $sickbeard.USE_SYNOINDEX then 'checked="checked"' else ''#>
+									<p>should SickGear send notifications to the Synology indexer ?</p>
 								</span>
 							</label>
 							<label>
 								<span class="component-title">&nbsp;</span>
-								<span class="component-desc"><b>Note:</b> requires SickGear to be running on your Synology NAS.</span>
+								<span class="component-desc"><b>Note:</b> requires SickGear to be running on a Synology NAS</span>
 							</label>
 						</div>
 
-						<div id="content_use_synoindex">
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_synoindex //-->
+						<div id="content_use-synoindex">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-synoindex //-->
 
 					</fieldset>
 				</div><!-- /synoindex component-group //-->
@@ -639,194 +662,575 @@
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/synologynotifier.png" alt="" title="Synology Indexer" />
-						<h3><a href="<%= anon_url('http://synology.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Synology Notifier</a></h3>
-						<p>Synology Notifier is the notification system of Synology DSM</p>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/synologynotifier.png" alt="" title="Syno Notifier">
+						<h3><a name="synonotifier" href="<%= anon_url('http://synology.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Syno Notifier</a></h3>
+						<p>The Synology DSM notification system.</p>
 					</div>
 
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_synologynotifier">
+							<label for="use-synologynotifier">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_synologynotifier" id="use_synologynotifier" #if $sickbeard.USE_SYNOLOGYNOTIFIER then 'checked="checked"' else ''# />
+									<input type="checkbox" class="enabler" name="use_synologynotifier" id="use-synologynotifier" #if $sickbeard.USE_SYNOLOGYNOTIFIER then 'checked="checked"' else ''#>
 									<p>should SickGear send notifications to the Synology Notifier ?</p>
 								</span>
 							</label>
 							<label>
 								<span class="component-title">&nbsp;</span>
-								<span class="component-desc"><b>Note:</b> requires SickGear to be running on your Synology DSM.</span>
+								<span class="component-desc"><b>Note:</b> requires SickGear to be running on a Synology DSM</span>
 							</label>
-						   </div>
-						<div id="content_use_synologynotifier">
+						</div>
+
+						<div id="content_use-synologynotifier">
 							<div class="field-pair">
-								<label for="synologynotifier_notify_onsnatch">
+								<label for="synologynotifier-notify-onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="synologynotifier_notify_onsnatch" id="synologynotifier_notify_onsnatch" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+										<input type="checkbox" name="synologynotifier_notify_onsnatch" id="synologynotifier-notify-onsnatch" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="synologynotifier_notify_ondownload">
+								<label for="synologynotifier-notify-ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="synologynotifier_notify_ondownload" id="synologynotifier_notify_ondownload" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="synologynotifier_notify_ondownload" id="synologynotifier-notify-ondownload" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="synologynotifier_notify_onsubtitledownload">
+								<label for="synologynotifier-notify-onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="synologynotifier_notify_onsubtitledownload" id="synologynotifier_notify_onsubtitledownload" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="synologynotifier_notify_onsubtitledownload" id="synologynotifier-notify-onsubtitledownload" #if $sickbeard.SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
 							</div>
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						   </div>
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div>
 					</fieldset>
 				</div><!-- /synology notifier component-group //-->
 
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/pytivo.png" alt="" title="pyTivo" />
-						<h3><a href="<%= anon_url('http://pytivo.sourceforge.net/wiki/index.php/PyTivo') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">pyTivo</a></h3>
-						<p>pyTivo is both an HMO and GoBack server. This notifier will load the completed downloads to your Tivo.</p>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/pytivo.png" alt="" title="pyTivo">
+						<h3><a name="pytivo" href="<%= anon_url('http://pytivo.sourceforge.net/wiki/index.php/PyTivo') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">pyTivo</a></h3>
+						<p>pyTivo is an HMO and GoBack server. This notifier will load the completed downloads to a Tivo.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_pytivo">
+							<label for="use-pytivo">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_pytivo" id="use_pytivo" #if $sickbeard.USE_PYTIVO then 'checked="checked"' else ''# />
+									<input type="checkbox" class="enabler" name="use_pytivo" id="use-pytivo" #if $sickbeard.USE_PYTIVO then 'checked="checked"' else ''#>
 									<p>should SickGear send notifications to pyTivo ?</p>
 								</span>
 							</label>
 							<label>
-								<span class="component-title">&nbsp;</span>
-								<span class="component-desc"><b>Note:</b> requires the downloaded files to be accessible by pyTivo.</span>
+								<span class="component-desc"><b>Note:</b> requires the downloaded files to be accessible by pyTivo</span>
 							</label>
 						</div>
 
-						<div id="content_use_pytivo">
+						<div id="content_use-pytivo">
 							<div class="field-pair">
-								<label for="pytivo_host">
+								<label for="pytivo-host">
 									<span class="component-title">pyTivo IP:Port</span>
-									<input type="text" name="pytivo_host" id="pytivo_host" value="$sickbeard.PYTIVO_HOST" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">host running pyTivo (eg. 192.168.1.1:9032)</span>
+									<span class="component-desc">
+										<input type="text" name="pytivo_host" id="pytivo-host" value="$sickbeard.PYTIVO_HOST" class="form-control input-sm input250">
+										<div class="clear-left">host running pyTivo (eg. 192.168.1.1:9032)</div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="pytivo_share_name">
+								<label for="pytivo-share-name">
 									<span class="component-title">pyTivo share name</span>
-									<input type="text" name="pytivo_share_name" id="pytivo_share_name" value="$sickbeard.PYTIVO_SHARE_NAME" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">value used in pyTivo Web Configuration to name the share.</span>
+									<span class="component-desc">
+										<input type="text" name="pytivo_share_name" id="pytivo-share-name" value="$sickbeard.PYTIVO_SHARE_NAME" class="form-control input-sm input250">
+										<div class="clear-left">value used in pyTivo Web Configuration to name the share</div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="pytivo_tivo_name">
+								<label for="pytivo-tivo-name">
 									<span class="component-title">Tivo name</span>
-									<input type="text" name="pytivo_tivo_name" id="pytivo_tivo_name" value="$sickbeard.PYTIVO_TIVO_NAME" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(Messages & Settings > Account & System Information > System Information > DVR name)</span>
+									<span class="component-desc">
+										<input type="text" name="pytivo_tivo_name" id="pytivo-tivo-name" value="$sickbeard.PYTIVO_TIVO_NAME" class="form-control input-sm input250">
+										<div class="clear-left">in pyTivo use DVR name in ...<br>Messages & Settings > Account & System Information > System Information</div>
+									</span>
 								</label>
 							</div>
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_pytivo //-->
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-pytivo //-->
 
 					</fieldset>
 				</div><!-- /component-group //-->
-
 			</div>
 
 
+
+
+
 			<div id="tabs-2">
+				<div class="component-group typelist">
+					<div class="type bgcol">
+						<span class="list"><div class="item text">Bubble links:</div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/boxcar2.png"><a href="#boxcar2" rel="noreferrer">Boxcar2</a></div>
+#if 'PUSHALOT' in NotifierFactory().notifiers
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pushalot.png"><a href="#pushalot" rel="noreferrer">Pushalot</a></div>
+#end if
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pushbullet.png"><a href="#pushbullet" rel="noreferrer">Pushbullet</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pushover.png"><a href="#pushover" rel="noreferrer">Pushover</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/growl.png"><a href="#growl" rel="noreferrer">Growl</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/prowl.png"><a href="#prowl" rel="noreferrer">Prowl</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/nma.png"><a href="#nma" rel="noreferrer">NMA</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/libnotify.png"><a href="#libnotify" rel="noreferrer">Libnotify</a></div>
+						</span>
+					</div>
+				</div>
+
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/growl.png" alt="" title="Growl" />
-						<h3><a href="<%= anon_url('http://growl.info/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Growl</a></h3>
-						<p>A cross-platform unobtrusive global notification system.</p>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/boxcar2.png" alt="" title="Boxcar2"/>
+						<h3><a name="boxcar2" href="<%= anon_url('https://boxcar.io/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Boxcar2</a></h3>
+						<p>Read messages where and when you want them.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_growl">
+							<label for="use-boxcar2">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_growl" id="use_growl" #if $sickbeard.USE_GROWL then 'checked="checked"' else ''# />
-									<p>should SickGear send Growl notifications ?</p>
+									<input type="checkbox" class="enabler" name="use_boxcar2" id="use-boxcar2" #if $sickbeard.USE_BOXCAR2 then 'checked="checked"' else ''#>
+									<p>should SickGear send Boxcar2 notifications ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_growl">
+						<div id="content_use-boxcar2">
 							<div class="field-pair">
-								<label for="growl_notify_onsnatch">
+								<label for="boxcar2-notify-onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="growl_notify_onsnatch" id="growl_notify_onsnatch" #if $sickbeard.GROWL_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+										<input type="checkbox" name="boxcar2_notify_onsnatch" id="boxcar2-notify-onsnatch" #if $sickbeard.BOXCAR2_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="growl_notify_ondownload">
+								<label for="boxcar2-notify-ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="growl_notify_ondownload" id="growl_notify_ondownload" #if $sickbeard.GROWL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="boxcar2_notify_ondownload" id="boxcar2-notify-ondownload" #if $sickbeard.BOXCAR2_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="growl_notify_onsubtitledownload">
+								<label for="boxcar2-notify-onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="growl_notify_onsubtitledownload" id="growl_notify_onsubtitledownload" #if $sickbeard.GROWL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="boxcar2_notify_onsubtitledownload" id="boxcar2-notify-onsubtitledownload" #if $sickbeard.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="growl_host">
-									<span class="component-title">Growl IP:Port</span>
-									<input type="text" name="growl_host" id="growl_host" value="$sickbeard.GROWL_HOST" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">host running Growl (eg. 192.168.1.100:23053)</span>
+								<label for="boxcar2-access-token">
+									<span class="component-title">Boxcar2 access token</span>
+									<span class="component-desc">
+										<input type="text" name="boxcar2_access_token" id="boxcar2-access-token" value="<%= starify(sickbeard.BOXCAR2_ACCESSTOKEN) %>" class="form-control input-sm input250">
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="growl_password">
-									<span class="component-title">Growl password</span>
-									<input type="password" autocomplete="nope" name="growl_password" id="growl_password" value="#echo '*' * len($sickbeard.GROWL_PASSWORD)#" class="form-control input-sm input250">
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">may leave blank if SickGear is on the same host.</span>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">otherwise Growl <b>requires</b> a password to be used.</span>
+								<label for="boxcar2-sound">
+									<span class="component-title">Custom sound</span>
+									<span class="component-desc">
+										<select id="boxcar2-sound" name="boxcar2_sound" class="form-control input-sm">
+											<option value="default" #if $sickbeard.BOXCAR2_SOUND == 'default' then 'selected="selected"' else ''#>Default (General)</option>
+											<option value="no-sound" #if $sickbeard.BOXCAR2_SOUND == 'no-sound' then 'selected="selected"' else ''#>Silent</option>
+											<option value="beep-crisp" #if $sickbeard.BOXCAR2_SOUND == 'beep-crisp' then 'selected="selected"' else ''#>Beep Crisp</option>
+											<option value="beep-soft" #if $sickbeard.BOXCAR2_SOUND == 'beep-soft' then 'selected="selected"' else ''#>Beep Soft</option>
+											<option value="bell-modern" #if $sickbeard.BOXCAR2_SOUND == 'bell-modern' then 'selected="selected"' else ''#>Bell Modern</option>
+											<option value="bell-one-tone" #if $sickbeard.BOXCAR2_SOUND == 'bell-one-tone' then 'selected="selected"' else ''#>Bell One Tone</option>
+											<option value="bell-simple" #if $sickbeard.BOXCAR2_SOUND == 'bell-simple' then 'selected="selected"' else ''#>Bell Simple</option>
+											<option value="bell-triple" #if $sickbeard.BOXCAR2_SOUND == 'bell-triple' then 'selected="selected"' else ''#>Bell Triple</option>
+											<option value="bird-1" #if $sickbeard.BOXCAR2_SOUND == 'bird-1' then 'selected="selected"' else ''#>Bird 1</option>
+											<option value="bird-2" #if $sickbeard.BOXCAR2_SOUND == 'bird-2' then 'selected="selected"' else ''#>Bird 2</option>
+											<option value="boing" #if $sickbeard.BOXCAR2_SOUND == 'boing' then 'selected="selected"' else ''#>Boing</option>
+											<option value="cash" #if $sickbeard.BOXCAR2_SOUND == 'cash' then 'selected="selected"' else ''#>Cash</option>
+											<option value="clanging" #if $sickbeard.BOXCAR2_SOUND == 'clanging' then 'selected="selected"' else ''#>Clanging</option>
+											<option value="detonator-charge" #if $sickbeard.BOXCAR2_SOUND == 'detonator-charge' then 'selected="selected"' else ''#>Detonator Charge</option>
+											<option value="digital-alarm" #if $sickbeard.BOXCAR2_SOUND == 'digital-alarm' then 'selected="selected"' else ''#>Digital Alarm</option>
+											<option value="done" #if $sickbeard.BOXCAR2_SOUND == 'done' then 'selected="selected"' else ''#>Done</option>
+											<option value="echo" #if $sickbeard.BOXCAR2_SOUND == 'echo' then 'selected="selected"' else ''#>Echo</option>
+											<option value="flourish" #if $sickbeard.BOXCAR2_SOUND == 'flourish' then 'selected="selected"' else ''#>Flourish</option>
+											<option value="harp" #if $sickbeard.BOXCAR2_SOUND == 'harp' then 'selected="selected"' else ''#>Harp</option>
+											<option value="light" #if $sickbeard.BOXCAR2_SOUND == 'light' then 'selected="selected"' else ''#>Light</option>
+											<option value="magic-chime" #if $sickbeard.BOXCAR2_SOUND == 'magic-chime' then 'selected="selected"' else ''#>Magic Chime</option>
+											<option value="magic-coin" #if $sickbeard.BOXCAR2_SOUND == 'magic-coin' then 'selected="selected"' else ''#>Magic Coin 1</option>
+											<option value="notifier-1" #if $sickbeard.BOXCAR2_SOUND == 'notifier-1' then 'selected="selected"' else ''#>Notifier 1</option>
+											<option value="notifier-2" #if $sickbeard.BOXCAR2_SOUND == 'notifier-2' then 'selected="selected"' else ''#>Notifier 2</option>
+											<option value="notifier-3" #if $sickbeard.BOXCAR2_SOUND == 'notifier-3' then 'selected="selected"' else ''#>Notifier 3</option>
+											<option value="orchestral-long" #if $sickbeard.BOXCAR2_SOUND == 'orchestral-long' then 'selected="selected"' else ''#>Orchestral Long</option>
+											<option value="orchestral-short" #if $sickbeard.BOXCAR2_SOUND == 'orchestral-short' then 'selected="selected"' else ''#>Orchestral Short</option>
+											<option value="score" #if $sickbeard.BOXCAR2_SOUND == 'score' then 'selected="selected"' else ''#>Score</option>
+											<option value="success" #if $sickbeard.BOXCAR2_SOUND == 'success' then 'selected="selected"' else ''#>Success</option>
+											<option value="up" #if $sickbeard.BOXCAR2_SOUND == 'up' then 'selected="selected"' else ''#>Up</option>
+										</select>
+										<div class="clear-left">override the default sound selected for the general notification</div>
+									</span>
 								</label>
 							</div>
-							<div class="testNotification" id="testGrowl-result">Click below to register and test Growl, this is required for Growl notifications to work.</div>
-							<input  class="btn" type="button" value="Register Growl" id="testGrowl" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_growl //-->
+							<div class="test-notification" id="test-boxcar2-result">Click below to test</div>
+							<input class="btn" type="button" value="Test Boxcar2" id="test-boxcar2">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-boxcar2 //-->
+
+					</fieldset>
+				</div><!-- /boxcar2 component-group //-->
+
+
+#if 'PUSHALOT' in NotifierFactory().notifiers
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/pushalot.png" alt="" title="Pushalot">
+						<h3><a name="pushalot" href="<%= anon_url('https://pushalot.com') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushalot</a></h3>
+						<p>Pushalot is a platform for receiving custom push notifications to connected devices running Windows Phone or Windows 8.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-pushalot">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_pushalot" id="use-pushalot" #if $sickbeard.USE_PUSHALOT then 'checked="checked"' else ''#>
+									<p>should SickGear send Pushalot notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-pushalot">
+							<div class="field-pair">
+								<label for="pushalot-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushalot_notify_onsnatch" id="pushalot-notify-onsnatch" #if $sickbeard.PUSHALOT_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushalot-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushalot_notify_ondownload" id="pushalot-notify-ondownload" #if $sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushalot-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushalot_notify_onsubtitledownload" id="pushalot-notify-onsubtitledownload" #if $sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushalot-authorizationtoken">
+									<span class="component-title">Pushalot auth token</span>
+									<span class="component-desc">
+										<input type="text" name="pushalot_authorizationtoken" id="pushalot-authorizationtoken" value="<%= starify(sickbeard.PUSHALOT_AUTHORIZATIONTOKEN) %>" class="form-control input-sm input350">
+										<div class="clear-left">authorization token of Pushalot account</div>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-pushalot-result">Click below to test</div>
+							<input type="button" class="btn" value="Test Pushalot" id="test-pushalot">
+							<input type="submit" class="btn config_submitter" value="Save Changes">
+						</div><!-- /content_use-pushalot //-->
+
+					</fieldset>
+				</div><!-- /pushalot component-group //-->
+#end if
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/pushbullet.png" alt="" title="Pushbullet">
+						<h3><a name="pushbullet" href="<%= anon_url('https://www.pushbullet.com') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushbullet</a></h3>
+						<p>Pushbullet sends notifications to Android, iOS, and browsers.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-pushbullet">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_pushbullet" id="use-pushbullet" #if $sickbeard.USE_PUSHBULLET then 'checked="checked"' else ''#>
+									<p>should SickGear send Pushbullet notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-pushbullet">
+							<div class="field-pair">
+								<label for="pushbullet-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushbullet_notify_onsnatch" id="pushbullet-notify-onsnatch" #if $sickbeard.PUSHBULLET_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushbullet-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushbullet_notify_ondownload" id="pushbullet-notify-ondownload" #if $sickbeard.PUSHBULLET_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushbullet-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushbullet_notify_onsubtitledownload" id="pushbullet-notify-onsubtitledownload" #if $sickbeard.PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushbullet-access-token">
+									<span class="component-title">Pushbullet access token</span>
+									<span class="component-desc">
+										<input type="text" name="pushbullet_access_token" id="pushbullet-access-token" value="<%= starify(sickbeard.PUSHBULLET_ACCESS_TOKEN) %>" class="form-control input-sm input250">
+										<div class="clear-left">get token at: <a href="<%= anon_url('https://www.pushbullet.com/account') %>" rel="noreferrer" onclick="window.open('${sickbeard.ANON_REDIRECT}' + this.href, '_blank'); return false;">https://www.pushbullet.com/account</a></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushbullet-device-iden">
+									<span class="component-title">Pushbullet device</span>
+									<span class="component-desc">
+										<input type="hidden" name="pushbullet_device_iden" id="pushbullet-device-iden" value="$sickbeard.PUSHBULLET_DEVICE_IDEN" size="35">
+										<select id="pushbullet-device-list" class="pull-left form-control input-sm" style="margin-right: 5px"></select>
+										<input type="button" class="btn btn-inline" value="Refresh Devices" id="get-pushbulletDevices">
+										<div class="clear-left">which device do you want to push to ?</div>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-pushbullet-result">Click below to test</div>
+							<input type="button" class="btn" value="Test Pushbullet" id="test-pushbullet">
+							<input type="submit" class="btn config_submitter" value="Save Changes">
+						</div><!-- /content_use-pushbullet //-->
+
+					</fieldset>
+				</div><!-- /pushbullet component-group //-->
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/pushover.png" alt="" title="Pushover">
+						<h3><a name="pushover" href="<%= anon_url('https://pushover.net/apps/clone/SickGear') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushover</a></h3>
+						<p>Pushover sends real-time notifications to Android and iOS devices.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-pushover">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_pushover" id="use-pushover" #if $sickbeard.USE_PUSHOVER then 'checked="checked"' else ''#>
+									<p>should SickGear send Pushover notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-pushover">
+							<div class="field-pair">
+								<label for="pushover-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushover_notify_onsnatch" id="pushover-notify-onsnatch" #if $sickbeard.PUSHOVER_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushover_notify_ondownload" id="pushover-notify-ondownload" #if $sickbeard.PUSHOVER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="pushover_notify_onsubtitledownload" id="pushover-notify-onsubtitledownload" #if $sickbeard.PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover-userkey">
+									<span class="component-title">Pushover account user key</span>
+									<span class="component-desc">
+										<input type="text" name="pushover_userkey" id="pushover-userkey" value="<%= starify(sickbeard.PUSHOVER_USERKEY) %>" class="form-control input-sm input250">
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover-apikey">
+									<span class="component-title">Pushover API key</span>
+									<span class="component-desc">
+										<input type="text" name="pushover_apikey" id="pushover-apikey" value="<%= starify(sickbeard.PUSHOVER_APIKEY) %>" class="form-control input-sm input250">
+										<div class="clear-left"><a href="<%= anon_url('https://pushover.net/apps/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover-priority">
+									<span class="component-title">Pushover priority:</span>
+									<span class="component-desc">
+										<select id="pushover-priority" name="pushover_priority" class="form-control input-sm">
+											<option value="-2" #if $sickbeard.PUSHOVER_PRIORITY == '-2' then 'selected="selected"' else ''#>Lowest</option>
+											<option value="-1" #if $sickbeard.PUSHOVER_PRIORITY == '-1' then 'selected="selected"' else ''#>Low</option>
+											<option value="0" #if $sickbeard.PUSHOVER_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
+											<option value="1" #if $sickbeard.PUSHOVER_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
+										</select>
+										<span>priority of Pushover messages from SickGear</span>
+										<div class="clear-left">overview: <a href="<%= anon_url('https://pushover.net/api#priority') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://pushover.net/api#priority</a></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover-device">
+									<span class="component-title">Pushover device</span>
+									<span class="component-desc">
+										<input type="hidden" name="pushover_device" id="pushover-device" value="$sickbeard.PUSHOVER_DEVICE" size="35">
+										<select id="pushover-device-list" name="pushover_device_list" class="pull-left form-control input-sm" style="margin-right:5px"></select>
+										<input type="button" class="btn btn-inline" value="Refresh Devices" id="get-pushoverDevices">
+										<div class="clear-left">select device to push to ?</div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="pushover-sound">
+									<span class="component-title">Pushover sound</span>
+									<span class="component-desc">
+										<select id="pushover-sound" name="pushover_sound" class="form-control input-sm">
+											<option value="pushover" #if $sickbeard.PUSHOVER_SOUND == 'pushover' then 'selected="selected"' else ''#>Pushover (default)</option>
+											<option value="bike" #if $sickbeard.PUSHOVER_SOUND == 'bike' then 'selected="selected"' else ''#>Bike</option>
+											<option value="bugle" #if $sickbeard.PUSHOVER_SOUND == 'bugle' then 'selected="selected"' else ''#>Bugle</option>
+											<option value="cashregister" #if $sickbeard.PUSHOVER_SOUND == 'cashregister' then 'selected="selected"' else ''#>Cash Register</option>
+											<option value="classical" #if $sickbeard.PUSHOVER_SOUND == 'classical' then 'selected="selected"' else ''#>Classical</option>
+											<option value="cosmic" #if $sickbeard.PUSHOVER_SOUND == 'cosmic' then 'selected="selected"' else ''#>Cosmic</option>
+											<option value="falling" #if $sickbeard.PUSHOVER_SOUND == 'falling' then 'selected="selected"' else ''#>Falling</option>
+											<option value="gamelan" #if $sickbeard.PUSHOVER_SOUND == 'gamelan' then 'selected="selected"' else ''#>Gamelan</option>
+											<option value="incoming" #if $sickbeard.PUSHOVER_SOUND == 'incoming' then 'selected="selected"' else ''#>Incoming</option>
+											<option value="intermission" #if $sickbeard.PUSHOVER_SOUND == 'intermission' then 'selected="selected"' else ''#>Intermission</option>
+											<option value="magic" #if $sickbeard.PUSHOVER_SOUND == 'magic' then 'selected="selected"' else ''#>Magic</option>
+											<option value="mechanical" #if $sickbeard.PUSHOVER_SOUND == 'mechanical' then 'selected="selected"' else ''#>Mechanical</option>
+											<option value="pianobar" #if $sickbeard.PUSHOVER_SOUND == 'pianobar' then 'selected="selected"' else ''#>Piano Bar</option>
+											<option value="siren" #if $sickbeard.PUSHOVER_SOUND == 'siren' then 'selected="selected"' else ''#>Siren</option>
+											<option value="spacealarm" #if $sickbeard.PUSHOVER_SOUND == 'spacealarm' then 'selected="selected"' else ''#>Space Alarm</option>
+											<option value="tugboat" #if $sickbeard.PUSHOVER_SOUND == 'tugboat' then 'selected="selected"' else ''#>Tug Boat</option>
+											<option value="alien" #if $sickbeard.PUSHOVER_SOUND == 'alien' then 'selected="selected"' else ''#>Alien Alarm (long)</option>
+											<option value="climb" #if $sickbeard.PUSHOVER_SOUND == 'climb' then 'selected="selected"' else ''#>Climb (long)</option>
+											<option value="persistent" #if $sickbeard.PUSHOVER_SOUND == 'persistent' then 'selected="selected"' else ''#>Persistent (long)</option>
+											<option value="echo" #if $sickbeard.PUSHOVER_SOUND == 'echo' then 'selected="selected"' else ''#>Pushover Echo (long)</option>
+											<option value="updown" #if $sickbeard.PUSHOVER_SOUND == 'updown' then 'selected="selected"' else ''#>Up Down (long)</option>
+											<option value="none" #if $sickbeard.PUSHOVER_SOUND == 'none' then 'selected="selected"' else ''#>None (silent)</option>
+										</select>
+										<div class="clear-left">select one of the predefined sounds for notifications</div>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-pushover-result">Click below to test</div>
+							<input class="btn" type="button" value="Test Pushover" id="test-pushover">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-pushover //-->
+
+					</fieldset>
+				</div><!-- /pushover component-group //-->
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/growl.png" alt="" title="Growl">
+						<h3><a name="growl" href="<%= anon_url('http://growl.info/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Growl</a></h3>
+						<p>Self-hosted private device to device notification system made for OS X, available on Windows. <a href="http://snarl.fullphat.net/content/download/">Snarl</a> on Windows and <a href="http://www.growlforandroid.com">Growl</a> for Android.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-growl">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_growl" id="use-growl" #if $sickbeard.USE_GROWL then 'checked="checked"' else ''#>
+									<p>should SickGear send Growl notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-growl">
+							<div class="field-pair">
+								<label for="growl-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="growl_notify_onsnatch" id="growl-notify-onsnatch" #if $sickbeard.GROWL_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="growl-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="growl_notify_ondownload" id="growl-notify-ondownload" #if $sickbeard.GROWL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="growl-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="growl_notify_onsubtitledownload" id="growl-notify-onsubtitledownload" #if $sickbeard.GROWL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="growl-host">
+									<span class="component-title">Growl IP:Port</span>
+									<span class="component-desc">
+										<input type="text" name="growl_host" id="growl-host" value="$sickbeard.GROWL_HOST" class="form-control input-sm input250">
+										<div class="clear-left">host running Growl (eg. 192.168.1.100:23053)</div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="growl-password">
+									<span class="component-title">Growl password</span>
+									<span class="component-desc">
+										<input type="password" autocomplete="nope" name="growl_password" id="growl-password" value="#echo '*' * len($sickbeard.GROWL_PASSWORD)#" class="form-control input-sm input250">
+										<div class="clear-left"><p>may leave blank if SickGear is on the same host<br>
+										otherwise Growl <b>requires</b> a password to be used</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-growl-result">Click below to register and test Growl, this is required for Growl notifications to work</div>
+							<input class="btn" type="button" value="Register Growl" id="test-growl">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-growl //-->
 
 					</fieldset>
 				</div><!-- /growl component-group //-->
@@ -834,79 +1238,77 @@
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/prowl.png" alt="Prowl" title="Prowl" />
-						<h3><a href="<%= anon_url('http://www.prowlapp.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Prowl</a></h3>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/prowl.png" alt="Prowl" title="Prowl">
+						<h3><a name="prowl" href="<%= anon_url('http://www.prowlapp.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Prowl</a></h3>
 						<p>A Growl client for iOS.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_prowl">
+							<label for="use-prowl">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_prowl" id="use_prowl" #if $sickbeard.USE_PROWL then 'checked="checked"' else ''# />
+									<input type="checkbox" class="enabler" name="use_prowl" id="use-prowl" #if $sickbeard.USE_PROWL then 'checked="checked"' else ''#>
 									<p>should SickGear send Prowl notifications ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_prowl">
+						<div id="content_use-prowl">
 							<div class="field-pair">
-								<label for="prowl_notify_onsnatch">
+								<label for="prowl-notify-onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="prowl_notify_onsnatch" id="prowl_notify_onsnatch" #if $sickbeard.PROWL_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+										<input type="checkbox" name="prowl_notify_onsnatch" id="prowl-notify-onsnatch" #if $sickbeard.PROWL_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="prowl_notify_ondownload">
+								<label for="prowl-notify-ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="prowl_notify_ondownload" id="prowl_notify_ondownload" #if $sickbeard.PROWL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="prowl_notify_ondownload" id="prowl-notify-ondownload" #if $sickbeard.PROWL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="prowl_notify_onsubtitledownload">
+								<label for="prowl-notify-onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="prowl_notify_onsubtitledownload" id="prowl_notify_onsubtitledownload" #if $sickbeard.PROWL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="prowl_notify_onsubtitledownload" id="prowl-notify-onsubtitledownload" #if $sickbeard.PROWL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="prowl_api">
+								<label for="prowl-api">
 									<span class="component-title">Prowl API key:</span>
-									<input type="text" name="prowl_api" id="prowl_api" value="<%= starify(sickbeard.PROWL_API) %>" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">get your key at: <a href="<%= anon_url('https://www.prowlapp.com/api_settings.php') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://www.prowlapp.com/api_settings.php</a></span>
+									<span class="component-desc">
+										<input type="text" name="prowl_api" id="prowl-api" value="<%= starify(sickbeard.PROWL_API) %>" class="form-control input-sm input250">
+										<div class="clear-left">get key at: <a href="<%= anon_url('https://www.prowlapp.com/api_settings.php') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://www.prowlapp.com/api_settings.php</a></div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="prowl_priority">
+								<label for="prowl-priority">
 									<span class="component-title">Prowl priority:</span>
-									<select id="prowl_priority" name="prowl_priority" class="form-control input-sm">
-										<option value="-2" #if $sickbeard.PROWL_PRIORITY == '-2' then 'selected="selected"' else ''#>Very Low</option>
-										<option value="-1" #if $sickbeard.PROWL_PRIORITY == '-1' then 'selected="selected"' else ''#>Moderate</option>
-										<option value="0" #if $sickbeard.PROWL_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
-										<option value="1" #if $sickbeard.PROWL_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
-										<option value="2" #if $sickbeard.PROWL_PRIORITY == '2' then 'selected="selected"' else ''#>Emergency</option>
-									</select>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">priority of Prowl messages from SickGear.</span>
+									<span class="component-desc">
+										<select id="prowl-priority" name="prowl_priority" class="form-control input-sm">
+											<option value="-2" #if $sickbeard.PROWL_PRIORITY == '-2' then 'selected="selected"' else ''#>Very Low</option>
+											<option value="-1" #if $sickbeard.PROWL_PRIORITY == '-1' then 'selected="selected"' else ''#>Moderate</option>
+											<option value="0" #if $sickbeard.PROWL_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
+											<option value="1" #if $sickbeard.PROWL_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
+											<option value="2" #if $sickbeard.PROWL_PRIORITY == '2' then 'selected="selected"' else ''#>Emergency</option>
+										</select>
+										<span>priority of Prowl messages from SickGear</span>
+									</span>
 								</label>
 							</div>
-							<div class="testNotification" id="testProwl-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Prowl" id="testProwl" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_prowl //-->
+							<div class="test-notification" id="test-prowl-result">Click below to test</div>
+							<input class="btn" type="button" value="Test Prowl" id="test-prowl">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-prowl //-->
 
 					</fieldset>
 				</div><!-- /prowl component-group //-->
@@ -914,648 +1316,197 @@
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/libnotify.png" alt="" title="Libnotify" />
-						<h3><a href="<%= anon_url('http://library.gnome.org/devel/libnotify/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Libnotify</a></h3>
-						<p>The standard desktop notification API for Linux/*nix systems.  This notifier will only function if the pynotify module is installed (Ubuntu/Debian package <a href="apt:python-notify">python-notify</a>).</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use_libnotify">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_libnotify" id="use_libnotify" #if $sickbeard.USE_LIBNOTIFY then 'checked="checked"' else ''# />
-									<p>should SickGear send Libnotify notifications ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use_libnotify">
-							<div class="field-pair">
-								<label for="libnotify_notify_onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="libnotify_notify_onsnatch" id="libnotify_notify_onsnatch" #if $sickbeard.LIBNOTIFY_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="libnotify_notify_ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="libnotify_notify_ondownload" id="libnotify_notify_ondownload" #if $sickbeard.LIBNOTIFY_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="libnotify_notify_onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="libnotify_notify_onsubtitledownload" id="libnotify_notify_onsubtitledownload" #if $sickbeard.LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="testNotification" id="testLibnotify-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Libnotify" id="testLibnotify" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_libnotify //-->
-
-					</fieldset>
-				</div><!-- /libnotify component-group //-->
-
-
-				<div class="component-group">
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/pushover.png" alt="" title="Pushover" />
-						<h3><a href="<%= anon_url('https://pushover.net/apps/clone/SickGear') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushover</a></h3>
-						<p>Pushover makes it easy to send real-time notifications to your Android and iOS devices.</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use_pushover">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_pushover" id="use_pushover" #if $sickbeard.USE_PUSHOVER then 'checked="checked"' else ''# />
-									<p>should SickGear send Pushover notifications ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use_pushover">
-							<div class="field-pair">
-								<label for="pushover_notify_onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="pushover_notify_onsnatch" id="pushover_notify_onsnatch" #if $sickbeard.PUSHOVER_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushover_notify_ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="pushover_notify_ondownload" id="pushover_notify_ondownload" #if $sickbeard.PUSHOVER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushover_notify_onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="pushover_notify_onsubtitledownload" id="pushover_notify_onsubtitledownload" #if $sickbeard.PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushover_userkey">
-									<span class="component-title">Pushover key</span>
-									<input type="text" name="pushover_userkey" id="pushover_userkey" value="<%= starify(sickbeard.PUSHOVER_USERKEY) %>" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">user key of your Pushover account</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushover_apikey">
-									<span class="component-title">Pushover API key</span>
-									<input type="text" name="pushover_apikey" id="pushover_apikey" value="<%= starify(sickbeard.PUSHOVER_APIKEY) %>" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc"><a href="<%= anon_url('https://pushover.net/apps/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>Click here</b></a> to create a Pushover API key</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushover_priority">
-									<span class="component-title">Pushover priority:</span>
-									<select id="pushover_priority" name="pushover_priority" class="form-control input-sm">
-										<option value="-2" #if $sickbeard.PUSHOVER_PRIORITY == '-2' then 'selected="selected"' else ''#>Lowest</option>
-										<option value="-1" #if $sickbeard.PUSHOVER_PRIORITY == '-1' then 'selected="selected"' else ''#>Low</option>
-										<option value="0" #if $sickbeard.PUSHOVER_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
-										<option value="1" #if $sickbeard.PUSHOVER_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
-									</select>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">priority of Pushover messages from SickGear.</span>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">overview: <a href="<%= anon_url('https://pushover.net/api#priority') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://pushover.net/api#priority</a></span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushover_device">
-									<span class="component-title">Pushover device</span>
-									<input type="hidden" name="pushover_device" id="pushover_device" value="$sickbeard.PUSHOVER_DEVICE" size="35" />
-									<select id="pushover_device_list" name="pushover_device_list" class="pull-left form-control input-sm" style="margin-right: 5px;">
-									</select>
-									<input type="button" class="btn btn-inline" value="Refresh Devices" id="getPushoverDevices" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">which device do you want to push to?</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushover_sound">
-									<span class="component-title">Pushover sound</span>
-									<select id="pushover_sound" name="pushover_sound" class="form-control input-sm">
-										<option value="pushover" #if $sickbeard.PUSHOVER_SOUND == 'pushover' then 'selected="selected"' else ''#>Pushover (default)</option>
-										<option value="bike" #if $sickbeard.PUSHOVER_SOUND == 'bike' then 'selected="selected"' else ''#>Bike</option>
-										<option value="bugle" #if $sickbeard.PUSHOVER_SOUND == 'bugle' then 'selected="selected"' else ''#>Bugle</option>
-										<option value="cashregister" #if $sickbeard.PUSHOVER_SOUND == 'cashregister' then 'selected="selected"' else ''#>Cash Register</option>
-										<option value="classical" #if $sickbeard.PUSHOVER_SOUND == 'classical' then 'selected="selected"' else ''#>Classical</option>
-										<option value="cosmic" #if $sickbeard.PUSHOVER_SOUND == 'cosmic' then 'selected="selected"' else ''#>Cosmic</option>
-										<option value="falling" #if $sickbeard.PUSHOVER_SOUND == 'falling' then 'selected="selected"' else ''#>Falling</option>
-										<option value="gamelan" #if $sickbeard.PUSHOVER_SOUND == 'gamelan' then 'selected="selected"' else ''#>Gamelan</option>
-										<option value="incoming" #if $sickbeard.PUSHOVER_SOUND == 'incoming' then 'selected="selected"' else ''#>Incoming</option>
-										<option value="intermission" #if $sickbeard.PUSHOVER_SOUND == 'intermission' then 'selected="selected"' else ''#>Intermission</option>
-										<option value="magic" #if $sickbeard.PUSHOVER_SOUND == 'magic' then 'selected="selected"' else ''#>Magic</option>
-										<option value="mechanical" #if $sickbeard.PUSHOVER_SOUND == 'mechanical' then 'selected="selected"' else ''#>Mechanical</option>
-										<option value="pianobar" #if $sickbeard.PUSHOVER_SOUND == 'pianobar' then 'selected="selected"' else ''#>Piano Bar</option>
-										<option value="siren" #if $sickbeard.PUSHOVER_SOUND == 'siren' then 'selected="selected"' else ''#>Siren</option>
-										<option value="spacealarm" #if $sickbeard.PUSHOVER_SOUND == 'spacealarm' then 'selected="selected"' else ''#>Space Alarm</option>
-										<option value="tugboat" #if $sickbeard.PUSHOVER_SOUND == 'tugboat' then 'selected="selected"' else ''#>Tug Boat</option>
-										<option value="alien" #if $sickbeard.PUSHOVER_SOUND == 'alien' then 'selected="selected"' else ''#>Alien Alarm (long)</option>
-										<option value="climb" #if $sickbeard.PUSHOVER_SOUND == 'climb' then 'selected="selected"' else ''#>Climb (long)</option>
-										<option value="persistent" #if $sickbeard.PUSHOVER_SOUND == 'persistent' then 'selected="selected"' else ''#>Persistent (long)</option>
-										<option value="echo" #if $sickbeard.PUSHOVER_SOUND == 'echo' then 'selected="selected"' else ''#>Pushover Echo (long)</option>
-										<option value="updown" #if $sickbeard.PUSHOVER_SOUND == 'updown' then 'selected="selected"' else ''#>Up Down (long)</option>
-										<option value="none" #if $sickbeard.PUSHOVER_SOUND == 'none' then 'selected="selected"' else ''#>None (silent)</option>
-									</select>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">select one of the predefined sounds for your notifications</span>
-								</label>
-							</div>
-							<div class="testNotification" id="testPushover-result">Click below to test.</div>
-							<input class="btn" type="button" value="Test Pushover" id="testPushover" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_pushover //-->
-
-					</fieldset>
-				</div><!-- /pushover component-group //-->
-
-				<div class="component-group">
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/boxcar2.png" alt="" title="Boxcar2"/>
-						<h3><a href="<%= anon_url('https://boxcar.io/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Boxcar2</a></h3>
-						<p>Read your messages where and when you want them!</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use_boxcar2">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_boxcar2" id="use_boxcar2" #if $sickbeard.USE_BOXCAR2 then 'checked="checked"' else ''# />
-									<p>should SickGear send Boxcar2 notifications ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use_boxcar2">
-							<div class="field-pair">
-								<label for="boxcar2_notify_onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_onsnatch" id="boxcar2_notify_onsnatch" #if $sickbeard.BOXCAR2_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="boxcar2_notify_ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_ondownload" id="boxcar2_notify_ondownload" #if $sickbeard.BOXCAR2_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="boxcar2_notify_onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_onsubtitledownload" id="boxcar2_notify_onsubtitledownload" #if $sickbeard.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="boxcar2_accesstoken">
-									<span class="component-title">Boxcar2 access token</span>
-									<input type="text" name="boxcar2_accesstoken" id="boxcar2_accesstoken" value="<%= starify(sickbeard.BOXCAR2_ACCESSTOKEN) %>" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">access token for your Boxcar2 account.</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="boxcar2_sound">
-									<span class="component-title">Custom sound</span>
-									<select id="boxcar2_sound" name="boxcar2_sound" class="form-control input-sm">
-										<option value="default" #if $sickbeard.BOXCAR2_SOUND == 'default' then 'selected="selected"' else ''#>Default (General)</option>
-										<option value="no-sound" #if $sickbeard.BOXCAR2_SOUND == 'no-sound' then 'selected="selected"' else ''#>Silent</option>
-										<option value="beep-crisp" #if $sickbeard.BOXCAR2_SOUND == 'beep-crisp' then 'selected="selected"' else ''#>Beep Crisp</option>
-										<option value="beep-soft" #if $sickbeard.BOXCAR2_SOUND == 'beep-soft' then 'selected="selected"' else ''#>Beep Soft</option>
-										<option value="bell-modern" #if $sickbeard.BOXCAR2_SOUND == 'bell-modern' then 'selected="selected"' else ''#>Bell Modern</option>
-										<option value="bell-one-tone" #if $sickbeard.BOXCAR2_SOUND == 'bell-one-tone' then 'selected="selected"' else ''#>Bell One Tone</option>
-										<option value="bell-simple" #if $sickbeard.BOXCAR2_SOUND == 'bell-simple' then 'selected="selected"' else ''#>Bell Simple</option>
-										<option value="bell-triple" #if $sickbeard.BOXCAR2_SOUND == 'bell-triple' then 'selected="selected"' else ''#>Bell Triple</option>
-										<option value="bird-1" #if $sickbeard.BOXCAR2_SOUND == 'bird-1' then 'selected="selected"' else ''#>Bird 1</option>
-										<option value="bird-2" #if $sickbeard.BOXCAR2_SOUND == 'bird-2' then 'selected="selected"' else ''#>Bird 2</option>
-										<option value="boing" #if $sickbeard.BOXCAR2_SOUND == 'boing' then 'selected="selected"' else ''#>Boing</option>
-										<option value="cash" #if $sickbeard.BOXCAR2_SOUND == 'cash' then 'selected="selected"' else ''#>Cash</option>
-										<option value="clanging" #if $sickbeard.BOXCAR2_SOUND == 'clanging' then 'selected="selected"' else ''#>Clanging</option>
-										<option value="detonator-charge" #if $sickbeard.BOXCAR2_SOUND == 'detonator-charge' then 'selected="selected"' else ''#>Detonator Charge</option>
-										<option value="digital-alarm" #if $sickbeard.BOXCAR2_SOUND == 'digital-alarm' then 'selected="selected"' else ''#>Digital Alarm</option>
-										<option value="done" #if $sickbeard.BOXCAR2_SOUND == 'done' then 'selected="selected"' else ''#>Done</option>
-										<option value="echo" #if $sickbeard.BOXCAR2_SOUND == 'echo' then 'selected="selected"' else ''#>Echo</option>
-										<option value="flourish" #if $sickbeard.BOXCAR2_SOUND == 'flourish' then 'selected="selected"' else ''#>Flourish</option>
-										<option value="harp" #if $sickbeard.BOXCAR2_SOUND == 'harp' then 'selected="selected"' else ''#>Harp</option>
-										<option value="light" #if $sickbeard.BOXCAR2_SOUND == 'light' then 'selected="selected"' else ''#>Light</option>
-										<option value="magic-chime" #if $sickbeard.BOXCAR2_SOUND == 'magic-chime' then 'selected="selected"' else ''#>Magic Chime</option>
-										<option value="magic-coin" #if $sickbeard.BOXCAR2_SOUND == 'magic-coin' then 'selected="selected"' else ''#>Magic Coin 1</option>
-										<option value="notifier-1" #if $sickbeard.BOXCAR2_SOUND == 'notifier-1' then 'selected="selected"' else ''#>Notifier 1</option>
-										<option value="notifier-2" #if $sickbeard.BOXCAR2_SOUND == 'notifier-2' then 'selected="selected"' else ''#>Notifier 2</option>
-										<option value="notifier-3" #if $sickbeard.BOXCAR2_SOUND == 'notifier-3' then 'selected="selected"' else ''#>Notifier 3</option>
-										<option value="orchestral-long" #if $sickbeard.BOXCAR2_SOUND == 'orchestral-long' then 'selected="selected"' else ''#>Orchestral Long</option>
-										<option value="orchestral-short" #if $sickbeard.BOXCAR2_SOUND == 'orchestral-short' then 'selected="selected"' else ''#>Orchestral Short</option>
-										<option value="score" #if $sickbeard.BOXCAR2_SOUND == 'score' then 'selected="selected"' else ''#>Score</option>
-										<option value="success" #if $sickbeard.BOXCAR2_SOUND == 'success' then 'selected="selected"' else ''#>Success</option>
-										<option value="up" #if $sickbeard.BOXCAR2_SOUND == 'up' then 'selected="selected"' else ''#>Up</option>
-									</select>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">override the default sound selected for the general notification.</span>
-								</label>
-							</div>
-							<div class="testNotification" id="testBoxcar2-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Boxcar2" id="testBoxcar2" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_boxcar2 //-->
-
-					</fieldset>
-				</div><!-- /boxcar2 component-group //-->
-
-				<div class="component-group">
-					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/nma.png" alt="" title="NMA"/>
-						<h3><a href="<%= anon_url('https://www.notifymyandroid.com') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Notify My Android</a></h3>
-						<p>Notify My Android is a Prowl-like Android App and API that offers an easy way to send notifications from your application directly to your Android device.</p>
+						<h3><a name="nma" href="<%= anon_url('https://www.notifymyandroid.com') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Notify My Android</a></h3>
+						<p>Notify My Android is a Prowl-like Android app and API that sends notifications from applications directly to Android devices.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_nma">
+							<label for="use-nma">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_nma" id="use_nma" #if $sickbeard.USE_NMA then 'checked="checked"' else ''# />
+									<input type="checkbox" class="enabler" name="use_nma" id="use-nma" #if $sickbeard.USE_NMA then 'checked="checked"' else ''#>
 									<p>should SickGear send NMA notifications ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_nma">
+						<div id="content_use-nma">
 							<div class="field-pair">
-								<label for="nma_notify_onsnatch">
+								<label for="nma-notify-onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_onsnatch" id="nma_notify_onsnatch" #if $sickbeard.NMA_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+										<input type="checkbox" name="nma_notify_onsnatch" id="nma-notify-onsnatch" #if $sickbeard.NMA_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="nma_notify_ondownload">
+								<label for="nma-notify-ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_ondownload" id="nma_notify_ondownload" #if $sickbeard.NMA_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="nma_notify_ondownload" id="nma-notify-ondownload" #if $sickbeard.NMA_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="nma_notify_onsubtitledownload">
+								<label for="nma-notify-onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_onsubtitledownload" id="nma_notify_onsubtitledownload" #if $sickbeard.NMA_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="nma_notify_onsubtitledownload" id="nma-notify-onsubtitledownload" #if $sickbeard.NMA_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="nma_api">
-									   <span class="component-title">NMA API key:</span>
-									<input type="text" name="nma_api" id="nma_api" value="<%= starify(sickbeard.NMA_API) %>" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">(multiple keys must be seperated by commas, up to a maximum of 5)</span>
+								<label for="nma-api">
+									<span class="component-title">NMA API key:</span>
+									<span class="component-desc">
+										<input type="text" name="nma_api" id="nma-api" value="<%= starify(sickbeard.NMA_API) %>" class="form-control input-sm input350">
+										<div class="clear-left">(multiple keys must be seperated by commas, up to a maximum of 5)</div>
+									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="nma_priority">
+								<label for="nma-priority">
 									<span class="component-title">NMA priority:</span>
-									   <select id="nma_priority" name="nma_priority" class="form-control input-sm">
-										<option value="-2" #if $sickbeard.NMA_PRIORITY == '-2' then 'selected="selected"' else ''#>Very Low</option>
-										<option value="-1" #if $sickbeard.NMA_PRIORITY == '-1' then 'selected="selected"' else ''#>Moderate</option>
-										<option value="0" #if $sickbeard.NMA_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
-										<option value="1" #if $sickbeard.NMA_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
-										<option value="2" #if $sickbeard.NMA_PRIORITY == '2' then 'selected="selected"' else ''#>Emergency</option>
-									</select>
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">priority of NMA messages from SickGear.</span>
+									<span class="component-desc">
+										<select id="nma-priority" name="nma_priority" class="form-control input-sm">
+											<option value="-2" #if $sickbeard.NMA_PRIORITY == '-2' then 'selected="selected"' else ''#>Very Low</option>
+											<option value="-1" #if $sickbeard.NMA_PRIORITY == '-1' then 'selected="selected"' else ''#>Moderate</option>
+											<option value="0" #if $sickbeard.NMA_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
+											<option value="1" #if $sickbeard.NMA_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
+											<option value="2" #if $sickbeard.NMA_PRIORITY == '2' then 'selected="selected"' else ''#>Emergency</option>
+										</select>
+										<div class="clear-left">priority of NMA messages from SickGear</div>
+									</span>
 								</label>
 							</div>
-							<div class="testNotification" id="testNMA-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test NMA" id="testNMA" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_nma //-->
+							<div class="test-notification" id="test-nma-result">Click below to test</div>
+							<input class="btn" type="button" value="Test NMA" id="test-nma">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-nma //-->
 
 					</fieldset>
 				</div><!-- /nma component-group //-->
 
+
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/pushalot.png" alt="" title="Pushalot" />
-						<h3><a href="<%= anon_url('https://pushalot.com') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushalot</a></h3>
-						<p>Pushalot is a platform for receiving custom push notifications to connected devices running Windows Phone or Windows 8.</p>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/libnotify.png" alt="" title="Libnotify">
+						<h3><a name="libnotify" href="<%= anon_url('http://library.gnome.org/devel/libnotify/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Libnotify</a></h3>
+						<p>Standard desktop notification API for Linux/*nix systems. Requires pynotify module (Ubuntu/Debian package <a href="apt:python-notify">python-notify</a>).</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_pushalot">
+							<label for="use-libnotify">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_pushalot" id="use_pushalot" #if $sickbeard.USE_PUSHALOT then 'checked="checked"' else ''# />
-									<p>should SickGear send Pushalot notifications ?</p>
+									<input type="checkbox" class="enabler" name="use_libnotify" id="use-libnotify" #if $sickbeard.USE_LIBNOTIFY then 'checked="checked"' else ''#>
+									<p>should SickGear send Libnotify notifications ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_pushalot">
+						<div id="content_use-libnotify">
 							<div class="field-pair">
-								<label for="pushalot_notify_onsnatch">
+								<label for="libnotify-notify-onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushalot_notify_onsnatch" id="pushalot_notify_onsnatch" #if $sickbeard.PUSHALOT_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+										<input type="checkbox" name="libnotify_notify_onsnatch" id="libnotify-notify-onsnatch" #if $sickbeard.LIBNOTIFY_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="pushalot_notify_ondownload">
+								<label for="libnotify-notify-ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushalot_notify_ondownload" id="pushalot_notify_ondownload" #if $sickbeard.PUSHALOT_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="libnotify_notify_ondownload" id="libnotify-notify-ondownload" #if $sickbeard.LIBNOTIFY_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="pushalot_notify_onsubtitledownload">
+								<label for="libnotify-notify-onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="pushalot_notify_onsubtitledownload" id="pushalot_notify_onsubtitledownload" #if $sickbeard.PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="libnotify_notify_onsubtitledownload" id="libnotify-notify-onsubtitledownload" #if $sickbeard.LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
 							</div>
-							<div class="field-pair">
-								<label for="pushalot_authorizationtoken">
-									<span class="component-title">Pushalot authorization token</span>
-									<input type="text" name="pushalot_authorizationtoken" id="pushalot_authorizationtoken" value="<%= starify(sickbeard.PUSHALOT_AUTHORIZATIONTOKEN) %>" class="form-control input-sm input350" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">authorization token of your Pushalot account.</span>
-								</label>
-							</div>
-							<div class="testNotification" id="testPushalot-result">Click below to test.</div>
-							<input type="button" class="btn" value="Test Pushalot" id="testPushalot" />
-							<input type="submit" class="btn config_submitter" value="Save Changes" />
-						</div><!-- /content_use_pushalot //-->
+							<div class="test-notification" id="test-libnotify-result">Click below to test</div>
+							<input class="btn" type="button" value="Test Libnotify" id="test-libnotify">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-libnotify //-->
 
 					</fieldset>
-				</div><!-- /pushalot component-group //-->
-
-				<div class="component-group">
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/pushbullet.png" alt="" title="Pushbullet" />
-						<h3><a href="<%= anon_url('https://www.pushbullet.com') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Pushbullet</a></h3>
-						<p>Pushbullet allows you to send push notifications to Android, iOS and supported browsers.</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use_pushbullet">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_pushbullet" id="use_pushbullet" #if $sickbeard.USE_PUSHBULLET then 'checked="checked"' else ''# />
-									<p>should SickGear send Pushbullet notifications ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use_pushbullet">
-							<div class="field-pair">
-								<label for="pushbullet_notify_onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="pushbullet_notify_onsnatch" id="pushbullet_notify_onsnatch" #if $sickbeard.PUSHBULLET_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushbullet_notify_ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="pushbullet_notify_ondownload" id="pushbullet_notify_ondownload" #if $sickbeard.PUSHBULLET_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushbullet_notify_onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="pushbullet_notify_onsubtitledownload" id="pushbullet_notify_onsubtitledownload" #if $sickbeard.PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushbullet_access_token">
-									<span class="component-title">Pushbullet access token</span>
-									<input type="text" name="pushbullet_access_token" id="pushbullet_access_token" value="<%= starify(sickbeard.PUSHBULLET_ACCESS_TOKEN) %>" class="form-control input-sm input250" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">get your token at: <a href="<%= anon_url('https://www.pushbullet.com/account') %>" rel="noreferrer" onclick="window.open('${sickbeard.ANON_REDIRECT}' + this.href, '_blank'); return false;">https://www.pushbullet.com/account</a></span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="pushbullet_device_iden">
-									<span class="component-title">Pushbullet device</span>
-									<input type="hidden" name="pushbullet_device_iden" id="pushbullet_device_iden" value="$sickbeard.PUSHBULLET_DEVICE_IDEN" size="35" />
-									<select id="pushbullet_device_list" name="pushbullet_device_list" class="pull-left form-control input-sm" style="margin-right: 5px;">
-									</select>
-									<input type="button" class="btn btn-inline" value="Refresh Devices" id="getPushbulletDevices" />
-								</label>
-								<label>
-									<span class="component-title">&nbsp;</span>
-									<span class="component-desc">which device do you want to push to?</span>
-								</label>
-							</div>
-							<div class="testNotification" id="testPushbullet-result">Click below to test.</div>
-							<input type="button" class="btn" value="Test Pushbullet" id="testPushbullet" />
-							<input type="submit" class="btn config_submitter" value="Save Changes" />
-						</div><!-- /content_use_pushbullet //-->
-
-					</fieldset>
-				</div><!-- /pushbullet component-group //-->
-
+				</div><!-- /libnotify component-group //-->
 			</div>
 
+
+
+
+
 			<div id="tabs-3">
-				<div class="component-group">
-					   <div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/twitter.png" alt="" title="Twitter"/>
-						<h3><a href="<%= anon_url('http://www.twitter.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Twitter</a></h3>
-						<p>A social networking and microblogging service, enabling its users to send and read other users' messages called tweets.</p>
+				<div class="component-group typelist">
+					<div class="type bgcol">
+						<span class="list"><div class="item text">Bubble links:</div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/trakt.png"><a href="#trakt" rel="noreferrer">Trakt</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/slack.png"><a href="#slack" rel="noreferrer">Slack</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/discordapp.png"><a href="#discordapp" rel="noreferrer">Discordapp</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/gitter.png"><a href="#gitter" rel="noreferrer">Gitter</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/twitter.png"><a href="#twitter" rel="noreferrer">Twitter</a></div>
+							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/email.png"><a href="#email" rel="noreferrer">Email</a></div>
+						</span>
 					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use_twitter">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_twitter" id="use_twitter" #if $sickbeard.USE_TWITTER then 'checked="checked"' else ''# />
-									<p>should SickGear post tweets on Twitter ?</p>
-								</span>
-							</label>
-							<label>
-								<span class="component-title">&nbsp;</span>
-								<span class="component-desc"><b>Note:</b> you may want to use a secondary account.</span>
-							</label>
-						</div>
+				</div>
 
-						<div id="content_use_twitter">
-							<div class="field-pair">
-								<label for="twitter_notify_onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="twitter_notify_onsnatch" id="twitter_notify_onsnatch" #if $sickbeard.TWITTER_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="twitter_notify_ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="twitter_notify_ondownload" id="twitter_notify_ondownload" #if $sickbeard.TWITTER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="twitter_notify_onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="twitter_notify_onsubtitledownload" id="twitter_notify_onsubtitledownload" #if $sickbeard.TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label>
-									<span class="component-title">Step One</span>
-								</label>
-								<label>
-									<span style="font-size:11px">Click the "Request Authorization" button.<br/> This will open a new page containing an auth key.<br/> <b>Note:</b> if nothing happens check your popup blocker.<br/></span>
-									<input class="btn" type="button" value="Request Authorization" id="twitterStep1" />
-								</label>
-							</div>
-							<div class="field-pair">
-								<label>
-									<span class="component-title">Step Two</span>
-								</label>
-								<label>
-									<span style="font-size: 11px;">Enter the key Twitter gave you below, and click "Verify Key".<br/><br/></span>
-									<input type="text" id="twitter_key" value="" class="form-control input-sm input350" />
-									<input class="btn btn-inline" type="button" value="Verify Key" id="twitterStep2" />
-								</label>
-							</div>
-							<!--
-							<div class="field-pair">
-								<label>
-									<span class="component-title">Step Three</span>
-								</label>
-							</div>
-							//-->
-							<div class="testNotification" id="testTwitter-result">Click below to test.</div>
-							<input  class="btn" type="button" value="Test Twitter" id="testTwitter" />
-							<input type="submit" class="config_submitter btn" value="Save Changes" />
-						</div><!-- /content_use_twitter //-->
-
-					</fieldset>
-				</div><!-- /twitter component-group //-->
-
-
-				<div class="component-group">
+				<div class="component-group clear-left">
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/trakt.png" alt="" title="Trakt"/>
-						<h3><a href="<%= anon_url('http://trakt.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Trakt</a></h3>
-						<p>Trakt can keep a record of what TV shows you are watching and recommend additional shows based on your show data.</p>
+						<h3><a name="trakt" href="<%= anon_url('http://trakt.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Trakt</a></h3>
+						<p>Trakt can recommend shows based on notifications. (Add show... Trakt cards/Recommend)</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_trakt">
+							<label for="use-trakt">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_trakt" id="use_trakt" #if $sickbeard.USE_TRAKT then 'checked="checked"' else ''# />
+									<input type="checkbox" class="enabler" name="use_trakt" id="use-trakt" #if $sickbeard.USE_TRAKT then 'checked="checked"' else ''#>
 									<p>should SickGear use Trakt.tv ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_trakt">
+						<div id="content_use-trakt">
 							<div class="field-pair">
-								<label for="trakt_accounts">
+								<label for="trakt-accounts">
 									<span class="component-title">Trakt account (status):</span>
 									<span class="component-desc">
-									<select name="trakt_accounts" id="trakt_accounts" class="pull-left form-control input-sm">
+									<select name="trakt_accounts" id="trakt-accounts" class="pull-left form-control input-sm">
 										<option value="new" selected="selected">Add account</option>
 #set $trakt_accounts = $sickbeard.TRAKT_ACCOUNTS
 #for $void, $account in $trakt_accounts.items()
 											<option value="$account.account_id">$account.account_id - $account.name #if $account.active then '(ok)' else '(inactive)'#</option>
 #end for
 									</select>
-									<input type="button" class="btn" value="Delete" id="trakt-delete" disabled="disabled" />
+									<input type="button" class="btn" value="Delete" id="trakt-delete" disabled="disabled">
 									</span>
 								</label>
-								<label for="trakt_pin">
+								<label for="trakt-pin">
 									<span class="component-title">Trakt PIN:</span>
 									<span class="component-desc">
-										<input type="text" name="trakt_pin" id="trakt_pin" value="" class="form-control input-sm input250" />
-										<input type="button" class="btn" value="Connect" id="trakt-authenticate" />
+										<input type="text" name="trakt_pin" id="trakt-pin" value="" class="form-control input-sm input250">
+										<input type="button" class="btn" value="Connect" id="trakt-authenticate">
 										<div class="clear-left"><p>get an active PIN using: <a href="<%= anon_url(sickbeard.TRAKT_PIN_URL) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>$sickbeard.TRAKT_PIN_URL</b></a>
-										<br />tip: easily add accounts by using the link in other browsers "signed in" to Trakt
+										<br>tip: easily add accounts by using the link in other browsers "signed in" to Trakt
 										</p></div>
 									</span>
 								</label>
-								<div class="testNotification" id="trakt-authentication-result"></div>
+								<div class="test-notification" id="trakt-authentication-result"></div>
 							</div>
 
 							<div class="field-pair">
@@ -1573,27 +1524,27 @@
 												<th>..</th>
 #end if
 #for $void, $account in $trakt_accounts.items()
-												<th class="tid-$account.account_id">$account.name#if $account.active then '' else '<br />(inactive)'#</th>
+												<th class="tid-$account.account_id">$account.name#if $account.active then '' else '<br>(inactive)'#</th>
 #end for
 											</tr>
 										</thead>
 										<tbody>
 #if not $root_dirs:
-    #set $root_dirs = [{'root_def': False, 'loc': 'all folders. Multiple parent folders will appear here.', 'b64': ''}]
+	#set $root_dirs = [{'root_def': False, 'loc': 'all folders. Multiple parent folders will appear here.', 'b64': ''}]
 #end if
 #for $root_info in $root_dirs:
 											<tr class="solid-border-top">
 												<td class="col-1"><span style="font-size:13px;font-weight:bold" data-loc="$root_info['b64']">Update collection</span></td>
-    #if not len($trakt_accounts)
+	#if not len($trakt_accounts)
 												<td class="opt">..</td>
-    #end if
-    #for $void, $account in $trakt_accounts.items()
-        #set $cur_selected = ('', ' checked="checked"')[$root_info['loc'] in $sickbeard.TRAKT_UPDATE_COLLECTION.get($account.account_id, '')]
-        #set $id_loc = "update_trakt_%s_%s" % ($account.account_id, $root_info['b64'])
+	#end if
+	#for $void, $account in $trakt_accounts.items()
+		#set $cur_selected = ('', ' checked="checked"')[$root_info['loc'] in $sickbeard.TRAKT_UPDATE_COLLECTION.get($account.account_id, '')]
+		#set $id_loc = "update-trakt-%s-%s" % ($account.account_id, $root_info['b64'])
 												<td class="opt">
-													<input type="checkbox" id="$id_loc" name="$id_loc"$cur_selected />
+													<input type="checkbox" id="$id_loc" name="$id_loc"$cur_selected>
 												</td>
-    #end for
+	#end for
 												</tr>
 											<tr>
 												<td colspan="${1 + $num_columns}">for #if $root_info['root_def'] then '*' else ''#$root_info['loc']</td>
@@ -1605,10 +1556,10 @@
 							</div>
 							<!--
 							<div class="field-pair">
-								<label for="trakt_default_indexer">
+								<label for="trakt-default-indexer">
 									<span class="component-title">Default indexer:</span>
 									<span class="component-desc">
-										<select id="trakt_default_indexer" name="trakt_default_indexer" class="form-control input-sm">
+										<select id="trakt-default-indexer" name="trakt_default_indexer" class="form-control input-sm">
 											#for $indexer in $sickbeard.indexerApi().indexers
 											<option value="$indexer" #if $indexer == $sickbeard.TRAKT_DEFAULT_INDEXER then 'selected="selected"' else ''#>$sickbeard.indexerApi().indexers[$indexer]</option>
 											#end for
@@ -1617,197 +1568,555 @@
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="trakt_sync">
+								<label for="trakt-sync">
 									<span class="component-title">Sync libraries:</span>
 									<span class="component-desc">
-										<input type="checkbox" class="enabler" name="trakt_sync" id="trakt_sync" #if $sickbeard.TRAKT_SYNC then 'checked="checked"' else ''# />
-										<p>sync your SickGear show library with your trakt show library.</p>
+										<input type="checkbox" class="enabler" name="trakt_sync" id="trakt-sync" #if $sickbeard.TRAKT_SYNC then 'checked="checked"' else ''#>
+										<p>sync SickGear show library with a trakt show library</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="trakt_use_watchlist">
+								<label for="trakt-use-watchlist">
 									<span class="component-title">Use watchlist:</span>
 									<span class="component-desc">
-										<input type="checkbox" class="enabler" name="trakt_use_watchlist" id="trakt_use_watchlist" #if $sickbeard.TRAKT_USE_WATCHLIST then 'checked="checked"' else ''# />
-										<p>get new shows from your trakt watchlist.</p>
+										<input type="checkbox" class="enabler" name="trakt_use_watchlist" id="trakt-use-watchlist" #if $sickbeard.TRAKT_USE_WATCHLIST then 'checked="checked"' else ''#>
+										<p>get new shows from your trakt watchlist</p>
 									</span>
 								</label>
 							</div>
 							<div id="content_trakt_use_watchlist">
 								<div class="field-pair">
-									<label for="trakt_method_add">
+									<label for="trakt-method-add">
 										<span class="component-title">Watchlist add method:</span>
-										   <select id="trakt_method_add" name="trakt_method_add" class="form-control input-sm">
-											<option value="0" #if $sickbeard.TRAKT_METHOD_ADD == 0 then 'selected="selected"' else ''#>Skip All</option>
-											<option value="1" #if $sickbeard.TRAKT_METHOD_ADD == 1 then 'selected="selected"' else ''#>Download Pilot Only</option>
-											<option value="2" #if $sickbeard.TRAKT_METHOD_ADD == 2 then 'selected="selected"' else ''#>Get whole show</option>
-										</select>
-									</label>
-									<label>
-										<span class="component-title">&nbsp;</span>
-										<span class="component-desc">method in which to download episodes for new show's.</span>
+										<span class="component-desc">
+											<select id="trakt-method-add" name="trakt_method_add" class="form-control input-sm">
+												<option value="0" #if $sickbeard.TRAKT_METHOD_ADD == 0 then 'selected="selected"' else ''#>Skip All</option>
+												<option value="1" #if $sickbeard.TRAKT_METHOD_ADD == 1 then 'selected="selected"' else ''#>Download Pilot Only</option>
+												<option value="2" #if $sickbeard.TRAKT_METHOD_ADD == 2 then 'selected="selected"' else ''#>Get whole show</option>
+											</select>
+											<div class="clear-left">method in which to download episodes for new show's</div>
+										</span>
 									</label>
 								</div>
 								<div class="field-pair">
-									<label for="trakt_remove_watchlist">
+									<label for="trakt-remove-watchlist">
 										<span class="component-title">Remove episode:</span>
 										<span class="component-desc">
-											<input type="checkbox" name="trakt_remove_watchlist" id="trakt_remove_watchlist" #if $sickbeard.TRAKT_REMOVE_WATCHLIST then 'checked="checked"' else ''# />
-											<p>remove an episode from your watchlist after it is downloaded.</p>
+											<input type="checkbox" name="trakt_remove_watchlist" id="trakt-remove-watchlist" #if $sickbeard.TRAKT_REMOVE_WATCHLIST then 'checked="checked"' else ''#>
+											<p>remove an episode from your watchlist after it is downloaded</p>
 										</span>
 									</label>
 								 </div>
 								<div class="field-pair">
-									<label for="trakt_remove_serieslist">
+									<label for="trakt-remove-serieslist">
 										<span class="component-title">Remove series:</span>
 										<span class="component-desc">
-											<input type="checkbox" name="trakt_remove_serieslist" id="trakt_remove_serieslist" #if $sickbeard.TRAKT_REMOVE_SERIESLIST then 'checked="checked"' else ''# />
-											<p>remove the whole series from your watchlist after any download.</p>
+											<input type="checkbox" name="trakt_remove_serieslist" id="trakt-remove-serieslist" #if $sickbeard.TRAKT_REMOVE_SERIESLIST then 'checked="checked"' else ''#>
+											<p>remove the whole series from your watchlist after any download</p>
 										</span>
 									</label>
 								</div>
 								<div class="field-pair">
-									<label for="trakt_start_paused">
+									<label for="trakt-start-paused">
 										<span class="component-title">Start paused:</span>
 										<span class="component-desc">
-											<input type="checkbox" name="trakt_start_paused" id="trakt_start_paused" #if $sickbeard.TRAKT_START_PAUSED then 'checked="checked"' else ''# />
-											<p>show's grabbed from your trakt watchlist start paused.</p>
+											<input type="checkbox" name="trakt_start_paused" id="trakt-start-paused" #if $sickbeard.TRAKT_START_PAUSED then 'checked="checked"' else ''#>
+											<p>show's grabbed from your trakt watchlist start paused</p>
 										</span>
 									</label>
 								</div>
 							</div>
 							-->
-							<input type="submit" class="btn config_submitter" value="Save Changes" />
-						</div><!-- /content_use_trakt //-->
+							<input type="submit" class="btn config_submitter" value="Save Changes">
+						</div><!-- /content_use-trakt //-->
 					</fieldset>
 				</div><!-- /trakt component-group //-->
 
+
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/email.png" alt="" title="Email" />
-						<h3><a href="<%= anon_url('http://en.wikipedia.org/wiki/Comparison_of_webmail_providers') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Email</a></h3>
-						<p>Email notification settings.</p>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/slack.png" alt="" title="Slack">
+						<h3><a name="slack" href="<%= anon_url('https://slack.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Slack</a></h3>
+						<p>Team, group, and direct communication.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use_email">
+							<label for="use-slack">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_email" id="use_email" #if $sickbeard.USE_EMAIL then 'checked="checked"' else ''# />
-									<p>should SickGear send email notifications ?</p>
+									<input type="checkbox" class="enabler" name="use_slack" id="use-slack" #if $sickbeard.USE_SLACK then 'checked="checked"' else ''#>
+									<p>should SickGear send Slack notifications ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use_email">
+						<div id="content_use-slack">
 							<div class="field-pair">
-								<label for="email_notify_onsnatch">
+								<label for="slack-notify-onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="email_notify_onsnatch" id="email_notify_onsnatch" #if $sickbeard.EMAIL_NOTIFY_ONSNATCH then 'checked="checked"' else ''# />
+										<input type="checkbox" name="slack_notify_onsnatch" id="slack-notify-onsnatch" #if $sickbeard.SLACK_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_notify_ondownload">
+								<label for="slack-notify-ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="email_notify_ondownload" id="email_notify_ondownload" #if $sickbeard.EMAIL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="slack_notify_ondownload" id="slack-notify-ondownload" #if $sickbeard.SLACK_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_notify_onsubtitledownload">
+								<label for="slack-notify-onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="email_notify_onsubtitledownload" id="email_notify_onsubtitledownload" #if $sickbeard.EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''# />
+										<input type="checkbox" name="slack_notify_onsubtitledownload" id="slack-notify-onsubtitledownload" #if $sickbeard.SLACK_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label for="slack-channel">
+									<span class="component-title">Slack channel</span>
+									<span class="component-desc">
+										<input type="text" name="slack_channel" id="slack-channel" value="$sickbeard.SLACK_CHANNEL" class="form-control input-sm input250">
+										<span style="float:left">channel to send notifications to</span>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="slack-as-authed">
+									<span class="component-title">Post as authed user</span>
+									<span class="component-desc">
+										<input type="checkbox" class="viewIf" name="slack_as_authed" id="slack-as-authed" #if $sickbeard.SLACK_AS_AUTHED then 'checked="checked"' else ''#>
+										<p>send notifications using the profile name and photo of the access token</p>
+									</span>
+								</label>
+							</div>
+							<div class="hide_if_slack-as-authed">
+								<div class="field-pair">
+									<label for="slack-bot-name">
+										<span class="component-title">Post as a custom name</span>
+										<span class="component-desc">
+											<input type="text" name="slack_bot_name" id="slack-bot-name" value="$sickbeard.SLACK_BOT_NAME" class="form-control input-sm input250">
+											<p>blank for 'SickGear'</p>
+										</span>
+									</label>
+								</div>
+								<div class="field-pair">
+									<label for="slack-icon-url">
+										<span class="component-title">Custom icon image url</span>
+										<span class="component-desc">
+											<input type="text" name="slack_icon_url" id="slack-icon-url" value="$sickbeard.SLACK_ICON_URL" class="form-control input-sm input250">
+											<p>blank for SickGear image</p>
+										</span>
+									</label>
+								</div>
+							</div>
+							<div class="field-pair">
+								<label for="slack-access-token">
+									<span class="component-title">Slack oauth access token</span>
+									<span class="component-desc">
+										<input type="text" name="slack_access_token" id="slack-access-token" value="$sickbeard.SLACK_ACCESS_TOKEN" class="form-control input-sm input350">
+										<div class="clear-left"><p>1. <a href="<%= anon_url('https://api.slack.com/apps/new') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">create a Slack app</a> name for SickGear and select a workspace<br>
+										2. under the 'Features' section of the left sidebar, click 'OAuth & Perms'<br>
+										3. scroll page to section 'Scopes' and open the menu 'Select Permission Scopes'<br>
+										4. in the 'Chat' menu section, select 'Send messages as <em class="grey-text">appname</em>' - (<em class="grey-text">set in step 1</em>)<br>
+										5. also, in the 'Chat' menu section, select 'Send messages as user'<br>
+										6. after 'Save', go to page top, click 'Install App to Workspace'<br>
+										7. click 'Authorize' to view the 'OAuth Access Token', paste it to the above field</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-slack-result">Click below to test</div>
+							<input type="button" class="btn" value="Test Slack" id="test-slack">
+							<input type="submit" class="btn config_submitter" value="Save Changes">
+						</div><!-- /content_use-slack //-->
+					</fieldset>
+				</div><!-- /slack component-group //-->
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/discordapp.png" alt="" title="Discordapp">
+						<h3><a name="discordapp" href="<%= anon_url('https://discordapp.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Discordapp</a></h3>
+						<p>Voice and text chat.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-discordapp">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_discordapp" id="use-discordapp" #if $sickbeard.USE_DISCORDAPP then 'checked="checked"' else ''#>
+									<p>should SickGear send Discordapp notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-discordapp">
+							<div class="field-pair">
+								<label for="discordapp-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="discordapp_notify_onsnatch" id="discordapp-notify-onsnatch" #if $sickbeard.DISCORDAPP_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="discordapp-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="discordapp_notify_ondownload" id="discordapp-notify-ondownload" #if $sickbeard.DISCORDAPP_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="discordapp-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="discordapp_notify_onsubtitledownload" id="discordapp-notify-onsubtitledownload" #if $sickbeard.DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label for="discordapp-as-authed">
+									<span class="component-title">Post as authed user</span>
+									<span class="component-desc">
+										<input type="checkbox" class="viewIf" name="discordapp_as_authed" id="discordapp-as-authed" #if $sickbeard.DISCORDAPP_AS_AUTHED then 'checked="checked"' else ''#>
+										<p>send notifications using the username and avatar of the channel webhook</p>
+									</span>
+								</label>
+							</div>
+							<div class="hide_if_discordapp-as-authed">
+								<div class="field-pair">
+									<label for="discordapp-username">
+										<span class="component-title">Post as a custom name</span>
+										<span class="component-desc">
+											<input type="text" name="discordapp_username" id="discordapp-username" value="$sickbeard.DISCORDAPP_USERNAME" class="form-control input-sm input250">
+											<p>blank for 'SickGear'</p>
+										</span>
+									</label>
+								</div>
+								<div class="field-pair">
+									<label for="discordapp-icon-url">
+										<span class="component-title">Custom icon image url</span>
+										<span class="component-desc">
+											<input type="text" name="discordapp_icon_url" id="discordapp-icon-url" value="$sickbeard.DISCORDAPP_ICON_URL" class="form-control input-sm input250">
+											<p>blank for SickGear image</p>
+										</span>
+									</label>
+								</div>
+							</div>
+							<div class="field-pair">
+								<label for="discordapp-as-tts">
+									<span class="component-title">Post as Text-To-Speech</span>
+									<span class="component-desc">
+										<input type="checkbox" name="discordapp_as_tts" id="discordapp-as-tts" #if $sickbeard.DISCORDAPP_AS_TTS then 'checked="checked"' else ''#>
+										<p>send notifications with Text-To-Speech enabled</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="discordapp-access-token">
+									<span class="component-title">Discordapp channel webhook</span>
+									<span class="component-desc">
+										<input type="text" name="discordapp_access_token" id="discordapp-access-token" value="$sickbeard.DISCORDAPP_ACCESS_TOKEN" class="form-control input-sm input350">
+										<div class="clear-left"><p>1. 'Edit Channel' for the server where you have permission<br>
+										2. select the 'Webhooks' menu item then 'Create Webhook'<br>
+										3. copy the webook url, paste it to the above field<br>
+										4. select 'Save' in Discordapp</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-discordapp-result">Click below to test</div>
+							<input type="button" class="btn" value="Test Discordapp" id="test-discordapp">
+							<input type="submit" class="btn config_submitter" value="Save Changes">
+						</div><!-- /content_use-discordapp //-->
+					</fieldset>
+				</div><!-- /discordapp component-group //-->
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/gitter.png" alt="" title="Gitter">
+						<h3><a name="gitter" href="<%= anon_url('https://gitter.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Gitter</a></h3>
+						<p>Gitter chat and networking platform.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-gitter">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_gitter" id="use-gitter" #if $sickbeard.USE_GITTER then 'checked="checked"' else ''#>
+									<p>should SickGear send Gitter notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-gitter">
+							<div class="field-pair">
+								<label for="gitter-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="gitter_notify_onsnatch" id="gitter-notify-onsnatch" #if $sickbeard.GITTER_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="gitter-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="gitter_notify_ondownload" id="gitter-notify-ondownload" #if $sickbeard.GITTER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="gitter-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="gitter_notify_onsubtitledownload" id="gitter-notify-onsubtitledownload" #if $sickbeard.GITTER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_from">
+								<label for="gitter-room">
+									<span class="component-title">Gitter room name</span>
+									<span class="component-desc">
+										<input type="text" name="gitter_room" id="gitter-room" value="$sickbeard.GITTER_ROOM" class="form-control input-sm input250">
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="gitter-access-token">
+									<span class="component-title">Gitter oauth access token</span>
+									<span class="component-desc">
+										<input type="text" name="gitter_access_token" id="gitter-access-token" value="$sickbeard.GITTER_ACCESS_TOKEN" class="form-control input-sm input350">
+										<div class="clear-left"><p>sign in, copy the access token from <a href="<%= anon_url('https://developer.gitter.im/apps') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">here</a>, paste it to the above field</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-gitter-result">Click below to test</div>
+							<input type="button" class="btn" value="Test Gitter" id="test-gitter">
+							<input type="submit" class="btn config_submitter" value="Save Changes">
+						</div><!-- /content_use-gitter //-->
+					</fieldset>
+				</div><!-- /gitter component-group //-->
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/twitter.png" alt="" title="Twitter"/>
+						<h3><a name="twitter" href="<%= anon_url('http://www.twitter.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Twitter</a></h3>
+						<p>A social networking and microblogging service.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-twitter">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_twitter" id="use-twitter" #if $sickbeard.USE_TWITTER then 'checked="checked"' else ''#>
+									<p>should SickGear post tweets on Twitter ?</p>
+								</span>
+							</label>
+							<label>
+								<span class="component-title">&nbsp;</span>
+								<span class="component-desc"><b>Note:</b> you may want to use a secondary account</span>
+							</label>
+						</div>
+
+						<div id="content_use-twitter">
+							<div class="field-pair">
+								<label for="twitter-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="twitter_notify_onsnatch" id="twitter-notify-onsnatch" #if $sickbeard.TWITTER_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="twitter-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="twitter_notify_ondownload" id="twitter-notify-ondownload" #if $sickbeard.TWITTER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="twitter-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="twitter_notify_onsubtitledownload" id="twitter-notify-onsubtitledownload" #if $sickbeard.TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Step One</span>
+									<span class="component-desc">
+										<input class="btn" type="button" value="Request Authorization" id="twitter-step1">
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Step Two</span>
+									<span class="component-desc">
+										<input type="text" id="twitter-key" value="" class="form-control input-sm input350">
+										<input class="btn btn-inline" type="button" value="Verify Key" id="twitter-step2">
+										<div class="clear-left">enter Twitter key then "Verify Key"</div>
+									</span>
+								</label>
+							</div>
+
+							<div class="test-notification" id="test-twitter-result">Click below to test</div>
+							<input class="btn" type="button" value="Test Twitter" id="test-twitter">
+							<input type="submit" class="config_submitter btn" value="Save Changes">
+						</div><!-- /content_use-twitter //-->
+
+					</fieldset>
+				</div><!-- /twitter component-group //-->
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/email.png" alt="" title="Email">
+						<h3><a name="email" href="<%= anon_url('http://en.wikipedia.org/wiki/Comparison_of_webmail_providers') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Email</a></h3>
+						<p>Email notification settings.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-email">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_email" id="use-email" #if $sickbeard.USE_EMAIL then 'checked="checked"' else ''#>
+									<p>should SickGear send email notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-email">
+							<div class="field-pair">
+								<label for="email-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="email_notify_onsnatch" id="email-notify-onsnatch" #if $sickbeard.EMAIL_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="email-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="email_notify_ondownload" id="email-notify-ondownload" #if $sickbeard.EMAIL_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="email-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="email_notify_onsubtitledownload" id="email-notify-onsubtitledownload" #if $sickbeard.EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="email-from">
 									<span class="component-title">SMTP sender email address</span>
 									<span class="component-desc">
-										<input type="text" name="email_from" id="email_from" value="$sickbeard.EMAIL_FROM" class="form-control input-sm input250" />
+										<input type="text" name="email_from" id="email-from" value="$sickbeard.EMAIL_FROM" class="form-control input-sm input250">
 										<div class="clear-left"><p>some recipient hosts require a real address</p></div>
 									</span>
 								</label>
 								<div style="margin-bottom:5px;display:inline-block">
 									<span class="component-title">SMTP server hostname</span>
 									<span class="component-desc">
-										<input type="text" name="email_host" id="email_host" value="$sickbeard.EMAIL_HOST" class="form-control input-sm input250" />
-										<span style="float:left;margin-right:6px">and port</span><input type="text" name="email_port" id="email_port" value="$sickbeard.EMAIL_PORT" class="form-control input-sm input75" style="width:60px" />
+										<input type="text" name="email_host" id="email-host" value="$sickbeard.EMAIL_HOST" class="form-control input-sm input250">
+										<span style="float:left;margin-right:6px">and port</span><input type="text" name="email_port" id="email-port" value="$sickbeard.EMAIL_PORT" class="form-control input-sm input75" style="width:60px">
 									</span>
 								</div>
-								<label for="email_tls">
+								<label for="email-tls">
 									<span class="component-title">Enable TLS encryption</span>
 									<span class="component-desc">
-										<input type="checkbox" name="email_tls" id="email_tls" #if $sickbeard.EMAIL_TLS then 'checked="checked"' else ''# />
+										<input type="checkbox" name="email_tls" id="email-tls" #if $sickbeard.EMAIL_TLS then 'checked="checked"' else ''#>
 									</span>
 								</label>
-								<label for="email_user">
+								<label for="email-user">
 									<span class="component-title">SMTP server username</span>
 									<span class="component-desc">
-										<input type="text" name="email_user" id="email_user" value="$sickbeard.EMAIL_USER" class="form-control input-sm input250" />
+										<input type="text" name="email_user" id="email-user" value="$sickbeard.EMAIL_USER" class="form-control input-sm input250">
 										<p>(optional)</p>
 									</span>
 								</label>
-								<label for="email_password">
+								<label for="email-password">
 									<span class="component-title">SMTP server password</span>
 									<span class="component-desc">
-										<input type="password" autocomplete="nope" name="email_password" id="email_password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250">
+										<input type="password" autocomplete="nope" name="email_password" id="email-password" value="#echo '*' * len($sickbeard.EMAIL_PASSWORD)#" class="form-control input-sm input250">
 										<p>(optional)</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_list">
+								<label for="email-list">
 									<span class="component-title">Notify for every show</span>
 									<span class="component-desc">
-										<input type="text" name="email_list" id="email_list" value="$sickbeard.EMAIL_LIST" class="form-control input-sm input350" />
+										<input type="text" name="email_list" id="email-list" value="$sickbeard.EMAIL_LIST" class="form-control input-sm input350">
 										<div class="clear-left"><p>comma separated email list</p></div>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="email_show">
+								<label for="email-show">
 									<span class="component-title">Notify on a per show basis</span>
-									<select name="email_show" id="email_show" class="showlist-select form-control input-sm">
+									<select name="email_show" id="email-show" class="showlist-select form-control input-sm">
 										<option value="-1">-- Shows appear here --</option>
 									</select>
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
 									<span class="component-desc">
-										<input type="text" name="show_email_list" id="show_email_list" class="form-control input-sm input350" />
-										<input type="button" value="Save Show" id="save_show_email" class="btn" />
+										<input type="text" name="show_email_list" id="show-email-list" class="form-control input-sm input350">
+										<input type="button" value="Save Show" id="save-show-email" class="btn">
 										<div class="clear-left"><p>comma separated email list for each show</p></div>
 									</span>
 								</label>
 							</div>
 
-							<div class="testNotification" id="testEmail-result">Click below to test.</div>
-							<input type="button" class="btn" value="Test Email" id="testEmail" />
-							<input type="submit" class="btn config_submitter" value="Save Changes" />
-						</div><!-- /content_use_email //-->
+							<div class="test-notification" id="test-email-result">Click below to test</div>
+							<input type="button" class="btn" value="Test Email" id="test-email">
+							<input type="submit" class="btn config_submitter" value="Save Changes">
+						</div><!-- /content_use-email //-->
 					</fieldset>
 				</div><!-- /email component-group //-->
 
 			</div><!-- /config-components //-->
 		</form>
 
-		<br/><input type="submit" class="config_submitter btn" value="Save Changes" /><br/>
+		<br><input type="submit" class="config_submitter btn" value="Save Changes"><br>
 
 	</div>
 </div>
 
 <div class="clearfix"></div>
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 	jQuery('#config-components').tabs();
 //-->

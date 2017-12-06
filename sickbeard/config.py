@@ -229,15 +229,21 @@ def change_USE_SUBTITLES(use_subtitles):
         return
 
     sickbeard.USE_SUBTITLES = use_subtitles
-    if sickbeard.USE_SUBTITLES:
+    if sickbeard.USE_SUBTITLES and not sickbeard.subtitlesFinderScheduler.isAlive():
+        sickbeard.subtitlesFinderScheduler = sickbeard.scheduler.Scheduler(
+            sickbeard.subtitles.SubtitlesFinder(),
+            cycleTime=datetime.timedelta(hours=sickbeard.SUBTITLES_FINDER_FREQUENCY),
+            threadName='FINDSUBTITLES', silent=False)
         sickbeard.subtitlesFinderScheduler.start()
     else:
         sickbeard.subtitlesFinderScheduler.stop.set()
-        logger.log(u'Waiting for the SUBTITLESFINDER thread to exit')
+        sickbeard.subtitlesFinderScheduler.silent = True
+        threadname = sickbeard.subtitlesFinderScheduler.name
         try:
             sickbeard.subtitlesFinderScheduler.join(10)
-        except:
-            pass
+            logger.log('Thread %s has exit' % threadname)
+        except RuntimeError:
+            logger.log('Fail, thread %s did not exit' % threadname)
 
 
 def CheckSection(CFG, sec):
@@ -448,7 +454,9 @@ class ConfigMigrator():
                                 11: 'Migrate anime split view to new layout',
                                 12: 'Add "hevc" and some non-english languages to ignore words if not found',
                                 13: 'Change default dereferrer url to blank',
-                                14: 'Convert Trakt to multi-account'}
+                                14: 'Convert Trakt to multi-account',
+                                15: 'Transmithe.net rebranded Nebulance',
+                                16: 'Purge old cache image folders'}
 
     def migrate_config(self):
         """ Calls each successive migration until the config is the same version as SG expects """
@@ -783,3 +791,41 @@ class ConfigMigrator():
         old_refresh_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_refresh_token', '')
         if old_token and old_refresh_token:
             TraktAPI.add_account(old_token, old_refresh_token, None)
+
+    # Migration v15: Transmithe.net variables
+    def _migrate_v15(self):
+        try:
+            neb = filter(lambda p: 'Nebulance' in p.name, sickbeard.providers.sortedProviderList())[0]
+        except (StandardError, Exception):
+            return
+        # get the old settings from the file and store them in the new variable names
+        old_id = 'transmithe_net'
+        old_id_uc = old_id.upper()
+        neb.enabled = bool(check_setting_int(self.config_obj, old_id_uc, old_id, 0))
+        setattr(neb, 'username', check_setting_str(self.config_obj, old_id_uc, old_id + '_username', ''))
+        neb.password = check_setting_str(self.config_obj, old_id_uc, old_id + '_password', '')
+        neb.minseed = check_setting_int(self.config_obj, old_id_uc, old_id + '_minseed', 0)
+        neb.minleech = check_setting_int(self.config_obj, old_id_uc, old_id + '_minleech', 0)
+        neb.freeleech = bool(check_setting_int(self.config_obj, old_id_uc, old_id + '_freeleech', 0))
+        neb.enable_recentsearch = bool(check_setting_int(
+            self.config_obj, old_id_uc, old_id + '_enable_recentsearch', 1)) or not getattr(neb, 'supports_backlog')
+        neb.enable_backlog = bool(check_setting_int(self.config_obj, old_id_uc, old_id + '_enable_backlog', 1))
+        neb.search_mode = check_setting_str(self.config_obj, old_id_uc, old_id + '_search_mode', 'eponly')
+        neb.search_fallback = bool(check_setting_int(self.config_obj, old_id_uc, old_id + '_search_fallback', 0))
+        neb.seed_time = check_setting_int(self.config_obj, old_id_uc, old_id + '_seed_time', '')
+        neb._seed_ratio = check_setting_str(self.config_obj, old_id_uc, old_id + '_seed_ratio', '')
+
+    # Migration v16: Purge old cache image folder name
+    @staticmethod
+    def _migrate_v16():
+        if sickbeard.CACHE_DIR and ek.ek(os.path.isdir, sickbeard.CACHE_DIR):
+            cache_default = sickbeard.CACHE_DIR
+            dead_paths = ['anidb', 'imdb', 'trakt']
+            for path in dead_paths:
+                sickbeard.CACHE_DIR = '%s/images/%s' % (cache_default, path)
+                helpers.clearCache(True)
+                try:
+                    ek.ek(os.rmdir, sickbeard.CACHE_DIR)
+                except OSError:
+                    pass
+            sickbeard.CACHE_DIR = cache_default

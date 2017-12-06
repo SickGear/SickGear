@@ -19,8 +19,8 @@ import re
 import datetime
 
 import sickbeard
-from lib.dateutil import parser
 from sickbeard.common import Quality
+from unidecode import unidecode
 
 try:
     from collections import OrderedDict
@@ -28,7 +28,7 @@ except ImportError:
     from requests.compat import OrderedDict
 
 
-class SearchResult:
+class SearchResult(object):
     """
     Represents a search result from an indexer.
     """
@@ -44,6 +44,9 @@ class SearchResult:
 
         # used by some providers to store extra info associated with the result
         self.extraInfo = []
+
+        # assign function to get the data for the download
+        self.get_data_func = None
 
         # list of TVEpisode objects that this result is associated with
         self.episodes = episodes
@@ -63,25 +66,48 @@ class SearchResult:
         # version
         self.version = -1
 
+        # proper level
+        self._properlevel = 0
+
+        # is a repack
+        self.is_repack = False
+
+        # provider unique id
+        self.puid = None
+
+    @property
+    def properlevel(self):
+        return self._properlevel
+
+    @properlevel.setter
+    def properlevel(self, v):
+        if isinstance(v, (int, long)):
+            self._properlevel = v
+
     def __str__(self):
 
         if self.provider is None:
             return 'Invalid provider, unable to print self'
 
-        myString = '%s @ %s\n' % (self.provider.name, self.url)
-        myString += 'Extra Info:\n'
-        for extra in self.extraInfo:
-            myString += '  %s\n' % extra
-        myString += 'Episode: %s\n' % self.episodes
-        myString += 'Quality: %s\n' % Quality.qualityStrings[self.quality]
-        myString += 'Name: %s\n' % self.name
-        myString += 'Size: %s\n' % str(self.size)
-        myString += 'Release Group: %s\n' % self.release_group
+        return '\n'.join([
+            '%s @ %s' % (self.provider.name, self.url),
+            'Extra Info:',
+            '\n'.join(['  %s' % x for x in self.extraInfo]),
+            'Episode: %s' % self.episodes,
+            'Quality: %s' % Quality.qualityStrings[self.quality],
+            'Name: %s' % self.name,
+            'Size: %s' % self.size,
+            'Release Group: %s' % self.release_group])
 
-        return myString
-
-    def fileName(self):
-        return self.episodes[0].prettyName() + '.' + self.resultType
+    def get_data(self):
+        if None is not self.get_data_func:
+            try:
+                return self.get_data_func(self.url)
+            except (StandardError, Exception):
+                pass
+        if self.extraInfo and 0 < len(self.extraInfo):
+            return self.extraInfo[0]
+        return None
 
 
 class NZBSearchResult(SearchResult):
@@ -109,7 +135,66 @@ class TorrentSearchResult(SearchResult):
     hash = None
 
 
-class AllShowsListUI:
+class ShowFilter(object):
+    def __init__(self, config, log=None):
+        self.config = config
+        self.log = log
+        self.bad_names = [re.compile('(?i)%s' % r) for r in (
+            '[*]+\s*(?:403:|do not add|dupli[^s]+\s*(?:\d+|<a\s|[*])|inval)',
+            '(?:inval|not? allow(ed)?)(?:[,\s]*period)?\s*[*]',
+            '[*]+\s*dupli[^\s*]+\s*[*]+\s*(?:\d+|<a\s)',
+            '\s(?:dupli[^s]+\s*(?:\d+|<a\s|[*]))'
+        )]
+
+    def _is_bad_name(self, show):
+        return isinstance(show, dict) and 'seriesname' in show and isinstance(show['seriesname'], (str, unicode)) \
+               and any([x.search(show['seriesname']) for x in self.bad_names])
+
+    @staticmethod
+    def _fix_firstaired(show):
+        if 'firstaired' not in show:
+            show['firstaired'] = '1900-01-01'
+
+    @staticmethod
+    def _dict_prevent_none(d, key, default):
+        v = None
+        if isinstance(d, dict):
+            v = d.get(key, default)
+        return (v, default)[None is v]
+
+    @staticmethod
+    def _fix_seriesname(show):
+        if isinstance(show, dict) and 'seriesname' in show and isinstance(show['seriesname'], (str, unicode)):
+            show['seriesname'] = ShowFilter._dict_prevent_none(show, 'seriesname', '').strip()
+
+
+class AllShowsNoFilterListUI(ShowFilter):
+    """
+    This class is for indexer api. Used for searching, no filter or smart select
+    """
+
+    def __init__(self, config, log=None):
+        super(AllShowsNoFilterListUI, self).__init__(config, log)
+
+    def select_series(self, all_series):
+        search_results = []
+
+        # get all available shows
+        if all_series:
+            for cur_show in all_series:
+                self._fix_seriesname(cur_show)
+                if cur_show in search_results or self._is_bad_name(cur_show):
+                    continue
+
+                self._fix_firstaired(cur_show)
+
+                if cur_show not in search_results:
+                    search_results += [cur_show]
+
+        return search_results
+
+
+class AllShowsListUI(ShowFilter):
     """
     This class is for indexer api. Instead of prompting with a UI to pick the
     desired result out of a list of shows it tries to be smart about it
@@ -117,42 +202,44 @@ class AllShowsListUI:
     """
 
     def __init__(self, config, log=None):
-        self.config = config
-        self.log = log
+        super(AllShowsListUI, self).__init__(config, log)
 
-    def selectSeries(self, allSeries):
-        searchResults = []
-        seriesnames = []
+    def select_series(self, all_series):
+        search_results = []
 
         # get all available shows
-        if allSeries:
-            if 'searchterm' in self.config:
-                searchterm = self.config['searchterm']
+        if all_series:
+            search_term = self.config.get('searchterm', '').strip().lower()
+            if search_term:
                 # try to pick a show that's in my show list
-                for curShow in allSeries:
-                    if curShow in searchResults:
+                for cur_show in all_series:
+                    self._fix_seriesname(cur_show)
+                    if cur_show in search_results or self._is_bad_name(cur_show):
                         continue
 
-                    if 'seriesname' in curShow:
-                        seriesnames.append(curShow['seriesname'])
-                    if 'aliasnames' in curShow:
-                        seriesnames.extend(curShow['aliasnames'].split('|'))
+                    seriesnames = []
+                    if 'seriesname' in cur_show:
+                        name = cur_show['seriesname'].lower()
+                        seriesnames += [name, unidecode(name.encode('utf-8').decode('utf-8'))]
+                    if 'aliases' in cur_show:
+                        if isinstance(cur_show['aliases'], list):
+                            for a in cur_show['aliases']:
+                                name = a.strip().lower()
+                                seriesnames += [name, unidecode(name.encode('utf-8').decode('utf-8'))]
+                        elif isinstance(cur_show['aliases'], (str, unicode)):
+                            name = cur_show['aliases'].strip().lower()
+                            seriesnames += name.split('|') + unidecode(name.encode('utf-8').decode('utf-8')).split('|')
 
-                    for name in seriesnames:
-                        if searchterm.lower() in name.lower():
-                            if 'firstaired' not in curShow:
-                                curShow['firstaired'] = str(datetime.date.fromordinal(1))
-                                curShow['firstaired'] = re.sub('([-]0{2}){1,}', '', curShow['firstaired'])
-                                fixDate = parser.parse(curShow['firstaired'], fuzzy=True).date()
-                                curShow['firstaired'] = fixDate.strftime('%Y-%m-%d')
+                    if search_term in set(seriesnames):
+                        self._fix_firstaired(cur_show)
 
-                            if curShow not in searchResults:
-                                searchResults += [curShow]
+                        if cur_show not in search_results:
+                            search_results += [cur_show]
 
-        return searchResults
+        return search_results
 
 
-class ShowListUI:
+class ShowListUI(ShowFilter):
     """
     This class is for tvdb-api. Instead of prompting with a UI to pick the
     desired result out of a list of shows it tries to be smart about it
@@ -160,27 +247,31 @@ class ShowListUI:
     """
 
     def __init__(self, config, log=None):
-        self.config = config
-        self.log = log
+        super(ShowListUI, self).__init__(config, log)
 
-    def selectSeries(self, allSeries):
+    def select_series(self, all_series):
         try:
             # try to pick a show that's in my show list
-            for curShow in allSeries:
+            for curShow in all_series:
+                self._fix_seriesname(curShow)
+                if self._is_bad_name(curShow):
+                    continue
                 if filter(lambda x: int(x.indexerid) == int(curShow['id']), sickbeard.showList):
                     return curShow
-        except:
+        except (StandardError, Exception):
             pass
 
         # if nothing matches then return first result
-        return allSeries[0]
+        return all_series[0]
 
 
 class Proper:
-    def __init__(self, name, url, date, show, parsed_show=None):
+    def __init__(self, name, url, date, show, parsed_show=None, size=-1, puid=None):
         self.name = name
         self.url = url
         self.date = date
+        self.size = size
+        self.puid = puid
         self.provider = None
         self.quality = Quality.UNKNOWN
         self.release_group = None
@@ -200,7 +291,7 @@ class Proper:
             self.indexerid) + ' from ' + str(sickbeard.indexerApi(self.indexer).name)
 
 
-class ErrorViewer():
+class ErrorViewer:
     """
     Keeps a static list of UIErrors to be displayed on the UI and allows
     the list to be cleared.
@@ -220,7 +311,7 @@ class ErrorViewer():
         ErrorViewer.errors = []
 
 
-class UIError():
+class UIError:
     """
     Represents an error to be displayed in the web UI.
     """
@@ -241,7 +332,7 @@ class OrderedDefaultdict(OrderedDict):
             args = args[1:]
         super(OrderedDefaultdict, self).__init__(*args, **kwargs)
 
-    def __missing__ (self, key):
+    def __missing__(self, key):
         if self.default_factory is None:
             raise KeyError(key)
         self[key] = default = self.default_factory()
@@ -253,33 +344,38 @@ class OrderedDefaultdict(OrderedDict):
 
 
 class ImageUrlList(list):
-    def __init__(self, iterable=None, max_age=30):
+    def __init__(self, max_age=30):
         super(ImageUrlList, self).__init__()
         self.max_age = max_age
 
     def add_url(self, url):
         self.remove_old()
-        for x in self:
-            if isinstance(x, (tuple, list)) and len(x) == 2 and url == x[0]:
-                x = (x[0], datetime.datetime.now())
+        cache_item = (url, datetime.datetime.now())
+        for n, x in enumerate(self):
+            if self._is_cache_item(x) and url == x[0]:
+                self[n] = cache_item
                 return
-        self.append((url, datetime.datetime.now()))
+        self.append(cache_item)
+
+    @staticmethod
+    def _is_cache_item(item):
+        return isinstance(item, (tuple, list)) and 2 == len(item)
 
     def remove_old(self):
         age_limit = datetime.datetime.now() - datetime.timedelta(minutes=self.max_age)
-        self[:] = [x for x in self if isinstance(x, (tuple, list)) and len(x) == 2 and x[1] > age_limit]
+        self[:] = [x for x in self if self._is_cache_item(x) and age_limit < x[1]]
 
     def __repr__(self):
-        return str([x[0] for x in self if isinstance(x, (tuple, list)) and len(x) == 2])
+        return str([x[0] for x in self if self._is_cache_item(x)])
 
-    def __contains__(self, y):
+    def __contains__(self, url):
         for x in self:
-            if isinstance(x, (tuple, list)) and len(x) == 2 and y == x[0]:
+            if self._is_cache_item(x) and url == x[0]:
                 return True
         return False
 
-    def remove(self, x):
-        for v in self:
-            if isinstance(v, (tuple, list)) and len(v) == 2 and v[0] == x:
-                super(ImageUrlList, self).remove(v)
+    def remove(self, url):
+        for x in self:
+            if self._is_cache_item(x) and url == x[0]:
+                super(ImageUrlList, self).remove(x)
                 break

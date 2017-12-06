@@ -126,7 +126,7 @@ class BTSceneProvider(generic.TorrentProvider):
         return results
 
     def _episode_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', **kwargs)
+        return super(BTSceneProvider, self)._episode_strings(ep_obj, sep_date='.', **kwargs)
 
 
 provider = BTSceneProvider()

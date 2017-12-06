@@ -17,7 +17,7 @@
 #set global $page_body_attr = 'display-show" class="' + $css
 #set theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
 ##
-#import os.path, os
+#import os.path, os, re
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 <input type="hidden" id="sbRoot" value="$sbRoot">
 <script>
@@ -321,7 +321,7 @@
                         #echo ('', '<br /><br />')[any($ep_tally)]
     #if $show_ended
         #if $varExists('force_update')
-						A <a href="/$force_update" title="Trigger force full update">force full update</a> may return a plot overview for this ended show
+						A <a href="$sbRoot/$force_update" title="Trigger force full update">force full update</a> may return a plot overview for this ended show
         #else
 						Restart SickGear to get a new link here for this ended show
         #end if
@@ -389,13 +389,22 @@
 
 	<div id="change-status" class="pull-left">
 		<p style="margin-bottom:5px">Change selected episodes to</p>
-		<select id="statusSelect" class="form-control form-control-inline input-sm">
-#for $curStatus in [$WANTED, $SKIPPED, $ARCHIVED, $IGNORED, $FAILED] + sorted($Quality.DOWNLOADED)
-    #if $DOWNLOADED == $curStatus
-        #continue
-    #end if
+		<select id="statusSelect" class="form-control form-control-inline input-sm showlist-select">
+#for $curStatus in [$WANTED, $SKIPPED, $IGNORED, $FAILED]
 			<option value="$curStatus">$statusStrings[$curStatus]</option>
 #end for
+			<optgroup label="Downloaded">
+#for $curStatus in sorted($Quality.DOWNLOADED)
+    #if $DOWNLOADED != $curStatus
+				<option value="$curStatus">$re.sub('Downloaded\s*\(([^\)]+)\)', r'\1', $statusStrings[$curStatus])</option>
+    #end if
+#end for
+			<option value="$DOWNLOADED">with archived quality</option>
+			</optgroup>
+			<optgroup label="Archived with">
+				<option value="$ARCHIVED">downloaded quality</option>
+				<option value="-$ARCHIVED">default ($min_initial)</option>
+			</optgroup>
 		</select>
 		<input type="hidden" id="showID" value="$show.indexerid">
 		<input type="hidden" id="indexer" value="$show.indexer">
@@ -462,15 +471,16 @@
 				<button type="button" class="btn btn-default pull-right allseasons"><span class="onshow">Show all</span><span class="onhide">Hide most</span><i class="icon-glyph"></i></button>
                 <span class="images pull-right hide"><i class="spinner"></i></span>
                 #end if
-                #set $videos = '0' if $season not in $ep_counts['videos'] else $ep_counts['videos'][$season]
+                #set $videos = $ep_counts['videos'].get($season, '0')
                 #set $season_stats = $ep_counts['status'].get($season, {})
                 #set $snatched = $season_stats.get($Overview.SNATCHED, None)
                 #set $wanted = $season_stats.get($Overview.WANTED, None)
                 #set $qual = $season_stats.get($Overview.QUAL, None)
+                #set $good = $season_stats.get($Overview.GOOD, '0')
                 #set $archived = False if $season not in $ep_counts['archived'] else $ep_counts['archived'][$season]
 				<h3>$human_season<a id="season-$season" name="season-$season"></a>
                 #if None is not $has_art
-					<span class="season-status"><span class="good status-badge">&nbsp;D: <strong>$videos</strong>&nbsp;</span>#if snatched#<span class="snatched status-badge">&nbsp;S: <strong>$snatched</strong>&nbsp;</span>#end if##if $wanted#<span class="wanted status-badge">&nbsp;W: <strong>$wanted</strong>&nbsp;</span>#end if##if $qual#<span class="qual status-badge">&nbsp;LQ: <strong>$qual</strong>&nbsp;</span>#end if#&nbsp;of&nbsp;<span class="footerhighlight">$ep_counts['totals'][$season]</span><span class="archived-count">#echo ('', '&nbsp;with <span class="footerhighlight">%s</span> archived' % $archived)[0 < $archived]#</span></span>
+					<span class="season-status"><span class="good status-badge">&nbsp;D: <strong>$good</strong>&nbsp;</span>#if snatched#<span class="snatched status-badge">&nbsp;S: <strong>$snatched</strong>&nbsp;</span>#end if##if $wanted#<span class="wanted status-badge">&nbsp;W: <strong>$wanted</strong>&nbsp;</span>#end if##if $qual#<span class="qual status-badge">&nbsp;LQ: <strong>$qual</strong>&nbsp;</span>#end if#&nbsp;of&nbsp;<span class="footerhighlight">$ep_counts['totals'][$season]</span>#if 0 < $archived#&nbsp;with <span class="footerhighlight">$archived</span> archived#end if##if int($videos)#&nbsp;#echo ('with', 'and')[0 < $archived]#&nbsp;<span class="footerhighlight">$videos</span> file$maybe_plural($videos)#end if#</span>
                 #end if
 				</h3>
 			</th>

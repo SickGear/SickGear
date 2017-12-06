@@ -18,7 +18,6 @@ import datetime
 import re
 
 import sickbeard
-import config
 from lib.six import moves
 from base64 import standard_b64encode
 from common import Quality
@@ -64,7 +63,7 @@ def test_nzbget(host, use_https, username, password):
     return result, msg, rpc_client
 
 
-def send_nzb(nzb, proper=False):
+def send_nzb(nzb):
     result = False
     add_to_top = False
     nzbget_prio = 0
@@ -80,7 +79,7 @@ def send_nzb(nzb, proper=False):
     # if it aired recently make it high priority and generate DupeKey/Score
     for curEp in nzb.episodes:
         if '' == dupekey:
-            dupekey = "SickGear-%s%s" % (
+            dupekey = 'SickGear-%s%s' % (
                 sickbeard.indexerApi(curEp.show.indexer).config.get('dupekey', ''), curEp.show.indexerid)
         dupekey += '-%s.%s' % (curEp.season, curEp.episode)
 
@@ -90,12 +89,14 @@ def send_nzb(nzb, proper=False):
 
     if Quality.UNKNOWN != nzb.quality:
         dupescore = nzb.quality * 100
-    if proper:
-        dupescore += 10
+
+    dupescore += (0, 9 + nzb.properlevel)[0 < nzb.properlevel]
 
     nzbcontent64 = None
     if 'nzbdata' == nzb.resultType:
-        data = nzb.extraInfo[0]
+        data = nzb.get_data()
+        if not data:
+            return False
         nzbcontent64 = standard_b64encode(data)
     elif 'Anizb' == nzb.provider.name and 'nzb' == nzb.resultType:
         gen_provider = GenericProvider('')
@@ -153,7 +154,7 @@ def send_nzb(nzb, proper=False):
             result = True
         else:
             logger.log(u'NZBget could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
-    except:
+    except(StandardError, Exception):
         logger.log(u'Connect Error to NZBget: could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
 
     return result

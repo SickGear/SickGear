@@ -9,7 +9,7 @@ $(document).ready(function() {
 
 	// handle the show selection dropbox
 	$('#pickShow').change(function() {
-		var val = $(this).attr('value');
+		var val = $(this).val();
 		if (val != 0)
 			window.location.href = $.SickGear.Root + '/home/displayShow?show=' + val;
 	});
@@ -56,8 +56,8 @@ $(document).ready(function() {
 			this.checked && epArr.push($(this).attr('id'))
 		});
 		if (epArr.length)
-			window.location.href = $.SickGear.Root + '/home/setStatus?show=' + $('#showID').attr('value') +
-				'&eps=' + epArr.join('|') + '&status=' + $('#statusSelect').attr('value');
+			window.location.href = $.SickGear.Root + '/home/setStatus?show=' + $('#showID').val() +
+				'&eps=' + epArr.join('|') + '&status=' + $('#statusSelect').val();
 	});
 
 	// show/hide different types of rows when the checkboxes are changed

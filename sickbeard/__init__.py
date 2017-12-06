@@ -59,7 +59,7 @@ CFG = None
 CONFIG_FILE = None
 
 # This is the version of the config we EXPECT to find
-CONFIG_VERSION = 14
+CONFIG_VERSION = 16
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -86,9 +86,16 @@ subtitlesFinderScheduler = None
 # traktCheckerScheduler = None
 background_mapping_task = None
 
+provider_ping_thread_pool = {}
+
 showList = None
 UPDATE_SHOWS_ON_START = False
 SHOW_UPDATE_HOUR = 3
+
+# non ui settings
+REMOVE_FILENAME_CHARS = None
+IMPORT_DEFAULT_CHECKED_SHOWS = None
+# /non ui settings
 
 providerList = []
 newznabProviderList = []
@@ -120,6 +127,7 @@ WEB_USERNAME = None
 WEB_PASSWORD = None
 WEB_HOST = None
 WEB_IPV6 = None
+WEB_IPV64 = None
 
 HANDLE_REVERSE_PROXY = False
 PROXY_SETTING = None
@@ -158,6 +166,8 @@ METADATA_WDTV = None
 METADATA_TIVO = None
 METADATA_MEDE8ER = None
 METADATA_KODI = None
+
+RESULTS_SORTBY = None
 
 QUALITY_DEFAULT = None
 STATUS_DEFAULT = None
@@ -199,6 +209,7 @@ TORRENT_METHOD = None
 TORRENT_DIR = None
 DOWNLOAD_PROPERS = False
 CHECK_PROPERS_INTERVAL = None
+PROPERS_WEBDL_ONEGRP = True
 ALLOW_HIGH_PRIORITY = False
 NEWZNAB_DATA = ''
 
@@ -225,7 +236,6 @@ SEARCH_UNAIRED = False
 UNAIRED_RECENT_SEARCH_ONLY = True
 
 ADD_SHOWS_WO_DIR = False
-REMOVE_FILENAME_CHARS = None
 CREATE_MISSING_SHOW_DIRS = False
 RENAME_EPISODES = False
 AIRDATE_EPISODES = False
@@ -239,18 +249,18 @@ TV_DOWNLOAD_DIR = None
 UNPACK = False
 SKIP_REMOVED_FILES = False
 
-SAB_USERNAME = None
-SAB_PASSWORD = None
-SAB_APIKEY = None
-SAB_CATEGORY = None
-SAB_HOST = ''
-
 NZBGET_USERNAME = None
 NZBGET_PASSWORD = None
 NZBGET_CATEGORY = None
 NZBGET_HOST = None
 NZBGET_USE_HTTPS = False
 NZBGET_PRIORITY = 100
+
+SAB_USERNAME = None
+SAB_PASSWORD = None
+SAB_APIKEY = None
+SAB_CATEGORY = None
+SAB_HOST = ''
 
 TORRENT_USERNAME = None
 TORRENT_PASSWORD = None
@@ -279,6 +289,16 @@ KODI_HOST = ''
 KODI_USERNAME = None
 KODI_PASSWORD = None
 
+USE_PLEX = False
+PLEX_NOTIFY_ONSNATCH = False
+PLEX_NOTIFY_ONDOWNLOAD = False
+PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = False
+PLEX_UPDATE_LIBRARY = False
+PLEX_SERVER_HOST = None
+PLEX_HOST = None
+PLEX_USERNAME = None
+PLEX_PASSWORD = None
+
 USE_XBMC = False
 XBMC_ALWAYS_ON = True
 XBMC_NOTIFY_ONSNATCH = False
@@ -291,15 +311,52 @@ XBMC_HOST = ''
 XBMC_USERNAME = None
 XBMC_PASSWORD = None
 
-USE_PLEX = False
-PLEX_NOTIFY_ONSNATCH = False
-PLEX_NOTIFY_ONDOWNLOAD = False
-PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PLEX_UPDATE_LIBRARY = False
-PLEX_SERVER_HOST = None
-PLEX_HOST = None
-PLEX_USERNAME = None
-PLEX_PASSWORD = None
+USE_NMJ = False
+NMJ_HOST = None
+NMJ_DATABASE = None
+NMJ_MOUNT = None
+
+USE_NMJv2 = False
+NMJv2_HOST = None
+NMJv2_DATABASE = None
+NMJv2_DBLOC = None
+
+USE_SYNOINDEX = False
+SYNOINDEX_UPDATE_LIBRARY = True
+
+USE_SYNOLOGYNOTIFIER = False
+SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH = False
+SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD = False
+SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+
+USE_PYTIVO = False
+PYTIVO_HOST = ''
+PYTIVO_SHARE_NAME = ''
+PYTIVO_TIVO_NAME = ''
+
+USE_BOXCAR2 = False
+BOXCAR2_NOTIFY_ONSNATCH = False
+BOXCAR2_NOTIFY_ONDOWNLOAD = False
+BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = False
+BOXCAR2_ACCESSTOKEN = None
+BOXCAR2_SOUND = None
+
+USE_PUSHBULLET = False
+PUSHBULLET_NOTIFY_ONSNATCH = False
+PUSHBULLET_NOTIFY_ONDOWNLOAD = False
+PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = False
+PUSHBULLET_ACCESS_TOKEN = None
+PUSHBULLET_DEVICE_IDEN = None
+
+USE_PUSHOVER = False
+PUSHOVER_NOTIFY_ONSNATCH = False
+PUSHOVER_NOTIFY_ONDOWNLOAD = False
+PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+PUSHOVER_USERKEY = None
+PUSHOVER_APIKEY = None
+PUSHOVER_PRIORITY = 0
+PUSHOVER_DEVICE = None
+PUSHOVER_SOUND = None
 
 USE_GROWL = False
 GROWL_NOTIFY_ONSNATCH = False
@@ -315,59 +372,23 @@ PROWL_NOTIFY_ONSUBTITLEDOWNLOAD = False
 PROWL_API = None
 PROWL_PRIORITY = 0
 
-USE_TWITTER = False
-TWITTER_NOTIFY_ONSNATCH = False
-TWITTER_NOTIFY_ONDOWNLOAD = False
-TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
-TWITTER_USERNAME = None
-TWITTER_PASSWORD = None
-TWITTER_PREFIX = None
-
-USE_BOXCAR2 = False
-BOXCAR2_NOTIFY_ONSNATCH = False
-BOXCAR2_NOTIFY_ONDOWNLOAD = False
-BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = False
-BOXCAR2_ACCESSTOKEN = None
-BOXCAR2_SOUND = None
-
-USE_PUSHOVER = False
-PUSHOVER_NOTIFY_ONSNATCH = False
-PUSHOVER_NOTIFY_ONDOWNLOAD = False
-PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PUSHOVER_USERKEY = None
-PUSHOVER_APIKEY = None
-PUSHOVER_PRIORITY = 0
-PUSHOVER_DEVICE = None
-PUSHOVER_SOUND = None
+USE_NMA = False
+NMA_NOTIFY_ONSNATCH = False
+NMA_NOTIFY_ONDOWNLOAD = False
+NMA_NOTIFY_ONSUBTITLEDOWNLOAD = False
+NMA_API = None
+NMA_PRIORITY = 0
 
 USE_LIBNOTIFY = False
 LIBNOTIFY_NOTIFY_ONSNATCH = False
 LIBNOTIFY_NOTIFY_ONDOWNLOAD = False
 LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD = False
 
-USE_NMJ = False
-NMJ_HOST = None
-NMJ_DATABASE = None
-NMJ_MOUNT = None
-
-USE_ANIDB = False
-ANIDB_USERNAME = None
-ANIDB_PASSWORD = None
-ANIDB_USE_MYLIST = False
-ADBA_CONNECTION = None
-ANIME_TREAT_AS_HDTV = False
-
-USE_SYNOINDEX = False
-
-USE_NMJv2 = False
-NMJv2_HOST = None
-NMJv2_DATABASE = None
-NMJv2_DBLOC = None
-
-USE_SYNOLOGYNOTIFIER = False
-SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH = False
-SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD = False
-SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+USE_PUSHALOT = False
+PUSHALOT_NOTIFY_ONSNATCH = False
+PUSHALOT_NOTIFY_ONDOWNLOAD = False
+PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = False
+PUSHALOT_AUTHORIZATIONTOKEN = None
 
 USE_TRAKT = False
 TRAKT_REMOVE_WATCHLIST = False
@@ -379,34 +400,40 @@ TRAKT_SYNC = False
 TRAKT_DEFAULT_INDEXER = None
 TRAKT_UPDATE_COLLECTION = {}
 
-USE_PYTIVO = False
-PYTIVO_NOTIFY_ONSNATCH = False
-PYTIVO_NOTIFY_ONDOWNLOAD = False
-PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PYTIVO_UPDATE_LIBRARY = False
-PYTIVO_HOST = ''
-PYTIVO_SHARE_NAME = ''
-PYTIVO_TIVO_NAME = ''
+USE_SLACK = False
+SLACK_NOTIFY_ONSNATCH = False
+SLACK_NOTIFY_ONDOWNLOAD = False
+SLACK_NOTIFY_ONSUBTITLEDOWNLOAD = False
+SLACK_CHANNEL = None
+SLACK_AS_AUTHED = False
+SLACK_BOT_NAME = None
+SLACK_ICON_URL = None
+SLACK_ACCESS_TOKEN = None
 
-USE_NMA = False
-NMA_NOTIFY_ONSNATCH = False
-NMA_NOTIFY_ONDOWNLOAD = False
-NMA_NOTIFY_ONSUBTITLEDOWNLOAD = False
-NMA_API = None
-NMA_PRIORITY = 0
+USE_DISCORDAPP = False
+DISCORDAPP_NOTIFY_ONSNATCH = False
+DISCORDAPP_NOTIFY_ONDOWNLOAD = False
+DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = False
+DISCORDAPP_AS_AUTHED = False
+DISCORDAPP_USERNAME = None
+DISCORDAPP_ICON_URL = None
+DISCORDAPP_AS_TTS = None
+DISCORDAPP_ACCESS_TOKEN = None
 
-USE_PUSHALOT = False
-PUSHALOT_NOTIFY_ONSNATCH = False
-PUSHALOT_NOTIFY_ONDOWNLOAD = False
-PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PUSHALOT_AUTHORIZATIONTOKEN = None
+USE_GITTER = False
+GITTER_NOTIFY_ONSNATCH = False
+GITTER_NOTIFY_ONDOWNLOAD = False
+GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+GITTER_ROOM = None
+GITTER_ACCESS_TOKEN = None
 
-USE_PUSHBULLET = False
-PUSHBULLET_NOTIFY_ONSNATCH = False
-PUSHBULLET_NOTIFY_ONDOWNLOAD = False
-PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD = False
-PUSHBULLET_ACCESS_TOKEN = None
-PUSHBULLET_DEVICE_IDEN = None
+USE_TWITTER = False
+TWITTER_NOTIFY_ONSNATCH = False
+TWITTER_NOTIFY_ONDOWNLOAD = False
+TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
+TWITTER_USERNAME = None
+TWITTER_PASSWORD = None
+TWITTER_PREFIX = None
 
 USE_EMAIL = False
 EMAIL_OLD_SUBJECTS = None
@@ -420,6 +447,13 @@ EMAIL_USER = None
 EMAIL_PASSWORD = None
 EMAIL_FROM = None
 EMAIL_LIST = None
+
+USE_ANIDB = False
+ANIDB_USERNAME = None
+ANIDB_PASSWORD = None
+ANIDB_USE_MYLIST = False
+ADBA_CONNECTION = None
+ANIME_TREAT_AS_HDTV = False
 
 GUI_NAME = None
 DEFAULT_HOME = None
@@ -444,6 +478,7 @@ EPISODE_VIEW_DISPLAY_PAUSED = False
 EPISODE_VIEW_POSTERS = True
 EPISODE_VIEW_MISSED_RANGE = None
 HISTORY_LAYOUT = None
+BROWSELIST_HIDDEN = []
 
 FUZZY_DATING = False
 TRIM_ZERO = False
@@ -499,6 +534,8 @@ else:
     TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
     TRAKT_BASE_URL = 'https://api.trakt.tv/'
 
+THETVDB_V2_API_TOKEN = {'token': None, 'datetime': datetime.datetime.fromordinal(1)}
+
 COOKIE_SECRET = base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
 CACHE_IMAGE_URL_LIST = classes.ImageUrlList()
@@ -517,13 +554,16 @@ def initialize(console_logging=True):
         # Misc
         global __INITIALIZED__, showList, providerList, newznabProviderList, torrentRssProviderList, \
             WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, CREATE_MISSING_SHOW_DIRS, \
-            RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, REMOVE_FILENAME_CHARS, \
-            CONFIG_FILE
+            RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, CONFIG_FILE, \
+            REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS
         # Schedulers
         # global traktCheckerScheduler
         global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
             versionCheckScheduler, showQueueScheduler, searchQueueScheduler, \
-            properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, background_mapping_task
+            properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, background_mapping_task, \
+            provider_ping_thread_pool
+        # Add Show Search
+        global RESULTS_SORTBY
         # Add Show Defaults
         global STATUS_DEFAULT, QUALITY_DEFAULT, SHOW_TAG_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, \
             WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SCENE_DEFAULT, ANIME_DEFAULT
@@ -535,7 +575,7 @@ def initialize(console_logging=True):
             EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
             EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
             DISPLAY_SHOW_VIEWMODE, DISPLAY_SHOW_BACKGROUND, DISPLAY_SHOW_BACKGROUND_TRANSLUCENT, \
-            DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT
+            DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT, BROWSELIST_HIDDEN
         # Gen Config/Misc
         global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
             TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, INDEXER_TIMEOUT, ROOT_DIRS, \
@@ -545,12 +585,12 @@ def initialize(console_logging=True):
             HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
             DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, TIMEZONE_DISPLAY, \
             WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEY, WEB_PORT, WEB_LOG, \
-            ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, HANDLE_REVERSE_PROXY
+            ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, WEB_IPV64, HANDLE_REVERSE_PROXY
         # Gen Config/Advanced
         global BRANCH, CUR_COMMIT_BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, GIT_PATH, CPU_PRESET, ANON_REDIRECT, \
             ENCRYPTION_VERSION, PROXY_SETTING, PROXY_INDEXERS, FILE_LOGGING_PRESET
         # Search Settings/Episode
-        global DOWNLOAD_PROPERS, CHECK_PROPERS_INTERVAL, RECENTSEARCH_FREQUENCY, \
+        global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, CHECK_PROPERS_INTERVAL, RECENTSEARCH_FREQUENCY, \
             BACKLOG_DAYS, BACKLOG_NOFULL, BACKLOG_FREQUENCY, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
             ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY
         # Search Settings/NZB search
@@ -591,8 +631,7 @@ def initialize(console_logging=True):
             USE_SYNOINDEX, \
             USE_SYNOLOGYNOTIFIER, SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, \
             SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD, SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD, \
-            USE_PYTIVO, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME, \
-            PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY
+            USE_PYTIVO, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME
         # Notification Settings/Devices
         global USE_GROWL, GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, \
             GROWL_HOST, GROWL_PASSWORD, \
@@ -615,6 +654,13 @@ def initialize(console_logging=True):
             USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
             TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
             TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
+            USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
+            USE_DISCORDAPP, DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, \
+            DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD, \
+            DISCORDAPP_AS_AUTHED, DISCORDAPP_USERNAME, DISCORDAPP_ICON_URL, DISCORDAPP_AS_TTS, DISCORDAPP_ACCESS_TOKEN,\
+            USE_GITTER, GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD,\
+            GITTER_ROOM, GITTER_ACCESS_TOKEN, \
             USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
             EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_LIST, EMAIL_OLD_SUBJECTS
         # Anime Settings
@@ -624,7 +670,8 @@ def initialize(console_logging=True):
             return False
 
         for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBget', 'Emby', 'Kodi', 'XBMC', 'PLEX',
-                       'Growl', 'Prowl', 'Twitter', 'Boxcar2', 'NMJ', 'NMJv2', 'Synology', 'SynologyNotifier',
+                       'Growl', 'Prowl', 'Twitter', 'Slack', 'Discordapp', 'Boxcar2', 'NMJ', 'NMJv2',
+                       'Synology', 'SynologyNotifier',
                        'pyTivo', 'NMA', 'Pushalot', 'Pushbullet', 'Subtitles'):
             CheckSection(CFG, stanza)
 
@@ -703,6 +750,7 @@ def initialize(console_logging=True):
         WEB_PORT = minimax(check_setting_int(CFG, 'General', 'web_port', 8081), 8081, 21, 65535)
         WEB_ROOT = check_setting_str(CFG, 'General', 'web_root', '').rstrip('/')
         WEB_IPV6 = bool(check_setting_int(CFG, 'General', 'web_ipv6', 0))
+        WEB_IPV64 = bool(check_setting_int(CFG, 'General', 'web_ipv64', 0))
         WEB_LOG = bool(check_setting_int(CFG, 'General', 'web_log', 0))
         ENCRYPTION_VERSION = check_setting_int(CFG, 'General', 'encryption_version', 0)
         WEB_USERNAME = check_setting_str(CFG, 'General', 'web_username', '')
@@ -740,6 +788,8 @@ def initialize(console_logging=True):
         ROOT_DIRS = check_setting_str(CFG, 'General', 'root_dirs', '')
         if not re.match(r'\d+\|[^|]+(?:\|[^|]+)*', ROOT_DIRS):
             ROOT_DIRS = ''
+
+        RESULTS_SORTBY = check_setting_str(CFG, 'General', 'results_sortby', '')
 
         QUALITY_DEFAULT = check_setting_int(CFG, 'General', 'quality_default', SD)
         STATUS_DEFAULT = check_setting_int(CFG, 'General', 'status_default', SKIPPED)
@@ -786,6 +836,7 @@ def initialize(console_logging=True):
             TORRENT_METHOD = 'blackhole'
 
         DOWNLOAD_PROPERS = bool(check_setting_int(CFG, 'General', 'download_propers', 1))
+        PROPERS_WEBDL_ONEGRP = bool(check_setting_int(CFG, 'General', 'propers_webdl_onegrp', 1))
         CHECK_PROPERS_INTERVAL = check_setting_str(CFG, 'General', 'check_propers_interval', '')
         if CHECK_PROPERS_INTERVAL not in ('15m', '45m', '90m', '4h', 'daily'):
             CHECK_PROPERS_INTERVAL = 'daily'
@@ -836,6 +887,7 @@ def initialize(console_logging=True):
         CREATE_MISSING_SHOW_DIRS = bool(check_setting_int(CFG, 'General', 'create_missing_show_dirs', 0))
         ADD_SHOWS_WO_DIR = bool(check_setting_int(CFG, 'General', 'add_shows_wo_dir', 0))
         REMOVE_FILENAME_CHARS = check_setting_str(CFG, 'General', 'remove_filename_chars', '')
+        IMPORT_DEFAULT_CHECKED_SHOWS = bool(check_setting_int(CFG, 'General', 'import_default_checked_shows', 0))
 
         SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '')
         SAB_PASSWORD = check_setting_str(CFG, 'SABnzbd', 'sab_password', '')
@@ -982,10 +1034,6 @@ def initialize(console_logging=True):
 
         CheckSection(CFG, 'pyTivo')
         USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
-        PYTIVO_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsnatch', 0))
-        PYTIVO_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_ondownload', 0))
-        PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'pyTivo', 'pytivo_notify_onsubtitledownload', 0))
-        PYTIVO_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'pyTivo', 'pyTivo_update_library', 0))
         PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
         PYTIVO_SHARE_NAME = check_setting_str(CFG, 'pyTivo', 'pytivo_share_name', '')
         PYTIVO_TIVO_NAME = check_setting_str(CFG, 'pyTivo', 'pytivo_tivo_name', '')
@@ -1011,6 +1059,34 @@ def initialize(console_logging=True):
             check_setting_int(CFG, 'Pushbullet', 'pushbullet_notify_onsubtitledownload', 0))
         PUSHBULLET_ACCESS_TOKEN = check_setting_str(CFG, 'Pushbullet', 'pushbullet_access_token', '')
         PUSHBULLET_DEVICE_IDEN = check_setting_str(CFG, 'Pushbullet', 'pushbullet_device_iden', '')
+
+        USE_SLACK = bool(check_setting_int(CFG, 'Slack', 'use_slack', 0))
+        SLACK_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Slack', 'slack_notify_onsnatch', 0))
+        SLACK_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Slack', 'slack_notify_ondownload', 0))
+        SLACK_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Slack', 'slack_notify_onsubtitledownload', 0))
+        SLACK_CHANNEL = check_setting_str(CFG, 'Slack', 'slack_channel', '')
+        SLACK_AS_AUTHED = bool(check_setting_int(CFG, 'Slack', 'slack_as_authed', 0))
+        SLACK_BOT_NAME = check_setting_str(CFG, 'Slack', 'slack_bot_name', '')
+        SLACK_ICON_URL = check_setting_str(CFG, 'Slack', 'slack_icon_url', '')
+        SLACK_ACCESS_TOKEN = check_setting_str(CFG, 'Slack', 'slack_access_token', '')
+
+        USE_DISCORDAPP = bool(check_setting_int(CFG, 'Discordapp', 'use_discordapp', 0))
+        DISCORDAPP_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_notify_onsnatch', 0))
+        DISCORDAPP_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_notify_ondownload', 0))
+        DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
+            check_setting_int(CFG, 'Discordapp', 'discordapp_notify_onsubtitledownload', 0))
+        DISCORDAPP_AS_AUTHED = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_as_authed', 0))
+        DISCORDAPP_USERNAME = check_setting_str(CFG, 'Discordapp', 'discordapp_username', '')
+        DISCORDAPP_ICON_URL = check_setting_str(CFG, 'Discordapp', 'discordapp_icon_url', '')
+        DISCORDAPP_AS_TTS = bool(check_setting_str(CFG, 'Discordapp', 'discordapp_as_tts', 0))
+        DISCORDAPP_ACCESS_TOKEN = check_setting_str(CFG, 'Discordapp', 'discordapp_access_token', '')
+
+        USE_GITTER = bool(check_setting_int(CFG, 'Gitter', 'use_gitter', 0))
+        GITTER_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsnatch', 0))
+        GITTER_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_ondownload', 0))
+        GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsubtitledownload', 0))
+        GITTER_ROOM = check_setting_str(CFG, 'Gitter', 'gitter_room', '')
+        GITTER_ACCESS_TOKEN = check_setting_str(CFG, 'Gitter', 'gitter_access_token', '')
 
         USE_EMAIL = bool(check_setting_int(CFG, 'Email', 'use_email', 0))
         EMAIL_OLD_SUBJECTS = bool(check_setting_int(CFG, 'Email', 'email_old_subjects',
@@ -1090,6 +1166,9 @@ def initialize(console_logging=True):
         EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
 
         HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
+        BROWSELIST_HIDDEN = [
+            x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()]
+
         # initialize NZB and TORRENT providers
         providerList = providers.makeProviderList()
 
@@ -1143,6 +1222,9 @@ def initialize(console_logging=True):
                                                    not getattr(torrent_prov, 'supports_backlog')
             if hasattr(torrent_prov, 'enable_backlog'):
                 torrent_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
+            if hasattr(torrent_prov, 'enable_scheduled_backlog'):
+                torrent_prov.enable_scheduled_backlog = bool(check_setting_int(
+                    CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
             if hasattr(torrent_prov, 'search_mode'):
                 torrent_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
             if hasattr(torrent_prov, 'search_fallback'):
@@ -1170,6 +1252,9 @@ def initialize(console_logging=True):
                                                not getattr(nzb_prov, 'supports_backlog')
             if hasattr(nzb_prov, 'enable_backlog'):
                 nzb_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
+            if hasattr(nzb_prov, 'enable_scheduled_backlog'):
+                nzb_prov.enable_scheduled_backlog = bool(check_setting_int(
+                    CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
 
         if not os.path.isfile(CONFIG_FILE):
             logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
@@ -1344,6 +1429,13 @@ def start():
             indexermapper.indexer_list = [i for i in indexerApi().all_indexers]
             background_mapping_task.start()
 
+            for p in providers.sortedProviderList():
+                if p.is_active() and getattr(p, 'ping_freq', None):
+                    # noinspection PyProtectedMember
+                    provider_ping_thread_pool[p.get_id()] = threading.Thread(
+                        name='PING-PROVIDER %s' % p.name, target=p._ping)
+                    provider_ping_thread_pool[p.get_id()].start()
+
             for thread in enabled_schedulers(is_init=True):
                 thread.start()
 
@@ -1378,30 +1470,41 @@ def halt():
 
         if __INITIALIZED__:
 
-            logger.log(u'Aborting all threads')
+            logger.log('Exiting threads')
 
-            for thread in enabled_schedulers():
-                thread.stop.set()
+            for p in provider_ping_thread_pool:
+                provider_ping_thread_pool[p].stop = True
 
-            for thread in enabled_schedulers():
-                logger.log('Waiting for the %s thread to exit' % thread.name)
+            for p in provider_ping_thread_pool:
                 try:
-                    thread.join(10)
+                    provider_ping_thread_pool[p].join(10)
+                    logger.log('Thread %s has exit' % provider_ping_thread_pool[p].name)
                 except RuntimeError:
+                    logger.log('Fail, thread %s did not exit' % provider_ping_thread_pool[p].name)
                     pass
 
             if ADBA_CONNECTION:
                 try:
                     ADBA_CONNECTION.logout()
                 except AniDBBannedError as e:
-                    logger.log(u'ANIDB Error %s' % ex(e), logger.DEBUG)
+                    logger.log('AniDB Error %s' % ex(e), logger.DEBUG)
                 except AniDBError:
                     pass
-                logger.log(u'Waiting for the ANIDB CONNECTION thread to exit')
                 try:
                     ADBA_CONNECTION.join(10)
+                    logger.log('Thread %s has exit' % ADBA_CONNECTION.name)
                 except (StandardError, Exception):
-                    pass
+                    logger.log('Fail, thread %s did not exit' % ADBA_CONNECTION.name)
+
+            for thread in enabled_schedulers():
+                thread.stop.set()
+
+            for thread in enabled_schedulers():
+                try:
+                    thread.join(10)
+                    logger.log('Thread %s has exit' % thread.name)
+                except RuntimeError:
+                    logger.log('Thread %s did not exit' % thread.name)
 
             __INITIALIZED__ = False
             started = False
@@ -1427,6 +1530,9 @@ def save_config():
     # For passwords you must include the word `password` in the item_name and
     # add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
     new_config['General'] = {}
+    s_z = check_setting_int(CFG, 'General', 'stack_size', 0)
+    if s_z:
+        new_config['General']['stack_size'] = s_z
     new_config['General']['config_version'] = CONFIG_VERSION
     new_config['General']['branch'] = BRANCH
     new_config['General']['git_remote'] = GIT_REMOTE
@@ -1439,6 +1545,7 @@ def save_config():
     new_config['General']['web_host'] = WEB_HOST
     new_config['General']['web_port'] = WEB_PORT
     new_config['General']['web_ipv6'] = int(WEB_IPV6)
+    new_config['General']['web_ipv64'] = int(WEB_IPV64)
     new_config['General']['web_log'] = int(WEB_LOG)
     new_config['General']['web_root'] = WEB_ROOT
     new_config['General']['web_username'] = WEB_USERNAME
@@ -1462,11 +1569,13 @@ def save_config():
     new_config['General']['backlog_frequency'] = int(BACKLOG_FREQUENCY)
     new_config['General']['update_frequency'] = int(UPDATE_FREQUENCY)
     new_config['General']['download_propers'] = int(DOWNLOAD_PROPERS)
+    new_config['General']['propers_webdl_onegrp'] = int(PROPERS_WEBDL_ONEGRP)
     new_config['General']['check_propers_interval'] = CHECK_PROPERS_INTERVAL
     new_config['General']['allow_high_priority'] = int(ALLOW_HIGH_PRIORITY)
     new_config['General']['recentsearch_startup'] = int(RECENTSEARCH_STARTUP)
     new_config['General']['backlog_nofull'] = int(BACKLOG_NOFULL)
     new_config['General']['skip_removed_files'] = int(SKIP_REMOVED_FILES)
+    new_config['General']['results_sortby'] = str(RESULTS_SORTBY)
     new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
     new_config['General']['status_default'] = int(STATUS_DEFAULT)
     new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
@@ -1531,6 +1640,7 @@ def save_config():
     new_config['General']['create_missing_show_dirs'] = int(CREATE_MISSING_SHOW_DIRS)
     new_config['General']['add_shows_wo_dir'] = int(ADD_SHOWS_WO_DIR)
     new_config['General']['remove_filename_chars'] = REMOVE_FILENAME_CHARS
+    new_config['General']['import_default_checked_shows'] = int(IMPORT_DEFAULT_CHECKED_SHOWS)
 
     new_config['General']['extra_scripts'] = '|'.join(EXTRA_SCRIPTS)
     new_config['General']['git_path'] = GIT_PATH
@@ -1559,7 +1669,7 @@ def save_config():
                 ('api_key', None), ('passkey', None), ('digest', None), ('hash', None), ('username', ''), ('uid', ''),
                 ('minseed', 1), ('minleech', 1), ('confirmed', 1), ('freeleech', 1), ('reject_m2ts', 1),
                 ('enable_recentsearch', 1), ('enable_backlog', 1), ('search_mode', None), ('search_fallback', 1),
-                ('seed_time', None)] if hasattr(src, k)]:
+                ('seed_time', None), ('enable_scheduled_backlog', 1)] if hasattr(src, k)]:
             new_config[src_id_uc][setting] = value
 
         if hasattr(src, '_seed_ratio'):
@@ -1576,7 +1686,8 @@ def save_config():
         for attr in [x for x in ['api_key', 'username', 'search_mode'] if hasattr(src, x)]:
             new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
-        for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'search_fallback'] if hasattr(src, x)]:
+        for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'search_fallback',
+                                 'enable_scheduled_backlog'] if hasattr(src, x)]:
             new_config[src_id_uc]['%s_%s' % (src_id, attr)] = helpers.tryInt(getattr(src, attr, None))
 
     new_config['SABnzbd'] = {}
@@ -1615,89 +1726,39 @@ def save_config():
     new_config['Kodi'] = {}
     new_config['Kodi']['use_kodi'] = int(USE_KODI)
     new_config['Kodi']['kodi_always_on'] = int(KODI_ALWAYS_ON)
-    new_config['Kodi']['kodi_notify_onsnatch'] = int(KODI_NOTIFY_ONSNATCH)
-    new_config['Kodi']['kodi_notify_ondownload'] = int(KODI_NOTIFY_ONDOWNLOAD)
-    new_config['Kodi']['kodi_notify_onsubtitledownload'] = int(KODI_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['Kodi']['kodi_update_library'] = int(KODI_UPDATE_LIBRARY)
     new_config['Kodi']['kodi_update_full'] = int(KODI_UPDATE_FULL)
     new_config['Kodi']['kodi_update_onlyfirst'] = int(KODI_UPDATE_ONLYFIRST)
     new_config['Kodi']['kodi_host'] = KODI_HOST
     new_config['Kodi']['kodi_username'] = KODI_USERNAME
     new_config['Kodi']['kodi_password'] = helpers.encrypt(KODI_PASSWORD, ENCRYPTION_VERSION)
+    new_config['Kodi']['kodi_notify_onsnatch'] = int(KODI_NOTIFY_ONSNATCH)
+    new_config['Kodi']['kodi_notify_ondownload'] = int(KODI_NOTIFY_ONDOWNLOAD)
+    new_config['Kodi']['kodi_notify_onsubtitledownload'] = int(KODI_NOTIFY_ONSUBTITLEDOWNLOAD)
+
+    new_config['Plex'] = {}
+    new_config['Plex']['use_plex'] = int(USE_PLEX)
+    new_config['Plex']['plex_username'] = PLEX_USERNAME
+    new_config['Plex']['plex_password'] = helpers.encrypt(PLEX_PASSWORD, ENCRYPTION_VERSION)
+    new_config['Plex']['plex_update_library'] = int(PLEX_UPDATE_LIBRARY)
+    new_config['Plex']['plex_server_host'] = PLEX_SERVER_HOST
+    new_config['Plex']['plex_notify_onsnatch'] = int(PLEX_NOTIFY_ONSNATCH)
+    new_config['Plex']['plex_notify_ondownload'] = int(PLEX_NOTIFY_ONDOWNLOAD)
+    new_config['Plex']['plex_notify_onsubtitledownload'] = int(PLEX_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Plex']['plex_host'] = PLEX_HOST
 
     new_config['XBMC'] = {}
     new_config['XBMC']['use_xbmc'] = int(USE_XBMC)
     new_config['XBMC']['xbmc_always_on'] = int(XBMC_ALWAYS_ON)
-    new_config['XBMC']['xbmc_notify_onsnatch'] = int(XBMC_NOTIFY_ONSNATCH)
-    new_config['XBMC']['xbmc_notify_ondownload'] = int(XBMC_NOTIFY_ONDOWNLOAD)
-    new_config['XBMC']['xbmc_notify_onsubtitledownload'] = int(XBMC_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['XBMC']['xbmc_update_library'] = int(XBMC_UPDATE_LIBRARY)
     new_config['XBMC']['xbmc_update_full'] = int(XBMC_UPDATE_FULL)
     new_config['XBMC']['xbmc_update_onlyfirst'] = int(XBMC_UPDATE_ONLYFIRST)
+    new_config['XBMC']['xbmc_notify_onsnatch'] = int(XBMC_NOTIFY_ONSNATCH)
+    new_config['XBMC']['xbmc_notify_ondownload'] = int(XBMC_NOTIFY_ONDOWNLOAD)
+    new_config['XBMC']['xbmc_notify_onsubtitledownload'] = int(XBMC_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['XBMC']['xbmc_host'] = XBMC_HOST
     new_config['XBMC']['xbmc_username'] = XBMC_USERNAME
     new_config['XBMC']['xbmc_password'] = helpers.encrypt(XBMC_PASSWORD, ENCRYPTION_VERSION)
-
-    new_config['Plex'] = {}
-    new_config['Plex']['use_plex'] = int(USE_PLEX)
-    new_config['Plex']['plex_notify_onsnatch'] = int(PLEX_NOTIFY_ONSNATCH)
-    new_config['Plex']['plex_notify_ondownload'] = int(PLEX_NOTIFY_ONDOWNLOAD)
-    new_config['Plex']['plex_notify_onsubtitledownload'] = int(PLEX_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Plex']['plex_update_library'] = int(PLEX_UPDATE_LIBRARY)
-    new_config['Plex']['plex_server_host'] = PLEX_SERVER_HOST
-    new_config['Plex']['plex_host'] = PLEX_HOST
-    new_config['Plex']['plex_username'] = PLEX_USERNAME
-    new_config['Plex']['plex_password'] = helpers.encrypt(PLEX_PASSWORD, ENCRYPTION_VERSION)
-
-    new_config['Growl'] = {}
-    new_config['Growl']['use_growl'] = int(USE_GROWL)
-    new_config['Growl']['growl_notify_onsnatch'] = int(GROWL_NOTIFY_ONSNATCH)
-    new_config['Growl']['growl_notify_ondownload'] = int(GROWL_NOTIFY_ONDOWNLOAD)
-    new_config['Growl']['growl_notify_onsubtitledownload'] = int(GROWL_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Growl']['growl_host'] = GROWL_HOST
-    new_config['Growl']['growl_password'] = helpers.encrypt(GROWL_PASSWORD, ENCRYPTION_VERSION)
-
-    new_config['Prowl'] = {}
-    new_config['Prowl']['use_prowl'] = int(USE_PROWL)
-    new_config['Prowl']['prowl_notify_onsnatch'] = int(PROWL_NOTIFY_ONSNATCH)
-    new_config['Prowl']['prowl_notify_ondownload'] = int(PROWL_NOTIFY_ONDOWNLOAD)
-    new_config['Prowl']['prowl_notify_onsubtitledownload'] = int(PROWL_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Prowl']['prowl_api'] = PROWL_API
-    new_config['Prowl']['prowl_priority'] = PROWL_PRIORITY
-
-    new_config['Twitter'] = {}
-    new_config['Twitter']['use_twitter'] = int(USE_TWITTER)
-    new_config['Twitter']['twitter_notify_onsnatch'] = int(TWITTER_NOTIFY_ONSNATCH)
-    new_config['Twitter']['twitter_notify_ondownload'] = int(TWITTER_NOTIFY_ONDOWNLOAD)
-    new_config['Twitter']['twitter_notify_onsubtitledownload'] = int(TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Twitter']['twitter_username'] = TWITTER_USERNAME
-    new_config['Twitter']['twitter_password'] = helpers.encrypt(TWITTER_PASSWORD, ENCRYPTION_VERSION)
-    new_config['Twitter']['twitter_prefix'] = TWITTER_PREFIX
-
-    new_config['Boxcar2'] = {}
-    new_config['Boxcar2']['use_boxcar2'] = int(USE_BOXCAR2)
-    new_config['Boxcar2']['boxcar2_notify_onsnatch'] = int(BOXCAR2_NOTIFY_ONSNATCH)
-    new_config['Boxcar2']['boxcar2_notify_ondownload'] = int(BOXCAR2_NOTIFY_ONDOWNLOAD)
-    new_config['Boxcar2']['boxcar2_notify_onsubtitledownload'] = int(BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Boxcar2']['boxcar2_accesstoken'] = BOXCAR2_ACCESSTOKEN
-    new_config['Boxcar2']['boxcar2_sound'] = BOXCAR2_SOUND
-
-    new_config['Pushover'] = {}
-    new_config['Pushover']['use_pushover'] = int(USE_PUSHOVER)
-    new_config['Pushover']['pushover_notify_onsnatch'] = int(PUSHOVER_NOTIFY_ONSNATCH)
-    new_config['Pushover']['pushover_notify_ondownload'] = int(PUSHOVER_NOTIFY_ONDOWNLOAD)
-    new_config['Pushover']['pushover_notify_onsubtitledownload'] = int(PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Pushover']['pushover_userkey'] = PUSHOVER_USERKEY
-    new_config['Pushover']['pushover_apikey'] = PUSHOVER_APIKEY
-    new_config['Pushover']['pushover_priority'] = int(PUSHOVER_PRIORITY)
-    new_config['Pushover']['pushover_device'] = PUSHOVER_DEVICE
-    new_config['Pushover']['pushover_sound'] = PUSHOVER_SOUND
-
-    new_config['Libnotify'] = {}
-    new_config['Libnotify']['use_libnotify'] = int(USE_LIBNOTIFY)
-    new_config['Libnotify']['libnotify_notify_onsnatch'] = int(LIBNOTIFY_NOTIFY_ONSNATCH)
-    new_config['Libnotify']['libnotify_notify_ondownload'] = int(LIBNOTIFY_NOTIFY_ONDOWNLOAD)
-    new_config['Libnotify']['libnotify_notify_onsubtitledownload'] = int(LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD)
 
     new_config['NMJ'] = {}
     new_config['NMJ']['use_nmj'] = int(USE_NMJ)
@@ -1721,6 +1782,76 @@ def save_config():
     new_config['SynologyNotifier']['synologynotifier_notify_onsubtitledownload'] = int(
         SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD)
 
+    new_config['pyTivo'] = {}
+    new_config['pyTivo']['use_pytivo'] = int(USE_PYTIVO)
+    new_config['pyTivo']['pytivo_host'] = PYTIVO_HOST
+    new_config['pyTivo']['pytivo_share_name'] = PYTIVO_SHARE_NAME
+    new_config['pyTivo']['pytivo_tivo_name'] = PYTIVO_TIVO_NAME
+
+    new_config['Boxcar2'] = {}
+    new_config['Boxcar2']['use_boxcar2'] = int(USE_BOXCAR2)
+    new_config['Boxcar2']['boxcar2_notify_onsnatch'] = int(BOXCAR2_NOTIFY_ONSNATCH)
+    new_config['Boxcar2']['boxcar2_notify_ondownload'] = int(BOXCAR2_NOTIFY_ONDOWNLOAD)
+    new_config['Boxcar2']['boxcar2_notify_onsubtitledownload'] = int(BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Boxcar2']['boxcar2_accesstoken'] = BOXCAR2_ACCESSTOKEN
+    new_config['Boxcar2']['boxcar2_sound'] = BOXCAR2_SOUND
+
+    new_config['Pushbullet'] = {}
+    new_config['Pushbullet']['use_pushbullet'] = int(USE_PUSHBULLET)
+    new_config['Pushbullet']['pushbullet_notify_onsnatch'] = int(PUSHBULLET_NOTIFY_ONSNATCH)
+    new_config['Pushbullet']['pushbullet_notify_ondownload'] = int(PUSHBULLET_NOTIFY_ONDOWNLOAD)
+    new_config['Pushbullet']['pushbullet_notify_onsubtitledownload'] = int(PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Pushbullet']['pushbullet_access_token'] = PUSHBULLET_ACCESS_TOKEN
+    new_config['Pushbullet']['pushbullet_device_iden'] = PUSHBULLET_DEVICE_IDEN
+
+    new_config['Pushover'] = {}
+    new_config['Pushover']['use_pushover'] = int(USE_PUSHOVER)
+    new_config['Pushover']['pushover_notify_onsnatch'] = int(PUSHOVER_NOTIFY_ONSNATCH)
+    new_config['Pushover']['pushover_notify_ondownload'] = int(PUSHOVER_NOTIFY_ONDOWNLOAD)
+    new_config['Pushover']['pushover_notify_onsubtitledownload'] = int(PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Pushover']['pushover_userkey'] = PUSHOVER_USERKEY
+    new_config['Pushover']['pushover_apikey'] = PUSHOVER_APIKEY
+    new_config['Pushover']['pushover_priority'] = int(PUSHOVER_PRIORITY)
+    new_config['Pushover']['pushover_device'] = PUSHOVER_DEVICE
+    new_config['Pushover']['pushover_sound'] = PUSHOVER_SOUND
+
+    new_config['Growl'] = {}
+    new_config['Growl']['use_growl'] = int(USE_GROWL)
+    new_config['Growl']['growl_notify_onsnatch'] = int(GROWL_NOTIFY_ONSNATCH)
+    new_config['Growl']['growl_notify_ondownload'] = int(GROWL_NOTIFY_ONDOWNLOAD)
+    new_config['Growl']['growl_notify_onsubtitledownload'] = int(GROWL_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Growl']['growl_host'] = GROWL_HOST
+    new_config['Growl']['growl_password'] = helpers.encrypt(GROWL_PASSWORD, ENCRYPTION_VERSION)
+
+    new_config['Prowl'] = {}
+    new_config['Prowl']['use_prowl'] = int(USE_PROWL)
+    new_config['Prowl']['prowl_notify_onsnatch'] = int(PROWL_NOTIFY_ONSNATCH)
+    new_config['Prowl']['prowl_notify_ondownload'] = int(PROWL_NOTIFY_ONDOWNLOAD)
+    new_config['Prowl']['prowl_notify_onsubtitledownload'] = int(PROWL_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Prowl']['prowl_api'] = PROWL_API
+    new_config['Prowl']['prowl_priority'] = PROWL_PRIORITY
+
+    new_config['NMA'] = {}
+    new_config['NMA']['use_nma'] = int(USE_NMA)
+    new_config['NMA']['nma_notify_onsnatch'] = int(NMA_NOTIFY_ONSNATCH)
+    new_config['NMA']['nma_notify_ondownload'] = int(NMA_NOTIFY_ONDOWNLOAD)
+    new_config['NMA']['nma_notify_onsubtitledownload'] = int(NMA_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['NMA']['nma_api'] = NMA_API
+    new_config['NMA']['nma_priority'] = NMA_PRIORITY
+
+    new_config['Libnotify'] = {}
+    new_config['Libnotify']['use_libnotify'] = int(USE_LIBNOTIFY)
+    new_config['Libnotify']['libnotify_notify_onsnatch'] = int(LIBNOTIFY_NOTIFY_ONSNATCH)
+    new_config['Libnotify']['libnotify_notify_ondownload'] = int(LIBNOTIFY_NOTIFY_ONDOWNLOAD)
+    new_config['Libnotify']['libnotify_notify_onsubtitledownload'] = int(LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD)
+
+    new_config['Pushalot'] = {}
+    new_config['Pushalot']['use_pushalot'] = int(USE_PUSHALOT)
+    new_config['Pushalot']['pushalot_notify_onsnatch'] = int(PUSHALOT_NOTIFY_ONSNATCH)
+    new_config['Pushalot']['pushalot_notify_ondownload'] = int(PUSHALOT_NOTIFY_ONDOWNLOAD)
+    new_config['Pushalot']['pushalot_notify_onsubtitledownload'] = int(PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Pushalot']['pushalot_authorizationtoken'] = PUSHALOT_AUTHORIZATIONTOKEN
+
     new_config['Trakt'] = {}
     new_config['Trakt']['use_trakt'] = int(USE_TRAKT)
     new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
@@ -1734,38 +1865,44 @@ def save_config():
     new_config['Trakt']['trakt_accounts'] = TraktAPI.build_config_string(TRAKT_ACCOUNTS)
     new_config['Trakt']['trakt_mru'] = TRAKT_MRU
 
-    new_config['pyTivo'] = {}
-    new_config['pyTivo']['use_pytivo'] = int(USE_PYTIVO)
-    new_config['pyTivo']['pytivo_notify_onsnatch'] = int(PYTIVO_NOTIFY_ONSNATCH)
-    new_config['pyTivo']['pytivo_notify_ondownload'] = int(PYTIVO_NOTIFY_ONDOWNLOAD)
-    new_config['pyTivo']['pytivo_notify_onsubtitledownload'] = int(PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['pyTivo']['pyTivo_update_library'] = int(PYTIVO_UPDATE_LIBRARY)
-    new_config['pyTivo']['pytivo_host'] = PYTIVO_HOST
-    new_config['pyTivo']['pytivo_share_name'] = PYTIVO_SHARE_NAME
-    new_config['pyTivo']['pytivo_tivo_name'] = PYTIVO_TIVO_NAME
+    new_config['Slack'] = {}
+    new_config['Slack']['use_slack'] = int(USE_SLACK)
+    new_config['Slack']['slack_notify_onsnatch'] = int(SLACK_NOTIFY_ONSNATCH)
+    new_config['Slack']['slack_notify_ondownload'] = int(SLACK_NOTIFY_ONDOWNLOAD)
+    new_config['Slack']['slack_notify_onsubtitledownload'] = int(SLACK_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Slack']['slack_channel'] = SLACK_CHANNEL
+    new_config['Slack']['slack_as_authed'] = int(SLACK_AS_AUTHED)
+    new_config['Slack']['slack_bot_name'] = SLACK_BOT_NAME
+    new_config['Slack']['slack_icon_url'] = SLACK_ICON_URL
+    new_config['Slack']['slack_access_token'] = SLACK_ACCESS_TOKEN
 
-    new_config['NMA'] = {}
-    new_config['NMA']['use_nma'] = int(USE_NMA)
-    new_config['NMA']['nma_notify_onsnatch'] = int(NMA_NOTIFY_ONSNATCH)
-    new_config['NMA']['nma_notify_ondownload'] = int(NMA_NOTIFY_ONDOWNLOAD)
-    new_config['NMA']['nma_notify_onsubtitledownload'] = int(NMA_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['NMA']['nma_api'] = NMA_API
-    new_config['NMA']['nma_priority'] = NMA_PRIORITY
+    new_config['Discordapp'] = {}
+    new_config['Discordapp']['use_discordapp'] = int(USE_DISCORDAPP)
+    new_config['Discordapp']['discordapp_notify_onsnatch'] = int(DISCORDAPP_NOTIFY_ONSNATCH)
+    new_config['Discordapp']['discordapp_notify_ondownload'] = int(DISCORDAPP_NOTIFY_ONDOWNLOAD)
+    new_config['Discordapp']['discordapp_notify_onsubtitledownload'] = int(DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Discordapp']['discordapp_as_authed'] = int(DISCORDAPP_AS_AUTHED)
+    new_config['Discordapp']['discordapp_username'] = DISCORDAPP_USERNAME
+    new_config['Discordapp']['discordapp_icon_url'] = DISCORDAPP_ICON_URL
+    new_config['Discordapp']['discordapp_as_tts'] = int(DISCORDAPP_AS_TTS)
+    new_config['Discordapp']['discordapp_access_token'] = DISCORDAPP_ACCESS_TOKEN
 
-    new_config['Pushalot'] = {}
-    new_config['Pushalot']['use_pushalot'] = int(USE_PUSHALOT)
-    new_config['Pushalot']['pushalot_notify_onsnatch'] = int(PUSHALOT_NOTIFY_ONSNATCH)
-    new_config['Pushalot']['pushalot_notify_ondownload'] = int(PUSHALOT_NOTIFY_ONDOWNLOAD)
-    new_config['Pushalot']['pushalot_notify_onsubtitledownload'] = int(PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Pushalot']['pushalot_authorizationtoken'] = PUSHALOT_AUTHORIZATIONTOKEN
+    new_config['Gitter'] = {}
+    new_config['Gitter']['use_gitter'] = int(USE_GITTER)
+    new_config['Gitter']['gitter_notify_onsnatch'] = int(GITTER_NOTIFY_ONSNATCH)
+    new_config['Gitter']['gitter_notify_ondownload'] = int(GITTER_NOTIFY_ONDOWNLOAD)
+    new_config['Gitter']['gitter_notify_onsubtitledownload'] = int(GITTER_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Gitter']['gitter_room'] = GITTER_ROOM
+    new_config['Gitter']['gitter_access_token'] = GITTER_ACCESS_TOKEN
 
-    new_config['Pushbullet'] = {}
-    new_config['Pushbullet']['use_pushbullet'] = int(USE_PUSHBULLET)
-    new_config['Pushbullet']['pushbullet_notify_onsnatch'] = int(PUSHBULLET_NOTIFY_ONSNATCH)
-    new_config['Pushbullet']['pushbullet_notify_ondownload'] = int(PUSHBULLET_NOTIFY_ONDOWNLOAD)
-    new_config['Pushbullet']['pushbullet_notify_onsubtitledownload'] = int(PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD)
-    new_config['Pushbullet']['pushbullet_access_token'] = PUSHBULLET_ACCESS_TOKEN
-    new_config['Pushbullet']['pushbullet_device_iden'] = PUSHBULLET_DEVICE_IDEN
+    new_config['Twitter'] = {}
+    new_config['Twitter']['use_twitter'] = int(USE_TWITTER)
+    new_config['Twitter']['twitter_notify_onsnatch'] = int(TWITTER_NOTIFY_ONSNATCH)
+    new_config['Twitter']['twitter_notify_ondownload'] = int(TWITTER_NOTIFY_ONDOWNLOAD)
+    new_config['Twitter']['twitter_notify_onsubtitledownload'] = int(TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD)
+    new_config['Twitter']['twitter_username'] = TWITTER_USERNAME
+    new_config['Twitter']['twitter_password'] = helpers.encrypt(TWITTER_PASSWORD, ENCRYPTION_VERSION)
+    new_config['Twitter']['twitter_prefix'] = TWITTER_PREFIX
 
     new_config['Email'] = {}
     new_config['Email']['use_email'] = int(USE_EMAIL)
@@ -1830,6 +1967,7 @@ def save_config():
     new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
     new_config['GUI']['show_tag_default'] = SHOW_TAG_DEFAULT
     new_config['GUI']['history_layout'] = HISTORY_LAYOUT
+    new_config['GUI']['browselist_hidden'] = '|~|'.join(BROWSELIST_HIDDEN)
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)

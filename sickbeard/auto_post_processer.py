@@ -43,6 +43,6 @@ class PostProcesser():
                        '(and probably not what you really want to process)' % sickbeard.TV_DOWNLOAD_DIR, logger.ERROR)
             return
 
-        processTV.processDir(sickbeard.TV_DOWNLOAD_DIR)
+        processTV.processDir(sickbeard.TV_DOWNLOAD_DIR, is_basedir=True)
 
         self.amActive = False

@@ -47,7 +47,7 @@
 					</div>
 
 					<fieldset class="component-group-list">
-						<div class="field-pair">
+						<div class="field-pair" style="padding-bottom:0">
 							<label for="download_propers">
 								<span class="component-title">Download propers</span>
 								<span class="component-desc">
@@ -57,6 +57,19 @@
 							</label>
 						</div>
 						<div id="content_download_propers">
+							<span class="component-desc">
+                                <p>Optional: to improve matching, install the OS dependent <a href="https://pypi.python.org/pypi/regex" target="_blank">regex python library</a></p>
+                                <p>at a command line, simply enter ... <code>python -m pip install regex</code></p>
+                            </span>
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Limit WebDL propers</span>
+									<span class="component-desc">
+										<input type="checkbox" name="propers_webdl_onegrp"#echo ('', $html_checked)[$sickbeard.PROPERS_WEBDL_ONEGRP]#>
+										<p>Only allow WebDL 'Propers' from the original release group</p>
+									</span>
+								</label>
+							</div>
 							<div class="field-pair">
 								<label for="check_propers_interval">
 									<span class="component-title">Check propers every:</span>
@@ -401,7 +414,7 @@
 							</div>
 						</div>
 
-						<div class="testNotification" id="test-nzb-result">Click below to test</div>
+						<div class="test-notification" id="test-nzb-result">Click below to test</div>
 						<input type="button" value="Test SABnzbd" id="test_sabnzbd" class="btn test-button sabnzbd">
 						<input type="button" value="Test NZBget" id="test_nzbget" class="btn test-button nzbget">
 						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
@@ -564,7 +577,7 @@
 								</label>
 							</div>
 
-							<div class="testNotification" id="test-torrent-result">Click below to test</div>
+							<div class="test-notification" id="test-torrent-result">Click below to test</div>
 							<input type="button" value="Test Connection" id="test_torrent" class="btn test-button">
 							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 							</div>

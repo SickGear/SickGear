@@ -39,8 +39,7 @@ class HDSpaceProvider(generic.TorrentProvider):
                      'login_action': self.url_base + 'index.php?page=login',
                      'browse': self.url_base + 'index.php?page=torrents&' + '&'.join(
                          ['options=0', 'active=1', 'category=']),
-                     'search': '&search=%s',
-                     'get': self.url_base + '%s'}
+                     'search': '&search=%s'}
 
         self.categories = {'shows': [21, 22, 24, 25, 27, 28]}
 
@@ -49,7 +48,7 @@ class HDSpaceProvider(generic.TorrentProvider):
         self.filter = []
         self.may_filter = OrderedDict([
             ('f0', ('not marked', False, '')), ('f25', ('FL', True, 'gold|sf')), ('f50', ('F/L', True, 'silver|sf'))])
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.username, self.password, self.scene, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -135,14 +134,6 @@ class HDSpaceProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-    def _season_strings(self, ep_obj, **kwargs):
-
-        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False)
-
-    def _episode_strings(self, ep_obj, **kwargs):
-
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
 
 provider = HDSpaceProvider()

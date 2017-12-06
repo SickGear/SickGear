@@ -34,10 +34,12 @@ import traceback
 import urlparse
 import uuid
 import subprocess
+import sys
 
 import adba
 import requests
 import requests.exceptions
+from cfscrape import CloudflareScraper
 import sickbeard
 import subliminal
 
@@ -53,7 +55,8 @@ except ImportError:
 
 from sickbeard.exceptions import MultipleShowObjectsException, ex
 from sickbeard import logger, db, notifiers, clients
-from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions, cpu_presets
+from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions, cpu_presets, statusStrings, \
+    SNATCHED_ANY, DOWNLOADED, ARCHIVED, IGNORED, Quality
 from sickbeard import encodingKludge as ek
 
 from lib.cachecontrol import CacheControl, caches
@@ -222,7 +225,7 @@ def makeDir(path):
         try:
             ek.ek(os.makedirs, path)
             # do the library update for synoindex
-            notifiers.synoindex_notifier.addFolder(path)
+            notifiers.NotifierFactory().get('SYNOINDEX').addFolder(path)
         except OSError:
             return False
     return True
@@ -298,7 +301,7 @@ def listMediaFiles(path):
 
 def copyFile(srcFile, destFile):
     if os.name.startswith('posix'):
-        subprocess.call(['cp', srcFile, destFile])
+        ek.ek(subprocess.call, ['cp', srcFile, destFile])
     else:
         ek.ek(shutil.copyfile, srcFile, destFile)
 
@@ -392,7 +395,7 @@ def make_dirs(path):
                     # use normpath to remove end separator, otherwise checks permissions against itself
                     chmodAsParent(ek.ek(os.path.normpath, sofar))
                     # do the library update for synoindex
-                    notifiers.synoindex_notifier.addFolder(sofar)
+                    notifiers.NotifierFactory().get('SYNOINDEX').addFolder(sofar)
                 except (OSError, IOError) as e:
                     logger.log(u'Failed creating %s : %s' % (sofar, ex(e)), logger.ERROR)
                     return False
@@ -475,7 +478,7 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
                 # need shutil.rmtree when ignore_items is really implemented
                 ek.ek(os.rmdir, check_empty_dir)
                 # do the library update for synoindex
-                notifiers.synoindex_notifier.deleteFolder(check_empty_dir)
+                notifiers.NotifierFactory().get('SYNOINDEX').deleteFolder(check_empty_dir)
             except OSError as e:
                 logger.log(u"Unable to delete " + check_empty_dir + ": " + repr(e) + " / " + str(e), logger.WARNING)
                 break
@@ -613,7 +616,7 @@ def sanitizeSceneName(name):
     """
 
     if name:
-        bad_chars = u",:()'!?\u2019"
+        bad_chars = u",:()£'!?\u2019"
 
         # strip out any bad chars
         for x in bad_chars:
@@ -644,12 +647,12 @@ def create_https_certificates(ssl_cert, ssl_key):
         return False
 
     # Create the CA Certificate
-    cakey = createKeyPair(TYPE_RSA, 1024)
+    cakey = createKeyPair(TYPE_RSA, 4096)
     careq = createCertRequest(cakey, CN='Certificate Authority')
     cacert = createCertificate(careq, (careq, cakey), serial, (0, 60 * 60 * 24 * 365 * 10))  # ten years
 
     cname = 'SickGear'
-    pkey = createKeyPair(TYPE_RSA, 1024)
+    pkey = createKeyPair(TYPE_RSA, 4096)
     req = createCertRequest(pkey, CN=cname)
     cert = createCertificate(req, (cacert, cakey), serial, (0, 60 * 60 * 24 * 365 * 10))  # ten years
 
@@ -1015,15 +1018,14 @@ def set_up_anidb_connection():
     return sickbeard.ADBA_CONNECTION.authed()
 
 
-def touchFile(fname, atime=None):
-    if None != atime:
+def touch_file(fname, atime=None):
+    if None is not atime:
         try:
             with open(fname, 'a'):
                 ek.ek(os.utime, fname, (atime, atime))
-                return True
-        except:
-            logger.log(u"File air date stamping not available on your OS", logger.DEBUG)
-            pass
+            return True
+        except (StandardError, Exception):
+            logger.log('File air date stamping not available on your OS', logger.DEBUG)
 
     return False
 
@@ -1099,46 +1101,61 @@ def proxy_setting(proxy_setting, request_url, force=False):
     return (False, proxy_address)[request_url_match], True
 
 
-def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False, raise_status_code=False, **kwargs):
+def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=None, json=False,
+           raise_status_code=False, raise_exceptions=False, **kwargs):
     """
-    Returns a byte-string retrieved from the url provider.
+    Either
+    1) Returns a byte-string retrieved from the url provider.
+    2) Return True/False if success after using kwargs 'savefile' set to file pathname.
     """
 
-    # request session
-    if None is session:
-        session = requests.session()
-
-    if not kwargs.get('nocache'):
-        cache_dir = sickbeard.CACHE_DIR or _getTempDir()
-        session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
-    else:
-        del(kwargs['nocache'])
-
-    # request session headers
-    req_headers = {'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip,deflate'}
-    if headers:
-        req_headers.update(headers)
-    session.headers.update(req_headers)
-
+    # selectively mute some errors
     mute = []
     for muted in filter(
             lambda x: kwargs.get(x, False), ['mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout']):
         mute += [muted]
         del kwargs[muted]
 
-    # request session ssl verify
-    session.verify = False
+    # reuse or instantiate request session
+    if None is session:
+        session = CloudflareScraper.create_scraper()
 
-    # request session paramaters
+    # download and save file or simply fetch url
+    savename = None
+    if 'savename' in kwargs:
+        # session streaming
+        session.stream = True
+        savename = kwargs.pop('savename')
+
+    if 'nocache' in kwargs:
+        del kwargs['nocache']
+    else:
+        cache_dir = sickbeard.CACHE_DIR or _getTempDir()
+        session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
+
+    # session master headers
+    req_headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                   'Accept-Encoding': 'gzip,deflate', 'User-Agent': USER_AGENT}
+    if headers:
+        req_headers.update(headers)
+    if hasattr(session, 'reserved') and 'headers' in session.reserved:
+        req_headers.update(session.reserved['headers'] or {})
+    session.headers.update(req_headers)
+
+    # session paramaters
     session.params = params
 
+    # session ssl verify
+    session.verify = False
+
+    response = None
     try:
-        # Remove double-slashes from url
+        # sanitise url
         parsed = list(urlparse.urlparse(url))
-        parsed[2] = re.sub("/{2,}", "/", parsed[2])  # replace two or more / with one
+        parsed[2] = re.sub('/{2,}', '/', parsed[2])  # replace two or more / with one
         url = urlparse.urlunparse(parsed)
 
-        # request session proxies
+        # session proxies
         if sickbeard.PROXY_SETTING:
             (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING, url)
             msg = '%sproxy for url: %s' % (('', 'PAC parsed ')[pac_found], url)
@@ -1147,46 +1164,45 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                 return
             elif proxy_address:
                 logger.log('Using %s' % msg, logger.DEBUG)
-                session.proxies = {
-                    'http': proxy_address,
-                    'https': proxy_address
-                }
+                session.proxies = {'http': proxy_address, 'https': proxy_address}
 
         # decide if we get or post data to server
         if 'post_json' in kwargs:
-            kwargs.setdefault('json', kwargs.get('post_json'))
-            del(kwargs['post_json'])
+            kwargs.setdefault('json', kwargs.pop('post_json'))
+
         if post_data:
             kwargs.setdefault('data', post_data)
+
         if 'data' in kwargs or 'json' in kwargs:
-            resp = session.post(url, timeout=timeout, **kwargs)
+            response = session.post(url, timeout=timeout, **kwargs)
         else:
-            resp = session.get(url, timeout=timeout, **kwargs)
-            if resp.ok and not resp.content and 'url=' in resp.headers.get('Refresh', '').lower():
-                url = resp.headers.get('Refresh').lower().split('url=')[1].strip('/')
+            response = session.get(url, timeout=timeout, **kwargs)
+            if response.ok and not response.content and 'url=' in response.headers.get('Refresh', '').lower():
+                url = response.headers.get('Refresh').lower().split('url=')[1].strip('/')
                 if not url.startswith('http'):
                     parsed[2] = '/%s' % url
                     url = urlparse.urlunparse(parsed)
-                resp = session.get(url, timeout=timeout, **kwargs)
+                response = session.get(url, timeout=timeout, **kwargs)
 
         if raise_status_code:
-            resp.raise_for_status()
+            response.raise_for_status()
 
-        if not resp.ok:
-            http_err_text = 'CloudFlare Ray ID' in resp.content and 'CloudFlare reports, "Website is offline"; ' or ''
-            if resp.status_code in clients.http_error_code:
-                http_err_text += clients.http_error_code[resp.status_code]
-            elif resp.status_code in range(520, 527):
+        if not response.ok:
+            http_err_text = 'CloudFlare Ray ID' in response.content and \
+                            'CloudFlare reports, "Website is offline"; ' or ''
+            if response.status_code in clients.http_error_code:
+                http_err_text += clients.http_error_code[response.status_code]
+            elif response.status_code in range(520, 527):
                 http_err_text += 'Origin server connection failure'
             else:
                 http_err_text = 'Custom HTTP error code'
             logger.log(u'Response not ok. %s: %s from requested url %s'
-                       % (resp.status_code, http_err_text, url), logger.DEBUG)
+                       % (response.status_code, http_err_text, url), logger.DEBUG)
             return
 
     except requests.exceptions.HTTPError as e:
         if raise_status_code:
-            resp.raise_for_status()
+            response.raise_for_status()
         logger.log(u'HTTP error %s while loading URL%s' % (
             e.errno, _maybe_request_url(e)), logger.WARNING)
         return
@@ -1194,16 +1210,22 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         if 'mute_connect_err' not in mute:
             logger.log(u'Connection error msg:%s while loading URL%s' % (
                 e.message, _maybe_request_url(e)), logger.WARNING)
+        if raise_exceptions:
+            raise e
         return
     except requests.exceptions.ReadTimeout as e:
         if 'mute_read_timeout' not in mute:
             logger.log(u'Read timed out msg:%s while loading URL%s' % (
                 e.message, _maybe_request_url(e)), logger.WARNING)
+        if raise_exceptions:
+            raise e
         return
     except (requests.exceptions.Timeout, socket.timeout) as e:
         if 'mute_connect_timeout' not in mute:
             logger.log(u'Connection timed out msg:%s while loading URL %s' % (
                 e.message, _maybe_request_url(e, url)), logger.WARNING)
+        if raise_exceptions:
+            raise e
         return
     except Exception as e:
         if e.message:
@@ -1212,88 +1234,50 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         else:
             logger.log(u'Unknown exception while loading URL %s\r\nDetail... %s'
                        % (url, traceback.format_exc()), logger.WARNING)
+        if raise_exceptions:
+            raise e
         return
 
     if json:
         try:
-            return resp.json()
+            data_json = response.json()
+            return ({}, data_json)[isinstance(data_json, (dict, list))]
         except (TypeError, Exception) as e:
             logger.log(u'JSON data issue from URL %s\r\nDetail... %s' % (url, e.message), logger.WARNING)
+            if raise_exceptions:
+                raise e
             return None
 
-    return resp.content
+    if savename:
+        try:
+            with open(savename, 'wb') as fp:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        fp.write(chunk)
+                        fp.flush()
+                ek.ek(os.fsync, fp.fileno())
+
+            chmodAsParent(savename)
+
+        except EnvironmentError as e:
+            logger.log(u'Unable to save the file: ' + ex(e), logger.ERROR)
+            if raise_exceptions:
+                raise e
+            return
+        return True
+
+    return response.content
 
 
 def _maybe_request_url(e, def_url=''):
     return hasattr(e, 'request') and hasattr(e.request, 'url') and ' ' + e.request.url or def_url
 
 
-def download_file(url, filename, session=None):
-    # create session
-    if None is session:
-        session = requests.session()
-    cache_dir = sickbeard.CACHE_DIR or _getTempDir()
-    session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
+def download_file(url, filename, session=None, **kwargs):
 
-    # request session headers
-    session.headers.update({'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip,deflate'})
-
-    # request session ssl verify
-    session.verify = False
-
-    # request session streaming
-    session.stream = True
-
-    # request session proxies
-    if sickbeard.PROXY_SETTING:
-        (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING, url)
-        msg = '%sproxy for url: %s' % (('', 'PAC parsed ')[pac_found], url)
-        if None is proxy_address:
-            logger.log('Proxy error, aborted the request using %s' % msg, logger.DEBUG)
-            return
-        elif proxy_address:
-            logger.log('Using %s' % msg, logger.DEBUG)
-            session.proxies = {
-                'http': proxy_address,
-                'https': proxy_address
-            }
-
-    try:
-        resp = session.get(url)
-        if not resp.ok:
-            logger.log(u"Requested url " + url + " returned status code is " + str(
-                resp.status_code) + ': ' + clients.http_error_code[resp.status_code], logger.DEBUG)
-            return False
-
-        with open(filename, 'wb') as fp:
-            for chunk in resp.iter_content(chunk_size=1024):
-                if chunk:
-                    fp.write(chunk)
-                    fp.flush()
-            ek.ek(os.fsync, fp.fileno())
-
-        chmodAsParent(filename)
-    except requests.exceptions.HTTPError as e:
+    if None is getURL(url, session=session, savename=filename, **kwargs):
         remove_file_failed(filename)
-        logger.log(u"HTTP error " + str(e.errno) + " while loading URL " + url, logger.WARNING)
         return False
-    except requests.exceptions.ConnectionError as e:
-        remove_file_failed(filename)
-        logger.log(u"Connection error " + str(e.message) + " while loading URL " + url, logger.WARNING)
-        return False
-    except requests.exceptions.Timeout as e:
-        remove_file_failed(filename)
-        logger.log(u"Connection timed out " + str(e.message) + " while loading URL " + url, logger.WARNING)
-        return False
-    except EnvironmentError as e:
-        remove_file_failed(filename)
-        logger.log(u"Unable to save the file: " + ex(e), logger.ERROR)
-        return False
-    except Exception:
-        remove_file_failed(filename)
-        logger.log(u"Unknown exception while loading URL " + url + ": " + traceback.format_exc(), logger.WARNING)
-        return False
-
     return True
 
 
@@ -1351,12 +1335,10 @@ def human(size):
 def get_size(start_path='.'):
     if ek.ek(os.path.isfile, start_path):
         return ek.ek(os.path.getsize, start_path)
-    total_size = 0
-    for dirpath, dirnames, filenames in ek.ek(os.walk, start_path):
-        for f in filenames:
-            fp = ek.ek(os.path.join, dirpath, f)
-            total_size += ek.ek(os.path.getsize, fp)
-    return total_size
+    try:
+        return sum(map((lambda x: x.stat(follow_symlinks=False).st_size), scantree(start_path)))
+    except OSError:
+        return 0
 
 
 def remove_article(text=''):
@@ -1495,8 +1477,8 @@ def cleanup_cache():
     """
     Delete old cached files
     """
-    delete_not_changed_in([ek.ek(os.path.join, sickbeard.CACHE_DIR, *x) for x in [
-        ('images', 'trakt'), ('images', 'imdb'), ('images', 'anidb')]])
+    delete_not_changed_in([ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'browse', 'thumb', x) for x in [
+        'anidb', 'imdb', 'trakt', 'tvdb']])
 
 
 def delete_not_changed_in(paths, days=30, minutes=0):
@@ -1534,3 +1516,42 @@ def set_file_timestamp(filename, min_age=3, new_time=None):
             ek.ek(os.utime, filename, new_time)
     except (StandardError, Exception):
         pass
+
+
+def should_delete_episode(status):
+    s = Quality.splitCompositeStatus(status)
+    if s not in SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED]:
+        return True
+    logger.log('not safe to delete episode from db because of status: %s' % statusStrings[s], logger.DEBUG)
+    return False
+
+
+def is_link(filepath):
+    """
+    Check if given file/pathname is symbolic link
+
+    :param filepath: file or path to check
+    :return: True or False
+    """
+    if 'win32' == sys.platform:
+        if not ek.ek(os.path.exists, filepath):
+            return False
+
+        import ctypes
+        invalid_file_attributes = 0xFFFFFFFF
+        file_attribute_reparse_point = 0x0400
+
+        attr = ctypes.windll.kernel32.GetFileAttributesW(unicode(filepath))
+        return invalid_file_attributes != attr and 0 != attr & file_attribute_reparse_point
+
+    return ek.ek(os.path.islink, filepath)
+
+
+def datetime_to_epoch(dt):
+    """ convert a datetime to seconds after (or possibly before) 1970-1-1 """
+    """ can raise an error with dates pre 1970-1-1 """
+    if not isinstance(getattr(dt, 'tzinfo'), datetime.tzinfo):
+        from sickbeard.network_timezones import sb_timezone
+        dt = dt.replace(tzinfo=sb_timezone)
+    utc_naive = dt.replace(tzinfo=None) - dt.utcoffset()
+    return int((utc_naive - datetime.datetime(1970, 1, 1)).total_seconds())

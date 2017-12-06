@@ -19,6 +19,11 @@
 # all regexes are case insensitive
 
 normal_regexes = [
+    ('garbage_name',
+     '''
+     ^[a-zA-Z0-9]{3,}$
+     '''
+     ),
     ('standard_repeat',
      # Show.Name.S01E02.S01E03.Source.Quality.Etc-Group
      # Show Name - S01E02 - S01E03 - S01E04 - Ep Name
@@ -32,7 +37,7 @@ normal_regexes = [
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 
     ('fov_repeat',
      # Show.Name.1x02.1x03.Source.Quality.Etc-Group
@@ -47,7 +52,7 @@ normal_regexes = [
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 
     ('standard',
      # Show.Name.S01E02.Source.Quality.Etc-Group
@@ -61,12 +66,12 @@ normal_regexes = [
      s(?P<season_num>\d+)[. _-]*                   # S01 and optional separator
      e(?P<ep_num>\d+)                              # E02 and separator
      (([. _-]*e|-)                                 # linking e/- char
-     (?P<extra_ep_num>(?!(1080|720|480)[pi])\d+))* # additional E03/etc
+     (?P<extra_ep_num>(?!(2160|1080|720|480)[pi])\d+))* # additional E03/etc
      [. _-]*((?P<extra_info>.+?)                   # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 
     ('fov',
      # Show_Name.1x02.Source_Quality_Etc-Group
@@ -79,13 +84,13 @@ normal_regexes = [
      (?P<ep_num>\d+)                               # 02 and separator
      (([. _-]*x|-)                                 # linking x/- char
      (?P<extra_ep_num>
-     (?!(1080|720|480)[pi])(?!(?<=x)264)           # ignore obviously wrong multi-eps
+     (?!(2160|1080|720|480)[pi])(?!(?<=x)264)      # ignore obviously wrong multi-eps
      \d+))*                                        # additional x03/etc
      [\]. _-]*((?P<extra_info>.+?)                 # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 
     ('scene_date_format',
      # Show.Name.2010.11.23.Source.Quality.Etc-Group
@@ -99,7 +104,23 @@ normal_regexes = [
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
+
+    ('uk_date_format',
+     # Show.Name.23.11.2010.Source.Quality.Etc-Group
+     # Show Name - 23-11-2010 - Ep Name
+     # Show Name - 14-08-17 - Ep Name
+     # Show Name - 14 Jan 17 - Ep Name
+     '''
+     ^((?P<series_name>.+?)[. _-]+)?               # Show_Name and separator
+     \(?(?P<air_day>\d{2})[. _-]+                  # 23 and separator
+     (?P<air_month>(?:\d{2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*))[. _-]+ # 11 and separator
+     (?P<air_year>(?:19|20)?\d{2})\)?              # 2010 and separator
+     [. _-]*((?P<extra_info>.+?)                   # Source_Quality_Etc-
+     ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
+     -(?P<release_group>[^- ]+))?)?$               # Group
+     '''
+     ),
 
     ('stupid',
      # tpz-abc102
@@ -109,7 +130,7 @@ normal_regexes = [
      (?P<season_num>\d{1,2})                       # 1
      (?P<ep_num>\d{2})$                            # 02
      '''
-    ),
+     ),
 
     ('verbose',
      # Show Name Season 1 Episode 2 Ep Name
@@ -121,7 +142,7 @@ normal_regexes = [
      (?P<ep_num>\d+)[. _-]+                        # 02 and separator
      (?P<extra_info>.+)$                           # Source_Quality_Etc-
      '''
-    ),
+     ),
 
     ('season_only',
      # Show.Name.S01.Source.Quality.Etc-Group
@@ -133,7 +154,7 @@ normal_regexes = [
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 
     ('no_season_multi_ep',
      # Show.Name.E02-03
@@ -143,12 +164,12 @@ normal_regexes = [
      (e(p(isode)?)?|part|pt)[. _-]?                # e, ep, episode, or part
      (?P<ep_num>(\d+|[ivx]+))                      # first ep num
      ((([. _-]+(and|&|to)[. _-]+)|-)               # and/&/to joiner
-     (?P<extra_ep_num>(?!(1080|720|480)[pi])(\d+|[ivx]+))[. _-])            # second ep num
+     (?P<extra_ep_num>(?!(2160|1080|720|480)[pi])(\d+|[ivx]+))[. _-])            # second ep num
      ([. _-]*(?P<extra_info>.+?)                   # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 
     ('no_season_general',
      # Show.Name.E23.Test
@@ -160,13 +181,13 @@ normal_regexes = [
      (?P<ep_num>(\d+|([ivx]+(?=[. _-]))))          # first ep num
      ([. _-]+((and|&|to)[. _-]+)?                  # and/&/to joiner
      ((e(p(isode)?)?|part|pt)[. _-]?)              # e, ep, episode, or part
-     (?P<extra_ep_num>(?!(1080|720|480)[pi])
+     (?P<extra_ep_num>(?!(2160|1080|720|480)[pi])
      (\d+|([ivx]+(?=[. _-]))))[. _-])*             # second ep num
      ([. _-]*(?P<extra_info>.+?)                   # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 
     ('bare',
      # Show.Name.102.Source.Quality.Etc-Group
@@ -177,20 +198,21 @@ normal_regexes = [
      ([. _-]+(?P<extra_info>(?!\d{3}[. _-]+)[^-]+) # Source_Quality_Etc-
      (-(?P<release_group>.+))?)?$                  # Group
      '''
-    ),
+     ),
 
     ('no_season',
      # Show Name - 01 - Ep Name
      # 01 - Ep Name
      '''
      ^((?P<series_name>.+?)(?:[. _-]{2,}|[. _]))?  # Show_Name and separator
-     (?P<ep_num>\d{1,2})                           # 01
-     (?:-(?P<extra_ep_num>\d{1,2}))*               # 02
+     (?P<ep_num>\d{1,3}(?!\d))                     # 01
+     (?:-(?P<extra_ep_num>\d{1,3}(?!\d)))*         # 02
+     (\s*(?:of)?\s*\d{1,3})?                       # of num eps
      [. _-]+((?P<extra_info>.+?)                   # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 ]
 
 anime_regexes = [
@@ -206,7 +228,8 @@ anime_regexes = [
      (?:[ ._]?\[(?P<crc>\w+)\])?
      .*?
      '''
-    ),
+     ),
+
     ('anime_standard',
      # [Group Name] Show Name.13-14
      # [Group Name] Show Name - 13-14
@@ -223,7 +246,9 @@ anime_regexes = [
      [ ._-]+\[(?P<extra_info>\d{3,4}[xp]?\d{0,4}.+?)\] # Source_Quality_Etc-
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
-     '''),
+     '''
+     ),
+
     ('anime_standard_round',
      # [Stratos-Subs]_Infinite_Stratos_-_12_(1280x720_H.264_AAC)_[379759DB]
      # [ShinBunBu-Subs] Bleach - 02-03 (CX 1280x720 x264 AAC)
@@ -236,7 +261,9 @@ anime_regexes = [
      [ ._-]+\((?P<extra_info>(CX[ ._-]?)?\d{3,4}[xp]?\d{0,4}[\.\w\s-]*)\) # Source_Quality_Etc-
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
-     '''),
+     '''
+     ),
+
     ('anime_slash',
      # [SGKK] Bleach 312v1 [720p/MKV]
      '''
@@ -248,7 +275,9 @@ anime_regexes = [
      [ ._-]+\[(?P<extra_info>\d{3,4}p)             # Source_Quality_Etc-
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
-     '''),
+     '''
+     ),
+
     ('anime_standard_codec',
      # [Ayako]_Infinite_Stratos_-_IS_-_07_[H264][720p][EB7838FC]
      # [Ayako] Infinite Stratos - IS - 07v2 [H264][720p][44419534]
@@ -264,7 +293,9 @@ anime_regexes = [
      [ ._-]*\[(?P<extra_info>(\d{3,4}[xp]?\d{0,4})?[\.\w\s-]*)\] # Source_Quality_Etc-
      (\[(?P<crc>\w{8})\])?                         # CRC
      .*?                                           # Separator and EOL
-     '''),
+     '''
+     ),
+
     ('anime_and_normal',
      # Bleach - s16e03-04 - 313-314
      # Bleach.s16e03-04.313-314
@@ -283,7 +314,8 @@ anime_regexes = [
      (v(?P<version>[0-9]))?                        # the version e.g. "v2"
      .*?
      '''
-    ),
+     ),
+
     ('anime_and_normal_x',
      # Bleach - s16e03-04 - 313-314
      # Bleach.s16e03-04.313-314
@@ -301,7 +333,8 @@ anime_regexes = [
      (v(?P<version>[0-9]))?                        # the version e.g. "v2"
      .*?
      '''
-    ),
+     ),
+
     ('anime_and_normal_reverse',
      # Bleach - 313-314 - s16e03-04
      '''
@@ -317,7 +350,8 @@ anime_regexes = [
      (?P<extra_ep_num>\d+))*                       # additional E03/etc
      .*?
      '''
-    ),
+     ),
+
     ('anime_and_normal_front',
      # 165.Naruto Shippuuden.s08e014
      '''
@@ -331,7 +365,8 @@ anime_regexes = [
      (?P<extra_ep_num>\d+))*                       # additional E03/etc
      .*?
      '''
-    ),
+     ),
+
     ('anime_ep_name',
      '''
      ^(?:\[(?P<release_group>.+?)\][ ._-]*)
@@ -344,7 +379,8 @@ anime_regexes = [
      (?:\[(?P<crc>\w{8})\])?
      .*?
      '''
-    ),
+     ),
+
     ('anime_bare',
      # One Piece - 102
      # [ACX]_Wolf's_Spirit_001.mkv
@@ -355,9 +391,10 @@ anime_regexes = [
      (-(?P<extra_ab_ep_num>\d{3}))*                # E02
      (v(?P<version>[0-9]))?                        # v2
      .*?                                           # Separator and EOL
-     '''),
+     '''
+     ),
 
-     ('standard',
+    ('standard',
      # Show.Name.S01E02.Source.Quality.Etc-Group
      # Show Name - S01E02 - My Ep Name
      # Show.Name.S01.E03.My.Ep.Name
@@ -369,10 +406,10 @@ anime_regexes = [
      s(?P<season_num>\d+)[. _-]*                   # S01 and optional separator
      e(?P<ep_num>\d+)                              # E02 and separator
      (([. _-]*e|-)                                 # linking e/- char
-     (?P<extra_ep_num>(?!(1080|720|480)[pi])\d+))* # additional E03/etc
+     (?P<extra_ep_num>(?!(2160|1080|720|480)[pi])\d+))* # additional E03/etc
      [. _-]*((?P<extra_info>.+?)                   # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''
-    ),
+     ),
 ]

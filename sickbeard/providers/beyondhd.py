@@ -39,7 +39,7 @@ class BeyondHDProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.passkey, self.minseed, self.minleech = 3 * [None]
+        self.passkey, self.scene, self.minseed, self.minleech = 4 * [None]
 
     def _check_auth_from_data(self, data_json):
 
@@ -91,10 +91,6 @@ class BeyondHDProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-    def _episode_strings(self, ep_obj, **kwargs):
-
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
 
 provider = BeyondHDProvider()

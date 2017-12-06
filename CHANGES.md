@@ -1,4 +1,373 @@
-﻿### 0.12.0 (2016-12-19 03:00:00 UTC)
+﻿### 0.13.0 (2017-12-06 12:40:00 UTC)
+
+* Change don't fetch caps for disabled nzb providers
+* Change recent search to use centralised title and URL parser for newznab
+* Add display unaired season 1 episodes of a new show in regular and pro I view modes
+* Change improve page load time when loading images
+* Update isotope library 2.2.2 to 3.0.1
+* Add lazyload package 3.0.0 (2e318b1)
+* Add webencodings 0.5 (3970651) to assist parsing legacy web content
+* Change improve add show search results by comparing search term to an additional unidecoded result set
+* Change webserver startup to correctly use xheaders in reverse proxy or load balance set-ups
+* Update backports_abc 0.4 to 0.5
+* Update Beautiful Soup 4.4.0 (r397) to 4.6.0 (r449)
+* Update cachecontrol library 0.11.5 to 0.12.3 (db54c40)
+* Update Certifi 2015.11.20.1 (385476b) to 2017.07.27 (f808089)
+* Update chardet packages 2.3.0 (d7fae98) to 3.0.4 (9b8c5c2)
+* Update dateutil library 2.4.2 (d4baf97) to 2.6.1 (2f3a160)
+* Update feedparser library 5.2.0 (8c62940) to 5.2.1 (f1dd1bb)
+* Update html5lib 0.99999999/1.0b9 (46dae3d) to (1a28d72)
+* Update IMDb 5.1dev20160106 to 5.1 (r907)
+* Update moment.js 2.15.1 to 2.17.1
+* Update PNotify library 2.1.0 to 3.0.0 (175af26)
+* Update profilehooks 1.8.2.dev0 (ee3f1a8) to 1.9.0 (de7d59b)
+* Update rarfile to 3.0 (3e54b22)
+* Update Requests library 2.9.1 (a1c9b84) to 2.13.0 (fc54869)
+* Update SimpleJSON library 3.8.1 (6022794) to 3.10.0 (c52efea)
+* Update Six compatibility library 1.10.0 (r405) to 1.10.0 (r433)
+* Update socks from SocksiPy 1.0 to PySocks 1.6.5 (b4323df)
+* Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.1 (79b2683)
+* Update unidecode library 0.04.18 to 0.04.21 (e99b0e3)
+* Update xmltodict library 0.9.2 (eac0031) to 0.10.2 (375d3a6)
+* Update Bootstrap 3.2.0 to 3.3.7
+* Update Bootstrap Hover Dropdown 2.0.11 to 2.2.1
+* Update imagesloaded 3.1.8 to 4.1.1
+* Update jquery.cookie 1.0 (21349d9) to JS-Cookie 2.1.3 (c1aa987)
+* Update jquery.cookiejar 1.0.1 to 1.0.2
+* Update jQuery JSON 2.2 (c908771) to 2.6 (2339804)
+* Update jquery.form plugin 3.35.0 to 3.51.0 (6bf24a5)
+* Update jQuery SelectBoxes 2.2.4 to 2.2.6
+* Update jquery-tokeninput 1.60 to 1.62 (9c36e19)
+* Update jQuery-UI 1.10.4 to 1.12.1 - minimum supported IE is 8
+* Update jQuery UI Touch Punch 0.2.2 to 0.2.3
+* Update qTip 2.2.1 to 2.2.2
+* Update tablesorter 2.17.7 to 2.28.5
+* Update jQuery 1.8.3 to 2.2.4
+* Add one time run to start up that deletes troublemaking compiled files
+* Fix reload of homepage after restart in some browsers
+* Add detection of '1080p Remux' releases as fullhdbluray
+* Add "Perform search tasks" to Config/Media Providers/Options
+* Change improve clarity of enabled providers on Config/Media Providers
+* Add option to limit WebDL propers to original release group under Config/Search/Media Search
+* Change add IPv4 config option when enabling IPv6.
+* Add autoProcessTV/onTxComplete.bat to improve Windows clients Deluge, qBittorrent, Tranmission, and uTorrent
+* Add Blutopia torrent provider
+* Add MagnetDL torrent provider
+* Add SceneHD torrent provider
+* Add Skytorrents torrent provider
+* Add TorrentVault torrent provider
+* Add WorldOfP2P torrent provider
+* Change do not have shows checked by default on import page. To re-enable import shows checked by default,
+  1) On config page 'Save' 2) Stop SG 3) Find 'import_default_checked_shows' in config.ini and set '1' 4) Start SG
+* Add Nyaa (.si) torrent provider
+* Add Trakt watchlist to Add show/Trakt Cards
+* Change revoke application access at Trakt when account is deleted in SG
+* Add persistent hide/unhide cards to Add show/Trakt and Add show/IMDb Cards
+* Change simplify dropdowns at all Add show/Cards
+* Change cosmetic title on shutdown
+* Change use TVDb API v2
+* Change improve search for PROPERS
+* Change catch show update task errors
+* Change simplify and update FreeBSD init script
+* Change only use newznab Api key if needed
+* Change editshow saving empty scene exceptions
+* Change improve TVDB data handling
+* Change improve post processing by using more snatch history data
+* Change show update, don't delete any ep in DB if eps are not returned from indexer
+* Change prevent unneeded error message during show update
+* Change improve performance, don't fetch episode list when retrieving a show image
+* Change don't remove episodes from DB with status: SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED, ARCHIVED, IGNORED
+* Change add additional episode removal protections for TVDb_api v2
+* Change filter SKIPPED items from episode view
+* Change improve clarity of various error message by including relevant show name
+* Change extend WEB PROPER release group check to ignore SD releases
+* Change increase performance by reducing TVDb API requests with a global token
+* Change make indexer lookup optional in NameParser, and deactivate during searches
+* Change improve newnab autoselect categories
+* Change add nzb.org BoxSD and BoxHD categories
+* Change post processor, ignore symlinks found in process_dir
+* Change file modify date of episodes older than 1970 can be changed to airdate, log warning on set fail
+* Add new parameter 'poster' to indexer api
+* Add optional tvdb_api load season image: lINDEXER_API_PARMS['seasons'] = True
+* Add optional tvdb_api load season wide image: lINDEXER_API_PARMS['seasonwides'] = True
+* Add Fuzzywuzzy 0.15.1 to sort search results
+* Change remove search results filtering from tv info source
+* Change suppress startup warnings for Fuzzywuzzy and Cheetah libs
+* Change show search, add options to choose order of search results
+* Add option to sort search results by 'A to Z' or 'First aired'
+* Add option to sort search results by 'Relevancy' using Fuzzywuzzy lib
+* Change search result anchor text uses SORT_ARTICLE setting for display
+* Change existing shows in DB are no longer selectable in result list
+* Change add image to search result item hover over
+* Change improve image load speed on browse Trakt/IMDb/AniDB pages
+* Add a changeable master Show ID when show no longer found at TV info source due to an ID change
+* Add guiding links to assist user to change TV Info Source ID
+* Add "Shows with abandoned master IDs" to Manage/Show Processes Page to link shows that can have their show IDs
+  adjusted in order to sustain TV info updates
+* Add "Shows from defunct TV info sources" to Manage/Show Processes page to link shows that can be switched to a
+  different default TV info source
+* Add shows not found at a TV info source for over 7 days will only be retried once a week
+* Change prevent showing 'Mark download as bad and retry?' dialog when status doesn't require it
+* Add warn icon indicator of abandoned IDs to "Manage" menu bar and "Manage/Show Processes" menu item
+* Add shows that have no replacement ID can be ignored at "Manage/Show Processes", the menu bar warn icon hides if all are ignored
+* Change FreeBSD initscript to use command_interpreter
+* Add Slack notifier to Notifications config/Social
+* Change allow Cheetah template engine version 2 and newer
+* Change improve handling of relative download links from providers
+* Change enable TorrentBytes provider
+* Change after SG is updated, don't attempt to send a Plex client notifications if there is no client host set
+* Add file name to possible names in history lookup post processing
+* Add garbage name handling to name parser
+* Change overhaul Notifications, add Notifier Factory and DRY refactoring
+* Notifiers are now loaded into memory on demand
+* Add bubble links to Notifications config tabs
+* Add Discordapp notifier to Notifications config/Social
+* Add Gitter notifier to Notifications config/Social
+* Change order of notifiers in Notifications config tabs
+* Remove Pushalot notifier
+* Remove XBMC notifier
+* Change a link to include webroot for "plot overview for this ended show"
+* Change Bulk Changes and Notifications save to be web_root setting aware
+* Change subtitle addons no longer need to be saved before Search Subtitles is enabled as a
+  forbidden action to reuse an exited FindSubtitles thread is no longer attempted
+* Fix tools menu not opening for some browsers
+* Change overhaul handling of PROPERS/REPACKS/REAL
+* Add restriction to allow only same release group for repacks
+* Change try all episode names with 'real', 'repack', 'proper'
+* Add tip to search settings/media search about improved matching with optional regex library
+* Change use value of "Update shows during hour" in General Settings straight after it is saved instead of after restart
+* Change add tips for what to use for Growl notifications on Windows
+* Change if a newly added show is not found on indexer, remove already created empty folder
+* Change parse 1080p Bluray AVC/VC1 to a quality instead of unknown
+* Add quality tag to archived items, improve displayShow/"Change selected episodes to"
+* Use to prevent "Update to" on those select episodes while preserving the downloaded quality
+* Change group "Downloaded" status qualities into one section
+* Add "Downloaded/with archived quality" to set shows as downloaded using quality of archived status
+* Add "Archived with/downloaded quality" to set shows as archived using quality of downloaded status
+* Add "Archived with/default (min. initial quality of show here)"
+* Change when settings/Post Processing/File Handling/Status of removed episodes/Set Archived is enabled, set status and quality accordingly
+* Add downloaded and archived statuses to Manage/Episode Status
+* Add quality pills to Manage/Episode Status
+* Change Manage/Episode Status season output format to be more readable
+
+
+### 0.12.37 (2017-11-12 10:35:00 UTC)
+
+* Change improve .nzb handling
+
+
+### 0.12.36 (2017-11-01 11:45:00 UTC)
+
+* Change qBittorent to handle the change to its API success/fail response
+
+
+### 0.12.35 (2017-10-27 20:30:00 UTC)
+
+* Change and add some network logos
+
+
+### 0.12.34 (2017-10-25 15:20:00 UTC)
+
+* Change improve TVChaos parser
+
+
+### 0.12.33 (2017-10-12 13:00:00 UTC)
+
+* Change improve handling of torrent auth failures
+
+
+### 0.12.32 (2017-10-11 02:05:00 UTC)
+
+* Change improve PA torrent access
+
+
+### 0.12.31 (2017-10-06 22:30:00 UTC)
+
+* Change improve handling of connection failures for metadata during media processing
+
+
+### 0.12.30 (2017-09-29 00:20:00 UTC)
+
+* Fix Media Providers/Custom Newznab tab action 'Delete' then 'Save Changes'
+* Fix enforce value API expects for paused show flag
+
+
+### 0.12.29 (2017-09-17 09:00:00 UTC)
+
+* Fix provider nCore
+* Change .torrent checker due to files created with qB 3.3.16 (affects nCore and NBL)
+
+
+### 0.12.28 (2017-08-26 18:15:00 UTC)
+
+* Change prevent indexer specific release name parts from fudging search logic
+
+
+### 0.12.27 (2017-08-22 19:00:00 UTC)
+
+* Update to UnRar 5.50 release
+
+
+### 0.12.26 (2017-08-20 13:05:00 UTC)
+
+* Fix infinite loop loading network_timezones
+* Change add optional "stack_size" setting as integer to config.ini under "General" stanza
+* Change prevent too many retries when loading network timezones, conversions, and zoneinfo in a short time
+* Update to UnRar 5.50 beta 6
+
+
+### 0.12.25 (2017-06-19 23:35:00 UTC)
+
+* Remove provider SceneAccess
+
+
+### 0.12.24 (2017-07-31 20:42:00 UTC)
+
+* Fix copy post process method on posix
+
+
+### 0.12.23 (2017-07-18 16:55:00 UTC)
+
+* Remove obsolete tvrage_api lib
+
+
+### 0.12.22 (2017-07-13 20:20:00 UTC)
+
+* Fix "Server failed to return anything useful" when should be using cached .torrent file
+* Fix displayShow 'Unaired' episode rows change state where appropriate
+* Change displayShow to stop requiring an airdate for checkboxes
+
+
+### 0.12.21 (2017-06-19 23:35:00 UTC)
+
+* Change provider Bit-HDTV user/pass to cookie
+
+
+### 0.12.20 (2017-06-14 22:00:00 UTC)
+
+* Change send info now required by qBittorrent 3.13+ clients
+
+
+### 0.12.19 (2017-05-20 10:30:00 UTC)
+
+* Remove provider Freshon.tv
+
+
+### 0.12.18 (2017-05-15 23:00:00 UTC)
+
+* Change thexem, remove tvrage from xem
+
+
+### 0.12.17 (2017-05-15 22:10:00 UTC)
+
+* Remove provider ExtraTorrent
+* Change thexem tvrage mappings are deprecated, data fetch disabled
+
+
+### 0.12.16 (2017-05-05 16:40:00 UTC)
+
+* Fix multiple SpeedCD cookie
+
+
+### 0.12.15 (2017-05-04 00:40:00 UTC)
+
+* Remove provider Nyaa
+* Change improve RSS validation (particularly for anime)
+* Change improve support for legacy magnet encoding
+
+
+### 0.12.14 (2017-05-02 17:10:00 UTC)
+
+* Change provider Transmithe.net is now Nebulance
+
+
+### 0.12.13 (2017-04-23 18:50:00 UTC)
+
+* Change add filter for thetvdb show overview
+* Change remove SpeedCD 'inspeed_uid' cookie requirement
+
+
+### 0.12.12 (2017-03-30 03:15:00 UTC)
+
+* Change search of SpeedCD, TVChaos and parse of TorrentDay
+
+
+### 0.12.11 (2017-03-17 02:00:00 UTC)
+
+* Change SpeedCD to cookie auth as username/password is not reliable
+* Change Usenet-Crawler media provider icon
+
+
+### 0.12.10 (2017-03-12 16:00:00 UTC)
+
+* Change refactor client for Deluge 1.3.14 compatibility
+* Change ensure IPT authentication is valid before use
+
+
+### 0.12.9 (2017-02-24 18:40:00 UTC)
+
+* Fix issue saving custom NewznabProviders
+
+
+### 0.12.8 (2017-02-19 13:50:00 UTC)
+
+* Change BTN API hostname
+
+
+### 0.12.7 (2017-02-17 15:00:00 UTC)
+
+* Change accept lists in JSON responses
+* Change do not log error for empty BTN un/pw in most cases
+* Change BTN to only try API once when doing alternative name searches
+* Change when API fails, warn users as a tip that they can configure un/pw
+
+
+### 0.12.6 (2017-02-17 03:48:00 UTC)
+
+* Change skip episodes that have no wanted qualities
+* Change download picked .nzb file on demand and not before
+* Change improve provider title processing
+* Change improve handling erroneous JSON responses
+* Change improve find show with unicode characters
+* Change improve results for providers Omgwtf, SpeedCD, Transmithenet, Zoogle
+* Change validate .torrent files that contain optional header data
+* Fix case where an episode status was not restored on failure
+* Add raise log error if no wanted qualities are found
+* Change add un/pw to Config/Media providers/Options for BTN API graceful fallback (can remove Api key for security)
+* Change only download torrent once when using blackhole
+* Add Cloudflare module 1.6.8 (be0a536) to handle specific CF connections
+* Add Js2Py 0.43 (c1442f1) Cloudflare dependency
+* Add pyjsparser 2.4.5 (cd5b829) Js2Py dependency
+* Remove Torrentshack
+
+
+### 0.12.5 (2017-01-16 16:22:00 UTC)
+
+* Change TD search URL
+* Fix saving Media Providers when either Search NZBs/Torrents is disabled
+
+
+### 0.12.4 (2016-12-31 00:50:00 UTC)
+
+* Remove Wombles nzb provider
+
+
+### 0.12.3 (2016-12-27 15:20:00 UTC)
+
+* Add UK date format handling to name parser
+
+
+### 0.12.2 (2016-12-20 16:00:00 UTC)
+
+* Change Rarbg and IPT urls
+
+
+### 0.12.1 (2016-12-19 12:00:00 UTC)
+
+* Fix image scan log for show titles that contain "%"
+
+
+### 0.12.0 (2016-12-19 03:00:00 UTC)
 
 * Add strict Python version check (equal to, or higher than 2.7.9 and less than 3.0), **exit** if incorrect version
 * Update unidecode library 0.04.11 to 0.04.18 (fd57cbf)

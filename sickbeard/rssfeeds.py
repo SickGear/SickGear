@@ -3,7 +3,7 @@
 # This file is part of SickGear.
 #
 
-from feedparser import feedparser
+import feedparser
 
 from sickbeard import helpers, logger
 from sickbeard.exceptions import ex

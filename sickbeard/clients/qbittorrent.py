@@ -24,6 +24,7 @@ class QbittorrentAPI(GenericClient):
         super(QbittorrentAPI, self).__init__('qBittorrent', host, username, password)
 
         self.url = self.host
+        self.session.headers.update({'Origin': self.host})
 
     def _get_auth(self):
 
@@ -38,7 +39,7 @@ class QbittorrentAPI(GenericClient):
 
     def _post_api(self, cmd='', **kwargs):
 
-        return '' == helpers.getURL('%scommand/%s' % (self.host, cmd), session=self.session, **kwargs)
+        return helpers.getURL('%scommand/%s' % (self.host, cmd), session=self.session, **kwargs) in ('', 'Ok.')
 
     def _add_torrent(self, cmd, **kwargs):
 

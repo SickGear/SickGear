@@ -38,7 +38,7 @@ To select ``curl_httpclient``, call `AsyncHTTPClient.configure` at startup::
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 """
 
-from __future__ import absolute_import, division, print_function, with_statement
+from __future__ import absolute_import, division, print_function
 
 import functools
 import time
@@ -341,13 +341,15 @@ class HTTPRequest(object):
            Allowed values are implementation-defined; ``curl_httpclient``
            supports "basic" and "digest"; ``simple_httpclient`` only supports
            "basic"
-        :arg float connect_timeout: Timeout for initial connection in seconds
-        :arg float request_timeout: Timeout for entire request in seconds
+        :arg float connect_timeout: Timeout for initial connection in seconds,
+           default 20 seconds
+        :arg float request_timeout: Timeout for entire request in seconds,
+           default 20 seconds
         :arg if_modified_since: Timestamp for ``If-Modified-Since`` header
         :type if_modified_since: `datetime` or `float`
         :arg bool follow_redirects: Should redirects be followed automatically
-           or return the 3xx response?
-        :arg int max_redirects: Limit for ``follow_redirects``
+           or return the 3xx response? Default True.
+        :arg int max_redirects: Limit for ``follow_redirects``, default 5.
         :arg string user_agent: String to send as ``User-Agent`` header
         :arg bool decompress_response: Request a compressed response from
            the server and decompress it after downloading.  Default is True.
@@ -381,9 +383,9 @@ class HTTPRequest(object):
         :arg string proxy_auth_mode: HTTP proxy Authentication mode;
            default is "basic". supports "basic" and "digest"
         :arg bool allow_nonstandard_methods: Allow unknown values for ``method``
-           argument?
+           argument? Default is False.
         :arg bool validate_cert: For HTTPS requests, validate the server's
-           certificate?
+           certificate? Default is True.
         :arg string ca_certs: filename of CA certificates in PEM format,
            or None to use defaults.  See note below when used with
            ``curl_httpclient``.
@@ -421,6 +423,9 @@ class HTTPRequest(object):
 
         .. versionadded:: 4.2
            The ``ssl_options`` argument.
+
+        .. versionadded:: 4.5
+           The ``proxy_auth_mode`` argument.
         """
         # Note that some of these attributes go through property setters
         # defined below.
@@ -667,6 +672,7 @@ def main():
         if options.print_body:
             print(native_str(response.body))
     client.close()
+
 
 if __name__ == "__main__":
     main()

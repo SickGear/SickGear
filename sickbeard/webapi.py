@@ -36,7 +36,7 @@ from sickbeard import classes
 from sickbeard import processTV
 from sickbeard import network_timezones, sbdatetime
 from sickbeard.exceptions import ex
-from sickbeard.common import SNATCHED, SNATCHED_PROPER, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
+from sickbeard.common import SNATCHED, SNATCHED_ANY, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED, SKIPPED, UNAIRED, IGNORED, ARCHIVED, WANTED, UNKNOWN
 from sickbeard.helpers import remove_article
 from common import Quality, qualityPresetStrings, statusStrings
 from sickbeard.indexers.indexer_config import *
@@ -144,7 +144,7 @@ class Api(webserve.BaseHandler):
                 out = '%s(%s);' % (callback, out)  # wrap with JSONP call if requested
 
         except Exception as e:  # if we fail to generate the output fake an error
-            logger.log(u'API :: ' + traceback.format_exc(), logger.DEBUG)
+            logger.log(u'API :: ' + traceback.format_exc(), logger.ERROR)
             out = '{"result":"' + result_type_map[RESULT_ERROR] + '", "message": "error while composing output: "' + ex(
                 e) + '"}'
 
@@ -562,7 +562,7 @@ def _replace_statusStrings_with_statusCodes(statusStrings):
     if "wanted" in statusStrings:
         statusCodes.append(WANTED)
     if "archived" in statusStrings:
-        statusCodes.append(ARCHIVED)
+        statusCodes += Quality.ARCHIVED
     if "ignored" in statusStrings:
         statusCodes.append(IGNORED)
     if "unaired" in statusStrings:
@@ -703,7 +703,7 @@ class CMD_ComingEpisodes(ApiCall):
         recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
 
         done_show_list = []
-        qualList = Quality.DOWNLOADED + Quality.SNATCHED + [ARCHIVED, IGNORED]
+        qualList = Quality.SNATCHED + Quality.DOWNLOADED + Quality.ARCHIVED + [IGNORED]
 
         myDB = db.DBConnection()
         sql_results = myDB.select(
@@ -2095,7 +2095,7 @@ class CMD_ShowAddNew(ApiCall):
         sickbeard.showQueueScheduler.action.addShow(int(self.indexer), int(self.indexerid), showPath, newStatus,
                                                     newQuality,
                                                     int(self.flatten_folders), self.lang, self.subtitles, self.anime,
-                                                    self.scene)  # @UndefinedVariable
+                                                    self.scene, new_show=True)  # @UndefinedVariable
 
         return _responds(RESULT_SUCCESS, {"name": indexerName}, indexerName + " has been queued to be added")
 
@@ -2469,7 +2469,7 @@ class CMD_ShowStats(ApiCall):
         episode_status_counts_total = {}
         episode_status_counts_total["total"] = 0
         for status in statusStrings.statusStrings.keys():
-            if status in [UNKNOWN, DOWNLOADED, SNATCHED, SNATCHED_PROPER]:
+            if status in SNATCHED_ANY + [UNKNOWN, DOWNLOADED]:
                 continue
             episode_status_counts_total[status] = 0
 
@@ -2485,7 +2485,7 @@ class CMD_ShowStats(ApiCall):
         # add all snatched qualities
         episode_qualities_counts_snatch = {}
         episode_qualities_counts_snatch["total"] = 0
-        for statusCode in Quality.SNATCHED + Quality.SNATCHED_PROPER:
+        for statusCode in Quality.SNATCHED_ANY:
             status, quality = Quality.splitCompositeStatus(statusCode)
             if quality in [Quality.NONE]:
                 continue
@@ -2503,7 +2503,7 @@ class CMD_ShowStats(ApiCall):
             if status in Quality.DOWNLOADED:
                 episode_qualities_counts_download["total"] += 1
                 episode_qualities_counts_download[int(row["status"])] += 1
-            elif status in Quality.SNATCHED + Quality.SNATCHED_PROPER:
+            elif status in Quality.SNATCHED_ANY:
                 episode_qualities_counts_snatch["total"] += 1
                 episode_qualities_counts_snatch[int(row["status"])] += 1
             elif status == 0:  # we dont count NONE = 0 = N/A
@@ -2655,12 +2655,12 @@ class CMD_ShowsStats(ApiCall):
             [show for show in sickbeard.showList if show.paused == 0 and show.status != "Ended"])
         stats["ep_downloaded"] = myDB.select("SELECT COUNT(*) FROM tv_episodes WHERE status IN (" + ",".join(
             [str(show) for show in
-             Quality.DOWNLOADED + [ARCHIVED]]) + ") AND season != 0 and episode != 0 AND airdate <= " + today + "")[0][
+             Quality.DOWNLOADED + Quality.ARCHIVED]) + ") AND season != 0 and episode != 0 AND airdate <= " + today + "")[0][
             0]
         stats["ep_total"] = myDB.select(
             "SELECT COUNT(*) FROM tv_episodes WHERE season != 0 AND episode != 0 AND (airdate != 1 OR status IN (" + ",".join(
-                [str(show) for show in (Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER) + [
-                    ARCHIVED]]) + ")) AND airdate <= " + today + " AND status != " + str(IGNORED) + "")[0][0]
+                [str(show) for show in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED]) +
+            ")) AND airdate <= " + today + " AND status != " + str(IGNORED) + "")[0][0]
 
         return _responds(RESULT_SUCCESS, stats)
 

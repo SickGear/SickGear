@@ -32,6 +32,10 @@ import shutil
 import subprocess
 import time
 import threading
+import warnings
+
+warnings.filterwarnings('ignore', module=r'.*fuzzywuzzy.*')
+warnings.filterwarnings('ignore', module=r'.*Cheetah.*')
 
 if not (2, 7, 9) <= sys.version_info < (3, 0):
     print('Python %s.%s.%s detected.' % sys.version_info[:3])
@@ -39,9 +43,14 @@ if not (2, 7, 9) <= sys.version_info < (3, 0):
     sys.exit(1)
 
 try:
+    import _cleaner
+except (StandardError, Exception):
+    pass
+
+try:
     import Cheetah
 
-    if Cheetah.Version[0] != '2':
+    if Cheetah.Version[0] < '2':
         raise ValueError
 except ValueError:
     print('Sorry, requires Python module Cheetah 2.1.0 or newer.')
@@ -302,6 +311,17 @@ class SickGear(object):
             print(u'Unable to find "%s", all settings will be default!' % sickbeard.CONFIG_FILE)
 
         sickbeard.CFG = ConfigObj(sickbeard.CONFIG_FILE)
+        stack_size = None
+        try:
+            stack_size = int(sickbeard.CFG['General']['stack_size'])
+        except:
+            stack_size = None
+
+        if stack_size:
+            try:
+                threading.stack_size(stack_size)
+            except (StandardError, Exception) as e:
+                print('Stack Size %s not set: %s' % (stack_size, e.message))
 
         # check all db versions
         for d, min_v, max_v, mo in [
@@ -359,10 +379,7 @@ class SickGear(object):
         if sickbeard.WEB_HOST and sickbeard.WEB_HOST != '0.0.0.0':
             self.webhost = sickbeard.WEB_HOST
         else:
-            if sickbeard.WEB_IPV6:
-                self.webhost = '::'
-            else:
-                self.webhost = '0.0.0.0'
+            self.webhost = (('0.0.0.0', '::')[sickbeard.WEB_IPV6], '')[sickbeard.WEB_IPV64]
 
         # web server options
         self.web_options = {
@@ -382,7 +399,8 @@ class SickGear(object):
         # start web server
         try:
             # used to check if existing SG instances have been started
-            sickbeard.helpers.wait_for_free_port(self.web_options['host'], self.web_options['port'])
+            sickbeard.helpers.wait_for_free_port(
+                sickbeard.WEB_IPV6 and '::1' or self.web_options['host'], self.web_options['port'])
 
             self.webserver = WebServer(self.web_options)
             self.webserver.start()
@@ -420,9 +438,15 @@ class SickGear(object):
         startup_background_tasks = threading.Thread(name='FETCH-XEMDATA', target=sickbeard.scene_exceptions.get_xem_ids)
         startup_background_tasks.start()
 
-        # sure, why not?
+        # check history snatched_proper update
+        if not db.DBConnection().has_flag('history_snatch_proper'):
+            # noinspection PyUnresolvedReferences
+            history_snatched_proper_task = threading.Thread(name='UPGRADE-HISTORY-ACTION',
+                                                            target=sickbeard.history.history_snatched_proper_fix)
+            history_snatched_proper_task.start()
+
         if sickbeard.USE_FAILED_DOWNLOADS:
-            failed_history.trimHistory()
+            failed_history.remove_old_history()
 
         # Start an update if we're supposed to
         if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:

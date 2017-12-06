@@ -37,8 +37,7 @@ class MoreThanProvider(generic.TorrentProvider):
                      'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s&' + '&'.join([
                          'tags_type=1', 'order_by=time', 'order_way=desc',
-                         'filter_cat[2]=1', 'action=basic', 'searchsubmit=1']),
-                     'get': self.url_base + '%s'}
+                         'filter_cat[2]=1', 'action=basic', 'searchsubmit=1'])}
 
         self.url = self.urls['config_provider_home_uri']
 

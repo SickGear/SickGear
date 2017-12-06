@@ -1,6 +1,6 @@
-$(document).ready(function() { 
+$(document).ready(function() {
 
-	function make_row(indexer_id, season, episode, name, checked, airdate_never) {
+	function make_row(indexer_id, season, episode, name, checked, airdate_never, qualityCss, qualityStr, sxe) {
 		var checkedbox = (checked ? ' checked' : ''),
 			row_class = $('#row_class').val(),
 			ep_id = season + 'x' + episode;
@@ -11,8 +11,10 @@ $(document).ready(function() {
 					+ ' class="' + indexer_id + '-epcheck"'
 					+ ' name="' + indexer_id + '-' + ep_id + '"'
 					+ checkedbox+'></td>'
-			+ '  <td>' + ep_id + '</td>'
-			+ '  <td class="tableright" style="width: 100%">' + name + (airdate_never ? ' (<strong><em>airdate is never, this should change in time</em></strong>)' : '') + '</td>'
+			+ '  <td class="text-nowrap">' + sxe + '</td>'
+			+ '  <td class="tableright" style="width: 100%">'
+			+ ' <span class="quality show-quality ' + qualityCss + ' text-nowrap">' +  qualityStr + '</span>'
+			+ name + (airdate_never ? ' (<strong><em>airdate is never, this should change in time</em></strong>)' : '') + '</td>'
 			+ ' </tr>';
 	}
 
@@ -49,7 +51,7 @@ $(document).ready(function() {
 				function (data) {
 					$.each(data, function(season, eps){
 						$.each(eps, function(episode, meta) {
-							show_header.after(make_row(cur_indexer_id, season, episode, meta.name, checked, meta.airdate_never));
+							show_header.after(make_row(cur_indexer_id, season, episode, meta.name, checked, meta.airdate_never, meta.qualityCss, meta.qualityStr, meta.sxe));
 						});
 					});
 					$('input#' + match[0]).val('more' == action ? 'Expand' : 'Collapse');

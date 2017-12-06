@@ -247,7 +247,7 @@ class PostProcessor(object):
                     self._log(u'Deleted file ' + cur_file, logger.DEBUG)
 
                 # do the library update for synoindex
-                notifiers.synoindex_notifier.deleteFile(cur_file)
+                notifiers.NotifierFactory().get('SYNOINDEX').deleteFile(cur_file)
 
     def _combined_file_operation(self, file_path, new_path, new_base_name, associated_files=False, action=None,
                                  subtitles=False, action_tmpl=None):
@@ -417,7 +417,7 @@ class PostProcessor(object):
         self.in_history = False
 
         # if we don't have either of these then there's nothing to use to search the history for anyway
-        if not self.nzb_name and not self.folder_name:
+        if not self.nzb_name and not self.file_name and not self.folder_name:
             return to_return
 
         # make a list of possible names to use in the search
@@ -426,6 +426,10 @@ class PostProcessor(object):
             names.append(self.nzb_name)
             if '.' in self.nzb_name:
                 names.append(self.nzb_name.rpartition('.')[0])
+        if self.file_name:
+            names.append(self.file_name)
+            if '.' in self.file_name:
+                names.append(self.file_name.rpartition('.')[0])
         if self.folder_name:
             names.append(self.folder_name)
 
@@ -481,7 +485,7 @@ class PostProcessor(object):
         parse_result = np.parse(name)
         self._log(u'Parsed %s<br />.. from %s' % (str(parse_result).decode('utf-8', 'xmlcharrefreplace'), name), logger.DEBUG)
 
-        if parse_result.is_air_by_date:
+        if parse_result.is_air_by_date and (None is parse_result.season_number or not parse_result.episode_numbers):
             season = -1
             episodes = [parse_result.air_date]
         else:
@@ -500,8 +504,9 @@ class PostProcessor(object):
         self.release_group = parse_result.release_group
 
         # remember whether it's a proper
-        if parse_result.extra_info:
-            self.is_proper = None is not re.search('(^|[\. _-])(proper|repack)([\. _-]|$)', parse_result.extra_info, re.I)
+        if parse_result.extra_info_no_name():
+            self.is_proper = 0 < common.Quality.get_proper_level(parse_result.extra_info_no_name(), parse_result.version,
+                                                                 parse_result.is_anime)
 
         # if the result is complete then set release name
         if parse_result.series_name and\
@@ -652,7 +657,7 @@ class PostProcessor(object):
         """
 
         # if there is a quality available in the status then we don't need to bother guessing from the filename
-        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
+        if ep_obj.status in common.Quality.SNATCHED_ANY:
             old_status, ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)  # @UnusedVariable
             if common.Quality.UNKNOWN != ep_quality:
                 self._log(
@@ -737,7 +742,7 @@ class PostProcessor(object):
         """
 
         # if SickGear snatched this then assume it's safe
-        if ep_obj.status in common.Quality.SNATCHED + common.Quality.SNATCHED_PROPER + common.Quality.SNATCHED_BEST:
+        if ep_obj.status in common.Quality.SNATCHED_ANY:
             self._log(u'SickGear snatched this episode, marking it safe to replace', logger.DEBUG)
             return True
 
@@ -771,10 +776,27 @@ class PostProcessor(object):
 
         # if there's an existing downloaded file with same quality, check filesize to decide
         if new_ep_quality == old_ep_quality:
-            if (isinstance(self.nzb_name, basestring) and re.search(r'\bproper|repack\b', self.nzb_name, re.I)) or \
-                    (isinstance(self.file_name, basestring) and re.search(r'\bproper|repack\b', self.file_name, re.I)):
-                self._log(u'Proper or repack with same quality, marking it safe to replace', logger.DEBUG)
-                return True
+            np = NameParser(showObj=self.showObj)
+            cur_proper_level = 0
+            try:
+                pr = np.parse(ep_obj.release_name)
+                cur_proper_level = common.Quality.get_proper_level(pr.extra_info_no_name(), pr.version, pr.is_anime)
+            except (StandardError, Exception):
+                pass
+            new_name = (('', self.file_name)[isinstance(self.file_name, basestring)], self.nzb_name)[isinstance(
+                self.nzb_name, basestring)]
+            if new_name:
+                try:
+                    npr = np.parse(new_name)
+                except (StandardError, Exception):
+                    npr = None
+                if npr:
+                    is_repack, new_proper_level = common.Quality.get_proper_level(npr.extra_info_no_name(), npr.version,
+                                                                                  npr.is_anime, check_is_repack=True)
+                    if new_proper_level > cur_proper_level and \
+                            (not is_repack or npr.release_group == ep_obj.release_group):
+                        self._log(u'Proper or repack with same quality, marking it safe to replace', logger.DEBUG)
+                        return True
 
             self._log(u'An episode exists in the database with the same quality as the episode to process', logger.DEBUG)
 
@@ -896,7 +918,7 @@ class PostProcessor(object):
             try:
                 ek.ek(os.mkdir, ep_obj.show.location)
                 # do the library update for synoindex
-                notifiers.synoindex_notifier.addFolder(ep_obj.show.location)
+                notifiers.NotifierFactory().get('SYNOINDEX').addFolder(ep_obj.show.location)
             except (OSError, IOError):
                 raise exceptions.PostProcessingFailed(u'Unable to create show directory: ' + ep_obj.show.location)
 
@@ -946,10 +968,10 @@ class PostProcessor(object):
 
         # Just want to keep this consistent for failed handling right now
         release_name = show_name_helpers.determineReleaseName(self.folder_path, self.nzb_name)
-        if None is not release_name:
-            failed_history.logSuccess(release_name)
-        else:
+        if None is release_name:
             self._log(u'No snatched release found in history', logger.WARNING)
+        elif sickbeard.USE_FAILED_DOWNLOADS:
+            failed_history.remove_failed(release_name)
 
         # find the destination folder
         try:
@@ -1045,34 +1067,13 @@ class PostProcessor(object):
         ep_obj.createMetaFiles()
 
         # log it to history
-        history.logDownload(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version)
+        history.log_download(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version)
 
         # send notifications
         notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
 
-        # do the library update for Emby
-        notifiers.emby_notifier.update_library(ep_obj.show)
-
-        # do the library update for Kodi
-        notifiers.kodi_notifier.update_library(ep_obj.show.name)
-
-        # do the library update for XBMC
-        notifiers.xbmc_notifier.update_library(ep_obj.show.name)
-
-        # do the library update for Plex
-        notifiers.plex_notifier.update_library(ep_obj)
-
-        # do the library update for NMJ
-        # nmj_notifier kicks off its library update when the notify_download is issued (inside notifiers)
-
-        # do the library update for Synology Indexer
-        notifiers.synoindex_notifier.addFile(ep_obj.location)
-
-        # do the library update for pyTivo
-        notifiers.pytivo_notifier.update_library(ep_obj)
-
-        # do the library update for Trakt
-        notifiers.trakt_notifier.update_collection(ep_obj)
+        # trigger library updates
+        notifiers.notify_update_library(ep_obj=ep_obj)
 
         self._run_extra_scripts(ep_obj)
 

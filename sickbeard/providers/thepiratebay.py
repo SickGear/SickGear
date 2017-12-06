@@ -17,6 +17,7 @@
 
 from __future__ import with_statement
 
+import base64
 import os
 import re
 import traceback
@@ -37,7 +38,51 @@ class ThePirateBayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay', cache_update_freq=20)
 
         self.url_home = ['https://thepiratebay.%s/' % u for u in 'se', 'org'] + \
-                        ['https://piratebay.usbypass.club/', 'https://tpb.run/']
+                        ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                            [re.sub('[t\sG]+', '', x[::-1]) for x in [
+                                'mGGY', '5tGF', 'HGtc', 'vGGJ', 'Htte', 'uG k', '2GGd', 'uGtl']],
+                            [re.sub('[t\sR]+', '', x[::-1]) for x in [
+                                'uF2R a', 'it VWe', 'uk XRY', 'uR82RY', 'vt sWd', 'vR x2P', '9QWtRY']],
+                            [re.sub('[n\sJ]+', '', x[::-1]) for x in [
+                                'lGJnc', 'XJY y', 'YJlJR', '5  Fm', '5 niM', 'm cJv', '= Jc']],
+                            [re.sub('[S\sp]+', '', x[::-1]) for x in [
+                                'XYySSlGc', '5FmSYl R', 'CdzF SmZ', '15ypbSj5', 'Gb/8pSya', '=0DppZh9']],
+                            [re.sub('[1\sz]+', '', x[::-1]) for x in [
+                                'XYzy lGc', '5zFm1YlR', '2Yp1VzXc', 'u812 Yus', '2PvszW1d', '91zQWYvx']],
+                            [re.sub('[P\sT]+', '', x[::-1]) for x in [
+                                'lGPPc', 'XYP y', 'c l R', 'vTJTH', 'kT He', 'GdTPu', 'wPP9']],
+                            [re.sub('[Y\sr]+', '', x[::-1]) for x in [
+                                'J rHc', 'Hrrev', 'awYYl', 'hJYYX', 'U YGd', 'Gdr u', 'wr 9']],
+                            [re.sub('[R\sk]+', '', x[::-1]) for x in [
+                                'vJRkHc', '0 lHRe', 'uR IGc', 'iV2RRd', '0kl2Rc', '==kQ Z']],
+                            [re.sub('[p\sz]+', '', x[::-1]) for x in [
+                                'Hppc', '4pzJ', 'Sppe', 'wzz5', 'XppY', '0 zJ', 'Q pe', '=pz=']],
+                            [re.sub('[p\si]+', '', x[::-1]) for x in [
+                                'hGpid', 'Gai l', 'Z kpl', 'u ViG', 'FpmiY', 'mLii5', 'j  N']],
+                            [re.sub('[g\ss]+', '', x[::-1]) for x in [
+                                'lhGgsd', 'ngFW b', '0s Vmb', '5sFmgY', 'uglsmL', '=8 m Z']],
+                            [re.sub('[I\ss]+', '', x[::-1]) for x in [
+                                'clIhsGd', 'X IYylG', 'Fm Yl R', '5IJmsL5', 'cszFGIc', 'nsLkIV2', '0I N']],
+                            [re.sub('[ \sq]+', '', x[::-1]) for x in [
+                                'GqclhG d', 'lR XqYyl', 'mL5Fm qY', 'uVXbt  l', 'HdqpNqWa', '=Q3cuq k']],
+                            [re.sub('[k\sK]+', '', x[::-1]) for x in [
+                                'GKclh Gd', 'lRXKYyKl', 'nL5F mKY', 'vxmYkKuV', 'CZlKKt2Y', '=kw2bsk5']],
+                            [re.sub('[f\si]+', '', x[::-1]) for x in [
+                                'Gicl hGd', 'lRXiYfyl', 'nL5F imY', 'vximYfuV', 'CZlft 2Y', '==Adffz5']],
+                            [re.sub('[j\sz]+', '', x[::-1]) for x in [
+                                'G c lhGd', 'lRXYjy l', 'nL5FmjjY', 'v xmzYuV', 'Gbh t2 Y', 'nJ 3zbuw']],
+                            [re.sub('[p\sH]+', '', x[::-1]) for x in [
+                                'lHRXYylpGc', 'uVnL5FmY', 'yB3aj9HGpb', '1x2HYuo2b', 'spNmYwRnY', 'ulmLuFHWZ', '=8mZ']],
+                            [re.sub('[1\sf]+', '', x[::-1]) for x in [
+                                'H  d', 'w1 B', 'm fc', '4 19', 'S  e', 'z115', 'Xffa', 'l 1R']],
+                            [re.sub('[r\sn]+', '', x[::-1]) for x in [
+                                'Hr d', 'irnB', 'Hnrc', 'vn J', 'Hrne', 'u rk', '2rnd', 'unrl']],
+                            [re.sub('[s\sZ]+', '', x[::-1]) for x in [
+                                'H sd', 'iZ B', 'nssc', 'u  V', 'nZZL', 'pZsd', 'g sb', '= s=']],
+                        ]]] + ['http://%s' % base64.b64decode(x) for x in [''.join(x) for x in [
+                            [re.sub('[q\sk]+', '', x[::-1]) for x in [
+                                'mkYh5k2a', 'rR n LuV', '2avM3  L', 'vdGcqklV', 'nLnq5qWa', '19kDqcoB', '9kwm c']],
+                        ]]]
 
         self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s',
@@ -95,7 +140,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
             return None
 
         try:
-            my_parser = NameParser(showObj=self.show)
+            my_parser = NameParser(showObj=self.show, indexer_lookup=False)
             parse_result = my_parser.parse(file_name)
         except (InvalidNameException, InvalidShowException):
             return None
@@ -124,10 +169,10 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, date_or=True,
-                                                        ep_detail=lambda x: '%s|%s' % (config.naming_ep_type[2] % x,
-                                                                                       config.naming_ep_type[0] % x),
-                                                        ep_detail_anime=lambda x: '%02i' % x, **kwargs)
+        return super(ThePirateBayProvider, self)._episode_strings(
+            ep_obj, date_or=True,
+            ep_detail=lambda x: '%s|%s' % (config.naming_ep_type[2] % x, config.naming_ep_type[0] % x),
+            ep_detail_anime=lambda x: '%02i' % x, **kwargs)
 
     def _search_provider(self, search_params, search_mode='eponly', epcount=0, **kwargs):
 

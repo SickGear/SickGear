@@ -26,6 +26,7 @@ import os
 import re
 import time
 import urlparse
+import threading
 from urllib import quote_plus
 import zlib
 from base64 import b16encode, b32decode
@@ -33,6 +34,7 @@ from base64 import b16encode, b32decode
 import sickbeard
 import requests
 import requests.cookies
+from cfscrape import CloudflareScraper
 from hachoir_parser import guessParser
 from hachoir_core.error import HachoirError
 from hachoir_core.stream import FileInputStream
@@ -70,11 +72,12 @@ class GenericProvider:
         self.enabled = False
         self.enable_recentsearch = False
         self.enable_backlog = False
+        self.enable_scheduled_backlog = True
         self.categories = None
 
         self.cache = tvcache.TVCache(self)
 
-        self.session = requests.session()
+        self.session = CloudflareScraper.create_scraper()
 
         self.headers = {
             # Using USER_AGENT instead of Mozilla to keep same user agent along authentication and download phases,
@@ -107,7 +110,7 @@ class GenericProvider:
 
     def is_public_access(self):
         try:
-            return bool(re.search('(?i)rarbg|sick|womble|anizb', self.name)) \
+            return bool(re.search('(?i)rarbg|sick|anizb', self.name)) \
                    or False is bool(('_authorised' in self.__class__.__dict__ or hasattr(self, 'digest')
                                      or self._check_auth(is_required=True)))
         except AuthException:
@@ -175,19 +178,22 @@ class GenericProvider:
             final_dir = sickbeard.TORRENT_DIR
             link_type = 'magnet'
             try:
-                torrent_hash = re.findall('(?i)urn:btih:([0-9a-f]{32,40})', result.url)[0].upper()
+                btih = None
+                try:
+                    btih = re.findall('urn:btih:([\w]{32,40})', result.url)[0]
+                    if 32 == len(btih):
+                        from base64 import b16encode, b32decode
+                        btih = b16encode(b32decode(btih))
+                except (StandardError, Exception):
+                    pass
 
-                if 32 == len(torrent_hash):
-                    torrent_hash = b16encode(b32decode(torrent_hash)).lower()
-
-                if not torrent_hash:
+                if not btih or not re.search('(?i)[0-9a-f]{32,40}', btih):
                     logger.log('Unable to extract torrent hash from link: ' + ex(result.url), logger.ERROR)
                     return False
 
-                urls = ['http%s://%s/torrent/%s.torrent' % (u + (torrent_hash,))
-                        for u in (('s', 'itorrents.org'), ('s', 'torra.pro'), ('s', 'torra.click'),
-                                  ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
-                                  ('s', 'torrentproject.se'), ('', 'thetorrent.org'))]
+                urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
+                        for u in (('s', 'itorrents.org'), ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
+                                  ('s', 'torrentproject.se'), ('', 'thetorrent.org'), ('s', 'torcache.to'))]
             except (StandardError, Exception):
                 link_type = 'torrent'
                 urls = [result.url]
@@ -205,20 +211,24 @@ class GenericProvider:
         for url in urls:
             cache_dir = sickbeard.CACHE_DIR or helpers._getTempDir()
             base_name = '%s.%s' % (helpers.sanitizeFileName(result.name), self.providerType)
+            final_file = ek.ek(os.path.join, final_dir, base_name)
+            cached = getattr(result, 'cache_file', None)
+            if cached and ek.ek(os.path.isfile, cached):
+                base_name = ek.ek(os.path.basename, cached)
             cache_file = ek.ek(os.path.join, cache_dir, base_name)
 
             self.session.headers['Referer'] = url
-            if helpers.download_file(url, cache_file, session=self.session):
+            if cached or helpers.download_file(url, cache_file, session=self.session):
 
                 if self._verify_download(cache_file):
                     logger.log(u'Downloaded %s result from %s' % (self.name, url))
-                    final_file = ek.ek(os.path.join, final_dir, base_name)
                     try:
                         helpers.moveFile(cache_file, final_file)
                         msg = 'moved'
                     except (OSError, Exception):
                         msg = 'copied cached file'
-                    logger.log(u'Saved %s link and %s to %s' % (link_type, msg, final_file))
+                    logger.log(u'Saved .%s data and %s to %s' % (
+                        (link_type, 'torrent cache')['magnet' == link_type], msg, final_file))
                     saved = True
                     break
 
@@ -231,9 +241,7 @@ class GenericProvider:
                 del(self.session.headers['Referer'])
 
         if not saved and 'magnet' == link_type:
-            logger.log(u'All torrent cache servers failed to return a downloadable result', logger.ERROR)
-            logger.log(u'Advice: in search settings, change from method blackhole to direct torrent client connect',
-                       logger.ERROR)
+            logger.log(u'All torrent cache servers failed to return a downloadable result', logger.DEBUG)
             final_file = ek.ek(os.path.join, final_dir, '%s.%s' % (helpers.sanitizeFileName(result.name), link_type))
             try:
                 with open(final_file, 'wb') as fp:
@@ -241,9 +249,11 @@ class GenericProvider:
                     fp.flush()
                     os.fsync(fp.fileno())
                 logger.log(u'Saved magnet link to file as some clients (or plugins) support this, %s' % final_file)
-
+                if 'blackhole' == sickbeard.TORRENT_METHOD:
+                    logger.log('Tip: If your client fails to load magnet in files, ' +
+                               'change blackhole to a client connection method in search settings')
             except (StandardError, Exception):
-                pass
+                logger.log(u'Failed to save magnet link to file, %s' % final_file)
         elif not saved:
             logger.log(u'Server failed to return anything useful', logger.ERROR)
 
@@ -319,16 +329,16 @@ class GenericProvider:
     def _link(self, url, url_tmpl=None):
 
         url = url and str(url).strip().replace('&amp;', '&') or ''
-        try:
-            url_tmpl = url_tmpl or self.urls['get']
-        except (StandardError, Exception):
-            url_tmpl = '%s'
-        return url if re.match('(?i)https?://', url) else (url_tmpl % url.lstrip('/'))
+        return url if re.match('(?i)(https?://|magnet:)', url) \
+            else (url_tmpl or self.urls.get('get', (getattr(self, 'url', '') or
+                                                    getattr(self, 'url_base')) + '%s')) % url.lstrip('/')
 
-    def _header_row(self, table_row, custom_match=None, header_strip=''):
+    @staticmethod
+    def _header_row(table_row, custom_match=None, custom_tags=None, header_strip=''):
         """
         :param header_row: Soup resultset of table header row
         :param custom_match: Dict key/values to override one or more default regexes
+        :param custom_tags: List of tuples with tag and attribute
         :param header_strip: String regex of ambiguities to remove from headers
         :return: dict column indices or None for leech, seeds, and size
         """
@@ -353,7 +363,7 @@ class GenericProvider:
                     cell.find(tag, **p) for p in [{attr: rc[x]} for x in rc.keys()]]))), {}).get(attr)
                 for (tag, attr) in [
                     ('img', 'title'), ('img', 'src'), ('i', 'title'), ('i', 'class'),
-                    ('abbr', 'title'), ('a', 'title'), ('a', 'href')]]))), '')
+                    ('abbr', 'title'), ('a', 'title'), ('a', 'href')] + (custom_tags or [])]))), '')
              or cell.get_text()
              )).strip() for cell in all_cells]
         headers = [re.sub(header_strip, '', x) for x in headers]
@@ -407,6 +417,9 @@ class GenericProvider:
 
     def get_show(self, item, **kwargs):
         return None
+
+    def get_size_uid(self, item, **kwargs):
+        return -1, None
 
     def find_search_results(self, show, episodes, search_mode, manual_search=False, **kwargs):
 
@@ -475,7 +488,7 @@ class GenericProvider:
         for item in item_list:
             (title, url) = self._title_and_url(item)
 
-            parser = NameParser(False, showObj=self.get_show(item, **kwargs), convert=True)
+            parser = NameParser(False, showObj=self.get_show(item, **kwargs), convert=True, indexer_lookup=False)
             # parse the file name
             try:
                 parse_result = parser.parse(title)
@@ -513,9 +526,8 @@ class GenericProvider:
                         logger.log(u'The result ' + title + u' doesn\'t seem to be a valid season that we are trying' +
                                    u' to snatch, ignoring', logger.DEBUG)
                         add_cache_entry = True
-                    elif len(parse_result.episode_numbers)\
-                            and not [ep for ep in episodes
-                                     if ep.season == parse_result.season_number and
+                    elif len(parse_result.episode_numbers) and not [
+                        ep for ep in episodes if ep.season == parse_result.season_number and
                             ep.episode in parse_result.episode_numbers]:
                         logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
                                    u' to snatch, ignoring', logger.DEBUG)
@@ -531,19 +543,14 @@ class GenericProvider:
                                u' didn\'t parse as one, skipping it', logger.DEBUG)
                     add_cache_entry = True
                 else:
-                    airdate = parse_result.air_date.toordinal()
-                    my_db = db.DBConnection()
-                    sql_results = my_db.select('SELECT season, episode FROM tv_episodes ' +
-                                               'WHERE showid = ? AND airdate = ?', [show_obj.indexerid, airdate])
+                    actual_season = parse_result.season_number
+                    actual_episodes = parse_result.episode_numbers
 
-                    if 1 != len(sql_results):
-                        logger.log(u'Tried to look up the date for the episode ' + title + ' but the database didn\'t' +
-                                   u' give proper results, skipping it', logger.WARNING)
+                    if not actual_episodes or \
+                            not [ep for ep in episodes if ep.season == actual_season and ep.episode in actual_episodes]:
+                        logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
+                                   u' to snatch, ignoring', logger.DEBUG)
                         add_cache_entry = True
-
-                if not add_cache_entry:
-                    actual_season = int(sql_results[0]['season'])
-                    actual_episodes = [int(sql_results[0]['episode'])]
 
             # add parsed result to cache for usage later on
             if add_cache_entry:
@@ -581,6 +588,10 @@ class GenericProvider:
             result.release_group = release_group
             result.content = None
             result.version = version
+            result.size, result.puid = self.get_size_uid(item, **kwargs)
+            result.is_repack, result.properlevel = Quality.get_proper_level(parse_result.extra_info_no_name(),
+                                                                            parse_result.version, show_obj.is_anime,
+                                                                            check_is_repack=True)
 
             if 1 == len(ep_obj):
                 ep_num = ep_obj[0].episode
@@ -645,7 +656,7 @@ class GenericProvider:
         if hasattr(self, 'cookies'):
             cookies = self.cookies
 
-            if not (cookies and re.match('^(\w+=\w+[;\s]*)+$', cookies)):
+            if not (cookies and re.match('^(?:\w+=[^;\s]+[;\s]*)+$', cookies)):
                 return False
 
             cj = requests.utils.add_dict_to_cookiejar(self.session.cookies,
@@ -694,6 +705,20 @@ class GenericProvider:
             pass
         return long(math.ceil(value))
 
+    @staticmethod
+    def _should_stop():
+        if getattr(threading.currentThread(), 'stop', False):
+            return True
+        return False
+
+    def _sleep_with_stop(self, t):
+        t_l = t
+        while t_l > 0:
+            time.sleep(3)
+            t_l -= 3
+            if self._should_stop():
+                return
+
 
 class NZBProvider(object, GenericProvider):
 
@@ -718,7 +743,7 @@ class NZBProvider(object, GenericProvider):
         if has_key:
             return has_key
         if None is has_key:
-            raise AuthException('%s for %s is empty in config provider options'
+            raise AuthException('%s for %s is empty in Media Providers/Options'
                                 % ('API key' + ('', ' and/or Username')[hasattr(self, 'username')], self.name))
 
         return GenericProvider._check_auth(self)
@@ -736,8 +761,8 @@ class NZBProvider(object, GenericProvider):
         search_terms = []
         regex = []
         if shows:
-            search_terms += ['.proper.', '.repack.']
-            regex += ['proper|repack']
+            search_terms += ['.proper.', '.repack.', '.real.']
+            regex += ['proper|repack', Quality.real_check]
             proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
         if anime:
             terms = 'v1|v2|v3|v4|v5'
@@ -791,7 +816,7 @@ class NZBProvider(object, GenericProvider):
 
 class TorrentProvider(object, GenericProvider):
 
-    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=None):
+    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=None, update_freq=None):
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
 
         self.providerType = GenericProvider.TORRENT
@@ -803,6 +828,8 @@ class TorrentProvider(object, GenericProvider):
         self.cache._cache_data = self._cache_data
         if cache_update_freq:
             self.cache.update_freq = cache_update_freq
+        self.ping_freq = update_freq
+        self.ping_skip = None
 
     @property
     def url(self):
@@ -926,7 +953,7 @@ class TorrentProvider(object, GenericProvider):
         search_params = []
         crop = re.compile(r'([.\s])(?:\1)+')
         for name in set(allPossibleShowNames(self.show)):
-            if process_name:
+            if process_name and getattr(self, 'scene', True):
                 name = helpers.sanitizeSceneName(name)
             for detail in ep_detail:
                 search_params += [crop.sub(r'\1', '%s %s%s' % (name, x, detail)) for x in prefix]
@@ -934,8 +961,8 @@ class TorrentProvider(object, GenericProvider):
 
     @staticmethod
     def _has_signature(data=None):
-        return data and re.search(r'(?sim)<input[^<]+name="password"', data) and \
-               re.search(r'(?sim)<input[^<]+name="username"', data)
+        return data and re.search(r'(?sim)<input[^<]+?name=["\'\s]*?password', data) and \
+               re.search(r'(?sim)<input[^<]+?name=["\'\s]*?username', data)
 
     def _valid_home(self, attempt_fetch=True):
         """
@@ -1097,7 +1124,7 @@ class TorrentProvider(object, GenericProvider):
         elif hasattr(self, 'username') and hasattr(self, 'api_key'):
             if self.username and self.api_key:
                 return True
-            setting = 'Apikey or Username'
+            setting = 'Api key or Username'
         elif hasattr(self, 'username') and hasattr(self, 'passkey'):
             if self.username and self.passkey:
                 return True
@@ -1109,7 +1136,7 @@ class TorrentProvider(object, GenericProvider):
         elif hasattr(self, 'api_key'):
             if self.api_key:
                 return True
-            setting = 'Apikey'
+            setting = 'Api key'
         elif hasattr(self, 'passkey'):
             if self.passkey:
                 return True
@@ -1117,7 +1144,7 @@ class TorrentProvider(object, GenericProvider):
         else:
             return not is_required and GenericProvider._check_auth(self)
 
-        raise AuthException('%s for %s is empty in config provider options' % (setting, self.name))
+        raise AuthException('%s for %s is empty in Media Providers/Options' % (setting, self.name))
 
     def find_propers(self, **kwargs):
         """
@@ -1126,10 +1153,10 @@ class TorrentProvider(object, GenericProvider):
         """
         results = []
 
-        search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack'])
+        search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack', 'real'])
         if not isinstance(search_terms, list):
             if None is search_terms:
-                search_terms = 'proper|repack'
+                search_terms = 'proper|repack|real'
             search_terms = [search_terms]
 
         items = self._search_provider({'Propers': search_terms})
@@ -1156,6 +1183,15 @@ class TorrentProvider(object, GenericProvider):
                          '[^<]*?no\shits\.\sTry\sadding' +
                          ')', html)
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
 
         return self._search_provider({'Cache': ['']})
+
+    def _ping(self):
+        while not self._should_stop():
+            if self.ping_skip:
+                self.ping_skip -= 1
+            else:
+                self.ping_skip = ((60*60)/self.ping_freq, None)[self._authorised()]
+
+            self._sleep_with_stop(self.ping_freq)

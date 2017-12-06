@@ -461,7 +461,7 @@ def xem_refresh(indexer_id, indexer, force=False):
     indexer_id = int(indexer_id)
     indexer = int(indexer)
 
-    if indexer_id not in xem_ids_list[indexer]:
+    if 'xem_origin' not in sickbeard.indexerApi(indexer).config or indexer_id not in xem_ids_list.get(indexer, []):
         return
 
     # XEM API URL
@@ -529,7 +529,7 @@ def xem_refresh(indexer_id, indexer, force=False):
             logger.log(
                 u'Exception while refreshing XEM data for show ' + str(indexer_id) + ' on ' + sickbeard.indexerApi(
                     indexer).name + ': ' + ex(e), logger.WARNING)
-            logger.log(traceback.format_exc(), logger.DEBUG)
+            logger.log(traceback.format_exc(), logger.ERROR)
 
 
 def fix_xem_numbering(indexer_id, indexer):

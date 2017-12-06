@@ -194,9 +194,24 @@ def get_imdbid_by_name(name, startyear):
             if hasattr(r, 'movieID') and hasattr(r, 'data') and 'kind' in r.data and r.data['kind'] == 'tv series' \
                     and 'year' in r.data and r.data['year'] == startyear:
                 ids[INDEXER_IMDB] = tryInt(r.movieID)
+                break
     except (StandardError, Exception):
         pass
     return {k: v for k, v in ids.iteritems() if v not in (None, '', 0)}
+
+
+def check_missing_trakt_id(n_ids, show_obj, url_trakt):
+    if INDEXER_TRAKT not in n_ids:
+        new_url_trakt = TraktDict()
+        for k, v in n_ids.iteritems():
+            if k != show_obj.indexer and k in [INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_IMDB] and 0 < v \
+                    and k not in url_trakt:
+                new_url_trakt[k] = v
+
+        if 0 < len(new_url_trakt):
+            n_ids.update(get_trakt_ids(new_url_trakt))
+
+    return n_ids
 
 
 def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
@@ -281,18 +296,11 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
                          or k not in new_ids or new_ids.get(k) in (None, 0, '', MapStatus.NOT_FOUND)}
                 new_ids.update(tvids)
 
-        if INDEXER_TRAKT not in new_ids:
-            new_url_trakt = TraktDict()
-            for k, v in new_ids.iteritems():
-                if k != show_obj.indexer and k in [INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_IMDB] and 0 < v \
-                        and k not in url_trakt:
-                    new_url_trakt[k] = v
-
-            if 0 < len(new_url_trakt):
-                new_ids.update(get_trakt_ids(new_url_trakt))
+        new_ids = check_missing_trakt_id(new_ids, show_obj, url_trakt)
 
         if INDEXER_IMDB not in new_ids:
             new_ids.update(get_imdbid_by_name(show_obj.name, show_obj.startyear))
+            new_ids = check_missing_trakt_id(new_ids, show_obj, url_trakt)
 
         if INDEXER_TMDB in mis_map \
                 and (None is new_ids.get(INDEXER_TMDB) or MapStatus.NOT_FOUND == new_ids.get(INDEXER_TMDB)) \

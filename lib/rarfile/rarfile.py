@@ -140,8 +140,12 @@ except ImportError:
     _have_crypto = 0
 
 try:
-    from pyblake2 import blake2s
-    _have_blake2 = True
+    try:
+        from hashlib import blake2s
+        _have_blake2 = True
+    except ImportError:
+        from pyblake2 import blake2s
+        _have_blake2 = True
 except ImportError:
     _have_blake2 = False
 
@@ -380,8 +384,8 @@ UTC = timezone(timedelta(0), 'UTC')
 BSIZE = 32 * 1024
 
 def _get_rar_version(xfile):
-    '''Check quickly whether file is rar archive.
-    '''
+    """Check quickly whether file is rar archive.
+    """
     with XFile(xfile) as fd:
         buf = fd.read(len(RAR5_ID))
     if buf.startswith(RAR_ID):
@@ -395,8 +399,8 @@ def _get_rar_version(xfile):
 ##
 
 def is_rarfile(xfile):
-    '''Check quickly whether file is rar archive.
-    '''
+    """Check quickly whether file is rar archive.
+    """
     return _get_rar_version(xfile) > 0
 
 class Error(Exception):
@@ -473,7 +477,7 @@ class RarCannotExec(RarExecError):
 
 
 class RarInfo(object):
-    r'''An entry in rar archive.
+    r"""An entry in rar archive.
 
     RAR3 extended timestamps are :class:`datetime.datetime` objects without timezone.
     RAR5 extended timestamps are :class:`datetime.datetime` objects with UTC timezone.
@@ -566,7 +570,7 @@ class RarInfo(object):
         volume_file
             Volume file name, where file starts.
 
-    '''
+    """
 
     # zipfile-compatible fields
     filename = None
@@ -616,8 +620,8 @@ class RarInfo(object):
 
 
 class RarFile(object):
-    '''Parse RAR structure, provide access to files in archive.
-    '''
+    """Parse RAR structure, provide access to files in archive.
+    """
 
     #: Archive comment.  Unicode string or None.
     comment = None
@@ -662,13 +666,16 @@ class RarFile(object):
         self._parse()
 
     def __enter__(self):
+        """Open context."""
         return self
 
     def __exit__(self, typ, value, traceback):
+        """Exit context"""
         self.close()
 
     def setpassword(self, password):
-        '''Sets the password to use when extracting.'''
+        """Sets the password to use when extracting.
+        """
         self._password = password
         if self._file_parser:
             if self._file_parser.has_header_encryption():
@@ -679,33 +686,35 @@ class RarFile(object):
             self._file_parser.setpassword(self._password)
 
     def needs_password(self):
-        '''Returns True if any archive entries require password for extraction.'''
+        """Returns True if any archive entries require password for extraction.
+        """
         return self._file_parser.needs_password()
 
     def namelist(self):
-        '''Return list of filenames in archive.'''
+        """Return list of filenames in archive.
+        """
         return [f.filename for f in self.infolist()]
 
     def infolist(self):
-        '''Return RarInfo objects for all files/directories in archive.'''
+        """Return RarInfo objects for all files/directories in archive.
+        """
         return self._file_parser.infolist()
 
     def volumelist(self):
-        '''Returns filenames of archive volumes.
+        """Returns filenames of archive volumes.
 
         In case of single-volume archive, the list contains
         just the name of main archive file.
-        '''
+        """
         return self._file_parser.volumelist()
 
     def getinfo(self, fname):
-        '''Return RarInfo for file.
-        '''
+        """Return RarInfo for file.
+        """
         return self._file_parser.getinfo(fname)
 
     def open(self, fname, mode='r', psw=None):
-        '''Returns file-like object (:class:`RarExtFile`),
-        from where the data can be read.
+        """Returns file-like object (:class:`RarExtFile`) from where the data can be read.
 
         The object implements :class:`io.RawIOBase` interface, so it can
         be further wrapped with :class:`io.BufferedReader`
@@ -726,7 +735,7 @@ class RarFile(object):
                 must be 'r'
             psw
                 password to use for extracting.
-        '''
+        """
 
         if mode != 'r':
             raise NotImplementedError("RarFile.open() supports only mode=r")
@@ -823,8 +832,7 @@ class RarFile(object):
             check_returncode(p, output)
 
     def strerror(self):
-        """Return error string if parsing failed,
-        or None if no problems.
+        """Return error string if parsing failed or None if no problems.
         """
         if not self._file_parser:
             return "Not a RAR file"
@@ -935,9 +943,14 @@ class CommonParser(object):
         """
         return self._info_list
 
-    def getinfo(self, fname):
+    def getinfo(self, member):
         """Return RarInfo for filename
         """
+        if isinstance(member, RarInfo):
+            fname = member.filename
+        else:
+            fname = member
+
         # accept both ways here
         if PATH_SEP == '/':
             fname2 = fname.replace("\\", "/")
@@ -1951,6 +1964,8 @@ class RarExtFile(RawIOBase):
     name = None
 
     def __init__(self, parser, inf):
+        """Open archive entry.
+        """
         super(RarExtFile, self).__init__()
 
         # standard io.* properties
@@ -2100,7 +2115,8 @@ class RarExtFile(RawIOBase):
     def writable(self):
         """Returns False.
 
-        Writing is not supported."""
+        Writing is not supported.
+        """
         return False
 
     def seekable(self):
@@ -2856,6 +2872,7 @@ def hmac_sha256(key, data):
     return HMAC(key, data, sha256).digest()
 
 def membuf_tempfile(memfile):
+    """Write in-memory file object to real file."""
     memfile.seek(0, 0)
 
     tmpfd, tmpname = mkstemp(suffix='.rar')
@@ -2875,6 +2892,8 @@ def membuf_tempfile(memfile):
     return tmpname
 
 class XTempFile(object):
+    """Real file for archive.
+    """
     __slots__ = ('_tmpfile', '_filename')
 
     def __init__(self, rarfile):

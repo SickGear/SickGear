@@ -21,8 +21,8 @@ import traceback
 from . import generic
 from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
 from sickbeard.config import naming_ep_type
+from sickbeard.helpers import tryInt
 from dateutil.parser import parse
 from lib.unidecode import unidecode
 
@@ -35,8 +35,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         self.url_base = 'https://www.tvchaosuk.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse.php',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'browse.php'}
 
         self.url = self.urls['config_provider_home_uri']
 
@@ -59,6 +58,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download', 'fl': 'free'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
+                search_string = search_string.replace(u'£', '%')
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 kwargs = dict(post_data={'keywords': search_string, 'do': 'quick_sort', 'page': '0',
@@ -115,9 +115,10 @@ class TVChaosUKProvider(generic.TorrentProvider):
                                     get_detail = False
 
                             try:
-                                title = self.regulate_title(title, mode)
-                                if title and download_url:
-                                    items[mode].append((title, download_url, seeders, self._bytesizer(size)))
+                                titles = self.regulate_title(title, mode, search_string)
+                                if download_url and titles:
+                                    for title in titles:
+                                        items[mode].append((title, download_url, seeders, self._bytesizer(size)))
                             except (StandardError, Exception):
                                 pass
 
@@ -127,7 +128,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string.replace('%', ' '), self.name)['Cache' == mode])
+                                 ('search string: ' + search_string.replace('%', '%%'), self.name)['Cache' == mode])
 
                 if mode in 'Season' and len(items[mode]):
                     break
@@ -137,7 +138,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         return results
 
     @staticmethod
-    def regulate_title(title, mode='-'):
+    def regulate_title(title, mode='-', search_string=''):
 
         has_series = re.findall('(?i)(.*?series[^\d]*?\d+)(.*)', title)
         if has_series:
@@ -163,13 +164,14 @@ class TVChaosUKProvider(generic.TorrentProvider):
         for yr in years:
             title = re.sub('\{\{yr\}\}', yr, title, count=1)
 
-        dated = re.findall('(?i)([(\s]*)((?:\d+\s)?)([adfjmnos]\w{2,}\s+)((?:19|20)\d\d)([)\s]*)', title)
+        date_re = '(?i)([(\s.]*)((?:\d+[\s.]*(?:st|nd|rd|th)?[\s.])?)([adfjmnos]\w{2,}[\s.]+)((?:19|20)\d\d)([)\s.]*)'
+        dated = re.findall(date_re, title)
+        dnew = None
         for d in dated:
             try:
                 dout = parse(''.join(d[1:4])).strftime('%Y-%m-%d')
-                title = title.replace(''.join(d), '%s%s%s' % (
-                    ('', ' ')[1 < len(d[0])], dout[0: not any(d[2]) and 4 or not any(d[1]) and 7 or len(dout)],
-                    ('', ' ')[1 < len(d[4])]))
+                dnew = dout[0: not any(d[2]) and 4 or not any(d[1]) and 7 or len(dout)]
+                title = title.replace(''.join(d), '%s%s%s' % (('', ' ')[1 < len(d[0])], dnew, ('', ' ')[1 < len(d[4])]))
             except (StandardError, Exception):
                 pass
         if dated:
@@ -212,7 +214,30 @@ class TVChaosUKProvider(generic.TorrentProvider):
         for r in [('\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', '.')]:
             title = re.sub(r[0], r[1], title)
 
-        return title
+        titles = []
+        if dnew:
+            snew = None
+            dated_s = re.findall(date_re, search_string)
+            for d in dated_s:
+                try:
+                    sout = parse(''.join(d[1:4])).strftime('%Y-%m-%d')
+                    snew = sout[0: not any(d[2]) and 4 or not any(d[1]) and 7 or len(sout)]
+                except (StandardError, Exception):
+                    pass
+
+            if snew and dnew and snew != dnew:
+                return titles
+
+            try:
+                sxxexx_r = '(?i)S\d\d+E\d\d+'
+                if dnew and re.search(sxxexx_r, title):
+                    titles += [re.sub(sxxexx_r, dnew, re.sub('[_.\-\s]?%s' % dnew, '', title))]
+            except (StandardError, Exception):
+                pass
+
+        titles += [title]
+
+        return titles
 
     def _season_strings(self, ep_obj, **kwargs):
 
@@ -223,8 +248,10 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, prefix='%', date_detail=(
-            lambda d: [d.strftime('%d %b %Y')] + ([d.strftime('%d %B %Y')], [])[d.strftime('%b') == d.strftime('%B')]),
+        return super(TVChaosUKProvider, self)._episode_strings(ep_obj, scene=False, prefix='%', date_detail=(
+            lambda d: [x.strip('0') for x in (
+                ['{0} {1}% {2}'.format(d.strftime('%d')[-1], d.strftime('%b'), d.strftime('%Y'))] +
+                [d.strftime('%d %b %Y')] + ([d.strftime('%d %B %Y')], [])[d.strftime('%b') == d.strftime('%B')])]),
             ep_detail=(lambda e: [naming_ep_type[2] % e] + (
                 [], ['%(episodenumber)dof' % e])[1 == tryInt(e.get('seasonnumber'))]), **kwargs)
 

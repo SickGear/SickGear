@@ -191,39 +191,27 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
             show_list = sickbeard.showList
             from_date = datetime.date.fromordinal(1)
-            need_anime = need_sports = need_sd = need_hd = need_uhd = False
-            max_sd = Quality.SDDVD
-            hd_qualities = [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
-                            Quality.HDBLURAY, Quality.FULLHDBLURAY]
-            max_hd = Quality.FULLHDBLURAY
+            needed = common.neededQualities()
             for curShow in show_list:
                 if curShow.paused:
                     continue
 
                 wanted_eps = wanted_episodes(curShow, from_date, unaired=sickbeard.SEARCH_UNAIRED)
-                if wanted_eps:
-                    if not need_anime and curShow.is_anime:
-                        need_anime = True
-                    if not need_sports and curShow.is_sports:
-                        need_sports = True
-                    if not need_sd or not need_hd or not need_uhd:
-                        for w in wanted_eps:
-                            if need_sd and need_hd and need_uhd:
-                                break
-                            if not w.show.is_anime and not w.show.is_sports:
-                                if Quality.UNKNOWN in w.wantedQuality:
-                                    need_sd = need_hd = need_uhd = True
-                                else:
-                                    if not need_sd and max_sd >= min(w.wantedQuality):
-                                        need_sd = True
-                                    if not need_hd and any(i in hd_qualities for i in w.wantedQuality):
-                                        need_hd = True
-                                    if not need_uhd and max_hd < max(w.wantedQuality):
-                                        need_uhd = True
-                self.episodes.extend(wanted_eps)
 
-            self.update_providers(need_anime=need_anime, need_sports=need_sports,
-                                  need_sd=need_sd, need_hd=need_hd, need_uhd=need_uhd)
+                if wanted_eps:
+                    if not needed.all_needed:
+                        if not needed.all_types_needed:
+                            needed.check_needed_types(curShow)
+                        if not needed.all_qualities_needed:
+                            for w in wanted_eps:
+                                if needed.all_qualities_needed:
+                                    break
+                                if not w.show.is_anime and not w.show.is_sports:
+                                    needed.check_needed_qualities(w.wantedQuality)
+
+                    self.episodes.extend(wanted_eps)
+
+            self.update_providers(needed=needed)
 
             if not self.episodes:
                 logger.log(u'No search of cache for episodes required')
@@ -248,8 +236,8 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
                             helpers.cpu_sleep()
 
-                except Exception:
-                    logger.log(traceback.format_exc(), logger.DEBUG)
+                except (StandardError, Exception):
+                    logger.log(traceback.format_exc(), logger.ERROR)
 
                 if None is self.success:
                     self.success = False
@@ -270,8 +258,9 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         cur_time = datetime.datetime.now(network_timezones.sb_timezone)
 
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT * FROM tv_episodes WHERE status = ? AND season > 0 AND airdate <= ? AND airdate > 1',
-                                   [common.UNAIRED, cur_date])
+        sql_results = my_db.select(
+            'SELECT * FROM tv_episodes WHERE status = ? AND season > 0 AND airdate <= ? AND airdate > 1',
+            [common.UNAIRED, cur_date])
 
         sql_l = []
         show = None
@@ -296,7 +285,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 # filter out any episodes that haven't aired yet
                 if end_time > cur_time:
                     continue
-            except:
+            except (StandardError, Exception):
                 # if an error occurred assume the episode hasn't aired yet
                 continue
 
@@ -318,7 +307,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 logger.log(u'Found new episodes marked wanted')
 
     @staticmethod
-    def update_providers(need_anime=True, need_sports=True, need_sd=True, need_hd=True, need_uhd=True):
+    def update_providers(needed=common.neededQualities(need_all=True)):
         orig_thread_name = threading.currentThread().name
         threads = []
 
@@ -332,14 +321,13 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
             # spawn a thread for each provider to save time waiting for slow response providers
             threads.append(threading.Thread(target=cur_provider.cache.updateCache,
-                                            kwargs={'need_anime': need_anime, 'need_sports': need_sports,
-                                                    'need_sd': need_sd, 'need_hd': need_hd, 'need_uhd': need_uhd},
+                                            kwargs={'needed': needed},
                                             name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
             # start the thread we just created
             threads[-1].start()
 
         if not len(providers):
-            logger.log('No NZB/Torrent sources enabled in Search Provider options for cache update', logger.WARNING)
+            logger.log('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes', logger.WARNING)
 
         if threads:
             # wait for all threads to finish
@@ -396,8 +384,8 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
 
                 logger.log(u'Unable to find a download for: [%s]' % self.segment.prettyName())
 
-        except Exception:
-            logger.log(traceback.format_exc(), logger.DEBUG)
+        except (StandardError, Exception):
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
             # Keep a list with the 100 last executed searches
@@ -425,11 +413,13 @@ class BacklogQueueItem(generic_queue.QueueItem):
     def run(self):
         generic_queue.QueueItem.run(self)
 
+        is_error = False
         try:
             logger.log(u'Beginning backlog search for: [%s]' % self.show.name)
             search_result = search.search_providers(
                 self.show, self.segment, False,
-                try_other_searches=(not self.standard_backlog or not self.limited_backlog))
+                try_other_searches=(not self.standard_backlog or not self.limited_backlog),
+                scheduled=self.standard_backlog)
 
             if search_result:
                 for result in search_result:
@@ -440,10 +430,12 @@ class BacklogQueueItem(generic_queue.QueueItem):
                     helpers.cpu_sleep()
             else:
                 logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show.name)
-        except Exception:
-            logger.log(traceback.format_exc(), logger.DEBUG)
+        except (StandardError, Exception):
+            is_error = True
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
+            logger.log('Completed backlog search %sfor: [%s]' % (('', 'with a debug error ')[is_error], self.show.name))
             self.finish()
 
 
@@ -462,21 +454,23 @@ class FailedQueueItem(generic_queue.QueueItem):
         self.started = True
 
         try:
-            for epObj in self.segment:
+            for ep_obj in self.segment:
 
-                logger.log(u'Marking episode as bad: [%s]' % epObj.prettyName())
+                logger.log(u'Marking episode as bad: [%s]' % ep_obj.prettyName())
 
-                failed_history.markFailed(epObj)
+                cur_status = ep_obj.status
 
-                (release, provider) = failed_history.findRelease(epObj)
+                failed_history.set_episode_failed(ep_obj)
+                (release, provider) = failed_history.find_release(ep_obj)
+                failed_history.revert_episode(ep_obj)
                 if release:
-                    failed_history.logFailed(release)
-                    history.logFailed(epObj, release, provider)
+                    failed_history.add_failed(release)
+                    history.log_failed(ep_obj, release, provider)
 
-                failed_history.revertEpisode(epObj)
-                logger.log(u'Beginning failed download search for: [%s]' % epObj.prettyName())
+                logger.log(u'Beginning failed download search for: [%s]' % ep_obj.prettyName())
 
-            search_result = search.search_providers(self.show, self.segment, True, try_other_searches=True)
+            search_result = search.search_providers(
+                self.show, self.segment, True, try_other_searches=True, old_status=cur_status)
 
             if search_result:
                 for result in search_result:
@@ -488,8 +482,8 @@ class FailedQueueItem(generic_queue.QueueItem):
             else:
                 pass
                 # logger.log(u'No valid episode found to retry for: [%s]' % self.segment.prettyName())
-        except Exception:
-            logger.log(traceback.format_exc(), logger.DEBUG)
+        except (StandardError, Exception):
+            logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
             # Keep a list with the 100 last executed searches

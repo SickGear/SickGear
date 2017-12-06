@@ -1,5 +1,5 @@
 from lib.tvdb_api.tvdb_api import Tvdb
-from lib.tvrage_api.tvrage_api import TVRage
+from lib.libtrakt.indexerapiinterface import TraktIndexer
 
 INDEXER_TVDB = 1
 INDEXER_TVRAGE = 2
@@ -23,7 +23,7 @@ indexerConfig = {
         id=INDEXER_TVDB,
         name='TheTVDB',
         module=Tvdb,
-        api_params=dict(apikey='F9C450E78D99172E', language='en', useZip=True),
+        api_params=dict(apikey='F9C450E78D99172E', language='en'),
         active=True,
         dupekey='',
         mapped_only=False,
@@ -33,7 +33,7 @@ indexerConfig = {
         main_url='http://tvrage.com/',
         id=INDEXER_TVRAGE,
         name='TVRage',
-        module=TVRage,
+        module=None,
         api_params=dict(apikey='Uhewg1Rr0o62fvZvUIZt', language='en'),
         active=False,
         dupekey='tvr',
@@ -41,7 +41,7 @@ indexerConfig = {
         icon='tvrage16.png',
     ),
     INDEXER_TVMAZE: dict(
-        main_url='http://www.tvmaze.com/',
+        main_url='https://www.tvmaze.com/',
         id=INDEXER_TVMAZE,
         name='TVmaze',
         module=None,
@@ -66,9 +66,9 @@ indexerConfig = {
         main_url='https://www.trakt.tv/',
         id=INDEXER_TRAKT,
         name='Trakt',
-        module=None,
+        module=TraktIndexer,
         api_params={},
-        active=False,
+        active=True,
         dupekey='trakt',
         mapped_only=True,
         icon='trakt16.png',
@@ -103,13 +103,12 @@ indexerConfig[info_src].update(dict(
               'showinfo.php?key=%(apikey)s&sid=' % indexerConfig[info_src]['api_params']),
     show_url='%sshows/id-' % indexerConfig[info_src]['main_url'],
     scene_url='https://sickgear.github.io/sg_tvrage_scene_exceptions/exceptions.txt',
-    xem_origin='rage',
     defunct=True,
 ))
 
 info_src = INDEXER_TVMAZE
 indexerConfig[info_src].update(dict(
-    base_url='http://api.tvmaze.com/',
+    base_url='https://api.tvmaze.com/',
     show_url='%sshows/' % indexerConfig[info_src]['main_url'],
     finder='%ssearch?q=%s' % (indexerConfig[info_src]['main_url'], '%s'),
 ))

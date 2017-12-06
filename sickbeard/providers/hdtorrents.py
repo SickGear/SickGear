@@ -37,9 +37,9 @@ class HDTorrentsProvider(generic.TorrentProvider):
         self.url_home = ['https://hd-torrents.%s/' % x for x in 'org', 'net', 'me'] + ['https://hdts.ru/']
 
         self.url_vars = {'login_action': 'index.php',
-                         'search': 'torrents.php?search=%s&active=0&options=0&%s', 'get': '%s'}
+                         'search': 'torrents.php?search=%s&active=0&options=0&%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'Episode': [59, 60, 30, 38, 65], 'anime': ['Animation']}
         self.categories['Season'] = self.categories['Cache'] = self.categories['Episode']
@@ -47,7 +47,7 @@ class HDTorrentsProvider(generic.TorrentProvider):
         self.filter = []
         self.may_filter = OrderedDict(
             [('f0', ('not marked', False)), ('f25', ('-25%', True)), ('f50', ('-50%', True)), ('f75', ('-75%', True))])
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.username, self.password, self.scene, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -137,12 +137,6 @@ class HDTorrentsProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-    def _season_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False, **kwargs)
-
-    def _episode_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, sep_date=' ', **kwargs)
 
 
 provider = HDTorrentsProvider()

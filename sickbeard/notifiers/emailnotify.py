@@ -19,118 +19,57 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-
-import sickbeard
-import smtplib
-
-from sickbeard import db
-from sickbeard import logger
-from sickbeard.common import notifyStrings, NOTIFY_SNATCH, NOTIFY_DOWNLOAD, NOTIFY_SUBTITLE_DOWNLOAD
-
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
+import re
+import smtplib
+
+import sickbeard
+from sickbeard import db
+from sickbeard.notifiers.generic import Notifier, notify_strings
 
 
-class EmailNotifier:
+class EmailNotifier(Notifier):
 
     def __init__(self):
+        super(EmailNotifier, self).__init__()
 
         self.last_err = None
 
-    def test_notify(self, host, port, smtp_from, use_tls, user, pwd, to):
+    def _sendmail(self, host, port, smtp_from, use_tls, user, pwd, to, msg, smtp_debug=False):
 
-        msg = MIMEText('Success.  This is a SickGear test message. Typically sent on, %s' %
-                       notifyStrings[NOTIFY_DOWNLOAD])
-        msg['Subject'] = 'SickGear: Test message'
-        msg['From'] = smtp_from
-        msg['To'] = to
-        msg['Date'] = formatdate(localtime=True)
-        return self._sendmail(host, port, smtp_from, use_tls, user, pwd, [to], msg, True)
-
-    def _send_email(self, title, ep_name, lang='', extra='', force=False):
-
-        if not sickbeard.USE_EMAIL and not force:
-            return
-
-        show = ep_name.split(' - ')[0]
-        to = self._get_recipients(show)
-        if not any(to):
-            logger.log(u'No email recipients to notify, skipping', logger.WARNING)
-            return
-
-        logger.log(u'Email recipients to notify: %s' % to, logger.DEBUG)
+        use_tls = 1 == sickbeard.helpers.tryInt(use_tls)
+        login = any(user) and any(pwd)
+        self._log_debug(u'Sendmail HOST: %s; PORT: %s; LOGIN: %s, TLS: %s, USER: %s, FROM: %s, TO: %s' % (
+            host, port, login, use_tls, user, smtp_from, to))
 
         try:
-            msg = MIMEMultipart('alternative')
-            msg.attach(MIMEText(
-                '<body style="font-family:Helvetica, Arial, sans-serif;">' +
-                '<h3>SickGear Notification - %s</h3>\n' % title +
-                '<p>Show: <b>' + show.encode('ascii', 'xmlcharrefreplace') +
-                '</b></p>\n<p>Episode: <b>' +
-                unicode(re.search('.+ - (.+?-.+) -.+', ep_name).group(1)).encode('ascii', 'xmlcharrefreplace') +
-                extra +
-                '</b></p>\n\n' +
-                '<footer style="margin-top:2.5em;padding:.7em 0;color:#777;border-top:#BBB solid 1px;">' +
-                'Powered by SickGear.</footer></body>',
-                'html'))
-        except:
-            try:
-                msg = MIMEText(ep_name)
-            except:
-                msg = MIMEText('Episode %s' % title)
+            srv = smtplib.SMTP(host, int(port))
+            if smtp_debug:
+                srv.set_debuglevel(1)
 
-        msg['Subject'] = '%s%s: %s' % (lang, title, ep_name)
-        msg['From'] = sickbeard.EMAIL_FROM
-        msg['To'] = ','.join(to)
-        msg['Date'] = formatdate(localtime=True)
-        if self._sendmail(sickbeard.EMAIL_HOST, sickbeard.EMAIL_PORT, sickbeard.EMAIL_FROM, sickbeard.EMAIL_TLS,
-                          sickbeard.EMAIL_USER, sickbeard.EMAIL_PASSWORD, to, msg):
-            logger.log(u'%s notification sent to [%s] for "%s"' % (title, to, ep_name), logger.DEBUG)
-        else:
-            logger.log(u'%s notification ERROR: %s' % (title, self.last_err), logger.ERROR)
+            if use_tls or login:
+                srv.ehlo()
+                self._log_debug(u'Sent initial EHLO command')
 
-    def notify_snatch(self, ep_name, title=notifyStrings[NOTIFY_SNATCH]):
-        """
-        Send a notification that an episode was snatched
+                if use_tls:
+                    srv.starttls()
+                    srv.ehlo()
+                    self._log_debug(u'Sent STARTTLS and EHLO command')
 
-        :param ep_name: The name of the episode that was snatched
-        :param title: The title of the notification (optional)
-        """
+                if login:
+                    srv.login(user, pwd)
+                    self._log_debug(u'Sent LOGIN command')
 
-        if sickbeard.EMAIL_NOTIFY_ONSNATCH:
-            title = sickbeard.EMAIL_OLD_SUBJECTS and 'Snatched' or title
-            self._send_email(title, ep_name)
+            srv.sendmail(smtp_from, to, msg.as_string())
+            srv.quit()
 
-    def notify_download(self, ep_name, title=notifyStrings[NOTIFY_DOWNLOAD]):
-        """
-        Send a notification that an episode was downloaded
+        except Exception as e:
+            self.last_err = '%s' % e
+            return False
 
-        :param ep_name: The name of the episode that was downloaded
-        :param title: The title of the notification (optional)
-        """
-
-        if sickbeard.EMAIL_NOTIFY_ONDOWNLOAD:
-            title = sickbeard.EMAIL_OLD_SUBJECTS and 'Downloaded' or title
-            self._send_email(title, ep_name)
-
-    def notify_subtitle_download(self, ep_name, lang, title=notifyStrings[NOTIFY_SUBTITLE_DOWNLOAD]):
-        """
-        Send a notification that a subtitle was downloaded
-
-        :param ep_name: The name of the episode that was downloaded
-        :param lang: Subtitle language
-        :param title: The title of the notification (optional)
-        """
-
-        if sickbeard.EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD:
-            title = sickbeard.EMAIL_OLD_SUBJECTS and 'Subtitle Downloaded' or title
-            self._send_email(title, ep_name, '%s ' % lang, '</b></p>\n<p>Language: <b>%s' % lang)
-
-    def notify_git_update(self, new_version='??'):
-
-        pass
+        return True
 
     @staticmethod
     def _get_recipients(show_name=None):
@@ -154,39 +93,91 @@ class EmailNotifier:
 
         return list(set(email_list))
 
-    def _sendmail(self, host, port, smtp_from, use_tls, user, pwd, to, msg, smtp_debug=False):
+    def _notify(self, title, body, lang='', extra='', **kwargs):
 
-        use_tls = 1 == sickbeard.helpers.tryInt(use_tls)
-        login = any(user) and any(pwd)
-        logger.log(u'Sendmail HOST: %s; PORT: %s; LOGIN: %s, TLS: %s, USER: %s, FROM: %s, TO: %s' % (
-            host, port, login, use_tls, user, smtp_from, to), logger.DEBUG)
+        show = body.split(' - ')[0]
+        to = self._get_recipients(show)
+        if not any(to):
+            self._log_warning(u'No email recipients to notify, skipping')
+            return
+
+        self._log_debug(u'Email recipients to notify: %s' % to)
 
         try:
-            srv = smtplib.SMTP(host, int(port))
-            if smtp_debug:
-                srv.set_debuglevel(1)
+            msg = MIMEMultipart('alternative')
+            msg.attach(MIMEText(
+                '<body style="font-family:Helvetica, Arial, sans-serif;">' +
+                '<h3>SickGear Notification - %s</h3>\n' % title +
+                '<p>Show: <b>' + show.encode('ascii', 'xmlcharrefreplace') +
+                '</b></p>\n<p>Episode: <b>' +
+                unicode(re.search('.+ - (.+?-.+) -.+', body).group(1)).encode('ascii', 'xmlcharrefreplace') +
+                extra +
+                '</b></p>\n\n' +
+                '<footer style="margin-top:2.5em;padding:.7em 0;color:#777;border-top:#BBB solid 1px;">' +
+                'Powered by SickGear.</footer></body>',
+                'html'))
+        except (StandardError, Exception):
+            try:
+                msg = MIMEText(body)
+            except (StandardError, Exception):
+                msg = MIMEText('Episode %s' % title)
 
-            if use_tls or login:
-                srv.ehlo()
-                logger.log(u'Sent initial EHLO command', logger.DEBUG)
+        msg['Subject'] = '%s%s: %s' % (lang, title, body)
+        msg['From'] = sickbeard.EMAIL_FROM
+        msg['To'] = ','.join(to)
+        msg['Date'] = formatdate(localtime=True)
+        if self._sendmail(sickbeard.EMAIL_HOST, sickbeard.EMAIL_PORT, sickbeard.EMAIL_FROM, sickbeard.EMAIL_TLS,
+                          sickbeard.EMAIL_USER, sickbeard.EMAIL_PASSWORD, to, msg):
+            self._log_debug(u'%s notification sent to [%s] for "%s"' % (title, to, body))
+        else:
+            self._log_error(u'%s notification ERROR: %s' % (title, self.last_err))
 
-                if use_tls:
-                    srv.starttls()
-                    srv.ehlo()
-                    logger.log(u'Sent STARTTLS and EHLO command', logger.DEBUG)
+    def test_notify(self, host, port, smtp_from, use_tls, user, pwd, to):
+        self._testing = True
 
-                if login:
-                    srv.login(user, pwd)
-                    logger.log(u'Sent LOGIN command', logger.DEBUG)
+        msg = MIMEText('Success.  This is a SickGear test message. Typically sent on, %s' % notify_strings['download'])
+        msg['Subject'] = 'SickGear: Test message'
+        msg['From'] = smtp_from
+        msg['To'] = to
+        msg['Date'] = formatdate(localtime=True)
 
-            srv.sendmail(smtp_from, to, msg.as_string())
-            srv.quit()
+        r = self._sendmail(host, port, smtp_from, use_tls, user, pwd, [to], msg, True)
+        return self._choose(('Success, notification sent.',
+                             'Failed to send notification: %s' % self.last_err)[not r], r)
 
-        except Exception as e:
-            self.last_err = '%s' % e
-            return False
+    def notify_snatch(self, ep_name, title=None):
+        """
+        Send a notification that an episode was snatched
 
-        return True
+        :param ep_name: The name of the episode that was snatched
+        :param title: The title of the notification (optional)
+        """
+
+        title = sickbeard.EMAIL_OLD_SUBJECTS and 'Snatched' or title or notify_strings['snatch']
+        self._notify(title, ep_name)
+
+    def notify_download(self, ep_name, title=None):
+        """
+        Send a notification that an episode was downloaded
+
+        :param ep_name: The name of the episode that was downloaded
+        :param title: The title of the notification (optional)
+        """
+
+        title = sickbeard.EMAIL_OLD_SUBJECTS and 'Downloaded' or title or notify_strings['download']
+        self._notify(title, ep_name)
+
+    def notify_subtitle_download(self, ep_name, lang, title=None):
+        """
+        Send a notification that a subtitle was downloaded
+
+        :param ep_name: The name of the episode that was downloaded
+        :param lang: Subtitle language
+        :param title: The title of the notification (optional)
+        """
+
+        title = sickbeard.EMAIL_OLD_SUBJECTS and 'Subtitle Downloaded' or title or notify_strings['subtitle_download']
+        self._notify(title, ep_name, '%s ' % lang, '</b></p>\n<p>Language: <b>%s' % lang)
 
 
 notifier = EmailNotifier

@@ -30,7 +30,7 @@ class RarbgProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'Rarbg')
 
-        self.url_base = 'https://rarbg.unblocked.uno/'
+        self.url_base = 'https://rarbgmirror.xyz/'
         # api_spec: https://rarbg.com/pubapi/apidocs_v2.txt
         self.url_api = 'https://torrentapi.org/pubapi_v2.php?app_id=SickGear&'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -168,7 +168,7 @@ class RarbgProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        search_params = generic.TorrentProvider._episode_strings(self, ep_obj, detail_only=True, date_or=True, **kwargs)
+        search_params = super(RarbgProvider, self)._episode_strings(ep_obj, detail_only=True, date_or=True, **kwargs)
         if self.show.air_by_date and self.show.is_sports:
             for x, types in enumerate(search_params):
                 for y, ep_type in enumerate(types):

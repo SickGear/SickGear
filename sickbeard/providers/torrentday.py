@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import base64
 import re
 import time
 
@@ -29,11 +30,23 @@ class TorrentDayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'TorrentDay')
 
         self.url_home = ['https://%s/' % u for u in 'torrentday.eu', 'secure.torrentday.com', 'tdonline.org',
-                                                    'torrentday.it', 'www.td.af', 'www.torrentday.com']
+                                                    'torrentday.it', 'www.td.af', 'www.torrentday.com'] + \
+                        ['http://td.%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                            [re.sub('(?i)[I\s1]+', '', x[::-1]) for x in [
+                                'y92d', 'zl12a', 'y9mY', 'n5 Wa', 'vNmIL', '=i1=Qb']],
+                            [re.sub('(?i)[T\sq]+', '', x[::-1]) for x in [
+                                '15TWd', 'hV 3c', 'lBHb', 'vNncq', 'j5ib', '=qQ02b']],
+                            [re.sub('(?i)[0\so]+', '', x[::-1]) for x in [
+                                'Vmco', 'CZh', 'boi10', 'r92', '5yc', 'mcv', '=oc']],
+                            [re.sub('(?i)[1\slq]+', '', x[::-1]) for x in [
+                                '2cql', 'yV1', 'mdlq', 'wQV', 'n11M', 'uA', '12Y', 't9']],
+                            [re.sub('(?i)[\s1q]+', '', x[::-1]) for x in [
+                                'Vmbq', 'WL10', 'ZyZ', 'rFW', '5yc', '12bj', 'q=0']]
+                        ]]]
 
-        self.url_vars = {'login': 'rss.php', 'search': 't?%s%s;q=%s%s', 'get': '%s'}
+        self.url_vars = {'login': 'rss.php', 'search': 'browse.php?cata=yes&%s%s&search=%s%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
-                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s'}
 
         self.categories = {'Season': [31, 33, 14], 'Episode': [24, 32, 26, 7, 34, 2], 'anime': [29]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
@@ -69,8 +82,8 @@ class TorrentDayProvider(generic.TorrentProvider):
                 search_string = '+'.join(search_string.split())
 
                 search_url = self.urls['search'] % (
-                    self._categories_string(mode, '%s', ';'), (';free', '')[not self.freeleech],
-                    search_string, (';o=seeders', '')['Cache' == mode])
+                    self._categories_string(mode), ('&free=on', '')[not self.freeleech],
+                    search_string, ('&sort=7&type=desc', '')['Cache' == mode])
 
                 html = self.get_url(search_url)
 
@@ -79,7 +92,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                    with BS4Parser(html, features=['html5lib', 'permissive'], tag='table', attr='torrentTable') as soup:
                         torrent_table = soup.find('table', id='torrentTable')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
@@ -120,7 +133,7 @@ class TorrentDayProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='.', date_or=True, **kwargs)
+        return super(TorrentDayProvider, self)._episode_strings(ep_obj, sep_date='.', date_or=True, **kwargs)
 
     def ui_string(self, key):
         if 'torrentday_digest' == key and self._valid_home():

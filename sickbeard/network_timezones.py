@@ -38,6 +38,9 @@ pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
 
 network_dict = None
 network_dupes = None
+last_failure = {'datetime': datetime.datetime.fromordinal(1), 'count': 0}
+max_retry_time = 900
+max_retry_count = 3
 
 country_timezones = {
     'AU': 'Australia/Sydney', 'AR': 'America/Buenos_Aires', 'AUSTRALIA': 'Australia/Sydney', 'BR': 'America/Sao_Paulo',
@@ -49,6 +52,24 @@ country_timezones = {
     'TW': 'Asia/Taipei', 'UK': 'Europe/London', 'US': 'US/Eastern', 'ZA': 'Africa/Johannesburg'}
 
 
+def reset_last_retry():
+    global last_failure
+    last_failure = {'datetime': datetime.datetime.fromordinal(1), 'count': 0}
+
+
+def update_last_retry():
+    global last_failure
+    last_failure = {'datetime': datetime.datetime.now(), 'count': last_failure.get('count', 0) + 1}
+
+
+def should_try_loading():
+    global last_failure
+    if last_failure.get('count', 0) >= max_retry_count and \
+            (datetime.datetime.now() - last_failure.get('datetime', datetime.datetime.fromordinal(1))).seconds < max_retry_time:
+        return False
+    return True
+
+
 def tz_fallback(t):
     return t if isinstance(t, datetime.tzinfo) else tz.tzlocal()
 
@@ -57,7 +78,7 @@ def get_tz():
     t = get_localzone()
     if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone and hasattr(sickbeard, 'ZONEINFO_DIR'):
         try:
-            t = tz_fallback(tz.gettz(t.zone))
+            t = tz_fallback(tz.gettz(t.zone, zoneinfo_priority=True))
         except:
             t = tz_fallback(t)
     else:
@@ -99,6 +120,9 @@ def _remove_old_zoneinfo():
 
 # update the dateutil zoneinfo
 def _update_zoneinfo():
+    if not should_try_loading():
+        return
+
     global sb_timezone
     sb_timezone = get_tz()
 
@@ -107,10 +131,13 @@ def _update_zoneinfo():
 
     url_data = helpers.getURL(url_zv)
     if url_data is None:
+        update_last_retry()
         # When urlData is None, trouble connecting to github
         logger.log(u'Loading zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' % url_zv,
                    logger.WARNING)
         return
+    else:
+        reset_last_retry()
 
     zonefilename = zoneinfo.ZONEFILENAME
     cur_zoneinfo = zonefilename
@@ -175,6 +202,9 @@ def _update_zoneinfo():
 
 # update the network timezone table
 def update_network_dict():
+    if not should_try_loading():
+        return
+
     _remove_old_zoneinfo()
     _update_zoneinfo()
     load_network_conversions()
@@ -186,10 +216,13 @@ def update_network_dict():
 
     url_data = helpers.getURL(url)
     if url_data is None:
+        update_last_retry()
         # When urlData is None, trouble connecting to github
         logger.log(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
-        load_network_dict()
+        load_network_dict(load=False)
         return
+    else:
+        reset_last_retry()
 
     try:
         for line in url_data.splitlines():
@@ -231,7 +264,7 @@ def update_network_dict():
 
 
 # load network timezones from db into dict
-def load_network_dict():
+def load_network_dict(load=True):
     global network_dict, network_dupes
 
     my_db = db.DBConnection('cache.db')
@@ -240,7 +273,7 @@ def load_network_dict():
         sql = 'SELECT %s AS network_name, timezone FROM [network_timezones] ' % sql_name + \
               'GROUP BY %s HAVING COUNT(*) = 1 ORDER BY %s;' % (sql_name, sql_name)
         cur_network_list = my_db.select(sql)
-        if cur_network_list is None or len(cur_network_list) < 1:
+        if load and (cur_network_list is None or len(cur_network_list) < 1):
             update_network_dict()
             cur_network_list = my_db.select(sql)
         network_dict = dict(cur_network_list)
@@ -270,14 +303,15 @@ def get_network_timezone(network):
             if not network_dict:
                 load_network_dict()
             try:
-                timezone = tz.gettz(network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower()))
+                timezone = tz.gettz(network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower()),
+                                    zoneinfo_priority=True)
             except:
                 pass
 
             if timezone is None:
                 cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
                 try:
-                    timezone = tz.gettz(country_timezones.get(cc.group(1).upper()))
+                    timezone = tz.gettz(country_timezones.get(cc.group(1).upper()), zoneinfo_priority=True)
                 except:
                     pass
     except:
@@ -360,6 +394,9 @@ def standardize_network(network, country):
 
 def load_network_conversions():
 
+    if not should_try_loading():
+        return
+
     conversions = []
 
     # network conversions are stored on github pages
@@ -367,9 +404,12 @@ def load_network_conversions():
 
     url_data = helpers.getURL(url)
     if url_data is None:
+        update_last_retry()
         # When urlData is None, trouble connecting to github
         logger.log(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
         return
+    else:
+        reset_last_retry()
 
     try:
         for line in url_data.splitlines():

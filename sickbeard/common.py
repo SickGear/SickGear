@@ -67,6 +67,7 @@ SNATCHED_PROPER = 9  # qualified with quality
 SUBTITLED = 10  # qualified with quality
 FAILED = 11  # episode downloaded or snatched we don't want
 SNATCHED_BEST = 12  # episode redownloaded using best quality
+SNATCHED_ANY = [SNATCHED, SNATCHED_PROPER, SNATCHED_BEST]
 
 NAMING_REPEAT = 1
 NAMING_EXTEND = 2
@@ -119,6 +120,31 @@ class Quality:
                       SNATCHED_PROPER: 'Snatched (Proper)',
                       FAILED: 'Failed',
                       SNATCHED_BEST: 'Snatched (Best)'}
+
+    real_check = r'\breal\b\W?(?=proper|repack|e?ac3|aac|dts|read\Wnfo|(ws\W)?[ph]dtv|(ws\W)?dsr|web|dvd|blu|\d{2,3}0(p|i))(?!.*\d+(e|x)\d+)'
+
+    proper_levels = [(re.compile(r'\brepack\b(?!.*\d+(e|x)\d+)', flags=re.I), True),
+                     (re.compile(r'\bproper\b(?!.*\d+(e|x)\d+)', flags=re.I), False),
+                     (re.compile(real_check, flags=re.I), False)]
+
+    @staticmethod
+    def get_proper_level(extra_no_name, version, is_anime=False, check_is_repack=False):
+        level = 0
+        is_repack = False
+        if is_anime:
+            if isinstance(version, (int, long)):
+                level = version
+            else:
+                level = 1
+        elif isinstance(extra_no_name, basestring):
+            for p, r_check in Quality.proper_levels:
+                a = len(p.findall(extra_no_name))
+                level += a
+                if 0 < a and r_check:
+                    is_repack = True
+        if check_is_repack:
+            return is_repack, level
+        return level
 
     @staticmethod
     def get_quality_css(quality):
@@ -237,10 +263,16 @@ class Quality:
             return Quality.FULLHDWEBDL
         elif checkName(['720p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all):
             return Quality.HDBLURAY
-        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all):
+        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all) or \
+                (checkName(['1080[pi]', 'remux'], all) and not checkName(['hdtv'], all)):
             return Quality.FULLHDBLURAY
         elif checkName(['2160p', 'web.?(dl|rip|.[hx]26[45])'], all):
             return Quality.UHD4KWEB
+        # p2p
+        elif checkName(['720HD'], all) and not checkName(['(1080|2160)[pi]'], all):
+            return Quality.HDTV
+        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'avc|vc[-\s.]?1'], all):
+            return Quality.FULLHDBLURAY
         else:
             return Quality.UNKNOWN
 
@@ -263,7 +295,7 @@ class Quality:
                 logger.log(msg % (filename, e.text), logger.WARNING)
             except Exception as e:
                 logger.log(msg % (filename, ex(e)), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.DEBUG)
+                logger.log(traceback.format_exc(), logger.ERROR)
 
             if parser:
                 if '.avi' == filename[-4::].lower():
@@ -336,18 +368,22 @@ class Quality:
                 quality = Quality.assumeQuality(file_path)
         return Quality.compositeStatus(DOWNLOADED, quality)
 
-    DOWNLOADED = None
     SNATCHED = None
     SNATCHED_PROPER = None
-    FAILED = None
     SNATCHED_BEST = None
+    SNATCHED_ANY = None
+    DOWNLOADED = None
+    ARCHIVED = None
+    FAILED = None
 
 
-Quality.DOWNLOADED = [Quality.compositeStatus(DOWNLOADED, x) for x in Quality.qualityStrings.keys()]
 Quality.SNATCHED = [Quality.compositeStatus(SNATCHED, x) for x in Quality.qualityStrings.keys()]
 Quality.SNATCHED_PROPER = [Quality.compositeStatus(SNATCHED_PROPER, x) for x in Quality.qualityStrings.keys()]
-Quality.FAILED = [Quality.compositeStatus(FAILED, x) for x in Quality.qualityStrings.keys()]
 Quality.SNATCHED_BEST = [Quality.compositeStatus(SNATCHED_BEST, x) for x in Quality.qualityStrings.keys()]
+Quality.SNATCHED_ANY = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
+Quality.DOWNLOADED = [Quality.compositeStatus(DOWNLOADED, x) for x in Quality.qualityStrings.keys()]
+Quality.ARCHIVED = [Quality.compositeStatus(ARCHIVED, x) for x in Quality.qualityStrings.keys()]
+Quality.FAILED = [Quality.compositeStatus(FAILED, x) for x in Quality.qualityStrings.keys()]
 
 SD = Quality.combineQualities([Quality.SDTV, Quality.SDDVD], [])
 HD = Quality.combineQualities(
@@ -378,29 +414,26 @@ class StatusStrings:
         self.statusStrings = {UNKNOWN: 'Unknown',
                               UNAIRED: 'Unaired',
                               SNATCHED: 'Snatched',
-                              DOWNLOADED: 'Downloaded',
-                              SKIPPED: 'Skipped',
                               SNATCHED_PROPER: 'Snatched (Proper)',
-                              WANTED: 'Wanted',
+                              SNATCHED_BEST: 'Snatched (Best)',
+                              DOWNLOADED: 'Downloaded',
                               ARCHIVED: 'Archived',
+                              SKIPPED: 'Skipped',
+                              WANTED: 'Wanted',
                               IGNORED: 'Ignored',
                               SUBTITLED: 'Subtitled',
-                              FAILED: 'Failed',
-                              SNATCHED_BEST: 'Snatched (Best)'}
+                              FAILED: 'Failed'}
 
     def __getitem__(self, name):
-        if name in Quality.DOWNLOADED + Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST:
+        if name in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED:
             status, quality = Quality.splitCompositeStatus(name)
             if quality == Quality.NONE:
                 return self.statusStrings[status]
-            else:
-                return '%s (%s)' % (self.statusStrings[status], Quality.qualityStrings[quality])
-        else:
-            return self.statusStrings[name] if self.statusStrings.has_key(name) else ''
+            return '%s (%s)' % (self.statusStrings[status], Quality.qualityStrings[quality])
+        return self.statusStrings[name] if self.statusStrings.has_key(name) else ''
 
     def has_key(self, name):
-        return name in self.statusStrings or name in Quality.DOWNLOADED or name in Quality.SNATCHED \
-            or name in Quality.SNATCHED_PROPER or name in Quality.SNATCHED_BEST
+        return name in self.statusStrings or name in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED
 
 
 statusStrings = StatusStrings()
@@ -427,3 +460,50 @@ class Overview:
 countryList = {'Australia': 'AU',
                'Canada': 'CA',
                'USA': 'US'}
+
+
+class neededQualities:
+    def __init__(self, need_anime=False, need_sports=False, need_sd=False, need_hd=False, need_uhd=False,
+                 need_webdl=False, need_all_qualities=False, need_all_types=False, need_all=False):
+        self.need_anime = need_anime or need_all_types or need_all
+        self.need_sports = need_sports or need_all_types or need_all
+        self.need_sd = need_sd or need_all_qualities or need_all
+        self.need_hd = need_hd or need_all_qualities or need_all
+        self.need_uhd = need_uhd or need_all_qualities or need_all
+        self.need_webdl = need_webdl or need_all_qualities or need_all
+
+    max_sd = Quality.SDDVD
+    hd_qualities = [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.HDBLURAY, Quality.FULLHDBLURAY]
+    webdl_qualities = [Quality.SDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB]
+    max_hd = Quality.FULLHDBLURAY
+
+    @property
+    def all_needed(self):
+        return self.all_qualities_needed and self.all_types_needed
+
+    @property
+    def all_types_needed(self):
+        return self.need_anime and self.need_sports
+
+    @property
+    def all_qualities_needed(self):
+        return self.need_sd and self.need_hd and self.need_uhd and self.need_webdl
+
+    def check_needed_types(self, show):
+        if show.is_anime:
+            self.need_anime = True
+        if show.is_sports:
+            self.need_sports = True
+
+    def check_needed_qualities(self, wantedQualities):
+        if Quality.UNKNOWN in wantedQualities:
+            self.need_sd = self.need_hd = self.need_uhd = self.need_webdl = True
+        else:
+            if not self.need_sd and min(wantedQualities) <= neededQualities.max_sd:
+                self.need_sd = True
+            if not self.need_hd and any(i in neededQualities.hd_qualities for i in wantedQualities):
+                self.need_hd = True
+            if not self.need_webdl and any(i in neededQualities.webdl_qualities for i in wantedQualities):
+                self.need_webdl = True
+            if not self.need_uhd and max(wantedQualities) > neededQualities.max_hd:
+                self.need_uhd = True

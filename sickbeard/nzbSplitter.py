@@ -18,9 +18,16 @@
 
 from __future__ import with_statement
 
-import xml.etree.cElementTree as etree
-import xml.etree
+try:
+    from lxml import etree
+except ImportError:
+    try:
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        import xml.etree.ElementTree as etree
+
 import re
+import os
 
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
@@ -28,6 +35,32 @@ from sickbeard import logger, classes, helpers
 from sickbeard.common import Quality
 from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
+import sickbeard
+
+
+SUBJECT_FN_MATCHER = re.compile(r'"([^"]*)"')
+RE_NORMAL_NAME = re.compile(r'\.\w{1,5}$')
+
+
+def platform_encode(p):
+    """ Return Unicode name, if not already Unicode, decode with UTF-8 or latin1 """
+    if isinstance(p, str):
+        try:
+            return p.decode('utf-8')
+        except:
+            return p.decode(sickbeard.SYS_ENCODING, errors='replace').replace('?', '!')
+    else:
+        return p
+
+
+def name_extractor(subject):
+    """ Try to extract a file name from a subject line, return `subject` if in doubt """
+    result = subject
+    for name in re.findall(SUBJECT_FN_MATCHER, subject):
+        name = name.strip(' "')
+        if name and RE_NORMAL_NAME.search(name):
+            result = name
+    return platform_encode(result)
 
 
 def getSeasonNZBs(name, urlData, season):
@@ -35,29 +68,31 @@ def getSeasonNZBs(name, urlData, season):
         showXML = etree.ElementTree(etree.XML(urlData))
     except SyntaxError:
         logger.log(u"Unable to parse the XML of " + name + ", not splitting it", logger.ERROR)
-        return ({}, '')
+        return {}, ''
 
     filename = name.replace(".nzb", "")
 
     nzbElement = showXML.getroot()
 
-    regex = '([\w\._\ ]+)[\. ]S%02d[\. ]([\w\._\-\ ]+)[\- ]([\w_\-\ ]+?)' % season
+    regex = '([\w\._\ ]+)[\._ ]S%02d[\._ ]([\w\._\-\ ]+)' % season
 
     sceneNameMatch = re.search(regex, filename, re.I)
     if sceneNameMatch:
-        showName, qualitySection, groupName = sceneNameMatch.groups()  # @UnusedVariable
+        showName, qualitySection = sceneNameMatch.groups()  # @UnusedVariable
     else:
-        logger.log(u"Unable to parse " + name + " into a scene name. If it's a valid one, log a bug.", logger.ERROR)
-        return ({}, '')
+        logger.log("%s - Not a valid season pack scene name. If it's a valid one, log a bug." % name, logger.ERROR)
+        return {}, ''
 
-    regex = '(' + re.escape(showName) + '\.S%02d(?:[E0-9]+)\.[\w\._]+\-\w+' % season + ')'
+    regex = '(' + re.escape(showName) + '[\._]S%02d(?:[E0-9]+)\.[\w\._]+' % season + ')'
     regex = regex.replace(' ', '.')
 
     epFiles = {}
     xmlns = None
 
     for curFile in nzbElement.getchildren():
-        xmlnsMatch = re.match("\{(http:\/\/[A-Za-z0-9_\.\/]+\/nzb)\}file", curFile.tag)
+        if not isinstance(curFile.tag, basestring):
+            continue
+        xmlnsMatch = re.match("\{(https?:\/\/[A-Za-z0-9_\.\/]+\/nzb)\}file", curFile.tag)
         if not xmlnsMatch:
             continue
         else:
@@ -67,12 +102,22 @@ def getSeasonNZBs(name, urlData, season):
             #print curFile.get("subject"), "doesn't match", regex
             continue
         curEp = match.group(1)
+        fn = name_extractor(curFile.get('subject', ''))
+        if curEp == re.sub(r'\+\d+\.par2$', '', fn, flags=re.I):
+            bn, ext = ek.ek(os.path.splitext, fn)
+            curEp = re.sub(r'\.(part\d+|vol\d+(\+\d+)?)$', '', bn, flags=re.I)
+        bn, ext = ek.ek(os.path.splitext, curEp)
+        if isinstance(ext, basestring) \
+                and re.search(r'^\.(nzb|r\d{2}|rar|7z|zip|par2|vol\d+|nfo|srt|txt|bat|sh|mkv|mp4|avi|wmv)$', ext,
+                              flags=re.I):
+            logger.log('Unable to split %s into episode nzb\'s' % name, logger.WARNING)
+            return {}, ''
         if curEp not in epFiles:
             epFiles[curEp] = [curFile]
         else:
             epFiles[curEp].append(curFile)
 
-    return (epFiles, xmlns)
+    return epFiles, xmlns
 
 
 def createNZBString(fileElements, xmlns):
@@ -83,7 +128,7 @@ def createNZBString(fileElements, xmlns):
     for curFile in fileElements:
         rootElement.append(stripNS(curFile, xmlns))
 
-    return xml.etree.ElementTree.tostring(rootElement, 'utf-8')
+    return etree.tostring(rootElement, encoding='utf-8')
 
 
 def saveNZB(nzbName, nzbString):

@@ -20,7 +20,7 @@ from sickbeard import helpers
 from sickbeard import logger
 
 
-def getShowImage(url, imgNum=None):
+def getShowImage(url, imgNum=None, showName=None):
 
     if None is url:
         return None
@@ -32,7 +32,7 @@ def getShowImage(url, imgNum=None):
 
     image_data = helpers.getURL(temp_url)
     if None is image_data:
-        logger.log(u'There was an error trying to retrieve the image, aborting', logger.ERROR)
+        logger.log('There was an error trying to retrieve the image%s, aborting' % ('', ' for show: %s' % showName)[None is not showName], logger.ERROR)
         return
 
     return image_data

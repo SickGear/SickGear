@@ -34,8 +34,7 @@ class GrabTheInfoProvider(generic.TorrentProvider):
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'rules.php',
                      'browse': self.url_base + 'browse.php?%s&incldead=%s&blah=0%s',
-                     'search': '&search=%s',
-                     'get': self.url_base + '%s'}
+                     'search': '&search=%s'}
 
         self.categories = {'shows': [36, 32, 43, 56, 8, 65, 61, 10]}
 
@@ -124,7 +123,7 @@ class GrabTheInfoProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._episode_strings(self, ep_obj, sep_date='|', **kwargs)
+        return super(GrabTheInfoProvider, self)._episode_strings(ep_obj, sep_date='|', **kwargs)
 
 
 provider = GrabTheInfoProvider()

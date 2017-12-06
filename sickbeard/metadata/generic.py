@@ -517,7 +517,7 @@ class GenericMetadata():
             logger.log(u"No thumb is available for this episode, not creating a thumb", logger.DEBUG)
             return False
 
-        thumb_data = metadata_helpers.getShowImage(thumb_url)
+        thumb_data = metadata_helpers.getShowImage(thumb_url, showName=ep_obj.show.name)
 
         result = self._write_image(thumb_data, file_path)
 
@@ -620,7 +620,7 @@ class GenericMetadata():
                            logger.DEBUG)
                 continue
 
-            seasonData = metadata_helpers.getShowImage(season_url)
+            seasonData = metadata_helpers.getShowImage(season_url, showName=show_obj.name)
 
             if not seasonData:
                 logger.log(u"No season poster data available, skipping this season", logger.DEBUG)
@@ -668,7 +668,7 @@ class GenericMetadata():
                            logger.DEBUG)
                 continue
 
-            seasonData = metadata_helpers.getShowImage(season_url)
+            seasonData = metadata_helpers.getShowImage(season_url, showName=show_obj.name)
 
             if not seasonData:
                 logger.log(u"No season banner data available, skipping this season", logger.DEBUG)
@@ -761,14 +761,19 @@ class GenericMetadata():
             # There's gotta be a better way of doing this but we don't wanna
             # change the language value elsewhere
             lINDEXER_API_PARMS = sickbeard.indexerApi(show_obj.indexer).api_params.copy()
-            lINDEXER_API_PARMS['banners'] = True
+            if image_type.startswith('fanart'):
+                lINDEXER_API_PARMS['fanart'] = True
+            elif image_type.startswith('poster'):
+                lINDEXER_API_PARMS['posters'] = True
+            else:
+                lINDEXER_API_PARMS['banners'] = True
             lINDEXER_API_PARMS['dvdorder'] = 0 != show_obj.dvdorder
 
             if indexer_lang and not 'en' == indexer_lang:
                 lINDEXER_API_PARMS['language'] = indexer_lang
 
             t = sickbeard.indexerApi(show_obj.indexer).indexer(**lINDEXER_API_PARMS)
-            indexer_show_obj = t[show_obj.indexerid]
+            indexer_show_obj = t[show_obj.indexerid, False]
         except (sickbeard.indexer_error, IOError) as e:
             logger.log(u"Unable to look up show on " + sickbeard.indexerApi(
                 show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
@@ -824,7 +829,7 @@ class GenericMetadata():
             if return_links:
                 return image_urls
             else:
-                image_data = metadata_helpers.getShowImage((init_url, image_urls[0])[None is init_url], which)
+                image_data = metadata_helpers.getShowImage((init_url, image_urls[0])[None is init_url], which, show_obj.name)
 
         if None is not image_data:
             return image_data

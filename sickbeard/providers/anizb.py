@@ -65,7 +65,7 @@ class AnizbCache(tvcache.TVCache):
         tvcache.TVCache.__init__(self, this_provider)
         self.update_freq = 6
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
         return self.provider.cache_data()
 
 

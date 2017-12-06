@@ -24,37 +24,35 @@ import sickbeard
 from . import generic
 from sickbeard import logger, encodingKludge as ek
 # usenet
-from . import newznab, omgwtfnzbs, womble
+from . import newznab, omgwtfnzbs
 # torrent
-from . import alpharatio, beyondhd, bithdtv, bitmetv, btn, btscene, dh, extratorrent, \
-    fano, filelist, freshontv, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, hdtorrents, \
-    iptorrents, limetorrents, morethan, ncore, pisexy, pretome, privatehd, ptf, \
-    rarbg, revtt, scc, scenetime, shazbat, speedcd, \
-    thepiratebay, torlock, torrentday, torrenting, torrentleech, \
-    torrentshack, torrentz2, transmithe_net, tvchaosuk, zooqle
+from . import alpharatio, beyondhd, bithdtv, bitmetv, blutopia, btn, btscene, dh, \
+    fano, filelist, funfile, gftracker, grabtheinfo, hd4free, hdbits, hdspace, hdtorrents, \
+    iptorrents, limetorrents, magnetdl, morethan, nebulance, ncore, nyaa, pisexy, pretome, privatehd, ptf, \
+    rarbg, revtt, scenehd, scenetime, shazbat, skytorrents, speedcd, \
+    thepiratebay, torlock, torrentbytes, torrentday, torrenting, torrentleech, \
+    torrentvault, torrentz2, tvchaosuk, wop, zooqle
 # anime
-from . import anizb, nyaatorrents, tokyotoshokan
+from . import anizb, tokyotoshokan
 # custom
 try:
     from . import custom01
-except:
+except (StandardError, Exception):
     pass
 
 __all__ = ['omgwtfnzbs',
-           'womble',
            'alpharatio',
            'anizb',
            'beyondhd',
            'bithdtv',
            'bitmetv',
+           'blutopia',
            'btn',
            'btscene',
            'custom01',
            'dh',
-           'extratorrent',
            'fano',
            'filelist',
-           'freshontv',
            'funfile',
            'gftracker',
            'grabtheinfo',
@@ -64,29 +62,33 @@ __all__ = ['omgwtfnzbs',
            'hdtorrents',
            'iptorrents',
            'limetorrents',
+           'magnetdl',
            'morethan',
+           'nebulance',
            'ncore',
+           'nyaa',
            'pisexy',
            'pretome',
            'privatehd',
            'ptf',
            'rarbg',
            'revtt',
-           'scc',
+           'scenehd',
            'scenetime',
            'shazbat',
+           'skytorrents',
            'speedcd',
            'thepiratebay',
            'torlock',
+           'torrentbytes',
            'torrentday',
            'torrenting',
            'torrentleech',
-           'torrentshack',
+           'torrentvault',
            'torrentz2',
-           'transmithe_net',
            'tvchaosuk',
+           'wop',
            'zooqle',
-           'nyaatorrents',
            'tokyotoshokan',
            ]
 
@@ -111,7 +113,13 @@ def sortedProviderList():
 
 
 def makeProviderList():
-    return [x.provider for x in [getProviderModule(y) for y in __all__] if x]
+    providers = [x.provider for x in [getProviderModule(y) for y in __all__] if x]
+    import browser_ua, zlib
+    headers = [1449593765]
+    for p in providers:
+        if abs(zlib.crc32(p.name)) + 40000400 in headers:
+            p.headers.update({'User-Agent': browser_ua.get_ua()})
+    return providers
 
 
 def getNewznabProviderList(data):
@@ -145,6 +153,7 @@ def getNewznabProviderList(data):
             providerDict[curDefault.name].search_fallback = curDefault.search_fallback
             providerDict[curDefault.name].enable_recentsearch = curDefault.enable_recentsearch
             providerDict[curDefault.name].enable_backlog = curDefault.enable_backlog
+            providerDict[curDefault.name].enable_scheduled_backlog = curDefault.enable_scheduled_backlog
 
     return filter(lambda x: x, providerList)
 
@@ -157,10 +166,14 @@ def makeNewznabProvider(configString):
     search_fallback = 0
     enable_recentsearch = 0
     enable_backlog = 0
+    enable_scheduled_backlog = 1
 
     try:
         values = configString.split('|')
-        if len(values) == 9:
+        if len(values) == 10:
+            name, url, key, cat_ids, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog, \
+            enable_scheduled_backlog = values
+        elif len(values) == 9:
             name, url, key, cat_ids, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog = values
         else:
             name = values[0]
@@ -176,7 +189,7 @@ def makeNewznabProvider(configString):
 
     newProvider = newznab.NewznabProvider(name, url, key=key, cat_ids=cat_ids, search_mode=search_mode,
                                           search_fallback=search_fallback, enable_recentsearch=enable_recentsearch,
-                                          enable_backlog=enable_backlog)
+                                          enable_backlog=enable_backlog, enable_scheduled_backlog=enable_scheduled_backlog)
     newProvider.enabled = enabled == '1'
 
     return newProvider
@@ -205,10 +218,14 @@ def makeTorrentRssProvider(configString):
     search_fallback = 0
     enable_recentsearch = 0
     enable_backlog = 0
+    enable_scheduled_backlog = 1
 
     try:
         values = configString.split('|')
-        if len(values) == 8:
+        if len(values) == 9:
+            name, url, cookies, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog, \
+            enable_scheduled_backlog = values
+        elif len(values) == 8:
             name, url, cookies, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog = values
         else:
             name = values[0]
@@ -225,7 +242,7 @@ def makeTorrentRssProvider(configString):
         return
 
     newProvider = torrentRss.TorrentRssProvider(name, url, cookies, search_mode, search_fallback, enable_recentsearch,
-                                                enable_backlog)
+                                                enable_backlog, enable_scheduled_backlog)
     newProvider.enabled = enabled == '1'
 
     return newProvider

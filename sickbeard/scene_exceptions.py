@@ -21,6 +21,7 @@ import time
 import threading
 import datetime
 import sickbeard
+import traceback
 
 from collections import defaultdict
 from lib import adba
@@ -210,7 +211,12 @@ def retrieve_exceptions():
             continue
 
         for cur_exception_dict in exception_dict[cur_indexer_id]:
-            cur_exception, cur_season = cur_exception_dict.items()[0]
+            try:
+                cur_exception, cur_season = cur_exception_dict.items()[0]
+            except Exception:
+                logger.log('scene exception error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
+                continue
 
             # if this exception isn't already in the DB then add it
             if cur_exception not in existing_exceptions:
@@ -289,7 +295,7 @@ def _xem_exceptions_fetcher():
             break
 
     if shouldRefresh(xem_list):
-        for indexer in sickbeard.indexerApi().indexers:
+        for indexer in [i for i in sickbeard.indexerApi().indexers if 'xem_origin' in sickbeard.indexerApi(i).config]:
             logger.log(u'Checking for XEM scene exception updates for %s' % sickbeard.indexerApi(indexer).name)
 
             url = 'http://thexem.de/map/allNames?origin=%s%s&seasonNumbers=1'\

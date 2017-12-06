@@ -99,7 +99,7 @@ class TokyoToshokanCache(tvcache.TVCache):
 
         self.update_freq = 15
 
-    def _cache_data(self):
+    def _cache_data(self, **kwargs):
 
         mode = 'Cache'
         search_url = '%srss.php?%s' % (self.provider.url, urllib.urlencode({'filter': '1'}))

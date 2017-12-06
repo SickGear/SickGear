@@ -256,6 +256,9 @@ class XBMC_12PlusMetadata(generic.GenericMetadata):
                     curEpToWrite.episode) + " on " + sickbeard.indexerApi(
                     ep_obj.show.indexer).name + ".. has it been removed? Should I delete from db?")
                 return None
+            except (StandardError, Exception):
+                logger.log(u"Not generating nfo because failed to fetched tv info data at this time", logger.DEBUG)
+                return None
 
             if getattr(myEp, 'firstaired', None) is None:
                 myEp["firstaired"] = str(datetime.date.fromordinal(1))

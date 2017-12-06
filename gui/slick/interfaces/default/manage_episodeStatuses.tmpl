@@ -19,7 +19,7 @@
 #if not $whichStatus or ($whichStatus and not $ep_counts)
 ##
     #if $whichStatus:
-	<h3>no episodes have status <span class="grey-text">$common.statusStrings[$int($whichStatus)].lower()</span></h3>
+	<h3>no episodes have status <span class="grey-text">$common.statusStrings[$whichStatus].lower()</span></h3>
     #end if
 
 	<form action="$sbRoot/manage/episodeStatuses" method="get">
@@ -27,7 +27,7 @@
 		Manage episodes with status
 		<select name="whichStatus" class="form-control form-control-inline input-sm" style="margin:0 10px">
 
-    #for $curStatus in [$common.SKIPPED, $common.UNKNOWN, $common.SNATCHED, $common.WANTED, $common.ARCHIVED, $common.IGNORED]:
+    #for $curStatus in [$common.SKIPPED, $common.UNKNOWN, $common.SNATCHED, $common.WANTED, $common.ARCHIVED, $common.IGNORED, $common.DOWNLOADED]:
 			<option value="$curStatus"#echo ('', ' selected="selected"')[$curStatus == $default_manage]#>$common.statusStrings[$curStatus]</option>
     #end for
 
@@ -45,11 +45,16 @@
     #end if
 
     #set $statusList = [$common.SKIPPED, $common.ARCHIVED, $common.IGNORED]
-    #if $int($whichStatus) in $statusList
-        $statusList.remove($int($whichStatus))
+    #if $common.DOWNLOADED == $whichStatus:
+        #set $statusList = [$common.ARCHIVED]
+    #elif $common.ARCHIVED == $whichStatus:
+        #set $statusList = [$common.SKIPPED, $common.DOWNLOADED, $common.ARCHIVED, $common.IGNORED]
+    #end if
+    #if $whichStatus in $statusList
+        $statusList.remove($whichStatus)
     #end if
 
-    #if $int($whichStatus) in [$common.SNATCHED, $common.SNATCHED_PROPER]
+    #if $whichStatus in $common.SNATCHED_ANY
         $statusList.append($common.FAILED)
     #end if
 
@@ -58,7 +63,7 @@
 	<form action="$sbRoot/manage/changeEpisodeStatuses" method="post">
 		<input type="hidden" id="oldStatus" name="oldStatus" value="$whichStatus">
 
-		<h3><span class="grey-text">$ep_count</span> episode#echo ('s', '')[1 == $ep_count]# marked <span class="grey-text">$common.statusStrings[$int($whichStatus)].lower()</span> in <span class="grey-text">${len($sorted_show_ids)}</span> show#echo ('s', '')[1 == len($sorted_show_ids)]#</h3>
+		<h3><span class="grey-text">$ep_count</span> episode#echo ('s', '')[1 == $ep_count]# marked <span class="grey-text">$common.statusStrings[$whichStatus].lower()</span> in <span class="grey-text">${len($sorted_show_ids)}</span> show#echo ('s', '')[1 == len($sorted_show_ids)]#</h3>
 
 		<input type="hidden" id="row_class" value="$row_class">
 
@@ -71,12 +76,14 @@
 			</select>
 			<input class="btn btn-inline go" type="submit" value="Go">
 
+    #if $common.DOWNLOADED != $whichStatus:
 			<span class="red-text" style="margin:0 0 0 30px">Override checked status to</span>
 			<select name="wantedStatus" class="form-control form-control-inline input-sm" style="margin:0 10px 0 5px">
 				<option value="$common.UNKNOWN">nothing</option>
 				<option value="$common.WANTED">$common.statusStrings[$common.WANTED]</option>
 			</select>
 			<input class="btn btn-inline go" type="submit" value="Go">
+	#end if
 		</div>
 
 		<div class="form-group">

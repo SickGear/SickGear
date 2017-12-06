@@ -1,8 +1,8 @@
 <hr>
-<div><a id="top"><img alt="SickGear" width="200" src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/SickGearLogo.png"></a></div>
+<div><a id="top"><img alt="SickGear" width="200" src="https://raw.githubusercontent.com/wiki/SickGear/SickGear.Wiki/images/SickGearLogo.png"></a></div>
 **SickGear**, a usenet and bittorrent PVR
 <hr>
-*Please note you should know how to use git and setup basic requirements in order to run this software.*
+_Please note you should know how to use git and setup basic requirements in order to run this software._
 
 SickGear provides management of TV shows and/or Anime, it can detect new episodes, link to downloader apps, and more.  SickGear is a proud descendant of Sick Beard and is humbled to have been endorsed by one of its former lead developers.  
 
@@ -10,7 +10,7 @@ Why SickGear?
 * SickGear maintains perfect uptime with the longest track record of being stable, reliable and trusted to work
 * SickGear delivers quality from active development with a wealth of options on a dark or light themed interface
 * [Migrating](https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B0%5D-Migrate) to a hassle free and feature rich set up is super simple
-  
+
 ## Features include
 * Stable, quality assured testing and development cycle
 * Innovations that inspire imitators
@@ -33,9 +33,9 @@ Why SickGear?
 * Processing nzb/torrents with your downloader application at your chosen qualities
 * Subtitle management
 * Notification
-  * System notifiers (i.e. Kodi, Emby, Plex, XBMC)
-  * Device notifiers (i.e. Growl, Prowl, Notify My Android)
-  * Social (i.e. Twitter, E-mail)
+  * Home Theater/NAS (Emby, Kodi, Plex, Syno, Tivo, and more)
+  * Social notifiers (Trakt, Slack, Gitter, Discord, E-mail, and more)
+  * Device notifiers (Boxcar2, Notify My Android, Growl, Prowl, and more)
 * Server friendly with minimal number of calls (e.g. one request per chosen snatch, not per result)
 * Can recommend trendy and/or personally tailored shows from Trakt, IMDb, AniDB
 * Automated alternative show names and episode numbering from XEM
@@ -80,10 +80,10 @@ Some of our innovative features;
 ## Available versions
 <table><thead></thead><tbody>
 <tr align="center">
-  <td>Master (<a title="Master Changelog" href="https://github.com/SickGear/SickGear/blob/master/CHANGES.md">changes</a>)</td><td>(most stable)</td><td><a id="top" title=""><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-stability.png"></a></td><td><a id="top" title="Build Status: Stable = Terrific!"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-stable.png"></a></td>
+  <td>Master (<a title="Master Changelog" href="/SickGear/SickGear/src/master/CHANGES.md">changes</a>)</td><td>(most stable)</td><td><a id="top" title=""><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-stability.png"></a></td><td><a id="top" title="Build Status: Stable = Terrific!"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-stable.png"></a></td>
 </tr>
 <tr align="center">
-  <td>Development (<a title="Development Changelog" href="https://github.com/SickGear/SickGear/blob/develop/CHANGES.md">changes</a>)</td><td>(mostly stable)</td><td><a id="top" title="Where some imitate"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-innovate.png"></a></td><td><a title="Build Status: Passing = All good!" target="_blank" href="https://travis-ci.org/SickGear/SickGear"><img src="https://travis-ci.org/SickGear/SickGear.svg?branch=develop"></a></td>
+  <td>Development (<a title="Development Changelog" href="/SickGear/SickGear/src/develop/CHANGES.md">changes</a>)</td><td>(mostly stable)</td><td><a id="top" title="Where some imitate"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-innovate.png"></a></td><td><a title="Build Status: Passing = All good!" target="_blank" href="https://travis-ci.org/SickGear/SickGear"><img src="https://travis-ci.org/SickGear/SickGear.svg?branch=develop"></a></td>
 </tr>
 <tr align="center">
 <td colspan=5>[ ++ Install <a href="https://github.com/SickGear/SickGear/wiki/Installation-Instructions">Guides</a> ++ ][ Frequently <a href="https://github.com/SickGear/SickGear/wiki/Frequently-Answered-Questions">Answered</a> ][ Discover <a href="https://github.com/SickGear/SickGear/wiki">Wiki</a> ]</td>
@@ -114,8 +114,10 @@ Thanks also, to unsung heroes that added source providers; Idan Gutman, Daniel H
 Finally, a massive thanks to all those that remain in the shadows, the quiet ones who welcome folk to special places, we salute you for your hospitality and for tirelessly keeping up operations.  
 
 ## Community
-* IRC: `irc.freenode.net` channel `#SickGear`  
-  Support is available, but you should understand the basics of your Linux or Windows OS.  If you don't understand basics like locating a db file, not running as root, or things like setting file permissions, then SickGear might not be for you.
+* <a href="https://gitter.im/SickGear/"><img src="https://badges.gitter.im/sickgear.svg"></a> web based (most likely one on one with a dev)
+* <a name="freenode"><img src="https://img.shields.io/badge/style-join%20chat-blue.svg?style=flat.svg&label=freenode"></a>&nbsp;(`irc.freenode.net` channel `#SickGear`)
+
+Although support is available, you should understand the basics of your Linux or Windows OS.  If you don't understand basics like locating a db file, not running as root, or things like setting file permissions, then SickGear might not be for you.
 
 ---
 Enjoy SickGear - stability, reliability, assured.

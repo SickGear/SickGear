@@ -6,11 +6,11 @@ from datetime import datetime
 def total_seconds(td):
     """Python 2.6 compatability"""
     if hasattr(td, 'total_seconds'):
-        return td.total_seconds()
+        return int(td.total_seconds())
 
     ms = td.microseconds
     secs = (td.seconds + td.days * 24 * 3600)
-    return (ms + secs * 10**6) / 10**6
+    return int((ms + secs * 10**6) / 10**6)
 
 
 class RedisCache(object):
@@ -25,7 +25,7 @@ class RedisCache(object):
         if not expires:
             self.conn.set(key, value)
         else:
-            expires = expires - datetime.now()
+            expires = expires - datetime.utcnow()
             self.conn.setex(key, total_seconds(expires), value)
 
     def delete(self, key):

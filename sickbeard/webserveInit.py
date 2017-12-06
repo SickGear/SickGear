@@ -19,6 +19,7 @@ class WebServer(threading.Thread):
         self.alive = True
         self.name = 'TORNADO'
         self.io_loop = io_loop or IOLoop.current()
+        self.server = None
 
         self.options = options
         self.options.setdefault('port', 8081)
@@ -31,8 +32,7 @@ class WebServer(threading.Thread):
         assert 'data_root' in self.options
 
         # web root
-        self.options['web_root'] = ('/' + self.options['web_root'].lstrip('/')) if self.options[
-            'web_root'] else ''
+        self.options['web_root'] = ('/' + self.options['web_root'].lstrip('/')) if self.options['web_root'] else ''
 
         # tornado setup
         self.enable_https = self.options['enable_https']
@@ -58,38 +58,8 @@ class WebServer(threading.Thread):
                                debug=True,
                                autoreload=False,
                                gzip=True,
-                               xheaders=sickbeard.HANDLE_REVERSE_PROXY,
                                cookie_secret=sickbeard.COOKIE_SECRET,
-                               login_url='%s/login/' % self.options['web_root']
-                               )
-
-        # Main Handler
-        self.app.add_handlers('.*$', [
-            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
-            (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
-            (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
-            (r'%s/cache(/?.*)' % self.options['web_root'], webserve.Cache),
-            (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
-            (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
-            (r'%s/config/providers(/?.*)' % self.options['web_root'], webserve.ConfigProviders),
-            (r'%s/config/subtitles(/?.*)' % self.options['web_root'], webserve.ConfigSubtitles),
-            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigPostProcessing),
-            (r'%s/config/notifications(/?.*)' % self.options['web_root'], webserve.ConfigNotifications),
-            (r'%s/config/anime(/?.*)' % self.options['web_root'], webserve.ConfigAnime),
-            (r'%s/config(/?.*)' % self.options['web_root'], webserve.Config),
-            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.ErrorLogs),
-            (r'%s/history(/?.*)' % self.options['web_root'], webserve.History),
-            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
-            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.NewHomeAddShows),
-            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomePostProcess),
-            (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
-            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
-            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.showProcesses),
-            (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
-            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
-            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
-            (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
-        ])
+                               login_url='%s/login/' % self.options['web_root'])
 
         # webui login/logout handlers
         self.app.add_handlers('.*$', [
@@ -125,20 +95,45 @@ class WebServer(threading.Thread):
              {'path': os.path.join(self.options['data_root'], 'js')}),
         ])
 
+        # Main Handler
+        self.app.add_handlers('.*$', [
+            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
+            (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
+            (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
+            (r'%s/cache(/?.*)' % self.options['web_root'], webserve.Cache),
+            (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
+            (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
+            (r'%s/config/providers(/?.*)' % self.options['web_root'], webserve.ConfigProviders),
+            (r'%s/config/subtitles(/?.*)' % self.options['web_root'], webserve.ConfigSubtitles),
+            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigPostProcessing),
+            (r'%s/config/notifications(/?.*)' % self.options['web_root'], webserve.ConfigNotifications),
+            (r'%s/config/anime(/?.*)' % self.options['web_root'], webserve.ConfigAnime),
+            (r'%s/config(/?.*)' % self.options['web_root'], webserve.Config),
+            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.ErrorLogs),
+            (r'%s/history(/?.*)' % self.options['web_root'], webserve.History),
+            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
+            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.NewHomeAddShows),
+            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomePostProcess),
+            (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
+            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
+            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.showProcesses),
+            (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
+            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
+            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
+            (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
+        ])
+
     def run(self):
-        if self.enable_https:
-            protocol = 'https'
-            self.server = HTTPServer(self.app, ssl_options={'certfile': self.https_cert, 'keyfile': self.https_key})
-        else:
-            protocol = 'http'
-            self.server = HTTPServer(self.app)
+        protocol, ssl_options = (('http', None),
+                                 ('https', {'certfile': self.https_cert, 'keyfile': self.https_key}))[self.enable_https]
 
         logger.log(u'Starting SickGear on ' + protocol + '://' + str(self.options['host']) + ':' + str(
             self.options['port']) + '/')
 
         try:
-            self.server.listen(self.options['port'], self.options['host'])
-        except:
+            self.server = self.app.listen(self.options['port'], self.options['host'], ssl_options=ssl_options,
+                                          xheaders=sickbeard.HANDLE_REVERSE_PROXY, protocol=protocol)
+        except (StandardError, Exception):
             etype, evalue, etb = sys.exc_info()
             logger.log(
                 'Could not start webserver on %s. Excpeption: %s, Error: %s' % (self.options['port'], etype, evalue),

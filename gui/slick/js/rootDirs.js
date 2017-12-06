@@ -109,10 +109,11 @@ $(document).ready(function() {
 
     function setDefault(which, force){
 
-        console.log('setting default to '+which);
+        //console.log('setting default to '+which);
 
-        if (which != undefined && !which.length)
-            return
+        if (/undefined/i.test(which) || !which.length) {
+            return;
+        }
 
         if ($('#whichDefaultRootDir').val() == which && force != true)
             return

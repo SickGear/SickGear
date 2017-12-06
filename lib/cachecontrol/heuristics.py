@@ -9,7 +9,7 @@ TIME_FMT = "%a, %d %b %Y %H:%M:%S GMT"
 
 
 def expire_after(delta, date=None):
-    date = date or datetime.now()
+    date = date or datetime.utcnow()
     return date + delta
 
 
@@ -40,10 +40,14 @@ class BaseHeuristic(object):
         return {}
 
     def apply(self, response):
-        warning_header_value = self.warning(response)
-        response.headers.update(self.update_headers(response))
-        if warning_header_value is not None:
-            response.headers.update({'Warning': warning_header_value})
+        updated_headers = self.update_headers(response)
+
+        if updated_headers:
+            response.headers.update(updated_headers)
+            warning_header_value = self.warning(response)
+            if warning_header_value is not None:
+                response.headers.update({'Warning': warning_header_value})
+
         return response
 
 

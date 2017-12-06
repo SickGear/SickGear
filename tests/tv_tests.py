@@ -98,6 +98,34 @@ class TVTests(test.SickbeardTestDBCase):
         #TODO: implement
 
 
+class TVFormatPatternTests(test.SickbeardTestDBCase):
+
+    def setUp(self):
+        super(TVFormatPatternTests, self).setUp()
+        sickbeard.showList = []
+
+    def test_getEpisode(self):
+        show = TVShow(1, 1, 'en')
+        show.name = 'show name'
+        show.tvrname = 'show name'
+        show.network = 'cbs'
+        show.genre = 'crime'
+        show.runtime = 40
+        show.status = '5'
+        show.airs = 'monday'
+        show.startyear = 1987
+        sickbeard.showList = [show]
+        show.episodes[1] = {}
+        show.episodes[1][1] = TVEpisode(show, 1, 1, '16)')
+        show.episodes[1][1].dirty = False
+        show.episodes[1][1].name = None
+        self.assertEqual(show.episodes[1][1].dirty, False)
+        self.assertEqual(show.episodes[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'), 'show name - 1x01 -  - Unknown')
+        show.episodes[1][1].dirty = False
+        show.episodes[1][1].name = 'ep name'
+        self.assertEqual(show.episodes[1][1].dirty, True)
+        self.assertEqual(show.episodes[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'), 'show name - 1x01 - ep name - Unknown')
+
 if __name__ == '__main__':
     print('==================')
     print('STARTING - TV TESTS')
@@ -110,4 +138,7 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVFormatPatternTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

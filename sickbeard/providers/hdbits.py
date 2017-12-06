@@ -20,7 +20,7 @@ import urllib
 
 from . import generic
 from sickbeard import logger
-from sickbeard.exceptions import AuthException
+from sickbeard.exceptions import ex, AuthException
 from sickbeard.helpers import tryInt
 from sickbeard.indexers import indexer_config
 
@@ -113,8 +113,12 @@ class HDBitsProvider(generic.TorrentProvider):
 
                 json_resp = self.get_url(search_url, post_data=post_data, json=True)
 
-                if not (json_resp and self.check_auth_from_data(json_resp) and 'data' in json_resp):
-                    logger.log(u'Response from %s does not contain any json data, abort' % self.name, logger.ERROR)
+                try:
+                    if not (json_resp and self.check_auth_from_data(json_resp) and 'data' in json_resp):
+                        logger.log(u'Response from %s does not contain any json data, abort' % self.name, logger.ERROR)
+                        return results
+                except AuthException as e:
+                    logger.log(u'Authentication error: %s' % (ex(e)), logger.ERROR)
                     return results
 
                 cnt = len(items[mode])

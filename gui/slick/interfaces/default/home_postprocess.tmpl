@@ -96,7 +96,7 @@
 #raw
 jQuery('#episodeDir').fileBrowser({title:'Select Unprocessed Episode Folder', key:'postprocessPath'});
 $('#process_method').change(function(){
-	$('#move-and-trash').css({'display':('move' == $(this).attr('value') ? 'block' : 'none')})
+	$('#move-and-trash').css({'display':('move' == $(this).val() ? 'block' : 'none')})
 });
 #end raw
 //-->

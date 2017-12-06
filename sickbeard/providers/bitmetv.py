@@ -34,8 +34,7 @@ class BitmetvProvider(generic.TorrentProvider):
 
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'links.php',
-                     'search': self.url_base + 'browse.php?%s&search=%s',
-                     'get': self.url_base + '%s'}
+                     'search': self.url_base + 'browse.php?%s&search=%s'}
 
         self.categories = {'shows': 0, 'anime': 86}  # exclusively one cat per key
 
