@@ -1,4 +1,4 @@
-﻿### 0.13.0 (2017-xx-xx xx:xx:xx UTC)
+﻿### 0.13.0 (2017-12-06 12:40:00 UTC)
 
 * Change don't fetch caps for disabled nzb providers
 * Change recent search to use centralised title and URL parser for newznab
@@ -149,28 +149,6 @@
 * Add downloaded and archived statuses to Manage/Episode Status
 * Add quality pills to Manage/Episode Status
 * Change Manage/Episode Status season output format to be more readable
-
-
-[develop changelog]
-
-* Fix "too many redirects" or "no CSS/JS content" delivered
-* Change restart/shutdown to use updated jQuery
-* Remove AlphaReign torrent provider
-* Update Beautiful Soup 4.4.0 (r397) to 4.5.3 (r439)
-* Update cachecontrol library 0.11.5 to 0.11.7 (3b3b776)
-* Update Certifi 2015.11.20.1 (385476b) to 2017.01.23 (9f9dc30)
-* Update Tornado Web Server 4.5.dev1 (92f29b8) to 4.5.dev1 (38e493e)
-* Update unidecode library 0.04.18 to 0.04.20 (1e18d98)
-* Fix image not loaded from tvdb_api if there is only one poster/banner
-* Change prevent setting show/episode attr to None from indexer data
-* Fix article link color on some page were changed blue
-* Fix error after SG is updated and where Slack notifier is not enabled
-* Change reduce number of DB calls for extra_info_no_name
-* Add parse repack, proper level to recent search flow
-* Change reenable Trakt Notifier to update collections at end of PP
-* Fix NotifierFactory attribute enabled_ondownloadsubtitles should be enabled_onsubtitlesdownload
-* Change, decouple files exist count from status set as downloaded count
-* Change displayShow to include all qualities in snatch/download/archived counts
 
 
 ### 0.12.37 (2017-11-12 10:35:00 UTC)
