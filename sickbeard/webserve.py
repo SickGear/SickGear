@@ -2073,7 +2073,7 @@ class Home(MainHandler):
 
                 logger.log(u'Attempting to set status on episode %s to %s' % (curEp, status), logger.DEBUG)
 
-                ep_obj = showObj.getEpisode(*tuple(curEp.split('x')))
+                ep_obj = showObj.getEpisode(*tuple([int(x) for x in curEp.split('x')]))
 
                 if ep_obj is None:
                     return self._genericMessage('Error', 'Episode couldn\'t be retrieved')
@@ -2155,7 +2155,7 @@ class Home(MainHandler):
                 sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)
 
                 msg += '<li>Season %s</li>' % season
-                logger.log(u'Retrying search for %s season %s because some eps were set to failed',
+                logger.log(u'Retrying search for %s season %s because some eps were set to failed' %
                            (showObj.name, season))
 
             msg += '</ul>'

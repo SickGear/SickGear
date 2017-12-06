@@ -143,7 +143,7 @@
             #end if
         #else
             #if 0 < $hItem['provider']
-                #if $curStatus in [$SNATCHED_ANY, $FAILED]
+                #if $curStatus in $SNATCHED_ANY + [$FAILED]
                     #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
                     #if None is not $provider
 					<img src="$sbRoot/images/providers/<%= provider.image_name() %>" width="16" height="16" /><span>$provider.name</span>
