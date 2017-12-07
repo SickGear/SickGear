@@ -1473,19 +1473,19 @@ class TVShow(object):
             logger.log('Unable to find a matching episode in database, ignoring found episode', logger.DEBUG)
             return False
 
-        epStatus = Quality.splitCompositeStatus(int(sqlResults[0]['status']))[0]
-        epStatus_text = statusStrings[epStatus]
+        curStatus, curQuality = Quality.splitCompositeStatus(int(sqlResults[0]['status']))
+        epStatus_text = statusStrings[curStatus]
 
-        logger.log('Existing episode status: %s (%s)' % (statusStrings[epStatus], epStatus_text), logger.DEBUG)
+        logger.log('Existing episode status: %s (%s)' % (statusStrings[curStatus], epStatus_text), logger.DEBUG)
 
         # if we know we don't want it then just say no
-        if epStatus in (SKIPPED, IGNORED, ARCHIVED) and not manualSearch:
+        if curStatus in (SKIPPED, IGNORED, ARCHIVED) and not manualSearch:
             logger.log('Existing episode status is skipped/ignored/archived, ignoring found episode', logger.DEBUG)
             return False
 
         # if it's one of these then we want it as long as it's in our allowed initial qualities
         if quality in allQualities:
-            if epStatus in (WANTED, UNAIRED, SKIPPED, FAILED):
+            if curStatus in (WANTED, UNAIRED, SKIPPED, FAILED):
                 logger.log('Existing episode status is wanted/unaired/skipped/failed, getting found episode', logger.DEBUG)
                 return True
             elif manualSearch:
@@ -1497,7 +1497,6 @@ class TVShow(object):
                 logger.log('Quality is on wanted list, need to check if it\'s better than existing quality',
                            logger.DEBUG)
 
-        curStatus, curQuality = Quality.splitCompositeStatus(epStatus)
         downloadedStatusList = SNATCHED_ANY + [DOWNLOADED]
         # special case: already downloaded quality is not in any of the wanted Qualities
         if curStatus in downloadedStatusList and curQuality not in allQualities:

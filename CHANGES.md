@@ -1,4 +1,9 @@
-﻿### 0.13.0 (2017-12-06 12:40:00 UTC)
+﻿### 0.13.1 (2017-12-07 15:30:00 UTC)
+
+* Fix wanted episodes
+
+
+### 0.13.0 (2017-12-06 12:40:00 UTC)
 
 * Change don't fetch caps for disabled nzb providers
 * Change recent search to use centralised title and URL parser for newznab
