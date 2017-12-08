@@ -1,4 +1,9 @@
-﻿### 0.13.1 (2017-12-07 15:30:00 UTC)
+﻿### 0.13.2 (2017-12-08 19:00:00 UTC)
+
+* Fix tools menu on Chrome mobile browser
+
+
+### 0.13.1 (2017-12-07 15:30:00 UTC)
 
 * Fix wanted episodes
 
