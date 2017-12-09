@@ -83,7 +83,9 @@ class indexerApi(object):
 
     def indexer(self, *args, **kwargs):
         if self.indexerID:
-            if indexerConfig[self.indexerID]['active']:
+            if indexerConfig[self.indexerID]['active'] or ('no_dummy' in kwargs and True is kwargs['no_dummy']):
+                if 'no_dummy' in kwargs:
+                    kwargs.pop('no_dummy')
                 return indexerConfig[self.indexerID]['module'](*args, **kwargs)
             else:
                 return DummyIndexer(*args, **kwargs)

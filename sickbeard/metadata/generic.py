@@ -39,6 +39,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
 from sickbeard.show_name_helpers import allPossibleShowNames
 from sickbeard.indexers import indexer_config
+from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVDB_V1
 
 from six import iteritems
 
@@ -397,12 +398,30 @@ class GenericMetadata():
 
         # try all included episodes in case some have thumbs and others don't
         for cur_ep in all_eps:
-            myEp = helpers.validateShow(cur_ep.show, cur_ep.season, cur_ep.episode)
+            if INDEXER_TVDB == cur_ep.show.indexer:
+                indexer_lang = cur_ep.show.lang
+
+                try:
+                    lINDEXER_API_PARMS = sickbeard.indexerApi(INDEXER_TVDB_V1).api_params.copy()
+                    lINDEXER_API_PARMS['dvdorder'] = 0 != cur_ep.show.dvdorder
+                    lINDEXER_API_PARMS['no_dummy'] = True
+
+                    if indexer_lang and not indexer_lang == 'en':
+                        lINDEXER_API_PARMS['language'] = indexer_lang
+
+                    t = sickbeard.indexerApi(INDEXER_TVDB_V1).indexer(**lINDEXER_API_PARMS)
+
+                    myEp = t[cur_ep.show.indexerid][cur_ep.season][cur_ep.episode]
+                except (sickbeard.indexer_episodenotfound, sickbeard.indexer_seasonnotfound, TypeError):
+                    myEp = None
+            else:
+                myEp = helpers.validateShow(cur_ep.show, cur_ep.season, cur_ep.episode)
+
             if not myEp:
                 continue
 
-            thumb_url = getattr(myEp, 'filename', None)
-            if thumb_url is not None:
+            thumb_url = getattr(myEp, 'filename', None) or (isinstance(myEp, dict) and myEp.get('filename', None))
+            if thumb_url not in (None, False, ''):
                 return thumb_url
 
         return None
