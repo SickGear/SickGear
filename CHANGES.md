@@ -1,4 +1,9 @@
-﻿### 0.13.4 (2017-12-11 16:45:00 UTC)
+﻿### 0.13.5 (2017-12-11 21:45:00 UTC)
+
+* Change delete unused html5lib files that can cause issue with search providers
+
+
+### 0.13.4 (2017-12-11 16:45:00 UTC)
 
 * Fix MediaBrowser Season##\metadata
 
