@@ -1,4 +1,9 @@
-﻿### 0.13.3 (2017-12-10 20:30:00 UTC)
+﻿### 0.13.4 (2017-12-11 16:45:00 UTC)
+
+* Fix MediaBrowser Season##\metadata
+
+
+### 0.13.3 (2017-12-10 20:30:00 UTC)
 
 * Fix metadata Season Posters and Banners
 * Change restore fetching metadata episode thumbs
