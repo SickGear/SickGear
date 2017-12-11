@@ -500,7 +500,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
                 Language = etree.SubElement(episode, "Language")
                 try:
-                    Language.text = myEp['language']
+                    Language.text = curEpToWrite.show.lang
                 except:
                     Language.text = 'en'  # tvrage api doesn't provide language so we must assume a value here
 
