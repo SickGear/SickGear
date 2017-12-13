@@ -656,8 +656,13 @@ class ParseResult(object):
         if None is regex:
             return re.sub(ep_regex, '', e_i_n_n, flags=re.I)
 
-        return regex.sub(r'(%s){e<=%d}' % (
-            ep_regex, trunc(len(re.findall(r'\w', ep_regex)) / 5)), '', e_i_n_n, flags=regex.I | regex.B)
+        er = trunc(len(re.findall(r'\w', ep_regex)) / 5)
+        try:
+            me = trunc(len(e_i_n_n) / 5)
+            me = min(3, me)
+        except (StandardError, Exception):
+            me = 3
+        return regex.sub(r'(%s){e<=%d}' % (ep_regex, (er, me)[er > me]), '', e_i_n_n, flags=regex.I | regex.B)
 
     def get_extra_info_no_name(self):
         extra_info_no_name = self.extra_info

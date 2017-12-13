@@ -171,7 +171,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         return super(ThePirateBayProvider, self)._episode_strings(
             ep_obj, date_or=True,
-            ep_detail=lambda x: '%s|%s' % (config.naming_ep_type[2] % x, config.naming_ep_type[0] % x),
+            ep_detail=lambda x: '%s*|%s*' % (config.naming_ep_type[2] % x, config.naming_ep_type[0] % x),
             ep_detail_anime=lambda x: '%02i' % x, **kwargs)
 
     def _search_provider(self, search_params, search_mode='eponly', epcount=0, **kwargs):

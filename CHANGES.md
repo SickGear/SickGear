@@ -1,4 +1,10 @@
-﻿### 0.13.5 (2017-12-11 21:45:00 UTC)
+﻿### 0.13.6 (2017-12-13 01:50:00 UTC)
+
+* Change improve multi episode release search
+* Change improve usage of the optional regex library
+
+
+### 0.13.5 (2017-12-11 21:45:00 UTC)
 
 * Change delete unused html5lib files that can cause issue with search providers
 

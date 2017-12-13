@@ -652,7 +652,8 @@ class NewznabProvider(generic.NZBProvider):
                     base_params['cat'] = ','.join(sorted(set((self.cat_ids.split(',') if self.cat_ids else []) + cat)))
 
                 request_params = base_params.copy()
-                if 'Propers' == mode and 'q' in params and not (any(x in params for x in ['season', 'ep'])):
+                if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
+                        and 'q' in params and not (any(x in params for x in ['season', 'ep'])):
                     request_params['t'] = 'search'
                 request_params.update(params)
 
