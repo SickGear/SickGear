@@ -4976,6 +4976,12 @@ class ConfigSearch(Config):
                                      show.rls_require_words.strip()]
         t.using_rls_require_words.sort(lambda x, y: cmp(x[1], y[1]), reverse=False)
         t.propers_intervals = search_propers.ProperSearcher().search_intervals
+        t.using_regex = False
+        try:
+            from sickbeard.name_parser.parser import regex
+            t.using_regex = None is not regex
+        except (StandardError, Exception):
+            pass
         return t.respond()
 
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,

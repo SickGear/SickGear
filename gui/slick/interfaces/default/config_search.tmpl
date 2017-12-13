@@ -58,8 +58,12 @@
 						</div>
 						<div id="content_download_propers">
 							<span class="component-desc">
+#if $getVar('using_regex', False)
+                                <p>Optional <a href="https://pypi.python.org/pypi/regex" target="_blank">regex python library</a> is being used</p>
+#else
                                 <p>Optional: to improve matching, install the OS dependent <a href="https://pypi.python.org/pypi/regex" target="_blank">regex python library</a></p>
                                 <p>at a command line, simply enter ... <code>python -m pip install regex</code></p>
+#end if
                             </span>
 							<div class="field-pair">
 								<label>
