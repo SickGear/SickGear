@@ -562,10 +562,13 @@ class GenericProvider:
 
             # make sure we want the episode
             want_ep = True
+            multi_ep = False
             for epNo in actual_episodes:
-                if not show_obj.wantEpisode(actual_season, epNo, quality, manual_search):
-                    want_ep = False
+                want_ep = show_obj.wantEpisode(actual_season, epNo, quality, manual_search, multi_ep)
+                if not want_ep:
                     break
+                # after initial single ep perspective, prepare multi ep for subsequent iterations
+                multi_ep = 1 < actual_episodes
 
             if not want_ep:
                 logger.log(u'Ignoring result %s because we don\'t want an episode that is %s'

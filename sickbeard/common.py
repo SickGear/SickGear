@@ -462,7 +462,7 @@ countryList = {'Australia': 'AU',
                'USA': 'US'}
 
 
-class neededQualities:
+class neededQualities(object):
     def __init__(self, need_anime=False, need_sports=False, need_sd=False, need_hd=False, need_uhd=False,
                  need_webdl=False, need_all_qualities=False, need_all_types=False, need_all=False):
         self.need_anime = need_anime or need_all_types or need_all
@@ -489,21 +489,27 @@ class neededQualities:
     def all_qualities_needed(self):
         return self.need_sd and self.need_hd and self.need_uhd and self.need_webdl
 
+    @all_qualities_needed.setter
+    def all_qualities_needed(self, v):
+        if isinstance(v, bool) and True is v:
+            self.need_sd = self.need_hd = self.need_uhd = self.need_webdl = True
+
     def check_needed_types(self, show):
-        if show.is_anime:
+        if getattr(show, 'is_anime', False):
             self.need_anime = True
-        if show.is_sports:
+        if getattr(show, 'is_sports', False):
             self.need_sports = True
 
-    def check_needed_qualities(self, wantedQualities):
-        if Quality.UNKNOWN in wantedQualities:
-            self.need_sd = self.need_hd = self.need_uhd = self.need_webdl = True
-        else:
-            if not self.need_sd and min(wantedQualities) <= neededQualities.max_sd:
-                self.need_sd = True
-            if not self.need_hd and any(i in neededQualities.hd_qualities for i in wantedQualities):
-                self.need_hd = True
-            if not self.need_webdl and any(i in neededQualities.webdl_qualities for i in wantedQualities):
-                self.need_webdl = True
-            if not self.need_uhd and max(wantedQualities) > neededQualities.max_hd:
-                self.need_uhd = True
+    def check_needed_qualities(self, wanted_qualities):
+        if wanted_qualities:
+            if Quality.UNKNOWN in wanted_qualities:
+                self.need_sd = self.need_hd = self.need_uhd = self.need_webdl = True
+            else:
+                if not self.need_sd and min(wanted_qualities) <= neededQualities.max_sd:
+                    self.need_sd = True
+                if not self.need_hd and any(i in neededQualities.hd_qualities for i in wanted_qualities):
+                    self.need_hd = True
+                if not self.need_webdl and any(i in neededQualities.webdl_qualities for i in wanted_qualities):
+                    self.need_webdl = True
+                if not self.need_uhd and max(wanted_qualities) > neededQualities.max_hd:
+                    self.need_uhd = True

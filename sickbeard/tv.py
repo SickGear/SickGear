@@ -1446,10 +1446,10 @@ class TVShow(object):
                + 'sports: %s\n' % self.is_sports \
                + 'anime: %s\n' % self.is_anime
 
-    def wantEpisode(self, season, episode, quality, manualSearch=False):
+    def wantEpisode(self, season, episode, quality, manualSearch=False, multi_ep=False):
 
-        logger.log('Checking if found episode %sx%s  is wanted at quality %s' %
-                   (season, episode, Quality.qualityStrings[quality]), logger.DEBUG)
+        logger.log('Checking if found %sepisode %sx%s is wanted at quality %s' %
+                   (('', 'multi-part ')[multi_ep], season, episode, Quality.qualityStrings[quality]), logger.DEBUG)
 
         # if the quality isn't one we want under any circumstances then just say no
         initialQualities, archiveQualities = Quality.splitQuality(self.quality)
@@ -1479,13 +1479,14 @@ class TVShow(object):
         logger.log('Existing episode status: %s (%s)' % (statusStrings[curStatus], epStatus_text), logger.DEBUG)
 
         # if we know we don't want it then just say no
-        if curStatus in (SKIPPED, IGNORED, ARCHIVED) and not manualSearch:
-            logger.log('Existing episode status is skipped/ignored/archived, ignoring found episode', logger.DEBUG)
+        if curStatus in [IGNORED, ARCHIVED] + ([SKIPPED], [])[multi_ep] and not manualSearch:
+            logger.log('Existing episode status is %signored/archived, ignoring found episode' %
+                       ('skipped/', '')[multi_ep], logger.DEBUG)
             return False
 
         # if it's one of these then we want it as long as it's in our allowed initial qualities
         if quality in allQualities:
-            if curStatus in (WANTED, UNAIRED, SKIPPED, FAILED):
+            if curStatus in [WANTED, UNAIRED, SKIPPED, FAILED] + ([], SNATCHED_ANY)[multi_ep]:
                 logger.log('Existing episode status is wanted/unaired/skipped/failed, getting found episode', logger.DEBUG)
                 return True
             elif manualSearch:
