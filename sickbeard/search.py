@@ -130,6 +130,11 @@ def snatch_episode(result, end_status=SNATCHED):
 
     # TORRENTs can be sent to clients or saved to disk
     elif 'torrent' == result.resultType:
+        if not result.url.startswith('magnet') and None is not result.get_data_func:
+            result.url = result.get_data_func(result.url)
+            result.get_data_func = None  # consume only once
+            if not result.url:
+                return False
         # torrents are saved to disk when blackhole mode
         if 'blackhole' == sickbeard.TORRENT_METHOD:
             dl_result = _download_result(result)
@@ -739,6 +744,11 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
 
             # filter out possible bad torrents from providers
             if 'torrent' == best_result.resultType:
+                if not best_result.url.startswith('magnet') and None is not best_result.get_data_func:
+                    best_result.url = best_result.get_data_func(best_result.url)
+                    best_result.get_data_func = None  # consume only once
+                    if not best_result.url:
+                        continue
                 if best_result.url.startswith('magnet'):
                     if 'blackhole' != sickbeard.TORRENT_METHOD:
                         best_result.content = None

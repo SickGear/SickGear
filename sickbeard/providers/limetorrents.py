@@ -34,18 +34,8 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.limetorrents.cc/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[f\sX]+', '', x[::-1]) for x in [
-                                'tlXGfb', '1X5SfZ', 'sfJfmb', 'rN 2Xb', 'u QfWZ', 's9G  b']],
-                            [re.sub('[ \ss]+', '', x[::-1]) for x in [
-                                'Ztl Gsb', 'nc svRX', 'Rs nblJ', '5  JmLz', 'czsFsGc', 'nLskVs2', '0s N']],
-                            [re.sub('[1\sF]+', '', x[::-1]) for x in [
-                                'X Zt1lGb', 'l1Jn1cvR', 'mL11zRnb', 'uVXbtFFl', 'Hdp NWFa', '=1FQ3cuk']],
-                            [re.sub('[y\sW]+', '', x[::-1]) for x in [
-                                'XWZtlyGb', 'lJnyWcvR', 'nyLzRn b', 'vxmYWuWV', 'CWZlt2yY', '== Adyz5']],
-                            [re.sub('[j\sy]+', '', x[::-1]) for x in [
-                                'XyZtlG b', 'lJjnjcvR', 'njLz Rnb', 'vjxmYyuV', 'Gbyhjt2Y', 'n jJ3buw']],
-                            [re.sub('[o\sg]+', '', x[::-1]) for x in [
-                                'XZt lgGb', 'loJn cvR', 'ngLz Rnb', 'v xgmYuV', 'Gbh t2gY', '6l Heu w']],
+                            [re.sub('[ \sF]+', '', x[::-1]) for x in [
+                                'X ZtlFGb', 'lJnc  vR', 'n LzR nb', 'vxmYuF V', 'CFZltF2Y', '==wYF2F5']],
                         ]]]
 
         self.url_vars = {'search': 'search/tv/%s/', 'browse': 'browse-torrents/TV-shows/'}

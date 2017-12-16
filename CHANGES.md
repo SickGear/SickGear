@@ -1,4 +1,13 @@
-﻿### 0.13.6 (2017-12-13 01:50:00 UTC)
+﻿### 0.14.0 (2018-xx-xx xx:xx:xx UTC)
+
+* Add ETTV torrent provider
+* Add PotUK torrent provider
+* Fix BTScene and Lime
+
+[develop changelog]
+
+
+### 0.13.6 (2017-12-13 01:50:00 UTC)
 
 * Change improve multi episode release search
 * Change improve usage of the optional regex library
