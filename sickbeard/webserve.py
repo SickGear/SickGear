@@ -5028,7 +5028,7 @@ class ConfigSearch(Config):
         sickbeard.IGNORE_WORDS = ignore_words if ignore_words else ''
         sickbeard.REQUIRE_WORDS = require_words if require_words else ''
 
-        sickbeard.DOWNLOAD_PROPERS = config.checkbox_to_value(download_propers)
+        config.change_DOWNLOAD_PROPERS(config.checkbox_to_value(download_propers))
         sickbeard.PROPERS_WEBDL_ONEGRP = config.checkbox_to_value(propers_webdl_onegrp)
         if sickbeard.CHECK_PROPERS_INTERVAL != check_propers_interval:
             sickbeard.CHECK_PROPERS_INTERVAL = check_propers_interval
@@ -5121,20 +5121,10 @@ class ConfigPostProcessing(Config):
             results += ['Unable to create directory ' + os.path.normpath(tv_download_dir) + ', dir not changed.']
 
         new_val = config.checkbox_to_value(process_automatically)
-        if new_val != sickbeard.PROCESS_AUTOMATICALLY:
-            if not sickbeard.PROCESS_AUTOMATICALLY and not sickbeard.autoPostProcesserScheduler.ident:
-                try:
-                    sickbeard.autoPostProcesserScheduler.start()
-                except:
-                    pass
-            sickbeard.PROCESS_AUTOMATICALLY = new_val
+        sickbeard.PROCESS_AUTOMATICALLY = new_val
+        sickbeard.autoPostProcesserScheduler.check_paused()
 
         config.change_AUTOPOSTPROCESSER_FREQUENCY(autopostprocesser_frequency)
-
-        if sickbeard.PROCESS_AUTOMATICALLY:
-            sickbeard.autoPostProcesserScheduler.silent = False
-        else:
-            sickbeard.autoPostProcesserScheduler.silent = True
 
         if unpack:
             if self.isRarSupported() != 'not supported':

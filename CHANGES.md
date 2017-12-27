@@ -1,4 +1,12 @@
-﻿### 0.13.8 (2017-12-27 15:45:00 UTC)
+﻿### 0.14.0 (2018-xx-xx xx:xx:xx UTC)
+
+* Change improve core scheduler logic
+
+
+[develop changelog]
+
+
+### 0.13.8 (2017-12-27 15:45:00 UTC)
 
 * Fix HD4Free provider
 

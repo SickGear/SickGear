@@ -1414,10 +1414,8 @@ def enabled_schedulers(is_init=False):
     # ([], [traktCheckerScheduler])[USE_TRAKT] + \
     for s in ([], [events])[is_init] + \
             [recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler,
-             versionCheckScheduler, showQueueScheduler, searchQueueScheduler] + \
-            ([], [properFinderScheduler])[DOWNLOAD_PROPERS] + \
-            ([], [autoPostProcesserScheduler])[PROCESS_AUTOMATICALLY] + \
-            ([], [subtitlesFinderScheduler])[USE_SUBTITLES] + \
+             versionCheckScheduler, showQueueScheduler, searchQueueScheduler, properFinderScheduler,
+             autoPostProcesserScheduler, subtitlesFinderScheduler] + \
             ([events], [])[is_init]:
         yield s
 
@@ -1501,7 +1499,7 @@ def halt():
                     logger.log('Fail, thread %s did not exit' % ADBA_CONNECTION.name)
 
             for thread in enabled_schedulers():
-                thread.stop.set()
+                thread.stop()
 
             for thread in enabled_schedulers():
                 try:
