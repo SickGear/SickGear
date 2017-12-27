@@ -27,7 +27,7 @@ from sickbeard.exceptions import ex
 
 class Scheduler(threading.Thread):
     def __init__(self, action, cycleTime=datetime.timedelta(minutes=10), run_delay=datetime.timedelta(minutes=0),
-                 start_time=None, threadName="ScheduledThread", silent=True, prevent_cycle_run=None):
+                 start_time=None, threadName="ScheduledThread", silent=True, prevent_cycle_run=None, paused=False):
         super(Scheduler, self).__init__()
 
         self.lastRun = datetime.datetime.now() + run_delay - cycleTime
@@ -38,9 +38,31 @@ class Scheduler(threading.Thread):
 
         self.name = threadName
         self.silent = silent
-        self.stop = threading.Event()
+        self._stop = threading.Event()
+        self._unpause = threading.Event()
+        if not paused:
+            self._unpause.set()
         self.lock = threading.Lock()
         self.force = False
+
+    def pause(self):
+        self._unpause.clear()
+
+    def unpause(self):
+        self._unpause.set()
+
+    def stop(self):
+        self._stop.set()
+        self.unpause()
+
+    def check_paused(self):
+        if hasattr(self.action, 'check_paused'):
+            if self.action.check_paused():
+                self.pause()
+                self.silent = True
+            else:
+                self.unpause()
+                self.silent = False
 
     def timeLeft(self):
         return self.cycleTime - (datetime.datetime.now() - self.lastRun)
@@ -52,8 +74,10 @@ class Scheduler(threading.Thread):
         return False
 
     def run(self):
+        self.check_paused()
 
-        while not self.stop.is_set():
+        # if self._unpause Event() is NOT set the loop pauses
+        while self._unpause.wait() and not self._stop.is_set():
 
             try:
                 current_time = datetime.datetime.now()
@@ -100,4 +124,5 @@ class Scheduler(threading.Thread):
             time.sleep(1)
 
         # exiting thread
-        self.stop.clear()
+        self._stop.clear()
+        self._unpause.clear()

@@ -29,6 +29,12 @@ class ProperSearcher:
         self.search_intervals = [('daily', '24 hours', 24 * 60), ('4h', '4 hours', 4 * 60),
                                  ('90m', '90 mins', 90), ('45m', '45 mins', 45), ('15m', '15 mins', 15)]
 
+    @staticmethod
+    def check_paused():
+        if sickbeard.DOWNLOAD_PROPERS:
+            return False
+        return True
+
     def run(self):
 
         self.amActive = True
