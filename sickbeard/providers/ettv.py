@@ -15,10 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import re
 import traceback
-import urllib
 
 from . import generic
 from sickbeard import logger
@@ -27,26 +25,23 @@ from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
-class LimeTorrentsProvider(generic.TorrentProvider):
+class ETTVProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'LimeTorrents')
+        generic.TorrentProvider.__init__(self, 'ETTV')
 
-        self.url_home = ['https://www.limetorrents.cc/'] + \
-                        ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[ \sF]+', '', x[::-1]) for x in [
-                                'X ZtlFGb', 'lJnc  vR', 'n LzR nb', 'vxmYuF V', 'CFZltF2Y', '==wYF2F5']],
-                        ]]]
+        self.url_home = ['https://ettv.tv/']
+        self.url_vars = {'search': 'torrents-search.php?%s&search=%s&sort=id&order=desc'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s'}
 
-        self.url_vars = {'search': 'search/tv/%s/', 'browse': 'browse-torrents/TV-shows/'}
-        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s',
-                         'browse': '%(home)s%(vars)s'}
+        self.categories = {'Season': [7], 'Episode': [41, 5, 50]}
+        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.minseed, self.minleech = 2 * [None]
 
     @staticmethod
     def _has_signature(data=None):
-        return data and re.search(r'(?i)LimeTorrents', data[33:1024:])
+        return data and re.search(r'(?i)(?:ettv)', data)
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -56,15 +51,15 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'dl'}.iteritems())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'torrent/'}.iteritems())
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
 
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                search_url = self.urls['browse'] if 'Cache' == mode \
-                    else self.urls['search'] % (urllib.quote_plus(search_string))
+                search_url = self.urls['search'] % (
+                    self._categories_string(mode), ('%2B ', '')['Cache' == mode] + '.'.join(search_string.split()))
 
                 html = self.get_url(search_url)
 
@@ -73,31 +68,28 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find_all('table', class_='table2')
-                        torrent_rows = [] if not torrent_table else [
-                            t.select('tr[bgcolor]') for t in torrent_table if
-                            all([x in ' '.join(x.get_text() for x in t.find_all('th')).lower() for x in
-                                 ['torrent', 'size']])]
+                        torrent_table = soup.find('table', class_='table')
+                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if not len(torrent_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[0]:  # 0 = all rows
+                        for tr in torrent_rows[1:]:
                             cells = tr.find_all('td')
-                            if 5 > len(cells):
+                            if 6 > len(cells):
                                 continue
                             try:
-                                head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n.replace(',', ''), n) for n in [
+                                head = head if None is not head else self._header_row(
+                                    tr, {'seed': r'seed', 'leech': r'leech', 'size': r'^size'})
+                                seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                anchors = tr.td.find_all('a')
-                                stats = anchors and [len(a.get_text()) for a in anchors]
-                                title = stats and anchors[stats.index(max(stats))].get_text().strip()
-                                download_url = self._link((tr.td.find('a', class_=rc['get']) or {}).get('href'))
+                                info = tr.find('a', href=rc['info'])
+                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                download_url = self._link(info.get('href'))
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
@@ -115,5 +107,23 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
         return results
 
+    def get_data(self, url):
+        result = None
+        html = self.get_url(url, timeout=90)
+        try:
+            result = re.findall('(?i)"(magnet:[^"]+?)">', html)[0]
+        except IndexError:
+            logger.log('Failed no magnet in response', logger.DEBUG)
+        return result
 
-provider = LimeTorrentsProvider()
+    def get_result(self, episodes, url):
+        result = None
+
+        if url:
+            result = super(ETTVProvider, self).get_result(episodes, url)
+            result.get_data_func = self.get_data
+
+        return result
+
+
+provider = ETTVProvider()

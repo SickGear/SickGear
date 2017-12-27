@@ -25,8 +25,7 @@ import datetime
 import sickbeard
 from sickbeard import db, logger, common, exceptions, helpers, network_timezones, generic_queue, search, \
     failed_history, history, ui, properFinder
-from sickbeard.search import wanted_episodes
-from sickbeard.common import Quality
+from sickbeard.search import wanted_episodes, get_aired_in_season, set_wanted_aired
 
 
 search_queue_lock = threading.Lock()
@@ -369,6 +368,9 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
             logger.log(u'Beginning manual search for: [%s]' % self.segment.prettyName())
             self.started = True
 
+            ep_count, ep_count_scene = get_aired_in_season(self.show)
+            set_wanted_aired(self.segment, True, ep_count, ep_count_scene, manual=True)
+
             search_result = search.search_providers(self.show, [self.segment], True, try_other_searches=True)
 
             if search_result:
@@ -415,6 +417,11 @@ class BacklogQueueItem(generic_queue.QueueItem):
 
         is_error = False
         try:
+            if not self.standard_backlog:
+                ep_count, ep_count_scene = get_aired_in_season(self.show)
+                for ep_obj in self.segment:
+                    set_wanted_aired(ep_obj, True, ep_count, ep_count_scene)
+
             logger.log(u'Beginning backlog search for: [%s]' % self.show.name)
             search_result = search.search_providers(
                 self.show, self.segment, False,
@@ -454,11 +461,10 @@ class FailedQueueItem(generic_queue.QueueItem):
         self.started = True
 
         try:
+            ep_count, ep_count_scene = get_aired_in_season(self.show)
             for ep_obj in self.segment:
 
                 logger.log(u'Marking episode as bad: [%s]' % ep_obj.prettyName())
-
-                cur_status = ep_obj.status
 
                 failed_history.set_episode_failed(ep_obj)
                 (release, provider) = failed_history.find_release(ep_obj)
@@ -469,8 +475,9 @@ class FailedQueueItem(generic_queue.QueueItem):
 
                 logger.log(u'Beginning failed download search for: [%s]' % ep_obj.prettyName())
 
-            search_result = search.search_providers(
-                self.show, self.segment, True, try_other_searches=True, old_status=cur_status)
+                set_wanted_aired(ep_obj, True, ep_count, ep_count_scene)
+
+            search_result = search.search_providers(self.show, self.segment, True, try_other_searches=True)
 
             if search_result:
                 for result in search_result:

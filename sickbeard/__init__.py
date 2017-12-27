@@ -507,6 +507,8 @@ IGNORE_WORDS = 'core2hd, hevc, MrLss, reenc, x265, danish, deutsch, dutch, flemi
                'german, italian, nordic, norwegian, portuguese, spanish, swedish, turkish'
 REQUIRE_WORDS = ''
 
+WANTEDLIST_CACHE = None
+
 CALENDAR_UNPROTECTED = False
 
 TMDB_API_KEY = 'edc5f123313769de83a71e157758030b'
@@ -555,7 +557,7 @@ def initialize(console_logging=True):
         global __INITIALIZED__, showList, providerList, newznabProviderList, torrentRssProviderList, \
             WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, CREATE_MISSING_SHOW_DIRS, \
             RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, CONFIG_FILE, \
-            REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS
+            REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE
         # Schedulers
         # global traktCheckerScheduler
         global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
@@ -676,6 +678,8 @@ def initialize(console_logging=True):
             CheckSection(CFG, stanza)
 
         update_config = False
+
+        WANTEDLIST_CACHE = common.wantedQualities()
 
         # wanted branch
         BRANCH = check_setting_str(CFG, 'General', 'branch', '')

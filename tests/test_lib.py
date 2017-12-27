@@ -110,7 +110,7 @@ mainDB.sickbeard.save_config = _dummy_saveConfig
 
 
 # the real one tries to contact tvdb just stop it from getting more info on the ep
-def _fake_specifyEP(self, season, episode):
+def _fake_specifyEP(self, season, episode, show_sql=None):
     pass
 
 sickbeard.tv.TVEpisode.specifyEpisode = _fake_specifyEP

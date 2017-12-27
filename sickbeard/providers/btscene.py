@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import base64
 import re
 import traceback
 import urllib
@@ -31,8 +32,13 @@ class BTSceneProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'BTScene')
 
-        self.url_home = ['http://btsone.cc/',  'http://diriri.xyz/', 'http://mytorrentz.tv/']
-
+        self.url_home = ['http://btsone.cc/',  'http://diriri.xyz/'] + \
+                        ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                            [re.sub('[L\sT]+', '', x[::-1]) for x in [
+                                'zTRnTY', 'uVT 2Y', '15LSTZ', 's JmLb', 'rTNL2b', 'uQW LZ', '=LLMmd']],
+                            [re.sub('[j\sq]+', '', x[::-1]) for x in [
+                                'zRn qY', 'l52j b', '1j5S M', 'sq Jmb', 'r Nq2b', 'ujQWqZ', 's9jGqb']],
+                        ]]]
         self.url_vars = {'search': '?q=%s&category=series&order=1', 'browse': 'lastdaycat/type/Series/',
                          'get': 'torrentdownload.php?id=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(vars)s',
@@ -58,6 +64,9 @@ class BTSceneProvider(generic.TorrentProvider):
 
         url = self.url
         response = self.get_url(url)
+        if not response:
+            return results
+
         form = re.findall('(?is)(<form[^>]+)', response)
         response = any(form) and form[0] or response
         action = re.findall('<form[^>]+action=[\'"]([^\'"]*)', response)[0]

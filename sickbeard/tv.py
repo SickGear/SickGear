@@ -109,7 +109,7 @@ class TVShow(object):
         self._air_by_date = 0
         self._subtitles = int(sickbeard.SUBTITLES_DEFAULT if sickbeard.SUBTITLES_DEFAULT else 0)
         self._dvdorder = 0
-        self._archive_firstmatch = 0
+        self._upgrade_once = 0
         self._lang = lang
         self._last_update_indexer = 1
         self._sports = 0
@@ -156,7 +156,7 @@ class TVShow(object):
     air_by_date = property(lambda self: self._air_by_date, dirty_setter('_air_by_date'))
     subtitles = property(lambda self: self._subtitles, dirty_setter('_subtitles'))
     dvdorder = property(lambda self: self._dvdorder, dirty_setter('_dvdorder'))
-    archive_firstmatch = property(lambda self: self._archive_firstmatch, dirty_setter('_archive_firstmatch'))
+    upgrade_once = property(lambda self: self._upgrade_once, dirty_setter('_upgrade_once'))
     lang = property(lambda self: self._lang, dirty_setter('_lang'))
     last_update_indexer = property(lambda self: self._last_update_indexer, dirty_setter('_last_update_indexer'))
     sports = property(lambda self: self._sports, dirty_setter('_sports'))
@@ -358,7 +358,8 @@ class TVShow(object):
 
         return ep_list
 
-    def getEpisode(self, season=None, episode=None, file=None, noCreate=False, absolute_number=None, forceUpdate=False):
+    def getEpisode(self, season=None, episode=None, file=None, noCreate=False, absolute_number=None, forceUpdate=False,
+                   ep_sql=None):
 
         # if we get an anime get the real season and episode
         if self.is_anime and absolute_number and not season and not episode:
@@ -392,9 +393,9 @@ class TVShow(object):
                        (self.indexerid, season, episode), logger.DEBUG)
 
             if file:
-                ep = TVEpisode(self, season, episode, file)
+                ep = TVEpisode(self, season, episode, file, show_sql=ep_sql)
             else:
-                ep = TVEpisode(self, season, episode)
+                ep = TVEpisode(self, season, episode, show_sql=ep_sql)
 
             if ep != None:
                 self.episodes[season][episode] = ep
@@ -932,9 +933,9 @@ class TVShow(object):
             if not self.dvdorder:
                 self.dvdorder = 0
 
-            self.archive_firstmatch = sqlResults[0]['archive_firstmatch']
-            if not self.archive_firstmatch:
-                self.archive_firstmatch = 0
+            self.upgrade_once = sqlResults[0]['archive_firstmatch']
+            if not self.upgrade_once:
+                self.upgrade_once = 0
 
             self.quality = int(sqlResults[0]['quality'])
             self.flatten_folders = int(sqlResults[0]['flatten_folders'])
@@ -1407,7 +1408,7 @@ class TVShow(object):
                         'sports': self.sports,
                         'subtitles': self.subtitles,
                         'dvdorder': self.dvdorder,
-                        'archive_firstmatch': self.archive_firstmatch,
+                        'archive_firstmatch': self.upgrade_once,
                         'startyear': self.startyear,
                         'lang': self.lang,
                         'imdb_id': self.imdbid,
@@ -1450,6 +1451,30 @@ class TVShow(object):
 
         logger.log('Checking if found %sepisode %sx%s is wanted at quality %s' %
                    (('', 'multi-part ')[multi_ep], season, episode, Quality.qualityStrings[quality]), logger.DEBUG)
+
+        if not multi_ep:
+            try:
+                wq = getattr(self.episodes.get(season, {}).get(episode, {}), 'wantedQuality', None)
+                if None is not wq:
+                    if quality in wq:
+                        curStatus, curQuality = Quality.splitCompositeStatus(self.episodes[season][episode].status)
+                        if curStatus in (WANTED, UNAIRED, SKIPPED, FAILED):
+                            logger.log('Existing episode status is wanted/unaired/skipped/failed, getting found episode',
+                                       logger.DEBUG)
+                            return True
+                        elif manualSearch:
+                            logger.log('Usually ignoring found episode, but forced search allows the quality, getting found'
+                                       ' episode', logger.DEBUG)
+                            return True
+                        elif quality > curQuality:
+                            logger.log(
+                                'Episode already exists but the found episode has better quality, getting found episode',
+                                logger.DEBUG)
+                            return True
+                    logger.log('None of the conditions were met, ignoring found episode', logger.DEBUG)
+                    return False
+            except (StandardError, Exception):
+                pass
 
         # if the quality isn't one we want under any circumstances then just say no
         initialQualities, archiveQualities = Quality.splitQuality(self.quality)
@@ -1542,7 +1567,7 @@ class TVShow(object):
 
             min_best, max_best = min(best_qualities), max(best_qualities)
             if quality >= max_best \
-                    or (self.archive_firstmatch and
+                    or (self.upgrade_once and
                         (quality in best_qualities or (None is not min_best and quality > min_best))):
                 return Overview.GOOD
             return Overview.QUAL
@@ -1558,7 +1583,7 @@ class TVShow(object):
 
 
 class TVEpisode(object):
-    def __init__(self, show, season, episode, file=''):
+    def __init__(self, show, season, episode, file='', show_sql=None):
         self._name = ''
         self._season = season
         self._episode = episode
@@ -1593,7 +1618,7 @@ class TVEpisode(object):
 
         self.lock = threading.Lock()
 
-        self.specifyEpisode(self.season, self.episode)
+        self.specifyEpisode(self.season, self.episode, show_sql)
 
         self.relatedEps = []
 
@@ -1738,9 +1763,9 @@ class TVEpisode(object):
         # if either setting has changed return true, if not return false
         return oldhasnfo != self.hasnfo or oldhastbn != self.hastbn
 
-    def specifyEpisode(self, season, episode):
+    def specifyEpisode(self, season, episode, show_sql=None):
 
-        sqlResult = self.loadFromDB(season, episode)
+        sqlResult = self.loadFromDB(season, episode, show_sql)
 
         if not sqlResult:
             # only load from NFO if we didn't load from DB
@@ -1764,13 +1789,17 @@ class TVEpisode(object):
                         raise exceptions.EpisodeNotFoundException(
                             'Couldn\'t find episode %sx%s' % (season, episode))
 
-    def loadFromDB(self, season, episode):
+    def loadFromDB(self, season, episode, show_sql=None):
         logger.log('%s: Loading episode details from DB for episode %sx%s' % (self.show.indexerid, season, episode),
                    logger.DEBUG)
 
-        myDB = db.DBConnection()
-        sql_results = myDB.select('SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
-                                 [self.show.indexerid, season, episode])
+        sql_results = None
+        if show_sql:
+            sql_results = [s for s in show_sql if episode == s['episode'] and season == s['season']]
+        if not sql_results:
+            myDB = db.DBConnection()
+            sql_results = myDB.select('SELECT * FROM tv_episodes WHERE showid = ? AND season = ? AND episode = ?',
+                                     [self.show.indexerid, season, episode])
 
         if len(sql_results) > 1:
             raise exceptions.MultipleDBEpisodesException('Your DB has two records for the same show somehow.')

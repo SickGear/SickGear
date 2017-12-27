@@ -26,7 +26,7 @@ import traceback
 
 import sickbeard
 
-from common import SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, Quality, SEASON_RESULT, MULTI_EP_RESULT
+from common import SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED, Quality, SEASON_RESULT, MULTI_EP_RESULT
 
 from sickbeard import logger, db, show_name_helpers, exceptions, helpers
 from sickbeard import sab
@@ -41,6 +41,7 @@ from sickbeard import failed_history
 from sickbeard.exceptions import ex
 from sickbeard.providers.generic import GenericProvider
 from sickbeard import common
+from sickbeard.tv import TVEpisode
 
 
 def _download_result(result):
@@ -130,6 +131,11 @@ def snatch_episode(result, end_status=SNATCHED):
 
     # TORRENTs can be sent to clients or saved to disk
     elif 'torrent' == result.resultType:
+        if not result.url.startswith('magnet') and None is not result.get_data_func:
+            result.url = result.get_data_func(result.url)
+            result.get_data_func = None  # consume only once
+            if not result.url:
+                return False
         # torrents are saved to disk when blackhole mode
         if 'blackhole' == sickbeard.TORRENT_METHOD:
             dl_result = _download_result(result)
@@ -165,7 +171,7 @@ def snatch_episode(result, end_status=SNATCHED):
     update_imdb_data = True
     for cur_ep_obj in result.episodes:
         with cur_ep_obj.lock:
-            if is_first_best_match(result):
+            if is_first_best_match(cur_ep_obj.status, result):
                 cur_ep_obj.status = Quality.compositeStatus(SNATCHED_BEST, result.quality)
             else:
                 cur_ep_obj.status = Quality.compositeStatus(end_status, result.quality)
@@ -289,7 +295,7 @@ def is_final_result(result):
         return False
 
 
-def is_first_best_match(result):
+def is_first_best_match(ep_status, result):
     """
     Checks if the given result is a best quality match and if we want to archive the episode on first match.
     """
@@ -298,21 +304,41 @@ def is_first_best_match(result):
                result.name, logger.DEBUG)
 
     show_obj = result.episodes[0].show
+    cur_status, cur_quality = Quality.splitCompositeStatus(ep_status)
 
     any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
 
     # if there is a redownload that's a match to one of our best qualities and
     # we want to archive the episode then we are done
-    if best_qualities and show_obj.archive_firstmatch and result.quality in best_qualities:
+    if best_qualities and show_obj.upgrade_once and \
+            (result.quality in best_qualities and
+             (cur_status in (SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED) or
+              result.quality not in any_qualities)):
         return True
 
     return False
 
 
-def wanted_episodes(show, from_date, make_dict=False, unaired=False):
-    initial_qualities, upgrade_qualities = common.Quality.splitQuality(show.quality)
-    all_qualities = list(set(initial_qualities + upgrade_qualities))
+def set_wanted_aired(ep_obj, unaired, ep_count, ep_count_scene, manual=False):
+    ep_status, ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)
+    ep_obj.wantedQuality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=unaired, manual=manual)
+    ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
+    ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
+        ep_obj.scene_season, 0) if ep_obj.scene_season else ep_obj.eps_aired_in_season
 
+
+def get_wanted_qualities(ep_obj, cur_status, cur_quality, unaired=False, manual=False):
+    if isinstance(ep_obj, TVEpisode):
+        return sickbeard.WANTEDLIST_CACHE.get_wantedlist(ep_obj.show.quality, ep_obj.show.upgrade_once,
+                                                         cur_quality, cur_status, unaired, manual)
+
+    return []
+
+
+def get_aired_in_season(show, return_sql=False):
+    ep_count = {}
+    ep_count_scene = {}
+    tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
     my_db = db.DBConnection()
 
     if show.air_by_date:
@@ -326,9 +352,6 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
                      'WHERE showid = ? AND indexer = ? AND season > 0'
 
     sql_results = my_db.select(sql_string, [show.indexerid, show.indexer])
-    ep_count = {}
-    ep_count_scene = {}
-    tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
     for result in sql_results:
         if 1 < helpers.tryInt(result['airdate']) <= tomorrow:
             cur_season = helpers.tryInt(result['season'])
@@ -337,76 +360,57 @@ def wanted_episodes(show, from_date, make_dict=False, unaired=False):
             if -1 != cur_scene_season:
                 ep_count_scene[cur_scene_season] = ep_count.setdefault(cur_scene_season, 0) + 1
 
+    if return_sql:
+        return ep_count, ep_count_scene, sql_results
+
+    return ep_count, ep_count_scene
+
+
+def wanted_episodes(show, from_date, make_dict=False, unaired=False):
+
+    ep_count, ep_count_scene, sql_results_org = get_aired_in_season(show, return_sql=True)
+
+    from_date_ord = from_date.toordinal()
     if unaired:
-        status_list = [common.WANTED, common.FAILED, common.UNAIRED]
-        sql_string += ' AND ( airdate > ? OR airdate = 1 )'
+        sql_results = [s for s in sql_results_org if s['airdate'] > from_date_ord or s['airdate'] == 1]
     else:
-        status_list = [common.WANTED, common.FAILED]
-        sql_string += ' AND airdate > ?'
+        sql_results = [s for s in sql_results_org if s['airdate'] > from_date_ord]
 
-    sql_results = my_db.select(sql_string, [show.indexerid, show.indexer, from_date.toordinal()])
-
-    # check through the list of statuses to see if we want any
     if make_dict:
         wanted = {}
     else:
         wanted = []
-    total_wanted = total_replacing = total_unaired = 0
-    downloaded_status_list = common.SNATCHED_ANY + [common.DOWNLOADED]
-    for result in sql_results:
-        not_downloaded = True
-        cur_composite_status = int(result['status'])
-        cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_composite_status)
-        cur_snatched = cur_status in downloaded_status_list
 
-        if show.archive_firstmatch and cur_snatched and cur_quality in upgrade_qualities:
+    total_wanted = total_replacing = total_unaired = 0
+
+    if 0 < len(sql_results) and 2 < len(sql_results) - len(show.episodes):
+        myDB = db.DBConnection()
+        show_ep_sql = myDB.select('SELECT * FROM tv_episodes WHERE showid = ? AND indexer = ?',
+                                  [show.indexerid, show.indexer])
+    else:
+        show_ep_sql = None
+
+    for result in sql_results:
+        ep_obj = show.getEpisode(int(result['season']), int(result['episode']), ep_sql=show_ep_sql)
+        cur_status, cur_quality = common.Quality.splitCompositeStatus(ep_obj.status)
+        ep_obj.wantedQuality = get_wanted_qualities(ep_obj, cur_status, cur_quality, unaired=unaired)
+        if not ep_obj.wantedQuality:
             continue
 
-        # special case: already downloaded quality is not in any of the upgrade to Qualities
-        other_quality_downloaded = False
-        if len(upgrade_qualities) and cur_snatched and cur_quality not in all_qualities:
-            other_quality_downloaded = True
-            wanted_qualities = all_qualities
+        ep_obj.eps_aired_in_season = ep_count.get(helpers.tryInt(result['season']), 0)
+        ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
+            helpers.tryInt(result['scene_season']), 0) if result['scene_season'] else ep_obj.eps_aired_in_season
+        if make_dict:
+            wanted.setdefault(ep_obj.scene_season if ep_obj.show.is_scene else ep_obj.season, []).append(ep_obj)
         else:
-            wanted_qualities = upgrade_qualities
+            wanted.append(ep_obj)
 
-        if upgrade_qualities:
-            highest_wanted_quality = max(wanted_qualities)
+        if cur_status in (common.WANTED, common.FAILED):
+            total_wanted += 1
+        elif cur_status in (common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN):
+            total_unaired += 1
         else:
-            if other_quality_downloaded:
-                highest_wanted_quality = max(initial_qualities)
-            else:
-                highest_wanted_quality = 0
-
-        # if we need a better one then say yes
-        if (cur_snatched and cur_quality < highest_wanted_quality) \
-                or cur_status in status_list \
-                or (sickbeard.SEARCH_UNAIRED and 1 == result['airdate']
-                    and cur_status in (common.SKIPPED, common.IGNORED, common.UNAIRED, common.UNKNOWN, common.FAILED)):
-
-            if cur_status in (common.WANTED, common.FAILED):
-                total_wanted += 1
-            elif cur_status in (common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN):
-                total_unaired += 1
-            else:
-                total_replacing += 1
-                not_downloaded = False
-
-            ep_obj = show.getEpisode(int(result['season']), int(result['episode']))
-            ep_obj.wantedQuality = [i for i in (wanted_qualities, initial_qualities)[not_downloaded]
-                                    if cur_quality < i]
-            # in case we don't want any quality for this episode, skip the episode
-            if 0 == len(ep_obj.wantedQuality):
-                logger.log('Dropped episode, no wanted quality for %sx%s: [%s]' % (
-                    ep_obj.season, ep_obj.episode, ep_obj.show.name), logger.ERROR)
-                continue
-            ep_obj.eps_aired_in_season = ep_count.get(helpers.tryInt(result['season']), 0)
-            ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
-                helpers.tryInt(result['scene_season']), 0) if result['scene_season'] else ep_obj.eps_aired_in_season
-            if make_dict:
-                wanted.setdefault(ep_obj.scene_season if ep_obj.show.is_scene else ep_obj.season, []).append(ep_obj)
-            else:
-                wanted.append(ep_obj)
+            total_replacing += 1
 
     if 0 < total_wanted + total_replacing + total_unaired:
         actions = []
@@ -739,6 +743,11 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
 
             # filter out possible bad torrents from providers
             if 'torrent' == best_result.resultType:
+                if not best_result.url.startswith('magnet') and None is not best_result.get_data_func:
+                    best_result.url = best_result.get_data_func(best_result.url)
+                    best_result.get_data_func = None  # consume only once
+                    if not best_result.url:
+                        continue
                 if best_result.url.startswith('magnet'):
                     if 'blackhole' != sickbeard.TORRENT_METHOD:
                         best_result.content = None
