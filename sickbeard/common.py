@@ -377,6 +377,62 @@ class Quality:
     FAILED = None
 
 
+class wantedQualities(dict):
+    wantedlist = 1
+    bothlists = 2
+    upgradelist = 3
+
+    def __init__(self, **kwargs):
+        super(wantedQualities, self).__init__(**kwargs)
+
+    def _generate_wantedlist(self, qualities):
+        initial_qualities, upgrade_qualities = Quality.splitQuality(qualities)
+        max_initial_quality = max(initial_qualities or [Quality.NONE])
+        self[qualities] = {0: {self.bothlists: False, self.wantedlist: initial_qualities, self.upgradelist: False}}
+        for q in Quality.qualityStrings:
+            if 0 >= q:
+                continue
+            if q not in upgrade_qualities and q in initial_qualities:
+                # quality is only in initial_qualities
+                self[qualities][q] = {self.bothlists: False,
+                                      self.wantedlist: [i for i in upgrade_qualities if q < i], self.upgradelist: False}
+            elif q in upgrade_qualities and q in initial_qualities:
+                # quality is in initial_qualities and upgrade_qualities
+                self[qualities][q] = {self.bothlists: True,
+                                      self.wantedlist: [i for i in upgrade_qualities if q < i], self.upgradelist: True}
+            elif q in upgrade_qualities:
+                # quality is only in upgrade_qualities
+                self[qualities][q] = {self.bothlists: False,
+                                      self.wantedlist: [i for i in upgrade_qualities if q < i], self.upgradelist: True}
+            else:
+                # quality is not in any selected quality for the show
+                only_upgrade = q >= max_initial_quality
+                self[qualities][q] = {self.bothlists: False,
+                                      self.wantedlist:
+                                          [i for i in (initial_qualities, upgrade_qualities)[only_upgrade] if q < i],
+                                      self.upgradelist: only_upgrade}
+
+    def __getitem__(self, k):
+        if k not in self:
+            self._generate_wantedlist(k)
+        return super(wantedQualities, self).__getitem__(k)
+
+    def get(self, k, *args, **kwargs):
+        if k not in self:
+            self._generate_wantedlist(k)
+        return super(wantedQualities, self).get(k, *args, **kwargs)
+
+    def get_wantedlist(self, qualities, upgradeonce, quality, status, unaired=False, manual=False):
+        if not manual and status in [ARCHIVED, IGNORED, SKIPPED] + ([UNAIRED], [])[unaired]:
+            return []
+        if upgradeonce:
+            if status == SNATCHED_BEST or \
+                    (not self[qualities][quality][self.bothlists] and self[qualities][quality][self.upgradelist] and
+                     status in (DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER)):
+                return []
+        return self[qualities][quality][self.wantedlist]
+
+
 Quality.SNATCHED = [Quality.compositeStatus(SNATCHED, x) for x in Quality.qualityStrings.keys()]
 Quality.SNATCHED_PROPER = [Quality.compositeStatus(SNATCHED_PROPER, x) for x in Quality.qualityStrings.keys()]
 Quality.SNATCHED_BEST = [Quality.compositeStatus(SNATCHED_BEST, x) for x in Quality.qualityStrings.keys()]

@@ -177,10 +177,10 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
                 lang='en', subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
-                wanted_begin=None, wanted_latest=None, tag=None, new_show=False):
+                wanted_begin=None, wanted_latest=None, tag=None, new_show=False, show_name=None):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
                                     subtitles, anime, scene, paused, blacklist, whitelist,
-                                    wanted_begin, wanted_latest, tag, new_show=new_show)
+                                    wanted_begin, wanted_latest, tag, new_show=new_show, show_name=show_name)
 
         self.add_item(queueItemObj)
 
@@ -238,7 +238,7 @@ class ShowQueueItem(generic_queue.QueueItem):
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
                  scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, tag,
-                 scheduled_update=False, new_show=False):
+                 scheduled_update=False, new_show=False, show_name=None):
 
         self.indexer = indexer
         self.indexer_id = indexer_id
@@ -257,6 +257,7 @@ class QueueItemAdd(ShowQueueItem):
         self.whitelist = whitelist
         self.tag = tag
         self.new_show = new_show
+        self.showname = show_name
 
         self.show = None
 
@@ -270,7 +271,9 @@ class QueueItemAdd(ShowQueueItem):
         Returns the show name if there is a show object created, if not returns
         the dir that the show is being added to.
         """
-        if self.show == None:
+        if None is not self.showname:
+            return self.showname
+        if None is self.show:
             return self.showDir
         return self.show.name
 
@@ -303,6 +306,12 @@ class QueueItemAdd(ShowQueueItem):
 
             t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
             s = t[self.indexer_id, False]
+
+            if getattr(t, 'show_not_found', False):
+                logger.log('Show %s was not found on %s, maybe show was deleted' %
+                           (self.show_name, sickbeard.indexerApi(self.indexer).name), logger.ERROR)
+                self._finishEarly()
+                return
 
             # this usually only happens if they have an NFO in their show dir which gave us a Indexer ID that has no proper english version of the show
             if getattr(s, 'seriesname', None) is None:

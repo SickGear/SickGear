@@ -1678,7 +1678,7 @@ class Home(MainHandler):
 
     def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
-                 indexerLang=None, subtitles=None, archive_firstmatch=None, rls_ignore_words=None,
+                 indexerLang=None, subtitles=None, upgrade_once=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
                  scene=None, tag=None, quality_preset=None, reset_fanart=None, **kwargs):
 
@@ -1757,7 +1757,7 @@ class Home(MainHandler):
 
         flatten_folders = config.checkbox_to_value(flatten_folders)
         dvdorder = config.checkbox_to_value(dvdorder)
-        archive_firstmatch = config.checkbox_to_value(archive_firstmatch)
+        upgrade_once = config.checkbox_to_value(upgrade_once)
         paused = config.checkbox_to_value(paused)
         air_by_date = config.checkbox_to_value(air_by_date)
         scene = config.checkbox_to_value(scene)
@@ -1820,7 +1820,7 @@ class Home(MainHandler):
         with showObj.lock:
             newQuality = Quality.combineQualities(map(int, anyQualities), map(int, bestQualities))
             showObj.quality = newQuality
-            showObj.archive_firstmatch = archive_firstmatch
+            showObj.upgrade_once = upgrade_once
 
             # reversed for now
             if bool(showObj.flatten_folders) != bool(flatten_folders):
@@ -3717,7 +3717,8 @@ class NewHomeAddShows(Home):
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
-                                                    wanted_begin, wanted_latest, tag, new_show=new_show)  # @UndefinedVariable
+                                                    wanted_begin, wanted_latest, tag, new_show=new_show,
+                                                    show_name=show_name)  # @UndefinedVariable
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()
@@ -3788,7 +3789,8 @@ class NewHomeAddShows(Home):
                                                             flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT,
                                                             subtitles=sickbeard.SUBTITLES_DEFAULT,
                                                             anime=sickbeard.ANIME_DEFAULT,
-                                                            scene=sickbeard.SCENE_DEFAULT)
+                                                            scene=sickbeard.SCENE_DEFAULT,
+                                                            show_name=show_name)
                 num_added += 1
 
         if num_added:
@@ -4131,8 +4133,8 @@ class Manage(MainHandler):
             if showObj:
                 showList.append(showObj)
 
-        archive_firstmatch_all_same = True
-        last_archive_firstmatch = None
+        upgrade_once_all_same = True
+        last_upgrade_once = None
 
         flatten_folders_all_same = True
         last_flatten_folders = None
@@ -4169,12 +4171,12 @@ class Manage(MainHandler):
             if cur_root_dir not in root_dir_list:
                 root_dir_list.append(cur_root_dir)
 
-            if archive_firstmatch_all_same:
+            if upgrade_once_all_same:
                 # if we had a value already and this value is different then they're not all the same
-                if last_archive_firstmatch not in (None, curShow.archive_firstmatch):
-                    archive_firstmatch_all_same = False
+                if last_upgrade_once not in (None, curShow.upgrade_once):
+                    upgrade_once_all_same = False
                 else:
-                    last_archive_firstmatch = curShow.archive_firstmatch
+                    last_upgrade_once = curShow.upgrade_once
 
             # if we know they're not all the same then no point even bothering
             if paused_all_same:
@@ -4235,7 +4237,7 @@ class Manage(MainHandler):
                     last_air_by_date = curShow.air_by_date
 
         t.showList = toEdit
-        t.archive_firstmatch_value = last_archive_firstmatch if archive_firstmatch_all_same else None
+        t.upgrade_once_value = last_upgrade_once if upgrade_once_all_same else None
         t.paused_value = last_paused if paused_all_same else None
         t.tag_value = last_tag if tag_all_same else None
         t.anime_value = last_anime if anime_all_same else None
@@ -4249,7 +4251,7 @@ class Manage(MainHandler):
 
         return t.respond()
 
-    def massEditSubmit(self, archive_firstmatch=None, paused=None, anime=None, sports=None, scene=None,
+    def massEditSubmit(self, upgrade_once=None, paused=None, anime=None, sports=None, scene=None,
                        flatten_folders=None, quality_preset=False, subtitles=None, air_by_date=None, anyQualities=[],
                        bestQualities=[], toEdit=None, tag=None, *args, **kwargs):
 
@@ -4285,11 +4287,11 @@ class Manage(MainHandler):
             else:
                 new_show_dir = showObj._location
 
-            if archive_firstmatch == 'keep':
-                new_archive_firstmatch = showObj.archive_firstmatch
+            if upgrade_once == 'keep':
+                new_upgrade_once = showObj.upgrade_once
             else:
-                new_archive_firstmatch = True if archive_firstmatch == 'enable' else False
-            new_archive_firstmatch = 'on' if new_archive_firstmatch else 'off'
+                new_upgrade_once = True if 'enable' == upgrade_once else False
+            new_upgrade_once = 'on' if new_upgrade_once else 'off'
 
             if paused == 'keep':
                 new_paused = showObj.paused
@@ -4348,7 +4350,7 @@ class Manage(MainHandler):
 
             curErrors += Home(self.application, self.request).editShow(curShow, new_show_dir, anyQualities,
                                                                        bestQualities, exceptions_list,
-                                                                       archive_firstmatch=new_archive_firstmatch,
+                                                                       upgrade_once=new_upgrade_once,
                                                                        flatten_folders=new_flatten_folders,
                                                                        paused=new_paused, sports=new_sports,
                                                                        subtitles=new_subtitles, anime=new_anime,
