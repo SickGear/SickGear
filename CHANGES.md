@@ -1,4 +1,9 @@
-﻿### 0.13.7 (2017-12-27 03:00:00 UTC)
+﻿### 0.13.8 (2017-12-27 15:45:00 UTC)
+
+* Fix HD4Free provider
+
+
+### 0.13.7 (2017-12-27 03:00:00 UTC)
 
 * Add log message for not found on indexer when adding a new show
 * Fix upgrade once ARCHIVED setting by postProcessor
