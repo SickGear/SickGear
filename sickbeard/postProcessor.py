@@ -939,12 +939,17 @@ class PostProcessor(object):
                 cur_ep.release_name = self.release_name or ''
 
                 any_qualities, best_qualities = common.Quality.splitQuality(cur_ep.show.quality)
+                cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_ep.status)
 
                 cur_ep.status = common.Quality.compositeStatus(
                     **({'status': common.DOWNLOADED, 'quality': new_ep_quality},
                        {'status': common.ARCHIVED, 'quality': new_ep_quality})
                     [ep_obj.status in common.Quality.SNATCHED_BEST or
-                     (cur_ep.show.archive_firstmatch and new_ep_quality in best_qualities)])
+                     (cur_ep.show.upgrade_once and
+                      (new_ep_quality in best_qualities and
+                       (new_ep_quality not in any_qualities or (cur_status in
+                        (common.SNATCHED, common.SNATCHED_BEST, common.SNATCHED_PROPER, common.DOWNLOADED) and
+                                                                cur_quality != new_ep_quality))))])
 
                 cur_ep.release_group = self.release_group or ''
 

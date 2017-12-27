@@ -1,10 +1,11 @@
-﻿### 0.14.0 (2018-xx-xx xx:xx:xx UTC)
+﻿### 0.13.7 (2017-12-27 03:00:00 UTC)
 
+* Add log message for not found on indexer when adding a new show
+* Fix upgrade once ARCHIVED setting by postProcessor
+* Fix determination of is_first_best_match
+* Fix BTScene and Lime
 * Add ETTV torrent provider
 * Add PotUK torrent provider
-* Fix BTScene and Lime
-
-[develop changelog]
 
 
 ### 0.13.6 (2017-12-13 01:50:00 UTC)

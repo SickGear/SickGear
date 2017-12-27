@@ -35,6 +35,7 @@ from io import BytesIO
 from lib.dateutil import parser
 from sickbeard.network_timezones import sb_timezone
 from sickbeard.helpers import tryInt
+from sickbeard.search import get_wanted_qualities, get_aired_in_season
 
 try:
     from lxml import etree
@@ -473,17 +474,29 @@ class NewznabProvider(generic.NZBProvider):
         return show_obj
 
     def choose_search_mode(self, episodes, ep_obj, hits_per_page=100):
-        if not hasattr(ep_obj, 'eps_aired_in_season'):
-            return None, neededQualities(need_all_qualities=True), hits_per_page
         searches = [e for e in episodes if (not ep_obj.show.is_scene and e.season == ep_obj.season) or
                     (ep_obj.show.is_scene and e.scene_season == ep_obj.scene_season)]
 
         needed = neededQualities()
+        needed.check_needed_types(ep_obj.show)
         for s in searches:
             if needed.all_qualities_needed:
                 break
             if not s.show.is_anime and not s.show.is_sports:
+                if not getattr(s, 'wantedQuality', None):
+                    # this should not happen, the creation is missing for the search in this case
+                    logger.log('wantedQuality property was missing for search, creating it', logger.WARNING)
+                    ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                    s.wantedQuality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
                 needed.check_needed_qualities(s.wantedQuality)
+
+        if not hasattr(ep_obj, 'eps_aired_in_season'):
+            # this should not happen, the creation is missing for the search in this case
+            logger.log('eps_aired_in_season property was missing for search, creating it', logger.WARNING)
+            ep_count, ep_count_scene = get_aired_in_season(ep_obj.show)
+            ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
+            ep_obj.eps_aired_in_scene_season = ep_count_scene.get(ep_obj.scene_season, 0) if ep_obj.show.is_scene else \
+                ep_obj.eps_aired_in_season
 
         per_ep, limit_per_ep = 0, 0
         if needed.need_sd and not needed.need_hd:
@@ -500,15 +513,26 @@ class NewznabProvider(generic.NZBProvider):
             rel_per_ep, limit_per_ep = 5, 10
         else:
             rel_per_ep = per_ep
-        rel = int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show.is_scene else
-                        ep_obj.eps_aired_in_season * rel_per_ep) / hits_per_page))
-        rel_limit = int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show.is_scene else
-                              ep_obj.eps_aired_in_season * limit_per_ep) / hits_per_page))
+        rel = max(1, int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show.is_scene else
+                               ep_obj.eps_aired_in_season * rel_per_ep) / hits_per_page)))
+        rel_limit = max(1, int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show.is_scene else
+                                     ep_obj.eps_aired_in_season * limit_per_ep) / hits_per_page)))
         season_search = rel < (len(searches) * 100 // hits_per_page)
         if not season_search:
             needed = neededQualities()
+            needed.check_needed_types(ep_obj.show)
             if not ep_obj.show.is_anime and not ep_obj.show.is_sports:
+                if not getattr(ep_obj, 'wantedQuality', None):
+                    ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                    ep_obj.wantedQuality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
                 needed.check_needed_qualities(ep_obj.wantedQuality)
+        else:
+            if not ep_obj.show.is_anime and not ep_obj.show.is_sports:
+                for ep in episodes:
+                    if not getattr(ep, 'wantedQuality', None):
+                        ep_status, ep_quality = Quality.splitCompositeStatus(ep.status)
+                        ep.wantedQuality = get_wanted_qualities(ep, ep_status, ep_quality, unaired=True)
+                    needed.check_needed_qualities(ep.wantedQuality)
         return (season_search, needed,
                 (hits_per_page * 100 // hits_per_page * 2, hits_per_page * int(ceil(rel_limit * 1.5)))[season_search])
 

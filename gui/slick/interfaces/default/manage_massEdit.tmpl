@@ -88,11 +88,11 @@
 	#set $isSelected = ' selected="selected"'
 	#set $isEnabled = $isSelected
 	#set $isDisabled = $isSelected
-	#if $archive_firstmatch_value##set $isDisabled = ''##else##set $isEnabled = ''##end if#
+	#if $upgrade_once_value##set $isDisabled = ''##else##set $isEnabled = ''##end if#
 	<div class="optionWrapper clearfix">
 		<span class="selectTitle">Upgrade once</span>
 		<div class="selectChoices">
-			<select id="edit_archive_firstmatch" name="archive_firstmatch" class="form-control form-control-inline input-sm">
+			<select id="edit_upgrade-once" name="upgrade_once" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>
 				<option value="enable"${isEnabled}>enable</option>
 				<option value="disable"${isDisabled}>disable</option>
