@@ -392,25 +392,20 @@ class wantedQualities(dict):
         for q in Quality.qualityStrings:
             if 0 >= q:
                 continue
+            wanted = [i for i in upgrade_qualities if q < i]
             if q not in upgrade_qualities and q in initial_qualities:
                 # quality is only in initial_qualities
-                self[qualities][q] = {self.bothlists: False,
-                                      self.wantedlist: [i for i in upgrade_qualities if q < i], self.upgradelist: False}
+                self[qualities][q] = {self.bothlists: False, self.wantedlist: wanted, self.upgradelist: False}
             elif q in upgrade_qualities and q in initial_qualities:
                 # quality is in initial_qualities and upgrade_qualities
-                self[qualities][q] = {self.bothlists: True,
-                                      self.wantedlist: [i for i in upgrade_qualities if q < i], self.upgradelist: True}
+                self[qualities][q] = {self.bothlists: True, self.wantedlist: wanted, self.upgradelist: True}
             elif q in upgrade_qualities:
                 # quality is only in upgrade_qualities
-                self[qualities][q] = {self.bothlists: False,
-                                      self.wantedlist: [i for i in upgrade_qualities if q < i], self.upgradelist: True}
+                self[qualities][q] = {self.bothlists: False, self.wantedlist: wanted, self.upgradelist: True}
             else:
                 # quality is not in any selected quality for the show
-                only_upgrade = q >= max_initial_quality
-                self[qualities][q] = {self.bothlists: False,
-                                      self.wantedlist:
-                                          [i for i in (initial_qualities, upgrade_qualities)[only_upgrade] if q < i],
-                                      self.upgradelist: only_upgrade}
+                self[qualities][q] = {self.bothlists: False, self.wantedlist: wanted,
+                                      self.upgradelist: (q >= max_initial_quality) and any(upgrade_qualities)}
 
     def __getitem__(self, k):
         if k not in self:
