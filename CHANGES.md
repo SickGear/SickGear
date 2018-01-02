@@ -1,4 +1,9 @@
-﻿### 0.13.8 (2017-12-27 15:45:00 UTC)
+﻿### 0.13.9 (2018-01-02 15:45:00 UTC)
+
+* Fix marking episode as to upgrade
+
+
+### 0.13.8 (2017-12-27 15:45:00 UTC)
 
 * Fix HD4Free provider
 
