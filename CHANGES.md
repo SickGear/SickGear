@@ -5,6 +5,8 @@
 
 [develop changelog]
 
+* Fix Events shutdown (a manual start-up is required after updating to this fix)
+
 
 ### 0.13.9 (2018-01-02 15:45:00 UTC)
 
