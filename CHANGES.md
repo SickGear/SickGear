@@ -1,4 +1,9 @@
-﻿### 0.13.9 (2018-01-02 15:45:00 UTC)
+﻿### 0.13.10 (2018-01-08 17:20:00 UTC)
+
+* Fix "Upgrade once" for wanted qualities
+
+
+### 0.13.9 (2018-01-02 15:45:00 UTC)
 
 * Fix marking episode as to upgrade
 
