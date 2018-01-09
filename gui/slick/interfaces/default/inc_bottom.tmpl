@@ -3,6 +3,7 @@
 #import re
 #from sickbeard import db, sbdatetime
 #from sickbeard.common import *
+#from sickbeard.helpers import df
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
@@ -61,7 +62,14 @@ try:
     recent_search_timeleft = str(sickbeard.recentSearchScheduler.timeLeft()).split('.')[0]
 except AttributeError:
     recent_search_timeleft = 'soon'
+diskfree, min_output = df()
+if min_output:
+    avail = ', '.join(['%s <span class="footerhighlight">%s</span>' % (drive, free) for (drive, free) in diskfree])
 %>
+<style>
+.stat-table{margin:0 auto}
+.stat-table > tbody > tr > td{padding:0 5px}
+</style>
 ##
 			<span class="footerhighlight">$shows_total</span> shows (<span class="footerhighlight">$shows_active</span> active)
 			| <span class="footerhighlight">$ep_downloaded</span><%=
@@ -74,6 +82,26 @@ except AttributeError:
 %>&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded $ep_percentage
 			| recent search: <span class="footerhighlight">$recent_search_timeleft</span>
 			| backlog search: <span class="footerhighlight">$next_backlog_timeleft</span>
+#if diskfree
+    #if min_output
+			<br>free space&nbsp;&nbsp;$avail
+    #else
+			<div class="table-responsive">
+				<table class="stat-table" cellspacing="5" cellpadding="5">
+					<caption style="display:none">Free space stats for volume/path</caption>
+					<tbody>
+        #for i, drive in enumerate(diskfree)
+						<tr>
+							<td>#if not i#free space#end if#</td>
+							<td><span class="footerhighlight">$drive[1]</span></td>
+							<td style="text-align:left">$drive[0]</td>
+						</tr>
+        #end for
+					</tobdy>
+				</table>
+			</div>
+    #end if
+#end if
 		</div>
 	</footer>
 </body>
