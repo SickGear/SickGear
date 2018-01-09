@@ -1555,3 +1555,62 @@ def datetime_to_epoch(dt):
         dt = dt.replace(tzinfo=sb_timezone)
     utc_naive = dt.replace(tzinfo=None) - dt.utcoffset()
     return int((utc_naive - datetime.datetime(1970, 1, 1)).total_seconds())
+
+
+def df():
+    """
+    Return disk free space at known parent locations
+
+    :return: string path, string value that is formatted size
+    :rtype: list of tuples
+    """
+    result = []
+    min_output = True
+    if sickbeard.ROOT_DIRS:
+        targets = []
+        for path in sickbeard.ROOT_DIRS.split('|')[1:]:
+            location_parts = os.path.splitdrive(path)
+            target = location_parts[0]
+            if 'win32' == sys.platform:
+                if not re.match('(?i)[a-z]:(?:\\\\)?$', target):
+                    # simple drive letter not found, fallback to full path
+                    target = path
+                    min_output = False
+            elif sys.platform.startswith(('linux', 'darwin', 'sunos5')) or 'bsd' in sys.platform:
+                target = path
+                min_output = False
+            if target and target not in targets:
+                targets += [target]
+                free = freespace(path)
+                if None is not free:
+                    result += [(target, sizeof_fmt(free).replace(' ', ''))]
+    return result, min_output
+
+
+def freespace(path=None):
+    """
+    Return free space available at path location
+
+    :param path: Example paths (Windows) = '\\\\192.168.0.1\\sharename\\existing_path', 'd:\\existing_path'
+                 Untested with mount points under linux
+    :type path: basestring
+    :return: Size in bytes
+    :rtype: long
+    """
+    result = None
+
+    if 'win32' == sys.platform:
+        try:
+            import ctypes
+            if None is not ctypes:
+                max_val = (2 ** 64) - 1
+                storage = ctypes.c_ulonglong(max_val)
+                ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(path), None, None, ctypes.pointer(storage))
+                result = (storage.value, None)[max_val == storage.value]
+        except(StandardError, Exception):
+            pass
+    elif sys.platform.startswith(('linux', 'darwin', 'sunos5')) or 'bsd' in sys.platform:
+        storage = os.statvfs(path)
+        result = storage.f_bavail * storage.f_frsize
+
+    return result
