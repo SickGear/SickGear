@@ -302,15 +302,15 @@ anime_regexes = [
      # Bleach s16e03e04 313-314
      '''
      ^(\[(?P<release_group>.+?)\][ ._-]*)?
-     (?P<series_name>.+?)[ ._-]+                   # start of string and series name and non optinal separator
+     (?P<series_name>.+?)[ ._-]+                   # start of string and series name and non optional separator
      [sS](?P<season_num>\d+)[. _-]*                # S01 and optional separator
-     [eE](?P<ep_num>\d+)                           # epipisode E02
+     [eE](?P<ep_num>\d+)                           # episode E02
      (([. _-]*e|-)                                 # linking e/- char
      (?P<extra_ep_num>\d+))*                       # additional E03/etc
      ([ ._-]{2,}|[ ._]+)                           # if "-" is used to separate at least something else has to be
                                                    # there(->{2,}) "s16e03-04-313-314" would make sens any way
-     (?P<ep_ab_num>\d{1,3})                        # absolute number
-     (-(?P<extra_ab_ep_num>\d{1,3}))*              # "-" as separator and anditional absolute number, all optinal
+     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)           # absolute number
+     (-(?P<extra_ab_ep_num>\d{1,3}))*              # "-" as separator and additional absolute number, all optional
      (v(?P<version>[0-9]))?                        # the version e.g. "v2"
      .*?
      '''
@@ -321,15 +321,15 @@ anime_regexes = [
      # Bleach.s16e03-04.313-314
      # Bleach s16e03e04 313-314
      '''
-     ^(?P<series_name>.+?)[ ._-]+                  # start of string and series name and non optinal separator
+     ^(?P<series_name>.+?)[ ._-]+                  # start of string and series name and non optional separator
      (?P<season_num>\d+)[. _-]*                    # S01 and optional separator
-     [xX](?P<ep_num>\d+)                           # epipisode E02
+     [xX](?P<ep_num>\d+)                           # episode E02
      (([. _-]*e|-)                                 # linking e/- char
      (?P<extra_ep_num>\d+))*                       # additional E03/etc
      ([ ._-]{2,}|[ ._]+)                           # if "-" is used to separate at least something else has to be
                                                    # there(->{2,}) "s16e03-04-313-314" would make sens any way
-     (?P<ep_ab_num>\d{1,3})                        # absolute number
-     (-(?P<extra_ab_ep_num>\d{1,3}))*              # "-" as separator and anditional absolute number, all optinal
+     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)           # absolute number
+     (-(?P<extra_ab_ep_num>\d{1,3}))*              # "-" as separator and additional absolute number, all optional
      (v(?P<version>[0-9]))?                        # the version e.g. "v2"
      .*?
      '''
@@ -338,14 +338,14 @@ anime_regexes = [
     ('anime_and_normal_reverse',
      # Bleach - 313-314 - s16e03-04
      '''
-     ^(?P<series_name>.+?)[ ._-]+                  # start of string and series name and non optinal separator
-     (?P<ep_ab_num>\d{1,3})                        # absolute number
-     (-(?P<extra_ab_ep_num>\d{1,3}))*              # "-" as separator and anditional absolute number, all optinal
+     ^(?P<series_name>.+?)[ ._-]+                  # start of string and series name and non optional separator
+     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)           # absolute number
+     (-(?P<extra_ab_ep_num>\d{1,3}))*              # "-" as separator and additional absolute number, all optional
      (v(?P<version>[0-9]))?                        # the version e.g. "v2"
      ([ ._-]{2,}|[ ._]+)                           # if "-" is used to separate at least something else has to be
                                                    # there(->{2,}) "s16e03-04-313-314" would make sens any way
      [sS](?P<season_num>\d+)[. _-]*                # S01 and optional separator
-     [eE](?P<ep_num>\d+)                           # epipisode E02
+     [eE](?P<ep_num>\d+)                           # episode E02
      (([. _-]*e|-)                                 # linking e/- char
      (?P<extra_ep_num>\d+))*                       # additional E03/etc
      .*?
@@ -355,8 +355,8 @@ anime_regexes = [
     ('anime_and_normal_front',
      # 165.Naruto Shippuuden.s08e014
      '''
-     ^(?P<ep_ab_num>\d{1,3})                       # start of string and absolute number
-     (-(?P<extra_ab_ep_num>\d{1,3}))*              # "-" as separator and anditional absolute number, all optinal
+     ^(?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)          # start of string and absolute number
+     (-(?P<extra_ab_ep_num>\d{1,3}))*              # "-" as separator and additional absolute number, all optional
      (v(?P<version>[0-9]))?[ ._-]+                 # the version e.g. "v2"
      (?P<series_name>.+?)[ ._-]+
      [sS](?P<season_num>\d+)[. _-]*                # S01 and optional separator
@@ -371,7 +371,7 @@ anime_regexes = [
      '''
      ^(?:\[(?P<release_group>.+?)\][ ._-]*)
      (?P<series_name>.+?)[ ._-]+
-     (?P<ep_ab_num>\d{1,3})
+     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)
      (-(?P<extra_ab_ep_num>\d{1,3}))*[ ._-]*?
      (?:v(?P<version>[0-9])[ ._-]+?)?
      (?:.+?[ ._-]+?)?
@@ -381,8 +381,19 @@ anime_regexes = [
      '''
      ),
 
-    ('anime_bare',
+    ('anime_bare_ep',
      # One Piece - 102
+     # Show Name 123 - 001
+     '''
+     ^(?:\[(?P<release_group>.+?)\][ ._-]*)?
+     (?P<series_name>.+?)[ ._-]+[ ._-]{2,}         # Show_Name and min 2 char separator
+     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)           # 1/001, while avoiding H.264 and 1080p from being matched
+     (-(?P<extra_ab_ep_num>\d{1,3}))*[ ._-]*       # 2/002
+     (?:v(?P<version>[0-9]))?                      # v2
+     '''
+     ),
+
+    ('anime_bare',
      # [ACX]_Wolf's_Spirit_001.mkv
      '''
      ^(\[(?P<release_group>.+?)\][ ._-]*)?

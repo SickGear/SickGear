@@ -1,6 +1,7 @@
 ﻿### 0.14.0 (2018-xx-xx xx:xx:xx UTC)
 
 * Change improve core scheduler logic
+* Change improve media process to parse anime format 'Show Name 123 - 001 - Ep 1 name'
 
 
 [develop changelog]

@@ -113,7 +113,7 @@ class NameParser(object):
             return
 
         matches = []
-
+        initial_best_result = None
         for reg_ex in self.compiled_regexes:
             for (cur_regex_num, cur_regex_name, cur_regex) in self.compiled_regexes[reg_ex]:
                 new_name = helpers.remove_non_release_groups(name, 'anime' in cur_regex_name)
@@ -266,6 +266,13 @@ class NameParser(object):
 
                 # if this is a naming pattern test then return best result
                 if not show or self.naming_pattern:
+                    if not show and not self.naming_pattern and not self.testing:
+                        # ensure anime regex test but use initial best if show still not found
+                        if 0 == reg_ex:
+                            initial_best_result = best_result
+                            matches = []  # clear non-anime match scores
+                            continue
+                        return initial_best_result
                     return best_result
 
                 # get quality
