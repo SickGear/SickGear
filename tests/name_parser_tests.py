@@ -271,10 +271,14 @@ simple_test_cases = {
         '165-166.3x3 Eyes.S08E014E015': parser.ParseResult(None, '3x3 Eyes', 8, [14, 15], None, None, None, [165, 166]),
     },
 
-    'anime_bare': {
+    'anime_bare_ep': {
+        'Show Name 123 - 001 - Ep 1 name': parser.ParseResult(None, 'Show Name 123', None, [], None, None, None, [1]),
         'One Piece 102': parser.ParseResult(None, 'One Piece', None, [], None, None, None, [102]),
         'bleach - 010': parser.ParseResult(None, 'bleach', None, [], None, None, None, [10]),
         'Naruto Shippuden - 314v2': parser.ParseResult(None, 'Naruto Shippuden', None, [], None, None, None, [314]),
+    },
+
+    'anime_bare': {
         'Blue Submarine No. 6 104-105':
             parser.ParseResult(None, 'Blue Submarine No. 6', None, [], None, None, None, [104, 105]),
         'Samurai X: Trust & Betrayal (OVA) 001-002':
@@ -558,6 +562,10 @@ class BasicTests(test.SickbeardTestDBCase):
     def test_anime_and_normal_front(self):
         np = parser.NameParser(False, TVShow(is_anime=True), testing=True)
         self._test_names(np, 'anime_and_normal_front')
+
+    def test_anime_bare_ep(self):
+        np = parser.NameParser(False, TVShow(is_anime=True), testing=True)
+        self._test_names(np, 'anime_bare_ep')
 
     def test_anime_bare(self):
         np = parser.NameParser(False, TVShow(is_anime=True), testing=True)
