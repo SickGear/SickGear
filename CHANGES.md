@@ -1,4 +1,9 @@
-﻿### 0.13.10 (2018-01-08 17:20:00 UTC)
+﻿### 0.13.11 (2018-01-15 17:35:00 UTC)
+
+* Fix issue fetching data in a rare case
+
+
+### 0.13.10 (2018-01-08 17:20:00 UTC)
 
 * Fix "Upgrade once" for wanted qualities
 
