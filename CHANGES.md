@@ -8,7 +8,7 @@
 
 * Fix Events shutdown (a manual start-up is required after updating to this fix)
 * Add free space stat (if obtainable) of parent folder(s) to footer
-
+* Add 'PB', 'EB', 'ZB', 'YB' to recognised output sizes
 
 ### 0.13.10 (2018-01-08 17:20:00 UTC)
 
