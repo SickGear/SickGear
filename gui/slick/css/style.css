@@ -3191,6 +3191,85 @@ input.get_less_eps{
 	display:none
 }
 
+#media-search .section{
+	padding-bottom:10px
+}
+#media-search .btn{
+	margin:0 6px 0 0;
+	min-width:70px
+}
+#media-search .btn.shows-more,
+#media-search .btn.shows-less{
+	margin:6px 6px 6px 0;
+}
+#media-search .btn.provider-retry{
+	margin:6px 0 6px 4px;
+}
+.tablesorter.provider-failures{width:auto;clear:both;margin-bottom:10px}
+.tablesorter.provider-failures > tbody > tr.tablesorter-childRow td{display:none}
+.tablesorter.provider-failures.tablesorter > tbody > tr{background-color:transparent}
+
+.provider-failures.hover-highlight th:hover::after,
+.provider-failures.hover-highlight td:hover::after,
+.provider-failures.focus-highlight th:focus::after,
+.provider-failures.focus-highlight td:focus::after{
+	content:'';
+	position:absolute;
+	width:100%;
+	height:999em;
+	left:0;
+	top:-555em;
+	z-index:-1
+}
+.provider-failures.focus-highlight th:focus::before,
+.provider-failures.focus-highlight td:focus::before{
+	content:'';
+	position:absolute;
+	width:999em;
+	height:100%;
+	left:-555em;
+	top:0;
+	z-index:-2
+}
+/* required styles */
+.provider-failures.hover-highlight,
+.provider-failures.focus-highlight{
+	overflow:hidden
+}
+.provider-failures.hover-highlight th,
+.provider-failures.hover-highlight td,
+.provider-failures.focus-highlight th,
+.provider-failures.focus-highlight td{
+	position:relative;
+	outline:0
+}
+/* override the tablesorter theme styling */
+.provider-failures.hover-highlight,
+.provider-failures.hover-highlight tbody > tr > td,
+.provider-failures.focus-highlight,
+.provider-failures.focus-highlight tbody > tr > td,
+/* override zebra styling */
+.provider-failures.hover-highlight tbody tr.even > th,
+.provider-failures.hover-highlight tbody tr.even > td,
+.provider-failures.hover-highlight tbody tr.odd > th,
+.provider-failures.hover-highlight tbody tr.odd > td,
+.provider-failures.focus-highlight tbody tr.even > th,
+.provider-failures.focus-highlight tbody tr.even > td,
+.provider-failures.focus-highlight tbody tr.odd > th,
+.provider-failures.focus-highlight tbody tr.odd > td{
+	background:transparent
+}
+/* table background positioned under the highlight */
+.provider-failures.hover-highlight td:before,
+.provider-failures.focus-highlight td:before{
+	content:'';
+	position:absolute;
+	width:100%;
+	height:100%;
+	left:0;
+	top:0;
+	z-index:-3
+}
 /* =======================================================================
 404.tmpl
 ========================================================================== */
@@ -4265,11 +4344,9 @@ tablesorter.css
 #display-show .tablesorter{
 	width:100%;
 	margin-right:auto;
-	margin-left:auto;
-	color:#000;
+	margin-left:auto
 /*	text-align:left;*/
-	background-color:#ddd/*;
-	border-spacing:0*/
+/*	border-spacing:0*/
 }
 
 #display-show .tablesorter{
@@ -4317,20 +4394,6 @@ tablesorter.css
 	cursor:default
 }
 
-thead.tablesorter-stickyHeader{
-	border-top:2px solid #ddd;
-	border-bottom:2px solid #ddd
-}
-
-/* Zebra Widget - row alternating colors */
-.tablesorter tr.odd, .sickbeardTable tr.odd{
-	background-color:#f5f1e4
-}
-
-.tablesorter tr.even, .sickbeardTable tr.even{
-	background-color:#dfdacf
-}
-
 /* filter widget */
 .tablesorter .filtered{
 	display:none
@@ -4346,9 +4409,7 @@ thead.tablesorter-stickyHeader{
 
 .tablesorter tr.tablesorter-filter-row,
 .tablesorter tr.tablesorter-filter-row td{
-	text-align:center;
-	background:#eee;
-	border-bottom:1px solid #ddd
+	text-align:center
 }
 
 /* optional disabled input styling */
@@ -4362,10 +4423,7 @@ thead.tablesorter-stickyHeader{
 }*/
 
 .tablesorter tfoot tr{
-	color:#ddd;
 	text-align:center;
-	text-shadow:-1px -1px 0 rgba(0, 0, 0, 0.3);
-	background-color:#333;
 	border-collapse:collapse
 }
 

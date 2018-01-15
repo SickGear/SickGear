@@ -86,6 +86,8 @@ class HDTorrentsProvider(generic.TorrentProvider):
                     self._categories_string(mode, template='category[]=%s')
                         .replace('&category[]=Animation', ('&genre[]=Animation', '')[mode in ['Cache', 'Propers']]))
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

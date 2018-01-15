@@ -58,8 +58,8 @@ class RarbgProvider(generic.TorrentProvider):
             return True
 
         for r in range(0, 3):
-            response = helpers.getURL(self.urls['api_token'], session=self.session, json=True)
-            if response and 'token' in response:
+            response = self.get_url(self.urls['api_token'], json=True)
+            if not self.should_skip() and response and 'token' in response:
                 self.token = response['token']
                 self.token_expiry = datetime.datetime.now() + datetime.timedelta(minutes=14)
                 return True
@@ -125,6 +125,8 @@ class RarbgProvider(generic.TorrentProvider):
                     searched_url = search_url % {'r': int(self.confirmed), 't': self.token}
 
                     data_json = self.get_url(searched_url, json=True)
+                    if self.should_skip():
+                        return results
 
                     self.token_expiry = datetime.datetime.now() + datetime.timedelta(minutes=14)
                     self.request_throttle = datetime.datetime.now() + datetime.timedelta(seconds=3)

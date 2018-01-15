@@ -187,13 +187,13 @@ class NewznabProvider(generic.NZBProvider):
             if datetime.date.today() - self._caps_need_apikey['date'] > datetime.timedelta(days=30) or \
                     not self._caps_need_apikey['need']:
                 self._caps_need_apikey['need'] = False
-                data = self.getURL('%s/api?t=caps' % self.url)
+                data = self.get_url('%s/api?t=caps' % self.url)
                 if data:
                     xml_caps = helpers.parse_xml(data)
             if xml_caps is None or not hasattr(xml_caps, 'tag') or xml_caps.tag == 'error' or xml_caps.tag != 'caps':
                 api_key = self.maybe_apikey()
                 if isinstance(api_key, basestring) and api_key not in ('0', ''):
-                    data = self.getURL('%s/api?t=caps&apikey=%s' % (self.url, api_key))
+                    data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, api_key))
                     if data:
                         xml_caps = helpers.parse_xml(data)
                         if xml_caps and hasattr(xml_caps, 'tag') and xml_caps.tag == 'caps':
@@ -296,7 +296,7 @@ class NewznabProvider(generic.NZBProvider):
             return False
         return super(NewznabProvider, self)._check_auth(is_required)
 
-    def check_auth_from_data(self, data):
+    def _check_auth_from_data(self, data, url):
 
         if data is None or not hasattr(data, 'tag'):
             return False
@@ -312,23 +312,12 @@ class NewznabProvider(generic.NZBProvider):
             elif '102' == code:
                 raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.' % self.name)
             elif '500' == code:
-                self.hit_limit_time = datetime.datetime.now()
-                self.hit_limit_count += 1
-                retry_time = re.search(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)
-                if retry_time:
-                    if retry_time.group(2) in ('s', 'sec', 'secs', 'seconds', 'second'):
-                        self.hit_limit_wait = datetime.timedelta(seconds=helpers.tryInt(retry_time.group(1)))
-                    elif retry_time.group(2) in ('m', 'min', 'mins', 'minutes', 'minute'):
-                        self.hit_limit_wait = datetime.timedelta(minutes=helpers.tryInt(retry_time.group(1)))
-                    elif retry_time.group(2) in ('h', 'hr', 'hrs', 'hours', 'hour'):
-                        self.hit_limit_wait = datetime.timedelta(hours=helpers.tryInt(retry_time.group(1)))
-                    elif retry_time.group(2) in ('d', 'days', 'day'):
-                        self.hit_limit_wait = datetime.timedelta(days=helpers.tryInt(retry_time.group(1)))
-                if not self.hit_limit_wait:
-                    fc = self.fail_time_index(base_limit=0)
-                    self.hit_limit_wait = self.wait_time(fc)
-                logger.log('Request limit reached. Waiting for %s until next retry. Message: %s' %
-                           (self.hit_limit_wait, description), logger.WARNING)
+                try:
+                    retry_time, unit = re.findall(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
+                except IndexError:
+                    retry_time, unit = None, None
+                self.tmr_limit_update(retry_time, unit, description)
+                self.log_failure_url(url)
             elif '910' == code:
                 logger.log(
                     '%s %s, please check with provider.' %
@@ -339,7 +328,7 @@ class NewznabProvider(generic.NZBProvider):
                            logger.WARNING)
             return False
 
-        self.hit_limit_count = 0
+        self.tmr_limit_count = 0
         return True
 
     def config_str(self):
@@ -739,17 +728,13 @@ class NewznabProvider(generic.NZBProvider):
                         search_url = '%sapi?%s' % (self.url, urllib.urlencode(request_params))
                     i and time.sleep(2.1)
 
-                    data = self.getURL(search_url)
+                    data = self.get_url(search_url)
 
-                    if self.should_skip():
-                        break
-
-                    if not data:
-                        logger.log('No Data returned from %s' % self.name, logger.WARNING)
+                    if self.should_skip() or not data:
                         break
 
                     # hack this in until it's fixed server side
-                    if data and not data.startswith('<?xml'):
+                    if not data.startswith('<?xml'):
                         data = '<?xml version="1.0" encoding="ISO-8859-1" ?>%s' % data
 
                     try:
@@ -759,7 +744,7 @@ class NewznabProvider(generic.NZBProvider):
                         logger.log('Error trying to load %s RSS feed' % self.name, logger.WARNING)
                         break
 
-                    if not self.check_auth_from_data(parsed_xml):
+                    if not self._check_auth_from_data(parsed_xml, search_url):
                         break
 
                     if 'rss' != parsed_xml.tag:

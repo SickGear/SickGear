@@ -8,169 +8,230 @@
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
-<input type="hidden" id="sbRoot" value="$sbRoot">
 
+<input type="hidden" id="sbRoot" value="$sbRoot">
 <script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/manageSearches.js?v=$sbPID"></script>
-<div id="content800">
+
+<div id="media-search" class="align-left">
+
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
 
-	<div id="summary2" class="align-left">
+
+
+	<div id="backlog-search" class="section">
 		<h3>Backlog Search:</h3>
 		<a id="forcebacklog" class="btn#if $standard_backlog_running or $backlog_is_active# disabled#end if#" href="$sbRoot/manage/manageSearches/forceBacklog"><i class="sgicon-play"></i> Force</a>
 		<a id="pausebacklog" class="btn" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlog_paused then "0" else "1"#"><i class="#if $backlog_paused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlog_paused then "Unpause" else "Pause"#</a>
-#if $backlog_paused then 'Paused: ' else ''#
+#if $backlog_paused
+		Paused:
+#end if##slurp#
 #if not $backlog_running and not $backlog_is_active:
-		Not in progress<br />
+		Not in progress
 #else
-		Currently running#if $backlog_running_type != "None"# ($backlog_running_type)#end if#<br />
+		Currently running#if $backlog_running_type != "None"# ($backlog_running_type)#end if#
 #end if
-		<br />
+	</div>
 
+
+
+	<div id="recent-search" class="section">
 		<h3>Recent Search:</h3>
 		<a id="recentsearch" class="btn#if $recent_search_status# disabled#end if#" href="$sbRoot/manage/manageSearches/forceSearch"><i class="sgicon-play"></i> Force</a>
 #if not $recent_search_status
-		Not in progress<br />
+		Not in progress
 #else
-		In Progress<br />
+		In Progress
 #end if
-		<br />
+	</div>
 
+
+
+	<div id="propers-search" class="section">
 		<h3>Find Propers Search:</h3>
 		<a id="propersearch" class="btn#if $find_propers_status# disabled#end if#" href="$sbRoot/manage/manageSearches/forceFindPropers"><i class="sgicon-play"></i> Force</a>
 #if not $find_propers_status
-		Not in progress<br />
+		Not in progress
 #else
-		In Progress<br />
+		In Progress
 #end if
-		<br />
-#if $provider_errors
-<h3>Provider Errors:</h3><br>
-#for $prov in $provider_error_stats
-	#if $len($prov['errors'])
-		$prov['name']<input type="button" class="shows-more btn" id="$prov['name']-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="$prov['name']-btn-less" value="Collapse">
-		#if $prov['next_try']
-		#set nt = $str($prov['next_try']).split('.', 2)
-		Next try in: $nt[0] <input type="button" class="prov-retry btn" id="$prov['prov_id']-btn-retry" value="Retry">
-		#end if
-		<br>
-		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
-			<thead><th>Day</th><th>http</th><th>connection</th><th>connection timeout</th><th>timeout</th><th>unknown</th><th>no data</th>
-			#if $prov['has_limit']
-			<th>Hit Limit</th>
-			#end if
+	</div>
+
+
+
+	<div id="provider-failures" class="section">
+		<h3>Provider Failures:</h3>
+#if not $provider_fails
+		<p>No current failures. Failure stats display here when appropriate.</p>
+#else
+		<p>Some providers can be often down over periods, SickGear will back off then retry connecting at a later time</p>
+
+    #for $prov in $provider_fail_stats
+        #if $len($prov['fails'])
+		<input type="button" class="shows-more btn" id="$prov['name']-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="$prov['name']-btn-less" value="Collapse"><img src="$sbRoot/images/providers/$prov['prov_img']" width="16" height="16" style="margin:0 6px" />$prov['name']
+            #if $prov['active']
+                #if $prov['next_try']
+                    #set nt = $str($prov['next_try']).split('.', 2)
+		... is blocked until $sbdatetime.sbdatetime.sbftime($sbdatetime.sbdatetime.now() + $prov['next_try'], markup=True) (in $nt[0]) <input type="button" class="provider-retry btn" id="$prov['prov_id']-btn-retry" value="Ignore block on next search">
+                #end if
+            #else
+		... is not enabled
+            #end if
+		<table class="manageTable provider-failures tablesorter hover-highlight focus-highlight text-center" cellspacing="0" border="0" cellpadding="0">
+			<thead>
+				<tr>
+					<th class="text-center" style="width:13em;padding-right:20px">period of 1hr</th>
+					<th class="text-center" style="padding-right:20px">server/timeout</th>
+					<th class="text-center" style="padding-right:20px">network</th>
+					<th class="text-center" style="padding-right:20px">no data</th>
+					<th class="text-center" style="padding-right:20px">other</th>
+            #if $prov['has_limit']
+					<th class="text-center" style="padding-right:20px">hit limit</th>
+            #end if
+				</tr>
 			</thead>
 			<tbody>
-			#set $row = 0
-		#for $error in $prov['errors']
-			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
-				<td style="color:white">$sbdatetime.sbdatetime.sbfdate($error['date'])</td>
-				<td style="color:white">$error['http'].get('count', 0)</td>
-				<td style="color:white">$error['connection'].get('count', 0)</td>
-				<td style="color:white">$error['connection_timeout'].get('count', 0)</td>
-				<td style="color:white">$error['timeout'].get('count', 0)</td>
-				<td style="color:white">$error['unknown'].get('count', 0)</td>
-				<td style="color:white">$error['nodata'].get('count', 0)</td>
-				#if $prov['has_limit']
-				<td style="color:white">$error.get('limit', {}).get('count', 0)</td>
-				#end if
-			</tr>
-		#end for
+            #set $day = []
+            #for $fail in $prov['fails']
+                #set $child = True
+                #if $fail['date'] not in $day
+                    #set $day += [$fail['date']]
+                    #set $child = False
+                #end if
+                #slurp#
+				<tr#if $fail['multirow'] and $child# class="tablesorter-childRow"#end if#>
+                #if $fail['multirow']
+                    #if not $child
+					<td><a href="#" class="provider-fail-parent-toggle" title="Totals (expand for detail)">$sbdatetime.sbdatetime.sbfdate($fail['date_time'])</a></td>
+                    #else
+					<td>$sbdatetime.sbdatetime.sbftime($fail['date_time'], markup=True)</td>
+                    #end if
+                #else
+					<td>$sbdatetime.sbdatetime.sbfdatetime($fail['date_time'], markup=True)</td>
+                #end if
+                #set $blank = '-'
+                #set $title=None
+                #if $fail['http']['count']
+                    #set $title=$fail['http']['code']
+                #end if
+					<td>#if $fail['http']['count']#<span title="#if $child#$title#else#Expand for fail codes#end if#">$fail['http']['count']</span>#else#$blank#end if# / #echo $fail['timeout'].get('count', 0) or $blank#</td>
+					<td>#echo ($fail['connection'].get('count', 0) + $fail['connection_timeout'].get('count', 0)) or $blank#</td>
+					<td>#echo $fail['nodata'].get('count', 0) or $blank#</td>
+					<td>#echo $fail['other'].get('count', 0) or $blank#</td>
+                #if $prov['has_limit']
+					<td>#echo $fail.get('limit', {}).get('count', 0) or $blank#</td>
+                #end if
+				</tr>
+            #end for
 			</tbody>
 		</table>
-	#end if
-#end for
-<br>
-		<br /><br />
+        #end if
+    #end for
 #end if
-		<h3>Search Queue:</h3>
+	</div>
+
+
+
+	<div id="search-queues" class="section">
+		<h3>Search Queues:</h3>
+
 #if $queue_length['backlog'] or $queue_length['manual'] or $queue_length['failed']
 		<input type="button" class="show-all-more btn" id="all-btn-more" value="Expand All"><input type="button" class="show-all-less btn" id="all-btn-less" value="Collapse All"><br>
 #end if
-<br>
-Recent: <i>$queue_length['recent'] item$sickbeard.helpers.maybe_plural($queue_length['recent'])</i><br><br>
-Proper: <i>$queue_length['proper'] item$sickbeard.helpers.maybe_plural($queue_length['proper'])</i><br><br>
-Backlog: <i>$len($queue_length['backlog']) item$sickbeard.helpers.maybe_plural($len($queue_length['backlog']))</i>
+		<div id="queue-recent" class="section">
+			Recent: <i>$queue_length['recent'] item$sickbeard.helpers.maybe_plural($queue_length['recent'])</i>
+		</div>
+
+
+		<div id="queue-proper" class="section">
+			Proper: <i>$queue_length['proper'] item$sickbeard.helpers.maybe_plural($queue_length['proper'])</i>
+		</div>
+
+
+		<div id="queue-backlog" class="section">
+			Backlog: <i>$len($queue_length['backlog']) item$sickbeard.helpers.maybe_plural($len($queue_length['backlog']))</i>
 #if $queue_length['backlog']
-	<input type="button" class="shows-more btn" id="backlog-btn-more" value="Expand" #if not $queue_length['backlog']# style="display:none" #end if#><input type="button" class="shows-less btn" id="backlog-btn-less" value="Collapse" style="display:none"><br>
-	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
-		<thead></thead>
-		<tbody>
-		#set $row = 0
-		#for $cur_item in $queue_length['backlog']:
-			#set $search_type = 'On Demand'
-			#if $cur_item['standard_backlog']:
-				#if $cur_item['forced']:
-					#set $search_type = 'Forced'
-				#else
-					#set $search_type = 'Scheduled'
-				#end if
-				#if $cur_item['torrent_only']:
-					#set $search_type += ', Torrent Only'
-				#end if
-				#if $cur_item['limited_backlog']:
-					#set $search_type += ' (Limited)'
-				#else
-					#set $search_type += ' (Full)'
-				#end if
-			#end if
-			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
-				<td style="width:80%;text-align:left;color:white">
-					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
-				</td>
-				<td style="width:20%;text-align:center;color:white">$search_type</td>
-			</tr>
-		#end for
-		</tbody>
-	</table>
-#else
-	<br>
+			<input type="button" class="shows-more btn" id="backlog-btn-more" value="Expand" #if not $queue_length['backlog']# style="display:none" #end if#><input type="button" class="shows-less btn" id="backlog-btn-less" value="Collapse" style="display:none"><br>
+			<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
+				<thead></thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_item in $queue_length['backlog']:
+        #set $search_type = 'On Demand'
+        #if $cur_item['standard_backlog']:
+            #if $cur_item['forced']:
+                #set $search_type = 'Forced'
+            #else
+                #set $search_type = 'Scheduled'
+            #end if
+            #if $cur_item['torrent_only']:
+                #set $search_type += ', Torrent Only'
+            #end if
+            #if $cur_item['limited_backlog']:
+                #set $search_type += ' (Limited)'
+            #else
+                #set $search_type += ' (Full)'
+            #end if
+        #end if
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td style="width:80%;text-align:left;color:white">
+							<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
+						</td>
+						<td style="width:20%;text-align:center;color:white">$search_type</td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
 #end if
-<br>
-Manual: <i>$len($queue_length['manual']) item$sickbeard.helpers.maybe_plural($len($queue_length['manual']))</i>
+		</div>
+
+
+		<div id="queue-manual" class="section">
+			Manual: <i>$len($queue_length['manual']) item$sickbeard.helpers.maybe_plural($len($queue_length['manual']))</i>
 #if $queue_length['manual']
-	<input type="button" class="shows-more btn" id="manual-btn-more" value="Expand" #if not $queue_length['manual']# style="display:none" #end if#><input type="button" class="shows-less btn" id="manual-btn-less" value="Collapse" style="display:none"><br>
-	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
-		<thead></thead>
-		<tbody>
-		#set $row = 0
-		#for $cur_item in $queue_length['manual']:
-			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
-				<td style="width:100%;text-align:left;color:white">
-					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
-				</td>
-			</tr>
-		#end for
-		</tbody>
-	</table>
-#else
-	<br>
+			<input type="button" class="shows-more btn" id="manual-btn-more" value="Expand" #if not $queue_length['manual']# style="display:none" #end if#><input type="button" class="shows-less btn" id="manual-btn-less" value="Collapse" style="display:none"><br>
+			<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
+				<thead></thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_item in $queue_length['manual']:
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td style="width:100%;text-align:left;color:white">
+							<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
+						</td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
 #end if
-<br>
-Failed: <i>$len($queue_length['failed']) item$sickbeard.helpers.maybe_plural($len($queue_length['failed']))</i>
+		</div>
+
+
+		<div id="queue-failed" class="section">
+			Failed: <i>$len($queue_length['failed']) item$sickbeard.helpers.maybe_plural($len($queue_length['failed']))</i>
 #if $queue_length['failed']
-	<input type="button" class="shows-more btn" id="failed-btn-more" value="Expand" #if not $queue_length['failed']# style="display:none" #end if#><input type="button" class="shows-less btn" id="failed-btn-less" value="Collapse" style="display:none"><br>
-	<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
-		<thead></thead>
-		<tbody>
-		#set $row = 0
-		#for $cur_item in $queue_length['failed']:
-			<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
-				<td style="width:100%;text-align:left;color:white">
-					<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
-				</td>
-			</tr>
-		#end for
-		</tbody>
-	</table>
-#else
-	<br>
+			<input type="button" class="shows-more btn" id="failed-btn-more" value="Expand" #if not $queue_length['failed']# style="display:none" #end if#><input type="button" class="shows-less btn" id="failed-btn-less" value="Collapse" style="display:none"><br>
+			<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
+				<thead></thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_item in $queue_length['failed']:
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td style="width:100%;text-align:left;color:white">
+							<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
+						</td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
 #end if
+		</div>
 	</div>
+
 </div>
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

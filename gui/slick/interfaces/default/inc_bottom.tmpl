@@ -65,11 +65,7 @@ except AttributeError:
 diskfree, min_output = df()
 if min_output:
     avail = ', '.join(['%s <span class="footerhighlight">%s</span>' % (drive, free) for (drive, free) in diskfree])
-%>
-<style>
-.stat-table{margin:0 auto}
-.stat-table > tbody > tr > td{padding:0 5px}
-</style>
+%>#slurp#
 ##
 			<span class="footerhighlight">$shows_total</span> shows (<span class="footerhighlight">$shows_active</span> active)
 			| <span class="footerhighlight">$ep_downloaded</span><%=
@@ -87,6 +83,10 @@ if min_output:
 			<br>free space&nbsp;&nbsp;$avail
     #else
 			<div class="table-responsive">
+<style>
+.stat-table{margin:0 auto}
+.stat-table > tbody > tr > td{padding:0 5px}
+</style>
 				<table class="stat-table" cellspacing="5" cellpadding="5">
 					<caption style="display:none">Free space stats for volume/path</caption>
 					<tbody>

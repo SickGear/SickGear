@@ -66,6 +66,8 @@ class TVChaosUKProvider(generic.TorrentProvider):
                                          'order': 'desc', 'daysprune': '-1'})
 
                 html = self.get_url(self.urls['search'], **kwargs)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

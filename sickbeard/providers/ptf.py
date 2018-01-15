@@ -85,11 +85,16 @@ class PTFProvider(generic.TorrentProvider):
 
                 search_url = self.urls['search'] % ('+'.join(search_string.split()), self._categories_string(mode))
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
+
                 time.sleep(2)
                 if not self.has_all_cookies(['session_key']):
                     if not self._authorised():
                         return results
                     html = self.get_url(search_url)
+                    if self.should_skip():
+                        return results
 
                 cnt = len(items[mode])
                 try:

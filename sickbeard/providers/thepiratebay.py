@@ -106,7 +106,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
         quality = Quality.UNKNOWN
         file_name = None
         data = self.get_url('%sajax_details_filelist.php?id=%s' % (self.url, torrent_id))
-        if not data:
+        if self.should_skip() or not data:
             return None
 
         files_list = re.findall('<td.+>(.*?)</td>', data)
@@ -193,6 +193,8 @@ class ThePirateBayProvider(generic.TorrentProvider):
                 search_url = self.urls['browse'] if 'Cache' == mode \
                     else self.urls['search'] % (urllib.quote(search_string))
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

@@ -48,7 +48,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
         self.username, self.passkey, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
-    def check_auth_from_data(self, parsed_json):
+    def _check_auth_from_data(self, parsed_json):
 
         if 'status' in parsed_json and 5 == parsed_json.get('status') and 'message' in parsed_json:
             logger.log(u'Incorrect username or password for %s: %s' % (self.name, parsed_json['message']), logger.DEBUG)
@@ -112,9 +112,11 @@ class HDBitsProvider(generic.TorrentProvider):
                 search_url = self.urls['search']
 
                 json_resp = self.get_url(search_url, post_data=post_data, json=True)
+                if self.should_skip():
+                    return results
 
                 try:
-                    if not (json_resp and self.check_auth_from_data(json_resp) and 'data' in json_resp):
+                    if not (json_resp and self._check_auth_from_data(json_resp) and 'data' in json_resp):
                         logger.log(u'Response from %s does not contain any json data, abort' % self.name, logger.ERROR)
                         return results
                 except AuthException as e:

@@ -86,6 +86,8 @@ class TorrentDayProvider(generic.TorrentProvider):
                     search_string, ('&sort=7&type=desc', '')['Cache' == mode])
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

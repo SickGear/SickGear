@@ -4531,12 +4531,12 @@ class ManageSearches(Manage):
         t.recent_search_status = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
         t.find_propers_status = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
         t.queue_length = sickbeard.searchQueueScheduler.action.queue_length()
-        t.provider_error_stats = [{'name': p.name, 'prov_id': p.get_id(), 'errors': p.errors.errors_sorted,
-                                   'hit_limit_time': p.hit_limit_time, 'failure_time': p.failure_time,
-                                   'last_error': p.last_error,
-                                   'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
-                                  for p in sickbeard.providerList + sickbeard.newznabProviderList]
-        t.provider_errors = 0 < len([p for p in t.provider_error_stats if len(p['errors'])])
+        t.provider_fail_stats = filter(lambda stat: len(stat['fails']), [{
+            'active': p.is_active(), 'name': p.name, 'prov_id': p.get_id(), 'prov_img': p.image_name(),
+            'fails': p.fails.fails_sorted, 'tmr_limit_time': p.tmr_limit_time,
+            'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
+            for p in sickbeard.providerList + sickbeard.newznabProviderList])
+        t.provider_fails = 0 < len([p for p in t.provider_fail_stats if len(p['fails'])])
 
         t.submenu = self.ManageMenu('Search')
 

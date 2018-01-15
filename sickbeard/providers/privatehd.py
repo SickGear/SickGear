@@ -97,6 +97,8 @@ class PrivateHDProvider(generic.TorrentProvider):
                     '+'.join(search_string.split()), self._categories_string(mode, ''))
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

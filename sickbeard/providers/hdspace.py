@@ -83,6 +83,8 @@ class HDSpaceProvider(generic.TorrentProvider):
                     search_url += self.urls['search'] % rc['nodots'].sub(' ', search_string)
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

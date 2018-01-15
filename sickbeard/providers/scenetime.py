@@ -80,6 +80,8 @@ class SceneTimeProvider(generic.TorrentProvider):
 
                 self.session.headers.update({'Referer': self.url + 'browse.php', 'X-Requested-With': 'XMLHttpRequest'})
                 html = self.get_url(self.urls['browse'], post_data=post_data)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

@@ -49,8 +49,8 @@ class ShazbatProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(ShazbatProvider, self)._authorised(
-            logged_in=(lambda y=None: '<input type="password"' not in helpers.getURL(
-                self.urls['feeds'], session=self.session)), post_params={'tv_login': self.username, 'form_tmpl': True})
+            logged_in=(lambda y=None: '<input type="password"' not in self.get_url(self.urls['feeds'], skip_auth=True)),
+            post_params={'tv_login': self.username, 'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -70,11 +70,16 @@ class ShazbatProvider(generic.TorrentProvider):
                 if 'Cache' == mode:
                     search_url = self.urls['browse']
                     html = self.get_url(search_url)
+                    if self.should_skip():
+                        return results
                 else:
                     search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                     search_string = search_string.replace(show_detail, '').strip()
                     search_url = self.urls['search'] % search_string
                     html = self.get_url(search_url)
+                    if self.should_skip():
+                        return results
+
                     shows = rc['show_id'].findall(html)
                     if not any(shows):
                         continue
@@ -85,6 +90,8 @@ class ShazbatProvider(generic.TorrentProvider):
                             continue
                         html and time.sleep(1.1)
                         html += self.get_url(self.urls['show'] % sid)
+                        if self.should_skip():
+                            return results
 
                 cnt = len(items[mode])
                 try:
