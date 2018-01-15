@@ -1119,6 +1119,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     # reuse or instantiate request session
     if None is session:
         session = CloudflareScraper.create_scraper()
+        session.headers.update({'User-Agent': USER_AGENT})
 
     # download and save file or simply fetch url
     savename = None
@@ -1135,7 +1136,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
     # session master headers
     req_headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                   'Accept-Encoding': 'gzip,deflate', 'User-Agent': USER_AGENT}
+                   'Accept-Encoding': 'gzip,deflate'}
     if headers:
         req_headers.update(headers)
     if hasattr(session, 'reserved') and 'headers' in session.reserved:
