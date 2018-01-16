@@ -1,4 +1,9 @@
-﻿### 0.13.11 (2018-01-15 17:35:00 UTC)
+﻿### 0.13.12 (2018-01-16 01:10:00 UTC)
+
+* Remove provider TorrentVault
+
+
+### 0.13.11 (2018-01-15 17:35:00 UTC)
 
 * Fix issue fetching data in a rare case
 
