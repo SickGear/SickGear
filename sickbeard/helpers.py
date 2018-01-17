@@ -1520,7 +1520,7 @@ def set_file_timestamp(filename, min_age=3, new_time=None):
 
 
 def should_delete_episode(status):
-    s = Quality.splitCompositeStatus(status)
+    s = Quality.splitCompositeStatus(status)[0]
     if s not in SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED]:
         return True
     logger.log('not safe to delete episode from db because of status: %s' % statusStrings[s], logger.DEBUG)

@@ -3,6 +3,7 @@ import sys
 import os.path
 
 from sickbeard import helpers
+from sickbeard.common import ARCHIVED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, DOWNLOADED, SKIPPED, IGNORED, UNAIRED, UNKNOWN, WANTED, Quality
 
 
 sys.path.insert(1, os.path.abspath('..'))
@@ -36,6 +37,23 @@ class HelpersTests(unittest.TestCase):
         }
         for test_name, test_result in test_names.items():
             self.assertEqual(test_result, helpers.remove_non_release_groups(test_name[0], test_name[1]))
+
+    def test_should_delete_episode(self):
+        test_cases = [
+            ((SNATCHED, Quality.HDTV), False),
+            ((SNATCHED_PROPER, Quality.HDTV), False),
+            ((SNATCHED_BEST, Quality.HDTV), False),
+            ((DOWNLOADED, Quality.HDTV), False),
+            ((ARCHIVED, Quality.HDTV), False),
+            ((ARCHIVED, Quality.NONE), False),
+            ((SKIPPED, Quality.NONE), True),
+            ((IGNORED, Quality.NONE), False),
+            ((UNAIRED, Quality.NONE), True),
+            ((UNKNOWN, Quality.NONE), True),
+            ((WANTED, Quality.NONE), True),
+        ]
+        for c, b in test_cases:
+            self.assertEqual(helpers.should_delete_episode(Quality.compositeStatus(*c)), b)
 
 
 if __name__ == '__main__':
