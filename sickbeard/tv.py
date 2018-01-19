@@ -2005,11 +2005,13 @@ class TVEpisode(object):
             if self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
                 today = datetime.date.today()
                 delta = datetime.timedelta(days=1)
+                very_old_delta = datetime.timedelta(days=90)
                 show_time = network_timezones.parse_date_time(self.airdate.toordinal(), self.show.airs, self.show.network)
                 show_length = datetime.timedelta(minutes=helpers.tryInt(self.show.runtime, 60))
                 tz_now = datetime.datetime.now(network_timezones.sb_timezone)
                 future_airtime = (self.airdate > (today + delta) or
                                   (not self.airdate < (today - delta) and ((show_time + show_length) > tz_now)))
+                very_old_airdate = datetime.date.fromordinal(1) < self.airdate < (today - very_old_delta)
 
                 # if this episode hasn't aired yet set the status to UNAIRED
                 if future_airtime:
@@ -2029,7 +2031,7 @@ class TVEpisode(object):
                     msg = ('Episode status %s%s, with air date in the past, marking it ' % (
                         statusStrings[self.status], ','.join([(' is a special', '')[0 < self.season],
                                                               ('', ' is paused')[self.show.paused]])) + '%s')
-                    self.status = (SKIPPED, WANTED)[0 < self.season and not self.show.paused]
+                    self.status = (SKIPPED, WANTED)[0 < self.season and not self.show.paused and not very_old_airdate]
 
                 # if still UNKNOWN or SKIPPED with the deprecated future airdate method
                 elif UNKNOWN == self.status or (SKIPPED == self.status and old_airdate_future):
@@ -2037,7 +2039,8 @@ class TVEpisode(object):
                         statusStrings[self.status], ','.join([
                             ('', ' has old future date format')[SKIPPED == self.status and old_airdate_future],
                             ('', ' is being updated')[bool(update)], (' is a special', '')[0 < self.season]])) + '%s')
-                    self.status = (SKIPPED, WANTED)[update and not self.show.paused and 0 < self.season]
+                    self.status = (SKIPPED, WANTED)[update and not self.show.paused and 0 < self.season
+                                                    and not very_old_airdate]
 
                 else:
                     msg = 'Not touching episode status %s, with air date in the past, because there is no file'
