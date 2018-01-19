@@ -1,4 +1,10 @@
-﻿### 0.13.12 (2018-01-16 01:10:00 UTC)
+﻿### 0.13.13 (2018-01-19 00:45:00 UTC)
+
+* Fix setting episode status when testing for if it should be deleted
+* Restrict setting newly added old episodes to WANTED to the last 90 days, older are set to SKIPPED
+
+
+### 0.13.12 (2018-01-16 01:10:00 UTC)
 
 * Remove provider TorrentVault
 
