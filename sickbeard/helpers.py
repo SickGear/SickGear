@@ -1567,7 +1567,7 @@ def df():
     """
     result = []
     min_output = True
-    if sickbeard.ROOT_DIRS:
+    if sickbeard.ROOT_DIRS and sickbeard.DISPLAY_FREESPACE:
         targets = []
         for path in sickbeard.ROOT_DIRS.split('|')[1:]:
             location_parts = os.path.splitdrive(path)

@@ -335,6 +335,17 @@
 							</label>
 						</div>
 
+#if not hasattr($sickbeard, 'DISPLAY_FREESPACE')#<span class="red-text">Restart SickGear to reveal new option here</span>#else#
+						<div class="field-pair">
+							<label for="display-freespace">
+								<span class="component-title">Display freespace</span>
+								<span class="component-desc">
+									<input type="checkbox" name="display_freespace" id="display-freespace"#echo ('', $checked)[$sg_var('DISPLAY_FREESPACE', True)]#>
+									<p>free space of parent locations is refreshed into any page footer request</p>
+								</span>
+							</label>
+						</div>
+#end if
 						<div class="field-pair">
 							<label for="sort_article">
 								<span class="component-title">Sort with "The", "A", "An"</span>
