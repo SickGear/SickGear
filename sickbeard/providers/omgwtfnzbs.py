@@ -22,13 +22,13 @@ import time
 import traceback
 import urllib
 
+import feedparser
 import sickbeard
 
 from . import generic
 from sickbeard import classes, logger, show_name_helpers, tvcache
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.exceptions import AuthException
-from sickbeard.rssfeeds import RSSFeeds
 from sickbeard.common import neededQualities
 
 
@@ -38,11 +38,10 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         generic.NZBProvider.__init__(self, 'omgwtfnzbs')
 
         self.url = 'https://omgwtfnzbs.me/'
-
         self.url_base = 'https://omgwtfnzbs.me/'
         self.url_api = 'https://api.omgwtfnzbs.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'cache': 'https://rss.omgwtfnzbs.me/rss-download.php?%s',
+                     'cache': self.url_api + 'xml/?%s',
                      'search': self.url_api + 'json/?%s',
                      'cache_html': self.url_base + 'browse.php?cat=tv%s',
                      'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}
@@ -69,7 +68,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             if 'notice' in data_json:
                 description_text = data_json.get('notice')
 
-                if 'information is incorrect' in data_json.get('notice'):
+                if re.search('(?i)(information is incorrect|in(?:valid|correct).*?(?:username|api))',
+                             data_json.get('notice')):
                     logger.log(u'Incorrect authentication credentials for ' + self.name + ' : ' + str(description_text),
                                logger.DEBUG)
                     raise AuthException(
@@ -125,7 +125,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         return result
 
-    def _get_cats(self, needed):
+    @staticmethod
+    def _get_cats(needed):
         cats = []
         if needed.need_sd:
             cats.extend(OmgwtfnzbsProvider.cat_sd)
@@ -140,21 +141,27 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         api_key = self._init_api()
         if False is api_key:
             return self.search_html(needed=needed, **kwargs)
+        results = []
         cats = self._get_cats(needed=needed)
         if None is not api_key:
-            params = {'user': self.username,
+            params = {'search': '',
+                      'user': self.username,
                       'api': api_key,
                       'eng': 1,
                       'catid': ','.join(cats)}  # SD,HD
 
-            rss_url = self.urls['cache'] % urllib.urlencode(params)
+            url = self.urls['cache'] % urllib.urlencode(params)
 
-            logger.log(self.name + u' cache update URL: ' + rss_url, logger.DEBUG)
+            response = self.get_url(url)
 
-            data = RSSFeeds(self).get_feed(rss_url)
+            data = feedparser.parse(response.replace('<xml', '<?xml').replace('>\n<info>', '?>\n<feed>\n<info>')
+                                    .replace('<search_req>\n', '').replace('</search_req>\n', '')
+                                    .replace('post>\n', 'entry>\n').replace('</xml>', '</feed>'))
             if data and 'entries' in data:
-                return data.entries
-        return []
+                results = data.entries
+
+            self._log_search('Cache', len(results), url)
+        return results
 
     def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0,
                          needed=neededQualities(need_all=True), **kwargs):
@@ -170,11 +177,10 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                       'eng': 1,
                       'nukes': 1,
                       'catid': ','.join(cats),  # SD,HD
-                      'retention': (sickbeard.USENET_RETENTION, retention)[retention or not sickbeard.USENET_RETENTION],
+                      'retention': retention or sickbeard.USENET_RETENTION or 0,
                       'search': search}
 
             search_url = self.urls['search'] % urllib.urlencode(params)
-            logger.log(u'Search url: ' + search_url, logger.DEBUG)
 
             data_json = self.get_url(search_url, json=True)
             if data_json and self._check_auth_from_data(data_json, is_xml=False):
@@ -183,6 +189,13 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         if item.get('nuked', '').startswith('1'):
                             continue
                         results.append(item)
+
+            mode = search_mode
+            if 'eponly' == search_mode:
+                mode = 'Episode'
+            elif 'sponly' == search_mode:
+                mode = 'Season'
+            self._log_search(mode, len(results), search_url)
         return results
 
     def search_html(self, search='', search_mode='', needed=neededQualities(need_all=True), **kwargs):

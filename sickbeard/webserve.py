@@ -123,12 +123,16 @@ class PageTemplate(Template):
 class BaseStaticFileHandler(StaticFileHandler):
     def set_extra_headers(self, path):
         self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
+        if sickbeard.SEND_SECURITY_HEADERS:
+            self.set_header('X-Frame-Options', 'SAMEORIGIN')
 
 
 class BaseHandler(RequestHandler):
     def set_default_headers(self):
         self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
         self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
+        if sickbeard.SEND_SECURITY_HEADERS:
+            self.set_header('X-Frame-Options', 'SAMEORIGIN')
 
     def redirect(self, url, permanent=False, status=None):
         if not url.startswith(sickbeard.WEB_ROOT):

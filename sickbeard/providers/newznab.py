@@ -35,6 +35,7 @@ from io import BytesIO
 from lib.dateutil import parser
 from sickbeard.network_timezones import sb_timezone
 from sickbeard.helpers import tryInt
+from sickbeard.show_name_helpers import get_show_names
 from sickbeard.search import get_wanted_qualities, get_aired_in_season
 
 try:
@@ -353,8 +354,7 @@ class NewznabProvider(generic.NZBProvider):
 
         spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
         # query search and exceptions
-        name_exceptions = self.get_show_names_url_encoded(ep_obj, spacer)
-
+        name_exceptions = get_show_names(ep_obj, spacer)
         for cur_exception in name_exceptions:
             params = base_params.copy()
             if 'q' in params:
@@ -407,8 +407,7 @@ class NewznabProvider(generic.NZBProvider):
 
         spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
         # query search and exceptions
-        name_exceptions = self.get_show_names_url_encoded(ep_obj, spacer)
-
+        name_exceptions = get_show_names(ep_obj, spacer)
         if sickbeard.scene_exceptions.has_abs_episodes(ep_obj):
             search_params.append({'q': '%s%s%s' % (ep_obj.show.name, spacer, base_params['ep'])})
         for cur_exception in name_exceptions:
@@ -627,8 +626,12 @@ class NewznabProvider(generic.NZBProvider):
                                           if v in self.caps]),
                        'offset': 0}
 
+        uc_only = all([re.search('(?i)usenet_crawler', self.get_id())])
+        base_params_uc = {'num': self.limits, 'dl': '1', 'i': '64660'}
+
         if isinstance(api_key, basestring) and api_key not in ('0', ''):
             base_params['apikey'] = api_key
+            base_params_uc['r'] = api_key
 
         results, n_spaces = [], {}
         total, cnt, search_url, exit_log = 0, len(results), '', True
@@ -668,6 +671,7 @@ class NewznabProvider(generic.NZBProvider):
 
                 if self.cat_ids or len(cat):
                     base_params['cat'] = ','.join(sorted(set((self.cat_ids.split(',') if self.cat_ids else []) + cat)))
+                    base_params_uc['t'] = base_params['cat']
 
                 request_params = base_params.copy()
                 if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
@@ -687,7 +691,10 @@ class NewznabProvider(generic.NZBProvider):
                 while (offset <= total) and (offset < max_items) and batch_count:
                     cnt = len(results)
 
-                    search_url = '%sapi?%s' % (self.url, urllib.urlencode(request_params))
+                    if 'Cache' == mode and uc_only:
+                        search_url = '%srss?%s' % (self.url, urllib.urlencode(base_params_uc))
+                    else:
+                        search_url = '%sapi?%s' % (self.url, urllib.urlencode(request_params))
                     i and time.sleep(2.1)
 
                     data = helpers.getURL(search_url)
@@ -734,7 +741,9 @@ class NewznabProvider(generic.NZBProvider):
                             hits += int(0 == hits)
                         offset = helpers.tryInt(parsed_xml.find('.//%sresponse' % n_spaces['newznab']).get('offset', 0))
                     except (AttributeError, KeyError):
-                        break
+                        if not uc_only:
+                            break
+                        total = len(items)
 
                     # No items found, prevent from doing another search
                     if 0 == total:
@@ -747,7 +756,7 @@ class NewznabProvider(generic.NZBProvider):
                                 first_date = self._parse_pub_date(items[0])
                             last_date = self._parse_pub_date(items[-1])
                         if not first_date or not last_date or not self._last_recent_search or \
-                                last_date <= self.last_recent_search:
+                                last_date <= self.last_recent_search or uc_only:
                             break
 
                     if offset != request_params['offset']:

@@ -567,6 +567,16 @@
 							</label>
 						</div>
 
+						<div class="field-pair">
+							<label for="send_security_headers">
+								<span class="component-title">Send security headers</span>
+								<span class="component-desc">
+									<input type="checkbox" name="send_security_headers" id="send_security_headers"#echo ('', $checked)[$sg_var('SEND_SECURITY_HEADERS')]#>
+									<p>send the following headers to increase browser security...<br />(X-Frame-Options:SAMEORIGIN)</p>
+								</span>
+							</label>
+						</div>
+
 						<input type="submit" class="btn config_submitter" value="Save Changes">
 
 					</fieldset>
