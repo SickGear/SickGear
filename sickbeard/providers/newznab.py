@@ -27,7 +27,7 @@ from math import ceil
 
 from sickbeard.sbdatetime import sbdatetime
 from . import generic
-from sickbeard import helpers, logger, scene_exceptions, tvcache, classes, db
+from sickbeard import helpers, logger, tvcache, classes, db
 from sickbeard.common import neededQualities, Quality
 from sickbeard.exceptions import AuthException, MultipleShowObjectsException
 from sickbeard.indexers.indexer_config import *
@@ -351,15 +351,12 @@ class NewznabProvider(generic.NZBProvider):
                 use_id = True
         use_id and search_params.append(params)
 
+        spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
         # query search and exceptions
-        name_exceptions = list(
-            set([helpers.sanitizeSceneName(a) for a in
-                 scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
+        name_exceptions = self.get_show_names_url_encoded(ep_obj, spacer)
 
-        spacer = 'geek' in self.get_id() and ' ' or '.'
         for cur_exception in name_exceptions:
             params = base_params.copy()
-            cur_exception = cur_exception.replace('.', spacer)
             if 'q' in params:
                 params['q'] = '%s%s%s' % (cur_exception, spacer, params['q'])
                 search_params.append(params)
@@ -408,17 +405,14 @@ class NewznabProvider(generic.NZBProvider):
                 use_id = True
         use_id and search_params.append(params)
 
+        spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
         # query search and exceptions
-        name_exceptions = list(
-            set([helpers.sanitizeSceneName(a) for a in
-                 scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
+        name_exceptions = self.get_show_names_url_encoded(ep_obj, spacer)
 
-        spacer = 'geek' in self.get_id() and ' ' or '.'
         if sickbeard.scene_exceptions.has_abs_episodes(ep_obj):
             search_params.append({'q': '%s%s%s' % (ep_obj.show.name, spacer, base_params['ep'])})
         for cur_exception in name_exceptions:
             params = base_params.copy()
-            cur_exception = cur_exception.replace('.', spacer)
             params['q'] = cur_exception
             search_params.append(params)
 
@@ -444,7 +438,7 @@ class NewznabProvider(generic.NZBProvider):
             r_found = True
             while r_found:
                 r_found = False
-                for pattern, repl in ((r'(?i)-Obfuscated$', ''), (r'(?i)-postbot$', '')):
+                for pattern, repl in ((r'(?i)-Obfuscated$', ''), (r'(?i)-postbot$', ''), (r'(?i)[-.]English$', '')):
                     if re.search(pattern, title):
                         r_found = True
                         title = re.sub(pattern, repl, title)
