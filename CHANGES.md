@@ -2,13 +2,14 @@
 
 * Change improve core scheduler logic
 * Change improve media process to parse anime format 'Show Name 123 - 001 - Ep 1 name'
+* Add free space stat (if obtainable) of parent folder(s) to footer
+* Add option "Display disk free" to general config/interface page (default enabled)
 
 
 [develop changelog]
 
 * Fix Events shutdown (a manual start-up is required after updating to this fix)
-* Add free space stat (if obtainable) of parent folder(s) to footer
-* Add 'PB', 'EB', 'ZB', 'YB' to recognised output sizes
+* Add 'PB', 'EB', 'ZB', 'YB' to output size formats
 
 
 ### 0.13.14 (2018-01-25 16:20:00 UTC)
