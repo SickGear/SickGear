@@ -24,6 +24,7 @@ from sickbeard import helpers, logger, scene_exceptions, tvcache
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.exceptions import AuthException
 from sickbeard.helpers import tryInt
+from sickbeard.show_name_helpers import get_show_names
 from lib.unidecode import unidecode
 
 try:
@@ -293,20 +294,12 @@ class BTNProvider(generic.TorrentProvider):
             base_params['tvdb'] = ep_obj.show.indexerid
             base_params['series'] = ep_obj.show.name
             search_params.append(base_params)
-        # elif 2 == ep_obj.show.indexer:
-        #    current_params['tvrage'] = ep_obj.show.indexerid
-        #    search_params.append(current_params)
-        # else:
-        name_exceptions = list(
-            set([helpers.sanitizeSceneName(a) for a in
-                 scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
-        dedupe = [ep_obj.show.name.replace(' ', '.')]
+
+        name_exceptions = get_show_names(ep_obj)
         for name in name_exceptions:
-            if name.replace(' ', '.') not in dedupe:
-                dedupe += [name.replace(' ', '.')]
-                series_param = base_params.copy()
-                series_param['series'] = name
-                search_params.append(series_param)
+            series_param = base_params.copy()
+            series_param['series'] = name
+            search_params.append(series_param)
 
         return [dict(Season=search_params)]
 
@@ -318,7 +311,6 @@ class BTNProvider(generic.TorrentProvider):
         search_params = []
         base_params = {'category': 'Episode'}
 
-        # episode
         if ep_obj.show.air_by_date or ep_obj.show.is_sports:
             date_str = str(ep_obj.airdate)
 
@@ -333,27 +325,16 @@ class BTNProvider(generic.TorrentProvider):
                                (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show.is_scene)]
             base_params['name'] = 'S%02dE%02d' % (season, episode)
 
-        # search
         if 1 == ep_obj.show.indexer:
             base_params['tvdb'] = ep_obj.show.indexerid
             base_params['series'] = ep_obj.show.name
             search_params.append(base_params)
-        # elif 2 == ep_obj.show.indexer:
-        #    search_params['tvrage'] = ep_obj.show.indexerid
-        #    to_return.append(search_params)
 
-        # else:
-            # add new query string for every exception
-        name_exceptions = list(
-            set([helpers.sanitizeSceneName(a) for a in
-                 scene_exceptions.get_scene_exceptions(ep_obj.show.indexerid) + [ep_obj.show.name]]))
-        dedupe = [ep_obj.show.name.replace(' ', '.')]
+        name_exceptions = get_show_names(ep_obj)
         for name in name_exceptions:
-            if name.replace(' ', '.') not in dedupe:
-                dedupe += [name.replace(' ', '.')]
-                series_param = base_params.copy()
-                series_param['series'] = name
-                search_params.append(series_param)
+            series_param = base_params.copy()
+            series_param['series'] = name
+            search_params.append(series_param)
 
         return [dict(Episode=search_params)]
 

@@ -37,7 +37,6 @@ from sickbeard.metadata import helpers as metadata_helpers
 from sickbeard import logger
 from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
-from sickbeard.show_name_helpers import allPossibleShowNames
 from sickbeard.indexers import indexer_config
 from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVDB_V1
 
