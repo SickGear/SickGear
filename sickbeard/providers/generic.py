@@ -44,7 +44,7 @@ from sickbeard.common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
 from sickbeard.exceptions import SickBeardException, AuthException, ex
 from sickbeard.helpers import maybe_plural, remove_file_failed
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from sickbeard.show_name_helpers import allPossibleShowNames
+from sickbeard.show_name_helpers import get_show_names_all_possible
 
 
 class HaltParseException(SickBeardException):
@@ -955,9 +955,7 @@ class TorrentProvider(object, GenericProvider):
 
         search_params = []
         crop = re.compile(r'([.\s])(?:\1)+')
-        for name in set(allPossibleShowNames(self.show)):
-            if process_name and getattr(self, 'scene', True):
-                name = helpers.sanitizeSceneName(name)
+        for name in get_show_names_all_possible(self.show, scenify=process_name and getattr(self, 'scene', True)):
             for detail in ep_detail:
                 search_params += [crop.sub(r'\1', '%s %s%s' % (name, x, detail)) for x in prefix]
         return search_params

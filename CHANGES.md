@@ -11,6 +11,15 @@
 * Add 'PB', 'EB', 'ZB', 'YB' to recognised output sizes
 
 
+### 0.13.14 (2018-01-25 16:20:00 UTC)
+
+* Add config/general/web interface/send security headers (default enabled)
+* Fix usenet_crawler cache mode results
+* Fix omgwtf test of invalid auth, issue when enabling propers, and updating cache
+* Fix unicode shownames when searching
+* Add season specific naming exceptions to nzb + btn
+
+
 ### 0.13.13 (2018-01-19 00:45:00 UTC)
 
 * Fix setting episode status when testing for if it should be deleted

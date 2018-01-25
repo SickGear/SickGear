@@ -20,6 +20,7 @@ import os
 
 import re
 import datetime
+from urllib import quote_plus
 
 import sickbeard
 from sickbeard import common
@@ -125,11 +126,27 @@ def compile_word_list(lookup_words, re_prefix='(^|[\W_])', re_suffix='($|[\W_])'
 
     return result
 
-def makeSceneShowSearchStrings(show, season=-1):
-    showNames = allPossibleShowNames(show, season=season)
 
-    # scenify the names
-    return map(sanitizeSceneName, showNames)
+def url_encode(show_names, spacer='.'):
+
+    return [quote_plus(n.replace('.', spacer).encode('utf-8', errors='replace')) for n in show_names]
+
+
+def get_show_names(ep_obj, spacer='.'):
+
+    old_anime, old_dirty = ep_obj.show.is_anime, ep_obj.show.dirty
+    ep_obj.show.anime = 1  # used to limit results from all_possible(...)
+    show_names = get_show_names_all_possible(ep_obj.show, season=ep_obj.season, spacer=spacer)
+    ep_obj.show.anime = old_anime  # temporary measure, so restore property then dirty flag
+    ep_obj.show.dirty = old_dirty
+    return show_names
+
+
+def get_show_names_all_possible(show, season=-1, scenify=True, spacer='.'):
+    show_names = set(allPossibleShowNames(show, season=season))
+    if scenify:
+        show_names = map(sanitizeSceneName, show_names)
+    return url_encode(show_names, spacer)
 
 
 def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
@@ -176,7 +193,7 @@ def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
         numseasons = int(numseasonsSQlResult[0][0])
         seasonStrings = ["S%02d" % int(ep_obj.scene_season)]
 
-    showNames = set(makeSceneShowSearchStrings(show, ep_obj.scene_season))
+    showNames = get_show_names_all_possible(show, ep_obj.scene_season)
 
     toReturn = []
 
@@ -221,7 +238,7 @@ def makeSceneSearchString(show, ep_obj):
     if numseasons == 1 and not ep_obj.show.is_anime:
         epStrings = ['']
 
-    showNames = set(makeSceneShowSearchStrings(show, ep_obj.scene_season))
+    showNames = get_show_names_all_possible(show, ep_obj.scene_season)
 
     toReturn = []
 
