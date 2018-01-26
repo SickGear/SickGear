@@ -639,6 +639,27 @@ inc_bottom.tmpl
 	display:inline
 }
 
+.footer .icon-glyph{
+	opacity:0.4;filter:alpha(opacity=40);
+	float:none;
+	display:inline-block;
+	margin:0 0 -2px 0;
+	height:12px;
+	width:14px
+}
+.footer .icon-glyph:hover{
+	opacity:0.6;filter:alpha(opacity=60);
+	cursor:pointer
+}
+.footer .icon-glyph.timeleft,
+.footer .icon-glyph.time:hover{
+	background-position:-48px -25px
+}
+.footer .icon-glyph.time,
+.footer .icon-glyph.timeleft:hover{
+	background-position:-192px -121px
+}
+
 /* =======================================================================
 inc_rootDirs.tmpl
 ========================================================================== */

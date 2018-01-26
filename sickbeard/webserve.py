@@ -602,6 +602,31 @@ class MainHandler(WebHandler):
 
         sickbeard.save_config()
 
+    @staticmethod
+    def getFooterTime(ajax_layout=True, *args, **kwargs):
+
+        now = datetime.datetime.now()
+        events = [
+            ('search-recent', sickbeard.recentSearchScheduler.timeLeft()),
+            ('search-backlog', sickbeard.backlogSearchScheduler.next_backlog_timeleft()),
+        ]
+
+        if ajax_layout:
+            sickbeard.FOOTER_TIME_LAYOUT += 1
+            if sickbeard.FOOTER_TIME_LAYOUT == 2:  # 2 layouts = time + delta
+                sickbeard.FOOTER_TIME_LAYOUT = 0
+            sickbeard.save_config()
+
+        if 0 == sickbeard.FOOTER_TIME_LAYOUT:
+            next_event = [{k + '_time': sbdatetime.sbdatetime.sbftime(now + v, markup=True)} for (k, v) in events]
+        else:
+            next_event = [{k + '_timeleft': str(v).split('.')[0]} for (k, v) in events]
+
+        if ajax_layout:
+            next_event = json.dumps(next_event)
+
+        return next_event
+
     def toggleDisplayShowSpecials(self, show):
 
         sickbeard.DISPLAY_SHOW_SPECIALS = not sickbeard.DISPLAY_SHOW_SPECIALS

@@ -463,6 +463,7 @@ FANART_LIMIT = None
 FANART_PANEL = None
 FANART_RATINGS = {}
 HOME_LAYOUT = None
+FOOTER_TIME_LAYOUT = 0
 POSTER_SORTBY = None
 POSTER_SORTDIR = None
 DISPLAY_SHOW_VIEWMODE = 0
@@ -574,7 +575,7 @@ def initialize(console_logging=True):
         # Post processing
         global KEEP_PROCESSED_DIR
         # Views
-        global GUI_NAME, HOME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
+        global GUI_NAME, HOME_LAYOUT, FOOTER_TIME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
             EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, \
             EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
             EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
@@ -1153,6 +1154,7 @@ def initialize(console_logging=True):
         METADATA_KODI = check_setting_str(CFG, 'General', 'metadata_kodi', '0|0|0|0|0|0|0|0|0|0')
 
         HOME_LAYOUT = check_setting_str(CFG, 'GUI', 'home_layout', 'poster')
+        FOOTER_TIME_LAYOUT = check_setting_int(CFG, 'GUI', 'footer_time_layout', 0)
         POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
         POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
         DISPLAY_SHOW_VIEWMODE = check_setting_int(CFG, 'GUI', 'display_show_viewmode', 0)
@@ -1951,6 +1953,7 @@ def save_config():
     new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
 
     new_config['GUI']['home_layout'] = HOME_LAYOUT
+    new_config['GUI']['footer_time_layout'] = FOOTER_TIME_LAYOUT
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
 
