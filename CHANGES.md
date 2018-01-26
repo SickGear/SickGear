@@ -1,4 +1,9 @@
-﻿### 0.13.14 (2018-01-25 16:20:00 UTC)
+﻿### 0.13.15 (2018-01-26 10:30:00 UTC)
+
+* Fix save on config general
+
+
+### 0.13.14 (2018-01-25 16:20:00 UTC)
 
 * Add config/general/web interface/send security headers (default enabled)
 * Fix usenet_crawler cache mode results

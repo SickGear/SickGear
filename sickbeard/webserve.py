@@ -4826,7 +4826,7 @@ class ConfigGeneral(Config):
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
-                    handle_reverse_proxy=None, home_search_focus=None, sort_article=None, auto_update=None, notify_on_update=None,
+                    handle_reverse_proxy=None, send_security_headers=None, home_search_focus=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
@@ -4918,6 +4918,7 @@ class ConfigGeneral(Config):
         sickbeard.WEB_IPV6 = config.checkbox_to_value(web_ipv6)
         sickbeard.WEB_IPV64 = config.checkbox_to_value(web_ipv64)
         sickbeard.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
+        sickbeard.SEND_SECURITY_HEADERS = config.checkbox_to_value(send_security_headers)
 
         # Advanced
         sickbeard.GIT_REMOTE = git_remote
