@@ -100,9 +100,12 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         result = None
         if url and False is self._init_api():
             data = self.get_url(url, timeout=90)
+            if self.should_skip():
+                return result
             if data:
                 if re.search('(?i)limit.*?reached', data):
-                    logger.log('Daily Nzb Download limit reached', logger.DEBUG)
+                    self.tmr_limit_update('1', 'h', 'Your 24 hour limit of 10 NZBs has been reached')
+                    self.log_failure_url(url)
                 elif '</nzb>' not in data or 'seem to be logged in' in data:
                     logger.log('Failed nzb data response: %s' % data, logger.DEBUG)
                 else:
@@ -138,6 +141,9 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
     def cache_data(self, needed=neededQualities(need_all=True), **kwargs):
 
+        if self.should_skip():
+            return []
+
         api_key = self._init_api()
         if False is api_key:
             return self.search_html(needed=needed, **kwargs)
@@ -153,6 +159,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             url = self.urls['cache'] % urllib.urlencode(params)
 
             response = self.get_url(url)
+            if self.should_skip():
+                return results
 
             data = feedparser.parse(response.replace('<xml', '<?xml').replace('>\n<info>', '?>\n<feed>\n<info>')
                                     .replace('<search_req>\n', '').replace('</search_req>\n', '')
@@ -183,6 +191,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             search_url = self.urls['search'] % urllib.urlencode(params)
 
             data_json = self.get_url(search_url, json=True)
+            if self.should_skip():
+                return results
             if data_json and self._check_auth_from_data(data_json, is_xml=False):
                 for item in data_json:
                     if 'release' in item and 'getnzb' in item:
@@ -211,6 +221,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         mode = ('search', 'cache')['' == search]
         search_url = self.urls[mode + '_html'] % search
         html = self.get_url(search_url)
+        if self.should_skip():
+            return results
         cnt = len(results)
         try:
             if not html:
@@ -254,6 +266,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         search_terms = ['.PROPER.', '.REPACK.', '.REAL.']
         results = []
+        if self.should_skip():
+            return results
 
         for term in search_terms:
             for item in self._search_provider(term, search_mode='Propers', retention=4):
@@ -271,6 +285,9 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         return results
 
     def _init_api(self):
+
+        if self.should_skip():
+            return None
 
         try:
             api_key = self._check_auth()

@@ -65,6 +65,8 @@ class AlphaRatioProvider(generic.TorrentProvider):
                 search_url = self.urls['search'] % (search_string, ('&freetorrent=1', '')[not self.freeleech])
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

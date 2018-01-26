@@ -4,6 +4,9 @@
 * Change improve media process to parse anime format 'Show Name 123 - 001 - Ep 1 name'
 * Add free space stat (if obtainable) of parent folder(s) to footer
 * Add option "Display disk free" to general config/interface page (default enabled)
+* Add a provider error table to page Manage/Media Search
+* Add failure handling, skip provider for x hour(s) depending on count of failures
+* Add detection of Too Many Requests (Supporting providers UC and BTN)
 
 
 [develop changelog]

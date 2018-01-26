@@ -65,6 +65,8 @@ class DHProvider(generic.TorrentProvider):
 
                 html = self.get_url(self.urls['search'] % (
                     '+'.join(search_string.split()), self._categories_string(mode), ('3', '0')[not self.freeleech]))
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

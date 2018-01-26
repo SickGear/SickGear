@@ -93,6 +93,8 @@ class Torrentz2Provider(generic.TorrentProvider):
                     'tv%s' % ('+' + quote_plus(search_string), '')['Cache' == mode])
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

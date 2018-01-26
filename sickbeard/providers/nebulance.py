@@ -51,7 +51,9 @@ class NebulanceProvider(generic.TorrentProvider):
                 post_params={'keeplogged': '1', 'form_tmpl': True}):
             return False
         if not self.user_authkey:
-            response = helpers.getURL(self.urls['user'], session=self.session, json=True)
+            response = self.get_url(self.urls['user'], skip_auth=True, json=True)
+            if self.should_skip():
+                return False
             if 'response' in response:
                 self.user_authkey, self.user_passkey = [response['response'].get(v) for v in 'authkey', 'passkey']
         return self.user_authkey
@@ -74,6 +76,8 @@ class NebulanceProvider(generic.TorrentProvider):
                     search_url += self.urls['search'] % rc['nodots'].sub('+', search_string)
 
                 data_json = self.get_url(search_url, json=True)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

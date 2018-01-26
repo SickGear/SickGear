@@ -70,6 +70,8 @@ class WOPProvider(generic.TorrentProvider):
                 search_url = self.urls['search'] % (search_string, self._categories_string(mode, 'cats2[]=%s'))
 
                 html = self.get_url(search_url, timeout=90)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

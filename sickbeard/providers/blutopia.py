@@ -105,6 +105,8 @@ class BlutopiaProvider(generic.TorrentProvider):
                     self.token, '+'.join(search_string.split()), self._categories_string(mode, ''), '', '', '')
 
                 resp = self.get_url(search_url, json=True)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

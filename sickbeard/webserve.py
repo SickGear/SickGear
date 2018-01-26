@@ -4531,10 +4531,26 @@ class ManageSearches(Manage):
         t.recent_search_status = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
         t.find_propers_status = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
         t.queue_length = sickbeard.searchQueueScheduler.action.queue_length()
+        t.provider_fail_stats = filter(lambda stat: len(stat['fails']), [{
+            'active': p.is_active(), 'name': p.name, 'prov_id': p.get_id(), 'prov_img': p.image_name(),
+            'fails': p.fails.fails_sorted, 'tmr_limit_time': p.tmr_limit_time,
+            'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
+            for p in sickbeard.providerList + sickbeard.newznabProviderList])
+        t.provider_fails = 0 < len([p for p in t.provider_fail_stats if len(p['fails'])])
 
         t.submenu = self.ManageMenu('Search')
 
         return t.respond()
+
+    def retryProvider(self, provider=None, *args, **kwargs):
+        if not provider:
+            return
+        prov = [p for p in sickbeard.providerList + sickbeard.newznabProviderList if p.get_id() == provider]
+        if not prov:
+            return
+        prov[0].retry_next()
+        time.sleep(3)
+        return
 
     def forceVersionCheck(self, *args, **kwargs):
         # force a check to see if there is a new version

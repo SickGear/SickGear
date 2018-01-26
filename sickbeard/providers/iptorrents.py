@@ -88,6 +88,8 @@ class IPTorrentsProvider(generic.TorrentProvider):
                     (';free', '')[not self.freeleech], (';o=seeders', '')['Cache' == mode])
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

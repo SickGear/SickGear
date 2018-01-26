@@ -49,6 +49,9 @@ class TokyoToshokanProvider(generic.TorrentProvider):
             'stats': 'S:\s*?(\d)+\s*L:\s*(\d+)', 'size': 'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
 
         html = self.get_url(search_url)
+        if self.should_skip():
+            return self._sort_seeding(mode, results)
+
         if html:
             try:
                 with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
@@ -103,7 +106,7 @@ class TokyoToshokanCache(tvcache.TVCache):
 
         mode = 'Cache'
         search_url = '%srss.php?%s' % (self.provider.url, urllib.urlencode({'filter': '1'}))
-        data = self.getRSSFeed(search_url)
+        data = self.get_rss(search_url)
 
         results = []
         if data and 'entries' in data:

@@ -94,6 +94,8 @@ class PotUKProvider(generic.TorrentProvider):
                         params.setdefault(name, value)
                     del params['doprefs']
                 html = self.get_url(search_url, post_data=params)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:
@@ -135,6 +137,9 @@ class PotUKProvider(generic.TorrentProvider):
     def get_data(self, url):
         result = None
         html = self.get_url(url, timeout=90)
+        if self.should_skip():
+            return result
+
         try:
             result = self._link(re.findall('(?i)"(attachment\.php[^"]+?)"', html)[0])
         except IndexError:

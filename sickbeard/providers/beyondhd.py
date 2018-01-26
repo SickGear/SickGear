@@ -73,6 +73,8 @@ class BeyondHDProvider(generic.TorrentProvider):
                     search_url += self.urls['search'] % re.sub('[.\s]+', ' ', search_string)
 
                 data_json = self.get_url(search_url, json=True)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 if data_json and 'results' in data_json and self._check_auth_from_data(data_json):

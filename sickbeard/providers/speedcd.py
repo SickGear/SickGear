@@ -67,6 +67,8 @@ class SpeedCDProvider(generic.TorrentProvider):
                                  jxt=2, jxw='b', freeleech=('on', None)[not self.freeleech])
 
                 data_json = self.get_url(self.urls['search'], post_data=post_data, json=True)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:
