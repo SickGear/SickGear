@@ -13,6 +13,7 @@
 
 * Fix Events shutdown (a manual start-up is required after updating to this fix)
 * Add 'PB', 'EB', 'ZB', 'YB' to output size formats
+* Fix save option display freespace
 
 
 ### 0.13.15 (2018-01-26 10:30:00 UTC)
