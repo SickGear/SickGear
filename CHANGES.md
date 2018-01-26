@@ -7,6 +7,7 @@
 * Add a provider error table to page Manage/Media Search
 * Add failure handling, skip provider for x hour(s) depending on count of failures
 * Add detection of Too Many Requests (Supporting providers UC and BTN)
+* Add footer icon button to switch time layouts
 
 
 [develop changelog]
