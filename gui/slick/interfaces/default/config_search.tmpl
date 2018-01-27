@@ -74,18 +74,6 @@
 									</span>
 								</label>
 							</div>
-							<div class="field-pair">
-								<label for="check_propers_interval">
-									<span class="component-title">Check propers every:</span>
-									<span class="component-desc">
-										<select id="check_propers_interval" name="check_propers_interval" class="form-control input-sm">
-#for $curKey, $curText, $void in $propers_intervals:
-											<option value="$curKey"#echo ('', $html_selected)[$sickbeard.CHECK_PROPERS_INTERVAL == $curKey]#>$curText</option>
-#end for
-										</select>
-									</span>
-								</label>
-							</div>
 						</div>
 
 						<div class="field-pair">

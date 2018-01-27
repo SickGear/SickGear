@@ -118,7 +118,7 @@
                 #if $fail['http']['count']
                     #set $title=$fail['http']['code']
                 #end if
-					<td>#if $fail['http']['count']#<span title="#if $child#$title#else#Expand for fail codes#end if#">$fail['http']['count']</span>#else#$blank#end if# / #echo $fail['timeout'].get('count', 0) or $blank#</td>
+					<td>#if $fail['http']['count']#<span title="#if $child or not $fail['multirow']#$title#else#Expand for fail codes#end if#">$fail['http']['count']</span>#else#$blank#end if# / #echo $fail['timeout'].get('count', 0) or $blank#</td>
 					<td>#echo ($fail['connection'].get('count', 0) + $fail['connection_timeout'].get('count', 0)) or $blank#</td>
 					<td>#echo $fail['nodata'].get('count', 0) or $blank#</td>
 					<td>#echo $fail['other'].get('count', 0) or $blank#</td>
@@ -148,7 +148,26 @@
 
 
 		<div id="queue-proper" class="section">
-			Proper: <i>$queue_length['proper'] item$sickbeard.helpers.maybe_plural($queue_length['proper'])</i>
+			Proper: <i>$len($queue_length['proper']) item$sickbeard.helpers.maybe_plural($queue_length['proper'])</i>
+#if $queue_length['proper']
+			<input type="button" class="shows-more btn" id="proper-btn-more" value="Expand" #if not $queue_length['proper']# style="display:none" #end if#><input type="button" class="shows-less btn" id="proper-btn-less" value="Collapse" style="display:none"><br>
+			<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
+				<thead></thead>
+				<tbody>
+		#set $row = 0
+		#for $cur_item in $queue_length['proper']:
+			#if $cur_item['recent']:
+				#set $search_type = 'Recent'
+			#else
+						#set $search_type = 'Scheduled'
+			#end if
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td style="width:20%;text-align:center;color:white">$search_type</td>
+					</tr>
+		#end for
+				</tbody>
+			</table>
+#end if
 		</div>
 
 

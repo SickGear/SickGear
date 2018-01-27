@@ -21,11 +21,14 @@ from __future__ import with_statement
 import traceback
 import threading
 import datetime
+import re
 
 import sickbeard
 from sickbeard import db, logger, common, exceptions, helpers, network_timezones, generic_queue, search, \
     failed_history, history, ui, properFinder
 from sickbeard.search import wanted_episodes, get_aired_in_season, set_wanted_aired
+from sickbeard.classes import Proper
+from sickbeard.indexers.indexer_config import INDEXER_TVDB
 
 
 search_queue_lock = threading.Lock()
@@ -109,7 +112,11 @@ class SearchQueue(generic_queue.GenericQueue):
         return self._is_in_progress(RecentSearchQueueItem)
 
     def is_propersearch_in_progress(self):
-        return self._is_in_progress(ProperSearchQueueItem)
+        with self.lock:
+            for cur_item in self.queue + [self.currentItem]:
+                if isinstance(cur_item, ProperSearchQueueItem) and None is cur_item.propers:
+                    return True
+            return False
 
     def is_standard_backlog_in_progress(self):
         with self.lock:
@@ -141,25 +148,25 @@ class SearchQueue(generic_queue.GenericQueue):
             return message
 
     def queue_length(self):
-        length = {'backlog': [], 'recent': 0, 'manual': [], 'failed': [], 'proper': 0}
+        length = {'backlog': [], 'recent': 0, 'manual': [], 'failed': [], 'proper': []}
         with self.lock:
             for cur_item in [self.currentItem] + self.queue:
                 if isinstance(cur_item, RecentSearchQueueItem):
                     length['recent'] += 1
                 elif isinstance(cur_item, BacklogQueueItem):
-                    length['backlog'].append({'indexerid': cur_item.show.indexerid, 'indexer': cur_item.show.indexer,
-                                              'name': cur_item.show.name, 'segment': cur_item.segment,
-                                              'standard_backlog': cur_item.standard_backlog,
-                                              'limited_backlog': cur_item.limited_backlog, 'forced': cur_item.forced,
-                                              'torrent_only': cur_item.torrent_only})
+                    length['backlog'] += [dict(indexerid=cur_item.show.indexerid, indexer=cur_item.show.indexer,
+                                               name=cur_item.show.name, segment=cur_item.segment,
+                                               standard_backlog=cur_item.standard_backlog,
+                                               limited_backlog=cur_item.limited_backlog, forced=cur_item.forced,
+                                               torrent_only=cur_item.torrent_only)]
                 elif isinstance(cur_item, ProperSearchQueueItem):
-                    length['proper'] += 1
+                    length['proper'] += [dict(recent=None is not cur_item.propers)]
                 elif isinstance(cur_item, ManualSearchQueueItem):
-                    length['manual'].append({'indexerid': cur_item.show.indexerid, 'indexer': cur_item.show.indexer,
-                                             'name': cur_item.show.name, 'segment': cur_item.segment})
+                    length['manual'] += [dict(indexerid=cur_item.show.indexerid, indexer=cur_item.show.indexer,
+                                              name=cur_item.show.name, segment=cur_item.segment)]
                 elif isinstance(cur_item, FailedQueueItem):
-                    length['failed'].append({'indexerid': cur_item.show.indexerid, 'indexer': cur_item.show.indexer,
-                                             'name': cur_item.show.name, 'segment': cur_item.segment})
+                    length['failed'] += [dict(indexerid=cur_item.show.indexerid, indexer=cur_item.show.indexer,
+                                              name=cur_item.show.name, segment=cur_item.segment)]
             return length
 
     def add_item(self, item):
@@ -210,7 +217,11 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
                     self.episodes.extend(wanted_eps)
 
+            if sickbeard.DOWNLOAD_PROPERS:
+                properFinder.get_needed_qualites(needed)
+
             self.update_providers(needed=needed)
+            self._check_for_propers(needed)
 
             if not self.episodes:
                 logger.log(u'No search of cache for episodes required')
@@ -243,6 +254,33 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
         finally:
             self.finish()
+
+    @staticmethod
+    def _check_for_propers(needed):
+        if not sickbeard.DOWNLOAD_PROPERS:
+            return
+
+        propers = {}
+        my_db = db.DBConnection('cache.db')
+        sql_results = my_db.select('SELECT * FROM provider_cache')
+        re_p = (r'\brepack|proper|real\b', r'\brepack|proper|real|v[1-5]\b')[needed.need_anime]
+
+        proper_regex = re.compile(re_p, flags=re.I)
+
+        for s in sql_results:
+            if proper_regex.search(s['name']):
+                try:
+                    show = helpers.find_show_by_id(sickbeard.showList, {INDEXER_TVDB: int(s['indexerid'])})
+                except (StandardError, Exception):
+                    continue
+                if show:
+                    propers.setdefault(s['provider'], []).append(
+                        Proper(s['name'], s['url'], datetime.datetime.fromtimestamp(s['time']), show, parsed_show=show))
+
+        if propers:
+            logger.log('Found Proper/Repack/Real in recent search, sending data to properfinder')
+            propersearch_queue_item = sickbeard.search_queue.ProperSearchQueueItem(propers=propers)
+            sickbeard.searchQueueScheduler.action.add_item(propersearch_queue_item)
 
     @staticmethod
     def _change_missing_episodes():
@@ -326,7 +364,8 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
             threads[-1].start()
 
         if not len(providers):
-            logger.log('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes', logger.WARNING)
+            logger.log('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes',
+                       logger.WARNING)
 
         if threads:
             # wait for all threads to finish
@@ -337,16 +376,17 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
 
 class ProperSearchQueueItem(generic_queue.QueueItem):
-    def __init__(self):
+    def __init__(self, propers=None):
         generic_queue.QueueItem.__init__(self, 'Proper Search', PROPER_SEARCH)
-        self.priority = generic_queue.QueuePriorities.HIGH
+        self.priority = (generic_queue.QueuePriorities.VERYHIGH, generic_queue.QueuePriorities.HIGH)[None is propers]
+        self.propers = propers
         self.success = None
 
     def run(self):
         generic_queue.QueueItem.run(self)
 
         try:
-            properFinder.search_propers()
+            properFinder.search_propers(self.propers)
         finally:
             self.finish()
 

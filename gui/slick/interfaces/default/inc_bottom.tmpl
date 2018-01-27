@@ -69,13 +69,13 @@ if min_output:
     % (localRoot, str(ep_snatched))
 )[0 < ep_snatched]
 %>&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded $ep_percentage
-#for i, event in enumerate($MainHandler.getFooterTime(ajax_layout=False))
+#for i, event in enumerate($MainHandler.getFooterTime(change_layout=False, json_dump=False))
     #for k, v in event.items()
             #set info = re.findall('(.*)_(timeleft|time)', k)[0]
             #if not i
-			<br><i class="icon-glyph layout $info[1]" title="Change time layout"></i>
+			<br>next connect <i class="icon-glyph layout $info[1]" title="Change time layout"></i> for...
             #end if
-			| $info[0].replace('-', ' '): <span class="footerhighlight $info[0]">$v</span>
+			<span id="next-connect-$info[0]">| $info[0].replace('-', ' '): <span class="footerhighlight $info[0]">$v</span></span>
     #end for
 #end for
 #if diskfree
@@ -106,18 +106,31 @@ if min_output:
 <script>
 var footerTimeUrl = '$localRoot/getFooterTime';
 #raw
-$(function(){
-	$('.footer').find('.layout').click(function(){
-		$.getJSON(footerTimeUrl, function(data){
-			var info, footerIcon$ = $('.footer').find('.icon-glyph.layout');
-			$.each(data, function(i, eventItems){
-				$.each(eventItems, function(k, v){
-					info = k.match(/(.*)_(timeleft|time)/);
-					$('.footer').find('.' + info[1]).html(v);
-					footerIcon$.removeClass('time').removeClass('timeleft').addClass(info[2])
-				});
+function getFooterTime(params){
+	params = /undefined/.test(params) && {} || params;
+	$.getJSON(footerTimeUrl, params, function(data){
+		var info, footerIcon$ = $('.footer').find('.icon-glyph.layout'), enabledPropers = !1;
+		$.each(data, function(i, eventItems){
+			$.each(eventItems, function(k, v){
+				info = k.match(/(.*)_(timeleft|time)/);
+				$('.footer').find('.' + info[1]).html(v);
+				footerIcon$.removeClass('time').removeClass('timeleft').addClass(info[2]);
+				enabledPropers |= /propers/.test(info[1]); // enable only if key is found in response
 			});
 		});
+
+		var propers$ = $('#next-connect-propers');
+		if(enabledPropers){
+			propers$.show();
+		} else {
+			propers$.hide();
+		}
+	});
+}
+
+$(function(){
+	$('.footer').find('.layout').click(function(){
+		getFooterTime();
 	});
 });
 #end raw

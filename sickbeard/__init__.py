@@ -37,7 +37,7 @@ sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import helpers, encodingKludge as ek
 from sickbeard import db, image_cache, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
     scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
-    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes
+    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes, properFinder
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
@@ -210,8 +210,8 @@ USENET_RETENTION = None
 TORRENT_METHOD = None
 TORRENT_DIR = None
 DOWNLOAD_PROPERS = False
-CHECK_PROPERS_INTERVAL = None
 PROPERS_WEBDL_ONEGRP = True
+WEBDL_TYPES = []
 ALLOW_HIGH_PRIORITY = False
 NEWZNAB_DATA = ''
 
@@ -595,7 +595,7 @@ def initialize(console_logging=True):
         global BRANCH, CUR_COMMIT_BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, GIT_PATH, CPU_PRESET, ANON_REDIRECT, \
             ENCRYPTION_VERSION, PROXY_SETTING, PROXY_INDEXERS, FILE_LOGGING_PRESET
         # Search Settings/Episode
-        global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, CHECK_PROPERS_INTERVAL, RECENTSEARCH_FREQUENCY, \
+        global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_FREQUENCY, \
             BACKLOG_DAYS, BACKLOG_NOFULL, BACKLOG_FREQUENCY, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
             ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY
         # Search Settings/NZB search
@@ -846,9 +846,6 @@ def initialize(console_logging=True):
 
         DOWNLOAD_PROPERS = bool(check_setting_int(CFG, 'General', 'download_propers', 1))
         PROPERS_WEBDL_ONEGRP = bool(check_setting_int(CFG, 'General', 'propers_webdl_onegrp', 1))
-        CHECK_PROPERS_INTERVAL = check_setting_str(CFG, 'General', 'check_propers_interval', '')
-        if CHECK_PROPERS_INTERVAL not in ('15m', '45m', '90m', '4h', 'daily'):
-            CHECK_PROPERS_INTERVAL = 'daily'
 
         ALLOW_HIGH_PRIORITY = bool(check_setting_int(CFG, 'General', 'allow_high_priority', 1))
 
@@ -1375,19 +1372,17 @@ def initialize(console_logging=True):
             prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
 
         propers_searcher = search_propers.ProperSearcher()
-        item = [(k, n, v) for (k, n, v) in propers_searcher.search_intervals if k == CHECK_PROPERS_INTERVAL]
-        if item:
-            update_interval = datetime.timedelta(minutes=item[0][2])
-            run_at = None
+        last_proper_search = datetime.datetime.fromtimestamp(properFinder.get_last_proper_search())
+        time_diff = datetime.timedelta(days=1) - (datetime.datetime.now() - last_proper_search)
+        if time_diff < datetime.timedelta(seconds=0):
+            properdelay = 20
         else:
-            update_interval = datetime.timedelta(hours=1)
-            run_at = datetime.time(hour=1)  # 1 AM
+            properdelay = helpers.tryInt((time_diff.total_seconds() / 60) + 5, 20)
 
         properFinderScheduler = scheduler.Scheduler(
             propers_searcher,
-            cycleTime=update_interval,
-            run_delay=update_interval,
-            start_time=run_at,
+            cycleTime=datetime.timedelta(days=1),
+            run_delay=datetime.timedelta(minutes=properdelay),
             threadName='FINDPROPERS',
             prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
 
@@ -1579,7 +1574,6 @@ def save_config():
     new_config['General']['update_frequency'] = int(UPDATE_FREQUENCY)
     new_config['General']['download_propers'] = int(DOWNLOAD_PROPERS)
     new_config['General']['propers_webdl_onegrp'] = int(PROPERS_WEBDL_ONEGRP)
-    new_config['General']['check_propers_interval'] = CHECK_PROPERS_INTERVAL
     new_config['General']['allow_high_priority'] = int(ALLOW_HIGH_PRIORITY)
     new_config['General']['recentsearch_startup'] = int(RECENTSEARCH_STARTUP)
     new_config['General']['backlog_nofull'] = int(BACKLOG_NOFULL)

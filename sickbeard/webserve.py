@@ -603,26 +603,35 @@ class MainHandler(WebHandler):
         sickbeard.save_config()
 
     @staticmethod
-    def getFooterTime(ajax_layout=True, *args, **kwargs):
+    def getFooterTime(change_layout=True, json_dump=True, *args, **kwargs):
 
         now = datetime.datetime.now()
         events = [
-            ('search-recent', sickbeard.recentSearchScheduler.timeLeft()),
-            ('search-backlog', sickbeard.backlogSearchScheduler.next_backlog_timeleft()),
+            ('recent', sickbeard.recentSearchScheduler.timeLeft),
+            ('backlog', sickbeard.backlogSearchScheduler.next_backlog_timeleft),
         ]
 
-        if ajax_layout:
+        if sickbeard.DOWNLOAD_PROPERS:
+            events += [('propers', sickbeard.properFinder.next_proper_timeleft)]
+
+        if change_layout not in (False, 0, '0', '', None):
             sickbeard.FOOTER_TIME_LAYOUT += 1
             if sickbeard.FOOTER_TIME_LAYOUT == 2:  # 2 layouts = time + delta
                 sickbeard.FOOTER_TIME_LAYOUT = 0
             sickbeard.save_config()
 
-        if 0 == sickbeard.FOOTER_TIME_LAYOUT:
-            next_event = [{k + '_time': sbdatetime.sbdatetime.sbftime(now + v, markup=True)} for (k, v) in events]
-        else:
-            next_event = [{k + '_timeleft': str(v).split('.')[0]} for (k, v) in events]
+        next_event = []
+        for k, v in events:
+            try:
+                t = v()
+            except AttributeError:
+                t = None
+            if 0 == sickbeard.FOOTER_TIME_LAYOUT:
+                next_event += [{k + '_time': t and sbdatetime.sbdatetime.sbftime(now + t, markup=True) or 'soon'}]
+            else:
+                next_event += [{k + '_timeleft': t and str(t).split('.')[0] or 'soon'}]
 
-        if ajax_layout:
+        if json_dump not in (False, 0, '0', '', None):
             next_event = json.dumps(next_event)
 
         return next_event
@@ -5024,7 +5033,6 @@ class ConfigSearch(Config):
                                      for show in sickbeard.showList if show.rls_require_words and
                                      show.rls_require_words.strip()]
         t.using_rls_require_words.sort(lambda x, y: cmp(x[1], y[1]), reverse=False)
-        t.propers_intervals = search_propers.ProperSearcher().search_intervals
         t.using_regex = False
         try:
             from sickbeard.name_parser.parser import regex
@@ -5038,7 +5046,7 @@ class ConfigSearch(Config):
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
                    backlog_days=None, backlog_frequency=None, search_unaired=None, unaired_recent_search_only=None,
                    recentsearch_frequency=None, nzb_method=None, torrent_method=None, usenet_retention=None,
-                   download_propers=None, propers_webdl_onegrp=None, check_propers_interval=None,
+                   download_propers=None, propers_webdl_onegrp=None,
                    allow_high_priority=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
                    torrent_label=None, torrent_path=None, torrent_verify_cert=None,
@@ -5077,24 +5085,6 @@ class ConfigSearch(Config):
 
         config.change_DOWNLOAD_PROPERS(config.checkbox_to_value(download_propers))
         sickbeard.PROPERS_WEBDL_ONEGRP = config.checkbox_to_value(propers_webdl_onegrp)
-        if sickbeard.CHECK_PROPERS_INTERVAL != check_propers_interval:
-            sickbeard.CHECK_PROPERS_INTERVAL = check_propers_interval
-
-            if sickbeard.DOWNLOAD_PROPERS:
-                proper_sch = sickbeard.properFinderScheduler
-                item = [(k, n, v) for (k, n, v) in proper_sch.action.search_intervals if k == check_propers_interval]
-                if item and None is proper_sch.start_time:
-                    interval = datetime.timedelta(minutes=item[0][2])
-                    run_in = proper_sch.lastRun + interval - datetime.datetime.now()
-                    proper_sch.cycleTime = interval
-
-                    run_at = 'imminent'
-                    if datetime.timedelta() < run_in:
-                        hours, remainder = divmod(run_in.seconds, 3600)
-                        minutes, seconds = divmod(remainder, 60)
-                        run_at = u'in approx. ' + ('%dh, %dm' % (hours, minutes) if 0 < hours else
-                                                   '%dm, %ds' % (minutes, seconds))
-                    logger.log(u'Change search PROPERS interval, next check %s' % run_at)
 
         sickbeard.SEARCH_UNAIRED = bool(config.checkbox_to_value(search_unaired))
         sickbeard.UNAIRED_RECENT_SEARCH_ONLY = bool(config.checkbox_to_value(unaired_recent_search_only, value_off=1, value_on=0))

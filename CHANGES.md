@@ -8,6 +8,9 @@
 * Add failure handling, skip provider for x hour(s) depending on count of failures
 * Add detection of Too Many Requests (Supporting providers UC and BTN)
 * Add footer icon button to switch time layouts
+* Add performance gains for proper search by integrating it into recent search
+* Add the once per day proper finder time to footer, this process catches any propers missed during recent searches
+* Add ability to differentiate webdl/rip sources so overwriting propers is always done from the same source (e.g. AMZN)
 
 
 [develop changelog]
