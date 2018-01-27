@@ -142,7 +142,12 @@ def load_webdl_types():
     default_types = [('Amazon', r'AMZN|AMAZON'), ('Netflix', r'NETFLIX|NF'), ('Hulu', r'HULU')]
     url = 'https://raw.githubusercontent.com/SickGear/sickgear.extdata/master/SickGear/webdl_types.txt'
     url_data = helpers.getURL(url)
-    if url_data:
+
+    my_db = db.DBConnection()
+    sql_results = my_db.select('SELECT * FROM webdl_types')
+    old_types = [(r['dname'], r['regex']) for r in sql_results]
+
+    if isinstance(url_data, basestring) and url_data.strip():
         try:
             for line in url_data.splitlines():
                 try:
@@ -155,9 +160,6 @@ def load_webdl_types():
         except (IOError, OSError):
             pass
 
-        my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT * FROM webdl_types')
-        old_types = [(r['dname'], r['regex']) for r in sql_results]
         cl = []
         for nt in new_types:
             if nt not in old_types:
@@ -169,6 +171,8 @@ def load_webdl_types():
 
         if cl:
             my_db.mass_action(cl)
+    else:
+        new_types = old_types
 
     sickbeard.WEBDL_TYPES = new_types + default_types
 
