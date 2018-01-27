@@ -643,7 +643,7 @@ inc_bottom.tmpl
 	opacity:0.4;filter:alpha(opacity=40);
 	float:none;
 	display:inline-block;
-	margin:0 0 -2px 0;
+	margin:0 0 -1px 2px;
 	height:12px;
 	width:14px
 }
@@ -653,11 +653,11 @@ inc_bottom.tmpl
 }
 .footer .icon-glyph.timeleft,
 .footer .icon-glyph.time:hover{
-	background-position:-48px -25px
+	background-position:-49px -25px
 }
 .footer .icon-glyph.time,
 .footer .icon-glyph.timeleft:hover{
-	background-position:-192px -121px
+	background-position:-193px -121px
 }
 
 /* =======================================================================

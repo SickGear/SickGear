@@ -41,7 +41,7 @@ def search_propers(proper_list=None):
     if not sickbeard.DOWNLOAD_PROPERS:
         return
 
-    logger.log(('Checking propers from Recent search', 'Beginning search for new propers')[None is proper_list])
+    logger.log(('Checking propers from recent search', 'Beginning search for new propers')[None is proper_list])
 
     age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
     aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
@@ -71,10 +71,10 @@ def search_propers(proper_list=None):
                 minutes, seconds = divmod(remainder, 60)
                 run_at += u'in approx. ' + ('%dh, %dm' % (hours, minutes) if 0 < hours else
                                             '%dm, %ds' % (minutes, seconds))
-    else:
-        run_at = ' send from recent search'
 
-    logger.log(u'Completed the search for new propers%s' % run_at)
+        logger.log(u'Completed search for new propers%s' % run_at)
+    else:
+        logger.log(u'Completed checking propers from recent search')
 
 
 def get_old_proper_level(show_obj, indexer, indexerid, season, episodes, old_status, new_quality,

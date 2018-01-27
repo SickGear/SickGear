@@ -262,6 +262,11 @@ function config_success(response) {
 		$(this).show();
 	});
 	$('#email_show').trigger('notify');
+
+	// update footer only on the config page for the propers option
+	if('saveSearch' == $('#configForm').attr('action')){
+		getFooterTime({'change_layout': 0});
+	}
 }
 
 function fetch_pullrequests() {

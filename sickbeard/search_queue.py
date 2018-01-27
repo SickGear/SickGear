@@ -278,7 +278,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                         Proper(s['name'], s['url'], datetime.datetime.fromtimestamp(s['time']), show, parsed_show=show))
 
         if propers:
-            logger.log('Found Proper/Repack/Real in Recent Search, sending data to properfinder')
+            logger.log('Found Proper/Repack/Real in recent search, sending data to properfinder')
             propersearch_queue_item = sickbeard.search_queue.ProperSearchQueueItem(propers=propers)
             sickbeard.searchQueueScheduler.action.add_item(propersearch_queue_item)
 

@@ -603,26 +603,35 @@ class MainHandler(WebHandler):
         sickbeard.save_config()
 
     @staticmethod
-    def getFooterTime(ajax_layout=True, *args, **kwargs):
+    def getFooterTime(change_layout=True, json_dump=True, *args, **kwargs):
 
         now = datetime.datetime.now()
         events = [
-            ('search-recent', sickbeard.recentSearchScheduler.timeLeft()),
-            ('search-backlog', sickbeard.backlogSearchScheduler.next_backlog_timeleft()),
+            ('recent', sickbeard.recentSearchScheduler.timeLeft),
+            ('backlog', sickbeard.backlogSearchScheduler.next_backlog_timeleft),
         ]
 
-        if ajax_layout:
+        if sickbeard.DOWNLOAD_PROPERS:
+            events += [('propers', sickbeard.properFinder.next_proper_timeleft)]
+
+        if change_layout not in (False, 0, '0', '', None):
             sickbeard.FOOTER_TIME_LAYOUT += 1
             if sickbeard.FOOTER_TIME_LAYOUT == 2:  # 2 layouts = time + delta
                 sickbeard.FOOTER_TIME_LAYOUT = 0
             sickbeard.save_config()
 
-        if 0 == sickbeard.FOOTER_TIME_LAYOUT:
-            next_event = [{k + '_time': sbdatetime.sbdatetime.sbftime(now + v, markup=True)} for (k, v) in events]
-        else:
-            next_event = [{k + '_timeleft': str(v).split('.')[0]} for (k, v) in events]
+        next_event = []
+        for k, v in events:
+            try:
+                t = v()
+            except AttributeError:
+                t = None
+            if 0 == sickbeard.FOOTER_TIME_LAYOUT:
+                next_event += [{k + '_time': t and sbdatetime.sbdatetime.sbftime(now + t, markup=True) or 'soon'}]
+            else:
+                next_event += [{k + '_timeleft': t and str(t).split('.')[0] or 'soon'}]
 
-        if ajax_layout:
+        if json_dump not in (False, 0, '0', '', None):
             next_event = json.dumps(next_event)
 
         return next_event
