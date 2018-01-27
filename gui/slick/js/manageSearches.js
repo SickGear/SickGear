@@ -21,12 +21,16 @@ $(function(){
 	});
 
 	$('.shows-less').click(function(){
-		$(this).nextAll('table:first').hide();
+		var table$ = $(this).nextAll('table:first');
+		table$ = table$.length ? table$ : $(this).parent().nextAll('table:first');
+		table$.hide();
 		$(this).hide();
 		$(this).prevAll('input:first').show();
 	});
 	$('.shows-more').click(function(){
-		$(this).nextAll('table:first').show();
+		var table$ = $(this).nextAll('table:first');
+		table$ = table$.length ? table$ : $(this).parent().nextAll('table:first');
+		table$.show();
 		$(this).hide();
 		$(this).nextAll('input:first').show();
 	});
