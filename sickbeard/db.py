@@ -512,7 +512,9 @@ def MigrationCode(myDB):
         20002: sickbeard.mainDB.AddTvShowTags,
         20003: sickbeard.mainDB.ChangeMapIndexer,
         20004: sickbeard.mainDB.AddShowNotFoundCounter,
-        20005: sickbeard.mainDB.AddFlagTable
+        20005: sickbeard.mainDB.AddFlagTable,
+        20006: sickbeard.mainDB.DBIncreaseTo20007,
+        20007: sickbeard.mainDB.AddWebdlTypesTable,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

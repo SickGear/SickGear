@@ -226,7 +226,10 @@ def update_network_dict():
 
     try:
         for line in url_data.splitlines():
-            (key, val) = line.decode('utf-8').strip().rsplit(u':', 1)
+            try:
+                (key, val) = line.decode('utf-8').strip().rsplit(u':', 1)
+            except (StandardError, Exception):
+                continue
             if key is None or val is None:
                 continue
             d[key] = val
