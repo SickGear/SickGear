@@ -18,6 +18,8 @@
 * Fix Events shutdown (a manual start-up is required after updating to this fix)
 * Add 'PB', 'EB', 'ZB', 'YB' to output size formats
 * Fix save option display freespace
+* Fix load web dl types from db if url fetching fails
+* Change ManageSearches layout between collapsed Provider Failures tables from single to multi line
 
 
 ### 0.13.15 (2018-01-26 10:30:00 UTC)

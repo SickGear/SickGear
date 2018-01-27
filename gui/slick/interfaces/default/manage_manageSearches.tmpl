@@ -69,18 +69,21 @@
 		<p>No current failures. Failure stats display here when appropriate.</p>
 #else
 		<p>Some providers can be often down over periods, SickGear will back off then retry connecting at a later time</p>
-
     #for $prov in $provider_fail_stats
         #if $len($prov['fails'])
-		<input type="button" class="shows-more btn" id="$prov['name']-btn-more" value="Expand" style="display:none"><input type="button" class="shows-less btn" id="$prov['name']-btn-less" value="Collapse"><img src="$sbRoot/images/providers/$prov['prov_img']" width="16" height="16" style="margin:0 6px" />$prov['name']
+
+		<!-- $prov['name'] -->
+		<div>
+			<input type="button" class="shows-more btn" value="Expand" style="display:none"><input type="button" class="shows-less btn" value="Collapse"><img src="$sbRoot/images/providers/$prov['prov_img']" width="16" height="16" style="margin:0 6px 0 3px">$prov['name']
             #if $prov['active']
                 #if $prov['next_try']
                     #set nt = $str($prov['next_try']).split('.', 2)
-		... is blocked until $sbdatetime.sbdatetime.sbftime($sbdatetime.sbdatetime.now() + $prov['next_try'], markup=True) (in $nt[0]) <input type="button" class="provider-retry btn" id="$prov['prov_id']-btn-retry" value="Ignore block on next search">
+			... is blocked until $sbdatetime.sbdatetime.sbftime($sbdatetime.sbdatetime.now() + $prov['next_try'], markup=True) (in $nt[0]) <input type="button" class="provider-retry btn" id="$prov['prov_id']-btn-retry" value="Ignore block on next search">
                 #end if
             #else
-		... is not enabled
+			... is not enabled
             #end if
+		</div>
 		<table class="manageTable provider-failures tablesorter hover-highlight focus-highlight text-center" cellspacing="0" border="0" cellpadding="0">
 			<thead>
 				<tr>
@@ -129,6 +132,7 @@
             #end for
 			</tbody>
 		</table>
+		<!-- /$prov['name'] -->
         #end if
     #end for
 #end if
