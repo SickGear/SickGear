@@ -336,6 +336,7 @@ home_newShow.tmpl
 	color:#707070
 }
 
+.btn-inverse.dark-bg,
 #addRootDirTable td label .filepath,
 .grey-text{color:#999}
 .highlight-text{color:#fff}
@@ -1428,7 +1429,7 @@ div.formpaginate .prev, div.formpaginate .next{
 	background:#2265a1
 }
 
-#customQualityWrapper .tip-text p{
+#custom-quality-wrapper .tip-text p{
 	color:#999
 }
 

@@ -105,9 +105,9 @@
     #slurp
     #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($ep['status']))
     #if Quality.NONE != $curQuality
-			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# <span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.qualityStrings[$curQuality]</span></td>
+			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# <span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span></td>
     #else
-			<td class="col-status">$statusStrings[$curStatus]</td>
+			<td class="col-status">$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</td>
     #end if
 			<td class="col-search">
     #if 0 != int($ep['season'])
