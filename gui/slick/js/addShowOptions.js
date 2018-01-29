@@ -3,10 +3,10 @@ $(document).ready(function(){
 	$('#saveDefaultsButton').click(function() {
 		var anyQualArray = [], bestQualArray = [];
 
-		$('#anyQualities option:selected').each(function(i, d) {
+		$('#initial-qualities option:selected').each(function(i, d) {
 			anyQualArray.push($(d).val());
 		});
-		$('#bestQualities option:selected').each(function(i, d) {
+		$('#upgrade-qualities option:selected').each(function(i, d) {
 			bestQualArray.push($(d).val());
 		});
 
@@ -32,7 +32,7 @@ $(document).ready(function(){
 		$(this).attr('disabled', true);
 	});
 
-	$('#statusSelect, #qualityPreset, #anyQualities, #bestQualities, #wanted_begin, #wanted_latest,'
+	$('#statusSelect, #quality-preset, #initial-qualities, #upgrade-qualities, #wanted_begin, #wanted_latest,'
 		+ ' #flatten_folders, #scene, #subtitles, #anime, #tag').change(function() {
 		$('#saveDefaultsButton').attr('disabled', false);
 	});

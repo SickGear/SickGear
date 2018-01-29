@@ -623,6 +623,20 @@ inc_top.tmpl
 	content:"\e900"
 }
 
+.searchadd.icon-glyph{
+	display:none
+}
+.active .searchadd.icon-glyph{
+	opacity:0.4;filter:alpha(opacity=40);
+	float:none;
+	display:inline-block;
+	margin:0 0 -2px 0;
+	height:14px
+}
+.searchadd.icon-glyph{
+	background-position:-337px 0
+}
+
 /* =======================================================================
 inc_bottom.tmpl
 ========================================================================== */
@@ -1124,14 +1138,14 @@ div.formpaginate{
 	margin-right:6px
 }
 
-#edit-show #customQualityWrapper .tip-text p,
-#addShowForm #customQualityWrapper .tip-text p,
-#edit-show #customQualityWrapper .tip-text em,
-#addShowForm #customQualityWrapper .tip-text em{
+#edit-show #custom-quality-wrapper .tip-text p,
+#addShowForm #custom-quality-wrapper .tip-text p,
+#edit-show #custom-quality-wrapper .tip-text em,
+#addShowForm #custom-quality-wrapper .tip-text em{
 	font-size:13px
 }
 
-#addShowForm .stepDiv #customQuality.show-if-quality-custom span.component-desc p{
+#addShowForm .stepDiv #custom-quality.show-if-quality-custom span.component-desc p{
 	font-size:12px
 }
 
@@ -2732,7 +2746,7 @@ config*.tmpl
 	color:#666
 }
 
-.stepDiv #customQualityWrapper h4{
+.stepDiv #custom-quality-wrapper h4{
 	margin-top:6px;
 	padding:0 0
 }
@@ -2764,7 +2778,7 @@ config*.tmpl
 	float:left
 }
 
-#config .nocheck, #config div #customQuality, .metadataDiv{
+#config .nocheck, #config div #custom-quality, .metadataDiv{
 	padding-left:20px
 }
 
@@ -2847,17 +2861,44 @@ select .selected:before{
 }
 
 #editShow .field-pair #SceneException h4,
-#editShow .field-pair #customQuality h4{
+#editShow .field-pair #custom-quality h4{
 	font-size:13px !important;
 }
 
 #editShow .field-pair #SceneException h4,
-#editShow .field-pair #customQuality h4{
+#editShow .field-pair #custom-quality h4{
 	margin-bottom:6px
 }
 
-#editShow .field-pair #customQuality h4{
+#editShow .field-pair #custom-quality h4{
 	line-height:normal
+}
+
+#custom-quality .btn,
+#custom-quality .btn-placeholder{
+	width:13em
+}
+#custom-quality .btn-placeholder{
+	display:inline-block;
+	border:1px transparent
+}
+
+#addShowForm #add-white,
+#addShowForm #add-black{
+	margin:0 0 10px 30px !important
+}
+#addShowForm #remove-white,
+#addShowForm #remove-black{
+	margin:0 0 0 30px !important
+}
+#edit-show #add-white,
+#edit-show #add-black{
+	margin:0 0 10px !important
+}
+
+#edit-show #remove-white,
+#edit-show #remove-black{
+	margin:0 !important
 }
 
 .test-notification{
@@ -3521,6 +3562,12 @@ img[src=""],img:not([src]){
 	position:absolute;
 	top:0;
 	left:0
+}
+
+.bfr{
+	position:absolute;
+	left:-999px;
+	top:-999px
 }
 
 /* =======================================================================
@@ -4327,6 +4374,24 @@ div.formpaginate .prev, div.formpaginate .next{
 	padding:15px
 }
 
+#import-shows .stepDiv,
+.step-three .stepDiv{
+	padding:15px 0
+}
+
+#import-shows #addShowForm{
+	width:861px
+}
+
+.step-three #custom-quality-wrapper{
+	width:831px
+}
+
+#import-shows #addShowForm .stepDiv span.component-desc,
+#addShowForm .step-three .stepDiv span.component-desc{
+	width:639px
+}
+
 .stepDiv.parent-folder{
 	padding:15px 0 0;
 	width:430px;
@@ -4338,21 +4403,21 @@ div.formpaginate .prev, div.formpaginate .next{
 }
 
 /* step 3 related */
-#edit-show #customQualityWrapper #customQuality,
-#customQuality{
+#edit-show #custom-quality-wrapper #custom-quality,
+#custom-quality{
 	display:block;
 	padding:0 0 10px 0;
 	overflow:hidden;
 	clear:both
 }
 
-#customQualityWrapper div.component-group-desc{
+#custom-quality-wrapper div.component-group-desc{
 	float:left;
 	width:172px;
 	padding:0
 }
 
-#customQualityWrapper div.component-group-desc p{
+#custom-quality-wrapper div.component-group-desc p{
 	margin:.8em 0;
 	font-size:1.2em
 }
@@ -4365,7 +4430,8 @@ tablesorter.css
 #display-show .tablesorter{
 	width:100%;
 	margin-right:auto;
-	margin-left:auto
+	margin-left:auto;
+	color:#000;
 /*	text-align:left;*/
 /*	border-spacing:0*/
 }

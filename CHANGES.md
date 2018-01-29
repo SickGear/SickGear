@@ -11,6 +11,8 @@
 * Add performance gains for proper search by integrating it into recent search
 * Add the once per day proper finder time to footer, this process catches any propers missed during recent searches
 * Add ability to differentiate webdl/rip sources so overwriting propers is always done from the same source (e.g. AMZN)
+* Change layout of quality custom to improve clarity
+* Change tweak text of SD DVD to include BD/BR
 
 
 [develop changelog]
@@ -20,6 +22,7 @@
 * Fix save option display freespace
 * Fix load web dl types from db if url fetching fails
 * Change ManageSearches layout between collapsed Provider Failures tables from single to multi line
+* Fix display show page episode font color for Proview I
 
 
 ### 0.13.15 (2018-01-26 10:30:00 UTC)

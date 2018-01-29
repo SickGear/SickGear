@@ -53,7 +53,7 @@
 	<div class="optionWrapper">
 		<span class="selectTitle">Quality</span>
 		<div class="selectChoices">
-			<select id="qualityPreset" name="quality_preset" class="form-control form-control-inline input-sm">
+			<select id="quality-preset" name="quality_preset" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>
 				<option value="0"  #if None is not $quality_value and $quality_value not in $common.qualityPresets then $selected else ''#>Custom</option>
 #for $curPreset in sorted($common.qualityPresets):
@@ -62,22 +62,22 @@
 			</select>
 		</div><br />
 
-		<div id="customQuality" class="show-if-quality-custom">
+		<div id="custom-quality" class="show-if-quality-custom">
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Initial</h4>
 #set $anyQualityList = filter(lambda x: x > $common.Quality.NONE, $common.Quality.qualityStrings)
-				<select id="anyQualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)">
+				<select id="initial-qualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)">
 #for $curQuality in sorted($anyQualityList):
-					<option value="$curQuality" #if $curQuality in $anyQualities then $selected else ''#>$common.Quality.qualityStrings[$curQuality]</option>
+					<option value="$curQuality" #if $curQuality in $anyQualities then $selected else ''#>$common.Quality.get_quality_ui($curQuality)</option>
 #end for
 				</select>
 			</div>
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Upgrade to</h4>
 #set $bestQualityList = filter(lambda x: x > $common.Quality.SDTV, $common.Quality.qualityStrings)
-				<select id="bestQualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)">
+				<select id="upgrade-qualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)">
 #for $curQuality in sorted($bestQualityList):
-					<option value="$curQuality" #if $curQuality in $bestQualities then $selected else ''#>$common.Quality.qualityStrings[$curQuality]</option>
+					<option value="$curQuality" #if $curQuality in $bestQualities then $selected else ''#>$common.Quality.get_quality_ui($curQuality)</option>
 #end for
 				</select>
 			</div><br />

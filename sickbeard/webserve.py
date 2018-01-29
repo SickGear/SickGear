@@ -1480,7 +1480,7 @@ class Home(MainHandler):
 
         indexerid = int(showObj.indexerid)
         indexer = int(showObj.indexer)
-        t.min_initial = Quality.qualityStrings[min(Quality.splitQuality(showObj.quality)[0])]
+        t.min_initial = Quality.get_quality_ui(min(Quality.splitQuality(showObj.quality)[0]))
         t.all_scene_exceptions = showObj.exceptions
         t.scene_numbering = get_scene_numbering_for_show(indexerid, indexer)
         t.scene_absolute_numbering = get_scene_absolute_numbering_for_show(indexerid, indexer)

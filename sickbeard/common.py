@@ -152,6 +152,10 @@ class Quality:
                 .replace('720p', 'HD720p').replace('HD TV', 'HD720p').replace('RawHD TV', 'RawHD'))
 
     @staticmethod
+    def get_quality_ui(quality):
+        return Quality.qualityStrings[quality].replace('SD DVD', 'SD DVD/BR/BD')
+
+    @staticmethod
     def _getStatusStrings(status):
         toReturn = {}
         for x in Quality.qualityStrings.keys():
