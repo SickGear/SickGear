@@ -22,6 +22,7 @@ import re
 
 MIN_DB_VERSION = 1
 MAX_DB_VERSION = 4
+TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
 # Add new migrations at the bottom of the list; subclass the previous migration.

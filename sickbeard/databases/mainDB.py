@@ -28,6 +28,7 @@ from sickbeard.name_parser.parser import NameParser, InvalidNameException, Inval
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
 MAX_DB_VERSION = 20008
+TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
 class MainSanityCheck(db.DBSanityCheck):

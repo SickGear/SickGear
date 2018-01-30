@@ -20,6 +20,7 @@
 from __future__ import print_function
 import unittest
 import test_lib as test
+from sickbeard import cache_db, mainDB, failed_db
 
 
 class DBBasicTests(test.SickbeardTestDBCase):
@@ -28,9 +29,16 @@ class DBBasicTests(test.SickbeardTestDBCase):
         super(DBBasicTests, self).setUp()
         self.db = test.db.DBConnection()
 
+    def is_testdb(self, version):
+        if isinstance(version, (int, long)):
+            return 100000 <= version
+
     def test_select(self):
         self.db.select('SELECT * FROM tv_episodes WHERE showid = ? AND location != ""', [0000])
         self.db.close()
+        self.assertEqual(cache_db.TEST_BASE_VERSION is not None, self.is_testdb(cache_db.MAX_DB_VERSION))
+        self.assertEqual(mainDB.TEST_BASE_VERSION is not None, self.is_testdb(mainDB.MAX_DB_VERSION))
+        self.assertEqual(failed_db.TEST_BASE_VERSION is not None, self.is_testdb(failed_db.MAX_DB_VERSION))
 
 if __name__ == '__main__':
     print('==================')
