@@ -13,6 +13,7 @@
 * Add ability to differentiate webdl/rip sources so overwriting propers is always done from the same source (e.g. AMZN)
 * Change layout of quality custom to improve clarity
 * Change tweak text of SD DVD to include BD/BR
+* Change TBy prov add UHD cat
 
 
 [develop changelog]

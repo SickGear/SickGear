@@ -36,7 +36,7 @@ class TorrentBytesProvider(generic.TorrentProvider):
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s'}
 
-        self.categories = {'Season': [41, 32], 'Episode': [33, 37, 38]}
+        self.categories = {'Season': [41], 'Episode': [32, 33, 37, 38]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
