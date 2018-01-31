@@ -24,6 +24,7 @@
 * Fix load web dl types from db if url fetching fails
 * Change ManageSearches layout between collapsed Provider Failures tables from single to multi line
 * Fix display show page episode font color for Proview I
+* Fix web type detection for new propers
 
 
 ### 0.13.15 (2018-01-26 10:30:00 UTC)

@@ -348,7 +348,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_list=
 
         if is_web:
             old_webdl_type = get_webdl_type(old_extra_no_name, old_name)
-            new_webdl_type = get_webdl_type(cur_proper.extra_info_no_name, cur_proper.name)
+            new_webdl_type = get_webdl_type(cur_proper.extra_info_no_name(), cur_proper.name)
             if old_webdl_type != new_webdl_type:
                 logger.log('Skipping proper webdl source: [%s], does not match existing webdl source: [%s] for [%s]'
                            % (old_webdl_type, new_webdl_type, cur_proper.name), logger.DEBUG)
