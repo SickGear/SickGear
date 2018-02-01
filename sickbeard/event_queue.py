@@ -2,13 +2,15 @@ from lib.six import moves
 
 import threading
 
+
 class Event:
-    def __init__(self, type):
-        self._type = type
+    def __init__(self, etype):
+        self._type = etype
 
     @property
     def type(self):
         return self._type
+
 
 class Events(threading.Thread):
     def __init__(self, callback):
@@ -16,30 +18,33 @@ class Events(threading.Thread):
         self.queue = moves.queue.Queue()
         self.daemon = True
         self.callback = callback
-        self.name = "EVENT-QUEUE"
-        self.stop = threading.Event()
+        self.name = 'EVENT-QUEUE'
+        self._stop = threading.Event()
 
-    def put(self, type):
-        self.queue.put(type)
+    def put(self, etype):
+        self.queue.put(etype)
+
+    def stop(self):
+        self._stop.set()
 
     def run(self):
-        while (not self.stop.is_set()):
+        while not self._stop.is_set():
             try:
                 # get event type
-                type = self.queue.get(True, 1)
+                etype = self.queue.get(True, 1)
 
                 # perform callback if we got a event type
-                self.callback(type)
+                self.callback(etype)
 
                 # event completed
                 self.queue.task_done()
             except moves.queue.Empty:
-                type = None
+                pass
 
         # exiting thread
-        self.stop.clear()
+        self._stop.clear()
 
     # System Events
     class SystemEvent(Event):
-        RESTART = "RESTART"
-        SHUTDOWN = "SHUTDOWN"
+        RESTART = 'RESTART'
+        SHUTDOWN = 'SHUTDOWN'

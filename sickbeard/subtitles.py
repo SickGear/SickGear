@@ -86,6 +86,12 @@ class SubtitlesFinder():
     The SubtitlesFinder will be executed every hour but will not necessarly search
     and download subtitles. Only if the defined rule is true
     """
+    @staticmethod
+    def check_paused():
+        if sickbeard.USE_SUBTITLES:
+            return False
+        return True
+
     def run(self, force=False):
         if len(sickbeard.subtitles.getEnabledServiceList()) < 1:
             logger.log(u'Not enough services selected. At least 1 service is required to search subtitles in the background', logger.ERROR)

@@ -27,6 +27,12 @@ class PostProcesser():
     def __init__(self):
         self.amActive = False
 
+    @staticmethod
+    def check_paused():
+        if sickbeard.PROCESS_AUTOMATICALLY:
+            return False
+        return True
+
     def run(self):
         if not sickbeard.PROCESS_AUTOMATICALLY:
             return

@@ -68,6 +68,8 @@ class NcoreProvider(generic.TorrentProvider):
 
                 # fetches 15 results by default, and up to 100 if allowed in user profile
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

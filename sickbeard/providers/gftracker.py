@@ -66,6 +66,8 @@ class GFTrackerProvider(generic.TorrentProvider):
                                                     (self.urls['search'] % search_string, '')['Cache' == mode])
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

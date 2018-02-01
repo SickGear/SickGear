@@ -54,6 +54,8 @@ class MagnetDLProvider(generic.TorrentProvider):
                     search_url = self.urls['search'] % re.sub('[.\s]+', ' ', search_string)
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

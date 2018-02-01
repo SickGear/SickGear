@@ -76,6 +76,7 @@ from sickbeard.exceptions import ex
 from lib.configobj import ConfigObj
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
+rollback_loaded = None
 
 signal.signal(signal.SIGINT, sickbeard.sig_handler)
 signal.signal(signal.SIGTERM, sickbeard.sig_handler)
@@ -152,6 +153,19 @@ class SickGear(object):
             help_msg += [help_tmpl % ln]
 
         return '\n'.join(help_msg)
+
+    @staticmethod
+    def execute_rollback(mo, max_v):
+        global rollback_loaded
+        try:
+            if None is rollback_loaded:
+                rollback_loaded = db.get_rollback_module()
+            if None is not rollback_loaded:
+                rollback_loaded.__dict__[mo]().run(max_v)
+            else:
+                print(u'ERROR: Could not download Rollback Module.')
+        except (StandardError, Exception):
+            pass
 
     def start(self):
         # do some preliminary stuff
@@ -324,14 +338,28 @@ class SickGear(object):
                 print('Stack Size %s not set: %s' % (stack_size, e.message))
 
         # check all db versions
-        for d, min_v, max_v, mo in [
-            ('failed.db', sickbeard.failed_db.MIN_DB_VERSION, sickbeard.failed_db.MAX_DB_VERSION, 'FailedDb'),
-            ('cache.db', sickbeard.cache_db.MIN_DB_VERSION, sickbeard.cache_db.MAX_DB_VERSION, 'CacheDb'),
-            ('sickbeard.db', sickbeard.mainDB.MIN_DB_VERSION, sickbeard.mainDB.MAX_DB_VERSION, 'MainDb')
+        for d, min_v, max_v, base_v, mo in [
+            ('failed.db', sickbeard.failed_db.MIN_DB_VERSION, sickbeard.failed_db.MAX_DB_VERSION, sickbeard.failed_db.TEST_BASE_VERSION, 'FailedDb'),
+            ('cache.db', sickbeard.cache_db.MIN_DB_VERSION, sickbeard.cache_db.MAX_DB_VERSION, sickbeard.cache_db.TEST_BASE_VERSION, 'CacheDb'),
+            ('sickbeard.db', sickbeard.mainDB.MIN_DB_VERSION, sickbeard.mainDB.MAX_DB_VERSION, sickbeard.mainDB.TEST_BASE_VERSION, 'MainDb')
         ]:
             cur_db_version = db.DBConnection(d).checkDBVersion()
 
-            if cur_db_version > 0:
+            # handling of standalone TEST db versions
+            if cur_db_version >= 100000 and cur_db_version != max_v:
+                print('Your [%s] database version (%s) is a test db version and doesn\'t match SickGear required '
+                      'version (%s), downgrading to production db' % (d, cur_db_version, max_v))
+                self.execute_rollback(mo, max_v)
+                cur_db_version = db.DBConnection(d).checkDBVersion()
+                if cur_db_version >= 100000:
+                    print(u'Rollback to production failed.')
+                    sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
+                if 100000 <= max_v and None is not base_v:
+                    max_v = base_v  # set max_v to the needed base production db for test_db
+                print(u'Rollback to production of [%s] successful.' % d)
+
+            # handling of production db versions
+            if 0 < cur_db_version < 100000:
                 if cur_db_version < min_v:
                     print(u'Your [%s] database version (%s) is too old to migrate from with this version of SickGear'
                           % (d, cur_db_version))
@@ -341,18 +369,15 @@ class SickGear(object):
                     print(u'Your [%s] database version (%s) has been incremented past'
                           u' what this version of SickGear supports. Trying to rollback now. Please wait...' %
                           (d, cur_db_version))
-                    try:
-                        rollback_loaded = db.get_rollback_module()
-                        if None is not rollback_loaded:
-                            rollback_loaded.__dict__[mo]().run(max_v)
-                        else:
-                            print(u'ERROR: Could not download Rollback Module.')
-                    except (StandardError, Exception):
-                        pass
+                    self.execute_rollback(mo, max_v)
                     if db.DBConnection(d).checkDBVersion() > max_v:
                         print(u'Rollback failed.')
                         sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
                     print(u'Rollback of [%s] successful.' % d)
+
+        # free memory
+        global rollback_loaded
+        rollback_loaded = None
 
         # Initialize the config and our threads
         sickbeard.initialize(console_logging=self.console_logging)

@@ -37,7 +37,7 @@ sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import helpers, encodingKludge as ek
 from sickbeard import db, image_cache, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
     scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
-    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes
+    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes, properFinder
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
@@ -153,6 +153,7 @@ ROOT_DIRS = None
 TRASH_REMOVE_SHOW = False
 TRASH_ROTATE_LOGS = False
 HOME_SEARCH_FOCUS = True
+DISPLAY_FREESPACE = True
 SORT_ARTICLE = False
 DEBUG = False
 SHOW_TAGS = []
@@ -209,8 +210,8 @@ USENET_RETENTION = None
 TORRENT_METHOD = None
 TORRENT_DIR = None
 DOWNLOAD_PROPERS = False
-CHECK_PROPERS_INTERVAL = None
 PROPERS_WEBDL_ONEGRP = True
+WEBDL_TYPES = []
 ALLOW_HIGH_PRIORITY = False
 NEWZNAB_DATA = ''
 
@@ -462,6 +463,7 @@ FANART_LIMIT = None
 FANART_PANEL = None
 FANART_RATINGS = {}
 HOME_LAYOUT = None
+FOOTER_TIME_LAYOUT = 0
 POSTER_SORTBY = None
 POSTER_SORTDIR = None
 DISPLAY_SHOW_VIEWMODE = 0
@@ -573,7 +575,7 @@ def initialize(console_logging=True):
         # Post processing
         global KEEP_PROCESSED_DIR
         # Views
-        global GUI_NAME, HOME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
+        global GUI_NAME, HOME_LAYOUT, FOOTER_TIME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
             EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, \
             EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
             EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
@@ -585,7 +587,7 @@ def initialize(console_logging=True):
             VERSION_NOTIFY, AUTO_UPDATE, UPDATE_FREQUENCY, NOTIFY_ON_UPDATE
         # Gen Config/Interface
         global THEME_NAME, DEFAULT_HOME, FANART_LIMIT, SHOWLIST_TAGVIEW, SHOW_TAGS, \
-            HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
+            HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_FREESPACE, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
             DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, TIMEZONE_DISPLAY, \
             WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEY, WEB_PORT, WEB_LOG, \
             ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, WEB_IPV64, HANDLE_REVERSE_PROXY, SEND_SECURITY_HEADERS
@@ -593,7 +595,7 @@ def initialize(console_logging=True):
         global BRANCH, CUR_COMMIT_BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, GIT_PATH, CPU_PRESET, ANON_REDIRECT, \
             ENCRYPTION_VERSION, PROXY_SETTING, PROXY_INDEXERS, FILE_LOGGING_PRESET
         # Search Settings/Episode
-        global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, CHECK_PROPERS_INTERVAL, RECENTSEARCH_FREQUENCY, \
+        global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_FREQUENCY, \
             BACKLOG_DAYS, BACKLOG_NOFULL, BACKLOG_FREQUENCY, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
             ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY
         # Search Settings/NZB search
@@ -727,6 +729,7 @@ def initialize(console_logging=True):
         USE_IMDB_INFO = bool(check_setting_int(CFG, 'GUI', 'use_imdb_info', 1))
         IMDB_ACCOUNTS = CFG.get('GUI', []).get('imdb_accounts', [IMDB_DEFAULT_LIST_ID, IMDB_DEFAULT_LIST_NAME])
         HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
+        DISPLAY_FREESPACE = bool(check_setting_int(CFG, 'General', 'display_freespace', 1))
         SORT_ARTICLE = bool(check_setting_int(CFG, 'General', 'sort_article', 0))
         FUZZY_DATING = bool(check_setting_int(CFG, 'GUI', 'fuzzy_dating', 0))
         TRIM_ZERO = bool(check_setting_int(CFG, 'GUI', 'trim_zero', 0))
@@ -843,9 +846,6 @@ def initialize(console_logging=True):
 
         DOWNLOAD_PROPERS = bool(check_setting_int(CFG, 'General', 'download_propers', 1))
         PROPERS_WEBDL_ONEGRP = bool(check_setting_int(CFG, 'General', 'propers_webdl_onegrp', 1))
-        CHECK_PROPERS_INTERVAL = check_setting_str(CFG, 'General', 'check_propers_interval', '')
-        if CHECK_PROPERS_INTERVAL not in ('15m', '45m', '90m', '4h', 'daily'):
-            CHECK_PROPERS_INTERVAL = 'daily'
 
         ALLOW_HIGH_PRIORITY = bool(check_setting_int(CFG, 'General', 'allow_high_priority', 1))
 
@@ -1151,6 +1151,7 @@ def initialize(console_logging=True):
         METADATA_KODI = check_setting_str(CFG, 'General', 'metadata_kodi', '0|0|0|0|0|0|0|0|0|0')
 
         HOME_LAYOUT = check_setting_str(CFG, 'GUI', 'home_layout', 'poster')
+        FOOTER_TIME_LAYOUT = check_setting_int(CFG, 'GUI', 'footer_time_layout', 0)
         POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
         POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
         DISPLAY_SHOW_VIEWMODE = check_setting_int(CFG, 'GUI', 'display_show_viewmode', 0)
@@ -1371,19 +1372,17 @@ def initialize(console_logging=True):
             prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
 
         propers_searcher = search_propers.ProperSearcher()
-        item = [(k, n, v) for (k, n, v) in propers_searcher.search_intervals if k == CHECK_PROPERS_INTERVAL]
-        if item:
-            update_interval = datetime.timedelta(minutes=item[0][2])
-            run_at = None
+        last_proper_search = datetime.datetime.fromtimestamp(properFinder.get_last_proper_search())
+        time_diff = datetime.timedelta(days=1) - (datetime.datetime.now() - last_proper_search)
+        if time_diff < datetime.timedelta(seconds=0):
+            properdelay = 20
         else:
-            update_interval = datetime.timedelta(hours=1)
-            run_at = datetime.time(hour=1)  # 1 AM
+            properdelay = helpers.tryInt((time_diff.total_seconds() / 60) + 5, 20)
 
         properFinderScheduler = scheduler.Scheduler(
             propers_searcher,
-            cycleTime=update_interval,
-            run_delay=update_interval,
-            start_time=run_at,
+            cycleTime=datetime.timedelta(days=1),
+            run_delay=datetime.timedelta(minutes=properdelay),
             threadName='FINDPROPERS',
             prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
 
@@ -1416,10 +1415,8 @@ def enabled_schedulers(is_init=False):
     # ([], [traktCheckerScheduler])[USE_TRAKT] + \
     for s in ([], [events])[is_init] + \
             [recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler,
-             versionCheckScheduler, showQueueScheduler, searchQueueScheduler] + \
-            ([], [properFinderScheduler])[DOWNLOAD_PROPERS] + \
-            ([], [autoPostProcesserScheduler])[PROCESS_AUTOMATICALLY] + \
-            ([], [subtitlesFinderScheduler])[USE_SUBTITLES] + \
+             versionCheckScheduler, showQueueScheduler, searchQueueScheduler, properFinderScheduler,
+             autoPostProcesserScheduler, subtitlesFinderScheduler] + \
             ([events], [])[is_init]:
         yield s
 
@@ -1503,7 +1500,7 @@ def halt():
                     logger.log('Fail, thread %s did not exit' % ADBA_CONNECTION.name)
 
             for thread in enabled_schedulers():
-                thread.stop.set()
+                thread.stop()
 
             for thread in enabled_schedulers():
                 try:
@@ -1577,7 +1574,6 @@ def save_config():
     new_config['General']['update_frequency'] = int(UPDATE_FREQUENCY)
     new_config['General']['download_propers'] = int(DOWNLOAD_PROPERS)
     new_config['General']['propers_webdl_onegrp'] = int(PROPERS_WEBDL_ONEGRP)
-    new_config['General']['check_propers_interval'] = CHECK_PROPERS_INTERVAL
     new_config['General']['allow_high_priority'] = int(ALLOW_HIGH_PRIORITY)
     new_config['General']['recentsearch_startup'] = int(RECENTSEARCH_STARTUP)
     new_config['General']['backlog_nofull'] = int(BACKLOG_NOFULL)
@@ -1615,6 +1611,7 @@ def save_config():
     new_config['General']['trash_remove_show'] = int(TRASH_REMOVE_SHOW)
     new_config['General']['trash_rotate_logs'] = int(TRASH_ROTATE_LOGS)
     new_config['General']['home_search_focus'] = int(HOME_SEARCH_FOCUS)
+    new_config['General']['display_freespace'] = int(DISPLAY_FREESPACE)
     new_config['General']['sort_article'] = int(SORT_ARTICLE)
     new_config['General']['proxy_setting'] = PROXY_SETTING
     new_config['General']['proxy_indexers'] = int(PROXY_INDEXERS)
@@ -1950,6 +1947,7 @@ def save_config():
     new_config['GUI']['showlist_tagview'] = SHOWLIST_TAGVIEW
 
     new_config['GUI']['home_layout'] = HOME_LAYOUT
+    new_config['GUI']['footer_time_layout'] = FOOTER_TIME_LAYOUT
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
 

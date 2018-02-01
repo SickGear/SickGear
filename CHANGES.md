@@ -1,4 +1,22 @@
-﻿### 0.13.15 (2018-01-26 10:30:00 UTC)
+﻿### 0.14.0 (2018-02-01 02:30:00 UTC)
+
+* Change improve core scheduler logic
+* Change improve media process to parse anime format 'Show Name 123 - 001 - Ep 1 name'
+* Add free space stat (if obtainable) of parent folder(s) to footer
+* Add option "Display disk free" to general config/interface page (default enabled)
+* Add a provider error table to page Manage/Media Search
+* Add failure handling, skip provider for x hour(s) depending on count of failures
+* Add detection of Too Many Requests (Supporting providers UC and BTN)
+* Add footer icon button to switch time layouts
+* Add performance gains for proper search by integrating it into recent search
+* Add the once per day proper finder time to footer, this process catches any propers missed during recent searches
+* Add ability to differentiate webdl/rip sources so overwriting propers is always done from the same source (e.g. AMZN)
+* Change layout of quality custom to improve clarity
+* Change tweak text of SD DVD to include BD/BR
+* Change TBy prov add UHD cat
+
+
+### 0.13.15 (2018-01-26 10:30:00 UTC)
 
 * Fix save on config general
 

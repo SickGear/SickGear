@@ -21,7 +21,6 @@ from . import generic
 from sickbeard import logger, tvcache
 from sickbeard.helpers import tryInt
 from sickbeard.exceptions import ex
-from sickbeard.rssfeeds import RSSFeeds
 from lib.bencode import bdecode
 
 
@@ -40,8 +39,6 @@ class TorrentRssProvider(generic.TorrentProvider):
         self.enable_recentsearch = bool(tryInt(enable_recentsearch)) or not self.enable_backlog
         self.search_mode = search_mode
         self.search_fallback = bool(tryInt(search_fallback))
-
-        self.feeder = RSSFeeds(self)
 
     def image_name(self):
 
@@ -102,6 +99,9 @@ class TorrentRssProvider(generic.TorrentProvider):
                         break
                 else:
                     torrent_file = self.get_url(url)
+                    if self.should_skip():
+                        break
+
                     try:
                         bdecode(torrent_file)
                         break
@@ -120,7 +120,7 @@ class TorrentRssProvider(generic.TorrentProvider):
 
         result = []
         for mode in search_params.keys():
-            data = self.feeder.get_feed(self.url)
+            data = self.cache.get_rss(self.url)
 
             result += (data and 'entries' in data) and data.entries or []
 

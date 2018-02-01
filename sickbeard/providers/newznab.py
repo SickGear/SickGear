@@ -28,7 +28,7 @@ from math import ceil
 from sickbeard.sbdatetime import sbdatetime
 from . import generic
 from sickbeard import helpers, logger, tvcache, classes, db
-from sickbeard.common import neededQualities, Quality
+from sickbeard.common import neededQualities, Quality, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED
 from sickbeard.exceptions import AuthException, MultipleShowObjectsException
 from sickbeard.indexers.indexer_config import *
 from io import BytesIO
@@ -291,7 +291,12 @@ class NewznabProvider(generic.NZBProvider):
             return [x for x in cats if x['id'] not in self.excludes]
         return ','.join(set(cats.split(',')) - self.excludes)
 
-    def check_auth_from_data(self, data):
+    def _check_auth(self, is_required=None):
+        if self.should_skip():
+            return False
+        return super(NewznabProvider, self)._check_auth(is_required)
+
+    def _check_auth_from_data(self, data, url):
 
         if data is None or not hasattr(data, 'tag'):
             return False
@@ -306,6 +311,13 @@ class NewznabProvider(generic.NZBProvider):
                 raise AuthException('Your account on %s has been suspended, contact the admin.' % self.name)
             elif '102' == code:
                 raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.' % self.name)
+            elif '500' == code:
+                try:
+                    retry_time, unit = re.findall(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
+                except IndexError:
+                    retry_time, unit = None, None
+                self.tmr_limit_update(retry_time, unit, description)
+                self.log_failure_url(url)
             elif '910' == code:
                 logger.log(
                     '%s %s, please check with provider.' %
@@ -316,6 +328,7 @@ class NewznabProvider(generic.NZBProvider):
                            logger.WARNING)
             return False
 
+        self.tmr_limit_count = 0
         return True
 
     def config_str(self):
@@ -530,15 +543,20 @@ class NewznabProvider(generic.NZBProvider):
                 (hits_per_page * 100 // hits_per_page * 2, hits_per_page * int(ceil(rel_limit * 1.5)))[season_search])
 
     def find_search_results(self, show, episodes, search_mode, manual_search=False, try_other_searches=False, **kwargs):
-        self._check_auth()
+        check = self._check_auth()
+        results = {}
+        if (isinstance(check, bool) and not check) or self.should_skip():
+            return results
+
         self.show = show
 
-        results = {}
         item_list = []
         name_space = {}
 
         searched_scene_season = s_mode = None
         for ep_obj in episodes:
+            if self.should_skip(log_warning=False):
+                break
             # skip if season already searched
             if (s_mode or 'sponly' == search_mode) and 1 < len(episodes) \
                     and searched_scene_season == ep_obj.scene_season:
@@ -577,6 +595,8 @@ class NewznabProvider(generic.NZBProvider):
                                                        try_all_searches=try_other_searches)
                 item_list += items
                 name_space.update(n_space)
+                if self.should_skip():
+                    break
 
         return self.finish_find_search_results(
             show, episodes, search_mode, manual_search, results, item_list, name_space=name_space)
@@ -617,7 +637,13 @@ class NewznabProvider(generic.NZBProvider):
     def _search_provider(self, search_params, needed=neededQualities(need_all=True), max_items=400,
                          try_all_searches=False, **kwargs):
 
+        results, n_spaces = [], {}
+        if self.should_skip():
+            return results, n_spaces
+
         api_key = self._check_auth()
+        if isinstance(api_key, bool) and not api_key:
+            return results, n_spaces
 
         base_params = {'t': 'tvsearch',
                        'maxage': sickbeard.USENET_RETENTION or 0,
@@ -644,7 +670,12 @@ class NewznabProvider(generic.NZBProvider):
         cat_webdl = self.cats.get(NewznabConstants.CAT_WEBDL)
 
         for mode in search_params.keys():
+            if self.should_skip(log_warning=False):
+                break
             for i, params in enumerate(search_params[mode]):
+
+                if self.should_skip(log_warning=False):
+                    break
 
                 # category ids
                 cat = []
@@ -697,14 +728,13 @@ class NewznabProvider(generic.NZBProvider):
                         search_url = '%sapi?%s' % (self.url, urllib.urlencode(request_params))
                     i and time.sleep(2.1)
 
-                    data = helpers.getURL(search_url)
+                    data = self.get_url(search_url)
 
-                    if not data:
-                        logger.log('No Data returned from %s' % self.name, logger.WARNING)
+                    if self.should_skip() or not data:
                         break
 
                     # hack this in until it's fixed server side
-                    if data and not data.startswith('<?xml'):
+                    if not data.startswith('<?xml'):
                         data = '<?xml version="1.0" encoding="ISO-8859-1" ?>%s' % data
 
                     try:
@@ -714,7 +744,7 @@ class NewznabProvider(generic.NZBProvider):
                         logger.log('Error trying to load %s RSS feed' % self.name, logger.WARNING)
                         break
 
-                    if not self.check_auth_from_data(parsed_xml):
+                    if not self._check_auth_from_data(parsed_xml, search_url):
                         break
 
                     if 'rss' != parsed_xml.tag:
@@ -794,6 +824,10 @@ class NewznabProvider(generic.NZBProvider):
         results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show) for x in
                    cache_results]
 
+        check = self._check_auth()
+        if isinstance(check, bool) and not check:
+            return results
+
         index = 0
         alt_search = ('nzbs_org' == self.get_id())
         do_search_alt = False
@@ -812,6 +846,9 @@ class NewznabProvider(generic.NZBProvider):
 
         urls = []
         while index < len(search_terms):
+            if self.should_skip(log_warning=False):
+                break
+
             search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
             if alt_search:
 
@@ -885,8 +922,11 @@ class NewznabCache(tvcache.TVCache):
         if 4489 != sickbeard.RECENTSEARCH_FREQUENCY or self.should_update():
             n_spaces = {}
             try:
-                self._checkAuth()
-                (items, n_spaces) = self.provider.cache_data(needed=needed)
+                check = self._checkAuth()
+                if isinstance(check, bool) and not check:
+                    items = None
+                else:
+                    (items, n_spaces) = self.provider.cache_data(needed=needed)
             except (StandardError, Exception):
                 items = None
 

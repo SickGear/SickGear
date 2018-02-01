@@ -29,6 +29,7 @@ pre .prelight-num{
 	background-image:url("../images/glyphicons-halflings-white.png")
 }
 
+.dark-bg .icon-glyph,
 .icon-white{
 	background-image:url("../images/glyphicons-halflings.png")
 }
@@ -351,6 +352,7 @@ home_newShow.tmpl
 	color:#909090
 }
 
+.btn-inverse.dark-bg,
 #addRootDirTable td label .filepath,
 .grey-text{color:#666}
 .highlight-text{color:#000}
@@ -740,6 +742,60 @@ manage*.tmpl
 
 a.whitelink{
 	color:#000
+}
+
+/* TABLE BACKGROUND color */
+.provider-failures.hover-highlight td:before,
+.provider-failures.focus-highlight td:before{
+	background:#fff
+}
+
+/* ODD ZEBRA STRIPE color (needs zebra widget) */
+.provider-failures.hover-highlight .odd th:before,
+.provider-failures.hover-highlight .odd td:before,
+.provider-failures.focus-highlight .odd th:before,
+.provider-failures.focus-highlight .odd td:before{
+	background:#f5f1e4
+}
+/* EVEN ZEBRA STRIPE color (needs zebra widget) */
+.provider-failures.hover-highlight .even th:before,
+.provider-failures.hover-highlight .even td:before,
+.provider-failures.focus-highlight .even th:before,
+.provider-failures.focus-highlight .even td:before{
+	background-color:#dfdacf;
+}
+
+/* HOVER ROW highlight colors */
+.provider-failures.hover-highlight tbody > tr:hover > td, /* override tablesorter theme row hover */
+.provider-failures.hover-highlight tbody > tr.odd:hover > td,
+.provider-failures.hover-highlight tbody > tr.even:hover > td{
+	background-color:#f4f3c2
+}
+/* HOVER COLUMN highlight colors */
+.provider-failures.hover-highlight tbody tr th:hover::after,
+.provider-failures.hover-highlight tbody tr td:hover::after{
+	background-color:#f4f3c2
+}
+
+/* FOCUS ROW highlight color (touch devices) */
+.provider-failures.focus-highlight th:focus::before,
+.provider-failures.focus-highlight td:focus::before{
+	background-color:#dfdead
+}
+/* FOCUS COLUMN highlight color (touch devices) */
+.provider-failures.focus-highlight th:focus::after,
+.provider-failures.focus-highlight td:focus::after{
+	background-color:#dfdead
+}
+/* FOCUS CELL highlight color */
+.provider-failures.focus-highlight th:focus,
+.provider-failures.focus-highlight td:focus,
+.provider-failures.focus-highlight .odd th:focus,
+.provider-failures.focus-highlight .odd td:focus,
+.provider-failures.focus-highlight .even th:focus,
+.provider-failures.focus-highlight .even td:focus{
+	background-color:#dfdead;
+	color:#222
 }
 
 /* =======================================================================
@@ -1335,7 +1391,7 @@ div.formpaginate .prev, div.formpaginate .next{
 	background:#57442b
 }
 
-#customQualityWrapper .tip-text p{
+#custom-quality-wrapper .tip-text p{
 	color:#666
 }
 
@@ -1381,8 +1437,8 @@ tablesorter.css
 }
 
 thead.tablesorter-stickyHeader{
-	border-top:2px solid #fff;
-	border-bottom:2px solid #fff
+	border-top:2px solid #ddd;
+	border-bottom:2px solid #ddd
 }
 
 /* Zebra Widget - row alternating colors */
@@ -1404,7 +1460,7 @@ thead.tablesorter-stickyHeader{
 }
 
 .tablesorter tfoot tr{
-	color:#fff;
+	color:#ddd;
 	text-align:center;
 	text-shadow:-1px -1px 0 rgba(0, 0, 0, 0.3);
 	background-color:#333;

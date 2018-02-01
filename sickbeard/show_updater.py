@@ -20,7 +20,7 @@ import datetime
 import traceback
 
 import sickbeard
-from sickbeard import logger, exceptions, ui, db, network_timezones, failed_history
+from sickbeard import logger, exceptions, ui, db, network_timezones, failed_history, properFinder
 from sickbeard.exceptions import ex
 
 
@@ -42,6 +42,12 @@ class ShowUpdater:
             except Exception:
                 logger.log('network timezone update error', logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
+
+            # refresh webdl types
+            try:
+                properFinder.load_webdl_types()
+            except (StandardError, Exception):
+                logger.log('error loading webdl_types', logger.DEBUG)
 
             # update xem id lists
             try:

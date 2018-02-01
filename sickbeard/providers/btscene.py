@@ -64,7 +64,7 @@ class BTSceneProvider(generic.TorrentProvider):
 
         url = self.url
         response = self.get_url(url)
-        if not response:
+        if self.should_skip():
             return results
 
         form = re.findall('(?is)(<form[^>]+)', response)
@@ -84,6 +84,8 @@ class BTSceneProvider(generic.TorrentProvider):
                     else url + self.urls['search'] % (urllib.quote_plus(search_string))
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

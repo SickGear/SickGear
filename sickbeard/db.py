@@ -432,6 +432,26 @@ class SchemaUpgrade(object):
             tables.append(table[0])
         return tables
 
+    def do_query(self, queries):
+        if not isinstance(queries, list):
+            queries = list(queries)
+        elif isinstance(queries[0], list):
+            queries = [item for sublist in queries for item in sublist]
+
+        for query in queries:
+            tbl_name = re.findall('(?i)DROP.*?TABLE.*?\[?([^\s\]]+)', query)
+            if tbl_name and not self.hasTable(tbl_name[0]):
+                continue
+            tbl_name = re.findall('(?i)CREATE.*?TABLE.*?\s([^\s(]+)\s*\(', query)
+            if tbl_name and self.hasTable(tbl_name[0]):
+                continue
+            self.connection.action(query)
+
+    def finish(self, tbl_dropped=False):
+        if tbl_dropped:
+            self.connection.action('VACUUM')
+        self.incDBVersion()
+
 
 def MigrationCode(myDB):
     schema = {
@@ -492,7 +512,9 @@ def MigrationCode(myDB):
         20002: sickbeard.mainDB.AddTvShowTags,
         20003: sickbeard.mainDB.ChangeMapIndexer,
         20004: sickbeard.mainDB.AddShowNotFoundCounter,
-        20005: sickbeard.mainDB.AddFlagTable
+        20005: sickbeard.mainDB.AddFlagTable,
+        20006: sickbeard.mainDB.DBIncreaseTo20007,
+        20007: sickbeard.mainDB.AddWebdlTypesTable,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

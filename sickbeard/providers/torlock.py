@@ -74,6 +74,8 @@ class TorLockProvider(generic.TorrentProvider):
                     else self.urls['search'] % (urllib.quote_plus(search_string).replace('+', '-'))
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

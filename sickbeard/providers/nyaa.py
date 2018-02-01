@@ -53,6 +53,8 @@ class NyaaProvider(generic.TorrentProvider):
                 search_url = self.urls['search'] % ((0, 2)[self.confirmed], search_string)
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

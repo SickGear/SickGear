@@ -62,6 +62,8 @@ class FLProvider(generic.TorrentProvider):
 
                 html = self.get_url(self.urls['search'] % ('+'.join(search_string.split()),
                                                            self._categories_string(mode, template='cats[]=%s')))
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

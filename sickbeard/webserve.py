@@ -602,6 +602,40 @@ class MainHandler(WebHandler):
 
         sickbeard.save_config()
 
+    @staticmethod
+    def getFooterTime(change_layout=True, json_dump=True, *args, **kwargs):
+
+        now = datetime.datetime.now()
+        events = [
+            ('recent', sickbeard.recentSearchScheduler.timeLeft),
+            ('backlog', sickbeard.backlogSearchScheduler.next_backlog_timeleft),
+        ]
+
+        if sickbeard.DOWNLOAD_PROPERS:
+            events += [('propers', sickbeard.properFinder.next_proper_timeleft)]
+
+        if change_layout not in (False, 0, '0', '', None):
+            sickbeard.FOOTER_TIME_LAYOUT += 1
+            if sickbeard.FOOTER_TIME_LAYOUT == 2:  # 2 layouts = time + delta
+                sickbeard.FOOTER_TIME_LAYOUT = 0
+            sickbeard.save_config()
+
+        next_event = []
+        for k, v in events:
+            try:
+                t = v()
+            except AttributeError:
+                t = None
+            if 0 == sickbeard.FOOTER_TIME_LAYOUT:
+                next_event += [{k + '_time': t and sbdatetime.sbdatetime.sbftime(now + t, markup=True) or 'soon'}]
+            else:
+                next_event += [{k + '_timeleft': t and str(t).split('.')[0] or 'soon'}]
+
+        if json_dump not in (False, 0, '0', '', None):
+            next_event = json.dumps(next_event)
+
+        return next_event
+
     def toggleDisplayShowSpecials(self, show):
 
         sickbeard.DISPLAY_SHOW_SPECIALS = not sickbeard.DISPLAY_SHOW_SPECIALS
@@ -1446,7 +1480,7 @@ class Home(MainHandler):
 
         indexerid = int(showObj.indexerid)
         indexer = int(showObj.indexer)
-        t.min_initial = Quality.qualityStrings[min(Quality.splitQuality(showObj.quality)[0])]
+        t.min_initial = Quality.get_quality_ui(min(Quality.splitQuality(showObj.quality)[0]))
         t.all_scene_exceptions = showObj.exceptions
         t.scene_numbering = get_scene_numbering_for_show(indexerid, indexer)
         t.scene_absolute_numbering = get_scene_absolute_numbering_for_show(indexerid, indexer)
@@ -4531,10 +4565,26 @@ class ManageSearches(Manage):
         t.recent_search_status = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
         t.find_propers_status = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
         t.queue_length = sickbeard.searchQueueScheduler.action.queue_length()
+        t.provider_fail_stats = filter(lambda stat: len(stat['fails']), [{
+            'active': p.is_active(), 'name': p.name, 'prov_id': p.get_id(), 'prov_img': p.image_name(),
+            'fails': p.fails.fails_sorted, 'tmr_limit_time': p.tmr_limit_time,
+            'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
+            for p in sickbeard.providerList + sickbeard.newznabProviderList])
+        t.provider_fails = 0 < len([p for p in t.provider_fail_stats if len(p['fails'])])
 
         t.submenu = self.ManageMenu('Search')
 
         return t.respond()
+
+    def retryProvider(self, provider=None, *args, **kwargs):
+        if not provider:
+            return
+        prov = [p for p in sickbeard.providerList + sickbeard.newznabProviderList if p.get_id() == provider]
+        if not prov:
+            return
+        prov[0].retry_next()
+        time.sleep(3)
+        return
 
     def forceVersionCheck(self, *args, **kwargs):
         # force a check to see if there is a new version
@@ -4826,7 +4876,7 @@ class ConfigGeneral(Config):
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
-                    handle_reverse_proxy=None, send_security_headers=None, home_search_focus=None, sort_article=None, auto_update=None, notify_on_update=None,
+                    handle_reverse_proxy=None, send_security_headers=None, home_search_focus=None, display_freespace=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
@@ -4882,6 +4932,7 @@ class ConfigGeneral(Config):
 
         sickbeard.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
         sickbeard.USE_IMDB_INFO = config.checkbox_to_value(use_imdb_info)
+        sickbeard.DISPLAY_FREESPACE = config.checkbox_to_value(display_freespace)
         sickbeard.SORT_ARTICLE = config.checkbox_to_value(sort_article)
         sickbeard.FUZZY_DATING = config.checkbox_to_value(fuzzy_dating)
         sickbeard.TRIM_ZERO = config.checkbox_to_value(trim_zero)
@@ -4982,7 +5033,6 @@ class ConfigSearch(Config):
                                      for show in sickbeard.showList if show.rls_require_words and
                                      show.rls_require_words.strip()]
         t.using_rls_require_words.sort(lambda x, y: cmp(x[1], y[1]), reverse=False)
-        t.propers_intervals = search_propers.ProperSearcher().search_intervals
         t.using_regex = False
         try:
             from sickbeard.name_parser.parser import regex
@@ -4996,7 +5046,7 @@ class ConfigSearch(Config):
                    nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
                    backlog_days=None, backlog_frequency=None, search_unaired=None, unaired_recent_search_only=None,
                    recentsearch_frequency=None, nzb_method=None, torrent_method=None, usenet_retention=None,
-                   download_propers=None, propers_webdl_onegrp=None, check_propers_interval=None,
+                   download_propers=None, propers_webdl_onegrp=None,
                    allow_high_priority=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
                    torrent_label=None, torrent_path=None, torrent_verify_cert=None,
@@ -5033,26 +5083,8 @@ class ConfigSearch(Config):
         sickbeard.IGNORE_WORDS = ignore_words if ignore_words else ''
         sickbeard.REQUIRE_WORDS = require_words if require_words else ''
 
-        sickbeard.DOWNLOAD_PROPERS = config.checkbox_to_value(download_propers)
+        config.change_DOWNLOAD_PROPERS(config.checkbox_to_value(download_propers))
         sickbeard.PROPERS_WEBDL_ONEGRP = config.checkbox_to_value(propers_webdl_onegrp)
-        if sickbeard.CHECK_PROPERS_INTERVAL != check_propers_interval:
-            sickbeard.CHECK_PROPERS_INTERVAL = check_propers_interval
-
-            if sickbeard.DOWNLOAD_PROPERS:
-                proper_sch = sickbeard.properFinderScheduler
-                item = [(k, n, v) for (k, n, v) in proper_sch.action.search_intervals if k == check_propers_interval]
-                if item and None is proper_sch.start_time:
-                    interval = datetime.timedelta(minutes=item[0][2])
-                    run_in = proper_sch.lastRun + interval - datetime.datetime.now()
-                    proper_sch.cycleTime = interval
-
-                    run_at = 'imminent'
-                    if datetime.timedelta() < run_in:
-                        hours, remainder = divmod(run_in.seconds, 3600)
-                        minutes, seconds = divmod(remainder, 60)
-                        run_at = u'in approx. ' + ('%dh, %dm' % (hours, minutes) if 0 < hours else
-                                                   '%dm, %ds' % (minutes, seconds))
-                    logger.log(u'Change search PROPERS interval, next check %s' % run_at)
 
         sickbeard.SEARCH_UNAIRED = bool(config.checkbox_to_value(search_unaired))
         sickbeard.UNAIRED_RECENT_SEARCH_ONLY = bool(config.checkbox_to_value(unaired_recent_search_only, value_off=1, value_on=0))
@@ -5126,20 +5158,10 @@ class ConfigPostProcessing(Config):
             results += ['Unable to create directory ' + os.path.normpath(tv_download_dir) + ', dir not changed.']
 
         new_val = config.checkbox_to_value(process_automatically)
-        if new_val != sickbeard.PROCESS_AUTOMATICALLY:
-            if not sickbeard.PROCESS_AUTOMATICALLY and not sickbeard.autoPostProcesserScheduler.ident:
-                try:
-                    sickbeard.autoPostProcesserScheduler.start()
-                except:
-                    pass
-            sickbeard.PROCESS_AUTOMATICALLY = new_val
+        sickbeard.PROCESS_AUTOMATICALLY = new_val
+        sickbeard.autoPostProcesserScheduler.check_paused()
 
         config.change_AUTOPOSTPROCESSER_FREQUENCY(autopostprocesser_frequency)
-
-        if sickbeard.PROCESS_AUTOMATICALLY:
-            sickbeard.autoPostProcesserScheduler.silent = False
-        else:
-            sickbeard.autoPostProcesserScheduler.silent = True
 
         if unpack:
             if self.isRarSupported() != 'not supported':

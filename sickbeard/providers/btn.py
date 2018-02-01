@@ -56,6 +56,7 @@ class BTNProvider(generic.TorrentProvider):
         self.ua = self.session.headers['User-Agent']
         self.reject_m2ts = False
         self.cache = BTNCache(self)
+        self.has_limit = True
 
     def _authorised(self, **kwargs):
 
@@ -66,6 +67,15 @@ class BTNProvider(generic.TorrentProvider):
         if not self.api_key and not (self.username and self.password):
             raise AuthException('Must set Api key or Username/Password for %s in config provider options' % self.name)
         return True
+
+    def _check_response(self, data, url, post_data=None, post_json=None):
+        if not self.should_skip(log_warning=False):
+            if data and 'Call Limit' in data:
+                self.tmr_limit_update('1', 'h', '150/hr %s' % data)
+                self.log_failure_url(url, post_data, post_json)
+            else:
+                logger.log(u'Action prematurely ended. %(prov)s server error response = %(desc)s' %
+                           {'prov': self.name, 'desc': data}, logger.WARNING)
 
     def _search_provider(self, search_params, age=0, **kwargs):
 
@@ -93,21 +103,19 @@ class BTNProvider(generic.TorrentProvider):
                              self.api_key, json.dumps(param_dct), items_per_page, offset))
 
                 try:
-                    response = None
+                    response, error_text = None, None
                     if api_up and self.api_key:
                         self.session.headers['Content-Type'] = 'application/json-rpc'
-                        response = helpers.getURL(
-                            self.url_api, post_data=json_rpc(params), session=self.session, json=True)
-                    if not response:
-                        api_up = False
-                        results = self.html(mode, search_string, results)
-                    error_text = response['error']['message']
-                    logger.log(
-                        ('Call Limit' in error_text
-                         and u'Action aborted because the %(prov)s 150 calls/hr limit was reached'
-                         or u'Action prematurely ended. %(prov)s server error response = %(desc)s') %
-                        {'prov': self.name, 'desc': error_text}, logger.WARNING)
-                    return results
+                        response = self.get_url(self.url_api, post_data=json_rpc(params), json=True)
+                        # response = {'error': {'message': 'Call Limit Exceeded Test'}}
+                        error_text = response['error']['message']
+                    api_up = False
+                    if 'Propers' == mode:
+                        return results
+                    results = self.html(mode, search_string, results)
+                    if not results:
+                        self._check_response(error_text, self.url_api, post_data=json_rpc(params))
+                        return results
                 except AuthException:
                     logger.log('API looks to be down, add un/pw config detail to be used as a fallback', logger.WARNING)
                 except (KeyError, Exception):
@@ -115,7 +123,7 @@ class BTNProvider(generic.TorrentProvider):
 
                 data_json = response and 'result' in response and response['result'] or {}
                 if data_json:
-
+                    self.tmr_limit_count = 0
                     found_torrents = 'torrents' in data_json and data_json['torrents'] or {}
 
                     # We got something, we know the API sends max 1000 results at a time.
@@ -134,15 +142,10 @@ class BTNProvider(generic.TorrentProvider):
                         for page in range(1, pages_needed + 1):
 
                             try:
-                                response = helpers.getURL(
-                                    self.url_api, json=True, session=self.session,
-                                    post_data=json_rpc(params, results_per_page, page * results_per_page))
+                                post_data = json_rpc(params, results_per_page, page * results_per_page)
+                                response = self.get_url(self.url_api, json=True, post_data=post_data)
                                 error_text = response['error']['message']
-                                logger.log(
-                                    ('Call Limit' in error_text
-                                     and u'Action prematurely ended because the %(prov)s 150 calls/hr limit was reached'
-                                     or u'Action prematurely ended. %(prov)s server error response = %(desc)s') %
-                                    {'prov': self.name, 'desc': error_text}, logger.WARNING)
+                                self._check_response(error_text, self.url_api, post_data=post_data)
                                 return results
                             except (KeyError, Exception):
                                 data_json = response and 'result' in response and response['result'] or {}
@@ -150,6 +153,7 @@ class BTNProvider(generic.TorrentProvider):
                             # Note that this these are individual requests and might time out individually.
                             # This would result in 'gaps' in the results. There is no way to fix this though.
                             if 'torrents' in data_json:
+                                self.tmr_limit_count = 0
                                 found_torrents.update(data_json['torrents'])
 
                     cnt = len(results)
@@ -176,7 +180,8 @@ class BTNProvider(generic.TorrentProvider):
 
         if self.username and self.password:
             return super(BTNProvider, self)._authorised(
-                post_params={'login': 'Log In!'}, logged_in=(lambda y='': 'casThe' in y[0:4096]))
+                post_params={'login': 'Log In!'},
+                logged_in=(lambda y='': 'casThe' in y[0:512] and '<title>Index' in y[0:512]))
         raise AuthException('Password or Username for %s is empty in config provider options' % self.name)
 
     def html(self, mode, search_string, results):
@@ -197,7 +202,10 @@ class BTNProvider(generic.TorrentProvider):
             search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
             search_url = self.urls['search'] % (search_string, self._categories_string(mode, 'filter_cat[%s]=1'))
 
-            html = helpers.getURL(search_url, session=self.session)
+            html = self.get_url(search_url, use_tmr_limit=False)
+            if self.should_skip(log_warning=False, use_tmr_limit=False):
+                return results
+
             cnt = len(results)
             try:
                 if not html or self._has_no_results(html):

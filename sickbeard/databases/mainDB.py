@@ -27,7 +27,8 @@ from sickbeard import encodingKludge as ek
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20006
+MAX_DB_VERSION = 20008
+TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
 class MainSanityCheck(db.DBSanityCheck):
@@ -1257,4 +1258,24 @@ class AddFlagTable(db.SchemaUpgrade):
             self.connection.action('CREATE TABLE flags (flag  PRIMARY KEY  NOT NULL )')
 
         self.setDBVersion(20006)
+        return self.checkDBVersion()
+
+
+# 20006 -> 20007
+class DBIncreaseTo20007(db.SchemaUpgrade):
+    def execute(self):
+
+        logger.log(u'Bumping database version')
+
+        self.setDBVersion(20007)
+        return self.checkDBVersion()
+
+
+# 20007 -> 20008
+class AddWebdlTypesTable(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+        self.connection.action('CREATE TABLE webdl_types (dname TEXT NOT NULL , regex TEXT NOT NULL )')
+
+        self.setDBVersion(20008)
         return self.checkDBVersion()

@@ -623,6 +623,20 @@ inc_top.tmpl
 	content:"\e900"
 }
 
+.searchadd.icon-glyph{
+	display:none
+}
+.active .searchadd.icon-glyph{
+	opacity:0.4;filter:alpha(opacity=40);
+	float:none;
+	display:inline-block;
+	margin:0 0 -2px 0;
+	height:14px
+}
+.searchadd.icon-glyph{
+	background-position:-337px 0
+}
+
 /* =======================================================================
 inc_bottom.tmpl
 ========================================================================== */
@@ -637,6 +651,27 @@ inc_bottom.tmpl
 
 .footerhighlight{
 	display:inline
+}
+
+.footer .icon-glyph{
+	opacity:0.4;filter:alpha(opacity=40);
+	float:none;
+	display:inline-block;
+	margin:0 0 -1px 2px;
+	height:12px;
+	width:14px
+}
+.footer .icon-glyph:hover{
+	opacity:0.6;filter:alpha(opacity=60);
+	cursor:pointer
+}
+.footer .icon-glyph.timeleft,
+.footer .icon-glyph.time:hover{
+	background-position:-49px -25px
+}
+.footer .icon-glyph.time,
+.footer .icon-glyph.timeleft:hover{
+	background-position:-193px -121px
 }
 
 /* =======================================================================
@@ -1103,14 +1138,14 @@ div.formpaginate{
 	margin-right:6px
 }
 
-#edit-show #customQualityWrapper .tip-text p,
-#addShowForm #customQualityWrapper .tip-text p,
-#edit-show #customQualityWrapper .tip-text em,
-#addShowForm #customQualityWrapper .tip-text em{
+#edit-show #custom-quality-wrapper .tip-text p,
+#addShowForm #custom-quality-wrapper .tip-text p,
+#edit-show #custom-quality-wrapper .tip-text em,
+#addShowForm #custom-quality-wrapper .tip-text em{
 	font-size:13px
 }
 
-#addShowForm .stepDiv #customQuality.show-if-quality-custom span.component-desc p{
+#addShowForm .stepDiv #custom-quality.show-if-quality-custom span.component-desc p{
 	font-size:12px
 }
 
@@ -2711,7 +2746,7 @@ config*.tmpl
 	color:#666
 }
 
-.stepDiv #customQualityWrapper h4{
+.stepDiv #custom-quality-wrapper h4{
 	margin-top:6px;
 	padding:0 0
 }
@@ -2743,7 +2778,7 @@ config*.tmpl
 	float:left
 }
 
-#config .nocheck, #config div #customQuality, .metadataDiv{
+#config .nocheck, #config div #custom-quality, .metadataDiv{
 	padding-left:20px
 }
 
@@ -2826,17 +2861,44 @@ select .selected:before{
 }
 
 #editShow .field-pair #SceneException h4,
-#editShow .field-pair #customQuality h4{
+#editShow .field-pair #custom-quality h4{
 	font-size:13px !important;
 }
 
 #editShow .field-pair #SceneException h4,
-#editShow .field-pair #customQuality h4{
+#editShow .field-pair #custom-quality h4{
 	margin-bottom:6px
 }
 
-#editShow .field-pair #customQuality h4{
+#editShow .field-pair #custom-quality h4{
 	line-height:normal
+}
+
+#custom-quality .btn,
+#custom-quality .btn-placeholder{
+	width:13em
+}
+#custom-quality .btn-placeholder{
+	display:inline-block;
+	border:1px transparent
+}
+
+#addShowForm #add-white,
+#addShowForm #add-black{
+	margin:0 0 10px 30px !important
+}
+#addShowForm #remove-white,
+#addShowForm #remove-black{
+	margin:0 0 0 30px !important
+}
+#edit-show #add-white,
+#edit-show #add-black{
+	margin:0 0 10px !important
+}
+
+#edit-show #remove-white,
+#edit-show #remove-black{
+	margin:0 !important
 }
 
 .test-notification{
@@ -3191,6 +3253,85 @@ input.get_less_eps{
 	display:none
 }
 
+#media-search .section{
+	padding-bottom:10px
+}
+#media-search .btn{
+	margin:0 6px 0 0;
+	min-width:70px
+}
+#media-search .btn.shows-more,
+#media-search .btn.shows-less{
+	margin:6px 6px 6px 0;
+}
+#media-search .btn.provider-retry{
+	margin:6px 0 6px 4px;
+}
+.tablesorter.provider-failures{width:auto;clear:both;margin-bottom:10px}
+.tablesorter.provider-failures > tbody > tr.tablesorter-childRow td{display:none}
+.tablesorter.provider-failures.tablesorter > tbody > tr{background-color:transparent}
+
+.provider-failures.hover-highlight th:hover::after,
+.provider-failures.hover-highlight td:hover::after,
+.provider-failures.focus-highlight th:focus::after,
+.provider-failures.focus-highlight td:focus::after{
+	content:'';
+	position:absolute;
+	width:100%;
+	height:999em;
+	left:0;
+	top:-555em;
+	z-index:-1
+}
+.provider-failures.focus-highlight th:focus::before,
+.provider-failures.focus-highlight td:focus::before{
+	content:'';
+	position:absolute;
+	width:999em;
+	height:100%;
+	left:-555em;
+	top:0;
+	z-index:-2
+}
+/* required styles */
+.provider-failures.hover-highlight,
+.provider-failures.focus-highlight{
+	overflow:hidden
+}
+.provider-failures.hover-highlight th,
+.provider-failures.hover-highlight td,
+.provider-failures.focus-highlight th,
+.provider-failures.focus-highlight td{
+	position:relative;
+	outline:0
+}
+/* override the tablesorter theme styling */
+.provider-failures.hover-highlight,
+.provider-failures.hover-highlight tbody > tr > td,
+.provider-failures.focus-highlight,
+.provider-failures.focus-highlight tbody > tr > td,
+/* override zebra styling */
+.provider-failures.hover-highlight tbody tr.even > th,
+.provider-failures.hover-highlight tbody tr.even > td,
+.provider-failures.hover-highlight tbody tr.odd > th,
+.provider-failures.hover-highlight tbody tr.odd > td,
+.provider-failures.focus-highlight tbody tr.even > th,
+.provider-failures.focus-highlight tbody tr.even > td,
+.provider-failures.focus-highlight tbody tr.odd > th,
+.provider-failures.focus-highlight tbody tr.odd > td{
+	background:transparent
+}
+/* table background positioned under the highlight */
+.provider-failures.hover-highlight td:before,
+.provider-failures.focus-highlight td:before{
+	content:'';
+	position:absolute;
+	width:100%;
+	height:100%;
+	left:0;
+	top:0;
+	z-index:-3
+}
 /* =======================================================================
 404.tmpl
 ========================================================================== */
@@ -3421,6 +3562,12 @@ img[src=""],img:not([src]){
 	position:absolute;
 	top:0;
 	left:0
+}
+
+.bfr{
+	position:absolute;
+	left:-999px;
+	top:-999px
 }
 
 /* =======================================================================
@@ -4227,6 +4374,24 @@ div.formpaginate .prev, div.formpaginate .next{
 	padding:15px
 }
 
+#import-shows .stepDiv,
+.step-three .stepDiv{
+	padding:15px 0
+}
+
+#import-shows #addShowForm{
+	width:861px
+}
+
+.step-three #custom-quality-wrapper{
+	width:831px
+}
+
+#import-shows #addShowForm .stepDiv span.component-desc,
+#addShowForm .step-three .stepDiv span.component-desc{
+	width:639px
+}
+
 .stepDiv.parent-folder{
 	padding:15px 0 0;
 	width:430px;
@@ -4238,21 +4403,21 @@ div.formpaginate .prev, div.formpaginate .next{
 }
 
 /* step 3 related */
-#edit-show #customQualityWrapper #customQuality,
-#customQuality{
+#edit-show #custom-quality-wrapper #custom-quality,
+#custom-quality{
 	display:block;
 	padding:0 0 10px 0;
 	overflow:hidden;
 	clear:both
 }
 
-#customQualityWrapper div.component-group-desc{
+#custom-quality-wrapper div.component-group-desc{
 	float:left;
 	width:172px;
 	padding:0
 }
 
-#customQualityWrapper div.component-group-desc p{
+#custom-quality-wrapper div.component-group-desc p{
 	margin:.8em 0;
 	font-size:1.2em
 }
@@ -4268,8 +4433,7 @@ tablesorter.css
 	margin-left:auto;
 	color:#000;
 /*	text-align:left;*/
-	background-color:#ddd/*;
-	border-spacing:0*/
+/*	border-spacing:0*/
 }
 
 #display-show .tablesorter{
@@ -4317,20 +4481,6 @@ tablesorter.css
 	cursor:default
 }
 
-thead.tablesorter-stickyHeader{
-	border-top:2px solid #ddd;
-	border-bottom:2px solid #ddd
-}
-
-/* Zebra Widget - row alternating colors */
-.tablesorter tr.odd, .sickbeardTable tr.odd{
-	background-color:#f5f1e4
-}
-
-.tablesorter tr.even, .sickbeardTable tr.even{
-	background-color:#dfdacf
-}
-
 /* filter widget */
 .tablesorter .filtered{
 	display:none
@@ -4346,9 +4496,7 @@ thead.tablesorter-stickyHeader{
 
 .tablesorter tr.tablesorter-filter-row,
 .tablesorter tr.tablesorter-filter-row td{
-	text-align:center;
-	background:#eee;
-	border-bottom:1px solid #ddd
+	text-align:center
 }
 
 /* optional disabled input styling */
@@ -4362,10 +4510,7 @@ thead.tablesorter-stickyHeader{
 }*/
 
 .tablesorter tfoot tr{
-	color:#ddd;
 	text-align:center;
-	text-shadow:-1px -1px 0 rgba(0, 0, 0, 0.3);
-	background-color:#333;
 	border-collapse:collapse
 }
 

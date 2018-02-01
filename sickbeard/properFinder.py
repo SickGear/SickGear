@@ -27,27 +27,28 @@ import sickbeard
 
 from sickbeard import db, exceptions, helpers, history, logger, search, show_name_helpers
 from sickbeard import encodingKludge as ek
-from sickbeard.common import DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER, Quality, ARCHIVED, FAILED
+from sickbeard.common import DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER, Quality, ARCHIVED, FAILED, neededQualities
 from sickbeard.exceptions import ex, MultipleShowObjectsException
 from sickbeard import failed_history
 from sickbeard.history import dateFormat
+from sickbeard.sbdatetime import sbdatetime
 
 from name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 
-def search_propers():
+def search_propers(proper_list=None):
 
     if not sickbeard.DOWNLOAD_PROPERS:
         return
 
-    logger.log(u'Beginning search for new propers')
+    logger.log(('Checking propers from recent search', 'Beginning search for new propers')[None is proper_list])
 
     age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
     aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
     aired_since_anime = datetime.datetime.today() - datetime.timedelta(days=age_anime)
     recent_shows, recent_anime = _recent_history(aired_since_shows, aired_since_anime)
     if recent_shows or recent_anime:
-        propers = _get_proper_list(aired_since_shows, recent_shows, recent_anime)
+        propers = _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_list=proper_list)
 
         if propers:
             _download_propers(propers)
@@ -55,52 +56,59 @@ def search_propers():
         logger.log(u'No downloads or snatches found for the last %s%s days to use for a propers search' %
                    (age_shows, ('', ' (%s for anime)' % age_anime)[helpers.has_anime()]))
 
-    _set_last_proper_search(datetime.datetime.today().toordinal())
-
     run_at = ''
-    proper_sch = sickbeard.properFinderScheduler
-    if None is proper_sch.start_time:
-        run_in = proper_sch.lastRun + proper_sch.cycleTime - datetime.datetime.now()
-        run_at = u', next check '
-        if datetime.timedelta() > run_in:
-            run_at += u'imminent'
-        else:
-            hours, remainder = divmod(run_in.seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            run_at += u'in approx. ' + ('%dh, %dm' % (hours, minutes) if 0 < hours else '%dm, %ds' % (minutes, seconds))
+    if None is proper_list:
+        _set_last_proper_search(datetime.datetime.now())
 
-    logger.log(u'Completed the search for new propers%s' % run_at)
+        proper_sch = sickbeard.properFinderScheduler
+        if None is proper_sch.start_time:
+            run_in = proper_sch.lastRun + proper_sch.cycleTime - datetime.datetime.now()
+            run_at = u', next check '
+            if datetime.timedelta() > run_in:
+                run_at += u'imminent'
+            else:
+                hours, remainder = divmod(run_in.seconds, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                run_at += u'in approx. ' + ('%dh, %dm' % (hours, minutes) if 0 < hours else
+                                            '%dm, %ds' % (minutes, seconds))
+
+        logger.log(u'Completed search for new propers%s' % run_at)
+    else:
+        logger.log(u'Completed checking propers from recent search')
 
 
-def get_old_proper_level(showObj, indexer, indexerid, season, episodes, old_status, new_quality,
+def get_old_proper_level(show_obj, indexer, indexerid, season, episodes, old_status, new_quality,
                          extra_no_name, version, is_anime=False):
     level = 0
     is_internal = False
     codec = ''
+    rel_name = None
     if old_status not in SNATCHED_ANY:
         level = Quality.get_proper_level(extra_no_name, version, is_anime)
-    elif showObj:
-        myDB = db.DBConnection()
-        np = NameParser(False, showObj=showObj)
+    elif show_obj:
+        my_db = db.DBConnection()
+        np = NameParser(False, showObj=show_obj)
         for episode in episodes:
-            result = myDB.select('SELECT resource FROM history WHERE showid = ? AND season = ? AND episode = ? AND '
-                                 '(' + ' OR '.join("action LIKE '%%%02d'" % x for x in SNATCHED_ANY) + ') '
-                                 'ORDER BY date DESC LIMIT 1',
-                                 [indexerid, season, episode])
+            result = my_db.select('SELECT resource FROM history WHERE showid = ? AND season = ? AND episode = ? AND '
+                                  '(' + ' OR '.join("action LIKE '%%%02d'" % x for x in SNATCHED_ANY) + ') '
+                                  'ORDER BY date DESC LIMIT 1',
+                                  [indexerid, season, episode])
             if not result or not isinstance(result[0]['resource'], basestring) or not result[0]['resource']:
                 continue
-            nq = Quality.sceneQuality(result[0]['resource'], showObj.is_anime)
+            nq = Quality.sceneQuality(result[0]['resource'], show_obj.is_anime)
             if nq != new_quality:
                 continue
             try:
                 p = np.parse(result[0]['resource'])
             except (StandardError, Exception):
                 continue
-            level = Quality.get_proper_level(p.extra_info_no_name(), p.version, showObj.is_anime)
+            level = Quality.get_proper_level(p.extra_info_no_name(), p.version, show_obj.is_anime)
+            extra_no_name = p.extra_info_no_name()
+            rel_name = result[0]['resource']
             is_internal = p.extra_info_no_name() and re.search(r'\binternal\b', p.extra_info_no_name(), flags=re.I)
             codec = _get_codec(p.extra_info_no_name())
             break
-    return level, is_internal, codec
+    return level, is_internal, codec, extra_no_name, rel_name
 
 
 def _get_codec(extra_info_no_name):
@@ -110,12 +118,66 @@ def _get_codec(extra_info_no_name):
         return '264'
     elif re.search(r'\bxvid\b', extra_info_no_name, flags=re.I):
         return 'xvid'
-    elif re.search(r'\b[xh]265|hevc\b', extra_info_no_name, flags=re.I):
+    elif re.search(r'\b[xh]\W?265|hevc\b', extra_info_no_name, flags=re.I):
         return 'hevc'
     return ''
 
 
-def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
+def get_webdl_type(extra_info_no_name, rel_name):
+    if not sickbeard.WEBDL_TYPES:
+        load_webdl_types()
+
+    for t in sickbeard.WEBDL_TYPES:
+        try:
+            if re.search(r'\b%s\b' % t[1], extra_info_no_name, flags=re.I):
+                return t[0]
+        except (StandardError, Exception):
+            continue
+
+    return ('webdl', 'webrip')[None is re.search(r'\bweb.?dl\b', rel_name, flags=re.I)]
+
+
+def load_webdl_types():
+    new_types = []
+    default_types = [('Amazon', r'AMZN|AMAZON'), ('Netflix', r'NETFLIX|NF'), ('Hulu', r'HULU')]
+    url = 'https://raw.githubusercontent.com/SickGear/sickgear.extdata/master/SickGear/webdl_types.txt'
+    url_data = helpers.getURL(url)
+
+    my_db = db.DBConnection()
+    sql_results = my_db.select('SELECT * FROM webdl_types')
+    old_types = [(r['dname'], r['regex']) for r in sql_results]
+
+    if isinstance(url_data, basestring) and url_data.strip():
+        try:
+            for line in url_data.splitlines():
+                try:
+                    (key, val) = line.decode('utf-8').strip().split(u'::', 1)
+                except (StandardError, Exception):
+                    continue
+                if key is None or val is None:
+                    continue
+                new_types.append((key, val))
+        except (IOError, OSError):
+            pass
+
+        cl = []
+        for nt in new_types:
+            if nt not in old_types:
+                cl.append(['REPLACE INTO webdl_types (dname, regex) VALUES (?,?)', [nt[0], nt[1]]])
+
+        for ot in old_types:
+            if ot not in new_types:
+                cl.append(['DELETE FROM webdl_types WHERE dname = ? AND regex = ?', [ot[0], ot[1]]])
+
+        if cl:
+            my_db.mass_action(cl)
+    else:
+        new_types = old_types
+
+    sickbeard.WEBDL_TYPES = new_types + default_types
+
+
+def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_list=None):
     propers = {}
 
     # for each provider get a list of the
@@ -124,22 +186,28 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
     for cur_provider in providers:
         if not recent_anime and cur_provider.anime_only:
             continue
-        threading.currentThread().name = orig_thread_name + ' :: [' + cur_provider.name + ']'
 
-        logger.log(u'Searching for new PROPER releases')
+        if None is not proper_list:
+            found_propers = proper_list.get(cur_provider.get_id(), [])
+            if not found_propers:
+                continue
+        else:
+            threading.currentThread().name = orig_thread_name + ' :: [' + cur_provider.name + ']'
 
-        try:
-            found_propers = cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows,
-                                                      anime=recent_anime)
-        except exceptions.AuthException as e:
-            logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
-            continue
-        except Exception as e:
-            logger.log(u'Error while searching ' + cur_provider.name + ', skipping: ' + ex(e), logger.ERROR)
-            logger.log(traceback.format_exc(), logger.ERROR)
-            continue
-        finally:
-            threading.currentThread().name = orig_thread_name
+            logger.log(u'Searching for new PROPER releases')
+
+            try:
+                found_propers = cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows,
+                                                          anime=recent_anime)
+            except exceptions.AuthException as e:
+                logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
+                continue
+            except Exception as e:
+                logger.log(u'Error while searching ' + cur_provider.name + ', skipping: ' + ex(e), logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
+                continue
+            finally:
+                threading.currentThread().name = orig_thread_name
 
         # if they haven't been added by a different provider than add the proper to the list
         count = 0
@@ -162,7 +230,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
                                                                               parse_result.is_anime,
                                                                               check_is_repack=True)
                         x.is_internal = parse_result.extra_info_no_name() and \
-                                        re.search(r'\binternal\b', parse_result.extra_info_no_name(), flags=re.I)
+                            re.search(r'\binternal\b', parse_result.extra_info_no_name(), flags=re.I)
                         x.codec = _get_codec(parse_result.extra_info_no_name())
                         propers[name] = x
                         count += 1
@@ -255,11 +323,12 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
         except (StandardError, Exception):
             extra_info = None
 
-        old_proper_level, old_is_internal, old_codec = get_old_proper_level(parse_result.show, cur_proper.indexer,
-                                                                            cur_proper.indexerid, cur_proper.season,
-                                                                            parse_result.episode_numbers, old_status,
-                                                                            cur_proper.quality, extra_info,
-                                                                            cur_proper.version, cur_proper.is_anime)
+        old_proper_level, old_is_internal, old_codec, old_extra_no_name, old_name = \
+            get_old_proper_level(parse_result.show, cur_proper.indexer, cur_proper.indexerid, cur_proper.season,
+                                 parse_result.episode_numbers, old_status, cur_proper.quality, extra_info,
+                                 cur_proper.version, cur_proper.is_anime)
+
+        old_name = (old_name, sql_results[0]['release_name'])[old_name in ('', None)]
         if cur_proper.proper_level < old_proper_level:
             continue
         elif cur_proper.proper_level == old_proper_level:
@@ -273,11 +342,20 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime):
         log_same_grp = 'Skipping proper from release group: [%s], does not match existing release group: [%s] for [%s]'\
                        % (cur_proper.release_group, old_release_group, cur_proper.name)
 
+        is_web = (old_quality in (Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB) or
+                  (old_quality == Quality.SDTV and re.search(r'\Wweb.?(dl|rip|.[hx]26[45])\W',
+                                                             str(sql_results[0]['release_name']), re.I)))
+
+        if is_web:
+            old_webdl_type = get_webdl_type(old_extra_no_name, old_name)
+            new_webdl_type = get_webdl_type(cur_proper.extra_info_no_name(), cur_proper.name)
+            if old_webdl_type != new_webdl_type:
+                logger.log('Skipping proper webdl source: [%s], does not match existing webdl source: [%s] for [%s]'
+                           % (old_webdl_type, new_webdl_type, cur_proper.name), logger.DEBUG)
+                continue
+
         # for webldls, prevent propers from different groups
-        if sickbeard.PROPERS_WEBDL_ONEGRP and \
-                (old_quality in (Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB) or
-                    (old_quality == Quality.SDTV and re.search(r'\Wweb.?(dl|rip|.[hx]26[45])\W', str(sql_results[0]['release_name']), re.I))) and \
-                cur_proper.release_group != old_release_group:
+        if sickbeard.PROPERS_WEBDL_ONEGRP and is_web and cur_proper.release_group != old_release_group:
             logger.log(log_same_grp, logger.DEBUG)
             continue
 
@@ -375,6 +453,46 @@ def _download_propers(proper_list):
             search.snatch_episode(result, SNATCHED_PROPER)
 
 
+def get_needed_qualites(needed=None):
+    if not isinstance(needed, neededQualities):
+        needed = neededQualities()
+    if not sickbeard.DOWNLOAD_PROPERS or needed.all_needed:
+        return needed
+
+    age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
+    aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
+    aired_since_anime = datetime.datetime.today() - datetime.timedelta(days=age_anime)
+
+    my_db = db.DBConnection()
+    sql_results = my_db.select(
+        'SELECT DISTINCT s.indexer, s.indexer_id, e.season, e.episode FROM history as h' +
+        ' INNER JOIN tv_episodes AS e ON (h.showid == e.showid AND h.season == e.season AND h.episode == e.episode)' +
+        ' INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id)' +
+        ' WHERE h.date >= %s' % min(aired_since_shows, aired_since_anime).strftime(dateFormat) +
+        ' AND (%s)' % ' OR '.join(['h.action LIKE "%%%02d"' % x for x in SNATCHED_ANY + [DOWNLOADED, FAILED]])
+    )
+
+    for sql_episode in sql_results:
+        if needed.all_needed:
+            break
+        try:
+            show = helpers.find_show_by_id(
+                sickbeard.showList, {int(sql_episode['indexer']): int(sql_episode['indexer_id'])})
+        except MultipleShowObjectsException:
+            continue
+        if show:
+            needed.check_needed_types(show)
+            if needed.all_show_qualities_needed(show) or needed.all_qualities_needed:
+                continue
+            ep_obj = show.getEpisode(season=sql_episode['season'], episode=sql_episode['episode'])
+            if ep_obj:
+                ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                if ep_status in SNATCHED_ANY + [DOWNLOADED, ARCHIVED]:
+                    needed.check_needed_qualities([ep_quality])
+
+    return needed
+
+
 def _recent_history(aired_since_shows, aired_since_anime):
 
     recent_shows, recent_anime = [], []
@@ -418,19 +536,23 @@ def _set_last_proper_search(when):
 
     if 0 == len(sql_results):
         my_db.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
-                     [0, 0, str(when)])
+                     [0, 0, sbdatetime.totimestamp(when)])
     else:
-        my_db.action('UPDATE info SET last_proper_search=%s' % when)
+        my_db.action('UPDATE info SET last_proper_search=%s' % sbdatetime.totimestamp(when))
 
 
-def _get_last_proper_search():
+def next_proper_timeleft():
+    return sickbeard.properFinderScheduler.timeLeft()
+
+
+def get_last_proper_search():
 
     my_db = db.DBConnection()
     sql_results = my_db.select('SELECT * FROM info')
 
     try:
-        last_proper_search = datetime.date.fromordinal(int(sql_results[0]['last_proper_search']))
+        last_proper_search = int(sql_results[0]['last_proper_search'])
     except (StandardError, Exception):
-        return datetime.date.fromordinal(1)
+        return 1
 
     return last_proper_search

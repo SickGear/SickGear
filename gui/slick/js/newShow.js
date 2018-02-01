@@ -251,7 +251,7 @@ $(document).ready(function () {
 		$('#addShowForm').submit();
 	});
 
-	$('#qualityPreset').change(function () {
+	$('#quality-preset').change(function () {
 		myform.loadsection(2);
 	});
 

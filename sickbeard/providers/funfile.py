@@ -66,6 +66,8 @@ class FunFileProvider(generic.TorrentProvider):
                 search_url = self.urls['search'] % (self._categories_string(mode), search_string)
 
                 html = self.get_url(search_url, timeout=self.url_timeout)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:

@@ -3,15 +3,15 @@
 
 #set $html_selected = ' selected="selected"'
 <div class="field-pair">
-	<label for="qualityPreset" class="clearfix">
-#set $overall_quality = $Quality.combineQualities($anyQualities, $bestQualities)
+	<label for="quality-preset" class="clearfix">
+#set $overall_quality = $Quality.combineQualities($any_qualities, $best_qualities)
 		<span class="component-title input">Quality to download</span>
 		<span class="component-desc">
 #set $selected = None
-			<select id="qualityPreset" name="quality_preset" class="form-control form-control-inline input-sm">
+			<select id="quality-preset" name="quality_preset" class="form-control form-control-inline input-sm">
 				<option value="0">Custom</option>
-#for $curPreset in $qualityPresets:
-				<option value="$curPreset"#echo ('', $html_selected)[$curPreset == $overall_quality]##echo ('', ' style="padding-left:15px"')[$qualityPresetStrings[$curPreset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$curPreset]]#>$qualityPresetStrings[$curPreset]</option>
+#for $cur_preset in $qualityPresets:
+				<option value="$cur_preset"#echo ('', $html_selected)[$cur_preset == $overall_quality]##echo ('', ' style="padding-left:15px"')[$qualityPresetStrings[$cur_preset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$cur_preset]]#>$qualityPresetStrings[$cur_preset]</option>
 #end for
 			</select>
 			<span>tip: select a quality then "Custom" for a default selection</span>
@@ -19,43 +19,76 @@
 	</label>
 </div>
 
-<div id="customQualityWrapper">
-	<div id="customQuality" class="show-if-quality-custom" style="display:none">
-		<div class="component-group-desc tip-text">
-			<p>An <em class="highlight-text">Initial</em> quality downloads before any <em class="highlight-text">Upgrade to</em> selections are considered.</p>
-			<p>Deselect all <em class="highlight-text">Upgrade to</em> qualities to keep the first best <em class="highlight-text">Initial</em> release found.</p>
-			<p>All found <em class="highlight-text">Upgrade to</em> qualities download until the best.</p>
+<div id="custom-quality-wrapper">
+	<div id="custom-quality" class="show-if-quality-custom" style="display:none">
+		<div class="field-pair">
+			<div class="component-group-desc tip-text">
+				<p style="margin-bottom:25px">An <em class="highlight-text">initial</em> quality downloads before optional upgrades</p>
+
+				<p id="unknown-quality" style="display:none">
+					Temporarily use <em class="red-text">'Unknown'</em> to skip release qual checks.
+					Results in spam if left on
+				</p>
+			</div>
+
+			<span id="initial-quality" class="component-desc">
+				<p>Select one or more qualities; the best one found when searching will be snatched</p>
+#set $any_quality_list = filter(lambda x: x > $Quality.NONE and x < $Quality.UNKNOWN, $Quality.qualityStrings)
+#set $has_unknown = False
+#for $cur_quality in sorted($any_quality_list):
+    ##set $has_unknown |= ($Quality.UNKNOWN == $cur_quality and $cur_quality in $any_qualities)
+				<a href="#" data-quality="$cur_quality" class="btn btn-inverse dark-bg#echo ('', ' active')[$cur_quality in $any_qualities]#" role="button"><i class="icon-glyph searchadd"></i>$Quality.get_quality_ui($cur_quality)</a>
+    #if $Quality.UHD4KWEB == $cur_quality
+				<span class="btn-placeholder"></span>
+				<span class="btn-placeholder"></span>
+				<a href="#" data-quality="$Quality.UNKNOWN" class="btn btn-inverse dark-bg#echo ('', ' active')[$Quality.UNKNOWN in $any_qualities]#" role="button"><i class="icon-glyph searchadd"></i>$Quality.get_quality_ui($Quality.UNKNOWN)</a>
+
+    #end if
+    #if $cur_quality in [$Quality.SDDVD, $Quality.FULLHDTV, $Quality.FULLHDBLURAY, $Quality.UHD4KWEB]
+				<br>
+    #end if
+#end for
+			</span>
 		</div>
 
-		<span class="component-desc">
+		<div class="field-pair" style="clear:both">
+			<div class="component-group-desc tip-text">
+				<p style="margin-bottom:25px">All found <em class="highlight-text">upgrade</em> qualities download until the best</p>
+
+				<p id="no-upgrade" style="display:none">No <em class="highlight-text">upgrades</em> selected, an <em class="highlight-text">initial</em> snatch will complete any search</p>
+				<p id="upgrade-cond" style="display:none">An <em class="highlight-text">upgrade</em> will only search after an <em class="highlight-text">initial</em> has complete</p>
+			</div>
+			<span id="upgrade-quality" class="component-desc">
+				<p>Optional, upgrade a completed download to any selected quality</p>
+#set $best_quality_list = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
+#for $cur_quality in sorted($best_quality_list):
+				<a href="#" data-quality="$cur_quality" class="btn btn-inverse dark-bg#echo ('', ' active')[$cur_quality in $best_qualities]#" role="button"><i class="icon-glyph searchadd"></i>$Quality.get_quality_ui($cur_quality)</a>
+    #if $cur_quality in [$Quality.SDDVD, $Quality.FULLHDTV, $Quality.FULLHDBLURAY]
+				<br>
+    #end if
+#end for
+			</span>
+		</div>
+
+		<span class="component-desc bfr">
 			<div style="float:left;padding-right:28px">
 				<h4 class="jumbo">Initial</h4>
-#set $anyQualityList = filter(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
-				<select id="anyQualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)" class="form-control form-control-inline input-sm">
-#set $has_unknown = False
-#for $curQuality in sorted($anyQualityList):
-    #set $has_unknown |= ($Quality.UNKNOWN == $curQuality and $curQuality in $anyQualities)
-					<option value="$curQuality"#echo ('', $html_selected)[$curQuality in $anyQualities]#>$Quality.qualityStrings[$curQuality]</option>
+#set $any_quality_list = filter(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
+				<select id="initial-qualities" name="anyQualities" multiple="multiple" size="$len($any_quality_list)" class="form-control form-control-inline input-sm">
+#for $cur_quality in sorted($any_quality_list):
+					<option value="$cur_quality"#echo ('', $html_selected)[$cur_quality in $any_qualities]#>$Quality.get_quality_ui($cur_quality)</option>
 #end for
 				</select>
 			</div>
 
 			<div style="float:left;padding-right:20px">
 				<h4 class="jumbo">Upgrade to</h4>
-#set $bestQualityList = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
-				<select id="bestQualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)" class="form-control form-control-inline input-sm">
-#for $curQuality in sorted($bestQualityList):
-					<option value="$curQuality"#echo ('', $html_selected)[$curQuality in $bestQualities]#>$Quality.qualityStrings[$curQuality]</option>
+#set $best_quality_list = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
+				<select id="upgrade-qualities" name="bestQualities" multiple="multiple" size="$len($best_quality_list)" class="form-control form-control-inline input-sm">
+#for $cur_quality in sorted($best_quality_list):
+					<option value="$cur_quality"#echo ('', $html_selected)[$cur_quality in $best_qualities]#>$Quality.get_quality_ui($cur_quality)</option>
 #end for
 				</select><br />
-				<span>Ctrl + Click = toggle a quality</span>
-			</div>
-
-			<div style="line-height:normal;padding-top:50px" id="quality-notes" class="tip-text">
-				<p id="unknown"#if not $has_unknown# style="display:none"#end if#>
-					<em class="highlight-text">Note:</em> Temporarily use 'Unknown' for releases with no recognised quality.
-					Full-time use risks snatching bad releases and wastes API hits.
-				</p>
 			</div>
 		</span>
 	</div>

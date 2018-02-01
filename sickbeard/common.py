@@ -152,6 +152,10 @@ class Quality:
                 .replace('720p', 'HD720p').replace('HD TV', 'HD720p').replace('RawHD TV', 'RawHD'))
 
     @staticmethod
+    def get_quality_ui(quality):
+        return Quality.qualityStrings[quality].replace('SD DVD', 'SD DVD/BR/BD')
+
+    @staticmethod
     def _getStatusStrings(status):
         toReturn = {}
         for x in Quality.qualityStrings.keys():
@@ -545,6 +549,24 @@ class neededQualities(object):
     def all_qualities_needed(self, v):
         if isinstance(v, bool) and True is v:
             self.need_sd = self.need_hd = self.need_uhd = self.need_webdl = True
+
+    def all_show_qualities_needed(self, show):
+        from sickbeard.tv import TVShow
+        if isinstance(show, TVShow):
+            init, upgrade = Quality.splitQuality(show.quality)
+            all_qual = set(init + upgrade)
+            need_sd = need_hd = need_uhd = need_webdl = False
+            for wanted_qualities in all_qual:
+                if not need_sd and wanted_qualities <= neededQualities.max_sd:
+                    need_sd = True
+                if not need_hd and wanted_qualities in neededQualities.hd_qualities:
+                    need_hd = True
+                if not need_webdl and wanted_qualities in neededQualities.webdl_qualities:
+                    need_webdl = True
+                if not need_uhd and wanted_qualities > neededQualities.max_hd:
+                    need_uhd = True
+            return self.need_sd == need_sd and self.need_hd == need_hd and self.need_webdl == need_webdl and \
+                self.need_uhd == need_uhd
 
     def check_needed_types(self, show):
         if getattr(show, 'is_anime', False):

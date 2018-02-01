@@ -134,7 +134,7 @@
         #if $SUBTITLED == $curStatus
 					<img width="16" height="11" src="$sbRoot/images/flags/<%= hItem["resource"][len(hItem["resource"])-6:len(hItem["resource"])-4] + '.png' %>">
         #end if
-					<span class="help" title="$os.path.basename($hItem["resource"])">$statusStrings[$curStatus]</span>
+					<span class="help" title="$os.path.basename($hItem["resource"])">$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</span>
 				</td>
 				<td class="provider">
         #if $DOWNLOADED == $curStatus
@@ -156,7 +156,7 @@
             #end if
         #end if
 				</td>
-				<td><span class="hide">$curQuality</span><span class="quality $Quality.get_quality_css($curQuality)">$Quality.qualityStrings[$curQuality]</span></td>
+				<td><span class="hide">$curQuality</span><span class="quality $Quality.get_quality_css($curQuality)">$Quality.get_quality_ui($curQuality)</span></td>
 			</tr>
     #end for
 
@@ -258,7 +258,7 @@
             #end for
 				</td>
         #end if
-				<td quality="$curQuality"><span class="quality $Quality.get_quality_css($curQuality)">$Quality.qualityStrings[$curQuality]</span></td>
+				<td quality="$curQuality"><span class="quality $Quality.get_quality_css($curQuality)">$Quality.get_quality_ui($curQuality)</span></td>
 			</tr>
     #end for
 

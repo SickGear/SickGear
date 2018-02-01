@@ -143,7 +143,7 @@ def snatch_episode(result, end_status=SNATCHED):
             # make sure we have the torrent file content
             if not result.content and not result.url.startswith('magnet'):
                 result.content = result.provider.get_url(result.url)
-                if not result.content:
+                if result.provider.should_skip() or not result.content:
                     logger.log(u'Torrent content failed to download from %s' % result.url, logger.ERROR)
                     return False
             # Snatches torrent with client
@@ -465,10 +465,17 @@ def search_for_needed_episodes(episodes):
                 best_result.content = None
                 if not best_result.url.startswith('magnet'):
                     best_result.content = best_result.provider.get_url(best_result.url)
+                    if best_result.provider.should_skip():
+                        break
                     if not best_result.content:
                         continue
 
             found_results[cur_ep] = best_result
+
+            try:
+                cur_provider.save_list()
+            except (StandardError, Exception):
+                pass
 
     threading.currentThread().name = orig_thread_name
 

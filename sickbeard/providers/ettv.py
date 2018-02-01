@@ -62,6 +62,8 @@ class ETTVProvider(generic.TorrentProvider):
                     self._categories_string(mode), ('%2B ', '')['Cache' == mode] + '.'.join(search_string.split()))
 
                 html = self.get_url(search_url)
+                if self.should_skip():
+                    return results
 
                 cnt = len(items[mode])
                 try:
@@ -110,6 +112,9 @@ class ETTVProvider(generic.TorrentProvider):
     def get_data(self, url):
         result = None
         html = self.get_url(url, timeout=90)
+        if self.should_skip():
+            return result
+
         try:
             result = re.findall('(?i)"(magnet:[^"]+?)">', html)[0]
         except IndexError:

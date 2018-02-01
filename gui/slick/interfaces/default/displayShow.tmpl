@@ -295,7 +295,7 @@
 					<div>
 						<span class="details-title">Initial</span>
 						<span class="details-info">
-							#echo ', '.join([$Quality.qualityStrings[$x] for $x in sorted($anyQualities)])#
+							#echo ', '.join([$Quality.get_quality_ui($x) for $x in sorted($anyQualities)])#
 						</span>
 					</div>
     #end if
@@ -303,7 +303,7 @@
 					<div>
 						<span class="details-title">Upgrade to</span>
 						<span class="details-info">
-							#echo ', '.join([$Quality.qualityStrings[$x] for $x in sorted($bestQualities)])#
+							#echo ', '.join([$Quality.get_quality_ui($x) for $x in sorted($bestQualities)])#
 						</span>
 					</div>
     #end if
@@ -396,7 +396,7 @@
 			<optgroup label="Downloaded">
 #for $curStatus in sorted($Quality.DOWNLOADED)
     #if $DOWNLOADED != $curStatus
-				<option value="$curStatus">$re.sub('Downloaded\s*\(([^\)]+)\)', r'\1', $statusStrings[$curStatus])</option>
+				<option value="$curStatus">$re.sub('Downloaded\s*\(([^\)]+)\)', r'\1', $statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD'))</option>
     #end if
 #end for
 			<option value="$DOWNLOADED">with archived quality</option>
