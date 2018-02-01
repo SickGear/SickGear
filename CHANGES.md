@@ -1,4 +1,4 @@
-﻿### 0.14.0 (2018-xx-xx xx:xx:xx UTC)
+﻿### 0.14.0 (2018-02-01 02:30:00 UTC)
 
 * Change improve core scheduler logic
 * Change improve media process to parse anime format 'Show Name 123 - 001 - Ep 1 name'
@@ -14,17 +14,6 @@
 * Change layout of quality custom to improve clarity
 * Change tweak text of SD DVD to include BD/BR
 * Change TBy prov add UHD cat
-
-
-[develop changelog]
-
-* Fix Events shutdown (a manual start-up is required after updating to this fix)
-* Add 'PB', 'EB', 'ZB', 'YB' to output size formats
-* Fix save option display freespace
-* Fix load web dl types from db if url fetching fails
-* Change ManageSearches layout between collapsed Provider Failures tables from single to multi line
-* Fix display show page episode font color for Proview I
-* Fix web type detection for new propers
 
 
 ### 0.13.15 (2018-01-26 10:30:00 UTC)
