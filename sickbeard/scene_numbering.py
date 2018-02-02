@@ -694,3 +694,66 @@ def fix_xem_numbering(indexer_id, indexer):
     if 0 < len(cl):
         my_db = db.DBConnection()
         my_db.mass_action(cl)
+
+
+def set_scene_numbering_helper(indexerid, indexer, forSeason=None, forEpisode=None, forAbsolute=None,
+                               sceneSeason=None, sceneEpisode=None, sceneAbsolute=None):
+    # sanitize:
+    indexerid = None if indexerid in [None, 'null', ''] else int(indexerid)
+    indexer = None if indexer in [None, 'null', ''] else int(indexer)
+
+    show_obj = sickbeard.helpers.find_show_by_id(sickbeard.showList, {indexer: indexerid}, no_mapped_ids=True)
+
+    if not show_obj:
+        result = {'success': False}
+        return result
+
+    if not show_obj.is_anime:
+        for_season = None if forSeason in [None, 'null', ''] else int(forSeason)
+        for_episode = None if forEpisode in [None, 'null', ''] else int(forEpisode)
+        scene_season = None if sceneSeason in [None, 'null', ''] else int(sceneSeason)
+        scene_episode = None if sceneEpisode in [None, 'null', ''] else int(sceneEpisode)
+        action_log = u'Set episode scene numbering to %sx%s for episode %sx%s of "%s"' \
+                     % (scene_season, scene_episode, for_season, for_episode, show_obj.name)
+        ep_args = {'show': indexerid, 'season': for_season, 'episode': for_episode}
+        scene_args = {'indexer_id': indexerid, 'indexer': indexer, 'season': for_season, 'episode': for_episode,
+                      'sceneSeason': scene_season, 'sceneEpisode': scene_episode}
+        result = {'forSeason': for_season, 'forEpisode': for_episode, 'sceneSeason': None, 'sceneEpisode': None}
+    else:
+        for_absolute = None if forAbsolute in [None, 'null', ''] else int(forAbsolute)
+        scene_absolute = None if sceneAbsolute in [None, 'null', ''] else int(sceneAbsolute)
+        action_log = u'Set absolute scene numbering to %s for episode %s of "%s"' \
+                     % (scene_absolute, for_absolute, show_obj.name)
+        ep_args = {'show': indexerid, 'absolute': for_absolute}
+        scene_args = {'indexer_id': indexerid, 'indexer': indexer, 'absolute_number': for_absolute,
+                      'sceneAbsolute': scene_absolute}
+        result = {'forAbsolute': for_absolute, 'sceneAbsolute': None}
+
+    if ep_args.get('absolute'):
+        ep_obj = show_obj.getEpisode(absolute_number=int(ep_args['absolute']))
+    elif None is not ep_args['season'] and None is not ep_args['episode']:
+        ep_obj = show_obj.getEpisode(int(ep_args['season']), int(ep_args['episode']))
+    else:
+        ep_obj = 'Invalid paramaters'
+
+    if ep_obj is None:
+        ep_obj = "Episode couldn't be retrieved"
+
+    result['success'] = not isinstance(ep_obj, str)
+    if result['success']:
+        logger.log(action_log, logger.DEBUG)
+        set_scene_numbering(**scene_args)
+        show_obj.flushEpisodes()
+    else:
+        result['errorMessage'] = ep_obj
+
+    if not show_obj.is_anime:
+        scene_numbering = get_scene_numbering(indexerid, indexer, for_season, for_episode)
+        if scene_numbering:
+            (result['sceneSeason'], result['sceneEpisode']) = scene_numbering
+    else:
+        scene_numbering = get_scene_absolute_numbering(indexerid, indexer, for_absolute)
+        if scene_numbering:
+            result['sceneAbsolute'] = scene_numbering
+
+    return result

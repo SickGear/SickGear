@@ -51,7 +51,7 @@ from sickbeard.helpers import has_image_ext, remove_article, starify
 from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_TRAKT
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
-    get_scene_absolute_numbering
+    get_scene_absolute_numbering, set_scene_numbering_helper
 from sickbeard.name_cache import buildNameCache
 from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
@@ -145,6 +145,13 @@ class BaseHandler(RequestHandler):
             return self.get_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT))
         return True
 
+    def getImage(self, image):
+        if ek.ek(os.path.isfile, image):
+            mime_type, encoding = MimeTypes().guess_type(image)
+            self.set_header('Content-Type', mime_type)
+            with ek.ek(open, image, 'rb') as img:
+                return img.read()
+
     def showPoster(self, show=None, which=None, api=None):
         # Redirect initial poster/banner thumb to default images
         if 'poster' == which[0:6]:
@@ -175,9 +182,14 @@ class BaseHandler(RequestHandler):
                 static_image_path = image_file_name
 
         if api:
+            used_file = ek.ek(os.path.basename, static_image_path)
+            if static_image_path.startswith('/images'):
+                used_file = 'default'
+                static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', static_image_path[1:])
             mime_type, encoding = MimeTypes().guess_type(static_image_path)
             self.set_header('Content-Type', mime_type)
-            with open(static_image_path, 'rb') as img:
+            self.set_header('X-Filename', used_file)
+            with ek.ek(open, static_image_path, 'rb') as img:
                 return img.read()
         else:
             static_image_path = os.path.normpath(static_image_path.replace(sickbeard.CACHE_DIR, '/cache'))
@@ -2458,50 +2470,8 @@ class Home(MainHandler):
     def setSceneNumbering(self, show, indexer, forSeason=None, forEpisode=None, forAbsolute=None, sceneSeason=None,
                           sceneEpisode=None, sceneAbsolute=None):
 
-        # sanitize:
-        show = None if show in [None, 'null', ''] else int(show)
-        indexer = None if indexer in [None, 'null', ''] else int(indexer)
-
-        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, show)
-
-        if not show_obj.is_anime:
-            for_season = None if forSeason in [None, 'null', ''] else int(forSeason)
-            for_episode = None if forEpisode in [None, 'null', ''] else int(forEpisode)
-            scene_season = None if sceneSeason in [None, 'null', ''] else int(sceneSeason)
-            scene_episode = None if sceneEpisode in [None, 'null', ''] else int(sceneEpisode)
-            action_log = u'Set episode scene numbering to %sx%s for episode %sx%s of "%s"'\
-                         % (scene_season, scene_episode, for_season, for_episode, show_obj.name)
-            ep_args = {'show': show, 'season': for_season, 'episode': for_episode}
-            scene_args = {'indexer_id': show, 'indexer': indexer, 'season': for_season, 'episode': for_episode,
-                          'sceneSeason': scene_season, 'sceneEpisode': scene_episode}
-            result = {'forSeason': for_season, 'forEpisode': for_episode, 'sceneSeason': None, 'sceneEpisode': None}
-        else:
-            for_absolute = None if forAbsolute in [None, 'null', ''] else int(forAbsolute)
-            scene_absolute = None if sceneAbsolute in [None, 'null', ''] else int(sceneAbsolute)
-            action_log = u'Set absolute scene numbering to %s for episode %s of "%s"'\
-                         % (scene_absolute, for_absolute, show_obj.name)
-            ep_args = {'show': show, 'absolute': for_absolute}
-            scene_args = {'indexer_id': show, 'indexer': indexer, 'absolute_number': for_absolute,
-                          'sceneAbsolute': scene_absolute}
-            result = {'forAbsolute': for_absolute, 'sceneAbsolute': None}
-
-        ep_obj = self._getEpisode(**ep_args)
-        result['success'] = not isinstance(ep_obj, str)
-        if result['success']:
-            logger.log(action_log, logger.DEBUG)
-            set_scene_numbering(**scene_args)
-            show_obj.flushEpisodes()
-        else:
-            result['errorMessage'] = ep_obj
-
-        if not show_obj.is_anime:
-            scene_numbering = get_scene_numbering(show, indexer, for_season, for_episode)
-            if scene_numbering:
-                (result['sceneSeason'], result['sceneEpisode']) = scene_numbering
-        else:
-            scene_numbering = get_scene_absolute_numbering(show, indexer, for_absolute)
-            if scene_numbering:
-                result['sceneAbsolute'] = scene_numbering
+        result = set_scene_numbering_helper(show, indexer, forSeason, forEpisode, forAbsolute, sceneSeason,
+                                            sceneEpisode, sceneAbsolute)
 
         return json.dumps(result)
 
@@ -2730,7 +2700,7 @@ class NewHomeAddShows(Home):
                re.sub(r'([,.!][^,.!]*?)$', '...',
                       re.sub(r'([.!?])(?=\w)', r'\1 ',
                              self.encode_html((show.get('overview', '') or '')[:250:].strip()))),
-               self._get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None,
+               self.get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None,
                self._make_search_image_url(iid, show)
                ] for show in shows.itervalues()] for iid, shows in results.iteritems()))
 
@@ -2791,7 +2761,8 @@ class NewHomeAddShows(Home):
                       ('%s.jpg' % show['id'], show['id'])
         return img_url
 
-    def _get_UWRatio(self, search_term, showname, aliases):
+    @classmethod
+    def get_UWRatio(cls, search_term, showname, aliases):
         s = fuzz.UWRatio(search_term, showname)
         # check aliases and give them a little lower score
         for a in aliases:
@@ -3452,15 +3423,9 @@ class NewHomeAddShows(Home):
 
         return self.redirect('/home/addShows/%s' % ('trakt_trending', sickbeard.TRAKT_MRU)[any(sickbeard.TRAKT_MRU)])
 
-    def browse_trakt(self, url_path, browse_title, *args, **kwargs):
-
-        browse_type = 'Trakt'
+    @staticmethod
+    def get_trakt_data(url_path, *args, **kwargs):
         normalised, filtered = ([], [])
-
-        if not sickbeard.USE_TRAKT and ('recommended' in kwargs.get('mode', '') or 'watchlist' in kwargs.get('mode', '')):
-            error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
-            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
-
         error_msg = None
         try:
             account = kwargs.get('send_oauth', None)
@@ -3488,7 +3453,7 @@ class NewHomeAddShows(Home):
 
         if not normalised:
             error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
-            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+            raise Exception(error_msg)
 
         oldest_dt = 9999999
         newest_dt = 0
@@ -3496,8 +3461,8 @@ class NewHomeAddShows(Home):
         newest = None
         for item in normalised:
             ignore = '''
-            ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
-            '''
+                    ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
+                    '''
             if re.search(ignore, item['show']['title'].strip(), re.I | re.X):
                 continue
             try:
@@ -3523,24 +3488,53 @@ class NewHomeAddShows(Home):
                     when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
                     episode_number='' if 'episode' not in item else item['episode']['number'] or 1,
                     episode_overview=('' if 'episode' not in item else
-                                      self.encode_html(item['episode']['overview'][:250:].strip()) or ''),
+                                      item['episode']['overview'].strip() or ''),
                     episode_season='' if 'episode' not in item else item['episode']['season'] or 1,
                     genres=('' if 'genres' not in item['show'] else
                             ', '.join(['%s' % v for v in item['show']['genres']])),
                     ids=item['show']['ids'],
                     images=images,
                     overview=('' if 'overview' not in item['show'] or None is item['show']['overview'] else
-                              self.encode_html(item['show']['overview'][:250:].strip())),
+                              item['show']['overview'].strip()),
                     rating=0 < item['show'].get('rating', 0) and
                            ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
                     title=item['show']['title'].strip(),
                     url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
                     url_tvdb=('', '%s%s' % (sickbeard.indexerApi(INDEXER_TVDB).config['show_url'],
-                                            item['show']['ids']['tvdb']))[isinstance(item['show']['ids']['tvdb'], (int, long))
-                                                                          and 0 < item['show']['ids']['tvdb']],
+                                            item['show']['ids']['tvdb']))[
+                        isinstance(item['show']['ids']['tvdb'], (int, long))
+                        and 0 < item['show']['ids']['tvdb']],
                     votes='0' if 'votes' not in item['show'] else item['show']['votes']))
-            except:
+            except (StandardError, Exception):
                 pass
+
+        if 'web_ui' in kwargs:
+            return filtered, oldest, newest, error_msg
+
+        return filtered, oldest, newest
+
+    def browse_trakt(self, url_path, browse_title, *args, **kwargs):
+
+        browse_type = 'Trakt'
+        normalised, filtered = ([], [])
+
+        if not sickbeard.USE_TRAKT and ('recommended' in kwargs.get('mode', '') or 'watchlist' in kwargs.get('mode', '')):
+            error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+
+        try:
+            filtered, oldest, newest, error_msg = self.get_trakt_data(url_path, web_ui=True)
+        except (StandardError, Exception):
+            error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+
+        for item in filtered:
+            key = 'episode_overview'
+            if item[key]:
+                item[key] = self.encode_html(item[key][:250:].strip())
+            key = 'overview'
+            if item[key]:
+                item[key] = self.encode_html(item[key][:250:].strip())
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
 
@@ -6233,6 +6227,8 @@ class ApiBuilder(MainHandler):
 
         t.seasonSQLResults = seasonSQLResults
         t.episodeSQLResults = episodeSQLResults
+        t.indexers = sickbeard.indexerApi().all_indexers
+        t.searchindexers = sickbeard.indexerApi().search_indexers
 
         if len(sickbeard.API_KEY) == 32:
             t.apikey = sickbeard.API_KEY

@@ -126,6 +126,11 @@ class indexerApi(object):
         return dict((int(x['id']), x['name']) for x in indexerConfig.values() if not x['mapped_only'])
 
     @property
+    def search_indexers(self):
+        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if not x['mapped_only'] and
+                    x.get('active') and not x.get('defunct'))
+
+    @property
     def all_indexers(self):
         """
         return all indexers including mapped only indexers
