@@ -3508,6 +3508,9 @@ class NewHomeAddShows(Home):
             except (StandardError, Exception):
                 pass
 
+        if 'web_ui' in kwargs:
+            return filtered, oldest, newest, error_msg
+
         return filtered, oldest, newest
 
     def browse_trakt(self, url_path, browse_title, *args, **kwargs):
@@ -3519,86 +3522,19 @@ class NewHomeAddShows(Home):
             error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
-        error_msg = None
         try:
-            account = kwargs.get('send_oauth', None)
-            if account:
-                account = sickbeard.helpers.tryInt(account)
-            resp = TraktAPI().trakt_request('%sextended=full,images' % url_path, send_oauth=account)
-            if resp:
-                if 'show' in resp[0]:
-                    if 'first_aired' in resp[0]:
-                        for item in resp:
-                            item['show']['first_aired'] = item['first_aired']
-                            del item['first_aired']
-                    normalised = resp
-                else:
-                    for item in resp:
-                        normalised.append({u'show': item})
-                del resp
-        except TraktAuthException as e:
-            logger.log(u'Pin authorisation needed to connect to Trakt service: %s' % ex(e), logger.WARNING)
-            error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
-        except TraktException as e:
-            logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
-        except (IndexError, KeyError):
-            pass
-
-        if not normalised:
+            filtered, oldest, newest, error_msg = self.get_trakt_data(url_path, web_ui=True)
+        except (StandardError, Exception):
             error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
-        oldest_dt = 9999999
-        newest_dt = 0
-        oldest = None
-        newest = None
-        for item in normalised:
-            ignore = '''
-            ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
-            '''
-            if re.search(ignore, item['show']['title'].strip(), re.I | re.X):
-                continue
-            try:
-                dt = dateutil.parser.parse(item['show']['first_aired'])
-                dt_ordinal = dt.toordinal()
-                dt_string = sbdatetime.sbdatetime.sbfdate(dt)
-                if dt_ordinal < oldest_dt:
-                    oldest_dt = dt_ordinal
-                    oldest = dt_string
-                if dt_ordinal > newest_dt:
-                    newest_dt = dt_ordinal
-                    newest = dt_string
-
-                tmdbid = item.get('show', {}).get('ids', {}).get('tmdb', 0)
-                tvdbid = item.get('show', {}).get('ids', {}).get('tvdb', 0)
-                traktid = item.get('show', {}).get('ids', {}).get('trakt', 0)
-                images = dict(poster=dict(thumb='imagecache?path=browse/thumb/trakt&filename=%s&tmdbid=%s&tvdbid=%s' %
-                                                ('%s.jpg' % traktid, tmdbid, tvdbid)))
-
-                filtered.append(dict(
-                    premiered=dt_ordinal,
-                    premiered_str=dt_string,
-                    when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
-                    episode_number='' if 'episode' not in item else item['episode']['number'] or 1,
-                    episode_overview=('' if 'episode' not in item else
-                                      self.encode_html(item['episode']['overview'][:250:].strip()) or ''),
-                    episode_season='' if 'episode' not in item else item['episode']['season'] or 1,
-                    genres=('' if 'genres' not in item['show'] else
-                            ', '.join(['%s' % v for v in item['show']['genres']])),
-                    ids=item['show']['ids'],
-                    images=images,
-                    overview=('' if 'overview' not in item['show'] or None is item['show']['overview'] else
-                              self.encode_html(item['show']['overview'][:250:].strip())),
-                    rating=0 < item['show'].get('rating', 0) and
-                           ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
-                    title=item['show']['title'].strip(),
-                    url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
-                    url_tvdb=('', '%s%s' % (sickbeard.indexerApi(INDEXER_TVDB).config['show_url'],
-                                            item['show']['ids']['tvdb']))[isinstance(item['show']['ids']['tvdb'], (int, long))
-                                                                          and 0 < item['show']['ids']['tvdb']],
-                    votes='0' if 'votes' not in item['show'] else item['show']['votes']))
-            except:
-                pass
+        for item in filtered:
+            key = 'episode_overview'
+            if item[key]:
+                item[key] = self.encode_html(item[key][:250:].strip())
+            key = 'overview'
+            if item[key]:
+                item[key] = self.encode_html(item[key][:250:].strip())
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
 
