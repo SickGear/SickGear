@@ -450,7 +450,8 @@ class NewznabProvider(generic.NZBProvider):
             r_found = True
             while r_found:
                 r_found = False
-                for pattern, repl in ((r'(?i)-Obfuscated$', ''), (r'(?i)-postbot$', ''), (r'(?i)[-.]English$', '')):
+                for pattern, repl in ((r'(?i)-Scrambled$', ''), (r'(?i)-BUYMORE$', ''), (r'(?i)-Obfuscated$', ''),
+                                      (r'(?i)-postbot$', ''), (r'(?i)[-.]English$', '')):
                     if re.search(pattern, title):
                         r_found = True
                         title = re.sub(pattern, repl, title)

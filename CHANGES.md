@@ -89,6 +89,7 @@
 * Add 'local_datetime' to comming eps + runtime
 * Add X-Filename response header to getbanner, getposter
 * Add X-Fanartname response header for sg.show.getfanart
+* Change remove some non-release group stuff from newnab results
 
 [develop changelog]
 
