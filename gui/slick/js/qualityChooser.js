@@ -1,14 +1,14 @@
-function setFromPresets (preset) {
-	var elCustomQuality = $('.show-if-quality-custom'),
-		selected = 'selected', quality, selectState, btn$, dev = !1;
-	if (preset = parseInt(preset)) {
-		!dev && elCustomQuality.fadeOut('fast', 'linear');
+function setFromPresets (preset){
+	var elCustomQuality = $('.show-if-quality-custom');
 
-		var upgrade = !0;
-		$('#initial-qualities, #upgrade-qualities').find('option').each(function() {
-			if (upgrade && 'upgrade-qualities' === $(this).parent().attr('id')) {
-				upgrade = !1;
-				switch (preset) {
+	if(preset = parseInt(preset)){
+		var upgradePreset = !0, quality, stateReqd, btn$;
+		elCustomQuality.fadeOut('fast', 'linear');
+
+		$('#wanted-qualities, #upgrade-qualities').find('option').each(function(){
+			if(upgradePreset && /upgrade/.test($(this).parent().attr('id'))){
+				upgradePreset = !1;
+				switch(preset){
 					case 3: preset = 128 + 32 + 4; break;
 					case 164: preset = 256 + 64 + 16 + 4; break;
 					case 336: preset = 256; break;
@@ -16,76 +16,117 @@ function setFromPresets (preset) {
 				}
 			}
 
-			quality = $(this).val();
-			selectState = ((preset & parseInt(quality, 10)) ? selected : !1);
-			$(this).attr(selected, selectState);
+			quality = $(this).val(); // quality from select$
+			stateReqd = ((preset & parseInt(quality, 10)) ? !0 : !1);
+			if(stateReqd !== this.selected){
+				$(this).prop('selected', stateReqd);
 
-			var list = /initial/.test($(this).parent().attr('id')) ? '#initial-quality': '#upgrade-quality';
-			btn$ = $(/initial/.test($(this).parent().attr('id')) ? '#initial-quality': '#upgrade-quality').find('a.btn[data-quality="' + quality + '"]');
-			if(!selectState){
-				btn$.removeClass('active')
-
-			} else {
-				btn$.addClass('active')
+				btn$ = $(/upgrade/.test($(this).parent().attr('id')) ? '#upgrade-quality' : '#wanted-quality')
+					.find('a.btn[data-quality="' + quality + '"]');
+				if(!stateReqd){
+					btn$.removeClass('active');
+				} else {
+					btn$.removeClass('disabled').addClass('active');
+				}
 			}
-			dev && console.log(preset, list, 'this.val():', quality, 'selectState:', selectState, 'hasClass:', btn$.hasClass('active'))
 		});
-		dev && console.log('-----------------------');
 	} else
 		elCustomQuality.fadeIn('fast', 'linear');
 
+	refreshUpgrades();
 	presentTips();
 }
 
-function presentTips() {
-	var tip$ = $('#unknown-quality');
-	if ($('#initial-quality').find('a.btn[data-quality="32768"]').hasClass('active')) {
+function presentTips(){
+	var tip$ = $('#unknown-quality'), tip2$;
+	if($('#wanted-quality').find('a.btn[data-quality="32768"]').hasClass('active')){
 		tip$.fadeIn('fast', 'linear');
 	} else {
 		tip$.fadeOut('fast', 'linear');
 	}
 
-	var tip$ = $('#no-upgrade'), tip2$ = $('#upgrade-cond');
-	if ($('#upgrade-quality').find('a.btn').hasClass('active')) {
+	tip$ = $('#no-upgrade'); tip2$ = $('#upgrade-cond, #upgrade-once-opt');
+	if($('#upgrade-quality').find('a.btn').hasClass('active')){
 		tip$.fadeOut('fast', 'linear', function(){tip2$.fadeIn('fast', 'linear');});
 	} else {
+		if(!!$('#upgrade-once:checked').length){
+			$('#upgrade-once').click();
+		}
 		tip2$.fadeOut('fast', 'linear', function(){tip$.fadeIn('fast', 'linear');});
 	}
 }
 
-$(function() {
+function refreshUpgrades(){
+	var btn$, minQuality=99999999, quality, upgrade$;
+
+	$.map($('#wanted-quality').find('a.btn.active'), function(btn){
+		btn$ = $(btn);
+		quality = parseInt(btn$.data('quality'), 10);
+		minQuality = quality < minQuality ? quality : minQuality;
+	});
+
+	$.map($('#upgrade-quality').find('a.btn'), function(btn){
+		btn$ = $(btn);
+		quality = parseInt(btn$.data('quality'), 10);
+		upgrade$ = $('#upgrade-qualities');
+		if(quality <= minQuality){
+			if(btn$.hasClass('active') // then btn is about to changed state so reflect change to select option
+				|| 1 === upgrade$.find('option[value="' + quality + '"]:selected').length){
+				upgrade$.find('option[value="' + quality + '"]').prop('selected', !1);
+			}
+			btn$.removeClass('active').addClass('disabled');
+		} else if(btn$.hasClass('disabled')){
+			btn$.removeClass('disabled');
+		}
+	});
+}
+
+$(function(){
 	var elQualityPreset = $('#quality-preset'),
 		selected = ':selected';
 
-	elQualityPreset.change(function() {
+	elQualityPreset.change(function(){
 		setFromPresets($(this).find(selected).val());
 	});
 
 	setFromPresets(elQualityPreset.find(selected).val());
 
-	$('#initial-qualities').change(function() {
+	$('#wanted-qualities').change(function(){
 		presentTips();
 	});
 
 	$('#custom-quality').find('a[href="#"].btn').on('click', function(event){
 		event.stopPropagation();
+		var active$ = $('#wanted-quality').find('a.btn.active'), num_active = active$.length;
 
-		$(this).toggleClass('active');
+		if(1 < num_active || (1 === num_active && $(this).data('quality') !== active$.data('quality'))){
 
-		var select$ = $('initial-quality' === $(this).closest('.component-desc').attr('id') ? '#initial-qualities' : '#upgrade-qualities'),
-			quality = $(this).data('quality'), arrSelected = $.map(select$.val(), function(v){return parseInt(v, 10)}) || Array();
+			$(this).toggleClass('active');
 
-		if($(this).hasClass('active')){
-			arrSelected.push(quality);
-		} else {
-			arrSelected = arrSelected.filter(function(elem){
-				return elem !== quality;
-			});
+			var isInit = 'wanted-quality' === $(this).closest('.component-desc').attr('id'),
+				select$ = $(isInit ? '#wanted-qualities' : '#upgrade-qualities'),
+				quality = $(this).data('quality'),
+				arrSelected = $.map(select$.val(), function (v){
+					return parseInt(v, 10)
+				}) || Array();
+
+			if($(this).hasClass('active')){
+				arrSelected.push(quality);
+			} else {
+				arrSelected = arrSelected.filter(function (elem){
+					return elem !== quality;
+				});
+			}
+
+			select$.val(arrSelected).change();
+
+			if(isInit){
+				refreshUpgrades();
+			}
+
+			presentTips();
+
 		}
-
-		select$.val(arrSelected).change();
-
-		presentTips();
 		return !1;
 	});
 });

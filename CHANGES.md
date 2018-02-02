@@ -1,4 +1,11 @@
-﻿### 0.14.0 (2018-02-01 02:30:00 UTC)
+﻿### 0.14.1 (2018-02-03 22:40:00 UTC)
+
+Change terminology around the custom quality selection to improve clarity
+Change restrict changing custom download qualities to reasonable selections
+Add upgrade to quality selections on Add show page and Import existing show page
+
+
+### 0.14.0 (2018-02-01 02:30:00 UTC)
 
 * Change improve core scheduler logic
 * Change improve media process to parse anime format 'Show Name 123 - 001 - Ep 1 name'

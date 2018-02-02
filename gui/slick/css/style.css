@@ -4114,6 +4114,11 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-color:#080808 \9
 }
 
+.btn-inverse.btn.disabled,
+.btn-inverse[disabled]{
+	color:#444
+}
+
 .btn-xs{
 	padding:1px 5px;
 	font-size:12px;

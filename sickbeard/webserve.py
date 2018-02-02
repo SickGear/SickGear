@@ -3638,7 +3638,8 @@ class NewHomeAddShows(Home):
         return t.respond()
 
     def addNewShow(self, whichSeries=None, indexerLang='en', rootDir=None, defaultStatus=None,
-                   quality_preset=None, anyQualities=None, bestQualities=None, flatten_folders=None, subtitles=None,
+                   quality_preset=None, anyQualities=None, bestQualities=None, upgrade_once=None,
+                   flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
                    scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None,
                    return_to=None, cancel_form=None):
@@ -3747,6 +3748,7 @@ class NewHomeAddShows(Home):
         if type(bestQualities) != list:
             bestQualities = [bestQualities]
         newQuality = Quality.combineQualities(map(int, anyQualities), map(int, bestQualities))
+        upgrade_once = config.checkbox_to_value(upgrade_once)
 
         wanted_begin = config.minimax(wanted_begin, 0, -1, 10)
         wanted_latest = config.minimax(wanted_latest, 0, -1, 10)
@@ -3756,7 +3758,7 @@ class NewHomeAddShows(Home):
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
                                                     wanted_begin, wanted_latest, tag, new_show=new_show,
-                                                    show_name=show_name)  # @UndefinedVariable
+                                                    show_name=show_name, upgrade_once=upgrade_once)
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finishAddShow()

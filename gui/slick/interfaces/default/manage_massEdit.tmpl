@@ -66,7 +66,7 @@
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Initial</h4>
 #set $anyQualityList = filter(lambda x: x > $common.Quality.NONE, $common.Quality.qualityStrings)
-				<select id="initial-qualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)">
+				<select id="wanted-qualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)">
 #for $curQuality in sorted($anyQualityList):
 					<option value="$curQuality" #if $curQuality in $anyQualities then $selected else ''#>$common.Quality.get_quality_ui($curQuality)</option>
 #end for

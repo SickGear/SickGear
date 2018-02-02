@@ -1,6 +1,7 @@
 #import sickbeard
 #from sickbeard.common import Quality, qualityPresets, qualityPresetStrings
-
+##
+#set $html_checked = ' checked="checked"'
 #set $html_selected = ' selected="selected"'
 <div class="field-pair">
 	<label for="quality-preset" class="clearfix">
@@ -23,16 +24,16 @@
 	<div id="custom-quality" class="show-if-quality-custom" style="display:none">
 		<div class="field-pair">
 			<div class="component-group-desc tip-text">
-				<p style="margin-bottom:25px">An <em class="highlight-text">initial</em> quality downloads before optional upgrades</p>
+				<p style="margin-bottom:25px">Wanted quality</p>
 
 				<p id="unknown-quality" style="display:none">
-					Temporarily use <em class="red-text">'Unknown'</em> to skip release qual checks.
-					Results in spam if left on
+					<em class="red-text">Briefly use</em> <em class="highlight-text">'Unknown'</em> to skip release quality checks
+					but expect spam if left on
 				</p>
 			</div>
 
-			<span id="initial-quality" class="component-desc">
-				<p>Select one or more qualities; the best one found when searching will be snatched</p>
+			<span id="wanted-quality" class="component-desc">
+				<p>select one or more qualities; the best one found when searching will be used</p>
 #set $any_quality_list = filter(lambda x: x > $Quality.NONE and x < $Quality.UNKNOWN, $Quality.qualityStrings)
 #set $has_unknown = False
 #for $cur_quality in sorted($any_quality_list):
@@ -53,13 +54,13 @@
 
 		<div class="field-pair" style="clear:both">
 			<div class="component-group-desc tip-text">
-				<p style="margin-bottom:25px">All found <em class="highlight-text">upgrade</em> qualities download until the best</p>
+				<p style="margin-bottom:25px">All selected qualities found will upgrade until the best</p>
 
-				<p id="no-upgrade" style="display:none">No <em class="highlight-text">upgrades</em> selected, an <em class="highlight-text">initial</em> snatch will complete any search</p>
-				<p id="upgrade-cond" style="display:none">An <em class="highlight-text">upgrade</em> will only search after an <em class="highlight-text">initial</em> has complete</p>
+				<p id="no-upgrade" style="display:none">With no upgrades selected, search is complete when a <em class="highlight-text">wanted quality</em> is found</p>
+				<p id="upgrade-cond" style="display:none">Upgrades will search <em class="highlight-text">after</em> a wanted quality release is snatched or downloaded</p>
 			</div>
 			<span id="upgrade-quality" class="component-desc">
-				<p>Optional, upgrade a completed download to any selected quality</p>
+				<p>optional, upgrade existing media to any selected quality</p>
 #set $best_quality_list = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
 #for $cur_quality in sorted($best_quality_list):
 				<a href="#" data-quality="$cur_quality" class="btn btn-inverse dark-bg#echo ('', ' active')[$cur_quality in $best_qualities]#" role="button"><i class="icon-glyph searchadd"></i>$Quality.get_quality_ui($cur_quality)</a>
@@ -70,11 +71,22 @@
 			</span>
 		</div>
 
+		<div class="field-pair" id="upgrade-once-opt" style="display:none">
+			<label for="upgrade-once">
+				<span class="component-title">Upgrade once</span>
+				<span class="component-desc">
+					<input type="checkbox" name="upgrade_once" id="upgrade-once"#echo ('', $html_checked)[$varExists('show') and $show.upgrade_once]#>
+					<p>stop upgrading after matching the first best <em>upgrade</em> quality</p>
+				</span>
+			</label>
+		</div>
+
 		<span class="component-desc bfr">
 			<div style="float:left;padding-right:28px">
-				<h4 class="jumbo">Initial</h4>
+				<h4 class="jumbo">Wanted</h4>
 #set $any_quality_list = filter(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
-				<select id="initial-qualities" name="anyQualities" multiple="multiple" size="$len($any_quality_list)" class="form-control form-control-inline input-sm">
+
+				<select id="wanted-qualities" name="anyQualities" multiple="multiple" size="$len($any_quality_list)" class="form-control form-control-inline input-sm">
 #for $cur_quality in sorted($any_quality_list):
 					<option value="$cur_quality"#echo ('', $html_selected)[$cur_quality in $any_qualities]#>$Quality.get_quality_ui($cur_quality)</option>
 #end for
