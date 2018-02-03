@@ -2922,8 +2922,8 @@ class CMD_SickGearShow(ApiCall):
             showDict["network"] = ""
         showDict["status"] = showObj.status
         showDict["scenenumbering"] = showObj.is_scene
-        showDict["archivefirstmatch"] = showObj.upgrade_once
-        showDict["irgnorewords"] = showObj.rls_ignore_words
+        showDict["upgrade_once"] = showObj.upgrade_once
+        showDict["ignorewords"] = showObj.rls_ignore_words
         showDict["requirewords"] = showObj.rls_require_words
         if self.overview:
             showDict["overview"] = showObj.overview
@@ -4127,8 +4127,8 @@ class CMD_SickGearShows(ApiCall):
                 "status": curShow.status,
                 "subtitles": curShow.subtitles,
                 "scenenumbering": curShow.is_scene,
-                "archivefirstmatch": curShow.upgrade_once,
-                "irgnorewords": curShow.rls_ignore_words,
+                "upgrade_once": curShow.upgrade_once,
+                "ignorewords": curShow.rls_ignore_words,
                 "requirewords": curShow.rls_require_words,
                 "tag": curShow.tag,
                 "imdb_id": curShow.imdbid,
