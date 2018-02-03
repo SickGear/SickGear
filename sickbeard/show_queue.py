@@ -180,7 +180,8 @@ class ShowQueue(generic_queue.GenericQueue):
                 wanted_begin=None, wanted_latest=None, tag=None, new_show=False, show_name=None, upgrade_once=False):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
                                     subtitles, anime, scene, paused, blacklist, whitelist,
-                                    wanted_begin, wanted_latest, tag, new_show=new_show, show_name=show_name, upgrade_once=upgrade_once)
+                                    wanted_begin, wanted_latest, tag,
+                                    new_show=new_show, show_name=show_name, upgrade_once=upgrade_once)
 
         self.add_item(queueItemObj)
 
@@ -342,7 +343,7 @@ class QueueItemAdd(ShowQueueItem):
             self.show.location = self.showDir
             self.show.subtitles = self.subtitles if None is not self.subtitles else sickbeard.SUBTITLES_DEFAULT
             self.show.quality = self.quality if self.quality else sickbeard.QUALITY_DEFAULT
-            self.show.archive_firstmatch = self.upgrade_once
+            self.show.upgrade_once = self.upgrade_once
             self.show.flatten_folders = self.flatten_folders if None is not self.flatten_folders else sickbeard.FLATTEN_FOLDERS_DEFAULT
             self.show.anime = self.anime if None is not self.anime else sickbeard.ANIME_DEFAULT
             self.show.scene = self.scene if None is not self.scene else sickbeard.SCENE_DEFAULT

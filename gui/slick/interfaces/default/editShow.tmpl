@@ -149,18 +149,6 @@
 #set global $any_qualities = $qualities[0]
 #set global $best_qualities = $qualities[1]
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
-
-#if $any_qualities + $best_qualities
-						<div class="field-pair show-if-quality-custom" style="display:none">
-							<label for="upgrade-once">
-								<span class="component-title">Upgrade once</span>
-								<span class="component-desc">
-									<input type="checkbox" name="upgrade_once" id="upgrade-once"#echo ('', $html_checked)[$show.upgrade_once]#>
-									<p>stop upgrading after matching the first best <em>upgrade</em> quality</p>
-								</span>
-							</label>
-						</div>
-#end if
 					</div>
 
 				</div><!-- /component-group1 //-->
