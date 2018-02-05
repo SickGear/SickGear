@@ -58,10 +58,11 @@ except ImportError:
 class ProcessTVShow(object):
     """ Process a TV Show """
 
-    def __init__(self, webhandler=None, is_basedir=True):
+    def __init__(self, webhandler=None, is_basedir=True, skip_failure_processing=False):
         self.files_passed = 0
         self.files_failed = 0
         self.fail_detected = False
+        self.skip_failure_processing = skip_failure_processing
         self._output = []
         self.webhandler = webhandler
         self.is_basedir = is_basedir
@@ -919,6 +920,10 @@ class ProcessTVShow(object):
     def _process_failed(self, dir_name, nzb_name, showObj=None):
         """ Process a download that did not complete correctly """
 
+        if self.skip_failure_processing:
+            self._log_helper('Download was not added by SickGear, ignoring failure', logger.WARNING)
+            return
+
         if sickbeard.USE_FAILED_DOWNLOADS:
             processor = None
 
@@ -947,8 +952,9 @@ class ProcessTVShow(object):
 
 # backward compatibility prevents the case of this function name from being updated to PEP8
 def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
-               failed=False, type='auto', cleanup=False, webhandler=None, showObj=None, is_basedir=True):
+               failed=False, type='auto', cleanup=False, webhandler=None, showObj=None, is_basedir=True,
+               skip_failure_processing=False):
 
     # backward compatibility prevents the case of this function name from being updated to PEP8
-    return ProcessTVShow(webhandler, is_basedir).process_dir(
+    return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing).process_dir(
         dir_name, nzb_name, process_method, force, force_replace, failed, type, cleanup, showObj)

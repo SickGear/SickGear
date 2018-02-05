@@ -257,6 +257,7 @@ NZBGET_CATEGORY = None
 NZBGET_HOST = None
 NZBGET_USE_HTTPS = False
 NZBGET_PRIORITY = 100
+NZBGET_SCRIPT_VERSION = None
 
 SAB_USERNAME = None
 SAB_PASSWORD = None
@@ -600,7 +601,8 @@ def initialize(console_logging=True):
             ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY
         # Search Settings/NZB search
         global USE_NZBS, NZB_METHOD, NZB_DIR, SAB_HOST, SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, \
-            NZBGET_USE_HTTPS, NZBGET_HOST, NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY
+            NZBGET_USE_HTTPS, NZBGET_HOST, NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, \
+            NZBGET_SCRIPT_VERSION
         # Search Settings/Torrent search
         global USE_TORRENTS, TORRENT_METHOD, TORRENT_DIR, TORRENT_HOST, TORRENT_USERNAME, TORRENT_PASSWORD, \
             TORRENT_LABEL, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_VERIFY_CERT
@@ -907,6 +909,15 @@ def initialize(console_logging=True):
         NZBGET_HOST = check_setting_str(CFG, 'NZBget', 'nzbget_host', '')
         NZBGET_USE_HTTPS = bool(check_setting_int(CFG, 'NZBget', 'nzbget_use_https', 0))
         NZBGET_PRIORITY = check_setting_int(CFG, 'NZBget', 'nzbget_priority', 100)
+
+        try:
+            ng_script_file = ek.ek(os.path.join, ek.ek(os.path.dirname, ek.ek(os.path.dirname, __file__)),
+                                   'autoProcessTV', 'SickGear-NG', 'SickGear-NG.py')
+            with open(ng_script_file, 'r') as ng:
+                text = ng.read()
+            NZBGET_SCRIPT_VERSION = re.search(r'__version__ =.*\'([0-9.]+)\'.*$', text, flags=re.M).group(1)
+        except (StandardError, Exception):
+            NZBGET_SCRIPT_VERSION = None
 
         TORRENT_USERNAME = check_setting_str(CFG, 'TORRENT', 'torrent_username', '')
         TORRENT_PASSWORD = check_setting_str(CFG, 'TORRENT', 'torrent_password', '')

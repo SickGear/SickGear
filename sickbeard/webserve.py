@@ -2519,7 +2519,11 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, is_basedir='1', **kwargs):
+                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, is_basedir='1',
+                       client=None, **kwargs):
+
+        if 'test' in kwargs and kwargs['test'] in ['True', True, 1, '1']:
+            return 'Connection success!'
 
         if not dir and ('0' == failed or not nzbName):
             self.redirect('/home/postprocess/')
@@ -2536,6 +2540,15 @@ class HomePostProcess(Home):
                         break
                 showObj = helpers.find_show_by_id(sickbeard.showList, {indexer: int(m.group(2))},
                                                no_mapped_ids=True)
+
+            skip_failure_processing = isinstance(client, basestring) and 'nzbget' == client and \
+                (not isinstance(dupekey, basestring) or None is re.search(r'^SickGear-([A-Za-z]*)(\d+)-', dupekey))
+
+            if isinstance(client, basestring) and 'nzbget' == client and \
+                    sickbeard.NZBGET_SCRIPT_VERSION != kwargs.get('ppVersion', '0'):
+                logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
+                           (kwargs.get('ppVersion', '0'), sickbeard.NZBGET_SCRIPT_VERSION), logger.ERROR)
+
             result = processTV.processDir(dir.decode('utf-8') if dir else None, nzbName.decode('utf-8') if nzbName else None,
                                           process_method=process_method, type=type,
                                           cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
@@ -2543,7 +2556,8 @@ class HomePostProcess(Home):
                                           force_replace=force_replace in ['on', '1'],
                                           failed='0' != failed,
                                           webhandler=self.send_message if stream != '0' else None,
-                                          showObj=showObj, is_basedir=is_basedir in ['on', '1'])
+                                          showObj=showObj, is_basedir=is_basedir in ['on', '1'],
+                                          skip_failure_processing=skip_failure_processing)
 
             if '0' != stream:
                 return
