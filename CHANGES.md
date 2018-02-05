@@ -90,6 +90,7 @@
 * Add X-Filename response header to getbanner, getposter
 * Add X-Fanartname response header for sg.show.getfanart
 * Change remove some non-release group stuff from newnab results
+* Add SickGear-NZBGet dedicated post processing script, see.. \autoProcessTV\SickGear-NG\INSTALL.txt
 
 [develop changelog]
 
