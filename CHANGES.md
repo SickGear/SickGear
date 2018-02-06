@@ -95,6 +95,7 @@
 [develop changelog]
 
 * Fix API typo and a regression 'archivefirstmatch'
+* Change removed NZBGet 'remote' PostProcess guidance until it is verified to work
 
 
 ### 0.14.1 (2018-02-03 22:40:00 UTC)

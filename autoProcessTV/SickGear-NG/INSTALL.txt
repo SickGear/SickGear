@@ -11,7 +11,7 @@ This is the best set up to automatically get script updates from SickGear
 
 #############
 
-If NZBGet is installed on a different system to SickGear or NZBGet is v16 or earlier, then as a remote/older install,
+If NZBGet v16 or earlier is installed, then as an older install,
 
 1) Copy the directory with/or this single script file to path set in NZBGet Settings/PATHS/ScriptDir
 
@@ -19,7 +19,7 @@ If NZBGet is installed on a different system to SickGear or NZBGet is v16 or ear
 
 3) Click View -> Compact to remove any tick and un hide tips and suggestions
 
-4) The bare minimum change is the sg_base_path setting
+4) The bare minimum change is the sg_base_path setting or enter `python -m pip install requests` at admin commandline
 
 5) Navigate to any named TV category at Settings/Categories, click "Choose" Category.Extensions then Apply SickGear-NG
 
