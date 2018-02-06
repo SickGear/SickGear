@@ -16,7 +16,7 @@
 #
 # #############
 #
-# If NZBGet is installed on a different system to SickGear or NZBGet is v16 or earlier, then as a remote/older install,
+# If NZBGet v16 or earlier is installed, then as an older install,
 #
 # 1) Copy the directory with/or this single script file to path set in NZBGet Settings/PATHS/ScriptDir
 #
@@ -24,7 +24,7 @@
 #
 # 3) Click View -> Compact to remove any tick and un hide tips and suggestions
 #
-# 4) The bare minimum change is the sg_base_path setting
+# 4) The bare minimum change is the sg_base_path setting or enter `python -m pip install requests` at admin commandline
 #
 # 5) Navigate to any named TV category at Settings/Categories, click "Choose" Category.Extensions then Apply SickGear-NG
 #
@@ -82,10 +82,6 @@
 # Or, if <span style="font-weight:bold">NZBGet v16 or earlier</span> is installed on the same system as SickGear and
 # if python <a href="https://pypi.python.org/pypi/requests" title="requests library page" target="_blank">requests library</a>
 # is not installed, then <strong style="font-weight:bold;color:#128D12 !important">sg_base_path</strong> must be set
-# <br /><br />
-# Or, if <span style="font-weight:bold">NZBGet</span> is installed on a different system to SickGear, then python
-# <a href="https://pypi.python.org/pypi/requests" title="requests library page" target="_blank">requests library</a>
-# must be installed onto the NZBGet system
 # </span>
 # </span>
 # <span style="display:block;padding:4px;margin-top:3px;background-color:#efefef;border:1px solid #ccc;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px">
