@@ -54,6 +54,21 @@ normal_regexes = [
      '''
      ),
 
+    ('non_standard_multi_ep',
+     # Show Name - S01E02&03 - My Ep Name
+     # Show Name - S01E02and03 - My Ep Name
+     '''
+     ^((?P<series_name>.+?)[. _-]+)?               # Show_Name and separator
+     s(?P<season_num>\d+)[. _-]*                   # S01 and optional separator
+     e(?P<ep_num>\d+)                              # E02 and separator
+     (([. _-]*and|&|to)                            # linking and/&/to
+     (?P<extra_ep_num>(?!(2160|1080|720|480)[pi])\d+))+ # additional E03/etc
+     [. _-]*((?P<extra_info>.+?)                   # Source_Quality_Etc-
+     ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
+     -(?P<release_group>[^- ]+))?)?$               # Group
+     '''
+     ),
+
     ('standard',
      # Show.Name.S01E02.Source.Quality.Etc-Group
      # Show Name - S01E02 - My Ep Name
@@ -68,6 +83,22 @@ normal_regexes = [
      (([. _-]*e|-)                                 # linking e/- char
      (?P<extra_ep_num>(?!(2160|1080|720|480)[pi])\d+))* # additional E03/etc
      [. _-]*((?P<extra_info>.+?)                   # Source_Quality_Etc-
+     ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
+     -(?P<release_group>[^- ]+))?)?$               # Group
+     '''
+     ),
+
+    ('fov_non_standard_multi_ep',
+     # Show Name - 1x02and03and04 - My Ep Name
+     '''
+     ^((?P<series_name>.+?)[\[. _-]+)?             # Show_Name and separator
+     (?P<season_num>\d+)x                          # 1x
+     (?P<ep_num>\d+)                               # 02 and separator
+     (([. _-]*and|&|to)                            # linking x/- char
+     (?P<extra_ep_num>
+     (?!(2160|1080|720|480)[pi])(?!(?<=x)264)      # ignore obviously wrong multi-eps
+     \d+))+                                        # additional x03/etc
+     [\]. _-]*((?P<extra_info>.+?)                 # Source_Quality_Etc-
      ((?<![. _-])(?<!WEB)                          # Make sure this is really the release group
      -(?P<release_group>[^- ]+))?)?$               # Group
      '''

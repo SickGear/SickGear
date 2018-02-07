@@ -91,6 +91,7 @@
 * Add X-Fanartname response header for sg.show.getfanart
 * Change remove some non-release group stuff from newnab results
 * Add SickGear-NZBGet dedicated post processing script, see.. \autoProcessTV\SickGear-NG\INSTALL.txt
+* Add non standard multi episode name parsing e.g. S01E02and03 and 1x02and03and04
 
 [develop changelog]
 
