@@ -43,6 +43,13 @@ simple_test_cases = {
             parser.ParseResult(None, 'Show Name', 1, [2], 'Source.Quality.Etc', 'Group'),
     },
 
+    'non_standard_multi_ep': {
+        'Show Name - S01E02and03 - My Ep Name': parser.ParseResult(None, 'Show Name', 1, [2, 3], 'My Ep Name'),
+        'Show Name - S01E02and03and04 - My Ep Name': parser.ParseResult(None, 'Show Name', 1, [2, 3, 4], 'My Ep Name'),
+        'Show Name - S01E02to03 - My Ep Name': parser.ParseResult(None, 'Show Name', 1, [2, 3], 'My Ep Name'),
+        'Show Name - S01E02&3&4 - My Ep Name': parser.ParseResult(None, 'Show Name', 1, [2, 3, 4], 'My Ep Name'),
+    },
+
     'fov': {
         'Show_Name.1x02.Source_Quality_Etc-Group':
             parser.ParseResult(None, 'Show Name', 1, [2], 'Source_Quality_Etc', 'Group'),
@@ -57,6 +64,11 @@ simple_test_cases = {
         'Show-Name-1x02-1080i': parser.ParseResult(None, 'Show-Name', 1, [2], '1080i'),
         'Show Name [05x12] Ep Name': parser.ParseResult(None, 'Show Name', 5, [12], 'Ep Name'),
         'Show.Name.1x02.WEB-DL': parser.ParseResult(None, 'Show Name', 1, [2], 'WEB-DL'),
+    },
+
+    'fov_non_standard_multi_ep': {
+        'Show_Name.1x02and03and04.Source_Quality_Etc-Group':
+            parser.ParseResult(None, 'Show Name', 1, [2, 3, 4], 'Source_Quality_Etc', 'Group'),
     },
 
     'standard_repeat': {
@@ -429,7 +441,7 @@ class BasicTests(test.SickbeardTestDBCase):
             try:
                 # self.assertEqual(test_result.which_regex, [section])
                 self.assertEqual(test_result, result)
-            except:
+            except(StandardError, Exception):
                 print('air_by_date:', test_result.is_air_by_date, 'air_date:', test_result.air_date)
                 print('anime:', test_result.is_anime, 'ab_episode_numbers:', test_result.ab_episode_numbers)
                 print(test_result)
@@ -444,6 +456,10 @@ class BasicTests(test.SickbeardTestDBCase):
         np = parser.NameParser(False, testing=True)
         self._test_names(np, 'standard_repeat')
 
+    def test_non_standard_multi_ep_names(self):
+        np = parser.NameParser(False, testing=True)
+        self._test_names(np, 'non_standard_multi_ep')
+
     def test_fov_names(self):
         np = parser.NameParser(False, testing=True)
         self._test_names(np, 'fov')
@@ -451,6 +467,10 @@ class BasicTests(test.SickbeardTestDBCase):
     def test_fov_repeat_names(self):
         np = parser.NameParser(False, testing=True)
         self._test_names(np, 'fov_repeat')
+
+    def test_fov_non_standard_multi_ep_names(self):
+        np = parser.NameParser(False, testing=True)
+        self._test_names(np, 'fov_non_standard_multi_ep')
 
     def test_bare_names(self):
         np = parser.NameParser(False, testing=True)
