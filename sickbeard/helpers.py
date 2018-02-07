@@ -1611,7 +1611,10 @@ def freespace(path=None):
         except(StandardError, Exception):
             pass
     elif sys.platform.startswith(('linux', 'darwin', 'sunos5')) or 'bsd' in sys.platform:
-        storage = os.statvfs(path)
-        result = storage.f_bavail * storage.f_frsize
+        try:
+            storage = os.statvfs(path)  # perms errors can result
+            result = storage.f_bavail * storage.f_frsize
+        except OSError:
+            pass
 
     return result

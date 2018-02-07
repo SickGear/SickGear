@@ -1,4 +1,9 @@
-﻿### 0.14.1 (2018-02-03 22:40:00 UTC)
+﻿### 0.14.2 (2018-02-07 16:00:00 UTC)
+
+Change add handling for where requesting disk freespace is denied permission on some Linux distros
+
+
+### 0.14.1 (2018-02-03 22:40:00 UTC)
 
 Change terminology around the custom quality selection to improve clarity
 Change restrict changing custom download qualities to reasonable selections
