@@ -1409,14 +1409,22 @@ class CMD_SickGearExceptions(ApiCall):
         """ display scene exceptions for all or a given show """
         myDB = db.DBConnection(row_type="dict")
 
-        if self.indexerid == None:
-            sqlResults = myDB.select("SELECT show_name, indexer_id AS 'indexerid' FROM scene_exceptions")
+        if self.indexerid is None:
+            sqlResults = myDB.select("SELECT s.indexer, se.show_name, se.indexer_id AS 'indexerid' "
+                                     "FROM scene_exceptions AS se INNER JOIN tv_shows as s "
+                                     "ON se.indexer_id == s.indexer_id")
             scene_exceptions = {}
             for row in sqlResults:
                 indexerid = row["indexerid"]
-                if not indexerid in scene_exceptions:
-                    scene_exceptions[indexerid] = []
-                scene_exceptions[indexerid].append(row["show_name"])
+                indexer = row["indexer"]
+                if self.sickbeard_call:
+                    if indexerid not in scene_exceptions:
+                        scene_exceptions[indexerid] = []
+                    scene_exceptions[indexerid].append(row["show_name"])
+                else:
+                    if indexerid not in scene_exceptions.get(indexer, {}):
+                        scene_exceptions.setdefault(indexer, {})[indexerid] = []
+                    scene_exceptions.setdefault(indexer, {})[indexerid].append(row["show_name"])
 
         else:
             showObj = helpers.find_show_by_id(sickbeard.showList, {self.indexer: self.indexerid})
