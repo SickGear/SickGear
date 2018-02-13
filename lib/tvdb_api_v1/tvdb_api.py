@@ -488,7 +488,7 @@ class TvdbV1:
                                          'tr': 21, 'pl': 18, 'fr': 17, 'hr': 31, 'de': 14, 'da': 10, 'fi': 11,
                                          'hu': 19, 'ja': 25, 'he': 24, 'ko': 32, 'sv': 8, 'sl': 30}
 
-        if None is language:
+        if not language:
             self.config['language'] = 'en'
         else:
             if language not in self.config['valid_languages']:
