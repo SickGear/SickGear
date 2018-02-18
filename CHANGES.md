@@ -1,8 +1,7 @@
-﻿### 0.14.4 (2018-02-15 13:00:00 UTC)
+﻿### 0.14.4 (2018-02-18 23:55:00 UTC)
 
-Change relax strict mode from subtitle languages and show unknown.png flag for 'Undetermined' subtitle languages.
-
-The strict parameter for languages simply raises a ValueError instead of returning Undetermined as language if unknown language is used.
+Change relax strict mode from subtitle languages and show unknown.png flag for 'Undetermined' subtitle languages
+Add Paramount Network icon
 
 
 ### 0.14.3 (2018-02-13 13:00:00 UTC)

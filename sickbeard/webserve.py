@@ -2437,10 +2437,10 @@ class Home(MainHandler):
             return json.dumps({'result': 'failure'})
 
         # try do download subtitles for that episode
-        previous_subtitles = set(subliminal.language.Language(x) for x in ep_obj.subtitles)
         try:
+            previous_subtitles = set(subliminal.language.Language(x) for x in ep_obj.subtitles)
             ep_obj.subtitles = set(x.language for x in ep_obj.downloadSubtitles().values()[0])
-        except:
+        except(StandardError, Exception):
             return json.dumps({'result': 'failure'})
 
         # return the correct json value
@@ -4027,8 +4027,8 @@ class Manage(MainHandler):
             result[cur_season][cur_episode]['name'] = cur_result['name']
 
             result[cur_season][cur_episode]['subtitles'] = ','.join(
-                subliminal.language.Language(subtitle).alpha2 for subtitle in cur_result['subtitles'].split(',')) if not \
-                cur_result['subtitles'] == '' else ''
+                subliminal.language.Language(subtitle, strict=False).alpha2
+                for subtitle in cur_result['subtitles'].split(',')) if '' != cur_result['subtitles'] else ''
 
         return json.dumps(result)
 
