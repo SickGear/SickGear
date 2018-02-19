@@ -406,7 +406,7 @@ class KodiNotifier(Notifier):
 
         self._maybe_log(u'Failed to %s %s, check device(s) and config' % (msg, host), logger.ERROR)
 
-    def _notify(self, title, body, hosts, username, password, **kwargs):
+    def _notify(self, title, body, hosts=None, username=None, password=None, **kwargs):
         """ Internal wrapper for the notify_snatch and notify_download functions
 
         Call either the JSON-RPC over HTTP or the legacy HTTP API methods depending on the Kodi API version.
