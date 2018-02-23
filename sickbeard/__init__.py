@@ -357,7 +357,7 @@ PUSHOVER_NOTIFY_ONDOWNLOAD = False
 PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD = False
 PUSHOVER_USERKEY = None
 PUSHOVER_APIKEY = None
-PUSHOVER_PRIORITY = 0
+PUSHOVER_PRIORITY = '0'
 PUSHOVER_DEVICE = None
 PUSHOVER_SOUND = None
 
@@ -373,14 +373,14 @@ PROWL_NOTIFY_ONSNATCH = False
 PROWL_NOTIFY_ONDOWNLOAD = False
 PROWL_NOTIFY_ONSUBTITLEDOWNLOAD = False
 PROWL_API = None
-PROWL_PRIORITY = 0
+PROWL_PRIORITY = '0'
 
 USE_NMA = False
 NMA_NOTIFY_ONSNATCH = False
 NMA_NOTIFY_ONDOWNLOAD = False
 NMA_NOTIFY_ONSUBTITLEDOWNLOAD = False
 NMA_API = None
-NMA_PRIORITY = 0
+NMA_PRIORITY = '0'
 
 USE_LIBNOTIFY = False
 LIBNOTIFY_NOTIFY_ONSNATCH = False
@@ -1006,7 +1006,7 @@ def initialize(console_logging=True):
             check_setting_int(CFG, 'Pushover', 'pushover_notify_onsubtitledownload', 0))
         PUSHOVER_USERKEY = check_setting_str(CFG, 'Pushover', 'pushover_userkey', '')
         PUSHOVER_APIKEY = check_setting_str(CFG, 'Pushover', 'pushover_apikey', '')
-        PUSHOVER_PRIORITY = check_setting_int(CFG, 'Pushover', 'pushover_priority', 0)
+        PUSHOVER_PRIORITY = check_setting_str(CFG, 'Pushover', 'pushover_priority', '0')
         PUSHOVER_DEVICE = check_setting_str(CFG, 'Pushover', 'pushover_device', 'all')
         PUSHOVER_SOUND = check_setting_str(CFG, 'Pushover', 'pushover_sound', 'pushover')
 
@@ -1826,7 +1826,7 @@ def save_config():
     new_config['Pushover']['pushover_notify_onsubtitledownload'] = int(PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['Pushover']['pushover_userkey'] = PUSHOVER_USERKEY
     new_config['Pushover']['pushover_apikey'] = PUSHOVER_APIKEY
-    new_config['Pushover']['pushover_priority'] = int(PUSHOVER_PRIORITY)
+    new_config['Pushover']['pushover_priority'] = PUSHOVER_PRIORITY
     new_config['Pushover']['pushover_device'] = PUSHOVER_DEVICE
     new_config['Pushover']['pushover_sound'] = PUSHOVER_SOUND
 

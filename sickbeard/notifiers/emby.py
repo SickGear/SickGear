@@ -131,7 +131,7 @@ class EmbyNotifier(Notifier):
 
         return hosts, apikeys, 'OK'
 
-    def _notify(self, title, body, hosts, apikeys, **kwargs):
+    def _notify(self, title, body, hosts=None, apikeys=None, **kwargs):
         """ Internal wrapper for the test_notify function
 
         Args:

@@ -99,6 +99,14 @@
 * Change removed NZBGet 'remote' PostProcess guidance until it is verified to work
 
 
+### 0.14.5 (2018-02-23 22:15:00 UTC)
+
+Remove NZB.is usenet provider
+Remove HD4Free torrent provider
+Fix config/notifications/Pushover priority selector
+Fix sending notification on snatch or download to Kodi/Emby
+
+
 ### 0.14.4 (2018-02-18 23:55:00 UTC)
 
 Change relax strict mode from subtitle languages and show unknown.png flag for 'Undetermined' subtitle languages
