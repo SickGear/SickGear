@@ -1101,10 +1101,10 @@
 									<span class="component-title">Pushover priority:</span>
 									<span class="component-desc">
 										<select id="pushover-priority" name="pushover_priority" class="form-control input-sm">
-											<option value="-2" #if $sickbeard.PUSHOVER_PRIORITY == '-2' then 'selected="selected"' else ''#>Lowest</option>
-											<option value="-1" #if $sickbeard.PUSHOVER_PRIORITY == '-1' then 'selected="selected"' else ''#>Low</option>
-											<option value="0" #if $sickbeard.PUSHOVER_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
-											<option value="1" #if $sickbeard.PUSHOVER_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
+											<option value="-2" #if $sickbeard.PUSHOVER_PRIORITY == -2 then 'selected="selected"' else ''#>Lowest</option>
+											<option value="-1" #if $sickbeard.PUSHOVER_PRIORITY == -1 then 'selected="selected"' else ''#>Low</option>
+											<option value="0" #if $sickbeard.PUSHOVER_PRIORITY == 0 then 'selected="selected"' else ''#>Normal</option>
+											<option value="1" #if $sickbeard.PUSHOVER_PRIORITY == 1 then 'selected="selected"' else ''#>High</option>
 										</select>
 										<span>priority of Pushover messages from SickGear</span>
 										<div class="clear-left">overview: <a href="<%= anon_url('https://pushover.net/api#priority') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://pushover.net/api#priority</a></div>
