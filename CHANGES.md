@@ -97,6 +97,7 @@
 
 * Fix API typo and a regression 'archivefirstmatch'
 * Change removed NZBGet 'remote' PostProcess guidance until it is verified to work
+* Fix Trakt, recommended and watchlist (send_oauth is now sent)
 
 
 ### 0.14.5 (2018-02-23 22:15:00 UTC)
