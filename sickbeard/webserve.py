@@ -3537,7 +3537,8 @@ class NewHomeAddShows(Home):
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
         try:
-            filtered, oldest, newest, error_msg = self.get_trakt_data(url_path, web_ui=True)
+            filtered, oldest, newest, error_msg = self.get_trakt_data(url_path, web_ui=True,
+                                                                      send_oauth=kwargs.get('send_oauth', None))
         except (StandardError, Exception):
             error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
