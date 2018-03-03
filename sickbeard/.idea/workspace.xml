@@ -1,0 +1,1172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BookmarkManager">
+    <bookmark url="file://$PROJECT_DIR$/tv.py" line="1003" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="a594580f-6f40-4408-b299-784ca5a33ad9" name="Default" comment="" />
+    <ignored path="sickbeard.iws" />
+    <ignored path=".idea/workspace.xml" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
+  <component name="CoverageDataManager">
+    <SUITE FILE_PATH="coverage/sickbeard$SickGear.coverage" NAME="SickGear Coverage Results" MODIFIED="1415670822189" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.." />
+  </component>
+  <component name="CreatePatchCommitExecutor">
+    <option name="PATCH_PATH" value="" />
+  </component>
+  <component name="DaemonCodeAnalyzer">
+    <disable_hints />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
+  <component name="FavoritesManager">
+    <favorites_list name="sickbeard" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf>
+      <file leaf-file-name="CHANGES.md" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/../CHANGES.md">
+          <provider editor-type-id="MarkdownPreviewEditor">
+            <state />
+          </provider>
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="-2.04" vertical-offset="884" max-vertical-offset="1904">
+              <caret line="55" column="0" selection-start-line="55" selection-start-column="0" selection-end-line="55" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="webapi.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/webapi.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="-6.36" vertical-offset="2340" max-vertical-offset="45356">
+              <caret line="167" column="25" selection-start-line="167" selection-start-column="25" selection-end-line="167" selection-end-column="25" />
+              <folding>
+                <marker date="1415676953728" expanded="true" signature="2409:7919" placeholder="..." />
+                <marker date="1415676953728" expanded="true" signature="5482:5559" placeholder="SELECT DISTI..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="5706:5805" placeholder="SELECT DISTI..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="6153:6846" placeholder="..." />
+                <marker date="1415676953728" expanded="true" signature="25333:29927" placeholder="..." />
+                <marker date="1415676953728" expanded="true" signature="26441:29927" placeholder="..." />
+                <marker date="1415676953728" expanded="true" signature="26942:27371" placeholder="SELECT airda..." />
+                <marker date="1415676953728" expanded="true" signature="27562:28289" placeholder="SELECT airda..." />
+                <marker date="1415676953728" expanded="true" signature="28468:28924" placeholder="SELECT airda..." />
+                <marker date="1415676953728" expanded="true" signature="33102:33254" placeholder="SELECT name,..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="45090:45155" placeholder="SELECT show_..." />
+                <marker date="1415676953728" expanded="true" signature="45715:45801" placeholder="SELECT show_..." />
+                <marker date="1415676953728" expanded="true" signature="47303:47434" placeholder="SELECT h.*, ..history..." />
+                <marker date="1415676953728" expanded="true" signature="47559:47717" placeholder="SELECT h.*, ..history..." />
+                <marker date="1415676953728" expanded="true" signature="48895:48924" placeholder="DELETE FROM ..." />
+                <marker date="1415676953728" expanded="true" signature="49421:49454" placeholder="DELETE FROM ..." />
+                <marker date="1415676953728" expanded="true" signature="57069:57098" placeholder="SELECT last_..info..." />
+                <marker date="1415676953728" expanded="true" signature="95870:95946" placeholder="SELECT DISTI..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="96057:96134" placeholder="SELECT DISTI..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="97467:97546" placeholder="SELECT name,..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="98484:98570" placeholder="SELECT name,..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="101142:101236" placeholder="&quot;&quot;&quot;...&quot;&quot;&quot;" />
+                <marker date="1415676953728" expanded="true" signature="104680:104751" placeholder="SELECT statu..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="110613:111189" placeholder="..." />
+                <marker date="1415676953728" expanded="true" signature="110613:111189" placeholder="..." />
+                <marker date="1415676953728" expanded="true" signature="111889:112088" placeholder="SELECT COUNT..tv_episodes..." />
+                <marker date="1415676953728" expanded="true" signature="112177:112481" placeholder="SELECT COUNT..tv_episodes..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="httputil.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/../tornado/httputil.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.8213592" vertical-offset="5170" max-vertical-offset="14756">
+              <caret line="342" column="23" selection-start-line="342" selection-start-column="8" selection-end-line="342" selection-end-column="23" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="web.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/../tornado/web.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="-11.28" vertical-offset="10853" max-vertical-offset="51663">
+              <caret line="655" column="0" selection-start-line="655" selection-start-column="0" selection-end-line="655" selection-end-column="0" />
+              <folding>
+                <element signature="e#1742#1822#0" expanded="true" />
+                <marker date="1415675989514" expanded="true" signature="3710:57335" placeholder="..." />
+                <marker date="1415675989514" expanded="true" signature="22872:24211" placeholder="..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="webserve.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/webserve.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="3454" max-vertical-offset="78353">
+              <caret line="244" column="13" selection-start-line="244" selection-start-column="13" selection-end-line="244" selection-end-column="13" />
+              <folding>
+                <marker date="1415676953721" expanded="true" signature="12586:12838" placeholder="SELECT *, tv..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="13027:13577" placeholder="SELECT *, tv..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="13285:13421" placeholder="SELECT airda..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="13756:14035" placeholder="SELECT *, tv..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="17704:17851" placeholder="SELECT show_..tv_shows..." />
+                <marker date="1415676953721" expanded="true" signature="18027:18155" placeholder="SELECT index..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="27426:27580" placeholder="SELECT seaso..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="28658:28927" placeholder="SELECT show_..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="30539:30695" placeholder="SELECT seaso..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="31285:31395" placeholder="SELECT seaso..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="32818:33083" placeholder="SELECT show_..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="34875:34968" placeholder="SELECT seaso..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="36448:36525" placeholder="SELECT * FRO..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="52206:52226" placeholder="SELECT * FRO..failed..." />
+                <marker date="1415676953721" expanded="true" signature="52281:52309" placeholder="SELECT * FRO..failed..." />
+                <marker date="1415676953721" expanded="true" signature="52452:52488" placeholder="DELETE FROM ..." />
+                <marker date="1415676953721" expanded="true" signature="53234:53329" placeholder="SELECT h.*, ..history..." />
+                <marker date="1415676953721" expanded="true" signature="53401:53504" placeholder="SELECT h.*, ..history..." />
+                <marker date="1415676953721" expanded="true" signature="56183:56212" placeholder="DELETE FROM ..." />
+                <marker date="1415676953721" expanded="true" signature="56399:56432" placeholder="DELETE FROM ..." />
+                <marker date="1415676953721" expanded="true" signature="121057:121098" placeholder="SELECT * FRO..tv_shows..." />
+                <marker date="1415676953721" expanded="true" signature="149273:149348" placeholder="SELECT show_..tv_shows..." />
+                <marker date="1415676953721" expanded="true" signature="153346:153423" placeholder="SELECT DISTI..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="153516:153593" placeholder="SELECT * FRO..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="159104:159187" placeholder="SELECT descr..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="182687:182768" placeholder="SELECT * FRO..tv_episodes..." />
+                <marker date="1415676953721" expanded="true" signature="183019:183080" placeholder="SELECT * FRO..tv_episodes..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FindManager">
+    <FindUsagesManager>
+      <setting name="OPEN_NEW_TAB" value="true" />
+    </FindUsagesManager>
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="changedFiles">
+      <list>
+        <option value="$PROJECT_DIR$/../gui/slick/js/configSearch.js" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/config_search.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/home.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/js/config.js" />
+        <option value="$PROJECT_DIR$/../tornado/http1connection.py" />
+        <option value="$PROJECT_DIR$/../tornado/iostream.py" />
+        <option value="$PROJECT_DIR$/__init__.py" />
+        <option value="$PROJECT_DIR$/tv.py" />
+        <option value="$PROJECT_DIR$/logger.py" />
+        <option value="$PROJECT_DIR$/../SickBeard.py" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/editShow.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/inc_qualityChooser.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/inc_addShowOptions.tmpl" />
+        <option value="$PROJECT_DIR$/sbdatetime.py" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/home_trendingShows.tmpl" />
+        <option value="$PROJECT_DIR$/../../DataSR/cache/cheetah/__Incoming_downloaders_usenet_sick_beard_git_SickGear_gui_slick_interfaces_default_comingEpisodes_tmpl.py" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/config.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/config_notifications.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/config_anime.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/config_general.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/config_subtitles.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/home_massAddTable.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/config_providers.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/js/newShow.js" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/inc_top.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/js/configProviders.js" />
+        <option value="$PROJECT_DIR$/../gui/slick/js/recommendedShows.js" />
+        <option value="$PROJECT_DIR$/../gui/slick/js/configSubtitles.js" />
+        <option value="$PROJECT_DIR$/../gui/slick/css/dark.css" />
+        <option value="$PROJECT_DIR$/../gui/slick/css/light.css" />
+        <option value="$PROJECT_DIR$/../gui/slick/css/style.css" />
+        <option value="$PROJECT_DIR$/../lib/send2trash/plat_other.py" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/displayShow.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/comingEpisodes.tmpl" />
+        <option value="$PROJECT_DIR$/../gui/slick/interfaces/default/home_newShow.tmpl" />
+        <option value="$PROJECT_DIR$/helpers.py" />
+        <option value="$PROJECT_DIR$/../lib/tvrage_api/tvrage_api.py" />
+        <option value="$PROJECT_DIR$/../lib/tvdb_api/tvdb_api.py" />
+        <option value="$PROJECT_DIR$/webserve.py" />
+        <option value="$PROJECT_DIR$/network_timezones.py" />
+        <option value="$PROJECT_DIR$/../gui/slick/js/ajaxEpSearch.js" />
+        <option value="$PROJECT_DIR$/../../DataSR/Logs/sickbeard.log" />
+        <option value="$PROJECT_DIR$/../tornado/web.py" />
+        <option value="$PROJECT_DIR$/webapi.py" />
+        <option value="$PROJECT_DIR$/../CHANGES.md" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds">
+    <option name="x" value="155" />
+    <option name="y" value="53" />
+    <option name="width" value="1405" />
+    <option name="height" value="971" />
+  </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="false">
+    <OptionsSetting value="true" id="Add" />
+    <OptionsSetting value="true" id="Remove" />
+    <OptionsSetting value="true" id="Checkout" />
+    <OptionsSetting value="true" id="Update" />
+    <OptionsSetting value="true" id="Status" />
+    <OptionsSetting value="true" id="Edit" />
+    <ConfirmationsSetting value="0" id="Add" />
+    <ConfirmationsSetting value="0" id="Remove" />
+  </component>
+  <component name="ProjectReloadState">
+    <option name="STATE" value="0" />
+  </component>
+  <component name="ProjectView">
+    <navigator currentView="ProjectPane" proportions="" version="1">
+      <flattenPackages />
+      <showMembers />
+      <showModules />
+      <showLibraryContents />
+      <hideEmptyPackages />
+      <abbreviatePackageNames />
+      <autoscrollToSource />
+      <autoscrollFromSource />
+      <sortByType />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="SickGear" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="SickGear" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="tornado" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="SickGear" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="gui" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="slick" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="js" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="SickGear" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="gui" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="slick" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="interfaces" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="default" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="SickGear" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="gui" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="slick" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="SickGear" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="gui" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="slick" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="css" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="SickGear" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="sickbeard" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+        </subPane>
+      </pane>
+      <pane id="Scope" />
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../SickBeard.py" />
+    <property name="options.lastSelected" value="reference.idesettings.debugger.python" />
+    <property name="options.splitter.main.proportions" value="0.3" />
+    <property name="options.splitter.details.proportions" value="0.2" />
+    <property name="options.searchVisible" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="recentsLimit" value="5" />
+    <property name="restartRequiresConfirmation" value="true" />
+    <property name="FullScreen" value="false" />
+  </component>
+  <component name="PyConsoleOptionsProvider">
+    <option name="myPythonConsoleState">
+      <console-settings />
+    </option>
+  </component>
+  <component name="RunManager" selected="Python.SickGear">
+    <configuration default="true" type="DjangoTestsConfigurationType" factoryName="Django tests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="sickbeard" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="TARGET" value="" />
+      <option name="SETTINGS_FILE" value="" />
+      <option name="CUSTOM_SETTINGS" value="false" />
+      <option name="USE_OPTIONS" value="false" />
+      <option name="OPTIONS" value="" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="py.test">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="sickbeard" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="testToRun" value="" />
+      <option name="keywords" value="" />
+      <option name="params" value="" />
+      <option name="USE_PARAM" value="false" />
+      <option name="USE_KEYWORD" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Nosetests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="sickbeard" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="sickbeard" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Unittests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="sickbeard" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PUREUNITTEST" value="true" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="JavascriptDebugType" factoryName="JavaScript Debug">
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Doctests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="sickbeard" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Attests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="sickbeard" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method />
+    </configuration>
+    <configuration default="false" name="SickGear" type="PythonConfigurationType" factoryName="Python">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Python27\python-SBeard.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.." />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="sickbeard" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../SickBeard.py" />
+      <option name="PARAMETERS" value="--datadir &quot;I:\_Incoming\downloaders\usenet\sick-beard\git\DataSR&quot;" />
+      <RunnerSettings RunnerId="PyDebugRunner" />
+      <ConfigurationWrapper RunnerId="PyDebugRunner" />
+      <method />
+    </configuration>
+    <list size="1">
+      <item index="0" class="java.lang.String" itemvalue="Python.SickGear" />
+    </list>
+  </component>
+  <component name="ShelveChangesManager" show_recycled="false" />
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a594580f-6f40-4408-b299-784ca5a33ad9" name="Default" comment="" />
+      <created>1414543935957</created>
+      <updated>1414543935957</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="155" y="53" width="1405" height="971" extended-state="0" />
+    <editor active="false" />
+    <layout>
+      <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3294964" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3297619" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2516704" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.26280624" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.35671818" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+    </layout>
+    <layout-to-restore>
+      <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
+      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32517985" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="true" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
+      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2494244" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.3072072" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+    </layout-to-restore>
+  </component>
+  <component name="Vcs.Log.UiProperties">
+    <option name="RECENTLY_FILTERED_USER_GROUPS">
+      <collection />
+    </option>
+    <option name="RECENTLY_FILTERED_BRANCH_GROUPS">
+      <collection />
+    </option>
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="myTodoPanelSettings">
+      <TodoPanelSettings />
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="NONE" type="python-line">
+          <url>file://$PROJECT_DIR$/../tornado/web.py</url>
+          <line>864</line>
+          <option name="timeStamp" value="101" />
+        </line-breakpoint>
+      </breakpoints>
+      <breakpoints-dialog>
+        <breakpoints-dialog />
+      </breakpoints-dialog>
+      <option name="time" value="115" />
+    </breakpoint-manager>
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/sbdatetime.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1137" max-vertical-offset="3876">
+          <caret line="83" column="21" selection-start-line="83" selection-start-column="21" selection-end-line="83" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/classes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-0.2943327" vertical-offset="501" max-vertical-offset="4590">
+          <caret line="28" column="6" selection-start-line="28" selection-start-column="6" selection-end-line="28" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../SickBeard.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.25235406" vertical-offset="1991" max-vertical-offset="9061">
+          <caret line="131" column="28" selection-start-line="131" selection-start-column="22" selection-end-line="131" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../DataSR/cache/cheetah/__Incoming_downloaders_usenet_sick_beard_git_SickGear_gui_slick_interfaces_default_comingEpisodes_tmpl.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.3206522" vertical-offset="14103" max-vertical-offset="19176">
+          <caret line="842" column="0" selection-start-line="842" selection-start-column="0" selection-end-line="842" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/config.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.6424474" vertical-offset="412" max-vertical-offset="1037">
+          <caret line="44" column="31" selection-start-line="44" selection-start-column="31" selection-end-line="44" selection-end-column="31" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/config_notifications.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.33211678" vertical-offset="413" max-vertical-offset="26673">
+          <caret line="35" column="48" selection-start-line="35" selection-start-column="41" selection-end-line="35" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/config_anime.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.3001912" vertical-offset="404" max-vertical-offset="1955">
+          <caret line="33" column="54" selection-start-line="33" selection-start-column="54" selection-end-line="33" selection-end-column="54" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/home_massAddTable.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-0.39783" vertical-offset="237" max-vertical-offset="918">
+          <caret line="1" column="0" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/config_subtitles.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-1.6383363" vertical-offset="940" max-vertical-offset="2822">
+          <caret line="2" column="39" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="39" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/config_general.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.3074141" vertical-offset="0" max-vertical-offset="9826">
+          <caret line="10" column="0" selection-start-line="9" selection-start-column="0" selection-end-line="10" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/inc_top.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-12.24" vertical-offset="1105" max-vertical-offset="4624">
+          <caret line="83" column="19" selection-start-line="83" selection-start-column="19" selection-end-line="83" selection-end-column="19" />
+          <folding />
+        </state>
+      </provider>
+      <provider editor-type-id="com.intellij.persistence.database.editor.CsvTableFileEditorProvider">
+        <state />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/js/recommendedShows.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-1.5" vertical-offset="214" max-vertical-offset="2550">
+          <caret line="17" column="0" selection-start-line="17" selection-start-column="0" selection-end-line="17" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/config_providers.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.33255813" vertical-offset="1455" max-vertical-offset="12342">
+          <caret line="94" column="49" selection-start-line="94" selection-start-column="41" selection-end-line="94" selection-end-column="49" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/js/configProviders.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-2.86" vertical-offset="1302" max-vertical-offset="10013">
+          <caret line="85" column="59" selection-start-line="85" selection-start-column="59" selection-end-line="85" selection-end-column="59" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/js/configSubtitles.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-2.86" vertical-offset="248" max-vertical-offset="1258">
+          <caret line="23" column="170" selection-start-line="23" selection-start-column="163" selection-end-line="23" selection-end-column="170" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/js/newShow.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-2.86" vertical-offset="1081" max-vertical-offset="3961">
+          <caret line="72" column="62" selection-start-line="72" selection-start-column="55" selection-end-line="72" selection-end-column="62" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/css/dark.css">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-11.76" vertical-offset="17199" max-vertical-offset="52122">
+          <caret line="1029" column="14" selection-start-line="1029" selection-start-column="14" selection-end-line="1029" selection-end-column="14" />
+          <folding>
+            <marker date="1415548652269" expanded="true" signature="-1:-1" placeholder="{...}" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/css/light.css">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-5.64" vertical-offset="16944" max-vertical-offset="51051">
+          <caret line="1005" column="0" selection-start-line="1005" selection-start-column="0" selection-end-line="1005" selection-end-column="0" />
+          <folding>
+            <marker date="1415548652271" expanded="true" signature="-1:-1" placeholder="{...}" />
+            <marker date="1415548652271" expanded="true" signature="-1:-1" placeholder="{...}" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/css/style.css">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="17196" max-vertical-offset="53023">
+          <caret line="1022" column="0" selection-start-line="1022" selection-start-column="0" selection-end-line="1022" selection-end-column="0" />
+          <folding>
+            <marker date="1415576481209" expanded="true" signature="-1:-1" placeholder="{...}" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../lib/send2trash/compat.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="493">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../lib/send2trash/plat_gio.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="493">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../lib/send2trash/plat_osx.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="316" max-vertical-offset="833">
+          <caret line="40" column="8" selection-start-line="40" selection-start-column="8" selection-end-line="40" selection-end-column="35" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../lib/send2trash/plat_other.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-12.0" vertical-offset="2012" max-vertical-offset="2754">
+          <caret line="142" column="36" selection-start-line="142" selection-start-column="36" selection-end-line="142" selection-end-column="36" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../DataSR/cache/cheetah/__Incoming_downloaders_usenet_sick_beard_git_SickGear_gui_slick_interfaces_default_displayShow_tmpl.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.33333334" vertical-offset="7473" max-vertical-offset="22083">
+          <caret line="451" column="0" selection-start-line="451" selection-start-column="0" selection-end-line="451" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/comingEpisodes.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-7.68" vertical-offset="7084" max-vertical-offset="9316">
+          <caret line="428" column="120" selection-start-line="428" selection-start-column="120" selection-end-line="428" selection-end-column="120" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/home_newShow.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-7.68" vertical-offset="488" max-vertical-offset="1972">
+          <caret line="40" column="87" selection-start-line="40" selection-start-column="87" selection-end-line="40" selection-end-column="87" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/helpers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="15354" max-vertical-offset="23800">
+          <caret line="951" column="54" selection-start-line="951" selection-start-column="54" selection-end-line="951" selection-end-column="54" />
+          <folding>
+            <marker date="1415592404330" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..tv_shows..." />
+            <marker date="1415592404330" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..tv_shows..." />
+            <marker date="1415592404330" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..tv_episodes..." />
+            <marker date="1415592404330" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..indexer_mapping..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/webserveInit.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.44827586" vertical-offset="2210" max-vertical-offset="2703">
+          <caret line="143" column="0" selection-start-line="143" selection-start-column="0" selection-end-line="144" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#9#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../lib/xmltodict.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-6.24" vertical-offset="4400" max-vertical-offset="6171">
+          <caret line="270" column="26" selection-start-line="270" selection-start-column="16" selection-end-line="270" selection-end-column="26" />
+          <folding>
+            <marker date="1414459406487" expanded="true" signature="-1:-1" placeholder="..." />
+            <marker date="1414459406487" expanded="true" signature="-1:-1" placeholder="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../lib/tvrage_api/tvrage_api.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.3696581" vertical-offset="7919" max-vertical-offset="11917">
+          <caret line="477" column="27" selection-start-line="477" selection-start-column="27" selection-end-line="477" selection-end-column="27" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../lib/tvdb_api/tvdb_api.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.18803419" vertical-offset="10384" max-vertical-offset="16575">
+          <caret line="617" column="42" selection-start-line="617" selection-start-column="42" selection-end-line="617" selection-end-column="42" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tornado/ioloop.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.3326572" vertical-offset="13198" max-vertical-offset="16558">
+          <caret line="805" column="0" selection-start-line="805" selection-start-column="0" selection-end-line="805" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tornado/stack_context.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="1.1602434" vertical-offset="4035" max-vertical-offset="6613">
+          <caret line="276" column="0" selection-start-line="276" selection-start-column="0" selection-end-line="276" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tornado/gen.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="1.5097276" vertical-offset="11311" max-vertical-offset="12937">
+          <caret line="721" column="0" selection-start-line="721" selection-start-column="0" selection-end-line="721" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tornado/http1connection.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.31906614" vertical-offset="4001" max-vertical-offset="11781">
+          <caret line="256" column="0" selection-start-line="256" selection-start-column="0" selection-end-line="256" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tornado/httpserver.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="9.029182" vertical-offset="0" max-vertical-offset="4998">
+          <caret line="283" column="0" selection-start-line="283" selection-start-column="0" selection-end-line="283" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/indexers/indexer_config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="952">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#38#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/js/displayShow.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.43076923" vertical-offset="25" max-vertical-offset="4692">
+          <caret line="13" column="7" selection-start-line="13" selection-start-column="7" selection-end-line="13" selection-end-column="7" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/js/ajaxEpSearch.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.74285716" vertical-offset="2467" max-vertical-offset="3298">
+          <caret line="165" column="49" selection-start-line="165" selection-start-column="49" selection-end-line="165" selection-end-column="49" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/displayShow.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.33259425" vertical-offset="6293" max-vertical-offset="8772">
+          <caret line="379" column="37" selection-start-line="379" selection-start-column="27" selection-end-line="379" selection-end-column="37" />
+          <folding />
+        </state>
+      </provider>
+      <provider editor-type-id="com.intellij.persistence.database.editor.CsvTableFileEditorProvider">
+        <state />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/network_timezones.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.36809817" vertical-offset="2115" max-vertical-offset="4726">
+          <caret line="146" column="10" selection-start-line="146" selection-start-column="81" selection-end-line="146" selection-end-column="102" />
+          <folding>
+            <marker date="1415676953732" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..network_timezones..." />
+            <marker date="1415676953732" expanded="true" signature="-1:-1" placeholder="UPDATE netwo..." />
+            <marker date="1415676953732" expanded="true" signature="-1:-1" placeholder="INSERT INTO ..." />
+            <marker date="1415676953732" expanded="true" signature="-1:-1" placeholder="DELETE FROM ..." />
+            <marker date="1415676953732" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..network_timezones..." />
+            <marker date="1415676953732" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..network_timezones..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gui/slick/interfaces/default/home_trendingShows.tmpl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.5105042" vertical-offset="1610" max-vertical-offset="2703">
+          <caret line="109" column="95" selection-start-line="109" selection-start-column="62" selection-end-line="109" selection-end-column="95" />
+          <folding />
+        </state>
+      </provider>
+      <provider editor-type-id="com.intellij.persistence.database.editor.CsvTableFileEditorProvider">
+        <state />
+      </provider>
+    </entry>
+    <entry file="file://C:/Python27/Lib/json/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.33268481" vertical-offset="3076" max-vertical-offset="6052">
+          <caret line="192" column="4" selection-start-line="192" selection-start-column="4" selection-end-line="192" selection-end-column="4" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../DataSR/Logs/sickbeard.log">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-1778.7858" vertical-offset="848198" max-vertical-offset="848674">
+          <caret line="88" column="107" selection-start-line="88" selection-start-column="107" selection-end-line="88" selection-end-column="107" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/webserve.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="3454" max-vertical-offset="78353">
+          <caret line="244" column="13" selection-start-line="244" selection-start-column="13" selection-end-line="244" selection-end-column="13" />
+          <folding>
+            <marker date="1415676953721" expanded="true" signature="12586:12838" placeholder="SELECT *, tv..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="13027:13577" placeholder="SELECT *, tv..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="13285:13421" placeholder="SELECT airda..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="13756:14035" placeholder="SELECT *, tv..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="17704:17851" placeholder="SELECT show_..tv_shows..." />
+            <marker date="1415676953721" expanded="true" signature="18027:18155" placeholder="SELECT index..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="27426:27580" placeholder="SELECT seaso..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="28658:28927" placeholder="SELECT show_..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="30539:30695" placeholder="SELECT seaso..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="31285:31395" placeholder="SELECT seaso..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="32818:33083" placeholder="SELECT show_..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="34875:34968" placeholder="SELECT seaso..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="36448:36525" placeholder="SELECT * FRO..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="52206:52226" placeholder="SELECT * FRO..failed..." />
+            <marker date="1415676953721" expanded="true" signature="52281:52309" placeholder="SELECT * FRO..failed..." />
+            <marker date="1415676953721" expanded="true" signature="52452:52488" placeholder="DELETE FROM ..." />
+            <marker date="1415676953721" expanded="true" signature="53234:53329" placeholder="SELECT h.*, ..history..." />
+            <marker date="1415676953721" expanded="true" signature="53401:53504" placeholder="SELECT h.*, ..history..." />
+            <marker date="1415676953721" expanded="true" signature="56183:56212" placeholder="DELETE FROM ..." />
+            <marker date="1415676953721" expanded="true" signature="56399:56432" placeholder="DELETE FROM ..." />
+            <marker date="1415676953721" expanded="true" signature="121057:121098" placeholder="SELECT * FRO..tv_shows..." />
+            <marker date="1415676953721" expanded="true" signature="149273:149348" placeholder="SELECT show_..tv_shows..." />
+            <marker date="1415676953721" expanded="true" signature="153346:153423" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="153516:153593" placeholder="SELECT * FRO..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="159104:159187" placeholder="SELECT descr..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="182687:182768" placeholder="SELECT * FRO..tv_episodes..." />
+            <marker date="1415676953721" expanded="true" signature="183019:183080" placeholder="SELECT * FRO..tv_episodes..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tornado/web.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-11.28" vertical-offset="10853" max-vertical-offset="51663">
+          <caret line="655" column="0" selection-start-line="655" selection-start-column="0" selection-end-line="655" selection-end-column="0" />
+          <folding>
+            <element signature="e#1742#1822#0" expanded="true" />
+            <marker date="1415675989514" expanded="true" signature="3710:57335" placeholder="..." />
+            <marker date="1415675989514" expanded="true" signature="22872:24211" placeholder="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/Python27/Lib/encodings/cp1252.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="67" max-vertical-offset="5321">
+          <caret line="14" column="0" selection-start-line="14" selection-start-column="0" selection-end-line="14" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/webapi.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-6.36" vertical-offset="2340" max-vertical-offset="45356">
+          <caret line="167" column="25" selection-start-line="167" selection-start-column="25" selection-end-line="167" selection-end-column="25" />
+          <folding>
+            <marker date="1415676953728" expanded="true" signature="2409:7919" placeholder="..." />
+            <marker date="1415676953728" expanded="true" signature="5482:5559" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="5706:5805" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="6153:6846" placeholder="..." />
+            <marker date="1415676953728" expanded="true" signature="25333:29927" placeholder="..." />
+            <marker date="1415676953728" expanded="true" signature="26441:29927" placeholder="..." />
+            <marker date="1415676953728" expanded="true" signature="26942:27371" placeholder="SELECT airda..." />
+            <marker date="1415676953728" expanded="true" signature="27562:28289" placeholder="SELECT airda..." />
+            <marker date="1415676953728" expanded="true" signature="28468:28924" placeholder="SELECT airda..." />
+            <marker date="1415676953728" expanded="true" signature="33102:33254" placeholder="SELECT name,..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="45090:45155" placeholder="SELECT show_..." />
+            <marker date="1415676953728" expanded="true" signature="45715:45801" placeholder="SELECT show_..." />
+            <marker date="1415676953728" expanded="true" signature="47303:47434" placeholder="SELECT h.*, ..history..." />
+            <marker date="1415676953728" expanded="true" signature="47559:47717" placeholder="SELECT h.*, ..history..." />
+            <marker date="1415676953728" expanded="true" signature="48895:48924" placeholder="DELETE FROM ..." />
+            <marker date="1415676953728" expanded="true" signature="49421:49454" placeholder="DELETE FROM ..." />
+            <marker date="1415676953728" expanded="true" signature="57069:57098" placeholder="SELECT last_..info..." />
+            <marker date="1415676953728" expanded="true" signature="95870:95946" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="96057:96134" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="97467:97546" placeholder="SELECT name,..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="98484:98570" placeholder="SELECT name,..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="101142:101236" placeholder="&quot;&quot;&quot;...&quot;&quot;&quot;" />
+            <marker date="1415676953728" expanded="true" signature="104680:104751" placeholder="SELECT statu..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="110613:111189" placeholder="..." />
+            <marker date="1415676953728" expanded="true" signature="110613:111189" placeholder="..." />
+            <marker date="1415676953728" expanded="true" signature="111889:112088" placeholder="SELECT COUNT..tv_episodes..." />
+            <marker date="1415676953728" expanded="true" signature="112177:112481" placeholder="SELECT COUNT..tv_episodes..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../CHANGES.md">
+      <provider editor-type-id="MarkdownPreviewEditor">
+        <state />
+      </provider>
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-2.04" vertical-offset="884" max-vertical-offset="1904">
+          <caret line="55" column="0" selection-start-line="55" selection-start-column="0" selection-end-line="55" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../Sick-Beard/sickbeard/webapi.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.34860557" vertical-offset="2494" max-vertical-offset="42228">
+          <caret line="177" column="37" selection-start-line="177" selection-start-column="30" selection-end-line="177" selection-end-column="37" />
+          <folding>
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT airda..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT airda..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT airda..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT name,..tv_episodes..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT show_..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT show_..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT h.*, ..history..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT h.*, ..history..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="DELETE FROM ..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="DELETE FROM ..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT last_..info..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT DISTI..tv_episodes..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT name,..tv_episodes..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT name,..tv_episodes..." />
+            <marker date="1414356381703" expanded="true" signature="-1:-1" placeholder="SELECT statu..tv_episodes..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tornado/httputil.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.8213592" vertical-offset="5170" max-vertical-offset="14756">
+          <caret line="342" column="23" selection-start-line="342" selection-start-column="8" selection-end-line="342" selection-end-column="23" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>
+

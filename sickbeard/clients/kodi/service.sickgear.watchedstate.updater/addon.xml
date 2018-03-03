@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="service.sickgear.watchedstate.updater" name="SickGear Watched State Updater" version="1.0.3" provider-name="SickGear">
+	<requires>
+		<import addon="xbmc.python" version="2.19.0" />
+		<import addon="xbmc.json"   version="6.20.0" />
+		<import addon="xbmc.addon"  version="14.0.0" />
+	</requires>
+	<extension point="xbmc.service" library="service.py" start="login" />
+	<extension point="xbmc.python.pluginsource" library="service.py" >
+			<provides>executable</provides>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary lang="en">SickGear Watched State Updater</summary>
+		<description lang="en">This Add-on notifies SickGear when an episode watched state is changed in Kodi</description>
+		<platform>all</platform>
+		<language>en</language>
+		<disclaimer/>
+		<license/>
+		<forum/>
+		<website>https://github.com/sickgear/sickgear</website>
+		<email/>
+		<nofanart>true</nofanart>
+		<source>https://github.com/sickgear/sickgear</source>
+		<assets>
+			<icon>icon.png</icon>
+		</assets>
+		<news>[B]1.0.0[/B] (2017-10-04)
+- Initial release
+[B]1.0.2[/B] (2017-11-15)
+- Devel release for an SG API change
+[B]1.0.3[/B] (2018-02-28)
+- Add episodeid to payload
+		</news>
+	</extension>
+</addon>

@@ -1,0 +1,2 @@
+# Install script contains removal instructions
+bash ../install/installpackage-sickgear remove

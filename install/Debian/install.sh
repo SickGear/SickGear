@@ -1,0 +1,324 @@
+#!/bin/bash
+#
+# A SickGear development.
+#
+# This installer script has been tested with... Debian (Jessie).
+# Install/Remove tests were done under a non root user account using sudo.
+#
+#
+# Install [remove] script for SickGear Service. Run with...
+#
+#   sudo sg_installer.sh [remove]
+#
+#
+# Notes:
+# 1) Install takes several minutes to complete due to building official
+#    Python from source.
+# 2) Uses systemd for autoboot.
+#
+#
+# 23 Dec 2016.
+# Change, now installs master branch by default.
+# Change, deploy Python 2.7.13 via pyenv
+#
+# 12 Nov 2016.
+# Initial, until further notice, this installer works only with develop branch.
+# Therefore, it will install develop branch for now.
+#
+################################################################################
+
+# Service name is used with systemctl and is the install dir
+SG_SERVICE=sickgear
+SG_INSTALL_DIR=/opt/${SG_SERVICE}/
+FILE_OWNER=`whoami`
+
+# Login is used if set. QuickBox details used if found. Otherwise, no SG login
+# If login not wanted, remove detais in SG at general config/user interface
+SG_USERNAME=
+SG_PASSWORD=
+
+# Default port to connect to reach the running SickGear application
+SG_PORT=8081
+SG_HOST=localhost
+
+# String must begin with a slash, example.. /sickgear
+SG_WEB_ROOT=
+
+SG_REPO=https://github.com/SickGear/SickGear.git
+
+# Used in an Apache2 conf.. /etc/apache2/sites-available/${SG_SERVICE}.conf
+REVERSE_PROXY_URL=http://${SG_HOST}:${SG_PORT}${SG_WEB_ROOT}
+
+# Can increase this value when a new python version comes, rerun to build new
+PYTHON_VER=2.7.13
+PYTHON_BIN=${SG_INSTALL_DIR}.pyenv/versions/${PYTHON_VER}/bin/
+
+# To print to shell, set to nothing, otherwise output to LOGFILE
+USE_LOGFILE=  #yes
+LOGFILE=/srv/rutorrent/home/db/output.log
+
+# To get most output from commands that are run, set to nothing
+MIN_OUTPUT=  #yes
+
+################################################################################
+#####          Should not need to change anything below this line          #####
+################################################################################
+
+_print() {
+  if [[ -z "${USE_LOGFILE}" ]]; then
+    echo $1
+  else
+    echo $1 >>"${LOGFILE}" 2>&1
+  fi
+}
+
+_do() {
+  if [[ ! -z "${MIN_OUTPUT}" ]]; then
+    ($1 >/dev/null 2>&1)
+  else
+    ($1)
+  fi
+}
+_sudo() {
+  _do "sudo $1"
+}
+
+_getUserVars() {
+  # if no user/pw, then use one from QB (if set)
+  QB_FILE=/srv/rutorrent/home/db/master.txt
+  if [[ -z ${SG_USERNAME} && -f ${QB_FILE} ]]; then
+    SG_USERNAME=`cat ${QB_FILE}`
+    if [[ ! -z ${SG_USERNAME} ]]; then
+      FILE_OWNER=${SG_USERNAME}
+      QB_PW_FILE=/root/${SG_USERNAME}.info
+      if [[ -f ${QB_FILE} ]]; then
+        SG_PASSWORD=`sudo cat ${QB_PW_FILE} | cut -d ":" -f 3 | cut -d "@" -f 1`
+      fi
+    fi
+  fi
+}
+
+_installSickGearIntro() {
+  _print "SickGear will now be installed to ${SG_INSTALL_DIR}"
+  _print "This process may take several minutes"
+  _print "Please wait until process is completed"
+
+  echo
+  sleep 5
+}
+
+_updateSystem() {
+  _print "0%..Updating system..."
+
+  _sudo "apt-get -y update"
+}
+
+_installBaseDeps() {
+  _print "11%..Installing application dependencies: git and unrar-free ..."
+
+  if [[ ! -n `which git` ]]; then
+    _sudo "apt-get -y install git"
+  else
+    _print "OK, git found"
+  fi
+  if [[ ! -n `which unrar-free` ]]; then
+    _sudo "apt-get -y install unrar-free"
+  else
+    _print "OK, unrar-free found"
+  fi
+}
+
+_pullSickGearRepo() {
+  _print "22%..Fetching SickGear application ..."
+
+  if [[ -d /install ]]; then
+    sudo touch /install/.${SG_SERVICE}.lock
+  fi
+  if [[ ! -d ${SG_INSTALL_DIR}app ]]; then
+    _sudo "mkdir -p ${SG_INSTALL_DIR}app"
+    _sudo "mkdir -p ${SG_INSTALL_DIR}data"
+    _sudo "git clone ${SG_REPO} ${SG_INSTALL_DIR}app/"
+    # comment/remove accordingly when requirements reach develop then master
+    #cd ${SG_INSTALL_DIR}app
+    #_sudo "git checkout -f --track -B develop remotes/origin/develop --"
+  else
+    _print "Skipped, found files at ${SG_INSTALL_DIR}app"
+  fi
+}
+
+_pullPyenvRepo() {
+  _print "33%..Fetching Python version management files ..."
+
+  if [[ ! -d ${SG_INSTALL_DIR}.pyenv ]]; then
+    _sudo "git clone https://github.com/yyuu/pyenv ${SG_INSTALL_DIR}.pyenv"
+  else
+    _print "Skipped, found folder at ${SG_INSTALL_DIR}.pyenv"
+  fi
+}
+
+_applyPerms() {
+  _print "44%..Permissions applied for folder and files ..."
+  sudo chown -R ${FILE_OWNER}:${FILE_OWNER} ${SG_INSTALL_DIR}
+  sudo find ${SG_INSTALL_DIR}app/ -type d -exec chmod 755 {} \;
+  sudo find ${SG_INSTALL_DIR}app/ -type f -iname *.py -exec chmod 644 {} \;
+  sudo find ${SG_INSTALL_DIR}app/autoProcessTV -iname *.py -exec chmod 755 {} \;
+  sudo chmod -R 755 ${SG_INSTALL_DIR}app/init-scripts
+  sudo chmod 755 ${SG_INSTALL_DIR}app/SickBeard.py
+}
+
+
+_buildPythonAndDeps() {
+  _print "55%..Building Python version management and dependencies ..."
+
+  if [[ ! -d ${SG_INSTALL_DIR}.pyenv/versions/${PYTHON_VER}/bin ]]; then
+    _print "(go make a hot beverage, this will take time) ..."
+    _sudo "apt-get -y install curl git-core build-essential libsqlite3-dev libbz2-dev libreadline-dev libssl-dev zlib1g-dev"
+    PYENV_ROOT=${SG_INSTALL_DIR}.pyenv ${SG_INSTALL_DIR}.pyenv/bin/pyenv install ${PYTHON_VER} >/dev/null 2>&1
+
+    _do "${PYTHON_BIN}pip install --upgrade pip"
+    _do "${PYTHON_BIN}pip install --upgrade pyopenssl ndg-httpsclient virtualenv lxml"
+    cd ${SG_INSTALL_DIR}app && _do "${PYTHON_BIN}pip install -r requirements.txt"
+  else
+    _print "Skipped, pyenv already installed"
+  fi
+}
+
+_setSystemd() {
+  _print "66%..Adding SickGear as a systemd service ..."
+  sudo cat >/etc/systemd/system/${SG_SERVICE}@.service<<-EOF
+		[Unit]
+		Description=SickGear Service
+
+		[Service]
+		User=${FILE_OWNER}
+		Group=${FILE_OWNER}
+
+		Environment=PYTHONUNBUFFERED=true
+		ExecStart=${PYTHON_BIN}python2 ${SG_INSTALL_DIR}app/SickBeard.py --systemd --datadir=${SG_INSTALL_DIR}data --port=%I
+		KillMode=process
+		Restart=on-failure
+
+		[Install]
+		WantedBy=multi-user.target
+EOF
+}
+
+_firstRunCycle() {
+  _print "77%..Enabling SickGear service on port ${SG_PORT} ..."
+
+  _sudo "systemctl enable ${SG_SERVICE}@${SG_PORT}"
+  _sudo "systemctl start ${SG_SERVICE}@${SG_PORT}"
+  sleep 5
+  _sudo "systemctl stop ${SG_SERVICE}@${SG_PORT}"
+  sleep 5
+}
+
+_tweakConfig() {
+  _print "88%..Setting up SickGear config ..."
+
+  cp ${SG_INSTALL_DIR}app/autoProcessTV/autoProcessTV.cfg.sample ${SG_INSTALL_DIR}app/autoProcessTV/autoProcessTV.cfg
+
+  sed -i -e 's/web_port\W*=.*/web_port = '${SG_PORT}'/' ${SG_INSTALL_DIR}data/config.ini
+  sed -i -e 's/port\W*=.*/port='${SG_PORT}'/' ${SG_INSTALL_DIR}app/autoProcessTV/autoProcessTV.cfg
+  if [[ ! -z ${SG_USERNAME} ]]; then
+    sed -i -e 's/web_username\W*=.*/web_username = "'"${SG_USERNAME}"'"/' ${SG_INSTALL_DIR}data/config.ini
+    sed -i -e 's/username\W*=.*/username='"${SG_USERNAME}"'/' ${SG_INSTALL_DIR}app/autoProcessTV/autoProcessTV.cfg
+  fi
+  if [[ ! -z ${SG_PASSWORD} ]]; then
+    sed -i -e 's/web_password\W*=.*/web_password = "'"${SG_PASSWORD}"'"/' ${SG_INSTALL_DIR}data/config.ini
+    sed -i -e 's/password\W*=.*/password='"${SG_PASSWORD}"'/' ${SG_INSTALL_DIR}app/autoProcessTV/autoProcessTV.cfg
+  fi
+  if [[ ! -z ${SG_WEB_ROOT} ]]; then
+    sed -i -e 's/web_root\W*=.*/web_root = "'"${SG_WEB_ROOT}"'"/' ${SG_INSTALL_DIR}data/config.ini
+    sed -i -e 's/web_root\W*=.*/web_root="'${SG_WEB_ROOT}'"/' ${SG_INSTALL_DIR}app/autoProcessTV/autoProcessTV.cfg
+  fi
+
+  APACHE_MODE=available
+  APACHE_PATH=/etc/apache2/sites-${APACHE_MODE}
+  if [[ -d ${APACHE_PATH} ]]; then
+    sudo cat >${APACHE_PATH}/${SG_SERVICE}.conf<<-EOF
+		<Location ${SG_WEB_ROOT}>
+		AuthName "rutorrent"
+		AuthType Digest
+		AuthUserFile "/etc/htpasswd"
+		ProxyPass ${REVERSE_PROXY_URL}
+		ProxyPassReverse ${REVERSE_PROXY_URL}
+		Require user ${SG_USERNAME}
+		</Location>
+EOF
+    sudo chown www-data: ${APACHE_PATH}/${SG_SERVICE}.conf
+    #_do "service apache2 reload"    # only need this if mode is "enabled"
+  fi
+
+  _sudo "systemctl start ${SG_SERVICE}@${SG_PORT}"
+}
+
+_installSickGearOutro() {
+  _print "99%..SickGear installation complete, connect at port ${SG_PORT}"
+  _print "Systemd service is named ${SG_SERVICE}. Example commands.."
+  _print "  systemctl start ${SG_SERVICE}@${SG_PORT}"
+  _print "  systemctl status ${SG_SERVICE}@${SG_PORT} -l"
+  _print "  systemctl stop ${SG_SERVICE}@${SG_PORT}"
+
+  _print
+  sleep 5
+}
+################################################################################
+_removeSickGearIntro() {
+  _print "SickGear will be stopped and removed from ${SG_INSTALL_DIR}app"
+  _print "Your data will be left untouched in ${SG_INSTALL_DIR}data"
+  _print "Process begins in 10 seconds (giving time to Ctrl-C abort)"
+
+  _print
+  sleep 10
+}
+
+_removeSickGearFiles() {
+  SG_PORT=`sudo grep ${SG_INSTALL_DIR}data/config.ini -e "web_port" | sed -n '${s/.* //p}'`
+
+  _sudo "systemctl stop ${SG_SERVICE}@${SG_PORT}"
+  _sudo "systemctl disable ${SG_SERVICE}@${SG_PORT}"
+  _sudo "rm -f /etc/systemd/system/${SG_SERVICE}@.service"
+
+  APACHE_MODE=enabled
+  APACHE_PATH=/etc/apache2/sites-${APACHE_MODE}
+  if [[ -d ${APACHE_PATH} && -f ${APACHE_PATH}/${SG_SERVICE}.conf ]]; then
+    _sudo "rm -f ${APACHE_PATH}/${SG_SERVICE}.conf"
+    _sudo "rm -f /etc/apache2/sites-available/${SG_SERVICE}.conf"
+    _do "service apache2 reload"
+  fi
+
+  _sudo "rm -rf ${SG_INSTALL_DIR}app"
+
+  _sudo "rm -f /install/.${SG_SERVICE}.lock"
+}
+
+_removeSickGearOutro() {
+  _print "SickGear has been stopped, removed from autostart and folder ${SG_INSTALL_DIR}app removed"
+  _print "Your data is still available in ${SG_INSTALL_DIR}data"
+
+  _print
+  sleep 5
+}
+################################################################################
+_done() {
+  _print "100%..Done. Close this box"
+  exit
+}
+
+if [[ remove == $1 ]]; then
+  _removeSickGearIntro
+  _removeSickGearFiles
+  _removeSickGearOutro
+  _done
+else
+  _getUserVars
+  _installSickGearIntro;_updateSystem
+  _installBaseDeps;_pullSickGearRepo;_pullPyenvRepo;
+  _applyPerms
+  _buildPythonAndDeps
+  _setSystemd;_firstRunCycle
+  _tweakConfig
+  _installSickGearOutro
+  _done
+fi

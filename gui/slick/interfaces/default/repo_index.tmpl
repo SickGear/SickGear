@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+	<head></head>
+	<body>
+		<h1>Index of $basepath</h1>
+		<table border="1" cellpadding="5" cellspacing="0" class="whitelinks">
+			<tr>
+				<th>Name</th>
+			</tr>
+#for $file in $filelist
+			<tr>
+				<td><a href="$file">$file</a></td>
+			</tr>
+#end for
+		</table>
+		<hr>
+		<em>Tornado Server for SickGear</em>
+	</body>
+</html>

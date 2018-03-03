@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<strings>
+  <string id="32000">General</string>
+  <string id="32001">KODI IP</string>
+  <string id="32002">KODI JSON RPC TCP Port</string>
+  <string id="32003">Use additional watched-tag (for TMM/ME)</string>
+  <string id="32004">- Add watched-tags if non-existant</string>
+  <string id="32005">Error Notifications</string>
+  
+  <string id="32100">Configuration:</string>
+  <string id="32101">Go to "System / Services / Control"</string>
+  <string id="32102">Check "Allow remote control from applications on this system"</string>
+  <string id="32103">Check "Allow remote control from applications on other systems"</string>
+</strings>

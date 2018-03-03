@@ -653,22 +653,32 @@ inc_bottom.tmpl
 	display:inline
 }
 
+#history-table thead th .icon-glyph,
 .footer .icon-glyph{
 	opacity:0.4;filter:alpha(opacity=40);
 	float:none;
 	display:inline-block;
-	margin:0 0 -1px 2px;
-	height:12px;
+	margin:0 0 -2px 4px;
+	height:13px;
 	width:14px
 }
+#history-table thead th .icon-glyph:hover,
+#history-table tfoot th .icon-glyph:hover,
 .footer .icon-glyph:hover{
-	opacity:0.6;filter:alpha(opacity=60);
+	opacity:0.6;filter:alpha(opacity=60)
+}
+#history-table thead th .icon-glyph:hover,
+.footer .icon-glyph:hover{
 	cursor:pointer
 }
+#history-table thead th .icon-glyph.age,
+#history-table thead th .icon-glyph.date:hover,
 .footer .icon-glyph.timeleft,
 .footer .icon-glyph.time:hover{
 	background-position:-49px -25px
 }
+#history-table thead th .icon-glyph.date,
+#history-table thead th .icon-glyph.age:hover,
 .footer .icon-glyph.time,
 .footer .icon-glyph.timeleft:hover{
 	background-position:-193px -121px
@@ -2605,40 +2615,51 @@ h2.day.add-apace, h2.network.add-space{
 /* =======================================================================
 history.tmpl
 ========================================================================== */
+.strike-deleted{
+	text-decoration:line-through
+}
 
-#historyTable td,
-#historyTable td.provider span{
+.red-bg{
+	background-color:#992828
+}
+
+.green-bg{
+	background-color:#3f993f
+}
+
+#history-table td,
+#history-table td.provider span{
 	text-align:center
 }
 
-#historyTable td.provider span{
+#history-table td.provider span{
 	padding:0 2px
 }
 
-#historyTable td.provider > img{
+#history-table td.provider > img{
 	margin-right:3px
 }
 
-#historyTable td.provider span.fail img{
+#history-table td.provider span.fail img{
 	opacity:0.5;
 	filter:alpha(opacity=50)
 }
 
-#historyTable td img,
-#historyTable td span{
+#history-table td img,
+#history-table td span{
 	vertical-align:middle
 }
 
-#historyTable td span.article{
+#history-table td span.article{
 	vertical-align:initial
 }
 
-#historyTable td img.help,
-#historyTable td span.help{
+#history-table td img.help,
+#history-table td span.help{
 	cursor:help
 }
 
-#historyTable td.tvShow{
+#history-table td.tvShow{
 	text-align:left
 }
 
@@ -3256,15 +3277,18 @@ input.get_less_eps{
 #media-search .section{
 	padding-bottom:10px
 }
-#media-search .btn{
+#media-search .btn,
+#provider-failures .btn{
 	margin:0 6px 0 0;
 	min-width:70px
 }
 #media-search .btn.shows-more,
-#media-search .btn.shows-less{
+#media-search .btn.shows-less,
+#provider-failures .btn.shows-more,
+#provider-failures .btn.shows-less{
 	margin:6px 6px 6px 0;
 }
-#media-search .btn.provider-retry{
+#provider-failures .btn.provider-retry{
 	margin:6px 0 6px 4px;
 }
 .tablesorter.provider-failures{width:auto;clear:both;margin-bottom:10px}
@@ -3355,6 +3379,16 @@ input.get_less_eps{
 /* =======================================================================
 Global
 ========================================================================== */
+
+.contrast-text,
+a.contrast-text:focus,
+a.contrast-text:active,
+a.contrast-text:visited{
+	color:#ddd
+}
+a.contrast-text:hover{
+	color:#999
+}
 
 span.path{
 	padding:3px;

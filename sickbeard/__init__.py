@@ -37,12 +37,14 @@ sys.path.insert(1, os.path.abspath('../lib'))
 from sickbeard import helpers, encodingKludge as ek
 from sickbeard import db, image_cache, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
     scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
-    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes, properFinder
-from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator, minimax
+    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes, properFinder, \
+    watchedstate_queue
+from sickbeard.config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
 from sickbeard.exceptions import ex
 from sickbeard.providers.generic import GenericProvider
+from sickbeard.watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
 from indexers.indexer_config import INDEXER_TVDB
 from indexers.indexer_api import indexerApi
 from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
@@ -85,6 +87,9 @@ autoPostProcesserScheduler = None
 subtitlesFinderScheduler = None
 # traktCheckerScheduler = None
 background_mapping_task = None
+embyWatchedStateScheduler = None
+plexWatchedStateScheduler = None
+watchedStateQueueScheduler = None
 
 provider_ping_thread_pool = {}
 
@@ -226,12 +231,15 @@ DEFAULT_AUTOPOSTPROCESSER_FREQUENCY = 10
 DEFAULT_RECENTSEARCH_FREQUENCY = 40
 DEFAULT_BACKLOG_FREQUENCY = 21
 DEFAULT_UPDATE_FREQUENCY = 1
+DEFAULT_WATCHEDSTATE_FREQUENCY = 10
 
 MIN_AUTOPOSTPROCESSER_FREQUENCY = 1
 MIN_RECENTSEARCH_FREQUENCY = 10
 MIN_BACKLOG_FREQUENCY = 7
 MAX_BACKLOG_FREQUENCY = 42
 MIN_UPDATE_FREQUENCY = 1
+MIN_WATCHEDSTATE_FREQUENCY = 10
+MAX_WATCHEDSTATE_FREQUENCY = 60
 
 BACKLOG_DAYS = 7
 SEARCH_UNAIRED = False
@@ -279,6 +287,8 @@ USE_EMBY = False
 EMBY_UPDATE_LIBRARY = False
 EMBY_HOST = None
 EMBY_APIKEY = None
+EMBY_WATCHEDSTATE_SCHEDULED = False
+EMBY_WATCHEDSTATE_FREQUENCY = None
 
 USE_KODI = False
 KODI_ALWAYS_ON = True
@@ -301,6 +311,8 @@ PLEX_SERVER_HOST = None
 PLEX_HOST = None
 PLEX_USERNAME = None
 PLEX_PASSWORD = None
+PLEX_WATCHEDSTATE_SCHEDULED = False
+PLEX_WATCHEDSTATE_FREQUENCY = None
 
 USE_XBMC = False
 XBMC_ALWAYS_ON = True
@@ -566,8 +578,10 @@ def initialize(console_logging=True):
         # global traktCheckerScheduler
         global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
             versionCheckScheduler, showQueueScheduler, searchQueueScheduler, \
-            properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, background_mapping_task, \
-            provider_ping_thread_pool
+            properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, \
+            background_mapping_task, provider_ping_thread_pool, \
+            embyWatchedStateScheduler, plexWatchedStateScheduler, watchedStateQueueScheduler, \
+            MIN_WATCHEDSTATE_FREQUENCY, MAX_WATCHEDSTATE_FREQUENCY, DEFAULT_WATCHEDSTATE_FREQUENCY
         # Add Show Search
         global RESULTS_SORTBY
         # Add Show Defaults
@@ -626,6 +640,7 @@ def initialize(console_logging=True):
             METADATA_PS3, METADATA_TIVO, METADATA_WDTV, METADATA_XBMC_12PLUS
         # Notification Settings/HT and NAS
         global USE_EMBY, EMBY_UPDATE_LIBRARY, EMBY_HOST, EMBY_APIKEY, \
+            EMBY_WATCHEDSTATE_SCHEDULED, EMBY_WATCHEDSTATE_FREQUENCY, \
             USE_KODI, KODI_ALWAYS_ON, KODI_UPDATE_LIBRARY, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, \
             KODI_HOST, KODI_USERNAME, KODI_PASSWORD, KODI_NOTIFY_ONSNATCH, \
             KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, \
@@ -633,6 +648,7 @@ def initialize(console_logging=True):
             XBMC_UPDATE_LIBRARY, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, \
             USE_PLEX, PLEX_USERNAME, PLEX_PASSWORD, PLEX_UPDATE_LIBRARY, PLEX_SERVER_HOST, \
             PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_HOST, \
+            PLEX_WATCHEDSTATE_SCHEDULED, PLEX_WATCHEDSTATE_FREQUENCY, \
             USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, \
             USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, \
             USE_SYNOINDEX, \
@@ -680,7 +696,7 @@ def initialize(console_logging=True):
                        'Growl', 'Prowl', 'Twitter', 'Slack', 'Discordapp', 'Boxcar2', 'NMJ', 'NMJv2',
                        'Synology', 'SynologyNotifier',
                        'pyTivo', 'NMA', 'Pushalot', 'Pushbullet', 'Subtitles'):
-            CheckSection(CFG, stanza)
+            check_section(CFG, stanza)
 
         update_config = False
 
@@ -933,6 +949,10 @@ def initialize(console_logging=True):
         EMBY_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'Emby', 'emby_update_library', 0))
         EMBY_HOST = check_setting_str(CFG, 'Emby', 'emby_host', '')
         EMBY_APIKEY = check_setting_str(CFG, 'Emby', 'emby_apikey', '')
+        EMBY_WATCHEDSTATE_SCHEDULED = bool(check_setting_int(CFG, 'Emby', 'emby_watchedstate_scheduled', 0))
+        EMBY_WATCHEDSTATE_FREQUENCY = minimax(check_setting_int(
+            CFG, 'Emby', 'emby_watchedstate_frequency', DEFAULT_WATCHEDSTATE_FREQUENCY),
+            DEFAULT_WATCHEDSTATE_FREQUENCY, MIN_WATCHEDSTATE_FREQUENCY, MAX_WATCHEDSTATE_FREQUENCY)
 
         USE_KODI = bool(check_setting_int(CFG, 'Kodi', 'use_kodi', 0))
         KODI_ALWAYS_ON = bool(check_setting_int(CFG, 'Kodi', 'kodi_always_on', 1))
@@ -967,6 +987,10 @@ def initialize(console_logging=True):
         PLEX_HOST = check_setting_str(CFG, 'Plex', 'plex_host', '')
         PLEX_USERNAME = check_setting_str(CFG, 'Plex', 'plex_username', '')
         PLEX_PASSWORD = check_setting_str(CFG, 'Plex', 'plex_password', '')
+        PLEX_WATCHEDSTATE_SCHEDULED = bool(check_setting_int(CFG, 'Plex', 'plex_watchedstate_scheduled', 0))
+        PLEX_WATCHEDSTATE_FREQUENCY = minimax(check_setting_int(
+            CFG, 'Plex', 'plex_watchedstate_frequency', DEFAULT_WATCHEDSTATE_FREQUENCY),
+            DEFAULT_WATCHEDSTATE_FREQUENCY, MIN_WATCHEDSTATE_FREQUENCY, MAX_WATCHEDSTATE_FREQUENCY)
 
         USE_GROWL = bool(check_setting_int(CFG, 'Growl', 'use_growl', 0))
         GROWL_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Growl', 'growl_notify_onsnatch', 0))
@@ -1049,7 +1073,6 @@ def initialize(console_logging=True):
         TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
         TRAKT_MRU = check_setting_str(CFG, 'Trakt', 'trakt_mru', '')
 
-        CheckSection(CFG, 'pyTivo')
         USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
         PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
         PYTIVO_SHARE_NAME = check_setting_str(CFG, 'pyTivo', 'pytivo_share_name', '')
@@ -1418,6 +1441,23 @@ def initialize(console_logging=True):
 
         background_mapping_task = threading.Thread(name='LOAD-MAPPINGS', target=indexermapper.load_mapped_ids)
 
+        watchedStateQueueScheduler = scheduler.Scheduler(
+            watchedstate_queue.WatchedStateQueue(),
+            cycleTime=datetime.timedelta(seconds=3),
+            threadName='WATCHEDSTATEQUEUE')
+
+        embyWatchedStateScheduler = scheduler.Scheduler(
+            EmbyWatchedStateUpdater(),
+            cycleTime=datetime.timedelta(minutes=EMBY_WATCHEDSTATE_FREQUENCY),
+            run_delay=datetime.timedelta(minutes=5),
+            threadName='EMBYWATCHEDSTATE')
+
+        plexWatchedStateScheduler = scheduler.Scheduler(
+            PlexWatchedStateUpdater(),
+            cycleTime=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_FREQUENCY),
+            run_delay=datetime.timedelta(minutes=5),
+            threadName='PLEXWATCHEDSTATE')
+
         __INITIALIZED__ = True
         return True
 
@@ -1427,7 +1467,8 @@ def enabled_schedulers(is_init=False):
     for s in ([], [events])[is_init] + \
             [recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler,
              versionCheckScheduler, showQueueScheduler, searchQueueScheduler, properFinderScheduler,
-             autoPostProcesserScheduler, subtitlesFinderScheduler] + \
+             autoPostProcesserScheduler, subtitlesFinderScheduler,
+             embyWatchedStateScheduler, plexWatchedStateScheduler, watchedStateQueueScheduler] + \
             ([events], [])[is_init]:
         yield s
 
@@ -1737,6 +1778,8 @@ def save_config():
     new_config['Emby']['emby_update_library'] = int(EMBY_UPDATE_LIBRARY)
     new_config['Emby']['emby_host'] = EMBY_HOST
     new_config['Emby']['emby_apikey'] = EMBY_APIKEY
+    new_config['Emby']['emby_watchedstate_scheduled'] = int(EMBY_WATCHEDSTATE_SCHEDULED)
+    new_config['Emby']['emby_watchedstate_frequency'] = int(EMBY_WATCHEDSTATE_FREQUENCY)
 
     new_config['Kodi'] = {}
     new_config['Kodi']['use_kodi'] = int(USE_KODI)
@@ -1761,6 +1804,8 @@ def save_config():
     new_config['Plex']['plex_notify_ondownload'] = int(PLEX_NOTIFY_ONDOWNLOAD)
     new_config['Plex']['plex_notify_onsubtitledownload'] = int(PLEX_NOTIFY_ONSUBTITLEDOWNLOAD)
     new_config['Plex']['plex_host'] = PLEX_HOST
+    new_config['Plex']['plex_watchedstate_scheduled'] = int(PLEX_WATCHEDSTATE_SCHEDULED)
+    new_config['Plex']['plex_watchedstate_frequency'] = int(PLEX_WATCHEDSTATE_FREQUENCY)
 
     new_config['XBMC'] = {}
     new_config['XBMC']['use_xbmc'] = int(USE_XBMC)
