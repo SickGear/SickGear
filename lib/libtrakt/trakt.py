@@ -210,7 +210,8 @@ class TraktAPI:
             return {}
 
         # wait before retry
-        count > 1 and time.sleep(sleep_retry)
+        if 'users/settings' != path:
+            count > 1 and time.sleep(sleep_retry)
 
         headers = headers or self.headers
         if None is not send_oauth and send_oauth in sickbeard.TRAKT_ACCOUNTS:

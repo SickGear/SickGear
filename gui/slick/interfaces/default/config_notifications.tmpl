@@ -1490,7 +1490,7 @@
 										<option value="new" selected="selected">Add account</option>
 #set $trakt_accounts = $sickbeard.TRAKT_ACCOUNTS
 #for $void, $account in $trakt_accounts.items()
-											<option value="$account.account_id">$account.account_id - $account.name #if $account.active then '(ok)' else '(inactive)'#</option>
+											<option value="$account.account_id">$account.account_id - $account.name #if $account.active and $account.name then '(ok)' else '(inactive)'#</option>
 #end for
 									</select>
 									<input type="button" class="btn" value="Delete" id="trakt-delete" disabled="disabled">
