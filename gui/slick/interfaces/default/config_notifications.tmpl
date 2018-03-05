@@ -1486,7 +1486,7 @@
 								<label for="trakt-accounts">
 									<span class="component-title">Trakt account (status):</span>
 									<span class="component-desc">
-									<select name="trakt_accounts" id="trakt-accounts" class="pull-left form-control input-sm">
+									<select id="trakt-accounts" class="pull-left form-control input-sm">
 										<option value="new" selected="selected">Add account</option>
 #set $trakt_accounts = $sickbeard.TRAKT_ACCOUNTS
 #for $void, $account in $trakt_accounts.items()
@@ -1499,7 +1499,7 @@
 								<label for="trakt-pin">
 									<span class="component-title">Trakt PIN:</span>
 									<span class="component-desc">
-										<input type="text" name="trakt_pin" id="trakt-pin" value="" class="form-control input-sm input250">
+										<input type="text" id="trakt-pin" value="" class="form-control input-sm input250">
 										<input type="button" class="btn" value="Connect" id="trakt-authenticate">
 										<div class="clear-left"><p>get an active PIN using: <a href="<%= anon_url(sickbeard.TRAKT_PIN_URL) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>$sickbeard.TRAKT_PIN_URL</b></a>
 										<br>tip: easily add accounts by using the link in other browsers "signed in" to Trakt
@@ -2085,14 +2085,14 @@
 							<div class="field-pair">
 								<label for="email-show">
 									<span class="component-title">Notify on a per show basis</span>
-									<select name="email_show" id="email-show" class="showlist-select form-control input-sm">
+									<select id="email-show" class="showlist-select form-control input-sm">
 										<option value="-1">-- Shows appear here --</option>
 									</select>
 								</label>
 								<label>
 									<span class="component-title">&nbsp;</span>
 									<span class="component-desc">
-										<input type="text" name="show_email_list" id="show-email-list" class="form-control input-sm input350">
+										<input type="text" id="show-email-list" class="form-control input-sm input350">
 										<input type="button" value="Save Show" id="save-show-email" class="btn">
 										<div class="clear-left"><p>comma separated email list for each show</p></div>
 									</span>
