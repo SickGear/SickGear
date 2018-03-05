@@ -100,6 +100,12 @@
 * Fix Trakt, recommended and watchlist (send_oauth is now sent)
 
 
+### 0.14.6 (2018-03-05 15:40:00 UTC)
+
+Fix config/notifications Trakt "inactive" status not displayed when it should be
+Fix saving multiple account "Update collection" selection at config/notifications Trakt
+
+
 ### 0.14.5 (2018-02-23 22:15:00 UTC)
 
 Remove NZB.is usenet provider

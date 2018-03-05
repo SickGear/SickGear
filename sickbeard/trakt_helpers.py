@@ -25,7 +25,7 @@ def build_config(**kwargs):
         root_pieces = sickbeard.ROOT_DIRS.split('|')
         root_dirs = root_pieces[1:]
 
-    for item in [re.findall('update_trakt_(\d+)_(.*)', k) for k, v in kwargs.items() if k.startswith('update_trakt_')]:
+    for item in [re.findall('update-trakt-(\d+)-(.*)', k) for k, v in kwargs.items() if k.startswith('update-trakt-')]:
         for account_id, location in item:
             account_id = tryInt(account_id, None)
             if None is account_id:
