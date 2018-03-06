@@ -28,10 +28,8 @@ class ProperSearcher:
         self.amActive = False
 
     @staticmethod
-    def check_paused():
-        if sickbeard.DOWNLOAD_PROPERS:
-            return False
-        return True
+    def is_enabled():
+        return sickbeard.DOWNLOAD_PROPERS
 
     def run(self):
 

@@ -105,13 +105,26 @@ class Api(webserve.BaseHandler):
         self.set_header('X-Application', 'SickGear')
         self.set_header('X-API-Version', Api.version)
 
+    def prepare(self):
+        # Incorporate request JSON into arguments dictionary.
+        if self.request.body:
+            try:
+                json_data = {'payloadjson': json.loads(self.request.body)}
+                self.request.arguments.update(json_data)
+            except (StandardError, Exception):
+                raise ApiError('Unable to parse JSON.')
+        super(Api, self).prepare()
+
+    def post(self, route, *args, **kwargs):
+        return self.get(route, *args, **kwargs)
+
     @gen.coroutine
     def get(self, route, *args, **kwargs):
         route = route.strip('/') or 'index'
 
         kwargs = self.request.arguments
         for arg, value in kwargs.items():
-            if len(value) == 1:
+            if not isinstance(value, dict) and len(value) == 1:
                 kwargs[arg] = value[0]
 
         args = args[1:]
@@ -475,6 +488,11 @@ class ApiCall(object):
                         value = li
             else:
                 value = value.split("|")
+        elif type == "dict":
+            if isinstance(value, dict):
+                value = value
+            else:
+                error = True
         elif type == "string":
             pass
         elif type == "ignore":
@@ -2857,6 +2875,33 @@ class CMD_SickGearSetRequrieWords(ApiCall):
         return _responds(RESULT_SUCCESS, data=return_data, msg="%s set requried words" % return_type)
 
 
+class CMD_SickGearUpdateWatchedState(ApiCall):
+    _help = {"desc": "Update db with details of media file that is watched or unwatched",
+             "requiredParameters": {
+                 "payloadjson": {
+                     "desc": "Payload is a dict of dicts transmitted as JSON via POST request"},
+             }}
+
+    def __init__(self, handler, args, kwargs):
+        # required
+        self.payloadjson, args = self.check_params(args, kwargs, "payloadjson", None, True, "dict", [])
+        # optional
+        # super, missing, help
+        ApiCall.__init__(self, handler, args, kwargs)
+
+    def run(self):
+        """ Update db with details of media file that is watched or unwatched """
+        payload = self.payloadjson.copy()
+
+        from webserve import MainHandler
+        MainHandler.update_watched_state(payload, as_json=False)
+
+        if not payload:
+            return _responds(RESULT_FAILURE, msg='Request made to SickGear with invalid payload')
+
+        return _responds(RESULT_SUCCESS, payload)
+
+
 class CMD_SickGearShow(ApiCall):
     _help = {"desc": "display information for a given show",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
@@ -4305,12 +4350,12 @@ class CMD_SickGearShowsStats(ApiCall):
 
         return _responds(RESULT_SUCCESS, stats)
 
-
+# WARNING: never define a cmd call string that contains a "_" (underscore)
 class CMD_ShowsStats(CMD_SickGearShowsStats):
     _help = {"desc": "display the global thetvdb.com shows and episode stats",
              "SickGearCommand": "sg.shows.stats",
              }
-
+# this is reserved for cmd indexes used while cmd chaining
     def __init__(self, handler, args, kwargs):
         # required
         # optional
@@ -4318,8 +4363,8 @@ class CMD_ShowsStats(CMD_SickGearShowsStats):
         self.sickbeard_call = True
         CMD_SickGearShowsStats.__init__(self, handler, args, kwargs)
 
-
-# WARNING: never define a cmd call string that contains a "_" (underscore)
+# WARNING: never define a param name that contains a "." (dot)
+# this is reserved for cmd namspaces used while cmd chaining
 # this is reserved for cmd indexes used while cmd chaining
 
 # WARNING: never define a param name that contains a "." (dot)
@@ -4389,6 +4434,7 @@ _functionMaper = {"help": CMD_Help,
                   "sg.setignorewords": CMD_SickGearSetIgnoreWords,
                   "sg.listrequiredwords": CMD_SickGearListRequireWords,
                   "sg.setrequiredwords": CMD_SickGearSetRequrieWords,
+                  "sg.updatewatchedstate": CMD_SickGearUpdateWatchedState,
                   "show": CMD_Show,
                   "sg.show": CMD_SickGearShow,
                   "show.addexisting": CMD_ShowAddExisting,

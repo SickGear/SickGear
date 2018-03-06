@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<settings>
+ 	<category label="32000">
+		<setting label="32011" type="bool" id="action_notification" default="true" />
+		<setting label="32012" type="bool" id="error_notification"  default="true" />
+		<setting label="32021" type="bool" id="verbose_log"         default="true" />
+
+		<setting label="32500" type="lsep" />
+		<setting label="32511" type="lsep" />
+		<setting label="32512" type="lsep" />
+		<setting label="32513" type="lsep" />
+	</category>
+
+	<category label="32100">
+		<setting label="32111" type="ipaddress" id="sickgear_ip"    default="127.0.0.1" />
+		<setting label="32112" type="number"    id="sickgear_port"  default="8081" />
+
+		<setting label="32121" type="ipaddress" id="kodi_ip"        default="127.0.0.1" />
+		<setting label="32122" type="number"    id="kodi_port"      default="9090" />
+	</category>
+</settings>
