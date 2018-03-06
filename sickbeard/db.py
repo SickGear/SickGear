@@ -47,26 +47,35 @@ def dbFilename(filename='sickbeard.db', suffix=None):
     return ek.ek(os.path.join, sickbeard.DATA_DIR, filename)
 
 
-def mass_upsert_sql(tableName, valueDict, keyDict):
-
+def mass_upsert_sql(table_name, value_dict, key_dict, sanitise=True):
     """
     use with cl.extend(mass_upsert_sql(tableName, valueDict, keyDict))
 
-    :param tableName: table name
-    :param valueDict: dict of values to be set {'table_fieldname': value}
-    :param keyDict: dict of restrains for update {'table_fieldname': value}
+    :param table_name: table name
+    :param value_dict: dict of values to be set {'table_fieldname': value}
+    :param key_dict: dict of restrains for update {'table_fieldname': value}
+    :param sanitise: True to remove k, v pairs in keyDict from valueDict as they must not exist in both.
+    This option has a performance hit so it's best to remove key_dict keys from value_dict and set this False instead.
+    :type sanitise: Boolean
     :return: list of 2 sql command
     """
     cl = []
 
-    genParams = lambda myDict: [x + ' = ?' for x in myDict.keys()]
+    gen_params = (lambda my_dict: [x + ' = ?' for x in my_dict.keys()])
 
-    cl.append(['UPDATE [%s] SET %s WHERE %s' % (
-        tableName, ', '.join(genParams(valueDict)), ' AND '.join(genParams(keyDict))), valueDict.values() + keyDict.values()])
+    # sanity: remove k, v pairs in keyDict from valueDict
+    if sanitise:
+        value_dict = dict(filter(lambda (k, _): k not in key_dict.keys(), value_dict.items()))
 
+    cl.append(['UPDATE [%s] SET %s WHERE %s' %
+               (table_name, ', '.join(gen_params(value_dict)), ' AND '.join(gen_params(key_dict))),
+               value_dict.values() + key_dict.values()])
 
-    cl.append(['INSERT INTO [' + tableName + '] (' + ', '.join(["'%s'" % ('%s' % v).replace("'", "''") for v in valueDict.keys() + keyDict.keys()]) + ')' +
-                ' SELECT ' + ', '.join(["'%s'" % ('%s' % v).replace("'", "''") for v in valueDict.values() + keyDict.values()]) + ' WHERE changes() = 0'])
+    cl.append(['INSERT INTO [' + table_name + '] (' +
+               ', '.join(["'%s'" % ('%s' % v).replace("'", "''") for v in value_dict.keys() + key_dict.keys()]) + ')' +
+               ' SELECT ' +
+               ', '.join(["'%s'" % ('%s' % v).replace("'", "''") for v in value_dict.values() + key_dict.values()]) +
+               ' WHERE changes() = 0'])
     return cl
 
 
@@ -261,12 +270,41 @@ class DBConnection(object):
         return False
 
     def add_flag(self, flag_name):
-        if not self.has_flag(flag_name):
+        has_flag = self.has_flag(flag_name)
+        if not has_flag:
             self.action('INSERT INTO flags (flag) VALUES (?)', [flag_name])
+        return not has_flag
 
     def remove_flag(self, flag_name):
-        if self.has_flag(flag_name):
+        has_flag = self.has_flag(flag_name)
+        if has_flag:
             self.action('DELETE FROM flags WHERE flag = ?', [flag_name])
+        return has_flag
+
+    def toggle_flag(self, flag_name):
+        """
+        Add or remove a flag
+        :param flag_name: Name of flag
+        :type flag_name: String
+        :return: True if this call added the flag, False if flag is removed
+        :rtype: Boolean
+        """
+        if self.remove_flag(flag_name):
+            return False
+        self.add_flag(flag_name)
+        return True
+
+    def set_flag(self, flag_name, state=True):
+        """
+        Set state of flag
+        :param flag_name: Name of flag
+        :type flag_name: String
+        :param state: If true, create flag otherwise remove flag
+        :type state: Boolean
+        :return: Previous state of flag
+        :rtype: Boolean
+        """
+        return (self.add_flag, self.remove_flag)[not bool(state)](flag_name)
 
     def close(self):
         """Close database connection"""
@@ -515,6 +553,7 @@ def MigrationCode(myDB):
         20005: sickbeard.mainDB.AddFlagTable,
         20006: sickbeard.mainDB.DBIncreaseTo20007,
         20007: sickbeard.mainDB.AddWebdlTypesTable,
+        20008: sickbeard.mainDB.AddWatched,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 
@@ -532,6 +571,9 @@ def MigrationCode(myDB):
     else:
 
         while db_version < sickbeard.mainDB.MAX_DB_VERSION:
+            if None is schema[db_version]:  # skip placeholders used when multi PRs are updating DB
+                db_version += 1
+                continue
             try:
                 update = schema[db_version](myDB)
                 db_version = update.execute()

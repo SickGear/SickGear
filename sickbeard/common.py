@@ -41,19 +41,6 @@ cpu_presets = {'DISABLED': 0, 'LOW': 0.01, 'NORMAL': 0.05, 'HIGH': 0.1}
 MULTI_EP_RESULT = -1
 SEASON_RESULT = -2
 
-# Notification Types
-NOTIFY_SNATCH = 1
-NOTIFY_DOWNLOAD = 2
-NOTIFY_SUBTITLE_DOWNLOAD = 3
-NOTIFY_GIT_UPDATE = 4
-NOTIFY_GIT_UPDATE_TEXT = 5
-
-notifyStrings = {NOTIFY_SNATCH: 'Started Download',
-                 NOTIFY_DOWNLOAD: 'Download Finished',
-                 NOTIFY_SUBTITLE_DOWNLOAD: 'Subtitle Download Finished',
-                 NOTIFY_GIT_UPDATE: 'SickGear Updated',
-                 NOTIFY_GIT_UPDATE_TEXT: 'SickGear Updated To Commit#: '}
-
 # Episode statuses
 UNKNOWN = -1  # should never happen
 UNAIRED = 1  # episodes that haven't aired yet

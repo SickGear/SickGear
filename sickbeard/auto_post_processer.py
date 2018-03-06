@@ -23,21 +23,22 @@ from sickbeard import logger, processTV
 from sickbeard import encodingKludge as ek
 
 
-class PostProcesser():
+class PostProcesser:
     def __init__(self):
         self.amActive = False
 
     @staticmethod
-    def check_paused():
-        if sickbeard.PROCESS_AUTOMATICALLY:
-            return False
-        return True
+    def is_enabled():
+        return sickbeard.PROCESS_AUTOMATICALLY
 
     def run(self):
-        if not sickbeard.PROCESS_AUTOMATICALLY:
-            return
+        if self.is_enabled():
+            self.amActive = True
+            self._main()
+            self.amActive = False
 
-        self.amActive = True
+    @staticmethod
+    def _main():
 
         if not ek.ek(os.path.isdir, sickbeard.TV_DOWNLOAD_DIR):
             logger.log(u"Automatic post-processing attempted but dir %s doesn't exist" % sickbeard.TV_DOWNLOAD_DIR,
@@ -50,5 +51,3 @@ class PostProcesser():
             return
 
         processTV.processDir(sickbeard.TV_DOWNLOAD_DIR, is_basedir=True)
-
-        self.amActive = False

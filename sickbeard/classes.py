@@ -17,6 +17,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import datetime
+import os
 
 import sickbeard
 from sickbeard.common import Quality
@@ -379,3 +380,48 @@ class ImageUrlList(list):
             if self._is_cache_item(x) and url == x[0]:
                 super(ImageUrlList, self).remove(x)
                 break
+
+
+if 'nt' == os.name:
+    import ctypes
+
+    class WinEnv:
+        def __init__(self):
+            pass
+
+        @staticmethod
+        def get_environment_variable(name):
+            name = unicode(name)  # ensures string argument is unicode
+            n = ctypes.windll.kernel32.GetEnvironmentVariableW(name, None, 0)
+            result = None
+            if n:
+                buf = ctypes.create_unicode_buffer(u'\0'*n)
+                ctypes.windll.kernel32.GetEnvironmentVariableW(name, buf, n)
+                result = buf.value
+            return result
+
+        def __getitem__(self, key):
+            return self.get_environment_variable(key)
+
+        def get(self, key, default=None):
+            r = self.get_environment_variable(key)
+            return r if r is not None else default
+
+    sickbeard.ENV = WinEnv()
+else:
+    class LinuxEnv(object):
+        def __init__(self, environ):
+            self.environ = environ
+
+        def __getitem__(self, key):
+            v = self.environ.get(key)
+            try:
+                return v.decode(SYS_ENCODING) if isinstance(v, str) else v
+            except (UnicodeDecodeError, UnicodeEncodeError):
+                return v
+
+        def get(self, key, default=None):
+            v = self[key]
+            return v if v is not None else default
+
+    sickbeard.ENV = LinuxEnv(os.environ)

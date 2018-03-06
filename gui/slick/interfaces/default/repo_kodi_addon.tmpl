@@ -1,0 +1,27 @@
+##
+#from sickbeard import WEB_PORT, WEB_ROOT, ENABLE_HTTPS
+#set sg_host = $getVar('sbHost', 'localhost')
+#set sg_port = str($getVar('sbHttpPort', WEB_PORT))
+#set sg_root = $getVar('sbRoot', WEB_ROOT)
+#set sg_use_https = $getVar('sbHttpsEnabled', ENABLE_HTTPS)
+##
+#set $base_url = 'http%s://%s:%s%s' % (('', 's')[any([sg_use_https])], $sg_host, $sg_port, $sg_root)
+##
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="repository.sickgear" name="SickGear Add-on repository" version="1.0.0" provider-name="SickGear">
+	<extension point="xbmc.addon.repository"
+				name="SickGear Add-on Repository">
+		<info compressed="true">$base_url/kodi/addons.xml</info>
+		<checksum>$base_url/kodi/addons.xml.md5</checksum>
+		<datadir zip="true">$base_url/kodi</datadir>
+		<hashes>false</hashes>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary>Install Add-ons for SickGear</summary>
+		<description>Download and install add-ons from a repository at a running SickGear instance.[CR][CR]Contains:[CR]* Watchedstate updater service</description>
+		<disclaimer></disclaimer>
+		<platform>all</platform>
+		<website>https://github.com/SickGear/SickGear</website>
+		<nofanart>true</nofanart>
+	</extension>
+</addon>

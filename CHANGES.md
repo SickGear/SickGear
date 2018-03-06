@@ -1,5 +1,19 @@
 ﻿### 0.15.0 (2018-xx-xx xx:xx:xx UTC)
 
+* Add choice to delete watched episodes from a list of played media at Kodi, Emby, and/or Plex,
+  instructions at Shows/History/Layout/"Watched"
+* Add installable SickGear Kodi repository containing addon "SickGear Watched State Updater"
+* Change add Emby setting for watched state scheduler at Config/Notifications/Emby/"Update watched interval"
+* Change add Plex setting for watched state scheduler at Config/Notifications/Plex/"Update watched interval"
+* Add API cmd=sg.updatewatchedstate, instructions for use are linked to in layout "Watched" at /history
+* Change history page table filter input values are saved across page refreshes
+* Change history page table filter inputs, accept values like "dvd or web" to only display both
+* Change history page table filter inputs, press 'ESC' key inside a filter input to reset it
+* Add provider activity stats to Shows/History/Layout/ drop down
+* Change move provider failures table from Manage/Media Search to Shows/History/Layout/Provider fails
+* Change sort provider failures by most recent failure, and with paused providers at the top
+* Add SickGear-NZBGet dedicated post processing script, see.. \autoProcessTV\SickGear-NG\INSTALL.txt
+* Add non standard multi episode name parsing e.g. S01E02and03 and 1x02and03and04
 * Change overhaul and add API functions
 * Change API version... start with 10
 * Change set application response header to 'SickGear' + add API version
@@ -90,8 +104,6 @@
 * Add X-Filename response header to getbanner, getposter
 * Add X-Fanartname response header for sg.show.getfanart
 * Change remove some non-release group stuff from newnab results
-* Add SickGear-NZBGet dedicated post processing script, see.. \autoProcessTV\SickGear-NG\INSTALL.txt
-* Add non standard multi episode name parsing e.g. S01E02and03 and 1x02and03and04
 
 [develop changelog]
 
