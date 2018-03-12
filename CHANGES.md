@@ -1,4 +1,10 @@
-﻿### 0.14.6 (2018-03-05 15:40:00 UTC)
+﻿### 0.14.7 (2018-03-12 21:30:00 UTC)
+
+Add DrunkenSlug usenet provider
+Fix PiSexy torrent provider
+
+
+### 0.14.6 (2018-03-05 15:40:00 UTC)
 
 Fix config/notifications Trakt "inactive" status not displayed when it should be
 Fix saving multiple account "Update collection" selection at config/notifications Trakt

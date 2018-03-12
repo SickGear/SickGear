@@ -51,7 +51,7 @@ class PiSexyProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': 'download', 'get': 'download', 'valid_cat': 'cat=(?:0|50[12])', 'filter': 'free',
+            'info': 'download', 'get': 'info.php\?id', 'valid_cat': 'cat=(?:0|50[12])', 'filter': 'free',
             'title': r'Download\s([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
@@ -108,6 +108,27 @@ class PiSexyProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    def get_data(self, url):
+        result = None
+        html = self.get_url(url, timeout=90)
+        if self.should_skip():
+            return result
+
+        try:
+            result = self._link(re.findall('(?i)"([^"]*?download\.php[^"]+?&(?!pimp)[^"]*)"', html)[0])
+        except IndexError:
+            logger.log('Failed no torrent in response', logger.DEBUG)
+        return result
+
+    def get_result(self, episodes, url):
+        result = None
+
+        if url:
+            result = super(PiSexyProvider, self).get_result(episodes, url)
+            result.get_data_func = self.get_data
+
+        return result
 
 
 provider = PiSexyProvider()
