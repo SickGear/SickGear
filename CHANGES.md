@@ -1,4 +1,9 @@
-﻿### 0.14.7 (2018-03-12 21:30:00 UTC)
+﻿### 0.14.8 (2018-03-13 22:00:00 UTC)
+
+Fix changing status from "Skipped" to "Wanted" in Manage/Episode Status
+
+
+### 0.14.7 (2018-03-12 21:30:00 UTC)
 
 Add DrunkenSlug usenet provider
 Fix PiSexy torrent provider
