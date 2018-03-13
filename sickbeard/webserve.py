@@ -2485,7 +2485,7 @@ class Home(MainHandler):
             return self._genericMessage('Error', err_msg)
 
         use_default = False
-        if '-' in status:
+        if isinstance(status, basestring) and '-' in status:
             use_default = True
             status = status.replace('-', '')
         status = int(status)
