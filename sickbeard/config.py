@@ -342,6 +342,19 @@ def clean_url(url, add_slash=True):
     return cleaned_url
 
 
+def kv_csv(data, default=''):
+    """
+    Returns a cleansed CSV string of key value pairs
+    Elements must have one '=' in order to be returned
+    Elements are stripped of leading/trailing whitespace but may contain whitespace (e.g. "tv shows")
+    """
+    if not isinstance(data, basestring):
+        return default
+
+    return ','.join(['='.join(i.strip() for i in i.split('=')) for i in data.split(',')
+                     if 1 == len(re.findall('=', i)) and all(i.replace(' ', '').split('='))])
+
+
 def to_int(val, default=0):
     """ Return int value of val or default on error """
 

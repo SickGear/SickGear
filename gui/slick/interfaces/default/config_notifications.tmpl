@@ -98,13 +98,24 @@
 								<label for="emby-watched-interval">
 									<span class="component-title">Update watched interval</span>
 									<span class="component-desc">
-										<select id="emby-watched-interval" name="emby_watched_interval" class="form-control input-sm">
+										<select id="emby-watched-interval" name="emby_watched_interval" class="form-control input-sm view-if">
 											<option value="0"#if not $sg_var('EMBY_WATCHEDSTATE_SCHEDULED')#${selected}#end if#>Off </option>
     #for v in [10, 15, 30, 45, 60]
 											<option value="$v"#if $sg_var('EMBY_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('EMBY_WATCHEDSTATE_FREQUENCY')#${selected}#end if#>$v #if not $sg_var('EMBY_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('EMBY_WATCHEDSTATE_FREQUENCY')#(recent) #end if#</option>
     #end for
 										</select>
 										<span>minutes to fetch episode watched states for the history page</span>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair show-if-emby-watched-interval">
+								<label for="emby-watched-mapped">
+									<span class="component-title">Map parent folder(s)</span>
+									<span class="component-desc">
+										<input type="text" name="emby_parent_maps" id="emby-watched-mapped" value="$sickbeard.EMBY_PARENT_MAPS" class="form-control input-sm input250">
+										<p>(comma separated)</p>
+										<div class="clear-left"><p>link each Emby library folder that differs to its SickGear parent folder counterpart<br>
+										(e.g. d:\tvstuff = c:\tv, /mnt/media/tv = /tv, /emby/folder = /sickgear/parent/folder)</p></div>
 									</span>
 								</label>
 							</div>
@@ -188,6 +199,17 @@
 									<span class="component-desc">
 										<input type="checkbox" name="kodi_update_onlyfirst" id="kodi-update-onlyfirst" #if $sickbeard.KODI_UPDATE_ONLYFIRST then 'checked="checked"' else ''#>
 										<p>only send library updates to the first active host</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="kodi-watched-mapped">
+									<span class="component-title">Map parent folder(s)</span>
+									<span class="component-desc">
+										<input type="text" name="kodi_parent_maps" id="kodi-watched-mapped" value="$sickbeard.KODI_PARENT_MAPS" class="form-control input-sm input250">
+										<p>(comma separated)</p>
+										<div class="clear-left"><p>link each Kodi library folder that differs to its SickGear parent folder counterpart<br>
+										(e.g. d:\tvstuff = c:\tv, /mnt/media/tv = /tv, /kodi/folder = /sickgear/parent/folder)</p></div>
 									</span>
 								</label>
 							</div>
@@ -312,13 +334,24 @@
 									<label for="plex-watched-interval">
 										<span class="component-title">Update watched interval</span>
 										<span class="component-desc">
-											<select id="plex-watched-interval" name="plex_watched_interval" class="form-control input-sm">
+											<select id="plex-watched-interval" name="plex_watched_interval" class="form-control input-sm view-if">
 												<option value="0"#if not $sg_var('PLEX_WATCHEDSTATE_SCHEDULED')#${selected}#end if#>Off </option>
 #for v in [10, 15, 30, 45, 60]
 												<option value="$v"#if $sg_var('PLEX_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('PLEX_WATCHEDSTATE_FREQUENCY')#${selected}#end if#>$v #if not $sg_var('PLEX_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('PLEX_WATCHEDSTATE_FREQUENCY')#(recent) #end if#</option>
 #end for
 											</select>
 											<span>minutes to fetch episode watched states for the history page</span>
+										</span>
+									</label>
+								</div>
+								<div class="field-pair show-if-plex-watched-interval">
+									<label for="plex-watched-mapped">
+										<span class="component-title">Map parent folder(s)</span>
+										<span class="component-desc">
+											<input type="text" name="plex_parent_maps" id="plex-watched-mapped" value="$sickbeard.PLEX_PARENT_MAPS" class="form-control input-sm input250">
+											<p>(comma separated)</p>
+											<div class="clear-left"><p>link each Plex library folder that differs to its SickGear parent folder counterpart<br>
+											(e.g. d:\tvstuff = c:\tv, /mnt/media/tv = /tv, /plex/folder = /sickgear/parent/folder)</p></div>
 										</span>
 									</label>
 								</div>
@@ -1723,12 +1756,12 @@
 								<label for="slack-as-authed">
 									<span class="component-title">Post as authed user</span>
 									<span class="component-desc">
-										<input type="checkbox" class="viewIf" name="slack_as_authed" id="slack-as-authed" #if $sickbeard.SLACK_AS_AUTHED then 'checked="checked"' else ''#>
+										<input type="checkbox" class="view-if" name="slack_as_authed" id="slack-as-authed" #if $sickbeard.SLACK_AS_AUTHED then 'checked="checked"' else ''#>
 										<p>send notifications using the profile name and photo of the access token</p>
 									</span>
 								</label>
 							</div>
-							<div class="hide_if_slack-as-authed">
+							<div class="hide-if-slack-as-authed">
 								<div class="field-pair">
 									<label for="slack-bot-name">
 										<span class="component-title">Post as a custom name</span>
@@ -1821,12 +1854,12 @@
 								<label for="discordapp-as-authed">
 									<span class="component-title">Post as authed user</span>
 									<span class="component-desc">
-										<input type="checkbox" class="viewIf" name="discordapp_as_authed" id="discordapp-as-authed" #if $sickbeard.DISCORDAPP_AS_AUTHED then 'checked="checked"' else ''#>
+										<input type="checkbox" class="view-if" name="discordapp_as_authed" id="discordapp-as-authed" #if $sickbeard.DISCORDAPP_AS_AUTHED then 'checked="checked"' else ''#>
 										<p>send notifications using the username and avatar of the channel webhook</p>
 									</span>
 								</label>
 							</div>
-							<div class="hide_if_discordapp-as-authed">
+							<div class="hide-if-discordapp-as-authed">
 								<div class="field-pair">
 									<label for="discordapp-username">
 										<span class="component-title">Post as a custom name</span>

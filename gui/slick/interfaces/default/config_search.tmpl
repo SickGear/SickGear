@@ -82,7 +82,6 @@
 								<span class="component-desc">
 									<input type="text" name="recentsearch_frequency" value="$sickbeard.RECENTSEARCH_FREQUENCY" class="form-control input-sm input75">
 									<p>minutes between checking recent updated shows (minimum $sickbeard.MIN_RECENTSEARCH_FREQUENCY)</p>
-									<p><em class="grey-text">enter 4489 for experimental internal provider frequencies</em></p>
 								</span>
 							</label>
 						</div>
@@ -98,16 +97,16 @@
 						</div>
 
 						<div class="field-pair">
-							<label for="backlog_nofull">
+							<label for="backlog-nofull">
 								<span class="component-title">Disable auto full backlog</span>
 								<span class="component-desc">
-									<input type="checkbox" name="backlog_nofull" id="backlog_nofull" class="enabler viewIf"<%= html_checked if sickbeard.BACKLOG_NOFULL == True else '' %>>
+									<input type="checkbox" name="backlog_nofull" id="backlog-nofull" class="enabler view-if"<%= html_checked if sickbeard.BACKLOG_NOFULL == True else '' %>>
 									<p>backlog search manually by setting episodes 'Wanted' or via 'Backlog overview'</p>
 								</span>
 							</label>
 						</div>
 
-						<div class="field-pair" id="content_backlog_nofull">
+						<div class="field-pair" id="content_backlog-nofull">
 							<label>
 								<span class="component-title"><em class="grey-text">Backlog search spread</em></span>
 								<span class="component-desc">
@@ -115,7 +114,7 @@
 								</span>
 							</label>
 						</div>
-						<div class="field-pair hide_if_backlog_nofull">
+						<div class="field-pair hide-if-backlog-nofull">
 							<label>
 								<span class="component-title">Backlog search spread</span>
 								<span class="component-desc">
