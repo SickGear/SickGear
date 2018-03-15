@@ -285,6 +285,7 @@ TORRENT_VERIFY_CERT = False
 
 USE_EMBY = False
 EMBY_UPDATE_LIBRARY = False
+EMBY_PARENT_MAPS = None
 EMBY_HOST = None
 EMBY_APIKEY = None
 EMBY_WATCHEDSTATE_SCHEDULED = False
@@ -298,6 +299,7 @@ KODI_NOTIFY_ONSUBTITLEDOWNLOAD = False
 KODI_UPDATE_LIBRARY = False
 KODI_UPDATE_FULL = False
 KODI_UPDATE_ONLYFIRST = False
+KODI_PARENT_MAPS = None
 KODI_HOST = ''
 KODI_USERNAME = None
 KODI_PASSWORD = None
@@ -307,6 +309,7 @@ PLEX_NOTIFY_ONSNATCH = False
 PLEX_NOTIFY_ONDOWNLOAD = False
 PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = False
 PLEX_UPDATE_LIBRARY = False
+PLEX_PARENT_MAPS = None
 PLEX_SERVER_HOST = None
 PLEX_HOST = None
 PLEX_USERNAME = None
@@ -639,14 +642,14 @@ def initialize(console_logging=True):
         global metadata_provider_dict, METADATA_KODI, METADATA_MEDE8ER, METADATA_XBMC, METADATA_MEDIABROWSER, \
             METADATA_PS3, METADATA_TIVO, METADATA_WDTV, METADATA_XBMC_12PLUS
         # Notification Settings/HT and NAS
-        global USE_EMBY, EMBY_UPDATE_LIBRARY, EMBY_HOST, EMBY_APIKEY, \
+        global USE_EMBY, EMBY_UPDATE_LIBRARY, EMBY_PARENT_MAPS, EMBY_HOST, EMBY_APIKEY, \
             EMBY_WATCHEDSTATE_SCHEDULED, EMBY_WATCHEDSTATE_FREQUENCY, \
             USE_KODI, KODI_ALWAYS_ON, KODI_UPDATE_LIBRARY, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, \
-            KODI_HOST, KODI_USERNAME, KODI_PASSWORD, KODI_NOTIFY_ONSNATCH, \
+            KODI_PARENT_MAPS, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, KODI_NOTIFY_ONSNATCH, \
             KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, \
             USE_XBMC, XBMC_ALWAYS_ON, XBMC_NOTIFY_ONSNATCH, XBMC_NOTIFY_ONDOWNLOAD, XBMC_NOTIFY_ONSUBTITLEDOWNLOAD, \
             XBMC_UPDATE_LIBRARY, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, \
-            USE_PLEX, PLEX_USERNAME, PLEX_PASSWORD, PLEX_UPDATE_LIBRARY, PLEX_SERVER_HOST, \
+            USE_PLEX, PLEX_USERNAME, PLEX_PASSWORD, PLEX_UPDATE_LIBRARY, PLEX_PARENT_MAPS, PLEX_SERVER_HOST, \
             PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_HOST, \
             PLEX_WATCHEDSTATE_SCHEDULED, PLEX_WATCHEDSTATE_FREQUENCY, \
             USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, \
@@ -947,6 +950,7 @@ def initialize(console_logging=True):
 
         USE_EMBY = bool(check_setting_int(CFG, 'Emby', 'use_emby', 0))
         EMBY_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'Emby', 'emby_update_library', 0))
+        EMBY_PARENT_MAPS = check_setting_str(CFG, 'Emby', 'emby_parent_maps', '')
         EMBY_HOST = check_setting_str(CFG, 'Emby', 'emby_host', '')
         EMBY_APIKEY = check_setting_str(CFG, 'Emby', 'emby_apikey', '')
         EMBY_WATCHEDSTATE_SCHEDULED = bool(check_setting_int(CFG, 'Emby', 'emby_watchedstate_scheduled', 0))
@@ -962,6 +966,7 @@ def initialize(console_logging=True):
         KODI_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_library', 0))
         KODI_UPDATE_FULL = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_full', 0))
         KODI_UPDATE_ONLYFIRST = bool(check_setting_int(CFG, 'Kodi', 'kodi_update_onlyfirst', 0))
+        KODI_PARENT_MAPS = check_setting_str(CFG, 'Kodi', 'kodi_parent_maps', '')
         KODI_HOST = check_setting_str(CFG, 'Kodi', 'kodi_host', '')
         KODI_USERNAME = check_setting_str(CFG, 'Kodi', 'kodi_username', '')
         KODI_PASSWORD = check_setting_str(CFG, 'Kodi', 'kodi_password', '')
@@ -983,6 +988,7 @@ def initialize(console_logging=True):
         PLEX_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Plex', 'plex_notify_ondownload', 0))
         PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Plex', 'plex_notify_onsubtitledownload', 0))
         PLEX_UPDATE_LIBRARY = bool(check_setting_int(CFG, 'Plex', 'plex_update_library', 0))
+        PLEX_PARENT_MAPS = check_setting_str(CFG, 'Plex', 'plex_parent_maps', '')
         PLEX_SERVER_HOST = check_setting_str(CFG, 'Plex', 'plex_server_host', '')
         PLEX_HOST = check_setting_str(CFG, 'Plex', 'plex_host', '')
         PLEX_USERNAME = check_setting_str(CFG, 'Plex', 'plex_username', '')
@@ -1375,7 +1381,8 @@ def initialize(console_logging=True):
             cycleTime=datetime.timedelta(seconds=3),
             threadName='SEARCHQUEUE')
 
-        update_interval = datetime.timedelta(minutes=(RECENTSEARCH_FREQUENCY, 1)[4489 == RECENTSEARCH_FREQUENCY])
+        # enter 4490 (was 4489) for experimental internal provider frequencies
+        update_interval = datetime.timedelta(minutes=(RECENTSEARCH_FREQUENCY, 1)[4499 == RECENTSEARCH_FREQUENCY])
         recentSearchScheduler = scheduler.Scheduler(
             search_recent.RecentSearcher(),
             cycleTime=update_interval,
@@ -1776,6 +1783,7 @@ def save_config():
     new_config['Emby'] = {}
     new_config['Emby']['use_emby'] = int(USE_EMBY)
     new_config['Emby']['emby_update_library'] = int(EMBY_UPDATE_LIBRARY)
+    new_config['Emby']['emby_parent_maps'] = EMBY_PARENT_MAPS
     new_config['Emby']['emby_host'] = EMBY_HOST
     new_config['Emby']['emby_apikey'] = EMBY_APIKEY
     new_config['Emby']['emby_watchedstate_scheduled'] = int(EMBY_WATCHEDSTATE_SCHEDULED)
@@ -1787,6 +1795,7 @@ def save_config():
     new_config['Kodi']['kodi_update_library'] = int(KODI_UPDATE_LIBRARY)
     new_config['Kodi']['kodi_update_full'] = int(KODI_UPDATE_FULL)
     new_config['Kodi']['kodi_update_onlyfirst'] = int(KODI_UPDATE_ONLYFIRST)
+    new_config['Kodi']['kodi_parent_maps'] = KODI_PARENT_MAPS
     new_config['Kodi']['kodi_host'] = KODI_HOST
     new_config['Kodi']['kodi_username'] = KODI_USERNAME
     new_config['Kodi']['kodi_password'] = helpers.encrypt(KODI_PASSWORD, ENCRYPTION_VERSION)
@@ -1799,6 +1808,7 @@ def save_config():
     new_config['Plex']['plex_username'] = PLEX_USERNAME
     new_config['Plex']['plex_password'] = helpers.encrypt(PLEX_PASSWORD, ENCRYPTION_VERSION)
     new_config['Plex']['plex_update_library'] = int(PLEX_UPDATE_LIBRARY)
+    new_config['Plex']['plex_parent_maps'] = PLEX_PARENT_MAPS
     new_config['Plex']['plex_server_host'] = PLEX_SERVER_HOST
     new_config['Plex']['plex_notify_onsnatch'] = int(PLEX_NOTIFY_ONSNATCH)
     new_config['Plex']['plex_notify_ondownload'] = int(PLEX_NOTIFY_ONDOWNLOAD)

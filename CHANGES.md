@@ -5,6 +5,7 @@
 * Add installable SickGear Kodi repository containing addon "SickGear Watched State Updater"
 * Change add Emby setting for watched state scheduler at Config/Notifications/Emby/"Update watched interval"
 * Change add Plex setting for watched state scheduler at Config/Notifications/Plex/"Update watched interval"
+* Change add map parent folder setting at Notifications for Emby, Kodi, and Plex
 * Add API cmd=sg.updatewatchedstate, instructions for use are linked to in layout "Watched" at /history
 * Change history page table filter input values are saved across page refreshes
 * Change history page table filter inputs, accept values like "dvd or web" to only display both

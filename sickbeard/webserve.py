@@ -874,12 +874,28 @@ class MainHandler(WebHandler):
         except (StandardError, Exception):
             pass
 
+        mapped = 0
+        mapping = None
+        maps = [x.split('=') for x in sickbeard.KODI_PARENT_MAPS.split(',') if any(x)]
         for k, d in data.iteritems():
             d['label'] = '%s%s{Kodi}' % (d['label'], bool(d['label']) and ' ' or '')
             try:
                 d['played'] = 100 * int(d['played'])
             except (StandardError, Exception):
                 d['played'] = 0
+
+            for m in maps:
+                result, change = helpers.path_mapper(m[0], m[1], d['path_file'])
+                if change:
+                    if not mapping:
+                        mapping = (states[idx]['path_file'], result)
+                    mapped += 1
+                    states[idx]['path_file'] = result
+                    break
+
+        if mapping:
+            logger.log('Folder mappings used, the first of %s is [%s] in Kodi is [%s] in SickGear' %
+                       (mapped, mapping[0], mapping[1]))
 
         return self.update_watched_state(data, as_json)
 
@@ -5284,13 +5300,17 @@ class History(MainHandler):
         if sickbeard.USE_EMBY and hosts:
             logger.log('Beginning Emby update watched episode states')
 
-            rd = sickbeard.ROOT_DIRS.split('|')[1:]
-            rootpaths = sorted(['%s%s' % (ek.ek(os.path.splitdrive, x)[1], os.path.sep) for x in rd],
-                               key=len, reverse=True)
+            rd = sickbeard.ROOT_DIRS.split('|')[1:] + \
+                 [x.split('=')[0] for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
+            rootpaths = sorted(
+                ['%s%s' % (ek.ek(os.path.splitdrive, x)[1], os.path.sep) for x in rd], key=len, reverse=True)
             rootdirs = sorted([x for x in rd], key=len, reverse=True)
             headers = {'Content-type': 'application/json'}
             states = {}
             idx = 0
+            mapped = 0
+            mapping = None
+            maps = [x.split('=') for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
             for i, cur_host in enumerate(hosts):
                 base_url = 'http://%s/emby/Users' % cur_host
                 headers.update({'X-MediaBrowser-Token': keys[i]})
@@ -5345,9 +5365,22 @@ class History(MainHandler):
                                     label='%s%s{Emby}' % (user.get('Name', ''), bool(user.get('Name')) and ' ' or ''),
                                     date_watched=sickbeard.sbdatetime.sbdatetime.totimestamp(
                                         dateutil.parser.parse(d.get('UserData', {}).get('LastPlayedDate'))))
+
+                                for m in maps:
+                                    result, change = helpers.path_mapper(m[0], m[1], states[idx]['path_file'])
+                                    if change:
+                                        if not mapping:
+                                            mapping = (states[idx]['path_file'], result)
+                                        mapped += 1
+                                        states[idx]['path_file'] = result
+                                        break
+
                                 idx += 1
                             except(StandardError, Exception):
                                 continue
+            if mapping:
+                logger.log('Folder mappings used, the first of %s is [%s] in Emby is [%s] in SickGear' %
+                           (mapped, mapping[0], mapping[1]))
 
             if states:
                 # Prune user removed items that are no longer being returned by API
@@ -5371,10 +5404,15 @@ class History(MainHandler):
             import urllib2
 
             plex = Plex(dict(username=sickbeard.PLEX_USERNAME, password=sickbeard.PLEX_PASSWORD,
-                             section_filter_path=sickbeard.ROOT_DIRS.split('|')[1:]))
+                             section_filter_path=sickbeard.ROOT_DIRS.split('|')[1:] +
+                             [x.split('=')[0] for x in sickbeard.PLEX_PARENT_MAPS.split(',') if any(x)]))
 
             states = {}
             idx = 0
+            played = 0
+            mapped = 0
+            mapping = None
+            maps = [x.split('=') for x in sickbeard.PLEX_PARENT_MAPS.split(',') if any(x)]
             for cur_host in hosts:
                 parts = urllib2.splitport(cur_host)
                 if parts[0]:
@@ -5386,9 +5424,25 @@ class History(MainHandler):
 
                     for k, v in plex.show_states.iteritems():
                         if 0 < v.get('played') or 0:
+                            played += 1
                             states[idx] = v
                             states[idx]['label'] = '%s%s{Plex}' % (v['label'], bool(v['label']) and ' ' or '')
+
+                            for m in maps:
+                                result, change = helpers.path_mapper(m[0], m[1], states[idx]['path_file'])
+                                if change:
+                                    if not mapping:
+                                        mapping = (states[idx]['path_file'], result)
+                                    mapped += 1
+                                    states[idx]['path_file'] = result
+                                    break
+
                             idx += 1
+
+                    logger.log('Fetched %s of %s played for host : %s' % (len(plex.show_states), played, cur_host))
+            if mapping:
+                logger.log('Folder mappings used, the first of %s is [%s] in Plex is [%s] in SickGear' %
+                           (mapped, mapping[0], mapping[1]))
 
             if states:
                 # Prune user removed items that are no longer being returned by API
@@ -6420,11 +6474,12 @@ class ConfigNotifications(Config):
 
     def save_notifications(
             self,
-            use_emby=None, emby_update_library=None, emby_watched_interval=None, emby_host=None, emby_apikey=None,
+            use_emby=None, emby_update_library=None, emby_watched_interval=None, emby_parent_maps=None,
+            emby_host=None, emby_apikey=None,
             use_kodi=None, kodi_always_on=None, kodi_update_library=None, kodi_update_full=None,
-            kodi_update_onlyfirst=None, kodi_host=None, kodi_username=None, kodi_password=None,
+            kodi_update_onlyfirst=None, kodi_parent_maps=None, kodi_host=None, kodi_username=None, kodi_password=None,
             kodi_notify_onsnatch=None, kodi_notify_ondownload=None, kodi_notify_onsubtitledownload=None,
-            use_plex=None, plex_update_library=None, plex_watched_interval=None,
+            use_plex=None, plex_update_library=None, plex_watched_interval=None, plex_parent_maps=None,
             plex_username=None, plex_password=None, plex_server_host=None,
             plex_notify_onsnatch=None, plex_notify_ondownload=None, plex_notify_onsubtitledownload=None, plex_host=None,
             # use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None, xbmc_notify_ondownload=None,
@@ -6480,6 +6535,7 @@ class ConfigNotifications(Config):
 
         sickbeard.USE_EMBY = config.checkbox_to_value(use_emby)
         sickbeard.EMBY_UPDATE_LIBRARY = config.checkbox_to_value(emby_update_library)
+        sickbeard.EMBY_PARENT_MAPS = config.kv_csv(emby_parent_maps)
         sickbeard.EMBY_HOST = config.clean_hosts(emby_host)
         keys_changed = False
         all_keys = []
@@ -6505,6 +6561,7 @@ class ConfigNotifications(Config):
         sickbeard.KODI_UPDATE_LIBRARY = config.checkbox_to_value(kodi_update_library)
         sickbeard.KODI_UPDATE_FULL = config.checkbox_to_value(kodi_update_full)
         sickbeard.KODI_UPDATE_ONLYFIRST = config.checkbox_to_value(kodi_update_onlyfirst)
+        sickbeard.KODI_PARENT_MAPS = config.kv_csv(kodi_parent_maps)
         sickbeard.KODI_HOST = config.clean_hosts(kodi_host)
         sickbeard.KODI_USERNAME = kodi_username
         if set('*') != set(kodi_password):
@@ -6528,6 +6585,7 @@ class ConfigNotifications(Config):
         sickbeard.PLEX_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(plex_notify_ondownload)
         sickbeard.PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(plex_notify_onsubtitledownload)
         sickbeard.PLEX_UPDATE_LIBRARY = config.checkbox_to_value(plex_update_library)
+        sickbeard.PLEX_PARENT_MAPS = config.kv_csv(plex_parent_maps)
         sickbeard.PLEX_HOST = config.clean_hosts(plex_host)
         sickbeard.PLEX_SERVER_HOST = config.clean_hosts(plex_server_host)
         sickbeard.PLEX_USERNAME = plex_username

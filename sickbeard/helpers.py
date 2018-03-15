@@ -1618,3 +1618,28 @@ def freespace(path=None):
             pass
 
     return result
+
+
+def path_mapper(search, replace, subject):
+    """
+    Substitute strings in a path
+
+    :param search: Search text
+    :type search: String
+    :param replace: Replacement text
+    :type replace: String
+    :param subject: Path text to search
+    :type subject: String
+    :return: Subject with or without substitution, True if a change was made otherwise False
+    :rtype: Tuple
+    """
+    delim = '/!~!/'
+    search = re.sub(r'[\\]', delim, search)
+    replace = re.sub(r'[\\]', delim, replace)
+    path = re.sub(r'[\\]', delim, subject)
+    result = re.sub('(?i)^%s' % search, replace, path)
+
+    if re.search(delim, path):
+        result = os.path.normpath(re.sub(delim, '/', result))
+
+    return result, result != subject

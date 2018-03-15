@@ -364,12 +364,12 @@
 							<label for="fuzzy_dating">
 								<span class="component-title">Display fuzzy dates</span>
 								<span class="component-desc">
-									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="viewIf datePresets"#echo ('', $checked)[$sg_var('FUZZY_DATING') == True]#>
+									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="view-if datePresets"#echo ('', $checked)[$sg_var('FUZZY_DATING') == True]#>
 									<p>move absolute dates into tooltips and display e.g. "Last Thu", "On Tue"</p>
 								</span>
 							</label>
 						</div>
-						<div class="field-pair show_if_fuzzy_dating#echo (' metadataDiv', '')[$sg_var('FUZZY_DATING')]#">
+						<div class="field-pair show-if-fuzzy_dating#echo (' metadataDiv', '')[$sg_var('FUZZY_DATING')]#">
 							<label for="trim_zero">
 								<span class="component-title">Trim date and time</span>
 								<span class="component-desc">
