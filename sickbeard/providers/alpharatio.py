@@ -89,7 +89,11 @@ class AlphaRatioProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._peers_fail(mode, seeders, leechers) or \
+                                        (self.freeleech and
+                                         any([not tr.select('.tl_free'),
+                                              tr.select('.tl_timed'), tr.select('[title^="Timed Free"]'),
+                                              tr.select('.tl_expired'), tr.select('[title^="Expired Free"]')])):
                                     continue
 
                                 title = tr.find('a', title=rc['info']).get_text().strip()
