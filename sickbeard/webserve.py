@@ -5298,7 +5298,7 @@ class History(MainHandler):
         hosts, keys, message = client.check_config(sickbeard.EMBY_HOST, sickbeard.EMBY_APIKEY)
 
         if sickbeard.USE_EMBY and hosts:
-            logger.log('Beginning Emby update watched episode states')
+            logger.log('Updating Emby watched episode states', logger.DEBUG)
 
             rd = sickbeard.ROOT_DIRS.split('|')[1:] + \
                  [x.split('=')[0] for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
@@ -5380,7 +5380,7 @@ class History(MainHandler):
                                 continue
             if mapping:
                 logger.log('Folder mappings used, the first of %s is [%s] in Emby is [%s] in SickGear' %
-                           (mapped, mapping[0], mapping[1]))
+                           (mapped, mapping[0], mapping[1]), logger.DEBUG)
 
             if states:
                 # Prune user removed items that are no longer being returned by API
@@ -5391,14 +5391,14 @@ class History(MainHandler):
 
                 MainHandler.update_watched_state(states, False)
 
-            logger.log('Finished Emby update watched episode states')
+            logger.log('Finished updating Emby watched episode states')
 
     @staticmethod
     def update_watched_state_plex():
 
         hosts = [x.strip().lower() for x in sickbeard.PLEX_SERVER_HOST.split(',')]
         if sickbeard.USE_PLEX and hosts:
-            logger.log('Beginning Plex update watched episode states')
+            logger.log('Updating Plex watched episode states', logger.DEBUG)
 
             from plex import Plex
             import urllib2
@@ -5439,10 +5439,11 @@ class History(MainHandler):
 
                             idx += 1
 
-                    logger.log('Fetched %s of %s played for host : %s' % (len(plex.show_states), played, cur_host))
+                    logger.log('Fetched %s of %s played for host : %s' % (len(plex.show_states), played, cur_host),
+                               logger.DEBUG)
             if mapping:
                 logger.log('Folder mappings used, the first of %s is [%s] in Plex is [%s] in SickGear' %
-                           (mapped, mapping[0], mapping[1]))
+                           (mapped, mapping[0], mapping[1]), logger.DEBUG)
 
             if states:
                 # Prune user removed items that are no longer being returned by API
@@ -5453,7 +5454,7 @@ class History(MainHandler):
 
                 MainHandler.update_watched_state(states, False)
 
-            logger.log('Finished Plex update watched episode states')
+            logger.log('Finished updating Plex watched episode states')
 
     def watched(self, tvew_id=None, files=None, records=None):
 
