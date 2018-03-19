@@ -643,7 +643,7 @@ class GenericProvider(object):
 
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
                         for u in (('s', 'itorrents.org'), ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
-                                  ('s', 'torrentproject.se'), ('', 'thetorrent.org'), ('s', 'torcache.to'))]
+                                  ('', 'thetorrent.org'))]
             except (StandardError, Exception):
                 link_type = 'torrent'
                 urls = [result.url]
@@ -698,6 +698,7 @@ class GenericProvider(object):
                     fp.write(result.url)
                     fp.flush()
                     os.fsync(fp.fileno())
+                saved = True
                 logger.log(u'Saved magnet link to file as some clients (or plugins) support this, %s' % final_file)
                 if 'blackhole' == sickbeard.TORRENT_METHOD:
                     logger.log('Tip: If your client fails to load magnet in files, ' +
