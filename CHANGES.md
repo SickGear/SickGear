@@ -1,4 +1,9 @@
-﻿### 0.14.8 (2018-03-13 22:00:00 UTC)
+﻿### 0.14.9 (2018-03-19 13:10:00 UTC)
+
+Change remove dead tor caches and stop searching episodes that have a magnet saved
+Change AlphaRatio provider freeleech mode; prevent spoiling user ratio from ambiguous filtered results
+
+### 0.14.8 (2018-03-13 22:00:00 UTC)
 
 Fix changing status from "Skipped" to "Wanted" in Manage/Episode Status
 
