@@ -1,5 +1,6 @@
 ﻿### 0.15.0 (2018-xx-xx xx:xx:xx UTC)
 
+* Add showRSS torrent provider
 * Add choice to delete watched episodes from a list of played media at Kodi, Emby, and/or Plex,
   instructions at Shows/History/Layout/"Watched"
 * Add installable SickGear Kodi repository containing addon "SickGear Watched State Updater"
