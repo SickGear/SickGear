@@ -5474,13 +5474,13 @@ class History(MainHandler):
             row_show_ids.update({int(rowid): {int(tvid): int(shoid)}})
 
         sql_results = my_db.select(
-            'SELECT rowid, label, location'
+            'SELECT rowid, tvep_id, label, location'
             ' FROM [tv_episodes_watched] WHERE `rowid` in (%s)' % ','.join([str(k) for k in row_show_ids.keys()])
         )
 
         h_records = []
         removed = []
-        deleted = []
+        deleted = {}
         attempted = []
         refresh = []
         for r in sql_results:
@@ -5500,7 +5500,7 @@ class History(MainHandler):
                 if not ek.ek(os.path.isfile, r['location']):
                     logger.log(u'Deleted file %s' % r['location'])
 
-                    deleted += [r['location']]
+                    deleted.update({r['tvep_id']: row_show_ids[r['rowid']]})
                     if row_show_ids[r['rowid']] not in refresh:
                         # schedule a show for one refresh after deleting an arbitrary number of locations
                         refresh += [row_show_ids[r['rowid']]]
@@ -5515,6 +5515,20 @@ class History(MainHandler):
                     if 1 == r_del.rowcount:
                         removed += ['%s-%s-%s' % (r['rowid'], k, v) for k, v in row_show_ids[r['rowid']].iteritems()]
 
+        updating = False
+        for epid, tvid_shoid_dict in deleted.iteritems():
+            sql_results = my_db.select('SELECT season, episode FROM [tv_episodes] WHERE `episode_id` = %s' % epid)
+            for r in sql_results:
+                show = helpers.find_show_by_id(sickbeard.showList, tvid_shoid_dict)
+                ep_obj = show.getEpisode(r['season'], r['episode'])
+                for n in filter(lambda x: x.name.lower() in ('emby', 'kodi', 'plex'),
+                                notifiers.NotifierFactory().get_enabled()):
+                    if 'PLEX' == n.name:
+                        if updating:
+                            continue
+                        updating = True
+                    n.update_library(show=show, show_name=show.name, ep_obj=ep_obj)
+
         for tvid_shoid_dict in refresh:
             try:
                 sickbeard.showQueueScheduler.action.refreshShow(
@@ -5523,7 +5537,7 @@ class History(MainHandler):
                 pass
 
         if not any([removed, h_records, len(deleted)]):
-            msg = 'No items removed, removed, or files deleted'
+            msg = 'No items removed and no files deleted'
         else:
             msg = []
             if deleted:

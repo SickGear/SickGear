@@ -113,6 +113,7 @@
 * Change removed NZBGet 'remote' PostProcess guidance until it is verified to work
 * Fix Trakt, recommended and watchlist (send_oauth is now sent)
 * Change some log messages from info to debug type
+* Change notify enabled Emby, Kodi, and Plex clients to update deleted
 
 
 ### 0.14.9 (2018-03-19 13:10:00 UTC)
