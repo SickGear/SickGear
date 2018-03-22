@@ -1,4 +1,4 @@
-﻿### 0.15.0 (2018-xx-xx xx:xx:xx UTC)
+﻿### 0.15.0 (2018-03-22 00:00:00 UTC)
 
 * Add showRSS torrent provider
 * Add choice to delete watched episodes from a list of played media at Kodi, Emby, and/or Plex,
@@ -107,19 +107,12 @@
 * Add X-Fanartname response header for sg.show.getfanart
 * Change remove some non-release group stuff from newnab results
 
-[develop changelog]
-
-* Fix API typo and a regression 'archivefirstmatch'
-* Change removed NZBGet 'remote' PostProcess guidance until it is verified to work
-* Fix Trakt, recommended and watchlist (send_oauth is now sent)
-* Change some log messages from info to debug type
-* Change notify enabled Emby, Kodi, and Plex clients to update deleted
-
 
 ### 0.14.9 (2018-03-19 13:10:00 UTC)
 
 Change remove dead tor caches and stop searching episodes that have a magnet saved
 Change AlphaRatio provider freeleech mode; prevent spoiling user ratio from ambiguous filtered results
+
 
 ### 0.14.8 (2018-03-13 22:00:00 UTC)
 
