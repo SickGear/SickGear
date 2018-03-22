@@ -1,6 +1,18 @@
+function toggle$(el, cond){
+	var ifId = '-if-' + $(el).attr('id');
+	if(cond){
+		$('.hide' + ifId).fadeOut('fast', 'linear');
+		$('.show' + ifId).fadeIn('fast', 'linear');
+	} else {
+		$('.show' + ifId).fadeOut('fast', 'linear');
+		$('.hide' + ifId).fadeIn('fast', 'linear');
+	}
+}
+
 $(document).ready(function () {
 	var enabler = $('.enabler'),
-		viewIf = $('.viewIf');
+		viewIf = $('input.view-if'),
+		viewIfSel = $('select.view-if');
 
 	enabler.each(function () {
 		if (!$(this).prop('checked'))
@@ -16,18 +28,19 @@ $(document).ready(function () {
 	});
 
 	viewIf.each(function () {
-		$(($(this).prop('checked') ? '.hide_if_' : '.show_if_') + $(this).attr('id')).hide();
+		$(($(this).prop('checked') ? '.hide-if-' : '.show-if-') + $(this).attr('id')).hide();
 	});
 
 	viewIf.click(function () {
-		var if_id = '_if_' + $(this).attr('id');
-		if ($(this).prop('checked')) {
-			$('.hide' + if_id).fadeOut('fast', 'linear');
-			$('.show' + if_id).fadeIn('fast', 'linear');
-		} else {
-			$('.show' + if_id).fadeOut('fast', 'linear');
-			$('.hide' + if_id).fadeIn('fast', 'linear');
-		}
+		toggle$(this, $(this).prop('checked'));
+	});
+
+	viewIfSel.each(function () {
+		$((0 < $(this).find('option:selected').val() ? '.hide-if-' : '.show-if-') + $(this).attr('id')).hide();
+	});
+
+	viewIfSel.change(function(){
+		toggle$(this, 0 < $(this).find('option:selected').val());
 	});
 
 	var idSelect = '#imdb-accounts', idDel = '#imdb-list-del', idInput = '#imdb-url', idOnOff = '#imdb-list-onoff',

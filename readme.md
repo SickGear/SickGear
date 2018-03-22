@@ -1,56 +1,75 @@
 <hr>
 <div><a id="top"><img alt="SickGear" width="200" src="https://raw.githubusercontent.com/wiki/SickGear/SickGear.Wiki/images/SickGearLogo.png"></a></div>
-**SickGear**, a usenet and bittorrent PVR
+*SickGear*, a usenet and bittorrent PVR
 <hr>
-_Please note you should know how to use git and setup basic requirements in order to run this software._
 
-SickGear provides management of TV shows and/or Anime, it can detect new episodes, link to downloader apps, and more.  SickGear is a proud descendant of Sick Beard and is humbled to have been endorsed by one of its former lead developers.  
+SickGear provides management of TV shows and/or Anime, it detects new episodes, links downloader apps, and more.
 
-Why SickGear?  
-* SickGear maintains perfect uptime with the longest track record of being stable, reliable and trusted to work
-* SickGear delivers quality from active development with a wealth of options on a dark or light themed interface
+#### Why SickGear?
+* SickGear maintains a perfect uptime with the longest track record of being stable, reliable and trusted to work
+* SickGear delivers valued quality from active development with a wealth of options on a dark or light themed interface
+
+#### What now?
+* [Install guides](https://github.com/SickGear/SickGear/wiki/Installation-Instructions) for many platforms
 * [Migrating](https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B0%5D-Migrate) to a hassle free and feature rich set up is super simple
 
-## Features include
+Or read more below...
+
+## Some innovative SickGear features
+* Ideas of shows to add from Trakt, IMDb, and AniDB categories; anticipating, new seasons, new shows, popular, and more
+* Advanced add show finder that near always returns results sorted A-Z, Aired, or Relevancy, with known shows separated
+* Releases can be searched during adding a show (e.g. optionally fetch oldest and/or newest without further effort)
+* Advanced automated search that always works to prevent you wasting time manually scanning result lists
+* Choose to delete watched episodes from a list built directly from played media at Kodi, Emby, and/or Plex (No Trakt!)
+* Smart custom qualities selector system that helps achieve an optimal quality selection for automated episode search
+* Choose to have episodes upgraded in quality, or keep existing archive quality, and upgrade future episodes either way
+* Natively use a most powerful regex pattern matching system for superior information handling
+* Select a UI style anytime; Regular, Proview I, or Proview II - independently for Episode View, and for Display Show
+* Smart fanart system allows you to rate avoid/prefer. UI can be moved or toggled off/on to fully appreciate a fanart
+* Episode View Layout "Day by Day" displays a fanart background from randomly selected imminent releases
+* Configure from 0 to 500 fanart images to cache per show, default is 3.
+* Provider server failure charts display what failed, when and why
+* Provider server failure handler that pauses connecting the more a server fails
+* Provider server activity graph and stats display how each are performing
+* Built-in providers that have proved over time to deliver leading durability among its application class and third parties
+* Built-in Kodi repository service to maintain SickGear add-ons, the first add-on is Watched State Updater
+* Separate Plex server and Plex client settings, multiple LAN Plex server support, and Plex Home multiple user support
+* Intelligent library updates target the actual Plex server that carries the show of an episode (multi LAN server)
+* Communicate directly with NZBGet using a dedicated integration script
+* Communicate directly with qBittorrent/Deluge/Transmission etc. using a dedicated integration script
+* Proxy auto-config (PAC) support to define when a proxy is used instead of using one for every system request
+* Change file date, to the date that the episode aired (yup, the feature was first created here for XBMC file sorting)
+* Visual percentage progress of managed episodes
+* Configure an episode status for removed media files
+* Configurable default home page
+
+Features above link to the UI; innovations also exist in core, we often inspire imitators, but you can [get the real deal!](https://github.com/SickGear/SickGear/wiki/Installation-Instructions)
+
+Other features and worthy points;
 * Stable, quality assured testing and development cycle
-* Innovations that inspire imitators
-* Compatible with any platform via a familiar web interface
 * Most comprehensive selection of usenet and torrent sources
+* Compatible with any platform via a familiar web interface
 * Episode management
+  * Group shows into personalised sections
   * View missed and upcoming shows at a glance with "day by day" and other layouts
-  * Group shows into personalised sections in a full show list view
-  * Automatic and manual search for availability of wanted episodes
-  * Set what episodes you want and how to receive them
-  * Uses well known established index sites to gather show information
-  * Searches for known alternatively named shows with a fallback to user edited names
-  * Searches for known alternatively numbered episodes with a fallback to user edited numbers
-  * Searches for known alternatively numbered seasons with a fallback to user edited numbers
-  * Forward search results to a downloader (e.g. NZBGet, SABNZBd, uTorrent, and others)
-  * Save search results to a "blackhole" folder that can be periodically scanned for taking action
-  * Post-process downloaded episodes into customisable layouts, with or without extra metadata
-  * Advanced Failed Download Handling (FDH)
-  * Overview of seasons, episodes, rating, version, airdate, episode status ([their meaning](https://github.com/SickGear/SickGear/wiki/Status-Modes))
-* Processing nzb/torrents with your downloader application at your chosen qualities
-* Subtitle management
+  * Automatic and manual search for availability of episodes you want
+  * Well known established sources are used to gather reliable show information
+  * Known and user added alternative show names can be searched
+  * Known and user added alternative numbered seasons and/or episodes can be searched
+  * Forward search results directly to clients like NZBGet, SABNZBd, qBitTorrent, Deluge and others
+  * Save search results to a "blackhole" folder, a place designated for clients to auto scan
+  * Built-in post processing of episodes, with renaming to custom folder and/or file names
+  * Fetch metadata like fanart, poster and banner images, nfo's for clients like Kodi, Plex and many more
+  * Native advanced automated handling of failed downloads to ensure a success after failure
+  * Overview of episodes, rating, version, airdate, episode status ([their meaning](https://github.com/SickGear/SickGear/wiki/Status-Modes))
+  * Support for specials and multi episode media files
+* Automated subtitle management
 * Notification
-  * Home Theater/NAS (Emby, Kodi, Plex, Syno, Tivo, and more)
+  * Home Theater/NAS (Emby, Kodi, Plex, Syno, Tivo, and more) can be notified to update their library
   * Social notifiers (Trakt, Slack, Gitter, Discord, E-mail, and more)
   * Device notifiers (Boxcar2, Notify My Android, Growl, Prowl, and more)
-* Server friendly with minimal number of calls (e.g. one request per chosen snatch, not per result)
-* Can recommend trendy and/or personally tailored shows from Trakt, IMDb, AniDB
+* Server friendly with minimal number of API calls using both active and passive search tech
 * Automated alternative show names and episode numbering from XEM
-
-Some of our innovative features;
-* Automated search after adding a show
-* Desktop notifications
-* Enhanced Anime features when adding shows
-* Visual percentage progress of managed episodes
-* Separate Plex server and Plex client settings
-* Intelligent library updates that target Plex servers that list the show of an episode
-* Configurable episode status for removed media files
-* Configurable default home page
-* Source providers
-* User Interface
 
 ## Screenies
 <table><thead></thead><tbody>
@@ -103,15 +122,15 @@ If your pull request is a new feature, please try explaining its function to a l
 ## Contributors
 
 #### To core
-MidgetSpy, zoggy, 1337, Tolstyak, Mr_Orange, Bricky, JackDandy, Prinz23, Supremicus, adam111316, and zanaga  
+MidgetSpy, zoggy, 1337, Tolstyak, Mr_Orange, Bricky, JackDandy, Prinz23, Supremicus, adam111316, and zanaga
 
 #### In other areas, testers and QA
-Warm thanks to tehspede, CtrlAltDefeat, Mike, vergessen (betrayed), and Rawh for their keen eye, all around help, and making sure all manner of things work as expected  
+Warm thanks to tehspede, CtrlAltDefeat, Mike, vergessen (betrayed), and Rawh for their keen eye, all around help, and making sure all manner of things work as expected
 
 #### Provider code
-Thanks also, to unsung heroes that added source providers; Idan Gutman, Daniel Heimans, jkaberg, and Seedboy  
+Thanks also, to unsung heroes that added source providers; Idan Gutman, Daniel Heimans, jkaberg, and Seedboy
 
-Finally, a massive thanks to all those that remain in the shadows, the quiet ones who welcome folk to special places, we salute you for your hospitality and for tirelessly keeping up operations.  
+Finally, a massive thanks to all those that remain in the shadows, the quiet ones who welcome folk to special places, we salute you for your hospitality and for tirelessly keeping up operations.
 
 ## Community
 * <a href="https://gitter.im/SickGear/"><img src="https://badges.gitter.im/sickgear.svg"></a> web based (most likely one on one with a dev)

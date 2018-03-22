@@ -23,7 +23,9 @@ import base64
 import datetime
 import dateutil.parser
 import glob
+import hashlib
 import itertools
+import io
 import os
 import random
 import re
@@ -32,6 +34,7 @@ import time
 import traceback
 import urllib
 import threading
+import zipfile
 
 from mimetypes import MimeTypes
 from Cheetah.Template import Template
@@ -51,7 +54,7 @@ from sickbeard.helpers import has_image_ext, remove_article, starify
 from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_TRAKT
 from sickbeard.scene_numbering import get_scene_numbering, set_scene_numbering, get_scene_numbering_for_show, \
     get_xem_numbering_for_show, get_scene_absolute_numbering_for_show, get_xem_absolute_numbering_for_show, \
-    get_scene_absolute_numbering
+    get_scene_absolute_numbering, set_scene_numbering_helper
 from sickbeard.name_cache import buildNameCache
 from sickbeard.browser import foldersAtPath
 from sickbeard.blackandwhitelist import BlackAndWhiteList, short_group_names
@@ -71,9 +74,11 @@ from lib.libtrakt.exceptions import TraktException, TraktAuthException
 from lib.libtrakt.indexerapiinterface import TraktSearchTypes
 from trakt_helpers import build_config, trakt_collection_remove_account
 from sickbeard.bs4_parser import BS4Parser
+
+from lib.fuzzywuzzy import fuzz
+from lib.send2trash import send2trash
 from lib.tmdb_api import TMDB
 from lib.tvdb_api.tvdb_exceptions import tvdb_exception
-from lib.fuzzywuzzy import fuzz
 
 try:
     import json
@@ -145,6 +150,13 @@ class BaseHandler(RequestHandler):
             return self.get_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT))
         return True
 
+    def getImage(self, image):
+        if ek.ek(os.path.isfile, image):
+            mime_type, encoding = MimeTypes().guess_type(image)
+            self.set_header('Content-Type', mime_type)
+            with ek.ek(open, image, 'rb') as img:
+                return img.read()
+
     def showPoster(self, show=None, which=None, api=None):
         # Redirect initial poster/banner thumb to default images
         if 'poster' == which[0:6]:
@@ -175,9 +187,14 @@ class BaseHandler(RequestHandler):
                 static_image_path = image_file_name
 
         if api:
+            used_file = ek.ek(os.path.basename, static_image_path)
+            if static_image_path.startswith('/images'):
+                used_file = 'default'
+                static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', static_image_path[1:])
             mime_type, encoding = MimeTypes().guess_type(static_image_path)
             self.set_header('Content-Type', mime_type)
-            with open(static_image_path, 'rb') as img:
+            self.set_header('X-Filename', used_file)
+            with ek.ek(open, static_image_path, 'rb') as img:
                 return img.read()
         else:
             static_image_path = os.path.normpath(static_image_path.replace(sickbeard.CACHE_DIR, '/cache'))
@@ -273,6 +290,253 @@ class CalendarHandler(BaseHandler):
 
         # Ending the iCal
         return ical + 'END:VCALENDAR'
+
+
+class RepoHandler(BaseStaticFileHandler):
+
+    def get(self, path, include_body=True, *args, **kwargs):
+        super(RepoHandler, self).get(path, include_body)
+        logger.log('Kodi req... get(path): %s' % path, logger.DEBUG)
+
+    def set_extra_headers(self, *args, **kwargs):
+        super(RepoHandler, self).set_extra_headers(*args, **kwargs)
+        self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+
+    def initialize(self, *args, **kwargs):
+        super(RepoHandler, self).initialize(*args, **kwargs)
+
+        logger.log('Kodi req... initialize(path): %s' % kwargs['path'], logger.DEBUG)
+        cache_client = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'clients')
+        cache_client_kodi = ek.ek(os.path.join, cache_client, 'kodi')
+        cache_client_kodi_watchedstate = ek.ek(os.path.join, cache_client_kodi, 'service.sickgear.watchedstate.updater')
+        for folder in (cache_client,
+                       cache_client_kodi,
+                       ek.ek(os.path.join, cache_client_kodi, 'repository.sickgear'),
+                       cache_client_kodi_watchedstate,
+                       ek.ek(os.path.join, cache_client_kodi_watchedstate, 'resources'),
+                       ek.ek(os.path.join, cache_client_kodi_watchedstate, 'resources', 'language'),
+                       ek.ek(os.path.join, cache_client_kodi_watchedstate, 'resources', 'language', 'English'),
+                       ):
+            if not ek.ek(os.path.exists, folder):
+                ek.ek(os.mkdir, folder)
+
+        with io.open(ek.ek(os.path.join, cache_client_kodi, 'index.html'), 'w') as fh:
+            fh.write(self.render_kodi_index())
+        with io.open(ek.ek(os.path.join, cache_client_kodi, 'repository.sickgear', 'index.html'), 'w') as fh:
+            fh.write(self.render_kodi_repository_sickgear_index())
+        with io.open(ek.ek(os.path.join, cache_client_kodi_watchedstate, 'index.html'), 'w') as fh:
+            fh.write(self.render_kodi_service_sickgear_watchedstate_updater_index())
+        with io.open(ek.ek(os.path.join, cache_client_kodi_watchedstate, 'resources', 'index.html'), 'w') as fh:
+            fh.write(self.render_kodi_service_sickgear_watchedstate_updater_resources_index())
+        with io.open(ek.ek(
+                os.path.join,
+                cache_client_kodi_watchedstate, 'resources', 'language', 'index.html'), 'w') as fh:
+            fh.write(self.render_kodi_service_sickgear_watchedstate_updater_resources_language_index())
+        with io.open(ek.ek(
+                os.path.join,
+                cache_client_kodi_watchedstate, 'resources', 'language', 'English', 'index.html'), 'w') as fh:
+            fh.write(self.render_kodi_service_sickgear_watchedstate_updater_resources_language_english_index())
+
+        '''
+        
+        if add-on rendered md5 changes, update its zip and then flag to update repo addon
+        if repo rendered md5 changes or flag is true, update the repo addon, where repo version *must* be increased
+        
+        '''
+        repo_md5_file = ek.ek(os.path.join, cache_client_kodi, 'addons.xml.md5')
+        saved_md5 = None
+        try:
+            with io.open(repo_md5_file, 'r') as fh:
+                saved_md5 = fh.readline()
+        except(StandardError, Exception):
+            pass
+        rendered_md5 = self.render_kodi_repo_addons_xml_md5()
+        if saved_md5 != rendered_md5:
+            with io.open(ek.ek(os.path.join, cache_client_kodi, 'repository.sickgear', 'addon.xml'), 'w') as fh:
+                fh.write(self.render_kodi_repo_addon_xml())
+            with io.open(ek.ek(os.path.join, cache_client_kodi_watchedstate, 'addon.xml'), 'w') as fh:
+                fh.write(self.get_watchedstate_updater_addon_xml())
+            with io.open(ek.ek(os.path.join, cache_client_kodi, 'addons.xml'), 'w') as fh:
+                fh.write(self.render_kodi_repo_addons_xml())
+            with io.open(ek.ek(os.path.join, cache_client_kodi, 'addons.xml.md5'), 'w') as fh:
+                fh.write(rendered_md5)
+
+            def save_zip(name, version, zip_path, zip_method):
+                zip_name = '%s-%s.zip' % (name, version)
+                zip_file = ek.ek(os.path.join, zip_path, zip_name)
+                for f in helpers.scantree(zip_path, ['resources']):
+                    if f.is_file(follow_symlinks=False) and f.name[-4:] in ('.zip', '.md5'):
+                        try:
+                            ek.ek(os.remove, f.path)
+                        except OSError:
+                            logger.log('Unable to delete %s: %r / %s' % (f.path, e, str(e)), logger.WARNING)
+                zip_data = zip_method()
+                with io.open(zip_file, 'wb') as zh:
+                    zh.write(zip_data)
+
+                # Force a UNIX line ending, like the md5sum utility.
+                with io.open(ek.ek(os.path.join, zip_path, '%s.md5' % zip_name), 'w', newline='\n') as zh:
+                    zh.write(u'%s *%s\n' % (self.md5ify(zip_data), zip_name))
+
+            aid, ver = self.repo_sickgear_details()
+            save_zip(aid, ver, ek.ek(os.path.join, cache_client_kodi, 'repository.sickgear'),
+                     self.kodi_repository_sickgear_zip)
+
+            aid, ver = self.addon_watchedstate_details()
+            save_zip(aid, ver, cache_client_kodi_watchedstate,
+                     self.kodi_service_sickgear_watchedstate_updater_zip)
+
+        for (src, dst) in (
+                (('repository.sickgear', 'icon.png'),
+                 (cache_client_kodi, 'repository.sickgear', 'icon.png')),
+                (('service.sickgear.watchedstate.updater', 'icon.png'),
+                 (cache_client_kodi_watchedstate, 'icon.png')),
+                (('service.sickgear.watchedstate.updater', 'resources', 'settings.xml'),
+                 (cache_client_kodi_watchedstate, 'resources', 'settings.xml')),
+                (('service.sickgear.watchedstate.updater', 'resources', 'language', 'English', 'strings.xml'),
+                 (cache_client_kodi_watchedstate, 'resources', 'language', 'English', 'strings.xml')),
+        ):
+            helpers.copyFile(ek.ek(
+                os.path.join, *(sickbeard.PROG_DIR, 'sickbeard', 'clients', 'kodi') + src), ek.ek(os.path.join, *dst))
+
+    def get_content_type(self):
+        if '.md5' == self.absolute_path[-4:]:
+            return 'text/plain'
+        return super(RepoHandler, self).get_content_type()
+
+    def index(self, basepath, filelist):
+        t = PageTemplate(headers=self.request.headers, file='repo_index.tmpl')
+        t.basepath = basepath
+        t.filelist = filelist
+        return t.respond()
+
+    def render_kodi_index(self):
+        return self.index('/kodi/',
+                          ['repository.sickgear/',
+                           'service.sickgear.watchedstate.updater/',
+                           'addons.xml',
+                           'addons.xml.md5',
+                           ])
+
+    def render_kodi_repository_sickgear_index(self):
+        aid, version = self.repo_sickgear_details()
+        return self.index('/kodi/repository.sickgear/',
+                          ['addon.xml',
+                           'icon.png',
+                           '%s-%s.zip' % (aid, version),
+                           '%s-%s.zip.md5' % (aid, version),
+                           ])
+
+    def render_kodi_service_sickgear_watchedstate_updater_index(self):
+        aid, version = self.addon_watchedstate_details()
+        return self.index('/kodi/service.sickgear.watchedstate.updater/',
+                          ['resources/',
+                           'addon.xml',
+                           'icon.png',
+                           '%s-%s.zip' % (aid, version),
+                           '%s-%s.zip.md5' % (aid, version),
+                           ])
+
+    def render_kodi_service_sickgear_watchedstate_updater_resources_index(self):
+        return self.index('/kodi/service.sickgear.watchedstate.updater/resources',
+                          ['language/',
+                           'settings.xml',
+                           'icon.png',
+                           ])
+
+    def render_kodi_service_sickgear_watchedstate_updater_resources_language_index(self):
+        return self.index('/kodi/service.sickgear.watchedstate.updater/resources/language',
+                          ['English/',
+                           ])
+
+    def render_kodi_service_sickgear_watchedstate_updater_resources_language_english_index(self):
+        return self.index('/kodi/service.sickgear.watchedstate.updater/resources/language/English',
+                          ['strings.xml',
+                           ])
+
+    def repo_sickgear_details(self):
+        return re.findall('(?si)addon\sid="(repository\.[^"]+)[^>]+version="([^"]+)',
+                          self.render_kodi_repo_addon_xml())[0]
+
+    def addon_watchedstate_details(self):
+        return re.findall('(?si)addon\sid="([^"]+)[^>]+version="([^"]+)',
+                          self.get_watchedstate_updater_addon_xml())[0]
+
+    @staticmethod
+    def get_watchedstate_updater_addon_xml():
+        with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
+                        'kodi', 'service.sickgear.watchedstate.updater', 'addon.xml'), 'r') as fh:
+            return fh.read().strip()
+
+    def render_kodi_repo_addon_xml(self):
+        t = PageTemplate(headers=self.request.headers, file='repo_kodi_addon.tmpl')
+        return t.respond().strip()
+
+    def render_kodi_repo_addons_xml(self):
+        t = PageTemplate(headers=self.request.headers, file='repo_kodi_addons.tmpl')
+        t.watchedstate_updater_addon_xml = re.sub(
+            '(?m)^([\s]*<)', r'\t\1',
+            '\n'.join(self.get_watchedstate_updater_addon_xml().split('\n')[1:]))  # skip xml header
+
+        t.repo_xml = re.sub(
+            '(?m)^([\s]*<)', r'\t\1',
+            '\n'.join(self.render_kodi_repo_addon_xml().split('\n')[1:]))
+
+        return t.respond()
+
+    def render_kodi_repo_addons_xml_md5(self):
+        return self.md5ify('\n'.join(self.render_kodi_repo_addons_xml().split('\n')[1:]))
+
+    @staticmethod
+    def md5ify(string):
+        return u'%s' % hashlib.new('md5', string).hexdigest()
+
+    def kodi_repository_sickgear_zip(self):
+        bfr = io.BytesIO()
+
+        try:
+            with zipfile.ZipFile(bfr, 'w') as zh:
+                zh.writestr('repository.sickgear/addon.xml', self.render_kodi_repo_addon_xml(), zipfile.ZIP_DEFLATED)
+
+                with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR,
+                                   'sickbeard', 'clients', 'kodi', 'repository.sickgear', 'icon.png'), 'rb') as fh:
+                    infile = fh.read()
+                zh.writestr('repository.sickgear/icon.png', infile, zipfile.ZIP_DEFLATED)
+        except OSError as e:
+            logger.log('Unable to zip %s: %r / %s' % (f.path, e, str(e)), logger.WARNING)
+
+        zip_data = bfr.getvalue()
+        bfr.close()
+        return zip_data
+
+    @staticmethod
+    def kodi_service_sickgear_watchedstate_updater_zip():
+        bfr = io.BytesIO()
+
+        basepath = ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients', 'kodi')
+
+        zip_path = ek.ek(os.path.join, basepath, 'service.sickgear.watchedstate.updater')
+        devenv_src = ek.ek(os.path.join, sickbeard.PROG_DIR, 'tests', '_devenv.py')
+        devenv_dst = ek.ek(os.path.join, zip_path, '_devenv.py')
+        if sickbeard.ENV.get('DEVENV') and ek.ek(os.path.exists, devenv_src):
+            helpers.copyFile(devenv_src, devenv_dst)
+        else:
+            helpers.remove_file_failed(devenv_dst)
+
+        for f in helpers.scantree(zip_path):
+            if f.is_file(follow_symlinks=False) and f.name[-4:] not in '.xcf':
+                try:
+                    with io.open(f.path, 'rb') as fh:
+                        infile = fh.read()
+
+                    with zipfile.ZipFile(bfr, 'a') as zh:
+                        zh.writestr(ek.ek(os.path.relpath, f.path, basepath), infile, zipfile.ZIP_DEFLATED)
+                except OSError as e:
+                    logger.log('Unable to zip %s: %r / %s' % (f.path, e, str(e)), logger.WARNING)
+
+        zip_data = bfr.getvalue()
+        bfr.close()
+        return zip_data
 
 
 class IsAliveHandler(BaseHandler):
@@ -602,6 +866,39 @@ class MainHandler(WebHandler):
 
         sickbeard.save_config()
 
+    def update_watched_state_kodi(self, payload=None, as_json=True):
+
+        data = {}
+        try:
+            data = json.loads(payload)
+        except (StandardError, Exception):
+            pass
+
+        mapped = 0
+        mapping = None
+        maps = [x.split('=') for x in sickbeard.KODI_PARENT_MAPS.split(',') if any(x)]
+        for k, d in data.iteritems():
+            d['label'] = '%s%s{Kodi}' % (d['label'], bool(d['label']) and ' ' or '')
+            try:
+                d['played'] = 100 * int(d['played'])
+            except (StandardError, Exception):
+                d['played'] = 0
+
+            for m in maps:
+                result, change = helpers.path_mapper(m[0], m[1], d['path_file'])
+                if change:
+                    if not mapping:
+                        mapping = (states[idx]['path_file'], result)
+                    mapped += 1
+                    states[idx]['path_file'] = result
+                    break
+
+        if mapping:
+            logger.log('Folder mappings used, the first of %s is [%s] in Kodi is [%s] in SickGear' %
+                       (mapped, mapping[0], mapping[1]))
+
+        return self.update_watched_state(data, as_json)
+
     @staticmethod
     def getFooterTime(change_layout=True, json_dump=True, *args, **kwargs):
 
@@ -636,6 +933,128 @@ class MainHandler(WebHandler):
 
         return next_event
 
+    @staticmethod
+    def update_watched_state(payload=None, as_json=True):
+        """
+        Update db with details of media file that is watched or unwatched
+
+        :param payload: Payload is a dict of dicts
+        :type payload: JSON or Dict
+        Each dict key in payload is an arbitrary value used to return its associated success or fail response.
+        Each dict value in payload comprises a dict of key value pairs where,
+            key: path_file: Path and filename of media, required for media to be found.
+            type: path_file:  String
+            key: played: Optional default=100. Percentage times media has played. If 0, show is set as unwatched.
+            type: played: String
+            key: label: Optional default=''. Profile name or label in use while playing media.
+            type: label: String
+            key: date_watched: Optional default=current time. Datetime stamp that episode changed state.
+            type: date_watched: Timestamp
+
+        Example:
+            dict(
+                key01=dict(path_file='\\media\\path\\', played=100, label='Bob', date_watched=1509850398.0),
+                key02=dict(path_file='\\media\\path\\file-played1.mkv', played=100, label='Sue', date_watched=1509850398.0),
+                key03=dict(path_file='\\media\\path\\file-played2.mkv', played=0, label='Rita', date_watched=1509850398.0)
+            )
+            JSON: '{"key01": {"path_file": "\\media\\path\\file_played1.mkv", "played": 100, "label": "Bob", "date_watched": 1509850398.0}}'
+        :param as_json: True returns result as JSON otherwise Dict
+        :type as_json: Boolean
+        :return: if OK, the value of each dict is '' else fail reason string else None if payload is invalid.
+        :rtype: JSON if as_json is True otherwise None but with payload dict modified
+        Example:
+        Dict: {'key123': {''}} : on success
+        As JSON: '{"key123": {""}}' : on success
+        Dict: {'key123': {'error reason'}}
+        As JSON: '{"key123": {"error reason"}}'
+        Dict: {'error': {'error reason'}} : 'error' used as default key when bad key, value, or json
+        JSON: '{"error": {"error reason"}}' : 'error' used as default key when bad key, value, or json
+
+Example case code using API endpoint, copy/paste, edit to suit, save, then run with: python sg_watched.py
+```
+import json
+import urllib2
+
+# SickGear APIkey
+sg_apikey = '0123456789abcdef'
+# SickGear server detail
+sg_host = 'http://localhost:8081'
+
+url = '%s/api/%s/?cmd=sg.updatewatchedstate' % (sg_host, sg_apikey)
+payload = json.dumps(dict(
+    key01=dict(path_file='\\media\\path\\', played=100, label='Bob', date_watched=1509850398.0),
+    key02=dict(path_file='\\media\\path\\file-played1.mkv', played=100, label='Sue', date_watched=1509850398.0),
+    key03=dict(path_file='\\media\\path\\file-played2.mkv', played=0, label='Rita', date_watched=1509850398.0)
+))
+# payload is POST'ed to SG
+rq = urllib2.Request(url, data=payload)
+r = urllib2.urlopen(rq)
+print json.load(r)
+r.close()
+```
+        """
+        try:
+            data = json.loads(payload)
+        except ValueError:
+            payload = {}
+            data = payload
+        except TypeError:
+            data = payload
+
+        sql_results = None
+        if data:
+            my_db = db.DBConnection(row_type='dict')
+
+            media_paths = map(lambda (_, d): ek.ek(os.path.basename, d['path_file']), data.iteritems())
+            sql_results = my_db.select(
+                'SELECT episode_id, status, location, file_size FROM tv_episodes WHERE file_size > 0 AND (%s)' %
+                ' OR '.join(['location LIKE "%%%s"' % x for x in media_paths]))
+
+        if sql_results:
+            cl = []
+
+            ep_results = {}
+            map(lambda r: ep_results.update({'%s' % ek.ek(os.path.basename, r['location']).lower(): dict(
+                episode_id=r['episode_id'], status=r['status'], location=r['location'], file_size=r['file_size'])}),
+                sql_results)
+
+            for (k, v) in iteritems(data):
+
+                bname = (ek.ek(os.path.basename, v.get('path_file')) or '').lower()
+                if not bname:
+                    msg = 'Missing media file name provided'
+                    data[k] = msg
+                    logger.log('Update watched state skipped an item: %s' % msg, logger.WARNING)
+                    continue
+
+                if bname in ep_results:
+                    date_watched = now = sbdatetime.sbdatetime.now().totimestamp(default=0)
+                    if 1500000000 < date_watched:
+                        date_watched = sickbeard.helpers.tryInt(float(v.get('date_watched')))
+
+                    ep_data = ep_results[bname]
+                    # using label and location with upsert to list multi-client items at same location
+                    # can omit label to have the latest scanned client upsert an existing client row based on location
+                    cl.extend(db.mass_upsert_sql(
+                        'tv_episodes_watched',
+                        dict(tvep_id=ep_data['episode_id'], clientep_id=v.get('media_id', '') or '',
+                             played=v.get('played', 1),
+                             date_watched=date_watched, date_added=now,
+                             status=ep_data['status'], file_size=ep_data['file_size']),
+                        dict(location=ep_data['location'], label=v.get('label', '')), sanitise=False))
+
+                    data[k] = ''
+
+            if cl:
+                my_db.mass_action(cl)
+
+        if as_json:
+            if not data:
+                data = dict(error='Request made to SickGear with invalid payload')
+                logger.log('Update watched state failed: %s' % data['error'], logger.WARNING)
+
+            return json.dumps(data)
+
     def toggleDisplayShowSpecials(self, show):
 
         sickbeard.DISPLAY_SHOW_SPECIALS = not sickbeard.DISPLAY_SHOW_SPECIALS
@@ -644,7 +1063,8 @@ class MainHandler(WebHandler):
 
     def setHistoryLayout(self, layout):
 
-        if layout not in ('compact', 'detailed'):
+        if layout not in ('compact', 'detailed', 'compact_watched', 'detailed_watched',
+                          'compact_stats', 'graph_stats', 'provider_failures'):
             layout = 'detailed'
 
         sickbeard.HISTORY_LAYOUT = layout
@@ -2458,50 +2878,8 @@ class Home(MainHandler):
     def setSceneNumbering(self, show, indexer, forSeason=None, forEpisode=None, forAbsolute=None, sceneSeason=None,
                           sceneEpisode=None, sceneAbsolute=None):
 
-        # sanitize:
-        show = None if show in [None, 'null', ''] else int(show)
-        indexer = None if indexer in [None, 'null', ''] else int(indexer)
-
-        show_obj = sickbeard.helpers.findCertainShow(sickbeard.showList, show)
-
-        if not show_obj.is_anime:
-            for_season = None if forSeason in [None, 'null', ''] else int(forSeason)
-            for_episode = None if forEpisode in [None, 'null', ''] else int(forEpisode)
-            scene_season = None if sceneSeason in [None, 'null', ''] else int(sceneSeason)
-            scene_episode = None if sceneEpisode in [None, 'null', ''] else int(sceneEpisode)
-            action_log = u'Set episode scene numbering to %sx%s for episode %sx%s of "%s"'\
-                         % (scene_season, scene_episode, for_season, for_episode, show_obj.name)
-            ep_args = {'show': show, 'season': for_season, 'episode': for_episode}
-            scene_args = {'indexer_id': show, 'indexer': indexer, 'season': for_season, 'episode': for_episode,
-                          'sceneSeason': scene_season, 'sceneEpisode': scene_episode}
-            result = {'forSeason': for_season, 'forEpisode': for_episode, 'sceneSeason': None, 'sceneEpisode': None}
-        else:
-            for_absolute = None if forAbsolute in [None, 'null', ''] else int(forAbsolute)
-            scene_absolute = None if sceneAbsolute in [None, 'null', ''] else int(sceneAbsolute)
-            action_log = u'Set absolute scene numbering to %s for episode %s of "%s"'\
-                         % (scene_absolute, for_absolute, show_obj.name)
-            ep_args = {'show': show, 'absolute': for_absolute}
-            scene_args = {'indexer_id': show, 'indexer': indexer, 'absolute_number': for_absolute,
-                          'sceneAbsolute': scene_absolute}
-            result = {'forAbsolute': for_absolute, 'sceneAbsolute': None}
-
-        ep_obj = self._getEpisode(**ep_args)
-        result['success'] = not isinstance(ep_obj, str)
-        if result['success']:
-            logger.log(action_log, logger.DEBUG)
-            set_scene_numbering(**scene_args)
-            show_obj.flushEpisodes()
-        else:
-            result['errorMessage'] = ep_obj
-
-        if not show_obj.is_anime:
-            scene_numbering = get_scene_numbering(show, indexer, for_season, for_episode)
-            if scene_numbering:
-                (result['sceneSeason'], result['sceneEpisode']) = scene_numbering
-        else:
-            scene_numbering = get_scene_absolute_numbering(show, indexer, for_absolute)
-            if scene_numbering:
-                result['sceneAbsolute'] = scene_numbering
+        result = set_scene_numbering_helper(show, indexer, forSeason, forEpisode, forAbsolute, sceneSeason,
+                                            sceneEpisode, sceneAbsolute)
 
         return json.dumps(result)
 
@@ -2549,7 +2927,11 @@ class HomePostProcess(Home):
         return t.respond()
 
     def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None,
-                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, is_basedir='1', **kwargs):
+                       force_replace=None, failed='0', type='auto', stream='0', dupekey=None, is_basedir='1',
+                       client=None, **kwargs):
+
+        if 'test' in kwargs and kwargs['test'] in ['True', True, 1, '1']:
+            return 'Connection success!'
 
         if not dir and ('0' == failed or not nzbName):
             self.redirect('/home/postprocess/')
@@ -2566,6 +2948,15 @@ class HomePostProcess(Home):
                         break
                 showObj = helpers.find_show_by_id(sickbeard.showList, {indexer: int(m.group(2))},
                                                no_mapped_ids=True)
+
+            skip_failure_processing = isinstance(client, basestring) and 'nzbget' == client and \
+                (not isinstance(dupekey, basestring) or None is re.search(r'^SickGear-([A-Za-z]*)(\d+)-', dupekey))
+
+            if isinstance(client, basestring) and 'nzbget' == client and \
+                    sickbeard.NZBGET_SCRIPT_VERSION != kwargs.get('ppVersion', '0'):
+                logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
+                           (kwargs.get('ppVersion', '0'), sickbeard.NZBGET_SCRIPT_VERSION), logger.ERROR)
+
             result = processTV.processDir(dir.decode('utf-8') if dir else None, nzbName.decode('utf-8') if nzbName else None,
                                           process_method=process_method, type=type,
                                           cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
@@ -2573,7 +2964,8 @@ class HomePostProcess(Home):
                                           force_replace=force_replace in ['on', '1'],
                                           failed='0' != failed,
                                           webhandler=self.send_message if stream != '0' else None,
-                                          showObj=showObj, is_basedir=is_basedir in ['on', '1'])
+                                          showObj=showObj, is_basedir=is_basedir in ['on', '1'],
+                                          skip_failure_processing=skip_failure_processing)
 
             if '0' != stream:
                 return
@@ -2730,7 +3122,7 @@ class NewHomeAddShows(Home):
                re.sub(r'([,.!][^,.!]*?)$', '...',
                       re.sub(r'([.!?])(?=\w)', r'\1 ',
                              self.encode_html((show.get('overview', '') or '')[:250:].strip()))),
-               self._get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None,
+               self.get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None,
                self._make_search_image_url(iid, show)
                ] for show in shows.itervalues()] for iid, shows in results.iteritems()))
 
@@ -2791,7 +3183,8 @@ class NewHomeAddShows(Home):
                       ('%s.jpg' % show['id'], show['id'])
         return img_url
 
-    def _get_UWRatio(self, search_term, showname, aliases):
+    @classmethod
+    def get_UWRatio(cls, search_term, showname, aliases):
         s = fuzz.UWRatio(search_term, showname)
         # check aliases and give them a little lower score
         for a in aliases:
@@ -3452,15 +3845,9 @@ class NewHomeAddShows(Home):
 
         return self.redirect('/home/addShows/%s' % ('trakt_trending', sickbeard.TRAKT_MRU)[any(sickbeard.TRAKT_MRU)])
 
-    def browse_trakt(self, url_path, browse_title, *args, **kwargs):
-
-        browse_type = 'Trakt'
+    @staticmethod
+    def get_trakt_data(url_path, *args, **kwargs):
         normalised, filtered = ([], [])
-
-        if not sickbeard.USE_TRAKT and ('recommended' in kwargs.get('mode', '') or 'watchlist' in kwargs.get('mode', '')):
-            error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
-            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
-
         error_msg = None
         try:
             account = kwargs.get('send_oauth', None)
@@ -3488,7 +3875,7 @@ class NewHomeAddShows(Home):
 
         if not normalised:
             error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
-            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+            raise Exception(error_msg)
 
         oldest_dt = 9999999
         newest_dt = 0
@@ -3496,8 +3883,8 @@ class NewHomeAddShows(Home):
         newest = None
         for item in normalised:
             ignore = '''
-            ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
-            '''
+                    ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
+                    '''
             if re.search(ignore, item['show']['title'].strip(), re.I | re.X):
                 continue
             try:
@@ -3523,24 +3910,54 @@ class NewHomeAddShows(Home):
                     when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
                     episode_number='' if 'episode' not in item else item['episode']['number'] or 1,
                     episode_overview=('' if 'episode' not in item else
-                                      self.encode_html(item['episode']['overview'][:250:].strip()) or ''),
+                                      item['episode']['overview'].strip() or ''),
                     episode_season='' if 'episode' not in item else item['episode']['season'] or 1,
                     genres=('' if 'genres' not in item['show'] else
                             ', '.join(['%s' % v for v in item['show']['genres']])),
                     ids=item['show']['ids'],
                     images=images,
                     overview=('' if 'overview' not in item['show'] or None is item['show']['overview'] else
-                              self.encode_html(item['show']['overview'][:250:].strip())),
+                              item['show']['overview'].strip()),
                     rating=0 < item['show'].get('rating', 0) and
                            ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
                     title=item['show']['title'].strip(),
                     url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
                     url_tvdb=('', '%s%s' % (sickbeard.indexerApi(INDEXER_TVDB).config['show_url'],
-                                            item['show']['ids']['tvdb']))[isinstance(item['show']['ids']['tvdb'], (int, long))
-                                                                          and 0 < item['show']['ids']['tvdb']],
+                                            item['show']['ids']['tvdb']))[
+                        isinstance(item['show']['ids']['tvdb'], (int, long))
+                        and 0 < item['show']['ids']['tvdb']],
                     votes='0' if 'votes' not in item['show'] else item['show']['votes']))
-            except:
+            except (StandardError, Exception):
                 pass
+
+        if 'web_ui' in kwargs:
+            return filtered, oldest, newest, error_msg
+
+        return filtered, oldest, newest
+
+    def browse_trakt(self, url_path, browse_title, *args, **kwargs):
+
+        browse_type = 'Trakt'
+        normalised, filtered = ([], [])
+
+        if not sickbeard.USE_TRAKT and ('recommended' in kwargs.get('mode', '') or 'watchlist' in kwargs.get('mode', '')):
+            error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+
+        try:
+            filtered, oldest, newest, error_msg = self.get_trakt_data(url_path, web_ui=True,
+                                                                      send_oauth=kwargs.get('send_oauth', None))
+        except (StandardError, Exception):
+            error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+
+        for item in filtered:
+            key = 'episode_overview'
+            if item[key]:
+                item[key] = self.encode_html(item[key][:250:].strip())
+            key = 'overview'
+            if item[key]:
+                item[key] = self.encode_html(item[key][:250:].strip())
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
 
@@ -4541,7 +4958,7 @@ class Manage(MainHandler):
 
         for release in toRemove:
             item = re.sub('_{3,}', '%', release)
-            myDB.action('DELETE FROM failed WHERE release like ?', [item])
+            myDB.action('DELETE FROM failed WHERE `release` like ?', [item])
 
         if toRemove:
             return self.redirect('/manage/failedDownloads/')
@@ -4567,12 +4984,6 @@ class ManageSearches(Manage):
         t.recent_search_status = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
         t.find_propers_status = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
         t.queue_length = sickbeard.searchQueueScheduler.action.queue_length()
-        t.provider_fail_stats = filter(lambda stat: len(stat['fails']), [{
-            'active': p.is_active(), 'name': p.name, 'prov_id': p.get_id(), 'prov_img': p.image_name(),
-            'fails': p.fails.fails_sorted, 'tmr_limit_time': p.tmr_limit_time,
-            'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
-            for p in sickbeard.providerList + sickbeard.newznabProviderList])
-        t.provider_fails = 0 < len([p for p in t.provider_fail_stats if len(p['fails'])])
 
         t.submenu = self.ManageMenu('Search')
 
@@ -4696,73 +5107,168 @@ class showProcesses(Manage):
 
 
 class History(MainHandler):
+
+    flagname_help_watched = 'ui_history_help_watched_supported_clients'
+    flagname_wdf = 'ui_history_watched_delete_files'
+    flagname_wdr = 'ui_history_watched_delete_records'
+
+    def toggle_help(self):
+        db.DBConnection().toggle_flag(self.flagname_help_watched)
+
     def index(self, limit=100):
 
-        # sqlResults = myDB.select('SELECT h.*, show_name, name FROM history h, tv_shows s, tv_episodes e WHERE h.showid=s.indexer_id AND h.showid=e.showid AND h.season=e.season AND h.episode=e.episode ORDER BY date DESC LIMIT '+str(numPerPage*(p-1))+', '+str(numPerPage))
-        myDB = db.DBConnection()
-        if limit == '0':
-            sqlResults = myDB.select(
-                'SELECT h.*, show_name FROM history h, tv_shows s WHERE h.showid=s.indexer_id ORDER BY date DESC')
-        else:
-            sqlResults = myDB.select(
-                'SELECT h.*, show_name FROM history h, tv_shows s WHERE h.showid=s.indexer_id ORDER BY date DESC LIMIT ?',
-                [limit])
-
-        history = {'show_id': 0, 'season': 0, 'episode': 0, 'quality': 0,
-                   'actions': [{'time': '', 'action': '', 'provider': ''}]}
-        compact = []
-
-        for sql_result in sqlResults:
-
-            if not any((history['show_id'] == sql_result['showid']
-                        and history['season'] == sql_result['season']
-                        and history['episode'] == sql_result['episode']
-                        and history['quality'] == sql_result['quality'])
-                       for history in compact):
-
-                history = {}
-                history['show_id'] = sql_result['showid']
-                history['season'] = sql_result['season']
-                history['episode'] = sql_result['episode']
-                history['quality'] = sql_result['quality']
-                history['show_name'] = sql_result['show_name']
-                history['resource'] = sql_result['resource']
-
-                action = {}
-                history['actions'] = []
-
-                action['time'] = sql_result['date']
-                action['action'] = sql_result['action']
-                action['provider'] = sql_result['provider']
-                action['resource'] = sql_result['resource']
-                history['actions'].append(action)
-                history['actions'].sort(key=lambda x: x['time'])
-                compact.append(history)
-            else:
-                index = [i for i, dict in enumerate(compact) \
-                         if dict['show_id'] == sql_result['showid'] \
-                         and dict['season'] == sql_result['season'] \
-                         and dict['episode'] == sql_result['episode']
-                         and dict['quality'] == sql_result['quality']][0]
-
-                action = {}
-                history = compact[index]
-
-                action['time'] = sql_result['date']
-                action['action'] = sql_result['action']
-                action['provider'] = sql_result['provider']
-                action['resource'] = sql_result['resource']
-                history['actions'].append(action)
-                history['actions'].sort(key=lambda x: x['time'], reverse=True)
-
         t = PageTemplate(headers=self.request.headers, file='history.tmpl')
-        t.historyResults = sqlResults
-        t.compactResults = compact
         t.limit = limit
-        t.submenu = [
-            {'title': 'Clear History', 'path': 'history/clearHistory'},
-            {'title': 'Trim History', 'path': 'history/trimHistory'},
-        ]
+
+        my_db = db.DBConnection(row_type='dict')
+
+        result_sets = []
+        if sickbeard.HISTORY_LAYOUT in ('compact', 'detailed'):
+
+            # sqlResults = myDB.select('SELECT h.*, show_name, name FROM history h, tv_shows s, tv_episodes e
+            #  WHERE h.showid=s.indexer_id AND h.showid=e.showid AND h.season=e.season AND h.episode=e.episode
+            #  ORDER BY date DESC LIMIT '+str(numPerPage*(p-1))+', '+str(numPerPage))
+            sql = 'SELECT h.*, show_name' \
+                  ' FROM history h, tv_shows s' \
+                  ' WHERE h.showid=s.indexer_id' \
+                  ' ORDER BY date DESC%s' % (' LIMIT %s' % limit, '')['0' == limit]
+            sql_results = my_db.select(sql)
+
+            compact = []
+
+            for sql_result in sql_results:
+
+                action = dict(time=sql_result['date'], action=sql_result['action'],
+                              provider=sql_result['provider'], resource=sql_result['resource'])
+
+                if not any((record['show_id'] == sql_result['showid']
+                            and record['season'] == sql_result['season']
+                            and record['episode'] == sql_result['episode']
+                            and record['quality'] == sql_result['quality']) for record in compact):
+
+                    cur_res = dict(show_id=sql_result['showid'], show_name=sql_result['show_name'],
+                                   season=sql_result['season'], episode=sql_result['episode'],
+                                   quality=sql_result['quality'], resource=sql_result['resource'], actions=[])
+
+                    cur_res['actions'].append(action)
+                    cur_res['actions'].sort(key=lambda x: x['time'])
+
+                    compact.append(cur_res)
+                else:
+                    index = [i for i, record in enumerate(compact)
+                             if record['show_id'] == sql_result['showid']
+                             and record['season'] == sql_result['season']
+                             and record['episode'] == sql_result['episode']
+                             and record['quality'] == sql_result['quality']][0]
+
+                    cur_res = compact[index]
+
+                    cur_res['actions'].append(action)
+                    cur_res['actions'].sort(key=lambda x: x['time'], reverse=True)
+
+            t.compact_results = compact
+            t.history_results = sql_results
+            t.submenu = [{'title': 'Clear History', 'path': 'history/clearHistory'},
+                         {'title': 'Trim History', 'path': 'history/trimHistory'}]
+
+            result_sets = ['compact_results', 'history_results']
+
+        elif 'watched' in sickbeard.HISTORY_LAYOUT:
+
+            t.hide_watched_help = my_db.has_flag(self.flagname_help_watched)
+
+            t.results = my_db.select(
+                'SELECT tvs.show_name, '
+                ' tve.indexer, tve.showid, tve.season, tve.episode, tve.status, tve.file_size,'
+                ' tvew.rowid, tvew.tvep_id, tvew.label, tvew.played, tvew.date_watched,'
+                ' tvew.status as status_w, tvew.location, tvew.file_size as file_size_w, tvew.hide'
+                ' FROM [tv_shows] AS tvs'
+                ' INNER JOIN [tv_episodes] AS tve ON (tvs.indexer == tve.indexer AND tvs.indexer_id == tve.showid)'
+                ' INNER JOIN [tv_episodes_watched] AS tvew ON (tve.episode_id == tvew.tvep_id)'
+                ' WHERE 0 = hide'
+                ' ORDER BY tvew.date_watched DESC'
+                '%s' % (' LIMIT %s' % limit, '')['0' == limit])
+
+            mru_count = {}
+            t.mru_row_ids = []
+            for r in t.results:
+                r['deleted'] = False
+                no_file = not helpers.get_size(r['location'])
+                if no_file or not r['file_size']:  # if not filesize, possible file recovered so restore known size
+                    if no_file:
+                        # file no longer available, can be due to upgrade, so use known details
+                        r['deleted'] = True
+                    r['status'] = r['status_w']
+                    r['file_size'] = r['file_size_w']
+
+                r['status'], r['quality'] = Quality.splitCompositeStatus(helpers.tryInt(r['status']))
+                r['season'], r['episode'] = '%02i' % r['season'], '%02i' % r['episode']
+                if r['tvep_id'] not in mru_count:
+                    # depends on SELECT ORDER BY date_watched DESC to determine mru_count
+                    mru_count.update({r['tvep_id']: r['played']})
+                    t.mru_row_ids += [r['rowid']]
+                r['mru_count'] = mru_count[r['tvep_id']]
+
+            result_sets = ['results']
+
+            # restore state of delete dialog
+            t.last_delete_files = my_db.has_flag(self.flagname_wdf)
+            t.last_delete_records = my_db.has_flag(self.flagname_wdr)
+
+        elif 'stats' in sickbeard.HISTORY_LAYOUT:
+
+            prov_list = [p.name for p in (sickbeard.providerList
+                                          + sickbeard.newznabProviderList
+                                          + sickbeard.torrentRssProviderList)]
+            sql = 'SELECT COUNT(1) as count,' \
+                  ' MIN(DISTINCT date) as earliest,' \
+                  ' MAX(DISTINCT date) as latest,' \
+                  ' provider ' \
+                  'FROM ' \
+                  '(SELECT * FROM history h, tv_shows s' \
+                  ' WHERE h.showid=s.indexer_id' \
+                  ' AND h.provider in ("%s")' % '","'.join(prov_list) + \
+                  ' AND h.action in ("%s")' % '","'.join([str(x) for x in Quality.SNATCHED_ANY]) + \
+                  ' ORDER BY date DESC%s)' % (' LIMIT %s' % limit, '')['0' == limit] + \
+                  ' GROUP BY provider' \
+                  ' ORDER BY count DESC'
+            t.stat_results = my_db.select(sql)
+
+            t.earliest = 0
+            t.latest = 0
+            for r in t.stat_results:
+                if r['latest'] > t.latest or not t.latest:
+                    t.latest = r['latest']
+                if r['earliest'] < t.earliest or not t.earliest:
+                    t.earliest = r['earliest']
+
+        elif 'failures' in sickbeard.HISTORY_LAYOUT:
+
+            t.provider_fail_stats = filter(lambda stat: len(stat['fails']), [{
+                'active': p.is_active(), 'name': p.name, 'prov_id': p.get_id(), 'prov_img': p.image_name(),
+                'fails': p.fails.fails_sorted, 'tmr_limit_time': p.tmr_limit_time,
+                'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
+                for p in sickbeard.providerList + sickbeard.newznabProviderList])
+            t.provider_fail_stats = sorted([item for item in t.provider_fail_stats],
+                                           key=lambda y: y.get('fails')[0].get('timestamp'),
+                                           reverse=True)
+            t.provider_fail_stats = sorted([item for item in t.provider_fail_stats],
+                                           key=lambda y: y.get('next_try') or datetime.timedelta(weeks=65535),
+                                           reverse=False)
+
+            t.provider_fails = 0 < len([p for p in t.provider_fail_stats if len(p['fails'])])
+
+        article_match = '^((?:A(?!\s+to)n?)|The)\s+(.*)$'
+        for rs in [getattr(t, name, []) for name in result_sets]:
+            for r in rs:
+                r['name1'] = ''
+                r['name2'] = r['data_name'] = r['show_name']
+                if not sickbeard.SORT_ARTICLE:
+                    try:
+                        r['name1'], r['name2'] = re.findall(article_match, r['show_name'])[0]
+                        r['data_name'] = r['name2']
+                    except (StandardError, Exception):
+                        pass
 
         return t.respond()
 
@@ -4782,6 +5288,271 @@ class History(MainHandler):
 
         ui.notifications.message('Removed history entries greater than 30 days old')
         self.redirect('/history/')
+
+    @staticmethod
+    def update_watched_state_emby():
+
+        import sickbeard.notifiers.emby as emby
+
+        client = emby.EmbyNotifier()
+        hosts, keys, message = client.check_config(sickbeard.EMBY_HOST, sickbeard.EMBY_APIKEY)
+
+        if sickbeard.USE_EMBY and hosts:
+            logger.log('Updating Emby watched episode states', logger.DEBUG)
+
+            rd = sickbeard.ROOT_DIRS.split('|')[1:] + \
+                 [x.split('=')[0] for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
+            rootpaths = sorted(
+                ['%s%s' % (ek.ek(os.path.splitdrive, x)[1], os.path.sep) for x in rd], key=len, reverse=True)
+            rootdirs = sorted([x for x in rd], key=len, reverse=True)
+            headers = {'Content-type': 'application/json'}
+            states = {}
+            idx = 0
+            mapped = 0
+            mapping = None
+            maps = [x.split('=') for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
+            for i, cur_host in enumerate(hosts):
+                base_url = 'http://%s/emby/Users' % cur_host
+                headers.update({'X-MediaBrowser-Token': keys[i]})
+
+                users = sickbeard.helpers.getURL(base_url, headers=headers,
+                                                 params=dict(format='json'), timeout=10, json=True)
+
+                for user_id in [u.get('Id') for u in users if u.get('Id')]:
+                    user_url = '%s/%s' % (base_url, user_id)
+                    user = sickbeard.helpers.getURL(user_url, headers=headers,
+                                                    params=dict(format='json'), timeout=10, json=True)
+
+                    for folder_id in user.get('Policy', {}).get('EnabledFolders') or []:
+                        folder = sickbeard.helpers.getURL('%s/Items/%s' % (user_url, folder_id), headers=headers,
+                                                          params=dict(format='json'), timeout=10, json=True)
+
+                        if 'tvshows' != folder.get('CollectionType', ''):
+                            continue
+
+                        items = sickbeard.helpers.getURL('%s/Items' % user_url, headers=headers,
+                                                         params=dict(SortBy='DatePlayed,SeriesSortName,SortName',
+                                                                     SortOrder='Descending',
+                                                                     IncludeItemTypes='Episode',
+                                                                     Recursive='true',
+                                                                     Fields='Path,UserData',
+                                                                     IsMissing='false',
+                                                                     IsVirtualUnaired='false',
+                                                                     StartIndex='0', Limit='100',
+                                                                     ParentId=folder_id,
+                                                                     Filters='IsPlayed',
+                                                                     format='json'), timeout=10, json=True)
+                        for d in filter(lambda item: 'Episode' == item.get('Type', ''), items.get('Items')):
+                            try:
+                                root_dir_found = False
+                                path_file = d.get('Path')
+                                if not path_file:
+                                    continue
+                                for index, p in enumerate(rootpaths):
+                                    if p in path_file:
+                                        path_file = ek.ek(os.path.join, rootdirs[index],
+                                                          re.sub('.*?%s' % re.escape(p), '', path_file))
+                                        root_dir_found = True
+                                        break
+                                if not root_dir_found:
+                                    continue
+                                states[idx] = dict(
+                                    path_file=path_file,
+                                    media_id=d['Id'],
+                                    played=(d.get('UserData', {}).get('PlayedPercentage') or
+                                            (d.get('UserData', {}).get('Played') and
+                                             d.get('UserData', {}).get('PlayCount') * 100) or 0),
+                                    label='%s%s{Emby}' % (user.get('Name', ''), bool(user.get('Name')) and ' ' or ''),
+                                    date_watched=sickbeard.sbdatetime.sbdatetime.totimestamp(
+                                        dateutil.parser.parse(d.get('UserData', {}).get('LastPlayedDate'))))
+
+                                for m in maps:
+                                    result, change = helpers.path_mapper(m[0], m[1], states[idx]['path_file'])
+                                    if change:
+                                        if not mapping:
+                                            mapping = (states[idx]['path_file'], result)
+                                        mapped += 1
+                                        states[idx]['path_file'] = result
+                                        break
+
+                                idx += 1
+                            except(StandardError, Exception):
+                                continue
+            if mapping:
+                logger.log('Folder mappings used, the first of %s is [%s] in Emby is [%s] in SickGear' %
+                           (mapped, mapping[0], mapping[1]), logger.DEBUG)
+
+            if states:
+                # Prune user removed items that are no longer being returned by API
+                my_db = db.DBConnection(row_type='dict')
+                media_paths = map(lambda (_, s): ek.ek(os.path.basename, s['path_file']), states.iteritems())
+                my_db.select('DELETE FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Emby}" AND %s' %
+                             ' AND '.join(['location NOT LIKE "%%%s"' % x for x in media_paths]))
+
+                MainHandler.update_watched_state(states, False)
+
+            logger.log('Finished updating Emby watched episode states')
+
+    @staticmethod
+    def update_watched_state_plex():
+
+        hosts = [x.strip().lower() for x in sickbeard.PLEX_SERVER_HOST.split(',')]
+        if sickbeard.USE_PLEX and hosts:
+            logger.log('Updating Plex watched episode states', logger.DEBUG)
+
+            from plex import Plex
+            import urllib2
+
+            plex = Plex(dict(username=sickbeard.PLEX_USERNAME, password=sickbeard.PLEX_PASSWORD,
+                             section_filter_path=sickbeard.ROOT_DIRS.split('|')[1:] +
+                             [x.split('=')[0] for x in sickbeard.PLEX_PARENT_MAPS.split(',') if any(x)]))
+
+            states = {}
+            idx = 0
+            played = 0
+            mapped = 0
+            mapping = None
+            maps = [x.split('=') for x in sickbeard.PLEX_PARENT_MAPS.split(',') if any(x)]
+            for cur_host in hosts:
+                parts = urllib2.splitport(cur_host)
+                if parts[0]:
+                    plex.plex_host = parts[0]
+                    if None is not parts[1]:
+                        plex.plex_port = parts[1]
+
+                    plex.fetch_show_states()
+
+                    for k, v in plex.show_states.iteritems():
+                        if 0 < v.get('played') or 0:
+                            played += 1
+                            states[idx] = v
+                            states[idx]['label'] = '%s%s{Plex}' % (v['label'], bool(v['label']) and ' ' or '')
+
+                            for m in maps:
+                                result, change = helpers.path_mapper(m[0], m[1], states[idx]['path_file'])
+                                if change:
+                                    if not mapping:
+                                        mapping = (states[idx]['path_file'], result)
+                                    mapped += 1
+                                    states[idx]['path_file'] = result
+                                    break
+
+                            idx += 1
+
+                    logger.log('Fetched %s of %s played for host : %s' % (len(plex.show_states), played, cur_host),
+                               logger.DEBUG)
+            if mapping:
+                logger.log('Folder mappings used, the first of %s is [%s] in Plex is [%s] in SickGear' %
+                           (mapped, mapping[0], mapping[1]), logger.DEBUG)
+
+            if states:
+                # Prune user removed items that are no longer being returned by API
+                my_db = db.DBConnection(row_type='dict')
+                media_paths = map(lambda (_, s): ek.ek(os.path.basename, s['path_file']), states.iteritems())
+                my_db.select('DELETE FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Plex}" AND %s' %
+                             ' AND '.join(['location NOT LIKE "%%%s"' % x for x in media_paths]))
+
+                MainHandler.update_watched_state(states, False)
+
+            logger.log('Finished updating Plex watched episode states')
+
+    def watched(self, tvew_id=None, files=None, records=None):
+
+        my_db = db.DBConnection(row_type='dict')
+
+        # remember state of dialog
+        my_db.set_flag(self.flagname_wdf, files)
+        my_db.set_flag(self.flagname_wdr, records)
+
+        ids = tvew_id.split('|')
+        if not (ids and any([files, records])):
+            return
+
+        row_show_ids = {}
+        for show_detail in ids:
+            rowid, tvid, shoid = show_detail.split('-')
+            row_show_ids.update({int(rowid): {int(tvid): int(shoid)}})
+
+        sql_results = my_db.select(
+            'SELECT rowid, tvep_id, label, location'
+            ' FROM [tv_episodes_watched] WHERE `rowid` in (%s)' % ','.join([str(k) for k in row_show_ids.keys()])
+        )
+
+        h_records = []
+        removed = []
+        deleted = {}
+        attempted = []
+        refresh = []
+        for r in sql_results:
+            if files and r['location'] not in attempted and 0 < helpers.get_size(r['location'])\
+                    and ek.ek(os.path.isfile, r['location']):
+                # locations repeat with watch events but attempt to delete once
+                attempted += [r['location']]
+
+                try:
+                    if sickbeard.TRASH_REMOVE_SHOW:
+                        ek.ek(send2trash, r['location'])
+                    else:
+                        ek.ek(os.remove, r['location'])
+                except OSError as e:
+                    logger.log(u'Unable to delete file %s: %s' % (r['location'], str(e.strerror)))
+
+                if not ek.ek(os.path.isfile, r['location']):
+                    logger.log(u'Deleted file %s' % r['location'])
+
+                    deleted.update({r['tvep_id']: row_show_ids[r['rowid']]})
+                    if row_show_ids[r['rowid']] not in refresh:
+                        # schedule a show for one refresh after deleting an arbitrary number of locations
+                        refresh += [row_show_ids[r['rowid']]]
+
+            if records:
+                if not r['label'].endswith('{Emby}') and not r['label'].endswith('{Plex}'):
+                    r_del = my_db.action('DELETE FROM [tv_episodes_watched] WHERE `rowid` == ?', [r['rowid']])
+                    if 1 == r_del.rowcount:
+                        h_records += ['%s-%s-%s' % (r['rowid'], k, v) for k, v in row_show_ids[r['rowid']].iteritems()]
+                else:
+                    r_del = my_db.action('UPDATE [tv_episodes_watched] SET hide=1 WHERE `rowid` == ?', [r['rowid']])
+                    if 1 == r_del.rowcount:
+                        removed += ['%s-%s-%s' % (r['rowid'], k, v) for k, v in row_show_ids[r['rowid']].iteritems()]
+
+        updating = False
+        for epid, tvid_shoid_dict in deleted.iteritems():
+            sql_results = my_db.select('SELECT season, episode FROM [tv_episodes] WHERE `episode_id` = %s' % epid)
+            for r in sql_results:
+                show = helpers.find_show_by_id(sickbeard.showList, tvid_shoid_dict)
+                ep_obj = show.getEpisode(r['season'], r['episode'])
+                for n in filter(lambda x: x.name.lower() in ('emby', 'kodi', 'plex'),
+                                notifiers.NotifierFactory().get_enabled()):
+                    if 'PLEX' == n.name:
+                        if updating:
+                            continue
+                        updating = True
+                    n.update_library(show=show, show_name=show.name, ep_obj=ep_obj)
+
+        for tvid_shoid_dict in refresh:
+            try:
+                sickbeard.showQueueScheduler.action.refreshShow(
+                    helpers.find_show_by_id(sickbeard.showList, tvid_shoid_dict))
+            except (StandardError, Exception):
+                pass
+
+        if not any([removed, h_records, len(deleted)]):
+            msg = 'No items removed and no files deleted'
+        else:
+            msg = []
+            if deleted:
+                msg += ['%s %s media file%s' % (
+                    ('Permanently deleted', 'Trashed')[sickbeard.TRASH_REMOVE_SHOW],
+                    len(deleted), helpers.maybe_plural(len(deleted)))]
+            elif removed:
+                msg += ['Removed %s watched history item%s' % (len(removed), helpers.maybe_plural(len(removed)))]
+            else:
+                msg += ['Deleted %s watched history item%s' % (len(h_records), helpers.maybe_plural(len(h_records)))]
+            msg = '<br>'.join(msg)
+
+        ui.notifications.message('History : Watch',  msg)
+
+        return json.dumps(dict(success=h_records))
 
 
 class Config(MainHandler):
@@ -4897,7 +5668,7 @@ class ConfigGeneral(Config):
             logger.log('Could not change Show Update Scheduler time: %s' % ex(e), logger.ERROR)
         sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
         sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
-        if not config.change_LOG_DIR(log_dir, web_log):
+        if not config.change_log_dir(log_dir, web_log):
             results += ['Unable to create directory ' + os.path.normpath(log_dir) + ', log directory not changed.']
         if indexer_default:
             sickbeard.INDEXER_DEFAULT = config.to_int(indexer_default)
@@ -4907,9 +5678,9 @@ class ConfigGeneral(Config):
             sickbeard.INDEXER_TIMEOUT = config.to_int(indexer_timeout)
 
         # Updates
-        config.change_VERSION_NOTIFY(config.checkbox_to_value(version_notify))
+        config.schedule_version_notify(config.checkbox_to_value(version_notify))
         sickbeard.AUTO_UPDATE = config.checkbox_to_value(auto_update)
-        config.change_UPDATE_FREQUENCY(update_frequency)
+        config.schedule_update(update_frequency)
         sickbeard.NOTIFY_ON_UPDATE = config.checkbox_to_value(notify_on_update)
 
         # Interface
@@ -4958,13 +5729,13 @@ class ConfigGeneral(Config):
         sickbeard.USE_API = config.checkbox_to_value(use_api)
         sickbeard.API_KEY = api_key
         sickbeard.WEB_PORT = config.to_int(web_port)
-        # sickbeard.WEB_LOG is set in config.change_LOG_DIR()
+        # sickbeard.WEB_LOG is set in config.change_log_dir()
 
         sickbeard.ENABLE_HTTPS = config.checkbox_to_value(enable_https)
-        if not config.change_HTTPS_CERT(https_cert):
+        if not config.change_https_cert(https_cert):
             results += [
                 'Unable to create directory ' + os.path.normpath(https_cert) + ', https cert directory not changed.']
-        if not config.change_HTTPS_KEY(https_key):
+        if not config.change_https_key(https_key):
             results += [
                 'Unable to create directory ' + os.path.normpath(https_key) + ', https key directory not changed.']
 
@@ -4982,7 +5753,7 @@ class ConfigGeneral(Config):
         sickbeard.PROXY_SETTING = proxy_setting
         sickbeard.PROXY_INDEXERS = config.checkbox_to_value(proxy_indexers)
         sickbeard.FILE_LOGGING_PRESET = file_logging_preset
-        # sickbeard.LOG_DIR is set in config.change_LOG_DIR()
+        # sickbeard.LOG_DIR is set in config.change_log_dir()
 
         logger.log_set_level()
 
@@ -5057,16 +5828,16 @@ class ConfigSearch(Config):
 
         results = []
 
-        if not config.change_NZB_DIR(nzb_dir):
+        if not config.change_nzb_dir(nzb_dir):
             results += ['Unable to create directory ' + os.path.normpath(nzb_dir) + ', dir not changed.']
 
-        if not config.change_TORRENT_DIR(torrent_dir):
+        if not config.change_torrent_dir(torrent_dir):
             results += ['Unable to create directory ' + os.path.normpath(torrent_dir) + ', dir not changed.']
 
-        config.change_RECENTSEARCH_FREQUENCY(recentsearch_frequency)
+        config.schedule_recentsearch(recentsearch_frequency)
 
         old_backlog_frequency = sickbeard.BACKLOG_FREQUENCY
-        config.change_BACKLOG_FREQUENCY(backlog_frequency)
+        config.schedule_backlog(backlog_frequency)
         sickbeard.search_backlog.BacklogSearcher.change_backlog_parts(old_backlog_frequency, sickbeard.BACKLOG_FREQUENCY)
         sickbeard.BACKLOG_DAYS = config.to_int(backlog_days, default=7)
 
@@ -5085,7 +5856,7 @@ class ConfigSearch(Config):
         sickbeard.IGNORE_WORDS = ignore_words if ignore_words else ''
         sickbeard.REQUIRE_WORDS = require_words if require_words else ''
 
-        config.change_DOWNLOAD_PROPERS(config.checkbox_to_value(download_propers))
+        config.schedule_download_propers(config.checkbox_to_value(download_propers))
         sickbeard.PROPERS_WEBDL_ONEGRP = config.checkbox_to_value(propers_webdl_onegrp)
 
         sickbeard.SEARCH_UNAIRED = bool(config.checkbox_to_value(search_unaired))
@@ -5156,14 +5927,12 @@ class ConfigPostProcessing(Config):
 
         results = []
 
-        if not config.change_TV_DOWNLOAD_DIR(tv_download_dir):
+        if not config.change_tv_download_dir(tv_download_dir):
             results += ['Unable to create directory ' + os.path.normpath(tv_download_dir) + ', dir not changed.']
 
         new_val = config.checkbox_to_value(process_automatically)
         sickbeard.PROCESS_AUTOMATICALLY = new_val
-        sickbeard.autoPostProcesserScheduler.check_paused()
-
-        config.change_AUTOPOSTPROCESSER_FREQUENCY(autopostprocesser_frequency)
+        config.schedule_autopostprocesser(autopostprocesser_frequency)
 
         if unpack:
             if self.isRarSupported() != 'not supported':
@@ -5720,11 +6489,13 @@ class ConfigNotifications(Config):
 
     def save_notifications(
             self,
-            use_emby=None, emby_update_library=None, emby_host=None, emby_apikey=None,
+            use_emby=None, emby_update_library=None, emby_watched_interval=None, emby_parent_maps=None,
+            emby_host=None, emby_apikey=None,
             use_kodi=None, kodi_always_on=None, kodi_update_library=None, kodi_update_full=None,
-            kodi_update_onlyfirst=None, kodi_host=None, kodi_username=None, kodi_password=None,
+            kodi_update_onlyfirst=None, kodi_parent_maps=None, kodi_host=None, kodi_username=None, kodi_password=None,
             kodi_notify_onsnatch=None, kodi_notify_ondownload=None, kodi_notify_onsubtitledownload=None,
-            use_plex=None, plex_update_library=None, plex_username=None, plex_password=None, plex_server_host=None,
+            use_plex=None, plex_update_library=None, plex_watched_interval=None, plex_parent_maps=None,
+            plex_username=None, plex_password=None, plex_server_host=None,
             plex_notify_onsnatch=None, plex_notify_ondownload=None, plex_notify_onsubtitledownload=None, plex_host=None,
             # use_xbmc=None, xbmc_always_on=None, xbmc_notify_onsnatch=None, xbmc_notify_ondownload=None,
             # xbmc_notify_onsubtitledownload=None, xbmc_update_onlyfirst=None,
@@ -5779,6 +6550,7 @@ class ConfigNotifications(Config):
 
         sickbeard.USE_EMBY = config.checkbox_to_value(use_emby)
         sickbeard.EMBY_UPDATE_LIBRARY = config.checkbox_to_value(emby_update_library)
+        sickbeard.EMBY_PARENT_MAPS = config.kv_csv(emby_parent_maps)
         sickbeard.EMBY_HOST = config.clean_hosts(emby_host)
         keys_changed = False
         all_keys = []
@@ -5804,6 +6576,7 @@ class ConfigNotifications(Config):
         sickbeard.KODI_UPDATE_LIBRARY = config.checkbox_to_value(kodi_update_library)
         sickbeard.KODI_UPDATE_FULL = config.checkbox_to_value(kodi_update_full)
         sickbeard.KODI_UPDATE_ONLYFIRST = config.checkbox_to_value(kodi_update_onlyfirst)
+        sickbeard.KODI_PARENT_MAPS = config.kv_csv(kodi_parent_maps)
         sickbeard.KODI_HOST = config.clean_hosts(kodi_host)
         sickbeard.KODI_USERNAME = kodi_username
         if set('*') != set(kodi_password):
@@ -5827,11 +6600,14 @@ class ConfigNotifications(Config):
         sickbeard.PLEX_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(plex_notify_ondownload)
         sickbeard.PLEX_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(plex_notify_onsubtitledownload)
         sickbeard.PLEX_UPDATE_LIBRARY = config.checkbox_to_value(plex_update_library)
+        sickbeard.PLEX_PARENT_MAPS = config.kv_csv(plex_parent_maps)
         sickbeard.PLEX_HOST = config.clean_hosts(plex_host)
         sickbeard.PLEX_SERVER_HOST = config.clean_hosts(plex_server_host)
         sickbeard.PLEX_USERNAME = plex_username
         if set('*') != set(plex_password):
             sickbeard.PLEX_PASSWORD = plex_password
+        config.schedule_emby_watched(emby_watched_interval)
+        config.schedule_plex_watched(plex_watched_interval)
 
         sickbeard.USE_GROWL = config.checkbox_to_value(use_growl)
         sickbeard.GROWL_NOTIFY_ONSNATCH = config.checkbox_to_value(growl_notify_onsnatch)
@@ -6002,14 +6778,14 @@ class ConfigSubtitles(Config):
         t.submenu = self.ConfigMenu('Subtitle')
         return t.respond()
 
-    def saveSubtitles(self, use_subtitles=None, subtitles_plugins=None, subtitles_languages=None, subtitles_dir=None,
+    def saveSubtitles(self, use_subtitles=None, subtitles_languages=None, subtitles_dir=None,
                       service_order=None, subtitles_history=None, subtitles_finder_frequency=None):
         results = []
 
         if subtitles_finder_frequency == '' or subtitles_finder_frequency is None:
             subtitles_finder_frequency = 1
 
-        config.change_USE_SUBTITLES(config.checkbox_to_value(use_subtitles))
+        config.schedule_subtitles(config.checkbox_to_value(use_subtitles))
         sickbeard.SUBTITLES_LANGUAGES = [lang.alpha2 for lang in subtitles.isValidLanguage(
             subtitles_languages.replace(' ', '').split(','))] if subtitles_languages != '' else ''
         sickbeard.SUBTITLES_DIR = subtitles_dir
@@ -6235,6 +7011,8 @@ class ApiBuilder(MainHandler):
 
         t.seasonSQLResults = seasonSQLResults
         t.episodeSQLResults = episodeSQLResults
+        t.indexers = sickbeard.indexerApi().all_indexers
+        t.searchindexers = sickbeard.indexerApi().search_indexers
 
         if len(sickbeard.API_KEY) == 32:
             t.apikey = sickbeard.API_KEY

@@ -49,10 +49,10 @@ def sortedServiceList():
             newList.append(curServiceDict)
 
     return newList
-    
+
 def getEnabledServiceList():
     return [x['name'] for x in sortedServiceList() if x['enabled']]
-    
+
 def isValidLanguage(language):
     return subliminal.language.language_list(language)
 
@@ -81,18 +81,26 @@ def subtitlesLanguages(video_path):
 def subtitleLanguageFilter():
     return [language for language in subliminal.language.LANGUAGES if language[2] != ""]
 
-class SubtitlesFinder():
+
+class SubtitlesFinder:
     """
     The SubtitlesFinder will be executed every hour but will not necessarly search
     and download subtitles. Only if the defined rule is true
     """
-    @staticmethod
-    def check_paused():
-        if sickbeard.USE_SUBTITLES:
-            return False
-        return True
+    def __init__(self):
+        self.amActive = False
 
-    def run(self, force=False):
+    @staticmethod
+    def is_enabled():
+        return sickbeard.USE_SUBTITLES
+
+    def run(self):
+        if self.is_enabled():
+            self.amActive = True
+            self._main()
+            self.amActive = False
+
+    def _main(self):
         if len(sickbeard.subtitles.getEnabledServiceList()) < 1:
             logger.log(u'Not enough services selected. At least 1 service is required to search subtitles in the background', logger.ERROR)
             return
@@ -100,7 +108,7 @@ class SubtitlesFinder():
         logger.log(u'Checking for subtitles', logger.MESSAGE)
 
         # get episodes on which we want subtitles
-        # criteria is: 
+        # criteria is:
         #  - show subtitles = 1
         #  - episode subtitles != config wanted languages or SINGLE (depends on config multi)
         #  - search count < 2 and diff(airdate, now) > 1 week : now -> 1d
@@ -114,7 +122,7 @@ class SubtitlesFinder():
         if len(sqlResults) == 0:
             logger.log('No subtitles to download', logger.MESSAGE)
             return
-        
+
         rules = self._getRules()
         now = datetime.datetime.now()
         for epToSub in sqlResults:
@@ -122,26 +130,26 @@ class SubtitlesFinder():
             if not ek.ek(os.path.isfile, epToSub['location']):
                 logger.log('Episode file does not exist, cannot download subtitles for episode %dx%d of show %s' % (epToSub['season'], epToSub['episode'], epToSub['show_name']), logger.DEBUG)
                 continue
-            
+
             # Old shows rule
             throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
             if ((epToSub['airdate_daydiff'] > 7 and epToSub['searchcount'] < 2 and now - datetime.datetime.strptime(epToSub['lastsearch'], '%Y-%m-%d %H:%M:%S') > datetime.timedelta(hours=rules['old'][epToSub['searchcount']])) or
-                # Recent shows rule 
+                # Recent shows rule
                 (epToSub['airdate_daydiff'] <= 7 and epToSub['searchcount'] < 7 and now - datetime.datetime.strptime(epToSub['lastsearch'], '%Y-%m-%d %H:%M:%S') > datetime.timedelta(hours=rules['new'][epToSub['searchcount']]))):
                 logger.log('Downloading subtitles for episode %dx%d of show %s' % (epToSub['season'], epToSub['episode'], epToSub['show_name']), logger.DEBUG)
-                
+
                 showObj = helpers.findCertainShow(sickbeard.showList, int(epToSub['showid']))
                 if not showObj:
                     logger.log(u'Show not found', logger.DEBUG)
                     return
-                
+
                 epObj = showObj.getEpisode(int(epToSub["season"]), int(epToSub["episode"]))
                 if isinstance(epObj, str):
                     logger.log(u'Episode not found', logger.DEBUG)
                     return
-                
+
                 previous_subtitles = epObj.subtitles
-                
+
                 try:
                     subtitles = epObj.downloadSubtitles()
                 except:

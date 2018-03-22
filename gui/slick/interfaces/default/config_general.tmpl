@@ -364,12 +364,12 @@
 							<label for="fuzzy_dating">
 								<span class="component-title">Display fuzzy dates</span>
 								<span class="component-desc">
-									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="viewIf datePresets"#echo ('', $checked)[$sg_var('FUZZY_DATING') == True]#>
+									<input type="checkbox" name="fuzzy_dating" id="fuzzy_dating" class="view-if datePresets"#echo ('', $checked)[$sg_var('FUZZY_DATING') == True]#>
 									<p>move absolute dates into tooltips and display e.g. "Last Thu", "On Tue"</p>
 								</span>
 							</label>
 						</div>
-						<div class="field-pair show_if_fuzzy_dating#echo (' metadataDiv', '')[$sg_var('FUZZY_DATING')]#">
+						<div class="field-pair show-if-fuzzy_dating#echo (' metadataDiv', '')[$sg_var('FUZZY_DATING')]#">
 							<label for="trim_zero">
 								<span class="component-title">Trim date and time</span>
 								<span class="component-desc">
@@ -481,7 +481,7 @@
 								<span class="component-title">API enable</span>
 								<span class="component-desc">
 									<input type="checkbox" name="use_api" class="enabler" id="use_api"#echo ('', $checked)[$sg_var('USE_API')]#>
-									<p>permit the use of the SickGear (SickBeard) API</p>
+									<p>permit the use of the SickGear (and Legacy SickBeard) API</p>
 								</span>
 							</label>
 						</div>
@@ -490,6 +490,7 @@
 								<label for="api_key">
 									<span class="component-title">API key</span>
 									<span class="component-desc">
+    									<p>The legacy SickBeard API is limited to shows from thetvdb.com.<br>Use the SickGear API endpoint for full access</p>
 										<input type="text" name="api_key" id="api_key" value="$sg_str('API_KEY')" class="form-control input-sm input300" readonly="readonly">
 										<input class="btn btn-inline" type="button" id="generate_new_apikey" value="Generate">
 										<div class="clear-left"><p>used to give 3rd party programs limited access to SickGear</p></div>

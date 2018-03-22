@@ -1,64 +1,41 @@
 #import datetime
 #import re
-
+##
 #import sickbeard
-#from sickbeard import history, providers, sbdatetime
+#from sickbeard import history, providers, sbdatetime, WEB_PORT
 #from sickbeard.common import Quality, statusStrings, SNATCHED_ANY, SNATCHED_PROPER, DOWNLOADED, SUBTITLED, ARCHIVED, FAILED
+#from sickbeard.helpers import human
 #from sickbeard.providers import generic
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
-#set global $title = 'History'
-#set global $header = 'History'
+#set $layout = $sg_str('HISTORY_LAYOUT', 'detailed')
+#set $layout_name = 'watched' in $layout and 'Watched' or 'stats' in $layout and 'Activity Hits' or 'provider_failures'in $layout and 'Provider Failures' or 'Activity'
+#set sg_port = str($getVar('sbHttpPort', WEB_PORT))
+#set global $title = 'History : %s' % $layout_name
+#set global $header = 'History <span class="grey-text">: %s</span>' % $layout_name
 #set global $sbPath = '..'
 #set global $topmenu = 'home'
-#set $layout = $sg_str('HISTORY_LAYOUT', 'detailed')
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+##
+#set $checked = ' checked="checked"'
 
-<script type="text/javascript">
+<script src="$sbRoot/js/history.js?v=$sbPID"></script>
+
+<script>
 <!--
-\$.tablesorter.addParser({
-	id: 'cDate',
-	is: function(s) {
-		return false;
-	},
-	format: function(s) {
-		return s;
-	},
-	type: 'numeric'
-});
+\$.SickGear.history = {
+	layoutName: '$layout',
+	isCompact: #echo ('!1', '!0')['compact' in $layout]#,
+	isTrashit: #echo ('!1', '!0')[bool($sg_var('TRASH_REMOVE_SHOW'))]#,
+	useSubtitles: #echo ('!1', '!0')[bool($sg_var('USE_SUBTITLES'))]#,
+	lastDeleteFiles: '#echo ('', $checked)[$getVar('last_delete_files', False)]#',
+	lastDeleteRecords: '#echo ('', $checked)[$getVar('last_delete_records', False)]#',
+};
 
-\$(document).ready(function()
-{
-	\$('#historyTable:has(tbody tr)').tablesorter({
-		widgets: ['zebra', 'filter'],
-		sortList: [[0, 1]],
-		textExtraction: {
-			0: function(node) { return \$(node).find('span').text().toLowerCase(); },
-#if ('detailed' == $layout)
-			4: function(node) { return \$(node).find('span').text().toLowerCase(); }
-#else
-			1: function(node) { return \$(node).find('span[data-name]').attr('data-name').toLowerCase(); },
-			2: function(node) { return \$(node).attr('provider').toLowerCase(); },
-			5: function(node) { return \$(node).attr('quality').toLowerCase(); }
-#end if
-		},
-		headers: {
-			0: { sorter: 'cDate' },
-#if ('detailed' == $layout)
-			4: { sorter: 'quality' }
-#else
-			4: { sorter: false },
-			5: { sorter: 'quality' }
-#end if
-		}
-
-	});
-	\$('#limit').change(function(){
-		window.location.href = '$sbRoot/history/?limit=' + \$(this).val()
-	});
+\$(document).ready(function() {
 
 #set $fuzzydate = 'airdate'
 #if $sg_var('FUZZY_DATING')
@@ -80,31 +57,64 @@
 #else
 	<h1 class="title">$title</h1>
 #end if
+#if $varExists('earliest')
+	<div class="grey-text" style="clear:both;margin:-8px 0 1.5em 2px;font-size:0.85em;float:left">
+		Stats range from <span class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($datetime.datetime.strptime(str($earliest), $history.dateFormat))</span> until <span class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($datetime.datetime.strptime(str($latest), $history.dateFormat))</span>
+	</div>
+#end if
 
-#set $html_selected = ' selected="selected"'
+#set $selected = ' selected="selected" class="selected"'
 ##
-	<div class="h2footer pull-right">Limit:
+	<div id="results-sortby" class="h2footer pull-right">Layout:
 		<select name="limit" id="limit" class="form-control form-control-inline input-sm">
-			<option value="100"#echo ('', $html_selected)['100' == $limit]#>100</option>
-			<option value="250"#echo ('', $html_selected)['250' == $limit]#>250</option>
-			<option value="500"#echo ('', $html_selected)['500' == $limit]#>500</option>
-			<option value="0"#echo ('', $html_selected)['0' == $limit]#>All</option>
+			<option value="100"#echo ('', $selected)['100' == $limit]#>100</option>
+			<option value="250"#echo ('', $selected)['250' == $limit]#>250</option>
+			<option value="500"#echo ('', $selected)['500' == $limit]#>500</option>
+			<option value="0"#echo ('', $selected)['0' == $limit]#>All</option>
 		</select>
 
-		<span style="margin-left:5px">Layout:
+		<span style="margin-left:5px">
 			<select name="HistoryLayout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value">
-				<option value="$sbRoot/setHistoryLayout/?layout=compact"#echo ('', $html_selected)['compact' == $sg_str('HISTORY_LAYOUT')]#>Compact</option>
-				<option value="$sbRoot/setHistoryLayout/?layout=detailed"#echo ('', $html_selected)['detailed' == $sg_str('HISTORY_LAYOUT', 'detailed')]#>Detailed</option>
+				<optgroup label="Activity">
+					<option value="$sbRoot/setHistoryLayout/?layout=compact"#echo ('', $selected)['compact' == $sg_str('HISTORY_LAYOUT')]#>Compact</option>
+					<option value="$sbRoot/setHistoryLayout/?layout=detailed"#echo ('', $selected)['detailed' == $sg_str('HISTORY_LAYOUT', 'detailed')]#>Detailed</option>
+				</optgroup>
+				<optgroup label="Watched">
+					<option value="$sbRoot/setHistoryLayout/?layout=compact_watched"#echo ('', $selected)['compact_watched' == $sg_str('HISTORY_LAYOUT')]#>Compact</option>
+					<option value="$sbRoot/setHistoryLayout/?layout=detailed_watched"#echo ('', $selected)['detailed_watched' == $sg_str('HISTORY_LAYOUT')]#>Detailed</option>
+				</optgroup>
+				<optgroup label="Stats">
+					<option value="$sbRoot/setHistoryLayout/?layout=compact_stats"#echo ('', $selected)['compact_stats' == $sg_str('HISTORY_LAYOUT')]#>Activity hits</option>
+					<option value="$sbRoot/setHistoryLayout/?layout=graph_stats"#echo ('', $selected)['graph_stats' == $sg_str('HISTORY_LAYOUT')]#>Graphed hits</option>
+					<option value="$sbRoot/setHistoryLayout/?layout=provider_failures"#echo ('', $selected)['provider_failures' == $sg_str('HISTORY_LAYOUT')]#>Provider fails</option>
+				</optgroup>
 			</select>
 		</span>
 	</div>
-	<br>
 
-	<table id="historyTable" class="sickbeardTable tablesorter $layout" cellspacing="1" border="0" cellpadding="0">
+<style>
+    #watched-help thead tr th, #watched-help tbody tr td{text-align:left}
+    #watched-help tbody td ol, #watched-help tbody td ul, #watched-help tbody td p{margin-bottom:0}
+    #watched-help tbody td img{margin-right:3px}
+    #watched-help .vmid{vertical-align:middle}
+    #history-table .age{display:none}
+    #history-table.event-age .age{display:inline-block}
+    #history-table.event-age .date{display:none}
+</style>
+##
+#if 'failure' not in $layout
+##
+	<table id="history-table" data-table-group="$layout" class="sickbeardTable tablesorter $layout" cellspacing="1" border="0" cellpadding="0">
+##
+#end if
+##
+##
 #if 'detailed' == $layout
+##
+##
 		<thead>
 			<tr>
-				<th class="nowrap">Time</th>
+				<th class="text-nowrap">Time</th>
 				<th width="35%">Episode</th>
 				<th>Action</th>
 				<th>Provider</th>
@@ -114,21 +124,20 @@
 
 		<tfoot>
 			<tr>
-				<th class="nowrap" colspan="5">&nbsp;</th>
+				<th class="text-nowrap" colspan="5">&nbsp;</th>
 			</tr>
 		</tfoot>
 
 		<tbody>
-    #for $hItem in $historyResults
+    #for $hItem in $history_results
         #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($hItem['action']))
-        #set $data_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'\2', $hItem['show_name']), $hItem['show_name'])[$sg_var('SORT_ARTICLE')]
-        #set $display_name = '<span data-name="%s">%s - S%02iE%02i</span>' % (
-            $data_name,
-            (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $hItem['show_name']), $hItem['show_name'])[$sg_var('SORT_ARTICLE')],
-            int(hItem['season']), int(hItem['episode']))
+        #set $display_name = '<span data-sort="%s">%s - S%02iE%02i</span>' % (
+            $hItem['data_name'],
+            (('<span class="article">%s</span> %s' % ($hItem['name1'], $hItem['name2'])), $hItem['show_name'])[$sg_var('SORT_ARTICLE') or not $hItem['name1']],
+            int($hItem['season']), int($hItem['episode']))
 			<tr>
         #set $curdatetime = $datetime.datetime.strptime(str($hItem['date']), $history.dateFormat)
-				<td><div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($curdatetime, show_seconds=True)</div><span class="sort-data">$time.mktime($curdatetime.timetuple())</span></td>
+				<td><div class="${fuzzydate}" data-sort="$time.mktime($curdatetime.timetuple())">$sbdatetime.sbdatetime.sbfdatetime($curdatetime, show_seconds=True)</div></td>
 				<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$hItem['showid']#season-$hItem['season']">$display_name#if $Quality.splitCompositeStatus($hItem['action'])[0] == $SNATCHED_PROPER then ' <span class="quality Proper">Proper</span>' else ''#</a></td>
 				<td#echo ('', ' class="subtitles_column"')[$SUBTITLED == $curStatus]#>
         #if $SUBTITLED == $curStatus
@@ -159,11 +168,14 @@
 				<td><span class="hide">$curQuality</span><span class="quality $Quality.get_quality_css($curQuality)">$Quality.get_quality_ui($curQuality)</span></td>
 			</tr>
     #end for
-
-#else
+##
+##
+#elif ('compact' == $layout)
+##
+##
 		<thead>
 			<tr>
-				<th class="nowrap">Time</th>
+				<th class="text-nowrap">Time</th>
 				<th width="#echo '3%s%%' % ('5', '0')[$sg_var('USE_SUBTITLES')]#">Episode</th>
 				<th>Snatched</th>
 				<th>Downloaded</th>
@@ -176,18 +188,17 @@
 
 		<tfoot>
 			<tr>
-				<th class="nowrap" colspan="6">&nbsp;</th>
+				<th class="text-nowrap" colspan="6">&nbsp;</th>
 			</tr>
 		</tfoot>
 
 		<tbody>
-    #for $hItem in $compactResults
+    #for $hItem in $compact_results
         #set $curdatetime = $datetime.datetime.strptime(str($hItem['actions'][0]['time']), $history.dateFormat)
-        #set $data_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'\2', $hItem['show_name']), $hItem['show_name'])[$sg_var('SORT_ARTICLE')]
-        #set $display_name = '<span data-name="%s">%s - S%02iE%02i</span>' % (
-            $data_name,
-            (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $hItem['show_name']), $hItem['show_name'])[$sg_var('SORT_ARTICLE')],
-            int(hItem['season']), int(hItem['episode']))
+        #set $display_name = '<span data-sort="%s">%s - S%02iE%02i</span>' % (
+            $hItem['data_name'],
+            (('<span class="article">%s</span> %s' % ($hItem['name1'], $hItem['name2'])), $hItem['show_name'])[$sg_var('SORT_ARTICLE') or not $hItem['name1']],
+            int($hItem['season']), int($hItem['episode']))
         #set $prov_list = []
         #set $down_list = []
         #set $order = 1
@@ -204,8 +215,8 @@
                         $provider.name, $basename)]
                     #set $order += (0, 1)[$curStatus in $SNATCHED_ANY]
                 #else
-					#set $prov_list += ['<img src="%s/images/providers/missing.png" width="16" height="16" alt="missing provider" title="missing provider" />'\
-					    % $sbRoot]
+                    #set $prov_list += ['<img src="%s/images/providers/missing.png" width="16" height="16" alt="missing provider" title="missing provider" />'\
+                        % $sbRoot]
                 #end if
             #end if
             #if $curStatus in [$DOWNLOADED, $ARCHIVED]
@@ -235,7 +246,7 @@
             #end if
         #end for
 			<tr>
-				<td><div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($curdatetime, show_seconds=True)</div><span class="sort-data">$time.mktime($curdatetime.timetuple())</span></td>
+				<td><div class="${fuzzydate}" data-sort="$time.mktime($curdatetime.timetuple())">$sbdatetime.sbdatetime.sbfdatetime($curdatetime, show_seconds=True)</div></td>
 				<td class="tvShow">
 					<span><a href="$sbRoot/home/displayShow?show=$hItem['show_id']#season-$hItem['season']">$display_name#if 'proper' in $hItem['resource'].lower or 'repack' in $hItem['resource'].lower then ' <span class="quality Proper">Proper</span>' else ''#</a></span>
 				</td>
@@ -261,9 +272,408 @@
 				<td quality="$curQuality"><span class="quality $Quality.get_quality_css($curQuality)">$Quality.get_quality_ui($curQuality)</span></td>
 			</tr>
     #end for
+##
+##
+#elif 'watched' in $layout
+##
+##
+		<thead>
+			<tr>
+				<th><span class="date">Event Date</span><span class="age">Event Age</span></th>
+				<th width="8%">Played</th>
+				<th class="text-nowrap">Episode</th>
+				<th class="text-nowrap" width="15%">Label (Profile)</th>
+				<th class="text-nowrap" width="10%">Quality</th>
+				<th class="text-nowrap" width="10%">Size</th>
+				<th width="10%">Delete</th>
+			</tr>
+		</thead>
 
-#end if
+		<tfoot>
+			<tr>
+				<th>
+					<i style="background-image:url($sbRoot/images/legend16.png)" id="show-watched-help" title="Toggle help" class="add-qtip icon-glyph"></i>
+					<span id="row-count" style="font-size:12px;line-height:20px;float:left"></span>
+				</th>
+				<th colspan="4"></th>
+				<th><span id="sum-size" style="border-top:solid 1px #ddd">0 Bytes</span></th>
+				<th>
+    #if $len($results)
+					<input id="del-watched" type="button" class="btn" value="Submit">
+    #end if
+				</th>
+			</tr>
+		</tfoot>
+
+		<tbody id="tbody">
+    #if not $results
+			<tr colspan="7">
+				<td colspan="7" style="text-align:center">
+					<p>Media marked watched or unwatched will list in this space</p>
+				</td>
+			</tr>
+    #else
+        #for $hItem in $results
+            #if $hItem.hide
+                #continue
+            #end if
+            #set $compact = 'compact' in $layout and $hItem['rowid'] not in $mru_row_ids
+            ##
+            #set $curdatetime = $datetime.datetime.fromtimestamp($hItem.get('date_watched'))
+            #set $curage = ($datetime.datetime.now() - $curdatetime).days
+            #set $display_name = '<span data-sort="%s"%s>%s - S%sE%s</span>' % (
+                $hItem.get('data_name'),
+                ('', ' class="grey-text"')[$hItem.get('deleted')],
+                (('<span class="article">%s</span> %s' % ($hItem.get('name1'), $hItem.get('name2'))), $hItem.get('show_name'))[$sg_var('SORT_ARTICLE') or not $hItem.get('name1')],
+                $hItem.get('season'), $hItem.get('episode'))
+			<tr data-tvep-id="$hItem['tvep_id']" data-file="$hItem['location']"#if $compact# class="hide"#end if#>
+				<td>
+					<div class="date ${fuzzydate}" data-sort="$curage">$sbdatetime.sbdatetime.sbfdatetime($curdatetime)</div>
+					<div class="age">${curage}d</div>
+				</td>
+				<td>
+            #set $float_played = int($hItem.get('played'))/100.0
+            #set $value = ($float_played, int($float_played))[int($float_played) == $float_played]
+					<span#if not $bool($int($value))# class="add-qtip" title="Marked Unwatched"#end if#>$value</span>
+				</td>
+				<td class="tvShow text-nowrap">
+					<span class="add-qtip#if not $hItem.get('deleted')#"#else# strike-deleted" title="file no longer exists"#end if#>
+						<a href="$sbRoot/home/displayShow?show=$hItem.get('showid')#season-$hItem.get('season')">$display_name</a>
+					</span>
+				</td>
+				<td>
+            #set $label = re.sub('\{[^}]+\}$', '', $hItem.get('label'))
+            #set $client = ''
+            #try
+                #set $client = re.findall('\{([^}]+)\}$', $hItem.get('label'))[0].lower()
+                #set $client_label = ('%s %s' % ($client, $label)).strip(' ')
+					<img height="16px" style="margin-right:3px" src="$sbRoot/images/notifiers/${client}.png"><span data-sort="$client_label" style="vertical-align:middle">$label</span>
+            #except
+					<span data-sort="${label}">$label</span>
+                #pass
+            #end try
+				</td>
+				<td quality="$hItem.get('quality')" class="text-nowrap">
+					<span class="quality $Quality.get_quality_css($hItem.get('quality')) add-qtip" title="#if $hItem.get('deleted')#file no longer exists#else#$hItem['location']#end if#">$Quality.qualityStrings[$hItem.get('quality')].replace('SD DVD', 'SD DVD/BR/BD')</span>
+				</td>
+				<td class="size text-nowrap">
+					<span#if $hItem.get('deleted')# class="add-qtip grey-text strike-deleted" title="file no longer exists"#end if# data-sort="$hItem.get('file_size')">$human($hItem.get('file_size'))</span>
+				</td>
+				<td class="#echo ('green', 'red')[100 > $hItem.get('mru_count')]#-bg">
+					<input id="del-$hItem.get('rowid')-$hItem.get('indexer')-$hItem.get('showid')"
+					title="last&nbsp;event<br>#echo ('watched', 'unwatched')[100 > $hItem.get('mru_count')]#"
+					type="checkbox" class="del-check add-qtip">
+            #if $hItem.get('mru_count')
+					<span style="position:absolute">
+						<i class="icon-glyph" style="top:-6px;right:4px;position:relative; opacity: 0.4;background-position: -95px -119px"></i>
+					</span>
+            #end if
+				</td>
+			</tr>
+        #end for
+    #end if
 		</tbody>
 	</table>
+
+    #def row_class()
+        #set global $row += 1
+        #echo ('even', 'odd')[bool($row % 2)]
+    #end def
+	<table id="watched-help" style="#if $hide_watched_help#display:none;#end if#margin-top:15px" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
+		<thead>
+			<tr>
+				<th colspan="2">General help</th>
+			</tr>
+		</thead>
+    #set global $row = 0
+		<tbody>
+			<tr class="$row_class()">
+				<td colspan="2">
+					<p>Filters are saved per layout. Examples;</p>
+					<ul>
+						<li>Event Date/Age, or Played: <span class="grey-text">&gt;7 and &lt;60</span> (between 7d and 60d) , <span class="grey-text">&gt;1</span> (played more than once)</li>
+						<li>Label (Profile): <span class="grey-text">emby or kodi</span> , <span class="grey-text">!kodi and !plex</span> , <span class="grey-text">emby user2</span> , <span class="grey-text">emby user"</span> (single end quote excludes user2)</li>
+						<li>Quality: <span class="grey-text">sd or dl</span> , <span class="grey-text">blu</span></li>
+					</ul>
+				</td
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td colspan="2">
+					<p>The above table is sorted first by played and then by date of event (i.e. watched/unwatched)</p>
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td colspan="2">
+					<p>To multi-select checkboxes or column headers, click then hold shift and click</p>
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td colspan="2">
+					<p style="margin-bottom:6px">Key for <span class="grey-text">Delete</span> column;</p>
+					<ul>
+						<li style="line-height:25px"><span class="contrast-text green-bg" style="padding:4px 18px 0 6px;margin:0 6px 0 0">Green
+								<span style="position:absolute">
+									<i class="icon-glyph" style="position:relative;top:-2px;right:8px;opacity: 0.4;background-position:-95px -119px"></i>
+								</span>
+							</span>Watched at least once at client</li>
+						<li style="line-height:25px"><span class="contrast-text red-bg" style="padding:4px 20px 0 6px;margin:0 6px 0 0">Red
+							</span>Partially watched or set 'unwatched' at client
+						</li>
+					</ul>
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td colspan="2">
+					<p>To find how much freespace a delete will yield, the size tally increases for selected episodes that have a media file</p>
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td colspan="2">
+					<p>A mapping in the client notification section is needed for results if a player library folder is different to a parent folder</p>
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td colspan="2">
+					<p>In <span class="grey-text">Compact</span> layout, deleting records removes all episode related records. <span class="grey-text">Detailed</span> layout allows for individual selection [<a rel="dialog" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/watched.png">Show me</a>]</p>
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td colspan="2">
+					<p>Any script can add to the watched list by making a <a href="https://github.com/SickGear/SickGear/wiki/API#sg.updatewatchedstate">documented API call</a> to <code>sg.updatewatchedstate</code></p>
+				</td>
+			</tr>
+		</tbody>
+		<thead>
+			<tr>
+				<th width="20%">Supported clients</th>
+				<th>To use</th>
+			</tr>
+		</thead>
+    #set global $row = 0
+        <tbody>
+			<tr class="$row_class()">
+				<td><img height="16px" src="$sbRoot/images/notifiers/kodi.png"><span class="vmid">Kodi</span>
+					<p><em class="grey-text">Isengard, Jarvis, Krypton</em><br>
+					Episodes marked watched or unwatched are pushed in real-time and shown above.</p>
+				</td>
+				<td>
+					<p>Make the following changes at Kodi;</p>
+					<ol>
+						<li>Install the SickGear repo to access its Kodi Add-on
+						<ul>
+							<li>in <b class="boldest">Filemanager</b>, add a source for SickGear with <span class="grey-text">&lt;ip&gt;:&lt;port&gt;/kodi/</span> (e.g. <span class="grey-text">192.168.0.10:$sg_port/kodi/</span>)<br>
+								and name it for example, <span class="grey-text">SickGear</span>.  <em>You will need to allow <span class="highlight-text">Unknown Sources</span> if not already</em> </li>
+							<li>in <b class="boldest">System/Add-ons</b>, "<span class="grey-text">Install from zip file</span>", in the folder list, select the <span class="grey-text">SickGear</span> source</li>
+							<li>select the <span class="grey-text">repository.sickgear</span> in the folder listing, and install the repository zip<br>
+								<em>Kodi will connect to the SickGear app to download and install its Add-on repository</em></li>
+						</ul>
+						<li>Install the SickGear Add-on from the repo</li>
+						<ul>
+							<li>in <b class="boldest">System/Add-ons</b>, "<span class="grey-text">Install from zip repository</span>", select "<span class="grey-text">SickGear Add-on repository</span>" / "<span class="grey-text">Services</span>"<br>
+							<li>select Add-on "<span class="grey-text">SickGear Watched State Updater</span>"</li>
+							<li>configure Add-on and restart Kodi after install or after switching profiles for the first time</li>
+						</ul>
+					</ol>
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td><img height="16px" src="$sbRoot/images/notifiers/emby.png"><span class="vmid">Emby</span>
+					<p>Episode watch states are periodically fetched and shown above.</p>
+				</td>
+				<td>
+					<ol>
+						<li>Enable Emby Media Server in <b class="boldest">config/Notifications</b></li>
+						<li>Choose an interval for updating watched states</li>
+					</ol>
+				</td>
+			</tr>
+			<tr class="$row_class()">
+				<td><img height="16px" src="$sbRoot/images/notifiers/plex.png"><span class="vmid">Plex</span>
+					<p>Episode watch states are periodically fetched and shown above.</p>
+				</td>
+				<td>
+					<ol>
+						<li>Enable Plex Media Server in <b class="boldest">config/Notifications</b></li>
+						<li>Choose an interval for updating watched states</li>
+					</ol>
+				</td>
+			</tr>
+##
+##
+#elif 'stats' in $layout
+##
+##
+    #set sum = 0
+    #for $hItem in $stat_results
+        #set $sum += $hItem['count']
+    #end for
+    ##
+    #if 'graph' in $layout
+		<tbody>
+			<tr><td>
+        #set $labels = []
+        #set $perc = []
+        #for $hItem in $stat_results
+            #set $p = (float($hItem['count']) / float($sum)) * 100
+            #if 1 <= $p:
+                #set $labels += [$hItem['provider']]
+                #set $perc += ['%s' % re.sub(r'(\d+)(\.\d)\d+', r'\1\2', str($p))]
+            #end if
+        #end for
+				<script src="$sbRoot/js/plot.ly/plotly-latest.min.js?v=$sbPID"></script>
+				<script src="$sbRoot/js/plot.ly/numeric/1.2.6/numeric.min.js?v=$sbPID"></script>
+
+				<div id="plot-canvas" style="margin:15px auto 15px;width:550px;height:350px"></div>
+				<style>
+				.modebar-btn[data-title*="edit plot"]{display:none !important}
+				</style>
+				<script>
+					Plotly.newPlot('plot-canvas', [
+						{
+							values: [#echo ', '.join($perc)#],
+							labels: [#echo '\'%s\'' % '\', \''.join($labels)#],
+							name: 'SickGear provider activity',
+							hoverinfo: 'label+percent+name',
+							domain: {x: [0, .5]},
+							hole: .42,
+							type: 'pie'
+						}
+					],
+					{title: 'SickGear provider activity (1% and above for #echo ('latest %s' % $limit, 'all')['0' == $limit]#)',
+					annotations: [{font: {size: 14}, showarrow: false, text: 'Activity', x: 0.16, y: 0.5}]
+					}, {displaylogo: !1, showLink: !1});
+				</script>
+			</td></tr>
+    ##
+    ##
+    #else
+    ##
+    ##
+		<thead>
+			<tr>
+				<th>Provider</th>
+				<th>Activity Hits</th>
+				<th>Activity %</th>
+				<th>Latest Activity</th>
+			</tr>
+		</thead>
+
+		<tfoot>
+			<tr>
+				<th class="text-nowrap" colspan="4">&nbsp;</th>
+			</tr>
+		</tfoot>
+
+		<tbody>
+        #for $hItem in $stat_results
+			<tr>
+				<td class="provider text-nowrap">
+            #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
+            #if None is not $provider
+					<img src="$sbRoot/images/providers/<%= provider.image_name() %>" width="16" height="16"><span data-sort="$hItem['provider']">$provider.name</span>
+            #else
+					<img src="$sbRoot/images/providers/missing.png" width="16" height="16" title="missing provider"><span data-sort="$hItem['provider']">Missing Provider</span>
+            #end if
+                </td>
+				<td>$hItem['count']</td>
+				<td>#echo '%s%%' % re.sub(r'(\d+)(\.\d)\d+', r'\1\2', str((float($hItem['count'])/float($sum))*100))#</td>
+                #set $curdatetime = $datetime.datetime.strptime(str($hItem['latest']), $history.dateFormat)
+				<td><div class="${fuzzydate}" data-sort="$hItem['latest']">$sbdatetime.sbdatetime.sbfdatetime($curdatetime)</div></td>
+			</tr>
+        #end for
+    #end if
+##
+##
+#elif 'failures' in $layout
+##
+##
+	<div id="provider-failures">
+    #if not $provider_fails
+		<p>No current failures. Failure stats display here when appropriate.</p>
+    #else
+        <p>When a provider cannot be contacted over a period, SickGear backs off and waits an increasing interval between each retry</p>
+        #for $prov in $provider_fail_stats
+            #if $len($prov['fails'])
+
+		<!-- $prov['name'] -->
+		<div>
+                #set $prov_class = '<span %sstyle="vertical-align:middle">'
+                #if not $prov['active']
+                    #set $prov_class = $prov_class % 'class="grey-text" '
+                #else
+                    #set $prov_class = $prov_class % ''
+                #end if
+            <input type="button" class="shows-more btn" value="Expand" style="display:none"><input type="button" class="shows-less btn" value="Collapse"><img src="$sbRoot/images/providers/$prov['prov_img']" width="16" height="16" style="margin:0 6px 0 3px">$prov_class$prov['name']
+                #if $prov['active']
+                    #if $prov['next_try']
+                        #set nt = $str($prov['next_try']).split('.', 2)[0][::-1].replace(':', ' m', 1).replace(':', ' h', 1)[::-1]
+			... is paused until $sbdatetime.sbdatetime.sbftime($sbdatetime.sbdatetime.now() + $prov['next_try'], markup=True) (in ${nt}s) <input type="button" class="provider-retry btn" id="$prov['prov_id']-btn-retry" value="Ignore pause on next search">
+                    #end if
+                #else
+			... is not enabled
+                #end if
+			</span>
+		</div>
+		<table class="manageTable provider-failures tablesorter hover-highlight focus-highlight text-center" cellspacing="0" border="0" cellpadding="0">
+			<thead>
+				<tr>
+					<th class="text-center" style="width:13em;padding-right:20px">period of 1hr</th>
+					<th class="text-center" style="padding-right:20px">server/timeout</th>
+					<th class="text-center" style="padding-right:20px">network</th>
+					<th class="text-center" style="padding-right:20px">no data</th>
+					<th class="text-center" style="padding-right:20px">other</th>
+                #if $prov['has_limit']
+					<th class="text-center" style="padding-right:20px">hit limit</th>
+                #end if
+				</tr>
+			</thead>
+			<tbody>
+                #set $day = []
+                #for $fail in $prov['fails']
+                    #set $child = True
+                    #if $fail['date'] not in $day
+                        #set $day += [$fail['date']]
+                        #set $child = False
+                    #end if
+                    #slurp#
+				<tr#if $fail['multirow'] and $child# class="tablesorter-childRow"#end if#>
+                    #if $fail['multirow']
+                        #if not $child
+					<td><a href="#" class="provider-fail-parent-toggle" title="Totals (expand for detail)">$sbdatetime.sbdatetime.sbfdate($fail['date_time'])</a></td>
+                        #else
+					<td>$sbdatetime.sbdatetime.sbftime($fail['date_time'], markup=True)</td>
+                        #end if
+                    #else
+					<td>$sbdatetime.sbdatetime.sbfdatetime($fail['date_time'], markup=True)</td>
+                    #end if
+                    #set $blank = '-'
+                    #set $title=None
+                    #if $fail['http']['count']
+                        #set $title=$fail['http']['code']
+                    #end if
+					<td>#if $fail['http']['count']#<span title="#if $child or not $fail['multirow']#$title#else#Expand for fail codes#end if#">$fail['http']['count']</span>#else#$blank#end if# / #echo $fail['timeout'].get('count', 0) or $blank#</td>
+					<td>#echo ($fail['connection'].get('count', 0) + $fail['connection_timeout'].get('count', 0)) or $blank#</td>
+					<td>#echo $fail['nodata'].get('count', 0) or $blank#</td>
+					<td>#echo $fail['other'].get('count', 0) or $blank#</td>
+                    #if $prov['has_limit']
+					<td>#echo $fail.get('limit', {}).get('count', 0) or $blank#</td>
+                    #end if
+				</tr>
+                #end for
+			</tbody>
+		</table>
+		<!-- /$prov['name'] -->
+            #end if
+        #end for
+    #end if
+	</div>
+##
+##
+#end if
+#if 'failure' not in $layout
+		</tbody>
+	</table>
+#end if
 
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

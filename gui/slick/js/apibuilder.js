@@ -10,7 +10,7 @@
 var _disable_empty_list=false;
 var _hide_empty_list=false;
 
-function goListGroup(apikey, L7, L6, L5, L4, L3, L2, L1){
+function goListGroup(apikey, L8, L7, L6, L5, L4, L3, L2, L1){
     var GlobalOptions = "";
     $('.global').each(function(){
         var checked = $(this).prop('checked');
@@ -26,7 +26,7 @@ function goListGroup(apikey, L7, L6, L5, L4, L3, L2, L1){
     });
 
     // handle the show.getposter / show.getbanner differently as they return an image and not json
-    if (L1 == "?cmd=show.getposter" || L1 == "?cmd=show.getbanner") {
+    if (L1 == "?cmd=sg.getnetworkicon" || L1 == "?cmd=sg.show.getposter" || L1 == "?cmd=sg.show.getbanner" || L1 == "?cmd=show.getposter" || L1 == "?cmd=show.getbanner" || L1 == "?cmd=sg.getindexericon") {
         var imgcache = sbRoot + "/api/" + apikey + "/" + L1 + L2 + GlobalOptions;
         var html = imgcache + '<br/><br/><img src="' + sbRoot + '/images/loading16.gif" id="imgcache">';
         $('#apiResponse').html(html);
@@ -36,14 +36,24 @@ function goListGroup(apikey, L7, L6, L5, L4, L3, L2, L1){
           cache: false,
           dataType: "html",
           success: function (img) {
-            $('#imgcache').attr('src', imgcache);
+            $('#imgcache').attr('src', imgcache + "&random=" + Math.random() * 100000000000000000000);
           }
         })
     }
+    else if (L1 == "?cmd=listcommands")
+    {
+        var html = $.ajax({
+          url: sbRoot + "/api/" + apikey + "/" + L1 + L2 + L3 + L4 + L5 + L6 + L7 + L8 + GlobalOptions,
+          async: false,
+          dataType: "html",
+        }).responseText;
+
+        $('#apiResponse').html(html);
+    }
     else {
-        var html = sbRoot + "/api/" + apikey + "/" + L1 + L2 + L3 + L4 + L5 + L6 + L7 + GlobalOptions + "<br/><pre>";
+        var html = sbRoot + "/api/" + apikey + "/" + L1 + L2 + L3 + L4 + L5 + L6 + L7 + L8 + GlobalOptions + "<br/><pre>";
         html += $.ajax({
-          url: sbRoot + "/api/" + apikey + "/" + L1 + L2 + L3 + L4 + L5 + L6 + L7 + GlobalOptions,
+          url: sbRoot + "/api/" + apikey + "/" + L1 + L2 + L3 + L4 + L5 + L6 + L7 + L8 + GlobalOptions,
           async: false,
           dataType: "html",
         }).responseText;
@@ -167,7 +177,7 @@ function cs_addL(dis,link,label,css) { this.items[this.items.length]=new cs_link
 function cs_addG(label,css) { this.items[this.items.length]=new cs_groupOBJ(label,css); }
 function cs_endG() { this.items[this.items.length]=new cs_groupOBJ2(); }
 
-function cs_showMsg(msg) { window.status=msg; }
+function cs_showMsg(msg) { console.error(msg); window.status=msg; }
 function cs_badContent(n) { cs_goodContent=false; cs_showMsg("["+n+"] Not Found."); }
 
 function _setCookie(name, value) {
@@ -636,6 +646,6 @@ function selectOptions(n,opts,mode) {
         }
       }
     }
-  }  
+  }
 }
 // ------

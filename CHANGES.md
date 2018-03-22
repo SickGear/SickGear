@@ -1,7 +1,118 @@
-﻿### 0.14.9 (2018-03-19 13:10:00 UTC)
+﻿### 0.15.0 (2018-03-22 00:00:00 UTC)
+
+* Add showRSS torrent provider
+* Add choice to delete watched episodes from a list of played media at Kodi, Emby, and/or Plex,
+  instructions at Shows/History/Layout/"Watched"
+* Add installable SickGear Kodi repository containing addon "SickGear Watched State Updater"
+* Change add Emby setting for watched state scheduler at Config/Notifications/Emby/"Update watched interval"
+* Change add Plex setting for watched state scheduler at Config/Notifications/Plex/"Update watched interval"
+* Change add map parent folder setting at Notifications for Emby, Kodi, and Plex
+* Add API cmd=sg.updatewatchedstate, instructions for use are linked to in layout "Watched" at /history
+* Change history page table filter input values are saved across page refreshes
+* Change history page table filter inputs, accept values like "dvd or web" to only display both
+* Change history page table filter inputs, press 'ESC' key inside a filter input to reset it
+* Add provider activity stats to Shows/History/Layout/ drop down
+* Change move provider failures table from Manage/Media Search to Shows/History/Layout/Provider fails
+* Change sort provider failures by most recent failure, and with paused providers at the top
+* Add SickGear-NZBGet dedicated post processing script, see.. \autoProcessTV\SickGear-NG\INSTALL.txt
+* Add non standard multi episode name parsing e.g. S01E02and03 and 1x02and03and04
+* Change overhaul and add API functions
+* Change API version... start with 10
+* Change set application response header to 'SickGear' + add API version
+* Change return timezone (of network) in API
+* Add indexer to calls
+* Add SickGear Command tip for old SickBeard commands
+* Add warning old sickbeard API calls only support tvdb shows
+* Add "tvdbid" fallback only for sickbeard calls
+* Add listcommands
+* Add list of all commands (old + new) in listcommand page at the beginning
+* Change hide 'listcommands' command from commands list, since it needs the API builder CSS + is html not json
+* Add missing help in webapi
+* Add episode info: absolute_number, scene_season, scene_episode, scene_absolute_number
+* Add fork to SB command
+* Add sg
+* Add sg.activatescenenumbering
+* Add sg.addrootdir
+* Add sg.checkscheduler
+* Add sg.deleterootdir
+* Add sg.episode
+* Add sg.episode.search
+* Add sg.episode.setstatus
+* Add sg.episode.subtitlesearch
+* Add sg.exceptions
+* Add sg.forcesearch
+* Add sg.future
+* Add sg.getdefaults
+* Add sg.getindexericon
+* Add sg.getindexers to list all indexers
+* Add sg.getmessages
+* Add sg.getnetworkicon
+* Add sg.getrootdirs
+* Add sg.getqualities
+* Add sg.getqualitystrings
+* Add sg.history
+* Add sg.history.clear
+* Add sg.history.trim
+* Add sg.listtraktaccounts
+* Add sg.listignorewords
+* Add sg.listrequiedwords
+* Add sg.logs
+* Add sg.pausebacklog
+* Add sg.postprocess
+* Add sg.ping
+* Add sg.restart
+* Add sg.searchqueue
+* Add sg.searchtv to search all indexers
+* Add sg.setexceptions
+* Add sg.setignorewords
+* Add sg.setrequiredwords
+* Add sg.setscenenumber
+* Add sg.show
+* Add sg.show.addexisting
+* Add sg.show.addnew
+* Add sg.show.cache
+* Add sg.show.delete
+* Add sg.show.getbanner
+* Add sg.show.getfanart
+* Add sg.show.getposter
+* Add sg.show.getquality
+* Add sg.show.listfanart
+* Add sg.show.ratefanart
+* Add sg.show.seasonlist
+* Add sg.show.seasons
+* Add sg.show.setquality
+* Add sg.show.stats
+* Add sg.show.refresh
+* Add sg.show.pause
+* Add sg.show.update
+* Add sg.shows
+* Add sg.shows.browsetrakt
+* Add sg.shows.forceupdate
+* Add sg.shows.queue
+* Add sg.shows.stats
+* Change sickbeard to sickgear
+* Change sickbeard_call to property
+* Change sg.episode.setstatus allow setting of quality
+* Change sg.history, history command output
+* Change sg.searchtv to list of indexers
+* Add uhd4kweb to qualities
+* Add upgrade_once to add existing shows
+* Add upgrade_once to add new show
+* Add upgrade_once to show quality settings (get/set)
+* Add 'ids' to Show + Shows
+* Add ids to coming eps + get tvdb id from ids
+* Add 'status_str' to coming eps
+* Add 'local_datetime' to comming eps + runtime
+* Add X-Filename response header to getbanner, getposter
+* Add X-Fanartname response header for sg.show.getfanart
+* Change remove some non-release group stuff from newnab results
+
+
+### 0.14.9 (2018-03-19 13:10:00 UTC)
 
 Change remove dead tor caches and stop searching episodes that have a magnet saved
 Change AlphaRatio provider freeleech mode; prevent spoiling user ratio from ambiguous filtered results
+
 
 ### 0.14.8 (2018-03-13 22:00:00 UTC)
 

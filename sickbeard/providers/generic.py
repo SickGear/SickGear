@@ -100,7 +100,8 @@ class ProviderFailList(object):
             fail_hour = e.fail_time.time().hour
             date_time = datetime.datetime.combine(fail_date, datetime.time(hour=fail_hour))
             if ProviderFailTypes.names[e.fail_type] not in fail_dict.get(date_time, {}):
-                default = {'date': str(fail_date), 'date_time': date_time, 'multirow': False}
+                default = {'date': str(fail_date), 'date_time': date_time,
+                           'timestamp': helpers.tryInt(sbdatetime.totimestamp(e.fail_time)), 'multirow': False}
                 for et in ProviderFailTypes.names.itervalues():
                     default[et] = b_d.copy()
                 fail_dict.setdefault(date_time, default)[ProviderFailTypes.names[e.fail_type]]['count'] = 1
@@ -502,8 +503,10 @@ class GenericProvider(object):
 
         kwargs['raise_exceptions'] = True
         kwargs['raise_status_code'] = True
-        for k, v in dict(headers=self.headers, hooks=dict(response=self.cb_response), session=self.session).items():
+        for k, v in dict(headers=self.headers, hooks=dict(response=self.cb_response)).items():
             kwargs.setdefault(k, v)
+        if 'nzbs.in' not in url:  # this provider returns 503's 3 out of 4 requests with the persistent session system
+            kwargs.setdefault('session', self.session)
 
         post_data = kwargs.get('post_data')
         post_json = kwargs.get('post_json')

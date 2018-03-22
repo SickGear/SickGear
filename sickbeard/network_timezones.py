@@ -295,31 +295,35 @@ def load_network_dict(load=True):
 
 
 # get timezone of a network or return default timezone
-def get_network_timezone(network):
+def get_network_timezone(network, return_name=False):
     if network is None:
         return sb_timezone
 
     timezone = None
+    timezone_name = None
 
     try:
         if zoneinfo.ZONEFILENAME is not None:
             if not network_dict:
                 load_network_dict()
             try:
-                timezone = tz.gettz(network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower()),
-                                    zoneinfo_priority=True)
-            except:
+                timezone_name = network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower())
+                timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
+            except (StandardError, Exception):
                 pass
 
             if timezone is None:
                 cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
                 try:
-                    timezone = tz.gettz(country_timezones.get(cc.group(1).upper()), zoneinfo_priority=True)
-                except:
+                    timezone_name = country_timezones.get(cc.group(1).upper())
+                    timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
+                except (StandardError, Exception):
                     pass
-    except:
+    except (StandardError, Exception):
         pass
 
+    if return_name:
+        return timezone if isinstance(timezone, datetime.tzinfo) else sb_timezone, timezone_name
     return timezone if isinstance(timezone, datetime.tzinfo) else sb_timezone
 
 

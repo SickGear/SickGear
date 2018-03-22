@@ -122,7 +122,7 @@ class EmbyNotifier(Notifier):
             else:
                 new_keys += [key]
 
-        apikeys = (new_keys, [x.strip() for x in sickbeard.EMBY_APIKEY.split(',') if x.strip()] + new_keys)[has_old_key]
+        apikeys = has_old_key and [x.strip() for x in sickbeard.EMBY_APIKEY.split(',') if x.strip()] or [] + new_keys
 
         if len(hosts) != len(apikeys):
             message = ('Not enough Api keys for hosts', 'More Api keys than hosts')[len(apikeys) > len(hosts)]
@@ -177,6 +177,11 @@ class EmbyNotifier(Notifier):
 
     def discover_server(self):
         return self._discover_server()
+
+    def check_config(self, hosts=None, apikeys=None):
+
+        self._testing = True  # ensure _choose() uses passed args
+        return self._check_config(hosts, apikeys)
 
 
 notifier = EmbyNotifier

@@ -55,14 +55,13 @@ class Scheduler(threading.Thread):
         self._stop.set()
         self.unpause()
 
-    def check_paused(self):
-        if hasattr(self.action, 'check_paused'):
-            if self.action.check_paused():
+    def set_paused_state(self):
+        if hasattr(self.action, 'is_enabled'):
+            self.silent = not self.action.is_enabled()
+            if self.silent:
                 self.pause()
-                self.silent = True
             else:
                 self.unpause()
-                self.silent = False
 
     def timeLeft(self):
         return self.cycleTime - (datetime.datetime.now() - self.lastRun)
@@ -74,52 +73,57 @@ class Scheduler(threading.Thread):
         return False
 
     def run(self):
-        self.check_paused()
+        self.set_paused_state()
 
         # if self._unpause Event() is NOT set the loop pauses
         while self._unpause.wait() and not self._stop.is_set():
 
-            try:
-                current_time = datetime.datetime.now()
-                should_run = False
-
-                # check if interval has passed
-                if current_time - self.lastRun >= self.cycleTime:
-                    # check if wanting to start around certain time taking interval into account
-                    if self.start_time:
-                        hour_diff = current_time.time().hour - self.start_time.hour
-                        if not hour_diff < 0 and hour_diff < self.cycleTime.seconds / 3600:
-                            should_run = True
-                        else:
-                            # set lastRun to only check start_time after another cycleTime
-                            self.lastRun = current_time
-                    else:
-                        should_run = True
-
-                if self.force:
-                    should_run = True
-
-                if should_run and self.prevent_cycle_run is not None and self.prevent_cycle_run():
-                    logger.log(u'%s skipping this cycleTime' % self.name, logger.WARNING)
-                    # set lastRun to only check start_time after another cycleTime
-                    self.lastRun = current_time
+            if getattr(self.action, 'is_enabled', True):
+                try:
+                    current_time = datetime.datetime.now()
                     should_run = False
 
-                if should_run:
-                    self.lastRun = current_time
+                    # check if interval has passed
+                    if current_time - self.lastRun >= self.cycleTime:
+                        # check if wanting to start around certain time taking interval into account
+                        if self.start_time:
+                            hour_diff = current_time.time().hour - self.start_time.hour
+                            if not hour_diff < 0 and hour_diff < self.cycleTime.seconds / 3600:
+                                should_run = True
+                            else:
+                                # set lastRun to only check start_time after another cycleTime
+                                self.lastRun = current_time
+                        else:
+                            should_run = True
 
-                    try:
-                        if not self.silent:
-                            logger.log(u"Starting new thread: " + self.name, logger.DEBUG)
+                    if self.force:
+                        should_run = True
 
-                        self.action.run()
-                    except Exception as e:
-                        logger.log(u"Exception generated in thread " + self.name + ": " + ex(e), logger.ERROR)
-                        logger.log(repr(traceback.format_exc()), logger.ERROR)
+                    if should_run and ((self.prevent_cycle_run is not None and self.prevent_cycle_run()) or
+                                       getattr(self.action, 'prevent_run', False)):
+                        logger.log(u'%s skipping this cycleTime' % self.name, logger.WARNING)
+                        # set lastRun to only check start_time after another cycleTime
+                        self.lastRun = current_time
+                        should_run = False
 
-            finally:
-                if self.force:
-                    self.force = False
+                    if should_run:
+                        self.lastRun = current_time
+
+                        try:
+                            if not self.silent:
+                                logger.log(u"Starting new thread: " + self.name, logger.DEBUG)
+
+                            self.action.run()
+                        except Exception as e:
+                            logger.log(u"Exception generated in thread " + self.name + ": " + ex(e), logger.ERROR)
+                            logger.log(repr(traceback.format_exc()), logger.ERROR)
+
+                finally:
+                    if self.force:
+                        self.force = False
+            else:
+                # disabled schedulers will only be rechecked every 30 seconds until enabled
+                time.sleep(30)
 
             time.sleep(1)
 

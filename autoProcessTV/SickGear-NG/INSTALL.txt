@@ -1,0 +1,34 @@
+SickGear PostProcessing script for NZBGet
+=========================================
+
+If NZBGet v17+ is installed on the same system as SickGear then as a local install,
+
+1) Add the location of this script file to NZBGet Settings/PATHS/ScriptDir
+
+2) Navigate to any named TV category at Settings/Categories, click "Choose" Category.Extensions then Apply SickGear-NG
+
+This is the best set up to automatically get script updates from SickGear
+
+#############
+
+If NZBGet v16 or earlier is installed, then as an older install,
+
+1) Copy the directory with/or this single script file to path set in NZBGet Settings/PATHS/ScriptDir
+
+2) Refresh the NZBGet page and navigate to Settings/SickGear-NG
+
+3) Click View -> Compact to remove any tick and un hide tips and suggestions
+
+4) The bare minimum change is the sg_base_path setting or enter `python -m pip install requests` at admin commandline
+
+5) Navigate to any named TV category at Settings/Categories, click "Choose" Category.Extensions then Apply SickGear-NG
+
+You will need to manually update your script with this set up
+
+#############
+
+Notes:
+Debian doesn't have pip, _if_ requests is needed, try "apt install python-requests"
+
+-----
+Enjoy
