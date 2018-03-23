@@ -32,8 +32,6 @@ class GrowlNotifier(Notifier):
     def __init__(self):
         super(GrowlNotifier, self).__init__()
 
-        self.sg_logo_file = 'apple-touch-icon-72x72.png'
-
     def _send_growl_msg(self, options, message=None):
 
         # Send Notification
@@ -53,8 +51,7 @@ class GrowlNotifier(Notifier):
         if options['priority']:
             notice.add_header('Notification-Priority', options['priority'])
         if options['icon']:
-            notice.add_header('Notification-Icon',
-                              'https://raw.github.com/SickGear/SickGear/master/gui/slick/images/sickgear.png')
+            notice.add_header('Notification-Icon', self._sg_logo_url)
 
         if message:
             notice.add_header('Notification-Text', message)
@@ -139,7 +136,7 @@ class GrowlNotifier(Notifier):
         self._testing = True
         self._send_registration(host, password)
         return ('Success, registered and tested', 'Failed registration and testing')[
-                   True is not super(GrowlNotifier, self).test_notify(name='Test', host=host, password=password)] + \
+                   'sent' not in super(GrowlNotifier, self).test_notify(name='Test', host=host, password=password)] + \
                (urllib.unquote_plus(host) + ' with password: ' + password, '')[password in (None, '')]
 
 

@@ -1,4 +1,10 @@
-﻿### 0.15.0 (2018-03-22 00:00:00 UTC)
+﻿### 0.15.1 (2018-03-23 22:30:00 UTC)
+
+* Fix overwriting repack where renamed filename has '-' in title
+* Fix Growl display correct message on test notification success + change notification icon
+
+
+### 0.15.0 (2018-03-22 00:00:00 UTC)
 
 * Add showRSS torrent provider
 * Add choice to delete watched episodes from a list of played media at Kodi, Emby, and/or Plex,
