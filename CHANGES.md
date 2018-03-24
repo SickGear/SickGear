@@ -9,6 +9,7 @@
 * Update html5lib 0.99999999/1.0b9 (1a28d72) to 1.1-dev (e9ef538)
 * Update IMDb 5.1 (r907) to 5.2.1dev20171113 (f640595)
 * Update jquery.form plugin 3.51.0 to 4.2.2
+* Update moment.js 2.17.1 to 2.21.0
 
 [develop changelog]
 
