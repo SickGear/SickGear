@@ -1,5 +1,6 @@
 ﻿### 0.16.0 (2018-xx-xx xx:xx:xx UTC)
 
+* Update backports/ssl_match_hostname 3.5.0.1 (r18) to 3.7.0.1 (r28)
 
 [develop changelog]
 
