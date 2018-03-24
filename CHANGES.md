@@ -5,6 +5,7 @@
 * Update chardet packages 3.0.4 (9b8c5c2) to 4.0.0 (b3d867a)
 * Update dateutil library 2.6.1 (2f3a160) to 2.7.2 (ff03c0f)
 * Update feedparser library 5.2.1 (f1dd1bb) to 5.2.1 (5646f4c) - Uses the faster cchardet if installed
+* Change Hachoir can't support PY2 so backport their PY3 to prevent a need for system dependant external binaries like mediainfo
 
 [develop changelog]
 
