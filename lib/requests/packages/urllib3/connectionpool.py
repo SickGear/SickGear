@@ -843,7 +843,6 @@ class HTTPSConnectionPool(HTTPConnectionPool):
         if not getattr(conn, 'sock', None):  # AppEngine might not have  `.sock`
             conn.connect()
 
-        """
         if not conn.is_verified:
             warnings.warn((
                 'Unverified HTTPS request is being made. '
@@ -851,7 +850,6 @@ class HTTPSConnectionPool(HTTPConnectionPool):
                 'https://urllib3.readthedocs.io/en/latest/advanced-usage.html'
                 '#ssl-warnings'),
                 InsecureRequestWarning)
-        """
 
 
 def connection_from_url(url, **kw):

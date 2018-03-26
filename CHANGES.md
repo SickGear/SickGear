@@ -14,6 +14,7 @@
 * Update Certifi 2017.07.27 (f808089) to 2018.01.18 (e225253)
 * Update PySocks 1.6.5 (b4323df) to 1.6.8 (524ceb4)
 * Update rarfile 3.0 (3e54b22) to 3.0 (2704344)
+* Update Requests library 2.13.0 (fc54869) to 2.15.1 (282b01a)
 
 [develop changelog]
 
