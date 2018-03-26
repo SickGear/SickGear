@@ -1,6 +1,7 @@
 ﻿### 0.16.0 (2018-xx-xx xx:xx:xx UTC)
 
 * Update backports/ssl_match_hostname 3.5.0.1 (r18) to 3.7.0.1 (r28)
+* Update cachecontrol library 0.12.3 (db54c40) to 0.12.4 (bd94f7e)
 
 [develop changelog]
 
