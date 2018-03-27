@@ -13,6 +13,7 @@
 * Update profilehooks 1.9.0 (de7d59b) to 1.10.0 (0ce1e29)
 * Update Certifi 2017.07.27 (f808089) to 2018.01.18 (e225253)
 * Update PySocks 1.6.5 (b4323df) to 1.6.8 (524ceb4)
+* Update rarfile 3.0 (3e54b22) to 3.0 (2704344)
 
 [develop changelog]
 
