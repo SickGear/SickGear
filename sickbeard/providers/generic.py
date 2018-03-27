@@ -36,9 +36,8 @@ import sickbeard
 import requests
 import requests.cookies
 from cfscrape import CloudflareScraper
-from hachoir_parser import guessParser
-from hachoir_core.error import HachoirError
-from hachoir_core.stream import FileInputStream
+from hachoir.parser import guessParser
+from hachoir.stream import FileInputStream
 
 from sickbeard import helpers, classes, logger, db, tvcache, encodingKludge as ek
 from sickbeard.common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
@@ -721,13 +720,13 @@ class GenericProvider(object):
             try:
                 stream = FileInputStream(file_name)
                 parser = guessParser(stream)
-            except (HachoirError, Exception):
+            except (StandardError, Exception):
                 pass
             result = parser and 'application/x-bittorrent' == parser.mime_type
 
             try:
                 stream._input.close()
-            except (HachoirError, Exception):
+            except (StandardError, Exception):
                 pass
 
         return result

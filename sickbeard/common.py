@@ -274,9 +274,9 @@ class Quality:
         from sickbeard.exceptions import ex
         if ek.ek(os.path.isfile, filename):
 
-            from hachoir_parser import createParser
-            from hachoir_metadata import extractMetadata
-            from hachoir_core.stream import InputStreamError
+            from hachoir.parser import createParser
+            from hachoir.metadata import extractMetadata
+            from hachoir.stream import InputStreamError
 
             parser = height = None
             msg = u'Hachoir can\'t parse file "%s" content quality because it found error: %s'
