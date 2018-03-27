@@ -14,7 +14,8 @@ def _import_speedups():
         return None, None
 c_encode_basestring_ascii, c_make_encoder = _import_speedups()
 
-from simplejson.decoder import PosInf
+from .decoder import PosInf
+from .raw_json import RawJSON
 
 #ESCAPE = re.compile(ur'[\x00-\x1f\\"\b\f\n\r\t\u2028\u2029]')
 # This is required because u() will mangle the string and ur'' isn't valid
@@ -39,14 +40,6 @@ for i in [0x2028, 0x2029]:
 
 FLOAT_REPR = repr
 
-class RawJSON(object):
-    """Wrap an encoded JSON document for direct embedding in the output
-
-    """
-    def __init__(self, encoded_json):
-        self.encoded_json = encoded_json
-
-
 def encode_basestring(s, _PY3=PY3, _q=u('"')):
     """Return a JSON representation of a Python string
 
@@ -55,12 +48,15 @@ def encode_basestring(s, _PY3=PY3, _q=u('"')):
         if isinstance(s, binary_type):
             s = s.decode('utf-8')
         if type(s) is not text_type:
-            s = text_type(s)
+            s = text_type.__str__(s)
     else:
         if isinstance(s, str) and HAS_UTF8.search(s) is not None:
             s = s.decode('utf-8')
         if type(s) not in string_types:
-            s = text_type(s)
+            if isinstance(s, str):
+                s = str.__str__(s)
+            else:
+                s = unicode.__getnewargs__(s)[0]
     def replace(match):
         return ESCAPE_DCT[match.group(0)]
     return _q + ESCAPE.sub(replace, s) + _q
@@ -74,12 +70,15 @@ def py_encode_basestring_ascii(s, _PY3=PY3):
         if isinstance(s, binary_type):
             s = s.decode('utf-8')
         if type(s) is not text_type:
-            s = text_type(s)
+            s = text_type.__str__(s)
     else:
         if isinstance(s, str) and HAS_UTF8.search(s) is not None:
             s = s.decode('utf-8')
         if type(s) not in string_types:
-            s = text_type(s)
+            if isinstance(s, str):
+                s = str.__str__(s)
+            else:
+                s = unicode.__getnewargs__(s)[0]
     def replace(match):
         s = match.group(0)
         try:
@@ -185,7 +184,7 @@ class JSONEncoder(object):
         transformed into unicode using that encoding prior to JSON-encoding.
         The default is UTF-8.
 
-        If use_decimal is true (not the default), ``decimal.Decimal`` will
+        If use_decimal is true (default: ``True``), ``decimal.Decimal`` will
         be supported directly by the encoder. For the inverse, decode JSON
         with ``parse_float=decimal.Decimal``.
 
@@ -265,7 +264,8 @@ class JSONEncoder(object):
                 return JSONEncoder.default(self, o)
 
         """
-        raise TypeError(repr(o) + " is not JSON serializable")
+        raise TypeError('Object of type %s is not JSON serializable' %
+                        o.__class__.__name__)
 
     def encode(self, o):
         """Return a JSON string representation of a Python data structure.
@@ -548,7 +548,8 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         elif _skipkeys:
             key = None
         else:
-            raise TypeError("key " + repr(key) + " is not a string")
+            raise TypeError('keys must be str, int, float, bool or None, '
+                            'not %s' % key.__class__.__name__)
         return key
 
     def _iterencode_dict(dct, _current_indent_level):
