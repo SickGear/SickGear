@@ -12,6 +12,7 @@ from ..exceptions import SSLError, InsecurePlatformWarning, SNIMissingWarning
 SSLContext = None
 HAS_SNI = False
 IS_PYOPENSSL = False
+IS_SECURETRANSPORT = False
 
 # Maps the length of a digest to a possible hash function producing this digest
 HASHFUNC_MAP = {
@@ -122,7 +123,6 @@ except ImportError:
             self.ciphers = cipher_suite
 
         def wrap_socket(self, socket, server_hostname=None, server_side=False):
-            """
             warnings.warn(
                 'A true SSLContext object is not available. This prevents '
                 'urllib3 from configuring SSL appropriately and may cause '
@@ -132,7 +132,6 @@ except ImportError:
                 '#ssl-warnings',
                 InsecurePlatformWarning
             )
-            """
             kwargs = {
                 'keyfile': self.keyfile,
                 'certfile': self.certfile,
