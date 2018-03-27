@@ -7,6 +7,7 @@
 * Update feedparser library 5.2.1 (f1dd1bb) to 5.2.1 (5646f4c) - Uses the faster cchardet if installed
 * Change Hachoir can't support PY2 so backport their PY3 to prevent a need for system dependant external binaries like mediainfo
 * Update html5lib 0.99999999/1.0b9 (1a28d72) to 1.1-dev (e9ef538)
+* Update IMDb 5.1 (r907) to 5.2.1dev20171113 (f640595)
 
 [develop changelog]
 
