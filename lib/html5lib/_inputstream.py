@@ -9,7 +9,7 @@ import re
 import webencodings
 
 from .constants import EOF, spaceCharacters, asciiLetters, asciiUppercase
-from .constants import ReparseException
+from .constants import _ReparseException
 from . import _utils
 
 from io import StringIO
@@ -48,7 +48,7 @@ non_bmp_invalid_codepoints = set([0x1FFFE, 0x1FFFF, 0x2FFFE, 0x2FFFF, 0x3FFFE,
                                   0xDFFFF, 0xEFFFE, 0xEFFFF, 0xFFFFE, 0xFFFFF,
                                   0x10FFFE, 0x10FFFF])
 
-ascii_punctuation_re = re.compile("[\u0009-\u000D\u0020-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E]")
+ascii_punctuation_re = re.compile("[\u0009-\u000D\u0020-\u002F\u003A-\u0040\u005C\u005B-\u0060\u007B-\u007E]")
 
 # Cache for charsUntil()
 charsUntilRegEx = {}
@@ -367,7 +367,7 @@ class HTMLUnicodeInputStream(object):
     def unget(self, char):
         # Only one character is allowed to be ungotten at once - it must
         # be consumed again before any further call to unget
-        if char is not None:
+        if char is not EOF:
             if self.chunkOffset == 0:
                 # unget is called quite rarely, so it's a good idea to do
                 # more work here if it saves a bit of work in the frequently
@@ -461,7 +461,7 @@ class HTMLBinaryInputStream(HTMLUnicodeInputStream):
         if charEncoding[0] is not None:
             return charEncoding
 
-        # If we've been overriden, we've been overriden
+        # If we've been overridden, we've been overridden
         charEncoding = lookupEncoding(self.override_encoding), "certain"
         if charEncoding[0] is not None:
             return charEncoding
@@ -530,7 +530,7 @@ class HTMLBinaryInputStream(HTMLUnicodeInputStream):
             self.rawStream.seek(0)
             self.charEncoding = (newEncoding, "certain")
             self.reset()
-            raise ReparseException("Encoding changed from %s to %s" % (self.charEncoding[0], newEncoding))
+            raise _ReparseException("Encoding changed from %s to %s" % (self.charEncoding[0], newEncoding))
 
     def detectBOM(self):
         """Attempts to detect at BOM at the start of the stream. If
