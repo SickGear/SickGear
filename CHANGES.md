@@ -10,6 +10,7 @@
 * Update IMDb 5.1 (r907) to 5.2.1dev20171113 (f640595)
 * Update jquery.form plugin 3.51.0 to 4.2.2
 * Update moment.js 2.17.1 to 2.21.0
+* Update profilehooks 1.9.0 (de7d59b) to 1.10.0 (0ce1e29)
 
 [develop changelog]
 
