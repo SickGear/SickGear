@@ -101,12 +101,9 @@ def _get_data_from_buffer(obj):
 
 
 def unpack(stream, **kwargs):
-    """
-    Unpack an object from `stream`.
-
-    Raises `ExtraData` when `packed` contains extra bytes.
-    See :class:`Unpacker` for options.
-    """
+    warnings.warn(
+        "Direct calling implementation's unpack() is deprecated, Use msgpack.unpack() or unpackb() instead.",
+        PendingDeprecationWarning)
     data = stream.read()
     return unpackb(data, **kwargs)
 
@@ -145,6 +142,16 @@ class Unpacker(object):
         If true, unpack msgpack array to Python list.
         Otherwise, unpack to Python tuple. (default: True)
 
+    :param bool raw:
+        If true, unpack msgpack raw to Python bytes (default).
+        Otherwise, unpack to Python str (or unicode on Python 2) by decoding
+        with UTF-8 encoding (recommended).
+        Currently, the default is true, but it will be changed to false in
+        near future.  So you must specify it explicitly for keeping backward
+        compatibility.
+
+        *encoding* option which is deprecated overrides this option.
+
     :param callable object_hook:
         When specified, it should be callable.
         Unpacker calls it with a dict argument after unpacking msgpack map.
@@ -160,7 +167,7 @@ class Unpacker(object):
         If it is None (default), msgpack raw is deserialized to Python bytes.
 
     :param str unicode_errors:
-        Used for decoding msgpack raw with *encoding*.
+        (deprecated) Used for decoding msgpack raw with *encoding*.
         (default: `'strict'`)
 
     :param int max_buffer_size:
@@ -183,13 +190,13 @@ class Unpacker(object):
 
     example of streaming deserialize from file-like object::
 
-        unpacker = Unpacker(file_like)
+        unpacker = Unpacker(file_like, raw=False)
         for o in unpacker:
             process(o)
 
     example of streaming deserialize from socket::
 
-        unpacker = Unpacker()
+        unpacker = Unpacker(raw=False)
         while True:
             buf = sock.recv(1024**2)
             if not buf:
@@ -199,15 +206,24 @@ class Unpacker(object):
                 process(o)
     """
 
-    def __init__(self, file_like=None, read_size=0, use_list=True,
+    def __init__(self, file_like=None, read_size=0, use_list=True, raw=True,
                  object_hook=None, object_pairs_hook=None, list_hook=None,
-                 encoding=None, unicode_errors='strict', max_buffer_size=0,
+                 encoding=None, unicode_errors=None, max_buffer_size=0,
                  ext_hook=ExtType,
                  max_str_len=2147483647, # 2**32-1
                  max_bin_len=2147483647,
                  max_array_len=2147483647,
                  max_map_len=2147483647,
                  max_ext_len=2147483647):
+
+        if encoding is not None:
+            warnings.warn(
+                "encoding is deprecated, Use raw=False instead.",
+                PendingDeprecationWarning)
+
+        if unicode_errors is None:
+            unicode_errors = 'strict'
+
         if file_like is None:
             self._feeding = True
         else:
@@ -234,6 +250,7 @@ class Unpacker(object):
         if read_size > self._max_buffer_size:
             raise ValueError("read_size must be smaller than max_buffer_size")
         self._read_size = read_size or min(self._max_buffer_size, 16*1024)
+        self._raw = bool(raw)
         self._encoding = encoding
         self._unicode_errors = unicode_errors
         self._use_list = use_list
@@ -265,6 +282,13 @@ class Unpacker(object):
         view = _get_data_from_buffer(next_bytes)
         if (len(self._buffer) - self._buff_i + len(view) > self._max_buffer_size):
             raise BufferFull
+
+        # Strip buffer before checkpoint before reading file.
+        if self._buf_checkpoint > 0:
+            del self._buffer[:self._buf_checkpoint]
+            self._buff_i -= self._buf_checkpoint
+            self._buf_checkpoint = 0
+
         self._buffer += view
 
     def _consume(self):
@@ -582,8 +606,10 @@ class Unpacker(object):
         if typ == TYPE_RAW:
             if self._encoding is not None:
                 obj = obj.decode(self._encoding, self._unicode_errors)
-            else:
+            elif self._raw:
                 obj = bytes(obj)
+            else:
+                obj = obj.decode('utf_8')
             return obj
         if typ == TYPE_EXT:
             return self._ext_hook(n, bytes(obj))
@@ -609,12 +635,14 @@ class Unpacker(object):
     def skip(self, write_bytes=None):
         self._unpack(EX_SKIP)
         if write_bytes is not None:
+            warnings.warn("`write_bytes` option is deprecated.  Use `.tell()` instead.", DeprecationWarning)
             write_bytes(self._buffer[self._buf_checkpoint:self._buff_i])
         self._consume()
 
     def unpack(self, write_bytes=None):
         ret = self._unpack(EX_CONSTRUCT)
         if write_bytes is not None:
+            warnings.warn("`write_bytes` option is deprecated.  Use `.tell()` instead.", DeprecationWarning)
             write_bytes(self._buffer[self._buf_checkpoint:self._buff_i])
         self._consume()
         return ret
@@ -622,6 +650,7 @@ class Unpacker(object):
     def read_array_header(self, write_bytes=None):
         ret = self._unpack(EX_READ_ARRAY_HEADER)
         if write_bytes is not None:
+            warnings.warn("`write_bytes` option is deprecated.  Use `.tell()` instead.", DeprecationWarning)
             write_bytes(self._buffer[self._buf_checkpoint:self._buff_i])
         self._consume()
         return ret
@@ -629,6 +658,7 @@ class Unpacker(object):
     def read_map_header(self, write_bytes=None):
         ret = self._unpack(EX_READ_MAP_HEADER)
         if write_bytes is not None:
+            warnings.warn("`write_bytes` option is deprecated.  Use `.tell()` instead.", DeprecationWarning)
             write_bytes(self._buffer[self._buf_checkpoint:self._buff_i])
         self._consume()
         return ret
@@ -652,18 +682,18 @@ class Packer(object):
     :param callable default:
         Convert user type to builtin type that Packer supports.
         See also simplejson's document.
-    :param str encoding:
-        Convert unicode to bytes with this encoding. (default: 'utf-8')
-    :param str unicode_errors:
-        Error handler for encoding unicode. (default: 'strict')
+
     :param bool use_single_float:
         Use single precision float type for float. (default: False)
+
     :param bool autoreset:
         Reset buffer after each pack and return its content as `bytes`. (default: True).
         If set this to false, use `bytes()` to get content and `.reset()` to clear buffer.
+
     :param bool use_bin_type:
         Use bin type introduced in msgpack spec 2.0 for bytes.
         It also enables str8 type for unicode.
+
     :param bool strict_types:
         If set to true, types will be checked to be exact. Derived classes
         from serializeable types will not be serialized and will be
@@ -671,10 +701,26 @@ class Packer(object):
         Additionally tuples will not be serialized as lists.
         This is useful when trying to implement accurate serialization
         for python types.
+
+    :param str encoding:
+        (deprecated) Convert unicode to bytes with this encoding. (default: 'utf-8')
+
+    :param str unicode_errors:
+        Error handler for encoding unicode. (default: 'strict')
     """
-    def __init__(self, default=None, encoding='utf-8', unicode_errors='strict',
+    def __init__(self, default=None, encoding=None, unicode_errors=None,
                  use_single_float=False, autoreset=True, use_bin_type=False,
                  strict_types=False):
+        if encoding is None:
+            encoding = 'utf_8'
+        else:
+            warnings.warn(
+                "encoding is deprecated, Use raw=False instead.",
+                PendingDeprecationWarning)
+
+        if unicode_errors is None:
+            unicode_errors = 'strict'
+
         self._strict_types = strict_types
         self._use_float = use_single_float
         self._autoreset = autoreset
@@ -795,10 +841,14 @@ class Packer(object):
                 obj = self._default(obj)
                 default_used = 1
                 continue
-            raise TypeError("Cannot serialize %r" % obj)
+            raise TypeError("Cannot serialize %r" % (obj, ))
 
     def pack(self, obj):
-        self._pack(obj)
+        try:
+            self._pack(obj)
+        except:
+            self._buffer = StringIO()  # force reset
+            raise
         ret = self._buffer.getvalue()
         if self._autoreset:
             self._buffer = StringIO()
