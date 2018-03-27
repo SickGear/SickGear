@@ -12,6 +12,7 @@
 * Update moment.js 2.17.1 to 2.21.0
 * Update profilehooks 1.9.0 (de7d59b) to 1.10.0 (0ce1e29)
 * Update Certifi 2017.07.27 (f808089) to 2018.01.18 (e225253)
+* Update PySocks 1.6.5 (b4323df) to 1.6.8 (524ceb4)
 
 [develop changelog]
 
