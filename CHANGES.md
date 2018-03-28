@@ -1,4 +1,9 @@
-﻿### 0.15.2 (2018-03-28 01:45:00 UTC)
+﻿### 0.15.3 (2018-03-28 16:55:00 UTC)
+
+* Fix clicking next and previous show buttons on macOS Safari
+
+
+### 0.15.2 (2018-03-28 01:45:00 UTC)
 
 * Fix search for wanted when adding new show
 
