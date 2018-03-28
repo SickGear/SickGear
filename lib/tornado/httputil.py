@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # Copyright 2009 Facebook
 #
@@ -61,7 +60,7 @@ except ImportError:
     SSLError = _SSLError  # type: ignore
 
 try:
-    import typing
+    import typing  # noqa: F401
 except ImportError:
     pass
 
@@ -184,11 +183,16 @@ class HTTPHeaders(collections.MutableMapping):
         """
         if line[0].isspace():
             # continuation of a multi-line header
+            if self._last_key is None:
+                raise HTTPInputError("first header line cannot start with whitespace")
             new_part = ' ' + line.lstrip()
             self._as_list[self._last_key][-1] += new_part
             self._dict[self._last_key] += new_part
         else:
-            name, value = line.split(":", 1)
+            try:
+                name, value = line.split(":", 1)
+            except ValueError:
+                raise HTTPInputError("no colon in header line")
             self.add(name, value.strip())
 
     @classmethod
@@ -198,6 +202,12 @@ class HTTPHeaders(collections.MutableMapping):
         >>> h = HTTPHeaders.parse("Content-Type: text/html\\r\\nContent-Length: 42\\r\\n")
         >>> sorted(h.items())
         [('Content-Length', '42'), ('Content-Type', 'text/html')]
+
+        .. versionchanged:: 5.1
+
+           Raises `HTTPInputError` on malformed headers instead of a
+           mix of `KeyError`, and `ValueError`.
+
         """
         h = cls()
         for line in _CRLF_RE.split(headers):
@@ -467,8 +477,7 @@ class HTTPServerRequest(object):
     def __repr__(self):
         attrs = ("protocol", "host", "method", "uri", "version", "remote_ip")
         args = ", ".join(["%s=%r" % (n, getattr(self, n)) for n in attrs])
-        return "%s(%s, headers=%s)" % (
-            self.__class__.__name__, args, dict(self.headers))
+        return "%s(%s)" % (self.__class__.__name__, args)
 
 
 class HTTPInputError(Exception):
@@ -829,6 +838,8 @@ def parse_request_start_line(line):
     try:
         method, path, version = line.split(" ")
     except ValueError:
+        # https://tools.ietf.org/html/rfc7230#section-3.1.1
+        # invalid request-line SHOULD respond with a 400 (Bad Request)
         raise HTTPInputError("Malformed HTTP request line")
     if not re.match(r"^HTTP/1\.[0-9]$", version):
         raise HTTPInputError(
@@ -938,6 +949,16 @@ def split_host_and_port(netloc):
         host = netloc
         port = None
     return (host, port)
+
+
+def qs_to_qsl(qs):
+    """Generator converting a result of ``parse_qs`` back to name-value pairs.
+
+    .. versionadded:: 5.0
+    """
+    for k, vs in qs.items():
+        for v in vs:
+            yield (k, v)
 
 
 _OctalPatt = re.compile(r"\\[0-3][0-7][0-7]")

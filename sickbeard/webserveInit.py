@@ -13,12 +13,12 @@ from tornado.ioloop import IOLoop
 
 
 class WebServer(threading.Thread):
-    def __init__(self, options={}, io_loop=None):
+    def __init__(self, options={}, **kwargs):
         threading.Thread.__init__(self)
         self.daemon = True
         self.alive = True
         self.name = 'TORNADO'
-        self.io_loop = io_loop or IOLoop.current()
+        self.io_loop = None
         self.server = None
 
         self.options = options
@@ -55,7 +55,7 @@ class WebServer(threading.Thread):
 
         # Load the app
         self.app = Application([],
-                               debug=True,
+                               debug=False,
                                autoreload=False,
                                gzip=True,
                                cookie_secret=sickbeard.COOKIE_SECRET,
@@ -144,6 +144,8 @@ class WebServer(threading.Thread):
                 logger.ERROR)
             return
 
+        self.io_loop = IOLoop.current()
+
         try:
             self.io_loop.start()
             self.io_loop.close(True)
@@ -153,4 +155,5 @@ class WebServer(threading.Thread):
 
     def shutDown(self):
         self.alive = False
-        self.io_loop.stop()
+        if None is not self.io_loop:
+            self.io_loop.stop()

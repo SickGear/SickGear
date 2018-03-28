@@ -18,6 +18,7 @@
 * Update scandir 1.3 to 1.6 (c3592ee)
 * Update SimpleJSON library 3.10.0 (c52efea) to 3.13.2 (6ffddbe)
 * Update Six compatibility library 1.10.0 (r433) to 1.11.0 (68112f3)
+* Update Tornado Web Server 4.5.1 (79b2683) to 5.0.1 (35a538f)
 
 [develop changelog]
 
