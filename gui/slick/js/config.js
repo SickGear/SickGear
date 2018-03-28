@@ -321,7 +321,7 @@ function fetch_branches() {
 					add_option_to_branches(text);
 				});
 				$('#branchCheckout').removeAttr('disabled');
-				$('#branchVersion').find('option[value="' + data['current'] + '"]').attr('selected', 'selected');
+				$('#branchVersion').find('option[value="' + data['current'] + '"]').prop('selected', !0);
 			} else {
 				add_option_to_branches('No branches available');
 			}

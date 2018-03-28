@@ -444,7 +444,7 @@ $(document).ready(function () {
 		});
 
 		if (cur_most_provider != '' && first) {
-			$('#metadataType option[value=' + cur_most_provider + ']').attr('selected', 'selected');
+			$('#metadataType option[value=' + cur_most_provider + ']').prop('selected', !0);
 			$(this).showHideMetadata();
 		}
 
