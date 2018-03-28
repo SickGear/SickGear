@@ -460,15 +460,6 @@ class QueueItemAdd(ShowQueueItem):
         items_wanted = get_wanted(my_db, self.default_wanted_begin, latest=False)
         items_wanted += get_wanted(my_db, self.default_wanted_latest, latest=True)
 
-        msg = ' the specified show into ' + self.showDir
-        # if started with WANTED eps then run the backlog
-        if WANTED == self.default_status or items_wanted:
-            logger.log('Launching backlog for this show since episodes are WANTED')
-            sickbeard.backlogSearchScheduler.action.search_backlog([self.show])  #@UndefinedVariable
-            ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
-        else:
-            ui.notifications.message('Show added', 'Adding' + msg)
-
         self.show.writeMetadata()
         self.show.updateMetadata()
         self.show.populateCache()
@@ -494,6 +485,17 @@ class QueueItemAdd(ShowQueueItem):
 
         # update internal name cache
         name_cache.buildNameCache(self.show)
+
+        self.show.loadEpisodesFromDB()
+
+        msg = ' the specified show into ' + self.showDir
+        # if started with WANTED eps then run the backlog
+        if WANTED == self.default_status or items_wanted:
+            logger.log('Launching backlog for this show since episodes are WANTED')
+            sickbeard.backlogSearchScheduler.action.search_backlog([self.show])  #@UndefinedVariable
+            ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
+        else:
+            ui.notifications.message('Show added', 'Adding' + msg)
 
         self.finish()
 

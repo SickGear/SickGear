@@ -1,4 +1,9 @@
-﻿### 0.15.1 (2018-03-23 22:30:00 UTC)
+﻿### 0.15.2 (2018-03-28 01:45:00 UTC)
+
+* Fix search for wanted when adding new show
+
+
+### 0.15.1 (2018-03-23 22:30:00 UTC)
 
 * Fix overwriting repack where renamed filename has '-' in title
 * Fix Growl display correct message on test notification success + change notification icon
