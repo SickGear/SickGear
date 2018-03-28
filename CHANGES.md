@@ -1,5 +1,6 @@
 ﻿### 0.16.0 (2018-xx-xx xx:xx:xx UTC)
 
+* Change hachoir targa and mpeg_ts mime parser tags so they validate
 * Update backports/ssl_match_hostname 3.5.0.1 (r18) to 3.7.0.1 (r28)
 * Update cachecontrol library 0.12.3 (db54c40) to 0.12.4 (bd94f7e)
 * Update chardet packages 3.0.4 (9b8c5c2) to 4.0.0 (b3d867a)
