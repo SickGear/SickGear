@@ -45,7 +45,7 @@ class TargaFile(Parser):
         "id": "targa",
         "category": "image",
         "file_ext": ("tga",),
-        "mime": ("image/targa", "image/tga", "image/x-tga"),
+        "mime": (u"image/targa", u"image/tga", u"image/x-tga"),
         "min_size": 18 * 8,
         "description": "Truevision Targa Graphic (TGA)"
     }
