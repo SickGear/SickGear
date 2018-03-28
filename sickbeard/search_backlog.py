@@ -145,7 +145,7 @@ class BacklogSearcher:
 
     def search_backlog(self, which_shows=None, force_type=NORMAL_BACKLOG, force=False):
 
-        if self.amActive:
+        if self.amActive and not which_shows:
             logger.log(u'Backlog is still running, not starting it again', logger.DEBUG)
             return
 
@@ -185,8 +185,8 @@ class BacklogSearcher:
         if standard_backlog and not any_torrent_enabled and sickbeard.BACKLOG_NOFULL:
             logger.log(u'Skipping automated full backlog search because it is disabled in search settings')
 
+        my_db = db.DBConnection('cache.db')
         if standard_backlog and not any_torrent_enabled and not sickbeard.BACKLOG_NOFULL:
-            my_db = db.DBConnection('cache.db')
             sql_result = my_db.select('SELECT * FROM backlogparts WHERE part in (SELECT MIN(part) FROM backlogparts)')
             if sql_result:
                 sl = []
