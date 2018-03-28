@@ -20,7 +20,7 @@ $(document).ready(function() {
 		//noinspection JSUnresolvedVariable
 		select$.find('option[value="' + config.TVShowList[('nextShow' === $(this).attr('id')
 			? (index < config.TVShowList.length - 1 ? index + 1 : 0)
-			: (0 < index ? index - 1 : config.TVShowList.length - 1))] + '"]').attr('selected', 'selected');
+			: (0 < index ? index - 1 : config.TVShowList.length - 1))] + '"]').prop('selected', !0);
 		select$.change();
 		return !1;
 	});
