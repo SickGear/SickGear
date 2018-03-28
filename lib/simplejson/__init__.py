@@ -77,7 +77,8 @@ Specializing JSON object encoding::
     >>> def encode_complex(obj):
     ...     if isinstance(obj, complex):
     ...         return [obj.real, obj.imag]
-    ...     raise TypeError(repr(o) + " is not JSON serializable")
+    ...     raise TypeError('Object of type %s is not JSON serializable' %
+    ...                     obj.__class__.__name__)
     ...
     >>> json.dumps(2 + 1j, default=encode_complex)
     '[2.0, 1.0]'
@@ -97,20 +98,21 @@ Using simplejson.tool from the shell to validate and pretty-print::
     Expecting property name: line 1 column 3 (char 2)
 """
 from __future__ import absolute_import
-__version__ = '3.10.0'
+__version__ = '3.13.2'
 __all__ = [
     'dump', 'dumps', 'load', 'loads',
     'JSONDecoder', 'JSONDecodeError', 'JSONEncoder',
-    'OrderedDict', 'simple_first',
+    'OrderedDict', 'simple_first', 'RawJSON'
 ]
 
 __author__ = 'Bob Ippolito <bob@redivi.com>'
 
 from decimal import Decimal
 
-from .scanner import JSONDecodeError
+from .errors import JSONDecodeError
+from .raw_json import RawJSON
 from .decoder import JSONDecoder
-from .encoder import JSONEncoder, JSONEncoderForHTML, RawJSON
+from .encoder import JSONEncoder, JSONEncoderForHTML
 def _import_OrderedDict():
     import collections
     try:

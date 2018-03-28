@@ -16,6 +16,7 @@
 * Update rarfile 3.0 (3e54b22) to 3.0 (2704344)
 * Update Requests library 2.13.0 (fc54869) to 2.15.1 (282b01a)
 * Update scandir 1.3 to 1.6 (c3592ee)
+* Update SimpleJSON library 3.10.0 (c52efea) to 3.13.2 (6ffddbe)
 
 [develop changelog]
 
