@@ -32,7 +32,7 @@ except NameError:  # pragma no cover
     _unicode = str
 
 __author__ = 'Martin Blech'
-__version__ = '0.10.2'
+__version__ = '0.11.0'
 __license__ = 'MIT'
 
 
@@ -188,7 +188,7 @@ class _DictSAXHandler(object):
 
 
 def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
-          namespace_separator=':', **kwargs):
+          namespace_separator=':', disable_entities=True, **kwargs):
     """Parse the given XML input and convert it into a dictionary.
 
     `xml_input` can either be a `string` or a file-like object.
@@ -313,9 +313,20 @@ def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
     parser.EndElementHandler = handler.endElement
     parser.CharacterDataHandler = handler.characters
     parser.buffer_text = True
-    try:
+    if disable_entities:
+        try:
+            # Attempt to disable DTD in Jython's expat parser (Xerces-J).
+            feature = "http://apache.org/xml/features/disallow-doctype-decl"
+            parser._reader.setFeature(feature, True)
+        except AttributeError:
+            # For CPython / expat parser.
+            # Anything not handled ends up here and entities aren't expanded.
+            parser.DefaultHandler = lambda x: None
+            # Expects an integer return; zero means failure -> expat.ExpatError.
+            parser.ExternalEntityRefHandler = lambda *x: 1
+    if hasattr(xml_input, 'read'):
         parser.ParseFile(xml_input)
-    except (TypeError, AttributeError):
+    else:
         parser.Parse(xml_input, True)
     return handler.item
 
@@ -361,6 +372,11 @@ def _emit(key, value, content_handler,
             raise ValueError('document with multiple roots')
         if v is None:
             v = OrderedDict()
+        elif isinstance(v, bool):
+            if v:
+                v = _unicode('true')
+            else:
+                v = _unicode('false')
         elif not isinstance(v, dict):
             v = _unicode(v)
         if isinstance(v, _basestring):

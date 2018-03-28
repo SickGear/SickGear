@@ -21,6 +21,7 @@
 * Update Tornado Web Server 4.5.1 (79b2683) to 5.0.1 (35a538f)
 * Update unidecode library 0.04.21 (e99b0e3) to 1.0.22 (81f938d)
 * Update webencodings 0.5 (3970651) to 0.5.1 (fa2cb5d)
+* Update xmltodict library 0.10.2 (375d3a6) to 0.11.0 (79ac9a4)
 
 [develop changelog]
 
