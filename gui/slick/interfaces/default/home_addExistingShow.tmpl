@@ -38,6 +38,7 @@ var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 
 <h3>Existing show folders</h3>
 <form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
+	$xsrf_form_html
 
 	<span#if $kwargs.get('hash_dir', None)# class="hide"#end if#>
 		<p>Tip: shows are added quicker when usable show nfo and xml metadata is found</p>
