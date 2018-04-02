@@ -1,5 +1,10 @@
 ﻿### 0.16.0 (2018-xx-xx xx:xx:xx UTC)
 
+* Change improve security with cross-site request forgery (xsrf) protection on web forms
+* Change improve security by sending header flags httponly and secure with cookies
+* Change improve security with DNS rebinding prevention, set "Allowed browser hostnames" at config/General/Web Interface
+* Change improve test for creating self-signed SSL cert
+* Change force restart when switching SSL on/off
 * Change hachoir targa and mpeg_ts mime parser tags so they validate
 * Update backports/ssl_match_hostname 3.5.0.1 (r18) to 3.7.0.1 (r28)
 * Update cachecontrol library 0.12.3 (db54c40) to 0.12.4 (bd94f7e)

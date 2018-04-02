@@ -266,8 +266,10 @@ $(document).ready(function () {
 });
 
 function config_success(response) {
-	if (response == 'reload') {
+	if ('reload' == response) {
 		window.location.reload(true);
+	} else if ('restart' == response) {
+		window.location.href = sbRoot + $('a.restart').attr('href')
 	}
 	$('.config_submitter').each(function () {
 		$(this).removeAttr('disabled');

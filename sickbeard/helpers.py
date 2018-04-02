@@ -639,10 +639,9 @@ def create_https_certificates(ssl_cert, ssl_key):
     Create self-signed HTTPS certificares and store in paths 'ssl_cert' and 'ssl_key'
     """
     try:
-        from OpenSSL import crypto  # @UnresolvedImport
-        from lib.certgen import createKeyPair, createCertRequest, createCertificate, TYPE_RSA, \
-            serial  # @UnresolvedImport
-    except Exception as e:
+        from OpenSSL import crypto
+        from lib.certgen import createKeyPair, createCertRequest, createCertificate, TYPE_RSA,  serial
+    except (StandardError, Exception):
         logger.log(u"pyopenssl module missing, please install for https access", logger.WARNING)
         return False
 
@@ -651,16 +650,17 @@ def create_https_certificates(ssl_cert, ssl_key):
     careq = createCertRequest(cakey, CN='Certificate Authority')
     cacert = createCertificate(careq, (careq, cakey), serial, (0, 60 * 60 * 24 * 365 * 10))  # ten years
 
-    cname = 'SickGear'
     pkey = createKeyPair(TYPE_RSA, 4096)
-    req = createCertRequest(pkey, CN=cname)
+    req = createCertRequest(pkey, CN='SickGear')
     cert = createCertificate(req, (cacert, cakey), serial, (0, 60 * 60 * 24 * 365 * 10))  # ten years
 
     # Save the key and certificate to disk
     try:
-        open(ssl_key, 'w').write(crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey))
-        open(ssl_cert, 'w').write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
-    except:
+        with open(ssl_key, 'w') as file_hd:
+            file_hd.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey))
+        with open(ssl_cert, 'w') as file_hd:
+            file_hd.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+    except (StandardError, Exception):
         logger.log(u"Error creating SSL key and certificate", logger.ERROR)
         return False
 
@@ -1348,6 +1348,64 @@ def remove_article(text=''):
 
 def maybe_plural(number=1):
     return ('s', '')[1 == number]
+
+
+def re_valid_hostname(with_allowed=True):
+    return re.compile(r'(?i)(%slocalhost|.*\.local|%s|%s)$' % (
+        '%s|' % (with_allowed
+                 and (sickbeard.ALLOWED_HOSTS and re.escape(sickbeard.ALLOWED_HOSTS).replace(',', '|') or '.*')
+                 or ''), socket.gethostname() or 'localhost', valid_ipaddr_expr()))
+
+
+def valid_ipaddr_expr():
+    """
+    Returns a regular expression that will validate an ip address
+    :return: Regular expression
+    :rtype: String
+    """
+    return r'(%s)' % '|'.join([re.sub('\s+(#.[^\r\n]+)?', '', x) for x in [
+        # IPv4 address (accurate)
+        #  Matches 0.0.0.0 through 255.255.255.255
+        '''
+        (?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])
+        '''
+        ,
+        # IPv6 address (standard and mixed)
+        #  8 hexadecimal words, or 6 hexadecimal words followed by 4 decimal bytes All with optional leading zeros
+        '''
+        (?:(?<![:.\w])\[?                                            # Anchor address
+        (?:[A-F0-9]{1,4}:){6}                                        #    6 words
+        (?:[A-F0-9]{1,4}:[A-F0-9]{1,4}                               #    2 words
+        |  (?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}  #    or 4 bytes
+           (?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])
+        )(?![:.\w]))                                                 # Anchor address
+        '''
+        ,
+        # IPv6 address (compressed and compressed mixed)
+        #  8 hexadecimal words, or 6 hexadecimal words followed by 4 decimal bytes
+        #  All with optional leading zeros.  Consecutive zeros may be replaced with ::
+        '''
+        (?:(?<![:.\w])\[?(?:                                       # Anchor address
+         (?:  # Mixed
+          (?:[A-F0-9]{1,4}:){6}                                    # Non-compressed
+         |(?=(?:[A-F0-9]{0,4}:){2,6}                               # Compressed with 2 to 6 colons
+             (?:[0-9]{1,3}\.){3}[0-9]{1,3}                         #    and 4 bytes
+             (?![:.\w]))                                           #    and anchored
+          (([0-9A-F]{1,4}:){1,5}|:)((:[0-9A-F]{1,4}){1,5}:|:)      #    and at most 1 double colon
+         |::(?:[A-F0-9]{1,4}:){5}                                  # Compressed with 7 colons and 5 numbers
+         )
+         (?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}  # 255.255.255.
+         (?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])           # 255
+        |     # Standard
+         (?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}                        # Standard
+        |     # Compressed
+         (?=(?:[A-F0-9]{0,4}:){0,7}[A-F0-9]{0,4}                   # Compressed with at most 7 colons
+            (?![:.\w]))                                            #    and anchored
+         (([0-9A-F]{1,4}:){1,7}|:)((:[0-9A-F]{1,4}){1,7}|:)        #    and at most 1 double colon
+        |(?:[A-F0-9]{1,4}:){7}:|:(:[A-F0-9]{1,4}){7}               # Compressed with 8 colons
+        )(?![:.\w]))                                               # Anchor address
+        '''
+    ]])
 
 
 def build_dict(seq, key):

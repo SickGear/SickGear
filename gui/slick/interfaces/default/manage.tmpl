@@ -83,6 +83,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 	<h1 class="title">$title</h1>
 #end if
 <form name="bulkChangeForm" method="post" action="bulkChange">
+$xsrf_form_html
 
 <table id="bulkChangeTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
 	<thead>
