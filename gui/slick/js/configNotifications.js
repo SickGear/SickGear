@@ -827,6 +827,7 @@ $(document).ready(function(){
 				return
 			}
 			$.post(sbRoot + '/home/save_show_email', {
+				_xsrf: Cookies.get('_xsrf'),
 				show: show,
 				emails: $('#show-email-list').val()},
 				function (data){

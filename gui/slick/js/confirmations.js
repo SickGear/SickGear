@@ -130,6 +130,7 @@ $(document).ready(function () {
 						$.SickGear.history.lastDeleteRecords = deleteRecords ? checked : '';
 						$.post($.SickGear.Root + '/history/watched',
 							{
+								_xsrf: Cookies.get('_xsrf'),
 								tvew_id: delArr.join('|'),
 								files: (deleteFiles ? '1' : ''),
 								records: (deleteRecords ? '1' : '')
