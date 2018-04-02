@@ -250,7 +250,7 @@ def makeTorrentRssProvider(configString):
 
 
 def getDefaultNewznabProviders():
-    return '!!!'.join(['Sick Beard Index|http://lolo.sickbeard.com/|0|5030,5040|0|eponly|0|0|0',
+    return '!!!'.join(['Sick Beard Index|https://lolo.sickbeard.com/|0|5030,5040|0|eponly|0|0|0',
                        'NZBgeek|https://api.nzbgeek.info/||5030,5040|0|eponly|0|0|0',
                        'NZBs.org|https://nzbs.org/||5030,5040|0|eponly|0|0|0',
                        'DrunkenSlug|https://api.drunkenslug.com/||5030,5040|0|eponly|0|0|0',

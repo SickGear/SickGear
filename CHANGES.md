@@ -30,6 +30,7 @@
 * Update xmltodict library 0.10.2 (375d3a6) to 0.11.0 (79ac9a4)
 
 [develop changelog]
+* Change pick up the stragglers late to the more security party
 
 
 ### 0.15.3 (2018-03-28 16:55:00 UTC)
