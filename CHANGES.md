@@ -31,6 +31,7 @@
 
 [develop changelog]
 * Change pick up the stragglers late to the more security party
+* Change remove redundant xsrf handling for POSTs that don't use web and API
 
 
 ### 0.15.4 (2018-04-03 16:10:00 UTC)

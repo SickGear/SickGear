@@ -143,6 +143,7 @@ class WebServer(threading.Thread):
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
             (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
             (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
+            (r'%s(/?update_watched_state_kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
             (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
 
