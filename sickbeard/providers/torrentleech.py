@@ -29,7 +29,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorrentLeech', cache_update_freq=20)
 
-        self.url_base = 'https://torrentleech.org/'
+        self.url_base = 'https://v4.torrentleech.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base,
                      'browse': self.url_base + 'torrents/browse/index/categories/%(cats)s',
