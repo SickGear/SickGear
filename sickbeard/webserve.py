@@ -91,7 +91,7 @@ class PageTemplate(Template):
     def __init__(self, web_handler, *args, **kwargs):
 
         headers = web_handler.request.headers
-        self.xsrf_form_html = '<input name="_xsrf" type="hidden" value="%s">' % web_handler.xsrf_token
+        self.xsrf_form_html = re.sub('\s*/>$', '>', web_handler.xsrf_form_html())
         self.sbHost = headers.get('X-Forwarded-Host')
         if None is self.sbHost:
             sbHost = headers.get('Host') or 'localhost'
@@ -545,6 +545,66 @@ class RepoHandler(BaseStaticFileHandler):
         return zip_data
 
 
+class NoXSRFHandler(RequestHandler):
+    def __init__(self, *arg, **kwargs):
+
+        super(NoXSRFHandler, self).__init__(*arg, **kwargs)
+        self.lock = threading.Lock()
+
+    def check_xsrf_cookie(self):
+        pass
+
+    @gen.coroutine
+    def post(self, route, *args, **kwargs):
+        route = route.strip('/')
+        try:
+            method = getattr(self, route)
+        except (StandardError, Exception):
+            self.finish()
+        else:
+            kwargss = {k: v if not (isinstance(v, list) and 1 == len(v)) else v[0]
+                       for k, v in self.request.arguments.iteritems()}
+            result = method(**kwargss)
+            if result:
+                self.finish(result)
+
+    @staticmethod
+    def update_watched_state_kodi(payload=None, as_json=True):
+        data = {}
+        try:
+            data = json.loads(payload)
+        except (StandardError, Exception):
+            pass
+
+        mapped = 0
+        mapping = None
+        maps = [x.split('=') for x in sickbeard.KODI_PARENT_MAPS.split(',') if any(x)]
+        for k, d in data.iteritems():
+            try:
+                d['label'] = '%s%s{Kodi}' % (d['label'], bool(d['label']) and ' ' or '')
+            except (StandardError, Exception):
+                return
+            try:
+                d['played'] = 100 * int(d['played'])
+            except (StandardError, Exception):
+                d['played'] = 0
+
+            for m in maps:
+                result, change = helpers.path_mapper(m[0], m[1], d['path_file'])
+                if change:
+                    if not mapping:
+                        mapping = (states[idx]['path_file'], result)
+                    mapped += 1
+                    states[idx]['path_file'] = result
+                    break
+
+        if mapping:
+            logger.log('Folder mappings used, the first of %s is [%s] in Kodi is [%s] in SickGear' %
+                       (mapped, mapping[0], mapping[1]))
+
+        return MainHandler.update_watched_state(data, as_json)
+
+
 class IsAliveHandler(BaseHandler):
     def get(self, *args, **kwargs):
         kwargs = self.request.arguments
@@ -870,38 +930,6 @@ class MainHandler(WebHandler):
 
         sickbeard.save_config()
 
-    def update_watched_state_kodi(self, payload=None, as_json=True):
-
-        data = {}
-        try:
-            data = json.loads(payload)
-        except (StandardError, Exception):
-            pass
-
-        mapped = 0
-        mapping = None
-        maps = [x.split('=') for x in sickbeard.KODI_PARENT_MAPS.split(',') if any(x)]
-        for k, d in data.iteritems():
-            d['label'] = '%s%s{Kodi}' % (d['label'], bool(d['label']) and ' ' or '')
-            try:
-                d['played'] = 100 * int(d['played'])
-            except (StandardError, Exception):
-                d['played'] = 0
-
-            for m in maps:
-                result, change = helpers.path_mapper(m[0], m[1], d['path_file'])
-                if change:
-                    if not mapping:
-                        mapping = (states[idx]['path_file'], result)
-                    mapped += 1
-                    states[idx]['path_file'] = result
-                    break
-
-        if mapping:
-            logger.log('Folder mappings used, the first of %s is [%s] in Kodi is [%s] in SickGear' %
-                       (mapped, mapping[0], mapping[1]))
-
-        return self.update_watched_state(data, as_json)
 
     @staticmethod
     def getFooterTime(change_layout=True, json_dump=True, *args, **kwargs):
