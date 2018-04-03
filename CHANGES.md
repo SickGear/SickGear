@@ -1,4 +1,9 @@
-﻿### 0.15.3 (2018-03-28 16:55:00 UTC)
+﻿### 0.15.4 (2018-04-03 16:10:00 UTC)
+
+* Fix Torrentleech provider
+
+
+### 0.15.3 (2018-03-28 16:55:00 UTC)
 
 * Fix clicking next and previous show buttons on macOS Safari
 
