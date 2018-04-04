@@ -181,7 +181,12 @@ def main():
     
     try:
         sess = requests.Session()
-        sess.post(login_url, data={'username': username, 'password': password}, stream=True, verify=False)
+        if username or password:
+            r = sess.get(login_url, verify=False)
+            login_params = {'username': username, 'password': password}
+            if 401 == r.status_code and r.cookies.get('_xsrf'):
+                login_params['_xsrf'] = r.cookies.get('_xsrf')
+            sess.post(login_url, data=login_params, stream=True, verify=False)
         response = sess.get(url, auth=(username, password), params=params, verify=False,  allow_redirects=False)
     except Exception as e:
         scriptlogger.error(u': Unknown exception raised when opening url: ' + str(e))

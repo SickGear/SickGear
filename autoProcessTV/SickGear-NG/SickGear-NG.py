@@ -156,7 +156,7 @@ import os
 import re
 import sys
 
-__version__ = '1.3'
+__version__ = '1.4'
 
 verbose = 0 or 'yes' == os.environ.get('NZBPO_SG_VERBOSE', 'no')
 
@@ -485,7 +485,7 @@ def call_sickgear(nzb_name, dir_name, test=False):
         s = requests.Session()
         if username or password:
             login = '%s%s:%s%s/login' % (protocol, host, port, webroot)
-            r = s.get(login)
+            r = s.get(login, verify=False)
             login_params = {'username': username, 'password': password}
             if 401 == r.status_code and r.cookies.get('_xsrf'):
                 login_params['_xsrf'] = r.cookies.get('_xsrf')
