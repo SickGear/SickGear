@@ -133,7 +133,7 @@ def processEpisode(dir_to_process, org_NZB_name=None, status=None):
     try:
         sess = requests.Session()
         if username or password:
-            r = sess.get(login_url)
+            r = sess.get(login_url, verify=False)
             login_params = {'username': username, 'password': password}
             if 401 == r.status_code and r.cookies.get('_xsrf'):
                 login_params['_xsrf'] = r.cookies.get('_xsrf')
