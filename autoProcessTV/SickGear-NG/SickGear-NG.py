@@ -485,7 +485,10 @@ def call_sickgear(nzb_name, dir_name, test=False):
         s = requests.Session()
         if username or password:
             login = '%s%s:%s%s/login' % (protocol, host, port, webroot)
+            r = s.get(login)
             login_params = {'username': username, 'password': password}
+            if 401 == r.status_code and r.cookies.get('_xsrf'):
+                login_params['_xsrf'] = r.cookies.get('_xsrf')
             s.post(login, data=login_params, stream=True, verify=False)
         r = s.get(url, auth=(username, password), params=params, stream=True, verify=False, timeout=900)
     except (StandardError, Exception):

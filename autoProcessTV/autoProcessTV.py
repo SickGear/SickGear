@@ -132,7 +132,12 @@ def processEpisode(dir_to_process, org_NZB_name=None, status=None):
 
     try:
         sess = requests.Session()
-        sess.post(login_url, data={'username': username, 'password': password}, stream=True, verify=False)
+        if username or password:
+            r = sess.get(login_url)
+            login_params = {'username': username, 'password': password}
+            if 401 == r.status_code and r.cookies.get('_xsrf'):
+                login_params['_xsrf'] = r.cookies.get('_xsrf')
+            sess.post(login_url, data=login_params, stream=True, verify=False)
         result = sess.get(url, params=params, stream=True, verify=False)
         if result.status_code == 401:
             print('Verify and use correct username and password in autoProcessTV.cfg')
