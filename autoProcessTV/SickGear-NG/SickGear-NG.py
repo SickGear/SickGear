@@ -63,7 +63,7 @@
 
 # Send PostProcessing requests to SickGear
 #
-# PostProcessing-Script version: 1.3.
+# PostProcessing-Script version: 1.5.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
@@ -155,10 +155,14 @@ import locale
 import os
 import re
 import sys
+import warnings
 
-__version__ = '1.4'
+__version__ = '1.5'
 
 verbose = 0 or 'yes' == os.environ.get('NZBPO_SG_VERBOSE', 'no')
+
+warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
+warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
 # NZBGet exit codes for post-processing scripts (Queue-scripts don't have any special exit codes).
 POSTPROCESS_SUCCESS, POSTPROCESS_ERROR, POSTPROCESS_NONE = 93, 94, 95

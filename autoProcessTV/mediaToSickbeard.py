@@ -5,11 +5,15 @@ import os
 import time
 import ConfigParser
 import logging
+import warnings
 
 sickbeardPath = os.path.split(os.path.split(sys.argv[0])[0])[0]
 sys.path.insert(1, os.path.join(sickbeardPath, 'lib'))
 sys.path.insert(1, sickbeardPath)
 configFilename = os.path.join(sickbeardPath, 'config.ini')
+
+warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
+warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
 try:
     import requests

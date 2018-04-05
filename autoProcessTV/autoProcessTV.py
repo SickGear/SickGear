@@ -23,10 +23,14 @@ from __future__ import with_statement
 
 import os.path
 import sys
+import warnings
 
 sickbeardPath = os.path.split(os.path.split(sys.argv[0])[0])[0]
 sys.path.insert(1, os.path.join(sickbeardPath, 'lib'))
 sys.path.insert(1, sickbeardPath)
+
+warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
+warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
 try:
     import requests
