@@ -34,6 +34,7 @@
 * Change pick up the stragglers late to the more security party
 * Change remove redundant xsrf handling for POSTs that don't use web and API
 * Change add xsrf protection support to media processing scripts
+* Change suppress output warnings from media process scripts
 
 
 ### 0.15.6 (2018-04-05 01:20:00 UTC)
