@@ -82,7 +82,7 @@ class CloudflareScraper(Session):
             raise
 
         # Safely evaluate the Javascript expression
-        params['jschl_answer'] = str(int(js2py.eval_js(js)) + len(domain))
+        params['jschl_answer'] = str(js2py.eval_js(js) + len(domain))
 
         # Requests transforms any request into a GET after a redirect,
         # so the redirect has to be handled manually here to allow for
@@ -96,8 +96,10 @@ class CloudflareScraper(Session):
     def extract_js(body):
         js = re.search(r'setTimeout\(function\(\){\s+(var '
                        's,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n', body).group(1)
-        js = re.sub(r'a\.value = (parseInt\(.+?\)).+', r'\1', js)
+        js = re.sub(r'a\.value\s=\s([+]?.+?)\s?\+\s?[^\.]+\.length.*', r'\1', js)
+        js = re.sub(r'a\.value\s=\s(parseInt\(.+?\)).+', r'\1', js)
         js = re.sub(r'\s{3,}[a-z](?: = |\.).+', '', js)
+        js = re.sub(r';\s+;', ';', js)
 
         # Strip characters that could be used to exit the string context
         # These characters are not currently used in Cloudflare's arithmetic snippet
