@@ -36,6 +36,11 @@
 * Change add xsrf protection support to media processing scripts
 
 
+### 0.15.6 (2018-04-05 01:20:00 UTC)
+
+* Fix cf algorythm
+
+
 ### 0.15.5 (2018-04-04 21:10:00 UTC)
 
 * Remove GFT torrent provider
