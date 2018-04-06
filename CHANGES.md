@@ -37,6 +37,12 @@
 * Change suppress output warnings from media process scripts
 
 
+### 0.15.7 (2018-04-06 13:30:00 UTC)
+
+* Change improve metadata handler during postprocessing when tvinfo source is down
+* Fix Torrentz2 filter spam
+
+
 ### 0.15.6 (2018-04-05 01:20:00 UTC)
 
 * Fix cf algorythm

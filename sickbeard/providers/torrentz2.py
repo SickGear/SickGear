@@ -90,7 +90,7 @@ class Torrentz2Provider(generic.TorrentProvider):
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 search_url = self.urls['search' + ('', 'v')[self.confirmed]] % (
-                    'tv%s' % ('+' + quote_plus(search_string), '')['Cache' == mode])
+                    quote_plus('%s -Torrent9 -nextorrent -XXX' % (search_string, 'x264')['Cache' == mode]))
 
                 html = self.get_url(search_url)
                 if self.should_skip():

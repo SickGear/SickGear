@@ -644,6 +644,8 @@ class Tvdb:
         try:
             src = self._load_url(url, params=params, language=language)
             return src
+        except tvdb_error:
+            raise sickbeard.indexer_error
         except (StandardError, Exception):
             return []
 
