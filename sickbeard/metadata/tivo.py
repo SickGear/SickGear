@@ -188,11 +188,16 @@ class TIVOMetadata(generic.GenericMetadata):
                 ep_obj.show.indexer).name + " while creating meta files - skipping - " + str(e), logger.ERROR)
             return False
 
+        if not myShow:
+            logger.log(u'Show %s not found on %s ' % (ep_obj.show.name, sickbeard.indexerApi(ep_obj.show.indexer).name),
+                       logger.WARNING)
+            return
+
         for curEpToWrite in eps_to_write:
 
             try:
                 myEp = myShow[curEpToWrite.season][curEpToWrite.episode]
-            except (sickbeard.indexer_episodenotfound, sickbeard.indexer_seasonnotfound):
+            except (StandardError, Exception):
                 logger.log(u"Unable to find episode " + str(curEpToWrite.season) + "x" + str(
                     curEpToWrite.episode) + " on " + sickbeard.indexerApi(
                     ep_obj.show.indexer).name + "... has it been removed? Should I delete from db?")

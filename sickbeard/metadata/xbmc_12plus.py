@@ -124,6 +124,11 @@ class XBMC_12PlusMetadata(generic.GenericMetadata):
                 logger.ERROR)
             raise
 
+        if not myShow:
+            logger.log(u'Show %s not found on %s ' % (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name),
+                       logger.WARNING)
+            return
+
         # check for title and id
         if getattr(myShow, 'seriesname', None) is None or getattr(myShow, 'id', None) is None:
             logger.log(u"Incomplete info for show with id " + str(show_ID) + " on " + sickbeard.indexerApi(
@@ -239,6 +244,11 @@ class XBMC_12PlusMetadata(generic.GenericMetadata):
         except sickbeard.indexer_error as e:
             logger.log(u"Unable to connect to " + sickbeard.indexerApi(
                 ep_obj.show.indexer).name + " while creating meta files - skipping - " + ex(e), logger.ERROR)
+            return
+
+        if not myShow:
+            logger.log(u'Show %s not found on %s ' % (ep_obj.show.name, sickbeard.indexerApi(ep_obj.show.indexer).name),
+                       logger.WARNING)
             return
 
         if len(eps_to_write) > 1:

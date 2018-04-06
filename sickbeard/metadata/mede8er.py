@@ -129,6 +129,11 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
             logger.log(u"TVDB is down, can't use its data to make the NFO", logger.ERROR)
             raise
 
+        if not myShow:
+            logger.log(u'Show %s not found on %s ' % (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name),
+                       logger.WARNING)
+            return
+
         # check for title and id
         try:
             if myShow['seriesname'] == None or myShow['seriesname'] == "" or myShow['id'] == None or myShow['id'] == "":
@@ -242,6 +247,11 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
             logger.log(u"Unable to connect to TVDB while creating meta files - skipping - " + ex(e), logger.ERROR)
             return False
 
+        if not myShow:
+            logger.log(u'Show %s not found on %s ' % (ep_obj.show.name, sickbeard.indexerApi(ep_obj.show.indexer).name),
+                       logger.WARNING)
+            return
+
         rootNode = etree.Element("details")
         movie = etree.SubElement(rootNode, "movie")
 
@@ -254,7 +264,7 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
 
             try:
                 myEp = myShow[curEpToWrite.season][curEpToWrite.episode]
-            except (sickbeard.indexer_episodenotfound, sickbeard.indexer_seasonnotfound):
+            except (StandardError, Exception):
                 logger.log(u"Unable to find episode " + str(curEpToWrite.season) + "x" + str(curEpToWrite.episode) + " on tvdb... has it been removed? Should I delete from db?")
                 return None
 
