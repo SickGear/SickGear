@@ -256,6 +256,11 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 logger.ERROR)
             raise
 
+        if not myShow:
+            logger.log(u'Show %s not found on %s ' % (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name),
+                       logger.WARNING)
+            return
+
         # check for title and id
         if getattr(myShow, 'seriesname', None) is None or getattr(myShow, 'id', None) is None:
             logger.log(u"Incomplete info for show with id " + str(show_obj.indexerid) + " on " + sickbeard.indexerApi(
@@ -416,6 +421,11 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 ep_obj.show.indexer).name + " while creating meta files - skipping - " + ex(e), logger.ERROR)
             return False
 
+        if not myShow:
+            logger.log(u'Show %s not found on %s ' % (ep_obj.show.name, sickbeard.indexerApi(ep_obj.show.indexer).name),
+                       logger.WARNING)
+            return
+
         rootNode = etree.Element("Item")
 
         # write an MediaBrowser XML containing info for all matching episodes
@@ -423,7 +433,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
             try:
                 myEp = myShow[curEpToWrite.season][curEpToWrite.episode]
-            except (sickbeard.indexer_episodenotfound, sickbeard.indexer_seasonnotfound):
+            except (StandardError, Exception):
                 logger.log(u"Unable to find episode " + str(curEpToWrite.season) + "x" + str(
                     curEpToWrite.episode) + " on " + sickbeard.indexerApi(
                     ep_obj.show.indexer).name + ".. has it been removed? Should I delete from db?")

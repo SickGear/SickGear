@@ -789,6 +789,11 @@ class GenericMetadata():
                 show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
             return None
 
+        if not indexer_show_obj:
+            logger.log(u'Show %s not found on %s ' %
+                       (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name), logger.WARNING)
+            return None
+
         return_links = False
         if 'fanart_all' == image_type:
             return_links = True
@@ -874,6 +879,11 @@ class GenericMetadata():
         except (sickbeard.indexer_error, IOError) as e:
             logger.log(u'Unable to look up show on ' + sickbeard.indexerApi(
                 show_obj.indexer).name + ', not downloading images: ' + ex(e), logger.ERROR)
+            return result
+
+        if not indexer_show_obj:
+            logger.log(u'Show %s not found on %s ' %
+                       (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name), logger.WARNING)
             return result
 
         season_images = getattr(indexer_show_obj, '_banners', {}).get(

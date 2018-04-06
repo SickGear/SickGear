@@ -1,4 +1,9 @@
-﻿### 0.15.7 (2018-04-06 13:30:00 UTC)
+﻿### 0.15.8 (2018-04-07 00:14:00 UTC)
+
+* Change improve tvinfo source meta handling for cases where server is either down, or no results are returned
+
+
+### 0.15.7 (2018-04-06 13:30:00 UTC)
 
 * Change improve metadata handler during postprocessing when tvinfo source is down
 * Fix Torrentz2 filter spam
