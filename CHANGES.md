@@ -1,4 +1,10 @@
-﻿### 0.15.8 (2018-04-07 00:14:00 UTC)
+﻿### 0.15.9 (2018-04-07 20:45:00 UTC)
+
+* Fix metadata show not found
+* Change when adding a show, display show title instead of '[]'
+
+
+### 0.15.8 (2018-04-07 00:14:00 UTC)
 
 * Change improve tvinfo source meta handling for cases where server is either down, or no results are returned
 
