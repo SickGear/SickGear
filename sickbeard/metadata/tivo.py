@@ -188,7 +188,7 @@ class TIVOMetadata(generic.GenericMetadata):
                 ep_obj.show.indexer).name + " while creating meta files - skipping - " + str(e), logger.ERROR)
             return False
 
-        if not myShow:
+        if not isinstance(myShow, dict) or None is getattr(myShow, 'seriesname', None):
             logger.log(u'Show %s not found on %s ' % (ep_obj.show.name, sickbeard.indexerApi(ep_obj.show.indexer).name),
                        logger.WARNING)
             return

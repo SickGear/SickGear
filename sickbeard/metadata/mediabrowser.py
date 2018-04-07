@@ -256,7 +256,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 logger.ERROR)
             raise
 
-        if not myShow:
+        if not isinstance(myShow, dict) or None is getattr(myShow, 'seriesname', None):
             logger.log(u'Show %s not found on %s ' % (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name),
                        logger.WARNING)
             return
@@ -421,7 +421,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 ep_obj.show.indexer).name + " while creating meta files - skipping - " + ex(e), logger.ERROR)
             return False
 
-        if not myShow:
+        if not isinstance(myShow, dict) or None is getattr(myShow, 'seriesname', None):
             logger.log(u'Show %s not found on %s ' % (ep_obj.show.name, sickbeard.indexerApi(ep_obj.show.indexer).name),
                        logger.WARNING)
             return

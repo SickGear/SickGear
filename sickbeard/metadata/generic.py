@@ -789,7 +789,7 @@ class GenericMetadata():
                 show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
             return None
 
-        if not indexer_show_obj:
+        if not isinstance(indexer_show_obj, dict) or None is getattr(indexer_show_obj, 'seriesname', None):
             logger.log(u'Show %s not found on %s ' %
                        (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name), logger.WARNING)
             return None
@@ -881,7 +881,7 @@ class GenericMetadata():
                 show_obj.indexer).name + ', not downloading images: ' + ex(e), logger.ERROR)
             return result
 
-        if not indexer_show_obj:
+        if not isinstance(indexer_show_obj, dict) or None is getattr(indexer_show_obj, 'seriesname', None):
             logger.log(u'Show %s not found on %s ' %
                        (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name), logger.WARNING)
             return result
