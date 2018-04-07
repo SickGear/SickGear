@@ -877,11 +877,17 @@ class TVShow(object):
         myDB = db.DBConnection()
         sqlResults = myDB.select('SELECT * FROM tv_shows WHERE indexer_id = ?', [self.indexerid])
 
-        if len(sqlResults) > 1:
-            logger.log('%s: Loading show info [%s] from database' % (self.indexerid, self.name))
-            raise exceptions.MultipleDBShowsException()
-        elif len(sqlResults) == 0:
-            logger.log('%s: Unable to find the show [%s] in the database' % (self.indexerid, self.name))
+        if 1 != len(sqlResults):
+            lINDEXER_API_PARMS = sickbeard.indexerApi(self.indexer).api_params.copy()
+            if self.lang:
+                lINDEXER_API_PARMS['language'] = self.lang
+            t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
+            cached_show = t[self.indexerid]
+            vals = (self.indexerid, '' if not cached_show else ' [%s]' % cached_show['seriesname'].strip())
+            if 0 != len(sqlResults):
+                logger.log('%s: Loading show info%s from database' % vals)
+                raise exceptions.MultipleDBShowsException()
+            logger.log('%s: Unable to find the show%s in the database' % vals)
             return
         else:
             if not self.indexer:
@@ -988,8 +994,6 @@ class TVShow(object):
 
     def loadFromIndexer(self, cache=True, tvapi=None, cachedSeason=None):
 
-        logger.log('%s: Loading show info [%s] from %s' % (self.indexerid, self.name, sickbeard.indexerApi(self.indexer).name))
-
         # There's gotta be a better way of doing this but we don't wanna
         # change the cache value elsewhere
         if tvapi is None:
@@ -1024,6 +1028,10 @@ class TVShow(object):
         except AttributeError:
             raise sickbeard.indexer_attributenotfound(
                 "Found %s, but attribute 'seriesname' was empty." % (self.indexerid))
+
+        if myEp:
+            logger.log('%s: Loading show info [%s] from %s' % (
+                self.indexerid, self.name, sickbeard.indexerApi(self.indexer).name))
 
         self.classification = dict_prevent_None(myEp, 'classification', 'Scripted')
         self.genre = dict_prevent_None(myEp, 'genre', '')

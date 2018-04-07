@@ -264,6 +264,24 @@ class GenericMetadata():
         """
         return None
 
+    @staticmethod
+    def _valid_show(fetched_show_obj, show_obj):
+        """
+        Test the integrity of fetched show data
+
+        :param fetched_show_obj: the object returned from the tvinfo source
+        :type fetched_show_obj: TVShow()
+        :param show_obj: Show that the fetched data relates to
+        :type show_obj: TVShow()
+        :return: True if fetched_show_obj is valid data otherwise False
+        :rtype: Boolean
+        """
+        if not fetched_show_obj:
+            logger.log(u'Show %s not found on %s ' %
+                       (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name), logger.WARNING)
+            return False
+        return True
+
     def _ep_data(self, ep_obj):
         """
         This should be overridden by the implementing class. It should
@@ -789,9 +807,7 @@ class GenericMetadata():
                 show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
             return None
 
-        if not indexer_show_obj:
-            logger.log(u'Show %s not found on %s ' %
-                       (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name), logger.WARNING)
+        if not self._valid_show(indexer_show_obj, show_obj):
             return None
 
         return_links = False
@@ -851,8 +867,7 @@ class GenericMetadata():
 
         return None
 
-    @staticmethod
-    def _season_image_dict(show_obj, season, image_type):
+    def _season_image_dict(self, show_obj, season, image_type):
         """
         image_type : Type of image to fetch, 'seasons' or 'seasonwides'
         image_type type : String
@@ -881,9 +896,7 @@ class GenericMetadata():
                 show_obj.indexer).name + ', not downloading images: ' + ex(e), logger.ERROR)
             return result
 
-        if not indexer_show_obj:
-            logger.log(u'Show %s not found on %s ' %
-                       (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name), logger.WARNING)
+        if not self._valid_show(indexer_show_obj, show_obj):
             return result
 
         season_images = getattr(indexer_show_obj, '_banners', {}).get(
