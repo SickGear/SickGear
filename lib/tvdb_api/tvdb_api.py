@@ -155,6 +155,9 @@ class Show(dict):
             # doesn't exist, so attribute error.
             raise tvdb_attributenotfound('Cannot find attribute %s' % (repr(key)))
 
+    def __nonzero__(self):
+        return any(self.data.keys())
+
     def aired_on(self, date):
         ret = self.search(str(date), 'firstaired')
         if 0 == len(ret):
@@ -643,9 +646,15 @@ class Tvdb:
         """
         try:
             src = self._load_url(url, params=params, language=language)
-            return src
-        except (StandardError, Exception):
-            return []
+            if isinstance(src, dict):
+                data = src['data'] or {}
+                if isinstance(data, list):
+                    data = data[0] or {}
+                if 1 > len(data.keys()):
+                    raise ValueError
+                return src
+        except (KeyError, IndexError, Exception):
+            pass
 
     def _set_item(self, sid, seas, ep, attrib, value):
         """Creates a new episode, creating Show(), Season() and
@@ -803,7 +812,7 @@ class Tvdb:
         url = self.config['url_episodeInfo'] % epid
         episode_data = self._getetsrc(url, language=self.config['language'])
 
-        if isinstance(episode_data, dict) and 'data' in episode_data:
+        if episode_data and 'data' in episode_data:
             data = episode_data['data']
             if isinstance(data, dict):
                 for k, v in data.iteritems():
@@ -830,7 +839,7 @@ class Tvdb:
         show_data = self._getetsrc(url, language=language)
 
         # check and make sure we have data to process and that it contains a series name
-        if not isinstance(show_data, dict) or 'data' not in show_data or not isinstance(show_data['data'], dict) or 'seriesname' not in show_data['data']:
+        if not (show_data and 'seriesname' in show_data.get('data', {}) or {}):
             return False
 
         for k, v in show_data['data'].iteritems():
@@ -839,7 +848,7 @@ class Tvdb:
         p = ''
         if self.config['posters_enabled']:
             poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'poster'), language=language)
-            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 0:
+            if poster_data and len(poster_data.get('data', '') or '') > 0:
                 poster_data['data'] = sorted(poster_data['data'], reverse=True,
                                              key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
                 p = self.config['url_artworkPrefix'] % poster_data['data'][0]['filename']
@@ -850,7 +859,7 @@ class Tvdb:
         b = ''
         if self.config['banners_enabled']:
             poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'series'), language=language)
-            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 0:
+            if poster_data and len(poster_data.get('data', '') or '') > 0:
                 poster_data['data'] = sorted(poster_data['data'], reverse=True,
                                              key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
                 b = self.config['url_artworkPrefix'] % poster_data['data'][0]['filename']
@@ -860,14 +869,14 @@ class Tvdb:
 
         if self.config['seasons_enabled']:
             poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'season'), language=language)
-            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 0:
+            if poster_data and len(poster_data.get('data', '') or '') > 0:
                 poster_data['data'] = sorted(poster_data['data'], reverse=True,
                                              key=lambda x: (-1 * tryInt(x['subkey']), x['ratingsinfo']['average'], x['ratingsinfo']['count']))
                 self._parse_banners(sid, poster_data['data'])
 
         if self.config['seasonwides_enabled']:
             poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'seasonwide'), language=language)
-            if poster_data and 'data' in poster_data and poster_data['data'] and len(poster_data['data']) > 0:
+            if poster_data and len(poster_data.get('data', '') or '') > 0:
                 poster_data['data'] = sorted(poster_data['data'], reverse=True,
                                              key=lambda x: (-1 * tryInt(x['subkey']), x['ratingsinfo']['average'], x['ratingsinfo']['count']))
                 self._parse_banners(sid, poster_data['data'])
@@ -875,7 +884,7 @@ class Tvdb:
         f = ''
         if self.config['fanart_enabled']:
             fanart_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'fanart'), language=language)
-            if fanart_data and 'data' in fanart_data and fanart_data['data'] and len(fanart_data['data']) > 0:
+            if fanart_data and len(fanart_data.get('data', '') or '') > 0:
                 fanart_data['data'] = sorted(fanart_data['data'], reverse=True,
                                              key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
                 f = self.config['url_artworkPrefix'] % fanart_data['data'][0]['filename']
@@ -885,7 +894,7 @@ class Tvdb:
 
         if self.config['actors_enabled']:
             actor_data = self._getetsrc(self.config['url_actorsInfo'] % sid, language=language)
-            if actor_data and 'data' in actor_data and actor_data['data'] and len(actor_data['data']) > 0:
+            if actor_data and len(actor_data.get('data', '') or '') > 0:
                 a = '|%s|' % '|'.join([n.get('name', '') for n in sorted(
                                         actor_data['data'], key=lambda x: x['sortorder'])])
                 self._parse_actors(sid, actor_data['data'])
@@ -901,12 +910,11 @@ class Tvdb:
             episodes = []
             while page is not None:
                 episode_data = self._getetsrc(self.config['url_epInfo'] % (sid, page), language=language)
-                if [] is episode_data:
+                if None is episode_data:
                     raise tvdb_error('Exception retrieving episodes for show')
-                if isinstance(episode_data, dict) and episode_data['data'] is not None:
+                if None is not episode_data.get('data'):
                     episodes.extend(episode_data['data'])
-                page = episode_data['links']['next'] if isinstance(episode_data, dict) \
-                    and 'links' in episode_data and 'next' in episode_data['links'] else None
+                page = episode_data.get('links', {}).get('next')
 
             ep_map_keys = {'absolutenumber': u'absolute_number', 'airedepisodenumber': u'episodenumber',
                            'airedseason': u'seasonnumber', 'airedseasonid': u'seasonid',

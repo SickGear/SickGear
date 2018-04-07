@@ -124,9 +124,7 @@ class KODIMetadata(generic.GenericMetadata):
                 logger.ERROR)
             raise
 
-        if not myShow:
-            logger.log(u'Show %s not found on %s ' % (show_obj.name, sickbeard.indexerApi(show_obj.indexer).name),
-                       logger.WARNING)
+        if not self._valid_show(myShow, show_obj):
             return
 
         # check for title and id
@@ -246,9 +244,7 @@ class KODIMetadata(generic.GenericMetadata):
                 ep_obj.show.indexer).name + ' while creating meta files - skipping - ' + ex(e), logger.ERROR)
             return
 
-        if not myShow:
-            logger.log(u'Show %s not found on %s ' %
-                       (ep_obj.show.name, sickbeard.indexerApi(ep_obj.show.indexer).name), logger.WARNING)
+        if not self._valid_show(myShow, ep_obj.show):
             return
 
         if len(eps_to_write) > 1:
