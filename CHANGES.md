@@ -1,5 +1,6 @@
 ﻿### 0.16.0 (2018-xx-xx xx:xx:xx UTC)
 
+* Change increase namecache size and fix deleting items from it when at capacity
 * Change improve security with cross-site request forgery (xsrf) protection on web forms
 * Change improve security by sending header flags httponly and secure with cookies
 * Change improve security with DNS rebinding prevention, set "Allowed browser hostnames" at config/General/Web Interface
