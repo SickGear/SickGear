@@ -70,7 +70,7 @@ class WebServer(threading.Thread):
 
         # Load the app
         self.app = Application([],
-                               debug=False,
+                               debug=True,
                                serve_traceback=True,
                                autoreload=False,
                                compress_response=True,
