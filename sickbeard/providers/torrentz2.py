@@ -35,32 +35,27 @@ class Torrentz2Provider(generic.TorrentProvider):
 
         self.url_home = ['https://torrentz2.eu/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[ \sQ]+', '', x[::-1]) for x in [
-                                'GQQd', 'yQQ9', 'mQ c', 'uQ V', 'HQd', 'yQ o', 'm  L', 'z Ql']],
-                            [re.sub('[S\sl]+', '', x[::-1]) for x in [
-                                'Glld', 'yll9', 'ml c', 'uSlV', 'HS d', 'yl o', 'mSSL', 'jS N']],
-                            [re.sub('[1\sq]+', '', x[::-1]) for x in [
-                                'G qd', 'y  9', 'm1qc', 'u1 V', 'H 1d', 'yqqo', 'n1qL', '21 R']],
-                            [re.sub('[F\sf]+', '', x[::-1]) for x in [
-                                'G fd', 'y  9', 'm  c', 'u FV', 'H Fd', 'uf o', 'nffY', '=fFo']],
-                            [re.sub('[j\sF]+', '', x[::-1]) for x in [
-                                'cy9F Gd', 'HFdFuVm', 'lnFYu o', 'zNXFY w', 'Yu jQWZ', 'AbFv9F2', '=FF=']],
-                            [re.sub('[K\sP]+', '', x[::-1]) for x in [
-                                'yK9 Gd', 'uVm Pc', 'uoH Pd', 'w  lnY', 'zP NXY', 'uQ PWZ', '=QK3Pc']],
-                            [re.sub('[R\sh]+', '', x[::-1]) for x in [
-                                'cyhR9Gd', 'HRdhuVm', '1hWaRuo', 'p5RWdRt', 'e0l2h Y', 'Adz h5S', '= R=']],
-                            [re.sub('[K\s ]+', '', x[::-1]) for x in [
-                                'cKy9G d', 'Hdu KVm', 'tWdu  o', 'sJKKmb1', 'Lr N 2b', 'g bKl1m', '= K=']],
-                            [re.sub('[s\sx]+', '', x[::-1]) for x in [
-                                'cy 9G d', 'HdxxuVm', '5xWsduo', 'j9Gb si', 'L skV2a', 'AZp Jsm', '=s =']],
-                            [re.sub('[P\s ]+', '', x[::-1]) for x in [
-                                'cy9 PGd', 'H duPVm', '5WdPu o', 'jP 9Gbi', 'LPkV 2a', 'APbvx m', '=PP=']],
-                            [re.sub('[X\sP]+', '', x[::-1]) for x in [
-                                'yP9XGd', 'uVm Pc', 'uX oHd', 'i X5Wd', 'j 9GXb', 'k VX2a', '0PXNnL']],
-                            [re.sub('[w\sf]+', '', x[::-1]) for x in [
-                                'cwy9Gfd', 'H duV m', '5Wfwduo', 'j9G bfi', 'bsFw2 a', 'mwcfv5C', '=ffc']],
-                            [re.sub('[Z\sj]+', '', x[::-1]) for x in [
-                                'm cjy9Gd', 'uZoHduZV', '2bs5jWZd', 'vJZHcZrN', 'XYw 5 ia', '==Qejj0J']],
+                            [re.sub('[r\sQ]+', '', x[::-1]) for x in [
+                                'GQrd', 'y Q9', 'mr c', 'uQ V', 'H Qd', 'yQQo', 'mrrL', 'jrrN']],
+                            [re.sub('[f\sJ]+', '', x[::-1]) for x in [
+                                'G fd', 'yJJ9', 'm Jc', 'uJ V', 'HfJd', 'yf o', 'nJfL', '2JfR']],
+                            [re.sub('[Q\sq]+', '', x[::-1]) for x in [
+                                'cQyQ9Gd', 'HQduVqm', 'NW L yo', 'yqBnLqj', 'cuqg 3b', '2QYhQB3', '=QQU']],
+                            [re.sub('[i\sP]+', '', x[::-1]) for x in [
+                                'c Py9Gd', 'H d uVm', 'JXib uo', 'vxmbiP1', 'aius2PY', 'wbimP5W', '=P =']],
+                            [re.sub('[q\si]+', '', x[::-1]) for x in [
+                                'duVmcy 9Gid', '3b yJXat pH', '9GdnqJi3buI', 'uoHdu Vmicy', 'Yvqxmb1J Xb',
+                                'QZ0F GiZus2', '= q=']],
+                            [re.sub('[g\sK]+', '', x[::-1]) for x in [
+                                'GKgb', '0ggF', 'y gb', 'wKK5', 'w gd', '=K =']],
+                            [re.sub('[R\su]+', '', x[::-1]) for x in [
+                                'n  e', 'jR h', 'iuud', '3RR5', 'WRua', '=R 4']],
+                            [re.sub('[K\sk]+', '', x[::-1]) for x in [
+                                'cKy9KGd', 'HKdu Vm', 'N WKLyo', 'pVKknLj', 'Ym5yk b', 'Aak0 lW', '=  =']],
+                            [re.sub('[k\sR]+', '', x[::-1]) for x in [
+                                'cyRk9Gd', 'HduV Rm', 'VnLk xo', 'vx RmYu', 'Zkl t2Y', 'Gdk35 C', '= kY']],
+                            [re.sub('[q\sQ]+', '', x[::-1]) for x in [
+                                'cyQ9GQd', 'HdquVqm', 'VnLQ xo', 'vQqxmYu', 'Zlt2 qY', 'wQctQ5C', '=  =']],
                         ]]]
 
         self.url_vars = {'search': 'searchA?f=%s&safe=1', 'searchv': 'verifiedA?f=%s&safe=1'}

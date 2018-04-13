@@ -252,6 +252,23 @@
 							</label>
 						</div>
     #end if
+    #if $hasattr($cur_newznab_provider, 'may_filter'):
+						<div class="field-pair">
+							<span class="component-title">Allow releases that are</span>
+							<span class="component-desc">
+        #for $cur_fval, $filter in $cur_newznab_provider.may_filter.iteritems()
+            #set $cur_fname, $cur_is_default = $filter[0], $filter[1]
+            #set $filter_id = '%s_filter_%s' % ($cur_newznab_provider.get_id(), $cur_fval)
+								<label class="space-right">
+									<input type="checkbox" name="$filter_id" id="$filter_id" #echo ('', $html_checked)[$cur_fval in $cur_newznab_provider.filter]#/>
+									<span>$cur_fname</span>
+								</label>
+        #end for
+								<span>(see site for meaning)</span>
+								<p>nothing selected allows everything (no filter, default)</p>
+							</span>
+						</div>
+    #end if
     #if $hasattr($cur_newznab_provider, 'search_mode') and $cur_newznab_provider.supports_backlog:
 						<div class="field-pair">
 							<span class="component-title">Episode search mode</span>

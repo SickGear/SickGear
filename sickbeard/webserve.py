@@ -3033,6 +3033,10 @@ class NewHomeAddShows(Home):
     def searchIndexersForShowName(self, search_term, lang='en', indexer=None):
         if not lang or 'null' == lang:
             lang = 'en'
+        try:
+            search_term = re.findall(r'(?i)thetvdb.*?seriesid=([\d]+)', search_term)[0]
+        except (StandardError, Exception):
+            pass
         term = search_term.decode('utf-8').strip()
         terms = []
         try:
@@ -6344,6 +6348,12 @@ class ConfigProviders(Config):
                     attr = 'search_mode'
                     if cur_id + '_' + attr in kwargs:
                         setattr(nzb_src, attr, str(kwargs.get(cur_id + '_' + attr)).strip())
+
+                    attr = 'filter'
+                    if hasattr(nzb_src, attr):
+                        setattr(nzb_src, attr,
+                                [k for k in nzb_src.may_filter.keys()
+                                 if config.checkbox_to_value(kwargs.get('%s_filter_%s' % (cur_id, k)))])
 
                     for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog']:
                         setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
