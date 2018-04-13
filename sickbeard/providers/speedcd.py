@@ -17,6 +17,7 @@
 
 import re
 import time
+from urllib import quote, unquote
 
 from . import generic
 from sickbeard.bs4_parser import BS4Parser
@@ -41,14 +42,15 @@ class SpeedCDProvider(generic.TorrentProvider):
         self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
 
     def _authorised(self, **kwargs):
-
+        digest = [x[::-1] for x in self.digest[::-1].rpartition('=')]
+        self.digest = digest[2] + digest[1] + quote(unquote(digest[0]))
         return super(SpeedCDProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 [self.session.cookies.get_dict(domain='.speed.cd') and
                  self.session.cookies.clear('.speed.cd') is None or True] +
                 ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
                 [(self.session.cookies.get('inSpeed_' + x) or 'sg!no!pw') in self.digest for x in ['speedian']])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Perhaps the cookie expired? Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -123,7 +125,9 @@ class SpeedCDProvider(generic.TorrentProvider):
     @staticmethod
     def ui_string(key):
 
-        return 'speedcd_digest' == key and 'use... \'inSpeed_speedian=yy\'' or ''
+        return 'speedcd_digest' == key and \
+               'use... \'inSpeed_speedian=yy\' - warning: SpeedCD cookies expire minutes after inactivity, ' \
+               'so keep SG running. If you get auth failures, grab another browser cookie' or ''
 
 
 provider = SpeedCDProvider()

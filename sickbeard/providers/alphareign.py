@@ -1,5 +1,7 @@
 # coding=utf-8
 #
+# Author: SickGear
+#
 # This file is part of SickGear.
 #
 # SickGear is free software: you can redistribute it and/or modify
@@ -25,13 +27,13 @@ from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
-class SkytorrentsProvider(generic.TorrentProvider):
+class AlphaReignProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'Skytorrents')
+        generic.TorrentProvider.__init__(self, 'AlphaReign')
 
-        self.url_base = 'https://skytorrents.lol/'
+        self.url_base = 'https://alphareign.lol/'
 
         self.urls = {'config_provider_home_uri': self.url_base,
                      'search': self.url_base + '?category=show&sort=created&query=%s&page=%s'}
@@ -44,9 +46,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': '^torrent/', 'get': '^magnet:'}.items())
-
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'magnet:'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
@@ -61,32 +61,23 @@ class SkytorrentsProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html):
+                    if not html or self._has_no_results(html) or re.search('<h3>Result.*?&quot;.*?&quot;</h3>', html):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': ['table', 'is-striped']})
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                        torrent_table = soup.find(id='results')
+                        torrent_rows = [] if not torrent_table else torrent_table.find_all('div', class_='result')
 
-                        if 2 > len(torrent_rows):
-                            raise generic.HaltParseException
-
-                        head = None
-                        for tr in torrent_rows[1:]:
-                            cells = tr.find_all('td')
-                            if 5 > len(cells):
-                                continue
+                        for tr in torrent_rows:
                             try:
-                                head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                    tr['data-%s' % x].strip() for x in 'seeders', 'leechers', 'size']]
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                info = tr.find('a', href=rc['info'])
-                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                title = tr['data-name'].strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
-                            except (AttributeError, TypeError, ValueError, KeyError):
+                            except (AttributeError, TypeError, ValueError):
                                 continue
 
                             if title and download_url:
@@ -111,7 +102,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
 
     def _cache_data(self, **kwargs):
 
-        return self._search_provider({'Cache': ['x264,', 'x264,2', 'x264,3', 'x264,4', 'x264,5']})
+        return self._search_provider({'Cache': [',', ',2', ',3', ',4', ',5']})
 
 
-provider = SkytorrentsProvider()
+provider = AlphaReignProvider()

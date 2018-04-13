@@ -1,4 +1,12 @@
-﻿### 0.15.9 (2018-04-07 20:45:00 UTC)
+﻿### 0.15.10 (2018-04-13 12:10:00 UTC)
+
+* Change accept theTVDB Url in addshow search field
+* Change Nzb.org usenet provider add config scene only/nuked
+* Change SpeedCD torrent provider improve copy/paste cookie support
+* Change BTScene, LimeTorrents, SkyTorrents, Torlock, Torrentz, TPB torrent providers
+* Add AlphaReign, EZTV torrent providers
+
+### 0.15.9 (2018-04-07 20:45:00 UTC)
 
 * Fix metadata show not found
 * Change when adding a show, display show title instead of '[]'

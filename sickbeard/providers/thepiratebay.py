@@ -35,53 +35,34 @@ from lib.unidecode import unidecode
 class ThePirateBayProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'The Pirate Bay', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'The Pirate Bay')
 
         self.url_home = ['https://thepiratebay.%s/' % u for u in 'se', 'org'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[t\sG]+', '', x[::-1]) for x in [
-                                'mGGY', '5tGF', 'HGtc', 'vGGJ', 'Htte', 'uG k', '2GGd', 'uGtl']],
-                            [re.sub('[t\sR]+', '', x[::-1]) for x in [
-                                'uF2R a', 'it VWe', 'uk XRY', 'uR82RY', 'vt sWd', 'vR x2P', '9QWtRY']],
-                            [re.sub('[n\sJ]+', '', x[::-1]) for x in [
-                                'lGJnc', 'XJY y', 'YJlJR', '5  Fm', '5 niM', 'm cJv', '= Jc']],
-                            [re.sub('[S\sp]+', '', x[::-1]) for x in [
-                                'XYySSlGc', '5FmSYl R', 'CdzF SmZ', '15ypbSj5', 'Gb/8pSya', '=0DppZh9']],
-                            [re.sub('[1\sz]+', '', x[::-1]) for x in [
-                                'XYzy lGc', '5zFm1YlR', '2Yp1VzXc', 'u812 Yus', '2PvszW1d', '91zQWYvx']],
-                            [re.sub('[P\sT]+', '', x[::-1]) for x in [
-                                'lGPPc', 'XYP y', 'c l R', 'vTJTH', 'kT He', 'GdTPu', 'wPP9']],
-                            [re.sub('[Y\sr]+', '', x[::-1]) for x in [
-                                'J rHc', 'Hrrev', 'awYYl', 'hJYYX', 'U YGd', 'Gdr u', 'wr 9']],
-                            [re.sub('[R\sk]+', '', x[::-1]) for x in [
-                                'vJRkHc', '0 lHRe', 'uR IGc', 'iV2RRd', '0kl2Rc', '==kQ Z']],
-                            [re.sub('[p\sz]+', '', x[::-1]) for x in [
-                                'Hppc', '4pzJ', 'Sppe', 'wzz5', 'XppY', '0 zJ', 'Q pe', '=pz=']],
-                            [re.sub('[p\si]+', '', x[::-1]) for x in [
-                                'hGpid', 'Gai l', 'Z kpl', 'u ViG', 'FpmiY', 'mLii5', 'j  N']],
-                            [re.sub('[g\ss]+', '', x[::-1]) for x in [
-                                'lhGgsd', 'ngFW b', '0s Vmb', '5sFmgY', 'uglsmL', '=8 m Z']],
-                            [re.sub('[I\ss]+', '', x[::-1]) for x in [
-                                'clIhsGd', 'X IYylG', 'Fm Yl R', '5IJmsL5', 'cszFGIc', 'nsLkIV2', '0I N']],
-                            [re.sub('[ \sq]+', '', x[::-1]) for x in [
-                                'GqclhG d', 'lR XqYyl', 'mL5Fm qY', 'uVXbt  l', 'HdqpNqWa', '=Q3cuq k']],
-                            [re.sub('[k\sK]+', '', x[::-1]) for x in [
-                                'GKclh Gd', 'lRXKYyKl', 'nL5F mKY', 'vxmYkKuV', 'CZlKKt2Y', '=kw2bsk5']],
-                            [re.sub('[f\si]+', '', x[::-1]) for x in [
-                                'Gicl hGd', 'lRXiYfyl', 'nL5F imY', 'vximYfuV', 'CZlft 2Y', '==Adffz5']],
-                            [re.sub('[j\sz]+', '', x[::-1]) for x in [
-                                'G c lhGd', 'lRXYjy l', 'nL5FmjjY', 'v xmzYuV', 'Gbh t2 Y', 'nJ 3zbuw']],
-                            [re.sub('[p\sH]+', '', x[::-1]) for x in [
-                                'lHRXYylpGc', 'uVnL5FmY', 'yB3aj9HGpb', '1x2HYuo2b', 'spNmYwRnY', 'ulmLuFHWZ', '=8mZ']],
-                            [re.sub('[1\sf]+', '', x[::-1]) for x in [
-                                'H  d', 'w1 B', 'm fc', '4 19', 'S  e', 'z115', 'Xffa', 'l 1R']],
-                            [re.sub('[r\sn]+', '', x[::-1]) for x in [
-                                'Hr d', 'irnB', 'Hnrc', 'vn J', 'Hrne', 'u rk', '2rnd', 'unrl']],
-                            [re.sub('[s\sZ]+', '', x[::-1]) for x in [
-                                'H sd', 'iZ B', 'nssc', 'u  V', 'nZZL', 'pZsd', 'g sb', '= s=']],
-                        ]]] + ['http://%s' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[q\sk]+', '', x[::-1]) for x in [
-                                'mkYh5k2a', 'rR n LuV', '2avM3  L', 'vdGcqklV', 'nLnq5qWa', '19kDqcoB', '9kwm c']],
+                            [re.sub('[h\sI]+', '', x[::-1]) for x in [
+                                'm IY', '5  F', 'HhIc', 'vI J', 'HIhe', 'uI k', '2  d', 'uh l']],
+                            [re.sub('[N\sQ]+', '', x[::-1]) for x in [
+                                'lN Gc', 'X  Yy', 'c lNR', 'vNJNH', 'kQNHe', 'GQdQu', 'wNN9']],
+                            [re.sub('[F\sT]+', '', x[::-1]) for x in [
+                                'JFHTc', 'HeTFv', 'aF wl', 'h JFX', 'UFFGd', 'G  du', 'wFF9']],
+                            [re.sub('[ \sL]+', '', x[::-1]) for x in [
+                                'HLLc', '4LLJ', 'S Le', 'w L5', 'XLLY', '0 LJ', 'QLLe', '=L =']],
+                            [re.sub('[r\sG]+', '', x[::-1]) for x in [
+                                'H rd', 'i rB', 'HGGc', 'v rJ', 'H Ge', 'u rk', '2rrd', 'uG l']],
+                            [re.sub('[Q\sh]+', '', x[::-1]) for x in [
+                                'lQG c', 'XhYQy', 'ch lR', 'v J H', 'kQHQe', '2cQ u', '=Qhg']],
+                            [re.sub('[T\st]+', '', x[::-1]) for x in [
+                                '3t Y', '1tTJ', 'm te', 'utTl', 'y TZ', '4 t5', 'Xtte', '=Tto']],
+                            [re.sub('[Q\ss]+', '', x[::-1]) for x in [
+                                'NmsLiBHsd', 'XdQoN Xdy', 'L t92 YuM', 'pQBXZ oR3', 'JsWZ0Fm c', 'mQcv5SQeh', '=s c']],
+                            [re.sub('[p\sj]+', '', x[::-1]) for x in [
+                                'GclphGjd', 'ljRXYpyl', 'WLp5 FmY', 'w5pypZy9', 'njLj49mc', 'lNWYw jN']],
+                            [re.sub('[M\sJ]+', '', x[::-1]) for x in [
+                                'HJ d', 'iJJB', 'nM L', '4JJp', '3  Y', 'uJ Y', '2  d', 'u Jl']],
+                            [re.sub('[j\sn]+', '', x[::-1]) for x in [
+                                'Gn clhGd', 'l RXY yl', 'mL5F mnY', 'sjj5Wdy1', 'mLnr N2b', '= UGdnhR']],
+                            [re.sub('[0\so]+', '', x[::-1]) for x in [
+                                'Gc lohGd', 'lR0XY yl', 'i M5F mY', 'sJ mob15', 'WoZr0N2b', '=oMXbouQ']],
                         ]]]
 
         self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/'}
@@ -199,6 +180,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                 cnt = len(items[mode])
                 try:
                     if not html or self._has_no_results(html):
+                        self._url = None
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive'], attr='id="searchResult"') as soup:

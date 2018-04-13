@@ -34,12 +34,22 @@ class TorLockProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.torlock.com/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[X\sI]+', '', x[::-1]) for x in [
-                                'yX9G d', 'j9 IGb', '1 I5ya', 'sJmX b', 'rN2I b', 'uQXXWZ', '0IVmIY']],
-                            [re.sub('[w\sP]+', '', x[::-1]) for x in [
-                                'y9PPGd', 'jPw9Gb', '1wP5ya', 's JmPb', 'rPN2wb', 'uQPPWZ', 'klm wY']],
-                            [re.sub('[g\sv]+', '', x[::-1]) for x in [
-                                'yB Dgd', 'jgg9Gb', '1vv5ya', 'svvJmb', 'rN2vgb', 'uQ vWZ', 'sg9 Gb']],
+                            [re.sub('[o\sH]+', '', x[::-1]) for x in [
+                                'y9HHGd', 'j 9Gob', '1H5 ya', 'sJmoHb', 'rHNH2b', 'uQWo Z', '0Vm HY']],
+                            [re.sub('[w\sm]+', '', x[::-1]) for x in [
+                                'bym9mGd', 'ya jw9G', '02wbjw1', 'vJwHmcu', 'cwz5 Ce', 'QwZjmFG', '=  =']],
+                            [re.sub('[N\sS]+', '', x[::-1]) for x in [
+                                'y 9 Gd', 'j9SGNb', 'jN1 ya', 'u0N2Nb', 'vlNNWd', 'hNSZmL', 'o NRXa']],
+                            [re.sub('[l\sO]+', '', x[::-1]) for x in [
+                                'bylBD d', 'zajO9lG', '5lWdu E', 'j9OGb i', 'LkOV2Oa', 'A bvlxm', '=OO=']],
+                            [re.sub('[o\ss]+', '', x[::-1]) for x in [
+                                'bsyBDsd', 'zasj9oG', '5sWdsuE', 'j 9Gboi', 'LksV2oa', 'A sbvxm', '=s =']],
+                            [re.sub('[q\sK]+', '', x[::-1]) for x in [
+                                'yqq9Gd', 'j9 Gqb', '15qy a', 'sJKmKb', 'rNqq2b', 'uQqqWZ', '=gX Kb']],
+                            [re.sub('[w\sI]+', '', x[::-1]) for x in [
+                                'XwId', 'sI B', '2wIb', 'kI F', 'nI L', 'hIwB', 'nIwc', '5I R']],
+                            [re.sub('[n\sP]+', '', x[::-1]) for x in [
+                                'G nd', 'v nx', '2PPY', 'uPPs', 'GPPc', 'yPPF', 'Hnnd', '= nk']],
                         ]]]
 
         self.url_vars = {'search': 'television/torrents/%s.html?sort=added&order=desc',
