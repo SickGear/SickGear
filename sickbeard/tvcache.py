@@ -100,7 +100,10 @@ class TVCache:
 
             if len(cl) > 0:
                 myDB = self.get_db()
-                myDB.mass_action(cl)
+                try:
+                    myDB.mass_action(cl)
+                except (StandardError, Exception) as e:
+                    logger.log('Warning could not save cache value [%s], caught err: %s' % (cl, ex(e)))
 
             # set updated as time the attempt to fetch data is
             self.setLastUpdate()

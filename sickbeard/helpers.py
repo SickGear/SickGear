@@ -65,13 +65,13 @@ from itertools import izip, cycle
 
 
 def indentXML(elem, level=0):
-    '''
+    """
     Does our pretty printing, makes Matt very happy
-    '''
-    i = "\n" + level * "  "
+    """
+    i = '\n' + level * '  '
     if len(elem):
-        if not elem.text or not elem.text.strip():
-            elem.text = i + "  "
+        if not elem.text or not ('%s' % elem.text).strip():
+            elem.text = i + '  '
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
         for elem in elem:
@@ -81,7 +81,7 @@ def indentXML(elem, level=0):
     else:
         # Strip out the newlines from text
         if elem.text:
-            elem.text = elem.text.replace('\n', ' ')
+            elem.text = ('%s' % elem.text).replace('\n', ' ')
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
 

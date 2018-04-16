@@ -58,7 +58,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
     def _season_strings(self, ep_obj, **kwargs):
 
-        params = super(HDBitsProvider, self)._season_strings(ep_obj, scene=False)
+        params = super(HDBitsProvider, self)._season_strings(ep_obj)
 
         show = ep_obj.show
         if indexer_config.INDEXER_TVDB == show.indexer and show.indexerid:
@@ -72,7 +72,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        params = super(HDBitsProvider, self)._episode_strings(ep_obj, scene=False, sep_date='|')
+        params = super(HDBitsProvider, self)._episode_strings(ep_obj, sep_date='|')
 
         show = ep_obj.show
         if indexer_config.INDEXER_TVDB == show.indexer and show.indexerid:
@@ -105,7 +105,7 @@ class HDBitsProvider(generic.TorrentProvider):
                     post_data.update(search_param)
                     id_search = True
                 else:
-                    post_data['search'] = search_param
+                    post_data['search'] = search_param = search_param.replace('.', ' ')
                     id_search = False
 
                 post_data = json.dumps(post_data)

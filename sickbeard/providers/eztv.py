@@ -56,7 +56,8 @@ class EztvProvider(generic.TorrentProvider):
                                 'h1 id0opXZ', 'u8Wa15y  Z', 'lhGdpFSmoZ', 'uVnL2 RnSe', 'ht2oY vxmY', 'nJ3obuwSGb']],
                         ]]]
         self.url_vars = {'search': 'search/%s', 'browse': 'page_%s'}
-        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(vars)s', 'browse': '%(home)s%(vars)s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s',
+                         'search': '%(home)s%(vars)s', 'browse': '%(home)s%(vars)s'}
 
         self.minseed = None
 
@@ -77,7 +78,8 @@ class EztvProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                search_url = self.urls[('search', 'browse')['Cache' == mode]] % search_string
+                search_url = self.urls['browse'] % search_string if 'Cache' == mode else \
+                    self.urls['search'] % search_string.replace('.', ' ')
 
                 html = self.get_url(search_url)
                 if self.should_skip():
@@ -117,7 +119,7 @@ class EztvProvider(generic.TorrentProvider):
                             if title and download_url:
                                 items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
-                except generic.HaltParseException:
+                except (generic.HaltParseException, IndexError):
                     pass
                 except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
@@ -127,12 +129,6 @@ class EztvProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-    def _season_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False, **kwargs)
-
-    def _episode_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
     def _cache_data(self, **kwargs):
 
