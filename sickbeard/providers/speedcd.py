@@ -49,7 +49,7 @@ class SpeedCDProvider(generic.TorrentProvider):
                 [self.session.cookies.get_dict(domain='.speed.cd') and
                  self.session.cookies.clear('.speed.cd') is None or True] +
                 ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
-                [(self.session.cookies.get('inSpeed_' + x) or 'sg!no!pw') in self.digest for x in ['speedian']])),
+                [(self.session.cookies.get('inSpeed_' + c) or 'sg!no!pw') in self.digest for c in ['speedian']])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Perhaps the cookie expired? Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
@@ -65,7 +65,8 @@ class SpeedCDProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')), search=search_string,
+                post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')),
+                                 search=search_string.replace('.', ' ').replace('^@^', '.'),
                                  jxt=2, jxw='b', freeleech=('on', None)[not self.freeleech])
 
                 data_json = self.get_url(self.urls['search'], post_data=post_data, json=True)
@@ -120,7 +121,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return super(SpeedCDProvider, self)._episode_strings(ep_obj, scene=False, sep_date='.', **kwargs)
+        return super(SpeedCDProvider, self)._episode_strings(ep_obj, sep_date='^@^', **kwargs)
 
     @staticmethod
     def ui_string(key):

@@ -54,7 +54,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
                 if 'Cache' == mode:
                     search_url = self.urls['search'] % tuple(search_string.split(','))
                 else:
-                    search_url = self.urls['search'] % (search_string, '')
+                    search_url = self.urls['search'] % (search_string.replace('.', ' '), '')
                 html = self.get_url(search_url)
                 if self.should_skip():
                     return results
@@ -102,12 +102,6 @@ class SkytorrentsProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
-
-    def _season_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False, **kwargs)
-
-    def _episode_strings(self, ep_obj, **kwargs):
-        return generic.TorrentProvider._episode_strings(self, ep_obj, scene=False, **kwargs)
 
     def _cache_data(self, **kwargs):
 
