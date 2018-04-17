@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from sickbeard import db
 from collections import OrderedDict
+from sickbeard import db
+
 import re
 
 MIN_DB_VERSION = 1
