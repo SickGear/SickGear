@@ -1443,6 +1443,10 @@ class TorrentProvider(GenericProvider):
 
         url_list = ['%s/' % x.rstrip('/') for x in url_list]
         last_url, expire = sickbeard.PROVIDER_HOMES.get(self.get_id(), ('', None))
+        url_drop = getattr(self, 'url_drop', [])
+        if url_drop and any([url in last_url for url in url_drop]):  # deprecate url
+            last_url = ''
+
         if 'site down' == last_url:
             if expire and (expire > int(time.time())) or not self.enabled:
                 return None

@@ -30,11 +30,12 @@ class ETTVProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'ETTV')
 
-        self.url_home = ['https://ettv.tv/']
+        self.url_home = ['https://www.ettv.tv/']
         self.url_vars = {'search': 'torrents-search.php?%s&search=%s&sort=id&order=desc'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s'}
+        self.url_drop = ['http://et']
 
-        self.categories = {'Season': [7], 'Episode': [41, 5, 50]}
+        self.categories = {'Season': [7], 'Episode': [41, 5, 50, 72, 77]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.minseed, self.minleech = 2 * [None]
@@ -59,7 +60,7 @@ class ETTVProvider(generic.TorrentProvider):
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 search_url = self.urls['search'] % (
-                    self._categories_string(mode), ('%2B ', '')['Cache' == mode] + '.'.join(search_string.split()))
+                    self._categories_string(mode), search_string)
 
                 html = self.get_url(search_url)
                 if self.should_skip():
@@ -105,9 +106,26 @@ class ETTVProvider(generic.TorrentProvider):
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
+                if len(items[mode]):
+                    break
+
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    @staticmethod
+    def change_params(params):
+        for x, types in enumerate(params):
+            for y, ep_type in enumerate(types):
+                search_string = '.'.join(params[x][ep_type][y].split())
+                params[x][ep_type] = ['%2B ' + search_string, search_string]
+        return params
+
+    def _season_strings(self, ep_obj, **kwargs):
+        return self.change_params(super(ETTVProvider, self)._season_strings(ep_obj, **kwargs))
+
+    def _episode_strings(self, ep_obj, **kwargs):
+        return self.change_params(super(ETTVProvider, self)._episode_strings(ep_obj, **kwargs))
 
     def get_data(self, url):
         result = None

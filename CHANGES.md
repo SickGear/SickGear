@@ -38,6 +38,11 @@
 * Change suppress output warnings from media process scripts
 
 
+### 0.15.12 (2018-04-17 14:10:00 UTC)
+
+* Fix ETTV torrent provider
+
+
 ### 0.15.11 (2018-04-16 03:20:00 UTC)
 
 * Fix issue creating xml metadata files
