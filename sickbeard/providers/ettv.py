@@ -134,18 +134,9 @@ class ETTVProvider(generic.TorrentProvider):
             return result
 
         try:
-            result = re.findall('(?i)"(magnet:[^"]+?)">', html)[0]
+            result = re.findall('(?i)"(magnet:[^"]+?)"', html)[0]
         except IndexError:
             logger.log('Failed no magnet in response', logger.DEBUG)
-        return result
-
-    def get_result(self, episodes, url):
-        result = None
-
-        if url:
-            result = super(ETTVProvider, self).get_result(episodes, url)
-            result.get_data_func = self.get_data
-
         return result
 
 

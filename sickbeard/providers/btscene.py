@@ -65,7 +65,7 @@ class BTSceneProvider(generic.TorrentProvider):
                                 'mPblqN2ctQnY', 'vlWduM2 YPtU', 'nYoRXahZPm L', '15PSZuV2 YzR', 'WYrN 2PbsJmb',
                                 '==wZ y9mL sx']],
                         ]]]
-        self.url_vars = {'search': '?q=%s&category=series&order=1', 'browse': 'lastdaycat/type/Series/',
+        self.url_vars = {'search': '?q=%s&order=1', 'browse': 'lastdaycat/type/Series/',
                          'get': 'torrentdownload.php?id=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(vars)s',
                          'browse': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
@@ -164,6 +164,20 @@ class BTSceneProvider(generic.TorrentProvider):
 
     def _episode_strings(self, ep_obj, **kwargs):
         return super(BTSceneProvider, self)._episode_strings(ep_obj, sep_date='.', **kwargs)
+
+    def get_data(self, url):
+        result = None
+        resp = self.get_url(url, timeout=90)
+        if self.should_skip():
+            return result
+
+        try:
+            result = resp
+            if re.search('(?i)\s+html', resp[0:30]):
+                result = re.findall('(?i)"(magnet:[^"]+?)"', resp)[0]
+        except IndexError:
+            pass
+        return result
 
 
 provider = BTSceneProvider()

@@ -1,4 +1,10 @@
-﻿### 0.15.12 (2018-04-17 14:10:00 UTC)
+﻿### 0.15.13 (2018-04-18 13:50:00 UTC)
+
+* Fix API endpoints for sg.exceptions and exceptions
+* Change improve searching torrent provider BTScene
+
+
+### 0.15.12 (2018-04-17 14:10:00 UTC)
 
 * Fix ETTV torrent provider
 

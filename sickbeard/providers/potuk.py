@@ -146,15 +146,6 @@ class PotUKProvider(generic.TorrentProvider):
             logger.log('Failed no torrent in response', logger.DEBUG)
         return result
 
-    def get_result(self, episodes, url):
-        result = None
-
-        if url:
-            result = super(PotUKProvider, self).get_result(episodes, url)
-            result.get_data_func = self.get_data
-
-        return result
-
     def ui_string(self, key):
         return ('%s_digest' % self.get_id()) == key and 'use... \'bbuserid=xx; bbpassword=yy\'' or ''
 
