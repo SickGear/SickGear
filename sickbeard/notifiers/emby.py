@@ -103,7 +103,10 @@ class EmbyNotifier(Notifier):
             except (StandardError, Exception):
                 pass
         if not sock_issue:
-            cs.shutdown(SHUT_RDWR)
+            try:
+                cs.shutdown(SHUT_RDWR)
+            except (StandardError, Exception):
+                pass
         return result
 
     def _check_config(self, hosts=None, apikeys=None):

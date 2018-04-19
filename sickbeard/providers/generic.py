@@ -668,7 +668,7 @@ class GenericProvider(object):
             cache_file = ek.ek(os.path.join, cache_dir, base_name)
 
             self.session.headers['Referer'] = url
-            if cached or helpers.download_file(url, cache_file, session=self.session):
+            if cached or helpers.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url):
 
                 if self._verify_download(cache_file):
                     logger.log(u'Downloaded %s result from %s' % (self.name, url))
@@ -1675,3 +1675,13 @@ class TorrentProvider(GenericProvider):
                 self.ping_skip = ((60*60)/self.ping_freq, None)[self._authorised()]
 
             self._sleep_with_stop(self.ping_freq)
+
+    def get_result(self, episodes, url):
+        result = None
+
+        if url:
+            result = super(TorrentProvider, self).get_result(episodes, url)
+            if hasattr(self, 'get_data'):
+                result.get_data_func = self.get_data
+
+        return result
