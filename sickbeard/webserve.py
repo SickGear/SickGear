@@ -3153,7 +3153,7 @@ class NewHomeAddShows(Home):
         map(final_results.extend,
             ([[id_names[iid], any([helpers.find_show_by_id(
                 sickbeard.showList, {(iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]: int(show['id'])},
-                no_mapped_ids=False)]),
+                no_mapped_ids=False)]) and '/home/displayShow?show=%s' % int(show['id']),
                iid, (iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid],
                sickbeard.indexerApi((iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]).config['show_url'], int(show['id']),
                show['seriesname'], self.encode_html(show['seriesname']), show['firstaired'],
