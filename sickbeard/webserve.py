@@ -1764,7 +1764,8 @@ class Home(MainHandler):
             last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
                 showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
             show_message = (
-                'The master ID of this show has been abandoned%s, ' % last_found
+                'The master ID of this show has been <span class="addQTip" title="many reasons exist, including: '
+                + '<br>show flagged as a duplicate, removed completely... etc">abandoned</span>%s, ' % last_found
                 + '<a href="%s/home/editShow?show=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>' % (
                     sickbeard.WEB_ROOT, show, show)
                 + ('', '<br>%s' % show_message)[0 < len(show_message)])
@@ -2238,8 +2239,10 @@ class Home(MainHandler):
                 # noinspection PyUnresolvedReferences
                 last_found = ('', ' since %s' % sbdatetime.sbdatetime.fromordinal(
                     showObj.last_found_on_indexer).sbfdate())[1 < showObj.last_found_on_indexer]
-                show_message = 'The master ID of this show has been abandoned%s<br>search for ' % last_found + \
-                               'a replacement in the "<b>Related show IDs</b>" section of the "<b>Other</b>" tab'
+                show_message = (
+                    'The master ID of this show has been <span class="addQTip" title="many reasons exist, including: '
+                    + '\nshow flagged as a duplicate, removed completely... etc">abandoned</span>%s' % last_found
+                    + '<br>search for a replacement in the "<b>Related show IDs</b>" section of the "<b>Other</b>" tab')
 
             t.show_message = show_message
 

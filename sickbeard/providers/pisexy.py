@@ -121,14 +121,5 @@ class PiSexyProvider(generic.TorrentProvider):
             logger.log('Failed no torrent in response', logger.DEBUG)
         return result
 
-    def get_result(self, episodes, url):
-        result = None
-
-        if url:
-            result = super(PiSexyProvider, self).get_result(episodes, url)
-            result.get_data_func = self.get_data
-
-        return result
-
 
 provider = PiSexyProvider()
