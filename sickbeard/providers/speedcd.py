@@ -20,18 +20,22 @@ import time
 from urllib import quote, unquote
 
 from . import generic
+from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt
+import sickbeard
 
 
 class SpeedCDProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SpeedCD', cache_update_freq=20, update_freq=4*60)
+        generic.TorrentProvider.__init__(self, 'SpeedCD', update_freq=7*60)
 
         self.url_base = 'https://speed.cd/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'rss.php',
+                     'login_action': None,
+                     'do_login': self.url_base,
                      'search': self.url_base + 'V3/API/API.php'}
 
         self.categories = {'Season': [41, 53], 'Episode': [2, 49, 50, 55], 'anime': [30]}
@@ -39,18 +43,53 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
+        self.username, self.password, self.digest, self.freeleech, self.minseed, self.minleech = 6 * [None]
 
     def _authorised(self, **kwargs):
-        digest = [x[::-1] for x in self.digest[::-1].rpartition('=')]
-        self.digest = digest[2] + digest[1] + quote(unquote(digest[0]))
-        return super(SpeedCDProvider, self)._authorised(
-            logged_in=(lambda y='': all(
-                [self.session.cookies.get_dict(domain='.speed.cd') and
-                 self.session.cookies.clear('.speed.cd') is None or True] +
-                ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
-                [(self.session.cookies.get('inSpeed_' + c) or 'sg!no!pw') in self.digest for c in ['speedian']])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Perhaps the cookie expired? Check settings'))
+        result = False
+        if self.digest:
+            digest = [x[::-1] for x in self.digest[::-1].rpartition('=')]
+            self.digest = digest[2] + digest[1] + quote(unquote(digest[0]))
+            params = dict(
+                logged_in=(lambda y='': all(
+                    [self.session.cookies.get_dict(domain='.speed.cd') and
+                     self.session.cookies.clear('.speed.cd') is None or True] +
+                    ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
+                    [(self.session.cookies.get('inSpeed_' + c) or 'sg!no!pw') in self.digest for c in ['speedian']])),
+                failed_msg=(lambda y=None: None))
+            username = self.username
+            del self.username
+            result = super(SpeedCDProvider, self)._authorised(**params)
+            setattr(self, 'username', username)
+
+        if not result and not self.failure_count:
+            if self.digest:
+                self.get_url('%slogout.php' % self.url_base, skip_auth=True, post_data={'submit.x': 24, 'submit.y': 11})
+            self.digest = ''
+            params = dict(
+                logged_in=(lambda y='': all(
+                    [self.session.cookies.get_dict(domain='.speed.cd') and
+                     self.session.cookies.clear('.speed.cd') is None or True] +
+                    [bool(y), not re.search('(?i)type="password"', y)] +
+                    [re.search('(?i)Logout', y) or not self.digest
+                     or (self.session.cookies.get('inSpeed_speedian') or 'sg!no!pw') in self.digest])),
+                failed_msg=(lambda y='': (
+                    re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
+                              '(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
+                    u'Invalid username or password for %s. Check settings' or
+                    u'Failed to authenticate or parse a response from %s, abort provider')),
+                post_params={'form_tmpl': True})
+            self.urls['login_action'] = self.urls.get('do_login')
+            session = super(SpeedCDProvider, self)._authorised(session=None, resp_sess=True, **params)
+            self.urls['login_action'] = None
+            if session:
+                self.digest = 'inSpeed_speedian=%s' % session.cookies.get('inSpeed_speedian')
+                sickbeard.save_config()
+                result = True
+                logger.log('Cookie details for %s updated.' % self.name, logger.DEBUG)
+            elif not self.failure_count:
+                logger.log('Invalid cookie details for %s and login failed. Check settings' % self.name, logger.ERROR)
+        return result
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -127,8 +166,8 @@ class SpeedCDProvider(generic.TorrentProvider):
     def ui_string(key):
 
         return 'speedcd_digest' == key and \
-               'use... \'inSpeed_speedian=yy\' - warning: SpeedCD cookies expire minutes after inactivity, ' \
-               'so keep SG running. If you get auth failures, grab another browser cookie' or ''
+               'use... \'inSpeed_speedian=yy\' - warning: SpeedCD cookies often expire, ' \
+               'username/pw may update them automatically, else update manually from browser' or ''
 
 
 provider = SpeedCDProvider()

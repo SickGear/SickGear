@@ -1,4 +1,14 @@
-﻿### 0.15.13 (2018-04-18 13:50:00 UTC)
+﻿### 0.15.14 (2018-04-20 12:00:00 UTC)
+
+* Change prefer modern html5lib over old to prevent display show issue on systems that fail to clean libs
+* Change add un/pw for cookie support to improve SpeedCD torrent provider
+* Change improve handling faults when downloading .torrent files
+* Remove TorrentBytes provider
+* Change remove redundant log messages for releases never to be cached removing <30% log spam
+* Change remove redundant log messages for items not found in cache removing <10% log spam
+
+
+### 0.15.13 (2018-04-18 13:50:00 UTC)
 
 * Fix API endpoints for sg.exceptions and exceptions
 * Change improve searching torrent provider BTScene
