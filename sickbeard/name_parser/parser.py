@@ -54,24 +54,22 @@ class NameParser(object):
         self.indexer_lookup = indexer_lookup
 
         if self.showObj and not self.showObj.is_anime:
-            self._compile_regexes(self.NORMAL_REGEX)
+            self.compiled_regexes = compiled_regexes[self.NORMAL_REGEX]
         elif self.showObj and self.showObj.is_anime:
-            self._compile_regexes(self.ANIME_REGEX)
+            self.compiled_regexes = compiled_regexes[self.ANIME_REGEX]
         else:
-            self._compile_regexes(self.ALL_REGEX)
+            self.compiled_regexes = compiled_regexes[self.ALL_REGEX]
 
-    def _compile_regexes(self, regex_mode):
-        if self.ANIME_REGEX == regex_mode:
-            logger.log(u'Using ANIME regexs', logger.DEBUG)
+    @classmethod
+    def compile_regexes(cls, regex_mode):
+        if cls.ANIME_REGEX == regex_mode:
             uncompiled_regex = [regexes.anime_regexes]
-        elif self.NORMAL_REGEX == regex_mode:
-            logger.log(u'Using NORMAL regexs', logger.DEBUG)
+        elif cls.NORMAL_REGEX == regex_mode:
             uncompiled_regex = [regexes.normal_regexes]
         else:
-            logger.log(u'Using ALL regexes', logger.DEBUG)
             uncompiled_regex = [regexes.normal_regexes, regexes.anime_regexes]
 
-        self.compiled_regexes = {0: [], 1: []}
+        cls.compiled_regexes = {0: [], 1: []}
         index = 0
         for regexItem in uncompiled_regex:
             for cur_pattern_num, (cur_pattern_name, cur_pattern) in enumerate(regexItem):
@@ -80,8 +78,10 @@ class NameParser(object):
                 except re.error as errormsg:
                     logger.log(u'WARNING: Invalid episode_pattern, %s. %s' % (errormsg, cur_pattern))
                 else:
-                    self.compiled_regexes[index].append([cur_pattern_num, cur_pattern_name, cur_regex])
+                    cls.compiled_regexes[index].append([cur_pattern_num, cur_pattern_name, cur_regex])
             index += 1
+
+        return cls.compiled_regexes
 
     @staticmethod
     def clean_series_name(series_name):
@@ -143,6 +143,15 @@ class NameParser(object):
                             pass
 
                         result.score += 1
+
+                if 'anime' in cur_regex_name and not (self.showObj and self.showObj.is_anime):
+                    p_show = helpers.get_show(result.series_name, True)
+                    if p_show and self.showObj and p_show.indexerid != self.showObj.indexerid:
+                        p_show = None
+                    if not p_show and self.showObj:
+                        p_show = self.showObj
+                    if p_show and not p_show.is_anime:
+                        continue
 
                 if 'series_num' in named_groups and match.group('series_num'):
                     result.score += 1
@@ -556,6 +565,11 @@ class NameParser(object):
 
         logger.log(u'Parsed %s into %s' % (name, str(final_result).decode('utf-8', 'xmlcharrefreplace')), logger.DEBUG)
         return final_result
+
+
+compiled_regexes = {NameParser.NORMAL_REGEX: NameParser.compile_regexes(NameParser.NORMAL_REGEX),
+                    NameParser.ANIME_REGEX: NameParser.compile_regexes(NameParser.ANIME_REGEX),
+                    NameParser.ALL_REGEX: NameParser.compile_regexes(NameParser.ALL_REGEX)}
 
 
 class ParseResult(object):

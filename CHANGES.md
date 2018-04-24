@@ -6,6 +6,9 @@
 * Remove TorrentBytes provider
 * Change remove redundant log messages for releases never to be cached removing <30% log spam
 * Change remove redundant log messages for items not found in cache removing <10% log spam
+* Fix marking episodes wanted due to parsing malformed non-anime release name as an anime season pack
+* Change speed optimization, compile static name parser regexes once, instead of for every NameParser instance
+* Change remove redundant create regexs log messages removing <10% log spam
 
 
 ### 0.15.13 (2018-04-18 13:50:00 UTC)

@@ -9,6 +9,7 @@ sys.path.insert(1, os.path.abspath('..'))
 sys.path.insert(1, os.path.abspath('../lib'))
 
 from sickbeard.name_parser import parser
+from sickbeard import name_cache
 
 import sickbeard
 
@@ -352,6 +353,25 @@ unicode_test_cases = [
 
 failure_cases = ['7sins-jfcs01e09-720p-bluray-x264']
 
+invalid_cases = [('The.Show.Name.111E14.1080p.WEB.x264-GROUP', 'the show name', 11, False)]
+
+
+class InvalidCases(test.SickbeardTestDBCase):
+
+    def _test_invalid(self, name, show, indexerid, is_anime):
+        sickbeard.showList.append(TVShow(name=name, indexerid=indexerid, is_anime=is_anime))
+        name_cache.addNameToCache(show, indexerid)
+        invalidexception = False
+        try:
+            parse_result = parser.NameParser(True).parse(name)
+        except (parser.InvalidNameException, parser.InvalidShowException):
+            invalidexception = True
+        self.assertEqual(invalidexception, True)
+
+    def test_invalid(self):
+        for (name, show, indexerid, is_anime) in invalid_cases:
+            self._test_invalid(name, show, indexerid, is_anime)
+
 
 class UnicodeTests(test.SickbeardTestDBCase):
 
@@ -593,8 +613,10 @@ class BasicTests(test.SickbeardTestDBCase):
 
 
 class TVShow(object):
-    def __init__(self, is_anime=False):
+    def __init__(self, is_anime=False, name='', indexerid=0):
         self.is_anime = is_anime
+        self.name = name
+        self.indexerid = indexerid
 
 
 if __name__ == '__main__':
@@ -611,4 +633,7 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(FailureCaseTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(InvalidCases)
     unittest.TextTestRunner(verbosity=2).run(suite)
