@@ -1,4 +1,4 @@
-﻿### 0.16.0 (2018-xx-xx xx:xx:xx UTC)
+﻿### 0.16.0 (2018-04-26 17:10:00 UTC)
 
 * Change search show result 'exists in db' text into a link to display show page
 * Change increase namecache size and fix deleting items from it when at capacity
@@ -31,14 +31,6 @@
 * Update unidecode library 0.04.21 (e99b0e3) to 1.0.22 (81f938d)
 * Update webencodings 0.5 (3970651) to 0.5.1 (fa2cb5d)
 * Update xmltodict library 0.10.2 (375d3a6) to 0.11.0 (79ac9a4)
-
-[develop changelog]
-* Update Tornado Web Server 4.5.1 (79b2683) to 5.0.1 (35a538f)
-* Change pick up the stragglers late to the more security party
-* Change remove redundant xsrf handling for POSTs that don't use web and API
-* Change add xsrf protection support to media processing scripts
-* Change suppress output warnings from media process scripts
-* Change remove deprecated files
 
 
 ### 0.15.14 (2018-04-20 12:00:00 UTC)
