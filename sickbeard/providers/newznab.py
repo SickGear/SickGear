@@ -980,10 +980,8 @@ class NewznabCache(tvcache.TVCache):
 
         ids = self.parse_ids(item, ns)
 
-        if not title or not url:
-            logger.log('The data returned from the %s feed is incomplete, this result is unusable'
-                       % self.provider.name, logger.DEBUG)
-            return None
+        if title and url:
+            return self.add_cache_entry(title, url, id_dict=ids)
 
-        logger.log('Attempting to add item from RSS to cache: %s' % title, logger.DEBUG)
-        return self.add_cache_entry(title, url, id_dict=ids)
+        logger.log('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name,
+                   logger.DEBUG)

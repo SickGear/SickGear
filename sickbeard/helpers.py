@@ -1107,30 +1107,25 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     Either
     1) Returns a byte-string retrieved from the url provider.
     2) Return True/False if success after using kwargs 'savefile' set to file pathname.
+    3) Returns Tuple response, session if success after setting kwargs 'resp_sess' True.
     """
 
     # selectively mute some errors
-    mute = []
-    for muted in filter(
-            lambda x: kwargs.get(x, False), ['mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout']):
-        mute += [muted]
-        del kwargs[muted]
+    mute = filter(lambda x: kwargs.pop(x, False), ['mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout'])
 
     # reuse or instantiate request session
+    resp_sess = kwargs.pop('resp_sess', None)
     if None is session:
         session = CloudflareScraper.create_scraper()
         session.headers.update({'User-Agent': USER_AGENT})
 
     # download and save file or simply fetch url
-    savename = None
-    if 'savename' in kwargs:
+    savename = kwargs.pop('savename', None)
+    if savename:
         # session streaming
         session.stream = True
-        savename = kwargs.pop('savename')
 
-    if 'nocache' in kwargs:
-        del kwargs['nocache']
-    else:
+    if not kwargs.pop('nocache', False):
         cache_dir = sickbeard.CACHE_DIR or _getTempDir()
         session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
 
@@ -1168,13 +1163,13 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                 session.proxies = {'http': proxy_address, 'https': proxy_address}
 
         # decide if we get or post data to server
-        if 'post_json' in kwargs:
-            kwargs.setdefault('json', kwargs.pop('post_json'))
+        if post_data or 'post_json' in kwargs:
+            if post_data:
+                kwargs.setdefault('data', post_data)
 
-        if post_data:
-            kwargs.setdefault('data', post_data)
+            if 'post_json' in kwargs:
+                kwargs.setdefault('json', kwargs.pop('post_json'))
 
-        if 'data' in kwargs or 'json' in kwargs:
             response = session.post(url, timeout=timeout, **kwargs)
         else:
             response = session.get(url, timeout=timeout, **kwargs)
@@ -1242,6 +1237,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     if json:
         try:
             data_json = response.json()
+            if resp_sess:
+                return ({}, data_json)[isinstance(data_json, (dict, list))], session
             return ({}, data_json)[isinstance(data_json, (dict, list))]
         except (TypeError, Exception) as e:
             logger.log(u'JSON data issue from URL %s\r\nDetail... %s' % (url, e.message), logger.WARNING)
@@ -1266,6 +1263,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                 raise e
             return
         return True
+
+    if resp_sess:
+        return response.content, session
 
     return response.content
 
