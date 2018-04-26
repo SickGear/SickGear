@@ -4,7 +4,7 @@ import os
 import shutil
 
 parent_dir = os.path.abspath(os.path.dirname(__file__))
-cleaned_file = os.path.abspath(os.path.join(parent_dir, r'.cleaned.tmp'))
+cleaned_file = os.path.abspath(os.path.join(parent_dir, '.cleaned.tmp'))
 if not os.path.isfile(cleaned_file):
     dead_dirs = [os.path.abspath(os.path.join(parent_dir, *d)) for d in [
         ('tornado',),
@@ -32,8 +32,11 @@ if not os.path.isfile(cleaned_file):
         fp.flush()
         os.fsync(fp.fileno())
 
-cleaned_file = os.path.abspath(os.path.join(parent_dir, r'.cleaned_html5lib.tmp'))
-if not os.path.isfile(cleaned_file):
+cleaned_file = os.path.abspath(os.path.join(parent_dir, '.cleaned_html5lib.tmp'))
+test = os.path.abspath(os.path.join(parent_dir, 'lib', 'html5lib', 'treebuilders', '_base.pyc'))
+danger_output = os.path.abspath(os.path.join(parent_dir, '__README-DANGER.txt'))
+bad_files = []
+if not os.path.isfile(cleaned_file) or os.path.exists(test):
     for dead_path in [os.path.abspath(os.path.join(parent_dir, *d)) for d in [
         ('lib', 'html5lib', 'trie'),
         ('lib', 'html5lib', 'serializer')
@@ -56,12 +59,27 @@ if not os.path.isfile(cleaned_file):
         ('lib', 'html5lib', 'treewalkers', 'genshistream.py'),
     ]]:
         for ext in ['', 'c', 'o']:
-            try:
-                os.remove('%s.py%s' % (os.path.splitext(dead_file)[:-1][0], ext))
-            except (StandardError, Exception):
-                pass
+            name = '%s.py%s' % (os.path.splitext(dead_file)[:-1][0], ext)
+            if os.path.exists(name):
+                try:
+                    os.remove(name)
+                except (StandardError, Exception):
+                    bad_files += [name]
+    if any(bad_files):
+        swap_name = cleaned_file
+        cleaned_file = danger_output
+        danger_output = swap_name
+        msg = 'Failed (permissions?) to delete file(s). You must manually delete:\r\n%s' % '\r\n'.join(bad_files)
+        print(msg)
+    else:
+        msg = 'This file exists to prevent a rerun delete of dead lib/html5lib files'
 
     with open(cleaned_file, 'wb') as fp:
-        fp.write('This file exists to prevent a rerun delete of dead lib/html5lib files')
+        fp.write(msg)
         fp.flush()
         os.fsync(fp.fileno())
+
+try:
+    os.remove(danger_output)
+except (StandardError, Exception):
+    pass

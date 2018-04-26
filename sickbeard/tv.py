@@ -389,8 +389,8 @@ class TVShow(object):
             if noCreate:
                 return None
 
-            logger.log('%s: An object for episode %sx%s didn\'t exist in the cache, trying to create it' %
-                       (self.indexerid, season, episode), logger.DEBUG)
+            # logger.log('%s: An object for episode %sx%s didn\'t exist in the cache, trying to create it' %
+            #            (self.indexerid, season, episode), logger.DEBUG)
 
             if file:
                 ep = TVEpisode(self, season, episode, file, show_sql=ep_sql)

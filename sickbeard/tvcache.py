@@ -127,14 +127,10 @@ class TVCache:
             title = self._translateTitle(title)
             url = self._translateLinkURL(url)
 
-            logger.log(u'Attempting to add item to cache: ' + title, logger.DEBUG)
             return self.add_cache_entry(title, url)
 
-        else:
-            logger.log(
-                u'The data returned from the ' + self.provider.name + ' feed is incomplete, this result is unusable',
-                logger.DEBUG)
-            return None
+        logger.log('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name,
+                   logger.DEBUG)
 
     def _getLastUpdate(self):
         myDB = self.get_db()
@@ -197,42 +193,41 @@ class TVCache:
         if not parse_result:
 
             # create showObj from indexer_id if available
-            showObj=None
+            show_obj = None
             if indexer_id:
                 try:
-                    showObj = helpers.findCertainShow(sickbeard.showList, indexer_id)
+                    show_obj = helpers.findCertainShow(sickbeard.showList, indexer_id)
                 except MultipleShowObjectsException:
-                    return None
+                    return
 
             if id_dict:
                 try:
-                    showObj = helpers.find_show_by_id(sickbeard.showList, id_dict=id_dict, no_mapped_ids=False)
+                    show_obj = helpers.find_show_by_id(sickbeard.showList, id_dict=id_dict, no_mapped_ids=False)
                 except MultipleShowObjectsException:
-                    return None
+                    return
 
             try:
-                np = NameParser(showObj=showObj, convert=True, indexer_lookup=False)
+                np = NameParser(showObj=show_obj, convert=True, indexer_lookup=False)
                 parse_result = np.parse(name)
             except InvalidNameException:
-                logger.log(u'Unable to parse the filename ' + name + ' into a valid episode', logger.DEBUG)
-                return None
+                logger.log('Unable to parse the filename %s into a valid episode' % name, logger.DEBUG)
+                return
             except InvalidShowException:
-                logger.log(u'No show in the db matches filename ' + name + ' not cached', logger.DEBUG)
-                return None
+                return
 
             if not parse_result or not parse_result.series_name:
-                return None
+                return
 
-        # if we made it this far then lets add the parsed result to cache for usager later on
+        # if we made it this far then lets add the parsed result to cache for usage later on
         season = parse_result.season_number if parse_result.season_number else 1
         episodes = parse_result.episode_numbers
 
         if season and episodes:
-            # store episodes as a seperated string
-            episodeText = '|' + '|'.join(map(str, episodes)) + '|'
+            # store episodes as a separated string
+            episode_text = '|%s|' % '|'.join(map(str, episodes))
 
             # get the current timestamp
-            curTimestamp = int(time.mktime(datetime.datetime.today().timetuple()))
+            cur_timestamp = int(time.mktime(datetime.datetime.today().timetuple()))
 
             # get quality of release
             quality = parse_result.quality
@@ -246,11 +241,14 @@ class TVCache:
             # get version
             version = parse_result.version
 
-            logger.log(u'Added RSS item: [' + name + '] to cache: [' + self.providerID + ']', logger.DEBUG)
+            logger.log('Add to cache: [%s]' % name, logger.DEBUG)
 
             return [
-                'INSERT OR IGNORE INTO provider_cache (provider, name, season, episodes, indexerid, url, time, quality, release_group, version) VALUES (?,?,?,?,?,?,?,?,?,?)',
-                [self.providerID, name, season, episodeText, parse_result.show.indexerid, url, curTimestamp, quality, release_group, version]]
+                'INSERT OR IGNORE INTO provider_cache'
+                ' (provider, name, season, episodes, indexerid, url, time, quality, release_group, version)'
+                ' VALUES (?,?,?,?,?,?,?,?,?,?)',
+                [self.providerID, name, season, episode_text, parse_result.show.indexerid,
+                 url, cur_timestamp, quality, release_group, version]]
 
     def searchCache(self, episode, manualSearch=False):
         neededEps = self.findNeededEpisodes(episode, manualSearch)

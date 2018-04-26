@@ -6,6 +6,9 @@
 #set global $topmenu = 'cache'
 ##
 #import os.path
+#from sickbeard import sbdatetime, providers
+#from sickbeard.common import Quality
+#from sickbeard.helpers import tryInt
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript">
@@ -14,7 +17,7 @@
 {
 	\$('#cacheTable:has(tbody tr)').tablesorter({
 		widgets: ['zebra', 'filter'],
-		sortList: [[0,1]],
+		sortList: [[1,0]],
 	});
 
 	#raw
@@ -40,38 +43,47 @@
 	<table id="cacheTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
 		<thead>
 			<tr>
-				<th class="col-cache">Provider</th>
-				<th class="col-name-cache">Name</th>
-				<th class="col-cache">Season</th>
-				<th class="col-episodes">Episodes</th>
-				<th class="col-cache">Indexer Id</th>
+				<th class="col-cache">Prov</th>
+				<th class="col-name-cache">Rls Name</th>
+				<th class="col-cache">Sn</th>
+				<th class="col-cache col-episodes">En</th>
+				<th class="col-cache">Show Id</th>
 				<th class="col-cache">Url</th>
-				<th class="col-cache">Time</th>
+				<th class="col-cache">TimeStamp</th>
 				<th class="col-cache">Quality</th>
-				<th class="col-cache">Release Group</th>
-				<th class="col-cache">Version</th>
+				<th class="col-cache">Rls Group</th>
+				<th class="col-cache">Ver</th>
 			</tr>
 		</thead>
 
 		<tfoot>
 			<tr>
-				<th class="nowrap" colspan="10">&nbsp;</th>
+				<th class="nowrap" colspan="10" style="text-align:left">$len($cacheResults) releases</th>
 			</tr>
 		</tfoot>
 
 		<tbody>
 #for $hItem in $cacheResults:
+    #set $provider = $providers.getProviderClass($hItem['provider'])
+    #set $tip = '%s @ %s' % ($hItem['provider'], $sbdatetime.sbdatetime.sbfdatetime($sbdatetime.sbdatetime.fromtimestamp($hItem['time'])))
+    #set $ver = $hItem['version']
+    #set $ver = ($ver, '')[-1 == $ver]
+    #set $quality = tryInt($hItem['quality'])
 			<tr>
-				<td class="col-cache">$hItem['provider']</td>
+    #if $provider
+                <td class="col-cache"><img src="$sbRoot/images/providers/$provider.image_name()" class="addQTip" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle"></td>
+    #else
+                <td class="col-cache"><span class="addQTip" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle">$hItem['provider']</span></td>
+    #end if
 				<td class="col-name-cache">$hItem['name']</td>
 				<td class="col-cache">$hItem['season']</td>
-				<td class="col-episodes">$hItem['episodes']</td>
+				<td class="col-episodes" style="white-space:nowrap">$hItem['episodes'].strip('|').replace('|', ',')</td>
 				<td class="col-cache">$hItem['indexerid']</td>
 				<td class="col-cache"><span title="$hItem['url']" class="addQTip"><img src="$sbRoot/images/info32.png" width="16" height="16" /></span></td>
 				<td class="col-cache">$hItem['time']</td>
-				<td class="col-cache">$hItem['quality']</td>
+				<td class="col-cache"><span class="quality $Quality.get_quality_css($quality)">$Quality.get_quality_ui($quality)</span></td>
 				<td class="col-cache">$hItem['release_group']</td>
-				<td class="col-cache">$hItem['version']</td>
+				<td class="col-cache">$ver</td>
 			</tr>
 #end for
 		</tbody>

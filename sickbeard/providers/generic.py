@@ -515,7 +515,8 @@ class GenericProvider(object):
         log_failure_url = False
         try:
             data = helpers.getURL(url, *args, **kwargs)
-            if data:
+            if data and not isinstance(data, tuple) \
+                    or isinstance(data, tuple) and data[0]:
                 if 0 != self.failure_count:
                     logger.log('Unblocking provider: %s' % self.get_id(), logger.DEBUG)
                 self.failure_count = 0
@@ -638,6 +639,7 @@ class GenericProvider(object):
                     pass
 
                 if not btih or not re.search('(?i)[0-9a-f]{32,40}', btih):
+                    assert not result.url.startswith('http')
                     logger.log('Unable to extract torrent hash from link: ' + ex(result.url), logger.ERROR)
                     return False
 
@@ -1494,7 +1496,7 @@ class TorrentProvider(GenericProvider):
                     is_valid = s + zlib.crc32(file_hd.read()) in (1661931498, 472149389)
         return is_valid
 
-    def _authorised(self, logged_in=None, post_params=None, failed_msg=None, url=None, timeout=30):
+    def _authorised(self, logged_in=None, post_params=None, failed_msg=None, url=None, timeout=30, **kwargs):
 
         maxed_out = (lambda y: re.search(r'(?i)[1-3]((<[^>]+>)|\W)*' +
                                          '(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)', y))
@@ -1514,19 +1516,24 @@ class TorrentProvider(GenericProvider):
         if not self._valid_home():
             return False
 
-        if hasattr(self, 'digest'):
+        if getattr(self, 'digest', None):
             self.cookies = re.sub(r'(?i)([\s\']+|cookie\s*:)', '', self.digest)
             success, msg = self._check_cookie()
             if not success:
                 self.cookies = None
                 logger.log(u'%s: [%s]' % (msg, self.cookies), logger.WARNING)
                 return False
-        elif not self._check_auth():
-            return False
+        else:
+            try:
+                if not self._check_auth():
+                    return False
+            except AuthException as e:
+                logger.log('%s' % ex(e), logger.ERROR)
+                return False
 
         if isinstance(url, type([])):
             for i in range(0, len(url)):
-                self.get_url(url.pop(), skip_auth=True)
+                self.get_url(url.pop(), skip_auth=True, **kwargs)
                 if self.should_skip():
                     return False
 
@@ -1535,7 +1542,9 @@ class TorrentProvider(GenericProvider):
             if hasattr(self, 'urls'):
                 url = self.urls.get('login_action')
                 if url:
-                    response = self.get_url(url, skip_auth=True)
+                    response = self.get_url(url, skip_auth=True, **kwargs)
+                    if isinstance(response, tuple):
+                        response = response[0]
                     if self.should_skip() or None is response:
                         return False
                     try:
@@ -1560,6 +1569,8 @@ class TorrentProvider(GenericProvider):
                                 passfield = name
                             if name not in ('username', 'password') and 'password' != itype:
                                 post_params.setdefault(name, value)
+                    except IndexError:
+                        return False
                     except KeyError:
                         return super(TorrentProvider, self)._authorised()
                 else:
@@ -1567,7 +1578,7 @@ class TorrentProvider(GenericProvider):
             if not url:
                 return super(TorrentProvider, self)._authorised()
 
-        if hasattr(self, 'username') and hasattr(self, 'password'):
+        if getattr(self, 'username', None) and getattr(self, 'password', None):
             if not post_params:
                 post_params = dict(username=self.username, password=self.password)
             elif isinstance(post_params, type({})):
@@ -1576,15 +1587,21 @@ class TorrentProvider(GenericProvider):
                 if self.password not in post_params.values():
                     post_params[(passfield, 'password')[not passfield]] = self.password
 
-        response = self.get_url(url, skip_auth=True, post_data=post_params, timeout=timeout)
+        response = self.get_url(url, skip_auth=True, post_data=post_params, timeout=timeout, **kwargs)
+        session = True
+        if isinstance(response, tuple):
+            session = response[1]
+            response = response[0]
         if not self.should_skip() and response:
             if logged_in(response):
-                return True
+                return session
 
             if maxed_out(response) and hasattr(self, 'password'):
                 self.password = None
                 sickbeard.save_config()
-            logger.log(failed_msg(response) % self.name, logger.ERROR)
+            msg = failed_msg(response)
+            if msg:
+                logger.log(msg % self.name, logger.ERROR)
 
         return False
 
