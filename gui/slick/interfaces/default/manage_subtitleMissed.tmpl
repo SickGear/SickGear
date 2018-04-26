@@ -45,6 +45,8 @@
 	<input type="hidden" id="selectSubLang" name="selectSubLang" value="$whichSubs">
 
 	<form action="$sbRoot/manage/downloadSubtitleMissed" method="post">
+		$xsrf_form_html
+
 		<h2>Episodes without $subsLanguage subtitles.</h2>
 		<br />
 		Download missed subtitles for selected episodes <input class="btn btn-inline" type="submit" value="Go" />

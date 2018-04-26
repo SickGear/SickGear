@@ -23,6 +23,7 @@ import os
 import os.path
 import re
 import time
+import threading
 
 import regexes
 import sickbeard
@@ -35,6 +36,7 @@ except ImportError:
 
 from sickbeard import logger, helpers, scene_numbering, common, scene_exceptions, encodingKludge as ek, db
 from sickbeard.exceptions import ex
+from sickbeard.classes import OrderedDefaultdict
 
 
 class NameParser(object):
@@ -720,20 +722,31 @@ class ParseResult(object):
 
 
 class NameParserCache(object):
-    _previous_parsed = {}
-    _cache_size = 100
+    def __init__(self):
+        super(NameParserCache, self).__init__()
+        self._previous_parsed = OrderedDefaultdict()
+        self._cache_size = 1000
+        self.lock = threading.Lock()
 
     def add(self, name, parse_result):
-        self._previous_parsed[name] = parse_result
-        _current_cache_size = len(self._previous_parsed)
-        if _current_cache_size > self._cache_size:
-            for i in range(_current_cache_size - self._cache_size):
-                del self._previous_parsed[self._previous_parsed.keys()[0]]
+        with self.lock:
+            self._previous_parsed[name] = parse_result
+            _current_cache_size = len(self._previous_parsed)
+            if _current_cache_size > self._cache_size:
+                key = None
+                for i in range(_current_cache_size - self._cache_size):
+                    try:
+                        key = self._previous_parsed.first_key()
+                        del self._previous_parsed[key]
+                    except KeyError:
+                        logger.log('Could not remove old NameParserCache entry: %s' % key, logger.DEBUG)
 
     def get(self, name):
-        if name in self._previous_parsed:
-            logger.log('Using cached parse result for: ' + name, logger.DEBUG)
-            return self._previous_parsed[name]
+        with self.lock:
+            if name in self._previous_parsed:
+                logger.log('Using cached parse result for: ' + name, logger.DEBUG)
+                self._previous_parsed.move_to_end(name)
+                return self._previous_parsed[name]
 
 
 name_parser_cache = NameParserCache()

@@ -17,26 +17,28 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-
-import time
-import sickbeard
-import datetime
-import re
-import urllib
+from collections import OrderedDict
 from math import ceil
 
-from sickbeard.sbdatetime import sbdatetime
-from . import generic
-from sickbeard import helpers, logger, tvcache, classes, db
-from sickbeard.common import neededQualities, Quality, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, DOWNLOADED
-from sickbeard.exceptions import AuthException, MultipleShowObjectsException
-from sickbeard.indexers.indexer_config import *
+import datetime
+import re
+import time
+import urllib
+
+import sickbeard
+
 from io import BytesIO
 from lib.dateutil import parser
-from sickbeard.network_timezones import sb_timezone
+from . import generic
+from sickbeard import classes, db, helpers, logger, tvcache
+from sickbeard.common import neededQualities, Quality, DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST
+from sickbeard.exceptions import AuthException, MultipleShowObjectsException
 from sickbeard.helpers import tryInt
+from sickbeard.indexers.indexer_config import *
+from sickbeard.network_timezones import sb_timezone
+from sickbeard.sbdatetime import sbdatetime
+from sickbeard.search import get_aired_in_season, get_wanted_qualities
 from sickbeard.show_name_helpers import get_show_names
-from sickbeard.search import get_wanted_qualities, get_aired_in_season
 
 try:
     from lxml import etree
@@ -45,11 +47,6 @@ except ImportError:
         import xml.etree.cElementTree as etree
     except ImportError:
         import xml.etree.ElementTree as etree
-
-try:
-    from collections import OrderedDict
-except ImportError:
-    from requests.compat import OrderedDict
 
 
 class NewznabConstants:
@@ -73,7 +70,7 @@ class NewznabConstants:
                         r'^BoxHD$': CAT_HD,
                         r'^UHD$': CAT_UHD,
                         r'^4K$': CAT_UHD,
-                        #r'^HEVC$': CAT_HEVC,
+                        # r'^HEVC$': CAT_HEVC,
                         r'^WEB.?DL$': CAT_WEBDL}
 
     providerToIndexerMapping = {'tvdbid': INDEXER_TVDB,
@@ -101,8 +98,8 @@ class NewznabConstants:
 
 class NewznabProvider(generic.NZBProvider):
 
-    def __init__(self, name, url, key='', cat_ids=None, search_mode=None,
-                 search_fallback=False, enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False):
+    def __init__(self, name, url, key='', cat_ids=None, search_mode=None, search_fallback=False,
+                 enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False):
         generic.NZBProvider.__init__(self, name, True, False)
 
         self.url = url
@@ -235,8 +232,8 @@ class NewznabProvider(generic.NZBProvider):
 
             limit = xml_caps.find('.//limits')
             if None is not limit:
-                l = helpers.tryInt(limit.get('max'), 100)
-                self._limits = (100, l)[l >= 100]
+                lim = helpers.tryInt(limit.get('max'), 100)
+                self._limits = (100, lim)[lim >= 100]
 
             try:
                 for category in xml_caps.iter('category'):

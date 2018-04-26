@@ -31,8 +31,8 @@ from sickbeard import db
 
 from sickbeard.metadata.generic import GenericMetadata
 
-from lib.hachoir_parser import createParser
-from lib.hachoir_metadata import extractMetadata
+from lib.hachoir.parser import createParser
+from lib.hachoir.metadata import extractMetadata
 from lib.send2trash import send2trash
 try:
     import zlib

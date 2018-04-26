@@ -36,6 +36,8 @@ import warnings
 
 warnings.filterwarnings('ignore', module=r'.*fuzzywuzzy.*')
 warnings.filterwarnings('ignore', module=r'.*Cheetah.*')
+warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
+warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
 if not (2, 7, 9) <= sys.version_info < (3, 0):
     print('Python %s.%s.%s detected.' % sys.version_info[:3])
@@ -55,7 +57,7 @@ try:
 except ValueError:
     print('Sorry, requires Python module Cheetah 2.1.0 or newer.')
     sys.exit(1)
-except:
+except (StandardError, Exception):
     print('The Python module Cheetah is required')
     sys.exit(1)
 
@@ -325,23 +327,25 @@ class SickGear(object):
             print(u'Unable to find "%s", all settings will be default!' % sickbeard.CONFIG_FILE)
 
         sickbeard.CFG = ConfigObj(sickbeard.CONFIG_FILE)
-        stack_size = None
         try:
             stack_size = int(sickbeard.CFG['General']['stack_size'])
-        except:
+        except (StandardError, Exception):
             stack_size = None
 
         if stack_size:
             try:
                 threading.stack_size(stack_size)
-            except (StandardError, Exception) as e:
-                print('Stack Size %s not set: %s' % (stack_size, e.message))
+            except (StandardError, Exception) as er:
+                print('Stack Size %s not set: %s' % (stack_size, er.message))
 
         # check all db versions
         for d, min_v, max_v, base_v, mo in [
-            ('failed.db', sickbeard.failed_db.MIN_DB_VERSION, sickbeard.failed_db.MAX_DB_VERSION, sickbeard.failed_db.TEST_BASE_VERSION, 'FailedDb'),
-            ('cache.db', sickbeard.cache_db.MIN_DB_VERSION, sickbeard.cache_db.MAX_DB_VERSION, sickbeard.cache_db.TEST_BASE_VERSION, 'CacheDb'),
-            ('sickbeard.db', sickbeard.mainDB.MIN_DB_VERSION, sickbeard.mainDB.MAX_DB_VERSION, sickbeard.mainDB.TEST_BASE_VERSION, 'MainDb')
+            ('failed.db', sickbeard.failed_db.MIN_DB_VERSION, sickbeard.failed_db.MAX_DB_VERSION,
+             sickbeard.failed_db.TEST_BASE_VERSION, 'FailedDb'),
+            ('cache.db', sickbeard.cache_db.MIN_DB_VERSION, sickbeard.cache_db.MAX_DB_VERSION,
+             sickbeard.cache_db.TEST_BASE_VERSION, 'CacheDb'),
+            ('sickbeard.db', sickbeard.mainDB.MIN_DB_VERSION, sickbeard.mainDB.MAX_DB_VERSION,
+             sickbeard.mainDB.TEST_BASE_VERSION, 'MainDb')
         ]:
             cur_db_version = db.DBConnection(d).checkDBVersion()
 
@@ -407,19 +411,25 @@ class SickGear(object):
             self.webhost = (('0.0.0.0', '::')[sickbeard.WEB_IPV6], '')[sickbeard.WEB_IPV64]
 
         # web server options
-        self.web_options = {
-            'port': int(self.start_port),
-            'host': self.webhost,
-            'data_root': os.path.join(sickbeard.PROG_DIR, 'gui', sickbeard.GUI_NAME),
-            'web_root': sickbeard.WEB_ROOT,
-            'log_dir': self.log_dir,
-            'username': sickbeard.WEB_USERNAME,
-            'password': sickbeard.WEB_PASSWORD,
-            'enable_https': sickbeard.ENABLE_HTTPS,
-            'handle_reverse_proxy': sickbeard.HANDLE_REVERSE_PROXY,
-            'https_cert': os.path.join(sickbeard.PROG_DIR, sickbeard.HTTPS_CERT),
-            'https_key': os.path.join(sickbeard.PROG_DIR, sickbeard.HTTPS_KEY),
-        }
+        self.web_options = dict(
+            host=self.webhost,
+            port=int(self.start_port),
+            web_root=sickbeard.WEB_ROOT,
+            data_root=os.path.join(sickbeard.PROG_DIR, 'gui', sickbeard.GUI_NAME),
+            log_dir=self.log_dir,
+            username=sickbeard.WEB_USERNAME,
+            password=sickbeard.WEB_PASSWORD,
+            handle_reverse_proxy=sickbeard.HANDLE_REVERSE_PROXY,
+            enable_https=False,
+            https_cert=None,
+            https_key=None,
+        )
+        if sickbeard.ENABLE_HTTPS:
+            self.web_options.update(dict(
+                enable_https=sickbeard.ENABLE_HTTPS,
+                https_cert=os.path.join(sickbeard.PROG_DIR, sickbeard.HTTPS_CERT),
+                https_key=os.path.join(sickbeard.PROG_DIR, sickbeard.HTTPS_KEY)
+            ))
 
         # start web server
         try:
@@ -594,7 +604,7 @@ class SickGear(object):
             # shutdown web server
             if self.webserver:
                 logger.log('Shutting down Tornado')
-                self.webserver.shutDown()
+                self.webserver.shut_down()
                 try:
                     self.webserver.join(10)
                 except (StandardError, Exception):
@@ -633,6 +643,7 @@ class SickGear(object):
     @staticmethod
     def exit(code):
         os._exit(code)
+
 
 if __name__ == '__main__':
     if sys.hexversion >= 0x020600F0:

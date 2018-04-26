@@ -85,7 +85,7 @@ $(document).ready(function () {
 						Aired: 8, Network: 9, Genre: 10, Overview: 11, RelSort: 12, DateSort: 13, AzSort: 14, ImgUrl: 15
 					};
 					$.each(data.results, function (index, item) {
-						attrs = (!0 === item[result.isInDB] ? ' disabled="disabled"' : (!0 === checked ? '' : ' checked'));
+						attrs = (!1 !== item[result.isInDB] ? ' disabled="disabled"' : (!0 === checked ? '' : ' checked'));
 						checked = (' checked' === attrs) ? !0 : checked;
 						rowType = (0 == row % 2 ? '' : ' alt');
 						row++;
@@ -102,7 +102,7 @@ $(document).ready(function () {
 
 						srcState = [
 							null === item[result.SrcName] ? '' : item[result.SrcName],
-							!1 === item[result.isInDB] ? '' : '<span class="exists-db">exists in db</span>']
+							!1 === item[result.isInDB] ? '' : '<span class="exists-db"><a href="' + sbRoot + item[result.isInDB] + '" target="_blank">exists in db</a></span>']
 							.join(' - ').replace(/(^[\s-]+|[\s-]+$)/, '');
 						resultStr += '<div class="results-item' + rowType + '" data-indb="' +  (!1 === item[result.isInDB] ? '' : '1') + '" data-sort-rel="' + item[result.RelSort] + '" data-sort-date="' + item[result.DateSort] + '" data-sort-az="' + item[result.AzSort] + '">'
 							+ '<input id="whichSeries" type="radio"'

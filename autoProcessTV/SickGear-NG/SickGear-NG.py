@@ -63,7 +63,7 @@
 
 # Send PostProcessing requests to SickGear
 #
-# PostProcessing-Script version: 1.3.
+# PostProcessing-Script version: 1.5.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
@@ -155,10 +155,14 @@ import locale
 import os
 import re
 import sys
+import warnings
 
-__version__ = '1.3'
+__version__ = '1.5'
 
 verbose = 0 or 'yes' == os.environ.get('NZBPO_SG_VERBOSE', 'no')
+
+warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
+warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
 # NZBGet exit codes for post-processing scripts (Queue-scripts don't have any special exit codes).
 POSTPROCESS_SUCCESS, POSTPROCESS_ERROR, POSTPROCESS_NONE = 93, 94, 95
@@ -485,7 +489,10 @@ def call_sickgear(nzb_name, dir_name, test=False):
         s = requests.Session()
         if username or password:
             login = '%s%s:%s%s/login' % (protocol, host, port, webroot)
+            r = s.get(login, verify=False)
             login_params = {'username': username, 'password': password}
+            if 401 == r.status_code and r.cookies.get('_xsrf'):
+                login_params['_xsrf'] = r.cookies.get('_xsrf')
             s.post(login, data=login_params, stream=True, verify=False)
         r = s.get(url, auth=(username, password), params=params, stream=True, verify=False, timeout=900)
     except (StandardError, Exception):

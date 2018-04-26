@@ -4,13 +4,18 @@ import os
 import shutil
 
 parent_dir = os.path.abspath(os.path.dirname(__file__))
-cleaned_file = os.path.abspath(os.path.join(parent_dir, '.cleaned.tmp'))
-if not os.path.isfile(cleaned_file):
+cleaned_file = os.path.abspath(os.path.join(parent_dir, '.cleaned002.tmp'))
+test = os.path.abspath(os.path.join(parent_dir, 'lib', 'hachoir_core'))
+if not os.path.isfile(cleaned_file) or os.path.exists(test):
     dead_dirs = [os.path.abspath(os.path.join(parent_dir, *d)) for d in [
+        ('.cleaned.tmp',),
         ('tornado',),
         ('lib', 'feedcache'),
+        ('lib', 'hachoir_core'), ('lib', 'hachoir_metadata'), ('lib', 'hachoir_parser'),
         ('lib', 'jsonrpclib'),
         ('lib', 'shove'),
+        ('lib', 'trakt'),
+        ('lib', 'tvrage_api'),
         ('lib', 'unrar2')
     ]]
 

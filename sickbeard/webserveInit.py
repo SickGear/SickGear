@@ -6,22 +6,21 @@ import webserve
 import webapi
 
 from sickbeard import logger
-from sickbeard.helpers import create_https_certificates
+from sickbeard.helpers import create_https_certificates, re_valid_hostname
 from tornado.web import Application
-from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
 
 class WebServer(threading.Thread):
-    def __init__(self, options={}, io_loop=None):
+    def __init__(self, options=None):
         threading.Thread.__init__(self)
         self.daemon = True
         self.alive = True
         self.name = 'TORNADO'
-        self.io_loop = io_loop or IOLoop.current()
+        self.io_loop = None
         self.server = None
 
-        self.options = options
+        self.options = options or {}
         self.options.setdefault('port', 8081)
         self.options.setdefault('host', '0.0.0.0')
         self.options.setdefault('log_dir', None)
@@ -40,40 +39,60 @@ class WebServer(threading.Thread):
         self.https_key = self.options['https_key']
 
         if self.enable_https:
+            make_cert = False
+            update_cfg = False
+            for (attr, ext) in [('https_cert', '.crt'), ('https_key', '.key')]:
+                ssl_path = getattr(self, attr, None)
+                if ssl_path and not os.path.isfile(ssl_path):
+                    if not ssl_path.endswith(ext):
+                        setattr(self, attr, os.path.join(ssl_path, 'server%s' % ext))
+                        setattr(sickbeard, attr.upper(), 'server%s' % ext)
+                    make_cert = True
+
             # If either the HTTPS certificate or key do not exist, make some self-signed ones.
-            if not (self.https_cert and os.path.exists(self.https_cert))\
-                    or not (self.https_key and os.path.exists(self.https_key)):
+            if make_cert:
                 if not create_https_certificates(self.https_cert, self.https_key):
                     logger.log(u'Unable to create CERT/KEY files, disabling HTTPS')
+                    update_cfg |= False is not sickbeard.ENABLE_HTTPS
                     sickbeard.ENABLE_HTTPS = False
                     self.enable_https = False
+                else:
+                    update_cfg = True
 
-            if not (os.path.exists(self.https_cert) and os.path.exists(self.https_key)):
+            if not (os.path.isfile(self.https_cert) and os.path.isfile(self.https_key)):
                 logger.log(u'Disabled HTTPS because of missing CERT and KEY files', logger.WARNING)
+                update_cfg |= False is not sickbeard.ENABLE_HTTPS
                 sickbeard.ENABLE_HTTPS = False
                 self.enable_https = False
+
+            if update_cfg:
+                sickbeard.save_config()
 
         # Load the app
         self.app = Application([],
                                debug=True,
+                               serve_traceback=True,
                                autoreload=False,
-                               gzip=True,
+                               compress_response=True,
                                cookie_secret=sickbeard.COOKIE_SECRET,
+                               xsrf_cookies=True,
                                login_url='%s/login/' % self.options['web_root'])
 
+        re_host_pattern = re_valid_hostname()
+
         # webui login/logout handlers
-        self.app.add_handlers('.*$', [
+        self.app.add_handlers(re_host_pattern, [
             (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),
             (r'%s/logout(/?)' % self.options['web_root'], webserve.LogoutHandler),
         ])
 
         # Web calendar handler (Needed because option Unprotected calendar)
-        self.app.add_handlers('.*$', [
+        self.app.add_handlers(re_host_pattern, [
             (r'%s/calendar' % self.options['web_root'], webserve.CalendarHandler),
         ])
 
         # Static File Handlers
-        self.app.add_handlers('.*$', [
+        self.app.add_handlers(re_host_pattern, [
             # favicon
             (r'%s/(favicon\.ico)' % self.options['web_root'], webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'images/ico/favicon.ico')}),
@@ -100,7 +119,7 @@ class WebServer(threading.Thread):
         ])
 
         # Main Handler
-        self.app.add_handlers('.*$', [
+        self.app.add_handlers(re_host_pattern, [
             (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
             (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
             (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
@@ -124,6 +143,7 @@ class WebServer(threading.Thread):
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
             (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
             (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
+            (r'%s(/?update_watched_state_kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
             (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
 
@@ -144,6 +164,8 @@ class WebServer(threading.Thread):
                 logger.ERROR)
             return
 
+        self.io_loop = IOLoop.current()
+
         try:
             self.io_loop.start()
             self.io_loop.close(True)
@@ -151,6 +173,7 @@ class WebServer(threading.Thread):
             # Ignore errors like 'ValueError: I/O operation on closed kqueue fd'. These might be thrown during a reload.
             pass
 
-    def shutDown(self):
+    def shut_down(self):
         self.alive = False
-        self.io_loop.stop()
+        if None is not self.io_loop:
+            self.io_loop.stop()

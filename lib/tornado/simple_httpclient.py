@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import absolute_import, division, print_function
 
 from tornado.escape import utf8, _unicode
@@ -6,6 +5,7 @@ from tornado import gen
 from tornado.httpclient import HTTPResponse, HTTPError, AsyncHTTPClient, main, _RequestProxy
 from tornado import httputil
 from tornado.http1connection import HTTP1Connection, HTTP1ConnectionParameters
+from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.netutil import Resolver, OverrideResolver, _client_ssl_defaults
 from tornado.log import gen_log
@@ -34,17 +34,38 @@ except ImportError:
     # ssl is not available on Google App Engine.
     ssl = None
 
-try:
-    import certifi
-except ImportError:
-    certifi = None
+
+class HTTPTimeoutError(HTTPError):
+    """Error raised by SimpleAsyncHTTPClient on timeout.
+
+    For historical reasons, this is a subclass of `.HTTPClientError`
+    which simulates a response code of 599.
+
+    .. versionadded:: 5.1
+    """
+    def __init__(self, message):
+        super(HTTPTimeoutError, self).__init__(599, message=message)
+
+    def __str__(self):
+        return self.message
 
 
-def _default_ca_certs():
-    if certifi is None:
-        raise Exception("The 'certifi' package is required to use https "
-                        "in simple_httpclient")
-    return certifi.where()
+class HTTPStreamClosedError(HTTPError):
+    """Error raised by SimpleAsyncHTTPClient when the underlying stream is closed.
+
+    When a more specific exception is available (such as `ConnectionResetError`),
+    it may be raised instead of this one.
+
+    For historical reasons, this is a subclass of `.HTTPClientError`
+    which simulates a response code of 599.
+
+    .. versionadded:: 5.1
+    """
+    def __init__(self, message):
+        super(HTTPStreamClosedError, self).__init__(599, message=message)
+
+    def __str__(self):
+        return self.message
 
 
 class SimpleAsyncHTTPClient(AsyncHTTPClient):
@@ -56,7 +77,7 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
     are not reused, and callers cannot select the network interface to be
     used.
     """
-    def initialize(self, io_loop, max_clients=10,
+    def initialize(self, max_clients=10,
                    hostname_mapping=None, max_buffer_size=104857600,
                    resolver=None, defaults=None, max_header_size=None,
                    max_body_size=None):
@@ -92,8 +113,7 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
         .. versionchanged:: 4.2
            Added the ``max_body_size`` argument.
         """
-        super(SimpleAsyncHTTPClient, self).initialize(io_loop,
-                                                      defaults=defaults)
+        super(SimpleAsyncHTTPClient, self).initialize(defaults=defaults)
         self.max_clients = max_clients
         self.queue = collections.deque()
         self.active = {}
@@ -107,12 +127,12 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
             self.resolver = resolver
             self.own_resolver = False
         else:
-            self.resolver = Resolver(io_loop=io_loop)
+            self.resolver = Resolver()
             self.own_resolver = True
         if hostname_mapping is not None:
             self.resolver = OverrideResolver(resolver=self.resolver,
                                              mapping=hostname_mapping)
-        self.tcp_client = TCPClient(resolver=self.resolver, io_loop=io_loop)
+        self.tcp_client = TCPClient(resolver=self.resolver)
 
     def close(self):
         super(SimpleAsyncHTTPClient, self).close()
@@ -153,7 +173,7 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
 
     def _handle_request(self, request, release_callback, final_callback):
         self._connection_class()(
-            self.io_loop, self, request, release_callback,
+            self, request, release_callback,
             final_callback, self.max_buffer_size, self.tcp_client,
             self.max_header_size, self.max_body_size)
 
@@ -181,7 +201,7 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
 
         error_message = "Timeout {0}".format(info) if info else "Timeout"
         timeout_response = HTTPResponse(
-            request, 599, error=HTTPError(599, error_message),
+            request, 599, error=HTTPTimeoutError(error_message),
             request_time=self.io_loop.time() - request.start_time)
         self.io_loop.add_callback(callback, timeout_response)
         del self.waiting[key]
@@ -190,11 +210,11 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
 class _HTTPConnection(httputil.HTTPMessageDelegate):
     _SUPPORTED_METHODS = set(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 
-    def __init__(self, io_loop, client, request, release_callback,
+    def __init__(self, client, request, release_callback,
                  final_callback, max_buffer_size, tcp_client,
                  max_header_size, max_body_size):
-        self.start_time = io_loop.time()
-        self.io_loop = io_loop
+        self.io_loop = IOLoop.current()
+        self.start_time = self.io_loop.time()
         self.client = client
         self.request = request
         self.release_callback = release_callback
@@ -240,10 +260,10 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
                 self._timeout = self.io_loop.add_timeout(
                     self.start_time + timeout,
                     stack_context.wrap(functools.partial(self._on_timeout, "while connecting")))
-            self.tcp_client.connect(host, port, af=af,
-                                    ssl_options=ssl_options,
-                                    max_buffer_size=self.max_buffer_size,
-                                    callback=self._on_connect)
+            fut = self.tcp_client.connect(host, port, af=af,
+                                          ssl_options=ssl_options,
+                                          max_buffer_size=self.max_buffer_size)
+            fut.add_done_callback(stack_context.wrap(self._on_connect))
 
     def _get_ssl_options(self, scheme):
         if scheme == "https":
@@ -256,62 +276,40 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
                     self.request.client_cert is None and
                     self.request.client_key is None):
                 return _client_ssl_defaults
-            ssl_options = {}
-            if self.request.validate_cert:
-                ssl_options["cert_reqs"] = ssl.CERT_REQUIRED
-            if self.request.ca_certs is not None:
-                ssl_options["ca_certs"] = self.request.ca_certs
-            elif not hasattr(ssl, 'create_default_context'):
-                # When create_default_context is present,
-                # we can omit the "ca_certs" parameter entirely,
-                # which avoids the dependency on "certifi" for py34.
-                ssl_options["ca_certs"] = _default_ca_certs()
-            if self.request.client_key is not None:
-                ssl_options["keyfile"] = self.request.client_key
+            ssl_ctx = ssl.create_default_context(
+                ssl.Purpose.SERVER_AUTH,
+                cafile=self.request.ca_certs)
+            if not self.request.validate_cert:
+                ssl_ctx.check_hostname = False
+                ssl_ctx.verify_mode = ssl.CERT_NONE
             if self.request.client_cert is not None:
-                ssl_options["certfile"] = self.request.client_cert
-
-            # SSL interoperability is tricky.  We want to disable
-            # SSLv2 for security reasons; it wasn't disabled by default
-            # until openssl 1.0.  The best way to do this is to use
-            # the SSL_OP_NO_SSLv2, but that wasn't exposed to python
-            # until 3.2.  Python 2.7 adds the ciphers argument, which
-            # can also be used to disable SSLv2.  As a last resort
-            # on python 2.6, we set ssl_version to TLSv1.  This is
-            # more narrow than we'd like since it also breaks
-            # compatibility with servers configured for SSLv3 only,
-            # but nearly all servers support both SSLv3 and TLSv1:
-            # http://blog.ivanristic.com/2011/09/ssl-survey-protocol-support.html
-            if sys.version_info >= (2, 7):
-                # In addition to disabling SSLv2, we also exclude certain
-                # classes of insecure ciphers.
-                ssl_options["ciphers"] = "DEFAULT:!SSLv2:!EXPORT:!DES"
-            else:
-                # This is really only necessary for pre-1.0 versions
-                # of openssl, but python 2.6 doesn't expose version
-                # information.
-                ssl_options["ssl_version"] = ssl.PROTOCOL_TLSv1
-            return ssl_options
+                ssl_ctx.load_cert_chain(self.request.client_cert,
+                                        self.request.client_key)
+            if hasattr(ssl, 'OP_NO_COMPRESSION'):
+                # See netutil.ssl_options_to_context
+                ssl_ctx.options |= ssl.OP_NO_COMPRESSION
+            return ssl_ctx
         return None
 
     def _on_timeout(self, info=None):
         """Timeout callback of _HTTPConnection instance.
 
-        Raise a timeout HTTPError when a timeout occurs.
+        Raise a `HTTPTimeoutError` when a timeout occurs.
 
         :info string key: More detailed timeout information.
         """
         self._timeout = None
         error_message = "Timeout {0}".format(info) if info else "Timeout"
         if self.final_callback is not None:
-            raise HTTPError(599, error_message)
+            raise HTTPTimeoutError(error_message)
 
     def _remove_timeout(self):
         if self._timeout is not None:
             self.io_loop.remove_timeout(self._timeout)
             self._timeout = None
 
-    def _on_connect(self, stream):
+    def _on_connect(self, stream_fut):
+        stream = stream_fut.result()
         if self.final_callback is None:
             # final_callback is cleared if we've hit our timeout.
             stream.close()
@@ -448,7 +446,7 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
             self._remove_timeout()
             if isinstance(value, StreamClosedError):
                 if value.real_error is None:
-                    value = HTTPError(599, "Stream closed")
+                    value = HTTPStreamClosedError("Stream closed")
                 else:
                     value = value.real_error
             self._run_callback(HTTPResponse(self.request, 599, error=value,
@@ -474,8 +472,8 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
             if self.stream.error:
                 raise self.stream.error
             try:
-                raise HTTPError(599, message)
-            except HTTPError:
+                raise HTTPStreamClosedError(message)
+            except HTTPStreamClosedError:
                 self._handle_exception(*sys.exc_info())
 
     def headers_received(self, first_line, headers):
@@ -533,7 +531,8 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
             final_callback = self.final_callback
             self.final_callback = None
             self._release()
-            self.client.fetch(new_request, final_callback)
+            fut = self.client.fetch(new_request, raise_error=False)
+            fut.add_done_callback(lambda f: final_callback(f.result()))
             self._on_end_request()
             return
         if self.request.streaming_callback:

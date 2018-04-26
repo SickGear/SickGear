@@ -7,7 +7,7 @@ the imdb.IMDb function will return an instance of this class when
 called with the 'accessSystem' argument set to "http" or "web"
 or "html" (this is the default).
 
-Copyright 2004-2012 Davide Alberani <da@erlug.linux.it>
+Copyright 2004-2017 Davide Alberani <da@erlug.linux.it>
                2008 H. Turgut Uyar <uyar@tekir.org>
 
 This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """
 
 import sys
+import ssl
 import socket
 import logging
 from urllib import FancyURLopener, quote_plus
@@ -68,8 +69,8 @@ class _ModuleProxy:
         """Initialize a proxy for the given module; defaultKeys, if set,
         muste be a dictionary of values to set for instanced objects."""
         if oldParsers or fallBackToNew:
-            _aux_logger.warn('The old set of parsers was removed; falling ' \
-                            'back to the new parsers.')
+            _aux_logger.warn('The old set of parsers was removed;'
+                             ' falling back to the new parsers.')
         self.useModule = useModule
         if defaultKeys is None:
             defaultKeys = {}
@@ -142,6 +143,7 @@ class IMDbURLopener(FancyURLopener):
 
     def __init__(self, *args, **kwargs):
         self._last_url = u''
+        kwargs['context'] = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
         FancyURLopener.__init__(self, *args, **kwargs)
         # Headers to add to every request.
         # XXX: IMDb's web server doesn't like urllib-based programs,
@@ -211,9 +213,9 @@ class IMDbURLopener(FancyURLopener):
             if server_encode is None and content:
                 begin_h = content.find('text/html; charset=')
                 if begin_h != -1:
-                    end_h = content[19+begin_h:].find('"')
+                    end_h = content[19 + begin_h:].find('"')
                     if end_h != -1:
-                        server_encode = content[19+begin_h:19+begin_h+end_h]
+                        server_encode = content[19 + begin_h:19 + begin_h + end_h]
             if server_encode:
                 try:
                     if lookup(server_encode):
@@ -237,9 +239,10 @@ class IMDbURLopener(FancyURLopener):
         if encode is None:
             encode = 'latin_1'
             # The detection of the encoding is error prone...
-            self._logger.warn('Unable to detect the encoding of the retrieved '
-                        'page [%s]; falling back to default latin1.', encode)
-        ##print unicode(content, encode, 'replace').encode('utf8')
+            self._logger.warn('Unable to detect the encoding of the retrieved page [%s];'
+                              ' falling back to default utf8.', encode)
+        if isinstance(content, unicode):
+            return content
         return unicode(content, encode, 'replace')
 
     def http_error_default(self, url, fp, errcode, errmsg, headers):
@@ -288,8 +291,8 @@ class IMDbHTTPAccessSystem(IMDbBase):
         self._getRefs = True
         self._mdparse = False
         if isThin:
-            self._http_logger.warn('"httpThin" access system no longer ' +
-                    'supported; "http" used automatically', exc_info=False)
+            self._http_logger.warn('"httpThin" access system no longer supported;'
+                                   ' "http" used automatically', exc_info=False)
             self.isThin = 0
             if self.accessSystem in ('httpThin', 'webThin', 'htmlThin'):
                 self.accessSystem = 'http'
@@ -503,7 +506,7 @@ class IMDbHTTPAccessSystem(IMDbBase):
         return self.smProxy.search_movie_parser.parse(cont, results=results)['data']
 
     def get_movie_main(self, movieID):
-        cont = self._retrieve(self.urls['movie_main'] % movieID + 'combined')
+        cont = self._retrieve(self.urls['movie_main'] % movieID + 'reference')
         return self.mProxy.movie_parser.parse(cont, mdparse=self._mdparse)
 
     def get_movie_full_credits(self, movieID):
@@ -811,7 +814,7 @@ class IMDbHTTPAccessSystem(IMDbBase):
     def _search_keyword(self, keyword, results):
         # XXX: the IMDb web server seems to have some serious problem with
         #      non-ascii keyword.
-        #      E.g.: http://akas.imdb.com/keyword/fianc%E9/
+        #      E.g.: http://www.imdb.com/keyword/fianc%E9/
         #      will return a 500 Internal Server Error: Redirect Recursion.
         keyword = keyword.encode('utf8', 'ignore')
         try:

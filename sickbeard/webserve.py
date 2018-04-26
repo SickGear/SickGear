@@ -63,6 +63,7 @@ from sickbeard.indexermapper import MapStatus, save_mapping, map_indexers_to_sho
 from sickbeard.tv import show_not_found_retry_days, concurrent_show_not_found_days
 from tornado import gen
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
+from tornado import escape
 from lib import adba
 from lib import subliminal
 from lib.dateutil import tz
@@ -87,8 +88,10 @@ except ImportError:
 
 
 class PageTemplate(Template):
-    def __init__(self, headers, *args, **kwargs):
+    def __init__(self, web_handler, *args, **kwargs):
 
+        headers = web_handler.request.headers
+        self.xsrf_form_html = re.sub('\s*/>$', '>', web_handler.xsrf_form_html())
         self.sbHost = headers.get('X-Forwarded-Host')
         if None is self.sbHost:
             sbHost = headers.get('Host') or 'localhost'
@@ -207,7 +210,7 @@ class LoginHandler(BaseHandler):
         if self.get_current_user():
             self.redirect(self.get_argument('next', '/home/'))
         else:
-            t = PageTemplate(headers=self.request.headers, file='login.tmpl')
+            t = PageTemplate(web_handler=self, file='login.tmpl')
             t.resp = self.get_argument('resp', '')
             self.set_status(401)
             self.finish(t.respond())
@@ -217,9 +220,12 @@ class LoginHandler(BaseHandler):
         password = sickbeard.WEB_PASSWORD
 
         if (self.get_argument('username') == username) and (self.get_argument('password') == password):
-            remember_me = int(self.get_argument('remember_me', default=0) or 0)
+            params = dict(expires_days=(None, 30)[int(self.get_argument('remember_me', default=0) or 0) > 0],
+                          httponly=True)
+            if sickbeard.ENABLE_HTTPS:
+                params.update(dict(secure=True))
             self.set_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT),
-                                   sickbeard.COOKIE_SECRET, expires_days=30 if remember_me > 0 else None)
+                                   sickbeard.COOKIE_SECRET, **params)
             self.redirect(self.get_argument('next', '/home/'))
         else:
             next_arg = '&next=' + self.get_argument('next', '/home/')
@@ -405,7 +411,7 @@ class RepoHandler(BaseStaticFileHandler):
         return super(RepoHandler, self).get_content_type()
 
     def index(self, basepath, filelist):
-        t = PageTemplate(headers=self.request.headers, file='repo_index.tmpl')
+        t = PageTemplate(web_handler=self, file='repo_index.tmpl')
         t.basepath = basepath
         t.filelist = filelist
         return t.respond()
@@ -469,11 +475,11 @@ class RepoHandler(BaseStaticFileHandler):
             return fh.read().strip()
 
     def render_kodi_repo_addon_xml(self):
-        t = PageTemplate(headers=self.request.headers, file='repo_kodi_addon.tmpl')
+        t = PageTemplate(web_handler=self, file='repo_kodi_addon.tmpl')
         return t.respond().strip()
 
     def render_kodi_repo_addons_xml(self):
-        t = PageTemplate(headers=self.request.headers, file='repo_kodi_addons.tmpl')
+        t = PageTemplate(web_handler=self, file='repo_kodi_addons.tmpl')
         t.watchedstate_updater_addon_xml = re.sub(
             '(?m)^([\s]*<)', r'\t\1',
             '\n'.join(self.get_watchedstate_updater_addon_xml().split('\n')[1:]))  # skip xml header
@@ -539,6 +545,66 @@ class RepoHandler(BaseStaticFileHandler):
         return zip_data
 
 
+class NoXSRFHandler(RequestHandler):
+    def __init__(self, *arg, **kwargs):
+
+        super(NoXSRFHandler, self).__init__(*arg, **kwargs)
+        self.lock = threading.Lock()
+
+    def check_xsrf_cookie(self):
+        pass
+
+    @gen.coroutine
+    def post(self, route, *args, **kwargs):
+        route = route.strip('/')
+        try:
+            method = getattr(self, route)
+        except (StandardError, Exception):
+            self.finish()
+        else:
+            kwargss = {k: v if not (isinstance(v, list) and 1 == len(v)) else v[0]
+                       for k, v in self.request.arguments.iteritems()}
+            result = method(**kwargss)
+            if result:
+                self.finish(result)
+
+    @staticmethod
+    def update_watched_state_kodi(payload=None, as_json=True):
+        data = {}
+        try:
+            data = json.loads(payload)
+        except (StandardError, Exception):
+            pass
+
+        mapped = 0
+        mapping = None
+        maps = [x.split('=') for x in sickbeard.KODI_PARENT_MAPS.split(',') if any(x)]
+        for k, d in data.iteritems():
+            try:
+                d['label'] = '%s%s{Kodi}' % (d['label'], bool(d['label']) and ' ' or '')
+            except (StandardError, Exception):
+                return
+            try:
+                d['played'] = 100 * int(d['played'])
+            except (StandardError, Exception):
+                d['played'] = 0
+
+            for m in maps:
+                result, change = helpers.path_mapper(m[0], m[1], d['path_file'])
+                if change:
+                    if not mapping:
+                        mapping = (states[idx]['path_file'], result)
+                    mapped += 1
+                    states[idx]['path_file'] = result
+                    break
+
+        if mapping:
+            logger.log('Folder mappings used, the first of %s is [%s] in Kodi is [%s] in SickGear' %
+                       (mapped, mapping[0], mapping[1]))
+
+        return MainHandler.update_watched_state(data, as_json)
+
+
 class IsAliveHandler(BaseHandler):
     def get(self, *args, **kwargs):
         kwargs = self.request.arguments
@@ -568,7 +634,7 @@ class WebHandler(BaseHandler):
 
     def page_not_found(self):
         self.set_status(404)
-        t = PageTemplate(headers=self.request.headers, file='404.tmpl')
+        t = PageTemplate(web_handler=self, file='404.tmpl')
         return t.respond()
 
     @authenticated
@@ -580,10 +646,8 @@ class WebHandler(BaseHandler):
         except:
             self.finish(self.page_not_found())
         else:
-            kwargss = self.request.arguments
-            for arg, value in kwargss.items():
-                if len(value) == 1:
-                    kwargss[arg] = value[0]
+            kwargss = {k: v if not (isinstance(v, list) and 1 == len(v)) else v[0]
+                       for k, v in self.request.arguments.iteritems() if '_xsrf' != k}
             result = method(**kwargss)
             if result:
                 self.finish(result)
@@ -770,7 +834,7 @@ class MainHandler(WebHandler):
 
         # add localtime to the dict
         cache_obj = image_cache.ImageCache()
-        t = PageTemplate(headers=self.request.headers, file='episodeView.tmpl')
+        t = PageTemplate(web_handler=self, file='episodeView.tmpl')
         t.fanart = {}
         for index, item in enumerate(sql_results):
             sql_results[index]['localtime'] = sbdatetime.sbdatetime.convert_to_setting(network_timezones.parse_date_time(item['airdate'],
@@ -866,38 +930,6 @@ class MainHandler(WebHandler):
 
         sickbeard.save_config()
 
-    def update_watched_state_kodi(self, payload=None, as_json=True):
-
-        data = {}
-        try:
-            data = json.loads(payload)
-        except (StandardError, Exception):
-            pass
-
-        mapped = 0
-        mapping = None
-        maps = [x.split('=') for x in sickbeard.KODI_PARENT_MAPS.split(',') if any(x)]
-        for k, d in data.iteritems():
-            d['label'] = '%s%s{Kodi}' % (d['label'], bool(d['label']) and ' ' or '')
-            try:
-                d['played'] = 100 * int(d['played'])
-            except (StandardError, Exception):
-                d['played'] = 0
-
-            for m in maps:
-                result, change = helpers.path_mapper(m[0], m[1], d['path_file'])
-                if change:
-                    if not mapping:
-                        mapping = (states[idx]['path_file'], result)
-                    mapped += 1
-                    states[idx]['path_file'] = result
-                    break
-
-        if mapping:
-            logger.log('Folder mappings used, the first of %s is [%s] in Kodi is [%s] in SickGear' %
-                       (mapped, mapping[0], mapping[1]))
-
-        return self.update_watched_state(data, as_json)
 
     @staticmethod
     def getFooterTime(change_layout=True, json_dump=True, *args, **kwargs):
@@ -1072,7 +1104,7 @@ r.close()
         self.redirect('/history/')
 
     def _genericMessage(self, subject, message):
-        t = PageTemplate(headers=self.request.headers, file='genericMessage.tmpl')
+        t = PageTemplate(web_handler=self, file='genericMessage.tmpl')
         t.submenu = self.HomeMenu()
         t.subject = subject
         t.message = message
@@ -1136,7 +1168,7 @@ class Home(MainHandler):
             self.redirect('/home/showlistView/')
 
     def showlistView(self):
-        t = PageTemplate(headers=self.request.headers, file='home.tmpl')
+        t = PageTemplate(web_handler=self, file='home.tmpl')
         t.showlists = []
         index = 0
         if sickbeard.SHOWLIST_TAGVIEW == 'custom':
@@ -1559,7 +1591,7 @@ class Home(MainHandler):
 
     def viewchanges(self):
 
-        t = PageTemplate(headers=self.request.headers, file='viewchanges.tmpl')
+        t = PageTemplate(web_handler=self, file='viewchanges.tmpl')
 
         t.changelist = [{'type': 'rel', 'ver': '', 'date': 'Nothing to display at this time'}]
         url = 'https://raw.githubusercontent.com/wiki/SickGear/SickGear/sickgear/CHANGES.md'
@@ -1603,7 +1635,7 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
-        t = PageTemplate(headers=self.request.headers, file='restart.tmpl')
+        t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = True
 
         sickbeard.events.put(sickbeard.events.SystemEvent.SHUTDOWN)
@@ -1615,7 +1647,7 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
-        t = PageTemplate(headers=self.request.headers, file='restart.tmpl')
+        t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = False
 
         sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
@@ -1664,7 +1696,7 @@ class Home(MainHandler):
         if None is season:
             return json.dumps(response)
 
-        t = PageTemplate(headers=self.request.headers, file='inc_displayShow.tmpl')
+        t = PageTemplate(web_handler=self, file='inc_displayShow.tmpl')
         t.show = show_obj
 
         my_db = db.DBConnection()
@@ -1697,7 +1729,7 @@ class Home(MainHandler):
             if showObj is None:
                 return self._genericMessage('Error', 'Show not in show list')
 
-        t = PageTemplate(headers=self.request.headers, file='displayShow.tmpl')
+        t = PageTemplate(web_handler=self, file='displayShow.tmpl')
         t.submenu = [{'title': 'Edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
 
         try:
@@ -2163,7 +2195,7 @@ class Home(MainHandler):
             bestQualities = []
 
         if not location and not anyQualities and not bestQualities and not flatten_folders:
-            t = PageTemplate(headers=self.request.headers, file='editShow.tmpl')
+            t = PageTemplate(web_handler=self, file='editShow.tmpl')
             t.submenu = self.HomeMenu()
 
             t.expand_ids = all([kwargs.get('tvsrc'), kwargs.get('srcid')])
@@ -2669,7 +2701,7 @@ class Home(MainHandler):
             # present season DESC episode DESC on screen
             ep_obj_rename_list.reverse()
 
-        t = PageTemplate(headers=self.request.headers, file='testRename.tmpl')
+        t = PageTemplate(web_handler=self, file='testRename.tmpl')
         t.submenu = [{'title': 'Edit', 'path': 'home/editShow?show=%d' % showObj.indexerid}]
         t.ep_obj_list = ep_obj_rename_list
         t.show = showObj
@@ -2925,7 +2957,7 @@ class Home(MainHandler):
 class HomePostProcess(Home):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='home_postprocess.tmpl')
+        t = PageTemplate(web_handler=self, file='home_postprocess.tmpl')
         t.submenu = [x for x in self.HomeMenu() if 'postprocess' not in x['path']]
         return t.respond()
 
@@ -2982,7 +3014,7 @@ class HomePostProcess(Home):
 class NewHomeAddShows(Home):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='home_addShows.tmpl')
+        t = PageTemplate(web_handler=self, file='home_addShows.tmpl')
         t.submenu = self.HomeMenu()
         return t.respond()
 
@@ -3121,7 +3153,7 @@ class NewHomeAddShows(Home):
         map(final_results.extend,
             ([[id_names[iid], any([helpers.find_show_by_id(
                 sickbeard.showList, {(iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]: int(show['id'])},
-                no_mapped_ids=False)]),
+                no_mapped_ids=False)]) and '/home/displayShow?show=%s' % int(show['id']),
                iid, (iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid],
                sickbeard.indexerApi((iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]).config['show_url'], int(show['id']),
                show['seriesname'], self.encode_html(show['seriesname']), show['firstaired'],
@@ -3201,7 +3233,7 @@ class NewHomeAddShows(Home):
         return s
 
     def massAddTable(self, rootDir=None, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='home_massAddTable.tmpl')
+        t = PageTemplate(web_handler=self, file='home_massAddTable.tmpl')
         t.submenu = self.HomeMenu()
         t.kwargs = kwargs
 
@@ -3323,7 +3355,7 @@ class NewHomeAddShows(Home):
         self.set_header('Pragma', 'no-cache')
         self.set_header('Expires', '0')
 
-        t = PageTemplate(headers=self.request.headers, file='home_newShow.tmpl')
+        t = PageTemplate(web_handler=self, file='home_newShow.tmpl')
         t.submenu = self.HomeMenu()
         t.enable_anime_options = True
         t.enable_default_wanted = True
@@ -4010,7 +4042,7 @@ class NewHomeAddShows(Home):
         Display the new show page which collects a tvdb id, folder, and extra options and
         posts them to addNewShow
         """
-        t = PageTemplate(headers=self.request.headers, file='home_browseShows.tmpl')
+        t = PageTemplate(web_handler=self, file='home_browseShows.tmpl')
         t.submenu = self.HomeMenu()
         t.browse_type = browse_type
         t.browse_title = browse_title
@@ -4053,7 +4085,7 @@ class NewHomeAddShows(Home):
         """
         Prints out the page to add existing shows from a root dir
         """
-        t = PageTemplate(headers=self.request.headers, file='home_addExistingShow.tmpl')
+        t = PageTemplate(web_handler=self, file='home_addExistingShow.tmpl')
         t.submenu = self.HomeMenu()
         t.enable_anime_options = False
         t.kwargs = kwargs
@@ -4286,7 +4318,7 @@ class Manage(MainHandler):
         return [x for x in menu if exclude not in x['title']]
 
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='manage.tmpl')
+        t = PageTemplate(web_handler=self, file='manage.tmpl')
         t.submenu = self.ManageMenu('Bulk')
         return t.respond()
 
@@ -4332,7 +4364,7 @@ class Manage(MainHandler):
         else:
             status_list = []
 
-        t = PageTemplate(headers=self.request.headers, file='manage_episodeStatuses.tmpl')
+        t = PageTemplate(web_handler=self, file='manage_episodeStatuses.tmpl')
         t.submenu = self.ManageMenu('Episode')
         t.whichStatus = whichStatus
 
@@ -4458,7 +4490,7 @@ class Manage(MainHandler):
 
     def subtitleMissed(self, whichSubs=None):
 
-        t = PageTemplate(headers=self.request.headers, file='manage_subtitleMissed.tmpl')
+        t = PageTemplate(web_handler=self, file='manage_subtitleMissed.tmpl')
         t.submenu = self.ManageMenu('Subtitle')
         t.whichSubs = whichSubs
 
@@ -4540,7 +4572,7 @@ class Manage(MainHandler):
 
     def backlogOverview(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='manage_backlogOverview.tmpl')
+        t = PageTemplate(web_handler=self, file='manage_backlogOverview.tmpl')
         t.submenu = self.ManageMenu('Backlog')
 
         showCounts = {}
@@ -4583,7 +4615,7 @@ class Manage(MainHandler):
 
     def massEdit(self, toEdit=None):
 
-        t = PageTemplate(headers=self.request.headers, file='manage_massEdit.tmpl')
+        t = PageTemplate(web_handler=self, file='manage_massEdit.tmpl')
         t.submenu = self.ManageMenu()
 
         if not toEdit:
@@ -4970,7 +5002,7 @@ class Manage(MainHandler):
         if toRemove:
             return self.redirect('/manage/failedDownloads/')
 
-        t = PageTemplate(headers=self.request.headers, file='manage_failedDownloads.tmpl')
+        t = PageTemplate(web_handler=self, file='manage_failedDownloads.tmpl')
         t.over_limit = limit and len(sql_results) > limit
         t.failedResults = t.over_limit and sql_results[0:-1] or sql_results
         t.limit = str(limit)
@@ -4981,7 +5013,7 @@ class Manage(MainHandler):
 
 class ManageSearches(Manage):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='manage_manageSearches.tmpl')
+        t = PageTemplate(web_handler=self, file='manage_manageSearches.tmpl')
         # t.backlog_pi = sickbeard.backlogSearchScheduler.action.get_progress_indicator()
         t.backlog_paused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
         t.backlog_running = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
@@ -5058,7 +5090,7 @@ class ManageSearches(Manage):
 
 class showProcesses(Manage):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='manage_showProcesses.tmpl')
+        t = PageTemplate(web_handler=self, file='manage_showProcesses.tmpl')
         t.queue_length = sickbeard.showQueueScheduler.action.queue_length()
         t.show_list = sickbeard.showList
         t.show_update_running = sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive
@@ -5124,7 +5156,7 @@ class History(MainHandler):
 
     def index(self, limit=100):
 
-        t = PageTemplate(headers=self.request.headers, file='history.tmpl')
+        t = PageTemplate(web_handler=self, file='history.tmpl')
         t.limit = limit
 
         my_db = db.DBConnection(row_type='dict')
@@ -5577,7 +5609,7 @@ class Config(MainHandler):
         return [x for x in menu if exclude not in x['title']]
 
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='config.tmpl')
+        t = PageTemplate(web_handler=self, file='config.tmpl')
         t.submenu = self.ConfigMenu()
 
         return t.respond()
@@ -5586,11 +5618,12 @@ class Config(MainHandler):
 class ConfigGeneral(Config):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='config_general.tmpl')
+        t = PageTemplate(web_handler=self, file='config_general.tmpl')
         t.submenu = self.ConfigMenu('General')
         t.show_tags = ', '.join(sickbeard.SHOW_TAGS)
         t.indexers = dict([(i, sickbeard.indexerApi().indexers[i]) for i in sickbeard.indexerApi().indexers
                            if sickbeard.indexerApi(i).config['active']])
+        t.request_host = escape.xhtml_escape(self.request.host_name)
         return t.respond()
 
     def saveRootDirs(self, rootDirString=None):
@@ -5656,7 +5689,8 @@ class ConfigGeneral(Config):
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
-                    handle_reverse_proxy=None, send_security_headers=None, home_search_focus=None, display_freespace=None, sort_article=None, auto_update=None, notify_on_update=None,
+                    handle_reverse_proxy=None, send_security_headers=None, allowed_hosts=None,
+                    home_search_focus=None, display_freespace=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
@@ -5724,6 +5758,7 @@ class ConfigGeneral(Config):
         sickbeard.TIMEZONE_DISPLAY = timezone_display
 
         # Web interface
+        restart = False
         reload_page = False
         if sickbeard.WEB_USERNAME != web_username:
             sickbeard.WEB_USERNAME = web_username
@@ -5738,6 +5773,7 @@ class ConfigGeneral(Config):
         sickbeard.WEB_PORT = config.to_int(web_port)
         # sickbeard.WEB_LOG is set in config.change_log_dir()
 
+        restart |= sickbeard.ENABLE_HTTPS != config.checkbox_to_value(enable_https)
         sickbeard.ENABLE_HTTPS = config.checkbox_to_value(enable_https)
         if not config.change_https_cert(https_cert):
             results += [
@@ -5750,6 +5786,10 @@ class ConfigGeneral(Config):
         sickbeard.WEB_IPV64 = config.checkbox_to_value(web_ipv64)
         sickbeard.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
         sickbeard.SEND_SECURITY_HEADERS = config.checkbox_to_value(send_security_headers)
+        hosts = ','.join(filter(lambda name: not helpers.re_valid_hostname(with_allowed=False).match(name),
+                                config.clean_hosts(allowed_hosts).split(',')))
+        if not hosts or self.request.host_name in hosts:
+            sickbeard.ALLOWED_HOSTS = hosts
 
         # Advanced
         sickbeard.GIT_REMOTE = git_remote
@@ -5773,6 +5813,11 @@ class ConfigGeneral(Config):
                                    '<br />\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
+
+        if restart:
+            self.clear_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT))
+            self.write('restart')
+            reload_page = False
 
         if reload_page:
             self.clear_cookie('sickgear-session-%s' % helpers.md5_for_text(sickbeard.WEB_PORT))
@@ -5803,7 +5848,7 @@ class ConfigGeneral(Config):
 class ConfigSearch(Config):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='config_search.tmpl')
+        t = PageTemplate(web_handler=self, file='config_search.tmpl')
         t.submenu = self.ConfigMenu('Search')
         t.using_rls_ignore_words = [(show.indexerid, show.name)
                                     for show in sickbeard.showList if show.rls_ignore_words and
@@ -5915,7 +5960,7 @@ class ConfigSearch(Config):
 class ConfigPostProcessing(Config):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='config_postProcessing.tmpl')
+        t = PageTemplate(web_handler=self, file='config_postProcessing.tmpl')
         t.submenu = self.ConfigMenu('Processing')
         return t.respond()
 
@@ -6099,7 +6144,7 @@ class ConfigPostProcessing(Config):
 
 class ConfigProviders(Config):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='config_providers.tmpl')
+        t = PageTemplate(web_handler=self, file='config_providers.tmpl')
         t.submenu = self.ConfigMenu('Providers')
         return t.respond()
 
@@ -6488,7 +6533,7 @@ class ConfigProviders(Config):
 class ConfigNotifications(Config):
 
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='config_notifications.tmpl')
+        t = PageTemplate(web_handler=self, file='config_notifications.tmpl')
         t.submenu = self.ConfigMenu('Notifications')
         t.root_dirs = []
         if sickbeard.ROOT_DIRS:
@@ -6787,7 +6832,7 @@ class ConfigNotifications(Config):
 
 class ConfigSubtitles(Config):
     def index(self, *args, **kwargs):
-        t = PageTemplate(headers=self.request.headers, file='config_subtitles.tmpl')
+        t = PageTemplate(web_handler=self, file='config_subtitles.tmpl')
         t.submenu = self.ConfigMenu('Subtitle')
         return t.respond()
 
@@ -6833,7 +6878,7 @@ class ConfigSubtitles(Config):
 class ConfigAnime(Config):
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='config_anime.tmpl')
+        t = PageTemplate(web_handler=self, file='config_anime.tmpl')
         t.submenu = self.ConfigMenu('Anime')
         return t.respond()
 
@@ -6891,7 +6936,7 @@ class ErrorLogs(MainHandler):
 
     def index(self, *args, **kwargs):
 
-        t = PageTemplate(headers=self.request.headers, file='errorlogs.tmpl')
+        t = PageTemplate(web_handler=self, file='errorlogs.tmpl')
         t.submenu = self.ErrorLogsMenu
 
         return t.respond()
@@ -6919,7 +6964,7 @@ class ErrorLogs(MainHandler):
 
     def viewlog(self, min_level=logger.MESSAGE, max_lines=500):
 
-        t = PageTemplate(headers=self.request.headers, file='viewlogs.tmpl')
+        t = PageTemplate(web_handler=self, file='viewlogs.tmpl')
         t.submenu = self.ErrorLogsMenu
 
         min_level = int(min_level)
@@ -7002,7 +7047,7 @@ class WebFileBrowser(MainHandler):
 class ApiBuilder(MainHandler):
     def index(self):
         """ expose the api-builder template """
-        t = PageTemplate(headers=self.request.headers, file='apiBuilder.tmpl')
+        t = PageTemplate(web_handler=self, file='apiBuilder.tmpl')
 
         def titler(x):
             return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE]
@@ -7042,7 +7087,7 @@ class Cache(MainHandler):
         if not sql_results:
             sql_results = []
 
-        t = PageTemplate(headers=self.request.headers, file='cache.tmpl')
+        t = PageTemplate(web_handler=self, file='cache.tmpl')
         t.cacheResults = sql_results
 
         return t.respond()

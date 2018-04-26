@@ -62,6 +62,8 @@
 <script type="text/javascript" src="$sbRoot/js/manageEpisodeStatuses.js?v=$sbPID"></script>
 
 	<form action="$sbRoot/manage/changeEpisodeStatuses" method="post">
+		$xsrf_form_html
+
 		<input type="hidden" id="oldStatus" name="oldStatus" value="$whichStatus">
 
 		<h3><span class="grey-text">$ep_count</span> episode#echo ('s', '')[1 == $ep_count]# marked <span class="grey-text">$statusStrings[$whichStatus].lower()</span> in <span class="grey-text">${len($sorted_show_ids)}</span> show#echo ('s', '')[1 == len($sorted_show_ids)]#</h3>

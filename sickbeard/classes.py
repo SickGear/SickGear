@@ -15,18 +15,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-import re
-import datetime
-import os
+from collections import OrderedDict
 
-import sickbeard
 from sickbeard.common import Quality
 from unidecode import unidecode
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from requests.compat import OrderedDict
+import datetime
+import os
+import re
+
+import sickbeard
 
 
 class SearchResult(object):
@@ -342,6 +340,35 @@ class OrderedDefaultdict(OrderedDict):
     def __reduce__(self):  # optional, for pickle support
         args = (self.default_factory,) if self.default_factory else ()
         return self.__class__, args, None, None, self.iteritems()
+
+    # backport from python 3
+    def move_to_end(self, key, last=True):
+        """Move an existing element to the end (or beginning if last==False).
+
+        Raises KeyError if the element does not exist.
+        When last=True, acts like a fast version of self[key]=self.pop(key).
+
+        """
+        link_prev, link_next, key = link = self._OrderedDict__map[key]
+        link_prev[1] = link_next
+        link_next[0] = link_prev
+        root = self._OrderedDict__root
+        if last:
+            last = root[0]
+            link[0] = last
+            link[1] = root
+            last[1] = root[0] = link
+        else:
+            first = root[1]
+            link[0] = root
+            link[1] = first
+            root[1] = first[0] = link
+
+    def first_key(self):
+        return self._OrderedDict__root[1][2]
+
+    def last_key(self):
+        return self._OrderedDict__root[0][2]
 
 
 class ImageUrlList(list):

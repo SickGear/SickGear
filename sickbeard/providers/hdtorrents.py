@@ -15,10 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from requests.compat import OrderedDict
+from collections import OrderedDict
+
 import re
 import traceback
 

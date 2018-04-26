@@ -42,6 +42,8 @@
 	<div id="config-content">
 
 		<form id="configForm" action="saveGeneral" method="post">
+			$xsrf_form_html
+
 			<div id="config-components">
 
 				<ul>
@@ -585,6 +587,17 @@
 								<span class="component-desc">
 									<input type="checkbox" name="send_security_headers" id="send_security_headers"#echo ('', $checked)[$sg_var('SEND_SECURITY_HEADERS')]#>
 									<p>send the following headers to increase browser security...<br />(X-Frame-Options:SAMEORIGIN)</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="allowed_hosts">
+								<span class="component-title">Allowed browser hostnames</span>
+								<span class="component-desc">
+									<input type="text" name="allowed_hosts" id="allowed-hosts" value="$sg_str('ALLOWED_HOSTS')" class="form-control input-sm input300">
+									<p>blank for insecure allow all</p>
+									<div class="clear-left"><p>whitelist names that browse the interface (e.g. $request_host, my_hostname)</p></div>
 								</span>
 							</label>
 						</div>

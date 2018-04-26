@@ -43,6 +43,7 @@
 #end if
 
 	<form id="addShowForm"#if $kwargs.get('action')# class="fullwidth"#end if# method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
+		$xsrf_form_html
 
 		<fieldset class="sectionwrap step-one">
 			<legend class="legendStep"><p>#if $use_provided_info#Using known show information#else#Find show at TV info source#end if#</p></legend>

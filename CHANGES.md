@@ -1,4 +1,39 @@
-﻿### 0.15.14 (2018-04-20 12:00:00 UTC)
+﻿### 0.16.0 (2018-04-26 17:10:00 UTC)
+
+* Change search show result 'exists in db' text into a link to display show page
+* Change increase namecache size and fix deleting items from it when at capacity
+* Change improve security with cross-site request forgery (xsrf) protection on web forms
+* Change improve security by sending header flags httponly and secure with cookies
+* Change improve security with DNS rebinding prevention, set "Allowed browser hostnames" at config/General/Web Interface
+* Change improve test for creating self-signed SSL cert
+* Change force restart when switching SSL on/off
+* Change disable SSL cert verification for logins in pp-scripts
+* Change hachoir targa and mpeg_ts mime parser tags so they validate
+* Update backports/ssl_match_hostname 3.5.0.1 (r18) to 3.7.0.1 (r28)
+* Update cachecontrol library 0.12.3 (db54c40) to 0.12.4 (bd94f7e)
+* Update chardet packages 3.0.4 (9b8c5c2) to 4.0.0 (b3d867a)
+* Update dateutil library 2.6.1 (2f3a160) to 2.7.2 (ff03c0f)
+* Update feedparser library 5.2.1 (f1dd1bb) to 5.2.1 (5646f4c) - Uses the faster cchardet if installed
+* Change Hachoir can't support PY2 so backport their PY3 to prevent a need for system dependant external binaries like mediainfo
+* Update html5lib 0.99999999/1.0b9 (1a28d72) to 1.1-dev (e9ef538)
+* Update IMDb 5.1 (r907) to 5.2.1dev20171113 (f640595)
+* Update jquery.form plugin 3.51.0 to 4.2.2
+* Update moment.js 2.17.1 to 2.21.0
+* Update profilehooks 1.9.0 (de7d59b) to 1.10.0 (0ce1e29)
+* Update Certifi 2017.07.27 (f808089) to 2018.01.18 (e225253)
+* Update PySocks 1.6.5 (b4323df) to 1.6.8 (524ceb4)
+* Update rarfile 3.0 (3e54b22) to 3.0 (2704344)
+* Update Requests library 2.13.0 (fc54869) to 2.15.1 (282b01a)
+* Update scandir 1.3 to 1.6 (c3592ee)
+* Update SimpleJSON library 3.10.0 (c52efea) to 3.13.2 (6ffddbe)
+* Update Six compatibility library 1.10.0 (r433) to 1.11.0 (68112f3)
+* Update Tornado Web Server 5.0.1 (35a538f) to 5.1.dev1 (415f453)
+* Update unidecode library 0.04.21 (e99b0e3) to 1.0.22 (81f938d)
+* Update webencodings 0.5 (3970651) to 0.5.1 (fa2cb5d)
+* Update xmltodict library 0.10.2 (375d3a6) to 0.11.0 (79ac9a4)
+
+
+### 0.15.14 (2018-04-20 12:00:00 UTC)
 
 * Change prefer modern html5lib over old to prevent display show issue on systems that fail to clean libs
 * Change add un/pw for cookie support to improve SpeedCD torrent provider

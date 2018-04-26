@@ -189,6 +189,7 @@ def _update_zoneinfo():
             from dateutil.zoneinfo import gettz
             if '_CLASS_ZONE_INSTANCE' in gettz.func_globals:
                 gettz.func_globals.__setitem__('_CLASS_ZONE_INSTANCE', list())
+            tz.gettz.cache_clear()
 
             sb_timezone = get_tz()
         except:
