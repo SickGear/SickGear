@@ -38,6 +38,7 @@
 * Change remove redundant xsrf handling for POSTs that don't use web and API
 * Change add xsrf protection support to media processing scripts
 * Change suppress output warnings from media process scripts
+* Change remove deprecated files
 
 
 ### 0.15.14 (2018-04-20 12:00:00 UTC)
