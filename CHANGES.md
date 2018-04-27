@@ -1,4 +1,12 @@
-﻿### 0.16.0 (2018-04-26 17:10:00 UTC)
+﻿### 0.17.0 (2018-xx-xx xx:xx:xx UTC)
+
+
+
+[develop changelog]
+
+
+
+### 0.16.0 (2018-04-26 17:10:00 UTC)
 
 * Change search show result 'exists in db' text into a link to display show page
 * Change increase namecache size and fix deleting items from it when at capacity
