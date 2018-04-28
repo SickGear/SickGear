@@ -31,7 +31,7 @@ from . import alpharatio, alphareign, beyondhd, bithdtv, bitmetv, blutopia, btn,
     iptorrents, limetorrents, magnetdl, morethan, nebulance, ncore, nyaa, pisexy, potuk, pretome, privatehd, ptf, \
     rarbg, revtt, scenehd, scenetime, shazbat, showrss, skytorrents, speedcd, \
     thepiratebay, torlock, torrentday, torrenting, torrentleech, \
-    torrentz2, tvchaosuk, wop, zooqle
+    torrentz2, tvchaosuk, wop, xspeeds, zooqle
 # anime
 from . import anizb, tokyotoshokan
 # custom
@@ -89,6 +89,7 @@ __all__ = ['omgwtfnzbs',
            'torrentz2',
            'tvchaosuk',
            'wop',
+           'xspeeds',
            'zooqle',
            'tokyotoshokan',
            ]
