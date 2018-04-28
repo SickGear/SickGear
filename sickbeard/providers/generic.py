@@ -1109,9 +1109,9 @@ class GenericProvider(object):
         """
         if not self.should_skip():
             str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
-            logger.log(u'%s %s in response from %s' % (('No' + str1, count)[0 < count], (
+            logger.log((u'%s %s in response from %s' % (('No' + str1, count)[0 < count], (
                 '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
-                re.sub('(\s)\s+', r'\1', url)))
+                re.sub('(\s)\s+', r'\1', url))).replace('%%', '%'))
 
     def check_auth_cookie(self):
 
