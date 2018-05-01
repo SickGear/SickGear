@@ -1,4 +1,9 @@
-﻿### 0.16.1 (2018-05-01 13:20:00 UTC)
+﻿### 0.16.2 (2018-05-02 00:25:00 UTC)
+
+* Change use copy of showObj for UI to preserve original object structs
+
+
+### 0.16.1 (2018-05-01 13:20:00 UTC)
 
 * Fix IMDb links to older shows on displayshow and editshow page
 
