@@ -1719,6 +1719,14 @@ class Home(MainHandler):
 
         return json.dumps({'success': t.respond()})
 
+    @staticmethod
+    def fix_imdb_id(obj):
+        try:
+            obj.ids[sickbeard.indexers.indexer_config.INDEXER_IMDB]['id'] = '%07d' % obj.ids[
+                sickbeard.indexers.indexer_config.INDEXER_IMDB]['id']
+        except (StandardError, Exception):
+            pass
+
     def displayShow(self, show=None):
 
         if show is None:
@@ -1794,6 +1802,7 @@ class Home(MainHandler):
                         {'title': 'Download Subtitles', 'path': 'home/subtitleShow?show=%d' % showObj.indexerid})
 
         t.show = showObj
+        self.fix_imdb_id(t.show)
         with BS4Parser('<html><body>%s</body></html>' % showObj.overview, features=['html5lib', 'permissive']) as soup:
             try:
                 soup.a.replace_with(soup.new_tag(''))
@@ -2224,6 +2233,7 @@ class Home(MainHandler):
 
             with showObj.lock:
                 t.show = showObj
+                self.fix_imdb_id(t.show)
                 t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_ids_list[showObj.indexer]
 
             # noinspection PyTypeChecker
