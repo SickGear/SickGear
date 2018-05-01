@@ -1,4 +1,9 @@
-﻿### 0.16.0 (2018-04-26 17:10:00 UTC)
+﻿### 0.16.1 (2018-05-01 13:20:00 UTC)
+
+* Fix IMDb links to older shows on displayshow and editshow page
+
+
+### 0.16.0 (2018-04-26 17:10:00 UTC)
 
 * Change search show result 'exists in db' text into a link to display show page
 * Change increase namecache size and fix deleting items from it when at capacity
