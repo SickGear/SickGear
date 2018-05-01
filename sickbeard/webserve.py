@@ -1801,7 +1801,8 @@ class Home(MainHandler):
                     t.submenu.append(
                         {'title': 'Download Subtitles', 'path': 'home/subtitleShow?show=%d' % showObj.indexerid})
 
-        t.show = showObj
+        import copy
+        t.show = copy.deepcopy(showObj)
         self.fix_imdb_id(t.show)
         with BS4Parser('<html><body>%s</body></html>' % showObj.overview, features=['html5lib', 'permissive']) as soup:
             try:
@@ -2232,7 +2233,8 @@ class Home(MainHandler):
                     t.groups.append(dict([('name', 'Did not initialise AniDB. Check debug log if reqd.'), ('rating', ''), ('range', '')]))
 
             with showObj.lock:
-                t.show = showObj
+                import copy
+                t.show = copy.deepcopy(showObj)
                 self.fix_imdb_id(t.show)
                 t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_ids_list[showObj.indexer]
 
