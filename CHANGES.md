@@ -8,6 +8,11 @@
 
 
 
+### 0.16.3 (2018-05-02 13:55:00 UTC)
+
+* Fix issue on displayShow
+
+
 ### 0.16.2 (2018-05-02 00:25:00 UTC)
 
 * Change use copy of showObj for UI to preserve original object structs

@@ -1911,7 +1911,7 @@ class Home(MainHandler):
         if showObj.is_anime:
             t.bwl = showObj.release_groups
 
-        showObj.exceptions = scene_exceptions.get_scene_exceptions(showObj.indexerid)
+        t.show.exceptions = scene_exceptions.get_scene_exceptions(showObj.indexerid)
 
         t.fanart = []
         cache_obj = image_cache.ImageCache()
@@ -1944,7 +1944,7 @@ class Home(MainHandler):
         indexerid = int(showObj.indexerid)
         indexer = int(showObj.indexer)
         t.min_initial = Quality.get_quality_ui(min(Quality.splitQuality(showObj.quality)[0]))
-        t.all_scene_exceptions = showObj.exceptions
+        t.all_scene_exceptions = t.show.exceptions
         t.scene_numbering = get_scene_numbering_for_show(indexerid, indexer)
         t.scene_absolute_numbering = get_scene_absolute_numbering_for_show(indexerid, indexer)
         t.xem_numbering = get_xem_numbering_for_show(indexerid, indexer)
