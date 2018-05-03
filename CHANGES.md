@@ -1,4 +1,9 @@
-﻿### 0.16.3 (2018-05-02 13:55:00 UTC)
+﻿### 0.16.4 (2018-05-03 12:00:00 UTC)
+
+* Fix PiSexy torrent provider
+
+
+### 0.16.3 (2018-05-02 13:55:00 UTC)
 
 * Fix issue on displayShow
 
@@ -247,56 +252,56 @@
 
 ### 0.14.9 (2018-03-19 13:10:00 UTC)
 
-Change remove dead tor caches and stop searching episodes that have a magnet saved
-Change AlphaRatio provider freeleech mode; prevent spoiling user ratio from ambiguous filtered results
+* Change remove dead tor caches and stop searching episodes that have a magnet saved
+* Change AlphaRatio provider freeleech mode; prevent spoiling user ratio from ambiguous filtered results
 
 
 ### 0.14.8 (2018-03-13 22:00:00 UTC)
 
-Fix changing status from "Skipped" to "Wanted" in Manage/Episode Status
+* Fix changing status from "Skipped" to "Wanted" in Manage/Episode Status
 
 
 ### 0.14.7 (2018-03-12 21:30:00 UTC)
 
-Add DrunkenSlug usenet provider
-Fix PiSexy torrent provider
+* Add DrunkenSlug usenet provider
+* Fix PiSexy torrent provider
 
 
 ### 0.14.6 (2018-03-05 15:40:00 UTC)
 
-Fix config/notifications Trakt "inactive" status not displayed when it should be
-Fix saving multiple account "Update collection" selection at config/notifications Trakt
+* Fix config/notifications Trakt "inactive" status not displayed when it should be
+* Fix saving multiple account "Update collection" selection at config/notifications Trakt
 
 
 ### 0.14.5 (2018-02-23 22:15:00 UTC)
 
-Remove NZB.is usenet provider
-Remove HD4Free torrent provider
-Fix config/notifications/Pushover priority selector
-Fix sending notification on snatch or download to Kodi/Emby
+* Remove NZB.is usenet provider
+* Remove HD4Free torrent provider
+* Fix config/notifications/Pushover priority selector
+* Fix sending notification on snatch or download to Kodi/Emby
 
 
 ### 0.14.4 (2018-02-18 23:55:00 UTC)
 
-Change relax strict mode from subtitle languages and show unknown.png flag for 'Undetermined' subtitle languages
-Add Paramount Network icon
+* Change relax strict mode from subtitle languages and show unknown.png flag for 'Undetermined' subtitle languages
+* Add Paramount Network icon
 
 
 ### 0.14.3 (2018-02-13 13:00:00 UTC)
 
-Change improve thetvdb api response handling
+* Change improve thetvdb api response handling
 
 
 ### 0.14.2 (2018-02-07 16:00:00 UTC)
 
-Change add handling for where requesting disk freespace is denied permission on some Linux distros
+* Change add handling for where requesting disk freespace is denied permission on some Linux distros
 
 
 ### 0.14.1 (2018-02-03 22:40:00 UTC)
 
-Change terminology around the custom quality selection to improve clarity
-Change restrict changing custom download qualities to reasonable selections
-Add upgrade to quality selections on Add show page and Import existing show page
+* Change terminology around the custom quality selection to improve clarity
+* Change restrict changing custom download qualities to reasonable selections
+* Add upgrade to quality selections on Add show page and Import existing show page
 
 
 ### 0.14.0 (2018-02-01 02:30:00 UTC)

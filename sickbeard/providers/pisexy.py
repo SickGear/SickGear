@@ -88,7 +88,7 @@ class PiSexyProvider(generic.TorrentProvider):
                                         or (self.freeleech and not tr.find('img', src=rc['filter'])):
                                     continue
 
-                                info = tr.find('a', href=rc['info'])
+                                info = tr.find('a', href=rc['info']) or tr.find('a', href=rc['get'])
                                 title = (rc['title'].sub('', info.attrs.get('title', '')) or info.get_text()).strip()
                                 size = cells[head['size']].get_text().strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
