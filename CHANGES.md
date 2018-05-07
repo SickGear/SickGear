@@ -1,4 +1,9 @@
-﻿### 0.16.4 (2018-05-03 12:00:00 UTC)
+﻿### 0.16.5 (2018-05-07 21:15:00 UTC)
+
+* Fix HTTP 422 error when using Plex Username and Password
+
+
+### 0.16.4 (2018-05-03 12:00:00 UTC)
 
 * Fix PiSexy torrent provider
 

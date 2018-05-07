@@ -1164,6 +1164,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
         # decide if we get or post data to server
         if post_data or 'post_json' in kwargs:
+            if True is post_data:
+                post_data = None
+
             if post_data:
                 kwargs.setdefault('data', post_data)
 
@@ -1697,8 +1700,6 @@ def path_mapper(search, replace, subject):
     replace = re.sub(r'[\\]', delim, replace)
     path = re.sub(r'[\\]', delim, subject)
     result = re.sub('(?i)^%s' % search, replace, path)
-
-    if re.search(delim, path):
-        result = os.path.normpath(re.sub(delim, '/', result))
+    result = os.path.normpath(re.sub(delim, '/', result))
 
     return result, result != subject
