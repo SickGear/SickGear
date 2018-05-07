@@ -57,7 +57,7 @@
 			</td>
     #if $curDir['existing_info'][1] and $indexer > 0
 			<td>
-				<a href="<%= anon_url(sickbeard.indexerApi(indexer).config['show_url'], curDir['existing_info'][0]) %>" target="_new">$curDir['existing_info'][1]</a>
+				<a href="<%= anon_url(sickbeard.indexerApi(indexer).config['show_url'] % curDir['existing_info'][0]) %>" target="_new">$curDir['existing_info'][1]</a>
 			</td>
     #else
 			<td>?</td>

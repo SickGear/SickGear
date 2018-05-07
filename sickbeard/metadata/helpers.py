@@ -32,7 +32,8 @@ def getShowImage(url, imgNum=None, showName=None):
 
     image_data = helpers.getURL(temp_url)
     if None is image_data:
-        logger.log('There was an error trying to retrieve the image%s, aborting' % ('', ' for show: %s' % showName)[None is not showName], logger.ERROR)
+        logger.log('There was an error trying to retrieve the image%s, aborting' %
+                   ('', ' for show: %s' % showName)[None is not showName], logger.WARNING)
         return
 
     return image_data

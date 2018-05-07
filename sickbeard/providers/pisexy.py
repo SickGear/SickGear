@@ -51,8 +51,8 @@ class PiSexyProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': 'download', 'get': 'info.php\?id', 'valid_cat': 'cat=(?:0|50[12])', 'filter': 'free',
-            'title': r'Download\s([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
+            'get': 'info.php\?id', 'valid_cat': 'cat=(?:0|50[12])', 'filter': 'free',
+            'title': r'Download\s*([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
@@ -88,10 +88,10 @@ class PiSexyProvider(generic.TorrentProvider):
                                         or (self.freeleech and not tr.find('img', src=rc['filter'])):
                                     continue
 
-                                info = tr.find('a', href=rc['info']) or tr.find('a', href=rc['get'])
-                                title = (rc['title'].sub('', info.attrs.get('title', '')) or info.get_text()).strip()
+                                info = tr.find('a', href=rc['get'])
+                                title = (rc['title'].sub(r'\1', info.attrs.get('title', '')) or info.get_text()).strip()
                                 size = cells[head['size']].get_text().strip()
-                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
+                                download_url = self._link(info['href'])
                             except (AttributeError, TypeError, ValueError, KeyError, IndexError):
                                 continue
 

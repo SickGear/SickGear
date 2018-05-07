@@ -105,7 +105,7 @@ info_src = INDEXER_TVDB
 indexerConfig[info_src].update(dict(
     base_url=(indexerConfig[info_src]['main_url'] +
               'api/%(apikey)s/series/' % indexerConfig[info_src]['api_params']),
-    show_url='%s?tab=series&id=' % indexerConfig[info_src]['main_url'],
+    show_url='%s?tab=series&id=%%d' % indexerConfig[info_src]['main_url'],
     finder=(indexerConfig[info_src]['main_url'] +
             'index.php?fieldlocation=2&language=7&order=translation&searching=Search&tab=advancedsearch&seriesname=%s'),
     scene_url='https://midgetspy.github.io/sb_tvdb_scene_exceptions/exceptions.txt',
@@ -116,7 +116,7 @@ info_src = INDEXER_TVDB_V1
 indexerConfig[info_src].update(dict(
     base_url=(indexerConfig[info_src]['main_url'] +
               'api/%(apikey)s/series/' % indexerConfig[info_src]['api_params']),
-    show_url='%s?tab=series&id=' % indexerConfig[info_src]['main_url'],
+    show_url='%s?tab=series&id=%%d' % indexerConfig[info_src]['main_url'],
     finder=(indexerConfig[info_src]['main_url'] +
             'index.php?fieldlocation=2&language=7&order=translation&searching=Search&tab=advancedsearch&seriesname=%s'),
 ))
@@ -125,7 +125,7 @@ info_src = INDEXER_TVRAGE
 indexerConfig[info_src].update(dict(
     base_url=(indexerConfig[info_src]['main_url'] +
               'showinfo.php?key=%(apikey)s&sid=' % indexerConfig[info_src]['api_params']),
-    show_url='%sshows/id-' % indexerConfig[info_src]['main_url'],
+    show_url='%sshows/id-%%d' % indexerConfig[info_src]['main_url'],
     scene_url='https://sickgear.github.io/sg_tvrage_scene_exceptions/exceptions.txt',
     defunct=True,
 ))
@@ -133,27 +133,27 @@ indexerConfig[info_src].update(dict(
 info_src = INDEXER_TVMAZE
 indexerConfig[info_src].update(dict(
     base_url='https://api.tvmaze.com/',
-    show_url='%sshows/' % indexerConfig[info_src]['main_url'],
+    show_url='%sshows/%%d' % indexerConfig[info_src]['main_url'],
     finder='%ssearch?q=%s' % (indexerConfig[info_src]['main_url'], '%s'),
 ))
 
 info_src = INDEXER_IMDB
 indexerConfig[info_src].update(dict(
     base_url=indexerConfig[info_src]['main_url'],
-    show_url='%stitle/tt' % indexerConfig[info_src]['main_url'],
+    show_url='%stitle/tt%%07d' % indexerConfig[info_src]['main_url'],
     finder='%sfind?q=%s&s=tt&ttype=tv&ref_=fn_tv' % (indexerConfig[info_src]['main_url'], '%s'),
 ))
 
 info_src = INDEXER_TRAKT
 indexerConfig[info_src].update(dict(
     base_url=indexerConfig[info_src]['main_url'],
-    show_url='%sshows/' % indexerConfig[info_src]['main_url'],
+    show_url='%sshows/%%d' % indexerConfig[info_src]['main_url'],
     finder='%ssearch/shows?query=%s' % (indexerConfig[info_src]['main_url'], '%s'),
 ))
 
 info_src = INDEXER_TMDB
 indexerConfig[info_src].update(dict(
     base_url=indexerConfig[info_src]['main_url'],
-    show_url='%stv/' % indexerConfig[info_src]['main_url'],
+    show_url='%stv/%%d' % indexerConfig[info_src]['main_url'],
     finder='%ssearch/tv?query=%s' % (indexerConfig[info_src]['main_url'], '%s'),
 ))

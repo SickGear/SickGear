@@ -191,7 +191,7 @@
             #continue
         #end if
         #if not $indexerApi($src_id).config.get('defunct')
-							<a class="service addQTip" href="$anon_url($indexerApi($src_id).config['show_url'], $show.ids[$src_id]['id'])" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View $src_name info in new tab">
+							<a class="service addQTip" href="$anon_url($indexerApi($src_id).config['show_url'] % $show.ids[$src_id]['id'])" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View $src_name info in new tab">
         #else#
 							<a class="service addQTip" href="$sbRoot/home/editShow?show=$show.indexerid#core-component-group3" title="Edit related show IDs">
         #end if#
@@ -430,7 +430,7 @@
 #if not len($seasons)
 	<div id="no-episode-data">
 		<h3>No episode details at TV info source
-			<a class="service" href="$anon_url($indexerApi($show.indexer).config['show_url'], $show.indexerid)" onclick="window.open(this.href, '_blank'); return !1;" title="View $indexerApi($show.indexer).name info in new tab">$indexerApi($show.indexer).name</a>
+			<a class="service" href="$anon_url($indexerApi($show.indexer).config['show_url'] % $show.indexerid)" onclick="window.open(this.href, '_blank'); return !1;" title="View $indexerApi($show.indexer).name info in new tab">$indexerApi($show.indexer).name</a>
 		</h3>
 	</div>
 #else
