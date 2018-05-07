@@ -123,7 +123,7 @@ $(document).ready(function () {
 							+ (0 < item[result.Overview].length ? '<p style=\'margin:0 0 2px\'>' + item[result.Overview] + '</p>' : '')
 							+ '<span style=\'float:right;clear:both\'>Click for more</span>'
 							+ '"'
-							+ ' href="' + anonURL + item[result.SrcUrl] + item[result.ShowID] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
+							+ ' href="' + anonURL + item[result.SrcUrl] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return !1;"'
 							+ '>' + (config.sortArticle ? displayShowName : displayShowName.replace(/^((?:A(?!\s+to)n?)|The)(\s)+(.*)/i, '$3$2<span class="article">($1)</span>')) + '</a>'
 							+ showstartdate

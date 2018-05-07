@@ -62,7 +62,7 @@
 #if $use_provided_info
     #set $provided_indexer_local = $provided_indexer
     #set $provided_indexer_id_local = $provided_indexer_id
-				Show: <a href="<%= anon_url(sickbeard.indexerApi(provided_indexer_local).config['show_url'], provided_indexer_id_local) %>">$provided_indexer_name</a>
+				Show: <a href="<%= anon_url(sickbeard.indexerApi(provided_indexer_local).config['show_url'] % provided_indexer_id_local) %>">$provided_indexer_name</a>
 				<input type="hidden" name="indexerLang" value="en">
 				<input type="hidden" name="whichSeries" value="#echo '|'.join([str($provided_indexer), '', str($provided_indexer_id), $provided_indexer_name])#">
 				<input type="hidden" id="providedName" value="$provided_indexer_name">

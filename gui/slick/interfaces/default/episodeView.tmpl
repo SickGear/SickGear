@@ -421,10 +421,10 @@
 			</td>
 
 			<td align="center" style="vertical-align:middle">
-        #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_id']
-				<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).config.get('name')]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
+        #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_url']
+				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).config.get('name')]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
         #end if
-				<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'], cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="$sickbeard.indexerApi($cur_indexer).config['show_url']${cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
+				<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickbeard.indexerApi($cur_indexer).config['show_url'] % cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
 			</td>
 
 			<td align="center">
@@ -610,10 +610,10 @@
 							</a></span>
 
 							<span class="tvshowTitleIcons">
-        #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_id']
-                				<a href="<%= anon_url('http://www.imdb.com/title/', cur_result['imdb_id']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="http://www.imdb.com/title/${cur_result['imdb_id']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).name]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
+        #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_url']
+                				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).name]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
         #end if
-								<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'], cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="$sickbeard.indexerApi($cur_indexer).config['show_url']${cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
+								<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickbeard.indexerApi($cur_indexer).config['show_url'] % cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
 								<span><a href="$sbRoot/home/searchEpisode?show=${cur_result['showid']}&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search" id="forceUpdate-${cur_result['showid']}" class="epSearch forceUpdate"><img alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" id="forceUpdateImage-${cur_result['showid']}" /></a></span>
 							</span>
 						</div>

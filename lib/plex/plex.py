@@ -132,7 +132,7 @@ class Plex:
                                    'X-Plex-Username': user
                                    },
                           json=True,
-                          data=urlencode({b'user[login]': user, b'user[password]': passw}).encode('utf-8')
+                          post_data=urlencode({b'user[login]': user, b'user[password]': passw}).encode('utf-8')
                           )['user']['authentication_token']
         except IndexError:
             self.log('Error getting Plex Token')
@@ -181,8 +181,7 @@ class Plex:
         if None is not home_users:
             for user in home_users.findall('User'):
                 user_id = user.get('id')
-                # use empty byte data to force POST
-                switch_page = self.get_url_x('https://plex.tv/api/home/users/%s/switch' % user_id, data=b'')
+                switch_page = self.get_url_x('https://plex.tv/api/home/users/%s/switch' % user_id, post_data=True)
                 if None is not switch_page:
                     home_token = 'user' == switch_page.tag and switch_page.get('authenticationToken')
                     if home_token:
