@@ -2177,7 +2177,10 @@ class CMD_SickGearGetIndexers(ApiCall):
                               not indexer_config.indexerConfig[i].get('defunct')
                     else:
                         key = d
-                        val = (v, '%s{INDEXER-ID}' % v)['show_url' == d]
+                        if 'show_url' == d:
+                            val = re.sub(r'%\d{,2}d', '{INDEXER-ID}', v, flags=re.I)
+                        else:
+                            val = v
                     result.setdefault(i, {}).update({key: val})
         return _responds(RESULT_SUCCESS, result)
 

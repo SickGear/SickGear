@@ -842,6 +842,18 @@ class MainHandler(WebHandler):
             sql_results[index]['data_show_name'] = value_maybe_article(item['show_name'])
             sql_results[index]['data_network'] = value_maybe_article(item['network'])
 
+            imdb_id = None
+            if item['imdb_id']:
+                try:
+                    imdb_id = helpers.tryInt(re.search(r'(\d+)', item['imdb_id']).group(1))
+                except (StandardError, Exception):
+                    pass
+            if imdb_id:
+                sql_results[index]['imdb_url'] = sickbeard.indexers.indexer_config.indexerConfig[
+                    sickbeard.indexers.indexer_config.INDEXER_IMDB]['show_url'] % imdb_id
+            else:
+                sql_results[index]['imdb_url'] = ''
+
             show_id = item['showid']
             if show_id in t.fanart:
                 continue
@@ -1719,14 +1731,6 @@ class Home(MainHandler):
 
         return json.dumps({'success': t.respond()})
 
-    @staticmethod
-    def fix_imdb_id(obj):
-        try:
-            obj.ids[sickbeard.indexers.indexer_config.INDEXER_IMDB]['id'] = '%07d' % obj.ids[
-                sickbeard.indexers.indexer_config.INDEXER_IMDB]['id']
-        except (StandardError, Exception):
-            pass
-
     def displayShow(self, show=None):
 
         if show is None:
@@ -1801,9 +1805,7 @@ class Home(MainHandler):
                     t.submenu.append(
                         {'title': 'Download Subtitles', 'path': 'home/subtitleShow?show=%d' % showObj.indexerid})
 
-        import copy
-        t.show = copy.deepcopy(showObj)
-        self.fix_imdb_id(t.show)
+        t.show = showObj
         with BS4Parser('<html><body>%s</body></html>' % showObj.overview, features=['html5lib', 'permissive']) as soup:
             try:
                 soup.a.replace_with(soup.new_tag(''))
@@ -2233,9 +2235,7 @@ class Home(MainHandler):
                     t.groups.append(dict([('name', 'Did not initialise AniDB. Check debug log if reqd.'), ('rating', ''), ('range', '')]))
 
             with showObj.lock:
-                import copy
-                t.show = copy.deepcopy(showObj)
-                self.fix_imdb_id(t.show)
+                t.show = showObj
                 t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_ids_list[showObj.indexer]
 
             # noinspection PyTypeChecker
@@ -3167,7 +3167,8 @@ class NewHomeAddShows(Home):
                 sickbeard.showList, {(iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]: int(show['id'])},
                 no_mapped_ids=False)]) and '/home/displayShow?show=%s' % int(show['id']),
                iid, (iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid],
-               sickbeard.indexerApi((iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]).config['show_url'], int(show['id']),
+               sickbeard.indexerApi((iid, INDEXER_TVDB)[INDEXER_TVDB_X == iid]).config['show_url'] % int(show['id']),
+               int(show['id']),
                show['seriesname'], self.encode_html(show['seriesname']), show['firstaired'],
                show.get('network', '') or '', show.get('genres', '') or '',
                re.sub(r'([,.!][^,.!]*?)$', '...',
@@ -3476,7 +3477,7 @@ class NewHomeAddShows(Home):
                             title=title.strip(),
                             images=images,
                             url_src_db='http://anidb.net/perl-bin/animedb.pl?show=anime&aid=%s' % ids['anidb'],
-                            url_tvdb='%s%s' % (sickbeard.indexerApi(INDEXER_TVDB).config['show_url'], ids['tvdb']),
+                            url_tvdb=sickbeard.indexerApi(INDEXER_TVDB).config['show_url'] % ids['tvdb'],
                             votes=votes, rating=rating,
                             genres='', overview=''
                         ))
@@ -3628,8 +3629,7 @@ class NewHomeAddShows(Home):
                 src = ((None, 'tvrage')[INDEXER_TVRAGE == indexer], 'tvdb')[INDEXER_TVDB == indexer]
                 if src:
                     filtered[-1]['ids'][src] = indexerid
-                    filtered[-1]['url_' + src] = '%s%s' % (
-                        sickbeard.indexerApi(indexer).config['show_url'], indexerid)
+                    filtered[-1]['url_' + src] = sickbeard.indexerApi(indexer).config['show_url'] % indexerid
             except (AttributeError, TypeError, KeyError, IndexError):
                 pass
 
@@ -3712,8 +3712,8 @@ class NewHomeAddShows(Home):
                     src = ((None, 'tvrage')[INDEXER_TVRAGE == show.indexer], 'tvdb')[INDEXER_TVDB == show.indexer]
                     if src:
                         filtered[-1]['ids'][src] = show.indexerid
-                        filtered[-1]['url_' + src] = '%s%s' % (
-                            sickbeard.indexerApi(show.indexer).config['show_url'], show.indexerid)
+                        filtered[-1]['url_' + src] = sickbeard.indexerApi(show.indexer).config['show_url'] % \
+                                                     show.indexerid
                 except (AttributeError, TypeError, KeyError, IndexError):
                     continue
 
@@ -3973,8 +3973,7 @@ class NewHomeAddShows(Home):
                            ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
                     title=item['show']['title'].strip(),
                     url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
-                    url_tvdb=('', '%s%s' % (sickbeard.indexerApi(INDEXER_TVDB).config['show_url'],
-                                            item['show']['ids']['tvdb']))[
+                    url_tvdb=('', sickbeard.indexerApi(INDEXER_TVDB).config['show_url'] % item['show']['ids']['tvdb'])[
                         isinstance(item['show']['ids']['tvdb'], (int, long))
                         and 0 < item['show']['ids']['tvdb']],
                     votes='0' if 'votes' not in item['show'] else item['show']['votes']))
