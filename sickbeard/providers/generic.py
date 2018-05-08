@@ -1285,7 +1285,7 @@ class NZBProvider(GenericProvider):
 
 class TorrentProvider(GenericProvider):
 
-    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=None, update_freq=None):
+    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=7, update_freq=None):
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
 
         self.providerType = GenericProvider.TORRENT
