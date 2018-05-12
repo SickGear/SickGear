@@ -674,10 +674,10 @@ class ParseResult(object):
 
     @staticmethod
     def _replace_ep_name_helper(e_i_n_n, n):
-        ep_regex = r'\W*%s\W*' % re.sub(r' ', r'\W', re.sub(r'[^a-zA-Z0-9 ]', r'\W?',
+        ep_regex = r'\W*%s(\W*)' % re.sub(r' ', r'\W', re.sub(r'[^a-zA-Z0-9 ]', r'\W?',
                                                             re.sub(r'\W+$', '', n.strip())))
         if None is regex:
-            return re.sub(ep_regex, '', e_i_n_n, flags=re.I)
+            return re.sub(r'^\W+', '', re.sub(ep_regex, r'\1', e_i_n_n, flags=re.I))
 
         er = trunc(len(re.findall(r'\w', ep_regex)) / 5)
         try:
@@ -685,7 +685,7 @@ class ParseResult(object):
             me = min(3, me)
         except (StandardError, Exception):
             me = 3
-        return regex.sub(r'(%s){e<=%d}' % (ep_regex, (er, me)[er > me]), '', e_i_n_n, flags=regex.I | regex.B)
+        return re.sub(r'^\W+', '', regex.sub(r'(?:%s){e<=%d}' % (ep_regex, (er, me)[er > me]), r'\1', e_i_n_n, flags=regex.I | regex.B))
 
     def get_extra_info_no_name(self):
         extra_info_no_name = self.extra_info
