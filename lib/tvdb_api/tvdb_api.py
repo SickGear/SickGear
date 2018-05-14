@@ -563,6 +563,10 @@ class Tvdb:
 
         return os.path.join(tempfile.gettempdir(), 'tvdb_api-%s' % uid)
 
+    def _match_url_pattern(self, pattern, url):
+        if pattern in self.config:
+            return re.search('^%s$' % re.escape(self.config[pattern]).replace('\\%s', '[^/]+'), url)
+
     @retry((tvdb_error, tvdb_tokenexpired))
     def _load_url(self, url, params=None, language=None):
         log().debug('Retrieving URL %s' % url)
@@ -583,7 +587,7 @@ class Tvdb:
             session.headers.update({'Accept-Language': language})
 
         resp = None
-        if re.search(re.escape(self.config['url_seriesInfo']).replace('%s', '.*'), url):
+        if self._match_url_pattern('url_seriesInfo', url):
             self.show_not_found = False
         self.not_found = False
         try:
@@ -595,8 +599,10 @@ class Tvdb:
                 sickbeard.THETVDB_V2_API_TOKEN = self.get_new_token()
                 raise tvdb_tokenexpired
             elif 404 == e.response.status_code:
-                if re.search(re.escape(self.config['url_seriesInfo']).replace('%s', '.*'), url):
+                if self._match_url_pattern('url_seriesInfo', url):
                     self.show_not_found = True
+                elif self._match_url_pattern('url_epInfo', url):
+                    resp = {'data': []}
                 self.not_found = True
             elif 404 != e.response.status_code:
                 raise tvdb_error
@@ -647,10 +653,16 @@ class Tvdb:
         try:
             src = self._load_url(url, params=params, language=language)
             if isinstance(src, dict):
-                data = src['data'] or {}
+                if None is not src['data']:
+                    data = src['data']
+                else:
+                    data = {}
+                # data = src['data'] or {}
                 if isinstance(data, list):
-                    data = data[0] or {}
-                if 1 > len(data.keys()):
+                    if 0 < len(data):
+                        data = data[0]
+                    # data = data[0] or {}
+                if None is data or (isinstance(data, dict) and 1 > len(data.keys())):
                     raise ValueError
                 return src
         except (KeyError, IndexError, Exception):
@@ -912,9 +924,9 @@ class Tvdb:
                 episode_data = self._getetsrc(self.config['url_epInfo'] % (sid, page), language=language)
                 if None is episode_data:
                     raise tvdb_error('Exception retrieving episodes for show')
-                if None is not episode_data.get('data'):
+                if not getattr(self, 'not_found', False) and None is not episode_data.get('data'):
                     episodes.extend(episode_data['data'])
-                page = episode_data.get('links', {}).get('next')
+                page = episode_data.get('links', {}).get('next', None)
 
             ep_map_keys = {'absolutenumber': u'absolute_number', 'airedepisodenumber': u'episodenumber',
                            'airedseason': u'seasonnumber', 'airedseasonid': u'seasonid',

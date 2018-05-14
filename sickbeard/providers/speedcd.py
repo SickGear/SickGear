@@ -56,11 +56,8 @@ class SpeedCDProvider(generic.TorrentProvider):
                      self.session.cookies.clear('.speed.cd') is None or True] +
                     ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
                     [(self.session.cookies.get('inSpeed_' + c) or 'sg!no!pw') in self.digest for c in ['speedian']])),
-                failed_msg=(lambda y=None: None))
-            username = self.username
-            del self.username
+                failed_msg=(lambda y=None: None), post_params={'login': False})
             result = super(SpeedCDProvider, self)._authorised(**params)
-            setattr(self, 'username', username)
 
         if not result and not self.failure_count:
             if self.digest:

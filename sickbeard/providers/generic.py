@@ -884,9 +884,8 @@ class GenericProvider(object):
             return results
 
         searched_scene_season = None
+        search_list = []
         for ep_obj in episodes:
-            if self.should_skip(log_warning=False):
-                break
             # search cache for episode result
             cache_result = self.cache.searchCache(ep_obj, manual_search)
             if cache_result:
@@ -911,7 +910,16 @@ class GenericProvider(object):
                 # get single episode search params
                 search_params = self._episode_strings(ep_obj)
 
+            search_list += [search_params]
+
+        search_done = []
+        for search_params in search_list:
+            if self.should_skip(log_warning=False):
+                break
             for cur_param in search_params:
+                if cur_param in search_done:
+                    continue
+                search_done += [cur_param]
                 item_list += self._search_provider(cur_param, search_mode=search_mode, epcount=len(episodes))
                 if self.should_skip():
                     break
@@ -1577,7 +1585,7 @@ class TorrentProvider(GenericProvider):
             if not url:
                 return super(TorrentProvider, self)._authorised()
 
-        if getattr(self, 'username', None) and getattr(self, 'password', None):
+        if getattr(self, 'username', None) and getattr(self, 'password', None) and post_params.pop('login', True):
             if not post_params:
                 post_params = dict(username=self.username, password=self.password)
             elif isinstance(post_params, type({})):

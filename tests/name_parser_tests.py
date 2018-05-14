@@ -9,7 +9,7 @@ sys.path.insert(1, os.path.abspath('..'))
 sys.path.insert(1, os.path.abspath('../lib'))
 
 from sickbeard.name_parser import parser
-from sickbeard import name_cache
+from sickbeard import name_cache, tv
 
 import sickbeard
 
@@ -355,6 +355,35 @@ failure_cases = ['7sins-jfcs01e09-720p-bluray-x264']
 
 invalid_cases = [('The.Show.Name.111E14.1080p.WEB.x264-GROUP', 'the show name', 11, False)]
 
+extra_info_no_name_tests = [('The Show Name', [('Episode 302', 3, 2)],
+                             'The.Show.Name.S03E02.REPACK.Episode.302.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ('The Show Name', [('Episode 302', 3, 2)],
+                             'The.Show.Name.S03E02.Episode.302.REPACK.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ('The Show Name', [('Episode 302', 3, 2)],
+                             'The.Show.Name.S03E02.Episode.302.REPACK.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ('The Show Name', [('Episode 302', 3, 2)],
+                             'The.Show.Name.S03E02.REPACK.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ('The Show Name', [('Episode 302', 3, 2)],
+                             'The.Show.Name.S03E02.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             '720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ('The Show Name', [('Episode 302', 3, 2), ('Name 2', 3, 3)],
+                             'The.Show.Name.S03E02E03.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             '720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ('The Show Name', [('Episode 302', 3, 2), ('Name 2', 3, 3)],
+                             'The.Show.Name.S03E02E03.Episode.302.Name2.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             '720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ('The Show Name', [('Episode 302', 3, 2), ('Name 2', 3, 3)],
+                             'The.Show.Name.S03E02E03.REPACK.Episode.302.Name2.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ('The Show Name', [('Episode 302', 3, 2), ('Name 2', 3, 3)],
+                             'The.Show.Name.S03E02E03.Episode.302.Name2.REPACK.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
+                            ]
+
 
 class InvalidCases(test.SickbeardTestDBCase):
 
@@ -612,11 +641,35 @@ class BasicTests(test.SickbeardTestDBCase):
         self._test_names(np, 'anime_bare')
 
 
-class TVShow(object):
-    def __init__(self, is_anime=False, name='', indexerid=0):
-        self.is_anime = is_anime
-        self.name = name
-        self.indexerid = indexerid
+class TVShow(tv.TVShow):
+    def __init__(self, is_anime=False, name='', indexerid=0, indexer=0):
+        self._anime = is_anime
+        self._name = name
+        self._indexerid = indexerid
+        self._indexer = indexer
+        self.episodes = {}
+
+
+class TVEpisode(tv.TVEpisode):
+    def __init__(self, name=''):
+        self._name = name
+
+
+class ExtraInfoNoNameTests(test.SickbeardTestDBCase):
+    def test_extra_info_no_name(self):
+        for case in extra_info_no_name_tests:
+            tvs = TVShow(False, case[0], 2, 1)
+            for e in case[1]:
+                tvs.episodes.setdefault(e[1], {}).update({e[2]: TVEpisode(e[0])})
+
+            sickbeard.showList = [tvs]
+            name_cache.nameCache = {}
+            name_cache.buildNameCache()
+
+            np = parser.NameParser()
+            r = np.parse(case[2])
+            n_ep = r.extra_info_no_name()
+            self.assertEqual(n_ep, case[3])
 
 
 if __name__ == '__main__':
@@ -636,4 +689,7 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(InvalidCases)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(ExtraInfoNoNameTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

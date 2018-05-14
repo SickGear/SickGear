@@ -9,6 +9,14 @@
 
 
 
+### 0.16.6 (2018-05-14 01:00:00 UTC)
+
+* Change improve tolerance to parse a release title with a badly placed episode name
+* Change improve handling tvdb_api data when adding upcoming shows with unfilled data
+* Change search only once per cycle for shows with multiple episodes that air on the same day
+* Fix SpeedCD
+
+
 ### 0.16.5 (2018-05-07 21:15:00 UTC)
 
 * Fix HTTP 422 error when using Plex Username and Password
