@@ -123,11 +123,12 @@ class NewznabProvider(generic.NZBProvider):
         self._caps_last_updated = datetime.datetime.fromordinal(1)
         self.cache = NewznabCache(self)
         # filters
-        if super(NewznabProvider, self).get_id() in ('nzbs_org',):
-            self.filter = []
-            if 'nzbs_org' == super(NewznabProvider, self).get_id():
-                self.may_filter = OrderedDict([
-                    ('so', ('scene only', False)), ('snn', ('scene not nuked', False))])
+        # deprecated; kept here as bookmark for new haspretime:0|1 + nuked:0|1 can be used here instead
+        # if super(NewznabProvider, self).get_id() in ('nzbs_org',):
+        #     self.filter = []
+        #     if 'nzbs_org' == super(NewznabProvider, self).get_id():
+        #         self.may_filter = OrderedDict([
+        #             ('so', ('scene only', False)), ('snn', ('scene not nuked', False))])
 
     @property
     def cat_ids(self):
@@ -727,9 +728,10 @@ class NewznabProvider(generic.NZBProvider):
                     request_params['t'] = 'search'
                 request_params.update(params)
 
-                if hasattr(self, 'filter'):
-                    if 'nzbs_org' == self.get_id():
-                        request_params['rls'] = ((0, 1)['so' in self.filter], 2)['snn' in self.filter]
+                # deprecated; kept here as bookmark for new haspretime:0|1 + nuked:0|1 can be used here instead
+                # if hasattr(self, 'filter'):
+                #     if 'nzbs_org' == self.get_id():
+                #         request_params['rls'] = ((0, 1)['so' in self.filter], 2)['snn' in self.filter]
 
                 # workaround a strange glitch
                 if sum(ord(i) for i in self.get_id()) in [383] and 5 == 14 - request_params['maxage']:

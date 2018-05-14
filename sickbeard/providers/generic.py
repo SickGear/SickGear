@@ -242,6 +242,13 @@ class GenericProvider(object):
         self.fail_times = {1: (0, 15), 2: (0, 30), 3: (1, 0), 4: (2, 0), 5: (3, 0), 6: (6, 0), 7: (12, 0), 8: (24, 0)}
         self._load_fail_values()
 
+        self.scene_only = False
+        self.scene_or_contain = ''
+        self.scene_loose = False
+        self.scene_loose_active = False
+        self.scene_rej_nuked = False
+        self.scene_nuked_active = False
+
     def _load_fail_values(self):
         if hasattr(sickbeard, 'DATA_DIR'):
             my_db = db.DBConnection('cache.db')
