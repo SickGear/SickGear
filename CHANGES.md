@@ -2,6 +2,7 @@
 
 * Change improve tolerance to parse a release title with a badly placed episode name
 * Change improve handling tvdb_api data when adding upcoming shows with unfilled data
+* Change search only once per cycle for shows with multiple episodes that air on the same day
 
 
 ### 0.16.5 (2018-05-07 21:15:00 UTC)
