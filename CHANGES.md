@@ -1,4 +1,9 @@
-﻿### 0.16.6 (2018-05-14 01:00:00 UTC)
+﻿### 0.16.7 (2018-05-14 02:40:00 UTC)
+
+* Fix name_parser_tests for test_extra_info_no_name
+
+
+### 0.16.6 (2018-05-14 01:00:00 UTC)
 
 * Change improve tolerance to parse a release title with a badly placed episode name
 * Change improve handling tvdb_api data when adding upcoming shows with unfilled data

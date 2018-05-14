@@ -374,13 +374,13 @@ extra_info_no_name_tests = [('The Show Name', [('Episode 302', 3, 2)],
                              'The.Show.Name.S03E02E03.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
                              '720p.AMZN.WEBRip.DDP5.1.x264'),
                             ('The Show Name', [('Episode 302', 3, 2), ('Name 2', 3, 3)],
-                             'The.Show.Name.S03E02E03.Episode.302.Name2.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'The.Show.Name.S03E02E03.Episode.302.Name.2.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
                              '720p.AMZN.WEBRip.DDP5.1.x264'),
                             ('The Show Name', [('Episode 302', 3, 2), ('Name 2', 3, 3)],
-                             'The.Show.Name.S03E02E03.REPACK.Episode.302.Name2.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'The.Show.Name.S03E02E03.REPACK.Episode.302.Name.2.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
                              'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
                             ('The Show Name', [('Episode 302', 3, 2), ('Name 2', 3, 3)],
-                             'The.Show.Name.S03E02E03.Episode.302.Name2.REPACK.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
+                             'The.Show.Name.S03E02E03.Episode.302.Name.2.REPACK.720p.AMZN.WEBRip.DDP5.1.x264-GROUP',
                              'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
                             ]
 
@@ -656,20 +656,34 @@ class TVEpisode(tv.TVEpisode):
 
 
 class ExtraInfoNoNameTests(test.SickbeardTestDBCase):
+    def setUp(self):
+        super(ExtraInfoNoNameTests, self).setUp()
+        self.oldregex = parser.regex
+
+    def tearDown(self):
+        super(ExtraInfoNoNameTests, self).tearDown()
+        parser.regex = self.oldregex
+
     def test_extra_info_no_name(self):
-        for case in extra_info_no_name_tests:
-            tvs = TVShow(False, case[0], 2, 1)
-            for e in case[1]:
-                tvs.episodes.setdefault(e[1], {}).update({e[2]: TVEpisode(e[0])})
+        for i in range(2):
+            if 1 == i:
+                if None is parser.regex:
+                    # only retest if regex lib is installed, now test re lib
+                    continue
+                parser.regex = None
+            for case in extra_info_no_name_tests:
+                tvs = TVShow(False, case[0], 2, 1)
+                for e in case[1]:
+                    tvs.episodes.setdefault(e[1], {}).update({e[2]: TVEpisode(e[0])})
 
-            sickbeard.showList = [tvs]
-            name_cache.nameCache = {}
-            name_cache.buildNameCache()
+                sickbeard.showList = [tvs]
+                name_cache.nameCache = {}
+                name_cache.buildNameCache()
 
-            np = parser.NameParser()
-            r = np.parse(case[2])
-            n_ep = r.extra_info_no_name()
-            self.assertEqual(n_ep, case[3])
+                np = parser.NameParser()
+                r = np.parse(case[2], cache_result=False)
+                n_ep = r.extra_info_no_name()
+                self.assertEqual(n_ep, case[3])
 
 
 if __name__ == '__main__':
