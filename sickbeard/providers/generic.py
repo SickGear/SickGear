@@ -1585,7 +1585,7 @@ class TorrentProvider(GenericProvider):
             if not url:
                 return super(TorrentProvider, self)._authorised()
 
-        if getattr(self, 'username', None) and getattr(self, 'password', None):
+        if getattr(self, 'username', None) and getattr(self, 'password', None) and post_params.pop('login', True):
             if not post_params:
                 post_params = dict(username=self.username, password=self.password)
             elif isinstance(post_params, type({})):
