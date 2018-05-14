@@ -116,7 +116,7 @@ class SceneHDProvider(generic.TorrentProvider):
 
     @staticmethod
     def ui_string(key):
-        return 'scenehd_confirm' == key and 'skip releases marked as bad/nuked' or ''
+        return 'scenehd_confirm' == key and 'not marked as bad/nuked' or ''
 
 
 provider = SceneHDProvider()

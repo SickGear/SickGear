@@ -3,6 +3,11 @@
 * Update Tornado Web Server 5.0.1 (35a538f) to 5.0.1 (2b2a220a)
 * Add HDME torrent provider
 * Add Xspeeds torrent provider
+* Change consolidate provider filters into 'Only allow releases that are'
+* Add provider filters, Only allow releases that are ...
+  'scene releases (srrDB/predb listed)', 'or contain' text or regex,
+  'non scene if no recent search results', 'non scene if no active search results',
+  'not scene nuked', and 'nuked if no active search results'
 
 
 [develop changelog]

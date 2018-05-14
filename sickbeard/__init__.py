@@ -1233,83 +1233,79 @@ def initialize(console_logging=True):
                              if GenericProvider.TORRENT == curProvider.providerType]:
             prov_id = torrent_prov.get_id()
             prov_id_uc = torrent_prov.get_id().upper()
-            torrent_prov.enabled = bool(check_setting_int(CFG, prov_id_uc, prov_id, 0))
+            torrent_prov.enabled = bool(check_setting_int(CFG, prov_id_uc, prov_id, False))
+
+            # check str with a def of list, don't add to block settings
             if getattr(torrent_prov, 'url_edit', None):
                 torrent_prov.url_home = check_setting_str(CFG, prov_id_uc, prov_id + '_url_home', [])
-            if hasattr(torrent_prov, 'api_key'):
-                torrent_prov.api_key = check_setting_str(CFG, prov_id_uc, prov_id + '_api_key', '')
-            if hasattr(torrent_prov, 'hash'):
-                torrent_prov.hash = check_setting_str(CFG, prov_id_uc, prov_id + '_hash', '')
-            if hasattr(torrent_prov, 'digest'):
-                torrent_prov.digest = check_setting_str(CFG, prov_id_uc, prov_id + '_digest', '')
-            for user_type in ['username', 'uid']:
-                if hasattr(torrent_prov, user_type):
-                    setattr(torrent_prov, user_type,
-                            check_setting_str(CFG, prov_id_uc, '%s_%s' % (prov_id, user_type), ''))
-            if hasattr(torrent_prov, 'password'):
-                torrent_prov.password = check_setting_str(CFG, prov_id_uc, prov_id + '_password', '')
-            if hasattr(torrent_prov, 'passkey'):
-                torrent_prov.passkey = check_setting_str(CFG, prov_id_uc, prov_id + '_passkey', '')
-            if hasattr(torrent_prov, 'confirmed'):
-                torrent_prov.confirmed = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_confirmed', 0))
-            if hasattr(torrent_prov, 'options'):
-                torrent_prov.options = check_setting_str(CFG, prov_id_uc, prov_id + '_options', '')
-            if hasattr(torrent_prov, '_seed_ratio'):
-                torrent_prov._seed_ratio = check_setting_str(CFG, prov_id_uc, prov_id + '_seed_ratio', '')
-            if hasattr(torrent_prov, 'seed_time'):
-                torrent_prov.seed_time = check_setting_int(CFG, prov_id_uc, prov_id + '_seed_time', '')
-            if hasattr(torrent_prov, 'minseed'):
-                torrent_prov.minseed = check_setting_int(CFG, prov_id_uc, prov_id + '_minseed', 0)
-            if hasattr(torrent_prov, 'minleech'):
-                torrent_prov.minleech = check_setting_int(CFG, prov_id_uc, prov_id + '_minleech', 0)
-            if hasattr(torrent_prov, 'freeleech'):
-                torrent_prov.freeleech = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_freeleech', 0))
-            if hasattr(torrent_prov, 'reject_m2ts'):
-                torrent_prov.reject_m2ts = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_reject_m2ts', 0))
-            if hasattr(torrent_prov, 'enable_recentsearch'):
-                torrent_prov.enable_recentsearch = bool(check_setting_int(CFG, prov_id_uc,
-                                                                          prov_id + '_enable_recentsearch', 1)) or \
-                                                   not getattr(torrent_prov, 'supports_backlog')
-            if hasattr(torrent_prov, 'enable_backlog'):
-                torrent_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
-            if hasattr(torrent_prov, 'enable_scheduled_backlog'):
-                torrent_prov.enable_scheduled_backlog = bool(check_setting_int(
-                    CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
-            if hasattr(torrent_prov, 'search_mode'):
-                torrent_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
-            if hasattr(torrent_prov, 'search_fallback'):
-                torrent_prov.search_fallback = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_search_fallback', 0))
+
+            # check int with a default of str, don't add to block settings
+            attr = 'seed_time'
+            if hasattr(torrent_prov, attr):
+                torrent_prov.seed_time = check_setting_int(CFG, prov_id_uc, '%s_%s' % (prov_id, attr), '')
+
+            # custom cond, don't add to block settings
+            attr = 'enable_recentsearch'
+            if hasattr(torrent_prov, attr):
+                torrent_prov.enable_recentsearch = bool(check_setting_int(
+                    CFG, prov_id_uc, '%s_%s' % (prov_id, attr), True)) or not getattr(torrent_prov, 'supports_backlog')
+
+            # check str with a default of list, don't add to block settings
             if hasattr(torrent_prov, 'filter'):
                 torrent_prov.filter = check_setting_str(CFG, prov_id_uc, prov_id + '_filter', [])
+
+            for (attr, default) in [
+                ('enable_backlog', True), ('enable_scheduled_backlog', True),
+                ('api_key', ''), ('hash', ''), ('digest', ''),
+                ('username', ''), ('uid', ''), ('password', ''), ('passkey', ''),
+                ('options', ''),
+                ('_seed_ratio', ''), ('minseed', 0), ('minleech', 0),
+                ('scene_only', False), ('scene_or_contain', ''), ('scene_loose', False), ('scene_loose_active', False),
+                ('scene_rej_nuked', False), ('scene_nuked_active', False),
+                ('freeleech', False), ('confirmed', False), ('reject_m2ts', False),
+                ('search_mode', 'eponly'), ('search_fallback', False)
+            ]:
+                if hasattr(torrent_prov, attr):
+                    attr_check = '%s_%s' % (prov_id, attr.strip('_'))
+                    if isinstance(default, bool):
+                        setattr(torrent_prov, attr, bool(check_setting_int(CFG, prov_id_uc, attr_check, default)))
+                    elif isinstance(default, basestring):
+                        setattr(torrent_prov, attr, check_setting_str(CFG, prov_id_uc, attr_check, default))
+                    elif isinstance(default, int):
+                        setattr(torrent_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
 
         for nzb_prov in [curProvider for curProvider in providers.sortedProviderList()
                          if GenericProvider.NZB == curProvider.providerType]:
             prov_id = nzb_prov.get_id()
             prov_id_uc = nzb_prov.get_id().upper()
-            nzb_prov.enabled = bool(
-                check_setting_int(CFG, prov_id_uc, prov_id, 0))
-            if hasattr(nzb_prov, 'api_key'):
-                nzb_prov.api_key = check_setting_str(CFG, prov_id_uc, prov_id + '_api_key', '')
-            if hasattr(nzb_prov, 'username'):
-                nzb_prov.username = check_setting_str(CFG, prov_id_uc, prov_id + '_username', '')
-            if hasattr(nzb_prov, 'search_mode'):
-                nzb_prov.search_mode = check_setting_str(CFG, prov_id_uc, prov_id + '_search_mode', 'eponly')
-            if hasattr(nzb_prov, 'search_fallback'):
-                nzb_prov.search_fallback = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_search_fallback', 0))
-            if hasattr(nzb_prov, 'enable_recentsearch'):
-                nzb_prov.enable_recentsearch = bool(check_setting_int(CFG, prov_id_uc,
-                                                                      prov_id + '_enable_recentsearch', 1)) or \
-                                               not getattr(nzb_prov, 'supports_backlog')
-            if hasattr(nzb_prov, 'enable_backlog'):
-                nzb_prov.enable_backlog = bool(check_setting_int(CFG, prov_id_uc, prov_id + '_enable_backlog', 1))
-            if hasattr(nzb_prov, 'enable_scheduled_backlog'):
-                nzb_prov.enable_scheduled_backlog = bool(check_setting_int(
-                    CFG, prov_id_uc, prov_id + '_enable_scheduled_backlog', 1))
+            nzb_prov.enabled = bool(check_setting_int(CFG, prov_id_uc, prov_id, False))
+
+            attr = 'enable_recentsearch'
+            if hasattr(nzb_prov, attr):
+                nzb_prov.enable_recentsearch = bool(check_setting_int(
+                    CFG, prov_id_uc, '%s_%s' % (prov_id, attr), True)) or not getattr(nzb_prov, 'supports_backlog')
+
+            for (attr, default) in [
+                ('enable_backlog', True), ('enable_scheduled_backlog', True),
+                ('api_key', ''), ('username', ''),
+                ('scene_only', False), ('scene_or_contain', ''), ('scene_loose', False), ('scene_loose_active', False),
+                ('scene_rej_nuked', False), ('scene_nuked_active', False),
+                ('search_mode', 'eponly'), ('search_fallback', False)
+            ]:
+                if hasattr(nzb_prov, attr):
+                    attr_check = '%s_%s' % (prov_id, attr.strip('_'))
+                    if isinstance(default, bool):
+                        setattr(nzb_prov, attr, bool(check_setting_int(CFG, prov_id_uc, attr_check, default)))
+                    elif isinstance(default, basestring):
+                        setattr(nzb_prov, attr, check_setting_str(CFG, prov_id_uc, attr_check, default))
+                    elif isinstance(default, int):
+                        setattr(nzb_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
 
         if not os.path.isfile(CONFIG_FILE):
             logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
-            save_config()
-        elif update_config:
+            update_config = True
+
+        if update_config:
             save_config()
 
         # start up all the threads
@@ -1733,10 +1729,15 @@ def save_config():
         for (setting, value) in [
             ('%s_%s' % (src_id, k), getattr(src, k, v) if not v else helpers.tryInt(getattr(src, k, None)))
             for (k, v) in [
+                ('enable_recentsearch', 1), ('enable_backlog', 1), ('enable_scheduled_backlog', 1),
                 ('api_key', None), ('passkey', None), ('digest', None), ('hash', None), ('username', ''), ('uid', ''),
-                ('minseed', 1), ('minleech', 1), ('confirmed', 1), ('freeleech', 1), ('reject_m2ts', 1),
-                ('enable_recentsearch', 1), ('enable_backlog', 1), ('search_mode', None), ('search_fallback', 1),
-                ('seed_time', None), ('enable_scheduled_backlog', 1)] if hasattr(src, k)]:
+                ('minseed', 1), ('minleech', 1), ('seed_time', None),
+                ('confirmed', 1), ('freeleech', 1), ('reject_m2ts', 1),
+                ('scene_only', None), ('scene_or_contain', ''), ('scene_loose', None), ('scene_loose_active', None),
+                ('scene_rej_nuked', None), ('scene_nuked_active', None),
+                ('search_mode', None), ('search_fallback', 1)
+            ]
+                if hasattr(src, k)]:
             new_config[src_id_uc][setting] = value
 
         if hasattr(src, '_seed_ratio'):
@@ -1753,9 +1754,16 @@ def save_config():
         for attr in [x for x in ['api_key', 'username', 'search_mode'] if hasattr(src, x)]:
             new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
-        for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'search_fallback',
-                                 'enable_scheduled_backlog'] if hasattr(src, x)]:
+        for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
+                                 'scene_only', 'scene_loose', 'scene_loose_active',
+                                 'scene_rej_nuked', 'scene_nuked_active',
+                                 'search_fallback']
+                     if hasattr(src, x)]:
             new_config[src_id_uc]['%s_%s' % (src_id, attr)] = helpers.tryInt(getattr(src, attr, None))
+
+        attr = 'scene_or_contain'
+        if hasattr(src, attr):
+            new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr, '')
 
     new_config['SABnzbd'] = {}
     new_config['SABnzbd']['sab_username'] = SAB_USERNAME

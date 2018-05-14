@@ -23,6 +23,8 @@ Or read more below...
 * Choose to delete watched episodes from a list built directly from played media at Kodi, Emby, and/or Plex (No Trakt!)
 * Smart custom qualities selector system that helps achieve an optimal quality selection for automated episode search
 * Choose to have episodes upgraded in quality, or keep existing archive quality, and upgrade future episodes either way
+* Single out providers to target "scene releases" either exclusively, with fallbacks to non-scene, and with optional user exclusions
+* Mark providers to avoid "scene nuked" releases, with optional fallback when no other choice is available
 * Natively use a most powerful regex pattern matching system for superior information handling
 * Select a UI style anytime; Regular, Proview I, or Proview II - independently for Episode View, and for Display Show
 * Smart fanart system allows you to rate avoid/prefer. UI can be moved or toggled off/on to fully appreciate a fanart
