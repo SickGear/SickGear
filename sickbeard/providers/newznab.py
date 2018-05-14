@@ -563,9 +563,8 @@ class NewznabProvider(generic.NZBProvider):
         name_space = {}
 
         searched_scene_season = s_mode = None
+        search_list = []
         for ep_obj in episodes:
-            if self.should_skip(log_warning=False):
-                break
             # skip if season already searched
             if (s_mode or 'sponly' == search_mode) and 1 < len(episodes) \
                     and searched_scene_season == ep_obj.scene_season:
@@ -598,7 +597,16 @@ class NewznabProvider(generic.NZBProvider):
                 else:
                     search_params = self._episode_strings(ep_obj)
 
+            search_list += [(search_params, needed, max_items)]
+
+        search_done = []
+        for (search_params, needed, max_items) in search_list:
+            if self.should_skip(log_warning=False):
+                break
             for cur_param in search_params:
+                if cur_param in search_done:
+                    continue
+                search_done += [cur_param]
                 items, n_space = self._search_provider(cur_param, search_mode=search_mode, epcount=len(episodes),
                                                        needed=needed, max_items=max_items,
                                                        try_all_searches=try_other_searches)

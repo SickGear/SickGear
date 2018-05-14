@@ -290,17 +290,29 @@ class GenericMetadata():
         return None
 
     def create_show_metadata(self, show_obj):
+        result = False
         if self.show_metadata and show_obj and not self._has_show_metadata(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating show metadata for " + show_obj.name, logger.DEBUG)
-            return self.write_show_file(show_obj)
-        return False
+            logger.log('Metadata provider %s creating show metadata for %s' % (self.name, show_obj.name), logger.DEBUG)
+            try:
+                result = self.write_show_file(show_obj)
+            except sickbeard.indexer_error as e:
+                logger.log('Unable to find useful show metadata for %s on %s: %s' % (
+                    self.name, sickbeard.indexerApi(show_obj.indexer).name, ex(e)), logger.WARNING)
+
+        return result
 
     def create_episode_metadata(self, ep_obj):
+        result = False
         if self.episode_metadata and ep_obj and not self._has_episode_metadata(ep_obj):
-            logger.log(u"Metadata provider " + self.name + " creating episode metadata for " + ep_obj.prettyName(),
+            logger.log('Metadata provider %s creating episode metadata for %s' % (self.name, ep_obj.prettyName()),
                        logger.DEBUG)
-            return self.write_ep_file(ep_obj)
-        return False
+            try:
+                result = self.write_ep_file(ep_obj)
+            except sickbeard.indexer_error as e:
+                logger.log('Unable to find useful episode metadata for %s on %s: %s' % (
+                    self.name, sickbeard.indexerApi(ep_obj.show.indexer).name, ex(e)), logger.WARNING)
+
+        return result
 
     def update_show_indexer_metadata(self, show_obj):
         if self.show_metadata and show_obj and self._has_show_metadata(show_obj):
@@ -804,7 +816,7 @@ class GenericMetadata():
             indexer_show_obj = t[show_obj.indexerid, False]
         except (sickbeard.indexer_error, IOError) as e:
             logger.log(u"Unable to look up show on " + sickbeard.indexerApi(
-                show_obj.indexer).name + ", not downloading images: " + ex(e), logger.ERROR)
+                show_obj.indexer).name + ", not downloading images: " + ex(e), logger.WARNING)
             return None
 
         if not self._valid_show(indexer_show_obj, show_obj):
@@ -893,7 +905,7 @@ class GenericMetadata():
             indexer_show_obj = t[show_obj.indexerid]
         except (sickbeard.indexer_error, IOError) as e:
             logger.log(u'Unable to look up show on ' + sickbeard.indexerApi(
-                show_obj.indexer).name + ', not downloading images: ' + ex(e), logger.ERROR)
+                show_obj.indexer).name + ', not downloading images: ' + ex(e), logger.WARNING)
             return result
 
         if not self._valid_show(indexer_show_obj, show_obj):

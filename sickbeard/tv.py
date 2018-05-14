@@ -580,7 +580,6 @@ class TVShow(object):
             myDB = db.DBConnection()
             myDB.mass_action(sql_l)
 
-
     def loadEpisodesFromDB(self, update=False):
 
         logger.log('Loading all episodes for [%s] from the DB' % self.name)
@@ -601,7 +600,12 @@ class TVShow(object):
 
         t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
 
-        cachedShow = t[self.indexerid]
+        cachedShow = None
+        try:
+            cachedShow = t[self.indexerid]
+        except sickbeard.indexer_error as e:
+            logger.log('Unable to find cached seasons from %s: %s' % (
+                sickbeard.indexerApi(self.indexer).name, ex(e)), logger.WARNING)
         if None is cachedShow:
             return scannedEps
 
@@ -878,16 +882,17 @@ class TVShow(object):
         sqlResults = myDB.select('SELECT * FROM tv_shows WHERE indexer_id = ?', [self.indexerid])
 
         if 1 != len(sqlResults):
-            lINDEXER_API_PARMS = sickbeard.indexerApi(self.indexer).api_params.copy()
-            if self.lang:
-                lINDEXER_API_PARMS['language'] = self.lang
-            t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
-            cached_show = t[self.indexerid]
-            vals = (self.indexerid, '' if not cached_show else ' [%s]' % cached_show['seriesname'].strip())
-            if 0 != len(sqlResults):
-                logger.log('%s: Loading show info%s from database' % vals)
-                raise exceptions.MultipleDBShowsException()
-            logger.log('%s: Unable to find the show%s in the database' % vals)
+            if 1 < len(sqlResults):
+                lINDEXER_API_PARMS = sickbeard.indexerApi(self.indexer).api_params.copy()
+                if self.lang:
+                    lINDEXER_API_PARMS['language'] = self.lang
+                t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
+                cached_show = t[self.indexerid]
+                vals = (self.indexerid, '' if not cached_show else ' [%s]' % cached_show['seriesname'].strip())
+                if 0 != len(sqlResults):
+                    logger.log('%s: Loading show info%s from database' % vals)
+                    raise exceptions.MultipleDBShowsException()
+            logger.log('%s: Unable to find the show%s in the database' % (self.indexerid, self.name))
             return
         else:
             if not self.indexer:
