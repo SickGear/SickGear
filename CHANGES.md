@@ -9,6 +9,7 @@
   'scene releases (srrDB/predb listed)', 'or contain' text or regex,
   'non scene if no recent search results', 'non scene if no active search results',
   'not scene nuked', and 'nuked if no active search results'
+* Change improve tvdb_api performance; remember if episodes are cached and reload show if not and episodes are requested
 
 
 [develop changelog]
