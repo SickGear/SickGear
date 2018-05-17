@@ -122,6 +122,7 @@ class Show(dict):
     def __init__(self):
         dict.__init__(self)
         self.data = {}
+        self.ep_loaded = False
 
     def __repr__(self):
         return '<Show %r (containing %s seasons)>' % (self.data.get(u'seriesname', 'instance'), len(self))
@@ -857,6 +858,9 @@ class Tvdb:
         for k, v in show_data['data'].iteritems():
             self._set_show_data(sid, k, v)
 
+        if sid in self.shows:
+            self.shows[sid].ep_loaded = get_ep_info
+
         p = ''
         if self.config['posters_enabled']:
             poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'poster'), language=language)
@@ -998,7 +1002,7 @@ class Tvdb:
 
         if isinstance(key, (int, long)):
             # Item is integer, treat as show id
-            if key not in self.shows:
+            if key not in self.shows or (not self.shows[key].ep_loaded and arg in (None, True)):
                 self._get_show_data(key, self.config['language'], (True, arg)[arg is not None])
             return None if key not in self.shows else self.shows[key]
 
