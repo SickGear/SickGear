@@ -1,4 +1,9 @@
-﻿### 0.16.8 (2018-05-17 02:00:00 UTC)
+﻿### 0.16.9 (2018-05-17 15:30:00 UTC)
+
+* Fix authorisation issue affecting some providers
+
+
+### 0.16.8 (2018-05-17 02:00:00 UTC)
 
 * Fix changing master id via search method
 

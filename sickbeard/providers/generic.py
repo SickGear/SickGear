@@ -1545,6 +1545,7 @@ class TorrentProvider(GenericProvider):
                     return False
 
         passfield, userfield = None, None
+        post_params = isinstance(post_params, type({})) and post_params or {}
         if not url:
             if hasattr(self, 'urls'):
                 url = self.urls.get('login_action')
@@ -1555,7 +1556,6 @@ class TorrentProvider(GenericProvider):
                     if self.should_skip() or None is response:
                         return False
                     try:
-                        post_params = isinstance(post_params, type({})) and post_params or {}
                         form = 'form_tmpl' in post_params and post_params.pop('form_tmpl')
                         if form:
                             form = re.findall(
