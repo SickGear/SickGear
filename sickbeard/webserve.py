@@ -2210,9 +2210,9 @@ class Home(MainHandler):
             t = PageTemplate(web_handler=self, file='editShow.tmpl')
             t.submenu = self.HomeMenu()
 
-            t.expand_ids = all([kwargs.get('tvsrc'), kwargs.get('srcid')])
+            t.expand_ids = all([kwargs.get('tvsrc'), helpers.tryInt(kwargs.get('srcid'))])
             t.tvsrc = int(kwargs.get('tvsrc', 0))
-            t.srcid = kwargs.get('srcid')
+            t.srcid = helpers.tryInt(kwargs.get('srcid'))
 
             myDB = db.DBConnection()
             t.seasonResults = myDB.select(
