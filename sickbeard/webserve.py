@@ -6359,19 +6359,21 @@ class ConfigProviders(Config):
                     # a 0 in the key spot indicates that no key is needed
                     nzb_src.needs_auth = '0' != cur_key
 
-                    attr = 'search_mode'
-                    if cur_id + '_' + attr in kwargs:
-                        setattr(nzb_src, attr, str(kwargs.get(cur_id + '_' + attr)).strip())
-
                     attr = 'filter'
                     if hasattr(nzb_src, attr):
                         setattr(nzb_src, attr,
                                 [k for k in nzb_src.may_filter.keys()
                                  if config.checkbox_to_value(kwargs.get('%s_filter_%s' % (cur_id, k)))])
 
-                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog']:
+                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
+                                 'scene_only', 'scene_loose', 'scene_loose_active',
+                                 'scene_rej_nuked', 'scene_nuked_active',]:
                         setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
 
+                    for attr in ['scene_or_contain', 'search_mode']:
+                        attr_check = '%s_%s' % (cur_id, attr)
+                        if attr_check in kwargs:
+                            setattr(nzb_src, attr, str(kwargs.get(attr_check) or '').strip())
                 else:
                     sickbeard.newznabProviderList.append(new_provider)
 
@@ -6404,10 +6406,21 @@ class ConfigProviders(Config):
 
                 # if it already exists then update it
                 if cur_id in torrent_rss_sources:
-                    torrent_rss_sources[cur_id].name = cur_name
-                    torrent_rss_sources[cur_id].url = cur_url
+                    torrss_src = torrent_rss_sources[cur_id]
+
+                    torrss_src.name = cur_name
+                    torrss_src.url = cur_url
                     if cur_cookies:
-                        torrent_rss_sources[cur_id].cookies = cur_cookies
+                        torrss_src.cookies = cur_cookies
+
+                    for attr in ['scene_only', 'scene_loose', 'scene_loose_active',
+                                 'scene_rej_nuked', 'scene_nuked_active']:
+                        setattr(torrss_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
+
+                    for attr in ['scene_or_contain']:
+                        attr_check = '%s_%s' % (cur_id, attr)
+                        if attr_check in kwargs:
+                            setattr(torrss_src, attr, str(kwargs.get(attr_check) or '').strip())
                 else:
                     sickbeard.torrentRssProviderList.append(new_provider)
 
@@ -6472,24 +6485,26 @@ class ConfigProviders(Config):
             for attr in [x for x in ['minseed', 'minleech'] if hasattr(torrent_src, x)]:
                 setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
 
-            for attr in [x for x in ['confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
-                                     'enable_backlog', 'search_fallback', 'enable_scheduled_backlog']
-                         if hasattr(torrent_src, x) and src_id_prefix + attr in kwargs]:
-                setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
-
             attr = 'seed_time'
             if hasattr(torrent_src, attr) and src_id_prefix + attr in kwargs:
                 setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
-
-            attr = 'search_mode'
-            if hasattr(torrent_src, attr):
-                setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip() or 'eponly')
 
             attr = 'filter'
             if hasattr(torrent_src, attr):
                 setattr(torrent_src, attr,
                         [k for k in torrent_src.may_filter.keys()
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
+
+            for attr in [x for x in ['confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
+                                     'enable_backlog', 'search_fallback', 'enable_scheduled_backlog',
+                                     'scene_only', 'scene_loose', 'scene_loose_active',
+                                     'scene_rej_nuked', 'scene_nuked_active']
+                         if hasattr(torrent_src, x) and src_id_prefix + x in kwargs]:
+                setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
+
+            for (attr, default) in [('scene_or_contain', ''), ('search_mode', 'eponly')]:
+                if hasattr(torrent_src, attr):
+                    setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
         # update nzb source settings
         for nzb_src in [src for src in sickbeard.providers.sortedProviderList() if
@@ -6506,17 +6521,20 @@ class ConfigProviders(Config):
             if hasattr(nzb_src, attr):
                 setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip() or None)
 
-            attr = 'search_mode'
-            if hasattr(nzb_src, attr):
-                setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip() or 'eponly')
-
             attr = 'enable_recentsearch'
             if hasattr(nzb_src, attr):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)) or
                         not getattr(nzb_src, 'supports_backlog', True))
 
-            for attr in [x for x in ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog'] if hasattr(nzb_src, x)]:
+            for attr in [x for x in ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
+                                     'scene_only', 'scene_loose', 'scene_loose_active',
+                                     'scene_rej_nuked', 'scene_nuked_active']
+                         if hasattr(nzb_src, x)]:
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
+
+            for (attr, default) in [('scene_or_contain', ''), ('search_mode', 'eponly')]:
+                if hasattr(nzb_src, attr):
+                    setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
         sickbeard.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickbeard.newznabProviderList])
         sickbeard.PROVIDER_ORDER = provider_list

@@ -3,6 +3,7 @@ import logging
 import random
 import re
 from requests.sessions import Session
+from requests.models import Response
 import js2py
 from copy import deepcopy
 
@@ -40,7 +41,8 @@ class CloudflareScraper(Session):
         resp = super(CloudflareScraper, self).request(method, url, *args, **kwargs)
 
         # Check if Cloudflare anti-bot is on
-        if (503 == resp.status_code
+        if (isinstance(resp, type(Response())) and isinstance(resp.headers.get('Server'), basestring)
+                and 503 == resp.status_code
                 and re.search('(?i)cloudflare', resp.headers.get('Server'))
                 and b'jschl_vc' in resp.content
                 and b'jschl_answer' in resp.content):
