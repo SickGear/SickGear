@@ -451,11 +451,17 @@
 						</div>
     #end if
     #if $hasattr($cur_torrent_provider, 'api_key'):
+        #set $field_name = cur_torrent_provider.get_id() + '_api_key'
 						<div class="field-pair">
-							<label for="${cur_torrent_provider.get_id()}_api_key">
-								<span class="component-title">Api key:</span>
+							<label for="$field_name">
+        #set $url_label = callable(getattr(cur_torrent_provider, 'ui_string', None)) and cur_torrent_provider.ui_string($field_name) or 'Api key'
+								<span class="component-title">$url_label</span>
 								<span class="component-desc">
-									<input type="text" name="${cur_torrent_provider.get_id()}_api_key" id="${cur_torrent_provider.get_id()}_api_key" value="<%= starify(cur_torrent_provider.api_key) %>" class="form-control input-sm input350" />
+									<input type="text" name="$field_name" id="$field_name" value="<%= starify(cur_torrent_provider.api_key) %>" class="form-control input-sm input350" />
+        #if callable(getattr(cur_torrent_provider, 'ui_string', None))
+            #set $tip_text = cur_torrent_provider.ui_string($field_name + '_tip')
+									<div class="clear-left"><p>$tip_text</p></div>
+        #end if
 								</span>
 							</label>
 						</div>

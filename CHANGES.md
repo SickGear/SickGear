@@ -2,6 +2,7 @@
 
 * Update Tornado Web Server 5.0.1 (35a538f) to 5.0.1 (2b2a220a)
 * Add HDME torrent provider
+* Add ImmortalSeed torrent provider
 * Add Xspeeds torrent provider
 
 
