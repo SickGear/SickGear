@@ -16,6 +16,11 @@
 
 
 
+### 0.16.8 (2018-05-17 02:00:00 UTC)
+
+* Fix changing master id via search method
+
+
 ### 0.16.7 (2018-05-14 02:40:00 UTC)
 
 * Fix name_parser_tests for test_extra_info_no_name
