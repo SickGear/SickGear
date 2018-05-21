@@ -597,9 +597,9 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                                                                 best_season_result.provider.providerType), logger.DEBUG)
 
             my_db = db.DBConnection()
-            sql = 'SELECT episode FROM tv_episodes WHERE showid = %s AND (season IN (%s))' %\
+            sql = 'SELECT season, episode FROM tv_episodes WHERE showid = %s AND (season IN (%s))' %\
                   (show.indexerid, ','.join([str(x.season) for x in episodes]))
-            ep_nums = [int(x['episode']) for x in my_db.select(sql)]
+            ep_nums = [(int(x['season']), int(x['episode'])) for x in my_db.select(sql)]
 
             logger.log(u'Executed query: [%s]' % sql)
             logger.log(u'Episode list: %s' % ep_nums, logger.DEBUG)
@@ -607,11 +607,10 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
             all_wanted = True
             any_wanted = False
             for ep_num in ep_nums:
-                for season in set([x.season for x in episodes]):
-                    if not show.wantEpisode(season, ep_num, season_qual):
-                        all_wanted = False
-                    else:
-                        any_wanted = True
+                if not show.wantEpisode(ep_num[0], ep_num[1], season_qual):
+                    all_wanted = False
+                else:
+                    any_wanted = True
 
             # if we need every ep in the season and there's nothing better then just download this and
             # be done with it (unless single episodes are preferred)
@@ -620,8 +619,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                            (best_season_result.provider.providerType, best_season_result.name))
                 ep_objs = []
                 for ep_num in ep_nums:
-                    for season in set([x.season for x in episodes]):
-                        ep_objs.append(show.getEpisode(season, ep_num))
+                    ep_objs.append(show.getEpisode(ep_num[0], ep_num[1]))
                 best_season_result.episodes = ep_objs
 
                 return [best_season_result]
@@ -660,8 +658,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                                u'the episodes that you do not want to "don\'t download"')
                     ep_objs = []
                     for ep_num in ep_nums:
-                        for season in set([x.season for x in episodes]):
-                            ep_objs.append(show.getEpisode(season, ep_num))
+                        ep_objs.append(show.getEpisode(ep_num[0], ep_num[1]))
                     best_season_result.episodes = ep_objs
 
                     ep_num = MULTI_EP_RESULT
