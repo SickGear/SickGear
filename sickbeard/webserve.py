@@ -1450,14 +1450,6 @@ class Home(MainHandler):
 
         return notifiers.NotifierFactory().get('PROWL').test_notify(prowl_api, prowl_priority)
 
-    def test_nma(self, nma_api=None, nma_priority=0):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not nma_api and starify(nma_api, True):
-            nma_api = sickbeard.NMA_API
-
-        return notifiers.NotifierFactory().get('NMA').test_notify(nma_api, nma_priority)
-
     def test_libnotify(self, *args, **kwargs):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3298,7 +3290,7 @@ class NewHomeAddShows(Home):
             if not file_list:
                 try:
                     file_list = ek.ek(os.listdir, root_dir)
-                except:
+                except (StandardError, Exception):
                     continue
 
             for cur_file in file_list:
@@ -6605,8 +6597,6 @@ class ConfigNotifications(Config):
             growl_notify_onsubtitledownload=None, growl_host=None, growl_password=None,
             use_prowl=None, prowl_notify_onsnatch=None, prowl_notify_ondownload=None,
             prowl_notify_onsubtitledownload=None, prowl_api=None, prowl_priority=0,
-            use_nma=None, nma_notify_onsnatch=None, nma_notify_ondownload=None,
-            nma_notify_onsubtitledownload=None, nma_api=None, nma_priority=0,
             use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
             libnotify_notify_onsubtitledownload=None,
             # use_pushalot=None, pushalot_notify_onsnatch=None, pushalot_notify_ondownload=None,
@@ -6819,15 +6809,6 @@ class ConfigNotifications(Config):
         sickbeard.PYTIVO_HOST = config.clean_host(pytivo_host)
         sickbeard.PYTIVO_SHARE_NAME = pytivo_share_name
         sickbeard.PYTIVO_TIVO_NAME = pytivo_tivo_name
-
-        sickbeard.USE_NMA = config.checkbox_to_value(use_nma)
-        sickbeard.NMA_NOTIFY_ONSNATCH = config.checkbox_to_value(nma_notify_onsnatch)
-        sickbeard.NMA_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(nma_notify_ondownload)
-        sickbeard.NMA_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(nma_notify_onsubtitledownload)
-        key = nma_api.strip()
-        if not starify(key, True):
-            sickbeard.NMA_API = key
-        sickbeard.NMA_PRIORITY = nma_priority
 
         # sickbeard.USE_PUSHALOT = config.checkbox_to_value(use_pushalot)
         # sickbeard.PUSHALOT_NOTIFY_ONSNATCH = config.checkbox_to_value(pushalot_notify_onsnatch)

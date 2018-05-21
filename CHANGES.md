@@ -16,6 +16,14 @@
 
 
 
+### 0.16.10 (2018-05-21 23:30:00 UTC)
+
+* Fix importing TV shows with utf8 characters in parent folders on Windows
+* Fix utf8 in folders for SickGear-NG.py post processing script, script version bumped 1.5 to 1.6
+* Fix incorrect logic mixing seasons
+* Remove NMA notifier
+
+
 ### 0.16.9 (2018-05-17 15:30:00 UTC)
 
 * Fix authorisation issue affecting some providers

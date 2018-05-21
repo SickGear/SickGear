@@ -409,25 +409,6 @@ $(document).ready(function(){
 			});
 	});
 
-	$('#test-nma').click(function () {
-		var nmaApi = $.trim($('#nma-api').val());
-		var nmaPriority = $('#nma-priority').val();
-		if (!nmaApi) {
-			$('#test-nma-result').html('Please fill out the necessary fields above.');
-			$('#nma-api').addClass('warning');
-			return;
-		}
-		$('#nma-api').removeClass('warning');
-		$(this).prop('disabled', !0);
-		$('#test-nma-result').html(loading);
-		$.get(sbRoot + '/home/test_nma',
-			{nma_api: nmaApi, nma_priority: nmaPriority})
-			.done(function (data) {
-				$('#test-nma-result').html(data);
-				$('#test-nma').prop('disabled', !1);
-			});
-	});
-
 	$('#test-pushalot').click(function () {
 		var pushalotAuthorizationtoken = $.trim($('#pushalot-authorizationtoken').val());
 		if (!pushalotAuthorizationtoken) {

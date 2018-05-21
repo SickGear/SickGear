@@ -32,7 +32,6 @@ import pushbullet
 import pushover
 import growl
 import prowl
-import nma
 from . import libnotify
 
 from lib import libtrakt
@@ -68,7 +67,6 @@ class NotifierFactory(object):
             PUSHOVER=pushover.PushoverNotifier,
             GROWL=growl.GrowlNotifier,
             PROWL=prowl.ProwlNotifier,
-            NMA=nma.NMANotifier,
             LIBNOTIFY=libnotify.LibnotifyNotifier,
 
             # social
