@@ -852,7 +852,6 @@
 							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pushover.png"><a href="#pushover" rel="noreferrer">Pushover</a></div>
 							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/growl.png"><a href="#growl" rel="noreferrer">Growl</a></div>
 							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/prowl.png"><a href="#prowl" rel="noreferrer">Prowl</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/nma.png"><a href="#nma" rel="noreferrer">NMA</a></div>
 							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/libnotify.png"><a href="#libnotify" rel="noreferrer">Libnotify</a></div>
 						</span>
 					</div>
@@ -1377,84 +1376,6 @@
 
 					</fieldset>
 				</div><!-- /prowl component-group //-->
-
-
-				<div class="component-group">
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/nma.png" alt="" title="NMA"/>
-						<h3><a name="nma" href="<%= anon_url('https://www.notifymyandroid.com') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Notify My Android</a></h3>
-						<p>Notify My Android is a Prowl-like Android app and API that sends notifications from applications directly to Android devices.</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use-nma">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_nma" id="use-nma" #if $sickbeard.USE_NMA then 'checked="checked"' else ''#>
-									<p>should SickGear send NMA notifications ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use-nma">
-							<div class="field-pair">
-								<label for="nma-notify-onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_onsnatch" id="nma-notify-onsnatch" #if $sickbeard.NMA_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="nma-notify-ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_ondownload" id="nma-notify-ondownload" #if $sickbeard.NMA_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="nma-notify-onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="nma_notify_onsubtitledownload" id="nma-notify-onsubtitledownload" #if $sickbeard.NMA_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="nma-api">
-									<span class="component-title">NMA API key:</span>
-									<span class="component-desc">
-										<input type="text" name="nma_api" id="nma-api" value="<%= starify(sickbeard.NMA_API) %>" class="form-control input-sm input350">
-										<div class="clear-left">(multiple keys must be seperated by commas, up to a maximum of 5)</div>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="nma-priority">
-									<span class="component-title">NMA priority:</span>
-									<span class="component-desc">
-										<select id="nma-priority" name="nma_priority" class="form-control input-sm">
-											<option value="-2" #if $sickbeard.NMA_PRIORITY == '-2' then 'selected="selected"' else ''#>Very Low</option>
-											<option value="-1" #if $sickbeard.NMA_PRIORITY == '-1' then 'selected="selected"' else ''#>Moderate</option>
-											<option value="0" #if $sickbeard.NMA_PRIORITY == '0' then 'selected="selected"' else ''#>Normal</option>
-											<option value="1" #if $sickbeard.NMA_PRIORITY == '1' then 'selected="selected"' else ''#>High</option>
-											<option value="2" #if $sickbeard.NMA_PRIORITY == '2' then 'selected="selected"' else ''#>Emergency</option>
-										</select>
-										<div class="clear-left">priority of NMA messages from SickGear</div>
-									</span>
-								</label>
-							</div>
-							<div class="test-notification" id="test-nma-result">Click below to test</div>
-							<input class="btn" type="button" value="Test NMA" id="test-nma">
-							<input type="submit" class="config_submitter btn" value="Save Changes">
-						</div><!-- /content_use-nma //-->
-
-					</fieldset>
-				</div><!-- /nma component-group //-->
 
 
 				<div class="component-group">

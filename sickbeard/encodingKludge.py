@@ -25,6 +25,7 @@ import sickbeard
 # encodings. It tries to just use unicode, but if that fails then it tries forcing it to utf-8. Any functions
 # which return something should always return unicode.
 
+
 def fixStupidEncodings(x, silent=False):
     if type(x) == str:
         try:
@@ -39,7 +40,6 @@ def fixStupidEncodings(x, silent=False):
             u"Unknown value passed in, ignoring it: " + str(type(x)) + " (" + repr(x) + ":" + repr(type(x)) + ")",
             logger.DEBUG if silent else logger.ERROR)
         return None
-
 
 
 def fixListEncodings(x):
@@ -78,8 +78,8 @@ def win_encode_unicode(x):
 def ek(func, *args, **kwargs):
     if os.name == 'nt':
         # convert all str parameter values to unicode
-        args = tuple([win_encode_unicode(x) if isinstance(x, str) else x for x in args])
-        kwargs = {k: win_encode_unicode(x) if isinstance(x, str) else x for k, x in
+        args = tuple([x if not isinstance(x, str) else win_encode_unicode(x) for x in args])
+        kwargs = {k: x if not isinstance(x, str) else win_encode_unicode(x) for k, x in
                   kwargs.iteritems()}
         result = func(*args, **kwargs)
     else:

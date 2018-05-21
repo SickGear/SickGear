@@ -63,7 +63,7 @@
 
 # Send PostProcessing requests to SickGear
 #
-# PostProcessing-Script version: 1.5.
+# PostProcessing-Script version: 1.6.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
@@ -157,7 +157,7 @@ import re
 import sys
 import warnings
 
-__version__ = '1.5'
+__version__ = '1.6'
 
 verbose = 0 or 'yes' == os.environ.get('NZBPO_SG_VERBOSE', 'no')
 
@@ -295,8 +295,21 @@ class Ek:
             return x.encode(SYS_ENCODING, 'ignore')
 
     @staticmethod
+    def win_encode_unicode(x):
+        if isinstance(x, str):
+            try:
+                return x.decode('UTF-8')
+            except UnicodeDecodeError:
+                return x
+        return x
+
+    @staticmethod
     def ek(func, *args, **kwargs):
         if 'nt' == os.name:
+            # convert all str parameter values to unicode
+            args = tuple([x if not isinstance(x, str) else win_encode_unicode(x) for x in args])
+            kwargs = {k: x if not isinstance(x, str) else win_encode_unicode(x) for k, x in
+                      kwargs.iteritems()}
             func_result = func(*args, **kwargs)
         else:
             func_result = func(*[Ek.encode_item(x) if type(x) == str else x for x in args], **kwargs)
