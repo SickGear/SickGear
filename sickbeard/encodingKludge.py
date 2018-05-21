@@ -66,8 +66,21 @@ def fixParaLists(x):
         return x
 
 
+def win_encode_unicode(x):
+    if isinstance(x, str):
+        try:
+            return x.decode('UTF-8')
+        except UnicodeDecodeError:
+            return x
+    return x
+
+
 def ek(func, *args, **kwargs):
     if os.name == 'nt':
+        # convert all str parameter values to unicode
+        args = tuple([win_encode_unicode(x) if isinstance(x, str) else x for x in args])
+        kwargs = {k: win_encode_unicode(x) if isinstance(x, str) else x for k, x in
+                  kwargs.iteritems()}
         result = func(*args, **kwargs)
     else:
         result = func(*[callPeopleStupid(x) if type(x) in (str, unicode) else fixParaLists(x) for x in args], **kwargs)

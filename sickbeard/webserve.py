@@ -3298,7 +3298,7 @@ class NewHomeAddShows(Home):
             if not file_list:
                 try:
                     file_list = ek.ek(os.listdir, root_dir)
-                except:
+                except (StandardError, Exception):
                     continue
 
             for cur_file in file_list:
