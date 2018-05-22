@@ -1,4 +1,9 @@
-﻿### 0.16.10 (2018-05-21 23:30:00 UTC)
+﻿### 0.16.11 (2018-05-22 00:00:00 UTC)
+
+* Fix SickGear-NG.py post processing script
+
+
+### 0.16.10 (2018-05-21 23:30:00 UTC)
 
 * Fix importing TV shows with utf8 characters in parent folders on Windows
 * Fix utf8 in folders for SickGear-NG.py post processing script, script version bumped 1.5 to 1.6
