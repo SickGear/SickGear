@@ -307,8 +307,8 @@ class Ek:
     def ek(func, *args, **kwargs):
         if 'nt' == os.name:
             # convert all str parameter values to unicode
-            args = tuple([x if not isinstance(x, str) else win_encode_unicode(x) for x in args])
-            kwargs = {k: x if not isinstance(x, str) else win_encode_unicode(x) for k, x in
+            args = tuple([x if not isinstance(x, str) else Ek.win_encode_unicode(x) for x in args])
+            kwargs = {k: x if not isinstance(x, str) else Ek.win_encode_unicode(x) for k, x in
                       kwargs.iteritems()}
             func_result = func(*args, **kwargs)
         else:
