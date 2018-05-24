@@ -242,7 +242,7 @@ class NameParser(object):
                     # assigns version to anime file if detected using anime regex. Non-anime regex receives -1
                     version = match.group('version')
                     if version:
-                        result.version = version
+                        result.version = helpers.tryInt(version)
                     else:
                         result.version = 1
                 else:

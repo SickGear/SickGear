@@ -120,9 +120,7 @@ class Quality:
         is_repack = False
         if is_anime:
             if isinstance(version, (int, long)):
-                level = version
-            else:
-                level = 1
+                level = (0, version - 1)[1 < version]
         elif isinstance(extra_no_name, basestring):
             for p, r_check in Quality.proper_levels:
                 a = len(p.findall(extra_no_name))
