@@ -628,7 +628,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
         found_results[provider_id] = {}
 
         search_count = 0
-        search_mode = cur_provider.search_mode
+        search_mode = getattr(cur_provider, 'search_mode', 'eponly')
 
         while True:
             search_count += 1
@@ -673,7 +673,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                         found_results[provider_id][cur_ep] = search_results[cur_ep]
 
                 break
-            elif not cur_provider.search_fallback or search_count == 2:
+            elif not getattr(cur_provider, 'search_fallback', False) or 2 == search_count:
                 break
 
             search_mode = '%sonly' % ('ep', 'sp')['ep' in search_mode]
