@@ -16,6 +16,11 @@
 
 
 
+### 0.16.12 (2018-05-25 00:40:00 UTC)
+
+* Fix anime parser and anime PROPER level
+
+
 ### 0.16.11 (2018-05-22 00:00:00 UTC)
 
 * Fix SickGear-NG.py post processing script

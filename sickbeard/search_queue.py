@@ -263,7 +263,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         propers = {}
         my_db = db.DBConnection('cache.db')
         sql_results = my_db.select('SELECT * FROM provider_cache')
-        re_p = (r'\brepack|proper|real\b', r'\brepack|proper|real|v[1-5]\b')[needed.need_anime]
+        re_p = r'\brepack|proper|real%s\b' % ('', '|v[2-9]')[needed.need_anime]
 
         proper_regex = re.compile(re_p, flags=re.I)
 
