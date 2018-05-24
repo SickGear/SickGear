@@ -1239,7 +1239,7 @@ class NZBProvider(GenericProvider):
             regex += ['proper|repack', Quality.real_check]
             proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
         if anime:
-            terms = 'v1|v2|v3|v4|v5'
+            terms = 'v2|v3|v4|v5|v6|v7|v8|v9'
             search_terms += [terms]
             regex += [terms]
             proper_check = re.compile(r'(?i)(%s)' % '|'.join(regex))
@@ -1643,7 +1643,7 @@ class TorrentProvider(GenericProvider):
 
         raise AuthException('%s for %s is empty in Media Providers/Options' % (setting, self.name))
 
-    def find_propers(self, **kwargs):
+    def find_propers(self, anime=False, **kwargs):
         """
         Search for releases of type PROPER
         :return: list of Proper objects
@@ -1652,11 +1652,16 @@ class TorrentProvider(GenericProvider):
         if self.should_skip():
             return results
 
-        search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack', 'real'])
+        # chance of a v6-v9 is so rare that to do every bl search with each in turn is too aggressive
+        search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack', 'real'] +
+                               ([], ['v2', 'v3', 'v4', 'v5'])[True is anime])
         if not isinstance(search_terms, list):
             if None is search_terms:
-                search_terms = 'proper|repack|real'
-            search_terms = [search_terms]
+                search_terms = ['proper|repack|real']
+                if anime:
+                    search_terms += ['v2|v3|v4|v5']
+            else:
+                search_terms = [search_terms]
 
         items = self._search_provider({'Propers': search_terms})
 

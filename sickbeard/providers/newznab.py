@@ -860,7 +860,7 @@ class NewznabProvider(generic.NZBProvider):
             regex += ['proper|repack', Quality.real_check]
             proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
         if anime:
-            terms = 'v1|v2|v3|v4|v5'
+            terms = 'v2|v3|v4|v5|v6|v7|v8|v9'
             search_terms += [terms]
             regex += [terms]
             proper_check = re.compile(r'(?i)(%s)' % '|'.join(regex))
