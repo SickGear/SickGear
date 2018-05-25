@@ -101,10 +101,10 @@ Other features and worthy points;
 ## Available versions
 <table><thead></thead><tbody>
 <tr align="center">
-  <td>Master (<a title="Master Changelog" href="../master/CHANGES.md">changes</a>)</td><td>(most stable)</td><td><a id="top" title=""><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-stability.png"></a></td><td><a id="top" title="Build Status: Stable = Terrific!"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-stable.png"></a></td>
+  <td>Master (<a title="Master Changelog" href="../master/CHANGES.md">changes</a>)</td><td>(most stable)</td><td><a id="top" title=""><img src="https://img.shields.io/:goal-stability-brightgreen.svg"></a></td><td><a id="top" title="Build Status: Stable = Terrific!"><img src="https://img.shields.io/travis/SickGear/SickGear/master.svg"></a></td>
 </tr>
 <tr align="center">
-  <td>Development (<a title="Development Changelog" href="../develop/CHANGES.md">changes</a>)</td><td>(mostly stable)</td><td><a id="top" title="Where some imitate"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-innovate.png"></a></td><td><a title="Build Status: Passing = All good!" target="_blank" href="https://travis-ci.org/SickGear/SickGear"><img src="https://travis-ci.org/SickGear/SickGear.svg?branch=develop"></a></td>
+  <td>Development (<a title="Development Changelog" href="../develop/CHANGES.md">changes</a>)</td><td>(mostly stable)</td><td><a id="top" title="Where some imitate"><img src="https://img.shields.io/:goal-innovate-brightgreen.svg"></a></td><td><a title="Build Status: Passing = All good!" target="_blank" href="https://travis-ci.org/SickGear/SickGear"><img src="https://img.shields.io/travis/SickGear/SickGear/develop.svg"></a></td>
 </tr>
 <tr align="center">
 <td colspan=5>[ ++ Install <a href="https://github.com/SickGear/SickGear/wiki/Installation-Instructions">Guides</a> ++ ][ Frequently <a href="https://github.com/SickGear/SickGear/wiki/Frequently-Answered-Questions">Answered</a> ][ Discover <a href="https://github.com/SickGear/SickGear/wiki">Wiki</a> ]</td>
