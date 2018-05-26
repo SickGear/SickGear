@@ -1,6 +1,7 @@
 ﻿### 0.16.13 (2018-05-26 17:00:00 UTC)
 
 * Change add blacklog search terms for anime PROPERS
+* Fix rare case recovery after a server has been down
 
 
 ### 0.16.12 (2018-05-25 00:40:00 UTC)

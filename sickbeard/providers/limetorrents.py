@@ -34,36 +34,38 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.limetorrents.cc/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[ \sg]+', '', x[::-1]) for x in [
-                                'XZtlg Gb', 'lJngcv R', 'nLz R nb', 'v xmYu V', 'CZl t2 Y', '==gwY2g5']],
-                            [re.sub('[S\si]+', '', x[::-1]) for x in [
-                                'X SZtlGb', 'lJi ncvR', 'nSSLzRnb', 'vxmSYu V', 'CSZilt2Y', '=S= Aet5']],
-                            [re.sub('[x\s0]+', '', x[::-1]) for x in [
-                                'tlGx b', 'u0ExTZ', 'i5xW d', 'j9 Gxb', 'kV020a', 'zx1m L']],
-                            [re.sub('[Y\so]+', '', x[::-1]) for x in [
-                                'to lGb', 'uoEYTZ', 'i 5WYd', 'jo 9Gb', 'ko V2a', '0  dnL', '==Y gZ']],
-                            [re.sub('[r\sp]+', '', x[::-1]) for x in [
-                                'XZt rlGb', 'lJpncpvR', 'n  LzRnb', 'vxmYu  V', 'ic ltp2Y', '=4Wa r35']],
-                            [re.sub('[F\so]+', '', x[::-1]) for x in [
-                                'lJncvRoX ZtlGb', 'vxFmYuVnLzoRnb', 'pxo2FYj5iclt2Y', '05W ZyJ3b0 VWb',
-                                'j9G buVFnct5yc', '=o0WYloJHdz5ya']],
-                            [re.sub('[F\sK]+', '', x[::-1]) for x in [
-                                'XKZtlGFb', 'lKJncFvR', 'mLzKKRnb', 's 5WFdy1', 'mLrNF2Fb', '=F 8mZul']],
+                            [re.sub('[F\sp]+', '', x[::-1]) for x in [
+                                'XZFtlpGb', 'lJn pcvR', 'nFLpzRnb', 'v xpmYuV', 'CZlt F2Y', '=F QXYs5']],
+                            [re.sub('[K\sP]+', '', x[::-1]) for x in [
+                                'XZKtPlGb', 'lJncPPvR', 'nKLzRnKb', 'vxm Y uV', 'CZlPt2PY', '==wYK2P5']],
+                            [re.sub('[i\sQ]+', '', x[::-1]) for x in [
+                                'X ZtlGQb', 'l Jn cvR', 'nLzQQRnb', 'vxmQYuiV', 'CZQlt2iY', '=ii=Aet5']],
+                            [re.sub('[q\sX]+', '', x[::-1]) for x in [
+                                't lGqb', 'uXETqZ', 'i5WqXd', 'j 9Gqb', 'kqV2Xa', 'z1qm L']],
+                            [re.sub('[w\sF]+', '', x[::-1]) for x in [
+                                'twlGFb', 'uEF TZ', 'i5W wd', 'j9 G b', 'kVw2 a', '0dnFFL', '==F gZ']],
+                            [re.sub('[Q\sy]+', '', x[::-1]) for x in [
+                                'XZQtlGyb', 'lJQncyvR', 'nLzRyn b', 'vxmY uyV', 'icltQ2QY', '=4WaQ3y5']],
+                            [re.sub('[0\sp]+', '', x[::-1]) for x in [
+                                'XZtlGp b', 'lJncppvR', 'n0LzR0nb', 'vx0mpYuV', 'icl0t2 Y', '==p0wYj5']],
+                            [re.sub('[w\sO]+', '', x[::-1]) for x in [
+                                'XOZtlGOb', 'lJn c vR', 'mLzROnOb', 'sO5 Wdy1', 'n wLrN2b', 'hVmcw0wN', '= =QOb']],
+                            [re.sub('[K\sO]+', '', x[::-1]) for x in [
+                                'XZtlK Gb', 'lJOncvKR', 'mLz RnKb', 'sK5W dy1', 'mLrKON2b', '=K8mZu l']],
+                            [re.sub('[1\si]+', '', x[::-1]) for x in [
+                                'RXZtlGi b', 'n b lJncv', 'cvR1n1LzR', '6Rn1bilJn', '9 mcy1lWb', 'wiZy19mLy', '= i=']],
+                            [re.sub('[s\sg]+', '', x[::-1]) for x in [
+                                'tlG sb', 'vR XsZ', 'lgJsnc', 'zR  nb', 'hxgmsL', 'u8 G d', '=sc Hc']],
+                            [re.sub('[o\sS]+', '', x[::-1]) for x in [
+                                'toSlGb', 'vR oXZ', 'lJSnoc', 'z Rnob', '4opnSL', 'uY3SSY', 'ul  2d']],
                             [re.sub('[r\sS]+', '', x[::-1]) for x in [
-                                'RXZStSlGb', 'nblJ nrcv', 'cvRn LrzR', '6RnSblJ n', '9mScylW b', 'wZyr9mSLy', '=Sr=']],
-                            [re.sub('[1\sy]+', '', x[::-1]) for x in [
-                                'tylyGb', 'v11RXZ', 'lyJ1nc', 'zRnyyb', 'hxy1mL', 'u8G  d', '=1c Hc']],
-                            [re.sub('[w\sy]+', '', x[::-1]) for x in [
-                                't wlGb', 'v  RXZ', 'lJ  nc', 'zRnywb', '4pw nL', 'uY3 wY', 'ul2 yd']],
-                            [re.sub('[f\s0]+', '', x[::-1]) for x in [
-                                'XZtlG0 b', 'lJn fcvR', 'mL0zRn0b', 'zF Gc5fJ', 'mL kV2 c', '= =w0Zy9']],
-                            [re.sub('[f\sy]+', '', x[::-1]) for x in [
-                                'ZtylGyb', 'ncvyRyX', 'RnbylyJ', '5Jm fLz', 'cy zFGc', 'mLk  V2', '1fyV']],
-                            [re.sub('[u\sQ]+', '', x[::-1]) for x in [
-                                'ZtlGQub', 'nc  vRX', 'R nb lJ', '5 JQmLz', 'czQuFGc', 'muLkVQ2', '6QuJ']],
-                            [re.sub('[p\sk]+', '', x[::-1]) for x in [
-                                'XZtlkGpb', 'lJncvkkR', 'nLkzRnpb', 'vxm Y uV', 'Gbhppt2Y', 'n pJ3buw']],
-
+                                'XrZtlSGb', 'lJn rcvR', 'mLzrRn b', 'zFSGc5SJ', 'mL  kV2c', '=S=wSZy9']],
+                            [re.sub('[f\sQ]+', '', x[::-1]) for x in [
+                                'Z tflGb', 'nQc vRX', 'RnQblQJ', '5 fJmLz', 'czfFGQc', 'm LfkV2', '1ffV']],
+                            [re.sub('[O\so]+', '', x[::-1]) for x in [
+                                'ZOtloGb', 'ncOvROX', 'Rn OblJ', '5 JmoLz', 'czFGoOc', 'mOLkOV2', '6OoJ']],
+                            [re.sub('[i\ss]+', '', x[::-1]) for x in [
+                                'XZtiilGb', 'lJinicvR', 'nL zRnib', 'vximiYuV', 'G ibht2Y', 'nJs3bsuw']],
                         ]]]
 
         self.url_vars = {'search': 'search/tv/%s/', 'browse': 'browse-torrents/TV-shows/'}

@@ -1468,14 +1468,14 @@ class TorrentProvider(GenericProvider):
         if not self.enabled:
             return last_url
 
+        self.failure_count = failure_count = 0
         for cur_url in url_list:
             if not self.is_valid_mod(cur_url):
                 return None
-
+            failure_count += self.failure_count
+            self.failure_count = 0
             if 10 < len(cur_url) and ((expire and (expire > int(time.time()))) or
                                       self._has_signature(self.get_url(cur_url, skip_auth=True))):
-                if self.should_skip():
-                    return None
                 for k, v in getattr(self, 'url_tmpl', {}).items():
                     self.urls[k] = v % {'home': cur_url, 'vars': getattr(self, 'url_vars', {}).get(k, '')}
 
@@ -1483,6 +1483,10 @@ class TorrentProvider(GenericProvider):
                     sickbeard.PROVIDER_HOMES[self.get_id()] = (cur_url, int(time.time()) + (60*60))
                     sickbeard.save_config()
                 return cur_url
+
+        self.failure_count = 3 * bool(failure_count)
+        if self.should_skip():
+            return None
 
         logger.log('Failed to identify a "%s" page with %s %s (local network issue, site down, or ISP blocked) ' %
                    (self.name, len(url_list), ('URL', 'different URLs')[1 < len(url_list)]) +

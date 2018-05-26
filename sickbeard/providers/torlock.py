@@ -34,22 +34,24 @@ class TorLockProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.torlock.com/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[o\sH]+', '', x[::-1]) for x in [
-                                'y9HHGd', 'j 9Gob', '1H5 ya', 'sJmoHb', 'rHNH2b', 'uQWo Z', '0Vm HY']],
-                            [re.sub('[w\sm]+', '', x[::-1]) for x in [
-                                'bym9mGd', 'ya jw9G', '02wbjw1', 'vJwHmcu', 'cwz5 Ce', 'QwZjmFG', '=  =']],
-                            [re.sub('[N\sS]+', '', x[::-1]) for x in [
-                                'y 9 Gd', 'j9SGNb', 'jN1 ya', 'u0N2Nb', 'vlNNWd', 'hNSZmL', 'o NRXa']],
-                            [re.sub('[l\sO]+', '', x[::-1]) for x in [
-                                'bylBD d', 'zajO9lG', '5lWdu E', 'j9OGb i', 'LkOV2Oa', 'A bvlxm', '=OO=']],
-                            [re.sub('[o\ss]+', '', x[::-1]) for x in [
-                                'bsyBDsd', 'zasj9oG', '5sWdsuE', 'j 9Gboi', 'LksV2oa', 'A sbvxm', '=s =']],
-                            [re.sub('[q\sK]+', '', x[::-1]) for x in [
-                                'yqq9Gd', 'j9 Gqb', '15qy a', 'sJKmKb', 'rNqq2b', 'uQqqWZ', '=gX Kb']],
-                            [re.sub('[w\sI]+', '', x[::-1]) for x in [
-                                'XwId', 'sI B', '2wIb', 'kI F', 'nI L', 'hIwB', 'nIwc', '5I R']],
-                            [re.sub('[n\sP]+', '', x[::-1]) for x in [
-                                'G nd', 'v nx', '2PPY', 'uPPs', 'GPPc', 'yPPF', 'Hnnd', '= nk']],
+                            [re.sub('[g\sF]+', '', x[::-1]) for x in [
+                                'y9FFGd', 'j9FgGb', '15 Fya', 'sF Jmb', 'rN 2Fb', 'uQW FZ', '0Vmg Y']],
+                            [re.sub('[O\si]+', '', x[::-1]) for x in [
+                                'byO9Gid', 'y aji9G', '02O bj1', 'vJ Hicu', 'cz 5OCe', 'QZij FG', '=  =']],
+                            [re.sub('[p\st]+', '', x[::-1]) for x in [
+                                'yp9Gtd', 'j9p Gb', 'j1ypta', 'u0p2tb', 'vltWpd', 'hZmp L', 'opRXta']],
+                            [re.sub('[T\sN]+', '', x[::-1]) for x in [
+                                'by  BDd', 'zTTaj9G', '5W duTE', 'jN9TGbi', 'LkVTT2a', 'AbvT xm', '=  =']],
+                            [re.sub('[h\st]+', '', x[::-1]) for x in [
+                                'bytBD d', 'zajh9 G', '5hWd uE', 'j9Ghhbi', 'Lk V2ta', 'Abvtxhm', '=tt=']],
+                            [re.sub('[ \sx]+', '', x[::-1]) for x in [
+                                'y 9Gxd', 'j  9Gb', '15y xa', 'sxJmxb', 'rN 2xb', 'u QWxZ', '0 F Gb']],
+                            [re.sub('[V\sI]+', '', x[::-1]) for x in [
+                                'y 9IGd', 'j 9GIb', '1VI5ya', 'sJmIIb', 'rN2VIb', 'u QW Z', '=VgXIb']],
+                            [re.sub('[j\so]+', '', x[::-1]) for x in [
+                                'X jd', 'so B', '2oob', 'k oF', 'njoL', 'hjjB', 'nj c', '5 jR']],
+                            [re.sub('[O\sw]+', '', x[::-1]) for x in [
+                                'GwOd', 'v wx', '2wwY', 'uw s', 'Gw c', 'y OF', 'HOOd', '=OOk']],
                         ]]]
 
         self.url_vars = {'search': 'television/torrents/%s.html?sort=added&order=desc',

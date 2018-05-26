@@ -34,26 +34,26 @@ class EztvProvider(generic.TorrentProvider):
 
         self.url_home = ['https://eztv.ag/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[f\sQ]+', '', x[::-1]) for x in [
-                                '0pfQXZ', 'uQEQjd', 'if5fWd', 'j9ffGb', 'kQV2fa', '0fdnQL', '=f=g Z']],
-                            [re.sub('[x\sg]+', '', x[::-1]) for x in [
-                                '0xp XZ', 'uxEjxd', 'i x5Wd', 'jg9Ggb', 'kV2 xa', 'zx1gmL']],
-                            [re.sub('[R\sK]+', '', x[::-1]) for x in [
-                                '0pX KZ', 'i5i  d', 'hBXKRe', 'lN3K c', 'v5KCKZ', '=cR mc']],
-                            [re.sub('[f\sR]+', '', x[::-1]) for x in [
-                                '0pfX Z', 'iff5id', 'hBXRfe', 'l N3 c', 'l5ffCZ', '==RQ d']],
-                            [re.sub('[S\sx]+', '', x[::-1]) for x in [
-                                '0 p XZ', 'iS5i d', 'h  BXe', 'lNSx3c', 'i5SC Z', '==gxSe']],
-                            [re.sub('[O\su]+', '', x[::-1]) for x in [
-                                '0OpX Z', 'hu1Oid', 'w5yuuZ', '49u mc', 'w N nL', 'lONW Y']],
-                            [re.sub('[O\sf]+', '', x[::-1]) for x in [
-                                'd0pOXfZ', '3bff05i', '5W ZfyJ', 'p1fmOe0', 'cvJn  c', 'mcOvf5i', '= Oc']],
-                            [re.sub('[w\sl]+', '', x[::-1]) for x in [
-                                'XwlZ', '0wlp', 'il d', 's l5', 'X wY', 'v lR', 'nl L', '3  B']],
-                            [re.sub('[M\sQ]+', '', x[::-1]) for x in [
-                                'pQMXZ', 'iQd 0', 'e 6M5', '2 NQG', 'dQMnL', 'gMQbp', '= Q=']],
-                            [re.sub('[o\sS]+', '', x[::-1]) for x in [
-                                'h1 id0opXZ', 'u8Wa15y  Z', 'lhGdpFSmoZ', 'uVnL2 RnSe', 'ht2oY vxmY', 'nJ3obuwSGb']],
+                            [re.sub('[v\sz]+', '', x[::-1]) for x in [
+                                '0vp XZ', 'uvEj d', 'i5 Wzd', 'j9 vGb', 'kV2v a', '0zdvnL', '==vg Z']],
+                            [re.sub('[f\sT]+', '', x[::-1]) for x in [
+                                '0TpfXZ', 'ufTEjd', 'i5WTTd', 'j9f Gb', 'kV f2a', 'z1mTTL']],
+                            [re.sub('[ \sR]+', '', x[::-1]) for x in [
+                                '0pXRRZ', 'h  1id', 'w5yRRZ', '4 9 mc', 'w N nL', 'lNRW Y']],
+                            [re.sub('[x\su]+', '', x[::-1]) for x in [
+                                'dx0xpXZ', '3bx05xi', '5WZyxuJ', 'p1mexu0', 'c vuJnc', 'mcuuv5i', '=  c']],
+                            [re.sub('[T\sr]+', '', x[::-1]) for x in [
+                                'XT Z', '0Trp', 'iTTd', 'sT 5', 'XTrY', 'vT R', 'nrrL', '3T B']],
+                            [re.sub('[l\sT]+', '', x[::-1]) for x in [
+                                'pX  Z', 'idl 0', 'e6l 5', '2lTNG', 'd nTL', 'g blp', '=  =']],
+                            [re.sub('[T\sR]+', '', x[::-1]) for x in [
+                                '0p X Z', 'h1iRRd', '15R yZ', 'u 8WRa', 'p RFmZ', '=gTGRd']],
+                            [re.sub('[T\st]+', '', x[::-1]) for x in [
+                                '0 ptXZ', '1T5i d', 'sTtJmb', 'rtN2Tb', 'sx WTY', 'ytT9mL', '=t=wTZ']],
+                            [re.sub('[o\sz]+', '', x[::-1]) for x in [
+                                '0zopXZ', '1z5oid', 'sJ  mb', 'rNz2zb', 'uz QWZ', '0FGoob']],
+                            [re.sub('[k\sv]+', '', x[::-1]) for x in [
+                                'Xk Z', '0kkp', 'ivvd', 'y k5', 'WkvZ', '=  Q']],
                         ]]]
         self.url_vars = {'search': 'search/%s', 'browse': 'page_%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s',
