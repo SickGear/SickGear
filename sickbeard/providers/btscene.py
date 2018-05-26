@@ -33,38 +33,41 @@ class BTSceneProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'BTScene')
 
         self.url_home = ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[O\sx]+', '', x[::-1]) for x in [
-                                'zRnx Y', 'ux V2Y', '15 S Z', 'sJ Omb', 'r N 2b', 'uxQxWZ', '=MOm d']],
-                            [re.sub('[L\sq]+', '', x[::-1]) for x in [
-                                'zLRn Y', 'uVqq2Y', '15SqLZ', 'sqJLmb', 'rN L2b', 'uqLQWZ', '=qgX b']],
-                            [re.sub('[Q\s0]+', '', x[::-1]) for x in [
-                                'zRn  Y', 'uQ V2Y', '1Q5QSZ', 'sJ0mQb', 'rQ0N2b', 'uIX QZ', 'ul200d']],
-                            [re.sub('[T\s ]+', '', x[::-1]) for x in [
-                                'zR nTY', 'uTVT2Y', '15 STZ', 'sTTJmb', 'r N2 b', 'uTTIXZ', '=TTM2Y']],
-                            [re.sub('[i\sw]+', '', x[::-1]) for x in [
-                                'zR  nY', 'li52ib', '15i SM', 's Jmwb', 'rN2  b', 'uwQW Z', 's9i Gb']],
-                            [re.sub('[X\sV]+', '', x[::-1]) for x in [
-                                'z Rn Y', 'lXV52b', '1 5 SM', 'sJ mXb', 'rN2XVb', 'uVQWVZ', 'mRX3Vd']],
-                            [re.sub('[p\sF]+', '', x[::-1]) for x in [
-                                'zFRFnY', 'l5 F2b', '15SF M', 'sFJmpb', 'rN 2pb', 'upQWpZ', '=MFFXb']],
-                            [re.sub('[Q\sp]+', '', x[::-1]) for x in [
-                                'z RpnY', 'u V2 Y', 'i5QSQZ', 'hBpQXe', 'lN 3Qc', 'vQ 5CZ', '=cpmpc']],
-                            [re.sub('[o\sG]+', '', x[::-1]) for x in [
-                                'zo RnY', 'u GV2Y', 'i 5S Z', 'hGBX e', 'loNG3c', 'lG5CGZ', '== Qod']],
-                            [re.sub('[q\sW]+', '', x[::-1]) for x in [
-                                'zR nqY', 'u V2qY', 'iq5 SZ', 'h BXqe', 'lN3  c', 'i5C WZ', '==gq e']],
-                            [re.sub('[q\sg]+', '', x[::-1]) for x in [
-                                'c gtQnY', 'mbg lN2', 'M 2Y tU', 'vgJHqcu', 'cz5C qe', 'QqgZjFG', '= g=']],
-                            [re.sub('[H\sF]+', '', x[::-1]) for x in [
-                                '2YzFRFnY', '0H5SZHuV', 'WZyFFJ3b', 'p1me 0 5', 'iHHcvJnc', '=cFmc v5']],
-                            [re.sub('[w\si]+', '', x[::-1]) for x in [
-                                'RwnwY', '2 wYz', 'Z u V', 'sii5S', 'RXi Y', 'nL wv', '3i B']],
-                            [re.sub('[k\sh]+', '', x[::-1]) for x in [
-                                'zRnkhY', 'uV  2Y', '65hSkZ', '2Nk Ge', 'phdn L', '=kk=gb']],
-                            [re.sub('[q\sP]+', '', x[::-1]) for x in [
-                                'mPblqN2ctQnY', 'vlWduM2 YPtU', 'nYoRXahZPm L', '15PSZuV2 YzR', 'WYrN 2PbsJmb',
-                                '==wZ y9mL sx']],
-                        ]]]
+            [re.sub('[o\sv]+', '', x[::-1]) for x in [
+                'z Rn Y', 'uVv2vY', '1 5vSZ', 'sJ omb', 'rNov2b', 'uQoWvZ', '0FvoGb']],
+            [re.sub('[v\sp]+', '', x[::-1]) for x in [
+                'zRnp Y', 'upVp2Y', '15SvpZ', 'spJpmb', 'r N 2b', 'u QvWZ', '=Mvm d']],
+            [re.sub('[P\sh]+', '', x[::-1]) for x in [
+                'zh RnY', 'uV2  Y', '1P5ShZ', 's Jm b', 'rN2h b', 'uQPW Z', '=ghXPb']],
+            [re.sub('[g\si]+', '', x[::-1]) for x in [
+                'zRiniY', 'uVgg2Y', '1 i5SZ', 'sJiimb', 'rN2igb', 'u IX Z', 'ul  2d']],
+            [re.sub('[O\sp]+', '', x[::-1]) for x in [
+                'zORnOY', 'uV2OpY', '15pSOZ', 'spJpmb', 'rN2O b', 'uOIXpZ', '=pM2OY']],
+            [re.sub('[ \sH]+', '', x[::-1]) for x in [
+                'zRHnHY', 'l H52b', '15HHSM', 'sJ mHb', 'rN 2 b', 'uQ WHZ', 's 9 Gb']],
+            [re.sub('[o\s ]+', '', x[::-1]) for x in [
+                'zRoonY', 'l5 2 b', '15ooSM', 'sJomob', 'rN2o b', 'uoQW Z', 'mRo3od']],
+            [re.sub('[0\sg]+', '', x[::-1]) for x in [
+                'zR0n0Y', 'l5 g2b', '1g5S M', 'sJm gb', 'rN0g2b', 'uQW 0Z', '=gMX b']],
+            [re.sub('[r\sj]+', '', x[::-1]) for x in [
+                'zR nrY', 'uVj2rY', 'ir 5SZ', 'hB Xre', 'lN j3c', 'vj 5CZ', '=jjcmc']],
+            [re.sub('[M\st]+', '', x[::-1]) for x in [
+                'z MRnY', 'uV2tMY', 'i5 StZ', 'hBtXte', 'lN3 tc', 'lMM5CZ', '== tQd']],
+            [re.sub('[K\so]+', '', x[::-1]) for x in [
+                'zR n Y', 'uV2 oY', 'i5  SZ', 'hBX oe', 'loNK3c', 'i 5CoZ', '=K=goe']],
+            [re.sub('[i\sP]+', '', x[::-1]) for x in [
+                'ctQiniY', 'mblNPP2', 'M 2YPtU', 'vJHPcPu', 'c z5PCe', 'QZj FPG', '=i =']],
+            [re.sub('[k\sq]+', '', x[::-1]) for x in [
+                '2Yzk RnY', '0k5qSZuV', 'WZyJ3qqb', 'p1m ke05', 'i cvJnkc', '=cmkckv5']],
+            [re.sub('[f\sG]+', '', x[::-1]) for x in [
+                'Rn  Y', '2 fYz', 'Z fuV', 'sf 5S', 'RffXY', 'nGfLv', '3ffB']],
+            [re.sub('[t\sF]+', '', x[::-1]) for x in [
+                'zFtRnY', 'u  V2Y', '65S tZ', '2NFG e', 'pdFnFL', '= =Fgb']],
+            [re.sub('[q\s ]+', '', x[::-1]) for x in [
+                't QqnY', 'l N2 c', 'tUmq b', 'uM2  Y', 'vl Wqd', 'hZ qmL', 'oRXqqa']],
+            [re.sub('[o\st]+', '', x[::-1]) for x in [
+                'YzRnooY', 'SoZu V2', 'Jmtb 15', 'rN  2bs', 'Ls xWtY', 'wZyt 9m', '= t=']],
+        ]]]
         self.url_vars = {'search': '?q=%s&order=1', 'browse': 'lastdaycat/type/Series/',
                          'get': 'torrentdownload.php?id=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(vars)s',

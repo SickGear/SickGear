@@ -35,27 +35,18 @@ class Torrentz2Provider(generic.TorrentProvider):
 
         self.url_home = ['https://torrentz2.eu/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[r\sQ]+', '', x[::-1]) for x in [
-                                'GQrd', 'y Q9', 'mr c', 'uQ V', 'H Qd', 'yQQo', 'mrrL', 'jrrN']],
-                            [re.sub('[f\sJ]+', '', x[::-1]) for x in [
-                                'G fd', 'yJJ9', 'm Jc', 'uJ V', 'HfJd', 'yf o', 'nJfL', '2JfR']],
-                            [re.sub('[Q\sq]+', '', x[::-1]) for x in [
-                                'cQyQ9Gd', 'HQduVqm', 'NW L yo', 'yqBnLqj', 'cuqg 3b', '2QYhQB3', '=QQU']],
-                            [re.sub('[i\sP]+', '', x[::-1]) for x in [
-                                'c Py9Gd', 'H d uVm', 'JXib uo', 'vxmbiP1', 'aius2PY', 'wbimP5W', '=P =']],
-                            [re.sub('[q\si]+', '', x[::-1]) for x in [
-                                'duVmcy 9Gid', '3b yJXat pH', '9GdnqJi3buI', 'uoHdu Vmicy', 'Yvqxmb1J Xb',
-                                'QZ0F GiZus2', '= q=']],
-                            [re.sub('[g\sK]+', '', x[::-1]) for x in [
-                                'GKgb', '0ggF', 'y gb', 'wKK5', 'w gd', '=K =']],
-                            [re.sub('[R\su]+', '', x[::-1]) for x in [
-                                'n  e', 'jR h', 'iuud', '3RR5', 'WRua', '=R 4']],
-                            [re.sub('[K\sk]+', '', x[::-1]) for x in [
-                                'cKy9KGd', 'HKdu Vm', 'N WKLyo', 'pVKknLj', 'Ym5yk b', 'Aak0 lW', '=  =']],
-                            [re.sub('[k\sR]+', '', x[::-1]) for x in [
-                                'cyRk9Gd', 'HduV Rm', 'VnLk xo', 'vx RmYu', 'Zkl t2Y', 'Gdk35 C', '= kY']],
-                            [re.sub('[q\sQ]+', '', x[::-1]) for x in [
-                                'cyQ9GQd', 'HdquVqm', 'VnLQ xo', 'vQqxmYu', 'Zlt2 qY', 'wQctQ5C', '=  =']],
+                            [re.sub('[r\sj]+', '', x[::-1]) for x in [
+                                'G  d', 'yr 9', 'm jc', 'urrV', 'Hr d', 'y ro', 'n rL', '2j R']],
+                            [re.sub('[q\sP]+', '', x[::-1]) for x in [
+                                'cy 9PGd', 'Hdq uVm', 'VnLqxqo', 'vqPxmYu', 'Zlt q2Y', 'G Pd35C', '=  Y']],
+                            [re.sub('[F\sJ]+', '', x[::-1]) for x in [
+                                'c y9 Gd', 'HduJFVm', 'VnL Fxo', 'vJFxmYu', 'Zl Ft2Y', 'wJct 5C', '=JJ=']],
+                            [re.sub('[P\sQ]+', '', x[::-1]) for x in [
+                                'y9 GPd', 'uQVmPc', 'yQoHQd', '5PPJmL', 'zFPGQc', 'k QV2c', '6PJmPL']],
+                            [re.sub('[N\sg]+', '', x[::-1]) for x in [
+                                'y9NGgd', 'uV mNc', 'yoNHgd', '5 JgmL', 'zFGg c', 'kV  2c', '1VgNmL']],
+                            [re.sub('[t\sj]+', '', x[::-1]) for x in [
+                                'cy 9G d', 'HdtuVtm', 'JtmLyjo', 'zFG ct5', 'LkVt2jc', 'wjZjy9m', '=tj=']],
                         ]]]
 
         self.url_vars = {'search': 'searchA?f=%s&safe=1', 'searchv': 'verifiedA?f=%s&safe=1'}
@@ -85,7 +76,7 @@ class Torrentz2Provider(generic.TorrentProvider):
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 search_url = self.urls['search' + ('', 'v')[self.confirmed]] % (
-                    quote_plus('%s -Torrent9 -nextorrent -XXX' % (search_string, 'x264')['Cache' == mode]))
+                    quote_plus('%s NOT Torrent9 NOT nextorrent' % (search_string, 'x264')['Cache' == mode]))
 
                 html = self.get_url(search_url)
                 if self.should_skip():

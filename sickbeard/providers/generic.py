@@ -1246,7 +1246,7 @@ class NZBProvider(GenericProvider):
             regex += ['proper|repack', Quality.real_check]
             proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
         if anime:
-            terms = 'v1|v2|v3|v4|v5'
+            terms = 'v2|v3|v4|v5|v6|v7|v8|v9'
             search_terms += [terms]
             regex += [terms]
             proper_check = re.compile(r'(?i)(%s)' % '|'.join(regex))
@@ -1475,14 +1475,14 @@ class TorrentProvider(GenericProvider):
         if not self.enabled:
             return last_url
 
+        self.failure_count = failure_count = 0
         for cur_url in url_list:
             if not self.is_valid_mod(cur_url):
                 return None
-
+            failure_count += self.failure_count
+            self.failure_count = 0
             if 10 < len(cur_url) and ((expire and (expire > int(time.time()))) or
                                       self._has_signature(self.get_url(cur_url, skip_auth=True))):
-                if self.should_skip():
-                    return None
                 for k, v in getattr(self, 'url_tmpl', {}).items():
                     self.urls[k] = v % {'home': cur_url, 'vars': getattr(self, 'url_vars', {}).get(k, '')}
 
@@ -1490,6 +1490,10 @@ class TorrentProvider(GenericProvider):
                     sickbeard.PROVIDER_HOMES[self.get_id()] = (cur_url, int(time.time()) + (60*60))
                     sickbeard.save_config()
                 return cur_url
+
+        self.failure_count = 3 * bool(failure_count)
+        if self.should_skip():
+            return None
 
         logger.log('Failed to identify a "%s" page with %s %s (local network issue, site down, or ISP blocked) ' %
                    (self.name, len(url_list), ('URL', 'different URLs')[1 < len(url_list)]) +
@@ -1650,7 +1654,7 @@ class TorrentProvider(GenericProvider):
 
         raise AuthException('%s for %s is empty in Media Providers/Options' % (setting, self.name))
 
-    def find_propers(self, **kwargs):
+    def find_propers(self, anime=False, **kwargs):
         """
         Search for releases of type PROPER
         :return: list of Proper objects
@@ -1659,11 +1663,16 @@ class TorrentProvider(GenericProvider):
         if self.should_skip():
             return results
 
-        search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack', 'real'])
+        # chance of a v6-v9 is so rare that to do every bl search with each in turn is too aggressive
+        search_terms = getattr(self, 'proper_search_terms', ['proper', 'repack', 'real'] +
+                               ([], ['v2', 'v3', 'v4', 'v5'])[True is anime])
         if not isinstance(search_terms, list):
             if None is search_terms:
-                search_terms = 'proper|repack|real'
-            search_terms = [search_terms]
+                search_terms = ['proper|repack|real']
+                if anime:
+                    search_terms += ['v2|v3|v4|v5']
+            else:
+                search_terms = [search_terms]
 
         items = self._search_provider({'Propers': search_terms})
 
