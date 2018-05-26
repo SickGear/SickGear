@@ -118,6 +118,7 @@ class TVShow(object):
         self._rls_ignore_words = ''
         self._rls_require_words = ''
         self._overview = ''
+        self._prune = 0
         self._tag = ''
         self._mapped_ids = {}
         self._not_found_count = None
@@ -165,6 +166,7 @@ class TVShow(object):
     rls_ignore_words = property(lambda self: self._rls_ignore_words, dirty_setter('_rls_ignore_words'))
     rls_require_words = property(lambda self: self._rls_require_words, dirty_setter('_rls_require_words'))
     overview = property(lambda self: self._overview, dirty_setter('_overview'))
+    prune = property(lambda self: self._prune, dirty_setter('_prune'))
     tag = property(lambda self: self._tag, dirty_setter('_tag'))
 
     def _helper_load_failed_db(self):
@@ -976,6 +978,10 @@ class TVShow(object):
             if not self.overview:
                 self.overview = sqlResults[0]['overview']
 
+            self.prune = sqlResults[0]['prune']
+            if not self.prune:
+                self.prune = 0
+
             self.tag = sqlResults[0]['tag']
             if not self.tag:
                 self.tag = 'Show List'
@@ -1197,17 +1203,9 @@ class TVShow(object):
                 + ek.ek(glob.glob, ic.poster_thumb_path(self.indexerid).replace('poster.jpg', '*')) \
                 + ek.ek(glob.glob, ic.fanart_path(self.indexerid).replace('%s.fanart.jpg' % self.indexerid, '')):
             cache_dir = ek.ek(os.path.isdir, cache_obj)
-            logger.log('Attempt to %s cache %s %s' % (action, cache_dir and 'dir' or 'file', cache_obj))
-            try:
-                if sickbeard.TRASH_REMOVE_SHOW:
-                    ek.ek(send2trash, cache_obj)
-                elif cache_dir:
-                    ek.ek(shutil.rmtree, cache_obj)
-                else:
-                    ek.ek(os.remove, cache_obj)
-
-            except OSError as e:
-                logger.log('Unable to %s %s: %s / %s' % (action, cache_obj, repr(e), str(e)), logger.WARNING)
+            result = helpers.remove_file(cache_obj, tree=cache_dir, log_level=logger.WARNING)
+            if result:
+                logger.log('%s cache %s %s' % (result, cache_dir and 'dir' or 'file', cache_obj))
 
         show_id = '%s' % self.indexerid
         if show_id in sickbeard.FANART_RATINGS:
@@ -1227,14 +1225,9 @@ class TVShow(object):
                     except:
                         logger.log('Unable to change permissions of %s' % self._location, logger.WARNING)
 
-                if sickbeard.TRASH_REMOVE_SHOW:
-                    ek.ek(send2trash, self.location)
-                else:
-                    ek.ek(shutil.rmtree, self.location)
-
-                logger.log('%s show folder %s' %
-                           (('Deleted', 'Trashed')[sickbeard.TRASH_REMOVE_SHOW],
-                            self._location))
+                result = helpers.remove_file(self.location, tree=True)
+                if result:
+                    logger.log('%s show folder %s' % (result, self._location))
 
             except exceptions.ShowDirNotFoundException:
                 logger.log('Show folder does not exist, no need to %s %s' % (action, self._location), logger.WARNING)
@@ -1260,8 +1253,15 @@ class TVShow(object):
         logger.log('%s: Loading all episodes for [%s] with a location from the database' % (self.indexerid, self.name))
 
         myDB = db.DBConnection()
-        sqlResults = myDB.select("SELECT * FROM tv_episodes WHERE showid = ? AND location != ''", [self.indexerid])
+        sqlResults = myDB.select(
+            'SELECT * FROM tv_episodes'
+            ' WHERE showid = ? AND location != ""'
+            ' ORDER BY season, episode DESC',
+            [self.indexerid])
 
+        kept = 0
+        deleted = 0
+        attempted = []
         sql_l = []
         for ep in sqlResults:
             curLoc = ek.ek(os.path.normpath, ep['location'])
@@ -1274,6 +1274,22 @@ class TVShow(object):
                 logger.log('The episode from [%s] was deleted while we were refreshing it, moving on to the next one' % self.name,
                            logger.DEBUG)
                 continue
+
+            # if the path exist and if it's in our show dir
+            if (self.prune and curEp.location not in attempted and 0 < helpers.get_size(curEp.location) and
+                    ek.ek(os.path.normpath, curLoc).startswith(ek.ek(os.path.normpath, self.location))):
+                with curEp.lock:
+                    if curEp.status in Quality.DOWNLOADED:
+                        # locations repeat but attempt to delete once
+                        attempted += curEp.location
+                        if kept >= self.prune:
+                            result = helpers.remove_file(curEp.location, prefix_failure=u'%s: ' % self.indexerid)
+                            if result:
+                                logger.log(u'%s: %s file %s' % (self.indexerid,
+                                                                result, curEp.location), logger.DEBUG)
+                                deleted += 1
+                        else:
+                            kept += 1
 
             # if the path doesn't exist or if it's not in our show dir
             if not ek.ek(os.path.isfile, curLoc) or not ek.ek(os.path.normpath, curLoc).startswith(
@@ -1307,6 +1323,11 @@ class TVShow(object):
                 # the file exists, set its modify file stamp
                 if sickbeard.AIRDATE_EPISODES:
                     curEp.airdateModifyStamp()
+
+        if deleted:
+            logger.log('%s: %s %s media file%s and kept %s most recent downloads' % (
+                self.indexerid, ('Permanently deleted', 'Trashed')[sickbeard.TRASH_REMOVE_SHOW],
+                deleted, helpers.maybe_plural(deleted), kept))
 
         if 0 < len(sql_l):
             myDB = db.DBConnection()
@@ -1429,6 +1450,7 @@ class TVShow(object):
                         'rls_ignore_words': self.rls_ignore_words,
                         'rls_require_words': self.rls_require_words,
                         'overview': self.overview,
+                        'prune': self.prune,
                         'tag': self.tag,
         }
 
@@ -1458,7 +1480,8 @@ class TVShow(object):
                + 'quality: %s\n' % self.quality \
                + 'scene: %s\n' % self.is_scene \
                + 'sports: %s\n' % self.is_sports \
-               + 'anime: %s\n' % self.is_anime
+               + 'anime: %s\n' % self.is_anime \
+               + 'prune: %s\n' % self.prune
 
     def wantEpisode(self, season, episode, quality, manualSearch=False, multi_ep=False):
 

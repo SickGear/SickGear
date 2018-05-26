@@ -61,7 +61,17 @@
     #pass
 #end try
 
-		<div class="field-pair #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#" style="margin-top:10px">
+		<div class="field-pair alt" style="margin-top:10px">
+			<label for="prune">
+				<span class="component-title">Keep up to</span>
+				<span class="component-desc">
+					<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
+					<p>most recent downloads (blank for all)</p>
+				</span>
+			</label>
+		</div>
+
+		<div class="field-pair #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#">
 			<label for="tag">
 				<span class="component-title">Place show in group</span>
 				<span class="component-desc">

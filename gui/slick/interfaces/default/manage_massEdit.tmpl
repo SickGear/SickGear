@@ -169,8 +169,16 @@
 		</div><br />
 	</div>
 
+	<div class="optionWrapper" >
+		<span class="selectTitle">Keep up to <span class="grey-text">(0 = no prune)</span></span>
+		<div class="selectChoices">
+			<input type="text" name="prune" id="prune" value="#if None is not $prune_value then $prune_value else ''#" class="form-control form-control-inline input-sm input75" style="width:50px;margin-top:0">
+			<span>blank = no change</span>
+		</div><br />
+	</div>
+
 	<div class="optionWrapper #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#">
-		<span class="selectTitle">Show is grouped in</span>
+		<span class="selectTitle">Place show in group</span>
 		<div class="selectChoices">
 			<select id="edit_tag" name="tag" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>

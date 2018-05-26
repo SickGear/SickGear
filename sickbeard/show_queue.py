@@ -177,10 +177,11 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def addShow(self, indexer, indexer_id, showDir, default_status=None, quality=None, flatten_folders=None,
                 lang='en', subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
-                wanted_begin=None, wanted_latest=None, tag=None, new_show=False, show_name=None, upgrade_once=False):
+                wanted_begin=None, wanted_latest=None, prune=None, tag=None,
+                new_show=False, show_name=None, upgrade_once=False):
         queueItemObj = QueueItemAdd(indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang,
                                     subtitles, anime, scene, paused, blacklist, whitelist,
-                                    wanted_begin, wanted_latest, tag,
+                                    wanted_begin, wanted_latest, prune, tag,
                                     new_show=new_show, show_name=show_name, upgrade_once=upgrade_once)
 
         self.add_item(queueItemObj)
@@ -238,7 +239,7 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, indexer, indexer_id, showDir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, tag,
+                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, prune, tag,
                  scheduled_update=False, new_show=False, show_name=None, upgrade_once=False):
 
         self.indexer = indexer
@@ -257,6 +258,7 @@ class QueueItemAdd(ShowQueueItem):
         self.paused = paused
         self.blacklist = blacklist
         self.whitelist = whitelist
+        self.prune = prune
         self.tag = tag
         self.new_show = new_show
         self.showname = show_name
@@ -348,6 +350,7 @@ class QueueItemAdd(ShowQueueItem):
             self.show.anime = self.anime if None is not self.anime else sickbeard.ANIME_DEFAULT
             self.show.scene = self.scene if None is not self.scene else sickbeard.SCENE_DEFAULT
             self.show.paused = self.paused if None is not self.paused else False
+            self.show.prune = self.prune if None is not self.prune else 0
             self.show.tag = self.tag if None is not self.tag else 'Show List'
 
             if self.show.anime:
