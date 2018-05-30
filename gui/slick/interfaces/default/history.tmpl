@@ -589,8 +589,19 @@
 ##
 ##
 	<div id="provider-failures">
+    #for ($check, $check_name, $check_url) in [
+        ('tvdb', 'TVDB Api', 'api.thetvdb.com'), ('thexem', 'The Xem', 'thexem.de'), ('github', 'GitHub', 'github.com'),
+    ]
+		<div id="check-$check" data-check="check_$check" class="check-site" style="margin-bottom:10px">
+			<input type="button" class="btn" value="Check $check_name">
+			<span style="line-height:26px">Test if site is up<span class="result"></span>
+				<a class="addQTip" style="margin-left:2px;display:none" href="$sickbeard.helpers.anon_url('http://www.isitdownrightnow.com/downorjustme.php?url=' + $check_url)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View full report for $check_name in new tab"><img alt="[IsItDown]" height="16" width="16" src="$sbRoot/images/iidrn.png" /></a>
+			</span>
+		</div>
+    #end for
+
     #if not $provider_fails
-		<p>No current failures. Failure stats display here when appropriate.</p>
+		<p>No current provider failures. Failure stats display here when appropriate.</p>
     #else
         <p>When a provider cannot be contacted over a period, SickGear backs off and waits an increasing interval between each retry</p>
         #for $prov in $provider_fail_stats
@@ -604,7 +615,7 @@
                 #else
                     #set $prov_class = $prov_class % ''
                 #end if
-            <input type="button" class="shows-more btn" value="Expand" style="display:none"><input type="button" class="shows-less btn" value="Collapse"><img src="$sbRoot/images/providers/$prov['prov_img']" width="16" height="16" style="margin:0 6px 0 3px">$prov_class$prov['name']
+			<input type="button" class="shows-more btn" value="Expand" style="display:none"><input type="button" class="shows-less btn" value="Collapse"><img src="$sbRoot/images/providers/$prov['prov_img']" width="16" height="16" style="margin:0 6px 0 3px">$prov_class$prov['name']
                 #if $prov['active']
                     #if $prov['next_try']
                         #set nt = $str($prov['next_try']).split('.', 2)[0][::-1].replace(':', ' m', 1).replace(':', ' h', 1)[::-1]

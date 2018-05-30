@@ -5329,6 +5329,39 @@ class History(MainHandler):
 
         return t.respond()
 
+    def check_site(self, site_name='', *args, **kwargs):
+
+        site_url = dict(
+            tvdb='api.thetvdb.com', thexem='thexem.de', github='github.com'
+        ).get(site_name.replace('check_', ''))
+
+        result = {}
+
+        if site_url:
+            resp = helpers.getURL('https://www.isitdownrightnow.com/check.php?domain=%s' % site_url)
+            if resp:
+                check = resp.lower()
+                day = re.findall(r'(\d+)\s*(?:day)', check)
+                hr = re.findall(r'(\d+)\s*(?:hour)', check)
+                mn = re.findall(r'(\d+)\s*(?:min)', check)
+                if any([day, hr, mn]):
+                    period = ', '.join(
+                        (day and ['%sd' % day[0]] or day)
+                        + (hr and ['%sh' % hr[0]] or hr)
+                        + (mn and ['%sm' % mn[0]] or mn))
+                else:
+                    try:
+                        period = re.findall('[^>]>([^<]+)ago', check)[0].strip()
+                    except (StandardError, Exception):
+                        try:
+                            period = re.findall('[^>]>([^<]+week)', check)[0]
+                        except (StandardError, Exception):
+                            period = 'quite some time'
+
+                result = {('last_down', 'down_for')['up' not in check and 'down for' in check]: period}
+
+        return json.dumps(result)
+
     def clearHistory(self, *args, **kwargs):
 
         myDB = db.DBConnection()

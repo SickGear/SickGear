@@ -1,9 +1,10 @@
 ﻿### 0.17.0 (2018-xx-xx xx:xx:xx UTC)
 
-* Change add "Keep up to x most recent downloads" to Edit Show/Other
-* Change add "Keep up to x most recent downloads" to Manage/Bulk Change/Edit
+* Add TVDB, TheXem, and GitHub buttons to page History/Layout "Provider fails" that fetches a site Up/Down report
+* Add "Keep up to x most recent downloads" to Edit Show/Other
+* Add "Keep up to x most recent downloads" to Manage/Bulk Change/Edit
 * Change append number of downloads to keep to the number of file(s) at Display Show
-* Change add "Keep up to x most recent downloads" to add show finally step
+* Add "Keep up to x most recent downloads" to add show finally step
 * Add prune to refreshDir/rescan
 * Update Tornado Web Server 5.0.1 (35a538f) to 5.0.1 (2b2a220a)
 * Add HDME torrent provider

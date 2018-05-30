@@ -186,6 +186,49 @@ $(document).ready(function() {
 		$.SickGear.sumChecked();
 	});
 
+	function updown(data){
+		var result = ': <span class="grey-text">failed to test site, oh the irony!</span>';
+
+		if(!(/undefined/i.test(data))) {
+			// noinspection JSUnresolvedVariable
+			var resp = data.last_down;
+
+			if (!(/undefined/i.test(resp))) {
+				result = ': <span class="grey-text"> yes it\'s <span class="box-green">up</span> and was last down ' + resp + ' ago</span>';
+			} else {
+				// noinspection JSUnresolvedVariable
+				resp = data.down_for;
+				if (!(/undefined/i.test(resp))) {
+					result = ': <span class="red-text">no, it\'s been <span class="box-red">down</span> for ~' + resp + '</span>';
+				}
+			}
+		}
+
+		return result;
+	}
+
+	function check_site(clicked){
+		var that = $(clicked), el$=$(that.parent());
+		that.attr('disabled', !0);
+		$.ajax({
+			url: $.SickGear.Root + '/history/check_site/?site_name=' + el$.attr('data-check'),
+			type: 'GET',
+			dataType: 'json',
+			complete: function (data) {
+				// noinspection JSUnresolvedVariable
+				el$.find('.result').html(updown(data.responseJSON));
+				el$.find('a').show();
+				that.attr('disabled', !1);
+			}
+		});
+	}
+
+	$.each(['tvdb', 'thexem', 'github'], function(i, el_id){
+		$('#check-' + el_id).find('input').click(function(){
+			check_site(this);
+		});
+	});
+
 	$('.shows-less').click(function(){
 		var table$ = $(this).nextAll('table:first');
 		table$ = table$.length ? table$ : $(this).parent().nextAll('table:first');

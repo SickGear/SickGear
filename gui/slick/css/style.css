@@ -3282,6 +3282,9 @@ input.get_less_eps{
 	margin:0 6px 0 0;
 	min-width:70px
 }
+#provider-failures .check-site .btn{
+	min-width:115px
+}
 #media-search .btn.shows-more,
 #media-search .btn.shows-less,
 #provider-failures .btn.shows-more,
@@ -3602,6 +3605,23 @@ img[src=""],img:not([src]){
 	position:absolute;
 	left:-999px;
 	top:-999px
+}
+
+.box-green{
+	background-color:#68b92b
+}
+.box-red{
+	background-color:#b72828
+}
+.box-green,
+.box-red{
+	color:#eee;
+	padding:0 10px;
+	text-align:center;
+	text-decoration:none;
+	border-radius:4px 4px 4px 4px;
+	-moz-border-radius:3px;
+	-webkit-border-radius:3px
 }
 
 /* =======================================================================
