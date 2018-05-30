@@ -175,6 +175,39 @@ def sanitizeFileName(name):
     return name
 
 
+def remove_file(filepath, tree=False, prefix_failure='', log_level=logger.MESSAGE):
+    """
+    Remove file based on setting for trash v permanent delete
+
+    :param filepath: Path and file name
+    :type filepath: String
+    :param tree: Remove file tree
+    :type tree: Bool
+    :param prefix_failure: Text to prepend to error log, e.g. show id
+    :type prefix_failure: String
+    :param log_level: Log level to use for error
+    :type log_level: Int
+    :return: Type of removal ('Deleted' or 'Trashed') if filepath does not exist or None if no removal occurred
+    :rtype: String or None
+    """
+    result = None
+    if filepath:
+        try:
+            result = 'Deleted'
+            if sickbeard.TRASH_REMOVE_SHOW:
+                result = 'Trashed'
+                ek.ek(send2trash, filepath)
+            elif tree:
+                ek.ek(shutil.rmtree, filepath)
+            else:
+                ek.ek(os.remove, filepath)
+        except OSError as e:
+            logger.log(u'%sUnable to %s %s %s: %s' % (prefix_failure, ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW],
+                                                      ('file', 'dir')[tree], filepath, str(e.strerror)), log_level)
+
+    return (None, result)[filepath and not ek.ek(os.path.exists, filepath)]
+
+
 def remove_file_failed(filename):
     try:
         ek.ek(os.remove, filename)

@@ -27,7 +27,7 @@ from sickbeard import encodingKludge as ek
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20009
+MAX_DB_VERSION = 20010
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -198,7 +198,7 @@ class InitialSchema(db.SchemaUpgrade):
     # = Main DB Migrations =
     # ======================
     # Add new migrations at the bottom of the list; subclass the previous migration.
-    # 0 -> 20007
+    # 0 -> 20009
     def execute(self):
         db.backup_database('sickbeard.db', self.checkDBVersion())
 
@@ -250,14 +250,15 @@ class InitialSchema(db.SchemaUpgrade):
                 # tv_episodes_watched
                 'CREATE TABLE tv_episodes_watched (tvep_id NUMERIC NOT NULL, clientep_id TEXT, label TEXT,'
                 ' played NUMERIC DEFAULT 0 NOT NULL, date_watched NUMERIC NOT NULL, date_added NUMERIC,'
-                ' status NUMERIC, location TEXT, file_size NUMERIC, hide INT default 0 not null)',
+                ' status NUMERIC, location TEXT, file_size NUMERIC, hide INT DEFAULT 0 not null)',
                 # tv_shows
                 'CREATE TABLE tv_shows (show_id INTEGER PRIMARY KEY, indexer_id NUMERIC, indexer NUMERIC,'
                 ' show_name TEXT, location TEXT, network TEXT, genre TEXT, classification TEXT, runtime NUMERIC,'
                 ' quality NUMERIC, airs TEXT, status TEXT, flatten_folders NUMERIC, paused NUMERIC, startyear NUMERIC,'
                 ' air_by_date NUMERIC, lang TEXT, subtitles NUMERIC, notify_list TEXT, imdb_id TEXT,'
                 ' last_update_indexer NUMERIC, dvdorder NUMERIC, archive_firstmatch NUMERIC, rls_require_words TEXT,'
-                ' rls_ignore_words TEXT, sports NUMERIC, anime NUMERIC, scene NUMERIC, overview TEXT, tag TEXT)',
+                ' rls_ignore_words TEXT, sports NUMERIC, anime NUMERIC, scene NUMERIC, overview TEXT, tag TEXT,'
+                ' prune INT DEFAULT 0)',
                 'CREATE UNIQUE INDEX idx_indexer_id ON tv_shows (indexer_id)',
                 # tv_shows_not_found
                 'CREATE TABLE tv_shows_not_found (indexer NUMERIC NOT NULL, indexer_id NUMERIC NOT NULL,'
@@ -1405,4 +1406,18 @@ class AddWatched(db.SchemaUpgrade):
                 )
 
         self.setDBVersion(20009)
+        return self.checkDBVersion()
+
+
+# 20009 -> 20010
+class AddPrune(db.SchemaUpgrade):
+    def execute(self):
+
+        if not self.hasColumn('tv_shows', 'prune'):
+            logger.log('Adding prune to tv_shows')
+
+            db.backup_database('sickbeard.db', self.checkDBVersion())
+            self.addColumn('tv_shows', 'prune', 'INT', 0)
+
+        self.setDBVersion(20010)
         return self.checkDBVersion()

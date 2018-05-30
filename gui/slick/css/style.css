@@ -3230,7 +3230,7 @@ td.tableright{
 }
 
 .optionWrapper{
-	width:450px;
+	width:475px;
 	margin-left:auto;
 	margin-right:auto;
 	padding:6px 12px
@@ -3246,7 +3246,7 @@ td.tableright{
 
 .optionWrapper div.selectChoices{
 	float:left;
-	width:175px;
+	width:200px;
 	margin-left:25px
 }
 

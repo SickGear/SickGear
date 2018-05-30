@@ -677,6 +677,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 											<input type="checkbox" name="${cur_torrent_provider.get_id()}_scene_nuked_active" id="${cur_torrent_provider.get_id()}_scene_nuked_active" <%= html_checked if cur_torrent_provider.scene_nuked_active else '' %>>
 											<span>$filter_scene_nuked_active_desc</span>
 										</label>
+										<span class="hide-if-${cur_torrent_provider.get_id()}_enable_backlog">&nbsp;</span>
     #end if
 									</div>
 								</div>

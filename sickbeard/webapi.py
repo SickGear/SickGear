@@ -2986,6 +2986,7 @@ class CMD_SickGearShow(ApiCall):
         showDict["requirewords"] = showObj.rls_require_words
         if self.overview:
             showDict["overview"] = showObj.overview
+        showDict["prune"] = showObj.prune
         showDict["tag"] = showObj.tag
         showDict["imdb_id"] = showObj.imdbid
         showDict["classification"] = showObj.classification
@@ -4189,6 +4190,7 @@ class CMD_SickGearShows(ApiCall):
                 "upgrade_once": curShow.upgrade_once,
                 "ignorewords": curShow.rls_ignore_words,
                 "requirewords": curShow.rls_require_words,
+                "prune": curShow.prune,
                 "tag": curShow.tag,
                 "imdb_id": curShow.imdbid,
                 "classification": curShow.classification,

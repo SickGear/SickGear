@@ -2171,7 +2171,7 @@ class Home(MainHandler):
                          ([], ['translucent'])[sickbeard.DISPLAY_SHOW_BACKGROUND_TRANSLUCENT] +
                          [{0: 'reg', 1: 'pro', 2: 'pro ii'}.get(sickbeard.DISPLAY_SHOW_VIEWMODE)])
 
-    def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
+    def editShow(self, show=None, prune=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, upgrade_once=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
@@ -2334,6 +2334,7 @@ class Home(MainHandler):
             showObj.subtitles = subtitles
             showObj.air_by_date = air_by_date
             showObj.tag = tag
+            showObj.prune = config.minimax(prune, 0, 0, 9999)
 
             if not directCall:
                 showObj.lang = indexer_lang
@@ -4100,8 +4101,8 @@ class NewHomeAddShows(Home):
                    quality_preset=None, anyQualities=None, bestQualities=None, upgrade_once=None,
                    flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None,
-                   return_to=None, cancel_form=None):
+                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None,
+                   prune=None, tag=None, return_to=None, cancel_form=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
@@ -4211,12 +4212,13 @@ class NewHomeAddShows(Home):
 
         wanted_begin = config.minimax(wanted_begin, 0, -1, 10)
         wanted_latest = config.minimax(wanted_latest, 0, -1, 10)
+        prune = config.minimax(prune, 0, 0, 9999)
 
         # add the show
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
-                                                    wanted_begin, wanted_latest, tag, new_show=new_show,
+                                                    wanted_begin, wanted_latest, prune, tag, new_show=new_show,
                                                     show_name=show_name, upgrade_once=upgrade_once)
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
@@ -4641,6 +4643,9 @@ class Manage(MainHandler):
         paused_all_same = True
         last_paused = None
 
+        prune_all_same = True
+        last_prune = None
+
         tag_all_same = True
         last_tag = None
 
@@ -4684,6 +4689,13 @@ class Manage(MainHandler):
                     paused_all_same = False
                 else:
                     last_paused = curShow.paused
+
+            if prune_all_same:
+                # if we had a value already and this value is different then they're not all the same
+                if last_prune not in (None, curShow.prune):
+                    prune_all_same = False
+                else:
+                    last_prune = curShow.prune
 
             if tag_all_same:
                 # if we had a value already and this value is different then they're not all the same
@@ -4738,6 +4750,7 @@ class Manage(MainHandler):
         t.showList = toEdit
         t.upgrade_once_value = last_upgrade_once if upgrade_once_all_same else None
         t.paused_value = last_paused if paused_all_same else None
+        t.prune_value = last_prune if prune_all_same else None
         t.tag_value = last_tag if tag_all_same else None
         t.anime_value = last_anime if anime_all_same else None
         t.flatten_folders_value = last_flatten_folders if flatten_folders_all_same else None
@@ -4752,7 +4765,7 @@ class Manage(MainHandler):
 
     def massEditSubmit(self, upgrade_once=None, paused=None, anime=None, sports=None, scene=None,
                        flatten_folders=None, quality_preset=False, subtitles=None, air_by_date=None, anyQualities=[],
-                       bestQualities=[], toEdit=None, tag=None, *args, **kwargs):
+                       bestQualities=[], toEdit=None, prune=None, tag=None, *args, **kwargs):
 
         dir_map = {}
         for cur_arg in kwargs:
@@ -4797,6 +4810,8 @@ class Manage(MainHandler):
             else:
                 new_paused = True if paused == 'enable' else False
             new_paused = 'on' if new_paused else 'off'
+
+            new_prune = (config.minimax(prune, 0, 0, 9999), showObj.prune)[prune in (None, '', 'keep')]
 
             if tag == 'keep':
                 new_tag = showObj.tag
@@ -4854,7 +4869,7 @@ class Manage(MainHandler):
                                                                        paused=new_paused, sports=new_sports,
                                                                        subtitles=new_subtitles, anime=new_anime,
                                                                        scene=new_scene, air_by_date=new_air_by_date,
-                                                                       tag=new_tag, directCall=True)
+                                                                       prune=new_prune, tag=new_tag, directCall=True)
 
             if curErrors:
                 logger.log(u'Errors: ' + str(curErrors), logger.ERROR)
@@ -5531,16 +5546,9 @@ class History(MainHandler):
                 # locations repeat with watch events but attempt to delete once
                 attempted += [r['location']]
 
-                try:
-                    if sickbeard.TRASH_REMOVE_SHOW:
-                        ek.ek(send2trash, r['location'])
-                    else:
-                        ek.ek(os.remove, r['location'])
-                except OSError as e:
-                    logger.log(u'Unable to delete file %s: %s' % (r['location'], str(e.strerror)))
-
-                if not ek.ek(os.path.isfile, r['location']):
-                    logger.log(u'Deleted file %s' % r['location'])
+                result = helpers.remove_file(r['location'])
+                if result:
+                    logger.log(u'%s file %s' % (result, r['location']))
 
                     deleted.update({r['tvep_id']: row_show_ids[r['rowid']]})
                     if row_show_ids[r['rowid']] not in refresh:

@@ -417,23 +417,15 @@ class ImageCache:
 
         void = False
         if not void and need_images[self.FANART]:
-            action = ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW]
-
             cache_path = self.fanart_path(show_id).replace('%s.fanart.jpg' % show_id, '')
             # num_images = len(fnmatch.filter(os.listdir(cache_path), '*.jpg'))
 
             for cache_dir in ek.ek(glob.glob, cache_path):
                 if show_id in sickbeard.FANART_RATINGS:
                     del (sickbeard.FANART_RATINGS[show_id])
-                logger.log(u'Attempt to %s purge cache file %s' % (action, cache_dir), logger.DEBUG)
-                try:
-                    if sickbeard.TRASH_REMOVE_SHOW:
-                        send2trash(cache_dir)
-                    else:
-                        shutil.rmtree(cache_dir)
-
-                except OSError as e:
-                    logger.log(u'Unable to %s %s: %s / %s' % (action, cache_dir, repr(e), str(e)), logger.WARNING)
+                result = helpers.remove_file(cache_dir, tree=True)
+                if result:
+                    logger.log(u'%s cache file %s' % (result, cache_dir), logger.DEBUG)
 
         try:
             checked_files = []

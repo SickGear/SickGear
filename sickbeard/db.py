@@ -554,6 +554,7 @@ def MigrationCode(myDB):
         20006: sickbeard.mainDB.DBIncreaseTo20007,
         20007: sickbeard.mainDB.AddWebdlTypesTable,
         20008: sickbeard.mainDB.AddWatched,
+        20009: sickbeard.mainDB.AddPrune,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 
