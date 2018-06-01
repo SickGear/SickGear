@@ -1481,6 +1481,7 @@ class TorrentProvider(GenericProvider):
                 return None
             failure_count += self.failure_count
             self.failure_count = 0
+            cur_url = cur_url.replace('{ts}', '%s.' % str(time.time())[2:6])
             if 10 < len(cur_url) and ((expire and (expire > int(time.time()))) or
                                       self._has_signature(self.get_url(cur_url, skip_auth=True))):
                 for k, v in getattr(self, 'url_tmpl', {}).items():

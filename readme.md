@@ -6,46 +6,54 @@
 SickGear provides management of TV shows and/or Anime, it detects new episodes, links downloader apps, and more.
 
 #### Why SickGear?
-* SickGear maintains a perfect uptime with the longest track record of being stable, reliable and trusted to work
+* SickGear maintains a perfect uptime with the longest track record of being stable, reliable, and trusted to work
+* SickGear gives fast issue resolution and provider updates (historically, with 99% of provider updates under 24 hours)
+* SickGear has the least issues and the least number of changes that require even more "fixes", less is more
+* SickGear Wiki pages are updated from feedback and the supported providers list is accurate and true
 * SickGear delivers valued quality from active development with a wealth of options on a dark or light themed interface
+* SickGear is said to be, simply the bestest all round SickBeard descendant there is, not our words, and very humbling
 
 #### What now?
+Hey you made it here, first, welcome to SickGear! You can dive straight in, or better to read below for what to expect...
 * [Install guides](https://github.com/SickGear/SickGear/wiki/Installation-Instructions) for many platforms
 * [Migrating](https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B0%5D-Migrate) to a hassle free and feature rich set up is super simple
 
-Or read more below...
+Here's a taster for what to expect...
 
-## Some innovative SickGear features
+## Some of the sick innovative gear you get
 * Ideas of shows to add from Trakt, IMDb, and AniDB categories; anticipating, new seasons, new shows, popular, and more
 * Advanced add show finder that near always returns results sorted A-Z, Aired, or Relevancy, with known shows separated
-* Releases can be searched during adding a show (e.g. optionally fetch oldest and/or newest without further effort)
-* Advanced automated search that always works to prevent you wasting time manually scanning result lists
-* Choose to delete watched episodes from a list built directly from played media at Kodi, Emby, and/or Plex (No Trakt!)
-* Smart custom qualities selector system that helps achieve an optimal quality selection for automated episode search
+* Releases can be auto fetched when a show is adding (e.g. optionally fetch oldest and/or newest without further effort)
+* Advanced automated search always works to save you from wasting your time manually picking from result lists
+* Choose to delete watched episodes pulled directly from played media at Kodi, Emby, and/or Plex (without Trakt tracking!)
+* Each show can keep all, or any set number of most recent episodes; e.g. only keep daily releases from the last 40 days
+* Smart custom qualities selector that guides to achieve an optimal quality selection for automated episode search
 * Choose to have episodes upgraded in quality, or keep existing archive quality, and upgrade future episodes either way
-* Single out providers to target "scene releases" either exclusively, with fallbacks to non-scene, and with optional user exclusions
+* Single out providers to target "scene releases" either exclusively, with fallbacks to non-scene, and with optional exclusions
 * Mark providers to avoid "scene nuked" releases, with optional fallback when no other choice is available
 * Natively use a most powerful regex pattern matching system for superior information handling
 * Select a UI style anytime; Regular, Proview I, or Proview II - independently for Episode View, and for Display Show
 * Smart fanart system allows you to rate avoid/prefer. UI can be moved or toggled off/on to fully appreciate a fanart
-* Episode View Layout "Day by Day" displays a fanart background from randomly selected imminent releases
-* Configure from 0 to 500 fanart images to cache per show, default is 3.
+* Episode View Layout "Day by Day" displays fanart backgrounds of imminent releases
+* Configure from 0 to 500 fanart images to cache per show, default is 3
 * Provider server failure charts display what failed, when and why
-* Provider server failure handler that pauses connecting the more a server fails
+* Provider server failure handler that pauses connecting to a server the more it fails
 * Provider server activity graph and stats display how each are performing
+* Integrated IsItDownRightNow buttons for the used TVDB, TheXem, and Github sites to see if any are/were offline
 * Built-in providers that have proved over time to deliver leading durability among its application class and third parties
+* Secure support of Cloudflare IUAM access with no need to install node.js
 * Built-in Kodi repository service to maintain SickGear add-ons, the first add-on is Watched State Updater
 * Separate Plex server and Plex client settings, multiple LAN Plex server support, and Plex Home multiple user support
 * Intelligent library updates target the actual Plex server that carries the show of an episode (multi LAN server)
-* Communicate directly with NZBGet using a dedicated integration script
+* NZBGet to SickGear direct connection using a purpose built add-on
 * Communicate directly with qBittorrent/Deluge/Transmission etc. using a dedicated integration script
 * Proxy auto-config (PAC) support to define when a proxy is used instead of using one for every system request
-* Change file date, to the date that the episode aired (yup, the feature was first created here for XBMC file sorting)
+* Change file date, to the date that the episode aired (feature first created here for XBMC file list sorting)
 * Visual percentage progress of managed episodes
 * Configure an episode status for removed media files
 * Configurable default home page
 
-Features above link to the UI; innovations also exist in core, we often inspire imitators, but you can [get the real deal!](https://github.com/SickGear/SickGear/wiki/Installation-Instructions)
+Innovations also exist in core, we often inspire imitators, but you can [get the real gear!](https://github.com/SickGear/SickGear/wiki/Installation-Instructions)
 
 Other features and worthy points;
 * Stable, quality assured testing and development cycle
@@ -56,8 +64,8 @@ Other features and worthy points;
   * View missed and upcoming shows at a glance with "day by day" and other layouts
   * Automatic and manual search for availability of episodes you want
   * Well known established sources are used to gather reliable show information
-  * Known and user added alternative show names can be searched
-  * Known and user added alternative numbered seasons and/or episodes can be searched
+  * Known and user editable alternative show names can be searched
+  * Known and user editable alternative numbered seasons and/or episodes can be searched
   * Forward search results directly to clients like NZBGet, SABNZBd, qBitTorrent, Deluge and others
   * Save search results to a "blackhole" folder, a place designated for clients to auto scan
   * Built-in post processing of episodes, with renaming to custom folder and/or file names
@@ -69,7 +77,7 @@ Other features and worthy points;
 * Notification
   * Home Theater/NAS (Emby, Kodi, Plex, Syno, Tivo, and more) can be notified to update their library
   * Social notifiers (Trakt, Slack, Gitter, Discord, E-mail, and more)
-  * Device notifiers (Boxcar2, Notify My Android, Growl, Prowl, and more)
+  * Device notifiers (Boxcar2, Growl, Prowl, and more)
 * Server friendly with minimal number of API calls using both active and passive search tech
 * Automated alternative show names and episode numbering from XEM
 
@@ -107,7 +115,10 @@ Other features and worthy points;
   <td>Development (<a title="Development Changelog" href="../develop/CHANGES.md">changes</a>)</td><td>(mostly stable)</td><td><a id="top" title="Where some imitate"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/badge-innovate.png"></a></td><td><a title="Build Status: Passing = All good!" target="_blank" href="https://travis-ci.org/SickGear/SickGear"><img src="https://travis-ci.org/SickGear/SickGear.svg?branch=develop"></a></td>
 </tr>
 <tr align="center">
-<td colspan=5>[ ++ Install <a href="https://github.com/SickGear/SickGear/wiki/Installation-Instructions">Guides</a> ++ ][ Frequently <a href="https://github.com/SickGear/SickGear/wiki/Frequently-Answered-Questions">Answered</a> ][ Discover <a href="https://github.com/SickGear/SickGear/wiki">Wiki</a> ]</td>
+  <td colspan=5>[ ++ Install <a href="https://github.com/SickGear/SickGear/wiki/Installation-Instructions">Guides</a> ++ ][ Frequently <a href="https://github.com/SickGear/SickGear/wiki/Frequently-Answered-Questions">Answered</a> ][ Discover <a href="https://github.com/SickGear/SickGear/wiki">Wiki</a> ]</td>
+</tr>
+<tr align="center">
+  <td>Github Stats</td><td>(reliability)</td><td><a href="http://isitmaintained.com/project/SickGear/SickGear" title="Average time to resolve an issue"><img title="Average time to resolve an issue" src="http://isitmaintained.com/badge/resolution/SickGear/SickGear.svg"></a></td><td><a href="http://isitmaintained.com/project/SickGear/SickGear" title="Percentage of issues still open"><img title="Percentage of issues still open" src="http://isitmaintained.com/badge/open/SickGear/SickGear.svg"></a></td>
 </tr>
 </tbody>
 </table>
@@ -118,7 +129,7 @@ Other features and worthy points;
 The following [guidelines](https://github.com/SickGear/SickGear/wiki/%5BHow-to%5D-Report-Issues) prevent reported issues getting messy and help us quickly get to the nub of an issue.  Please be aware that we require all requested information and that missing details will likely result in the reported issue being closed.
 
 #### Contribute code
-Please read this [guide](https://github.com/SickGear/SickGear/wiki/%5BHow-to%5D-Contribute-Code).  Directions  include coding with git and submitting pull requests.
+Please read this [guide](https://github.com/SickGear/SickGear/wiki/%5BHow-to%5D-Contribute-Code).  Directions include coding with git and submitting pull requests.
 If your pull request is a new feature, please try explaining its function to a limit of 200 characters.  Better, talk to our devs in IRC (details below).
 
 ## Contributors
@@ -138,7 +149,7 @@ Finally, a massive thanks to all those that remain in the shadows, the quiet one
 * <a href="https://gitter.im/SickGear/"><img src="https://badges.gitter.im/sickgear.svg"></a> web based (most likely one on one with a dev)
 * <a name="freenode"><img src="https://img.shields.io/badge/style-join%20chat-blue.svg?style=flat.svg&label=freenode"></a>&nbsp;(`irc.freenode.net` channel `#SickGear`)
 
-Although support is available, you should understand the basics of your Linux or Windows OS.  If you don't understand basics like locating a db file, not running as root, or things like setting file permissions, then SickGear might not be for you.
+Although support is available, you should understand the basics of your OS.  If you can't understand locating a db file, not running as root, or setting file permissions, then SickGear might not be for you.
 
 ---
 Enjoy SickGear - stability, reliability, assured.
