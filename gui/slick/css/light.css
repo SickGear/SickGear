@@ -65,10 +65,12 @@ pre .prelight-num{
 	border-color:#fff
 }
 
+.component-group.bubblelist a,
 .ui-widget-content a{
 	color:rgb(42, 100, 150)
 }
 
+.component-group.bubblelist a:hover,
 .ui-widget-content a:hover{
 	color:#09a2ff
 }
@@ -963,7 +965,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-color:#333
 }
 
-.component-group.typelist .bgcol,
+.component-group.bubblelist .bgcol,
 .dropdown-menu{
 	background-color:#f5f1e4;
 	border:1px solid rgba(0, 0, 0, 0.15);
