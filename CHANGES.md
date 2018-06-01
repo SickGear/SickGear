@@ -1,6 +1,7 @@
 ﻿### 0.17.0 (2018-xx-xx xx:xx:xx UTC)
 
 * Add TVDB, TheXem, and GitHub buttons to page History/Layout "Provider fails" that fetches a site Up/Down report
+* Add bubble links to History/Provider fails when more than one provider has failures
 * Add "Keep up to x most recent downloads" to Edit Show/Other
 * Add "Keep up to x most recent downloads" to Manage/Bulk Change/Edit
 * Change append number of downloads to keep to the number of file(s) at Display Show

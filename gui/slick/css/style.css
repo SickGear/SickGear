@@ -236,6 +236,7 @@ inc_top.tmpl
 	border:1px solid
 }
 
+.component-group.bubblelist a,
 .ui-widget-content a{
 	text-decoration:none
 }
@@ -3801,6 +3802,18 @@ fieldset[disabled] .navbar-default .btn-link:hover,
 fieldset[disabled] .navbar-default .btn-link:focus{
 	color:#ccc
 }
+
+.component-group.bubble.last{padding:0;margin:0;border-bottom:none}
+.component-group.bubblelist{min-height:30px}
+.component-group.bubblelist .type{padding:6px}
+.component-group.bubblelist .item{display:inline-block}
+.component-group.bubblelist .item img{margin-right:4px}
+.component-group.bubblelist .item.text{font-size:12px; padding-right:3px}
+.component-group.bubblelist .item a{font-size:16px;padding-right:20px}
+.component-group.bubblelist .item.text,
+.component-group.bubblelist .item a{line-height:16px;vertical-align:middle}
+.component-group.bubblelist .item a img{vertical-align:bottom;opacity:0.65;filter:alpha(opacity=65)}
+.component-group.bubblelist .item a:hover img{opacity:1;filter:alpha(opacity=1)}
 
 .dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus{
 	color:#262626;

@@ -589,57 +589,80 @@
 ##
 ##
 	<div id="provider-failures">
+		<div style="padding-bottom:10px">
     #for ($check, $check_name, $check_url) in [
         ('tvdb', 'TVDB Api', 'api.thetvdb.com'), ('thexem', 'The Xem', 'thexem.de'), ('github', 'GitHub', 'github.com'),
     ]
-		<div id="check-$check" data-check="check_$check" class="check-site" style="margin-bottom:10px">
-			<input type="button" class="btn" value="Check $check_name">
-			<span style="line-height:26px">Test if site is up<span class="result"></span>
-				<a class="addQTip" style="margin-left:2px;display:none" href="$sickbeard.helpers.anon_url('http://www.isitdownrightnow.com/downorjustme.php?url=' + $check_url)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View full report for $check_name in new tab"><img alt="[IsItDown]" height="16" width="16" src="$sbRoot/images/iidrn.png" /></a>
-			</span>
-		</div>
+			<div id="check-$check" data-check="check_$check" class="check-site" style="margin-bottom:10px">
+				<input type="button" class="btn" value="Check $check_name">
+				<span style="line-height:26px">Test if site is up<span class="result"></span>
+					<a class="addQTip" style="margin-left:2px;display:none" href="$sickbeard.helpers.anon_url('http://www.isitdownrightnow.com/downorjustme.php?url=' + $check_url)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View full report for $check_name in new tab"><img alt="[IsItDown]" height="16" width="16" src="$sbRoot/images/iidrn.png" /></a>
+				</span>
+			</div>
     #end for
+		</div>
 
     #if not $provider_fails
 		<p>No current provider failures. Failure stats display here when appropriate.</p>
     #else
-        <p>When a provider cannot be contacted over a period, SickGear backs off and waits an increasing interval between each retry</p>
-        #for $prov in $provider_fail_stats
+<style>
+	.component-group{min-height:50px}
+	.component-group.bubblelist{padding:0;border-bottom:none}
+	.component-group.bubblelist .item a{font-size:14px;padding-right:14px}
+</style>
+        #set dev = (1, 3)[False]
+        #if 1 < len([$prov for $prov in $provider_fail_stats * $dev if len($prov['fails'])])
+		<div class="component-group bubblelist" style="margin:0 0 3px">
+			<div class="type bgcol">
+				<span class="list"><div class="item text">Bubble links:</div>
+            #for $n, $prov in enumerate($provider_fail_stats * $dev)
+                #if $len($prov['fails'])
+					<div class="item"><a href="#$prov['prov_id']-section-$n" rel="noreferrer"><img height="16px" src="$sbRoot/images/providers/$prov['prov_img']">$prov['name']</a></div>
+                #end if
+            #end for
+				</span>
+			</div>
+		</div>
+        #end if
+		<p id="bubble-after">When a provider cannot be contacted over a period, SickGear backs off and waits an increasing interval between each retry</p>
+
+        #for $n, $prov in enumerate($provider_fail_stats * $dev)
             #if $len($prov['fails'])
 
 		<!-- $prov['name'] -->
-		<div>
+		<div class="component-group bubble#if $n + 1 == $len($provider_fail_stats * $dev)# last#end if#">
+			<div name="$prov['prov_id']-section-$n" style="text-align:left">
                 #set $prov_class = '<span %sstyle="vertical-align:middle">'
                 #if not $prov['active']
                     #set $prov_class = $prov_class % 'class="grey-text" '
                 #else
                     #set $prov_class = $prov_class % ''
                 #end if
-			<input type="button" class="shows-more btn" value="Expand" style="display:none"><input type="button" class="shows-less btn" value="Collapse"><img src="$sbRoot/images/providers/$prov['prov_img']" width="16" height="16" style="margin:0 6px 0 3px">$prov_class$prov['name']
+				<input type="button" class="shows-more btn" value="Expand" style="display:none"><input type="button" class="shows-less btn" value="Collapse"><img src="$sbRoot/images/providers/$prov['prov_img']" width="16" height="16" style="margin:0 6px 0 3px">$prov_class$prov['name']
                 #if $prov['active']
                     #if $prov['next_try']
                         #set nt = $str($prov['next_try']).split('.', 2)[0][::-1].replace(':', ' m', 1).replace(':', ' h', 1)[::-1]
-			... is paused until $sbdatetime.sbdatetime.sbftime($sbdatetime.sbdatetime.now() + $prov['next_try'], markup=True) (in ${nt}s) <input type="button" class="provider-retry btn" id="$prov['prov_id']-btn-retry" value="Ignore pause on next search">
+				... is paused until $sbdatetime.sbdatetime.sbftime($sbdatetime.sbdatetime.now() + $prov['next_try'], markup=True) (in ${nt}s) <input type="button" class="provider-retry btn" id="$prov['prov_id']-btn-retry" value="Ignore pause on next search">
                     #end if
                 #else
-			... is not enabled
+				... is not enabled
                 #end if
-			</span>
-		</div>
-		<table class="manageTable provider-failures tablesorter hover-highlight focus-highlight text-center" cellspacing="0" border="0" cellpadding="0">
-			<thead>
-				<tr>
-					<th class="text-center" style="width:13em;padding-right:20px">period of 1hr</th>
-					<th class="text-center" style="padding-right:20px">server/timeout</th>
-					<th class="text-center" style="padding-right:20px">network</th>
-					<th class="text-center" style="padding-right:20px">no data</th>
-					<th class="text-center" style="padding-right:20px">other</th>
+				</span>
+			</div>
+			<table class="manageTable provider-failures tablesorter hover-highlight focus-highlight text-center" cellspacing="0" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-center" style="width:13em;padding-right:20px">period of 1hr</th>
+						<th class="text-center" style="padding-right:20px">server/timeout</th>
+						<th class="text-center" style="padding-right:20px">network</th>
+						<th class="text-center" style="padding-right:20px">no data</th>
+						<th class="text-center" style="padding-right:20px">other</th>
                 #if $prov['has_limit']
 					<th class="text-center" style="padding-right:20px">hit limit</th>
                 #end if
-				</tr>
-			</thead>
-			<tbody>
+					</tr>
+				</thead>
+				<tbody>
                 #set $day = []
                 #for $fail in $prov['fails']
                     #set $child = True
@@ -648,33 +671,33 @@
                         #set $child = False
                     #end if
                     #slurp#
-				<tr#if $fail['multirow'] and $child# class="tablesorter-childRow"#end if#>
+					<tr#if $fail['multirow'] and $child# class="tablesorter-childRow"#end if#>
                     #if $fail['multirow']
                         #if not $child
-					<td><a href="#" class="provider-fail-parent-toggle" title="Totals (expand for detail)">$sbdatetime.sbdatetime.sbfdate($fail['date_time'])</a></td>
+						<td><a href="#" class="provider-fail-parent-toggle" title="Totals (expand for detail)">$sbdatetime.sbdatetime.sbfdate($fail['date_time'])</a></td>
                         #else
-					<td>$sbdatetime.sbdatetime.sbftime($fail['date_time'], markup=True)</td>
+						<td>$sbdatetime.sbdatetime.sbftime($fail['date_time'], markup=True)</td>
                         #end if
                     #else
-					<td>$sbdatetime.sbdatetime.sbfdatetime($fail['date_time'], markup=True)</td>
+						<td>$sbdatetime.sbdatetime.sbfdatetime($fail['date_time'], markup=True)</td>
                     #end if
                     #set $blank = '-'
                     #set $title=None
                     #if $fail['http']['count']
                         #set $title=$fail['http']['code']
                     #end if
-					<td>#if $fail['http']['count']#<span title="#if $child or not $fail['multirow']#$title#else#Expand for fail codes#end if#">$fail['http']['count']</span>#else#$blank#end if# / #echo $fail['timeout'].get('count', 0) or $blank#</td>
-					<td>#echo ($fail['connection'].get('count', 0) + $fail['connection_timeout'].get('count', 0)) or $blank#</td>
-					<td>#echo $fail['nodata'].get('count', 0) or $blank#</td>
-					<td>#echo $fail['other'].get('count', 0) or $blank#</td>
+						<td>#if $fail['http']['count']#<span title="#if $child or not $fail['multirow']#$title#else#Expand for fail codes#end if#">$fail['http']['count']</span>#else#$blank#end if# / #echo $fail['timeout'].get('count', 0) or $blank#</td>
+						<td>#echo ($fail['connection'].get('count', 0) + $fail['connection_timeout'].get('count', 0)) or $blank#</td>
+						<td>#echo $fail['nodata'].get('count', 0) or $blank#</td>
+						<td>#echo $fail['other'].get('count', 0) or $blank#</td>
                     #if $prov['has_limit']
-					<td>#echo $fail.get('limit', {}).get('count', 0) or $blank#</td>
+						<td>#echo $fail.get('limit', {}).get('count', 0) or $blank#</td>
                     #end if
-				</tr>
+					</tr>
                 #end for
-			</tbody>
-		</table>
-		<!-- /$prov['name'] -->
+				</tbody>
+			</table>
+		</div><!-- /$prov['name'] -->
             #end if
         #end for
     #end if

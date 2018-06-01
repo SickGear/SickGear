@@ -42,4 +42,17 @@ $(document).ready(function(){
 	$('#NAV' + topmenu).addClass('active');
 	$('.dropdown-toggle').dropdownHover();
 	(/undefined/i.test(document.createElement('input').placeholder)) && $('body').addClass('no-placeholders');
+
+	$('.bubblelist').on('click', '.list .item a', function(){
+		var bubbleAfter$ = $('#bubble-after'),
+			lastBubble$ = $('.bubble.last'), toBubble = $(this).attr('href').replace('#', ''),
+			doLast = (lastBubble$.length && toBubble === lastBubble$.find('div[name*="section"]').attr('name'));
+
+		doLast && lastBubble$.removeClass('last');
+		(bubbleAfter$.length && bubbleAfter$ || $(this).closest('.component-group')).after(
+			$('[name=' + $(this).attr('href').replace('#','') + ']').closest('.component-group')
+		);
+		doLast && $('.bubble').last().addClass('last');
+		return !1;
+	});
 });
