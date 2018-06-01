@@ -62,8 +62,9 @@ class RarbgProvider(generic.TorrentProvider):
             if not self.should_skip() and response and 'token' in response:
                 self.token = response['token']
                 self.token_expiry = datetime.datetime.now() + datetime.timedelta(minutes=14)
+                time.sleep(2)
                 return True
-            time.sleep(1.1)
+            time.sleep(2)
 
         logger.log(u'No usable API token returned from: %s' % self.urls['api_token'], logger.ERROR)
         return False
