@@ -6408,6 +6408,9 @@ class ConfigProviders(Config):
                         if attr_check in kwargs:
                             setattr(nzb_src, attr, str(kwargs.get(attr_check) or '').strip())
                 else:
+                    new_provider.enabled = True
+                    _ = new_provider.caps  # when adding a custom, trigger server_type update
+                    new_provider.enabled = False
                     sickbeard.newznabProviderList.append(new_provider)
 
                 active_ids.append(cur_id)

@@ -44,6 +44,7 @@ from sickbeard.common import SD, SKIPPED
 from sickbeard.databases import mainDB, cache_db, failed_db
 from sickbeard.exceptions import ex
 from sickbeard.providers.generic import GenericProvider
+from sickbeard.providers.newznab import NewznabConstants
 from sickbeard.watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
 from indexers.indexer_config import INDEXER_TVDB
 from indexers.indexer_api import indexerApi
@@ -1275,7 +1276,7 @@ def initialize(console_logging=True):
                 ('api_key', ''), ('username', ''),
                 ('scene_only', False), ('scene_or_contain', ''), ('scene_loose', False), ('scene_loose_active', False),
                 ('scene_rej_nuked', False), ('scene_nuked_active', False),
-                ('search_mode', 'eponly'), ('search_fallback', False)
+                ('search_mode', 'eponly'), ('search_fallback', False), ('server_type', NewznabConstants.SERVER_DEFAULT)
             ]:
                 if hasattr(nzb_prov, attr):
                     attr_check = '%s_%s' % (prov_id, attr.strip('_'))
@@ -1742,7 +1743,7 @@ def save_config():
         for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
                                  'scene_only', 'scene_loose', 'scene_loose_active',
                                  'scene_rej_nuked', 'scene_nuked_active',
-                                 'search_fallback']
+                                 'search_fallback', 'server_type']
                      if hasattr(src, x)]:
             new_config[src_id_uc]['%s_%s' % (src_id, attr)] = helpers.tryInt(getattr(src, attr, None))
 
