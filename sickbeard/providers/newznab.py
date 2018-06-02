@@ -92,6 +92,12 @@ class NewznabConstants:
                    'season': SEARCH_SEASON,
                    'ep': SEARCH_EPISODE}
 
+    SERVER_DEFAULT = 0
+    SERVER_SPOTWEB = 1
+
+    server_types = {SERVER_DEFAULT: 'newznab',
+                    SERVER_SPOTWEB: 'spotweb'}
+
     def __init__(self):
         pass
 
@@ -99,11 +105,12 @@ class NewznabConstants:
 class NewznabProvider(generic.NZBProvider):
 
     def __init__(self, name, url, key='', cat_ids=None, search_mode=None, search_fallback=False,
-                 enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False):
+                 enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False, server_type=None):
         generic.NZBProvider.__init__(self, name, True, False)
 
         self.url = url
         self.key = key
+        self.server_type = tryInt(server_type, None) or NewznabConstants.SERVER_DEFAULT
         self._exclude = set()
         self.cat_ids = cat_ids or ''
         self._cat_ids = None
@@ -185,6 +192,11 @@ class NewznabProvider(generic.NZBProvider):
             pass
         self._last_recent_search = value
 
+    def image_name(self):
+
+        return generic.GenericProvider.image_name(
+            self, ('newznab', 'spotweb')[self.server_type == NewznabConstants.SERVER_SPOTWEB])
+
     def check_cap_update(self):
         if self.enabled and \
                 (not self._caps or (datetime.datetime.now() - self._caps_last_updated) >= datetime.timedelta(days=1)):
@@ -224,6 +236,12 @@ class NewznabProvider(generic.NZBProvider):
         all_cats = []
         xml_caps = self._get_caps_data()
         if None is not xml_caps:
+            server_node = xml_caps.find('.//server')
+            if None is not server_node:
+                self.server_type = (NewznabConstants.SERVER_DEFAULT, NewznabConstants.SERVER_SPOTWEB)[
+                    NewznabConstants.server_types.get(NewznabConstants.SERVER_SPOTWEB) in
+                    (server_node.get('type', '') or server_node.get('title', '')).lower()]
+
             tv_search = xml_caps.find('.//tv-search')
             if None is not tv_search:
                 for c in [i for i in tv_search.get('supportedParams', '').split(',')]:
@@ -341,10 +359,10 @@ class NewznabProvider(generic.NZBProvider):
         return True
 
     def config_str(self):
-        return '%s|%s|%s|%s|%i|%s|%i|%i|%i|%i' \
+        return '%s|%s|%s|%s|%i|%s|%i|%i|%i|%i|%i' \
                % (self.name or '', self.url or '', self.maybe_apikey() or '', self.cat_ids or '', self.enabled,
                   self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog,
-                  self.enable_scheduled_backlog)
+                  self.enable_scheduled_backlog, self.server_type)
 
     def _season_strings(self, ep_obj):
 

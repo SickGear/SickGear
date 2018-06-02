@@ -2,6 +2,7 @@
 #from sickbeard.clients import get_client_instance
 #from sickbeard.providers.generic import GenericProvider
 #from sickbeard.providers import thepiratebay
+#from sickbeard.providers.newznab import NewznabConstants
 #from sickbeard.helpers import anon_url, starify
 ##
 #set global $title = 'Config - Providers'
@@ -95,6 +96,7 @@
     #set $cur_name = $cur_provider.get_id()
     #set $cur_url = $cur_provider.url
     #set $show_type = $sickbeard.USE_NZBS and $sickbeard.USE_TORRENTS and $GenericProvider.NZB == $cur_provider.providerType
+    #set $spotweb = ('', 'sw ')[$getattr($cur_provider, 'server_type', None) == $NewznabConstants.SERVER_SPOTWEB and type($cur_provider).__name__ not in ['TorrentRssProvider']]
     #set $bad_url = not $cur_url and cur_provider.is_enabled()
     #set $tip = ($cur_provider.name + ('', ' (enable for link)')[not $cur_url and not cur_provider.is_enabled()],
         'Site Down')[$bad_url]
@@ -106,7 +108,7 @@
     #if $cur_provider.is_public_access() and type($cur_provider).__name__ not in ['TorrentRssProvider']#
 								<span style="font-size:10px;vertical-align:top;font-weight:normal">(PA)</span>
     #end if##if $show_type##slurp
-								<span style="font-size:10px;vertical-align:top;font-weight:normal">($cur_provider.providerType)</span>
+								<span style="font-size:10px;vertical-align:top;font-weight:normal">($spotweb$cur_provider.providerType)</span>
     #end if##if not $cur_provider.supports_backlog#*#set $backlog_only_tip=True##end if##slurp
 								<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="margin-top:3px"></span>
 							</li>
