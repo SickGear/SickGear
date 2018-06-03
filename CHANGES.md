@@ -24,6 +24,11 @@
 
 
 
+### 0.16.15 (2018-06-03 21:24:00 UTC)
+
+* Change garbage_name regex
+
+
 ### 0.16.14 (2018-06-01 15:55:00 UTC)
 
 * Change improve IPT and RarBG providers
