@@ -73,10 +73,12 @@ class NameParser(object):
 
         cls.compiled_regexes = {0: [], 1: []}
         index = 0
+        strip_comment = re.compile('\(\?#[^)]+\)')
         for regexItem in uncompiled_regex:
             for cur_pattern_num, (cur_pattern_name, cur_pattern) in enumerate(regexItem):
                 try:
-                    cur_regex = re.compile(cur_pattern, re.VERBOSE | re.IGNORECASE)
+                    cur_pattern = strip_comment.sub('', cur_pattern)
+                    cur_regex = re.compile('(?x)' + cur_pattern, re.VERBOSE | re.IGNORECASE)
                 except re.error as errormsg:
                     logger.log(u'WARNING: Invalid episode_pattern, %s. %s' % (errormsg, cur_pattern))
                 else:
