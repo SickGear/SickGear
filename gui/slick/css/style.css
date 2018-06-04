@@ -1958,6 +1958,7 @@ a.service img{
 #display-show .tablesorter tr.unaired{
 	background-color:#f5f1e4
 }
+.unknown,
 #display-show.back-art.pro.ii .tablesorter tr.unaired{
 	background-color:rgba(245,241,228,0.7);
 	color:#584b20

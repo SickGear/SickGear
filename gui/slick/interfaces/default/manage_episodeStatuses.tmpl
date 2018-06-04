@@ -17,16 +17,16 @@
 	<h1 class="title">$title</h1>
 #end if
 ##
-#if not $whichStatus or ($whichStatus and not $ep_counts)
+#if not $which_status or ($which_status and not $ep_counts)
 ##
-    #if $whichStatus:
-	<h3>no episodes have status <span class="grey-text">$statusStrings[$whichStatus].lower()</span></h3>
+    #if $which_status:
+	<h3>no episodes have status <span class="grey-text">$statusStrings[$which_status].lower()</span></h3>
     #end if
 
-	<form action="$sbRoot/manage/episodeStatuses" method="get">
+	<form action="$sbRoot/manage/episode_statuses" method="get">
 
 		Manage episodes with status
-		<select name="whichStatus" class="form-control form-control-inline input-sm" style="margin:0 10px">
+		<select name="which_status" class="form-control form-control-inline input-sm" style="margin:0 10px">
 
     #for $curStatus in [$SKIPPED, $UNKNOWN, $SNATCHED, $WANTED, $ARCHIVED, $IGNORED, $DOWNLOADED]:
 			<option value="$curStatus"#echo ('', ' selected="selected"')[$curStatus == $default_manage]#>$statusStrings[$curStatus]</option>
@@ -37,51 +37,52 @@
 	</form>
 ##
 #else
-    #if $whichStatus in ($ARCHIVED, $IGNORED):
+    #if $which_status == $IGNORED:
+        #set $row_class = 'skipped'
+    #elif $which_status == $ARCHIVED:
         #set $row_class = 'good'
-    #elif $whichStatus == $SNATCHED:
+    #elif $which_status == $SNATCHED:
         #set $row_class = 'snatched'
     #else
-        #set $row_class = $Overview.overviewStrings[$whichStatus]
+        #set $row_class = $Overview.overviewStrings[$which_status]
     #end if
 
     #set $statusList = [$ARCHIVED, $IGNORED, $SKIPPED]
-    #if $DOWNLOADED == $whichStatus:
+    #if $DOWNLOADED == $which_status:
         #set $statusList = [$ARCHIVED]
-    #elif $ARCHIVED == $whichStatus:
+    #elif $ARCHIVED == $which_status:
         #set $statusList = [$SKIPPED, $DOWNLOADED, $ARCHIVED, $IGNORED]
     #end if
-    #if $whichStatus in $statusList
-        $statusList.remove($whichStatus)
+    #if $which_status in $statusList
+        $statusList.remove($which_status)
     #end if
 
-    #if $whichStatus in $SNATCHED_ANY
+    #if $which_status in $SNATCHED_ANY
         $statusList.append($FAILED)
     #end if
 
 <script type="text/javascript" src="$sbRoot/js/manageEpisodeStatuses.js?v=$sbPID"></script>
-
-	<form action="$sbRoot/manage/changeEpisodeStatuses" method="post">
+	<form action="$sbRoot/manage/change_episode_statuses" method="post">
 		$xsrf_form_html
 
-		<input type="hidden" id="oldStatus" name="oldStatus" value="$whichStatus">
+		<input type="hidden" id="old-status" name="old_status" value="$which_status">
 
-		<h3><span class="grey-text">$ep_count</span> episode#echo ('s', '')[1 == $ep_count]# marked <span class="grey-text">$statusStrings[$whichStatus].lower()</span> in <span class="grey-text">${len($sorted_show_ids)}</span> show#echo ('s', '')[1 == len($sorted_show_ids)]#</h3>
+		<h3><span class="grey-text">$ep_count</span> episode#echo ('s', '')[1 == $ep_count]# marked <span class="grey-text">$statusStrings[$which_status].lower()</span> in <span class="grey-text">${len($sorted_show_ids)}</span> show#echo ('s', '')[1 == len($sorted_show_ids)]#</h3>
 
-		<input type="hidden" id="row_class" value="$row_class">
+		<input type="hidden" id="row-class" value="$row_class">
 
 		<div class="form-group">
 			<span>Set checked shows/episodes to</span>
-			<select name="newStatus" class="form-control form-control-inline input-sm" style="margin:0 10px 0 5px">
+			<select id="set-status" name="new_status" class="form-control form-control-inline input-sm" style="margin:0 10px 0 5px">
     #for $curStatus in $statusList:
 				<option value="$curStatus">$statusStrings[$curStatus]</option>
     #end for
 			</select>
 			<input class="btn btn-inline go" type="submit" value="Go">
 
-    #if $DOWNLOADED != $whichStatus:
+    #if $DOWNLOADED != $which_status:
 			<span class="red-text" style="margin:0 0 0 30px">Override checked status to</span>
-			<select name="wantedStatus" class="form-control form-control-inline input-sm" style="margin:0 10px 0 5px">
+			<select name="wanted_status" class="form-control form-control-inline input-sm" style="margin:0 10px 0 5px">
 				<option value="$UNKNOWN">nothing</option>
 				<option value="$WANTED">$statusStrings[$WANTED]</option>
 			</select>
@@ -95,6 +96,10 @@
 			<input type="button" class="btn btn-xs expandAll" value="Expand All Shows">
 		</div>
 
+<style>
+	.manageTable tr{line-height:26px}
+	.recommend{margin-left:20px}
+</style>
 		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
 			<thead></thead>
 			<tbody>

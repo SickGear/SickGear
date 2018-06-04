@@ -39,7 +39,7 @@ var ajaxConsumer = function () {
 			.done(function (data) {
 				logInfo('search_q_progress.success(data)', data);
 				if (!data.episodes || 0 === data.episodes.length) {
-					imgRestore();
+					rowRestore();
 				}
 				// using 5s as a reasonable max. when updating images from historical statuses after a page refresh
 				that.pollInterval = data.episodes && data.episodes.length
@@ -122,7 +122,7 @@ function uiUpdateComplete(data) {
 						'$1' + ' <span class="quality ' + ep.quality + '">' + '$2' + '</span>');
 
 					// remove backed vars
-					link$.removeAttr('data-status data-imgclass');
+					link$.removeAttr('data-status data-rowclass data-imgclass');
 			}
 
 			// update the status area
@@ -146,16 +146,19 @@ function getAttr(el$, name) {
 
 function imgUpdate(link$, tip, cls) {
 	link$.find('img').attr('src', '').attr('title', tip).prop('alt', '')
-		.removeClass('spinner queued search no yes').addClass(cls);
+		.removeClass('spinner2 queued search no yes').addClass(cls);
 }
 
-function imgRestore() {
+function rowRestore() {
 	$('a[data-status]').each(function() {
+		$(this).closest('tr')
+			.removeClass('skipped wanted qual good unaired snatched')
+			.addClass($(this).attr('data-rowclass'));
 		$(this).closest('.col-search').siblings('.col-status').html($(this).attr('data-status'));
 		imgUpdate($(this),
 			getAttr($(this), 'data-imgtitle'),
 			getAttr($(this), 'data-imgclass') || $.ajaxEpSearch.defaults.searchImage);
-		$(this).removeAttr('data-status data-imgclass data-imgtitle');
+		$(this).removeAttr('data-status data-rowclass data-imgclass data-imgtitle');
 	});
 }
 
@@ -165,7 +168,7 @@ function imgRestore() {
 		defaults: {
 			size:			16,
 			colorRow:		!1,
-			loadingImage:	'spinner',
+			loadingImage:	'spinner2',
 			queuedImage:	'queued',
 			searchImage:	'search',
 			imgNo:			'no',
@@ -194,6 +197,7 @@ function imgRestore() {
 			var link$ = $(this), img$ = link$.find('img'), img = ['Failed', uiOptions.imgNo], imgCls;
 			// backup ui vars
 			if (link$.closest('.col-search') && link$.closest('.col-search').siblings('.col-status')) {
+				link$.attr('data-rowclass', getAttr(link$.closest('tr'), 'class'));
 				link$.attr('data-status', link$.closest('.col-search').siblings('.col-status').html().trim());
 			}
 			link$.attr('data-imgtitle', getAttr(img$, 'title'));
@@ -202,6 +206,9 @@ function imgRestore() {
 			}
 
 			imgUpdate(link$, 'Loading', uiOptions.loadingImage);
+			link$.closest('tr')
+				.removeClass('skipped wanted qual good unaired snatched')
+				.addClass('wanted');
 
 	        $.getJSON({url: $(this).attr('href'), timeout: 15000})
 				.done(function(data) {
@@ -226,7 +233,7 @@ function imgRestore() {
 					imgUpdate(link$, img[0], img[1]);
 					ajaxConsumer.checkManualSearches();
 				})
-				.fail(function() { imgRestore(); });
+				.fail(function() { rowRestore(); });
 
 	        // prevent following the clicked link
 	        return !1;

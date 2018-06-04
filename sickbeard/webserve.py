@@ -2605,7 +2605,7 @@ class Home(MainHandler):
                         continue
 
                     if ARCHIVED == status:
-                        if ep_obj.status in Quality.DOWNLOADED:
+                        if ep_obj.status in Quality.DOWNLOADED or direct:
                             ep_obj.status = Quality.compositeStatus(
                                 ARCHIVED, (Quality.splitCompositeStatus(ep_obj.status)[1], min_initial)[use_default])
                     elif DOWNLOADED == status:
@@ -4307,7 +4307,7 @@ class Manage(MainHandler):
             {'title': 'Backlog Overview', 'path': 'manage/backlogOverview/'},
             {'title': 'Media Search', 'path': 'manage/manageSearches/'},
             {'title': 'Show Processes', 'path': 'manage/showProcesses/'},
-            {'title': 'Episode Status', 'path': 'manage/episodeStatuses/'}, ]
+            {'title': 'Episode Status', 'path': 'manage/episode_statuses/'}, ]
 
         if sickbeard.USE_SUBTITLES:
             menu.append({'title': 'Missed Subtitle Management', 'path': 'manage/subtitleMissed/'})
@@ -4322,16 +4322,16 @@ class Manage(MainHandler):
         t.submenu = self.ManageMenu('Bulk')
         return t.respond()
 
-    def showEpisodeStatuses(self, indexer_id, whichStatus):
-        whichStatus = helpers.tryInt(whichStatus)
-        status_list = ((([whichStatus],
-                         Quality.SNATCHED_ANY)[SNATCHED == whichStatus],
-                        Quality.DOWNLOADED)[DOWNLOADED == whichStatus],
-                       Quality.ARCHIVED)[ARCHIVED == whichStatus]
+    def show_episode_statuses(self, indexer_id, which_status):
+        which_status = helpers.tryInt(which_status)
+        status_list = ((([which_status],
+                         Quality.SNATCHED_ANY)[SNATCHED == which_status],
+                        Quality.DOWNLOADED)[DOWNLOADED == which_status],
+                       Quality.ARCHIVED)[ARCHIVED == which_status]
 
-        myDB = db.DBConnection()
-        cur_show_results = myDB.select(
-            'SELECT season, episode, name, airdate, status FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
+        my_db = db.DBConnection()
+        cur_show_results = my_db.select(
+            'SELECT season, episode, name, airdate, status, location FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
                 ['?'] * len(status_list)) + ')', [int(indexer_id)] + status_list)
 
         result = {}
@@ -4351,22 +4351,98 @@ class Manage(MainHandler):
                                                'qualityStr': Quality.qualityStrings[cur_quality],
                                                'sxe': '%d x %02d' % (cur_season, cur_episode)}
 
+            if which_status in [SNATCHED, SKIPPED, IGNORED, WANTED]:
+
+                sql = 'SELECT action, date' \
+                      ' FROM history' \
+                      ' WHERE showid = ?' \
+                      ' AND season = ? AND episode = ? AND action in (%s)' \
+                      ' ORDER BY date DESC' % ','.join([str(q) for q in Quality.DOWNLOADED + Quality.SNATCHED_ANY])
+                sql_results = my_db.select(sql, [int(indexer_id), cur_season, cur_episode])
+                d_status, d_qual, s_status, s_quality, age = 5 * (None,)
+                if sql_results:
+                    for event in sql_results:
+                        if None is d_status and event['action'] in Quality.DOWNLOADED:
+                            d_status, d_qual = Quality.splitCompositeStatus(event['action'])
+                        if None is s_status and event['action'] in Quality.SNATCHED_ANY:
+                            s_status, s_quality = Quality.splitCompositeStatus(event['action'])
+                            aged = ((datetime.datetime.now() -
+                                     datetime.datetime.strptime(str(event['date']), sickbeard.history.dateFormat))
+                                    .total_seconds())
+                            h = 60 * 60
+                            d = 24 * h
+                            days = aged // d
+                            age = ([], ['%id' % days])[bool(days)]
+                            hours, mins = 0, 0
+                            if 7 > days:
+                                hours = aged % d // h
+                                mins = aged % d % h // 60
+                            age = ', '.join(age + ([], ['%ih' % hours])[bool(hours)]
+                                            + ([], ['%im' % mins])[not bool(days)])
+
+                        if None is not d_status and None is not s_status:
+                            break
+
+                undo_from_history, change_to, status = self.recommend_status(
+                    cur_result['status'], cur_result['location'], d_qual, cur_quality)
+                if status:
+                    result[cur_season][cur_episode]['recommend'] = [('. '.join(
+                        (['snatched %s ago' % age], [])[None is age]
+                        + ([], ['file %sfound' % ('not ', '')[bool(cur_result['location'])]])[
+                            None is d_status or not undo_from_history]
+                        + ['%s to <b>%s</b> ?' % (('undo from history',
+                                                   'change')[None is d_status or not undo_from_history], change_to)])),
+                        status]
+
         return json.dumps(result)
 
-    def episodeStatuses(self, whichStatus=None):
+    @staticmethod
+    def recommend_status(cur_status, location=None, d_qual=None, cur_quality=None):
 
-        whichStatus = helpers.tryInt(whichStatus)
-        if whichStatus:
-            status_list = ((([whichStatus],
-                             Quality.SNATCHED_ANY)[SNATCHED == whichStatus],
-                            Quality.DOWNLOADED)[DOWNLOADED == whichStatus],
-                           Quality.ARCHIVED)[ARCHIVED == whichStatus]
+        undo_from_history = False
+        change_to = ''
+        status = None
+        if Quality.NONE == cur_quality:
+            return undo_from_history, change_to, status
+
+        cur_status = Quality.splitCompositeStatus(int(cur_status))[0]
+        if any([location]):
+            undo_from_history = True
+            change_to = statusStrings[DOWNLOADED]
+            status = [Quality.compositeStatus(DOWNLOADED, d_qual or cur_quality)]
+        elif cur_status in Quality.SNATCHED_ANY + [IGNORED, SKIPPED, WANTED]:
+            if None is d_qual:
+                if cur_status not in [IGNORED, SKIPPED]:
+                    change_to = statusStrings[SKIPPED]
+                    status = [SKIPPED]
+            else:
+                # downloaded and removed
+                if cur_status in Quality.SNATCHED_ANY + [WANTED] \
+                        or sickbeard.SKIP_REMOVED_FILES in [ARCHIVED, IGNORED, SKIPPED]:
+                    undo_from_history = True
+                    change_to = '%s %s' % (statusStrings[ARCHIVED], Quality.qualityStrings[d_qual])
+                    status = [Quality.compositeStatus(ARCHIVED, d_qual)]
+                elif sickbeard.SKIP_REMOVED_FILES in [IGNORED, SKIPPED] \
+                        and cur_status not in [IGNORED, SKIPPED]:
+                    change_to = statusStrings[statusStrings[sickbeard.SKIP_REMOVED_FILES]]
+                    status = [sickbeard.SKIP_REMOVED_FILES]
+
+        return undo_from_history, change_to, status
+
+    def episode_statuses(self, which_status=None):
+
+        which_status = helpers.tryInt(which_status)
+        if which_status:
+            status_list = ((([which_status],
+                             Quality.SNATCHED_ANY)[SNATCHED == which_status],
+                            Quality.DOWNLOADED)[DOWNLOADED == which_status],
+                           Quality.ARCHIVED)[ARCHIVED == which_status]
         else:
             status_list = []
 
         t = PageTemplate(web_handler=self, file='manage_episodeStatuses.tmpl')
         t.submenu = self.ManageMenu('Episode')
-        t.whichStatus = whichStatus
+        t.which_status = which_status
 
         my_db = db.DBConnection()
         sql_result = my_db.select(
@@ -4414,47 +4490,67 @@ class Manage(MainHandler):
         t.sorted_show_ids = sorted_show_ids
         return t.respond()
 
-    def changeEpisodeStatuses(self, oldStatus, newStatus, wantedStatus=sickbeard.common.UNKNOWN, *args, **kwargs):
-        status = int(oldStatus)
+    def change_episode_statuses(self, old_status, new_status, wanted_status=sickbeard.common.UNKNOWN, *args, **kwargs):
+        status = int(old_status)
         status_list = ((([status],
                          Quality.SNATCHED_ANY)[SNATCHED == status],
                         Quality.DOWNLOADED)[DOWNLOADED == status],
                        Quality.ARCHIVED)[ARCHIVED == status]
 
-        to_change = {}
+        changes, new_status = self.status_changes(new_status, wanted_status, **kwargs)
+
+        my_db = None if not any(changes) else db.DBConnection()
+        for cur_indexer_id, c_what_to in changes.items():
+            for what, to in c_what_to.items():
+                if 'all' == what:
+                    sql_results = my_db.select(
+                        'SELECT season, episode FROM tv_episodes WHERE status IN (' + ','.join(
+                            ['?'] * len(status_list)) + ') AND season != 0 AND showid = ?',
+                        status_list + [cur_indexer_id])
+                    what = (sql_results and '|'.join(map(lambda r: '%sx%s' % (r['season'], r['episode']), sql_results))
+                            or None)
+                    to = new_status
+
+                Home(self.application, self.request).setStatus(cur_indexer_id, what, to, direct=True)
+
+        self.redirect('/manage/episode_statuses/')
+
+    @staticmethod
+    def status_changes(new_status, wanted_status=sickbeard.common.UNKNOWN, **kwargs):
 
         # make a list of all shows and their associated args
+        to_change = {}
         for arg in kwargs:
-            # we don't care about unchecked checkboxes
-            if kwargs[arg] != 'on':
-                continue
+            # only work with checked checkboxes
+            if kwargs[arg] == 'on':
 
-            indexer_id, what = arg.split('-')
+                indexer_id, _, what = arg.partition('-')
+                what, _, to = what.partition('-')
+                to = (to, new_status)[not to]
+                if 'recommended' != to:
+                    to_change.setdefault(indexer_id, dict())
+                    to_change[indexer_id].setdefault(to, [])
+                    to_change[indexer_id][to] += [what]
 
-            if indexer_id not in to_change:
-                to_change[indexer_id] = []
+        if WANTED == int(wanted_status):
+            new_status = WANTED
 
-            to_change[indexer_id].append(what)
+        changes = {}
+        for indexer_id, to_what in to_change.items():
+            changes.setdefault(indexer_id, dict())
+            all_to = None
+            for to, what in to_what.items():
+                if 'all' in what:
+                    all_to = to
+                    continue
+                changes[indexer_id].update({'|'.join(sorted(what)): (new_status, to)['recommended' == new_status]})
+            if None is not all_to and not any(changes[indexer_id]):
+                if 'recommended' == new_status:
+                    del(changes[indexer_id])
+                else:
+                    changes[indexer_id] = {'all': all_to}
 
-        if sickbeard.common.WANTED == int(wantedStatus):
-            newStatus = sickbeard.common.WANTED
-
-        myDB = db.DBConnection()
-        for cur_indexer_id in to_change:
-
-            # get a list of all the eps we want to change if they just said 'all'
-            if 'all' in to_change[cur_indexer_id]:
-                all_eps_results = myDB.select(
-                    'SELECT season, episode FROM tv_episodes WHERE status IN (' + ','.join(
-                        ['?'] * len(status_list)) + ') AND season != 0 AND showid = ?',
-                    status_list + [cur_indexer_id])
-                all_eps = [str(x['season']) + 'x' + str(x['episode']) for x in all_eps_results]
-                to_change[cur_indexer_id] = all_eps
-
-            Home(self.application, self.request).setStatus(cur_indexer_id, '|'.join(to_change[cur_indexer_id]),
-                                                           newStatus, direct=True)
-
-        self.redirect('/manage/episodeStatuses/')
+        return changes, new_status
 
     def showSubtitleMissed(self, indexer_id, whichSubs):
         myDB = db.DBConnection()
