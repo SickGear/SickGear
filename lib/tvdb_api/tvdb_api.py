@@ -799,23 +799,28 @@ class Tvdb:
 
     def _parse_actors(self, sid, actor_list):
 
-        cur_actors = Actors()
+        a = []
         try:
-            for curActorItem in actor_list:
-                cur_actor = Actor()
-                for k, v in curActorItem.iteritems():
-                    k = k.lower()
-                    if None is not v:
-                        if 'image' == k:
-                            v = self.config['url_artworkPrefix'] % v
-                        else:
-                            v = self._clean_data(v)
-                    cur_actor[k] = v
-                cur_actors.append(cur_actor)
+            for n in sorted(actor_list, key=lambda x: x['sortorder']):
+                a.append({'character': {'id': None,
+                                        'name': n.get('role', ''),
+                                        'url': None,  # not supported by tvdb
+                                        'image': (None, self.config['url_artworkPrefix'] % n.get('image'))
+                                        [n.get('image')not in (None, '')],
+                                        },
+                          'person': {'id': None,  # not supported by tvdb
+                                     'name': n.get('name', ''),
+                                     'url': '',  # not supported by tvdb
+                                     'image': None,  # not supported by tvdb
+                                     'birthday': None,  # not supported by tvdb
+                                     'deathday': None,  # not supported by tvdb
+                                     'gender': None,  # not supported by tvdb
+                                     'country': None,  # not supported by tvdb
+                                     },
+                          })
         except (StandardError, Exception):
             pass
-
-        self._set_show_data(sid, '_actors', cur_actors)
+        self._set_show_data(sid, 'actors', a)
 
     def get_episode_data(self, epid):
         # Parse episode information
@@ -907,12 +912,7 @@ class Tvdb:
         if self.config['actors_enabled']:
             actor_data = self._getetsrc(self.config['url_actorsInfo'] % sid, language=language)
             if actor_data and len(actor_data.get('data', '') or '') > 0:
-                a = '|%s|' % '|'.join([n.get('name', '') for n in sorted(
-                                        actor_data['data'], key=lambda x: x['sortorder'])])
                 self._parse_actors(sid, actor_data['data'])
-            else:
-                a = '||'
-            self._set_show_data(sid, u'actors', a)
 
         if get_ep_info:
             # Parse episode data

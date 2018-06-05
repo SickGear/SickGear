@@ -771,23 +771,28 @@ class TvdbV1:
         self.log('Getting actors for %s' % sid)
         actors_et = self._getetsrc(self.config['url_actorsInfo'] % sid)
 
-        cur_actors = Actors()
+        a = []
         try:
-            for curActorItem in actors_et['actor']:
-                cur_actor = Actor()
-                for k, v in curActorItem.items():
-                    k = k.lower()
-                    if None is not v:
-                        if 'image' == k:
-                            v = self._get_url_artwork(v)
-                        else:
-                            v = self._clean_data(v)
-                    cur_actor[k] = v
-                cur_actors.append(cur_actor)
+            for n in sorted(actors_et['Actor'], key=lambda x: x['SortOrder']):
+                a.append({'character': {'id': None,
+                                        'name': n.get('Role', ''),
+                                        'url': None,  # not supported by tvdb
+                                        'image': (None, self.config['url_artworkPrefix'] % n.get('Image'))
+                                        [n.get('Image')not in (None, '')],
+                                        },
+                          'person': {'id': None,  # not supported by tvdb
+                                     'name': n.get('Name', ''),
+                                     'url': '',  # not supported by tvdb
+                                     'image': None,  # not supported by tvdb
+                                     'birthday': None,  # not supported by tvdb
+                                     'deathday': None,  # not supported by tvdb
+                                     'gender': None,  # not supported by tvdb
+                                     'country': None,  # not supported by tvdb
+                                     },
+                          })
         except (StandardError, Exception):
             pass
-
-        self._set_show_data(sid, '_actors', cur_actors)
+        self._set_show_data(sid, 'actors', a)
 
     def _get_show_data(self, sid, language, get_ep_info=False):
         """Takes a series ID, gets the epInfo URL and parses the TVDB
@@ -822,14 +827,15 @@ class TvdbV1:
 
             self._set_show_data(sid, k.lower(), v)
 
-        if get_ep_info:
-            # Parse banners
-            if self.config['banners_enabled']:
-                self._parse_banners(sid)
+        # Parse actors
+        if self.config['actors_enabled']:
+            self._parse_actors(sid)
 
-            # Parse actors
-            if self.config['actors_enabled']:
-                self._parse_actors(sid)
+        # Parse banners
+        if self.config['banners_enabled']:
+            self._parse_banners(sid)
+
+        if get_ep_info:
 
             # Parse episode data
             self.log('Getting all episodes of %s' % sid)

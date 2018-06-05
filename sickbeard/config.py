@@ -465,7 +465,8 @@ class ConfigMigrator:
                                 13: 'Change default dereferrer url to blank',
                                 14: 'Convert Trakt to multi-account',
                                 15: 'Transmithe.net rebranded Nebulance',
-                                16: 'Purge old cache image folders'}
+                                16: 'Purge old cache image folders',
+                                17: 'Add "vp9", "av1" to ignore words if not found'}
 
     def migrate_config(self):
         """ Calls each successive migration until the config is the same version as SG expects """
@@ -844,3 +845,22 @@ class ConfigMigrator:
                 except OSError:
                     pass
             sickbeard.CACHE_DIR = cache_default
+
+    @staticmethod
+    def _migrate_v17():
+        # add words to ignore list and insert spaces to improve the ui config readability
+        words_to_add = ['vp9', 'av1']
+        config_words = sickbeard.IGNORE_WORDS.split(',')
+        new_list = []
+        for new_word in words_to_add:
+            add_word = True
+            for ignore_word in config_words:
+                ignored = ignore_word.strip().lower()
+                if ignored and ignored not in new_list:
+                    new_list += [ignored]
+                if re.search(r'(?i)%s' % new_word, ignored):
+                    add_word = False
+            if add_word:
+                new_list += [new_word]
+
+        sickbeard.IGNORE_WORDS = ', '.join(sorted(new_list))
