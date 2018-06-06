@@ -234,33 +234,33 @@ class Quality:
             else:
                 return Quality.UNKNOWN
 
-        if checkName(['(pdtv|hdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|x264|h.?264))'], all) and not checkName(['(720|1080|2160)[pi]'], all) \
+        if checkName(['(pdtv|hdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|[hx]?.?26[45]|vp9|av1))'], all) and not checkName(['(720|1080|2160)[pi]'], all) \
                 and not checkName(['hr.ws.pdtv.(x264|h.?264)'], any):
             return Quality.SDTV
-        elif checkName(['web.?(dl|rip|.[hx]26[45])', 'xvid|x26[45]|.?26[45]'], all) and not checkName(['(720|1080|2160)[pi]'], all):
+        elif checkName(['web.?(dl|rip|.[hx]26[45])', 'xvid|[hx]?.?26[45]|vp9|av1'], all) and not checkName(['(720|1080|2160)[pi]'], all):
             return Quality.SDTV
-        elif checkName(['(dvd.?rip|b[r|d]rip)(.ws)?(.(xvid|divx|x264|h.?264))?'], any) and not checkName(['(720|1080|2160)[pi]'], all):
+        elif checkName(['(dvd.?rip|b[r|d]rip)(.ws)?(.(xvid|divx|[hx]?.?26[45]|vp9|av1))?'], any) and not checkName(['(720|1080|2160)[pi]'], all):
             return Quality.SDDVD
         elif checkName(['(xvid|divx|480p)'], any) and not checkName(['(720|1080|2160)[pi]'], all) \
-                and not checkName(['hr.ws.pdtv.(x264|h.?264)'], any):
+                and not checkName(['hr.ws.pdtv.([hx]?.?26[45]|vp9|av1)'], any):
             return Quality.SDTV
-        elif checkName(['720p', 'hdtv', 'x264|h.?264'], all) or checkName(['hr.ws.pdtv.(x264|h.?264)'], any) \
+        elif checkName(['720p', 'hdtv', '[hx]?.?26[45]|vp9|av1'], all) or checkName(['hr.ws.pdtv.([hx]?.?26[45]|vp9|av1)'], any) \
                 and not checkName(['(1080|2160)[pi]'], all):
             return Quality.HDTV
         elif checkName(['720p|1080i', 'hdtv', 'mpeg-?2'], all) or checkName(['1080[pi].hdtv', 'h.?264'], all):
             return Quality.RAWHDTV
-        elif checkName(['1080p', 'hdtv', 'x264'], all):
+        elif checkName(['1080p', 'hdtv', '[hx]?.?26[45]|vp9|av1'], all):
             return Quality.FULLHDTV
-        elif checkName(['720p', 'web.?(dl|rip|.[hx]26[45])'], all) or checkName(['720p', 'itunes', 'x264|h.?264'], all):
+        elif checkName(['720p', 'web.?(dl|rip|.[hx]?.?26[45]|.vp9|.av1)'], all) or checkName(['720p', 'itunes', '[hx]?.?26[45]|vp9|av1'], all):
             return Quality.HDWEBDL
-        elif checkName(['1080p', 'web.?(dl|rip|.[hx]26[45])'], all) or checkName(['1080p', 'itunes', 'x264|h.?264'], all):
+        elif checkName(['1080p', 'web.?(dl|rip|.[hx]?.?26[45]|.vp9|.av1)'], all) or checkName(['1080p', 'itunes', '[hx]?.?26[45]|vp9|av1'], all):
             return Quality.FULLHDWEBDL
-        elif checkName(['720p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all):
+        elif checkName(['720p', 'blu.?ray|hddvd|b[r|d]rip', '[hx]?.?26[45]|vp9|av1'], all):
             return Quality.HDBLURAY
-        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all) or \
+        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', '[hx]?.?26[45]|vp9|av1'], all) or \
                 (checkName(['1080[pi]', 'remux'], all) and not checkName(['hdtv'], all)):
             return Quality.FULLHDBLURAY
-        elif checkName(['2160p', 'web.?(dl|rip|.[hx]26[45])'], all):
+        elif checkName(['2160p', 'web.?(dl|rip|.[hx]?.?26[45]|.vp9|.av1)'], all):
             return Quality.UHD4KWEB
         # p2p
         elif checkName(['720HD'], all) and not checkName(['(1080|2160)[pi]'], all):
