@@ -398,17 +398,17 @@ class Tvdb:
 
         banners (True/False):
             Retrieves the banners for a show. These are accessed
-            via the _banners key of a Show(), for example:
+            via the banners key of a Show(), for example:
 
-            >> Tvdb(banners=True)['scrubs']['_banners'].keys()
+            >> Tvdb(banners=True)['scrubs']['banners'].keys()
             ['fanart', 'poster', 'series', 'season']
 
         actors (True/False):
             Retrieves a list of the actors for a show. These are accessed
-            via the _actors key of a Show(), for example:
+            via the actors key of a Show(), for example:
 
             >> t = Tvdb(actors=True)
-            >> t['scrubs']['_actors'][0]['name']
+            >> t['scrubs']['actors'][0]['name']
             u'Zach Braff'
 
         custom_ui (tvdb_ui.BaseUI subclass):
@@ -524,7 +524,7 @@ class Tvdb:
         self.config['url_actorsInfo'] = '%(base_url)sseries/%%s/actors' % self.config
 
         self.config['url_seriesBanner'] = '%(base_url)sseries/%%s/images/query?keyType=%%s' % self.config
-        self.config['url_artworkPrefix'] = 'https://thetvdb.com/banners/%s'
+        self.config['url_artworkPrefix'] = 'https://www.thetvdb.com/banners/%s'
 
     def get_new_token(self):
         token = sickbeard.THETVDB_V2_API_TOKEN.get('token', None)
@@ -784,10 +784,10 @@ class Tvdb:
                     k, v = k.lower(), v.lower() if isinstance(v, (str, unicode)) else v
                     if k == 'filename':
                         k = 'bannerpath'
-                        banners[btype][btype2][bid]['_bannerpath'] = self.config['url_artworkPrefix'] % v
+                        banners[btype][btype2][bid]['bannerpath'] = self.config['url_artworkPrefix'] % v
                     elif k == 'thumbnail':
                         k = 'thumbnailpath'
-                        banners[btype][btype2][bid]['_thumbnailpath'] = self.config['url_artworkPrefix'] % v
+                        banners[btype][btype2][bid]['thumbnailpath'] = self.config['url_artworkPrefix'] % v
                     elif k == 'keytype':
                         k = 'bannertype'
                     banners[btype][btype2][bid][k] = v
@@ -799,23 +799,28 @@ class Tvdb:
 
     def _parse_actors(self, sid, actor_list):
 
-        cur_actors = Actors()
+        a = []
         try:
-            for curActorItem in actor_list:
-                cur_actor = Actor()
-                for k, v in curActorItem.iteritems():
-                    k = k.lower()
-                    if None is not v:
-                        if 'image' == k:
-                            v = self.config['url_artworkPrefix'] % v
-                        else:
-                            v = self._clean_data(v)
-                    cur_actor[k] = v
-                cur_actors.append(cur_actor)
+            for n in sorted(actor_list, key=lambda x: x['sortorder']):
+                a.append({'character': {'id': None,
+                                        'name': n.get('role', '').strip(),
+                                        'url': None,  # not supported by tvdb
+                                        'image': (None, self.config['url_artworkPrefix'] %
+                                                  n.get('image'))[any([n.get('image')])],
+                                        },
+                          'person': {'id': None,  # not supported by tvdb
+                                     'name': n.get('name', '').strip(),
+                                     'url': None,  # not supported by tvdb
+                                     'image': None,  # not supported by tvdb
+                                     'birthday': None,  # not supported by tvdb
+                                     'deathday': None,  # not supported by tvdb
+                                     'gender': None,  # not supported by tvdb
+                                     'country': None,  # not supported by tvdb
+                                     },
+                          })
         except (StandardError, Exception):
             pass
-
-        self._set_show_data(sid, '_actors', cur_actors)
+        self._set_show_data(sid, 'actors', a)
 
     def get_episode_data(self, epid):
         # Parse episode information
@@ -907,12 +912,7 @@ class Tvdb:
         if self.config['actors_enabled']:
             actor_data = self._getetsrc(self.config['url_actorsInfo'] % sid, language=language)
             if actor_data and len(actor_data.get('data', '') or '') > 0:
-                a = '|%s|' % '|'.join([n.get('name', '') for n in sorted(
-                                        actor_data['data'], key=lambda x: x['sortorder'])])
                 self._parse_actors(sid, actor_data['data'])
-            else:
-                a = '||'
-            self._set_show_data(sid, u'actors', a)
 
         if get_ep_info:
             # Parse episode data

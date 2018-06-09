@@ -199,14 +199,7 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
             Runtime.text = myShow['runtime']
 
         cast = etree.SubElement(tv_node, "cast")
-
-        if getattr(myShow, '_actors', None) is not None:
-            for actor in myShow['_actors']:
-                cur_actor_name_text = actor['name']
-
-                if cur_actor_name_text != None and cur_actor_name_text.strip():
-                    cur_actor = etree.SubElement(cast, "actor")
-                    cur_actor.text = cur_actor_name_text.strip()
+        self.add_actor_element(myShow, etree, cast)
 
         helpers.indentXML(rootNode)
 
@@ -333,14 +326,7 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
                     credits.text = credits_text
 
                 cast = etree.SubElement(episode, "cast")
-
-                if getattr(myShow, '_actors', None) is not None:
-                    for actor in myShow['_actors']:
-                        cur_actor_name_text = actor['name']
-
-                        if cur_actor_name_text != None and cur_actor_name_text.strip():
-                            cur_actor = etree.SubElement(cast, "actor")
-                            cur_actor.text = cur_actor_name_text.strip()
+                self.add_actor_element(myShow, etree, cast)
 
             else:
                 # append data from (if any) related episodes
@@ -361,6 +347,17 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
         data = etree.ElementTree(rootNode)
 
         return data
+
+    @staticmethod
+    def add_actor_element(my_show, et, node):
+        for actor in getattr(my_show, 'actors', []):
+            cur_actor_name_text = actor['character']['name'] and actor['person']['name'] \
+                                  and actor['character']['name'] != actor['person']['name'] \
+                                  and '%s (%s)' % (actor['character']['name'], actor['person']['name']) \
+                                  or actor['person']['name'] or actor['character']['name']
+            if cur_actor_name_text:
+                cur_actor = et.SubElement(node, 'actor')
+                cur_actor.text = cur_actor_name_text
 
 
 # present a standard "interface" from the module
