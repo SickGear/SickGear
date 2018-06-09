@@ -20,9 +20,11 @@ from __future__ import print_function
 from __future__ import with_statement
 
 import base64
+import codecs
 import datetime
 import getpass
 import hashlib
+import io
 import os
 import re
 import shutil
@@ -393,7 +395,7 @@ def moveAndSymlinkFile(srcFile, destFile):
         copyFile(srcFile, destFile)
 
 
-def make_dirs(path):
+def make_dirs(path, syno=True):
     """
     Creates any folders that are missing and assigns them the permissions of their
     parents
@@ -427,8 +429,9 @@ def make_dirs(path):
                     ek.ek(os.mkdir, sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
                     chmodAsParent(ek.ek(os.path.normpath, sofar))
-                    # do the library update for synoindex
-                    notifiers.NotifierFactory().get('SYNOINDEX').addFolder(sofar)
+                    if syno:
+                        # do the library update for synoindex
+                        notifiers.NotifierFactory().get('SYNOINDEX').addFolder(sofar)
                 except (OSError, IOError) as e:
                     logger.log(u'Failed creating %s : %s' % (sofar, ex(e)), logger.ERROR)
                     return False
@@ -1284,17 +1287,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
 
     if savename:
         try:
-            with open(savename, 'wb') as fp:
-                for chunk in response.iter_content(chunk_size=1024):
-                    if chunk:
-                        fp.write(chunk)
-                        fp.flush()
-                ek.ek(os.fsync, fp.fileno())
-
-            chmodAsParent(savename)
-
-        except EnvironmentError as e:
-            logger.log(u'Unable to save the file: ' + ex(e), logger.ERROR)
+            write_file(savename, response, raw=True, raise_exceptions=raise_exceptions)
+        except (StandardError, Exception) as e:
             if raise_exceptions:
                 raise e
             return
@@ -1736,3 +1730,44 @@ def path_mapper(search, replace, subject):
     result = os.path.normpath(re.sub(delim, '/', result))
 
     return result, result != subject
+
+
+def write_file(filepath, data, raw=False, xmltree=False, utf8=False, raise_exceptions=False):
+
+    result = False
+
+    if make_dirs(ek.ek(os.path.dirname, filepath), False):
+        try:
+            if raw:
+                with io.FileIO(filepath, 'wb') as fh:
+                    for chunk in data.iter_content(chunk_size=1024):
+                        if chunk:
+                            fh.write(chunk)
+                            fh.flush()
+                    ek.ek(os.fsync, fh.fileno())
+            else:
+                w_mode = 'w'
+                if utf8:
+                    w_mode = 'a'
+                    with io.FileIO(filepath, 'wb') as fh:
+                        fh.write(codecs.BOM_UTF8)
+
+                if xmltree:
+                    with io.FileIO(filepath, w_mode) as fh:
+                        if utf8:
+                            data.write(fh, encoding='utf-8')
+                        else:
+                            data.write(fh)
+                else:
+                    with io.FileIO(filepath, w_mode) as fh:
+                        fh.write(data)
+
+            chmodAsParent(filepath)
+
+            result = True
+        except (EnvironmentError, IOError) as e:
+            logger.log('Unable to write file %s : %s' % (filepath, ex(e)), logger.ERROR)
+            if raise_exceptions:
+                raise e
+
+    return result

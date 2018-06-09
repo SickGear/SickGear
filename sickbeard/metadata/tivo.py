@@ -252,15 +252,16 @@ class TIVOMetadata(generic.GenericMetadata):
 
             # This must be entered as yyyy-mm-ddThh:mm:ssZ (the t is capitalized and never changes, the Z is also
             # capitalized and never changes). This is the original air date of the episode.
-            # NOTE: Hard coded the time to T00:00:00Z as we really don't know when during the day the first run happened.
+            # NOTE: Hard coded the time to T00:00:00Z as we really don't know when during the day the first run happened
             if curEpToWrite.airdate != datetime.date.fromordinal(1):
                 data += ("originalAirDate : " + str(curEpToWrite.airdate) + "T00:00:00Z\n")
 
             # This shows up at the beginning of the description on the Program screen and on the Details screen.
-            if getattr(myShow, 'actors', None) is not None:
-                for actor in myShow["actors"].split('|'):
-                    if actor:
-                        data += ("vActor : " + actor + "\n")
+            for actor in getattr(myShow, 'actors', []):
+                data += ('vActor : %s\n' % actor['character']['name'] and actor['person']['name']
+                         and actor['character']['name'] != actor['person']['name']
+                         and '%s (%s)' % (actor['character']['name'], actor['person']['name'])
+                         or actor['person']['name'] or actor['character']['name'])
 
             # This is shown on both the Program screen and the Details screen.
             if getattr(myEp, 'rating', None) is not None:

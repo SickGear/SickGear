@@ -24,6 +24,12 @@
 
 
 
+### 0.16.16 (2018-06-09 12:13:00 UTC)
+
+* Fix metadata mediabrowser when no actors
+* Add 'vp9' and 'av1' to ignore word list
+
+
 ### 0.16.15 (2018-06-03 21:24:00 UTC)
 
 * Change garbage_name regex

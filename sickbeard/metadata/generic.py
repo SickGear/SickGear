@@ -320,36 +320,31 @@ class GenericMetadata():
                        logger.DEBUG)
 
             nfo_file_path = self.get_show_file_path(show_obj)
-            try:
-                with ek.ek(open, nfo_file_path, 'r') as xmlFileObj:
-                    show_xml = etree.ElementTree(file=xmlFileObj)
+            with ek.ek(open, nfo_file_path, 'r') as xmlFileObj:
+                show_xml = etree.ElementTree(file=xmlFileObj)
 
-                indexer = show_xml.find('indexer')
-                indexerid = show_xml.find('id')
+            indexer = show_xml.find('indexer')
+            indexerid = show_xml.find('id')
 
-                root = show_xml.getroot()
-                show_indexer = str(show_obj.indexer)
-                if None is not indexer:
-                    indexer.text = show_indexer
-                else:
-                    etree.SubElement(root, 'indexer').text = show_indexer
+            root = show_xml.getroot()
+            show_indexer = str(show_obj.indexer)
+            if None is not indexer:
+                indexer.text = show_indexer
+            else:
+                etree.SubElement(root, 'indexer').text = show_indexer
 
-                show_indexerid = str(show_obj.indexerid)
-                if None is not indexerid:
-                    indexerid.text = show_indexerid
-                else:
-                    etree.SubElement(root, 'id').text = show_indexerid
+            show_indexerid = str(show_obj.indexerid)
+            if None is not indexerid:
+                indexerid.text = show_indexerid
+            else:
+                etree.SubElement(root, 'id').text = show_indexerid
 
-                # Make it purdy
-                helpers.indentXML(root)
+            # Make it purdy
+            helpers.indentXML(root)
 
-                show_xml.write(nfo_file_path)
-                helpers.chmodAsParent(nfo_file_path)
+            helpers.write_file(nfo_file_path, show_xml, xmltree=True, utf8=True)
 
-                return True
-            except IOError as e:
-                logger.log(u'Unable to write file %s - is the folder writable? %s' % (nfo_file_path, ex(e)),
-                           logger.ERROR)
+            return True
 
     def create_fanart(self, show_obj):
         if self.fanart and show_obj and not self._has_fanart(show_obj):
@@ -476,27 +471,10 @@ class GenericMetadata():
             return False
 
         nfo_file_path = self.get_show_file_path(show_obj)
-        nfo_file_dir = ek.ek(os.path.dirname, nfo_file_path)
 
-        try:
-            if not ek.ek(os.path.isdir, nfo_file_dir):
-                logger.log(u"Metadata dir didn't exist, creating it at " + nfo_file_dir, logger.DEBUG)
-                ek.ek(os.makedirs, nfo_file_dir)
-                helpers.chmodAsParent(nfo_file_dir)
+        logger.log(u'Writing show metadata file: %s' % nfo_file_path, logger.DEBUG)
 
-            logger.log(u"Writing show nfo file to " + nfo_file_path, logger.DEBUG)
-
-            nfo_file = ek.ek(open, nfo_file_path, 'w')
-
-            data.write(nfo_file, encoding="utf-8")
-            nfo_file.close()
-            helpers.chmodAsParent(nfo_file_path)
-        except IOError as e:
-            logger.log(u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),
-                       logger.ERROR)
-            return False
-
-        return True
+        return helpers.write_file(nfo_file_path, data, xmltree=True, utf8=True)
 
     def write_ep_file(self, ep_obj):
         """
@@ -521,27 +499,10 @@ class GenericMetadata():
             return False
 
         nfo_file_path = self.get_episode_file_path(ep_obj)
-        nfo_file_dir = ek.ek(os.path.dirname, nfo_file_path)
 
-        try:
-            if not ek.ek(os.path.isdir, nfo_file_dir):
-                logger.log(u"Metadata dir didn't exist, creating it at " + nfo_file_dir, logger.DEBUG)
-                ek.ek(os.makedirs, nfo_file_dir)
-                helpers.chmodAsParent(nfo_file_dir)
+        logger.log(u'Writing episode metadata file: %s' % nfo_file_path, logger.DEBUG)
 
-            logger.log(u"Writing episode nfo file to " + nfo_file_path, logger.DEBUG)
-
-            nfo_file = ek.ek(open, nfo_file_path, 'w')
-
-            data.write(nfo_file, encoding="utf-8")
-            nfo_file.close()
-            helpers.chmodAsParent(nfo_file_path)
-        except IOError as e:
-            logger.log(u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),
-                       logger.ERROR)
-            return False
-
-        return True
+        return helpers.write_file(nfo_file_path, data, xmltree=True, utf8=True)
 
     def save_thumbnail(self, ep_obj):
         """
@@ -911,12 +872,12 @@ class GenericMetadata():
         if not self._valid_show(indexer_show_obj, show_obj):
             return result
 
-        season_images = getattr(indexer_show_obj, '_banners', {}).get(
+        season_images = getattr(indexer_show_obj, 'banners', {}).get(
             ('season', 'seasonwide')['seasonwides' == image_type], {}).get(season, {})
         for image_id in season_images.keys():
             if season not in result:
                 result[season] = {}
-            result[season][image_id] = season_images[image_id]['_bannerpath']
+            result[season][image_id] = season_images[image_id]['bannerpath']
 
         return result
 
