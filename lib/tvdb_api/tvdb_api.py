@@ -398,17 +398,17 @@ class Tvdb:
 
         banners (True/False):
             Retrieves the banners for a show. These are accessed
-            via the _banners key of a Show(), for example:
+            via the banners key of a Show(), for example:
 
-            >> Tvdb(banners=True)['scrubs']['_banners'].keys()
+            >> Tvdb(banners=True)['scrubs']['banners'].keys()
             ['fanart', 'poster', 'series', 'season']
 
         actors (True/False):
             Retrieves a list of the actors for a show. These are accessed
-            via the _actors key of a Show(), for example:
+            via the actors key of a Show(), for example:
 
             >> t = Tvdb(actors=True)
-            >> t['scrubs']['_actors'][0]['name']
+            >> t['scrubs']['actors'][0]['name']
             u'Zach Braff'
 
         custom_ui (tvdb_ui.BaseUI subclass):
@@ -524,7 +524,7 @@ class Tvdb:
         self.config['url_actorsInfo'] = '%(base_url)sseries/%%s/actors' % self.config
 
         self.config['url_seriesBanner'] = '%(base_url)sseries/%%s/images/query?keyType=%%s' % self.config
-        self.config['url_artworkPrefix'] = 'https://thetvdb.com/banners/%s'
+        self.config['url_artworkPrefix'] = 'https://www.thetvdb.com/banners/%s'
 
     def get_new_token(self):
         token = sickbeard.THETVDB_V2_API_TOKEN.get('token', None)
@@ -784,10 +784,10 @@ class Tvdb:
                     k, v = k.lower(), v.lower() if isinstance(v, (str, unicode)) else v
                     if k == 'filename':
                         k = 'bannerpath'
-                        banners[btype][btype2][bid]['_bannerpath'] = self.config['url_artworkPrefix'] % v
+                        banners[btype][btype2][bid]['bannerpath'] = self.config['url_artworkPrefix'] % v
                     elif k == 'thumbnail':
                         k = 'thumbnailpath'
-                        banners[btype][btype2][bid]['_thumbnailpath'] = self.config['url_artworkPrefix'] % v
+                        banners[btype][btype2][bid]['thumbnailpath'] = self.config['url_artworkPrefix'] % v
                     elif k == 'keytype':
                         k = 'bannertype'
                     banners[btype][btype2][bid][k] = v
@@ -803,14 +803,14 @@ class Tvdb:
         try:
             for n in sorted(actor_list, key=lambda x: x['sortorder']):
                 a.append({'character': {'id': None,
-                                        'name': n.get('role', ''),
+                                        'name': n.get('role', '').strip(),
                                         'url': None,  # not supported by tvdb
-                                        'image': (None, self.config['url_artworkPrefix'] % n.get('image'))
-                                        [n.get('image')not in (None, '')],
+                                        'image': (None, self.config['url_artworkPrefix'] %
+                                                  n.get('image'))[any([n.get('image')])],
                                         },
                           'person': {'id': None,  # not supported by tvdb
-                                     'name': n.get('name', ''),
-                                     'url': '',  # not supported by tvdb
+                                     'name': n.get('name', '').strip(),
+                                     'url': None,  # not supported by tvdb
                                      'image': None,  # not supported by tvdb
                                      'birthday': None,  # not supported by tvdb
                                      'deathday': None,  # not supported by tvdb

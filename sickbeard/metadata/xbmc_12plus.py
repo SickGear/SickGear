@@ -187,24 +187,7 @@ class XBMC_12PlusMetadata(generic.GenericMetadata):
         if getattr(myShow, 'network', None) is not None:
             studio.text = myShow["network"]
 
-        if getattr(myShow, '_actors', None) is not None:
-            for actor in myShow['_actors']:
-                cur_actor = etree.SubElement(tv_node, "actor")
-
-                cur_actor_name = etree.SubElement(cur_actor, "name")
-                cur_actor_name_text = actor['name']
-                if isinstance(cur_actor_name_text, basestring):
-                    cur_actor_name.text = cur_actor_name_text.strip()
-
-                cur_actor_role = etree.SubElement(cur_actor, "role")
-                cur_actor_role_text = actor['role']
-                if cur_actor_role_text != None:
-                    cur_actor_role.text = cur_actor_role_text
-
-                cur_actor_thumb = etree.SubElement(cur_actor, "thumb")
-                cur_actor_thumb_text = actor['image']
-                if cur_actor_thumb_text != None:
-                    cur_actor_thumb.text = cur_actor_thumb_text
+        self.add_actor_element(myShow, etree, tv_node)
 
         # Make it purdy
         helpers.indentXML(tv_node)
@@ -354,24 +337,7 @@ class XBMC_12PlusMetadata(generic.GenericMetadata):
                     cur_actor_name = etree.SubElement(cur_actor, "name")
                     cur_actor_name.text = actor
 
-            if getattr(myEp, '_actors', None) is not None:
-                for actor in myShow['_actors']:
-                    cur_actor = etree.SubElement(episode, "actor")
-
-                    cur_actor_name = etree.SubElement(cur_actor, "name")
-                    cur_actor_name_text = actor['name']
-                    if isinstance(cur_actor_name_text, basestring):
-                        cur_actor_name.text = cur_actor_name_text.strip()
-
-                    cur_actor_role = etree.SubElement(cur_actor, "role")
-                    cur_actor_role_text = actor['role']
-                    if cur_actor_role_text != None:
-                        cur_actor_role.text = cur_actor_role_text
-
-                    cur_actor_thumb = etree.SubElement(cur_actor, "thumb")
-                    cur_actor_thumb_text = actor['image']
-                    if cur_actor_thumb_text != None:
-                        cur_actor_thumb.text = cur_actor_thumb_text
+            self.add_actor_element(myShow, etree, episode)
 
         # Make it purdy
         helpers.indentXML(rootNode)
@@ -379,6 +345,26 @@ class XBMC_12PlusMetadata(generic.GenericMetadata):
         data = etree.ElementTree(rootNode)
 
         return data
+
+    @staticmethod
+    def add_actor_element(my_show, et, node):
+        for actor in getattr(my_show, 'actors', []):
+            cur_actor = et.SubElement(node, 'actor')
+
+            cur_actor_name = et.SubElement(cur_actor, 'name')
+            cur_actor_name_text = actor['person']['name']
+            if cur_actor_name_text:
+                cur_actor_name.text = cur_actor_name_text
+
+            cur_actor_role = et.SubElement(cur_actor, 'role')
+            cur_actor_role_text = actor['character']['name']
+            if cur_actor_role_text:
+                cur_actor_role.text = cur_actor_role_text
+
+            cur_actor_thumb = et.SubElement(cur_actor, 'thumb')
+            cur_actor_thumb_text = actor['character']['image']
+            if None is not cur_actor_thumb_text:
+                cur_actor_thumb.text = cur_actor_thumb_text
 
 
 # present a standard "interface" from the module

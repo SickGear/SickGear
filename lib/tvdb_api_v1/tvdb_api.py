@@ -380,7 +380,7 @@ class TvdbV1:
             Retrieves the banners for a show. These are accessed
             via the _banners key of a Show(), for example:
 
-            >> Tvdb(banners=True)['scrubs']['_banners'].keys()
+            >> Tvdb(banners=True)['scrubs']['banners'].keys()
             ['fanart', 'poster', 'series', 'season']
 
         actors (True/False):
@@ -388,7 +388,7 @@ class TvdbV1:
             via the _actors key of a Show(), for example:
 
             >> t = Tvdb(actors=True)
-            >> t['scrubs']['_actors'][0]['name']
+            >> t['scrubs']['actors'][0]['name']
             u'Zach Braff'
 
         custom_ui (tvdb_ui.BaseUI subclass):
@@ -514,7 +514,7 @@ class TvdbV1:
         self.config['url_actorsInfo'] = u'%(base_url)s/api/%(apikey)s/series/%%s/actors.xml' % self.config
 
         self.config['url_seriesBanner'] = u'%(base_url)s/api/%(apikey)s/series/%%s/banners.xml' % self.config
-        self.config['url_artworkPrefix'] = u'%(base_url)s/banners/%%s' % self.config
+        self.config['url_artworkPrefix'] = u'https://thetvdb.com/banners/%%s' % self.config
 
     def log(self, msg, log_level=logger.DEBUG):
         logger.log('TVDB_API :: %s' % (msg.replace(self.config['apikey'], '<apikey>')), log_level=log_level)
@@ -699,7 +699,7 @@ class TvdbV1:
         >> t = Tvdb(banners = True)
         >> t['scrubs']['_banners'].keys()
         ['fanart', 'poster', 'series', 'season']
-        >> t['scrubs']['_banners']['poster']['680x1000']['35308']['_bannerpath']
+        >> t['scrubs']['_banners']['poster']['680x1000']['35308']['bannerpath']
         u'http://thetvdb.com/banners/posters/76156-2.jpg'
         >>
 
@@ -751,7 +751,7 @@ class TvdbV1:
         Actors are retrieved using t['show name]['_actors'], for example:
 
         >> t = Tvdb(actors = True)
-        >> actors = t['scrubs']['_actors']
+        >> actors = t['scrubs']['actors']
         >> type(actors)
         <class 'tvdb_api.Actors'>
         >> type(actors[0])
@@ -775,14 +775,14 @@ class TvdbV1:
         try:
             for n in sorted(actors_et['Actor'], key=lambda x: x['SortOrder']):
                 a.append({'character': {'id': None,
-                                        'name': n.get('Role', ''),
+                                        'name': n.get('Role', '').strip(),
                                         'url': None,  # not supported by tvdb
-                                        'image': (None, self.config['url_artworkPrefix'] % n.get('Image'))
-                                        [n.get('Image')not in (None, '')],
+                                        'image': (None, self.config['url_artworkPrefix'] %
+                                                  n.get('Image'))[any([n.get('Image')])],
                                         },
                           'person': {'id': None,  # not supported by tvdb
-                                     'name': n.get('Name', ''),
-                                     'url': '',  # not supported by tvdb
+                                     'name': n.get('Name', '').strip(),
+                                     'url': None,  # not supported by tvdb
                                      'image': None,  # not supported by tvdb
                                      'birthday': None,  # not supported by tvdb
                                      'deathday': None,  # not supported by tvdb

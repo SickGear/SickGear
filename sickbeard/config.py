@@ -847,20 +847,29 @@ class ConfigMigrator:
             sickbeard.CACHE_DIR = cache_default
 
     @staticmethod
-    def _migrate_v17():
+    def add_ignore_words(wordlist):
         # add words to ignore list and insert spaces to improve the ui config readability
-        words_to_add = ['vp9', 'av1']
+        if not isinstance(wordlist, list):
+            wordlist = [wordlist]
         config_words = sickbeard.IGNORE_WORDS.split(',')
         new_list = []
-        for new_word in words_to_add:
+        using_regex = ''
+        for new_word in wordlist:
             add_word = True
             for ignore_word in config_words:
                 ignored = ignore_word.strip().lower()
+                if ignored.startswith('regex:'):
+                    ignored = ignored.lstrip('regex:')
+                    using_regex = 'regex:'
                 if ignored and ignored not in new_list:
                     new_list += [ignored]
-                if re.search(r'(?i)%s' % new_word, ignored):
+                if new_word in ignored:
                     add_word = False
             if add_word:
                 new_list += [new_word]
 
-        sickbeard.IGNORE_WORDS = ', '.join(sorted(new_list))
+        sickbeard.IGNORE_WORDS = '%s%s' % (using_regex, ', '.join(new_list))
+
+    def _migrate_v17(self):
+
+        self.add_ignore_words(['vp9', 'av1'])
