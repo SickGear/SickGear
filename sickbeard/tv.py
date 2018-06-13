@@ -38,11 +38,6 @@ import fnmatch
 
 from imdb._exceptions import IMDbError
 
-try:
-    from lib.send2trash import send2trash
-except ImportError:
-    pass
-
 from lib.imdb import imdb
 
 from sickbeard import db
