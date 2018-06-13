@@ -77,7 +77,6 @@ from trakt_helpers import build_config, trakt_collection_remove_account
 from sickbeard.bs4_parser import BS4Parser
 
 from lib.fuzzywuzzy import fuzz
-from lib.send2trash import send2trash
 from lib.tmdb_api import TMDB
 from lib.tvdb_api.tvdb_exceptions import tvdb_exception
 

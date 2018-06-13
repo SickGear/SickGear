@@ -42,6 +42,7 @@ import adba
 import requests
 import requests.exceptions
 from cfscrape import CloudflareScraper
+from lib.send2trash import send2trash
 import sickbeard
 import subliminal
 

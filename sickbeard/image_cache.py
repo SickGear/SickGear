@@ -33,7 +33,6 @@ from sickbeard.metadata.generic import GenericMetadata
 
 from lib.hachoir.parser import createParser
 from lib.hachoir.metadata import extractMetadata
-from lib.send2trash import send2trash
 try:
     import zlib
 except:
