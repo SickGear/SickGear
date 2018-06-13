@@ -2996,7 +2996,14 @@ class HomePostProcess(Home):
                 logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
                            (kwargs.get('ppVersion', '0'), sickbeard.NZBGET_SCRIPT_VERSION), logger.ERROR)
 
-            result = processTV.processDir(dir.decode('utf-8') if dir else None, nzbName.decode('utf-8') if nzbName else None,
+            if isinstance(dir, basestring):
+                dir = dir.decode('utf-8')
+                if isinstance(client, basestring) and 'nzbget' == client and \
+                        isinstance(sickbeard.NZBGET_MAP, basestring) and sickbeard.NZBGET_MAP:
+                    m = sickbeard.NZBGET_MAP.split('=')
+                    dir, not_used = helpers.path_mapper(m[0], m[1], dir)
+
+            result = processTV.processDir(dir if dir else None, nzbName.decode('utf-8') if nzbName else None,
                                           process_method=process_method, type=type,
                                           cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
                                           force=force in ['on', '1'],
