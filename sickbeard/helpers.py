@@ -1728,7 +1728,7 @@ def path_mapper(search, replace, subject):
     replace = re.sub(r'[\\]', delim, replace)
     path = re.sub(r'[\\]', delim, subject)
     result = re.sub('(?i)^%s' % search, replace, path)
-    result = os.path.normpath(re.sub(delim, '/', result))
+    result = ek.ek(os.path.normpath, re.sub(delim, '/', result))
 
     return result, result != subject
 

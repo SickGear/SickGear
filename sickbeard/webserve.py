@@ -2996,7 +2996,14 @@ class HomePostProcess(Home):
                 logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
                            (kwargs.get('ppVersion', '0'), sickbeard.NZBGET_SCRIPT_VERSION), logger.ERROR)
 
-            result = processTV.processDir(dir.decode('utf-8') if dir else None, nzbName.decode('utf-8') if nzbName else None,
+            if isinstance(dir, basestring):
+                dir = dir.decode('utf-8')
+                if isinstance(client, basestring) and 'nzbget' == client and \
+                        isinstance(sickbeard.NZBGET_MAP, basestring) and sickbeard.NZBGET_MAP:
+                    m = sickbeard.NZBGET_MAP.split('=')
+                    dir, not_used = helpers.path_mapper(m[0], m[1], dir)
+
+            result = processTV.processDir(dir if dir else None, nzbName.decode('utf-8') if nzbName else None,
                                           process_method=process_method, type=type,
                                           cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
                                           force=force in ['on', '1'],
@@ -5909,9 +5916,10 @@ class ConfigSearch(Config):
             pass
         return t.respond()
 
-    def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
-                   sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None,
-                   nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
+    def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None,
+                   sab_host=None, sab_username=None, sab_password=None, sab_apikey=None, sab_category=None,
+                   nzbget_use_https=None, nzbget_host=None, nzbget_username=None, nzbget_password=None,
+                   nzbget_category=None, nzbget_priority=None, nzbget_parent_map=None,
                    backlog_days=None, backlog_frequency=None, search_unaired=None, unaired_recent_search_only=None,
                    recentsearch_frequency=None, nzb_method=None, torrent_method=None, usenet_retention=None,
                    download_propers=None, propers_webdl_onegrp=None,
@@ -5975,6 +5983,7 @@ class ConfigSearch(Config):
         sickbeard.NZBGET_HOST = config.clean_host(nzbget_host)
         sickbeard.NZBGET_USE_HTTPS = config.checkbox_to_value(nzbget_use_https)
         sickbeard.NZBGET_PRIORITY = config.to_int(nzbget_priority, default=100)
+        sickbeard.NZBGET_MAP = config.kv_csv(nzbget_parent_map)
 
         sickbeard.TORRENT_USERNAME = torrent_username
         if set('*') != set(torrent_password):
