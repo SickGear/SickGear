@@ -921,17 +921,17 @@ def initialize(console_logging=True):
 
         # first check using official name case, then with case of legacy
         # todo: migrate config, (just not atm due to testing map feature)
-        NZBGET_USERNAME = (check_setting_str(CFG, 'NZBGet', 'nzbget_username', None)
+        NZBGET_USERNAME = (check_setting_str(CFG, 'NZBGet', 'nzbget_username', '')
                            or check_setting_str(CFG, 'NZBget', 'nzbget_username', 'nzbget'))
-        NZBGET_PASSWORD = (check_setting_str(CFG, 'NZBGet', 'nzbget_password', None)
+        NZBGET_PASSWORD = (check_setting_str(CFG, 'NZBGet', 'nzbget_password', '')
                            or check_setting_str(CFG, 'NZBget', 'nzbget_password', 'tegbzn6789'))
-        NZBGET_CATEGORY = (check_setting_str(CFG, 'NZBGet', 'nzbget_category', None)
+        NZBGET_CATEGORY = (check_setting_str(CFG, 'NZBGet', 'nzbget_category', '')
                            or check_setting_str(CFG, 'NZBget', 'nzbget_category', 'tv'))
-        NZBGET_HOST = (check_setting_str(CFG, 'NZBGet', 'nzbget_host', None)
+        NZBGET_HOST = (check_setting_str(CFG, 'NZBGet', 'nzbget_host', '')
                        or check_setting_str(CFG, 'NZBget', 'nzbget_host', ''))
-        NZBGET_USE_HTTPS = (bool(check_setting_int(CFG, 'NZBGet', 'nzbget_use_https', None))
+        NZBGET_USE_HTTPS = (bool(check_setting_int(CFG, 'NZBGet', 'nzbget_use_https', 0))
                             or bool(check_setting_int(CFG, 'NZBget', 'nzbget_use_https', 0)))
-        NZBGET_PRIORITY = (check_setting_int(CFG, 'NZBGet', 'nzbget_priority', None)
+        NZBGET_PRIORITY = (check_setting_int(CFG, 'NZBGet', 'nzbget_priority', 0)
                            or check_setting_int(CFG, 'NZBget', 'nzbget_priority', 100))
         NZBGET_MAP = check_setting_str(CFG, 'NZBGet', 'nzbget_map', '')
 
