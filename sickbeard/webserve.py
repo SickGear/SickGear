@@ -2170,11 +2170,11 @@ class Home(MainHandler):
                          ([], ['translucent'])[sickbeard.DISPLAY_SHOW_BACKGROUND_TRANSLUCENT] +
                          [{0: 'reg', 1: 'pro', 2: 'pro ii'}.get(sickbeard.DISPLAY_SHOW_VIEWMODE)])
 
-    def editShow(self, show=None, prune=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
+    def editShow(self, show=None, location=None, anyQualities=[], bestQualities=[], exceptions_list=[],
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, upgrade_once=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                 scene=None, tag=None, quality_preset=None, reset_fanart=None, **kwargs):
+                 scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None, **kwargs):
 
         if show is None:
             errString = 'Invalid show ID: ' + str(show)
