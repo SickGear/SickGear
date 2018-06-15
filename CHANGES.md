@@ -22,6 +22,7 @@
 
 [develop changelog]
 * Fix issue when deleting files and "Send to trash for actions" is enabled
+* Fix submitting a bulk change
 
 
 
