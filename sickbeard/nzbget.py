@@ -30,7 +30,7 @@ def test_nzbget(host, use_https, username, password):
 
     result = False
     if not host:
-        msg = 'No NZBget host found. Please configure it'
+        msg = 'No NZBGet host found. Please configure it'
         logger.log(msg, logger.ERROR)
         return result, msg, None
 
@@ -49,12 +49,12 @@ def test_nzbget(host, use_https, username, password):
         logger.log(u'NZBGet URL: %s' % url, logger.DEBUG)
 
     except moves.http_client.socket.error:
-        msg = 'Please check NZBget host and port (if it is running). NZBget is not responding to these values'
+        msg = 'Please check NZBGet host and port (if it is running). NZBGet is not responding to these values'
         logger.log(msg, logger.ERROR)
 
     except moves.xmlrpc_client.ProtocolError as e:
         if 'Unauthorized' == e.errmsg:
-            msg = 'NZBget username or password is incorrect'
+            msg = 'NZBGet username or password is incorrect'
             logger.log(msg, logger.ERROR)
         else:
             msg = 'Protocol Error: %s' % e.errmsg
@@ -150,11 +150,11 @@ def send_nzb(nzb):
                                                      nzbget_prio, False, nzb.url)
 
         if nzbget_result:
-            logger.log(u'NZB sent to NZBget successfully', logger.DEBUG)
+            logger.log(u'NZB sent to NZBGet successfully', logger.DEBUG)
             result = True
         else:
-            logger.log(u'NZBget could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
+            logger.log(u'NZBGet could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
     except(StandardError, Exception):
-        logger.log(u'Connect Error to NZBget: could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
+        logger.log(u'Connect Error to NZBGet: could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
 
     return result

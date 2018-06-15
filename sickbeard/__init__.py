@@ -691,7 +691,7 @@ def initialize(console_logging=True):
         if __INITIALIZED__:
             return False
 
-        for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBget', 'Emby', 'Kodi', 'XBMC', 'PLEX',
+        for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBGet', 'Emby', 'Kodi', 'XBMC', 'PLEX',
                        'Growl', 'Prowl', 'Twitter', 'Slack', 'Discordapp', 'Boxcar2', 'NMJ', 'NMJv2',
                        'Synology', 'SynologyNotifier',
                        'pyTivo', 'Pushalot', 'Pushbullet', 'Subtitles'):
@@ -919,13 +919,21 @@ def initialize(console_logging=True):
         SAB_CATEGORY = check_setting_str(CFG, 'SABnzbd', 'sab_category', 'tv')
         SAB_HOST = check_setting_str(CFG, 'SABnzbd', 'sab_host', '')
 
-        NZBGET_USERNAME = check_setting_str(CFG, 'NZBget', 'nzbget_username', 'nzbget')
-        NZBGET_PASSWORD = check_setting_str(CFG, 'NZBget', 'nzbget_password', 'tegbzn6789')
-        NZBGET_CATEGORY = check_setting_str(CFG, 'NZBget', 'nzbget_category', 'tv')
-        NZBGET_HOST = check_setting_str(CFG, 'NZBget', 'nzbget_host', '')
-        NZBGET_USE_HTTPS = bool(check_setting_int(CFG, 'NZBget', 'nzbget_use_https', 0))
-        NZBGET_PRIORITY = check_setting_int(CFG, 'NZBget', 'nzbget_priority', 100)
-        NZBGET_MAP = check_setting_str(CFG, 'NZBget', 'nzbget_map', '')
+        # first check using official name case, then with case of legacy
+        # todo: migrate config, (just not atm due to testing map feature)
+        NZBGET_USERNAME = (check_setting_str(CFG, 'NZBGet', 'nzbget_username', None)
+                           or check_setting_str(CFG, 'NZBget', 'nzbget_username', 'nzbget'))
+        NZBGET_PASSWORD = (check_setting_str(CFG, 'NZBGet', 'nzbget_password', None)
+                           or check_setting_str(CFG, 'NZBget', 'nzbget_password', 'tegbzn6789'))
+        NZBGET_CATEGORY = (check_setting_str(CFG, 'NZBGet', 'nzbget_category', None)
+                           or check_setting_str(CFG, 'NZBget', 'nzbget_category', 'tv'))
+        NZBGET_HOST = (check_setting_str(CFG, 'NZBGet', 'nzbget_host', None)
+                       or check_setting_str(CFG, 'NZBget', 'nzbget_host', ''))
+        NZBGET_USE_HTTPS = (bool(check_setting_int(CFG, 'NZBGet', 'nzbget_use_https', None))
+                            or bool(check_setting_int(CFG, 'NZBget', 'nzbget_use_https', 0)))
+        NZBGET_PRIORITY = (check_setting_int(CFG, 'NZBGet', 'nzbget_priority', None)
+                           or check_setting_int(CFG, 'NZBget', 'nzbget_priority', 100))
+        NZBGET_MAP = check_setting_str(CFG, 'NZBGet', 'nzbget_map', '')
 
         try:
             ng_script_file = ek.ek(os.path.join, ek.ek(os.path.dirname, ek.ek(os.path.dirname, __file__)),
@@ -1760,15 +1768,15 @@ def save_config():
     new_config['SABnzbd']['sab_category'] = SAB_CATEGORY
     new_config['SABnzbd']['sab_host'] = SAB_HOST
 
-    new_config['NZBget'] = {}
+    new_config['NZBGet'] = {}
 
-    new_config['NZBget']['nzbget_username'] = NZBGET_USERNAME
-    new_config['NZBget']['nzbget_password'] = helpers.encrypt(NZBGET_PASSWORD, ENCRYPTION_VERSION)
-    new_config['NZBget']['nzbget_category'] = NZBGET_CATEGORY
-    new_config['NZBget']['nzbget_host'] = NZBGET_HOST
-    new_config['NZBget']['nzbget_use_https'] = int(NZBGET_USE_HTTPS)
-    new_config['NZBget']['nzbget_priority'] = NZBGET_PRIORITY
-    new_config['NZBget']['nzbget_map'] = NZBGET_MAP
+    new_config['NZBGet']['nzbget_username'] = NZBGET_USERNAME
+    new_config['NZBGet']['nzbget_password'] = helpers.encrypt(NZBGET_PASSWORD, ENCRYPTION_VERSION)
+    new_config['NZBGet']['nzbget_category'] = NZBGET_CATEGORY
+    new_config['NZBGet']['nzbget_host'] = NZBGET_HOST
+    new_config['NZBGet']['nzbget_use_https'] = int(NZBGET_USE_HTTPS)
+    new_config['NZBGet']['nzbget_priority'] = NZBGET_PRIORITY
+    new_config['NZBGet']['nzbget_map'] = NZBGET_MAP
 
     new_config['TORRENT'] = {}
     new_config['TORRENT']['torrent_username'] = TORRENT_USERNAME

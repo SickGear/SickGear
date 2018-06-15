@@ -2,7 +2,7 @@
 GOTO :main
 *******************************************************************************
 
-onTxComplete.bat v1.0 for Sickgear
+onTxComplete.bat v1.0 for SickGear
 
   Script to copy select files to a location for SickGear to post process.
 
