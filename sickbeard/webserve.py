@@ -6512,9 +6512,6 @@ class ConfigProviders(Config):
                     src_id_prefix + attr, '').split(',')]))
                 torrent_src.url_home = ([url_edit], [])[not url_edit]
 
-            for attr in [x for x in ['username', 'uid'] if hasattr(torrent_src, x)]:
-                setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip())
-
             for attr in [x for x in ['password', 'api_key', 'passkey', 'digest', 'hash'] if hasattr(torrent_src, x)]:
                 key = str(kwargs.get(src_id_prefix + attr, '')).strip()
                 if 'password' == attr:
@@ -6522,16 +6519,15 @@ class ConfigProviders(Config):
                 elif not starify(key, True):
                     setattr(torrent_src, attr, key)
 
-            attr = 'ratio'
-            if hasattr(torrent_src, '_seed_' + attr) and src_id_prefix + attr in kwargs:
-                setattr(torrent_src, '_seed_' + attr, kwargs.get(src_id_prefix + attr, '').strip() or None)
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
+                'username', 'uid', '_seed_ratio', 'scene_or_contain'
+            ]):
+                setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr.replace('_seed_', ''), '')).strip())
 
-            for attr in [x for x in ['minseed', 'minleech'] if hasattr(torrent_src, x)]:
-                setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
-
-            attr = 'seed_time'
-            if hasattr(torrent_src, attr) and src_id_prefix + attr in kwargs:
-                setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
+                'minseed', 'minleech', 'seed_time'
+            ]):
+                setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr, '')).strip()))
 
             attr = 'filter'
             if hasattr(torrent_src, attr):
@@ -6539,16 +6535,18 @@ class ConfigProviders(Config):
                         [k for k in torrent_src.may_filter.keys()
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
 
-            for attr in [x for x in ['confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
-                                     'enable_backlog', 'search_fallback', 'enable_scheduled_backlog',
-                                     'scene_only', 'scene_loose', 'scene_loose_active',
-                                     'scene_rej_nuked', 'scene_nuked_active']
-                         if hasattr(torrent_src, x) and src_id_prefix + x in kwargs]:
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
+                'confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
+                'enable_backlog', 'search_fallback', 'enable_scheduled_backlog',
+                'scene_only', 'scene_loose', 'scene_loose_active',
+                'scene_rej_nuked', 'scene_nuked_active'
+            ]):
                 setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
-            for (attr, default) in [('scene_or_contain', ''), ('search_mode', 'eponly')]:
-                if hasattr(torrent_src, attr):
-                    setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
+            for attr, default in filter(lambda (a, _): hasattr(torrent_src, a), [
+                ('search_mode', 'eponly'),
+            ]):
+                setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
         # update nzb source settings
         for nzb_src in [src for src in sickbeard.providers.sortedProviderList() if
@@ -6570,10 +6568,10 @@ class ConfigProviders(Config):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)) or
                         not getattr(nzb_src, 'supports_backlog', True))
 
-            for attr in [x for x in ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
-                                     'scene_only', 'scene_loose', 'scene_loose_active',
-                                     'scene_rej_nuked', 'scene_nuked_active']
-                         if hasattr(nzb_src, x)]:
+            for attr in filter(lambda x: hasattr(nzb_src, x),
+                               ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
+                                'scene_only', 'scene_loose', 'scene_loose_active',
+                                'scene_rej_nuked', 'scene_nuked_active']):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
             for (attr, default) in [('scene_or_contain', ''), ('search_mode', 'eponly')]:
