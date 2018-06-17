@@ -1,5 +1,6 @@
 ﻿### 0.17.0 (2018-xx-xx xx:xx:xx UTC)
 
+* Change save config values only where reqd. reduces file by up to 75%
 * Add 'Map an NZBGet "DestDir"' setting to config/Search/NZB Results tab (select NZBGet)
 * Add TVDB, TheXem, and GitHub buttons to page History/Layout "Provider fails" that fetches a site Up/Down report
 * Add bubble links to History/Provider fails when more than one provider has failures
