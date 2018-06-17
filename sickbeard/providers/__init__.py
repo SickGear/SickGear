@@ -17,86 +17,38 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from os import sys
+import importlib
 
 import os.path
 import sickbeard
 
-from . import generic
+from . import generic, newznab
 from .newznab import NewznabConstants
 from sickbeard import logger, encodingKludge as ek
-# usenet
-from . import newznab, omgwtfnzbs
-# torrent
-from . import alpharatio, alphareign, beyondhd, bithdtv, bitmetv, blutopia, btn, btscene, dh, ettv, eztv, \
-    fano, filelist, funfile, grabtheinfo, hdbits, hdme, hdspace, hdtorrents, horriblesubs, immortalseed, \
-    iptorrents, limetorrents, magnetdl, morethan, nebulance, ncore, nyaa, pisexy, potuk, pretome, privatehd, ptf, \
-    rarbg, revtt, scenehd, scenetime, shazbat, showrss, skytorrents, speedcd, \
-    thepiratebay, torlock, torrentday, torrenting, torrentleech, \
-    torrentz2, tvchaosuk, wop, xspeeds, zooqle
-# anime
-from . import anizb, tokyotoshokan
-# custom
-try:
-    from . import custom01
-except (StandardError, Exception):
-    pass
 
-__all__ = ['omgwtfnzbs',
-           'alpharatio',
-           'alphareign',
-           'anizb',
-           'beyondhd',
-           'bithdtv',
-           'bitmetv',
-           'blutopia',
-           'btn',
-           'btscene',
-           'custom01',
-           'dh',
-           'ettv',
-           'eztv',
-           'fano',
-           'filelist',
-           'funfile',
-           'grabtheinfo',
-           'hdbits',
-           'hdme',
-           'hdspace',
-           'hdtorrents',
-           'horriblesubs',
-           'immortalseed',
-           'iptorrents',
-           'limetorrents',
-           'magnetdl',
-           'morethan',
-           'nebulance',
-           'ncore',
-           'nyaa',
-           'pisexy',
-           'potuk',
-           'pretome',
-           'privatehd',
-           'ptf',
-           'rarbg',
-           'revtt',
-           'scenehd',
-           'scenetime',
-           'shazbat',
-           'showrss',
-           'skytorrents',
-           'speedcd',
-           'thepiratebay',
-           'torlock',
-           'torrentday',
-           'torrenting',
-           'torrentleech',
-           'torrentz2',
-           'tvchaosuk',
-           'wop',
-           'xspeeds',
-           'zooqle',
-           'tokyotoshokan',
-           ]
+__all__ = [
+    # usenet
+    'omgwtfnzbs',
+    # torrent
+    'alpharatio', 'alphareign', 'beyondhd', 'bithdtv', 'bitmetv', 'blutopia', 'btn', 'btscene',
+    'custom01', 'custom11', 'dh', 'ettv', 'eztv', 'fano', 'filelist', 'funfile', 'grabtheinfo',
+    'hdbits', 'hdme', 'hdspace', 'hdtorrents', 'horriblesubs',
+    'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'morethan', 'nebulance', 'ncore', 'nyaa',
+    'pisexy', 'potuk', 'pretome', 'privatehd', 'ptf',
+    'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'skytorrents', 'speedcd',
+    'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'torrentz2', 'tvchaosuk',
+    'wop', 'xspeeds', 'zooqle',
+    # anime
+    'anizb', 'tokyotoshokan',
+    ]
+for module in __all__:
+    try:
+        m = importlib.import_module('.' + module, 'sickbeard.providers')
+        globals().update({n: getattr(m, n) for n in m.__all__} if hasattr(m, '__all__')
+                         else dict(filter(lambda t: '_' != t[0][0], m.__dict__.items())))
+    except ImportError as e:
+        if 'custom' != module[0:6]:
+            raise e
 
 
 def sortedProviderList():

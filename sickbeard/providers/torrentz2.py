@@ -39,14 +39,6 @@ class Torrentz2Provider(generic.TorrentProvider):
                                 'G  d', 'yr 9', 'm jc', 'urrV', 'Hr d', 'y ro', 'n rL', '2j R']],
                             [re.sub('[q\sP]+', '', x[::-1]) for x in [
                                 'cy 9PGd', 'Hdq uVm', 'VnLqxqo', 'vqPxmYu', 'Zlt q2Y', 'G Pd35C', '=  Y']],
-                            [re.sub('[F\sJ]+', '', x[::-1]) for x in [
-                                'c y9 Gd', 'HduJFVm', 'VnL Fxo', 'vJFxmYu', 'Zl Ft2Y', 'wJct 5C', '=JJ=']],
-                            [re.sub('[P\sQ]+', '', x[::-1]) for x in [
-                                'y9 GPd', 'uQVmPc', 'yQoHQd', '5PPJmL', 'zFPGQc', 'k QV2c', '6PJmPL']],
-                            [re.sub('[N\sg]+', '', x[::-1]) for x in [
-                                'y9NGgd', 'uV mNc', 'yoNHgd', '5 JgmL', 'zFGg c', 'kV  2c', '1VgNmL']],
-                            [re.sub('[t\sj]+', '', x[::-1]) for x in [
-                                'cy 9G d', 'HdtuVtm', 'JtmLyjo', 'zFG ct5', 'LkVt2jc', 'wjZjy9m', '=tj=']],
                         ]]]
 
         self.url_vars = {'search': 'searchA?f=%s&safe=1', 'searchv': 'verifiedA?f=%s&safe=1'}

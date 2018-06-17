@@ -31,23 +31,12 @@ class IPTorrentsProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'IPTorrents')
 
-        self.url_home = (['https://iptorrents.%s/' % u for u in 'eu', 'com', 'me', 'ru'] +
-                         ['http://rss.workisboring.com/'] +
+        self.url_home = (['https://iptorrents.com/'] +
                          [base64.b64decode(x) for x in [''.join(x) for x in [
                              [re.sub('(?i)[q\s1]+', '', x[::-1]) for x in [
                                  'c0RHa', 'vo1QD', 'hJ2L', 'GdhdXe', 'vdnLoN', 'J21cptmc', '5yZulmcv', '02bj', '=iq=']],
                              [re.sub('(?i)[q\seg]+', '', x[::-1]) for x in [
                                  'RqHEa', 'LvEoDc0', 'Zvex2', 'LuF2', 'NXdu Vn', 'XZwQxeWY1', 'Yu42bzJ', 'tgG92']],
-                             [re.sub('(?i)[q\sek]+', '', x[::-1]) for x in [
-                                 'H qa', 'vQoDc0R', '2L ', 'bod', 'hNmLk0N3', 'WLlxemY', 'LtVGZv1', 'wZy9m', '=kQ=']],
-                             [re.sub('(?i)[q\seg1]+', '', x[::-1]) for x in [
-                                 'HGa', 'voDc0R', '21L', 'bucmbvt', 'ZyZWQ1L0Vm', 'ycrFW', '02bej5', 'e=gq']],
-                             [re.sub('(?i)[q\sei]+', '', x[::-1]) for x in [
-                                 'Q0RHa', 'voiQDc', 'asF2L', 'hVmLuVW', 'yZulGd', 'mbhdmcv1', 'Adl5mLjl', '==Qe']],
-                             [re.sub('[r\sh]+', '', x[::-1]) for x in [
-                                 'fzRh3re', 'ChdwhlW', 'FW Zyh5', 'vJWhrLk', 'Lhz t2b', 'wZyhh9m', '=rr=']],
-                             [re.sub('[S\sN]+', '', x[::-1]) for x in [
-                                 'zSSR3e', 'wNlWNf', 'zN 5Cd', '2SNJXZ', 'ySNAXZ', 'j5SSCc', '=S02 b']],
                          ]]])
 
         self.url_vars = {'login': 't', 'search': 't?%s;q=%s;qf=ti%s%s#torrents'}
