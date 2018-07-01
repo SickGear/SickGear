@@ -2414,14 +2414,12 @@ class CMD_SickGearSearchIndexers(ApiCall):
                 lINDEXER_API_PARMS['custom_ui'] = classes.AllShowsNoFilterListUI
                 t = sickbeard.indexerApi(i).indexer(**lINDEXER_API_PARMS)
 
-                apiData = None
-
                 try:
                     apiData = t[str(self.name).encode(), False]
                 except (StandardError, Exception):
-                    pass
+                    continue
 
-                for curSeries in apiData:
+                for curSeries in (apiData or []):
                     s = {"indexerid": int(curSeries['id']),
                          "name": curSeries['seriesname'],
                          "first_aired": curSeries['firstaired'],
@@ -3659,10 +3657,12 @@ class CMD_SickGearShowPause(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show not found")
 
         if self.pause:
-            showObj.paused = 1
+            showObj.paused = True
+            showObj.saveToDB()
             return _responds(RESULT_SUCCESS, msg=str(showObj.name) + " has been paused")
         else:
-            showObj.paused = 0
+            showObj.paused = False
+            showObj.saveToDB()
             return _responds(RESULT_SUCCESS, msg=str(showObj.name) + " has been unpaused")
 
         return _responds(RESULT_FAILURE, msg=str(showObj.name) + " was unable to be paused")

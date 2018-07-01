@@ -29,6 +29,12 @@
 
 
 
+### 0.16.17 (2018-07-01 01:00:00 UTC)
+
+* Update UnRar for Windows 5.50 to 5.60
+* Fix API save show paused state and API exception raised when no indexer results
+
+
 ### 0.16.16 (2018-06-09 12:13:00 UTC)
 
 * Fix metadata mediabrowser when no actors
