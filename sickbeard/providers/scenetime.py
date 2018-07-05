@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import ast
 import re
 import traceback
 
@@ -33,11 +32,13 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         self.url_home = ['https://%s.scenetime.com/' % u for u in 'www', 'uk']
 
-        self.url_vars = {'login': 'support.php', 'browse': 'browse_API.php', 'get': 'download.php/%s.torrent'}
+        self.url_vars = {'login': 'support.php', 'search': 'browse.php?cata=yes&%s&search=%s%s',
+                         'get': 'download.php/%s.torrent'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
-                         'browse': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
+                         'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
-        self.categories = {'shows': [2, 43, 9, 63, 77, 79, 83]}
+        self.categories = {'Season': [43], 'Episode': [2, 9, 63, 77, 79, 100, 83, 19], 'anime': [18]}
+        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
 
@@ -61,25 +62,18 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': 'detail', 'get': '.*id=(\d+).*', 'fl': '\[freeleech\]',
-            'cats': 'cat=(?:%s)' % self._categories_string(template='', delimiter='|')}.items())
         for mode in search_params.keys():
+            rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+                'info': 'detail', 'get': '.*id=(\d+).*', 'fl': '\[freeleech\]',
+                'cats': 'cat=(?:%s)' % self._categories_string(mode=mode, template='', delimiter='|')}.items())
+
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                post_data = {'sec': 'jax', 'cata': 'yes'}
-                post_data.update(ast.literal_eval(
-                    '{%s}' % self._categories_string(template='"c%s": "1"', delimiter=',')))
-                if 'Cache' != mode:
-                    search_string = '+'.join(search_string.split())
-                    post_data['search'] = search_string
-
-                if self.freeleech:
-                    post_data.update({'freeleech': 'on'})
-
-                self.session.headers.update({'Referer': self.url + 'browse.php', 'X-Requested-With': 'XMLHttpRequest'})
-                html = self.get_url(self.urls['browse'], post_data=post_data)
+                search_url = self.urls['search'] % (self._categories_string(),
+                                                    '+'.join(search_string.replace('.', ' ').split()),
+                                                    ('', '&freeleech=on')[self.freeleech])
+                html = self.get_url(search_url)
                 if self.should_skip():
                     return results
 
@@ -124,8 +118,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                 except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
-                self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string, self.name)['Cache' == mode])
+                self._log_search(mode, len(items[mode]) - cnt, search_url)
 
             results = self._sort_seeding(mode, results + items[mode])
 

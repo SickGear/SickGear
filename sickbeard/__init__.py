@@ -849,7 +849,7 @@ def initialize(console_logging=True):
         NAMING_STRIP_YEAR = bool(check_setting_int(CFG, 'General', 'naming_strip_year', 0))
 
         USE_NZBS = bool(check_setting_int(CFG, 'General', 'use_nzbs', 0))
-        USE_TORRENTS = bool(check_setting_int(CFG, 'General', 'use_torrents', 1))
+        USE_TORRENTS = bool(check_setting_int(CFG, 'General', 'use_torrents', 0))
 
         NZB_METHOD = check_setting_str(CFG, 'General', 'nzb_method', 'blackhole')
         if NZB_METHOD not in ('blackhole', 'sabnzbd', 'nzbget'):
