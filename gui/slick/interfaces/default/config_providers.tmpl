@@ -115,7 +115,8 @@
 #end for
 						</ul>
 
-
+						<input type="hidden" name="provider_order" id="provider_order" value="<%=' '.join([x.get_id()+':'+str(int(x.is_enabled())) for x in sickbeard.providers.sortedProviderList()])%>"/>
+#if $sickbeard.USE_NZBS or $sickbeard.USE_TORRENTS
 						<div id="provider_key">
 							<span style="float:left;font-size:10px;vertical-align:top;font-weight:normal">(PA)</span><p class="note">Public access, no account required</p>
 #if $backlog_only_tip
@@ -127,12 +128,12 @@
 							##<h4 class="note">!</h4><p class="note">Provider is <b>NOT WORKING</b></p>
 						</div>
 
-						<input type="hidden" name="provider_order" id="provider_order" value="<%=' '.join([x.get_id()+':'+str(int(x.is_enabled())) for x in sickbeard.providers.sortedProviderList()])%>"/>
 						<div style="width: 300px; float: right">
 							<div style="margin: 0px auto; width: 101px">
 								<input type="submit" class="btn config_submitter" value="Save Changes" />
 							</div>
 						</div>
+#end if
 					</fieldset>
 
 				</div><!-- /component-group1 //-->

@@ -29,6 +29,12 @@
 
 
 
+### 0.16.18 (2018-07-05 14:45:00 UTC)
+
+* Fix Scenetime torrent provider
+* Change disable search torrents on first installation
+
+
 ### 0.16.17 (2018-07-01 01:00:00 UTC)
 
 * Update UnRar for Windows 5.50 to 5.60
