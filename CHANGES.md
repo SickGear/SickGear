@@ -29,6 +29,11 @@
 
 
 
+### 0.16.19 (2018-07-05 18:10:00 UTC)
+
+* Fix Uuid1 Python Bug, add fallback to uuid4 when uuid1 fails with ValueError https://bugs.python.org/issue32502
+
+
 ### 0.16.18 (2018-07-05 14:45:00 UTC)
 
 * Fix Scenetime torrent provider

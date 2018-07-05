@@ -26,7 +26,10 @@ import uuid
 import logger
 import sickbeard
 
-INSTANCE_ID = str(uuid.uuid1())
+try:
+    INSTANCE_ID = str(uuid.uuid1())
+except ValueError:
+    INSTANCE_ID = str(uuid.uuid4())
 
 USER_AGENT = ('SickGear/(%s; %s; %s)' % (platform.system(), platform.release(), INSTANCE_ID))
 
