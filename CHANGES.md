@@ -1,4 +1,10 @@
-﻿### 0.16.19 (2018-07-05 18:10:00 UTC)
+﻿### 0.16.20 (2018-07-17 14:30:00 UTC)
+
+* Change TorrentDay
+* Fix for Emby updater when no folders are returned from API
+
+
+### 0.16.19 (2018-07-05 18:10:00 UTC)
 
 * Fix Uuid1 Python Bug, add fallback to uuid4 when uuid1 fails with ValueError https://bugs.python.org/issue32502
 
