@@ -5423,7 +5423,7 @@ class History(MainHandler):
                         folder = sickbeard.helpers.getURL('%s/Items/%s' % (user_url, folder_id), headers=headers,
                                                           params=dict(format='json'), timeout=10, json=True)
 
-                        if 'tvshows' != folder.get('CollectionType', ''):
+                        if not folder or 'tvshows' != folder.get('CollectionType', ''):
                             continue
 
                         items = sickbeard.helpers.getURL('%s/Items' % user_url, headers=headers,
