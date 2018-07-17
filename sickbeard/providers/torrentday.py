@@ -44,7 +44,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                                 'Vmbq', 'WL10', 'ZyZ', 'rFW', '5yc', '12bj', 'q=0']]
                         ]]]
 
-        self.url_vars = {'login': 'rss.php', 'search': 'browse.php?cata=yes&%s%s&search=%s%s'}
+        self.url_vars = {'login': 'rss.php', 'search': 't?%s%s&qf=&q=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s'}
 
@@ -76,14 +76,13 @@ class TorrentDayProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'download'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = '+'.join(search_string.split())
 
                 search_url = self.urls['search'] % (
-                    self._categories_string(mode), ('&free=on', '')[not self.freeleech],
-                    search_string, ('&sort=7&type=desc', '')['Cache' == mode])
+                    self._categories_string(mode, '%s=on'), ('&free=on', '')[not self.freeleech], search_string)
 
                 html = self.get_url(search_url)
                 if self.should_skip():
@@ -114,9 +113,11 @@ class TorrentDayProvider(generic.TorrentProvider):
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                title = tr.find('a', href=rc['info']).get_text().strip()
-                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
-                            except (AttributeError, TypeError, ValueError):
+                                dl = tr.find('a', href=rc['get'])['href']
+                                title = tr.find('a', href=re.compile(
+                                    '/t/%s' % re.findall('download.*?/([^/]+)', dl)[0])).get_text().strip()
+                                download_url = self._link(dl)
+                            except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
                             if title and download_url:
