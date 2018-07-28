@@ -63,7 +63,7 @@
 
 # Send PostProcessing requests to SickGear
 #
-# PostProcessing-Script version: 1.6.
+# PostProcessing-Script version: 1.7.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
@@ -157,7 +157,7 @@ import re
 import sys
 import warnings
 
-__version__ = '1.6'
+__version__ = '1.7'
 
 verbose = 0 or 'yes' == os.environ.get('NZBPO_SG_VERBOSE', 'no')
 
@@ -282,10 +282,16 @@ class Ek:
         return None
 
     @staticmethod
+    def fix_out_encoding(x):
+        if isinstance(x, basestring):
+            return Ek.fix_string_encoding(x)
+        return x
+
+    @staticmethod
     def fix_list_encoding(x):
         if type(x) not in (list, tuple):
             return x
-        return filter(lambda i: None is not i, map(Ek.fix_string_encoding, i))
+        return filter(lambda i: None is not i, map(Ek.fix_out_encoding, x))
 
     @staticmethod
     def encode_item(x):
