@@ -42,11 +42,16 @@ def fixStupidEncodings(x, silent=False):
         return None
 
 
+def fixOutEncoding(x):
+    if isinstance(x, basestring):
+        return fixStupidEncodings(x)
+    return x
+
+
 def fixListEncodings(x):
-    if type(x) != list and type(x) != tuple:
+    if type(x) not in (list, tuple):
         return x
-    else:
-        return filter(lambda x: x != None, map(fixStupidEncodings, x))
+    return filter(lambda i: None is not i, map(fixOutEncoding, x))
 
 
 def callPeopleStupid(x):

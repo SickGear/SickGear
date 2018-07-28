@@ -30,19 +30,7 @@ class TorrentDayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'TorrentDay')
 
         self.url_home = ['https://%s/' % u for u in 'torrentday.eu', 'secure.torrentday.com', 'tdonline.org',
-                                                    'torrentday.it', 'www.td.af', 'www.torrentday.com'] + \
-                        ['http://td.%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('(?i)[I\s1]+', '', x[::-1]) for x in [
-                                'y92d', 'zl12a', 'y9mY', 'n5 Wa', 'vNmIL', '=i1=Qb']],
-                            [re.sub('(?i)[T\sq]+', '', x[::-1]) for x in [
-                                '15TWd', 'hV 3c', 'lBHb', 'vNncq', 'j5ib', '=qQ02b']],
-                            [re.sub('(?i)[0\so]+', '', x[::-1]) for x in [
-                                'Vmco', 'CZh', 'boi10', 'r92', '5yc', 'mcv', '=oc']],
-                            [re.sub('(?i)[1\slq]+', '', x[::-1]) for x in [
-                                '2cql', 'yV1', 'mdlq', 'wQV', 'n11M', 'uA', '12Y', 't9']],
-                            [re.sub('(?i)[\s1q]+', '', x[::-1]) for x in [
-                                'Vmbq', 'WL10', 'ZyZ', 'rFW', '5yc', '12bj', 'q=0']]
-                        ]]]
+                                                    'torrentday.it', 'www.td.af', 'www.torrentday.com']
 
         self.url_vars = {'login': 'rss.php', 'search': 't?%s%s&qf=&q=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',

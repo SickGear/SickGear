@@ -9,7 +9,7 @@ from functools import wraps
 
 __author__ = 'dbr/Ben'
 __version__ = '2.0'
-__api_version__ = '2.1.2'
+__api_version__ = '2.2.0'
 
 import os
 import time
@@ -581,19 +581,19 @@ class Tvdb:
             log().debug('Using proxy for URL: %s' % url)
             session.proxies = {'http': self.config['proxy'], 'https': self.config['proxy']}
 
-        session.headers.update({'Accept-Encoding': 'gzip,deflate', 'Authorization': 'Bearer %s' % self.get_token(),
-                                'Accept': 'application/vnd.thetvdb.v%s' % __api_version__})
+        headers = {'Accept-Encoding': 'gzip,deflate', 'Authorization': 'Bearer %s' % self.get_token(),
+                   'Accept': 'application/vnd.thetvdb.v%s' % __api_version__}
 
         if None is not language and language in self.config['valid_languages']:
-            session.headers.update({'Accept-Language': language})
+            headers.update({'Accept-Language': language})
 
         resp = None
         if self._match_url_pattern('url_seriesInfo', url):
             self.show_not_found = False
         self.not_found = False
         try:
-            resp = getURL(url.strip(), params=params, session=session, json=True, raise_status_code=True,
-                          raise_exceptions=True)
+            resp = getURL(url.strip(), params=params, session=session, headers=headers, json=True,
+                          raise_status_code=True, raise_exceptions=True)
         except requests.exceptions.HTTPError as e:
             if 401 == e.response.status_code:
                 # token expired, get new token, raise error to retry

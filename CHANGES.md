@@ -29,6 +29,12 @@
 
 
 
+### 0.16.21 (2018-07-28 14:15:00 UTC)
+
+* Change TorrentDay
+* Change TVDB API 2 to version 2.2.0
+
+
 ### 0.16.20 (2018-07-17 14:30:00 UTC)
 
 * Change TorrentDay
