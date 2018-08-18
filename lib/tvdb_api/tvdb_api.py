@@ -610,9 +610,13 @@ class Tvdb:
         except (StandardError, Exception):
             raise tvdb_error
 
-        map_show = {'airstime': 'airs_time', 'airsdayofweek': 'airs_dayofweek', 'imdbid': 'imdb_id'}
+        map_show = {'airstime': 'airs_time', 'airsdayofweek': 'airs_dayofweek', 'imdbid': 'imdb_id',
+                    'writers': 'writer'}
 
         def map_show_keys(data):
+            keep_data = {}
+            del_keys = []
+            new_data = {}
             for k, v in data.iteritems():
                 k_org = k
                 k = k.lower()
@@ -620,6 +624,13 @@ class Tvdb:
                     if k in ['banner', 'fanart', 'poster'] and v:
                         v = self.config['url_artworkPrefix'] % v
                     elif 'genre' == k:
+                        keep_data['genre_list'] = v
+                        v = '|%s|' % '|'.join([self._clean_data(c) for c in v if isinstance(c, basestring)])
+                    elif 'gueststars' == k:
+                        keep_data['gueststars_list'] = v
+                        v = '|%s|' % '|'.join([self._clean_data(c) for c in v if isinstance(c, basestring)])
+                    elif 'writers' == k:
+                        keep_data[k] = v
                         v = '|%s|' % '|'.join([self._clean_data(c) for c in v if isinstance(c, basestring)])
                     elif 'firstaired' == k:
                         if v:
@@ -634,8 +645,15 @@ class Tvdb:
                 if k in map_show:
                     k = map_show[k]
                 if k_org is not k:
-                    del(data[k_org])
-                data[k] = v
+                    del_keys.append(k_org)
+                    new_data[k] = v
+                else:
+                    data[k] = v
+            for d in del_keys:
+                del(data[d])
+            if isinstance(data, dict):
+                data.update(new_data)
+                data.update(keep_data)
             return data
 
         if resp:
