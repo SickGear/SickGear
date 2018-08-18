@@ -1,4 +1,9 @@
-﻿### 0.16.21 (2018-07-28 14:15:00 UTC)
+﻿### 0.16.22 (2018-08-18 12:30:00 UTC)
+
+* Change TVDB data parsing for gueststars, writers and genre
+
+
+### 0.16.21 (2018-07-28 14:15:00 UTC)
 
 * Change TorrentDay
 * Change TVDB API 2 to version 2.2.0
