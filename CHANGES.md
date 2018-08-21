@@ -29,6 +29,13 @@
 
 
 
+### 0.16.23 (2018-08-21 21:00:00 UTC)
+
+* Fix detection of existing files
+* Change add sanitize 'imdbid' field in tvdb_api v2
+* Change indexer_id in imdb_info (switchIndexer)
+
+
 ### 0.16.22 (2018-08-18 12:30:00 UTC)
 
 * Change TVDB data parsing for gueststars, writers and genre

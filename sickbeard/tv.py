@@ -820,7 +820,7 @@ class TVShow(object):
                 logger.log('Since this file was renamed, file %s was checked and quality "%s" found'
                            % (file, Quality.qualityStrings[new_quality]), logger.DEBUG)
                 status, quality = sickbeard.common.Quality.splitCompositeStatus(cur_ep.status)
-                if Quality.UNKNOWN != new_quality or SKIPPED == status:
+                if Quality.UNKNOWN != new_quality or status in (SKIPPED, UNAIRED):
                     cur_ep.status = Quality.compositeStatus(DOWNLOADED, new_quality)
 
             # check for status/quality changes as long as it's a new file
@@ -856,6 +856,16 @@ class TVShow(object):
                         logger.log('STATUS: we have an associated file, so setting the status from %s to DOWNLOADED/%s'
                                    % (cur_ep.status, Quality.compositeStatus(new_status, new_quality)), logger.DEBUG)
                         cur_ep.status = Quality.compositeStatus(new_status, new_quality)
+
+            elif same_file:
+                status, quality = Quality.splitCompositeStatus(cur_ep.status)
+                if status in (SKIPPED, UNAIRED):
+                    new_quality = Quality.nameQuality(file, self.is_anime)
+                    if Quality.UNKNOWN == new_quality:
+                        new_quality = Quality.fileQuality(file)
+                    logger.log('Since this file has status: "%s", file %s was checked and quality "%s" found'
+                               % (statusStrings[status], file, Quality.qualityStrings[new_quality]), logger.DEBUG)
+                    cur_ep.status = Quality.compositeStatus(DOWNLOADED, new_quality)
 
             with cur_ep.lock:
                 result = cur_ep.get_sql()
@@ -1371,6 +1381,8 @@ class TVShow(object):
         self.ids[old_indexer]['status'] = MapStatus.NONE
         self.ids[self.indexer]['status'] = MapStatus.SOURCE
         self.ids[self.indexer]['id'] = self.indexerid
+        if isinstance(self.imdb_info, dict):
+            self.imdb_info['indexer_id'] = self.indexerid
         save_mapping(self)
         name_cache.remove_from_namecache(old_indexerid)
 
