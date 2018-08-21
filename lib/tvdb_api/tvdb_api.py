@@ -639,6 +639,12 @@ class Tvdb:
                                 v = None
                         else:
                             v = None
+                    elif 'imdbid' == k:
+                        if v:
+                            if re.search(r'^(tt)?\d{1,7}$', v, flags=re.I):
+                                v = self._clean_data(v)
+                            else:
+                                v = ''
                     else:
                         v = self._clean_data(v)
                 if k in map_show:
