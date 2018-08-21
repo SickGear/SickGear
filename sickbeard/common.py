@@ -180,7 +180,8 @@ class Quality:
         If no quality is achieved it will try sceneQuality regex
         """
 
-        name = os.path.basename(name)
+        from sickbeard import encodingKludge as ek
+        name = ek.ek(os.path.basename, name)
 
         # if we have our exact text then assume we put it there
         for x in sorted(Quality.qualityStrings.keys(), reverse=True):
@@ -201,7 +202,8 @@ class Quality:
         Return The quality from the scene episode File
         """
 
-        name = os.path.basename(name)
+        from sickbeard import encodingKludge as ek
+        name = ek.ek(os.path.basename, name)
 
         checkName = lambda quality_list, func: func([re.search(x, name, re.I) for x in quality_list])
 
