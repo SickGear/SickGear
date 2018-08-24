@@ -1,4 +1,4 @@
-﻿### 0.17.0 (2018-xx-xx xx:xx:xx UTC)
+﻿### 0.17.0 (2018-08-24 23:40:00 UTC)
 
 * Change save config values only where reqd. reduces file by up to 75%
 * Add 'Map an NZBGet "DestDir"' setting to config/Search/NZB Results tab (select NZBGet)
@@ -21,13 +21,6 @@
   'not scene nuked', and 'nuked if no active search results'
 * Change improve tvdb_api performance; remember if episodes are cached and reload show if not and episodes are requested
 * Change remove redundant torrent URLs and improve provider loader
-
-
-[develop changelog]
-* Fix issue when deleting files and "Send to trash for actions" is enabled
-* Fix submitting a bulk change
-* Fix issue with enabled encrpyted passwords and migrating the NZBGet default password fails
-
 
 
 ### 0.16.23 (2018-08-21 21:00:00 UTC)
