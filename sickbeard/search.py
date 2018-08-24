@@ -136,8 +136,22 @@ def snatch_episode(result, end_status=SNATCHED):
             result.get_data_func = None  # consume only once
             if not result.url:
                 return False
+        if not result.content and result.url.startswith('magnet-'):
+            if sickbeard.TORRENT_DIR:
+                filepath = ek.ek(os.path.join, sickbeard.TORRENT_DIR, 'files.txt')
+                try:
+                    with open(filepath, 'a') as fh:
+                        result.url = result.url[7:]
+                        fh.write('"%s"\t"%s"\n' % (result.url, sickbeard.TV_DOWNLOAD_DIR))
+                    dl_result = True
+                except IOError:
+                    logger.log(u'Failed to write to %s' % filepath, logger.ERROR)
+                    return False
+            else:
+                logger.log(u'Need to set a torrent blackhole folder', logger.ERROR)
+                return False
         # torrents are saved to disk when blackhole mode
-        if 'blackhole' == sickbeard.TORRENT_METHOD:
+        elif 'blackhole' == sickbeard.TORRENT_METHOD:
             dl_result = _download_result(result)
         else:
             # make sure we have the torrent file content

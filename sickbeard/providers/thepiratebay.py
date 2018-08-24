@@ -37,32 +37,12 @@ class ThePirateBayProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay')
 
-        self.url_home = ['https://thepiratebay.%s/' % u for u in 'se', 'org'] + \
+        self.url_home = ['https://thepiratebay.se/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
                             [re.sub('[h\sI]+', '', x[::-1]) for x in [
                                 'm IY', '5  F', 'HhIc', 'vI J', 'HIhe', 'uI k', '2  d', 'uh l']],
                             [re.sub('[N\sQ]+', '', x[::-1]) for x in [
                                 'lN Gc', 'X  Yy', 'c lNR', 'vNJNH', 'kQNHe', 'GQdQu', 'wNN9']],
-                            [re.sub('[F\sT]+', '', x[::-1]) for x in [
-                                'JFHTc', 'HeTFv', 'aF wl', 'h JFX', 'UFFGd', 'G  du', 'wFF9']],
-                            [re.sub('[ \sL]+', '', x[::-1]) for x in [
-                                'HLLc', '4LLJ', 'S Le', 'w L5', 'XLLY', '0 LJ', 'QLLe', '=L =']],
-                            [re.sub('[r\sG]+', '', x[::-1]) for x in [
-                                'H rd', 'i rB', 'HGGc', 'v rJ', 'H Ge', 'u rk', '2rrd', 'uG l']],
-                            [re.sub('[Q\sh]+', '', x[::-1]) for x in [
-                                'lQG c', 'XhYQy', 'ch lR', 'v J H', 'kQHQe', '2cQ u', '=Qhg']],
-                            [re.sub('[T\st]+', '', x[::-1]) for x in [
-                                '3t Y', '1tTJ', 'm te', 'utTl', 'y TZ', '4 t5', 'Xtte', '=Tto']],
-                            [re.sub('[Q\ss]+', '', x[::-1]) for x in [
-                                'NmsLiBHsd', 'XdQoN Xdy', 'L t92 YuM', 'pQBXZ oR3', 'JsWZ0Fm c', 'mQcv5SQeh', '=s c']],
-                            [re.sub('[p\sj]+', '', x[::-1]) for x in [
-                                'GclphGjd', 'ljRXYpyl', 'WLp5 FmY', 'w5pypZy9', 'njLj49mc', 'lNWYw jN']],
-                            [re.sub('[M\sJ]+', '', x[::-1]) for x in [
-                                'HJ d', 'iJJB', 'nM L', '4JJp', '3  Y', 'uJ Y', '2  d', 'u Jl']],
-                            [re.sub('[j\sn]+', '', x[::-1]) for x in [
-                                'Gn clhGd', 'l RXY yl', 'mL5F mnY', 'sjj5Wdy1', 'mLnr N2b', '= UGdnhR']],
-                            [re.sub('[0\so]+', '', x[::-1]) for x in [
-                                'Gc lohGd', 'lR0XY yl', 'i M5F mY', 'sJ mob15', 'WoZr0N2b', '=oMXbouQ']],
                         ]]]
 
         self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/'}

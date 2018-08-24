@@ -1166,6 +1166,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         cache_dir = sickbeard.CACHE_DIR or _getTempDir()
         session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
 
+    provider = kwargs.pop('provider', None)
+
     # session master headers
     req_headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                    'Accept-Encoding': 'gzip,deflate'}
@@ -1219,6 +1221,10 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                     parsed[2] = '/%s' % url
                     url = urlparse.urlunparse(parsed)
                 response = session.get(url, timeout=timeout, **kwargs)
+
+        # noinspection PyProtectedMember
+        if provider and provider._has_signature(response.content):
+            return response.content
 
         if raise_status_code:
             response.raise_for_status()

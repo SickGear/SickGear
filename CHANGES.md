@@ -20,6 +20,7 @@
   'non scene if no recent search results', 'non scene if no active search results',
   'not scene nuked', and 'nuked if no active search results'
 * Change improve tvdb_api performance; remember if episodes are cached and reload show if not and episodes are requested
+* Change remove redundant torrent URLs and improve provider loader
 
 
 [develop changelog]

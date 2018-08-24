@@ -29,8 +29,13 @@ class TorrentDayProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorrentDay')
 
-        self.url_home = ['https://%s/' % u for u in 'torrentday.eu', 'secure.torrentday.com', 'tdonline.org',
-                                                    'torrentday.it', 'www.td.af', 'www.torrentday.com']
+        self.url_home = ['https://www.torrentday.com/'] + \
+                        ['http://td.%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                            [re.sub('(?i)[I\s1]+', '', x[::-1]) for x in [
+                                'y92d', 'zl12a', 'y9mY', 'n5 Wa', 'vNmIL', '=i1=Qb']],
+                            [re.sub('(?i)[T\sq]+', '', x[::-1]) for x in [
+                                '15TWd', 'hV 3c', 'lBHb', 'vNncq', 'j5ib', '=qQ02b']],
+                        ]]]
 
         self.url_vars = {'login': 'rss.php', 'search': 't?%s%s&qf=&q=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',

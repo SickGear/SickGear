@@ -38,22 +38,6 @@ class EztvProvider(generic.TorrentProvider):
                                 '0vp XZ', 'uvEj d', 'i5 Wzd', 'j9 vGb', 'kV2v a', '0zdvnL', '==vg Z']],
                             [re.sub('[f\sT]+', '', x[::-1]) for x in [
                                 '0TpfXZ', 'ufTEjd', 'i5WTTd', 'j9f Gb', 'kV f2a', 'z1mTTL']],
-                            [re.sub('[ \sR]+', '', x[::-1]) for x in [
-                                '0pXRRZ', 'h  1id', 'w5yRRZ', '4 9 mc', 'w N nL', 'lNRW Y']],
-                            [re.sub('[x\su]+', '', x[::-1]) for x in [
-                                'dx0xpXZ', '3bx05xi', '5WZyxuJ', 'p1mexu0', 'c vuJnc', 'mcuuv5i', '=  c']],
-                            [re.sub('[T\sr]+', '', x[::-1]) for x in [
-                                'XT Z', '0Trp', 'iTTd', 'sT 5', 'XTrY', 'vT R', 'nrrL', '3T B']],
-                            [re.sub('[l\sT]+', '', x[::-1]) for x in [
-                                'pX  Z', 'idl 0', 'e6l 5', '2lTNG', 'd nTL', 'g blp', '=  =']],
-                            [re.sub('[T\sR]+', '', x[::-1]) for x in [
-                                '0p X Z', 'h1iRRd', '15R yZ', 'u 8WRa', 'p RFmZ', '=gTGRd']],
-                            [re.sub('[T\st]+', '', x[::-1]) for x in [
-                                '0 ptXZ', '1T5i d', 'sTtJmb', 'rtN2Tb', 'sx WTY', 'ytT9mL', '=t=wTZ']],
-                            [re.sub('[o\sz]+', '', x[::-1]) for x in [
-                                '0zopXZ', '1z5oid', 'sJ  mb', 'rNz2zb', 'uz QWZ', '0FGoob']],
-                            [re.sub('[k\sv]+', '', x[::-1]) for x in [
-                                'Xk Z', '0kkp', 'ivvd', 'y k5', 'WkvZ', '=  Q']],
                         ]]]
         self.url_vars = {'search': 'search/%s', 'browse': 'page_%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s',

@@ -45,7 +45,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': '^torrent/', 'get': '^magnet:'}.items())
+            'info': '^(info|torrent)/', 'get': '^magnet:'}.items())
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
