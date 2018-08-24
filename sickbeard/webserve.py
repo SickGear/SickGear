@@ -77,7 +77,6 @@ from trakt_helpers import build_config, trakt_collection_remove_account
 from sickbeard.bs4_parser import BS4Parser
 
 from lib.fuzzywuzzy import fuzz
-from lib.send2trash import send2trash
 from lib.tmdb_api import TMDB
 from lib.tvdb_api.tvdb_exceptions import tvdb_exception
 
@@ -2175,7 +2174,7 @@ class Home(MainHandler):
                  flatten_folders=None, paused=None, directCall=False, air_by_date=None, sports=None, dvdorder=None,
                  indexerLang=None, subtitles=None, upgrade_once=None, rls_ignore_words=None,
                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                 scene=None, tag=None, quality_preset=None, reset_fanart=None, **kwargs):
+                 scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None, **kwargs):
 
         if show is None:
             errString = 'Invalid show ID: ' + str(show)
@@ -2334,6 +2333,7 @@ class Home(MainHandler):
             showObj.subtitles = subtitles
             showObj.air_by_date = air_by_date
             showObj.tag = tag
+            showObj.prune = config.minimax(prune, 0, 0, 9999)
 
             if not directCall:
                 showObj.lang = indexer_lang
@@ -2996,7 +2996,14 @@ class HomePostProcess(Home):
                 logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
                            (kwargs.get('ppVersion', '0'), sickbeard.NZBGET_SCRIPT_VERSION), logger.ERROR)
 
-            result = processTV.processDir(dir.decode('utf-8') if dir else None, nzbName.decode('utf-8') if nzbName else None,
+            if isinstance(dir, basestring):
+                dir = dir.decode('utf-8')
+                if isinstance(client, basestring) and 'nzbget' == client and \
+                        isinstance(sickbeard.NZBGET_MAP, basestring) and sickbeard.NZBGET_MAP:
+                    m = sickbeard.NZBGET_MAP.split('=')
+                    dir, not_used = helpers.path_mapper(m[0], m[1], dir)
+
+            result = processTV.processDir(dir if dir else None, nzbName.decode('utf-8') if nzbName else None,
                                           process_method=process_method, type=type,
                                           cleanup='cleanup' in kwargs and kwargs['cleanup'] in ['on', '1'],
                                           force=force in ['on', '1'],
@@ -4100,8 +4107,8 @@ class NewHomeAddShows(Home):
                    quality_preset=None, anyQualities=None, bestQualities=None, upgrade_once=None,
                    flatten_folders=None, subtitles=None,
                    fullShowPath=None, other_shows=None, skipShow=None, providedIndexer=None, anime=None,
-                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None, tag=None,
-                   return_to=None, cancel_form=None):
+                   scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None,
+                   prune=None, tag=None, return_to=None, cancel_form=None):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
@@ -4211,12 +4218,13 @@ class NewHomeAddShows(Home):
 
         wanted_begin = config.minimax(wanted_begin, 0, -1, 10)
         wanted_latest = config.minimax(wanted_latest, 0, -1, 10)
+        prune = config.minimax(prune, 0, 0, 9999)
 
         # add the show
         sickbeard.showQueueScheduler.action.addShow(indexer, indexer_id, show_dir, int(defaultStatus), newQuality,
                                                     flatten_folders, indexerLang, subtitles, anime,
                                                     scene, None, blacklist, whitelist,
-                                                    wanted_begin, wanted_latest, tag, new_show=new_show,
+                                                    wanted_begin, wanted_latest, prune, tag, new_show=new_show,
                                                     show_name=show_name, upgrade_once=upgrade_once)
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
@@ -4641,6 +4649,9 @@ class Manage(MainHandler):
         paused_all_same = True
         last_paused = None
 
+        prune_all_same = True
+        last_prune = None
+
         tag_all_same = True
         last_tag = None
 
@@ -4684,6 +4695,13 @@ class Manage(MainHandler):
                     paused_all_same = False
                 else:
                     last_paused = curShow.paused
+
+            if prune_all_same:
+                # if we had a value already and this value is different then they're not all the same
+                if last_prune not in (None, curShow.prune):
+                    prune_all_same = False
+                else:
+                    last_prune = curShow.prune
 
             if tag_all_same:
                 # if we had a value already and this value is different then they're not all the same
@@ -4738,6 +4756,7 @@ class Manage(MainHandler):
         t.showList = toEdit
         t.upgrade_once_value = last_upgrade_once if upgrade_once_all_same else None
         t.paused_value = last_paused if paused_all_same else None
+        t.prune_value = last_prune if prune_all_same else None
         t.tag_value = last_tag if tag_all_same else None
         t.anime_value = last_anime if anime_all_same else None
         t.flatten_folders_value = last_flatten_folders if flatten_folders_all_same else None
@@ -4752,7 +4771,7 @@ class Manage(MainHandler):
 
     def massEditSubmit(self, upgrade_once=None, paused=None, anime=None, sports=None, scene=None,
                        flatten_folders=None, quality_preset=False, subtitles=None, air_by_date=None, anyQualities=[],
-                       bestQualities=[], toEdit=None, tag=None, *args, **kwargs):
+                       bestQualities=[], toEdit=None, prune=None, tag=None, *args, **kwargs):
 
         dir_map = {}
         for cur_arg in kwargs:
@@ -4797,6 +4816,8 @@ class Manage(MainHandler):
             else:
                 new_paused = True if paused == 'enable' else False
             new_paused = 'on' if new_paused else 'off'
+
+            new_prune = (config.minimax(prune, 0, 0, 9999), showObj.prune)[prune in (None, '', 'keep')]
 
             if tag == 'keep':
                 new_tag = showObj.tag
@@ -4854,7 +4875,7 @@ class Manage(MainHandler):
                                                                        paused=new_paused, sports=new_sports,
                                                                        subtitles=new_subtitles, anime=new_anime,
                                                                        scene=new_scene, air_by_date=new_air_by_date,
-                                                                       tag=new_tag, directCall=True)
+                                                                       prune=new_prune, tag=new_tag, directCall=True)
 
             if curErrors:
                 logger.log(u'Errors: ' + str(curErrors), logger.ERROR)
@@ -5314,6 +5335,39 @@ class History(MainHandler):
 
         return t.respond()
 
+    def check_site(self, site_name='', *args, **kwargs):
+
+        site_url = dict(
+            tvdb='api.thetvdb.com', thexem='thexem.de', github='github.com'
+        ).get(site_name.replace('check_', ''))
+
+        result = {}
+
+        if site_url:
+            resp = helpers.getURL('https://www.isitdownrightnow.com/check.php?domain=%s' % site_url)
+            if resp:
+                check = resp.lower()
+                day = re.findall(r'(\d+)\s*(?:day)', check)
+                hr = re.findall(r'(\d+)\s*(?:hour)', check)
+                mn = re.findall(r'(\d+)\s*(?:min)', check)
+                if any([day, hr, mn]):
+                    period = ', '.join(
+                        (day and ['%sd' % day[0]] or day)
+                        + (hr and ['%sh' % hr[0]] or hr)
+                        + (mn and ['%sm' % mn[0]] or mn))
+                else:
+                    try:
+                        period = re.findall('[^>]>([^<]+)ago', check)[0].strip()
+                    except (StandardError, Exception):
+                        try:
+                            period = re.findall('[^>]>([^<]+week)', check)[0]
+                        except (StandardError, Exception):
+                            period = 'quite some time'
+
+                result = {('last_down', 'down_for')['up' not in check and 'down for' in check]: period}
+
+        return json.dumps(result)
+
     def clearHistory(self, *args, **kwargs):
 
         myDB = db.DBConnection()
@@ -5531,16 +5585,9 @@ class History(MainHandler):
                 # locations repeat with watch events but attempt to delete once
                 attempted += [r['location']]
 
-                try:
-                    if sickbeard.TRASH_REMOVE_SHOW:
-                        ek.ek(send2trash, r['location'])
-                    else:
-                        ek.ek(os.remove, r['location'])
-                except OSError as e:
-                    logger.log(u'Unable to delete file %s: %s' % (r['location'], str(e.strerror)))
-
-                if not ek.ek(os.path.isfile, r['location']):
-                    logger.log(u'Deleted file %s' % r['location'])
+                result = helpers.remove_file(r['location'])
+                if result:
+                    logger.log(u'%s file %s' % (result, r['location']))
 
                     deleted.update({r['tvep_id']: row_show_ids[r['rowid']]})
                     if row_show_ids[r['rowid']] not in refresh:
@@ -5869,9 +5916,10 @@ class ConfigSearch(Config):
             pass
         return t.respond()
 
-    def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
-                   sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None,
-                   nzbget_category=None, nzbget_priority=None, nzbget_host=None, nzbget_use_https=None,
+    def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None,
+                   sab_host=None, sab_username=None, sab_password=None, sab_apikey=None, sab_category=None,
+                   nzbget_use_https=None, nzbget_host=None, nzbget_username=None, nzbget_password=None,
+                   nzbget_category=None, nzbget_priority=None, nzbget_parent_map=None,
                    backlog_days=None, backlog_frequency=None, search_unaired=None, unaired_recent_search_only=None,
                    recentsearch_frequency=None, nzb_method=None, torrent_method=None, usenet_retention=None,
                    download_propers=None, propers_webdl_onegrp=None,
@@ -5935,6 +5983,7 @@ class ConfigSearch(Config):
         sickbeard.NZBGET_HOST = config.clean_host(nzbget_host)
         sickbeard.NZBGET_USE_HTTPS = config.checkbox_to_value(nzbget_use_https)
         sickbeard.NZBGET_PRIORITY = config.to_int(nzbget_priority, default=100)
+        sickbeard.NZBGET_MAP = config.kv_csv(nzbget_parent_map)
 
         sickbeard.TORRENT_USERNAME = torrent_username
         if set('*') != set(torrent_password):
@@ -6351,20 +6400,25 @@ class ConfigProviders(Config):
                     # a 0 in the key spot indicates that no key is needed
                     nzb_src.needs_auth = '0' != cur_key
 
-                    attr = 'search_mode'
-                    if cur_id + '_' + attr in kwargs:
-                        setattr(nzb_src, attr, str(kwargs.get(cur_id + '_' + attr)).strip())
-
                     attr = 'filter'
                     if hasattr(nzb_src, attr):
                         setattr(nzb_src, attr,
                                 [k for k in nzb_src.may_filter.keys()
                                  if config.checkbox_to_value(kwargs.get('%s_filter_%s' % (cur_id, k)))])
 
-                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog']:
+                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
+                                 'scene_only', 'scene_loose', 'scene_loose_active',
+                                 'scene_rej_nuked', 'scene_nuked_active',]:
                         setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
 
+                    for attr in ['scene_or_contain', 'search_mode']:
+                        attr_check = '%s_%s' % (cur_id, attr)
+                        if attr_check in kwargs:
+                            setattr(nzb_src, attr, str(kwargs.get(attr_check) or '').strip())
                 else:
+                    new_provider.enabled = True
+                    _ = new_provider.caps  # when adding a custom, trigger server_type update
+                    new_provider.enabled = False
                     sickbeard.newznabProviderList.append(new_provider)
 
                 active_ids.append(cur_id)
@@ -6396,10 +6450,21 @@ class ConfigProviders(Config):
 
                 # if it already exists then update it
                 if cur_id in torrent_rss_sources:
-                    torrent_rss_sources[cur_id].name = cur_name
-                    torrent_rss_sources[cur_id].url = cur_url
+                    torrss_src = torrent_rss_sources[cur_id]
+
+                    torrss_src.name = cur_name
+                    torrss_src.url = cur_url
                     if cur_cookies:
-                        torrent_rss_sources[cur_id].cookies = cur_cookies
+                        torrss_src.cookies = cur_cookies
+
+                    for attr in ['scene_only', 'scene_loose', 'scene_loose_active',
+                                 'scene_rej_nuked', 'scene_nuked_active']:
+                        setattr(torrss_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
+
+                    for attr in ['scene_or_contain']:
+                        attr_check = '%s_%s' % (cur_id, attr)
+                        if attr_check in kwargs:
+                            setattr(torrss_src, attr, str(kwargs.get(attr_check) or '').strip())
                 else:
                     sickbeard.torrentRssProviderList.append(new_provider)
 
@@ -6447,9 +6512,6 @@ class ConfigProviders(Config):
                     src_id_prefix + attr, '').split(',')]))
                 torrent_src.url_home = ([url_edit], [])[not url_edit]
 
-            for attr in [x for x in ['username', 'uid'] if hasattr(torrent_src, x)]:
-                setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip())
-
             for attr in [x for x in ['password', 'api_key', 'passkey', 'digest', 'hash'] if hasattr(torrent_src, x)]:
                 key = str(kwargs.get(src_id_prefix + attr, '')).strip()
                 if 'password' == attr:
@@ -6457,31 +6519,34 @@ class ConfigProviders(Config):
                 elif not starify(key, True):
                     setattr(torrent_src, attr, key)
 
-            attr = 'ratio'
-            if hasattr(torrent_src, '_seed_' + attr) and src_id_prefix + attr in kwargs:
-                setattr(torrent_src, '_seed_' + attr, kwargs.get(src_id_prefix + attr, '').strip() or None)
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
+                'username', 'uid', '_seed_ratio', 'scene_or_contain'
+            ]):
+                setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr.replace('_seed_', ''), '')).strip())
 
-            for attr in [x for x in ['minseed', 'minleech'] if hasattr(torrent_src, x)]:
-                setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
-
-            for attr in [x for x in ['confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
-                                     'enable_backlog', 'search_fallback', 'enable_scheduled_backlog']
-                         if hasattr(torrent_src, x) and src_id_prefix + attr in kwargs]:
-                setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
-
-            attr = 'seed_time'
-            if hasattr(torrent_src, attr) and src_id_prefix + attr in kwargs:
-                setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr)).strip()))
-
-            attr = 'search_mode'
-            if hasattr(torrent_src, attr):
-                setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip() or 'eponly')
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
+                'minseed', 'minleech', 'seed_time'
+            ]):
+                setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr, '')).strip()))
 
             attr = 'filter'
             if hasattr(torrent_src, attr):
                 setattr(torrent_src, attr,
                         [k for k in torrent_src.may_filter.keys()
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
+
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
+                'confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
+                'enable_backlog', 'search_fallback', 'enable_scheduled_backlog',
+                'scene_only', 'scene_loose', 'scene_loose_active',
+                'scene_rej_nuked', 'scene_nuked_active'
+            ]):
+                setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
+
+            for attr, default in filter(lambda (a, _): hasattr(torrent_src, a), [
+                ('search_mode', 'eponly'),
+            ]):
+                setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
         # update nzb source settings
         for nzb_src in [src for src in sickbeard.providers.sortedProviderList() if
@@ -6498,17 +6563,20 @@ class ConfigProviders(Config):
             if hasattr(nzb_src, attr):
                 setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip() or None)
 
-            attr = 'search_mode'
-            if hasattr(nzb_src, attr):
-                setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr, '')).strip() or 'eponly')
-
             attr = 'enable_recentsearch'
             if hasattr(nzb_src, attr):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)) or
                         not getattr(nzb_src, 'supports_backlog', True))
 
-            for attr in [x for x in ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog'] if hasattr(nzb_src, x)]:
+            for attr in filter(lambda x: hasattr(nzb_src, x),
+                               ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
+                                'scene_only', 'scene_loose', 'scene_loose_active',
+                                'scene_rej_nuked', 'scene_nuked_active']):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
+
+            for (attr, default) in [('scene_or_contain', ''), ('search_mode', 'eponly')]:
+                if hasattr(nzb_src, attr):
+                    setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
         sickbeard.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickbeard.newznabProviderList])
         sickbeard.PROVIDER_ORDER = provider_list

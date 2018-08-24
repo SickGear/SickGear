@@ -38,20 +38,6 @@ class TorLockProvider(generic.TorrentProvider):
                                 'y9FFGd', 'j9FgGb', '15 Fya', 'sF Jmb', 'rN 2Fb', 'uQW FZ', '0Vmg Y']],
                             [re.sub('[O\si]+', '', x[::-1]) for x in [
                                 'byO9Gid', 'y aji9G', '02O bj1', 'vJ Hicu', 'cz 5OCe', 'QZij FG', '=  =']],
-                            [re.sub('[p\st]+', '', x[::-1]) for x in [
-                                'yp9Gtd', 'j9p Gb', 'j1ypta', 'u0p2tb', 'vltWpd', 'hZmp L', 'opRXta']],
-                            [re.sub('[T\sN]+', '', x[::-1]) for x in [
-                                'by  BDd', 'zTTaj9G', '5W duTE', 'jN9TGbi', 'LkVTT2a', 'AbvT xm', '=  =']],
-                            [re.sub('[h\st]+', '', x[::-1]) for x in [
-                                'bytBD d', 'zajh9 G', '5hWd uE', 'j9Ghhbi', 'Lk V2ta', 'Abvtxhm', '=tt=']],
-                            [re.sub('[ \sx]+', '', x[::-1]) for x in [
-                                'y 9Gxd', 'j  9Gb', '15y xa', 'sxJmxb', 'rN 2xb', 'u QWxZ', '0 F Gb']],
-                            [re.sub('[V\sI]+', '', x[::-1]) for x in [
-                                'y 9IGd', 'j 9GIb', '1VI5ya', 'sJmIIb', 'rN2VIb', 'u QW Z', '=VgXIb']],
-                            [re.sub('[j\so]+', '', x[::-1]) for x in [
-                                'X jd', 'so B', '2oob', 'k oF', 'njoL', 'hjjB', 'nj c', '5 jR']],
-                            [re.sub('[O\sw]+', '', x[::-1]) for x in [
-                                'GwOd', 'v wx', '2wwY', 'uw s', 'Gw c', 'y OF', 'HOOd', '=OOk']],
                         ]]]
 
         self.url_vars = {'search': 'television/torrents/%s.html?sort=added&order=desc',

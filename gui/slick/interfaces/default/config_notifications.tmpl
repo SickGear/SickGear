@@ -23,17 +23,6 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<style>
-.component-group.typelist{min-height:30px}
-.component-group.typelist .type{padding:6px}
-.component-group.typelist .item{display:inline-block}
-.component-group.typelist .item img{margin-right:4px}
-.component-group.typelist .item.text{font-size:12px; padding-right:3px}
-.component-group.typelist .item a{font-size:16px;padding-right:20px}
-.component-group.typelist .item.text,
-.component-group.typelist .item a{line-height:16px;vertical-align:middle}
-</style>
-
 <img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sickbeard.THEME_NAME]#.gif" height="16" width="16" style="display:none">
 <div id="config">
 	<div id="config-content">
@@ -52,17 +41,17 @@
 
 
 				<div id="tabs-1">
-				<div class="component-group typelist">
+				<div class="component-group bubblelist">
 					<div class="type bgcol">
 						<span class="list"><div class="item text">Bubble links:</div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/emby.png"><a href="#emby" rel="noreferrer">Emby</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/kodi.png"><a href="#kodi" rel="noreferrer">Kodi</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/plex.png"><a href="#plex" rel="noreferrer">Plex</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/nmj.png"><a href="#nmj" rel="noreferrer">NMJ</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/nmj.png"><a href="#nmjv2" rel="noreferrer">NMJv2</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/synoindex.png"><a href="#synoindexer" rel="noreferrer">Syno Indexer</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/synologynotifier.png"><a href="#synonotifier" rel="noreferrer">Syno Notifier</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pytivo.png"><a href="#pytivo" rel="noreferrer">pyTivo</a></div>
+							<div class="item"><a href="#emby" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/emby.png">Emby</a></div>
+							<div class="item"><a href="#kodi" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/kodi.png">Kodi</a></div>
+							<div class="item"><a href="#plex" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/plex.png">Plex</a></div>
+							<div class="item"><a href="#nmj" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/nmj.png">NMJ</a></div>
+							<div class="item"><a href="#nmjv2" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/nmj.png">NMJv2</a></div>
+							<div class="item"><a href="#synoindexer" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/synoindex.png">Syno Indexer</a></div>
+							<div class="item"><a href="#synonotifier" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/synologynotifier.png">Syno Notifier</a></div>
+							<div class="item"><a href="#pytivo" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/pytivo.png">pyTivo</a></div>
 						</span>
 					</div>
 				</div>
@@ -841,18 +830,18 @@
 
 
 			<div id="tabs-2">
-				<div class="component-group typelist">
+				<div class="component-group bubblelist">
 					<div class="type bgcol">
 						<span class="list"><div class="item text">Bubble links:</div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/boxcar2.png"><a href="#boxcar2" rel="noreferrer">Boxcar2</a></div>
+							<div class="item"><a href="#boxcar2" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/boxcar2.png">Boxcar2</a></div>
 #if 'PUSHALOT' in NotifierFactory().notifiers
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pushalot.png"><a href="#pushalot" rel="noreferrer">Pushalot</a></div>
+							<div class="item"><a href="#pushalot" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/pushalot.png">Pushalot</a></div>
 #end if
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pushbullet.png"><a href="#pushbullet" rel="noreferrer">Pushbullet</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/pushover.png"><a href="#pushover" rel="noreferrer">Pushover</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/growl.png"><a href="#growl" rel="noreferrer">Growl</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/prowl.png"><a href="#prowl" rel="noreferrer">Prowl</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/libnotify.png"><a href="#libnotify" rel="noreferrer">Libnotify</a></div>
+							<div class="item"><a href="#pushbullet" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/pushbullet.png">Pushbullet</a></div>
+							<div class="item"><a href="#pushover" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/pushover.png">Pushover</a></div>
+							<div class="item"><a href="#growl" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/growl.png">Growl</a></div>
+							<div class="item"><a href="#prowl" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/prowl.png">Prowl</a></div>
+							<div class="item"><a href="#libnotify" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/libnotify.png">Libnotify</a></div>
 						</span>
 					</div>
 				</div>
@@ -1437,15 +1426,15 @@
 
 
 			<div id="tabs-3">
-				<div class="component-group typelist">
+				<div class="component-group bubblelist">
 					<div class="type bgcol">
 						<span class="list"><div class="item text">Bubble links:</div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/trakt.png"><a href="#trakt" rel="noreferrer">Trakt</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/slack.png"><a href="#slack" rel="noreferrer">Slack</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/discordapp.png"><a href="#discordapp" rel="noreferrer">Discordapp</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/gitter.png"><a href="#gitter" rel="noreferrer">Gitter</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/twitter.png"><a href="#twitter" rel="noreferrer">Twitter</a></div>
-							<div class="item"><img height="16px" src="$sbRoot/images/notifiers/email.png"><a href="#email" rel="noreferrer">Email</a></div>
+							<div class="item"><a href="#trakt" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/trakt.png">Trakt</a></div>
+							<div class="item"><a href="#slack" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/slack.png">Slack</a></div>
+							<div class="item"><a href="#discordapp" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/discordapp.png">Discordapp</a></div>
+							<div class="item"><a href="#gitter" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/gitter.png">Gitter</a></div>
+							<div class="item"><a href="#twitter" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/twitter.png">Twitter</a></div>
+							<div class="item"><a href="#email" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/email.png">Email</a></div>
 						</span>
 					</div>
 				</div>

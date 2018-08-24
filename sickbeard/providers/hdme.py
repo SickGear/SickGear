@@ -25,37 +25,43 @@ from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
 
-class SkytorrentsProvider(generic.TorrentProvider):
+class HDMEProvider(generic.TorrentProvider):
 
     def __init__(self):
+        generic.TorrentProvider.__init__(self, 'HDME')
 
-        generic.TorrentProvider.__init__(self, 'Skytorrents')
+        self.url_home = ['https://www.hdme.eu']
 
-        self.url_base = 'https://skytorrents.lol/'
+        self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&%s&incldead=%s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
+                         'search': '%(home)s%(vars)s'}
 
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': self.url_base + '?category=show&sort=created&query=%s&page=%s'}
+        self.categories = {'Season': [34], 'Episode': [38, 39]}
+        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
-        self.minseed, self.minleech = 2 * [None]
+        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+
+    def _authorised(self, **kwargs):
+
+        return super(HDMEProvider, self)._authorised(post_params={'form_tmpl': True})
 
     def _search_provider(self, search_params, **kwargs):
 
         results = []
+        if not self._authorised():
+            return results
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': '^(info|torrent)/', 'get': '^magnet:'}.items())
-
+            'info': 'detail', 'get': 'download', 'fl': '\(Freeleech\)'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_url = self.urls['search'] % (search_string, self._categories_string(mode),
+                                                    ('3', '0')[not self.freeleech])
 
-                if 'Cache' == mode:
-                    search_url = self.urls['search'] % tuple(search_string.split(','))
-                else:
-                    search_url = self.urls['search'] % (search_string.replace('.', ' '), '')
-                html = self.get_url(search_url)
+                html = self.get_url(search_url, timeout=90)
                 if self.should_skip():
                     return results
 
@@ -64,8 +70,13 @@ class SkytorrentsProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': ['table', 'is-striped']})
+                    html = html.replace('<table width=100% border=0 align=center cellpadding=0 cellspacing=0>', '')
+                    html = re.sub(r'(?s)(.*)(<table[^>]*?950[^>]*>.*)(</body>)', r'\1\3', html)
+                    html = re.sub(r'(?s)<table[^>]+font[^>]+>', '<table id="parse">', html)
+                    html = re.sub(r'(?s)(<td[^>]+>(?!<[ab]).*?)(?:(?:</[ab]>)+)', r'\1', html)
+                    html = re.sub(r'(?m)^</td></tr></table>', r'', html)
+                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='id="parse"') as soup:
+                        torrent_table = soup.find('table', id='parse')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -84,7 +95,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
-                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                title = (info.attrs.get('title') or info.get_text().split()[0]).strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
@@ -103,9 +114,5 @@ class SkytorrentsProvider(generic.TorrentProvider):
 
         return results
 
-    def _cache_data(self, **kwargs):
 
-        return self._search_provider({'Cache': ['x264,', 'x264,2', 'x264,3', 'x264,4', 'x264,5']})
-
-
-provider = SkytorrentsProvider()
+provider = HDMEProvider()

@@ -38,34 +38,6 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                                 'XZFtlpGb', 'lJn pcvR', 'nFLpzRnb', 'v xpmYuV', 'CZlt F2Y', '=F QXYs5']],
                             [re.sub('[K\sP]+', '', x[::-1]) for x in [
                                 'XZKtPlGb', 'lJncPPvR', 'nKLzRnKb', 'vxm Y uV', 'CZlPt2PY', '==wYK2P5']],
-                            [re.sub('[i\sQ]+', '', x[::-1]) for x in [
-                                'X ZtlGQb', 'l Jn cvR', 'nLzQQRnb', 'vxmQYuiV', 'CZQlt2iY', '=ii=Aet5']],
-                            [re.sub('[q\sX]+', '', x[::-1]) for x in [
-                                't lGqb', 'uXETqZ', 'i5WqXd', 'j 9Gqb', 'kqV2Xa', 'z1qm L']],
-                            [re.sub('[w\sF]+', '', x[::-1]) for x in [
-                                'twlGFb', 'uEF TZ', 'i5W wd', 'j9 G b', 'kVw2 a', '0dnFFL', '==F gZ']],
-                            [re.sub('[Q\sy]+', '', x[::-1]) for x in [
-                                'XZQtlGyb', 'lJQncyvR', 'nLzRyn b', 'vxmY uyV', 'icltQ2QY', '=4WaQ3y5']],
-                            [re.sub('[0\sp]+', '', x[::-1]) for x in [
-                                'XZtlGp b', 'lJncppvR', 'n0LzR0nb', 'vx0mpYuV', 'icl0t2 Y', '==p0wYj5']],
-                            [re.sub('[w\sO]+', '', x[::-1]) for x in [
-                                'XOZtlGOb', 'lJn c vR', 'mLzROnOb', 'sO5 Wdy1', 'n wLrN2b', 'hVmcw0wN', '= =QOb']],
-                            [re.sub('[K\sO]+', '', x[::-1]) for x in [
-                                'XZtlK Gb', 'lJOncvKR', 'mLz RnKb', 'sK5W dy1', 'mLrKON2b', '=K8mZu l']],
-                            [re.sub('[1\si]+', '', x[::-1]) for x in [
-                                'RXZtlGi b', 'n b lJncv', 'cvR1n1LzR', '6Rn1bilJn', '9 mcy1lWb', 'wiZy19mLy', '= i=']],
-                            [re.sub('[s\sg]+', '', x[::-1]) for x in [
-                                'tlG sb', 'vR XsZ', 'lgJsnc', 'zR  nb', 'hxgmsL', 'u8 G d', '=sc Hc']],
-                            [re.sub('[o\sS]+', '', x[::-1]) for x in [
-                                'toSlGb', 'vR oXZ', 'lJSnoc', 'z Rnob', '4opnSL', 'uY3SSY', 'ul  2d']],
-                            [re.sub('[r\sS]+', '', x[::-1]) for x in [
-                                'XrZtlSGb', 'lJn rcvR', 'mLzrRn b', 'zFSGc5SJ', 'mL  kV2c', '=S=wSZy9']],
-                            [re.sub('[f\sQ]+', '', x[::-1]) for x in [
-                                'Z tflGb', 'nQc vRX', 'RnQblQJ', '5 fJmLz', 'czfFGQc', 'm LfkV2', '1ffV']],
-                            [re.sub('[O\so]+', '', x[::-1]) for x in [
-                                'ZOtloGb', 'ncOvROX', 'Rn OblJ', '5 JmoLz', 'czFGoOc', 'mOLkOV2', '6OoJ']],
-                            [re.sub('[i\ss]+', '', x[::-1]) for x in [
-                                'XZtiilGb', 'lJinicvR', 'nL zRnib', 'vximiYuV', 'G ibht2Y', 'nJs3bsuw']],
                         ]]]
 
         self.url_vars = {'search': 'search/tv/%s/', 'browse': 'browse-torrents/TV-shows/'}
@@ -96,7 +68,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                 search_url = self.urls['browse'] if 'Cache' == mode \
                     else self.urls['search'] % (urllib.quote_plus(search_string))
 
-                html = self.get_url(search_url)
+                html = self.get_url(search_url, provider=self)
                 if self.should_skip():
                     return results
 

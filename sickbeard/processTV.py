@@ -48,11 +48,6 @@ try:
 except ImportError:
     from lib import simplejson as json
 
-try:
-    from lib.send2trash import send2trash
-except ImportError:
-    pass
-
 
 # noinspection PyArgumentList
 class ProcessTVShow(object):
@@ -150,13 +145,8 @@ class ProcessTVShow(object):
                     ek.ek(os.chmod, cur_file_path, stat.S_IWRITE)
                 except OSError as e:
                     self._log_helper(u'Cannot change permissions of %s: %s' % (cur_file_path, str(e.strerror)))
-            try:
-                if use_trash:
-                    ek.ek(send2trash, cur_file_path)
-                else:
-                    ek.ek(os.remove, cur_file_path)
-            except OSError as e:
-                self._log_helper(u'Unable to delete file %s: %s' % (cur_file, str(e.strerror)))
+
+            helpers.remove_file(cur_file_path)
 
             if ek.ek(os.path.isfile, cur_file_path):
                 result = False

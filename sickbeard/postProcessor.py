@@ -43,11 +43,6 @@ from sickbeard.name_parser.parser import NameParser, InvalidNameException, Inval
 
 from lib import adba
 
-try:
-    from lib.send2trash import send2trash
-except ImportError:
-    pass
-
 
 class PostProcessor(object):
     """
@@ -235,13 +230,7 @@ class PostProcessor(object):
                     except:
                         self._log(u'Cannot change permissions to writeable to delete file: %s' % cur_file, logger.WARNING)
 
-                try:
-                    if self.use_trash:
-                        ek.ek(send2trash, cur_file)
-                    else:
-                        ek.ek(os.remove, cur_file)
-                except OSError as e:
-                    self._log(u'Unable to delete file %s: %s' % (cur_file, str(e.strerror)), logger.DEBUG)
+                helpers.remove_file(cur_file, log_level=logger.DEBUG)
 
                 if True is not ek.ek(os.path.isfile, cur_file):
                     self._log(u'Deleted file ' + cur_file, logger.DEBUG)

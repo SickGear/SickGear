@@ -240,7 +240,7 @@
 								<span class="component-title">Send .nzb files to:</span>
 								<span class="component-desc">
 									<select name="nzb_method" id="nzb_method" class="form-control input-sm">
-#set $nzb_method_text = {'blackhole': "Black hole", 'sabnzbd': "SABnzbd", 'nzbget': "NZBget"}
+#set $nzb_method_text = {'blackhole': "Black hole", 'sabnzbd': "SABnzbd", 'nzbget': "NZBGet"}
 #for $curAction in ('sabnzbd', 'blackhole', 'nzbget'):
     #set $selected = $html_selected if $sickbeard.NZB_METHOD == $curAction else ''
 									<option value="$curAction"$selected>$nzb_method_text[$curAction]</option>
@@ -328,18 +328,18 @@
 
 							<div class="field-pair">
 								<label>
-									<span class="component-title">NZBget host:port</span>
+									<span class="component-title">NZBGet host:port</span>
 									<span class="component-desc">
 										<input type="text" name="nzbget_host" id="nzbget_host" value="$sickbeard.NZBGET_HOST" class="form-control input-sm input350">
 										<p>(e.g. localhost:6789)</p>
-										<p class="clear-left note">NZBget RPC host name and port number (not NZBgetweb!)</p>
+										<p class="clear-left note">NZBGet RPC host name and port number (not NZBGetweb!)</p>
 									</span>
 								</label>
 							</div>
 
 							<div class="field-pair">
 								<label>
-									<span class="component-title">NZBget username</span>
+									<span class="component-title">NZBGet username</span>
 									<span class="component-desc">
 										<input type="text" name="nzbget_username" id="nzbget_username" value="$sickbeard.NZBGET_USERNAME" class="form-control input-sm input200">
 										<p>locate in nzbget.conf (default:nzbget)</p>
@@ -349,7 +349,7 @@
 
 							<div class="field-pair">
 								<label>
-									<span class="component-title">NZBget password</span>
+									<span class="component-title">NZBGet password</span>
 									<span class="component-desc">
 										<input type="password" autocomplete="nope" name="nzbget_password" id="nzbget_password" value="#echo '*' * len($sickbeard.NZBGET_PASSWORD)#" class="form-control input-sm input200">
 										<p>locate in nzbget.conf (default:tegbzn6789)</p>
@@ -359,7 +359,7 @@
 
 							<div class="field-pair">
 								<label>
-									<span class="component-title">Use NZBget category</span>
+									<span class="component-title">Use NZBGet category</span>
 									<span class="component-desc">
 										<input type="text" name="nzbget_category" id="nzbget_category" value="$sickbeard.NZBGET_CATEGORY" class="form-control input-sm input200">
 										<p>send downloads marked this category (e.g. TV)</p>
@@ -390,7 +390,7 @@
 #end if
 							<div class="field-pair">
 								<label>
-									<span class="component-title">NZBget priority</span>
+									<span class="component-title">NZBGet priority</span>
 									<span class="component-desc">
 										<select name="nzbget_priority" id="nzbget_priority" class="form-control input-sm">
 											<option value="-100"${prio_verylow}>Very low</option>
@@ -404,11 +404,24 @@
 									</span>
 								</label>
 							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Map an NZBGet "DestDir"</span>
+									<span class="component-desc">
+										<input type="text" name="nzbget_parent_map" value="$sickbeard.NZBGET_MAP" placeholder="DestDir=path known locally as" class="form-control input-sm input250">
+										<p>link a remote path to a local path</p>
+										<div class="clear-left" style="line-height:initial"><p>optional: where SG is not installed on the NZBGet system (used by process media)<br>
+										(e.g. d:\tvstuff = c:\tv, /mnt/tv = /tv, /remote/nzbget/DestDir = /locally/known/as/dir)</p></div>
+									</span>
+								</label>
+							</div>
+
 						</div>
 
 						<div class="test-notification" id="test-nzb-result">Click below to test</div>
 						<input type="button" value="Test SABnzbd" id="test_sabnzbd" class="btn test-button sabnzbd">
-						<input type="button" value="Test NZBget" id="test_nzbget" class="btn test-button nzbget">
+						<input type="button" value="Test NZBGet" id="test_nzbget" class="btn test-button nzbget">
 						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
 
 						</div><!-- /content_use_nzbs //-->

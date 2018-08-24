@@ -17,81 +17,38 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from os import sys
+import importlib
 
 import os.path
 import sickbeard
 
-from . import generic
+from . import generic, newznab
+from .newznab import NewznabConstants
 from sickbeard import logger, encodingKludge as ek
-# usenet
-from . import newznab, omgwtfnzbs
-# torrent
-from . import alpharatio, alphareign, beyondhd, bithdtv, bitmetv, blutopia, btn, btscene, dh, ettv, eztv, \
-    fano, filelist, funfile, grabtheinfo, hdbits, hdspace, hdtorrents, \
-    iptorrents, limetorrents, magnetdl, morethan, nebulance, ncore, nyaa, pisexy, potuk, pretome, privatehd, ptf, \
-    rarbg, revtt, scenehd, scenetime, shazbat, showrss, skytorrents, speedcd, \
-    thepiratebay, torlock, torrentday, torrenting, torrentleech, \
-    torrentz2, tvchaosuk, wop, zooqle
-# anime
-from . import anizb, tokyotoshokan
-# custom
-try:
-    from . import custom01
-except (StandardError, Exception):
-    pass
 
-__all__ = ['omgwtfnzbs',
-           'alpharatio',
-           'alphareign',
-           'anizb',
-           'beyondhd',
-           'bithdtv',
-           'bitmetv',
-           'blutopia',
-           'btn',
-           'btscene',
-           'custom01',
-           'dh',
-           'ettv',
-           'eztv',
-           'fano',
-           'filelist',
-           'funfile',
-           'grabtheinfo',
-           'hdbits',
-           'hdspace',
-           'hdtorrents',
-           'iptorrents',
-           'limetorrents',
-           'magnetdl',
-           'morethan',
-           'nebulance',
-           'ncore',
-           'nyaa',
-           'pisexy',
-           'potuk',
-           'pretome',
-           'privatehd',
-           'ptf',
-           'rarbg',
-           'revtt',
-           'scenehd',
-           'scenetime',
-           'shazbat',
-           'showrss',
-           'skytorrents',
-           'speedcd',
-           'thepiratebay',
-           'torlock',
-           'torrentday',
-           'torrenting',
-           'torrentleech',
-           'torrentz2',
-           'tvchaosuk',
-           'wop',
-           'zooqle',
-           'tokyotoshokan',
-           ]
+__all__ = [
+    # usenet
+    'omgwtfnzbs',
+    # torrent
+    'alpharatio', 'alphareign', 'beyondhd', 'bithdtv', 'bitmetv', 'blutopia', 'btn', 'btscene',
+    'custom01', 'custom11', 'dh', 'ettv', 'eztv', 'fano', 'filelist', 'funfile', 'grabtheinfo',
+    'hdbits', 'hdme', 'hdspace', 'hdtorrents', 'horriblesubs',
+    'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'morethan', 'nebulance', 'ncore', 'nyaa',
+    'pisexy', 'potuk', 'pretome', 'privatehd', 'ptf',
+    'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'skytorrents', 'speedcd',
+    'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'torrentz2', 'tvchaosuk',
+    'wop', 'xspeeds', 'zooqle',
+    # anime
+    'anizb', 'tokyotoshokan',
+    ]
+for module in __all__:
+    try:
+        m = importlib.import_module('.' + module, 'sickbeard.providers')
+        globals().update({n: getattr(m, n) for n in m.__all__} if hasattr(m, '__all__')
+                         else dict(filter(lambda t: '_' != t[0][0], m.__dict__.items())))
+    except ImportError as e:
+        if 'custom' != module[0:6]:
+            raise e
 
 
 def sortedProviderList():
@@ -147,14 +104,10 @@ def getNewznabProviderList(data):
             providerList.append(curDefault)
         else:
             providerDict[curDefault.name].default = True
-            providerDict[curDefault.name].name = curDefault.name
-            providerDict[curDefault.name].url = curDefault.url
-            providerDict[curDefault.name].needs_auth = curDefault.needs_auth
-            providerDict[curDefault.name].search_mode = curDefault.search_mode
-            providerDict[curDefault.name].search_fallback = curDefault.search_fallback
-            providerDict[curDefault.name].enable_recentsearch = curDefault.enable_recentsearch
-            providerDict[curDefault.name].enable_backlog = curDefault.enable_backlog
-            providerDict[curDefault.name].enable_scheduled_backlog = curDefault.enable_scheduled_backlog
+            for k in ('name', 'url', 'needs_auth', 'search_mode', 'search_fallback',
+                      'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
+                      'server_type'):
+                setattr(providerDict[curDefault.name], k, getattr(curDefault, k))
 
     return filter(lambda x: x, providerList)
 
@@ -163,34 +116,24 @@ def makeNewznabProvider(configString):
     if not configString:
         return None
 
-    search_mode = 'eponly'
-    search_fallback = 0
-    enable_recentsearch = 0
-    enable_backlog = 0
-    enable_scheduled_backlog = 1
-
-    try:
-        values = configString.split('|')
-        if len(values) == 10:
-            name, url, key, cat_ids, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog, \
-            enable_scheduled_backlog = values
-        elif len(values) == 9:
-            name, url, key, cat_ids, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog = values
-        else:
-            name = values[0]
-            url = values[1]
-            key = values[2]
-            cat_ids = values[3]
-            enabled = values[4]
-    except ValueError:
-        logger.log(u"Skipping Newznab provider string: '" + configString + "', incorrect format", logger.ERROR)
+    values = configString.split('|')
+    if 5 <= len(values):
+        name, url, enabled = values.pop(0), values.pop(0), values.pop(4-2)
+        params = dict()
+        for k, d in (('key', ''), ('cat_ids', ''), ('search_mode', 'eponly'), ('search_fallback', 0),
+                     ('enable_recentsearch', 0), ('enable_backlog', 0), ('enable_scheduled_backlog', 1),
+                     ('server_type', NewznabConstants.SERVER_DEFAULT)):
+            try:
+                params.update({k: values.pop(0)})
+            except IndexError:
+                params.update({k: d})
+    else:
+        logger.log(u'Skipping Newznab provider string: \'%s\', incorrect format' % configString, logger.ERROR)
         return None
 
     newznab = sys.modules['sickbeard.providers.newznab']
 
-    newProvider = newznab.NewznabProvider(name, url, key=key, cat_ids=cat_ids, search_mode=search_mode,
-                                          search_fallback=search_fallback, enable_recentsearch=enable_recentsearch,
-                                          enable_backlog=enable_backlog, enable_scheduled_backlog=enable_scheduled_backlog)
+    newProvider = newznab.NewznabProvider(name, url, **params)
     newProvider.enabled = enabled == '1'
 
     return newProvider

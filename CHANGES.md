@@ -1,4 +1,29 @@
-﻿### 0.16.23 (2018-08-21 21:00:00 UTC)
+﻿### 0.17.0 (2018-08-24 23:40:00 UTC)
+
+* Change save config values only where reqd. reduces file by up to 75%
+* Add 'Map an NZBGet "DestDir"' setting to config/Search/NZB Results tab (select NZBGet)
+* Add TVDB, TheXem, and GitHub buttons to page History/Layout "Provider fails" that fetches a site Up/Down report
+* Add bubble links to History/Provider fails when more than one provider has failures
+* Add "Keep up to x most recent downloads" to Edit Show/Other
+* Add "Keep up to x most recent downloads" to Manage/Bulk Change/Edit
+* Change append number of downloads to keep to the number of file(s) at Display Show
+* Add "Keep up to x most recent downloads" to add show finally step
+* Add prune to refreshDir/rescan
+* Update Tornado Web Server 5.0.1 (35a538f) to 5.0.1 (2b2a220a)
+* Add HDME torrent provider
+* Add HorribleSubs torrent provider
+* Add ImmortalSeed torrent provider
+* Add Xspeeds torrent provider
+* Change consolidate provider filters into 'Only allow releases that are'
+* Add provider filters, Only allow releases that are ...
+  'scene releases (srrDB/predb listed)', 'or contain' text or regex,
+  'non scene if no recent search results', 'non scene if no active search results',
+  'not scene nuked', and 'nuked if no active search results'
+* Change improve tvdb_api performance; remember if episodes are cached and reload show if not and episodes are requested
+* Change remove redundant torrent URLs and improve provider loader
+
+
+### 0.16.23 (2018-08-21 21:00:00 UTC)
 
 * Fix detection of existing files
 * Change add sanitize 'imdbid' field in tvdb_api v2

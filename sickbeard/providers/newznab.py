@@ -92,6 +92,12 @@ class NewznabConstants:
                    'season': SEARCH_SEASON,
                    'ep': SEARCH_EPISODE}
 
+    SERVER_DEFAULT = 0
+    SERVER_SPOTWEB = 1
+
+    server_types = {SERVER_DEFAULT: 'newznab',
+                    SERVER_SPOTWEB: 'spotweb'}
+
     def __init__(self):
         pass
 
@@ -99,11 +105,12 @@ class NewznabConstants:
 class NewznabProvider(generic.NZBProvider):
 
     def __init__(self, name, url, key='', cat_ids=None, search_mode=None, search_fallback=False,
-                 enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False):
+                 enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False, server_type=None):
         generic.NZBProvider.__init__(self, name, True, False)
 
         self.url = url
         self.key = key
+        self.server_type = tryInt(server_type, None) or NewznabConstants.SERVER_DEFAULT
         self._exclude = set()
         self.cat_ids = cat_ids or ''
         self._cat_ids = None
@@ -123,11 +130,12 @@ class NewznabProvider(generic.NZBProvider):
         self._caps_last_updated = datetime.datetime.fromordinal(1)
         self.cache = NewznabCache(self)
         # filters
-        if super(NewznabProvider, self).get_id() in ('nzbs_org',):
-            self.filter = []
-            if 'nzbs_org' == super(NewznabProvider, self).get_id():
-                self.may_filter = OrderedDict([
-                    ('so', ('scene only', False)), ('snn', ('scene not nuked', False))])
+        # deprecated; kept here as bookmark for new haspretime:0|1 + nuked:0|1 can be used here instead
+        # if super(NewznabProvider, self).get_id() in ('nzbs_org',):
+        #     self.filter = []
+        #     if 'nzbs_org' == super(NewznabProvider, self).get_id():
+        #         self.may_filter = OrderedDict([
+        #             ('so', ('scene only', False)), ('snn', ('scene not nuked', False))])
 
     @property
     def cat_ids(self):
@@ -184,6 +192,11 @@ class NewznabProvider(generic.NZBProvider):
             pass
         self._last_recent_search = value
 
+    def image_name(self):
+
+        return generic.GenericProvider.image_name(
+            self, ('newznab', 'spotweb')[self.server_type == NewznabConstants.SERVER_SPOTWEB])
+
     def check_cap_update(self):
         if self.enabled and \
                 (not self._caps or (datetime.datetime.now() - self._caps_last_updated) >= datetime.timedelta(days=1)):
@@ -223,6 +236,12 @@ class NewznabProvider(generic.NZBProvider):
         all_cats = []
         xml_caps = self._get_caps_data()
         if None is not xml_caps:
+            server_node = xml_caps.find('.//server')
+            if None is not server_node:
+                self.server_type = (NewznabConstants.SERVER_DEFAULT, NewznabConstants.SERVER_SPOTWEB)[
+                    NewznabConstants.server_types.get(NewznabConstants.SERVER_SPOTWEB) in
+                    (server_node.get('type', '') or server_node.get('title', '')).lower()]
+
             tv_search = xml_caps.find('.//tv-search')
             if None is not tv_search:
                 for c in [i for i in tv_search.get('supportedParams', '').split(',')]:
@@ -340,10 +359,10 @@ class NewznabProvider(generic.NZBProvider):
         return True
 
     def config_str(self):
-        return '%s|%s|%s|%s|%i|%s|%i|%i|%i|%i' \
+        return '%s|%s|%s|%s|%i|%s|%i|%i|%i|%i|%i' \
                % (self.name or '', self.url or '', self.maybe_apikey() or '', self.cat_ids or '', self.enabled,
                   self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog,
-                  self.enable_scheduled_backlog)
+                  self.enable_scheduled_backlog, self.server_type)
 
     def _season_strings(self, ep_obj):
 
@@ -727,9 +746,10 @@ class NewznabProvider(generic.NZBProvider):
                     request_params['t'] = 'search'
                 request_params.update(params)
 
-                if hasattr(self, 'filter'):
-                    if 'nzbs_org' == self.get_id():
-                        request_params['rls'] = ((0, 1)['so' in self.filter], 2)['snn' in self.filter]
+                # deprecated; kept here as bookmark for new haspretime:0|1 + nuked:0|1 can be used here instead
+                # if hasattr(self, 'filter'):
+                #     if 'nzbs_org' == self.get_id():
+                #         request_params['rls'] = ((0, 1)['so' in self.filter], 2)['snn' in self.filter]
 
                 # workaround a strange glitch
                 if sum(ord(i) for i in self.get_id()) in [383] and 5 == 14 - request_params['maxage']:

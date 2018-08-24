@@ -136,8 +136,22 @@ def snatch_episode(result, end_status=SNATCHED):
             result.get_data_func = None  # consume only once
             if not result.url:
                 return False
+        if not result.content and result.url.startswith('magnet-'):
+            if sickbeard.TORRENT_DIR:
+                filepath = ek.ek(os.path.join, sickbeard.TORRENT_DIR, 'files.txt')
+                try:
+                    with open(filepath, 'a') as fh:
+                        result.url = result.url[7:]
+                        fh.write('"%s"\t"%s"\n' % (result.url, sickbeard.TV_DOWNLOAD_DIR))
+                    dl_result = True
+                except IOError:
+                    logger.log(u'Failed to write to %s' % filepath, logger.ERROR)
+                    return False
+            else:
+                logger.log(u'Need to set a torrent blackhole folder', logger.ERROR)
+                return False
         # torrents are saved to disk when blackhole mode
-        if 'blackhole' == sickbeard.TORRENT_METHOD:
+        elif 'blackhole' == sickbeard.TORRENT_METHOD:
             dl_result = _download_result(result)
         else:
             # make sure we have the torrent file content
@@ -206,20 +220,35 @@ def pass_show_wordlist_checks(name, show):
     return True
 
 
-def pick_best_result(results, show, quality_list=None):
+def pick_best_result(results, show, quality_list=None, filter_rls=False):
     logger.log(u'Picking the best result out of %s' % [x.name for x in results], logger.DEBUG)
 
     # find the best result for the current episode
     best_result = None
-    for cur_result in results:
+    best_fallback_result = None
+    scene_only = scene_or_contain = scene_loose = scene_loose_active = scene_rej_nuked = scene_nuked_active = False
+    if filter_rls:
+        try:
+            provider = getattr(results[0], 'provider', None)
+            scene_only = getattr(provider, 'scene_only', False)
+            scene_or_contain = getattr(provider, 'scene_or_contain', '')
+            recent_task = 'RECENT' in filter_rls
+            scene_loose = getattr(provider, 'scene_loose', False) and recent_task
+            scene_loose_active = getattr(provider, 'scene_loose_active', False) and not recent_task
+            scene_rej_nuked = getattr(provider, 'scene_rej_nuked', False)
+            scene_nuked_active = getattr(provider, 'scene_nuked_active', False) and not recent_task
+        except (StandardError, Exception):
+            filter_rls = False
 
-        logger.log(u'Quality is %s for [%s]' % (Quality.qualityStrings[cur_result.quality], cur_result.name))
+    addendum = ''
+    for cur_result in results:
 
         if show.is_anime and not show.release_groups.is_valid(cur_result):
             continue
 
         if quality_list and cur_result.quality not in quality_list:
-            logger.log(u'Rejecting unwanted quality [%s]' % cur_result.name, logger.DEBUG)
+            logger.log(u'Rejecting unwanted quality %s for [%s]' % (
+                Quality.qualityStrings[cur_result.quality], cur_result.name), logger.DEBUG)
             continue
 
         if not pass_show_wordlist_checks(cur_result.name, show):
@@ -231,24 +260,73 @@ def pick_best_result(results, show, quality_list=None):
             logger.log(u'Rejecting previously failed [%s]' % cur_result.name)
             continue
 
-        if not best_result or best_result.quality < cur_result.quality != Quality.UNKNOWN:
-            best_result = cur_result
+        if filter_rls and any([scene_only, scene_loose, scene_loose_active, scene_rej_nuked, scene_nuked_active]):
+            if show.is_anime:
+                addendum = u'anime (skipping scene/nuke filter) '
+            else:
+                scene_contains = False
+                if scene_only and scene_or_contain:
+                    re_extras = dict(re_prefix='.*', re_suffix='.*')
+                    r = show_name_helpers.contains_any(cur_result.name, scene_or_contain, **re_extras)
+                    if None is not r and r:
+                        scene_contains = True
 
-        elif best_result.quality == cur_result.quality:
-            if cur_result.properlevel > best_result.properlevel and \
-                    (not cur_result.is_repack or cur_result.release_group == best_result.release_group):
-                best_result = cur_result
-            elif cur_result.properlevel == best_result.properlevel:
-                if 'xvid' in best_result.name.lower() and 'x264' in cur_result.name.lower():
-                    logger.log(u'Preferring (x264 over xvid) [%s]' % cur_result.name)
-                    best_result = cur_result
-                elif 'internal' in best_result.name.lower() and 'internal' not in cur_result.name.lower():
-                    best_result = cur_result
+                if scene_contains and not scene_rej_nuked:
+                    logger.log(u'Considering title match to \'or contain\' [%s]' % cur_result.name, logger.DEBUG)
+                    reject = False
+                else:
+                    reject, url = can_reject(cur_result.name)
+                    if reject:
+                        if isinstance(reject, basestring):
+                            if scene_rej_nuked and not scene_nuked_active:
+                                logger.log(u'Rejecting nuked release. Nuke reason [%s] source [%s]' % (reject, url),
+                                           logger.DEBUG)
+                            elif scene_nuked_active:
+                                best_fallback_result = best_candidate(best_fallback_result, cur_result)
+                            else:
+                                logger.log(u'Considering nuked release. Nuke reason [%s] source [%s]' % (reject, url),
+                                           logger.DEBUG)
+                                reject = False
+                        elif scene_contains or any([scene_loose, scene_loose_active]):
+                            best_fallback_result = best_candidate(best_fallback_result, cur_result)
+                        else:
+                            logger.log(u'Rejecting as not scene release listed at any [%s]' % url, logger.DEBUG)
+
+                if reject:
+                    continue
+
+        best_result = best_candidate(best_result, cur_result)
+
+    if best_result and scene_only and not show.is_anime:
+        addendum = u'scene release filtered '
+    elif not best_result and best_fallback_result:
+        addendum = u'non scene release filtered '
+        best_result = best_fallback_result
 
     if best_result:
-        logger.log(u'Picked as the best [%s]' % best_result.name, logger.DEBUG)
+        logger.log(u'Picked as the best %s[%s]' % (addendum, best_result.name), logger.DEBUG)
     else:
         logger.log(u'No result picked.', logger.DEBUG)
+
+    return best_result
+
+
+def best_candidate(best_result, cur_result):
+    logger.log(u'Quality is %s for [%s]' % (Quality.qualityStrings[cur_result.quality], cur_result.name))
+
+    if not best_result or best_result.quality < cur_result.quality != Quality.UNKNOWN:
+        best_result = cur_result
+
+    elif best_result.quality == cur_result.quality:
+        if cur_result.properlevel > best_result.properlevel and \
+                (not cur_result.is_repack or cur_result.release_group == best_result.release_group):
+            best_result = cur_result
+        elif cur_result.properlevel == best_result.properlevel:
+            if 'xvid' in best_result.name.lower() and 'x264' in cur_result.name.lower():
+                logger.log(u'Preferring (x264 over xvid) [%s]' % cur_result.name)
+                best_result = cur_result
+            elif 'internal' in best_result.name.lower() and 'internal' not in cur_result.name.lower():
+                best_result = cur_result
 
     return best_result
 
@@ -449,7 +527,7 @@ def search_for_needed_episodes(episodes):
                 continue
 
             # find the best result for the current episode
-            best_result = pick_best_result(cur_found_results[cur_ep], cur_ep.show)
+            best_result = pick_best_result(cur_found_results[cur_ep], cur_ep.show, filter_rls=orig_thread_name)
 
             # if all results were rejected move on to the next episode
             if not best_result:
@@ -488,6 +566,52 @@ def search_for_needed_episodes(episodes):
     return found_results.values()
 
 
+def can_reject(release_name):
+    """
+    Check if a release name should be rejected at external services.
+    If any site reports result as a valid scene release, then return None, None.
+    If predb reports result as nuked, then return nuke reason and url attempted.
+    If fail to find result at all services, return reject and url details for each site.
+
+    :param release_name: Release title
+    :type release_name: String
+    :return: None, None if release has no issue otherwise True/Nuke reason, URLs that rejected
+    :rtype: Tuple (None, None or True/String, String)
+    """
+    rej_urls = []
+    srrdb_url = 'https://www.srrdb.com/api/search/r:%s/order:date-desc' % re.sub('\]\[', '', release_name)
+    resp = helpers.getURL(srrdb_url, json=True)
+    if not resp:
+        srrdb_rej = True
+        rej_urls += ['Failed contact \'%s\'' % srrdb_url]
+    else:
+        srrdb_rej = (not len(resp.get('results', []))
+                     or release_name.lower() != resp.get('results', [{}])[0].get('release', '').lower())
+        rej_urls += ([], ['\'%s\'' % srrdb_url])[srrdb_rej]
+
+    sane_name = helpers.full_sanitizeSceneName(release_name)
+    predb_url = 'https://predb.ovh/api/v1/?q=@name "%s"' % sane_name
+    resp = helpers.getURL(predb_url, json=True)
+    predb_rej = True
+    if not resp:
+        rej_urls += ['Failed contact \'%s\'' % predb_url]
+    elif 'success' == resp.get('status', '').lower():
+        rows = resp and (resp.get('data') or {}).get('rows') or []
+        for data in rows:
+            if sane_name == helpers.full_sanitizeSceneName((data.get('name', '') or '').strip()):
+                nuke_type = (data.get('nuke') or {}).get('type')
+                if not nuke_type:
+                    predb_rej = not helpers.tryInt(data.get('preAt'))
+                else:
+                    predb_rej = 'un' not in nuke_type and data.get('nuke', {}).get('reason', 'Reason not set')
+                break
+        rej_urls += ([], ['\'%s\'' % predb_url])[bool(predb_rej)]
+
+    pred = any([not srrdb_rej, not predb_rej])
+
+    return pred and (None, None) or (predb_rej or True,  ', '.join(rej_urls))
+
+
 def search_providers(show, episodes, manual_search=False, torrent_only=False, try_other_searches=False, old_status=None, scheduled=False):
     found_results = {}
     final_results = []
@@ -518,7 +642,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
         found_results[provider_id] = {}
 
         search_count = 0
-        search_mode = cur_provider.search_mode
+        search_mode = getattr(cur_provider, 'search_mode', 'eponly')
 
         while True:
             search_count += 1
@@ -563,7 +687,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                         found_results[provider_id][cur_ep] = search_results[cur_ep]
 
                 break
-            elif not cur_provider.search_fallback or search_count == 2:
+            elif not getattr(cur_provider, 'search_fallback', False) or 2 == search_count:
                 break
 
             search_mode = '%sonly' % ('ep', 'sp')['ep' in search_mode]
@@ -739,7 +863,8 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
             if 0 == len(found_results[provider_id][cur_ep]):
                 continue
 
-            best_result = pick_best_result(found_results[provider_id][cur_ep], show, quality_list)
+            best_result = pick_best_result(found_results[provider_id][cur_ep], show, quality_list,
+                                           filter_rls=orig_thread_name)
 
             # if all results were rejected move on to the next episode
             if not best_result:

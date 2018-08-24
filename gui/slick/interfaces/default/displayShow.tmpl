@@ -336,7 +336,9 @@
 						<span class="label addQTip" title="Location#echo (' no longer exists" style="background-color:#8f1515"', '"')[$showLoc[1]]#>$showLoc[0]</span>
 						<span class="label addQTip" title="Size">$human($get_size($showLoc[0]))</span>
 #set $filecount = sum([$c for $k, $c in $ep_counts['videos'].items()])
-						<span class="label addQTip" title="Videos">#echo ('No', $filecount)[0 < $filecount]# file$maybe_plural($filecount)</span>
+#set $to_prune = $show.prune - $filecount
+#set $keep_or_prune = ('', ' (%s)' % ('%s to prune' % abs($to_prune), 'keep %s' % $show.prune)[0 <= $to_prune])[bool($show.prune)]
+						<span class="label addQTip" title="Videos">#echo '%s file%s%s' % (('No', $filecount)[0 < $filecount], $maybe_plural($filecount), $keep_or_prune)#</span>
 #if $show.paused
 						<span class="label label-paused">Paused</span>
 #end if

@@ -5,13 +5,6 @@
 $(document).ready(function(){
 	var loading = '<img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />';
 
-	$('.typelist').on('click', '.list .item a', function(){
-		$(this).closest('.component-group').after(
-			$('[name=' + $(this).attr('href').replace('#','') + ']').closest('.component-group')
-		);
-		return !1;
-	});
-
 	$('#test-growl').click(function () {
 		var growlHost = $.trim($('#growl-host').val());
 		var growlPassword = $.trim($('#growl-password').val());

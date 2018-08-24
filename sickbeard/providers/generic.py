@@ -21,6 +21,7 @@ from __future__ import with_statement
 
 import datetime
 import itertools
+import json
 import math
 import os
 import re
@@ -30,7 +31,7 @@ import threading
 import socket
 from urllib import quote_plus
 import zlib
-from base64 import b16encode, b32decode
+from base64 import b16encode, b32decode, b64decode
 
 import sickbeard
 import requests
@@ -241,6 +242,13 @@ class GenericProvider(object):
         self.has_limit = False
         self.fail_times = {1: (0, 15), 2: (0, 30), 3: (1, 0), 4: (2, 0), 5: (3, 0), 6: (6, 0), 7: (12, 0), 8: (24, 0)}
         self._load_fail_values()
+
+        self.scene_only = False
+        self.scene_or_contain = ''
+        self.scene_loose = False
+        self.scene_loose_active = False
+        self.scene_rej_nuked = False
+        self.scene_nuked_active = False
 
     def _load_fail_values(self):
         if hasattr(sickbeard, 'DATA_DIR'):
@@ -707,6 +715,16 @@ class GenericProvider(object):
             except (StandardError, Exception):
                 logger.log(u'Failed to save magnet link to file, %s' % final_file)
         elif not saved:
+            if 'torrent' == link_type and result.provider.get_id() in sickbeard.PROVIDER_HOMES:
+                # home var url can differ to current url if a url has changed, so exclude both on error
+                urls = list(set([sickbeard.PROVIDER_HOMES[result.provider.get_id()][0]]
+                                + re.findall('^(https?://[^/]+/)', result.url)
+                                + getattr(sickbeard, 'PROVIDER_EXCLUDE', [])))
+                sickbeard.PROVIDER_HOMES[result.provider.get_id()] = ('', None)
+                # noinspection PyProtectedMember
+                result.provider._valid_home(url_exclude=urls)
+                setattr(sickbeard, 'PROVIDER_EXCLUDE', ([], urls)[any([result.provider.url])])
+
             logger.log(u'Server failed to return anything useful', logger.ERROR)
 
         return saved
@@ -1117,9 +1135,9 @@ class GenericProvider(object):
         """
         if not self.should_skip():
             str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
-            logger.log(u'%s %s in response from %s' % (('No' + str1, count)[0 < count], (
+            logger.log((u'%s %s in response from %s' % (('No' + str1, count)[0 < count], (
                 '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
-                re.sub('(\s)\s+', r'\1', url)))
+                re.sub('(\s)\s+', r'\1', url))).replace('%%', '%'))
 
     def check_auth_cookie(self):
 
@@ -1293,7 +1311,7 @@ class NZBProvider(GenericProvider):
 
 class TorrentProvider(GenericProvider):
 
-    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=None, update_freq=None):
+    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_freq=7, update_freq=None):
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
 
         self.providerType = GenericProvider.TORRENT
@@ -1439,7 +1457,58 @@ class TorrentProvider(GenericProvider):
         return data and re.search(r'(?sim)<input[^<]+?name=["\'\s]*?password', data) and \
                re.search(r'(?sim)<input[^<]+?name=["\'\s]*?username', data)
 
-    def _valid_home(self, attempt_fetch=True):
+    def _decode_urls(self, url_exclude=None):
+
+        data_attr = 'PROVIDER_DATA'
+        data_refresh = 'PROVIDER_DATA_REFRESH'
+        obf = getattr(sickbeard, data_attr, None)
+        now = int(time.time())
+        data_window = getattr(sickbeard, data_refresh, now - 1)
+        if data_window < now:
+            setattr(sickbeard, data_refresh, (10*60) + now)
+            url = 'https://raw.githubusercontent.com/SickGear/sickgear.extdata/master/SickGear/data.txt'
+            obf_new = helpers.getURL(url, json=True) or {}
+            if obf_new:
+                setattr(sickbeard, data_attr, obf_new)
+                obf = obf_new
+
+        urls = []
+
+        seen_attr = 'PROVIDER_SEEN'
+        if obf and self.__module__ not in getattr(sickbeard, seen_attr, []):
+            file_path = '%s.py' % os.path.join(sickbeard.PROG_DIR, *self.__module__.split('.'))
+            if ek.ek(os.path.isfile, file_path):
+                with open(file_path, 'rb') as file_hd:
+                    c = bytearray(str(zlib.crc32(file_hd.read())).encode('hex'))
+
+                for x in obf.keys():
+                    if self.__module__.endswith(self._decode(bytearray(b64decode(x)), c)):
+                        for u in obf[x]:
+                            urls += [self._decode(bytearray(
+                                b64decode(''.join([re.sub('[\s%s]+' % u[0], '', x[::-1]) for x in u[1:]]))), c)]
+                        url_exclude = url_exclude or []
+                        if url_exclude:
+                            urls = urls[1:]
+                        urls = filter(lambda u: u not in url_exclude, urls)
+                        break
+                if not urls:
+                    setattr(sickbeard, seen_attr, list(set(getattr(sickbeard, seen_attr, []) + [self.__module__])))
+
+        if not urls:
+            urls = filter(lambda u: 'http' in u, getattr(self, 'url_home', []))
+
+        return urls
+
+    @staticmethod
+    def _decode(data, c):
+        try:
+            result = ''.join(chr(int(str(
+                bytearray((8 * c)[i] ^ x for i, x in enumerate(data))[i:i + 2]), 16)) for i in range(0, len(data), 2))
+        except (StandardError, Exception):
+            result = '|'
+        return result
+
+    def _valid_home(self, attempt_fetch=True, url_exclude=None):
         """
         :return: signature verified home url else None if validation fail
         """
@@ -1447,13 +1516,13 @@ class TorrentProvider(GenericProvider):
         if url_base:
             return url_base
 
-        url_list = getattr(self, 'url_home', None)
-        if not url_list and getattr(self, 'url_edit', None) or 10 > max([len(x) for x in url_list]):
+        url_list = self._decode_urls(url_exclude)
+        if not url_list and getattr(self, 'url_edit', None) or not any(filter(lambda u: 10 < len(u), url_list)):
             return None
 
-        url_list = ['%s/' % x.rstrip('/') for x in url_list]
+        url_list = map(lambda u: '%s/' % u.rstrip('/'), url_list)
         last_url, expire = sickbeard.PROVIDER_HOMES.get(self.get_id(), ('', None))
-        url_drop = getattr(self, 'url_drop', [])
+        url_drop = (url_exclude or []) + getattr(self, 'url_drop', [])
         if url_drop and any([url in last_url for url in url_drop]):  # deprecate url
             last_url = ''
 

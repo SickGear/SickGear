@@ -236,6 +236,7 @@ inc_top.tmpl
 	border:1px solid
 }
 
+.component-group.bubblelist a,
 .ui-widget-content a{
 	text-decoration:none
 }
@@ -3230,7 +3231,7 @@ td.tableright{
 }
 
 .optionWrapper{
-	width:450px;
+	width:475px;
 	margin-left:auto;
 	margin-right:auto;
 	padding:6px 12px
@@ -3246,7 +3247,7 @@ td.tableright{
 
 .optionWrapper div.selectChoices{
 	float:left;
-	width:175px;
+	width:200px;
 	margin-left:25px
 }
 
@@ -3281,6 +3282,9 @@ input.get_less_eps{
 #provider-failures .btn{
 	margin:0 6px 0 0;
 	min-width:70px
+}
+#provider-failures .check-site .btn{
+	min-width:115px
 }
 #media-search .btn.shows-more,
 #media-search .btn.shows-less,
@@ -3604,6 +3608,23 @@ img[src=""],img:not([src]){
 	top:-999px
 }
 
+.box-green{
+	background-color:#68b92b
+}
+.box-red{
+	background-color:#b72828
+}
+.box-green,
+.box-red{
+	color:#eee;
+	padding:0 10px;
+	text-align:center;
+	text-decoration:none;
+	border-radius:4px 4px 4px 4px;
+	-moz-border-radius:3px;
+	-webkit-border-radius:3px
+}
+
 /* =======================================================================
 bootstrap Overrides
 ========================================================================== */
@@ -3781,6 +3802,18 @@ fieldset[disabled] .navbar-default .btn-link:hover,
 fieldset[disabled] .navbar-default .btn-link:focus{
 	color:#ccc
 }
+
+.component-group.bubble.last{padding:0;margin:0;border-bottom:none}
+.component-group.bubblelist{min-height:30px}
+.component-group.bubblelist .type{padding:6px}
+.component-group.bubblelist .item{display:inline-block}
+.component-group.bubblelist .item img{margin-right:4px}
+.component-group.bubblelist .item.text{font-size:12px; padding-right:3px}
+.component-group.bubblelist .item a{font-size:16px;padding-right:20px}
+.component-group.bubblelist .item.text,
+.component-group.bubblelist .item a{line-height:16px;vertical-align:middle}
+.component-group.bubblelist .item a img{vertical-align:bottom;opacity:0.65;filter:alpha(opacity=65)}
+.component-group.bubblelist .item a:hover img{opacity:1;filter:alpha(opacity=1)}
 
 .dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus{
 	color:#262626;
