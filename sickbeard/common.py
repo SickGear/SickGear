@@ -286,16 +286,18 @@ class Quality:
             try:
                 parser = ek.ek(createParser, filename)
             except InputStreamError as e:
-                logger.log(msg % (filename, e.text), logger.WARNING)
+                logger.log(msg % (filename, ex(e)), logger.WARNING)
             except Exception as e:
                 logger.log(msg % (filename, ex(e)), logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
 
             if parser:
-                if '.avi' == filename[-4::].lower():
-                    extract = extractMetadata(parser, scan_index=False)
-                else:
-                    extract = extractMetadata(parser)
+                extract = None
+                try:
+                    args = ({}, {'scan_index': False})['.avi' == filename[-4::].lower()]
+                    extract = extractMetadata(parser, **args)
+                except (StandardError, Exception) as e:
+                    logger.log(msg % (filename, ex(e)), logger.WARNING)
                 if extract:
                     try:
                         height = extract.get('height')

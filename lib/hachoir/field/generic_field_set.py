@@ -93,7 +93,8 @@ class GenericFieldSet(BasicFieldSet):
 
     def __str__(self):
         return '<%s path=%s, current_size=%s, current length=%s>' % \
-               (self.__class__.__name__, self.path, self._current_size, len(self._fields))
+            (self.__class__.__name__, self.path,
+             self._current_size, len(self._fields))
 
     def __len__(self):
         """
@@ -106,23 +107,22 @@ class GenericFieldSet(BasicFieldSet):
 
     def _getCurrentLength(self):
         return len(self._fields)
-
     current_length = property(_getCurrentLength)
 
     def _getSize(self):
         if self._size is None:
             self._feedAll()
         return self._size
-
-    size = property(_getSize, doc="Size in bits, may create all fields to get size")
+    size = property(
+        _getSize, doc="Size in bits, may create all fields to get size")
 
     def _getCurrentSize(self):
-        assert not (self.done)
+        assert not(self.done)
         return self._current_size
-
     current_size = property(_getCurrentSize)
 
-    eof = property(lambda self: self._checkSize(self._current_size + 1, True) < 0)
+    eof = property(lambda self: self._checkSize(
+        self._current_size + 1, True) < 0)
 
     def _checkSize(self, size, strict):
         field = self
@@ -170,11 +170,13 @@ class GenericFieldSet(BasicFieldSet):
             _ = field.size
         except Exception as err:
             if field.is_field_set and field.current_length and field.eof:
-                self.warning("Error when getting size of '%s': %s" % (field.name, err))
+                self.warning(
+                    "Error when getting size of '%s': %s" % (field.name, err))
                 field._stopFeeding()
                 ask_stop = True
             else:
-                self.warning("Error when getting size of '%s': delete it" % field.name)
+                self.warning(
+                    "Error when getting size of '%s': delete it" % field.name)
                 self.__is_feeding = False
                 raise
         self.__is_feeding = False
@@ -190,8 +192,8 @@ class GenericFieldSet(BasicFieldSet):
         self._current_size += field.size
         try:
             self._fields.append(field._name, field)
-        except UniqKeyError, err:
-            self.warning("Duplicate field name " + unicode(err))
+        except UniqKeyError as err:
+            self.warning("Duplicate field name " + str(err))
             field._name += "[]"
             self.setUniqueFieldName(field)
             self._fields.append(field._name, field)
@@ -220,7 +222,7 @@ class GenericFieldSet(BasicFieldSet):
         return field
 
     def getField(self, key, const=True):
-        if isinstance(key, (int, long)):
+        if isinstance(key, int):
             if key < 0:
                 raise KeyError("Key must be positive!")
             if not const:
@@ -250,7 +252,7 @@ class GenericFieldSet(BasicFieldSet):
                     self._fields.append(field._name, field)
             self._current_size = self._size
         else:
-            assert size < self._size or self._size is None
+            assert self._size is None or size < self._size
             self._size = size
         if self._size == self._current_size:
             self._field_generator = None
@@ -327,7 +329,7 @@ class GenericFieldSet(BasicFieldSet):
             return None
         try:
             while True:
-                field = self._field_generator.next()
+                field = next(self._field_generator)
                 self._addField(field)
                 if field.name == field_name:
                     return field
@@ -349,7 +351,7 @@ class GenericFieldSet(BasicFieldSet):
         oldlen = len(self._fields)
         try:
             for index in xrange(number):
-                self._addField(self._field_generator.next())
+                self._addField(next(self._field_generator))
         except StopIteration:
             self._stopFeeding()
         except Exception as err:
@@ -362,7 +364,7 @@ class GenericFieldSet(BasicFieldSet):
             return
         try:
             while True:
-                field = self._field_generator.next()
+                field = next(self._field_generator)
                 self._addField(field)
         except StopIteration:
             self._stopFeeding()
@@ -381,7 +383,7 @@ class GenericFieldSet(BasicFieldSet):
                 if done == len(self._fields):
                     if self._field_generator is None:
                         break
-                    self._addField(self._field_generator.next())
+                    self._addField(next(self._field_generator))
                 for field in self._fields.values[done:]:
                     yield field
                     done += 1
@@ -404,7 +406,6 @@ class GenericFieldSet(BasicFieldSet):
 
     def _isDone(self):
         return (self._field_generator is None)
-
     done = property(_isDone, doc="Boolean to know if parsing is done or not")
 
     #
@@ -445,7 +446,8 @@ class GenericFieldSet(BasicFieldSet):
         # TODO: Check in self and not self.field
         # Problem is that "generator is already executing"
         if name not in self._fields:
-            raise ParserError("Unable to replace %s: field doesn't exist!" % name)
+            raise ParserError(
+                "Unable to replace %s: field doesn't exist!" % name)
         assert 1 <= len(new_fields)
         old_field = self[name]
         total_size = sum((field.size for field in new_fields))
@@ -486,7 +488,8 @@ class GenericFieldSet(BasicFieldSet):
         if feed and self._field_generator is not None:
             self._feedAll()
         if address < self._current_size:
-            i = lowerBound(self._fields.values, lambda x: x.address + x.size <= address)
+            i = lowerBound(self._fields.values,
+                           lambda x: x.address + x.size <= address)
             if i is not None:
                 return self._fields.values[i]
         return None
@@ -499,8 +502,8 @@ class GenericFieldSet(BasicFieldSet):
         # Check size
         total_size = sum(field.size for field in new_fields)
         if old_field.size < total_size:
-            raise ParserError( \
-                "Unable to write fields at address %s " \
+            raise ParserError(
+                "Unable to write fields at address %s "
                 "(too big)!" % (address))
 
         # Need padding before?
