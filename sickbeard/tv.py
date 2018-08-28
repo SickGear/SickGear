@@ -36,9 +36,8 @@ from name_parser.parser import NameParser, InvalidNameException, InvalidShowExce
 from lib import subliminal
 import fnmatch
 
-from imdb._exceptions import IMDbError
-
-from lib.imdb import imdb
+from lib import imdbpie
+from imdbpie import ImdbAPIError
 
 from sickbeard import db
 from sickbeard import helpers, exceptions, logger, name_cache, indexermapper
@@ -51,6 +50,7 @@ from sickbeard import history
 from sickbeard import network_timezones
 from sickbeard.sbdatetime import sbdatetime
 from sickbeard.blackandwhitelist import BlackAndWhiteList
+from sickbeard.helpers import tryInt, tryFloat
 from sickbeard.indexermapper import del_mapping, save_mapping, MapStatus
 from sickbeard.generic_queue import QueuePriorities
 
@@ -1070,15 +1070,9 @@ class TVShow(object):
         if not sickbeard.USE_IMDB_INFO:
             return
 
-        from lib.imdb import _exceptions as imdb_exceptions
-
         logger.log('Retrieving show info [%s] from IMDb' % self.name, logger.DEBUG)
         try:
             self._get_imdb_info()
-        except imdb_exceptions.IMDbDataAccessError as e:
-            logger.log('Timeout waiting for IMDb api: %s' % ex(e), logger.WARNING)
-        except imdb_exceptions.IMDbError as e:
-            logger.log('Something is wrong with IMDb api: %s' % ex(e), logger.WARNING)
         except Exception as e:
             logger.log('Error loading IMDb info: %s' % ex(e), logger.ERROR)
             logger.log('%s' % traceback.format_exc(), logger.ERROR)
@@ -1091,65 +1085,83 @@ class TVShow(object):
         imdb_info = {'imdb_id': self.imdbid or 'tt%07d' % self.ids[indexermapper.INDEXER_IMDB]['id'],
                      'title': '',
                      'year': '',
-                     'akas': [],
-                     'runtimes': '',
-                     'genres': [],
+                     'akas': '',
+                     'runtimes': self.runtime,
+                     'genres': '',
                      'countries': '',
-                     'country_codes': [],
-                     'certificates': [],
+                     'country_codes': '',
+                     'certificates': '',
                      'rating': '',
                      'votes': '',
                      'last_update': ''}
 
+        imdb_id = None
+        imdb_certificates = None
         try:
-            i = imdb.IMDb()
-            imdbTv = i.get_movie(
-                str(re.sub('[^0-9]', '', self.imdbid or '%07d' % self.ids[indexermapper.INDEXER_IMDB]['id'])))
-        except IMDbError:
+            imdb_id = str(self.imdbid or 'tt%07d' % self.ids[indexermapper.INDEXER_IMDB]['id'])
+            i = imdbpie.Imdb(exclude_episodes=True)
+            if not re.search(r'tt\d{7}', imdb_id, flags=re.I):
+                logger.log('Not a valid imdbid: %s for show: %s' % (imdb_id, self.name), logger.WARNING)
+                return
+            imdb_ratings = i.get_title_ratings(imdb_id=imdb_id)
+            imdb_akas = i.get_title_versions(imdb_id=imdb_id)
+            imdb_tv = i.get_title_auxiliary(imdb_id=imdb_id)
+            ipie = getattr(imdbpie.__dict__.get('imdbpie'), '_SIMPLE_GET_ENDPOINTS', None)
+            if ipie:
+                ipie.update({
+                    u'get_title_certificates': u'/title/{imdb_id}/certificates',
+                    u'get_title_parentalguide': u'/title/{imdb_id}/parentalguide',
+                })
+                imdb_certificates = i.get_title_certificates(imdb_id=imdb_id)
+        except LookupError as e:
+            logger.log('imdbid: %s not found. Error: %s' % (imdb_id, ex(e)), logger.WARNING)
+            return
+        except ImdbAPIError as e:
+            logger.log('Imdb API Error: %s' % ex(e), logger.WARNING)
+            return
+        except (StandardError, Exception) as e:
+            logger.log('Error: %s retrieving imdb id: %s' % (ex(e), imdb_id), logger.WARNING)
             return
 
-        for key in filter(lambda x: x.replace('_', ' ') in imdbTv.keys(), imdb_info.keys()):
-            # Store only the first value for string type
-            if type(imdb_info[key]) == type('') and type(imdbTv.get(key)) == type([]):
-                imdb_info[key] = imdbTv.get(key.replace('_', ' '))[0]
-            else:
-                imdb_info[key] = imdbTv.get(key.replace('_', ' '))
+        # ratings
+        if isinstance(imdb_ratings.get('rating'), (int, float)):
+            imdb_info['rating'] = tryFloat(imdb_ratings.get('rating'), '')
+        if isinstance(imdb_ratings.get('ratingCount'), int):
+            imdb_info['votes'] = tryInt(imdb_ratings.get('ratingCount'), '')
 
-        # Filter only the value
-        if imdb_info['runtimes']:
-            imdb_info['runtimes'] = re.search('\d+', imdb_info['runtimes']).group(0)
-        else:
-            imdb_info['runtimes'] = self.runtime
+        # akas
+        if isinstance(imdb_akas.get('alternateTitles'), (list, tuple)):
+            imdb_info['akas'] = '|'.join(['%s::%s' % (t.get('region'), t.get('title'))
+                                          for t in imdb_akas.get('alternateTitles') if isinstance(t, dict) and
+                                          t.get('title') and t.get('region')])
 
-        if imdb_info['akas']:
-            imdb_info['akas'] = '|'.join(imdb_info['akas'])
-        else:
-            imdb_info['akas'] = ''
+        # tv
+        if isinstance(imdb_tv.get('title'), basestring):
+            imdb_info['title'] = imdb_tv.get('title')
+        if isinstance(imdb_tv.get('year'), (int, basestring)):
+            imdb_info['year'] = tryInt(imdb_tv.get('year'), '')
+        if isinstance(imdb_tv.get('runningTimeInMinutes'), (int, basestring)):
+            imdb_info['runtimes'] = tryInt(imdb_tv.get('runningTimeInMinutes'), '')
+        if isinstance(imdb_tv.get('genres'), (list, tuple)):
+            imdb_info['genres'] = '|'.join(filter(lambda v: v, imdb_tv.get('genres')))
+        if isinstance(imdb_tv.get('origins'), list):
+            imdb_info['country_codes'] = '|'.join(filter(lambda v: v, imdb_tv.get('origins')))
 
-        # Join all genres in a string
-        if imdb_info['genres']:
-            imdb_info['genres'] = '|'.join(imdb_info['genres'])
-        else:
-            imdb_info['genres'] = ''
-
-        # Get only the production country certificate if any
-        if imdb_info['certificates'] and imdb_info['countries']:
-            dct = {}
-            try:
-                for item in imdb_info['certificates']:
-                    dct[item.split(':')[0]] = item.split(':')[1]
-
-                imdb_info['certificates'] = dct[imdb_info['countries']]
-            except:
-                imdb_info['certificates'] = ''
-
-        else:
-            imdb_info['certificates'] = ''
-
-        if imdb_info['country_codes']:
-            imdb_info['country_codes'] = '|'.join(imdb_info['country_codes'])
-        else:
-            imdb_info['country_codes'] = ''
+        # certificate
+        if isinstance(imdb_certificates.get('certificates'), dict):
+            certs = []
+            for country, values in imdb_certificates.get('certificates').iteritems():
+                if country and isinstance(values, (list, tuple)):
+                    for cert in values:
+                        if isinstance(cert, dict) and cert.get('certificate'):
+                            extra_info = ''
+                            if isinstance(cert.get('attributes'), list):
+                                extra_info = ' (%s)' % ', '.join(cert.get('attributes'))
+                            certs.append('%s:%s%s' % (country, cert.get('certificate'), extra_info))
+            imdb_info['certificates'] = '|'.join(certs)
+        if (not imdb_info['certificates'] and isinstance(imdb_tv.get('certificate'), dict)
+                and isinstance(imdb_tv.get('certificate').get('certificate'), basestring)):
+            imdb_info['certificates'] = '%s:%s' % (u'US', imdb_tv.get('certificate').get('certificate'))
 
         imdb_info['last_update'] = datetime.date.today().toordinal()
 
