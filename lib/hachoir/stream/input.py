@@ -4,7 +4,6 @@ from hachoir.core.log import Logger
 from hachoir.core.bits import str2long
 from hachoir.core.i18n import getTerminalCharset
 from hachoir.core.tools import lowerBound
-from hachoir.core.i18n import _
 from hachoir.core.tools import alignValue
 from errno import ESPIPE
 from weakref import ref as weakref_ref
@@ -16,21 +15,25 @@ class InputStreamError(StreamError):
 
 
 class ReadStreamError(InputStreamError):
+
     def __init__(self, size, address, got=None):
         self.size = size
         self.address = address
         self.got = got
         if self.got is not None:
-            msg = _("Can't read %u bits at address %u (got %u bits)") % (self.size, self.address, self.got)
+            msg = "Can't read %u bits at address %u (got %u bits)" % (
+                self.size, self.address, self.got)
         else:
-            msg = _("Can't read %u bits at address %u") % (self.size, self.address)
+            msg = "Can't read %u bits at address %u" % (
+                self.size, self.address)
         InputStreamError.__init__(self, msg)
 
 
 class NullStreamError(InputStreamError):
+
     def __init__(self, source):
         self.source = source
-        msg = _("Input size is nul (source='%s')!") % self.source
+        msg = "Input size is nul (source='%s')!" % self.source
         InputStreamError.__init__(self, msg)
 
 
@@ -76,7 +79,6 @@ class FileFromInputStream:
             if shift:
                 raise InputStreamError("TODO: handle non-byte-aligned data")
             return data
-
         if self._size or size is not None and not self._from_end:
             # We don't want self.tell() to read anything
             # and the size must be known if we read until the end.
@@ -96,7 +98,8 @@ class FileFromInputStream:
             if size <= 0:
                 return ''
             data = '', ''
-            self._offset = max(0, self.stream._current_size // 8 + self._offset)
+            self._offset = max(
+                0, self.stream._current_size // 8 + self._offset)
             self._from_end = False
             bs = max(max_size, 1 << 16)
             while True:
@@ -129,7 +132,7 @@ class InputStream(Logger):
 
     def __init__(self, source=None, size=None, packets=None, **args):
         self.source = source
-        self._size = size  # in bits
+        self._size = size   # in bits
         if size == 0:
             raise NullStreamError(source)
         self.tags = tuple(args.get("tags", tuple()))
@@ -245,7 +248,8 @@ class InputStream(Logger):
         None else.
         """
         if start_address % 8:
-            raise InputStreamError("Unable to search bytes with address with bit granularity")
+            raise InputStreamError(
+                "Unable to search bytes with address with bit granularity")
         length = len(needle)
         size = max(3 * length, 4096)
         buffer = ''
@@ -334,7 +338,8 @@ class InputPipe(object):
             return ''
         buf = self.buffers[index]
         if buf is None:
-            raise InputStreamError(_("Error: Buffers too small. Can't seek backward."))
+            raise InputStreamError(
+                "Error: Buffers too small. Can't seek backward.")
         if self.last != index:
             next = buf[1]
             prev = buf[2]
@@ -366,7 +371,7 @@ class InputPipe(object):
 
     def read(self, size):
         end = self.address + size
-        for i in xrange(len(self.buffers), (end >> self.buffer_size) + 1):
+        for i in range(len(self.buffers), (end >> self.buffer_size) + 1):
             data = self._input.read(1 << self.buffer_size)
             if len(data) < 1 << self.buffer_size:
                 self.size = (len(self.buffers) << self.buffer_size) + len(data)
@@ -386,6 +391,7 @@ class InputPipe(object):
 
 
 class InputIOStream(InputStream):
+
     def __init__(self, input, size=None, **args):
         if not hasattr(input, "seek"):
             if size is None:
@@ -396,14 +402,15 @@ class InputIOStream(InputStream):
             try:
                 input.seek(0, 2)
                 size = input.tell() * 8
-            except IOError, err:
+            except IOError as err:
                 if err.errno == ESPIPE:
                     input = InputPipe(input, self._setSize)
                 else:
                     charset = getTerminalCharset()
                     errmsg = unicode(str(err), charset)
                     source = args.get("source", "<inputio:%r>" % input)
-                    raise InputStreamError(_("Unable to get size of %s: %s") % (source, errmsg))
+                    raise InputStreamError(
+                        "Unable to get size of %s: %s" % (source, errmsg))
         self._input = input
         InputStream.__init__(self, size=size, **args)
 
@@ -416,7 +423,6 @@ class InputIOStream(InputStream):
         if self._input.size:
             return 8 * self._input.size
         return 8 * self._input.current_size
-
     _current_size = property(__current_size)
 
     def read(self, address, size):
@@ -445,6 +451,7 @@ class InputIOStream(InputStream):
 
 
 class StringInputStream(InputStream):
+
     def __init__(self, data, source="<string>", **args):
         self.data = data
         InputStream.__init__(self, source=source, size=8 * len(data), **args)
@@ -464,6 +471,7 @@ class StringInputStream(InputStream):
 
 
 class InputSubStream(InputStream):
+
     def __init__(self, stream, offset, size=None, source=None, **args):
         if offset is None:
             offset = 0
@@ -499,6 +507,7 @@ def InputFieldStream(field, **args):
 
 
 class FragmentedStream(InputStream):
+
     def __init__(self, field, **args):
         self.stream = field.parent.stream
         data = field.getData()
@@ -573,6 +582,7 @@ class FragmentedStream(InputStream):
 
 class ConcatStream(InputStream):
     # TODO: concatene any number of any type of stream
+
     def __init__(self, streams, **args):
         if len(streams) > 2 or not streams[0].checked:
             raise NotImplementedError
@@ -583,7 +593,8 @@ class ConcatStream(InputStream):
         self.__streams = streams
         InputStream.__init__(self, **args)
 
-    _current_size = property(lambda self: self.__size0 + self.__streams[1]._current_size)
+    _current_size = property(
+        lambda self: self.__size0 + self.__streams[1]._current_size)
 
     def close(self):
         self.__streams = None

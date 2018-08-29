@@ -3,6 +3,7 @@ from hachoir.core.endian import endian_name
 from hachoir.core.tools import makePrintable, makeUnicode
 from hachoir.core.dict import Dict
 from hachoir.core.i18n import _
+from hachoir.core.error import error
 from hachoir.core.log import Logger
 from hachoir.metadata.metadata_item import (
     MIN_PRIORITY, MAX_PRIORITY, QUALITY_NORMAL)
@@ -351,13 +352,11 @@ def extractMetadata(parser, quality=QUALITY_NORMAL, **kwargs):
         meta_extract_error = False
     except Exception as err:
         error("Error during metadata extraction: %s" % unicode(err))
-    except Exception as err:
-        error("Error during metadata extraction: %s" % unicode(err))
 
     if meta_extract_error:
         try:
             parser.stream._input.close()
-        except:
+        except (StandardError, Exception):
             pass
         return None
 

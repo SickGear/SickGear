@@ -1,4 +1,11 @@
-﻿### 0.17.0 (2018-08-24 23:40:00 UTC)
+﻿### 0.17.1 (2018-08-29 23:40:00 UTC)
+
+* Change replace imdb lib with imdb-pie 5.6.3 (df7411d1)
+* Change handle if BTS returns no data
+* Change improve hachoir error handling with bad source metadata
+
+
+### 0.17.0 (2018-08-24 23:40:00 UTC)
 
 * Change save config values only where reqd. reduces file by up to 75%
 * Add 'Map an NZBGet "DestDir"' setting to config/Search/NZB Results tab (select NZBGet)

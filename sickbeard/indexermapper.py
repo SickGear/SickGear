@@ -31,7 +31,7 @@ from sickbeard.helpers import tryInt, getURL
 from sickbeard.indexers.indexer_config import (INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_TVMAZE,
                                                INDEXER_IMDB, INDEXER_TRAKT, INDEXER_TMDB)
 from lib.tmdb_api import TMDB
-from lib.imdb import IMDb
+from lib.imdbpie import Imdb
 from time import sleep
 
 tv_maze_retry_wait = 10
@@ -189,11 +189,11 @@ def get_trakt_ids(url_trakt):
 def get_imdbid_by_name(name, startyear):
     ids = {}
     try:
-        res = IMDb().search_movie(title=name)
+        res = Imdb(exclude_episodes=True).search_for_title(title=name)
         for r in res:
-            if hasattr(r, 'movieID') and hasattr(r, 'data') and 'kind' in r.data and r.data['kind'] == 'tv series' \
-                    and 'year' in r.data and r.data['year'] == startyear:
-                ids[INDEXER_IMDB] = tryInt(r.movieID)
+            if isinstance(r.get('type'), basestring) and 'tv series' == r.get('type').lower() \
+                    and str(startyear) == str(r.get('year')):
+                ids[INDEXER_IMDB] = tryInt(re.sub(r'[^0-9]*', '', r.get('imdb_id')))
                 break
     except (StandardError, Exception):
         pass

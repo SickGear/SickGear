@@ -12,6 +12,7 @@ from hachoir.field import (FieldSet, ParserError,
                            UInt8, UInt16, UInt32, UInt64,
                            String, PascalString16,
                            RawBytes)
+from hachoir.stream.input import ReadStreamError
 from hachoir.core.text_handler import textHandler, filesizeHandler, hexadecimal
 from hachoir.core.tools import makeUnicode
 from hachoir.core.endian import LITTLE_ENDIAN
@@ -153,6 +154,7 @@ class ExtraField(FieldSet):
 
 
 class ExtraFields(FieldSet):
+
     def createFields(self):
         while self.current_size < self.size:
             yield ExtraField(self, "extra[]")
@@ -183,6 +185,7 @@ class ZipCentralDirectory(FieldSet):
 
     def createFields(self):
         yield ZipVersion(self, "version_made_by", "Version made by")
+        # yield from ZipStartCommonFields(self)  # PY3
         for field in ZipStartCommonFields(self):
             yield field
 
@@ -266,7 +269,8 @@ class FileEntry(FieldSet):
         compression = self["compression"].value
         if compression == 0:
             return SubFile(self, "data", size, filename=self.filename)
-        compressed = SubFile(self, "compressed_data", size, filename=self.filename)
+        compressed = SubFile(self, "compressed_data",
+                             size, filename=self.filename)
         if compression == COMPRESSION_DEFLATE:
             return Deflate(compressed)
         else:
@@ -292,6 +296,7 @@ class FileEntry(FieldSet):
                               (size, data_desc["file_compressed_size"].value))
 
     def createFields(self):
+        # yield from ZipStartCommonFields(self) # PY3
         for field in ZipStartCommonFields(self):
             yield field
         length = self["filename_length"].value
@@ -308,6 +313,7 @@ class FileEntry(FieldSet):
         if size > 0:
             yield self.data(size)
         elif self["flags/incomplete"].value:
+            # yield from self.resync()  # PY3
             for field in self.resync():
                 yield field
         if self["flags/has_descriptor"].value and self['crc32'].value == 0:
@@ -315,7 +321,7 @@ class FileEntry(FieldSet):
 
     def createDescription(self):
         return "File entry: %s (%s)" % \
-               (self["filename"].value, self["compressed_size"].display)
+            (self["filename"].value, self["compressed_size"].display)
 
     def validate(self):
         if self["compression"].value not in COMPRESSION_METHOD:
@@ -396,10 +402,24 @@ class ZipFile(Parser):
         "min_size": (4 + 26) * 8,  # header + file entry
         "description": "ZIP archive"
     }
+    CHUNK_TYPES = {
+        FileEntry.HEADER: (FileEntry, "file[]", None),
+        ZipDataDescriptor.HEADER: (ZipDataDescriptor, "spanning[]", None),
+        0x30304b50: (ZipDataDescriptor, "temporary_spanning[]", None),
+        ZipCentralDirectory.HEADER: (ZipCentralDirectory, "central_directory[]", None),
+        ZipEndCentralDirectory.HEADER: (ZipEndCentralDirectory, "end_central_directory", "End of central directory"),
+        Zip64EndCentralDirectory.HEADER: (Zip64EndCentralDirectory, "end64_central_directory", "ZIP64 end of central directory"),
+        ZipSignature.HEADER: (ZipSignature, "signature", "Signature"),
+        Zip64EndCentralDirectoryLocator.HEADER: (Zip64EndCentralDirectoryLocator, "end_locator", "ZIP64 Enf of central directory locator"),
+    }
 
     def validate(self):
-        if self["header[0]"].value != FileEntry.HEADER:
-            return "Invalid magic"
+        try:
+            if self["header[0]"].value != FileEntry.HEADER:
+                return "Invalid magic"
+        except Exception as err:
+            return "Unable to get header #0"
+
         try:
             file0 = self["file[0]"]
         except Exception as err:
@@ -407,6 +427,7 @@ class ZipFile(Parser):
         err = file0.validate()
         if err:
             return "File #0: %s" % err
+
         return True
 
     def createFields(self):
@@ -414,29 +435,30 @@ class ZipFile(Parser):
         self.signature = None
         self.central_directory = []
         while not self.eof:
-            header = textHandler(
+            skip = 0
+            while True:
+                try:
+                    header = self.stream.readBits(self.absolute_address + self.current_size + skip, 32, self.endian)
+                    if header in self.CHUNK_TYPES:
+                        break
+                    skipdelta = self.stream.searchBytes(b'PK', self.absolute_address + self.current_size + skip + 8)
+                    if skipdelta is None:
+                        if not self.current_size:
+                            raise ParserError("Failed to find any zip headers")
+                        return
+                    skip = skipdelta - (self.absolute_address + self.current_size)
+                except ReadStreamError:
+                    if not self.current_size:
+                        raise ParserError("Failed to read stream")
+                    return
+            if skip:
+                yield RawBytes(self, "unparsed[]", skip // 8)
+
+            yield textHandler(
                 UInt32(self, "header[]", "Header"), hexadecimal)
-            yield header
-            header = header.value
-            if header == FileEntry.HEADER:
-                yield FileEntry(self, "file[]")
-            elif header == ZipDataDescriptor.HEADER:
-                yield ZipDataDescriptor(self, "spanning[]")
-            elif header == 0x30304b50:
-                yield ZipDataDescriptor(self, "temporary_spanning[]")
-            elif header == ZipCentralDirectory.HEADER:
-                yield ZipCentralDirectory(self, "central_directory[]")
-            elif header == ZipEndCentralDirectory.HEADER:
-                yield ZipEndCentralDirectory(self, "end_central_directory", "End of central directory")
-            elif header == Zip64EndCentralDirectory.HEADER:
-                yield Zip64EndCentralDirectory(self, "end64_central_directory", "ZIP64 end of central directory")
-            elif header == ZipSignature.HEADER:
-                yield ZipSignature(self, "signature", "Signature")
-            elif header == Zip64EndCentralDirectoryLocator.HEADER:
-                yield Zip64EndCentralDirectoryLocator(self, "end_locator", "ZIP64 Enf of central directory locator")
-            else:
-                raise ParserError(
-                    "Error, unknown ZIP header (0x%08X)." % header)
+
+            ftype, fname, fdesc = self.CHUNK_TYPES[header]
+            yield ftype(self, fname, fdesc)
 
     def createMimeType(self):
         if self["file[0]/filename"].value == "mimetype":
