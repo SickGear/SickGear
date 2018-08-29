@@ -63,7 +63,7 @@ class BTSceneProvider(generic.TorrentProvider):
 
         url = self.url
         response = self.get_url(url)
-        if self.should_skip():
+        if self.should_skip() or not response:
             return results
 
         form = re.findall('(?is)(<form[^>]+)', response)

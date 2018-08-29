@@ -173,6 +173,7 @@ class SectionFlags(FieldSet):
 
 
 class SymbolStringTableOffset(UInt32):
+
     def createDisplay(self):
         section_index = self['/header/shstrndx'].value
         section = self['/section[' + str(section_index) + ']']
@@ -213,7 +214,7 @@ class SectionHeader32(FieldSet):
 
     def createDescription(self):
         return "Section header (name: %s, type: %s)" % \
-               (self["name"].display, self["type"].display)
+            (self["name"].display, self["type"].display)
 
 
 class SectionHeader64(SectionHeader32):
@@ -316,7 +317,8 @@ class ElfFile(HachoirParser, RootSeekableFieldSet):
     endian = LITTLE_ENDIAN
 
     def __init__(self, stream, **args):
-        RootSeekableFieldSet.__init__(self, None, "root", stream, None, stream.askSize(self))
+        RootSeekableFieldSet.__init__(
+            self, None, "root", stream, None, stream.askSize(self))
         HachoirParser.__init__(self, stream, **args)
 
     def validate(self):
@@ -354,7 +356,8 @@ class ElfFile(HachoirParser, RootSeekableFieldSet):
 
         for index in xrange(self["header/shnum"].value):
             field = self["section_header[" + str(index) + "]"]
-            if field['size'].value != 0:
+            if field['size'].value != 0 and field['type'].value != 8:
+                # skip NOBITS sections
                 self.seekByte(field['LMA'].value, relative=False)
                 yield RawBytes(self, "section[" + str(index) + "]", field['size'].value)
 
