@@ -35,7 +35,7 @@ class BlutopiaProvider(generic.TorrentProvider):
         self.url_base = 'https://blutopia.xyz/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base + 'torrents',
-                     'search': self.url_base + 'filter?%s' % '&'.join(
+                     'search': self.url_base + 'filterTorrents?%s' % '&'.join(
                          ['_token=%s', 'search=%s', 'categories[]=%s', 'freeleech=%s', 'doubleupload=%s', 'featured=%s',
                           'username=', 'imdb=', 'tvdb=', 'tmdb=', 'sorting=created_at', 'qty=50', 'direction=desc'])}
 
@@ -52,7 +52,9 @@ class BlutopiaProvider(generic.TorrentProvider):
     def logged_in(self, resp):
         try:
             self.token = re.findall('csrf\s*=\s*"([^"]+)', resp)[0]
-            self.resp = re.findall('(?sim)(<table.*?Result.*?</table>)', resp)[0]
+            resp = re.findall('(?sim)(<table.*?Result.*?</table>)', resp)
+            if resp:
+                self.resp = resp[0]
         except (IndexError, TypeError):
             return False
         return self.has_all_cookies('XSRF-TOKEN')
@@ -71,7 +73,7 @@ class BlutopiaProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'info': 'torrents', 'get': '(.*?download)_check(.*)'}.items())
+                  for (k, v) in {'info': 'torrents', 'get': '(.*?download)(?:_check)?(.*)'}.items())
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -102,17 +104,26 @@ class BlutopiaProvider(generic.TorrentProvider):
                 search_url = self.urls['search'] % (
                     self.token, '+'.join(search_string.split()), self._categories_string(mode, ''), '', '', '')
 
-                resp = self.get_url(search_url, json=True)
+                resp = self.get_url(search_url)
                 if self.should_skip():
                     return results
 
+                resp_json = None
+                if None is not self.resp:
+                    try:
+                        from lib import simplejson as json
+                        resp_json = json.loads(resp)
+                    except (StandardError, Exception):
+                        pass
+
                 cnt = len(items[mode])
                 try:
-                    if not resp or not resp.get('rows'):
+                    if not resp or (resp_json and not resp_json.get('rows')):
                         raise generic.HaltParseException
 
                     html = '<html><body>%s</body></html>' % \
-                           self.resp.replace('</tbody>', '%s</tbody>' % ''.join(resp.get('result', [])))
+                           (resp if None is self.resp else
+                            self.resp.replace('</tbody>', '%s</tbody>' % ''.join(resp_json.get('result', []))))
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
                         torrent_table = soup.find('table', class_='table')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
@@ -141,8 +152,10 @@ class BlutopiaProvider(generic.TorrentProvider):
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                title = tr.find('a', href=rc['info'])['data-original-title']
-                                download_url = self._link(rc['get'].sub(r'\1\2', tr.find('a', href=rc['get'])['href']))
+                                title = tr.find('a', href=rc['info'])
+                                title = title.get_text().strip() if None is self.resp else title['data-original-title']
+                                download_url = self._link(''.join(rc['get'].findall(
+                                    tr.find('a', href=rc['get'])['href'])[0]))
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 

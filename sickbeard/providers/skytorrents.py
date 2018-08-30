@@ -45,7 +45,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': '^(info|torrent)/', 'get': '^magnet:'}.items())
+            'info': '(^(info|torrent)/|/[\w+]{40,}\s*$)', 'get': '^magnet:'}.items())
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
@@ -83,8 +83,11 @@ class SkytorrentsProvider(generic.TorrentProvider):
                                 if self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                info = tr.find('a', href=rc['info'])
-                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                info = tr.select(
+                                    '[alt*="magnet"], [title*="magnet"], [alt*="torrent"], [title*="torrent"]')[0] \
+                                    or tr.find('a', href=rc['info'])
+                                title = re.sub('\s(using|use|magnet|link)', '', (
+                                        info.attrs.get('title') or info.attrs.get('alt') or info.get_text())).strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
