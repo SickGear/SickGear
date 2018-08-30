@@ -96,10 +96,11 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'download', 'fl': '\[freeleech\]'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'info': '/t/', 'get': 'download', 'fl': '\[freeleech\]'}.items())
 
         for mode in search_params.keys():
-            rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
+            rc['cats'] = re.compile('(?i)(cat|c\[\])=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
                 post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')),
                                  search=search_string.replace('.', ' ').replace('^@^', '.'),
@@ -116,7 +117,7 @@ class SpeedCDProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'cellspacing': 0})
+                        torrent_table = soup.find('table', attrs={'cellspacing': 0}) or soup.find('table')
                         torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
 
                         if 2 > len(torrent_rows):
@@ -136,7 +137,7 @@ class SpeedCDProvider(generic.TorrentProvider):
                                         or self._peers_fail(mode, seeders, leechers):
                                     continue
 
-                                info = tr.find('a', 'torrent')
+                                info = tr.find('a', 'torrent') or tr.find('a', href=rc['info'])
                                 title = (info.attrs.get('title') or info.get_text()).strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):

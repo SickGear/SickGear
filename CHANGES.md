@@ -4,7 +4,12 @@
 [develop changelog]
 
 
-### 0.17.1 (2018-08-29 23:40:00 UTC)
+### 0.17.2 (2018-08-30 15:06:00 UTC)
+
+* Fix Blutopia, Skytorrents, and SpeedCD torrent providers
+
+
+### 0.17.1 (2018-08-29 17:37:00 UTC)
 
 * Change replace imdb lib with imdb-pie 5.6.3 (df7411d1)
 * Change handle if BTS returns no data
