@@ -29,6 +29,7 @@ except ImportError:
 
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
+from lib.six.moves.html_parser import HTMLParser
 
 from lib.etreetodict import ConvertXmlToDict
 from tvdb_ui import BaseUI, ConsoleUI
@@ -637,6 +638,8 @@ class TvdbV1:
         - Replaces &amp; with &
         - Trailing whitespace
         """
+        if isinstance(data, basestring):
+            return HTMLParser().unescape(data).strip()
         return data if not isinstance(data, basestring) else data.strip().replace(u'&amp;', u'&')
 
     def _get_url_artwork(self, image):

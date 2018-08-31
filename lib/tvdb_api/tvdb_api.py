@@ -25,6 +25,8 @@ import re
 from sickbeard.helpers import getURL, tryInt
 import sickbeard
 
+from lib.six.moves.html_parser import HTMLParser
+
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
 
@@ -737,6 +739,8 @@ class Tvdb:
             return [self._clean_data(d) for d in data]
         if isinstance(data, dict):
             return {k: self._clean_data(v) for k, v in data.iteritems()}
+        if isinstance(data, basestring):
+            return HTMLParser().unescape(data).strip()
         return data if not isinstance(data, (str, unicode)) else data.strip().replace(u'&amp;', u'&')
 
     def search(self, series):
