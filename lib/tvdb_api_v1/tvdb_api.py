@@ -814,7 +814,7 @@ class TvdbV1:
                 if k in ['banner', 'fanart', 'poster']:
                     v = self._get_url_artwork(v)
                 else:
-                    v = self.clean_data(v)
+                    v = clean_data(v)
 
             self._set_show_data(sid, k.lower(), v)
 
@@ -869,7 +869,7 @@ class TvdbV1:
                         if 'filename' == k:
                             v = self._get_url_artwork(v)
                         else:
-                            v = self.clean_data(v)
+                            v = clean_data(v)
 
                     self._set_item(sid, seas_no, ep_no, k, v)
 
