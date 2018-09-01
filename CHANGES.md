@@ -4,6 +4,11 @@
 [develop changelog]
 
 
+### 0.17.4 (2018-09-01 03:00:00 UTC)
+
+* Fix typo
+
+
 ### 0.17.3 (2018-09-01 02:10:00 UTC)
 
 * Fix issue with tvdb response data
