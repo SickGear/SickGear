@@ -1778,3 +1778,22 @@ def write_file(filepath, data, raw=False, xmltree=False, utf8=False, raise_excep
                 raise e
 
     return result
+
+
+def clean_data(data):
+    """Cleans up strings, lists, dicts returned
+
+    Issues corrected:
+    - Replaces &amp; with &
+    - Trailing whitespace
+    - Decode html entities
+    """
+
+    if isinstance(data, list):
+        return [clean_data(d) for d in data]
+    if isinstance(data, dict):
+        return {k: clean_data(v) for k, v in data.iteritems()}
+    if isinstance(data, basestring):
+        from lib.six.moves.html_parser import HTMLParser
+        return HTMLParser().unescape(data).strip().replace(u'&amp;', u'&')
+    return data
