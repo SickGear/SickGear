@@ -29,7 +29,6 @@ except ImportError:
 
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
-from lib.six.moves.html_parser import HTMLParser
 
 from lib.etreetodict import ConvertXmlToDict
 from tvdb_ui import BaseUI, ConsoleUI
@@ -37,6 +36,7 @@ from tvdb_exceptions import (tvdb_error_v1, tvdb_shownotfound_v1,
                              tvdb_seasonnotfound_v1, tvdb_episodenotfound_v1, tvdb_attributenotfound_v1)
 
 from sickbeard import logger
+from sickbeard.helpers import clean_data
 
 
 def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logr=None):
@@ -630,18 +630,6 @@ class TvdbV1:
             self.shows[sid] = Show()
         self.shows[sid].data[key] = value
 
-    @staticmethod
-    def _clean_data(data):
-        """Cleans up strings returned by TheTVDB.com
-
-        Issues corrected:
-        - Replaces &amp; with &
-        - Trailing whitespace
-        """
-        if isinstance(data, basestring):
-            return HTMLParser().unescape(data).strip()
-        return data if not isinstance(data, basestring) else data.strip().replace(u'&amp;', u'&')
-
     def _get_url_artwork(self, image):
         return image and (self.config['url_artworkPrefix'] % image) or image
 
@@ -826,7 +814,7 @@ class TvdbV1:
                 if k in ['banner', 'fanart', 'poster']:
                     v = self._get_url_artwork(v)
                 else:
-                    v = self._clean_data(v)
+                    v = self.clean_data(v)
 
             self._set_show_data(sid, k.lower(), v)
 
@@ -881,7 +869,7 @@ class TvdbV1:
                         if 'filename' == k:
                             v = self._get_url_artwork(v)
                         else:
-                            v = self._clean_data(v)
+                            v = self.clean_data(v)
 
                     self._set_item(sid, seas_no, ep_no, k, v)
 

@@ -22,10 +22,8 @@ import requests.exceptions
 import datetime
 import re
 
-from sickbeard.helpers import getURL, tryInt
+from sickbeard.helpers import getURL, tryInt, clean_data
 import sickbeard
-
-from lib.six.moves.html_parser import HTMLParser
 
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
@@ -627,13 +625,13 @@ class Tvdb:
                         v = self.config['url_artworkPrefix'] % v
                     elif 'genre' == k:
                         keep_data['genre_list'] = v
-                        v = '|%s|' % '|'.join([self._clean_data(c) for c in v if isinstance(c, basestring)])
+                        v = '|%s|' % '|'.join([clean_data(c) for c in v if isinstance(c, basestring)])
                     elif 'gueststars' == k:
                         keep_data['gueststars_list'] = v
-                        v = '|%s|' % '|'.join([self._clean_data(c) for c in v if isinstance(c, basestring)])
+                        v = '|%s|' % '|'.join([clean_data(c) for c in v if isinstance(c, basestring)])
                     elif 'writers' == k:
                         keep_data[k] = v
-                        v = '|%s|' % '|'.join([self._clean_data(c) for c in v if isinstance(c, basestring)])
+                        v = '|%s|' % '|'.join([clean_data(c) for c in v if isinstance(c, basestring)])
                     elif 'firstaired' == k:
                         if v:
                             try:
@@ -645,11 +643,11 @@ class Tvdb:
                     elif 'imdbid' == k:
                         if v:
                             if re.search(r'^(tt)?\d{1,7}$', v, flags=re.I):
-                                v = self._clean_data(v)
+                                v = clean_data(v)
                             else:
                                 v = ''
                     else:
-                        v = self._clean_data(v)
+                        v = clean_data(v)
                 if k in map_show:
                     k = map_show[k]
                 if k_org is not k:
@@ -727,21 +725,6 @@ class Tvdb:
             self.shows[sid].data[key].update(value)
         else:
             self.shows[sid].data[key] = value
-
-    def _clean_data(self, data):
-        """Cleans up strings, lists, dicts returned
-
-        Issues corrected:
-        - Replaces &amp; with &
-        - Trailing whitespace
-        """
-        if isinstance(data, list):
-            return [self._clean_data(d) for d in data]
-        if isinstance(data, dict):
-            return {k: self._clean_data(v) for k, v in data.iteritems()}
-        if isinstance(data, basestring):
-            return HTMLParser().unescape(data).strip()
-        return data if not isinstance(data, (str, unicode)) else data.strip().replace(u'&amp;', u'&')
 
     def search(self, series):
         """This searches TheTVDB.com for the series name
@@ -868,7 +851,7 @@ class Tvdb:
                         if 'filename' == k and v:
                             v = self.config['url_artworkPrefix'] % v
                         else:
-                            v = self._clean_data(v)
+                            v = clean_data(v)
                     data[k] = v
 
         return data
@@ -992,7 +975,7 @@ class Tvdb:
                         if 'filename' == k:
                             v = self.config['url_artworkPrefix'] % v
                         else:
-                            v = self._clean_data(v)
+                            v = clean_data(v)
 
                     if k in ep_map_keys:
                         k = ep_map_keys[k]

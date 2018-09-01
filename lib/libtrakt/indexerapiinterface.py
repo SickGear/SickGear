@@ -125,19 +125,6 @@ class TraktIndexer:
     def __repr__(self):
         return str(self.shows)
 
-    def _clean_data(self, data):
-        """Cleans up strings, lists, dicts returned
-
-        Issues corrected:
-        - Replaces &amp; with &
-        - Trailing whitespace
-        """
-        if isinstance(data, list):
-            return [self._clean_data(d) for d in data]
-        if isinstance(data, dict):
-            return {k: self._clean_data(v) for k, v in data.iteritems()}
-        return data if not isinstance(data, (str, unicode)) else data.strip().replace(u'&amp;', u'&')
-
     @staticmethod
     def _dict_prevent_none(d, key, default):
         v = None
@@ -156,12 +143,13 @@ class TraktIndexer:
         if None is not self.config['sleep_retry']:
             kwargs['sleep_retry'] = self.config['sleep_retry']
         try:
+            from sickbeard.helpers import clean_data
             resp = TraktAPI().trakt_request(url, **kwargs)
             if len(resp):
                 for d in resp:
                     if isinstance(d, dict) and 'type' in d and d['type'] in self.config['result_types']:
                         for k, v in d.iteritems():
-                            d[k] = self._clean_data(v)
+                            d[k] = clean_data(v)
                         if 'show' in d and TraktResultTypes.show == d['type']:
                             d.update(d['show'])
                             del d['show']

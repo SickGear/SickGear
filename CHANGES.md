@@ -1,4 +1,9 @@
-﻿### 0.17.2 (2018-08-30 15:06:00 UTC)
+﻿### 0.17.3 (2018-09-01 02:10:00 UTC)
+
+* Fix issue with tvdb response data
+
+
+### 0.17.2 (2018-08-30 15:06:00 UTC)
 
 * Fix Blutopia, Skytorrents, and SpeedCD torrent providers
 
