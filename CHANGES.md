@@ -4,6 +4,7 @@
 * Update CacheControl library 0.12.4 (bd94f7e) to 0.12.5 (cd91309)
 * Update Certifi 2018.01.18 (e225253) to 2018.08.24 (8be9f89)
 * Update dateutil module 2.7.2 (ff03c0f) to 2.7.2 (49690ee)
+* Update feedparser 5.2.1 (5646f4c) to 5.2.1 (2b11c80)
 
 
 [develop changelog]
