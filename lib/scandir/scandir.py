@@ -35,7 +35,12 @@ try:
 except ImportError:
     ctypes = None
 
-if _scandir is None and ctypes is None:
+if not getattr(_scandir, 'DirEntry', None):
+    import warnings
+    warnings.warn("scandir compiled _scandir C module is too old"
+                  ", using slow generic fallback")
+    _scandir = None
+elif _scandir is None and ctypes is None:
     import warnings
     warnings.warn("scandir can't find the compiled _scandir C module "
                   "or ctypes, using slow generic fallback")
