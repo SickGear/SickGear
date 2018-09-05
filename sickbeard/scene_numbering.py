@@ -83,7 +83,7 @@ def find_scene_numbering(indexer_id, indexer, season, episode):
         return int(rows[0]['scene_season']), int(rows[0]['scene_episode'])
 
 
-def get_scene_absolute_numbering(indexer_id, indexer, absolute_number, fallback_to_xem=True):
+def get_scene_absolute_numbering(indexer_id, indexer, absolute_number, season, episode, fallback_to_xem=True):
     """
     Returns a tuple, (season, episode), with the scene numbering (if there is one),
     otherwise returns the xem numbering (if fallback_to_xem is set), otherwise
@@ -110,7 +110,7 @@ def get_scene_absolute_numbering(indexer_id, indexer, absolute_number, fallback_
         return result
     else:
         if fallback_to_xem:
-            xem_result = find_xem_absolute_numbering(indexer_id, indexer, absolute_number)
+            xem_result = find_xem_absolute_numbering(indexer_id, indexer, absolute_number, season, episode)
             if xem_result:
                 return xem_result
         return absolute_number
@@ -247,7 +247,7 @@ def find_xem_numbering(indexer_id, indexer, season, episode):
         return int(rows[0]['scene_season']), int(rows[0]['scene_episode'])
 
 
-def find_xem_absolute_numbering(indexer_id, indexer, absolute_number):
+def find_xem_absolute_numbering(indexer_id, indexer, absolute_number, season, episode):
     """
     Returns the scene numbering, as retrieved from xem.
     Refreshes/Loads as needed.
@@ -266,8 +266,8 @@ def find_xem_absolute_numbering(indexer_id, indexer, absolute_number):
 
     my_db = db.DBConnection()
     rows = my_db.select(
-        'SELECT scene_absolute_number FROM tv_episodes WHERE indexer = ? and showid = ? and absolute_number = ? and scene_absolute_number != 0',
-        [indexer, indexer_id, absolute_number])
+        'SELECT scene_absolute_number FROM tv_episodes WHERE indexer = ? and showid = ? and season = ? and episode = ? and scene_absolute_number != 0',
+        [indexer, indexer_id, season, episode])
 
     if rows:
         return int(rows[0]['scene_absolute_number'])
@@ -437,14 +437,15 @@ def get_xem_absolute_numbering_for_show(indexer_id, indexer):
     result = {}
     my_db = db.DBConnection()
     rows = my_db.select(
-        'SELECT absolute_number, scene_absolute_number FROM tv_episodes WHERE indexer = ? and showid = ? and scene_absolute_number != 0 ORDER BY absolute_number',
+        'SELECT season, episode, scene_absolute_number FROM tv_episodes WHERE indexer = ? and showid = ? and scene_absolute_number != 0 ORDER BY season, episode',
         [indexer, indexer_id])
 
     for row in rows:
-        absolute_number = int(row['absolute_number'])
+        season = int(row['season'])
+        episode = int(row['episode'])
         scene_absolute_number = int(row['scene_absolute_number'])
 
-        result[absolute_number] = scene_absolute_number
+        result[(season, episode)] = scene_absolute_number
 
     return result
 
@@ -752,7 +753,7 @@ def set_scene_numbering_helper(indexerid, indexer, forSeason=None, forEpisode=No
         if scene_numbering:
             (result['sceneSeason'], result['sceneEpisode']) = scene_numbering
     else:
-        scene_numbering = get_scene_absolute_numbering(indexerid, indexer, for_absolute)
+        scene_numbering = get_scene_absolute_numbering(indexerid, indexer, for_absolute, for_season, for_episode)
         if scene_numbering:
             result['sceneAbsolute'] = scene_numbering
 

@@ -65,6 +65,7 @@
 					style="padding:0; text-align:center; max-width:60px">
 			</td>
     #elif $scene_anime
+            ## todo: $xem_absolute_numbering[$ep['absolute_number']] is tuple key: $xem_absolute_numbering[($ep['season'], $ep['episode'])]
         #set $dfltAbsolute = 0 if $ep['absolute_number'] not in $xem_absolute_numbering else $xem_absolute_numbering[$ep['absolute_number']]
 			<td align="center">
 				<input type="text" placeholder="$dfltAbsolute" size="6" maxlength="8"

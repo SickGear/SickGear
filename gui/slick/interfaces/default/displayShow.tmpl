@@ -233,7 +233,7 @@
 							<span class="space-right">#echo ($startyear, 'Unknown')[None is $startyear]#</span>
     #if $flags
         #for $country in $show.imdb_info['country_codes'].split('|')
-							<img class="flag space-right" src="$sbRoot/images/flags/${$country}.png" width="16" height="11" />
+							<img class="flag space-right" src="$sbRoot/images/flags/${$country.lower()}.png" width="16" height="11" />
         #end for
     #end if
 						</span>
