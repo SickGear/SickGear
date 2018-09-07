@@ -992,7 +992,7 @@ class TVShow(object):
             if not self.tag:
                 self.tag = 'Show List'
 
-        logger.log('Loaded.. {: <9} {: <8} {}'.format(
+        logger.log(u'Loaded.. {: <9} {: <8} {}'.format(
             sickbeard.indexerApi(self.indexer).config.get('name') + ',', str(self.indexerid) + ',', self.name))
 
         # Get IMDb_info from database

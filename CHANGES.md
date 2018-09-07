@@ -1,4 +1,14 @@
-﻿### 0.17.4 (2018-09-01 03:00:00 UTC)
+﻿### 0.17.5 (2018-09-08 13:20:00 UTC)
+
+* Fix error updating shows with certain paths
+* Fix getting XEM absolute numbers for show
+* Fix IMDb info load for redirected ids
+* Fix flags on displayShow (under Linux)
+* Change refactor scene numbering
+* Change update LimeTorrents icon
+
+
+### 0.17.4 (2018-09-01 03:00:00 UTC)
 
 * Fix typo
 
