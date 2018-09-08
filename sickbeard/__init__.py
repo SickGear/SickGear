@@ -108,6 +108,7 @@ newznabProviderList = []
 torrentRssProviderList = []
 metadata_provider_dict = {}
 
+MODULE_UPDATE_STRING = None
 NEWEST_VERSION_STRING = None
 VERSION_NOTIFY = False
 AUTO_UPDATE = False
@@ -572,7 +573,7 @@ def initialize(console_logging=True):
         global __INITIALIZED__, showList, providerList, newznabProviderList, torrentRssProviderList, \
             WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, CREATE_MISSING_SHOW_DIRS, \
             RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, CONFIG_FILE, \
-            REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE
+            REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING
         # Schedulers
         # global traktCheckerScheduler
         global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
@@ -1459,6 +1460,23 @@ def initialize(console_logging=True):
             cycleTime=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_FREQUENCY),
             run_delay=datetime.timedelta(minutes=5),
             threadName='PLEXWATCHEDSTATE')
+
+        try:
+            import _scandir
+        except ImportError:
+            _scandir = None
+
+        try:
+            import ctypes
+        except ImportError:
+            ctypes = None
+
+        if None is not _scandir and None is not ctypes and not getattr(_scandir, 'DirEntry', None):
+            MODULE_UPDATE_STRING = \
+                'Your scandir binary module is outdated, using the slow but newer Python module.' \
+                '<br>Upgrade the binary at a command prompt with' \
+                ' # <span class="boldest">python -m pip install -U scandir</span>' \
+                '<br>Important: You <span class="boldest">must</span> Shutdown SickGear before upgrading'
 
         __INITIALIZED__ = True
         return True

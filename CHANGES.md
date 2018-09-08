@@ -8,7 +8,9 @@
 * Update profilehooks module 1.10.0 (0ce1e29) to 1.10.1 (fdbf19d)                   
 * Update PySocks 1.6.8 (524ceb4) to 1.6.8 (b687a34)
 * Update Requests library 2.15.1 (282b01a) to 2.19.1 (33b41c7)
+* Update scandir module 1.6 (c3592ee) to 1.9.0 (9ab3d1f)
 * Add urllib3 release 1.23 (7c216f4)
+* Change if old scandir binary module is installed, fallback to slow Python module and inform user to upgrade binary
 
 
 [develop changelog]

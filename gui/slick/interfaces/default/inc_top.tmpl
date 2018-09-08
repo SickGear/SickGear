@@ -265,6 +265,11 @@
 		<span>$sg_str('NEWEST_VERSION_STRING')</span>
 	</div>
 #end if
+#if $sg_str('MODULE_UPDATE_STRING')
+	<div class="alert alert-success upgrade-notification" role="alert">
+		<span>$sg_str('MODULE_UPDATE_STRING')</span>
+	</div>
+#end if
 ##
 #set $items = []
 #try
