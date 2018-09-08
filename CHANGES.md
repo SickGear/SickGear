@@ -2,6 +2,7 @@
 
 * Update Beautiful Soup 4.6.0 (r449) to 4.6.3 (r475)
 * Update CacheControl library 0.12.4 (bd94f7e) to 0.12.5 (cd91309)
+* Update Certifi 2018.01.18 (e225253) to 2018.08.24 (8be9f89)
 
 
 [develop changelog]
