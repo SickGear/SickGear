@@ -126,16 +126,17 @@ $(document).ready(function() {
 			},
 			function(data) {
 				//	Set the values we get back
-				$('#sceneSeasonXEpisode_' + showId + '_' + forSeason + '_' + forEpisode).val(
-					(null === data.sceneSeason || null === data.sceneEpisode)
+				var value = ((null === data.sceneSeason || null === data.sceneEpisode)
 						? '' : data.sceneSeason + 'x' + data.sceneEpisode);
+				$('#sceneSeasonXEpisode_' + showId + '_' + forSeason + '_' + forEpisode)
+					.val(value).attr('value', value);
 				if (!data.success)
 					alert(data.errorMessage ? data.errorMessage : 'Update failed.');
 			}
 		);
 	}
 
-	function setAbsoluteSceneNumbering(forAbsolute, sceneAbsolute) {
+	function setAbsoluteSceneNumbering(forSeason, forEpisode, sceneAbsolute) {
 		var showId = $('#showID').val(), indexer = $('#indexer').val();
 
 		if ('' === sceneAbsolute)
@@ -145,13 +146,15 @@ $(document).ready(function() {
 			{
 				'show': showId,
 				'indexer': indexer,
-				'forAbsolute': forAbsolute,
+				'forSeason': forSeason,
+				'forEpisode': forEpisode,
 				'sceneAbsolute': sceneAbsolute
 			},
 			function(data) {
 				//	Set the values we get back
-				$('#sceneAbsolute_' + showId + '_' + forAbsolute).val(
-					(null === data.sceneAbsolute) ? '' : data.sceneAbsolute);
+				var value = (null === data.sceneAbsolute ? '' : data.sceneAbsolute);
+				$('#sceneAbsolute_' + showId + '_' + forSeason + '_' + forEpisode)
+					.val(value).attr('value', value);
 				if (!data.success)
 					alert(data.errorMessage ? data.errorMessage : 'Update failed.');
 			}
@@ -250,13 +253,14 @@ $(document).ready(function() {
 
 			$(obj).find('.sceneAbsolute').change(function() {
 				//	Strip non-numeric characters
-				$(this).val($(this).val().replace(/[^0-9xX]*/g, ''));
+				$(this).val($(this).val().replace(/[^0-9]*/g, ''));
 
-				var forAbsolute = $(this).attr('data-for-absolute'),
-					m = $(this).val().match(/^(\d{1,3})$/i),
+				var forSeason = $(this).attr('data-for-season'),
+					forEpisode = $(this).attr('data-for-episode'),
+					m = $(this).val().match(/^(\d{1,4})$/i),
 					sceneAbsolute = m && m[1] || null;
 
-				setAbsoluteSceneNumbering(forAbsolute, sceneAbsolute);
+				setAbsoluteSceneNumbering(forSeason, forEpisode, sceneAbsolute);
 			});
 		});
 	}

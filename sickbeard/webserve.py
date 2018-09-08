@@ -2342,16 +2342,18 @@ class Home(MainHandler):
                 showObj.rls_require_words = rls_require_words.strip()
 
             # if we change location clear the db of episodes, change it, write to db, and rescan
-            if os.path.normpath(showObj._location) != os.path.normpath(location):
-                logger.log(os.path.normpath(showObj._location) + ' != ' + os.path.normpath(location), logger.DEBUG)
-                if not ek.ek(os.path.isdir, location) and not sickbeard.CREATE_MISSING_SHOW_DIRS:
-                    errors.append('New location <tt>%s</tt> does not exist' % location)
+            old_path = ek.ek(os.path.normpath, showObj._location)
+            new_path = ek.ek(os.path.normpath, location)
+            if old_path != new_path:
+                logger.log(u'%s != %s' % (old_path, new_path), logger.DEBUG)
+                if not ek.ek(os.path.isdir, new_path) and not sickbeard.CREATE_MISSING_SHOW_DIRS:
+                    errors.append(u'New location <tt>%s</tt> does not exist' % new_path)
 
                 # don't bother if we're going to update anyway
                 elif not do_update:
                     # change it
                     try:
-                        showObj.location = location
+                        showObj.location = new_path
                         try:
                             sickbeard.showQueueScheduler.action.refreshShow(showObj)  # @UndefinedVariable
                         except exceptions.CantRefreshException as e:
@@ -2361,7 +2363,8 @@ class Home(MainHandler):
                             # rescan the episodes in the new folder
                     except exceptions.NoNFOException:
                         errors.append(
-                            "The folder at <tt>%s</tt> doesn't contain a tvshow.nfo - copy your files to that folder before you change the directory in SickGear." % location)
+                            u"The folder at <tt>%s</tt> doesn't contain a tvshow.nfo - "
+                            u"copy your files to that folder before you change the directory in SickGear." % new_path)
 
             # save it to the DB
             showObj.saveToDB()
