@@ -25,6 +25,7 @@ import re
 import glob
 import stat
 import traceback
+import requests
 import shutil
 
 import sickbeard
@@ -991,7 +992,7 @@ class TVShow(object):
             if not self.tag:
                 self.tag = 'Show List'
 
-        logger.log('Loaded.. {: <9} {: <8} {}'.format(
+        logger.log(u'Loaded.. {: <9} {: <8} {}'.format(
             sickbeard.indexerApi(self.indexer).config.get('name') + ',', str(self.indexerid) + ',', self.name))
 
         # Get IMDb_info from database
@@ -1077,6 +1078,17 @@ class TVShow(object):
             logger.log('Error loading IMDb info: %s' % ex(e), logger.ERROR)
             logger.log('%s' % traceback.format_exc(), logger.ERROR)
 
+    def check_imdb_redirect(self, imdb_id):
+        page_url = 'https://www.imdb.com/title/{0}/'.format(imdb_id)
+        try:
+            response = requests.head(page_url, allow_redirects=True)
+            if response.history and any(h for h in response.history if h.status_code == 301):
+                return re.search(r'(tt\d{7})', response.url, flags=re.I).group(1)
+            else:
+                return None
+        except (StandardError, Exception):
+            return None
+
     def _get_imdb_info(self):
 
         if not self.imdbid and self.ids.get(indexermapper.INDEXER_IMDB, {'id': 0}).get('id', 0) <= 0:
@@ -1099,6 +1111,11 @@ class TVShow(object):
         imdb_certificates = None
         try:
             imdb_id = str(self.imdbid or 'tt%07d' % self.ids[indexermapper.INDEXER_IMDB]['id'])
+            redirect_check = self.check_imdb_redirect(imdb_id)
+            if redirect_check:
+                self._imdbid = redirect_check
+                imdb_id = redirect_check
+                imdb_info['imdb_id'] = self.imdbid
             i = imdbpie.Imdb(exclude_episodes=True)
             if not re.search(r'tt\d{7}', imdb_id, flags=re.I):
                 logger.log('Not a valid imdbid: %s for show: %s' % (imdb_id, self.name), logger.WARNING)
@@ -1914,7 +1931,8 @@ class TVEpisode(object):
                 self.scene_absolute_number = sickbeard.scene_numbering.get_scene_absolute_numbering(
                     self.show.indexerid,
                     self.show.indexer,
-                    self.absolute_number
+                    absolute_number=self.absolute_number,
+                    season=self.season, episode=episode
                 )
 
             if self.scene_season == 0 or self.scene_episode == 0:
@@ -2008,7 +2026,8 @@ class TVEpisode(object):
         self.scene_absolute_number = sickbeard.scene_numbering.get_scene_absolute_numbering(
             self.show.indexerid,
             self.show.indexer,
-            self.absolute_number
+            absolute_number=self.absolute_number,
+            season=self.season, episode=self.episode
         )
 
         self.scene_season, self.scene_episode = sickbeard.scene_numbering.get_scene_numbering(
@@ -2175,7 +2194,8 @@ class TVEpisode(object):
                     self.scene_absolute_number = sickbeard.scene_numbering.get_scene_absolute_numbering(
                         self.show.indexerid,
                         self.show.indexer,
-                        self.absolute_number
+                        absolute_number=self.absolute_number,
+                        season=self.season, episode=self.episode
                     )
 
                     self.scene_season, self.scene_episode = sickbeard.scene_numbering.get_scene_numbering(
