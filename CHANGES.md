@@ -5,7 +5,8 @@
 * Update Certifi 2018.01.18 (e225253) to 2018.08.24 (8be9f89)
 * Update dateutil module 2.7.2 (ff03c0f) to 2.7.2 (49690ee)
 * Update feedparser 5.2.1 (5646f4c) to 5.2.1 (2b11c80)
-* Update profilehooks module 1.10.0 (0ce1e29) to 1.10.1 (fdbf19d)
+* Update profilehooks module 1.10.0 (0ce1e29) to 1.10.1 (fdbf19d)                   
+* Update PySocks 1.6.8 (524ceb4) to 1.6.8 (b687a34)
 
 
 [develop changelog]
