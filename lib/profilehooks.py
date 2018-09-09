@@ -104,7 +104,7 @@ Released under the MIT licence since December 2006:
 __author__ = "Marius Gedminas <marius@gedmin.as>"
 __copyright__ = "Copyright 2004-2017 Marius Gedminas and contributors"
 __license__ = "MIT"
-__version__ = '1.10.0'
+__version__ = '1.10.1.dev0'
 __date__ = "2017-12-09"
 
 
@@ -319,7 +319,7 @@ class FuncProfile(object):
         self.fn = fn
         self.skip = skip
         self.filename = filename
-        self.immediate = immediate
+        self._immediate = immediate
         self.stdout = stdout
         self.dirs = dirs
         self.sort = sort or ('cumulative', 'time', 'calls')
@@ -327,7 +327,12 @@ class FuncProfile(object):
             self.sort = (self.sort, )
         self.entries = entries
         self.reset_stats()
-        atexit.register(self.atexit)
+        if not self.immediate:
+            atexit.register(self.atexit)
+
+    @property
+    def immediate(self):
+        return self._immediate
 
     def __call__(self, *args, **kw):
         """Profile a singe call to the function."""
@@ -387,9 +392,7 @@ class FuncProfile(object):
 
         This function is registered as an atexit hook.
         """
-        # XXX: uh, why even register this as an atexit hook if immediate is True?
-        if not self.immediate:
-            self.print_stats()
+        self.print_stats()
 
 
 AVAILABLE_PROFILERS['profile'] = FuncProfile
@@ -650,7 +653,8 @@ class FuncSource:
         strs = set()
         prev = token.INDENT  # so module docstring is detected as docstring
         with open(filename) as f:
-            for ttype, tstr, start, end, line in tokenize.generate_tokens(f.readline):
+            tokens = tokenize.generate_tokens(f.readline)
+            for ttype, tstr, start, end, line in tokens:
                 if ttype == token.STRING and prev == token.INDENT:
                     strs.update(range(start[0], end[0] + 1))
                 prev = ttype
@@ -757,8 +761,8 @@ class FuncTimer(object):
         fn = self.fn
         timer = self.timer
         self.ncalls += 1
+        start = timer()
         try:
-            start = timer()
             return fn(*args, **kw)
         finally:
             duration = timer() - start
