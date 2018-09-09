@@ -23,7 +23,6 @@ from os import listdir, lstat, stat, strerror
 from os.path import join, islink
 from stat import S_IFDIR, S_IFLNK, S_IFREG
 import collections
-import os
 import sys
 
 try:
@@ -36,12 +35,16 @@ try:
 except ImportError:
     ctypes = None
 
-if _scandir is None and ctypes is None:
-    import warnings
-    warnings.warn("scandir can't find the compiled _scandir C module "
-                  "or ctypes, using slow generic fallback")
 
-__version__ = '1.6'
+if None is not _scandir and None is not ctypes and not getattr(_scandir, 'DirEntry', None):
+    import warnings
+    warnings.warn("scandir compiled _scandir C module is too old, using slow generic fallback")
+    _scandir = None
+elif _scandir is None and ctypes is None:
+    import warnings
+    warnings.warn("scandir can't find the compiled _scandir C module or ctypes, using slow generic fallback")
+
+__version__ = '1.9.0'
 __all__ = ['scandir', 'walk']
 
 # Windows FILE_ATTRIBUTE constants for interpreting the
@@ -96,6 +99,10 @@ class GenericDirEntry(object):
                 self._lstat = lstat(self.path)
             return self._lstat
 
+    # The code duplication below is intentional: this is for slightly
+    # better performance on systems that fall back to GenericDirEntry.
+    # It avoids an additional attribute lookup and method call, which
+    # are relatively slow on CPython.
     def is_dir(self, follow_symlinks=True):
         try:
             st = self.stat(follow_symlinks=follow_symlinks)
@@ -386,13 +393,17 @@ if sys.platform == 'win32':
 
     if _scandir is not None:
         scandir_c = _scandir.scandir
+        DirEntry_c = _scandir.DirEntry
 
     if _scandir is not None:
         scandir = scandir_c
+        DirEntry = DirEntry_c
     elif ctypes is not None:
         scandir = scandir_python
+        DirEntry = Win32DirEntryPython
     else:
         scandir = scandir_generic
+        DirEntry = GenericDirEntry
 
 
 # Linux, OS X, and BSD implementation
@@ -413,6 +424,16 @@ elif sys.platform.startswith(('linux', 'darwin', 'sunos5')) or 'bsd' in sys.plat
                     ('d_off', ctypes.c_long),
                     ('d_reclen', ctypes.c_ushort),
                     ('d_type', ctypes.c_byte),
+                    ('d_name', ctypes.c_char * 256),
+                )
+            elif 'openbsd' in sys.platform:
+                _fields_ = (
+                    ('d_ino', ctypes.c_uint64),
+                    ('d_off', ctypes.c_uint64),
+                    ('d_reclen', ctypes.c_uint16),
+                    ('d_type', ctypes.c_uint8),
+                    ('d_namlen', ctypes.c_uint8),
+                    ('__d_padding', ctypes.c_uint8 * 4),
                     ('d_name', ctypes.c_char * 256),
                 )
             else:
@@ -564,18 +585,23 @@ elif sys.platform.startswith(('linux', 'darwin', 'sunos5')) or 'bsd' in sys.plat
 
     if _scandir is not None:
         scandir_c = _scandir.scandir
+        DirEntry_c = _scandir.DirEntry
 
     if _scandir is not None:
         scandir = scandir_c
-    elif ctypes is not None:
+        DirEntry = DirEntry_c
+    elif ctypes is not None and have_dirent_d_type:
         scandir = scandir_python
+        DirEntry = PosixDirEntry
     else:
         scandir = scandir_generic
+        DirEntry = GenericDirEntry
 
 
 # Some other system -- no d_type or stat information
 else:
     scandir = scandir_generic
+    DirEntry = GenericDirEntry
 
 
 def _walk(top, topdown=True, onerror=None, followlinks=False):
