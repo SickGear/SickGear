@@ -181,7 +181,7 @@ def _update_zoneinfo():
             # remove the old zoneinfo file
             if cur_zoneinfo is not None:
                 old_file = helpers.real_path(
-                    ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
+                    ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
                 if ek.ek(os.path.exists, old_file):
                     ek.ek(os.remove, old_file)
             # rename downloaded file
@@ -190,6 +190,11 @@ def _update_zoneinfo():
             if '_CLASS_ZONE_INSTANCE' in gettz.func_globals:
                 gettz.func_globals.__setitem__('_CLASS_ZONE_INSTANCE', list())
             tz.gettz.cache_clear()
+            from dateutil.zoneinfo import get_zonefile_instance
+            try:
+                delattr(get_zonefile_instance, '_cached_instance')
+            except AttributeError:
+                pass
 
             sb_timezone = get_tz()
         except:
