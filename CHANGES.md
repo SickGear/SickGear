@@ -7,6 +7,8 @@
 * Update feedparser 5.2.1 (5646f4c) to 5.2.1 (2b11c80)
 * Update profilehooks module 1.10.0 (0ce1e29) to 1.10.1 (fdbf19d)                   
 * Update PySocks 1.6.8 (524ceb4) to 1.6.8 (b687a34)
+* Update Requests library 2.15.1 (282b01a) to 2.19.1 (33b41c7)
+* Add urllib3 release 1.23 (7c216f4)
 
 
 [develop changelog]
