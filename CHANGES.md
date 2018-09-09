@@ -11,6 +11,7 @@
 * Update scandir module 1.6 (c3592ee) to 1.9.0 (9ab3d1f)
 * Add urllib3 release 1.23 (7c216f4)
 * Change if old scandir binary module is installed, fallback to slow Python module and inform user to upgrade binary
+* Update SimpleJSON 3.13.2 (6ffddbe) to 3.16.0 (e2a54f7)
 
 
 [develop changelog]
