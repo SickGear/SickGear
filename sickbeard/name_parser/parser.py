@@ -273,6 +273,8 @@ class NameParser(object):
                 elif not show and self.showObj:
                     show = self.showObj
                 best_result.show = show
+                if not best_result.series_name and getattr(show, 'name', None):
+                    best_result.series_name = show.name
 
                 if show and show.is_anime and 1 < len(self.compiled_regexes[1]) and 1 != reg_ex:
                     continue
