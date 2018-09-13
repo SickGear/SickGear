@@ -5347,7 +5347,19 @@ class History(MainHandler):
         result = {}
 
         if site_url:
-            resp = helpers.getURL('https://www.isitdownrightnow.com/check.php?domain=%s' % site_url)
+            import requests
+            down_url = 'www.isitdownrightnow.com'
+            proto = 'https'
+            try:
+                requests.head('%s://%s' % (proto, down_url), timeout=5)
+            except (StandardError, Exception):
+                proto = 'http'
+                try:
+                    requests.head('%s://%s' % (proto, down_url), timeout=5)
+                except (StandardError, Exception):
+                    return json.dumps(result)
+
+            resp = helpers.getURL('%s://%s/check.php?domain=%s' % (proto, down_url, site_url))
             if resp:
                 check = resp.lower()
                 day = re.findall(r'(\d+)\s*(?:day)', check)
