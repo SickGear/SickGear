@@ -346,7 +346,7 @@ home_newShow.tmpl
 	border-color:#dfdede
 }
 
-.step-one #searchResults .alt{
+.step-one #search-results .alt{
 	background-color:rgb(245, 245, 245)
 }
 
@@ -1384,7 +1384,7 @@ div.stepsguide .disabledstep p{
 	color:#8a775e
 }
 
-.stepDiv #searchResults div .exists-db{
+.stepDiv #search-results div .exists-db{
 	color:#1178B3
 }
 

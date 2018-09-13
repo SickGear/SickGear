@@ -16,6 +16,10 @@
 * Change site services tester to fallback to http if error with SSL
 * Change try to use folder name when filename does not contain show name
 * Change force redirects in TVMaze API to be https
+* Add display first 20 results with link to display more
+* Add search results sort by Z to A
+* Add search results sort by newest aired
+* Add search results sort by oldest aired
 
 
 [develop changelog]
