@@ -15,6 +15,7 @@
 * Update unidecode module 1.0.22 (81f938d) to 1.0.22 (578cdb9)
 * Change site services tester to fallback to http if error with SSL
 * Change try to use folder name when filename does not contain show name
+* Change force redirects in TVMaze API to be https
 
 
 [develop changelog]
