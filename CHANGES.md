@@ -23,6 +23,7 @@
 
 
 [develop changelog]
+* Fix sorting results
 
 
 ### 0.17.5 (2018-09-08 13:20:00 UTC)
