@@ -9,10 +9,11 @@
 * Update PySocks 1.6.8 (524ceb4) to 1.6.8 (b687a34)
 * Update Requests library 2.15.1 (282b01a) to 2.19.1 (33b41c7)
 * Update scandir module 1.6 (c3592ee) to 1.9.0 (9ab3d1f)
-* Add urllib3 release 1.23 (7c216f4)
-* Change if old scandir binary module is installed, fallback to slow Python module and inform user to upgrade binary
 * Update SimpleJSON 3.13.2 (6ffddbe) to 3.16.0 (e2a54f7)
 * Update unidecode module 1.0.22 (81f938d) to 1.0.22 (578cdb9)
+* Add idna library 2.7 (0f50bdc)
+* Add urllib3 release 1.23 (7c216f4)
+* Change if old scandir binary module is installed, fallback to slow Python module and inform user to upgrade binary
 * Change site services tester to fallback to http if error with SSL
 * Change try to use folder name when filename does not contain show name
 * Change force redirects in TVMaze API to be https
@@ -20,6 +21,7 @@
 * Add search results sort by Z to A
 * Add search results sort by newest aired
 * Add search results sort by oldest aired
+* Change requirements.txt Cheetah >= 3.1.0
 
 
 [develop changelog]
