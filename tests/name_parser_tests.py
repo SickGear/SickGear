@@ -169,6 +169,11 @@ simple_test_cases = {
             parser.ParseResult(None, 'Show Name', None, [], 'WEB-DL', None, datetime.date(2010, 11, 23)),
     },
 
+    'folder_filename': {
+        'Show.Name.S01.DVDRip.XviD-NOGRP/1x10 - The Episode Name.avi':
+            parser.ParseResult(None, 'Show Name', 1, [10], 'The Episode Name', 'NOGRP')
+    },
+
     'anime_ultimate': {
         '[Tsuki] Bleach - 301 [1280x720][61D1D4EE]':
             parser.ParseResult(None, 'Bleach', None, [], '1280x720', 'Tsuki', None, [301]),
@@ -468,6 +473,36 @@ class ComboTests(test.SickbeardTestDBCase):
 
 
 class BasicTests(test.SickbeardTestDBCase):
+    def _test_folder_file(self, section, verbose=False):
+        if VERBOSE or verbose:
+            print('Running', section, 'tests')
+        for cur_test_base in simple_test_cases[section]:
+            cur_test_dir, cur_test_file = cur_test_base.split('/')
+            if VERBOSE or verbose:
+                print('Testing dir: %s file: %s' % (cur_test_dir, cur_test_file))
+
+            result = simple_test_cases[section][cur_test_base]
+            showobj = TVShow(name=result.series_name)
+            np = parser.NameParser(testing=True, showObj=showobj)
+
+            if not result:
+                self.assertRaises(parser.InvalidNameException, np.parse, cur_test_file)
+                return
+            else:
+                test_result = np.parse(cur_test_file)
+
+            test_result.release_group = result.release_group
+
+            try:
+                # self.assertEqual(test_result.which_regex, [section])
+                self.assertEqual(test_result, result)
+            except(StandardError, Exception):
+                print('air_by_date:', test_result.is_air_by_date, 'air_date:', test_result.air_date)
+                print('anime:', test_result.is_anime, 'ab_episode_numbers:', test_result.ab_episode_numbers)
+                print(test_result)
+                print(result)
+                raise
+
     def _test_names(self, np, section, transform=None, verbose=False):
 
         if VERBOSE or verbose:
@@ -596,6 +631,9 @@ class BasicTests(test.SickbeardTestDBCase):
     def test_scene_date_format_file_names(self):
         np = parser.NameParser(testing=True)
         self._test_names(np, 'scene_date_format', lambda x: x + '.avi')
+
+    def test_folder_filename(self):
+        self._test_folder_file('folder_filename')
 
     def test_combination_names(self):
         pass
