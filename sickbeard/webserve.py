@@ -3227,9 +3227,9 @@ class NewHomeAddShows(Home):
                     reverse=False, key=lambda x: x[idx_src]), is_last_sort)
 
         if 'az' == sickbeard.RESULTS_SORTBY[:2]:
-            sort_results = [sort_date, sort_rel, sort_za, sort_az]
+            sort_results = [sort_oldest, sort_newest, sort_rel, sort_za, sort_az]
         elif 'za' == sickbeard.RESULTS_SORTBY[:2]:
-            sort_results = [sort_date, sort_rel, sort_az, sort_za]
+            sort_results = [sort_oldest, sort_newest, sort_rel, sort_az, sort_za]
         elif 'newest' == sickbeard.RESULTS_SORTBY[:6]:
             sort_results = [sort_az, sort_rel, sort_oldest, sort_newest]
         elif 'oldest' == sickbeard.RESULTS_SORTBY[:6]:
