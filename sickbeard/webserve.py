@@ -3176,7 +3176,7 @@ class NewHomeAddShows(Home):
                re.sub(r'([,.!][^,.!]*?)$', '...',
                       re.sub(r'([.!?])(?=\w)', r'\1 ',
                              self.encode_html((show.get('overview', '') or '')[:250:].strip()))),
-               self.get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None,
+               self.get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None, None, None,
                self._make_search_image_url(iid, show)
                ] for show in shows.itervalues()] for iid, shows in results.iteritems()))
 
@@ -3186,22 +3186,34 @@ class NewHomeAddShows(Home):
                 x[sortby_index] = n + (1000, 0)[x[idx_is_indb] and 'notop' not in sickbeard.RESULTS_SORTBY]
             return data if not final_sort else sorted(data, reverse=False, key=lambda x: x[sortby_index])
 
-        def sort_date(data_result, is_last_sort):
-            idx_date_sort, idx_src, idx_aired = 13, 2, 8
+        def sort_newest(data_result, is_last_sort):
+            return sort_date(data_result, is_last_sort, 13)
+
+        def sort_oldest(data_result, is_last_sort):
+            return sort_date(data_result, is_last_sort, 14, False)
+
+        def sort_date(data_result, is_last_sort, idx_sort, reverse=True):
+            idx_src, idx_aired = 2, 8
             return final_order(
-                idx_date_sort,
+                idx_sort,
                 sorted(
-                    sorted(data_result, reverse=True, key=lambda x: (dateutil.parser.parse(
+                    sorted(data_result, reverse=reverse, key=lambda x: (dateutil.parser.parse(
                         re.match('^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
                         or (x[idx_aired] and str(x[idx_aired])) or '1900'))),
                     reverse=False, key=lambda x: x[idx_src]), is_last_sort)
 
         def sort_az(data_result, is_last_sort):
-            idx_az_sort, idx_src, idx_title = 14, 2, 6
+            return sort_zaaz(data_result, is_last_sort, 15)
+
+        def sort_za(data_result, is_last_sort):
+            return sort_zaaz(data_result, is_last_sort, 16, True)
+
+        def sort_zaaz(data_result, is_last_sort, idx_sort, reverse=False):
+            idx_src, idx_title = 2, 6
             return final_order(
-                idx_az_sort,
+                idx_sort,
                 sorted(
-                    data_result, reverse=False, key=lambda x: (
+                    data_result, reverse=reverse, key=lambda x: (
                         x[idx_src],
                         (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE])),
                 is_last_sort)
@@ -3215,11 +3227,15 @@ class NewHomeAddShows(Home):
                     reverse=False, key=lambda x: x[idx_src]), is_last_sort)
 
         if 'az' == sickbeard.RESULTS_SORTBY[:2]:
-            sort_results = [sort_date, sort_rel, sort_az]
-        elif 'date' == sickbeard.RESULTS_SORTBY[:4]:
-            sort_results = [sort_az, sort_rel, sort_date]
+            sort_results = [sort_date, sort_rel, sort_za, sort_az]
+        elif 'za' == sickbeard.RESULTS_SORTBY[:2]:
+            sort_results = [sort_date, sort_rel, sort_az, sort_za]
+        elif 'newest' == sickbeard.RESULTS_SORTBY[:6]:
+            sort_results = [sort_az, sort_rel, sort_oldest, sort_newest]
+        elif 'oldest' == sickbeard.RESULTS_SORTBY[:6]:
+            sort_results = [sort_az, sort_rel, sort_newest, sort_oldest]
         else:
-            sort_results = [sort_az, sort_date, sort_rel]
+            sort_results = [sort_za, sort_az, sort_oldest, sort_newest, sort_rel]
 
         for n, func in enumerate(sort_results):
             final_results = func(final_results, n == len(sort_results) - 1)
@@ -5696,7 +5712,7 @@ class ConfigGeneral(Config):
 
     def saveResultPrefs(self, ui_results_sortby=None):
 
-        if ui_results_sortby in ('az', 'date', 'rel', 'notop', 'ontop'):
+        if ui_results_sortby in ('az', 'za', 'newest', 'oldest', 'rel', 'notop', 'ontop'):
             was_ontop = 'notop' not in sickbeard.RESULTS_SORTBY
             if 'top' == ui_results_sortby[-3:]:
                 maybe_ontop = ('', ' notop')[was_ontop]

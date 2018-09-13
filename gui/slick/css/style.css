@@ -1138,7 +1138,7 @@ div.formpaginate{
 	border:1px solid
 }
 
-#searchResults input[type="radio"]{
+#search-results input[type="radio"]{
 	vertical-align:-2px
 }
 
@@ -1174,21 +1174,21 @@ div.formpaginate{
 	margin-left:10px
 }
 
-.stepDiv #searchResults .results-item{
+.stepDiv #search-results .results-item{
 	width:100%;
 	line-height:1.7
 }
 
-.stepDiv #searchResults .results-item input[disabled=disabled]{
+.stepDiv #search-results .results-item input[disabled=disabled]{
 	visibility:hidden
 }
 
-.stepDiv #searchResults .results-item .exists-db{
+.stepDiv #search-results .results-item .exists-db{
 	font-weight:800;
 	font-style:italic
 }
 
-.stepDiv #searchResults #searchingAnim{
+.stepDiv #search-results #searchingAnim{
 	margin-right:6px
 }
 
@@ -4377,7 +4377,7 @@ fieldset.sectionwrap{
 	border-width:0
 }
 
-.step-one #searchResults legend.legendStep{
+.step-one #search-results legend.legendStep{
 	margin-top:10px
 }
 
