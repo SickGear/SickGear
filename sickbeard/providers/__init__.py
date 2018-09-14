@@ -35,7 +35,7 @@ __all__ = [
     'hdbits', 'hdme', 'hdspace', 'hdtorrents', 'horriblesubs',
     'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'morethan', 'nebulance', 'ncore', 'nyaa',
     'pisexy', 'potuk', 'pretome', 'privatehd', 'ptf',
-    'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'skytorrents', 'speedcd',
+    'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'skytorrents', 'snowfl', 'speedcd',
     'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'torrentz2', 'tvchaosuk',
     'wop', 'xspeeds', 'zooqle',
     # anime
