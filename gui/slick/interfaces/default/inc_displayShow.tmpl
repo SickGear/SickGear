@@ -1,7 +1,7 @@
 #import datetime
 #import sickbeard
 #from sickbeard import network_timezones, sbdatetime, subtitles
-#from sickbeard.common import Overview, Quality, statusStrings, ARCHIVED, UNAIRED, SUBTITLED
+#from sickbeard.common import Overview, Quality, statusStrings, ARCHIVED, UNAIRED, SUBTITLED, SNATCHED_ANY, DOWNLOADED
 #from lib import subliminal
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
@@ -107,7 +107,8 @@
     #end if
 			<td class="col-search">
     #if 0 != int($ep['season'])
-        #if (int($ep['status']) in $Quality.SNATCHED or int($ep['status']) in $Quality.DOWNLOADED) and $sg_var('USE_FAILED_DOWNLOADS')
+        #set $status = $Quality.splitCompositeStatus(int($ep['status']))[0]
+        #if ($status in $SNATCHED_ANY + [$DOWNLOADED, $ARCHIVED]) and $sg_var('USE_FAILED_DOWNLOADS')
 				<a class="epRetry" id="$ep_str" name="$ep_str" href="$sbRoot/home/retryEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download"></a>
         #else
 				<a class="epSearch" id="$ep_str" name="$ep_str" href="$sbRoot/home/searchEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search"></a>

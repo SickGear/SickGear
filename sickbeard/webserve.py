@@ -2777,8 +2777,8 @@ class Home(MainHandler):
 
         sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)  # @UndefinedVariable
 
-        if ep_queue_item.success:
-            return returnManualSearchResult(ep_queue_item)
+        #if ep_queue_item.success:
+        #    return returnManualSearchResult(ep_queue_item)
         if not ep_queue_item.started and ep_queue_item.success is None:
             return json.dumps({'result': 'success'}) #I Actually want to call it queued, because the search hasnt been started yet!
         if ep_queue_item.started and ep_queue_item.success is None:
@@ -2792,6 +2792,7 @@ class Home(MainHandler):
     def getManualSearchStatus(self, show=None, season=None):
 
         episodes = []
+        eps_list = set()
         currentManualSearchThreadsQueued = []
         currentManualSearchThreadActive = []
         finishedManualSearchThreadItems= []
@@ -2799,83 +2800,108 @@ class Home(MainHandler):
         # Queued Searches
         currentManualSearchThreadsQueued = sickbeard.searchQueueScheduler.action.get_all_ep_from_queue(show)
         # Running Searches
-        if (sickbeard.searchQueueScheduler.action.is_manualsearch_in_progress()):
-            currentManualSearchThreadActive = sickbeard.searchQueueScheduler.action.currentItem
+        currentManualSearchThreadActive = sickbeard.searchQueueScheduler.action.get_current_manualsearch_item(show)
 
         # Finished Searches
-        finishedManualSearchThreadItems =  sickbeard.search_queue.MANUAL_SEARCH_HISTORY
+        sickbeard.search_queue.remove_old_fifo(sickbeard.search_queue.MANUAL_SEARCH_HISTORY)
+        finishedManualSearchThreadItems = sickbeard.search_queue.MANUAL_SEARCH_HISTORY
 
         if currentManualSearchThreadsQueued:
             for searchThread in currentManualSearchThreadsQueued:
                 searchstatus = 'queued'
                 if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
+                    eps_list.add('%sx%s' % (searchThread.segment.season, searchThread.segment.episode))
                     episodes.append({'episode': searchThread.segment.episode,
-                                     'episodeindexid': searchThread.segment.indexerid,
-                                     'season' : searchThread.segment.season,
-                                     'searchstatus' : searchstatus,
-                                     'status' : statusStrings[searchThread.segment.status],
+                                     'showindexer': searchThread.show.indexer,
+                                     'showindexid': searchThread.show.indexerid,
+                                     'season': searchThread.segment.season,
+                                     'searchstatus': searchstatus,
+                                     'status': statusStrings[searchThread.segment.status],
                                      'quality': self.getQualityClass(searchThread.segment)})
                 elif hasattr(searchThread, 'segment'):
                     for epObj in searchThread.segment:
+                        eps_list.add('%sx%s' % (epObj.season, epObj.episode))
                         episodes.append({'episode': epObj.episode,
-                             'episodeindexid': epObj.indexerid,
-                             'season' : epObj.season,
-                             'searchstatus' : searchstatus,
-                             'status' : statusStrings[epObj.status],
-                             'quality': self.getQualityClass(epObj)})
+                                         'showindexer': epObj.show.indexer,
+                                         'showindexid': epObj.show.indexerid,
+                                         'season': epObj.season,
+                                         'searchstatus': searchstatus,
+                                         'status': statusStrings[epObj.status],
+                                         'quality': self.getQualityClass(epObj)})
 
         retry_statues = SNATCHED_ANY + [DOWNLOADED, ARCHIVED]
         if currentManualSearchThreadActive:
             searchThread = currentManualSearchThreadActive
-            searchstatus = 'searching'
             if searchThread.success:
                 searchstatus = 'finished'
             else:
                 searchstatus = 'searching'
             if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
+                eps_list.add('%sx%s' % (searchThread.segment.season, searchThread.segment.episode))
                 episodes.append({'episode': searchThread.segment.episode,
-                                 'episodeindexid': searchThread.segment.indexerid,
-                                 'season' : searchThread.segment.season,
-                                 'searchstatus' : searchstatus,
-                                 'retrystatus': Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
-                                 'status' : statusStrings[searchThread.segment.status],
+                                 'showindexer': searchThread.show.indexer,
+                                 'showindexid': searchThread.show.indexerid,
+                                 'season': searchThread.segment.season,
+                                 'searchstatus': searchstatus,
+                                 'retrystatus': sickbeard.USE_FAILED_DOWNLOADS and Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
+                                 'status': statusStrings[searchThread.segment.status],
                                  'quality': self.getQualityClass(searchThread.segment)})
             elif hasattr(searchThread, 'segment'):
                 for epObj in searchThread.segment:
+                    eps_list.add('%sx%s' % (epObj.season, epObj.episode))
                     episodes.append({'episode': epObj.episode,
-                                     'episodeindexid': epObj.indexerid,
-                                     'season' : epObj.season,
-                                     'searchstatus' : searchstatus,
-                                     'retrystatus': Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
-                                     'status' : statusStrings[epObj.status],
+                                     'showindexer': epObj.show.indexer,
+                                     'showindexid': epObj.show.indexerid,
+                                     'season': epObj.season,
+                                     'searchstatus': searchstatus,
+                                     'retrystatus': sickbeard.USE_FAILED_DOWNLOADS and Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
+                                     'status': statusStrings[epObj.status],
                                      'quality': self.getQualityClass(epObj)})
 
         if finishedManualSearchThreadItems:
+            searchstatus = 'finished'
             for searchThread in finishedManualSearchThreadItems:
                 if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
-                    if str(searchThread.show.indexerid) == show and not [x for x in episodes if x['episodeindexid'] == searchThread.segment.indexerid]:
-                        searchstatus = 'finished'
+                    if str(searchThread.show.indexerid) == show and '%sx%s' % (searchThread.segment.season, searchThread.segment.episode) not in eps_list:
+                        eps_list.add('%sx%s' % (searchThread.segment.season, searchThread.segment.episode))
                         episodes.append({'episode': searchThread.segment.episode,
-                                         'episodeindexid': searchThread.segment.indexerid,
-                                 'season' : searchThread.segment.season,
-                                 'searchstatus' : searchstatus,
-                                 'retrystatus': Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
-                                 'status' : statusStrings[searchThread.segment.status],
-                                 'quality': self.getQualityClass(searchThread.segment)})
+                                         'showindexer': searchThread.show.indexer,
+                                         'showindexid': searchThread.show.indexerid,
+                                         'season': searchThread.segment.season,
+                                         'searchstatus': searchstatus,
+                                         'retrystatus': sickbeard.USE_FAILED_DOWNLOADS and Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
+                                         'status': statusStrings[searchThread.segment.status],
+                                         'quality': self.getQualityClass(searchThread.segment),
+                                         'statusoverview': Overview.overviewStrings[searchThread.show.getOverview(searchThread.segment.status)]})
                 ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
                 elif hasattr(searchThread, 'segment') and str(searchThread.show.indexerid) == show:
                     for epObj in searchThread.segment:
-                        if not [x for x in episodes if x['episodeindexid'] == epObj.indexerid]:
-                            searchstatus = 'finished'
+                        if '%sx%s' % (epObj.season, epObj.episode) not in eps_list:
+                            eps_list.add('%sx%s' % (epObj.season, epObj.episode))
                             episodes.append({'episode': epObj.episode,
-                                             'episodeindexid': epObj.indexerid,
-                                     'season' : epObj.season,
-                                     'searchstatus' : searchstatus,
-                                     'retrystatus': Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
-                                     'status' : statusStrings[epObj.status],
-                                     'quality': self.getQualityClass(epObj)})
+                                             'showindexer': epObj.show.indexer,
+                                             'showindexid': epObj.show.indexerid,
+                                             'season': epObj.season,
+                                             'searchstatus': searchstatus,
+                                             'retrystatus': sickbeard.USE_FAILED_DOWNLOADS and Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
+                                             'status': statusStrings[epObj.status],
+                                             'quality': self.getQualityClass(epObj),
+                                             'statusoverview': Overview.overviewStrings[searchThread.show.getOverview(epObj.status)]})
 
-        return json.dumps({'show': show, 'episodes' : episodes})
+                for ep in [v for k, v in searchThread.snatched_eps.iteritems() if k not in eps_list]:
+                    ep_obj = searchThread.show.getEpisode(season=ep['season'], episode=ep['episode'])
+                    episodes.append({'episode': ep['episode'],
+                                     'showindexer': searchThread.show.indexer,
+                                     'showindexid': searchThread.show.indexerid,
+                                     'season': ep['season'],
+                                     'searchstatus': searchstatus,
+                                     'retrystatus': sickbeard.USE_FAILED_DOWNLOADS and Quality.splitCompositeStatus(ep_obj.status)[0] in retry_statues,
+                                     'status': statusStrings[ep_obj.status],
+                                     'quality': self.getQualityClass(ep_obj),
+                                     'statusoverview': Overview.overviewStrings[searchThread.show.getOverview(ep_obj.status)]})
+
+
+        return json.dumps({'show': show, 'episodes': episodes})
 
         #return json.dumps()
 
@@ -2936,8 +2962,8 @@ class Home(MainHandler):
         ep_queue_item = search_queue.FailedQueueItem(ep_obj.show, [ep_obj])
         sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)  # @UndefinedVariable
 
-        if ep_queue_item.success:
-            return returnManualSearchResult(ep_queue_item)
+        #if ep_queue_item.success:
+        #    return returnManualSearchResult(ep_queue_item)
         if not ep_queue_item.started and ep_queue_item.success is None:
             return json.dumps({'result': 'success'}) #I Actually want to call it queued, because the search hasnt been started yet!
         if ep_queue_item.started and ep_queue_item.success is None:

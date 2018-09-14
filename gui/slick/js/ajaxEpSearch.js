@@ -47,7 +47,7 @@ function updateImages(data) {
         	if (ep.searchstatus == 'searching') {
 				//el=$('td#' + ep.season + 'x' + ep.episode + '.search img');
 				img.attr('title','Searching');
-				img.attr('alt','earching');
+				img.prop('alt','searching');
 				img.attr('src',sbRoot+'/images/' + loadingImage);
 				disableLink(el);
 				// Update Status and Quality
@@ -58,20 +58,31 @@ function updateImages(data) {
         	else if (ep.searchstatus == 'queued') {
 				//el=$('td#' + ep.season + 'x' + ep.episode + '.search img');
 				img.attr('title','Queued');
-				img.attr('alt','queued');
+				img.prop('alt','queued');
 				img.attr('src',sbRoot+'/images/' + queuedImage );
 				disableLink(el);
 				HtmlContent = ep.searchstatus;
 			}
         	else if (ep.searchstatus == 'finished') {
 				//el=$('td#' + ep.season + 'x' + ep.episode + '.search img');
-				img.attr('title','Searching');
-				img.attr('alt','searching');
-				if (ep.retrystatus) {img.parent().attr('class','epRetry');} else {img.parent().attr('class','epSearch');}
+				imgparent=img.parent();
+				if (ep.retrystatus) {
+					imgparent.attr('class','epRetry');
+					imgparent.attr('href', imgparent.attr('href').replace('/home/searchEpisode?', '/home/retryEpisode?'));
+					img.attr('title','Retry download');
+					img.prop('alt', 'retry download');
+				}
+				else {
+					imgparent.attr('class','epSearch');
+					imgparent.attr('href', imgparent.attr('href').replace('/home/retryEpisode?', '/home/searchEpisode?'));
+					img.attr('title','Manual search');
+					img.prop('alt', 'manual search');
+				}
 				img.attr('src',sbRoot+'/images/' + searchImage);
 				enableLink(el);
 				
 				// Update Status and Quality
+				parent.closest('tr').removeClass('skipped wanted qual good unaired snatched').addClass(ep.statusoverview);
 				var rSearchTerm = /(\w+)\s\((.+?)\)/;
 	            HtmlContent = ep.status.replace(rSearchTerm,"$1"+' <span class="quality '+ep.quality+'">'+"$2"+'</span>');
 		        
@@ -140,7 +151,7 @@ function disableLink(el) {
 	    	// Create var for img under anchor and set options for the loading gif
 	        img=$(this).children('img');
 	        img.attr('title','loading');
-			img.attr('alt','');
+			img.prop('alt','');
 			img.attr('src',sbRoot+'/images/' + options.loadingImage);
 			
 	        
@@ -169,7 +180,7 @@ function disableLink(el) {
 
 	            // put the corresponding image as the result of queuing of the manual search
 	            img.attr('title',img_result);
-				img.attr('alt',img_result);
+				img.prop('alt',img_result);
 				img.attr('height', options.size);
 				img.attr('src',sbRoot+"/images/"+img_name);
 	        });
