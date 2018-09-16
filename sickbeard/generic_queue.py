@@ -113,8 +113,8 @@ class QueueItem(threading.Thread):
 
     def copy(self, deepcopy_obj=None):
         """
-        Returns a shallow copy of QueueItem with optional deepcopises of in deepcopy_obj listed objects
-        :param deepcopy_obj: List of properties to be deepcopied
+        Returns a shallow copy of QueueItem with optional deepcopy of in deepcopy_obj listed objects
+        :param deepcopy_obj: List of properties to be deep copied
         :type deepcopy_obj: list
         :return: return QueueItem
         :rtype: QueueItem

@@ -65,16 +65,16 @@ function updateImages(data) {
 			}
         	else if (ep.searchstatus == 'finished') {
 				//el=$('td#' + ep.season + 'x' + ep.episode + '.search img');
-				imgparent=img.parent();
+				var imgParent = img.parent();
 				if (ep.retrystatus) {
-					imgparent.attr('class','epRetry');
-					imgparent.attr('href', imgparent.attr('href').replace('/home/searchEpisode?', '/home/retryEpisode?'));
+					imgParent.attr('class','epRetry');
+					imgParent.attr('href', imgParent.attr('href').replace('/home/searchEpisode?', '/home/retryEpisode?'));
 					img.attr('title','Retry download');
 					img.prop('alt', 'retry download');
 				}
 				else {
-					imgparent.attr('class','epSearch');
-					imgparent.attr('href', imgparent.attr('href').replace('/home/retryEpisode?', '/home/searchEpisode?'));
+					imgParent.attr('class','epSearch');
+					imgParent.attr('href', imgParent.attr('href').replace('/home/retryEpisode?', '/home/searchEpisode?'));
 					img.attr('title','Manual search');
 					img.prop('alt', 'manual search');
 				}

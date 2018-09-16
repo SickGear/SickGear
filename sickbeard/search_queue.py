@@ -69,24 +69,6 @@ class SearchQueue(generic_queue.GenericQueue):
                     return True
             return False
 
-    def get_all_ep_from_queue(self, show):
-        """
-        Returns False or List of copies of all show related items in manual or failed queue
-        :param show: indexerid
-        :type show: str
-        :return: False or List of copies of all show related items in manual or failed queue
-        """
-        with self.lock:
-            ep_obj_list = []
-            for cur_item in self.queue:
-                if (isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and
-                        show == str(cur_item.show.indexerid)):
-                    ep_obj_list.append(cur_item.copy())
-
-            if ep_obj_list:
-                return ep_obj_list
-            return False
-
     def pause_backlog(self):
         with self.lock:
             self.min_priority = generic_queue.QueuePriorities.HIGH
@@ -107,21 +89,33 @@ class SearchQueue(generic_queue.GenericQueue):
                     return True
             return False
 
-    def get_current_manualsearch_item(self, show):
+    def get_queued_manual(self, show):
         """
-        Returns a static copy of the current item
-        :param show: indexerid
-        :type show: str
+        Returns None or List of copies of all show related items in manual or failed queue
+        :param show: show indexerid or None for all q items
+        :type show: String or None
+        :return: List with 0 or more items
+        """
+        ep_obj_list = []
+        with self.lock:
+            for cur_item in self.queue:
+                if (isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and
+                        (not show or show == str(cur_item.show.indexerid))):
+                    ep_obj_list.append(cur_item.copy())
+
+        return ep_obj_list
+
+    def get_current_manual_item(self, show):
+        """
+        Returns a static copy of the currently active manual search item
+        :param show: show indexerid or None for all q items
+        :type show: String or None
         :return: copy of ManualSearchQueueItem or FailedQueueItem or None
         """
         with self.lock:
             if self.currentItem and isinstance(self.currentItem, (ManualSearchQueueItem, FailedQueueItem)) \
-                    and show == str(self.currentItem.show.indexerid):
+                    and (not show or show == str(self.currentItem.show.indexerid)):
                 return self.currentItem.copy()
-
-    def is_manualsearch_in_progress(self):
-        # Only referenced in webserve.py, only current running manualsearch or failedsearch is needed!!
-        return self._is_in_progress((ManualSearchQueueItem, FailedQueueItem))
 
     def is_backlog_in_progress(self):
         return self._is_in_progress(BacklogQueueItem)
@@ -206,7 +200,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         self.success = None
         self.episodes = []
         generic_queue.QueueItem.__init__(self, 'Recent Search', RECENT_SEARCH)
-        self.snatched_eps = {}
+        self.snatched_eps = set([])
 
     def run(self):
         generic_queue.QueueItem.run(self)
@@ -264,8 +258,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                             self.success = search.snatch_episode(result)
                             if self.success:
                                 for ep in result.episodes:
-                                    self.snatched_eps.update({'%sx%s' % (ep.season, ep.episode):
-                                                              {'season': ep.season, 'episode': ep.episode}})
+                                    self.snatched_eps.add((ep.show.indexer, ep.show.indexerid, ep.season, ep.episode))
 
                             helpers.cpu_sleep()
 
@@ -423,7 +416,8 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
         self.show = show
         self.segment = segment
         self.started = None
-        self.snatched_eps = {}
+        self.added_dt = None
+        self.snatched_eps = set([])
 
     def copy(self, deepcopy_obj=None):
         if not isinstance(deepcopy_obj, list):
@@ -448,8 +442,7 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
                 logger.log(u'Downloading %s from %s' % (search_result[0].name, search_result[0].provider.name))
                 self.success = search.snatch_episode(search_result[0])
                 for ep in search_result[0].episodes:
-                    self.snatched_eps.update({'%sx%s' % (ep.season, ep.episode):
-                                              {'season': ep.season, 'episode': ep.episode}})
+                    self.snatched_eps.add((ep.show.indexer, ep.show.indexerid, ep.season, ep.episode))
 
                 helpers.cpu_sleep()
 
@@ -463,8 +456,8 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
             logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
-            # Keep a list with the 100 last executed searches
-            fifo(MANUAL_SEARCH_HISTORY, self, MANUAL_SEARCH_HISTORY_SIZE)
+            # Keep a list with the last executed searches
+            fifo(MANUAL_SEARCH_HISTORY, self)
 
             if self.success is None:
                 self.success = False
@@ -484,7 +477,7 @@ class BacklogQueueItem(generic_queue.QueueItem):
         self.limited_backlog = limited_backlog
         self.forced = forced
         self.torrent_only = torrent_only
-        self.snatched_eps = {}
+        self.snatched_eps = set([])
 
     def copy(self, deepcopy_obj=None):
         if not isinstance(deepcopy_obj, list):
@@ -514,8 +507,7 @@ class BacklogQueueItem(generic_queue.QueueItem):
                     logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                     if search.snatch_episode(result):
                         for ep in result.episodes:
-                            self.snatched_eps.update({'%sx%s' % (ep.season, ep.episode):
-                                                      {'season': ep.season, 'episode': ep.episode}})
+                            self.snatched_eps.add((ep.show.indexer, ep.show.indexerid, ep.season, ep.episode))
 
                     helpers.cpu_sleep()
             else:
@@ -538,7 +530,8 @@ class FailedQueueItem(generic_queue.QueueItem):
         self.segment = segment
         self.success = None
         self.started = None
-        self.snatched_eps = {}
+        self.added_dt = None
+        self.snatched_eps = set([])
 
     def copy(self, deepcopy_obj=None):
         if not isinstance(deepcopy_obj, list):
@@ -575,8 +568,7 @@ class FailedQueueItem(generic_queue.QueueItem):
                     logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                     if search.snatch_episode(result):
                         for ep in result.episodes:
-                            self.snatched_eps.update({'%sx%s' % (ep.season, ep.episode):
-                                                      {'season': ep.season, 'episode': ep.episode}})
+                            self.snatched_eps.add((ep.show.indexer, ep.show.indexerid, ep.season, ep.episode))
 
                     helpers.cpu_sleep()
             else:
@@ -586,8 +578,8 @@ class FailedQueueItem(generic_queue.QueueItem):
             logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
-            # Keep a list with the 100 last executed searches
-            fifo(MANUAL_SEARCH_HISTORY, self, MANUAL_SEARCH_HISTORY_SIZE)
+            # Keep a list with the last executed searches
+            fifo(MANUAL_SEARCH_HISTORY, self)
 
             if self.success is None:
                 self.success = False
@@ -595,10 +587,10 @@ class FailedQueueItem(generic_queue.QueueItem):
             self.finish()
 
 
-def fifo(my_list, item, max_size=100):
+def fifo(my_list, item):
     remove_old_fifo(my_list)
     item.added_dt = datetime.datetime.now()
-    if len(my_list) >= max_size:
+    if len(my_list) >= MANUAL_SEARCH_HISTORY_SIZE:
         my_list.pop(0)
     my_list.append(item)
 
