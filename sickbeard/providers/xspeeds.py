@@ -189,7 +189,7 @@ class XspeedsProvider(generic.TorrentProvider):
         params.update(dict(('cat%s' % c, 'yes') for c in (
             self.categories[(mode, 'Episode')['Propers' == mode]] +
             ([], self.categories['anime'])[(re.search('(Ca|Pr)', mode) and has_anime()) or
-                                           (re.search('(Se|Ep)', mode) and self.show and self.show.is_anime)])))
+                                           all([re.search('(Se|Ep)', mode) and self.show and self.show.is_anime])])))
         params['torrentsperpage'] = 40
         self.get_url(save_url, post_data=params)
         if self.should_skip():

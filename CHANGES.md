@@ -28,6 +28,12 @@
 * Fix sorting results
 
 
+### 0.17.6 (2018-09-22 09:45:00 UTC)
+
+* Fix propers search for Xspeeds torrent provider
+* Remove BTScene and BitMeTV torrent providers
+
+
 ### 0.17.5 (2018-09-08 13:20:00 UTC)
 
 * Fix error updating shows with certain paths
