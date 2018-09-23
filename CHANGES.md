@@ -22,6 +22,7 @@
 * Add search results sort by newest aired
 * Add search results sort by oldest aired
 * Change requirements.txt Cheetah >= 3.1.0
+* Add Snowfl torrent provider
 
 
 [develop changelog]
