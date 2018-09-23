@@ -10,6 +10,7 @@
 * Update Requests library 2.15.1 (282b01a) to 2.19.1 (33b41c7)
 * Update scandir module 1.6 (c3592ee) to 1.9.0 (9ab3d1f)
 * Update SimpleJSON 3.13.2 (6ffddbe) to 3.16.0 (e2a54f7)
+* Update Tornado Web Server 5.0.1 (2b2a220a) to 5.1.1 (cc2cf07)
 * Update unidecode module 1.0.22 (81f938d) to 1.0.22 (578cdb9)
 * Add idna library 2.7 (0f50bdc)
 * Add urllib3 release 1.23 (7c216f4)
