@@ -28,6 +28,7 @@
 
 [develop changelog]
 * Fix sorting results
+* Change remove deprecated files
 
 
 ### 0.17.6 (2018-09-22 09:45:00 UTC)
