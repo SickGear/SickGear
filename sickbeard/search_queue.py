@@ -27,7 +27,7 @@ import sickbeard
 from sickbeard import db, logger, common, exceptions, helpers, network_timezones, generic_queue, search, \
     failed_history, history, ui, properFinder
 from sickbeard.search import wanted_episodes, get_aired_in_season, set_wanted_aired
-from sickbeard.classes import Proper
+from sickbeard.classes import Proper, SimpleNamespace
 from sickbeard.indexers.indexer_config import INDEXER_TVDB
 
 
@@ -101,7 +101,7 @@ class SearchQueue(generic_queue.GenericQueue):
             for cur_item in self.queue:
                 if (isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and
                         (not show or show == str(cur_item.show.indexerid))):
-                    ep_obj_list.append(cur_item.copy())
+                    ep_obj_list.append(cur_item.base_info())
 
         return ep_obj_list
 
@@ -115,7 +115,7 @@ class SearchQueue(generic_queue.GenericQueue):
         with self.lock:
             if self.currentItem and isinstance(self.currentItem, (ManualSearchQueueItem, FailedQueueItem)) \
                     and (not show or show == str(self.currentItem.show.indexerid)):
-                return self.currentItem.copy()
+                return self.currentItem.base_info()
 
     def is_backlog_in_progress(self):
         return self._is_in_progress(BacklogQueueItem)
@@ -407,23 +407,60 @@ class ProperSearchQueueItem(generic_queue.QueueItem):
             self.finish()
 
 
-class ManualSearchQueueItem(generic_queue.QueueItem):
-    def __init__(self, show, segment):
-        generic_queue.QueueItem.__init__(self, 'Manual Search', MANUAL_SEARCH)
-        self.priority = generic_queue.QueuePriorities.HIGH
-        self.name = 'MANUAL-%s' % show.indexerid
-        self.success = None
-        self.show = show
+class BaseSearchQueueItem(generic_queue.QueueItem):
+    def __init__(self, show, segment, name, action_id=0):
+        super(BaseSearchQueueItem, self).__init__(name, action_id)
         self.segment = segment
-        self.started = None
-        self.added_dt = None
+        self.show = show
+        self.success = None
         self.snatched_eps = set([])
+
+    def base_info(self):
+        o = SimpleNamespace()
+        o.success = self.success
+        o.show = SimpleNamespace()
+        o.show.indexer = self.show.indexer
+        o.show.indexerid = self.show.indexerid
+        o.show.quality = self.show.quality
+        o.show.upgrade_once = self.show.upgrade_once
+        sl = []
+        for s in ([self.segment], self.segment)[isinstance(self.segment, list)]:
+            eo = SimpleNamespace()
+            eo.episode = s.episode
+            eo.season = s.season
+            eo.status = s.status
+            eo.show = SimpleNamespace()
+            eo.show.indexer = s.show.indexer
+            eo.show.indexerid = s.show.indexerid
+            eo.show.quality = s.show.quality
+            eo.show.upgrade_once = s.show.upgrade_once
+            sl.append(eo)
+        o.segment = sl
+
+        return o
 
     def copy(self, deepcopy_obj=None):
         if not isinstance(deepcopy_obj, list):
             deepcopy_obj = []
-        deepcopy_obj += ['segment', 'show']
-        return super(ManualSearchQueueItem, self).copy(deepcopy_obj)
+        deepcopy_obj += ['segment']
+        same_show = True
+        if (isinstance(self.segment, list) and getattr(self.segment[0], 'show') is not self.show) \
+                or getattr(self.segment, 'show') is not self.show:
+            same_show = False
+            deepcopy_obj += ['show']
+        n_o = super(BaseSearchQueueItem, self).copy(deepcopy_obj)
+        if same_show:
+            n_o.show = (getattr(n_o.segment, 'show'), getattr(n_o.segment[0], 'show'))[isinstance(n_o.segment, list)]
+        return n_o
+
+
+class ManualSearchQueueItem(BaseSearchQueueItem):
+    def __init__(self, show, segment):
+        super(ManualSearchQueueItem, self).__init__(show, segment, 'Manual Search', MANUAL_SEARCH)
+        self.priority = generic_queue.QueuePriorities.HIGH
+        self.name = 'MANUAL-%s' % show.indexerid
+        self.started = None
+        self.added_dt = None
 
     def run(self):
         generic_queue.QueueItem.run(self)
@@ -465,25 +502,15 @@ class ManualSearchQueueItem(generic_queue.QueueItem):
             self.finish()
 
 
-class BacklogQueueItem(generic_queue.QueueItem):
+class BacklogQueueItem(BaseSearchQueueItem):
     def __init__(self, show, segment, standard_backlog=False, limited_backlog=False, forced=False, torrent_only=False):
-        generic_queue.QueueItem.__init__(self, 'Backlog', BACKLOG_SEARCH)
+        super(BacklogQueueItem, self).__init__(show, segment, 'Backlog', BACKLOG_SEARCH)
         self.priority = generic_queue.QueuePriorities.LOW
         self.name = 'BACKLOG-%s' % show.indexerid
-        self.success = None
-        self.show = show
-        self.segment = segment
         self.standard_backlog = standard_backlog
         self.limited_backlog = limited_backlog
         self.forced = forced
         self.torrent_only = torrent_only
-        self.snatched_eps = set([])
-
-    def copy(self, deepcopy_obj=None):
-        if not isinstance(deepcopy_obj, list):
-            deepcopy_obj = []
-        deepcopy_obj += ['segment', 'show']
-        return super(BacklogQueueItem, self).copy(deepcopy_obj)
 
     def run(self):
         generic_queue.QueueItem.run(self)
@@ -521,23 +548,13 @@ class BacklogQueueItem(generic_queue.QueueItem):
             self.finish()
 
 
-class FailedQueueItem(generic_queue.QueueItem):
+class FailedQueueItem(BaseSearchQueueItem):
     def __init__(self, show, segment):
-        generic_queue.QueueItem.__init__(self, 'Retry', FAILED_SEARCH)
+        super(FailedQueueItem, self).__init__(show, segment, 'Retry', FAILED_SEARCH)
         self.priority = generic_queue.QueuePriorities.HIGH
         self.name = 'RETRY-%s' % show.indexerid
-        self.show = show
-        self.segment = segment
-        self.success = None
         self.started = None
         self.added_dt = None
-        self.snatched_eps = set([])
-
-    def copy(self, deepcopy_obj=None):
-        if not isinstance(deepcopy_obj, list):
-            deepcopy_obj = []
-        deepcopy_obj += ['segment', 'show']
-        return super(FailedQueueItem, self).copy(deepcopy_obj)
 
     def run(self):
         generic_queue.QueueItem.run(self)

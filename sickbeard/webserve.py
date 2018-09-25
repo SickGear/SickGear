@@ -2808,12 +2808,7 @@ class Home(MainHandler):
 
         progress = 'queued'
         for thread in queued_items:
-            if isinstance(thread, sickbeard.search_queue.ManualSearchQueueItem):
-                ep, uniq_sxe = self.prepare_episode(thread.show, thread.segment, progress)
-                episodes.append(ep)
-                seen_eps.add(uniq_sxe)
-
-            elif hasattr(thread, 'segment'):
+            if hasattr(thread, 'segment'):
                 for ep_obj in thread.segment:
                     ep, uniq_sxe = self.prepare_episode(ep_obj.show, ep_obj, progress)
                     episodes.append(ep)
@@ -2824,12 +2819,7 @@ class Home(MainHandler):
             episode_params = dict(([('searchstate', 'finished'), ('statusoverview', True)],
                                    [('searchstate', 'searching'), ('statusoverview', False)])[None is thread.success],
                                   retrystate=True)
-            if isinstance(thread, sickbeard.search_queue.ManualSearchQueueItem):
-                ep, uniq_sxe = self.prepare_episode(thread.show, thread.segment, **episode_params)
-                episodes.append(ep)
-                seen_eps.add(uniq_sxe)
-
-            elif hasattr(thread, 'segment'):
+            if hasattr(thread, 'segment'):
                 for ep_obj in thread.segment:
                     ep, uniq_sxe = self.prepare_episode(ep_obj.show, ep_obj, **episode_params)
                     episodes.append(ep)
@@ -2837,7 +2827,7 @@ class Home(MainHandler):
 
         episode_params = dict(searchstate='finished', retrystate=True, statusoverview=True)
         for thread in finished_items:
-            if isinstance(thread, sickbeard.search_queue.ManualSearchQueueItem):
+            if not isinstance(getattr(thread, 'segment'), list):
                 if (not show or show == str(thread.show.indexerid)) and \
                         (thread.show.indexer, thread.show.indexerid, thread.segment.season, thread.segment.episode) \
                         not in seen_eps:
@@ -2894,7 +2884,8 @@ class Home(MainHandler):
             retry_statuses = SNATCHED_ANY + [DOWNLOADED, ARCHIVED]
             ep_data.update(dict(retrystate=sickbeard.USE_FAILED_DOWNLOADS and ep_status in retry_statuses))
         if statusoverview:
-            ep_data.update(dict(statusoverview=Overview.overviewStrings[show.getOverview(ep.status)]))
+            ep_data.update(dict(statusoverview=Overview.overviewStrings[
+                helpers.getOverview(ep.status, show.quality, show.upgrade_once)]))
 
         return ep_data, (show.indexer, show.indexerid, ep.season, ep.episode)
 
