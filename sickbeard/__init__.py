@@ -1707,7 +1707,7 @@ def save_config():
     new_config['General']['require_words'] = REQUIRE_WORDS
     new_config['General']['calendar_unprotected'] = int(CALENDAR_UNPROTECTED)
 
-    for src in [x for x in providers.sortedProviderList() if GenericProvider.TORRENT == x.providerType]:
+    for src in filter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sortedProviderList()):
         src_id = src.get_id()
         src_id_uc = src_id.upper()
         new_config[src_id_uc] = {}
@@ -1745,22 +1745,22 @@ def save_config():
         if not new_config[src_id_uc]:
             del new_config[src_id_uc]
 
-    for src in [x for x in providers.sortedProviderList() if GenericProvider.NZB == x.providerType]:
+    for src in filter(lambda px: GenericProvider.NZB == px.providerType, providers.sortedProviderList()):
         src_id = src.get_id()
         src_id_uc = src.get_id().upper()
         new_config[src_id_uc] = {}
         if int(src.enabled):
             new_config[src_id_uc][src_id] = int(src.enabled)
 
-        for attr in [x for x in ['api_key', 'username', 'search_mode'] if getattr(src, x, None)]:
+        for attr in filter(lambda a: None is not getattr(src, a, None), ('api_key', 'username', 'search_mode')):
             if 'search_mode' != attr or 'eponly' != getattr(src, attr):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
-        for attr in [x for x in ['enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
-                                 'scene_only', 'scene_loose', 'scene_loose_active',
-                                 'scene_rej_nuked', 'scene_nuked_active',
-                                 'search_fallback', 'server_type']
-                     if getattr(src, x, None)]:
+        for attr in filter(lambda a: None is not getattr(src, a, None), (
+                'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
+                'scene_only', 'scene_loose', 'scene_loose_active',
+                'scene_rej_nuked', 'scene_nuked_active',
+                'search_fallback', 'server_type')):
             value = helpers.tryInt(getattr(src, attr, None))
             # must allow the following to save '0' not '1' because default is enable (1) instead of disable (0)
             if (value and (attr not in ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog'))
@@ -1957,7 +1957,8 @@ def save_config():
         cfg_lc = cfg.lower()
         cfg_keys += [cfg]
         new_config[cfg] = {}
-        for (k, v) in filter(lambda (_, y): any([y]), items):
+        for (k, v) in filter(lambda (_, y): any([y]) or (
+                cfg_lc in ('kodi', 'xbmc', 'synoindex') and _ in ('always_on',)), items):
             k = '%s' in k and (k % cfg_lc) or (cfg_lc + '_' + k)
             # correct for cases where keys are named in an inconsistent manner to parent stanza
             k = k.replace('blackhole_', '').replace('sabnzbd_', 'sab_')

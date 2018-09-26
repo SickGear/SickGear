@@ -1,4 +1,11 @@
-﻿### 0.17.6 (2018-09-22 09:45:00 UTC)
+﻿### 0.17.7 (2018-09-26 18:30:00 UTC)
+
+* Fix conflicting chars search with RarBG torrent provider
+* Change improve Zooqle search
+* Fix saving an nzb and a couple of notifs settings as disabled whose defaults were enabled
+
+
+### 0.17.6 (2018-09-22 09:45:00 UTC)
 
 * Fix propers search for Xspeeds torrent provider
 * Remove BTScene and BitMeTV torrent providers
