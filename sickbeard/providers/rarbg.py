@@ -38,7 +38,7 @@ class RarbgProvider(generic.TorrentProvider):
                      'api_list': self.url_api + 'mode=list',
                      'api_search': self.url_api + 'mode=search'}
 
-        self.params = {'defaults': '&format=json_extended&category=18;41&limit=100&sort=last&ranked=%(r)s&token=%(t)s',
+        self.params = {'defaults': '&format=json_extended&category=18;41&limit=100&sort=last&ranked={r}&token={t}',
                        'param_iid': '&search_imdb=%(sid)s',
                        'param_tid': '&search_tvdb=%(sid)s',
                        'param_str': '&search_string=%(str)s',
@@ -123,7 +123,7 @@ class RarbgProvider(generic.TorrentProvider):
                         time_out += 1
                         time.sleep(1)
 
-                    searched_url = search_url % {'r': int(self.confirmed), 't': self.token}
+                    searched_url = search_url.format(**{'r': int(self.confirmed), 't': self.token})
 
                     data_json = self.get_url(searched_url, json=True)
                     if self.should_skip():
