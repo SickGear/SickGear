@@ -32,7 +32,7 @@ class ZooqleProvider(generic.TorrentProvider):
 
         self.url_base = 'https://zooqle.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': self.url_base + 'search?q=%s category:%s&s=ns&v=t&sd=d',
+                     'search': self.url_base + 'search?q=%s category:%s&s=%s&v=t&sd=d',
                      'get': self.url_base + 'download/%s.torrent'}
 
         self.categories = {'Season': ['TV'], 'Episode': ['TV'], 'anime': ['Anime']}
@@ -55,7 +55,8 @@ class ZooqleProvider(generic.TorrentProvider):
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                 search_string = '+'.join(rc['abd'].sub(r'%22\1%22', search_string).split())
-                search_url = self.urls['search'] % (search_string, self._categories_string(mode, '', ','))
+                search_url = self.urls['search'] % (search_string, self._categories_string(mode, '', ','),
+                                                    ('ns', 'dt')['Cache' == mode])
 
                 html = self.get_url(search_url)
                 if self.should_skip():
