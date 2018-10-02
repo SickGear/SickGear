@@ -395,8 +395,9 @@ $(document).ready(function () {
 
 	$('#search-results').on('click', '.stepone-result-radio', updateSampleText);
 
-	elNameToSearch.keyup(function (event) {
+	elNameToSearch.keydown(function (event) {
 		if (event.keyCode == 13) {
+			event.preventDefault();
 			elSearchName.click();
 		}
 	});

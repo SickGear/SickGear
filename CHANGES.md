@@ -31,6 +31,11 @@
 * Change remove deprecated files
 
 
+### 0.17.8 (2018-10-02 13:15:00 UTC)
+
+* Fix executing addshow form prematurely
+
+
 ### 0.17.7 (2018-09-26 18:30:00 UTC)
 
 * Fix conflicting chars search with RarBG torrent provider
