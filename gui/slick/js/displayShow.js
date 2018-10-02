@@ -173,7 +173,7 @@ $(document).ready(function() {
 	qTips($('.addQTip'));
 
 	function table_init(table$) {
-		$('#sbRoot').ajaxEpSearch({'colorRow': true});
+		$('#sbRoot').ajaxEpSearch();
 		$('#sbRoot').ajaxEpSubtitlesSearch();
 
 		if ($.SickGear.config.useFuzzy) {

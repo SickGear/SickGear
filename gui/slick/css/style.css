@@ -2130,6 +2130,19 @@ td.col-search{
 	width:46px
 }
 
+td.col-search{
+	font-size:10px
+}
+
+.ep-search,
+.ep-retry,
+.ep-search img[src=""],
+.ep-retry img[src=""]{
+	display:inline-block;
+	width:16px;
+	height:16px
+}
+
 #testRenameTable tbody td.col-checkbox,
 #testRenameTable tbody td.col-ep{width:1%;vertical-align:middle}
 #testRenameTable tbody td.col-name{

@@ -85,6 +85,9 @@ class ShowUpdater:
                 logger.log('image cache cleanup error', logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
 
+            # cleanup manual search history
+            sickbeard.search_queue.remove_old_fifo(sickbeard.search_queue.MANUAL_SEARCH_HISTORY)
+
             # add missing mapped ids
             if not sickbeard.background_mapping_task.is_alive():
                 logger.log(u'Updating the Indexer mappings')

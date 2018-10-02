@@ -1615,34 +1615,7 @@ class TVShow(object):
         return False
 
     def getOverview(self, epStatus):
-
-        status, quality = Quality.splitCompositeStatus(epStatus)
-        if ARCHIVED == status:
-            return Overview.GOOD
-        if WANTED == status:
-            return Overview.WANTED
-        if status in (SKIPPED, IGNORED):
-            return Overview.SKIPPED
-        if status in (UNAIRED, UNKNOWN):
-            return Overview.UNAIRED
-        if status in [SUBTITLED] + Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.FAILED:
-
-            if FAILED == status:
-                return Overview.WANTED
-            if status in SNATCHED_ANY:
-                return Overview.SNATCHED
-
-            void, best_qualities = Quality.splitQuality(self.quality)
-            # if re-downloads aren't wanted then mark it "good" if there is anything
-            if not len(best_qualities):
-                return Overview.GOOD
-
-            min_best, max_best = min(best_qualities), max(best_qualities)
-            if quality >= max_best \
-                    or (self.upgrade_once and
-                        (quality in best_qualities or (None is not min_best and quality > min_best))):
-                return Overview.GOOD
-            return Overview.QUAL
+        return helpers.getOverview(epStatus, self.quality, self.upgrade_once)
 
     def __getstate__(self):
         d = dict(self.__dict__)

@@ -17,6 +17,7 @@
 #set $restart = 'Restart SickGear for new features on this page'
 #set $show_message = (None, $restart)[not $varExists('fanart')]
 #set global $page_body_attr  = 'episode-view" class="' + $css
+#set theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
@@ -176,7 +177,9 @@
 .asc{border-top:0; border-bottom:8px solid}
 .desc{border-top:8px solid; border-bottom:0}
 #end if
+.bfr{position:absolute;left:-999px;top:-999px}.bfr img,img.spinner,img.queued,img.search{display:inline-block;width:16px;height:16px}img.spinner{background:url(${sbRoot}/images/loading16${theme_suffix}.gif) no-repeat 0 0}img.queued{background:url(${sbRoot}/images/queued.png) no-repeat 0 0}img.search{background:url(${sbRoot}/images/search16.png) no-repeat 0 0}
 </style>
+<div class="bfr"><img src="$sbRoot/images/loading16${theme_suffix}.gif"><img src="$sbRoot/images/queued.png"><img src="$sbRoot/images/search16.png"><img src="$sbRoot/images/no16.png"><img src="$sbRoot/images/yes16.png"></div>
 #if $show_message
 
 	<div class="alert alert-info" style="margin:-40px 0 50px">
@@ -293,9 +296,9 @@
 	});
 
 	$(document).ready(function(){
-
-		sortList = [[$table_sort_header_codes[$sort], 0]];
-
+#end raw
+		var sortList = [[$table_sort_header_codes[$sort], 0]];
+#raw
 		$('#showListTable:has(tbody tr)').tablesorter({
 			widgets: ['stickyHeaders'],
 			sortList: sortList,
@@ -381,9 +384,10 @@
             #end if
         #end if
 
-        #set $show_id = '%s_%sx%s' % (str($cur_result['showid']), str($cur_result['season']), str($cur_result['episode']))
+        #set $show_id = '%s_%sx%s' % ($cur_result['showid'], $cur_result['season'], $cur_result['episode'])
+        #set $id_sxe = '%s_%s' % ($cur_result['indexer'], $show_id)
 		<!-- start $cur_result['show_name'] //-->
-		<tr id="show-${show_id}" class="$show_div" data-rawname="$cur_result['show_name']">
+		<tr id="show-${show_id}" class="$show_div" data-rawname="$cur_result['show_name']" data-show-id="$id_sxe">
 			## forced to use a div to wrap airdate, the column sort went crazy with a span
 			<td align="center" class="nowrap">
 				<div class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($cur_result['localtime']).decode($sickbeard.SYS_ENCODING)</div><span class="sort-data">$cur_result['localtime'].strftime('%Y%m%d%H%M')</span>
@@ -428,7 +432,7 @@
 			</td>
 
 			<td align="center">
-				<a href="$sbRoot/home/searchEpisode?show=${cur_result['showid']}&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search" id="forceUpdate-${cur_result['showid']}" class="forceUpdate epSearch"><img alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" id="forceUpdateImage-${cur_result['showid']}" /></a>
+				<a class="ep-search" href="$sbRoot/home/episode_search?show=${cur_result['showid']}&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search"><img title="[search]" alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" /></a>
 			</td>
 		</tr>
 		<!-- end $cur_result['show_name'] //-->
@@ -455,7 +459,7 @@
 <!--
 #raw
 	$(document).ready(function(){
-		$('#sbRoot').ajaxEpSearch({'size': 16, 'loadingImage': 'loading16' + themeSpinner + '.gif'});
+		$('#sbRoot').ajaxEpSearch();
 		$('.ep_summary').hide();
 		$('.ep_summaryTrigger').click(function() {
 			$(this).next('.ep_summary').slideToggle('normal', function() {
@@ -588,7 +592,8 @@
         #end if
 #slurp
 	<!-- start $cur_result['show_name'] //-->
-	<div class="$show_div" id="listing-${cur_result['showid']}">
+    #set $id_sxe = '%s_%s_%sx%s' % ($cur_result['indexer'], $cur_result['showid'], $cur_result['season'], $cur_result['episode'])
+	<div class="$show_div" id="listing-${cur_result['showid']}" data-show-id="$id_sxe">
 		<div class="tvshowDiv">
 			<table width="100%" border="0" cellpadding="0" cellspacing="0">
 				<tr>
@@ -614,7 +619,7 @@
                 				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickbeard.indexerApi(INDEXER_IMDB).name]" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi(INDEXER_IMDB).config.get('icon')" /></a>
         #end if
 								<a href="<%= anon_url(sickbeard.indexerApi(cur_indexer).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickbeard.indexerApi($cur_indexer).config['show_url'] % cur_result['showid']}"><img alt="$sickbeard.indexerApi($cur_indexer).name" height="16" width="16" src="$sbRoot/images/$sickbeard.indexerApi($cur_indexer).config['icon']" /></a>
-								<span><a href="$sbRoot/home/searchEpisode?show=${cur_result['showid']}&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search" id="forceUpdate-${cur_result['showid']}" class="epSearch forceUpdate"><img alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" id="forceUpdateImage-${cur_result['showid']}" /></a></span>
+								<span><a class="ep-search" href="$sbRoot/home/episode_search?show=${cur_result['showid']}&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search"><img title="[search]" alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" /></a></span>
 							</span>
 						</div>
 
