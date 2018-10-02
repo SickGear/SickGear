@@ -2797,69 +2797,57 @@ class Home(MainHandler):
         seen_eps = set([])
 
         # Queued searches
-        queued_items = sickbeard.searchQueueScheduler.action.get_queued_manual(show)
+        queued = sickbeard.searchQueueScheduler.action.get_queued_manual(show)
 
         # Active search
-        active_item = sickbeard.searchQueueScheduler.action.get_current_manual_item(show)
+        active = sickbeard.searchQueueScheduler.action.get_current_manual_item(show)
 
         # Finished searches
         sickbeard.search_queue.remove_old_fifo(sickbeard.search_queue.MANUAL_SEARCH_HISTORY)
-        finished_items = sickbeard.search_queue.MANUAL_SEARCH_HISTORY
+        results = sickbeard.search_queue.MANUAL_SEARCH_HISTORY
 
-        progress = 'queued'
-        for thread in queued_items:
-            if hasattr(thread, 'segment'):
-                for ep_obj in thread.segment:
-                    ep, uniq_sxe = self.prepare_episode(ep_obj.show, ep_obj, progress)
-                    episodes.append(ep)
-                    seen_eps.add(uniq_sxe)
+        for item in filter(lambda q: hasattr(q, 'segment'), queued):
+            for ep_base in item.segment:
+                ep, uniq_sxe = self.prepare_episode(ep_base, 'queued')
+                episodes.append(ep)
+                seen_eps.add(uniq_sxe)
 
-        if active_item:
-            thread = active_item
+        if active and hasattr(active, 'segment'):
             episode_params = dict(([('searchstate', 'finished'), ('statusoverview', True)],
-                                   [('searchstate', 'searching'), ('statusoverview', False)])[None is thread.success],
+                                   [('searchstate', 'searching'), ('statusoverview', False)])[None is active.success],
                                   retrystate=True)
-            if hasattr(thread, 'segment'):
-                for ep_obj in thread.segment:
-                    ep, uniq_sxe = self.prepare_episode(ep_obj.show, ep_obj, **episode_params)
-                    episodes.append(ep)
-                    seen_eps.add(uniq_sxe)
+            for ep_base in active.segment:
+                ep, uniq_sxe = self.prepare_episode(ep_base, **episode_params)
+                episodes.append(ep)
+                seen_eps.add(uniq_sxe)
 
         episode_params = dict(searchstate='finished', retrystate=True, statusoverview=True)
-        for thread in finished_items:
-            if not isinstance(getattr(thread, 'segment'), list):
-                if (not show or show == str(thread.show.indexerid)) and \
-                        (thread.show.indexer, thread.show.indexerid, thread.segment.season, thread.segment.episode) \
-                        not in seen_eps:
-                    ep, uniq_sxe = self.prepare_episode(thread.show, thread.segment, **episode_params)
-                    episodes.append(ep)
-                    seen_eps.add(uniq_sxe)
+        for item in filter(lambda r: hasattr(r, 'segment') and (not show or show == str(r.show.indexerid)), results):
+            for ep_base in filter(
+                    lambda e: (e.show.indexer, e.show.indexerid, e.season, e.episode) not in seen_eps, item.segment):
+                ep, uniq_sxe = self.prepare_episode(ep_base, **episode_params)
+                episodes.append(ep)
+                seen_eps.add(uniq_sxe)
 
-            # These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segment/episodes
-            elif hasattr(thread, 'segment') and show == str(thread.show.indexerid):
-                for ep_obj in thread.segment:
-                    if (ep_obj.show.indexer, ep_obj.show.indexerid, ep_obj.season, ep_obj.episode) not in seen_eps:
-                        ep, uniq_sxe = self.prepare_episode(ep_obj.show, ep_obj, **episode_params)
-                        episodes.append(ep)
-                        seen_eps.add(uniq_sxe)
-
-            for snatched in filter(lambda v: v not in seen_eps, thread.snatched_eps):
-                ep_obj = thread.show.getEpisode(season=snatched[2], episode=snatched[3])
-                ep, uniq_sxe = self.prepare_episode(thread.show, ep_obj, **episode_params)
+            for snatched in filter(lambda s: (s not in seen_eps), item.snatched_eps):
+                try:
+                    show = helpers.find_show_by_id(sickbeard.showList, dict({snatched[0]: snatched[1]}))
+                    ep_obj = show.getEpisode(season=snatched[2], episode=snatched[3])
+                except (StandardError, Exception):
+                    continue
+                ep, uniq_sxe = self.prepare_episode(ep_obj, **episode_params)
                 episodes.append(ep)
                 seen_eps.add(uniq_sxe)
 
         return json.dumps(dict(episodes=episodes))
 
     @staticmethod
-    def prepare_episode(show, ep, searchstate, retrystate=False, statusoverview=False):
+    def prepare_episode(ep, searchstate, retrystate=False, statusoverview=False):
         """
         Prepare episode data and its unique id
 
-        :param show: Show object
-        :type show: TVShow object
-        :param ep: Episode object
-        :type ep: TVEpisode object
+        :param ep: Episode structure containing the show that it relates to
+        :type ep: TVEpisode object or Episode Base Namespace
         :param searchstate: Progress of search
         :type searchstate: string
         :param retrystate: True to add retrystate to data
@@ -2877,7 +2865,7 @@ class Home(MainHandler):
                 quality_class = qualityPresetStrings[x]
                 break
 
-        ep_data = dict(showindexer=show.indexer, showindexid=show.indexerid,
+        ep_data = dict(showindexer=ep.show.indexer, showindexid=ep.show.indexerid,
                        season=ep.season, episode=ep.episode, quality=quality_class,
                        searchstate=searchstate, status=statusStrings[ep.status])
         if retrystate:
@@ -2885,9 +2873,9 @@ class Home(MainHandler):
             ep_data.update(dict(retrystate=sickbeard.USE_FAILED_DOWNLOADS and ep_status in retry_statuses))
         if statusoverview:
             ep_data.update(dict(statusoverview=Overview.overviewStrings[
-                helpers.getOverview(ep.status, show.quality, show.upgrade_once)]))
+                helpers.getOverview(ep.status, ep.show.quality, ep.show.upgrade_once)]))
 
-        return ep_data, (show.indexer, show.indexerid, ep.season, ep.episode)
+        return ep_data, (ep.show.indexer, ep.show.indexerid, ep.season, ep.episode)
 
     def searchEpisodeSubtitles(self, show=None, season=None, episode=None):
         # retrieve the episode object and fail if we can't get one

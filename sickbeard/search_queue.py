@@ -22,6 +22,7 @@ import traceback
 import threading
 import datetime
 import re
+import copy
 
 import sickbeard
 from sickbeard import db, logger, common, exceptions, helpers, network_timezones, generic_queue, search, \
@@ -91,7 +92,7 @@ class SearchQueue(generic_queue.GenericQueue):
 
     def get_queued_manual(self, show):
         """
-        Returns None or List of copies of all show related items in manual or failed queue
+        Returns None or List of base info items of all show related items in manual or failed queue
         :param show: show indexerid or None for all q items
         :type show: String or None
         :return: List with 0 or more items
@@ -107,10 +108,10 @@ class SearchQueue(generic_queue.GenericQueue):
 
     def get_current_manual_item(self, show):
         """
-        Returns a static copy of the currently active manual search item
+        Returns a base info item of the currently active manual search item
         :param show: show indexerid or None for all q items
         :type show: String or None
-        :return: copy of ManualSearchQueueItem or FailedQueueItem or None
+        :return: base info item of ManualSearchQueueItem or FailedQueueItem or None
         """
         with self.lock:
             if self.currentItem and isinstance(self.currentItem, (ManualSearchQueueItem, FailedQueueItem)) \
@@ -412,46 +413,38 @@ class BaseSearchQueueItem(generic_queue.QueueItem):
         super(BaseSearchQueueItem, self).__init__(name, action_id)
         self.segment = segment
         self.show = show
+        self.added_dt = None
         self.success = None
         self.snatched_eps = set([])
 
     def base_info(self):
-        o = SimpleNamespace()
-        o.success = self.success
-        o.show = SimpleNamespace()
-        o.show.indexer = self.show.indexer
-        o.show.indexerid = self.show.indexerid
-        o.show.quality = self.show.quality
-        o.show.upgrade_once = self.show.upgrade_once
-        sl = []
-        for s in ([self.segment], self.segment)[isinstance(self.segment, list)]:
-            eo = SimpleNamespace()
-            eo.episode = s.episode
-            eo.season = s.season
-            eo.status = s.status
-            eo.show = SimpleNamespace()
-            eo.show.indexer = s.show.indexer
-            eo.show.indexerid = s.show.indexerid
-            eo.show.quality = s.show.quality
-            eo.show.upgrade_once = s.show.upgrade_once
-            sl.append(eo)
-        o.segment = sl
+        return SimpleNamespace(
+            success=self.success,
+            added_dt=self.added_dt,
+            snatched_eps=copy.deepcopy(self.snatched_eps),
+            show=SimpleNamespace(
+                indexer=self.show.indexer, indexerid=self.show.indexerid,
+                quality=self.show.quality, upgrade_once=self.show.upgrade_once),
+            segment=[SimpleNamespace(
+                season=s.season, episode=s.episode, status=s.status,
+                show=SimpleNamespace(
+                    indexer=s.show.indexer, indexerid=s.show.indexerid,
+                    quality=s.show.quality, upgrade_once=s.show.upgrade_once
+                )) for s in ([self.segment], self.segment)[isinstance(self.segment, list)]])
 
-        return o
-
-    def copy(self, deepcopy_obj=None):
-        if not isinstance(deepcopy_obj, list):
-            deepcopy_obj = []
-        deepcopy_obj += ['segment']
-        same_show = True
-        if (isinstance(self.segment, list) and getattr(self.segment[0], 'show') is not self.show) \
-                or getattr(self.segment, 'show') is not self.show:
-            same_show = False
-            deepcopy_obj += ['show']
-        n_o = super(BaseSearchQueueItem, self).copy(deepcopy_obj)
-        if same_show:
-            n_o.show = (getattr(n_o.segment, 'show'), getattr(n_o.segment[0], 'show'))[isinstance(n_o.segment, list)]
-        return n_o
+    # def copy(self, deepcopy_obj=None):
+    #     if not isinstance(deepcopy_obj, list):
+    #         deepcopy_obj = []
+    #     deepcopy_obj += ['segment']
+    #     same_show = True
+    #     if (isinstance(self.segment, list) and getattr(self.segment[0], 'show') is not self.show) \
+    #             or getattr(self.segment, 'show') is not self.show:
+    #         same_show = False
+    #         deepcopy_obj += ['show']
+    #     n_o = super(BaseSearchQueueItem, self).copy(deepcopy_obj)
+    #     if same_show:
+    #         n_o.show = (getattr(n_o.segment, 'show'), getattr(n_o.segment[0], 'show'))[isinstance(n_o.segment, list)]
+    #     return n_o
 
 
 class ManualSearchQueueItem(BaseSearchQueueItem):
@@ -460,7 +453,6 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
         self.priority = generic_queue.QueuePriorities.HIGH
         self.name = 'MANUAL-%s' % show.indexerid
         self.started = None
-        self.added_dt = None
 
     def run(self):
         generic_queue.QueueItem.run(self)
@@ -494,7 +486,7 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
 
         finally:
             # Keep a list with the last executed searches
-            fifo(MANUAL_SEARCH_HISTORY, self)
+            fifo(MANUAL_SEARCH_HISTORY, self.base_info())
 
             if self.success is None:
                 self.success = False
@@ -554,7 +546,6 @@ class FailedQueueItem(BaseSearchQueueItem):
         self.priority = generic_queue.QueuePriorities.HIGH
         self.name = 'RETRY-%s' % show.indexerid
         self.started = None
-        self.added_dt = None
 
     def run(self):
         generic_queue.QueueItem.run(self)
@@ -596,7 +587,7 @@ class FailedQueueItem(BaseSearchQueueItem):
 
         finally:
             # Keep a list with the last executed searches
-            fifo(MANUAL_SEARCH_HISTORY, self)
+            fifo(MANUAL_SEARCH_HISTORY, self.base_info())
 
             if self.success is None:
                 self.success = False

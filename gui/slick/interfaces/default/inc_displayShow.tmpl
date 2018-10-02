@@ -101,7 +101,7 @@
     #slurp
     #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($ep['status']))
     #if Quality.NONE != $curQuality
-			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# <span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span></td>
+			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# #if 'Unknown' != $statusStrings[$curStatus]#<span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span>#end if#</td>
     #else
 			<td class="col-status">$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</td>
     #end if
@@ -109,9 +109,9 @@
     #if 0 != int($ep['season'])
         #set $status = $Quality.splitCompositeStatus(int($ep['status']))[0]
         #if ($status in $SNATCHED_ANY + [$DOWNLOADED, $ARCHIVED]) and $sg_var('USE_FAILED_DOWNLOADS')
-				<a class="epRetry" id="$ep_str" name="$ep_str" href="$sbRoot/home/retryEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download"></a>
+				<a class="ep-retry" href="$sbRoot/home/episode_retry?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download"></a>
         #else
-				<a class="epSearch" id="$ep_str" name="$ep_str" href="$sbRoot/home/searchEpisode?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search"></a>
+				<a class="ep-search" href="$sbRoot/home/episode_search?show=$show.indexerid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search"></a>
         #end if
     #end if
     #slurp

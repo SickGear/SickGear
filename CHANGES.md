@@ -24,6 +24,10 @@
 * Add search results sort by oldest aired
 * Change requirements.txt Cheetah >= 3.1.0
 * Add Snowfl torrent provider
+* Fix manual search button on displayShow and episode view page
+* Change feedback result of manual search on the clicked button image/tooltip
+* Change reduce browser I/O on displayShow
+* Fix displayShow bug where click holding on a season btn and then dragging away leaves 50% white
 
 
 [develop changelog]
