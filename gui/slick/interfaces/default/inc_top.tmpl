@@ -133,7 +133,8 @@
 							<li><a href="$sbRoot/history/" tabindex="$tab#set $tab += 1#"><i class="sgicon-mediafile"></i>History $history_home</a></li>
 							<li class="divider"></li>
 							<li class="menu-item-noicon opacity60">Add show...</li>
-							<li><a href="$sbRoot/home/addShows/new_show/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>Search
+							<li><a id="add-show-name" data-href="$sbRoot/home/addShows/new_show/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>
+								<input  class="form-control form-control-inline input-sm" type="text" placeholder="Search" tabindex="$tab#set $tab += 1#">
 								<div class="menu-item-desc opacity60">find show at TV info source</div></a></li>
 							<li><a href="$sbRoot/home/addShows/trakt_default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-trakt"></i>Trakt Cards
 								<div class="menu-item-desc opacity60">trends, tailored suggestions...</div></a></li>

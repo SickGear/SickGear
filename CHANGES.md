@@ -31,6 +31,7 @@
 * Change Show List text "Search Show Name" to "Filter Show Name", and "Reset Search" to "Reset Filter" for clarity
 * Change when getting a non existing folder, add the failed location to log messages
 * Change add pulsing effect to warning indicators
+* Add show search ability to menu Shows/"Add show"
 
 
 [develop changelog]
