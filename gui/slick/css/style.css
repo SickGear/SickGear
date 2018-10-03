@@ -688,6 +688,18 @@ inc_top.tmpl
 	background-position:-337px 0
 }
 
+#add-show-name:hover{
+	cursor:pointer
+}
+
+#add-show-name input{
+	margin:0 0 0 -1px;
+	padding:0 2px;
+	height:18px;
+	width:135px;
+	font-size:12px
+}
+
 /* =======================================================================
 inc_bottom.tmpl
 ========================================================================== */

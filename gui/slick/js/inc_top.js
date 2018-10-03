@@ -37,7 +37,7 @@ function initActions() {
 	// menu$.find('a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
 }
 
-$(document).ready(function(){
+$(function(){
 	initActions();
 	$('#NAV' + topmenu).addClass('active');
 	$('.dropdown-toggle').dropdownHover();
@@ -55,4 +55,24 @@ $(document).ready(function(){
 		doLast && $('.bubble').last().addClass('last');
 		return !1;
 	});
+
+	var search = function(){
+		var link$ = $('#add-show-name'), text = link$.find('input').val(),
+			param = '?show_to_add=|||' + text + '&use_show_name=True';
+		window.location.href = link$.attr('data-href') + (!text.length ? '' : param);
+	}, removeHref = function(){$('#add-show-name').removeAttr('href');};
+	$('#add-show-name')
+		.on('click', function(){ search(); })
+		.hover(function() {$(this).attr('href', $(this).attr('data-href'));}, removeHref);
+	$('#add-show-name input')
+		.hover(removeHref)
+		.on('click', function(e){ e.stopPropagation(); })
+		.keydown(function(e){
+			if (13 === e.keyCode) {
+				e.stopPropagation();
+				e.preventDefault();
+				search();
+				return !1;
+			}
+		});
 });
