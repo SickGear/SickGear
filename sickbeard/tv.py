@@ -288,7 +288,7 @@ class TVShow(object):
         if ek.ek(os.path.isdir, self._location):
             return self._location
         else:
-            raise exceptions.ShowDirNotFoundException('Show folder doesn\'t exist, you shouldn\'t be using it')
+            raise exceptions.ShowDirNotFoundException("Show folder '%s' does not exist. Create it to enable post-processing an episode of this show." % self._location)
 
     def _setLocation(self, newLocation):
         logger.log('Setter sets location to %s' % newLocation, logger.DEBUG)
