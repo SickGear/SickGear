@@ -28,6 +28,7 @@
 * Change feedback result of manual search on the clicked button image/tooltip
 * Change reduce browser I/O on displayShow
 * Fix displayShow bug where click holding on a season btn and then dragging away leaves 50% white
+* Change Show List text "Search Show Name" to "Filter Show Name", and "Reset Search" to "Reset Filter" for clarity
 
 
 [develop changelog]
