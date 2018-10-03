@@ -12,6 +12,7 @@
 * Update SimpleJSON 3.13.2 (6ffddbe) to 3.16.0 (e2a54f7)
 * Update Tornado Web Server 5.0.1 (2b2a220a) to 5.1.1 (cc2cf07)
 * Update unidecode module 1.0.22 (81f938d) to 1.0.22 (578cdb9)
+* Update UnRar for Windows 5.60 to 5.61
 * Add idna library 2.7 (0f50bdc)
 * Add urllib3 release 1.23 (7c216f4)
 * Change if old scandir binary module is installed, fallback to slow Python module and inform user to upgrade binary
