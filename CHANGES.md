@@ -29,6 +29,7 @@
 * Change reduce browser I/O on displayShow
 * Fix displayShow bug where click holding on a season btn and then dragging away leaves 50% white
 * Change Show List text "Search Show Name" to "Filter Show Name", and "Reset Search" to "Reset Filter" for clarity
+* Change when getting a non existing folder, add the failed location to log messages
 
 
 [develop changelog]
