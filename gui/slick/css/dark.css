@@ -24,6 +24,12 @@ pre .prelight-num{
 	color:#ff6d5e
 }
 
+.snf .pulse,
+.shows-not-found.n .snf .pulse{ border-color:#c3ed9b }
+.shows-not-found.nn .snf .pulse{ border-color:#f6ff41 }
+.shows-not-found.nnn .snf .pulse{ border-color:#ffba57 }
+.shows-not-found.nnnn .snf .pulse{ border-color:#ff6d5e }
+
 [class^="icon-"],
 [class*=" icon-"]{
 	background-image:url("../images/glyphicons-halflings.png")
