@@ -17,6 +17,7 @@
 
 import re
 import traceback
+from urllib import unquote_plus
 
 from . import generic
 from sickbeard import logger
@@ -58,8 +59,8 @@ class TVChaosUKProvider(generic.TorrentProvider):
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download', 'fl': 'free'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                search_string = search_string.replace(u'£', '%')
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = re.sub('(?i)[^a-z0-9\s]', '%', unquote_plus(search_string))
 
                 kwargs = dict(post_data={'keywords': search_string, 'do': 'quick_sort', 'page': '0',
                                          'category': '0', 'search_type': 't_name', 'sort': 'added',
@@ -164,6 +165,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                                                       mode in 'Season'])] % new_parts[2]
             title = '%s`S%02d%s`%s' % tuple(new_parts)
         for yr in years:
+            # noinspection RegExpRedundantEscape
             title = re.sub('\{\{yr\}\}', yr, title, count=1)
 
         date_re = '(?i)([(\s.]*)((?:\d+[\s.]*(?:st|nd|rd|th)?[\s.])?)([adfjmnos]\w{2,}[\s.]+)((?:19|20)\d\d)([)\s.]*)'
@@ -195,7 +197,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         tags = [re.findall(x, t[-1], flags=re.X) for x in
                 ('(?i)%sProper%s|\bProper\b$' % (bl, br),
-                 '(?i)\d{3,4}(?:[pi]|hd)',
+                 '(?i)(?:\d{3,4}(?:[pi]|hd)|hd(?:tv)?\s*\d{3,4}(?:[pi])?)',
                  '''
                  (?i)(hr.ws.pdtv|blu.?ray|hddvd|
                  pdtv|hdtv|dsr|tvrip|web.?(?:dl|rip)|dvd.?rip|b[r|d]rip|mpeg-?2)
@@ -206,7 +208,8 @@ class TVChaosUKProvider(generic.TorrentProvider):
                  ''')]
         title = ('%s`%s' % (
             re.sub('|'.join(['|'.join([re.escape(y) for y in x]) for x in tags if x]).strip('|'), '', t[-1]),
-            re.sub('(?i)(\d{3,4})hd', r'\1p', '`'.join(['`'.join(x) for x in tags[:-1]]).rstrip('`')) +
+            re.sub('(?i)(?:hd(?:tv)?\s*)?(\d{3,4})(?:hd|p)?', r'\1p',
+                   '`'.join(['`'.join(x) for x in tags[:-1]]).rstrip('`')) +
             ('', '`hdtv')[not any(tags[2])] + ('', '`x264')[not any(tags[3])]))
         for r in [('(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
                   ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), ('%s\s*%s' % (bl, br), '`')]:
