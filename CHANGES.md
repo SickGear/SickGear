@@ -40,6 +40,11 @@
 * Change remove deprecated files
 
 
+### 0.17.9 (2018-10-04 15:40:00 UTC)
+
+* Change improve TVChaosUK
+
+
 ### 0.17.8 (2018-10-02 13:15:00 UTC)
 
 * Fix executing addshow form prematurely
