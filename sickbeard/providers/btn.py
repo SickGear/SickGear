@@ -160,8 +160,8 @@ class BTNProvider(generic.TorrentProvider):
                     for torrentid, torrent_info in found_torrents.iteritems():
                         seeders, leechers, size = (tryInt(n, n) for n in [torrent_info.get(x) for x in
                                                                           'Seeders', 'Leechers', 'Size'])
-                        if self._peers_fail(mode, seeders, leechers) or \
-                                self.reject_m2ts and re.match(r'(?i)m2?ts', torrent_info.get('Container', '')):
+                        if self._reject_item(seeders, leechers, container=self.reject_m2ts and (
+                                re.match(r'(?i)m2?ts', torrent_info.get('Container', '')))):
                             continue
 
                         title, url = self._get_title_and_url(torrent_info)
@@ -231,8 +231,9 @@ class BTNProvider(generic.TorrentProvider):
                             head = head if None is not head else self._header_row(tr)
                             seeders, leechers, size = [tryInt(n, n) for n in [
                                 cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                            if ((self.reject_m2ts and re.search(r'(?i)\[.*?m2?ts.*?\]', tr.get_text('', strip=True))) or
-                                    self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats'])):
+                            if not tr.find('a', href=rc['cats']) or self._reject_item(
+                                    seeders, leechers, container=self.reject_m2ts and (
+                                            re.search(r'(?i)\[.*?m2?ts.*?\]', tr.get_text('', strip=True)))):
                                 continue
 
                             title = tr.select('td span[title]')[0].attrs.get('title').strip()

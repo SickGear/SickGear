@@ -27,7 +27,7 @@ from lib.unidecode import unidecode
 
 class TorrentLeechProvider(generic.TorrentProvider):
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'TorrentLeech', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'TorrentLeech', cache_update_freq=15)
 
         self.url_base = 'https://v4.torrentleech.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -86,7 +86,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers = [tryInt(n) for n in [
                                     tr.find('td', class_=x).get_text().strip() for x in 'seeders', 'leechers']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = tr.find('td', class_='name').a

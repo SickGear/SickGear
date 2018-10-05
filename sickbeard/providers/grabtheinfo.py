@@ -28,7 +28,7 @@ from lib.unidecode import unidecode
 class GrabTheInfoProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'GrabTheInfo', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'GrabTheInfo', cache_update_freq=15)
 
         self.url_base = 'http://grabthe.info/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -101,7 +101,7 @@ class GrabTheInfoProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(torrent_rows[shows_found])
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

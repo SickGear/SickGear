@@ -99,8 +99,8 @@ class XspeedsProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers) \
-                                        or self.freeleech and None is cells[1].find('img', title=rc['fl']):
+                                if self._reject_item(seeders, leechers, self.freeleech and (
+                                        None is cells[1].find('img', title=rc['fl']))):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

@@ -91,7 +91,7 @@ class EztvProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(tr)
                                 seeders = tryInt(cells[head['seed']].get_text().strip())
-                                if self._peers_fail(mode, seeders):
+                                if self._reject_item(seeders):
                                     continue
 
                                 title = tr.select('a.epinfo')[0].get_text().strip()

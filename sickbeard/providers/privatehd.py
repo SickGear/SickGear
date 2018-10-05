@@ -126,7 +126,7 @@ class PrivateHDProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 title = rc['info'].sub('', tr.find('a', attrs={'title': rc['info']})['title'])
