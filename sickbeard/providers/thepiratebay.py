@@ -178,7 +178,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers = [tryInt(cells[head[x]].get_text().strip()) for x in 'seed', 'leech']
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = tr.find('a', title=rc['info'])

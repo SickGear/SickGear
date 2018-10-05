@@ -87,7 +87,7 @@ class ETTVProvider(generic.TorrentProvider):
                                     tr, {'seed': r'seed', 'leech': r'leech', 'size': r'^size'})
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

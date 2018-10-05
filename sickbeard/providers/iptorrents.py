@@ -104,7 +104,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
                                     tr, header_strip='(?i)(?:leechers|seeders|size);')
                                 seeders, leechers = [tryInt(tr.find('td', class_='t_' + x).get_text().strip())
                                                      for x in 'seeders', 'leechers']
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

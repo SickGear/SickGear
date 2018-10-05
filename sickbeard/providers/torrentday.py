@@ -103,7 +103,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                                     tr, header_strip='(?i)(?:leechers|seeders|size);')
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 dl = tr.find('a', href=rc['get'])['href']

@@ -28,7 +28,7 @@ from lib.unidecode import unidecode
 class WOPProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'WOP', cache_update_freq=10)
+        generic.TorrentProvider.__init__(self, 'WOP')
 
         self.url_home = ['https://www.worldofp2p.net/']
 
@@ -95,8 +95,8 @@ class WOPProvider(generic.TorrentProvider):
                                     tr, custom_tags=[('span', 'data-original-title')])
                                 seeders, leechers, size = [n for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if (self.freeleech and not tr.find('i', class_=rc['filter'])) \
-                                        or self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers, self.freeleech and (
+                                        not tr.find('i', class_=rc['filter']))):
                                     continue
 
                                 title = tr.find('a', href=rc['info']).get_text().strip()

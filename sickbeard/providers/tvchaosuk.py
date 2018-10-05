@@ -15,7 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import random
 import re
+import time
 import traceback
 from urllib import unquote_plus
 
@@ -24,6 +26,7 @@ from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.config import naming_ep_type
 from sickbeard.helpers import tryInt
+from bs4 import BeautifulSoup
 from dateutil.parser import parse
 from lib.unidecode import unidecode
 
@@ -66,69 +69,85 @@ class TVChaosUKProvider(generic.TorrentProvider):
                                          'category': '0', 'search_type': 't_name', 'sort': 'added',
                                          'order': 'desc', 'daysprune': '-1'})
 
-                html = self.get_url(self.urls['search'], **kwargs)
-                if self.should_skip():
-                    return results
+                vals = [i for i in range(5, 16)]
+                random.SystemRandom().shuffle(vals)
+                attempts = html = soup = torrent_table = None
+                fetch = 'failed fetch'
+                for attempts, s in enumerate((0, vals[0], vals[5], vals[10])):
+                    time.sleep(s)
+                    html = self.get_url(self.urls['search'], **kwargs)
+                    if self.should_skip():
+                        return results
+                    if html:
+                        soup = BeautifulSoup(html, 'html.parser')
+                        torrent_table = soup.find('table', id='sortabletable')
+                        if torrent_table:
+                            fetch = 'data fetched'
+                            break
+                if attempts:
+                    logger.log('%s %s after %s attempts' % (mode, fetch, attempts+1))
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html):
+                    if not html or self._has_no_results(html) or not soup:
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, 'html.parser') as soup:
-                        torrent_table = soup.find('table', id='sortabletable')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
-                        get_detail = True
+                    torrent_rows = torrent_table.find_all('tr')
+                    get_detail = True
 
-                        if 2 > len(torrent_rows):
-                            raise generic.HaltParseException
+                    if 2 > len(torrent_rows):
+                        raise generic.HaltParseException
 
-                        head = None
-                        for tr in torrent_rows[1:]:
-                            cells = tr.find_all('td')
-                            if 6 > len(cells):
-                                continue
-                            try:
-                                head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers) \
-                                        or self.freeleech and None is cells[1].find('img', title=rc['fl']):
-                                    continue
-
-                                info = tr.find('a', href=rc['info'])
-                                title = (tr.find('div', class_='tooltip-content').get_text() or info.get_text()).strip()
-                                title = re.findall('(?m)(^[^\r\n]+)', title)[0]
-                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
-                            except (StandardError, Exception):
+                    head = None
+                    for tr in torrent_rows[1:]:
+                        cells = tr.find_all('td')
+                        if 6 > len(cells):
+                            continue
+                        try:
+                            head = head if None is not head else self._header_row(tr)
+                            seeders, leechers, size = [tryInt(n, n) for n in [
+                                cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                            if self._reject_item(seeders, leechers, self.freeleech and (
+                                    None is cells[1].find('img', title=rc['fl']))):
                                 continue
 
-                            if get_detail and title.endswith('...'):
-                                try:
-                                    with BS4Parser(self.get_url('%s%s' % (
-                                            self.urls['config_provider_home_uri'], info['href'].lstrip('/').replace(
-                                                self.urls['config_provider_home_uri'], ''))),
-                                                   'html.parser') as soup_detail:
-                                        title = soup_detail.find(
-                                            'td', class_='thead', attrs={'colspan': '3'}).get_text().strip()
-                                        title = re.findall('(?m)(^[^\r\n]+)', title)[0]
-                                except IndexError:
-                                    continue
-                                except (StandardError, Exception):
-                                    get_detail = False
+                            info = tr.find('a', href=rc['info'])
+                            title = (tr.find('div', class_='tooltip-content').get_text() or info.get_text()).strip()
+                            title = re.findall('(?m)(^[^\r\n]+)', title)[0]
+                            download_url = self._link(tr.find('a', href=rc['get'])['href'])
+                        except (StandardError, Exception):
+                            continue
 
+                        if get_detail and title.endswith('...'):
                             try:
-                                titles = self.regulate_title(title, mode, search_string)
-                                if download_url and titles:
-                                    for title in titles:
-                                        items[mode].append((title, download_url, seeders, self._bytesizer(size)))
+                                with BS4Parser(self.get_url('%s%s' % (
+                                        self.urls['config_provider_home_uri'], info['href'].lstrip('/').replace(
+                                            self.urls['config_provider_home_uri'], ''))),
+                                               'html.parser') as soup_detail:
+                                    title = soup_detail.find(
+                                        'td', class_='thead', attrs={'colspan': '3'}).get_text().strip()
+                                    title = re.findall('(?m)(^[^\r\n]+)', title)[0]
+                            except IndexError:
+                                continue
                             except (StandardError, Exception):
-                                pass
+                                get_detail = False
+
+                        try:
+                            titles = self.regulate_title(title, mode, search_string)
+                            if download_url and titles:
+                                for title in titles:
+                                    items[mode].append((title, download_url, seeders, self._bytesizer(size)))
+                        except (StandardError, Exception):
+                            pass
 
                 except generic.HaltParseException:
                     pass
                 except (StandardError, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+
+                if soup:
+                    soup.clear(True)
+                    del soup
 
                 self._log_search(mode, len(items[mode]) - cnt,
                                  ('search string: ' + search_string.replace('%', '%%'), self.name)['Cache' == mode])

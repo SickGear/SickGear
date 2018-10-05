@@ -22,7 +22,7 @@ from lib.unidecode import unidecode
 class PreToMeProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'PreToMe', cache_update_freq=6)
+        generic.TorrentProvider.__init__(self, 'PreToMe')
 
         self.url_base = 'https://pretome.info/'
 

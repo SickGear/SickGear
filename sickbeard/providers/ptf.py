@@ -125,8 +125,8 @@ class PTFProvider(generic.TorrentProvider):
                                 seeders, leechers = 2 * [cells[head['seed']].get_text().strip()]
                                 seeders, leechers = [tryInt(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
-                                if self._peers_fail(mode, seeders, leechers) or\
-                                        not rc['cats'].findall(tr.find('td').get('onclick', ''))[0]:
+                                if not rc['cats'].findall(tr.find('td').get('onclick', ''))[0] or self._reject_item(
+                                        seeders, leechers):
                                     continue
 
                                 title = tr.find('a', href=rc['info']).get_text().strip()

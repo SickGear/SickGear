@@ -132,9 +132,9 @@ class SpeedCDProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if None is tr.find('a', href=rc['cats']) \
-                                        or self.freeleech and None is rc['fl'].search(cells[1].get_text()) \
-                                        or self._peers_fail(mode, seeders, leechers):
+                                if None is tr.find('a', href=rc['cats']) or self._reject_item(
+                                        seeders, leechers, self.freeleech and (
+                                        None is rc['fl'].search(cells[1].get_text()))):
                                     continue
 
                                 info = tr.find('a', 'torrent') or tr.find('a', href=rc['info'])

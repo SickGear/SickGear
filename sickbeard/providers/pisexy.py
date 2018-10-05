@@ -51,7 +51,7 @@ class PiSexyProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'get': 'info.php\?id', 'valid_cat': 'cat=(?:0|50[12])', 'filter': 'free',
+            'get': 'info.php\?id', 'cats': 'cat=(?:0|50[12])', 'filter': 'free',
             'title': r'Download\s*([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
@@ -84,8 +84,8 @@ class PiSexyProvider(generic.TorrentProvider):
                                 seeders, leechers = 2 * [cells[head['seed']].get_text().strip()]
                                 seeders, leechers = [tryInt(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
-                                if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['valid_cat']) \
-                                        or (self.freeleech and not tr.find('img', src=rc['filter'])):
+                                if not tr.find('a', href=rc['cats']) or self._reject_item(
+                                        seeders, leechers, self.freeleech and not tr.find('img', src=rc['filter'])):
                                     continue
 
                                 info = tr.find('a', href=rc['get'])

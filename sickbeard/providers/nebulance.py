@@ -28,7 +28,7 @@ from lib.unidecode import unidecode
 class NebulanceProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'Nebulance', cache_update_freq=17)
+        generic.TorrentProvider.__init__(self, 'Nebulance', cache_update_freq=15)
 
         self.url_base = 'https://nebulance.io/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -87,7 +87,7 @@ class NebulanceProvider(generic.TorrentProvider):
 
                         seeders, leechers, group_name, torrent_id, size = [tryInt(n, n) for n in [item.get(x) for x in [
                             'seeders', 'leechers', 'groupName', 'torrentId', 'size']]]
-                        if self._peers_fail(mode, seeders, leechers):
+                        if self._reject_item(seeders, leechers):
                             continue
 
                         try:

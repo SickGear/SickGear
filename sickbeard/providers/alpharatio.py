@@ -31,7 +31,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'AlphaRatio', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'AlphaRatio', cache_update_freq=15)
 
         self.url_base = 'https://alpharatio.cc/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -89,11 +89,10 @@ class AlphaRatioProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers) or \
-                                        (self.freeleech and
-                                         any([not tr.select('.tl_free'),
-                                              tr.select('.tl_timed'), tr.select('[title^="Timed Free"]'),
-                                              tr.select('.tl_expired'), tr.select('[title^="Expired Free"]')])):
+                                if self._reject_item(seeders, leechers, self.freeleech and (
+                                        any([not tr.select('.tl_free'),
+                                             tr.select('.tl_timed'), tr.select('[title^="Timed Free"]'),
+                                             tr.select('.tl_expired'), tr.select('[title^="Expired Free"]')]))):
                                     continue
 
                                 title = tr.find('a', title=rc['info']).get_text().strip()

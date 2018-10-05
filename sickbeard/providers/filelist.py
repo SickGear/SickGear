@@ -83,7 +83,7 @@ class FLProvider(generic.TorrentProvider):
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[x].get_text().strip() for x in -3, -2, -5]]
-                                if self._peers_fail(mode, seeders, leechers) or not tr.find('a', href=rc['cats']):
+                                if not tr.find('a', href=rc['cats']) or self._reject_item(seeders, leechers):
                                     continue
 
                                 title = tr.find('a', href=rc['info']).get_text().strip()
