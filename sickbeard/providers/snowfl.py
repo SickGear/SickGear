@@ -36,7 +36,7 @@ except ImportError:
 class SnowflProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'Snowfl', cache_update_freq=6)
+        generic.TorrentProvider.__init__(self, 'Snowfl')
 
         self.url_base = 'https://www.snowfl.com/'
 
@@ -97,7 +97,7 @@ class SnowflProvider(generic.TorrentProvider):
                                 not self.confirmed or di.get('verified')), data_json or {}):
                             seeders, leechers, size = map(lambda n: tryInt(
                                 *([item.get(n)]) * 2), ('seed', 'leech', 'size'))
-                            if self._peers_fail(mode, seeders, leechers):
+                            if self._reject_item(seeders, leechers):
                                 continue
                             title = item.get('title')
                             download_url = item.get('magnetLink')
