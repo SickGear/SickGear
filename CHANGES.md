@@ -33,6 +33,7 @@
 * Change when getting a non existing folder, add the failed location to log messages
 * Change add pulsing effect to warning indicators
 * Add show search ability to menu Shows/"Add show"
+* Change simplify options on final step of Add show
 
 
 [develop changelog]

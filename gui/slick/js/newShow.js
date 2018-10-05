@@ -292,7 +292,7 @@ $(document).ready(function () {
 	* Visit http://www.dynamicdrive.com/ for this script and 100s more.
 	***********************************************/
 
-	var myform = new FormToWizard({
+	var myform = $.SickGear.myform = new FormToWizard({
 		fieldsetborderwidth: 0,
 		formid: 'addShowForm',
 		revealfx: ['slide', 500],
