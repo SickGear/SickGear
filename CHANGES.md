@@ -39,6 +39,7 @@
 [develop changelog]
 * Fix sorting results
 * Change remove deprecated files
+* Use current ep status data for finished search items for correct UI updates
 
 
 ### 0.17.10 (2018-10-05 20:15:00 UTC)

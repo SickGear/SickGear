@@ -2825,7 +2825,12 @@ class Home(MainHandler):
         for item in filter(lambda r: hasattr(r, 'segment') and (not show or show == str(r.show.indexerid)), results):
             for ep_base in filter(
                     lambda e: (e.show.indexer, e.show.indexerid, e.season, e.episode) not in seen_eps, item.segment):
-                ep, uniq_sxe = self.prepare_episode(ep_base, **episode_params)
+                try:
+                    show = helpers.find_show_by_id(sickbeard.showList, dict({ep_base.show.indexer: ep_base.show.indexerid}))
+                    ep_obj = show.getEpisode(season=ep_base.season, episode=ep_base.episode)
+                except (StandardError, Exception):
+                    continue
+                ep, uniq_sxe = self.prepare_episode(ep_obj, **episode_params)
                 episodes.append(ep)
                 seen_eps.add(uniq_sxe)
 
