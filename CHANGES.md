@@ -1,4 +1,10 @@
-﻿### 0.17.9 (2018-10-04 15:40:00 UTC)
+﻿### 0.17.10 (2018-10-05 20:15:00 UTC)
+
+* Change improve log stats for rejected items at torrent providers
+* Change when a TVChaosUK response is invalid, wait then retry
+
+
+### 0.17.9 (2018-10-04 15:40:00 UTC)
 
 * Change improve TVChaosUK
 

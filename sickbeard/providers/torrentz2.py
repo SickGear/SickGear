@@ -93,7 +93,7 @@ class Torrentz2Provider(generic.TorrentProvider):
                                     continue
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[x].get_text().strip() for x in -2, -1, -3]]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = tr.dt.a

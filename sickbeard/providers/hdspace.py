@@ -30,7 +30,7 @@ from lib.unidecode import unidecode
 class HDSpaceProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'HDSpace', cache_update_freq=17)
+        generic.TorrentProvider.__init__(self, 'HDSpace', cache_update_freq=15)
 
         self.url_base = 'https://hd-space.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -112,7 +112,7 @@ class HDSpaceProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers = [tryInt(x.get_text().strip())
                                                      for x in tr.find_all('a', href=rc['peers'])]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

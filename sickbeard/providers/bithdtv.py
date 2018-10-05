@@ -28,7 +28,7 @@ from lib.unidecode import unidecode
 class BitHDTVProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'BitHDTV', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'BitHDTV', cache_update_freq=15)
 
         self.url_home = ['https://www.bit-hdtv.com/']
 
@@ -97,8 +97,8 @@ class BitHDTVProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self.freeleech and not tr.attrs.get('bgcolor').endswith('FF99') or \
-                                        self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers, self.freeleech and (
+                                        not tr.attrs.get('bgcolor').endswith('FF99'))):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

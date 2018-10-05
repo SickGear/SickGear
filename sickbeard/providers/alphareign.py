@@ -72,7 +72,7 @@ class AlphaReignProvider(generic.TorrentProvider):
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     tr['data-%s' % x].strip() for x in 'seeders', 'leechers', 'size']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 title = tr['data-name'].strip()

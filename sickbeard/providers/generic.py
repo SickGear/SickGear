@@ -1133,11 +1133,19 @@ class GenericProvider(object):
         :param count: count of successfully processed items
         :param url: source url of item(s)
         """
+        stats = map(lambda (attr, _): ('_reject_%s' % attr, _),
+                    filter(lambda (a, t): all([getattr(self, '_reject_%s' % a, None)]),
+                           (('seed', '%s <min seeders'), ('leech', '%s <min leechers'), ('notfree', '%s not freeleech'),
+                            ('unverified', '%s unverified'), ('container', '%s unwanted containers'))))
+        rejects = ', '.join((text % getattr(self, attr, '')).strip() for attr, text in stats)
+        for (attr, _) in stats:
+            setattr(self, attr, None)
+
         if not self.should_skip():
             str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
-            logger.log((u'%s %s in response from %s' % (('No' + str1, count)[0 < count], (
+            logger.log((u'%s %s in response%s from %s' % (('No' + str1, count)[0 < count], (
                 '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
-                re.sub('(\s)\s+', r'\1', url))).replace('%%', '%'))
+                ('', ' (rejects: %s)' % rejects)[bool(rejects)], re.sub('(\s)\s+', r'\1', url))).replace('%%', '%'))
 
     def check_auth_cookie(self):
 
@@ -1325,6 +1333,11 @@ class TorrentProvider(GenericProvider):
             self.cache.update_freq = cache_update_freq
         self.ping_freq = update_freq
         self.ping_skip = None
+        self._reject_seed = None
+        self._reject_leech = None
+        self._reject_unverified = None
+        self._reject_notfree = None
+        self._reject_container = None
 
     @property
     def url(self):
@@ -1361,8 +1374,25 @@ class TorrentProvider(GenericProvider):
         return items
 
     def _peers_fail(self, mode, seeders=0, leechers=0):
+        """ legacy function used by a custom provider, do not remove """
 
         return 'Cache' != mode and (seeders < getattr(self, 'minseed', 0) or leechers < getattr(self, 'minleech', 0))
+
+    def _reject_item(self, seeders=0, leechers=0, freeleech=None, verified=None, container=None):
+        reject = False
+        for condition, attr in filter(lambda (cond, a): all([cond]), (
+                (seeders < getattr(self, 'minseed', 0), 'seed'),
+                (leechers < getattr(self, 'minleech', 0), 'leech'),
+                (all([freeleech]), 'notfree'),
+                (all([verified]), 'unverified'),
+                (all([container]), 'container'),
+        )):
+            reject = True
+            attr = '_reject_%s' % attr
+            rejected = getattr(self, attr, None)
+            setattr(self, attr, 1 if not rejected else 1 + rejected)
+
+        return reject
 
     def get_quality(self, item, anime=False):
 

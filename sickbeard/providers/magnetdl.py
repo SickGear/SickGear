@@ -29,7 +29,7 @@ class MagnetDLProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'MagnetDL', cache_update_freq=6)
+        generic.TorrentProvider.__init__(self, 'MagnetDL')
 
         self.url_base = 'http://www.magnetdl.com/'
 
@@ -78,7 +78,7 @@ class MagnetDLProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

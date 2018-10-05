@@ -89,7 +89,7 @@ class NcoreProvider(generic.TorrentProvider):
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     tr.find('div', class_=x).get_text().strip()
                                     for x in 'box_s2', 'box_l2', 'box_meret2']]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 anchor = tr.find('a', href=rc['info'])

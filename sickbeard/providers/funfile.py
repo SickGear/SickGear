@@ -92,7 +92,7 @@ class FunFileProvider(generic.TorrentProvider):
                                     tr, {'seed': r'(?:up\.gif|seed|s/l)', 'leech': r'(?:down\.gif|leech|peers)'})
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
-                                if None is tr.find('a', href=rc['cats']) or self._peers_fail(mode, seeders, leechers):
+                                if None is tr.find('a', href=rc['cats']) or self._reject_item(seeders, leechers):
                                     continue
 
                                 title = (info.attrs.get('title') or info.get_text()).strip()

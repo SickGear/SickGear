@@ -81,7 +81,7 @@ class BeyondHDProvider(generic.TorrentProvider):
                     for item in data_json['results']:
 
                         seeders, leechers = item.get('seeders', 0), item.get('leechers', 0)
-                        if self._peers_fail(mode, seeders, leechers):
+                        if self._reject_item(seeders, leechers):
                             continue
                         title, download_url = item.get('file'), self._link(item.get('get'))
                         if title and download_url:

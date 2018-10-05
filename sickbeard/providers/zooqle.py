@@ -85,7 +85,7 @@ class ZooqleProvider(generic.TorrentProvider):
                                 stats = rc['peers'].findall(
                                     (cells[head['peers']].find(class_='progress') or {}).get('title', ''))
                                 seeders, leechers = any(stats) and [tryInt(x) for x in stats[0]] or (0, 0)
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
 
                                 info = cells[1].find('a', href=rc['info']) or cells[0].find('a', href=rc['info'])

@@ -128,8 +128,8 @@ class HDBitsProvider(generic.TorrentProvider):
                     try:
                         seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in
                                                                           'seeders', 'leechers', 'size']]
-                        if self._peers_fail(mode, seeders, leechers)\
-                                or self.freeleech and re.search('(?i)no', item.get('freeleech', 'no')):
+                        if self._reject_item(seeders, leechers, self.freeleech and (
+                                re.search('(?i)no', item.get('freeleech', 'no')))):
                             continue
 
                         title = item['name']

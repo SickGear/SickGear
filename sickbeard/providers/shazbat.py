@@ -32,7 +32,7 @@ class ShazbatProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'Shazbat', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'Shazbat', cache_update_freq=15)
 
         self.url_base = 'https://www.shazbat.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
@@ -114,7 +114,7 @@ class ShazbatProvider(generic.TorrentProvider):
                                 stats = cells[head['leech']].get_text().strip()
                                 seeders, leechers = [(tryInt(x[0], 0), tryInt(x[1], 0)) for x in
                                                      re.findall('(?::(\d+))(?:\W*[/]\W*:(\d+))?', stats) if x[0]][0]
-                                if self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers):
                                     continue
                                 sizes = [(tryInt(x[0], x[0]), tryInt(x[1], False)) for x in
                                          re.findall('([\d.]+\w+)?(?:\s*[(\[](\d+)[)\]])?', stats) if x[0]][0]

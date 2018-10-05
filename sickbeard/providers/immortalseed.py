@@ -86,7 +86,7 @@ class ImmortalSeedProvider(generic.TorrentProvider):
                     try:
                         seeders, leechers, size = [tryInt(n, n) for n in [
                             rc[x].findall(item.summary)[0].strip() for x in 'seed', 'leech', 'size']]
-                        if self._peers_fail(mode, seeders, leechers):
+                        if self._reject_item(seeders, leechers):
                             continue
                         title = rc['title'].sub(r'\1', item.title.strip())
                         download_url = self._link(rc['get'].findall(getattr(item, 'link', ''))[0])

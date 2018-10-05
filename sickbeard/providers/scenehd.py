@@ -28,7 +28,7 @@ from lib.unidecode import unidecode
 class SceneHDProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SceneHD', cache_update_freq=20)
+        generic.TorrentProvider.__init__(self, 'SceneHD', cache_update_freq=15)
 
         self.url_home = ['https://scenehd.org/']
 
@@ -89,10 +89,10 @@ class SceneHDProvider(generic.TorrentProvider):
                                 seeders, leechers, size = [tryInt(n, n) for n in
                                                            list(re.findall('^(\d+)[^\d]+?(\d+)', leechers)[0])
                                                            + re.findall('^[^\n\t]+', size)]
-                                if (self.confirmed and
-                                        any([tr.find('img', alt=rc['nuked']), tr.find('img', class_=rc['nuked'])])) \
-                                        or (self.freeleech and not tr.find('a', class_=rc['filter'])) \
-                                        or self._peers_fail(mode, seeders, leechers):
+                                if self._reject_item(seeders, leechers,
+                                                     self.freeleech and (not tr.find('a', class_=rc['filter'])),
+                                                     self.confirmed and (any([tr.find('img', alt=rc['nuked']),
+                                                                              tr.find('img', class_=rc['nuked'])]))):
                                     continue
 
                                 title = (info.attrs.get('title') or info.get_text()).strip()
