@@ -75,6 +75,8 @@ class QualityTests(unittest.TestCase):
             'Test.Show.S01E02.WEB.x264-GROUP',
             'Test.Show.S01E02.WEB.h265-GROUP',
             'Test.Show.S01E02.WEB.x265-GROUP',
+            'Test.Show.S01E02.WEB.VP9-GROUP',
+            'Test.Show.S01E02.WEB.AV1-GROUP',
             'Test.Show.S01E02.WEBRip.h264-GROUP',
             'Test.Show.S01E02.WEBRip.x264-GROUP'])
 
@@ -90,6 +92,7 @@ class QualityTests(unittest.TestCase):
             'Test.Show.S01E02.BDRIP.XViD-GROUP',
             'Test.Show.S01E02.BDRIP.DiVX-GROUP',
             'Test.Show.S01E02.BDRIP.x264-GROUP',
+            'Test.Show.S01E02.BDRIP.VP9-GROUP',
             'Test.Show.S01E02.BDRIP.WS.XViD-GROUP',
             'Test.Show.S01E02.BDRIP.WS.DiVX-GROUP',
             'Test.Show.S01E02.BDRIP.WS.x264-GROUP'])
@@ -97,6 +100,7 @@ class QualityTests(unittest.TestCase):
     def test_HDTV(self):
         self.check_quality_names(common.Quality.HDTV, [
             'Test.Show.S01E02.720p.HDTV.x264-GROUP',
+            'Test.Show.S01E02.720p.HDTV.VP9-GROUP',
             'Test.Show.S01E02.HR.WS.PDTV.x264-GROUP',
             'Test.Show.S01E02.720p.AHDTV.x264-GROUP'])
 
@@ -111,6 +115,7 @@ class QualityTests(unittest.TestCase):
     def test_FULLHDTV(self):
         self.check_quality_names(common.Quality.FULLHDTV, [
             'Test.Show.S01E02.1080p.HDTV.x264-GROUP',
+            'Test.Show.S01E02.1080p.HDTV.vp9-GROUP',
             'Test.Show.S01E02.1080p.AHDTV.x264-GROUP'])
 
     def test_HDWEBDL(self):
@@ -131,6 +136,7 @@ class QualityTests(unittest.TestCase):
             'Test.Show.S01E02.720p.WEB.x264-GROUP',
             'Test.Show.S01E02.720p.WEB.h265-GROUP',
             'Test.Show.S01E02.720p.WEB.x265-GROUP',
+            'Test.Show.S01E02.720p.WEB.vp9-GROUP',
             'Test.Show.S01E02.720p.WEBRip.h264-GROUP',
             'Test.Show.S01E02.720p.WEBRip.x264-GROUP'])
 
@@ -151,12 +157,14 @@ class QualityTests(unittest.TestCase):
             'Test.Show.S01E02.1080p.WEB.x264-GROUP',
             'Test.Show.S01E02.1080p.WEB.h265-GROUP',
             'Test.Show.S01E02.1080p.WEB.x265-GROUP',
+            'Test.Show.S01E02.1080p.WEB.VP9-GROUP',
             'Test.Show.S01E02.1080p.WEBRip.h264-GROUP',
             'Test.Show.S01E02.1080p.WEBRip.x264-GROUP'])
 
     def test_HDBLURAY(self):
         self.check_quality_names(common.Quality.HDBLURAY, [
             'Test.Show.S01E02.720p.BluRay.x264-GROUP',
+            'Test.Show.S01E02.720p.BluRay.vp9-GROUP',
             'Test.Show.S01E02.720p.HDDVD.x264-GROUP',
             'Test.Show.S01E02.720p.Blu-ray.x264-GROUP'])
 
@@ -165,13 +173,15 @@ class QualityTests(unittest.TestCase):
             'Test.Show.S01E02.1080p.BluRay.x264-GROUP',
             'Test.Show.S01E02.1080p.HDDVD.x264-GROUP',
             'Test.Show.S01E02.1080p.Blu-ray.x264-GROUP',
+            'Test.Show.S01E02.1080p.Blu-ray.vp9-GROUP',
             'Test Show S02 1080p Remux AVC FLAC 5.1'])
 
     def test_UHD4KWEB(self):
         self.check_quality_names(common.Quality.UHD4KWEB, [
             'Test.Show.S01E02.2160p.WEBRip.h264-GROUP',
             'Test.Show.S01E02.2160p.WEBRip.x264-GROUP',
-            'Test.Show.S01E02.2160p.WEBRip.x265-GROUP'])
+            'Test.Show.S01E02.2160p.WEBRip.x265-GROUP',
+            'Test.Show.S01E02.2160p.WEBRip.vp9-GROUP'])
 
     def test_UNKNOWN(self):
         self.check_quality_names(common.Quality.UNKNOWN, ['Test.Show.S01E02-SiCKGEAR'])
