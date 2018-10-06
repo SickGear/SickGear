@@ -40,6 +40,7 @@
 * Fix sorting results
 * Change remove deprecated files
 * Use current ep status data for finished search items for correct UI updates
+* Change prevent left/right keypresses while used in the add show input field from also moving the Episode view carousel
 
 
 ### 0.17.10 (2018-10-05 20:15:00 UTC)
