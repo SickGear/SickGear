@@ -34,6 +34,8 @@
 * Change add pulsing effect to warning indicators
 * Add show search ability to menu Shows/"Add show"
 * Change simplify options on final step of Add show
+* Add quick set suggestion statuses in Episode Status Manager. Helpful for orphan "Snatches", or changes to "Skipped" etc.
+* Change DisplayShow manual search button busy animation
 
 
 [develop changelog]
@@ -41,6 +43,8 @@
 * Change remove deprecated files
 * Use current ep status data for finished search items for correct UI updates
 * Change prevent left/right keypresses while used in the add show input field from also moving the Episode view carousel
+* Change DisplayShow row change to wanted colour on manual search
+* Fix DisplayShow wheel animation not displaying
 
 
 ### 0.17.10 (2018-10-05 20:15:00 UTC)
@@ -106,6 +110,8 @@
 
 ### 0.17.0 (2018-08-24 23:40:00 UTC)
 
+* Add ability to set episodes to suggested statuses in Episode Status Manager. Useful for orphaned "Snatches" or to undo
+  change to "Skipped", "Ignored", or "Wanted" to a previously known quality
 * Change save config values only where reqd. reduces file by up to 75%
 * Add 'Map an NZBGet "DestDir"' setting to config/Search/NZB Results tab (select NZBGet)
 * Add TVDB, TheXem, and GitHub buttons to page History/Layout "Provider fails" that fetches a site Up/Down report
