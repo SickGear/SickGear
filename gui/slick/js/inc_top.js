@@ -67,6 +67,8 @@ $(function(){
 	$('#add-show-name input')
 		.hover(removeHref)
 		.on('click', function(e){ e.stopPropagation(); })
+		.on('focus', function(){$.SickGear.PauseCarousel = !0;})
+		.on('blur', function(){delete $.SickGear.PauseCarousel;})
 		.keydown(function(e){
 			if (13 === e.keyCode) {
 				e.stopPropagation();

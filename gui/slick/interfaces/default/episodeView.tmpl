@@ -893,9 +893,10 @@ window.setInterval('location.reload(true)', 30*60000); // Refresh every xx minut
 $('#Carousel').carousel({interval: 0});
 
 $(document).bind('keyup', function(e) {
-    return ((!(e.hasOwnProperty('ctrlKey') && e.ctrlKey) && !(e.hasOwnProperty('altKey') && e.altKey)) && (
-        (39 == e.which && $('.carousel').carousel('next')) ||
-        (37 == e.which && $('.carousel').carousel('prev'))) || !0);
+	return (/undefined/i.test($.SickGear.PauseCarousel) &&
+		(!(e.hasOwnProperty('ctrlKey') && e.ctrlKey) && !(e.hasOwnProperty('altKey') && e.altKey)) && (
+		(39 == e.which && $('.carousel').carousel('next')) ||
+		(37 == e.which && $('.carousel').carousel('prev'))) || !0);
 });
 //-->
 </script>
