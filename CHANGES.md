@@ -1,4 +1,15 @@
-﻿### 0.17.10 (2018-10-05 20:15:00 UTC)
+﻿### 0.17.11 (2018-10-14 18:43:00 UTC)
+
+* Fix post process "Permission denied" caused by removing the !sync file too early in onTxComplete
+* Change onTxComplete copy files logic to mitigate potential issues
+* Change bump onTxComplete version to 1.1
+* Change onTxComplete supported qBittorrent version is 4.13 and newer
+* Change onTxComplete supported uTorrent is 2.2.1
+* Add onTxComplete.bat logging to onTxComplete.log
+* Fix issue with TVChaosUK
+
+
+### 0.17.10 (2018-10-05 20:15:00 UTC)
 
 * Change improve log stats for rejected items at torrent providers
 * Change when a TVChaosUK response is invalid, wait then retry
