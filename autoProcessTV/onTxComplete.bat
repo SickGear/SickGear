@@ -2,21 +2,25 @@
 GOTO :main
 *******************************************************************************
 
-onTxComplete.bat v1.0 for SickGear
+onTxComplete.bat v1.1 for SickGear
 
   Script to copy select files to a location for SickGear to post process.
 
-  This allows the 'Move' post process episode method to be used so that
-  seeding files are not post processed over and over.
+  This is used with the 'Move' post process episode method
+  so that seeding files are not post processed over and over.
 
 *******************************************************************************
 
 Supported clients
 -----------------
 * Deluge clients 1.3.15 and newer clients
-* qBittorrent 3.3.12 and newer clients
+* qBittorrent 4.13 and newer clients
 * Transmission 2.84 and newer clients
-* uTorrent 2.2.1 and newer clients
+* uTorrent 2.2.1
+
+Supported OS
+------------
+* Windows 10, 8, 7, Vista
 
 
 How this works
@@ -33,13 +37,13 @@ param1 = Isolation path where to copy completed downloads for SG to process.
 
 param2 = This filter value is compared with either a client set label, or the
          tail of the path where the client downloaded seeding file is located.
-         Every download is skipped except those that compare successfully.
+         Matching downloads are copied into isolation.
 
 param3 = Client set downloaded item category or label (e.g. "%L")
 
 param4 = Client set downloaded item content path (e.g. "%F", "%D\%F" etc)
 
-The values of params 3 and 4 can be found documented in the download client or
+Token values for params 3 and 4 are found documented in the download client or
 at the client webiste. Other clients may be able to replace param3 and param4
 to fit (see examples).
 
@@ -117,7 +121,7 @@ to the config file param2 value to isolate SG downloads from everything else.
    set "Downloaded files location" to a created folder with name ending in the
    config file value of param2 e.g. [path]\[param2]
 
-Reference: https://trac.transmissionbt.com/wiki/Scripts
+Reference: https://web.archive.org/web/20171009055508/https://trac.transmissionbt.com/wiki/Scripts#OnTorrentCompletion
 
 
 For uTorrent
@@ -130,7 +134,7 @@ Use one cmd below replacing "[script dir]" with the path to this script
    cmd /c start "" /B [script dir]\onTxComplete.bat "F:\sg_pp" "SG" "%L" "%D\%F"
 
 It is advised to not use the uTorrent "Move completed downloads" feature because
-it runs scripts before move actions complete, bad. Consider switching.
+it runs scripts before move actions complete, bad. Consider switching clients.
 
 Reference: https://stackoverflow.com/a/29071224
 
@@ -138,7 +142,9 @@ Reference: https://stackoverflow.com/a/29071224
 rem ***************************************************************************
 rem Set 1 to enable test mode output (default: blank)
 SET testmode=
+SET keeptmp=
 rem ***************************************************************************
+chcp 65001 >NUL 2>NUL
 SETLOCAL
 SETLOCAL ENABLEEXTENSIONS
 SETLOCAL ENABLEDELAYEDEXPANSION
@@ -154,6 +160,7 @@ IF "" NEQ "%~4" (
   SET "sg_label=%~2"
   SET "client_label=%~3"
   SET "content_path=%~4"
+  IF "1" NEQ "!testmode!" IF "" NEQ "%~5" SET "testmode=1"
   SET "check_label_path_tail="
 
 ) ELSE (
@@ -162,22 +169,20 @@ IF "" NEQ "%~4" (
   SET "cfgfile=!install_dir!onTxComplete.cfg"
   FOR /F "eol=; tokens=1,2 delims==" %%a IN (!cfgfile!) DO (
     SET "%%a=%%b"
-    IF "1" == "!testmode!" (
-      ECHO Config ... %%a = %%b
-    )
+    CALL:Log "Config ... %%a = %%b"
   )
 
   SET "nullvar="
   IF NOT DEFINED param1 SET "nullvar=1"
   IF NOT DEFINED param2 SET "nullvar=1"
   IF DEFINED nullvar (
-    ECHO Error: Issue while reading file !cfgfile!
+    CALL:Log "Error: Issue while reading file !cfgfile!" "force"
     GOTO:exit
   )
   SET "sg_path=!param1!"
   SET "sg_label=!param2!"
 
-  rem Attempt to read Transmision environment variables
+  rem Attempt to read Transmission environment variables
   SET "client_name=%TR_TORRENT_NAME%"
   SET "client_path=%TR_TORRENT_DIR%"
 
@@ -188,9 +193,10 @@ IF "" NEQ "%~4" (
   IF DEFINED nullvar (
 
     rem With no Transmission vars, attempt to read input parameters from Deluge
+    rem Deluge sends id, name, and path
     IF "" == "%~3" (
 
-      ECHO Error: %0 not enough input params, Deluge sends id, name, and path
+      CALL:Log "Error: not enough input params, read comments in %0 for usage" "force"
       GOTO :exit
 
     )
@@ -218,6 +224,7 @@ IF "\?\" == "!content_path:~0,3!" SET "content_path=!content_path:~3!"
 rem Remove any trailing slashes from paths
 IF "\" == "!sg_path:~-1!" SET "sg_path=!sg_path:~0,-1!"
 IF "\" == "!content_path:~-1!" SET "content_path=!content_path:~0,-1!"
+IF "\" == "!client_path:~-1!" SET "client_path=!client_path:~0,-1!"
 
 
 IF DEFINED check_label_path_tail (
@@ -237,19 +244,22 @@ IF DEFINED check_label_path_tail (
 
 rem Create ".!sync" filename
 SET "syncext=^!sync"
-SET "syncfile=!sg_path!\copying.!syncext!"
-
-
-IF "1" == "!testmode!" (
-
-  ECHO Running in ***test mode*** - files will not be copied
-  ECHO param1 = !sg_path!
-  ECHO param2 = !sg_label!
-  ECHO param3 = !client_label!
-  ECHO param4 = !content_path!
-  ECHO !syncfile!
-
+SET "basefile=!sg_path!\copying"
+SET "syncfile=!basefile!.!syncext!" & SET "files=!basefile!.files.txt" & SET "tmp=!basefile!.tmp"
+SET num=2
+:loopnum
+IF EXIST "!syncfile!" (
+  SET "syncfile=!basefile!-!num!.!syncext!" & SET "files=!basefile!-!num!.files.txt" & SET "tmp=!basefile!-!num!.tmp"
+  SET /A num+=1 & GOTO :loopnum
 )
+
+IF "1" == "!testmode!" CALL:Log "Running in ***test mode*** - files will not be copied"
+CALL:Log "**** cmd = ""%~f0"""
+CALL:Log "  param1 = ""!sg_path!"""
+CALL:Log "  param2 = ""!sg_label!"""
+CALL:Log "  param3 = ""!client_label!"""
+CALL:Log "  param4 = ""!content_path!"""
+CALL:Log "syncfile = ""!syncfile!"""
 
 
 CALL:StartsWith "!client_label!" "!sg_label!" && (
@@ -259,35 +269,69 @@ CALL:StartsWith "!client_label!" "!sg_label!" && (
   IF EXIST "!sg_path!" (
 
     rem Determine file/folder as these need to be handled differently
-    SET attr=%~a4
-    IF /I "dir" == "!attr:~0,1!ir" (
+    FOR %%f IN ("!content_path!") DO SET attr=%%~af & SET attr=!attr:~0,1!ir
+    IF /I "dir" == "!attr!" (
 
       rem Create a file to prevent SG premature post processing (ref: step (d)) ..
-      ECHO Copying folder "!content_path!" to "!sg_path!" > "!syncfile!"
+      ECHO Copying folder "!content_path!" to "!sg_path!">"!syncfile!"
 
-      FOR /F "tokens=*" %%a IN ('DIR "!content_path!" /S/B') DO (
+      PUSHD "!content_path!"
+
+      rem Copy from; `parent/` to `{pp}/parent/` and `parent/.../child/` to `{pp}/parent/child/`
+      FOR %%f IN ("!content_path!.") DO SET "parent=\%%~nxf"
+
+      rem Sort by largest to smallest filesize for copy
+      SET "delim=	"
+      FORFILES /P "!content_path!" /S /C "CMD /C IF FALSE == @isdir ECHO @fsize!delim!@relpath!delim!@file" > "!files!"
+      (
+        FOR /F "tokens=1,2* delims=	" %%a IN ('TYPE "!files!"') DO (
+          SET "size=...............%%a"
+          SET "relpath=%%b"
+          ECHO !size:~-15!!delim!!relpath:%%~c=!!delim!%%c
+        )
+      )>"!tmp!"
+      (
+        FOR /F "tokens=1* delims=.	" %%a IN ('SORT /R "!tmp!"') DO ECHO %%b
+      )>"!files!"
+      IF "1" NEQ "!keeptmp!" IF EXIST "!tmp!" DEL "!tmp!"
+
+      FOR /F "tokens=1* delims=	" %%a IN ('TYPE "!files!"') DO (
+        rem Copy
+        SET "child="
+        SET "relpath=%%~a"
+        IF ".\" NEQ "!relpath!" FOR %%f IN ("!relpath:~0,-1!.") DO SET "child=\%%~nxf"
+        SET "filename=%%~b"
+        SET "dstdir=!sg_path!!parent!!child!"
+        SET "dstfile=!dstdir!\!filename!"
+        SET "srcfile=!relpath!!filename!"
 
         IF "1" == "!testmode!" (
 
-          ECHO XCOPY "%%a" "!sg_path!\.%%~pa" /Y/I/S
+          IF NOT EXIST "!dstdir!" CALL:Log "MKDIR ""!dstdir!"""
+          IF NOT EXIST "!dstfile!" ( CALL:Log "XCOPY ""!srcfile!"" ""!dstfile!*"" /H /Y /J >NUL 2>NUL"
+            ) ELSE ( CALL:Log "Skipping, file exists ""!dstfile!""" )
 
         ) ELSE (
 
-          XCOPY "%%a" "!sg_path!\.%%~pa" /Y/I/S >NUL 2>NUL
-          IF EXIST "!syncfile!" DEL "!syncfile!"
+          IF NOT EXIST "!dstdir!" MKDIR "!dstdir!"
+          IF NOT EXIST "!dstfile!" XCOPY "!srcfile!" "!dstfile!*" /H /Y /J >NUL 2>NUL
 
         )
 
       )
 
+      IF "1" NEQ "!keeptmp!" IF EXIST "!files!" DEL "!files!"
+      IF "1" NEQ "!testmode!" IF EXIST "!syncfile!" DEL "!syncfile!"
+      POPD
+
     ) ELSE (
 
       rem Create a file to prevent SG premature post processing (ref: step (d)) ..
-      ECHO Copying file "!content_path!" to "!sg_path!" > "!syncfile!"
+      ECHO Copying file "!content_path!" to "!sg_path!">"!syncfile!"
 
       IF "1" == "!testmode!" (
 
-        ECHO COPY "!content_path!" "!sg_path!\" /Y
+        CALL:Log "COPY ""!content_path!"" ""!sg_path!\"" /Y"
 
       ) ELSE (
 
@@ -312,6 +356,25 @@ SET "txt=%~1"
 SET "str=%~2"
 IF DEFINED str CALL SET "s=%str%%%txt:*%str%=%%"
 IF /I "%txt%" NEQ "%s%" SET=2>NUL
+EXIT /B
+
+:Log text --  Append text to logfile, and output text to stdio if testmode is "1"
+SETLOCAL
+SET "logfile=!install_dir!onTxComplete.log"
+SET "txt=%~1"
+SET "txt=!txt:""="!"
+IF "1" == "!testmode!" (
+  ECHO !txt!
+) ELSE IF "" NEQ "%~2" (
+  ECHO !txt!
+)
+
+SET "TS=%DATE% %TIME%"
+IF EXIST "!logfile!" (
+  ECHO !TS! !txt!>>"!logfile!"
+) ELSE (
+  ECHO !TS! !txt!>"!logfile!"
+)
 EXIT /B
 rem ****************
 rem ****************

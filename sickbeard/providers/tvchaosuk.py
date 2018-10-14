@@ -89,7 +89,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html) or not soup:
+                    if not html or self._has_no_results(html) or not torrent_table:
                         raise generic.HaltParseException
 
                     torrent_rows = torrent_table.find_all('tr')
