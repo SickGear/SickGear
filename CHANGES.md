@@ -24,6 +24,7 @@
 * Add search results sort by newest aired
 * Add search results sort by oldest aired
 * Change requirements.txt Cheetah >= 3.1.0
+* Add bB torrent provider
 * Add Snowfl torrent provider
 * Fix manual search button on displayShow and episode view page
 * Change feedback result of manual search on the clicked button image/tooltip

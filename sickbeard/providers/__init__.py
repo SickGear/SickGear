@@ -30,7 +30,7 @@ __all__ = [
     # usenet
     'omgwtfnzbs',
     # torrent
-    'alpharatio', 'alphareign', 'beyondhd', 'bithdtv', 'blutopia', 'btn',
+    'alpharatio', 'alphareign', 'bb', 'beyondhd', 'bithdtv', 'blutopia', 'btn',
     'custom01', 'custom11', 'dh', 'ettv', 'eztv', 'fano', 'filelist', 'funfile', 'grabtheinfo',
     'hdbits', 'hdme', 'hdspace', 'hdtorrents', 'horriblesubs',
     'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'morethan', 'nebulance', 'ncore', 'nyaa',
