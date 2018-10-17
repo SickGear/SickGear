@@ -7,7 +7,7 @@
 * Update feedparser 5.2.1 (5646f4c) to 5.2.1 (2b11c80)
 * Update profilehooks module 1.10.0 (0ce1e29) to 1.10.1 (fdbf19d)                   
 * Update PySocks 1.6.8 (524ceb4) to 1.6.8 (b687a34)
-* Update Requests library 2.15.1 (282b01a) to 2.19.1 (33b41c7)
+* Update Requests library 2.15.1 (282b01a) to 2.19.1 (2c6a842)
 * Update scandir module 1.6 (c3592ee) to 1.9.0 (9ab3d1f)
 * Update SimpleJSON 3.13.2 (6ffddbe) to 3.16.0 (e2a54f7)
 * Update Tornado Web Server 5.0.1 (2b2a220a) to 5.1.1 (cc2cf07)
@@ -17,12 +17,12 @@
 * Add urllib3 release 1.23 (7c216f4)
 * Change if old scandir binary module is installed, fallback to slow Python module and inform user to upgrade binary
 * Change site services tester to fallback to http if error with SSL
-* Change try to use folder name when filename does not contain show name
+* Change postprocessor try to use folder name when filename does not contain show name
 * Change force redirects in TVMaze API to be https
-* Add display first 20 results with link to display more
-* Add search results sort by Z to A
-* Add search results sort by newest aired
-* Add search results sort by oldest aired
+* Add display first 20 results in "Add show" view with a link to display more
+* Add search results sort by Z to A to "Add show" view
+* Add search results sort by newest aired to "Add show" view
+* Add search results sort by oldest aired to "Add show" view
 * Change requirements.txt Cheetah >= 3.1.0
 * Add bB torrent provider
 * Add Snowfl torrent provider
@@ -32,7 +32,7 @@
 * Fix displayShow bug where click holding on a season btn and then dragging away leaves 50% white
 * Change Show List text "Search Show Name" to "Filter Show Name", and "Reset Search" to "Reset Filter" for clarity
 * Change when getting a non existing folder, add the failed location to log messages
-* Change add pulsing effect to warning indicators
+* Change add pulsing effect to warning indicators in navbar
 * Add show search ability to menu Shows/"Add show"
 * Change simplify options on final step of Add show
 * Add quick set suggestion statuses in Episode Status Manager. Helpful for orphan "Snatches", or changes to "Skipped" etc.
@@ -46,6 +46,7 @@
 * Change prevent left/right keypresses while used in the add show input field from also moving the Episode view carousel
 * Change DisplayShow row change to wanted colour on manual search
 * Fix DisplayShow wheel animation not displaying
+* Update Requests 2.19.1 (33b41c7) to 2.19.1 (2c6a842)
 
 
 ### 0.17.11 (2018-10-14 18:43:00 UTC)
