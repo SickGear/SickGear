@@ -99,9 +99,7 @@ function uiUpdateComplete(data) {
 						imgTip = 'Click for manual search';
 						link$.attr('class', 'ep-search').attr(attrName, href.replace('retry', 'search'));
 					}
-					if (/good/i.test(ep.statusoverview)) {
-						imgCls = uiOptions.searchImage;
-					} else if (/snatched/i.test(ep.statusoverview)) {
+					if (/good|qual|snatched/i.test(ep.statusoverview)) {
 						imgCls = uiOptions.imgYes;
 					} else {
 						imgTip = 'Last manual search failed. Click to try again';
