@@ -47,6 +47,7 @@
 * Change DisplayShow row change to wanted colour on manual search
 * Fix DisplayShow wheel animation not displaying
 * Update Requests 2.19.1 (33b41c7) to 2.19.1 (2c6a842)
+* Change add qual response to finished handler and change "good" from magnifier to tick
 
 
 ### 0.17.11 (2018-10-14 18:43:00 UTC)
