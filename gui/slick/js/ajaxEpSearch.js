@@ -16,11 +16,15 @@ var dev = !1,
 
 PNotify.prototype.options.maxonscreen = 5;
 
-$(document).ready(function () {
+$(function () {
 
 	ajaxConsumer.checkManualSearches();
 
 });
+
+var baseUrl = function() {
+	return $.SickGear.Root;
+};
 
 var ajaxConsumer = function () {
 	var that = this;
@@ -33,7 +37,7 @@ var ajaxConsumer = function () {
 			logInfo('ajaxConsumer.checkManualSearches()');
 			var showId = $('#showID').val();
 			$.getJSON({
-				url: $.SickGear.Root + '/home/search_q_progress' + (/undefined/i.test(showId) ? '' : '?show=' + showId),
+				url: baseUrl() + '/home/search_q_progress' + (/undefined/i.test(showId) ? '' : '?show=' + showId),
 				timeout: 15000 // timeout request after 15 secs
 			})
 			.done(function (data) {
@@ -57,7 +61,6 @@ var ajaxConsumer = function () {
 				logInfo(that.pollInterval ? '^-- ' + that.pollInterval/1000 + 's to next work' : '^-- no more work');
 				logInfo('====');
 			});
-
 		}
 	};
 }();
@@ -66,15 +69,16 @@ function uiUpdateComplete(data) {
 	var isFinished = !0;
 	$.each(data.episodes, function (name, ep) {
 
-        var sxe = ep.season + 'x' + ep.episode,
-			displayShow$ = $('#' + sxe).closest('tr'),
+		var sxe = ep.season + 'x' + ep.episode,
+			displayShowEp$ = $('#' + sxe),
+			displayShow$ = displayShowEp$.closest('tr'),
 			episodeView$ = $('[data-show-id="' + ep.showindexer + '_' + ep.showindexid + '_' + sxe + '"]'),
 			link$ = (displayShow$.length ? displayShow$ : episodeView$).find('.ep-search, .ep-retry'),
 			uiOptions = $.ajaxEpSearch.defaults;
 
 		logInfo('^-- data item', name, ep.searchstate, ep.showindexid, sxe, ep.statusoverview);
 
-        if (link$.length) {
+		if (link$.length) {
 			var htmlContent = '', imgTip, imgCls;
 
 			switch (ep.searchstate) {
@@ -82,12 +86,14 @@ function uiUpdateComplete(data) {
 					isFinished = !1;
 					imgUpdate(link$, 'Searching', uiOptions.loadingImage);
 					disableLink(link$);
+					uiWanted(displayShow$);
 					htmlContent = '[' + ep.searchstate + ']';
 					break;
 				case 'queued':
 					isFinished = !1;
 					imgUpdate(link$, 'Queued', uiOptions.queuedImage);
 					disableLink(link$);
+					uiWanted(displayShow$);
 					htmlContent = '[' + ep.searchstate + ']';
 					break;
 				case 'finished':
@@ -101,6 +107,8 @@ function uiUpdateComplete(data) {
 					}
 					if (/good|qual|snatched/i.test(ep.statusoverview)) {
 						imgCls = uiOptions.imgYes;
+						// unhide displayshow row checkbox on success, e.g. unaired eps hide it
+						displayShowEp$.removeClass('hide');
 					} else {
 						imgTip = 'Last manual search failed. Click to try again';
 						imgCls = uiOptions.imgNo;
@@ -110,8 +118,7 @@ function uiUpdateComplete(data) {
 
 					// update row status
 					if (ep.statusoverview) {
-						link$.closest('tr')
-							.removeClass('skipped wanted qual good unaired snatched')
+						uiClearClass(link$.closest('tr'))
 							.addClass(ep.statusoverview);
 					}
 					// update quality text for status column
@@ -124,8 +131,8 @@ function uiUpdateComplete(data) {
 			}
 
 			// update the status area
-	        link$.closest('.col-search').siblings('.col-status').html(htmlContent);
-        }
+			link$.closest('.col-search').siblings('.col-status').html(htmlContent);
+		}
 	});
 	return isFinished;
 }
@@ -147,10 +154,17 @@ function imgUpdate(link$, tip, cls) {
 		.removeClass('spinner2 queued search no yes').addClass(cls);
 }
 
+function uiClearClass(el$) {
+	return el$.removeClass('skipped wanted qual good unaired snatched') || el$;
+}
+
+function uiWanted(el$) {
+	uiClearClass(el$).addClass('wanted');
+}
+
 function rowRestore() {
 	$('a[data-status]').each(function() {
-		$(this).closest('tr')
-			.removeClass('skipped wanted qual good unaired snatched')
+		uiClearClass($(this).closest('tr'))
 			.addClass($(this).attr('data-rowclass'));
 		$(this).closest('.col-search').siblings('.col-status').html($(this).attr('data-status'));
 		imgUpdate($(this),
@@ -177,11 +191,11 @@ function rowRestore() {
 	$.fn.ajaxEpSearch = function(uiOptions) {
 		uiOptions = $.extend( {}, $.ajaxEpSearch.defaults, uiOptions);
 
-	    $('.ep-search, .ep-retry').on('click', function(event) {
-	    	event.preventDefault();
-	    	logInfo(($(this).hasClass('ep-search') ? 'Search' : 'Retry') + ' clicked');
+		$('.ep-search, .ep-retry').on('click', function(event) {
+			event.preventDefault();
+			logInfo(($(this).hasClass('ep-search') ? 'Search' : 'Retry') + ' clicked');
 
-	    	// check if we have disabled the click
+			// check if we have disabled the click
 			if (!!getAttr($(this), 'data-href')) {
 				logInfo('Already queued, not downloading!');
 				return !1;
@@ -204,11 +218,9 @@ function rowRestore() {
 			}
 
 			imgUpdate(link$, 'Loading', uiOptions.loadingImage);
-			link$.closest('tr')
-				.removeClass('skipped wanted qual good unaired snatched')
-				.addClass('wanted');
+			uiWanted(link$.closest('tr'));
 
-	        $.getJSON({url: $(this).attr('href'), timeout: 15000})
+			$.getJSON({url: baseUrl() + $(this).attr('href'), timeout: 15000})
 				.done(function(data) {
 					logInfo('getJSON() data...', data);
 
@@ -222,8 +234,8 @@ function rowRestore() {
 						// prevent further interaction
 						disableLink(link$);
 
-						img = 'queueing' === data.result
-							? ['Queueing', uiOptions.queuedImage]
+						img = 'queuing' === data.result
+							? ['Queuing', uiOptions.queuedImage]
 							: ['Searching', uiOptions.loadingImage];
 					}
 
@@ -233,8 +245,8 @@ function rowRestore() {
 				})
 				.fail(function() { rowRestore(); });
 
-	        // prevent following the clicked link
-	        return !1;
-	    });
+			// prevent following the clicked link
+			return !1;
+		});
 	};
 })();

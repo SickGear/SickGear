@@ -2780,7 +2780,7 @@ class Home(MainHandler):
             sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)
 
             if None is ep_queue_item.success:  # invocation
-                result.update(dict(result=('success', 'queueing')[not ep_queue_item.started]))
+                result.update(dict(result=('success', 'queuing')[not ep_queue_item.started]))
             # elif ep_queue_item.success:
             #    return self.search_q_progress(str(ep_obj.show.indexerid))  # page refresh
 
