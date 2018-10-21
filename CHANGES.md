@@ -48,6 +48,9 @@
 * Fix DisplayShow wheel animation not displaying
 * Update Requests 2.19.1 (33b41c7) to 2.19.1 (2c6a842)
 * Change add qual response to finished handler and change "good" from magnifier to tick
+* Change reveal displayshow row checkbox on snatch success where hidden due to unaired ep
+* Change if displayshow page refreshed during manual search, update UI row with wanted status
+* Change correct queueing typo
 
 
 ### 0.17.11 (2018-10-14 18:43:00 UTC)

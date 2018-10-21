@@ -26,9 +26,7 @@
     #set never_aired = 0 < int($ep['season']) and 1 == int($ep['airdate'])
 		<tr class="#echo ' '.join([$Overview.overviewStrings[$ep_cats[$ep_str]], ('', 'airdate-never')[$never_aired], ('', 'archived')[$ARCHIVED == $Quality.splitCompositeStatus(int($ep['status']))[0]]])#">
 			<td class="col-checkbox">
-    #if $UNAIRED != int($ep['status'])
-				<input type="checkbox" class="epCheck" id="$ep_str" name="$ep_str">
-    #end if
+				<input type="checkbox" class="epCheck #echo 'hide' if $UNAIRED == int($ep['status']) else ''#" id="$ep_str" name="$ep_str">
 			</td>
 
     #set $nfo, $nfo_img = (('No', '-no'), ('Yes', ''))[int($ep['hasnfo'])]
