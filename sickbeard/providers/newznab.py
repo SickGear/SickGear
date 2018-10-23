@@ -235,6 +235,7 @@ class NewznabProvider(generic.NZBProvider):
         cats = {}
         all_cats = []
         xml_caps = self._get_caps_data()
+        old_api = False
         if None is not xml_caps:
             server_node = xml_caps.find('.//server')
             if None is not server_node:
@@ -248,6 +249,10 @@ class NewznabProvider(generic.NZBProvider):
                     k = NewznabConstants.searchTypes.get(c)
                     if k:
                         caps[k] = c
+                # for very old newznab, just add text search as only option
+                if not tv_search.get('supportedParams'):
+                    caps[NewznabConstants.searchTypes['q']] = 'q'
+                    old_api = True
 
             limit = xml_caps.find('.//limits')
             if None is not limit:
@@ -285,16 +290,17 @@ class NewznabProvider(generic.NZBProvider):
         if self.enabled:
             self._caps_last_updated = datetime.datetime.now()
 
-        if not caps and self.get_id() not in ['sick_beard_index']:
-            caps[INDEXER_TVDB] = 'tvdbid'
+        if not old_api and (self.url and 'nzbplanet.net' not in self.url.lower()):
+            if not caps and self.get_id() not in ['sick_beard_index']:
+                caps[INDEXER_TVDB] = 'tvdbid'
+            if NewznabConstants.SEARCH_SEASON not in caps or not caps.get(NewznabConstants.SEARCH_SEASON):
+                caps[NewznabConstants.SEARCH_SEASON] = 'season'
+            if NewznabConstants.SEARCH_EPISODE not in caps or not caps.get(NewznabConstants.SEARCH_EPISODE):
+                caps[NewznabConstants.SEARCH_TEXT] = 'ep'
+            if (INDEXER_TVRAGE not in caps or not caps.get(INDEXER_TVRAGE)) and self.get_id() not in ['sick_beard_index']:
+                caps[INDEXER_TVRAGE] = 'rid'
         if NewznabConstants.SEARCH_TEXT not in caps or not caps.get(NewznabConstants.SEARCH_TEXT):
             caps[NewznabConstants.SEARCH_TEXT] = 'q'
-        if NewznabConstants.SEARCH_SEASON not in caps or not caps.get(NewznabConstants.SEARCH_SEASON):
-            caps[NewznabConstants.SEARCH_SEASON] = 'season'
-        if NewznabConstants.SEARCH_EPISODE not in caps or not caps.get(NewznabConstants.SEARCH_EPISODE):
-            caps[NewznabConstants.SEARCH_TEXT] = 'ep'
-        if (INDEXER_TVRAGE not in caps or not caps.get(INDEXER_TVRAGE)) and self.get_id() not in ['sick_beard_index']:
-            caps[INDEXER_TVRAGE] = 'rid'
 
         if NewznabConstants.CAT_HD not in cats or not cats.get(NewznabConstants.CAT_HD):
             cats[NewznabConstants.CAT_HD] = (['5040'], ['5040', '5090'])['nzbs_org' == self.get_id()]
