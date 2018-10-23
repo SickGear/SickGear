@@ -53,6 +53,11 @@
 * Change correct queueing typo
 
 
+### 0.17.12 (2018-10-23 19:50:00 UTC)
+
+* Change add text search as default for old newznab without supportedParams caps parameter
+
+
 ### 0.17.11 (2018-10-14 18:43:00 UTC)
 
 * Fix post process "Permission denied" caused by removing the !sync file too early in onTxComplete
