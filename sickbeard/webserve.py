@@ -5263,10 +5263,13 @@ class History(MainHandler):
     def toggle_help(self):
         db.DBConnection().toggle_flag(self.flagname_help_watched)
 
-    def index(self, limit=100):
+    def index(self, limit=100, layout=None):
 
         t = PageTemplate(web_handler=self, file='history.tmpl')
         t.limit = limit
+
+        if layout in ('compact', 'detailed', 'compact_watched', 'detailed_watched', 'provider_failures'):
+            sickbeard.HISTORY_LAYOUT = layout
 
         my_db = db.DBConnection(row_type='dict')
 

@@ -37,6 +37,16 @@
 * Change simplify options on final step of Add show
 * Add quick set suggestion statuses in Episode Status Manager. Helpful for orphan "Snatches", or changes to "Skipped" etc.
 * Change DisplayShow manual search button busy animation
+* Add history view layouts to "Shows" menu
+* Add a current layout indicator to "Shows"/"History" menu item
+* Add the five last added shows to "Shows" menu under item "[1/2]"
+* Change relabel ui "Episode Schedule" and "Episode View" to "Daily Schedule"
+* Change displayShow, move table header sorting chevron images from right side of column to before text
+* Change displayShow, move plotinfo from right side of name column to before the episode text
+* Fix use correct columns for sorting on displayShow
+* Fix sort by episode number on displayShow
+* Change add images for manual search finished on displayShow to indicate completed fully (green) or low quality (bronze)
+* Change improve image sizes to reduce page overhead
 
 
 [develop changelog]

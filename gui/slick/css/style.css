@@ -2067,6 +2067,13 @@ span.unaired b{
 	right:-2px
 }
 
+#display-show .plotInfoNone,
+#display-show .plotInfo{
+	float:none;
+	top:-2px;
+	right:0
+}
+
 .plotInfo{
 	cursor:help;
 }
@@ -2080,6 +2087,14 @@ span.unaired b{
 	border:none;
 	empty-cells:show;
 	color:#000
+}
+
+#display-show .sickbeardTable{
+	border-spacing:0
+}
+
+#display-show .sickbeardTable td{
+	border-top:1px solid black
 }
 
 .sickbeardTable tr.header td,
@@ -2139,8 +2154,7 @@ td.col-checkbox input[type="checkbox"]{
 	vertical-align:-2px
 }
 
-th.col-metadata,
-td.col-metadata{
+th.col-metadata{
 	width:28px
 }
 
@@ -2186,6 +2200,10 @@ td.col-status{
 th.col-legend,
 td.col-legend{
 	width:80px
+}
+
+#display-show .tablesorter th.col-search{
+	padding-right:4px
 }
 
 th.col-search,
@@ -3823,8 +3841,8 @@ input, textarea, select, .uneditable-input{
 .navbar-default .navbar-nav > .open > a:hover,
 .navbar-default .navbar-nav > .open > a:focus,
 .back-art.pro.ii .navbar-default,
-.dropdown-menu > li > a:hover,
-.dropdown-menu > li > a:focus{
+.dropdown-menu li > a:hover,
+.dropdown-menu li > a:focus{
 	background-image:none;
 	text-decoration:none
 }
@@ -3891,14 +3909,62 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 .component-group.bubblelist .item a img{vertical-align:bottom;opacity:0.65;filter:alpha(opacity=65)}
 .component-group.bubblelist .item a:hover img{opacity:1;filter:alpha(opacity=1)}
 
-.dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus{
+.dropdown-menu li > a{
+	display:block;
+	padding:4px 20px;
+	clear:none;
+	font-weight:400
+}
+
+.dropdown-menu li > a.history{
+	width:70%;
+	display:inline-block;
+	padding-right:0
+}
+.dropdown-menu li > a .icon-glyph{
+	display:inline-block;
+	vertical-align:middle;
+	float:none;
+	margin:0
+}
+.dropdown-menu li > a.history.watched .icon-glyph{
+	margin:0 -2px
+}
+.dropdown-menu li > a.history.activity .icon-glyph{
+	margin:0 -2px 0 -1px
+}
+.dropdown-menu li > a.history.failures .icon-glyph{
+	margin:0 -3px 0 -1px
+}
+.dropdown-menu li > a.history-sub{
+	width:28px;
+	padding:4px 6px;
+	float:right
+}
+.dropdown-menu .icon-glyph{
+	opacity:0.75;filter:alpha(opacity=75)
+}
+.dropdown-menu .activity .icon-glyph{background-position:-95px -23px}
+.dropdown-menu .watched .icon-glyph{background-position:-119px -119px}
+.dropdown-menu .failures .icon-glyph{background-position:-0 -119px}
+
+.dropdown-menu .added-last .truncate{
+	max-width:135px
+}
+
+.truncate{
+	display:inline-block;
+	vertical-align:middle;
+	overflow:hidden;
+	white-space:nowrap;
+	-ms-text-overflow:ellipsis;
+		text-overflow:ellipsis
+}
+
+.dropdown-menu li > a:hover, .dropdown-menu li > a:focus{
 	color:#262626;
 	text-decoration:none;
 	background-color:#f5f5f5
-}
-
-.dropdown-menu > li > a{
-	padding:4px 20px
 }
 
 .dropdown-menu li.menu-item-noicon{
@@ -3915,6 +3981,19 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-color:#f5f1e4;
 	border:1px solid rgba(0, 0, 0, 0.15);
 	box-shadow:0 6px 12px rgba(0, 0, 0, 0.176)
+}
+
+.dropdown-menu #add-view{
+	float:right;
+	padding:0 15px
+}
+
+.dropdown-menu #add-view .paginate{
+	font-size:0.7em
+}
+
+.dropdown-menu .added-last{
+	display:none
 }
 
 .img-trakt-16{background-image:url("../images/addshows/trakt16-black.png")}
@@ -4617,6 +4696,24 @@ tablesorter.css
 	padding-right:12px;
 	cursor:pointer;
 	vertical-align:middle
+}
+
+#display-show .tablesorter .tablesorter-header,
+#display-show .tablesorter thead .tablesorter-headerDesc,
+#display-show .tablesorter thead .tablesorter-headerAsc{background-image:none}
+#display-show .tablesorter .tablesorter-header .hdr-text,
+#display-show .tablesorter thead .tablesorter-headerDesc .hdr-text,
+#display-show .tablesorter thead .tablesorter-headerAsc .hdr-text{margin-left:-8px;padding-left:18px;background:transparent no-repeat center left}
+#display-show .tablesorter .tablesorter-header .hdr-text{background-image:url("data:image/gif;base64,R0lGODlhFQAJAIAAAP///////yH5BAEAAAEALAAAAAAVAAkAAAIXjI+AywnaYnhUMoqt3gZXPmVg94yJVQAAOw==")}
+#display-show .tablesorter thead .tablesorter-headerDesc .hdr-text{background-image:url("data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7")}
+#display-show .tablesorter thead .tablesorter-headerAsc .hdr-text{background-image:url("data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjI8Bya2wnINUMopZAQA7")}
+
+#display-show .tablesorter .tablesorter-header{
+	padding:4px 0
+}
+
+#display-show .tablesorter .tablesorter-header.col-name{
+	padding-left:10px
 }
 
 .tablesorter .narrow.tablesorter-header{
