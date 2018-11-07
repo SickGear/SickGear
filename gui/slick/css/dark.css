@@ -498,6 +498,8 @@ body#display-show.back-art .displayshow-wrapper .label a:focus{
 .translucent.pro.ii .day-of-week .day-number,
 .back-art.pro.ii .sickbeardTable .seasoncols th,
 .translucent.pro.ii .sickbeardTable .seasoncols th,
+#display-show.back-art.pro.ii .sickbeardTable .seasoncols th,
+#display-show.translucent.pro.ii .sickbeardTable .seasoncols th,
 .back-art.pro.ii .sickbeardTable thead .seasoncols td,
 .translucent.pro.ii .sickbeardTable thead .seasoncols td{
 	background-color:rgba(21, 82, 143, 0.5)
@@ -988,14 +990,14 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	color:#ccc
 }
 
-.dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus{
+.dropdown-menu li > a{
+	color:#ddd
+}
+
+.dropdown-menu li > a:hover, .dropdown-menu li > a:focus{
 	color:#ddd;
 	text-decoration:none;
 	background-color:#15528f
-}
-
-.dropdown-menu > li > a{
-	color:#ddd
 }
 
 .component-group.bubblelist .bgcol,

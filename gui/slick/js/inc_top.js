@@ -77,4 +77,24 @@ $(function(){
 				return !1;
 			}
 		});
+
+	$('#NAVhome').find('.dropdown-menu li a#add-view')
+		.on('click', function(e){
+			e.stopPropagation();
+			e.preventDefault();
+			var that = $(this), viewing='add-show', view='added-last', t;
+			if (viewing === that.attr('data-view')){
+				t = viewing;
+				viewing = view;
+				view = t;
+			}
+			that.attr('data-view', viewing);
+			that.closest('.dropdown-menu')
+				.find('.' + viewing).fadeOut('fast', 'linear', function(){
+					that.closest('.dropdown-menu')
+						.find('.' + view).fadeIn('fast', 'linear', function(){
+							return !1;
+					});
+				});
+		})
 });

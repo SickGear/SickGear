@@ -107,6 +107,10 @@ function uiUpdateComplete(data) {
 					}
 					if (/good|qual|snatched/i.test(ep.statusoverview)) {
 						imgCls = uiOptions.imgYes;
+						if (/good/i.test(ep.statusoverview))
+							imgCls = uiOptions.successImage;
+						else if (/qual/i.test(ep.statusoverview))
+							imgCls = uiOptions.upgradeImage;
 						// unhide displayshow row checkbox on success, e.g. unaired eps hide it
 						displayShowEp$.removeClass('hide');
 					} else {
@@ -183,6 +187,8 @@ function rowRestore() {
 			loadingImage:	'spinner2',
 			queuedImage:	'queued',
 			searchImage:	'search',
+			successImage:	'success',
+			upgradeImage:	'upgrade',
 			imgNo:			'no',
 			imgYes:			'yes'
 		}
