@@ -5,7 +5,7 @@
 * Update Certifi 2018.01.18 (e225253) to 2018.08.24 (8be9f89)
 * Update dateutil module 2.7.2 (ff03c0f) to 2.7.2 (49690ee)
 * Update feedparser 5.2.1 (5646f4c) to 5.2.1 (2b11c80)
-* Update profilehooks module 1.10.0 (0ce1e29) to 1.10.1 (fdbf19d)                   
+* Update profilehooks module 1.10.0 (0ce1e29) to 1.10.1 (fdbf19d)
 * Update PySocks 1.6.8 (524ceb4) to 1.6.8 (b687a34)
 * Update Requests library 2.15.1 (282b01a) to 2.19.1 (2c6a842)
 * Update scandir module 1.6 (c3592ee) to 1.9.0 (9ab3d1f)
@@ -61,6 +61,7 @@
 * Change reveal displayshow row checkbox on snatch success where hidden due to unaired ep
 * Change if displayshow page refreshed during manual search, update UI row with wanted status
 * Change correct queueing typo
+* Change vertically align spinner on displayShow
 
 
 ### 0.17.12 (2018-10-23 19:50:00 UTC)
