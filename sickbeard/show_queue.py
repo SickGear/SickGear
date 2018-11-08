@@ -482,9 +482,22 @@ class QueueItemAdd(ShowQueueItem):
 
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show.indexerid, self.show.indexer, force=True)
-        # check if show has XEM mapping and if user disabled scene numbering during add show, output availability to log
-        if not self.scene and self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
-            logger.log('Alternative scene episode numbers were disabled during add show. Edit show to enable them for searching.')
+        if self.show.scene:
+            # enable/disable scene flag based on if show has an explicit _scene_ mapping at XEM
+            self.show.scene = sickbeard.scene_numbering.has_xem_scene_mapping(
+                self.show.indexerid, self.show.indexer)
+        # if "scene" numbering is disabled during add show, output availability to log
+        if None is not self.scene and not self.show.scene and \
+                self.show.indexerid in sickbeard.scene_exceptions.xem_ids_list[self.show.indexer]:
+            logger.log('No scene number mappings found at TheXEM. Therefore, episode scene numbering disabled, '
+                       'edit show and enable it to manually add custom numbers for search and media processing.')
+        try:
+            self.show.saveToDB()
+        except Exception as e:
+            logger.log('Error saving the show to the database: %s' % ex(e), logger.ERROR)
+            logger.log(traceback.format_exc(), logger.ERROR)
+            self._finishEarly()
+            raise
 
         # update internal name cache
         name_cache.buildNameCache(self.show)
