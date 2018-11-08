@@ -64,6 +64,15 @@
 * Change vertically align spinner on displayShow
 
 
+### 0.17.13 (2018-11-08 21:12:00 UTC)
+
+* Fix add filter to data used for alternative scene episode numbers
+* Change don't enable "Scene numbering" for shows without alternative scene episode numbers
+* Change label/summary of editShow/Search/"Scene numbering" to "Editable episode numbers" to improve clarity for its use
+* Change improve summary of addShow/Finally/"Scene numbering"
+* Change improve displayShow tooltips for editable episode number fields
+
+
 ### 0.17.12 (2018-10-23 19:50:00 UTC)
 
 * Change add text search as default for old newznab without supportedParams caps parameter

@@ -2227,7 +2227,8 @@ class Home(MainHandler):
 
             with showObj.lock:
                 t.show = showObj
-                t.show_has_scene_map = showObj.indexerid in sickbeard.scene_exceptions.xem_ids_list[showObj.indexer]
+                t.show_has_scene_map = sickbeard.scene_numbering.has_xem_scene_mapping(
+                    showObj.indexerid, showObj.indexer)
 
             # noinspection PyTypeChecker
             self.fanart_tmpl(t)

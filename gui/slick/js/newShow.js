@@ -336,7 +336,7 @@ $(document).ready(function () {
 		if (elRadio.length) {
 			show_name = elRadio.val().split('|')[idxWhichTitle];
 			elScene[0].checked = 0 <= show_scene_maps.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
-			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'inline' : 'None');
+			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'block' : 'None');
 		}
 		// if we provided a show in the hidden field, use that
 		else if (elInput.length && elInput.val().length) {

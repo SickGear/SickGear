@@ -168,10 +168,10 @@
 
 					<div class="field-pair">
 						<label for="scene">
-							<span class="component-title">Scene numbering</span>
+							<span class="component-title">Editable episode numbers</span>
 							<span class="component-desc">
 								<input type="checkbox" name="scene" id="scene"#echo ('', $html_checked)[$show.scene]#>
-								<p>find episodes numbered by release groups instead of the TV network <em class="grey-text">(#if $show_has_scene_map then 'scene/manual numbers' else 'manual numbers only '# available)</em></p>
+								<p>enable editable #if $show_has_scene_map then '(<em class="grey-text">and alternative scene release</em>) ' else ''# episode numbers for search and media processing</p>
 							</span>
 						</label>
 					</div>
@@ -181,7 +181,7 @@
 							<span class="component-title">Use DVD titles and numbers</span>
 							<span class="component-desc">
 								<input type="checkbox" name="dvdorder" id="dvdorder"#echo ('', $html_checked)[$show.dvdorder]#>
-								<p>#echo ('enable to use DVD title and episode ordering', 'disable to use TV network title, number and aired order')[$show.dvdorder]#.&nbsp;
+								<p>#echo ('enable use of DVD title and episode ordering', 'disable use of TV network title, number and aired order')[$show.dvdorder]#.&nbsp;
 								After changing this setting, a "force full update" is essential, and existing episodes should be manually renamed or replaced with #echo ('DVD', 'network')[$show.dvdorder]# numbered releases</p>
 							</span>
 						</label>
