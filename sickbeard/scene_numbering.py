@@ -410,6 +410,20 @@ def get_scene_numbering_for_show(indexer_id, indexer):
     return _get_numbering_for_show('scene_numbering', indexer, indexer_id)
 
 
+def has_xem_scene_mapping(indexer_id, indexer):
+    """
+    Test if a scene mapping exists for a show at XEM
+
+    :param indexer_id:
+    :type indexer_id: int
+    :param indexer:
+    :type indexer: int
+    :return: True if scene mapping exists, False if not
+    :rtype: Bool
+    """
+    return bool(get_xem_numbering_for_show(indexer_id, indexer))
+
+
 def get_xem_numbering_for_show(indexer_id, indexer):
     """
     Returns a dict of (season, episode) : (scene_season, scene_episode) mappings
@@ -562,7 +576,7 @@ def xem_refresh(indexer_id, indexer, force=False):
 
             if 'success' in parsed_json['result']:
                 cl = []
-                for entry in parsed_json['data']:
+                for entry in filter(lambda x: 'scene' in x, parsed_json['data']):
                     # use scene2 for doubles
                     scene = 'scene%s' % ('', '_2')['scene_2' in entry]
                     cl.append([
