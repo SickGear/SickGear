@@ -133,24 +133,24 @@
 							<li>
 #set $layout = $sg_var('HISTORY_LAYOUT', 'compact') or 'compact'
 #if $layout in ('compact', 'detailed')
-	#set $default_layout = 'activity'
+	#set $default_layout = 'downloaded'
 #elif 'watched' in $layout
 	#set $default_layout = 'watched'
 #else
 	#set $default_layout = 'failures'
 #end if
-								<a href="$sbRoot/history/" class="history $default_layout" tabindex="$tab#set $tab += 1#"><i class="sgicon-mediafile"></i>History $history_home (<i class="icon-glyph"></i>)</a>
+								<a href="$sbRoot/history/" class="history" tabindex="$tab#set $tab += 1#"><i class="sgicon-mediafile"></i>History $history_home (<i class="sgicon-$default_layout"></i>)</a>
 ## switch tab order around using pop() due to float right
 #set $tab_list = [$tab, $tab + 1]
 #set $tab += 2
 #if 'failures' != $default_layout
-								<a href="$sbRoot/history/?layout=provider_failures" class="failures history-sub" title="Stats" tabindex="$tab_list.pop()"><i class="icon-glyph"></i></a>
+								<a href="$sbRoot/history/?layout=provider_failures" class="history-sub" title="Stats" tabindex="$tab_list.pop()"><i class="sgicon-failures"></i></a>
 #end if
 #if 'watched' != $default_layout
-								<a href="$sbRoot/history/?layout=compact_watched" class="watched history-sub" title="Watched" tabindex="$tab_list.pop()"><i class="icon-glyph"></i></a>
+								<a href="$sbRoot/history/?layout=compact_watched" class="history-sub" title="Watched" tabindex="$tab_list.pop()"><i class="sgicon-watched"></i></a>
 #end if
-#if 'activity' != $default_layout
-								<a href="$sbRoot/history/?layout=compact" class="activity history-sub" title="Activity" tabindex="$tab_list.pop()"><i class="icon-glyph"></i></a>
+#if 'downloaded' != $default_layout
+								<a href="$sbRoot/history/?layout=compact" class="history-sub" title="Activity" tabindex="$tab_list.pop()"><i class="sgicon-downloaded"></i></a>
 #end if
 							</li>
 							<li class="divider"></li>
