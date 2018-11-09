@@ -62,6 +62,7 @@
 * Change if displayshow page refreshed during manual search, update UI row with wanted status
 * Change correct queueing typo
 * Change vertically align spinner on displayShow
+* Change improve history menu images for light themes
 
 
 ### 0.17.13 (2018-11-08 21:12:00 UTC)

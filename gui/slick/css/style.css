@@ -129,11 +129,11 @@ fonts
 /* SickGear Icons */
 @font-face{
 	font-family:"sgicons";
-	src:url("fonts/sgicons.eot?v2");
-	src:url("fonts/sgicons.eot?v2#iefix") format("embedded-opentype"),
-		url("fonts/sgicons.woff?v2") format("woff"),
-		url("fonts/sgicons.ttf?v2") format("truetype"),
-		url("fonts/sgicons.svg?v2#sgicons") format("svg");
+	src:url("fonts/sgicons.eot?v3");
+	src:url("fonts/sgicons.eot?v3#iefix") format("embedded-opentype"),
+		url("fonts/sgicons.woff?v3") format("woff"),
+		url("fonts/sgicons.ttf?v3") format("truetype"),
+		url("fonts/sgicons.svg?v3#sgicons") format("svg");
 	font-weight:normal;
 	font-style:normal
 }
@@ -563,7 +563,7 @@ inc_top.tmpl
 }
 
 .sgicon-info:before{
-	content:"\e617"
+	content:"\e65b"
 }
 
 .sgicon-restart:before{
@@ -583,27 +583,27 @@ inc_top.tmpl
 }
 
 .sgicon-arrowup:before{
-	content:"\e61c"
+	content:"\e63b"
 }
 
 .sgicon-arrowdown:before{
-	content:"\e61d"
+	content:"\e63a"
 }
 
 .sgicon-plex:before{
-	content:"\e61e"
+	content:"\e903"
 }
 
 .sgicon-kodi:before{
-	content:"\e61f"
+	content:"\e901"
 }
 
 .sgicon-bittorrent:before{
-	content:"\e620"
+	content:"\e910"
 }
 
 .sgicon-xbmc:before{
-	content:"\e621"
+	content:"\e902"
 }
 
 .sgicon-rss:before{
@@ -639,7 +639,7 @@ inc_top.tmpl
 }
 
 .sgicon-warning:before{
-	content:"\e62a"
+	content:"\e657"
 }
 
 .sgicon-list:before{
@@ -660,6 +660,18 @@ inc_top.tmpl
 
 .sgicon-book:before{
 	content:"\e62f"
+}
+
+.sgicon-downloaded:before{
+	content:"\e634"
+}
+
+.sgicon-watched:before{
+	content:"\e643"
+}
+
+.sgicon-failures:before{
+	content:"\e685"
 }
 
 .sgicon-imdb:before{
@@ -3916,37 +3928,37 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	font-weight:400
 }
 
-.dropdown-menu li > a.history{
+.dropdown-menu li > .history{
 	width:70%;
 	display:inline-block;
 	padding-right:0
 }
-.dropdown-menu li > a .icon-glyph{
-	display:inline-block;
-	vertical-align:middle;
-	float:none;
+
+.dropdown-menu li > .history .sgicon-downloaded,
+.dropdown-menu li > .history .sgicon-watched,
+.dropdown-menu li > .history-sub [class^="sgicon-"]{
 	margin:0
 }
-.dropdown-menu li > a.history.watched .icon-glyph{
-	margin:0 -2px
+.dropdown-menu li > .history .sgicon-failures{
+	margin:0 2px 0 3px
 }
-.dropdown-menu li > a.history.activity .icon-glyph{
-	margin:0 -2px 0 -1px
+.dropdown-menu li > .history .sgicon-downloaded,
+.dropdown-menu li > .history .sgicon-watched,
+.dropdown-menu li > .history .sgicon-failures,
+.dropdown-menu li > .history-sub [class^="sgicon-"]{
+	opacity:0.6;filter:alpha(opacity=0.6)
 }
-.dropdown-menu li > a.history.failures .icon-glyph{
-	margin:0 -3px 0 -1px
+.dropdown-menu li > .history:hover .sgicon-downloaded,
+.dropdown-menu li > .history:hover .sgicon-watched,
+.dropdown-menu li > .history:hover .sgicon-failures,
+.dropdown-menu li > .history-sub:hover [class^="sgicon-"]{
+	opacity:1;filter:alpha(opacity=1)
 }
-.dropdown-menu li > a.history-sub{
+.dropdown-menu li > .history-sub{
 	width:28px;
-	padding:4px 6px;
+	padding:4px 7px;
 	float:right
 }
-.dropdown-menu .icon-glyph{
-	opacity:0.75;filter:alpha(opacity=75)
-}
-.dropdown-menu .activity .icon-glyph{background-position:-95px -23px}
-.dropdown-menu .watched .icon-glyph{background-position:-119px -119px}
-.dropdown-menu .failures .icon-glyph{background-position:-0 -119px}
 
 .dropdown-menu .added-last .truncate{
 	max-width:135px
