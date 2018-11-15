@@ -65,6 +65,11 @@
 * Change improve history menu images for light themes
 
 
+### 0.17.14 (2018-11-15 08:00:00 UTC)
+
+* Change remove required restart of SickGear after changing label or path settings for rTorrent and qBittorrent
+
+
 ### 0.17.13 (2018-11-08 21:12:00 UTC)
 
 * Fix add filter to data used for alternative scene episode numbers
