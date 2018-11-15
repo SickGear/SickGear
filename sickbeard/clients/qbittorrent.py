@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from sickbeard import helpers, TORRENT_LABEL, TORRENT_PATH
+import sickbeard
+from sickbeard import helpers
 from sickbeard.clients.generic import GenericClient
 
 
@@ -43,8 +44,8 @@ class QbittorrentAPI(GenericClient):
 
     def _add_torrent(self, cmd, **kwargs):
 
-        label = TORRENT_LABEL.replace(' ', '_')
-        label_dict = {'label': label, 'category': label, 'savepath': TORRENT_PATH}
+        label = sickbeard.TORRENT_LABEL.replace(' ', '_')
+        label_dict = {'label': label, 'category': label, 'savepath': sickbeard.TORRENT_PATH}
         if 'post_data' in kwargs:
             kwargs['post_data'].update(label_dict)
         else:
