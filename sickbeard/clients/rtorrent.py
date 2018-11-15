@@ -17,7 +17,8 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import xmlrpclib
-from sickbeard import helpers, TORRENT_LABEL, TORRENT_PATH
+import sickbeard
+from sickbeard import helpers
 from sickbeard.clients.generic import GenericClient
 from lib.rtorrent import RTorrent
 
@@ -58,11 +59,11 @@ class RtorrentAPI(GenericClient):
 
                 if torrent:
 
-                    if TORRENT_LABEL:
-                        torrent.set_custom(1, TORRENT_LABEL)
+                    if sickbeard.TORRENT_LABEL:
+                        torrent.set_custom(1, sickbeard.TORRENT_LABEL)
 
-                    if TORRENT_PATH:
-                        torrent.set_directory(TORRENT_PATH)
+                    if sickbeard.TORRENT_PATH:
+                        torrent.set_directory(sickbeard.TORRENT_PATH)
 
                     torrent.start()
 
