@@ -65,6 +65,12 @@
 * Change improve history menu images for light themes
 
 
+### 0.17.15 (2018-11-24 20:30:00 UTC)
+
+* Fix pruning large watch lists
+* Add Ubuntu snap installer
+
+
 ### 0.17.14 (2018-11-15 08:00:00 UTC)
 
 * Change remove required restart of SickGear after changing label or path settings for rTorrent and qBittorrent

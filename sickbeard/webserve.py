@@ -1044,14 +1044,20 @@ r.close()
         except TypeError:
             data = payload
 
-        sql_results = None
+        sql_results = []
         if data:
             my_db = db.DBConnection(row_type='dict')
 
-            media_paths = map(lambda (_, d): ek.ek(os.path.basename, d['path_file']), data.iteritems())
-            sql_results = my_db.select(
-                'SELECT episode_id, status, location, file_size FROM tv_episodes WHERE file_size > 0 AND (%s)' %
-                ' OR '.join(['location LIKE "%%%s"' % x for x in media_paths]))
+            media_paths = map(lambda (_, d): ek.ek(os.path.basename, d['path_file']), data.items())
+
+            def chunks(l, n):
+                for c in range(0, len(l), n):
+                    yield l[c:c + n]
+
+            for x in chunks(media_paths, 100):
+                sql_results += my_db.select(
+                    'SELECT episode_id, status, location, file_size FROM tv_episodes WHERE file_size > 0 AND (%s)' %
+                    ' OR '.join(['location LIKE "%%%s"' % i for i in x]))
 
         if sql_results:
             cl = []
@@ -5581,10 +5587,12 @@ class History(MainHandler):
 
             if states:
                 # Prune user removed items that are no longer being returned by API
+                media_paths = map(lambda (_, s): ek.ek(os.path.basename, s['path_file']), states.items())
+                sql = 'FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Emby}"'
                 my_db = db.DBConnection(row_type='dict')
-                media_paths = map(lambda (_, s): ek.ek(os.path.basename, s['path_file']), states.iteritems())
-                my_db.select('DELETE FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Emby}" AND %s' %
-                             ' AND '.join(['location NOT LIKE "%%%s"' % x for x in media_paths]))
+                files = my_db.select('SELECT location %s' % sql)
+                for i in filter(lambda f: ek.ek(os.path.basename, f['location']) not in media_paths, files):
+                    my_db.select('DELETE %s AND location="%s"' % (sql, i['location']))
 
                 MainHandler.update_watched_state(states, False)
 
@@ -5644,10 +5652,12 @@ class History(MainHandler):
 
             if states:
                 # Prune user removed items that are no longer being returned by API
+                media_paths = map(lambda (_, s): ek.ek(os.path.basename, s['path_file']), states.items())
+                sql = 'FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Plex}"'
                 my_db = db.DBConnection(row_type='dict')
-                media_paths = map(lambda (_, s): ek.ek(os.path.basename, s['path_file']), states.iteritems())
-                my_db.select('DELETE FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Plex}" AND %s' %
-                             ' AND '.join(['location NOT LIKE "%%%s"' % x for x in media_paths]))
+                files = my_db.select('SELECT location %s' % sql)
+                for i in filter(lambda f: ek.ek(os.path.basename, f['location']) not in media_paths, files):
+                    my_db.select('DELETE %s AND location="%s"' % (sql, i['location']))
 
                 MainHandler.update_watched_state(states, False)
 
