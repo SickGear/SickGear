@@ -1,0 +1,63 @@
+name: sickgear
+summary: SickGear
+description: |
+  SickGear has proven the most reliable stable TV fork of the great Sick-Beard to fully automate TV enjoyment with innovation.
+
+  Typically used with a download client e.g. nzbget, sabnzbd, qBittorrent, transmission, deluge, rtorrent and others.
+
+  Home: https://github.com/SickGear/SickGear
+  Wiki: https://github.com/SickGear/SickGear/wiki
+  Issues: https://github.com/SickGear/SickGear/issues
+
+icon: gui/slick/images/sickgear.png
+confinement: strict
+adopt-info: sickgear
+
+apps:
+  sickgear:
+    command: python $SNAP/opt/sickgear/app/sickgear.py --datadir=$SNAP/opt/sickgear/data
+    # daemon: simple
+    plugs: [network, network-bind, removable-media]
+
+parts:
+  sickgear:
+    plugin: python
+    source: .
+    python-version: python2
+    python-packages: [cheetah3, cryptography, lxml, regex, scandir]
+    build-attributes: [no-system-libraries]
+
+    stage-packages:
+    - libffi-dev
+    - libssl-dev
+    - p7zip-full
+    - python-dev
+    - unrar
+
+    build-packages:
+    - libffi-dev
+    - libssl-dev
+    - libxslt1-dev
+    - libxml2-dev
+    - p7zip-full
+    - python-dev
+    - python-lxml
+    - python-regex
+    - unrar
+
+    override-pull: |
+      snapcraftctl pull
+
+      [ -z $(grep -o 'xx:xx:xx' CHANGES.md) ] && grade=stable || grade=devel
+      snapcraftctl set-grade "$grade"
+
+      version="$(sed -n '1 s/###[^0-9]\{1,\}\([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\).*/\1/p' CHANGES.md)"
+      # removes unicode before assignment
+      snapcraftctl set-version "$(echo ${version} | sed 's/[^0-9\.]//g')"
+
+    override-build: |
+      snapcraftctl build
+
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/sickgear/app
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/sickgear/data
+      cp -R $SNAPCRAFT_PART_BUILD/* $SNAPCRAFT_PART_INSTALL/opt/sickgear/app
