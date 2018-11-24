@@ -1,5 +1,6 @@
-﻿### 0.17.15 (2018-11-24 18:45:00 UTC)
+﻿### 0.17.15 (2018-11-24 20:30:00 UTC)
 
+* Fix pruning large watch lists
 * Add Ubuntu snap installer
 
 
