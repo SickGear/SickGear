@@ -1,4 +1,12 @@
-﻿### 0.18.0 (2018-11-26 19:30:00 UTC)
+﻿### 0.19.0 (2019-xx-xx xx:xx:xx UTC)
+
+
+
+[develop changelog]
+
+
+
+### 0.18.0 (2018-11-26 19:30:00 UTC)
 
 * Update Beautiful Soup 4.6.0 (r449) to 4.6.3 (r475)
 * Update CacheControl library 0.12.4 (bd94f7e) to 0.12.5 (cd91309)
