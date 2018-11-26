@@ -47,6 +47,7 @@
 * Fix sort by episode number on displayShow
 * Change add images for manual search finished on displayShow to indicate completed fully (green) or low quality (bronze)
 * Change improve image sizes to reduce page overhead
+* Fix make release group comparison for proper/repack search case insensitive
 
 
 [develop changelog]
