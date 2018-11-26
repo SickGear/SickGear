@@ -5,7 +5,7 @@ import re
 from operator import itemgetter
 # Do not import Decimal directly to avoid reload issues
 import decimal
-from .compat import u, unichr, binary_type, text_type, string_types, integer_types, PY3
+from .compat import unichr, binary_type, text_type, string_types, integer_types, PY3
 def _import_speedups():
     try:
         from . import _speedups
@@ -17,10 +17,7 @@ c_encode_basestring_ascii, c_make_encoder = _import_speedups()
 from .decoder import PosInf
 from .raw_json import RawJSON
 
-#ESCAPE = re.compile(ur'[\x00-\x1f\\"\b\f\n\r\t\u2028\u2029]')
-# This is required because u() will mangle the string and ur'' isn't valid
-# python3 syntax
-ESCAPE = re.compile(u'[\\x00-\\x1f\\\\"\\b\\f\\n\\r\\t\u2028\u2029]')
+ESCAPE = re.compile(r'[\x00-\x1f\\"]')
 ESCAPE_ASCII = re.compile(r'([\\"]|[^\ -~])')
 HAS_UTF8 = re.compile(r'[\x80-\xff]')
 ESCAPE_DCT = {
@@ -35,24 +32,27 @@ ESCAPE_DCT = {
 for i in range(0x20):
     #ESCAPE_DCT.setdefault(chr(i), '\\u{0:04x}'.format(i))
     ESCAPE_DCT.setdefault(chr(i), '\\u%04x' % (i,))
-for i in [0x2028, 0x2029]:
-    ESCAPE_DCT.setdefault(unichr(i), '\\u%04x' % (i,))
 
 FLOAT_REPR = repr
 
-def encode_basestring(s, _PY3=PY3, _q=u('"')):
+def encode_basestring(s, _PY3=PY3, _q=u'"'):
     """Return a JSON representation of a Python string
 
     """
     if _PY3:
-        if isinstance(s, binary_type):
-            s = s.decode('utf-8')
-        if type(s) is not text_type:
-            s = text_type.__str__(s)
+        if isinstance(s, bytes):
+            s = str(s, 'utf-8')
+        elif type(s) is not str:
+            # convert an str subclass instance to exact str
+            # raise a TypeError otherwise
+            s = str.__str__(s)
     else:
         if isinstance(s, str) and HAS_UTF8.search(s) is not None:
-            s = s.decode('utf-8')
-        if type(s) not in string_types:
+            s = unicode(s, 'utf-8')
+        elif type(s) not in (str, unicode):
+            # convert an str subclass instance to exact str
+            # convert a unicode subclass instance to exact unicode
+            # raise a TypeError otherwise
             if isinstance(s, str):
                 s = str.__str__(s)
             else:
@@ -67,14 +67,19 @@ def py_encode_basestring_ascii(s, _PY3=PY3):
 
     """
     if _PY3:
-        if isinstance(s, binary_type):
-            s = s.decode('utf-8')
-        if type(s) is not text_type:
-            s = text_type.__str__(s)
+        if isinstance(s, bytes):
+            s = str(s, 'utf-8')
+        elif type(s) is not str:
+            # convert an str subclass instance to exact str
+            # raise a TypeError otherwise
+            s = str.__str__(s)
     else:
         if isinstance(s, str) and HAS_UTF8.search(s) is not None:
-            s = s.decode('utf-8')
-        if type(s) not in string_types:
+            s = unicode(s, 'utf-8')
+        elif type(s) not in (str, unicode):
+            # convert an str subclass instance to exact str
+            # convert a unicode subclass instance to exact unicode
+            # raise a TypeError otherwise
             if isinstance(s, str):
                 s = str.__str__(s)
             else:
@@ -279,7 +284,7 @@ class JSONEncoder(object):
         if isinstance(o, binary_type):
             _encoding = self.encoding
             if (_encoding is not None and not (_encoding == 'utf-8')):
-                o = o.decode(_encoding)
+                o = text_type(o, _encoding)
         if isinstance(o, string_types):
             if self.ensure_ascii:
                 return encode_basestring_ascii(o)
@@ -314,10 +319,10 @@ class JSONEncoder(object):
             _encoder = encode_basestring_ascii
         else:
             _encoder = encode_basestring
-        if self.encoding != 'utf-8':
+        if self.encoding != 'utf-8' and self.encoding is not None:
             def _encoder(o, _orig_encoder=_encoder, _encoding=self.encoding):
                 if isinstance(o, binary_type):
-                    o = o.decode(_encoding)
+                    o = text_type(o, _encoding)
                 return _orig_encoder(o)
 
         def floatstr(o, allow_nan=self.allow_nan, ignore_nan=self.ignore_nan,
@@ -382,6 +387,11 @@ class JSONEncoderForHTML(JSONEncoder):
     characters &, < and > should be escaped. They cannot be escaped
     with the usual entities (e.g. &amp;) because they are not expanded
     within <script> tags.
+
+    This class also escapes the line separator and paragraph separator
+    characters U+2028 and U+2029, irrespective of the ensure_ascii setting,
+    as these characters are not valid in JavaScript strings (see
+    http://timelessrepo.com/json-isnt-a-javascript-subset).
     """
 
     def encode(self, o):
@@ -399,6 +409,11 @@ class JSONEncoderForHTML(JSONEncoder):
             chunk = chunk.replace('&', '\\u0026')
             chunk = chunk.replace('<', '\\u003c')
             chunk = chunk.replace('>', '\\u003e')
+
+            if not self.ensure_ascii:
+                chunk = chunk.replace(u'\u2028', '\\u2028')
+                chunk = chunk.replace(u'\u2029', '\\u2029')
+
             yield chunk
 
 
@@ -477,8 +492,9 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 first = False
             else:
                 buf = separator
-            if (isinstance(value, string_types) or
-                (_PY3 and isinstance(value, binary_type))):
+            if isinstance(value, string_types):
+                yield buf + _encoder(value)
+            elif _PY3 and isinstance(value, bytes) and _encoding is not None:
                 yield buf + _encoder(value)
             elif isinstance(value, RawJSON):
                 yield buf + value.encoded_json
@@ -528,8 +544,8 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
     def _stringify_key(key):
         if isinstance(key, string_types): # pragma: no cover
             pass
-        elif isinstance(key, binary_type):
-            key = key.decode(_encoding)
+        elif _PY3 and isinstance(key, bytes) and _encoding is not None:
+            key = str(key, _encoding)
         elif isinstance(key, float):
             key = _floatstr(key)
         elif key is True:
@@ -598,8 +614,9 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 yield item_separator
             yield _encoder(key)
             yield _key_separator
-            if (isinstance(value, string_types) or
-                (_PY3 and isinstance(value, binary_type))):
+            if isinstance(value, string_types):
+                yield _encoder(value)
+            elif _PY3 and isinstance(value, bytes) and _encoding is not None:
                 yield _encoder(value)
             elif isinstance(value, RawJSON):
                 yield value.encoded_json
@@ -642,8 +659,9 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
             del markers[markerid]
 
     def _iterencode(o, _current_indent_level):
-        if (isinstance(o, string_types) or
-            (_PY3 and isinstance(o, binary_type))):
+        if isinstance(o, string_types):
+            yield _encoder(o)
+        elif _PY3 and isinstance(o, bytes) and _encoding is not None:
             yield _encoder(o)
         elif isinstance(o, RawJSON):
             yield o.encoded_json

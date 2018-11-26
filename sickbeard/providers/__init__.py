@@ -30,12 +30,12 @@ __all__ = [
     # usenet
     'omgwtfnzbs',
     # torrent
-    'alpharatio', 'alphareign', 'beyondhd', 'bithdtv', 'blutopia', 'btn',
+    'alpharatio', 'alphareign', 'bb', 'beyondhd', 'bithdtv', 'blutopia', 'btn',
     'custom01', 'custom11', 'dh', 'ettv', 'eztv', 'fano', 'filelist', 'funfile', 'grabtheinfo',
     'hdbits', 'hdme', 'hdspace', 'hdtorrents', 'horriblesubs',
     'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'morethan', 'nebulance', 'ncore', 'nyaa',
     'pisexy', 'potuk', 'pretome', 'privatehd', 'ptf',
-    'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'skytorrents', 'speedcd',
+    'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'skytorrents', 'snowfl', 'speedcd',
     'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'torrentz2', 'tvchaosuk',
     'wop', 'xspeeds', 'zooqle',
     # anime

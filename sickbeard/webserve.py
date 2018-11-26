@@ -2612,7 +2612,7 @@ class Home(MainHandler):
                         continue
 
                     if ARCHIVED == status:
-                        if ep_obj.status in Quality.DOWNLOADED:
+                        if ep_obj.status in Quality.DOWNLOADED or direct:
                             ep_obj.status = Quality.compositeStatus(
                                 ARCHIVED, (Quality.splitCompositeStatus(ep_obj.status)[1], min_initial)[use_default])
                     elif DOWNLOADED == status:
@@ -2772,132 +2772,122 @@ class Home(MainHandler):
 
         self.redirect('/home/displayShow?show=' + show)
 
-    def searchEpisode(self, show=None, season=None, episode=None):
+    def episode_search(self, show=None, season=None, episode=None, retry=False):
+
+        result = dict(result='failure')
 
         # retrieve the episode object and fail if we can't get one
         ep_obj = self._getEpisode(show, season, episode)
-        if isinstance(ep_obj, str):
-            return json.dumps({'result': 'failure'})
+        if not isinstance(ep_obj, str):
 
-        # make a queue item for it and put it on the queue
-        ep_queue_item = search_queue.ManualSearchQueueItem(ep_obj.show, ep_obj)
+            # make a queue item for the TVEpisode and put it on the queue
+            ep_queue_item = (search_queue.ManualSearchQueueItem(ep_obj.show, ep_obj),
+                             search_queue.FailedQueueItem(ep_obj.show, [ep_obj]))[retry]
 
-        sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)  # @UndefinedVariable
+            sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)
 
-        if ep_queue_item.success:
-            return returnManualSearchResult(ep_queue_item)
-        if not ep_queue_item.started and ep_queue_item.success is None:
-            return json.dumps({'result': 'success'}) #I Actually want to call it queued, because the search hasnt been started yet!
-        if ep_queue_item.started and ep_queue_item.success is None:
-            return json.dumps({'result': 'success'})
-        else:
-            return json.dumps({'result': 'failure'})
+            if None is ep_queue_item.success:  # invocation
+                result.update(dict(result=('success', 'queuing')[not ep_queue_item.started]))
+            # elif ep_queue_item.success:
+            #    return self.search_q_progress(str(ep_obj.show.indexerid))  # page refresh
 
-    ### Returns the current ep_queue_item status for the current viewed show.
-    # Possible status: Downloaded, Snatched, etc...
-    # Returns {'show': 279530, 'episodes' : ['episode' : 6, 'season' : 1, 'searchstatus' : 'queued', 'status' : 'running', 'quality': '4013']
-    def getManualSearchStatus(self, show=None, season=None):
+        return json.dumps(result)
+
+    def episode_retry(self, show, season, episode):
+
+        return self.episode_search(show, season, episode, True)
+
+    # Return progress for queued, active and finished episodes
+    def search_q_progress(self, show=None):
 
         episodes = []
-        currentManualSearchThreadsQueued = []
-        currentManualSearchThreadActive = []
-        finishedManualSearchThreadItems= []
+        seen_eps = set([])
 
-        # Queued Searches
-        currentManualSearchThreadsQueued = sickbeard.searchQueueScheduler.action.get_all_ep_from_queue(show)
-        # Running Searches
-        if (sickbeard.searchQueueScheduler.action.is_manualsearch_in_progress()):
-            currentManualSearchThreadActive = sickbeard.searchQueueScheduler.action.currentItem
+        # Queued searches
+        queued = sickbeard.searchQueueScheduler.action.get_queued_manual(show)
 
-        # Finished Searches
-        finishedManualSearchThreadItems =  sickbeard.search_queue.MANUAL_SEARCH_HISTORY
+        # Active search
+        active = sickbeard.searchQueueScheduler.action.get_current_manual_item(show)
 
-        if currentManualSearchThreadsQueued:
-            for searchThread in currentManualSearchThreadsQueued:
-                searchstatus = 'queued'
-                if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
-                    episodes.append({'episode': searchThread.segment.episode,
-                                     'episodeindexid': searchThread.segment.indexerid,
-                                     'season' : searchThread.segment.season,
-                                     'searchstatus' : searchstatus,
-                                     'status' : statusStrings[searchThread.segment.status],
-                                     'quality': self.getQualityClass(searchThread.segment)})
-                elif hasattr(searchThread, 'segment'):
-                    for epObj in searchThread.segment:
-                        episodes.append({'episode': epObj.episode,
-                             'episodeindexid': epObj.indexerid,
-                             'season' : epObj.season,
-                             'searchstatus' : searchstatus,
-                             'status' : statusStrings[epObj.status],
-                             'quality': self.getQualityClass(epObj)})
+        # Finished searches
+        sickbeard.search_queue.remove_old_fifo(sickbeard.search_queue.MANUAL_SEARCH_HISTORY)
+        results = sickbeard.search_queue.MANUAL_SEARCH_HISTORY
 
-        retry_statues = SNATCHED_ANY + [DOWNLOADED, ARCHIVED]
-        if currentManualSearchThreadActive:
-            searchThread = currentManualSearchThreadActive
-            searchstatus = 'searching'
-            if searchThread.success:
-                searchstatus = 'finished'
-            else:
-                searchstatus = 'searching'
-            if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
-                episodes.append({'episode': searchThread.segment.episode,
-                                 'episodeindexid': searchThread.segment.indexerid,
-                                 'season' : searchThread.segment.season,
-                                 'searchstatus' : searchstatus,
-                                 'retrystatus': Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
-                                 'status' : statusStrings[searchThread.segment.status],
-                                 'quality': self.getQualityClass(searchThread.segment)})
-            elif hasattr(searchThread, 'segment'):
-                for epObj in searchThread.segment:
-                    episodes.append({'episode': epObj.episode,
-                                     'episodeindexid': epObj.indexerid,
-                                     'season' : epObj.season,
-                                     'searchstatus' : searchstatus,
-                                     'retrystatus': Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
-                                     'status' : statusStrings[epObj.status],
-                                     'quality': self.getQualityClass(epObj)})
+        for item in filter(lambda q: hasattr(q, 'segment'), queued):
+            for ep_base in item.segment:
+                ep, uniq_sxe = self.prepare_episode(ep_base, 'queued')
+                episodes.append(ep)
+                seen_eps.add(uniq_sxe)
 
-        if finishedManualSearchThreadItems:
-            for searchThread in finishedManualSearchThreadItems:
-                if isinstance(searchThread, sickbeard.search_queue.ManualSearchQueueItem):
-                    if str(searchThread.show.indexerid) == show and not [x for x in episodes if x['episodeindexid'] == searchThread.segment.indexerid]:
-                        searchstatus = 'finished'
-                        episodes.append({'episode': searchThread.segment.episode,
-                                         'episodeindexid': searchThread.segment.indexerid,
-                                 'season' : searchThread.segment.season,
-                                 'searchstatus' : searchstatus,
-                                 'retrystatus': Quality.splitCompositeStatus(searchThread.segment.status)[0] in retry_statues,
-                                 'status' : statusStrings[searchThread.segment.status],
-                                 'quality': self.getQualityClass(searchThread.segment)})
-                ### These are only Failed Downloads/Retry SearchThreadItems.. lets loop through the segement/episodes
-                elif hasattr(searchThread, 'segment') and str(searchThread.show.indexerid) == show:
-                    for epObj in searchThread.segment:
-                        if not [x for x in episodes if x['episodeindexid'] == epObj.indexerid]:
-                            searchstatus = 'finished'
-                            episodes.append({'episode': epObj.episode,
-                                             'episodeindexid': epObj.indexerid,
-                                     'season' : epObj.season,
-                                     'searchstatus' : searchstatus,
-                                     'retrystatus': Quality.splitCompositeStatus(epObj.status)[0] in retry_statues,
-                                     'status' : statusStrings[epObj.status],
-                                     'quality': self.getQualityClass(epObj)})
+        if active and hasattr(active, 'segment'):
+            episode_params = dict(([('searchstate', 'finished'), ('statusoverview', True)],
+                                   [('searchstate', 'searching'), ('statusoverview', False)])[None is active.success],
+                                  retrystate=True)
+            for ep_base in active.segment:
+                ep, uniq_sxe = self.prepare_episode(ep_base, **episode_params)
+                episodes.append(ep)
+                seen_eps.add(uniq_sxe)
 
-        return json.dumps({'show': show, 'episodes' : episodes})
+        episode_params = dict(searchstate='finished', retrystate=True, statusoverview=True)
+        for item in filter(lambda r: hasattr(r, 'segment') and (not show or show == str(r.show.indexerid)), results):
+            for ep_base in filter(
+                    lambda e: (e.show.indexer, e.show.indexerid, e.season, e.episode) not in seen_eps, item.segment):
+                try:
+                    show = helpers.find_show_by_id(sickbeard.showList, dict({ep_base.show.indexer: ep_base.show.indexerid}))
+                    ep_obj = show.getEpisode(season=ep_base.season, episode=ep_base.episode)
+                except (StandardError, Exception):
+                    continue
+                ep, uniq_sxe = self.prepare_episode(ep_obj, **episode_params)
+                episodes.append(ep)
+                seen_eps.add(uniq_sxe)
 
-        #return json.dumps()
+            for snatched in filter(lambda s: (s not in seen_eps), item.snatched_eps):
+                try:
+                    show = helpers.find_show_by_id(sickbeard.showList, dict({snatched[0]: snatched[1]}))
+                    ep_obj = show.getEpisode(season=snatched[2], episode=snatched[3])
+                except (StandardError, Exception):
+                    continue
+                ep, uniq_sxe = self.prepare_episode(ep_obj, **episode_params)
+                episodes.append(ep)
+                seen_eps.add(uniq_sxe)
 
-    def getQualityClass(self, ep_obj):
-        # return the correct json value
+        return json.dumps(dict(episodes=episodes))
 
+    @staticmethod
+    def prepare_episode(ep, searchstate, retrystate=False, statusoverview=False):
+        """
+        Prepare episode data and its unique id
+
+        :param ep: Episode structure containing the show that it relates to
+        :type ep: TVEpisode object or Episode Base Namespace
+        :param searchstate: Progress of search
+        :type searchstate: string
+        :param retrystate: True to add retrystate to data
+        :type retrystate: bool
+        :param statusoverview: True to add statusoverview to data
+        :type statusoverview: bool
+        :return: Episode data and its unique episode id
+        :rtype: tuple containing a dict and a tuple
+        """
         # Find the quality class for the episode
         quality_class = Quality.qualityStrings[Quality.UNKNOWN]
-        ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+        ep_status, ep_quality = Quality.splitCompositeStatus(ep.status)
         for x in (SD, HD720p, HD1080p, UHD2160p):
             if ep_quality in Quality.splitQuality(x)[0]:
                 quality_class = qualityPresetStrings[x]
                 break
 
-        return quality_class
+        ep_data = dict(showindexer=ep.show.indexer, showindexid=ep.show.indexerid,
+                       season=ep.season, episode=ep.episode, quality=quality_class,
+                       searchstate=searchstate, status=statusStrings[ep.status])
+        if retrystate:
+            retry_statuses = SNATCHED_ANY + [DOWNLOADED, ARCHIVED]
+            ep_data.update(dict(retrystate=sickbeard.USE_FAILED_DOWNLOADS and ep_status in retry_statuses))
+        if statusoverview:
+            ep_data.update(dict(statusoverview=Overview.overviewStrings[
+                helpers.getOverview(ep.status, ep.show.quality, ep.show.upgrade_once)]))
+
+        return ep_data, (ep.show.indexer, ep.show.indexerid, ep.season, ep.episode)
 
     def searchEpisodeSubtitles(self, show=None, season=None, episode=None):
         # retrieve the episode object and fail if we can't get one
@@ -2931,26 +2921,6 @@ class Home(MainHandler):
                                             sceneEpisode, sceneAbsolute)
 
         return json.dumps(result)
-
-    def retryEpisode(self, show, season, episode):
-
-        # retrieve the episode object and fail if we can't get one
-        ep_obj = self._getEpisode(show, season, episode)
-        if isinstance(ep_obj, str):
-            return json.dumps({'result': 'failure'})
-
-        # make a queue item for it and put it on the queue
-        ep_queue_item = search_queue.FailedQueueItem(ep_obj.show, [ep_obj])
-        sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)  # @UndefinedVariable
-
-        if ep_queue_item.success:
-            return returnManualSearchResult(ep_queue_item)
-        if not ep_queue_item.started and ep_queue_item.success is None:
-            return json.dumps({'result': 'success'}) #I Actually want to call it queued, because the search hasnt been started yet!
-        if ep_queue_item.started and ep_queue_item.success is None:
-            return json.dumps({'result': 'success'})
-        else:
-            return json.dumps({'result': 'failure'})
 
     @staticmethod
     def fetch_releasegroups(show_name):
@@ -3183,7 +3153,7 @@ class NewHomeAddShows(Home):
                re.sub(r'([,.!][^,.!]*?)$', '...',
                       re.sub(r'([.!?])(?=\w)', r'\1 ',
                              self.encode_html((show.get('overview', '') or '')[:250:].strip()))),
-               self.get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None,
+               self.get_UWRatio(term, show['seriesname'], show.get('aliases', [])), None, None, None, None,
                self._make_search_image_url(iid, show)
                ] for show in shows.itervalues()] for iid, shows in results.iteritems()))
 
@@ -3193,22 +3163,34 @@ class NewHomeAddShows(Home):
                 x[sortby_index] = n + (1000, 0)[x[idx_is_indb] and 'notop' not in sickbeard.RESULTS_SORTBY]
             return data if not final_sort else sorted(data, reverse=False, key=lambda x: x[sortby_index])
 
-        def sort_date(data_result, is_last_sort):
-            idx_date_sort, idx_src, idx_aired = 13, 2, 8
+        def sort_newest(data_result, is_last_sort):
+            return sort_date(data_result, is_last_sort, 13)
+
+        def sort_oldest(data_result, is_last_sort):
+            return sort_date(data_result, is_last_sort, 14, False)
+
+        def sort_date(data_result, is_last_sort, idx_sort, reverse=True):
+            idx_src, idx_aired = 2, 8
             return final_order(
-                idx_date_sort,
+                idx_sort,
                 sorted(
-                    sorted(data_result, reverse=True, key=lambda x: (dateutil.parser.parse(
+                    sorted(data_result, reverse=reverse, key=lambda x: (dateutil.parser.parse(
                         re.match('^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
                         or (x[idx_aired] and str(x[idx_aired])) or '1900'))),
                     reverse=False, key=lambda x: x[idx_src]), is_last_sort)
 
         def sort_az(data_result, is_last_sort):
-            idx_az_sort, idx_src, idx_title = 14, 2, 6
+            return sort_zaaz(data_result, is_last_sort, 15)
+
+        def sort_za(data_result, is_last_sort):
+            return sort_zaaz(data_result, is_last_sort, 16, True)
+
+        def sort_zaaz(data_result, is_last_sort, idx_sort, reverse=False):
+            idx_src, idx_title = 2, 6
             return final_order(
-                idx_az_sort,
+                idx_sort,
                 sorted(
-                    data_result, reverse=False, key=lambda x: (
+                    data_result, reverse=reverse, key=lambda x: (
                         x[idx_src],
                         (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE])),
                 is_last_sort)
@@ -3222,11 +3204,15 @@ class NewHomeAddShows(Home):
                     reverse=False, key=lambda x: x[idx_src]), is_last_sort)
 
         if 'az' == sickbeard.RESULTS_SORTBY[:2]:
-            sort_results = [sort_date, sort_rel, sort_az]
-        elif 'date' == sickbeard.RESULTS_SORTBY[:4]:
-            sort_results = [sort_az, sort_rel, sort_date]
+            sort_results = [sort_oldest, sort_newest, sort_rel, sort_za, sort_az]
+        elif 'za' == sickbeard.RESULTS_SORTBY[:2]:
+            sort_results = [sort_oldest, sort_newest, sort_rel, sort_az, sort_za]
+        elif 'newest' == sickbeard.RESULTS_SORTBY[:6]:
+            sort_results = [sort_az, sort_rel, sort_oldest, sort_newest]
+        elif 'oldest' == sickbeard.RESULTS_SORTBY[:6]:
+            sort_results = [sort_az, sort_rel, sort_newest, sort_oldest]
         else:
-            sort_results = [sort_az, sort_date, sort_rel]
+            sort_results = [sort_za, sort_az, sort_oldest, sort_newest, sort_rel]
 
         for n, func in enumerate(sort_results):
             final_results = func(final_results, n == len(sort_results) - 1)
@@ -4328,7 +4314,7 @@ class Manage(MainHandler):
             {'title': 'Backlog Overview', 'path': 'manage/backlogOverview/'},
             {'title': 'Media Search', 'path': 'manage/manageSearches/'},
             {'title': 'Show Processes', 'path': 'manage/showProcesses/'},
-            {'title': 'Episode Status', 'path': 'manage/episodeStatuses/'}, ]
+            {'title': 'Episode Status', 'path': 'manage/episode_statuses/'}, ]
 
         if sickbeard.USE_SUBTITLES:
             menu.append({'title': 'Missed Subtitle Management', 'path': 'manage/subtitleMissed/'})
@@ -4343,16 +4329,16 @@ class Manage(MainHandler):
         t.submenu = self.ManageMenu('Bulk')
         return t.respond()
 
-    def showEpisodeStatuses(self, indexer_id, whichStatus):
-        whichStatus = helpers.tryInt(whichStatus)
-        status_list = ((([whichStatus],
-                         Quality.SNATCHED_ANY)[SNATCHED == whichStatus],
-                        Quality.DOWNLOADED)[DOWNLOADED == whichStatus],
-                       Quality.ARCHIVED)[ARCHIVED == whichStatus]
+    def show_episode_statuses(self, indexer_id, which_status):
+        which_status = helpers.tryInt(which_status)
+        status_list = ((([which_status],
+                         Quality.SNATCHED_ANY)[SNATCHED == which_status],
+                        Quality.DOWNLOADED)[DOWNLOADED == which_status],
+                       Quality.ARCHIVED)[ARCHIVED == which_status]
 
-        myDB = db.DBConnection()
-        cur_show_results = myDB.select(
-            'SELECT season, episode, name, airdate, status FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
+        my_db = db.DBConnection()
+        cur_show_results = my_db.select(
+            'SELECT season, episode, name, airdate, status, location FROM tv_episodes WHERE showid = ? AND season != 0 AND status IN (' + ','.join(
                 ['?'] * len(status_list)) + ')', [int(indexer_id)] + status_list)
 
         result = {}
@@ -4372,22 +4358,98 @@ class Manage(MainHandler):
                                                'qualityStr': Quality.qualityStrings[cur_quality],
                                                'sxe': '%d x %02d' % (cur_season, cur_episode)}
 
+            if which_status in [SNATCHED, SKIPPED, IGNORED, WANTED]:
+
+                sql = 'SELECT action, date' \
+                      ' FROM history' \
+                      ' WHERE showid = ?' \
+                      ' AND season = ? AND episode = ? AND action in (%s)' \
+                      ' ORDER BY date DESC' % ','.join([str(q) for q in Quality.DOWNLOADED + Quality.SNATCHED_ANY])
+                sql_results = my_db.select(sql, [int(indexer_id), cur_season, cur_episode])
+                d_status, d_qual, s_status, s_quality, age = 5 * (None,)
+                if sql_results:
+                    for event in sql_results:
+                        if None is d_status and event['action'] in Quality.DOWNLOADED:
+                            d_status, d_qual = Quality.splitCompositeStatus(event['action'])
+                        if None is s_status and event['action'] in Quality.SNATCHED_ANY:
+                            s_status, s_quality = Quality.splitCompositeStatus(event['action'])
+                            aged = ((datetime.datetime.now() -
+                                     datetime.datetime.strptime(str(event['date']), sickbeard.history.dateFormat))
+                                    .total_seconds())
+                            h = 60 * 60
+                            d = 24 * h
+                            days = aged // d
+                            age = ([], ['%id' % days])[bool(days)]
+                            hours, mins = 0, 0
+                            if 7 > days:
+                                hours = aged % d // h
+                                mins = aged % d % h // 60
+                            age = ', '.join(age + ([], ['%ih' % hours])[bool(hours)]
+                                            + ([], ['%im' % mins])[not bool(days)])
+
+                        if None is not d_status and None is not s_status:
+                            break
+
+                undo_from_history, change_to, status = self.recommend_status(
+                    cur_result['status'], cur_result['location'], d_qual, cur_quality)
+                if status:
+                    result[cur_season][cur_episode]['recommend'] = [('. '.join(
+                        (['snatched %s ago' % age], [])[None is age]
+                        + ([], ['file %sfound' % ('not ', '')[bool(cur_result['location'])]])[
+                            None is d_status or not undo_from_history]
+                        + ['%s to <b>%s</b> ?' % (('undo from history',
+                                                   'change')[None is d_status or not undo_from_history], change_to)])),
+                        status]
+
         return json.dumps(result)
 
-    def episodeStatuses(self, whichStatus=None):
+    @staticmethod
+    def recommend_status(cur_status, location=None, d_qual=None, cur_quality=None):
 
-        whichStatus = helpers.tryInt(whichStatus)
-        if whichStatus:
-            status_list = ((([whichStatus],
-                             Quality.SNATCHED_ANY)[SNATCHED == whichStatus],
-                            Quality.DOWNLOADED)[DOWNLOADED == whichStatus],
-                           Quality.ARCHIVED)[ARCHIVED == whichStatus]
+        undo_from_history = False
+        change_to = ''
+        status = None
+        if Quality.NONE == cur_quality:
+            return undo_from_history, change_to, status
+
+        cur_status = Quality.splitCompositeStatus(int(cur_status))[0]
+        if any([location]):
+            undo_from_history = True
+            change_to = statusStrings[DOWNLOADED]
+            status = [Quality.compositeStatus(DOWNLOADED, d_qual or cur_quality)]
+        elif cur_status in Quality.SNATCHED_ANY + [IGNORED, SKIPPED, WANTED]:
+            if None is d_qual:
+                if cur_status not in [IGNORED, SKIPPED]:
+                    change_to = statusStrings[SKIPPED]
+                    status = [SKIPPED]
+            else:
+                # downloaded and removed
+                if cur_status in Quality.SNATCHED_ANY + [WANTED] \
+                        or sickbeard.SKIP_REMOVED_FILES in [ARCHIVED, IGNORED, SKIPPED]:
+                    undo_from_history = True
+                    change_to = '%s %s' % (statusStrings[ARCHIVED], Quality.qualityStrings[d_qual])
+                    status = [Quality.compositeStatus(ARCHIVED, d_qual)]
+                elif sickbeard.SKIP_REMOVED_FILES in [IGNORED, SKIPPED] \
+                        and cur_status not in [IGNORED, SKIPPED]:
+                    change_to = statusStrings[statusStrings[sickbeard.SKIP_REMOVED_FILES]]
+                    status = [sickbeard.SKIP_REMOVED_FILES]
+
+        return undo_from_history, change_to, status
+
+    def episode_statuses(self, which_status=None):
+
+        which_status = helpers.tryInt(which_status)
+        if which_status:
+            status_list = ((([which_status],
+                             Quality.SNATCHED_ANY)[SNATCHED == which_status],
+                            Quality.DOWNLOADED)[DOWNLOADED == which_status],
+                           Quality.ARCHIVED)[ARCHIVED == which_status]
         else:
             status_list = []
 
         t = PageTemplate(web_handler=self, file='manage_episodeStatuses.tmpl')
         t.submenu = self.ManageMenu('Episode')
-        t.whichStatus = whichStatus
+        t.which_status = which_status
 
         my_db = db.DBConnection()
         sql_result = my_db.select(
@@ -4435,47 +4497,67 @@ class Manage(MainHandler):
         t.sorted_show_ids = sorted_show_ids
         return t.respond()
 
-    def changeEpisodeStatuses(self, oldStatus, newStatus, wantedStatus=sickbeard.common.UNKNOWN, *args, **kwargs):
-        status = int(oldStatus)
+    def change_episode_statuses(self, old_status, new_status, wanted_status=sickbeard.common.UNKNOWN, *args, **kwargs):
+        status = int(old_status)
         status_list = ((([status],
                          Quality.SNATCHED_ANY)[SNATCHED == status],
                         Quality.DOWNLOADED)[DOWNLOADED == status],
                        Quality.ARCHIVED)[ARCHIVED == status]
 
-        to_change = {}
+        changes, new_status = self.status_changes(new_status, wanted_status, **kwargs)
+
+        my_db = None if not any(changes) else db.DBConnection()
+        for cur_indexer_id, c_what_to in changes.items():
+            for what, to in c_what_to.items():
+                if 'all' == what:
+                    sql_results = my_db.select(
+                        'SELECT season, episode FROM tv_episodes WHERE status IN (' + ','.join(
+                            ['?'] * len(status_list)) + ') AND season != 0 AND showid = ?',
+                        status_list + [cur_indexer_id])
+                    what = (sql_results and '|'.join(map(lambda r: '%sx%s' % (r['season'], r['episode']), sql_results))
+                            or None)
+                    to = new_status
+
+                Home(self.application, self.request).setStatus(cur_indexer_id, what, to, direct=True)
+
+        self.redirect('/manage/episode_statuses/')
+
+    @staticmethod
+    def status_changes(new_status, wanted_status=sickbeard.common.UNKNOWN, **kwargs):
 
         # make a list of all shows and their associated args
+        to_change = {}
         for arg in kwargs:
-            # we don't care about unchecked checkboxes
-            if kwargs[arg] != 'on':
-                continue
+            # only work with checked checkboxes
+            if kwargs[arg] == 'on':
 
-            indexer_id, what = arg.split('-')
+                indexer_id, _, what = arg.partition('-')
+                what, _, to = what.partition('-')
+                to = (to, new_status)[not to]
+                if 'recommended' != to:
+                    to_change.setdefault(indexer_id, dict())
+                    to_change[indexer_id].setdefault(to, [])
+                    to_change[indexer_id][to] += [what]
 
-            if indexer_id not in to_change:
-                to_change[indexer_id] = []
+        if WANTED == int(wanted_status):
+            new_status = WANTED
 
-            to_change[indexer_id].append(what)
+        changes = {}
+        for indexer_id, to_what in to_change.items():
+            changes.setdefault(indexer_id, dict())
+            all_to = None
+            for to, what in to_what.items():
+                if 'all' in what:
+                    all_to = to
+                    continue
+                changes[indexer_id].update({'|'.join(sorted(what)): (new_status, to)['recommended' == new_status]})
+            if None is not all_to and not any(changes[indexer_id]):
+                if 'recommended' == new_status:
+                    del(changes[indexer_id])
+                else:
+                    changes[indexer_id] = {'all': all_to}
 
-        if sickbeard.common.WANTED == int(wantedStatus):
-            newStatus = sickbeard.common.WANTED
-
-        myDB = db.DBConnection()
-        for cur_indexer_id in to_change:
-
-            # get a list of all the eps we want to change if they just said 'all'
-            if 'all' in to_change[cur_indexer_id]:
-                all_eps_results = myDB.select(
-                    'SELECT season, episode FROM tv_episodes WHERE status IN (' + ','.join(
-                        ['?'] * len(status_list)) + ') AND season != 0 AND showid = ?',
-                    status_list + [cur_indexer_id])
-                all_eps = [str(x['season']) + 'x' + str(x['episode']) for x in all_eps_results]
-                to_change[cur_indexer_id] = all_eps
-
-            Home(self.application, self.request).setStatus(cur_indexer_id, '|'.join(to_change[cur_indexer_id]),
-                                                           newStatus, direct=True)
-
-        self.redirect('/manage/episodeStatuses/')
+        return changes, new_status
 
     def showSubtitleMissed(self, indexer_id, whichSubs):
         myDB = db.DBConnection()
@@ -5188,10 +5270,13 @@ class History(MainHandler):
     def toggle_help(self):
         db.DBConnection().toggle_flag(self.flagname_help_watched)
 
-    def index(self, limit=100):
+    def index(self, limit=100, layout=None):
 
         t = PageTemplate(web_handler=self, file='history.tmpl')
         t.limit = limit
+
+        if layout in ('compact', 'detailed', 'compact_watched', 'detailed_watched', 'provider_failures'):
+            sickbeard.HISTORY_LAYOUT = layout
 
         my_db = db.DBConnection(row_type='dict')
 
@@ -5354,7 +5439,19 @@ class History(MainHandler):
         result = {}
 
         if site_url:
-            resp = helpers.getURL('https://www.isitdownrightnow.com/check.php?domain=%s' % site_url)
+            import requests
+            down_url = 'www.isitdownrightnow.com'
+            proto = 'https'
+            try:
+                requests.head('%s://%s' % (proto, down_url), timeout=5)
+            except (StandardError, Exception):
+                proto = 'http'
+                try:
+                    requests.head('%s://%s' % (proto, down_url), timeout=5)
+                except (StandardError, Exception):
+                    return json.dumps(result)
+
+            resp = helpers.getURL('%s://%s/check.php?domain=%s' % (proto, down_url, site_url))
             if resp:
                 check = resp.lower()
                 day = re.findall(r'(\d+)\s*(?:day)', check)
@@ -5695,7 +5792,7 @@ class ConfigGeneral(Config):
 
     def saveResultPrefs(self, ui_results_sortby=None):
 
-        if ui_results_sortby in ('az', 'date', 'rel', 'notop', 'ontop'):
+        if ui_results_sortby in ('az', 'za', 'newest', 'oldest', 'rel', 'notop', 'ontop'):
             was_ontop = 'notop' not in sickbeard.RESULTS_SORTBY
             if 'top' == ui_results_sortby[-3:]:
                 maybe_ontop = ('', ' notop')[was_ontop]

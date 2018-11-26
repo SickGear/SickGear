@@ -50,11 +50,11 @@
 <script type="text/javascript" src="$sbRoot/js/lib/jquery.collapser.min.js?v=$sbPID"></script>
 
 <style>
-.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sbRoot}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
+.bfr{position:absolute;left:-999px;top:-999px}.bfr img,.spinner,.spinner2,img.queued,img.search,img.success,img.upgrade{display:inline-block;width:16px;height:16px}.spinner{background:url(${sbRoot}/images/loading16${theme_suffix}.gif) no-repeat 0 0}.spinner2{background:url(${sbRoot}/images/loading16-red.gif) no-repeat 0 0}img.queued{background:url(${sbRoot}/images/queued.png) no-repeat 0 0}img.search{background:url(${sbRoot}/images/search16.png) no-repeat 0 0}img.success{background:url(${sbRoot}/images/down-success.png) no-repeat 0 0}img.upgrade{background:url(${sbRoot}/images/down-upgrade.png) no-repeat 0 0}
 .images i{margin-right:6px;margin-top:5px}.hide{display:none}
-.tvshowImg {border:1px solid transparent;min-width:226px;min-hieght:332px}
+.tvshowImg{border:1px solid transparent;min-width:226px;min-hieght:332px}.spinner2{margin-top:3px !important}
 </style>
-<div class="bfr"><img src="$sbRoot/images/loading16${theme_suffix}.gif" /></div>
+<div class="bfr"><img src="$sbRoot/images/loading16${theme_suffix}.gif"><img src="$sbRoot/images/loading16-red.gif"><img src="$sbRoot/images/queued.png"><img src="$sbRoot/images/search16.png"><img src="$sbRoot/images/no16.png"><img src="$sbRoot/images/yes16.png"><img src="$sbRoot/images/down-success.png"><img src="$sbRoot/images/down-upgrade.png"></div>
 
 <div id="background-container">
 #if $has_art
@@ -489,14 +489,14 @@
 		</tr>
                 #set $attr_title_ep = ('', ' (Anime #)')[$show.is_anime]
 		<tr id="season-$season-cols" class="seasoncols collapse tablesorter-headerRow">
-			<td class="col-checkbox tablesorter-no-sort"><input type="checkbox" class="seasonCheck" id="$season"></td>
+			<th class="col-checkbox tablesorter-no-sort"><input type="checkbox" class="seasonCheck" id="$season"></th>
 			<th class="col-metadata tablesorter-no-sort">Meta</th>
-			<th class="col-ep tablesorter-ep-num"><span title="Ep #$attr_title_ep">#</span></th>#if $scene or $scene_anime
-			<th class="col-ep tablesorter-ep-scene" style="padding-right:18px">Scene#if $scene_anime# absolute#end if#</th>#end if#
-			<th class="col-name">Name</th>
-			<th class="col-airdate tablesorter-airdate">Air Date</th>#if $sg_var('USE_SUBTITLES') and $show.subtitles
+			<th class="col-ep tablesorter-ep-num"><span title="Ep #$attr_title_ep"><span class="hdr-text">#</span></span></th>#if $scene or $scene_anime
+			<th class="col-ep tablesorter-ep-scene" style="padding-right:18px"><span class="hdr-text">Scene#if $scene_anime# absolute#end if#</span></th>#end if#
+			<th class="col-name"><span class="hdr-text">Name</span></th>
+			<th class="col-airdate tablesorter-airdate"><span class="hdr-text">Air Date</span></th>#if $sg_var('USE_SUBTITLES') and $show.subtitles
 			<th class="col-subtitles tablesorter-no-sort">Subtitles</th>#end if
-			<th class="col-status">Status</th>
+			<th class="col-status"><span class="hdr-text">Status</span></th>
 			<th class="col-search tablesorter-no-sort">Search</th>
 		</tr>
 	</thead>

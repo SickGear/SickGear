@@ -8,13 +8,12 @@ This module provides a Session object to manage and persist settings across
 requests (cookies, auth, proxies).
 """
 import os
-import platform
+import sys
 import time
-from collections import Mapping
 from datetime import timedelta
 
 from .auth import _basic_auth_str
-from .compat import cookielib, is_py3, OrderedDict, urljoin, urlparse
+from .compat import cookielib, is_py3, OrderedDict, urljoin, urlparse, Mapping
 from .cookies import (
     cookiejar_from_dict, extract_cookies_to_jar, RequestsCookieJar, merge_cookies)
 from .models import Request, PreparedRequest, DEFAULT_REDIRECT_LIMIT
@@ -23,9 +22,8 @@ from ._internal_utils import to_native_string
 from .utils import to_key_val_list, default_headers
 from .exceptions import (
     TooManyRedirects, InvalidSchema, ChunkedEncodingError, ContentDecodingError)
-from .packages.urllib3._collections import RecentlyUsedContainer
-from .structures import CaseInsensitiveDict
 
+from .structures import CaseInsensitiveDict
 from .adapters import HTTPAdapter
 
 from .utils import (
@@ -38,11 +36,9 @@ from .status_codes import codes
 # formerly defined here, reexposed here for backward compatibility
 from .models import REDIRECT_STATI
 
-REDIRECT_CACHE_SIZE = 1000
-
 # Preferred clock, based on which one is more accurate on a given system.
-if platform.system() == 'Windows':
-    try:  # Python 3.3+
+if sys.platform == 'win32':
+    try:  # Python 3.4+
         preferred_clock = time.perf_counter
     except AttributeError:  # Earlier than Python 3.
         preferred_clock = time.clock
@@ -100,6 +96,12 @@ class SessionRedirectMixin(object):
 
     def get_redirect_target(self, resp):
         """Receives a Response. Returns a redirect URI or ``None``"""
+        # Due to the nature of how requests processes redirects this method will
+        # be called at least once upon the original response and at least twice
+        # on each subsequent redirect response (if any).
+        # If a custom mixin is used to handle this logic, it may be advantageous
+        # to cache the redirect location onto the response object as a private
+        # attribute.
         if resp.is_redirect:
             location = resp.headers['location']
             # Currently the underlying http module on py3 decode headers
@@ -113,13 +115,30 @@ class SessionRedirectMixin(object):
             return to_native_string(location, 'utf8')
         return None
 
+    def should_strip_auth(self, old_url, new_url):
+        """Decide whether Authorization header should be removed when redirecting"""
+        old_parsed = urlparse(old_url)
+        new_parsed = urlparse(new_url)
+        if old_parsed.hostname != new_parsed.hostname:
+            return True
+        # Special case: allow http -> https redirect when using the standard
+        # ports. This isn't specified by RFC 7235, but is kept to avoid
+        # breaking backwards compatibility with older versions of requests
+        # that allowed any redirects on the same host.
+        if (old_parsed.scheme == 'http' and old_parsed.port in (80, None)
+                and new_parsed.scheme == 'https' and new_parsed.port in (443, None)):
+            return False
+        # Standard case: root URI must match
+        return old_parsed.port != new_parsed.port or old_parsed.scheme != new_parsed.scheme
+
     def resolve_redirects(self, resp, req, stream=False, timeout=None,
                           verify=True, cert=None, proxies=None, yield_requests=False, **adapter_kwargs):
         """Receives a Response. Returns a generator of Responses or Requests."""
 
-        hist = [] # keep track of history
+        hist = []  # keep track of history
 
         url = self.get_redirect_target(resp)
+        previous_fragment = urlparse(req.url).fragment
         while url:
             prepared_request = req.copy()
 
@@ -144,8 +163,12 @@ class SessionRedirectMixin(object):
                 parsed_rurl = urlparse(resp.url)
                 url = '%s:%s' % (to_native_string(parsed_rurl.scheme), url)
 
-            # The scheme should be lower case...
+            # Normalize url case and attach previous fragment if needed (RFC 7231 7.1.2)
             parsed = urlparse(url)
+            if parsed.fragment == '' and previous_fragment:
+                parsed = parsed._replace(fragment=previous_fragment)
+            elif parsed.fragment:
+                previous_fragment = parsed.fragment
             url = parsed.geturl()
 
             # Facilitate relative 'location' headers, as allowed by RFC 7231.
@@ -157,15 +180,12 @@ class SessionRedirectMixin(object):
                 url = requote_uri(url)
 
             prepared_request.url = to_native_string(url)
-            # Cache the url, unless it redirects to itself.
-            if resp.is_permanent_redirect and req.url != prepared_request.url:
-                self.redirect_cache[req.url] = prepared_request.url
 
             self.rebuild_method(prepared_request, resp)
 
-            # https://github.com/kennethreitz/requests/issues/1084
+            # https://github.com/requests/requests/issues/1084
             if resp.status_code not in (codes.temporary_redirect, codes.permanent_redirect):
-                # https://github.com/kennethreitz/requests/issues/3490
+                # https://github.com/requests/requests/issues/3490
                 purged_headers = ('Content-Length', 'Content-Type', 'Transfer-Encoding')
                 for header in purged_headers:
                     prepared_request.headers.pop(header, None)
@@ -232,14 +252,10 @@ class SessionRedirectMixin(object):
         headers = prepared_request.headers
         url = prepared_request.url
 
-        if 'Authorization' in headers:
+        if 'Authorization' in headers and self.should_strip_auth(response.request.url, url):
             # If we get redirected to a new host, we should strip out any
             # authentication headers.
-            original_parsed = urlparse(response.request.url)
-            redirect_parsed = urlparse(url)
-
-            if (original_parsed.hostname != redirect_parsed.hostname):
-                del headers['Authorization']
+            del headers['Authorization']
 
         # .netrc might have more auth for us on our new host.
         new_auth = get_netrc_auth(url) if self.trust_env else None
@@ -295,7 +311,7 @@ class SessionRedirectMixin(object):
         """
         method = prepared_request.method
 
-        # http://tools.ietf.org/html/rfc7231#section-6.4.4
+        # https://tools.ietf.org/html/rfc7231#section-6.4.4
         if response.status_code == codes.see_other and method != 'HEAD':
             method = 'GET'
 
@@ -321,13 +337,13 @@ class Session(SessionRedirectMixin):
 
       >>> import requests
       >>> s = requests.Session()
-      >>> s.get('http://httpbin.org/get')
+      >>> s.get('https://httpbin.org/get')
       <Response [200]>
 
     Or as a context manager::
 
       >>> with requests.Session() as s:
-      >>>     s.get('http://httpbin.org/get')
+      >>>     s.get('https://httpbin.org/get')
       <Response [200]>
     """
 
@@ -392,9 +408,6 @@ class Session(SessionRedirectMixin):
         self.mount('https://', HTTPAdapter())
         self.mount('http://', HTTPAdapter())
 
-        # Only store 1000 redirects to prevent using infinite memory
-        self.redirect_cache = RecentlyUsedContainer(REDIRECT_CACHE_SIZE)
-
     def __enter__(self):
         return self
 
@@ -442,20 +455,9 @@ class Session(SessionRedirectMixin):
         return p
 
     def request(self, method, url,
-        params=None,
-        data=None,
-        headers=None,
-        cookies=None,
-        files=None,
-        auth=None,
-        timeout=None,
-        allow_redirects=True,
-        proxies=None,
-        hooks=None,
-        stream=None,
-        verify=None,
-        cert=None,
-        json=None):
+            params=None, data=None, headers=None, cookies=None, files=None,
+            auth=None, timeout=None, allow_redirects=True, proxies=None,
+            hooks=None, stream=None, verify=None, cert=None, json=None):
         """Constructs a :class:`Request <Request>`, prepares it and sends it.
         Returns :class:`Response <Response>` object.
 
@@ -463,8 +465,8 @@ class Session(SessionRedirectMixin):
         :param url: URL for the new :class:`Request` object.
         :param params: (optional) Dictionary or bytes to be sent in the query
             string for the :class:`Request`.
-        :param data: (optional) Dictionary, bytes, or file-like object to send
-            in the body of the :class:`Request`.
+        :param data: (optional) Dictionary, list of tuples, bytes, or file-like
+            object to send in the body of the :class:`Request`.
         :param json: (optional) json to send in the body of the
             :class:`Request`.
         :param headers: (optional) Dictionary of HTTP Headers to send with the
@@ -494,16 +496,16 @@ class Session(SessionRedirectMixin):
         """
         # Create the Request.
         req = Request(
-            method = method.upper(),
-            url = url,
-            headers = headers,
-            files = files,
-            data = data or {},
-            json = json,
-            params = params or {},
-            auth = auth,
-            cookies = cookies,
-            hooks = hooks,
+            method=method.upper(),
+            url=url,
+            headers=headers,
+            files=files,
+            data=data or {},
+            json=json,
+            params=params or {},
+            auth=auth,
+            cookies=cookies,
+            hooks=hooks,
         )
         prep = self.prepare_request(req)
 
@@ -560,7 +562,8 @@ class Session(SessionRedirectMixin):
         r"""Sends a POST request. Returns :class:`Response` object.
 
         :param url: URL for the new :class:`Request` object.
-        :param data: (optional) Dictionary, bytes, or file-like object to send in the body of the :class:`Request`.
+        :param data: (optional) Dictionary, list of tuples, bytes, or file-like
+            object to send in the body of the :class:`Request`.
         :param json: (optional) json to send in the body of the :class:`Request`.
         :param \*\*kwargs: Optional arguments that ``request`` takes.
         :rtype: requests.Response
@@ -572,7 +575,8 @@ class Session(SessionRedirectMixin):
         r"""Sends a PUT request. Returns :class:`Response` object.
 
         :param url: URL for the new :class:`Request` object.
-        :param data: (optional) Dictionary, bytes, or file-like object to send in the body of the :class:`Request`.
+        :param data: (optional) Dictionary, list of tuples, bytes, or file-like
+            object to send in the body of the :class:`Request`.
         :param \*\*kwargs: Optional arguments that ``request`` takes.
         :rtype: requests.Response
         """
@@ -583,12 +587,13 @@ class Session(SessionRedirectMixin):
         r"""Sends a PATCH request. Returns :class:`Response` object.
 
         :param url: URL for the new :class:`Request` object.
-        :param data: (optional) Dictionary, bytes, or file-like object to send in the body of the :class:`Request`.
+        :param data: (optional) Dictionary, list of tuples, bytes, or file-like
+            object to send in the body of the :class:`Request`.
         :param \*\*kwargs: Optional arguments that ``request`` takes.
         :rtype: requests.Response
         """
 
-        return self.request('PATCH', url,  data=data, **kwargs)
+        return self.request('PATCH', url, data=data, **kwargs)
 
     def delete(self, url, **kwargs):
         r"""Sends a DELETE request. Returns :class:`Response` object.
@@ -621,16 +626,6 @@ class Session(SessionRedirectMixin):
         allow_redirects = kwargs.pop('allow_redirects', True)
         stream = kwargs.get('stream')
         hooks = request.hooks
-
-        # Resolve URL in redirect cache, if available.
-        if allow_redirects:
-            checked_urls = set()
-            while request.url in self.redirect_cache:
-                checked_urls.add(request.url)
-                new_url = self.redirect_cache.get(request.url)
-                if new_url in checked_urls:
-                    break
-                request.url = new_url
 
         # Get the appropriate adapter to use
         adapter = self.get_adapter(url=request.url)
@@ -720,7 +715,7 @@ class Session(SessionRedirectMixin):
         """
         for (prefix, adapter) in self.adapters.items():
 
-            if url.lower().startswith(prefix):
+            if url.lower().startswith(prefix.lower()):
                 return adapter
 
         # Nothing matches :-/
@@ -734,7 +729,7 @@ class Session(SessionRedirectMixin):
     def mount(self, prefix, adapter):
         """Registers a connection adapter to a prefix.
 
-        Adapters are sorted in descending order by key length.
+        Adapters are sorted in descending order by prefix length.
         """
         self.adapters[prefix] = adapter
         keys_to_move = [k for k in self.adapters if len(k) < len(prefix)]
@@ -744,24 +739,23 @@ class Session(SessionRedirectMixin):
 
     def __getstate__(self):
         state = dict((attr, getattr(self, attr, None)) for attr in self.__attrs__)
-        state['redirect_cache'] = dict(self.redirect_cache)
         return state
 
     def __setstate__(self, state):
-        redirect_cache = state.pop('redirect_cache', {})
         for attr, value in state.items():
             setattr(self, attr, value)
-
-        self.redirect_cache = RecentlyUsedContainer(REDIRECT_CACHE_SIZE)
-        for redirect, to in redirect_cache.items():
-            self.redirect_cache[redirect] = to
 
 
 def session():
     """
     Returns a :class:`Session` for context-management.
 
+    .. deprecated:: 1.0.0
+
+        This method has been deprecated since version 1.0.0 and is only kept for
+        backwards compatibility. New code should use :class:`~requests.sessions.Session`
+        to create a session. This may be removed at a future date.
+
     :rtype: Session
     """
-
     return Session()

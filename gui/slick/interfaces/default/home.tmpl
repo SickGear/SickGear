@@ -77,8 +77,8 @@
 		</div>
 #end if
 		<div class="pull-right" style="clear:right">
-			<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" data-column="1" placeholder="Search Show Name" tabindex="$tab#set $tab += 1#">
-			&nbsp;<button type="button" class="resetshows btn btn-inline" tabindex="$tab#set $tab += 1#">Reset Search</button>
+			<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" data-column="1" placeholder="Filter Show Name" tabindex="$tab#set $tab += 1#">
+			&nbsp;<button type="button" class="resetshows btn btn-inline" tabindex="$tab#set $tab += 1#">Reset Filter</button>
 		</div>
 	</div><!-- /HomeLayout -->
 ##
@@ -161,7 +161,7 @@
                 #set $download_stat = str($cur_downloaded)
                 #set $download_stat_tip = 'Downloaded: ' + str($cur_downloaded)
                 #if $cur_snatched > 0
-                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sg_root, $cur_snatched)
+                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episode_statuses?which_status=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sg_root, $cur_snatched)
                     #set $download_stat_tip = download_stat_tip + '&#013;' + 'Snatched: ' + str($cur_snatched)
                 #end if
                 #set $download_stat = download_stat + ' / ' + str($cur_total)
@@ -350,7 +350,7 @@
                 #set $download_stat = str($cur_downloaded)
                 #set $download_stat_tip = 'Downloaded: ' + str($cur_downloaded)
                 #if $cur_snatched > 0
-                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episodeStatuses?whichStatus=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sg_root, $cur_snatched)
+                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episode_statuses?which_status=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sg_root, $cur_snatched)
                     #set $download_stat_tip = download_stat_tip + '&#013;' + 'Snatched: ' + str($cur_snatched)
                 #end if
                 #set $download_stat = download_stat + ' / ' + str($cur_total)

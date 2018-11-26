@@ -9,126 +9,128 @@
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 		<div class="stepDiv linefix">
 
-		<div style="float:right;margin:-30px 0px 20px 15px;font-size:12px;line-height:27px;">
-			<span class="grey-text">To reuse options below when adding more shows&nbsp;<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save as defaults" disabled="disabled" /></span>
-		</div>
+			<div style="float:right;margin:-30px 0px 20px 15px;font-size:12px;line-height:27px;">
+				<span class="grey-text">To reuse options below when adding more shows&nbsp;<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save as defaults" disabled="disabled" /></span>
+			</div>
 
-		<div class="field-pair">
-			<label for="statusSelect">
-				<span class="component-title">Initial episode status</span>
-				<span class="component-desc">
-					<select name="defaultStatus" id="statusSelect" class="form-control form-control-inline input-sm">
-#for $curStatus in [$SKIPPED, $WANTED, $ARCHIVED, $IGNORED]:
-						<option value="$curStatus"#if $sg_var('STATUS_DEFAULT', SKIPPED) == $curStatus then $selected else ''#>$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</option>
-#end for
-					</select>
-					<span>set the initial status of missing episodes</span>
-				</span>
-			</label>
-		</div>
+			<div class="field-pair alt">
+				<p class="grey-text"><span style="font-weight:800">Edit</span> options anytime from the details view of the show</p>
+			</div>
 
-		<div class="field-pair alt">
-			<p class="grey-text">Tip: The following options are <span style="font-weight:800">edit</span>able later in the detail view of the show</p>
-		</div>
-
-		<div class="field-pair">
+			<div class="field-pair">
 #set $qualities = $Quality.splitQuality($sg_var('QUALITY_DEFAULT', SD))
 #set global $any_qualities = $qualities[0]
 #set global $best_qualities = $qualities[1]
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
-		</div>
+			</div>
 
 #try:
-    #if True == $enable_default_wanted:
-		<div class="field-pair alt">
-			<span class="component-title">From season 1 forward, set</span>
-			<span class="component-desc">
-				<label for="wanted_begin" style="padding-bottom:10px">
-					<input type="number" name="wanted_begin" id="wanted_begin" value="$sg_str('WANTED_BEGIN_DEFAULT')" class="form-control input-sm input75">
-					<span>episodes as wanted (10 ... 0, and where -1 is whole first season)</span>
-				</label>
-			</span>
-			<span class="component-title">From latest going back, set</span>
-			<span class="component-desc">
-				<label for="wanted_latest">
-					<input type="number" name="wanted_latest" id="wanted_latest" value="$sg_str('WANTED_LATEST_DEFAULT')" class="form-control input-sm input75">
-					<span>episodes as wanted (10 ... 0, and where -1 is whole latest season)</span>
-				</label>
-			</span>
-		</div>
-    #end if
+	#if True == $enable_default_wanted:
+			<div class="field-pair alt">
+				<span class="component-title">From season 1 forward, set</span>
+				<span class="component-desc">
+					<label for="wanted_begin" style="padding-bottom:10px">
+						<input type="number" name="wanted_begin" id="wanted_begin" value="$sg_str('WANTED_BEGIN_DEFAULT')" class="form-control input-sm input75">
+						<span>episodes as wanted (10 ... 0, and where -1 is whole first season)</span>
+					</label>
+				</span>
+				<span class="component-title">From latest going back, set</span>
+				<span class="component-desc">
+					<label for="wanted_latest">
+						<input type="number" name="wanted_latest" id="wanted_latest" value="$sg_str('WANTED_LATEST_DEFAULT')" class="form-control input-sm input75">
+						<span>episodes as wanted (10 ... 0, and where -1 is whole latest season)</span>
+					</label>
+				</span>
+			</div>
+	#end if
 #except (NameError, NotFound):
-    #pass
+	#pass
 #end try
 
-		<div class="field-pair alt" style="margin-top:10px">
-			<label for="prune">
-				<span class="component-title">Keep up to</span>
-				<span class="component-desc">
-					<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
-					<p>most recent downloads (blank for all)</p>
-				</span>
-			</label>
-		</div>
-
-		<div class="field-pair #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#">
-			<label for="tag">
-				<span class="component-title">Place show in group</span>
-				<span class="component-desc">
-					<select name="tag" id="tag" class="form-control form-control-inline input-sm">
+			<div class="field-pair #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#">
+				<label for="tag">
+					<span class="component-title">Place show in group</span>
+					<span class="component-desc">
+						<select name="tag" id="tag" class="form-control form-control-inline input-sm">
 #for $tag in $sg_var('SHOW_TAGS', []):
-						<option value="$tag"#if $tag == $getattr(sickbeard, 'SHOW_TAG_DEFAULT', $getattr(sickbeard, 'DEFAULT_SHOW_TAG', None)) then $selected else ''#>$tag</option>
+							<option value="$tag"#if $tag == $getattr(sickbeard, 'SHOW_TAG_DEFAULT', $getattr(sickbeard, 'DEFAULT_SHOW_TAG', None)) then $selected else ''#>$tag</option>
 #end for
-					</select>
-					<span>and display on the show list page under this section</span>
-				</span>
-			</label>
-		</div>
+						</select>
+						<span>and display on the show list page under this section</span>
+					</span>
+				</label>
+			</div>
 
-		<div class="field-pair alt">
-			<label for="flatten_folders">
-				<span class="component-title">Flat folder structure</span>
-				<span class="component-desc">
-					<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders"#if $sg_var('FLATTEN_FOLDERS_DEFAULT') then $checked else ''# />
-					<p>do not create sub folders</p>
-				</span>
-			</label>
-		</div>
+			<div><a id="moreless-options-addshow" href="#" name="More options">More options...</a></div>
+			<div id="options-addshow" style="display:none">
 
-		<div class="field-pair alt" id="scene-maps-found" style="display:none">
-			<label for="scene">
-				<span class="component-title">Scene numbering</span>
-				<span class="component-desc">
-					<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''# />
-					<p>if any exists, enable editable episode numbers from TheXEM.de for search and media processing</p>
-				</span>
-			</label>
-		</div>
+				<div class="field-pair alt" style="margin-top:10px">
+					<label for="prune">
+						<span class="component-title">Keep up to</span>
+						<span class="component-desc">
+							<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
+							<p>most recent downloads (blank for all)</p>
+						</span>
+					</label>
+				</div>
+
+				<div class="field-pair">
+					<label for="statusSelect">
+						<span class="component-title">Initial episode status</span>
+						<span class="component-desc">
+							<select name="defaultStatus" id="statusSelect" class="form-control form-control-inline input-sm">
+#for $curStatus in [$SKIPPED, $WANTED, $ARCHIVED, $IGNORED]:
+								<option value="$curStatus"#if $sg_var('STATUS_DEFAULT', SKIPPED) == $curStatus then $selected else ''#>$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</option>
+#end for
+							</select>
+							<span>set the initial status of missing episodes</span>
+						</span>
+					</label>
+				</div>
+
+				<div class="field-pair alt" id="scene-maps-found" style="display:none">
+					<label for="scene">
+						<span class="component-title">Scene numbering</span>
+						<span class="component-desc">
+							<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''# />
+							<p>if any exists, enable editable episode numbers from TheXEM.de for search and media processing</p>
+					</label>
+				</div>
 
 #if $sg_var('USE_SUBTITLES'):
-		<div class="field-pair alt">
-			<label for="subtitles">
-				<span class="component-title">Subtitles</span>
-				<span class="component-desc">
-					<input type="checkbox" name="subtitles" id="subtitles"#if $sg_var('SUBTITLES_DEFAULT') then $checked else ''# />
-					<p>download subtitles for this show</p>
-				</span>
-			</label>
-		</div>
+				<div class="field-pair alt">
+					<label for="subtitles">
+						<span class="component-title">Subtitles</span>
+						<span class="component-desc">
+							<input type="checkbox" name="subtitles" id="subtitles"#if $sg_var('SUBTITLES_DEFAULT') then $checked else ''# />
+							<p>download subtitles for this show</p>
+						</span>
+					</label>
+				</div>
 #end if
+
+				<div class="field-pair alt">
+					<label for="flatten_folders">
+						<span class="component-title">Flat folder structure</span>
+						<span class="component-desc">
+							<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders"#if $sg_var('FLATTEN_FOLDERS_DEFAULT') then $checked else ''# />
+							<p>do not create sub folders</p>
+						</span>
+					</label>
+				</div>
 
 #if $enable_anime_options
-		<div class="field-pair alt">
-			<label for="anime">
-				<span class="component-title">Show is anime</span>
-				<span class="component-desc">
-					<input type="checkbox" name="anime" id="anime"#if $sg_var('ANIME_DEFAULT') or $kwargs.get('is_anime') then $checked else ''# />
-					<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
-				</span>
-			</label>
-		</div>
-
+				<div class="field-pair alt">
+					<label for="anime">
+						<span class="component-title">Show is anime</span>
+						<span class="component-desc">
+							<input type="checkbox" name="anime" id="anime"#if $sg_var('ANIME_DEFAULT') or $kwargs.get('is_anime') then $checked else ''# />
+							<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
+						</span>
+					</label>
+				</div>
 #end if
+			</div>
 		</div>
 
 #if $enable_anime_options

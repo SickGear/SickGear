@@ -205,70 +205,82 @@ class Quality:
         from sickbeard import encodingKludge as ek
         name = ek.ek(os.path.basename, name)
 
-        checkName = lambda quality_list, func: func([re.search(x, name, re.I) for x in quality_list])
+        check_name = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
 
         if anime:
-            dvdOptions = checkName(['dvd', 'dvdrip'], any)
-            blueRayOptions = checkName(['bluray', 'blu-ray', 'BD'], any)
-            sdOptions = checkName(['360p', '480p', '848x480', 'XviD'], any)
-            hdOptions = checkName(['720p', '1280x720', '960x720'], any)
-            fullHD = checkName(['1080p', '1920x1080'], any)
+            sd_options = check_name(['360p', '480p', '848x480', 'XviD'], any)
+            dvd_options = check_name(['dvd', 'dvdrip'], any)
+            blue_ray_options = check_name(['bluray', 'blu-ray', 'BD'], any)
 
-            if sdOptions and not blueRayOptions and not dvdOptions:
+            if sd_options and not dvd_options and not blue_ray_options:
                 return Quality.SDTV
-            elif dvdOptions:
+            if dvd_options:
                 return Quality.SDDVD
-            elif hdOptions and not blueRayOptions and not fullHD:
-                return Quality.HDTV
-            elif fullHD and not blueRayOptions and not hdOptions:
-                return Quality.FULLHDTV
-            elif hdOptions and not blueRayOptions and not fullHD:
-                return Quality.HDWEBDL
-            elif blueRayOptions and hdOptions and not fullHD:
-                return Quality.HDBLURAY
-            elif blueRayOptions and fullHD and not hdOptions:
-                return Quality.FULLHDBLURAY
-            elif sickbeard.ANIME_TREAT_AS_HDTV:
+
+            hd_options = check_name(['720p', '1280x720', '960x720'], any)
+            full_hd = check_name(['1080p', '1920x1080'], any)
+            if not blue_ray_options:
+                if hd_options and not full_hd:
+                    return Quality.HDTV
+                if not hd_options and full_hd:
+                    return Quality.FULLHDTV
+                # this cond already checked above, commented out for now
+                # if hd_options and not full_hd:
+                #     return Quality.HDWEBDL
+            else:
+                if hd_options and not full_hd:
+                    return Quality.HDBLURAY
+                if not hd_options and full_hd:
+                    return Quality.FULLHDBLURAY
+            if sickbeard.ANIME_TREAT_AS_HDTV:
                 logger.log(u'Treating file: %s with "unknown" quality as HDTV per user settings' % name, logger.DEBUG)
                 return Quality.HDTV
-            else:
-                return Quality.UNKNOWN
+            return Quality.UNKNOWN
 
-        if checkName(['(pdtv|hdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|x264|h.?264))'], all) and not checkName(['(720|1080|2160)[pi]'], all) \
-                and not checkName(['hr.ws.pdtv.(x264|h.?264)'], any):
+        fmt = '((h.?|x)26[45]|vp9|av1)'
+        webfmt = 'web.?(dl|rip|.%s)' % fmt
+        rips = 'b[r|d]rip'
+        hd_rips = 'blu.?ray|hddvd|%s' % rips
+        # for check in []:
+
+        if check_name(['(hdtv|pdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|%s))' % fmt]) \
+                and not (check_name(['(720|1080|2160)[pi]']) or check_name(['hr.ws.pdtv.(x264|h.?264)'])):
             return Quality.SDTV
-        elif checkName(['web.?(dl|rip|.[hx]26[45])', 'xvid|x26[45]|.?26[45]'], all) and not checkName(['(720|1080|2160)[pi]'], all):
+        if check_name([webfmt, 'xvid|%s' % fmt]) \
+                and not check_name(['(720|1080|2160)[pi]']):
             return Quality.SDTV
-        elif checkName(['(dvd.?rip|b[r|d]rip)(.ws)?(.(xvid|divx|x264|h.?264))?'], any) and not checkName(['(720|1080|2160)[pi]'], all):
+        if check_name(['(dvd.?rip|%s)(.ws)?(.(xvid|divx|%s))?' % (rips, fmt)]) \
+                and not check_name(['(720|1080|2160)[pi]']):
             return Quality.SDDVD
-        elif checkName(['(xvid|divx|480p)'], any) and not checkName(['(720|1080|2160)[pi]'], all) \
-                and not checkName(['hr.ws.pdtv.(x264|h.?264)'], any):
+        if check_name(['(xvid|divx|480p)']) \
+                and not (check_name(['(720|1080|2160)[pi]']) or check_name(['hr.ws.pdtv.%s' % fmt])):
             return Quality.SDTV
-        elif checkName(['720p', 'hdtv', 'x264|h.?264'], all) or checkName(['hr.ws.pdtv.(x264|h.?264)'], any) \
-                and not checkName(['(1080|2160)[pi]'], all):
+        if check_name(['720p', 'hdtv', fmt]) or check_name(['hr.ws.pdtv.%s' % fmt]) \
+                and not check_name(['(1080|2160)[pi]']):
             return Quality.HDTV
-        elif checkName(['720p|1080i', 'hdtv', 'mpeg-?2'], all) or checkName(['1080[pi].hdtv', 'h.?264'], all):
+        if check_name(['720p|1080i', 'hdtv', 'mpeg-?2']) or check_name(['1080[pi].hdtv', 'h.?264']):
             return Quality.RAWHDTV
-        elif checkName(['1080p', 'hdtv', 'x264'], all):
+        if check_name(['1080p', 'hdtv', fmt]):
             return Quality.FULLHDTV
-        elif checkName(['720p', 'web.?(dl|rip|.[hx]26[45])'], all) or checkName(['720p', 'itunes', 'x264|h.?264'], all):
+        if check_name(['720p', webfmt]) or check_name(['720p', 'itunes', fmt]):
             return Quality.HDWEBDL
-        elif checkName(['1080p', 'web.?(dl|rip|.[hx]26[45])'], all) or checkName(['1080p', 'itunes', 'x264|h.?264'], all):
+        if check_name(['1080p', webfmt]) or check_name(['1080p', 'itunes', fmt]):
             return Quality.FULLHDWEBDL
-        elif checkName(['720p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all):
+        if check_name(['720p', hd_rips, fmt]):
             return Quality.HDBLURAY
-        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'x264|h.?264'], all) or \
-                (checkName(['1080[pi]', 'remux'], all) and not checkName(['hdtv'], all)):
+        if check_name(['1080p', hd_rips, fmt]) \
+                or (check_name(['1080[pi]', 'remux']) and not check_name(['hdtv'])):
             return Quality.FULLHDBLURAY
-        elif checkName(['2160p', 'web.?(dl|rip|.[hx]26[45])'], all):
+        if check_name(['2160p', webfmt]):
             return Quality.UHD4KWEB
         # p2p
-        elif checkName(['720HD'], all) and not checkName(['(1080|2160)[pi]'], all):
+        if check_name(['720HD']) \
+                and not check_name(['(1080|2160)[pi]']):
             return Quality.HDTV
-        elif checkName(['1080p', 'blu.?ray|hddvd|b[r|d]rip', 'avc|vc[-\s.]?1'], all):
+        if check_name(['1080p', hd_rips, 'avc|vc[-\s.]?1']):
             return Quality.FULLHDBLURAY
-        else:
-            return Quality.UNKNOWN
+
+        return Quality.UNKNOWN
 
     @staticmethod
     def fileQuality(filename):

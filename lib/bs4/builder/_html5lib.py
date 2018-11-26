@@ -30,14 +30,13 @@ from bs4.element import (
     )
 
 try:
-    # 0.99999999 and up
-    from html5lib.treebuilders import base as treebuilder_base
-    old_html5lib = False
-except ImportError:
     # Pre-0.99999999
     from html5lib.treebuilders import _base as treebuilder_base
-    old_html5lib = True
-
+    new_html5lib = False
+except ImportError, e:
+    # 0.99999999 and up
+    from html5lib.treebuilders import base as treebuilder_base
+    new_html5lib = True
 
 class HTML5TreeBuilder(HTMLTreeBuilder):
     """Use html5lib to build a tree."""
@@ -66,7 +65,7 @@ class HTML5TreeBuilder(HTMLTreeBuilder):
 
         extra_kwargs = dict()
         if not isinstance(markup, unicode):
-            if not old_html5lib:
+            if new_html5lib:
                 extra_kwargs['override_encoding'] = self.user_specified_encoding
             else:
                 extra_kwargs['encoding'] = self.user_specified_encoding

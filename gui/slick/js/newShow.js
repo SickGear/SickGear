@@ -57,7 +57,7 @@ $(document).ready(function () {
 			tvsrcName = elTvDatabase.find('option:selected').text(),
 			tvSearchSrc = 0 < tvsrcName.length ? ' on ' + tvsrcName : '';
 
-		$('#searchResults').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
+		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
 			+ ' searching <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
 			+ tvSearchSrc + ' in ' + elIndexerLang.val()
 			+ '...');
@@ -72,17 +72,18 @@ $(document).ready(function () {
 			timeout: parseInt($('#indexer_timeout').val(), 10) * parseInt($('#indexer_count').val(), 2) * 1000 + 15000,
 			dataType: 'json',
 			error: function () {
-				$('#searchResults').empty().html('search timed out, try again or try another database');
+				$('#search-results').empty().html('search timed out, try again in a few mins.');
 			},
 			success: function (data) {
-				var resultStr = '', attrs = '', checked = !1, rowType, row = 0, srcState = '';
+				var resultStr = '', attrs = '', checked = !1, rowType, row = 0, srcState = '',
+					resultItem, resultStrBuffer = '', nBufferSize = 20, nBuffer = 0, nAll = 0;
 
-				if (0 === data.results.length) {
+				if (null === data.results || 0 === data.results.length) {
 					resultStr += '<span class="boldest">Sorry, no results found. Try a different search.</span>';
 				} else {
 					var result = {
 						SrcName: 0, isInDB: 1, SrcId: 2, SrcDBId: 3, SrcUrl: 4, ShowID: 5, Title: 6, TitleHtml: 7,
-						Aired: 8, Network: 9, Genre: 10, Overview: 11, RelSort: 12, DateSort: 13, AzSort: 14, ImgUrl: 15
+						Aired: 8, Network: 9, Genre: 10, Overview: 11, RelSort: 12, NewestAired: 13, OldestAired: 14, AzSort: 15 , ZaSort: 16, ImgUrl: 17
 					};
 					$.each(data.results, function (index, item) {
 						attrs = (!1 !== item[result.isInDB] ? ' disabled="disabled"' : (!0 === checked ? '' : ' checked'));
@@ -104,7 +105,7 @@ $(document).ready(function () {
 							null === item[result.SrcName] ? '' : item[result.SrcName],
 							!1 === item[result.isInDB] ? '' : '<span class="exists-db"><a href="' + sbRoot + item[result.isInDB] + '" target="_blank">exists in db</a></span>']
 							.join(' - ').replace(/(^[\s-]+|[\s-]+$)/, '');
-						resultStr += '<div class="results-item' + rowType + '" data-indb="' +  (!1 === item[result.isInDB] ? '' : '1') + '" data-sort-rel="' + item[result.RelSort] + '" data-sort-date="' + item[result.DateSort] + '" data-sort-az="' + item[result.AzSort] + '">'
+						resultItem = '<div class="results-item' + rowType + '" data-indb="' +  (!1 === item[result.isInDB] ? '' : '1') + '" data-sort-rel="' + item[result.RelSort] + '" data-sort-newest="' + item[result.NewestAired] + '" data-sort-oldest="' + item[result.OldestAired] + '" data-sort-az="' + item[result.AzSort] + '" data-sort-za="' + item[result.ZaSort] + '">'
 							+ '<input id="whichSeries" type="radio"'
 							+ ' class="stepone-result-radio"'
 							+ (!1 === item[result.isInDB]
@@ -130,23 +131,32 @@ $(document).ready(function () {
 							+ ('' === srcState ? ''
 								: '&nbsp;<span class="stepone-result-db grey-text">' + '[' + srcState + ']' + '</span>')
 							+ '</div>' + "\n";
-
+						if (nBuffer < nBufferSize || item[result.isInDB]) {
+							resultStr += resultItem;
+							if (!1 === item[result.isInDB])
+								nBuffer++;
+						} else {
+							resultStrBuffer += resultItem;
+						}
+						nAll++;
 					});
 				}
 				var selAttr = 'selected="selected" ',
 					selClass = 'selected-text',
 					classAttrSel = 'class="' + selClass + '" ',
-					defSortby = /^az/.test(config.resultsSortby) || /^date/.test(config.resultsSortby) ? '': classAttrSel + selAttr;
+					useBuffer = nBufferSize < nAll,
+					defSortby = /^az/.test(config.resultsSortby) || /^za/.test(config.resultsSortby) || /^newest/.test(config.resultsSortby) || /^oldest/.test(config.resultsSortby) ? '': classAttrSel + selAttr;
 
-				$('#searchResults').html(
+				$('#search-results').html(
 					'<fieldset>' + "\n" + '<legend class="legendStep" style="margin-bottom: 15px">'
-						+ (0 < row ? row : 'No')
-						+ ' search result' + (1 == row ? '' : 's') + '...'
+						+ '<span id="count"></span>'
 						+ '<span style="float:right;height:32px;line-height:1">'
 						+ '<select id="results-sortby" class="form-control form-control-inline input-sm">'
 						+ '<optgroup label="Sort by">'
 						+ '<option ' + (/^az/.test(config.resultsSortby) ? classAttrSel + selAttr : '') + 'value="az">A to Z</option>'
-						+ '<option ' + (/^date/.test(config.resultsSortby) ? classAttrSel + selAttr : '') + 'value="date">First aired</option>'
+						+ '<option ' + (/^za/.test(config.resultsSortby) ? classAttrSel + selAttr : '') + 'value="za">Z to A</option>'
+						+ '<option ' + (/^newest/.test(config.resultsSortby) ? classAttrSel + selAttr : '') + 'value="newest">Newest aired</option>'
+						+ '<option ' + (/^oldest/.test(config.resultsSortby) ? classAttrSel + selAttr : '') + 'value="oldest">Oldest aired</option>'
 						+ '<option ' + defSortby + 'value="rel">Relevancy</option>'
 						+ '</optgroup><optgroup label="With...">'
 						+ '<option ' + (!/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ontop">Exists on top</option>'
@@ -158,6 +168,25 @@ $(document).ready(function () {
 						+ '</div>'
 						+ '</fieldset>'
 					);
+
+				if (useBuffer) {
+					$('#search-results-buffer').html(resultStrBuffer);
+					$('#more-results').show();
+					$('#more-results a').on('click', function(e, d) {
+						e.preventDefault();
+						$('#more-results').hide();
+						$('#search-results #count').text(nAll + ' search result' + (1 === nAll ? '' : 's') + '...');
+						$('#search-results-buffer .results-item').appendTo('#holder');
+						container$.isotope( 'reloadItems' ).isotope(
+							{sortBy: $('#results-sortby').find('option:not([value$="top"]).selected-text').val()});
+						myform.loadsection(0);
+					});
+					$('#search-results #count').text((nBuffer + ' / ' + nAll)
+						+ ' search result' + (1 === nBuffer ? '' : 's') + '...');
+				} else {
+					$('#search-results #count').text((0 < nBuffer ? nBuffer + (useBuffer ? ' / ' + nAll : '') : 'No')
+						+ ' search result' + (1 === nAll ? '' : 's') + '...');
+				}
 
 				var container$ = $('#holder'),
 					sortbySelect$ = $('#results-sortby'),
@@ -180,7 +209,9 @@ $(document).ready(function () {
 					layoutMode: 'masonry',
 					getSortData: {
 						az: function(itemElem){ return getData(itemElem, 'az'); },
-						date: function(itemElem){ return getData(itemElem, 'date'); },
+						za: function(itemElem){ return getData(itemElem, 'za'); },
+						newest: function(itemElem){ return getData(itemElem, 'newest'); },
+						oldest: function(itemElem){ return getData(itemElem, 'oldest'); },
 						rel: function(itemElem){ return getData(itemElem, 'rel'); }
 					}
 				}).on('arrangeComplete', function(event, items){
@@ -261,7 +292,7 @@ $(document).ready(function () {
 	* Visit http://www.dynamicdrive.com/ for this script and 100s more.
 	***********************************************/
 
-	var myform = new FormToWizard({
+	var myform = $.SickGear.myform = new FormToWizard({
 		fieldsetborderwidth: 0,
 		formid: 'addShowForm',
 		revealfx: ['slide', 500],
@@ -362,7 +393,7 @@ $(document).ready(function () {
 
 	$('#rootDirText').change(updateSampleText);
 
-	$('#searchResults').on('click', '.stepone-result-radio', updateSampleText);
+	$('#search-results').on('click', '.stepone-result-radio', updateSampleText);
 
 	elNameToSearch.keydown(function (event) {
 		if (event.keyCode == 13) {

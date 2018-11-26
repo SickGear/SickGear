@@ -127,38 +127,74 @@
 #else
     #set $showlist_home, $episode_home = 2 * ['']
 #end if
-						<ul class="dropdown-menu">
+						<ul class="dropdown-menu" style="min-width:204px">
 							<li><a href="$sbRoot/home/showlistView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-list" style="font-size:12px"></i>Show List $showlist_home</a></li>
-							<li><a href="$sbRoot/episodeView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-cal"></i>Episode Schedule $episode_home</a></li>
-							<li><a href="$sbRoot/history/" tabindex="$tab#set $tab += 1#"><i class="sgicon-mediafile"></i>History $history_home</a></li>
-							<li class="divider"></li>
-							<li class="menu-item-noicon opacity60">Add show...</li>
-							<li><a href="$sbRoot/home/addShows/new_show/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>Search
-								<div class="menu-item-desc opacity60">find show at TV info source</div></a></li>
-							<li><a href="$sbRoot/home/addShows/trakt_default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-trakt"></i>Trakt Cards
-								<div class="menu-item-desc opacity60">trends, tailored suggestions...</div></a></li>
-							<li><a href="$sbRoot/home/addShows/imdb_default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-imdb"></i>IMDb Cards
-								<div class="menu-item-desc opacity60">popular decades, watchlists...</div></a></li>
-#if $sg_var('USE_ANIDB')
-							<li><a href="$sbRoot/home/addShows/anime_default/" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
-								<div class="menu-item-desc opacity60">browse anime to add</div></a></li>
+							<li><a href="$sbRoot/episodeView/" tabindex="$tab#set $tab += 1#"><i class="sgicon-cal"></i>Daily Schedule $episode_home</a></li>
+							<li>
+#set $layout = $sg_var('HISTORY_LAYOUT', 'compact') or 'compact'
+#if $layout in ('compact', 'detailed')
+	#set $default_layout = 'downloaded'
+#elif 'watched' in $layout
+	#set $default_layout = 'watched'
 #else
-							<li><a href="$sbRoot/config/anime/" class="opacity60" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
-								<div class="menu-item-desc">to use, first enable AniDB here</div></a></li>
+	#set $default_layout = 'failures'
 #end if
+								<a href="$sbRoot/history/" class="history" tabindex="$tab#set $tab += 1#"><i class="sgicon-mediafile"></i>History $history_home (<i class="sgicon-$default_layout"></i>)</a>
+## switch tab order around using pop() due to float right
+#set $tab_list = [$tab, $tab + 1]
+#set $tab += 2
+#if 'failures' != $default_layout
+								<a href="$sbRoot/history/?layout=provider_failures" class="history-sub" title="Stats" tabindex="$tab_list.pop()"><i class="sgicon-failures"></i></a>
+#end if
+#if 'watched' != $default_layout
+								<a href="$sbRoot/history/?layout=compact_watched" class="history-sub" title="Watched" tabindex="$tab_list.pop()"><i class="sgicon-watched"></i></a>
+#end if
+#if 'downloaded' != $default_layout
+								<a href="$sbRoot/history/?layout=compact" class="history-sub" title="Activity" tabindex="$tab_list.pop()"><i class="sgicon-downloaded"></i></a>
+#end if
+							</li>
+							<li class="divider"></li>
+							<li class="menu-item-noicon"><span class="add-show opacity60">Add show...</span><span class="added-last opacity60">Added last...</span><a id="add-view" data-view="add" href="#" tabindex="$tab#set $tab += 1#">[<span class="add-show">1</span><span class="added-last">2</span><span class="paginate">/2</span>]</a></li>
+							<li><ul class="nav add-show">
+								<li><a id="add-show-name" data-href="$sbRoot/home/addShows/new_show/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>
+									<input  class="form-control form-control-inline input-sm" type="text" placeholder="Search" tabindex="$tab#set $tab += 1#">
+									<div class="menu-item-desc opacity60">find show at TV info source</div></a></li>
+								<li><a href="$sbRoot/home/addShows/trakt_default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-trakt"></i>Trakt Cards
+									<div class="menu-item-desc opacity60">trends, tailored suggestions...</div></a></li>
+								<li><a href="$sbRoot/home/addShows/imdb_default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-imdb"></i>IMDb Cards
+									<div class="menu-item-desc opacity60">popular decades, watchlists...</div></a></li>
+#if $sg_var('USE_ANIDB')
+								<li><a href="$sbRoot/home/addShows/anime_default/" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
+									<div class="menu-item-desc opacity60">browse anime to add</div></a></li>
+#else
+								<li><a href="$sbRoot/config/anime/" class="opacity60" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
+									<div class="menu-item-desc">to use, first enable AniDB here</div></a></li>
+#end if
+								</ul>
+								<ul class="nav added-last">
+#set $added_last = ($sg_var('showList', []) or [])[-5:][::-1]
+#if not $added_last:
+									<li><span style="padding-left:20px">This will list added shows</span></li>
+#else
+    #for item in [dict(name=x.name, indexer=x.indexer, indexer_id=x.indexerid) for x in $added_last]
+									<li><a href="$sbRoot/home/displayShow?show=$item.indexer_id" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i><span class="truncate">$item.name</span></a></li>
+    #end for
+#end if
+								</ul>
+							</li>
 						</ul>
 					</li>
 
 					<li id="NAVmanage" class="dropdown">
-						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b><span class="snf bar"><i class="sgicon-warning"></i></span></a>
+						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b><span class="snf bar"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/home/postprocess/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Process Media</a></li>
 							<li class="divider"></li>
 							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-bulk-change"></i>Bulk Change</a></li>
 							<li><a href="$sbRoot/manage/backlogOverview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-backlog"></i>Backlog Overview</a></li>
 							<li><a href="$sbRoot/manage/manageSearches/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Media Search</a></li>
-							<li><a href="$sbRoot/manage/showProcesses/" tabindex="$tab#set $tab += 1#"><span class="snf item"><i class="sgicon-warning"></i><i class="sgicon-showqueue"></i></span>Show Processes</a></li>
-							<li><a href="$sbRoot/manage/episodeStatuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status</a></li>
+							<li><a href="$sbRoot/manage/showProcesses/" tabindex="$tab#set $tab += 1#"><span class="snf item"><i class="sgicon-warning"><em class="pulse"></em></i><i class="sgicon-showqueue"></i></span>Show Processes</a></li>
+							<li><a href="$sbRoot/manage/episode_statuses/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Status</a></li>
 #if hasattr($sickbeard, 'USE_EMBY') and $sg_var('USE_EMBY') and $sg_str('EMBY_HOST') != '' and $sg_str('EMBY_APIKEY') != ''
 							<li><a href="$sbRoot/home/update_emby/" tabindex="$tab#set $tab += 1#"><i class="sgicon-emby"></i>Update Emby</a></li>
 #end if
@@ -199,13 +235,13 @@
 					<li id="NAVtools" class="dropdown">
 #set num_errors = $getVar('$log_num_errors', None)
 #set $err_class = ('', ' errors ' + (len('%s' % $num_errors ) * 'n')[0:4])[any([$num_errors])]
-						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"></i></span></a>
+						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/manage/manageSearches/forceVersionCheck" tabindex="$tab#set $tab += 1#"><i class="sgicon-updatecheck"></i>Check for Updates</a></li>
 							<li><a href="$sbRoot/home/viewchanges" tabindex="$tab#set $tab += 1#"><i class="sgicon-changes"></i>View Changes</a></li>
 							<li class="divider"></li>
 #if $err_class
-							<li><a href="$sbRoot/errorlogs/" tabindex="$tab#set $tab += 1#"><span class="logger item$err_class"><i class="sgicon-warning"></i></span></i>View Errors</a></li>
+							<li><a href="$sbRoot/errorlogs/" tabindex="$tab#set $tab += 1#"><span class="logger item$err_class"><i class="sgicon-warning"><em class="pulse"></em></i></span></i>View Errors</a></li>
 #end if
 							<li><a href="$sbRoot/errorlogs/viewlog/" tabindex="$tab#set $tab += 1#"><i class="sgicon-log"></i>View Log File</a></li>
 							<li class="divider"></li>
@@ -263,6 +299,11 @@
 #if $sg_str('NEWEST_VERSION_STRING')
 	<div class="alert alert-success upgrade-notification" role="alert">
 		<span>$sg_str('NEWEST_VERSION_STRING')</span>
+	</div>
+#end if
+#if $sg_str('MODULE_UPDATE_STRING')
+	<div class="alert alert-success upgrade-notification" role="alert">
+		<span>$sg_str('MODULE_UPDATE_STRING')</span>
 	</div>
 #end if
 ##

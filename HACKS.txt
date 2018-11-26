@@ -10,6 +10,7 @@ Libs with customisations...
 /lib/hachoir_parser/guess.py
 /lib/hachoir_parser/misc/torrent.py
 /lib/lockfile/mkdirlockfile.py
+/lib/scandir/scandir.py
 /lib/tmdb_api/tmdb_api.py
 /lib/tornado
 /lib/tvdb_api/tvdb_api.py

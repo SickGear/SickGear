@@ -18,6 +18,7 @@
 
 import datetime
 import threading
+import copy
 
 from sickbeard import logger
 
@@ -98,6 +99,7 @@ class GenericQueue(object):
                         self.currentItem.name = self.queue_name + '-' + self.currentItem.name
                     self.currentItem.start()
 
+
 class QueueItem(threading.Thread):
     def __init__(self, name, action_id=0):
         super(QueueItem, self).__init__()
@@ -108,6 +110,24 @@ class QueueItem(threading.Thread):
         self.action_id = action_id
         self.stop = threading.Event()
         self.added = None
+
+    def copy(self, deepcopy_obj=None):
+        """
+        Returns a shallow copy of QueueItem with optional deepcopy of in deepcopy_obj listed objects
+        :param deepcopy_obj: List of properties to be deep copied
+        :type deepcopy_obj: list
+        :return: return QueueItem
+        :rtype: QueueItem
+        """
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        if deepcopy_obj:
+            for o in deepcopy_obj:
+                if self.__dict__.get(o):
+                    new_seg = copy.deepcopy(self.__dict__.get(o))
+                    result.__dict__[o] = new_seg
+        return result
 
     def run(self):
         """Implementing classes should call this"""

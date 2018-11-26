@@ -283,7 +283,10 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_list=
                 parse_result.extra_info_no_name(), parse_result.version, parse_result.is_anime, check_is_repack=True)
             cur_proper.proper_level = cur_proper.properlevel    # local non global value
             old_release_group = sql_results[0]['release_group']
-            same_release_group = parse_result.release_group == old_release_group
+            try:
+                same_release_group = parse_result.release_group.lower() == old_release_group.lower()
+            except (StandardError, Exception):
+                same_release_group = parse_result.release_group == old_release_group
             if old_status not in SNATCHED_ANY + [DOWNLOADED, ARCHIVED] \
                     or cur_proper.quality != old_quality \
                     or (cur_proper.is_repack and not same_release_group):

@@ -1,4 +1,56 @@
-﻿### 0.17.15 (2018-11-24 20:30:00 UTC)
+﻿### 0.18.0 (2018-11-26 19:30:00 UTC)
+
+* Update Beautiful Soup 4.6.0 (r449) to 4.6.3 (r475)
+* Update CacheControl library 0.12.4 (bd94f7e) to 0.12.5 (cd91309)
+* Update Certifi 2018.01.18 (e225253) to 2018.08.24 (8be9f89)
+* Update dateutil module 2.7.2 (ff03c0f) to 2.7.2 (49690ee)
+* Update feedparser 5.2.1 (5646f4c) to 5.2.1 (2b11c80)
+* Update profilehooks module 1.10.0 (0ce1e29) to 1.10.1 (fdbf19d)
+* Update PySocks 1.6.8 (524ceb4) to 1.6.8 (b687a34)
+* Update Requests library 2.15.1 (282b01a) to 2.19.1 (2c6a842)
+* Update scandir module 1.6 (c3592ee) to 1.9.0 (9ab3d1f)
+* Update SimpleJSON 3.13.2 (6ffddbe) to 3.16.0 (e2a54f7)
+* Update Tornado Web Server 5.0.1 (2b2a220a) to 5.1.1 (cc2cf07)
+* Update unidecode module 1.0.22 (81f938d) to 1.0.22 (578cdb9)
+* Update UnRar for Windows 5.60 to 5.61
+* Add idna library 2.7 (0f50bdc)
+* Add urllib3 release 1.23 (7c216f4)
+* Change if old scandir binary module is installed, fallback to slow Python module and inform user to upgrade binary
+* Change site services tester to fallback to http if error with SSL
+* Change postprocessor try to use folder name when filename does not contain show name
+* Change force redirects in TVMaze API to be https
+* Add display first 20 results in "Add show" view with a link to display more
+* Add search results sort by Z to A to "Add show" view
+* Add search results sort by newest aired to "Add show" view
+* Add search results sort by oldest aired to "Add show" view
+* Change requirements.txt Cheetah >= 3.1.0
+* Add bB torrent provider
+* Add Snowfl torrent provider
+* Fix manual search button on displayShow and episode view page
+* Change feedback result of manual search on the clicked button image/tooltip
+* Change reduce browser I/O on displayShow
+* Fix displayShow bug where click holding on a season btn and then dragging away leaves 50% white
+* Change Show List text "Search Show Name" to "Filter Show Name", and "Reset Search" to "Reset Filter" for clarity
+* Change when getting a non existing folder, add the failed location to log messages
+* Change add pulsing effect to warning indicators in navbar
+* Add show search ability to menu Shows/"Add show"
+* Change simplify options on final step of Add show
+* Add quick set suggestion statuses in Episode Status Manager. Helpful for orphan "Snatches", or changes to "Skipped" etc.
+* Change DisplayShow manual search button busy animation
+* Add history view layouts to "Shows" menu
+* Add a current layout indicator to "Shows"/"History" menu item
+* Add the five last added shows to "Shows" menu under item "[1/2]"
+* Change relabel ui "Episode Schedule" and "Episode View" to "Daily Schedule"
+* Change displayShow, move table header sorting chevron images from right side of column to before text
+* Change displayShow, move plotinfo from right side of name column to before the episode text
+* Fix use correct columns for sorting on displayShow
+* Fix sort by episode number on displayShow
+* Change add images for manual search finished on displayShow to indicate completed fully (green) or low quality (bronze)
+* Change improve image sizes to reduce page overhead
+* Fix make release group comparison for proper/repack search case insensitive
+
+
+### 0.17.15 (2018-11-24 20:30:00 UTC)
 
 * Fix pruning large watch lists
 * Add Ubuntu snap installer
@@ -97,6 +149,8 @@
 
 ### 0.17.0 (2018-08-24 23:40:00 UTC)
 
+* Add ability to set episodes to suggested statuses in Episode Status Manager. Useful for orphaned "Snatches" or to undo
+  change to "Skipped", "Ignored", or "Wanted" to a previously known quality
 * Change save config values only where reqd. reduces file by up to 75%
 * Add 'Map an NZBGet "DestDir"' setting to config/Search/NZB Results tab (select NZBGet)
 * Add TVDB, TheXem, and GitHub buttons to page History/Layout "Provider fails" that fetches a site Up/Down report

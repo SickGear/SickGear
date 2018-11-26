@@ -96,9 +96,18 @@ class TraktDict(OrderedDict):
                                              (self[key], '%07d' % self[key])[key == INDEXER_IMDB])
 
 
+def tvmaze_record_hook(r, *args, **kwargs):
+    r.hook_called = True
+    if 301 == r.status_code and isinstance(r.headers.get('Location'), basestring) \
+            and r.headers.get('Location').startswith('http://api.tvmaze'):
+        r.headers['Location'] = r.headers['Location'].replace('http://', 'https://')
+    return r
+
+
 def get_tvmaze_data(count=0, *args, **kwargs):
     res = None
     count += 1
+    kwargs['hooks'] = {'response': tvmaze_record_hook}
     if 3 >= count:
         try:
             res = getURL(*args, **kwargs)

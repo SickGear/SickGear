@@ -24,6 +24,12 @@ pre .prelight-num{
 	color:#ff6d5e
 }
 
+.snf .pulse,
+.shows-not-found.n .snf .pulse{ border-color:#6f8c53 }
+.shows-not-found.nn .snf .pulse{ border-color:#b7b82c }
+.shows-not-found.nnn .snf .pulse{ border-color:#eaab52 }
+.shows-not-found.nnnn .snf .pulse{ border-color:#ff6d5e }
+
 [class^="icon-"],
 [class*=" icon-"]{
 	background-image:url("../images/glyphicons-halflings-white.png")
@@ -346,7 +352,7 @@ home_newShow.tmpl
 	border-color:#dfdede
 }
 
-.step-one #searchResults .alt{
+.step-one #search-results .alt{
 	background-color:rgb(245, 245, 245)
 }
 
@@ -491,7 +497,9 @@ body#display-show.back-art,
 .back-art.pro.ii .day-of-week .day-number,
 .translucent.pro.ii .day-of-week .day-number,
 .back-art.pro.ii .sickbeardTable .seasoncols th,
-.translucent.pro.ii .sickbeardTable .seasoncols th{
+.translucent.pro.ii .sickbeardTable .seasoncols th,
+#display-show.back-art.pro.ii .sickbeardTable .seasoncols th,
+#display-show.translucent.pro.ii .sickbeardTable .seasoncols th{
 	background-color:rgba(51, 51, 51, 0.7)
 }
 
@@ -959,7 +967,11 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	color:#ccc
 }
 
-.dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus{
+.dropdown-menu li > a{
+	color:#333
+}
+
+.dropdown-menu li > a:hover, .dropdown-menu li > a:focus{
 	color:#fff;
 	text-decoration:none;
 	background-color:#333
@@ -1317,6 +1329,7 @@ input sizing (for config pages)
 ========================================================================== */
 
 .showlist-select optgroup,
+#set-status optgroup,
 #results-sortby optgroup,
 #pickShow optgroup,
 #showfilter optgroup,
@@ -1327,6 +1340,7 @@ input sizing (for config pages)
 }
 
 .showlist-select optgroup option,
+#set-status optgroup option,
 #results-sortby optgroup option,
 #pickShow optgroup option,
 #showfilter optgroup option,
@@ -1384,7 +1398,7 @@ div.stepsguide .disabledstep p{
 	color:#8a775e
 }
 
-.stepDiv #searchResults div .exists-db{
+.stepDiv #search-results div .exists-db{
 	color:#1178B3
 }
 

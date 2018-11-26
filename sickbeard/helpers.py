@@ -59,7 +59,7 @@ except ImportError:
 from sickbeard.exceptions import MultipleShowObjectsException, ex
 from sickbeard import logger, db, notifiers, clients
 from sickbeard.common import USER_AGENT, mediaExtensions, subtitleExtensions, cpu_presets, statusStrings, \
-    SNATCHED_ANY, DOWNLOADED, ARCHIVED, IGNORED, Quality
+    SNATCHED_ANY, DOWNLOADED, ARCHIVED, IGNORED, WANTED, SKIPPED, UNAIRED, UNKNOWN, SUBTITLED, FAILED, Quality, Overview
 from sickbeard import encodingKludge as ek
 
 from lib.cachecontrol import CacheControl, caches
@@ -1797,3 +1797,34 @@ def clean_data(data):
         from lib.six.moves.html_parser import HTMLParser
         return HTMLParser().unescape(data).strip().replace(u'&amp;', u'&')
     return data
+
+
+def getOverview(epStatus, show_quality, upgrade_once):
+
+    status, quality = Quality.splitCompositeStatus(epStatus)
+    if ARCHIVED == status:
+        return Overview.GOOD
+    if WANTED == status:
+        return Overview.WANTED
+    if status in (SKIPPED, IGNORED):
+        return Overview.SKIPPED
+    if status in (UNAIRED, UNKNOWN):
+        return Overview.UNAIRED
+    if status in [SUBTITLED] + Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.FAILED:
+
+        if FAILED == status:
+            return Overview.WANTED
+        if status in SNATCHED_ANY:
+            return Overview.SNATCHED
+
+        void, best_qualities = Quality.splitQuality(show_quality)
+        # if re-downloads aren't wanted then mark it "good" if there is anything
+        if not len(best_qualities):
+            return Overview.GOOD
+
+        min_best, max_best = min(best_qualities), max(best_qualities)
+        if quality >= max_best \
+                or (upgrade_once and
+                    (quality in best_qualities or (None is not min_best and quality > min_best))):
+            return Overview.GOOD
+        return Overview.QUAL

@@ -24,6 +24,12 @@ pre .prelight-num{
 	color:#ff6d5e
 }
 
+.snf .pulse,
+.shows-not-found.n .snf .pulse{ border-color:#c3ed9b }
+.shows-not-found.nn .snf .pulse{ border-color:#f6ff41 }
+.shows-not-found.nnn .snf .pulse{ border-color:#ffba57 }
+.shows-not-found.nnnn .snf .pulse{ border-color:#ff6d5e }
+
 [class^="icon-"],
 [class*=" icon-"]{
 	background-image:url("../images/glyphicons-halflings.png")
@@ -330,7 +336,7 @@ home_newShow.tmpl
 	border:0
 }
 
-.step-one #searchResults .alt{
+.step-one #search-results .alt{
 	background-color:rgb(40, 40, 40)
 }
 
@@ -492,6 +498,8 @@ body#display-show.back-art .displayshow-wrapper .label a:focus{
 .translucent.pro.ii .day-of-week .day-number,
 .back-art.pro.ii .sickbeardTable .seasoncols th,
 .translucent.pro.ii .sickbeardTable .seasoncols th,
+#display-show.back-art.pro.ii .sickbeardTable .seasoncols th,
+#display-show.translucent.pro.ii .sickbeardTable .seasoncols th,
 .back-art.pro.ii .sickbeardTable thead .seasoncols td,
 .translucent.pro.ii .sickbeardTable thead .seasoncols td{
 	background-color:rgba(21, 82, 143, 0.5)
@@ -982,14 +990,14 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	color:#ccc
 }
 
-.dropdown-menu > li > a:hover, .dropdown-menu > li > a:focus{
+.dropdown-menu li > a{
+	color:#ddd
+}
+
+.dropdown-menu li > a:hover, .dropdown-menu li > a:focus{
 	color:#ddd;
 	text-decoration:none;
 	background-color:#15528f
-}
-
-.dropdown-menu > li > a{
-	color:#ddd
 }
 
 .component-group.bubblelist .bgcol,
@@ -1060,6 +1068,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	outline:thin dotted #333;
 	outline:5px auto -webkit-focus-ring-color;
 	outline-offset:-2px;
+	background-position:0;
 	color:#ddd
 }
 
@@ -1351,6 +1360,7 @@ input sizing (for config pages)
 ========================================================================== */
 
 .showlist-select optgroup,
+#set-status optgroup,
 #results-sortby optgroup,
 #pickShow optgroup,
 #showfilter optgroup,
@@ -1361,6 +1371,7 @@ input sizing (for config pages)
 }
 
 .showlist-select optgroup option,
+#set-status optgroup option,
 #results-sortby optgroup option,
 #pickShow optgroup option,
 #showfilter optgroup option,
@@ -1418,7 +1429,7 @@ div.stepsguide .step p{
 	color:#ccc
 }
 
-.stepDiv #searchResults div .exists-db{
+.stepDiv #search-results div .exists-db{
 	color:#1178B3
 }
 

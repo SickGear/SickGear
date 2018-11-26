@@ -452,7 +452,7 @@ class PostProcessor(object):
 
         return to_return
 
-    def _analyze_name(self, name, resource=True):
+    def _analyze_name(self, name, resource=True, show=None, rel_grp=None):
         """
         Takes a name and tries to figure out a show, season, and episode from it.
 
@@ -470,7 +470,7 @@ class PostProcessor(object):
             return to_return
 
         # parse the name to break it into show name, season, and episode
-        np = NameParser(resource, try_scene_exceptions=True, convert=True, showObj=self.showObj)
+        np = NameParser(resource, try_scene_exceptions=True, convert=True, showObj=self.showObj or show)
         parse_result = np.parse(name)
         self._log(u'Parsed %s<br />.. from %s' % (str(parse_result).decode('utf-8', 'xmlcharrefreplace'), name), logger.DEBUG)
 
@@ -483,6 +483,8 @@ class PostProcessor(object):
 
         # show object
         show = parse_result.show
+        if show and rel_grp and not parse_result.release_group:
+            parse_result.release_group = rel_grp
         to_return = (show, season, episodes, parse_result.quality)
 
         self._finalize(parse_result)
@@ -518,7 +520,7 @@ class PostProcessor(object):
         For a given file try to find the showid, season, and episode.
         """
 
-        show = season = quality = None
+        show = season = quality = rel_grp = None
         episodes = []
 
         # try to look up the nzb in history
@@ -537,7 +539,10 @@ class PostProcessor(object):
                         lambda: self._analyze_name(self.file_path),
 
                         # try to analyze the dir + file name together as one name
-                        lambda: self._analyze_name(self.folder_name + u' ' + self.file_name)]
+                        lambda: self._analyze_name(self.folder_name + u' ' + self.file_name),
+
+                        # try to analyze file name with previously parsed show
+                        lambda: self._analyze_name(self.file_name, show=show, rel_grp=rel_grp)]
 
         # attempt every possible method to get our info
         for cur_attempt in attempt_list:
@@ -553,6 +558,8 @@ class PostProcessor(object):
 
             # if we already did a successful history lookup then keep that show value
             show = cur_show
+            if self.release_group:
+                rel_grp = self.release_group
 
             if cur_quality and not (self.in_history and quality):
                 quality = cur_quality
