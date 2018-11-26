@@ -1,4 +1,4 @@
-﻿### 0.18.0 (2018-xx-xx xx:xx:xx UTC)
+﻿### 0.18.0 (2018-11-26 19:30:00 UTC)
 
 * Update Beautiful Soup 4.6.0 (r449) to 4.6.3 (r475)
 * Update CacheControl library 0.12.4 (bd94f7e) to 0.12.5 (cd91309)
@@ -48,22 +48,6 @@
 * Change add images for manual search finished on displayShow to indicate completed fully (green) or low quality (bronze)
 * Change improve image sizes to reduce page overhead
 * Fix make release group comparison for proper/repack search case insensitive
-
-
-[develop changelog]
-* Fix sorting results
-* Change remove deprecated files
-* Use current ep status data for finished search items for correct UI updates
-* Change prevent left/right keypresses while used in the add show input field from also moving the Episode view carousel
-* Change DisplayShow row change to wanted colour on manual search
-* Fix DisplayShow wheel animation not displaying
-* Update Requests 2.19.1 (33b41c7) to 2.19.1 (2c6a842)
-* Change add qual response to finished handler and change "good" from magnifier to tick
-* Change reveal displayshow row checkbox on snatch success where hidden due to unaired ep
-* Change if displayshow page refreshed during manual search, update UI row with wanted status
-* Change correct queueing typo
-* Change vertically align spinner on displayShow
-* Change improve history menu images for light themes
 
 
 ### 0.17.15 (2018-11-24 20:30:00 UTC)
