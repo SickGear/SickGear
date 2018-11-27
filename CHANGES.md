@@ -3,6 +3,7 @@
 * Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
 * Update Certifi 2018.08.24 (8be9f89) to 2018.10.15 (a462d21)
 * Update dateutil 2.7.2 (49690ee) to 2.7.5 (e954819)
+* Update Requests library 2.19.1 (2c6a842) to 2.20.1 (57d7284)
 
 
 [develop changelog]
