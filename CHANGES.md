@@ -5,6 +5,7 @@
 * Update dateutil 2.7.2 (49690ee) to 2.7.5 (e954819)
 * Update Requests library 2.19.1 (2c6a842) to 2.20.1 (57d7284)
 * Update Six compatibility library 1.11.0 (68112f3) to 1.11.0 (0b4265e)
+* Update urllib3 release 1.23 (7c216f4) to 1.24.1 (a6ec68a)
 
 
 [develop changelog]
