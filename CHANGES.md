@@ -1,5 +1,6 @@
 ﻿### 0.19.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
 
 
 [develop changelog]
