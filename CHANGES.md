@@ -1,6 +1,7 @@
 ﻿### 0.19.0 (2019-xx-xx xx:xx:xx UTC)
 
 * Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
+* Update Certifi 2018.08.24 (8be9f89) to 2018.10.15 (a462d21)
 
 
 [develop changelog]
