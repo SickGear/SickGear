@@ -34,7 +34,7 @@ class CacheController(object):
     def __init__(
         self, cache=None, cache_etags=True, serializer=None, status_codes=None
     ):
-        self.cache = cache or DictCache()
+        self.cache = DictCache() if cache is None else cache
         self.cache_etags = cache_etags
         self.serializer = serializer or Serializer()
         self.cacheable_status_codes = status_codes or (200, 203, 300, 301)
