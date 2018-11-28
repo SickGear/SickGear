@@ -1,4 +1,9 @@
-﻿### 0.18.0 (2018-11-26 19:30:00 UTC)
+﻿### 0.18.1 (2018-11-28 15:35:00 UTC)
+
+* Fix manual search button on Daily Schedule
+
+
+### 0.18.0 (2018-11-26 19:30:00 UTC)
 
 * Update Beautiful Soup 4.6.0 (r449) to 4.6.3 (r475)
 * Update CacheControl library 0.12.4 (bd94f7e) to 0.12.5 (cd91309)
