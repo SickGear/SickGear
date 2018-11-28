@@ -214,7 +214,7 @@ function rowRestore() {
 
 			var link$ = $(this), img$ = link$.find('img'), img = ['Failed', uiOptions.imgNo], imgCls;
 			// backup ui vars
-			if (link$.closest('.col-search') && link$.closest('.col-search').siblings('.col-status')) {
+			if (!!link$.closest('.col-search').length && link$.closest('.col-search').siblings('.col-status')) {
 				link$.attr('data-rowclass', getAttr(link$.closest('tr'), 'class'));
 				link$.attr('data-status', link$.closest('.col-search').siblings('.col-status').html().trim());
 			}
