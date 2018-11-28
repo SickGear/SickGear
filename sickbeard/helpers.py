@@ -1148,7 +1148,8 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     """
 
     # selectively mute some errors
-    mute = filter(lambda x: kwargs.pop(x, False), ['mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout'])
+    mute = filter(lambda x: kwargs.pop(x, False), [
+        'mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout', 'mute_http_error'])
 
     # reuse or instantiate request session
     resp_sess = kwargs.pop('resp_sess', None)
@@ -1238,8 +1239,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
                 http_err_text += 'Origin server connection failure'
             else:
                 http_err_text = 'Custom HTTP error code'
-            logger.log(u'Response not ok. %s: %s from requested url %s'
-                       % (response.status_code, http_err_text, url), logger.DEBUG)
+                if 'mute_http_error' not in mute:
+                    logger.log(u'Response not ok. %s: %s from requested url %s'
+                               % (response.status_code, http_err_text, url), logger.DEBUG)
             return
 
     except requests.exceptions.HTTPError as e:
