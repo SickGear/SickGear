@@ -13,6 +13,12 @@
 
 
 
+### 0.18.2 (2018-11-30 21:15:00 UTC)
+
+* Remove AlphaReign torrent provider
+* Change minimise library update calls to Kodi and Plex
+
+
 ### 0.18.1 (2018-11-28 15:35:00 UTC)
 
 * Fix manual search button on Daily Schedule

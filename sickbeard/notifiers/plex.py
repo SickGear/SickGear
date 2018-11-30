@@ -142,7 +142,7 @@ class PLEXNotifier(Notifier):
         return (('Test result for', 'Successful test of')['Fail' not in result]
                 + ' Plex server(s) ... %s<br>\n' % result)
 
-    def update_library(self, ep_obj=None, host=None, username=None, password=None, **kwargs):
+    def update_library(self, ep_obj=None, host=None, username=None, password=None, location=None, **kwargs):
         """Handles updating the Plex Media Server host via HTTP API
 
         Plex Media Server currently only supports updating the whole video library and not a specific path.
@@ -186,7 +186,7 @@ class PLEXNotifier(Notifier):
             except (ValueError, IndexError) as e:
                 self._log(u'Error parsing plex.tv response: ' + ex(e))
 
-        file_location = '' if None is ep_obj else ep_obj.location
+        file_location = location if None is not location else '' if None is ep_obj else ep_obj.location
         host_validate = self._get_host_list(host, all([token_arg]))
         hosts_all = {}
         hosts_match = {}
