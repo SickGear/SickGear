@@ -28,7 +28,7 @@ import sys
 import time
 
 import sickbeard
-from sickbeard import postProcessor
+from sickbeard import postProcessor, notifiers
 from sickbeard import db, helpers, exceptions
 from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
@@ -415,6 +415,8 @@ class ProcessTVShow(object):
         def _bottom_line(text, log_level=logger.DEBUG):
             self._buffer('-' * len(text))
             self._log_helper(text, log_level)
+
+        notifiers.notify_update_library(ep_obj=None, flush_q=True)
 
         if self.any_vid_processed:
             if not self.files_failed:

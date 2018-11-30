@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import re
+
 import emby
 import kodi
 import plex
@@ -43,6 +46,7 @@ import tweet
 import emailnotify
 
 import sickbeard
+from sickbeard import encodingKludge as ek
 
 
 class NotifierFactory(object):
@@ -151,6 +155,35 @@ def notify_git_update(new_version=''):
             n.notify_git_update(new_version)
 
 
-def notify_update_library(ep_obj):
-    for n in NotifierFactory().get_enabled('library'):
-        n.update_library(show=ep_obj.show, show_name=ep_obj.show.name, ep_obj=ep_obj)
+def notify_update_library(ep_obj, flush_q=None):
+
+    if not flush_q or sickbeard.QUEUE_UPDATE_LIBRARY:
+
+        for n in NotifierFactory().get_enabled('library'):
+
+            if isinstance(n, (plex.PLEXNotifier, kodi.KodiNotifier)):
+                if not flush_q:
+                    sickbeard.QUEUE_UPDATE_LIBRARY += [(ep_obj.show.name, ep_obj.location)]
+                else:
+                    shows = set()
+                    locations = set()
+                    for show_name, location in sickbeard.QUEUE_UPDATE_LIBRARY:
+                        if isinstance(n, kodi.KodiNotifier):
+                            if show_name in shows:
+                                continue
+                            shows.add(show_name)
+                        else:
+                            parent_dir = re.sub(r'[/\\]+%s.*' % show_name, '', ek.ek(os.path.dirname, location))
+                            parent_dir = re.sub(r'^(.{,2})[/\\]', '', parent_dir)
+                            if parent_dir in locations:
+                                continue
+                            locations.add(parent_dir)
+
+                        n.update_library(show_name=show_name, location=location)
+
+            elif not flush_q:
+
+                n.update_library(show=ep_obj.show, show_name=ep_obj.show.name, ep_obj=ep_obj)
+
+        if flush_q:
+            sickbeard.QUEUE_UPDATE_LIBRARY = []

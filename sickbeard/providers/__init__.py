@@ -30,7 +30,7 @@ __all__ = [
     # usenet
     'omgwtfnzbs',
     # torrent
-    'alpharatio', 'alphareign', 'bb', 'beyondhd', 'bithdtv', 'blutopia', 'btn',
+    'alpharatio', 'bb', 'beyondhd', 'bithdtv', 'blutopia', 'btn',
     'custom01', 'custom11', 'dh', 'ettv', 'eztv', 'fano', 'filelist', 'funfile', 'grabtheinfo',
     'hdbits', 'hdme', 'hdspace', 'hdtorrents', 'horriblesubs',
     'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'morethan', 'nebulance', 'ncore', 'nyaa',
@@ -73,7 +73,7 @@ def sortedProviderList():
 def makeProviderList():
     providers = [x.provider for x in [getProviderModule(y) for y in __all__] if x]
     import browser_ua, zlib
-    headers = [1449593765]
+    headers = [1449593765, 1597250020]
     for p in providers:
         if abs(zlib.crc32(p.name)) + 40000400 in headers:
             p.headers.update({'User-Agent': browser_ua.get_ua()})
