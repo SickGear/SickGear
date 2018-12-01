@@ -13,6 +13,11 @@
 
 
 
+### 0.18.3 (2018-12-01 17:35:00 UTC)
+
+* Add Milkie torrent provider
+
+
 ### 0.18.2 (2018-11-30 21:15:00 UTC)
 
 * Remove AlphaReign torrent provider
