@@ -1,4 +1,11 @@
-﻿### 0.18.3 (2018-12-01 17:35:00 UTC)
+﻿### 0.18.4 (2018-12-04 15:45:00 UTC)
+
+* Fix "Test Emby" notifications output when there are not enough API keys for hosts
+* Change About page to include current base @ version number
+* Change handle when a known season is deleted from indexer but ep data is not deletable locally
+
+
+### 0.18.3 (2018-12-01 17:35:00 UTC)
 
 * Add Milkie torrent provider
 

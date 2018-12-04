@@ -22,7 +22,7 @@
 		<tr>
 			<td class="infoTableHeader">Version: </td>
 			<td class="infoTableCell">
-				BRANCH: #echo $sg_str('BRANCH') or 'UNKNOWN'# / COMMIT: #echo $sg_str('CUR_COMMIT_HASH') or 'UNKNOWN'#<br />
+				BRANCH: #echo $sg_str('BRANCH') or 'UNKNOWN'# / COMMIT: #echo ($sg_str('CUR_COMMIT_HASH')[0:7] or 'UNKNOWN') + ('', ' @ ')[bool($version)]#$version<br />
 				<em class="red-text">This is BETA software</em><br />
 #if not $sg_var('VERSION_NOTIFY'):
 				You don't have version checking turned on, see "Check software updates" in Config > General.

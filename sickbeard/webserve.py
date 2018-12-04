@@ -5773,6 +5773,12 @@ class Config(MainHandler):
         t = PageTemplate(web_handler=self, file='config.tmpl')
         t.submenu = self.ConfigMenu()
 
+        try:
+            with open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'CHANGES.md')) as fh:
+                t.version = re.findall('###[^0-9]+([0-9]+\.[0-9]+\.[0-9]+)', fh.readline())[0]
+        except (StandardError, BaseException):
+            t.version = ''
+
         return t.respond()
 
 

@@ -636,7 +636,7 @@ class TVShow(object):
                     curEp.deleteEpisode()
 
                 curEp.loadFromDB(curSeason, curEpisode)
-                curEp.loadFromIndexer(tvapi=t, cachedSeason=cachedSeasons[curSeason], update=update)
+                curEp.loadFromIndexer(tvapi=t, cachedSeason=cachedSeasons.get(curSeason), update=update)
                 scannedEps[curSeason][curEpisode] = True
             except exceptions.EpisodeDeletedException:
                 logger.log('Tried loading an episode from [%s] from the DB that should have been deleted, skipping it' % self.name,
