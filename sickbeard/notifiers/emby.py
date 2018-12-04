@@ -146,7 +146,7 @@ class EmbyNotifier(Notifier):
         """
         hosts, keys, message = self._check_config(hosts, apikeys)
         if not hosts:
-            return False, message
+            return self._choose(message, False)
 
         success = True
         message = []
