@@ -270,7 +270,7 @@ class PyJsParser:
             type = Token.Keyword
         elif (d == 'null'):
             type = Token.NullLiteral
-        elif (i == 'true' or d == 'false'):
+        elif (d == 'true' or d == 'false'):
             type = Token.BooleanLiteral
         else:
             type = Token.Identifier;
@@ -1265,16 +1265,16 @@ class PyJsParser:
 
         if (self.strict and paramInfo['firstRestricted']):
             self.tolerateUnexpectedToken(paramInfo['firstRestricted'], paramInfo.get('message'))
-        if (self.strict and paramInfo['stricted']):
-            self.tolerateUnexpectedToken(paramInfo['stricted'], paramInfo.get('message'));
+        if (self.strict and paramInfo.get('stricted')):
+            self.tolerateUnexpectedToken(paramInfo.get('stricted'), paramInfo.get('message'));
 
         self.strict = previousStrict;
-        return node.finishFunctionExpression(null, paramInfo['params'], paramInfo['defaults'], body)
+        return node.finishFunctionExpression(null, paramInfo.get('params'), paramInfo.get('defaults'), body)
 
     def parsePropertyMethodFunction(self):
         node = Node();
 
-        params = self.parseParams();
+        params = self.parseParams(null);
         method = self.parsePropertyFunction(node, params);
         return method;
 
@@ -1892,7 +1892,7 @@ class PyJsParser:
                 params[i] = param;
                 defaults.append(null);
         if (options.get('message') == Messages.StrictParamDupe):
-            token = options['stricted'] if self.strict else options['firstRestricted']
+            token = options.get('stricted') if self.strict else options['firstRestricted']
             self.throwUnexpectedToken(token, options.get('message'));
         if (defaultCount == 0):
             defaults = []
@@ -2738,7 +2738,7 @@ class PyJsParser:
         tmp = self.parseParams(firstRestricted);
         params = tmp['params']
         defaults = tmp['defaults']
-        stricted = tmp['stricted']
+        stricted = tmp.get('stricted')
         firstRestricted = tmp['firstRestricted']
         if (tmp.get('message')):
             message = tmp['message'];
@@ -2780,7 +2780,7 @@ class PyJsParser:
         tmp = self.parseParams(firstRestricted);
         params = tmp['params']
         defaults = tmp['defaults']
-        stricted = tmp['stricted']
+        stricted = tmp.get('stricted')
         firstRestricted = tmp['firstRestricted']
         if (tmp.get('message')):
             message = tmp['message']

@@ -1,4 +1,5 @@
 #import sickbeard
+#import datetime
 #import urllib
 #from sickbeard.helpers import anon_url
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
@@ -112,7 +113,9 @@
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 				</button>
-				<a href="$sbRoot/home/" class="navbar-brand" tabindex="-1" title="SickGear"><img alt="SickGear" src="$sbRoot/images/sickgear.png" style="height: 50px;" class="img-responsive pull-left" /></a>
+#set date = $datetime.datetime.today().timetuple()
+#set logo = ('', '-xmas')[(12 <= $date.tm_mon) or (3 > $date.tm_yday) or (3 == $date.tm_yday and 5 > $date.tm_hour)]
+				<a href="$sbRoot/home/" class="navbar-brand" tabindex="-1" title="SickGear"><img alt="SickGear" src="$sbRoot/images/sickgear${logo}.png" style="height: 50px;" class="img-responsive pull-left" /></a>
 			</div>
 #set $hover_dropdown='data-hover="dropdown" data-hover-delay="400" data-delay="500"'
 			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -237,7 +240,9 @@
 #set $err_class = ('', ' errors ' + (len('%s' % $num_errors ) * 'n')[0:4])[any([$num_errors])]
 						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
 						<ul class="dropdown-menu">
+#if not $sg_var('EXT_UPDATES')
 							<li><a href="$sbRoot/manage/manageSearches/forceVersionCheck" tabindex="$tab#set $tab += 1#"><i class="sgicon-updatecheck"></i>Check for Updates</a></li>
+#end if
 							<li><a href="$sbRoot/home/viewchanges" tabindex="$tab#set $tab += 1#"><i class="sgicon-changes"></i>View Changes</a></li>
 							<li class="divider"></li>
 #if $err_class
