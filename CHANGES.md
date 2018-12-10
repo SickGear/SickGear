@@ -4,6 +4,7 @@
 * Update Certifi 2018.08.24 (8be9f89) to 2018.10.15 (a462d21)
 * Update dateutil 2.7.2 (49690ee) to 2.7.5 (e954819)
 * Update html5lib 1.1-dev (e9ef538) to 1.1-dev (4f92357)
+* Update idna library 2.7 (0f50bdc) to 2.8 (032fc55)
 * Update MsgPack 0.5.6 (d4675be) to 0.6.0 (197e307)
 * Update Requests library 2.19.1 (2c6a842) to 2.20.1 (57d7284)
 * Update Six compatibility library 1.11.0 (68112f3) to 1.11.0 (0b4265e)
