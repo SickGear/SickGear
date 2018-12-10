@@ -514,6 +514,8 @@ class GenericProvider(object):
             kwargs.setdefault(k, v)
         if 'nzbs.in' not in url:  # this provider returns 503's 3 out of 4 requests with the persistent session system
             kwargs.setdefault('session', self.session)
+        if self.providerType == self.NZB:
+            kwargs['timeout'] = 60
 
         post_data = kwargs.get('post_data')
         post_json = kwargs.get('post_json')

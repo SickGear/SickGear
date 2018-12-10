@@ -30,33 +30,35 @@ DEFAULT_USER_AGENT = random.choice(DEFAULT_USER_AGENTS)
 
 
 class CloudflareScraper(Session):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(CloudflareScraper, self).__init__()
 
         if 'requests' in self.headers['User-Agent']:
-            # Spoof Firefox on Linux if no custom User-Agent has been set
+            # Set a random User-Agent if no custom User-Agent has been set
             self.headers['User-Agent'] = DEFAULT_USER_AGENT
+
+        self.delay = kwargs.pop('delay', 8)
 
     def request(self, method, url, *args, **kwargs):
         resp = super(CloudflareScraper, self).request(method, url, *args, **kwargs)
 
         # Check if Cloudflare anti-bot is on
-        if (isinstance(resp, type(Response())) and isinstance(resp.headers.get('Server'), basestring)
+        if (isinstance(resp, type(Response()))
                 and 503 == resp.status_code
-                and re.search('(?i)cloudflare', resp.headers.get('Server'))
+                and re.search('(?i)cloudflare', resp.headers.get('Server', ''))
                 and b'jschl_vc' in resp.content
                 and b'jschl_answer' in resp.content):
-            return self.solve_cf_challenge(resp, **kwargs)
+            resp = self.solve_cf_challenge(resp, **kwargs)
 
         # Otherwise, no Cloudflare anti-bot detected
         return resp
 
     def solve_cf_challenge(self, resp, **original_kwargs):
-        sleep(5)  # Cloudflare requires a delay before solving the challenge
+        sleep(self.delay)  # Cloudflare requires a delay before solving the challenge
 
         body = resp.text
         parsed_url = urlparse(resp.url)
-        domain = urlparse(resp.url).netloc
+        domain = parsed_url.netloc
         submit_url = '%s://%s/cdn-cgi/l/chk_jschl' % (parsed_url.scheme, domain)
 
         cloudflare_kwargs = {k: v for k, v in original_kwargs.items() if k not in ['hooks']}
@@ -76,15 +78,17 @@ class CloudflareScraper(Session):
             # This may indicate Cloudflare has changed their anti-bot
             # technique. If you see this and are running the latest version,
             # please open a GitHub issue so I can update the code accordingly.
-            logging.error('[!] Unable to parse Cloudflare anti-bots page. '
-                          'Try upgrading cloudflare-scrape, or submit a bug report '
-                          'if you are running the latest version. Please read '
-                          'https://github.com/Anorov/cloudflare-scrape#updates '
-                          'before submitting a bug report.')
+            logging.error('[!] Unable to parse Cloudflare anti-bots page.')
             raise
 
         # Safely evaluate the Javascript expression
-        params['jschl_answer'] = str(js2py.eval_js(js) + len(domain))
+        try:
+            params['jschl_answer'] = str(js2py.eval_js(js) + len(domain))
+        except (Exception, BaseException):
+            try:
+                params['jschl_answer'] = str(js2py.eval_js(js) + len(domain))
+            except (Exception, BaseException):
+                return
 
         # Requests transforms any request into a GET after a redirect,
         # so the redirect has to be handled manually here to allow for
@@ -92,13 +96,18 @@ class CloudflareScraper(Session):
         method = resp.request.method
         cloudflare_kwargs['allow_redirects'] = False
         redirect = self.request(method, submit_url, **cloudflare_kwargs)
-        return self.request(method, redirect.headers['Location'], **original_kwargs)
+
+        location = redirect.headers.get('Location')
+        parsed_location = urlparse(location)
+        if not parsed_location.netloc:
+            location = '%s://%s%s' % (parsed_url.scheme, domain, parsed_location.path)
+        return self.request(method, location, **original_kwargs)
 
     @staticmethod
     def extract_js(body):
         js = re.search(r'setTimeout\(function\(\){\s+(var '
                        's,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n', body).group(1)
-        js = re.sub(r'a\.value\s=\s([+]?.+?)\s?\+\s?[^\.]+\.length.*', r'\1', js)
+        js = re.sub(r'a\.value\s=\s([+]?.+?)\s?\+\s?[^.]+\.length.*', r'\1', js)
         js = re.sub(r'a\.value\s=\s(parseInt\(.+?\)).+', r'\1', js)
         js = re.sub(r'\s{3,}[a-z](?: = |\.).+', '', js)
         js = re.sub(r';\s+;', ';', js)
@@ -107,14 +116,17 @@ class CloudflareScraper(Session):
         # These characters are not currently used in Cloudflare's arithmetic snippet
         js = re.sub(r'[\n\\"]', '', js)
 
+        if 'toFixed' not in js:
+            raise ValueError('Error Cloudflare IUAM JavaScript changed, contact SickGear IRC')
+
         return js
 
     @classmethod
-    def create_scraper(cls, sess=None):
+    def create_scraper(cls, sess=None, **kwargs):
         """
-        Convenience function for creating a ready-to-go requests.Session (subclass) object.
+        Convenience function for creating a ready-to-go CloudflareScraper object.
         """
-        scraper = cls()
+        scraper = cls(**kwargs)
 
         if sess:
             attrs = ['auth', 'cert', 'cookies', 'headers', 'hooks', 'params', 'proxies', 'data']
@@ -128,14 +140,14 @@ class CloudflareScraper(Session):
     # Functions for integrating cloudflare-scrape with other applications and scripts
 
     @classmethod
-    def get_tokens(cls, url, user_agent=None):
+    def get_tokens(cls, url, user_agent=None, **kwargs):
         scraper = cls.create_scraper()
         if user_agent:
             scraper.headers['User-Agent'] = user_agent
 
         # noinspection PyUnusedLocal
         try:
-            resp = scraper.get(url)
+            resp = scraper.get(url, **kwargs)
             resp.raise_for_status()
         except Exception as e:
             logging.error('[%s] returned an error. Could not collect tokens.' % url)
@@ -162,7 +174,7 @@ class CloudflareScraper(Session):
         """
         Convenience function for building a Cookie HTTP header value.
         """
-        tokens, user_agent = cls.get_tokens(url, user_agent=user_agent)
+        tokens, user_agent = cls.get_tokens(url, user_agent=user_agent, **kwargs)
         return '; '.join('='.join(pair) for pair in tokens.items()), user_agent
 
 

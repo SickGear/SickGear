@@ -62,6 +62,14 @@ def sortedProviderList():
         if curModule in providerDict:
             newList.append(providerDict[curModule])
 
+    if not sickbeard.PROVIDER_ORDER:
+        nzb = filter(lambda p: p.providerType == generic.GenericProvider.NZB, providerDict.values())
+        tor = filter(lambda p: p.providerType != generic.GenericProvider.NZB, providerDict.values())
+        newList = sorted(filter(lambda p: not p.anime_only, nzb), key=lambda v: v.get_id()) + \
+            sorted(filter(lambda p: not p.anime_only, tor), key=lambda v: v.get_id()) + \
+            sorted(filter(lambda p: p.anime_only, nzb), key=lambda v: v.get_id()) + \
+            sorted(filter(lambda p: p.anime_only, tor), key=lambda v: v.get_id())
+
     # add any modules that are missing from that list
     for curModule in providerDict:
         if providerDict[curModule] not in newList:
