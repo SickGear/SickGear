@@ -3232,6 +3232,10 @@ class NewHomeAddShows(Home):
 
     @classmethod
     def get_UWRatio(cls, search_term, showname, aliases):
+        if isinstance(search_term, str):
+            search_term = search_term.decode('utf-8', 'replace')
+        if isinstance(showname, str):
+            showname = showname.decode('utf-8', 'replace')
         s = fuzz.UWRatio(search_term, showname)
         # check aliases and give them a little lower score
         for a in aliases:
@@ -4229,6 +4233,8 @@ class NewHomeAddShows(Home):
     def split_extra_show(self, extra_show):
         if not extra_show:
             return (None, None, None, None)
+        if isinstance(extra_show, str):
+            extra_show = extra_show.decode('utf-8', 'replace')
         split_vals = extra_show.split('|')
         indexer = helpers.tryInt(split_vals[0], 1)
         show_dir = split_vals[1]

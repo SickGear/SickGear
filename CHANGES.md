@@ -1,5 +1,8 @@
-﻿### 0.18.5 (2018-12-09 15:00:00 UTC)
+﻿### 0.18.5 (2018-12-10 12:15:00 UTC)
 
+* Change all nzb provider requests to 60s timeout
+* Fix encode str to unicode for get_UWRatio
+* Fix decode given show in add show as 'utf-8' into unicode
 * Change improve UI to account for docker/snap installations
 * Fix snap startup permissions issue
 * Change providers on first run to be alphabetically listed and grouped usenet, torrent, anime
