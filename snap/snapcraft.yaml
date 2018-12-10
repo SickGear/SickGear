@@ -15,7 +15,7 @@ adopt-info: sickgear
 
 apps:
   sickgear:
-    command: python $SNAP/opt/sickgear/app/sickgear.py --datadir=$SNAP/opt/sickgear/data
+    command: python "$SNAP/sickgear/sickgear.py" --datadir="$SNAP_COMMON/data"
     # daemon: simple
     plugs: [network, network-bind, removable-media]
 
@@ -58,6 +58,32 @@ parts:
     override-build: |
       snapcraftctl build
 
-      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/sickgear/app
-      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/sickgear/data
-      cp -R $SNAPCRAFT_PART_BUILD/* $SNAPCRAFT_PART_INSTALL/opt/sickgear/app
+      snap_install="$SNAPCRAFT_PART_INSTALL/sickgear"
+      mkdir -p "$snap_install"
+      cp -R "$SNAPCRAFT_PART_BUILD"/* "$snap_install"
+      # unrequired on r/o systems
+      rm -rf "$snap_install/tests" \
+             "$snap_install/_cleaner.py" \
+             "$snap_install/HACKS.txt" \
+             "$snap_install/requirements.txt" \
+             "$snap_install/tox.ini"
+
+    override-prime: |
+      snapcraftctl prime
+
+      snap_current=$(printf "${SNAP_COMMON}" | sed -e "s/common/current/" -e "s/snapcraft/sickgear/")
+      cat > "$SNAPCRAFT_PRIME/sickgear/_SNAP_README.txt" <<EOT
+      For ease of use, autoProcessTV scripts for use in third party applications are
+      placed in the writable path $snap_current/ so that editable config
+      files are copied into latest revision folders created by the snap update system.
+
+      Examples, create config file from templates;
+      for Sabnzbd, create autoProcessTV.cfg from autoProcessTV.cfg.sample
+      for Deluge or Transmission, create onTxComplete.cfg from onTxComplete.sample.cfg
+
+      In clients, when specifying a download completed script location;
+      for Sabnzbd, $snap_current/autoProcessTV/sabToSickBeard.py
+      for NzbGet, $snap_current/autoProcessTV/SickGear-NG/SickGear-NG.py
+      for Torrent (*nix), $snap_current/autoProcessTV/onTxComplete.sh
+      for Torrent (Win), $snap_current/autoProcessTV/onTxComplete.bat
+      EOT

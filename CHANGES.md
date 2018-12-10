@@ -1,4 +1,19 @@
-﻿### 0.18.4 (2018-12-04 15:45:00 UTC)
+﻿### 0.18.5 (2018-12-10 12:15:00 UTC)
+
+* Change all nzb provider requests to 60s timeout
+* Fix encode str to unicode for get_UWRatio
+* Fix decode given show in add show as 'utf-8' into unicode
+* Change improve UI to account for docker/snap installations
+* Fix snap startup permissions issue
+* Change providers on first run to be alphabetically listed and grouped usenet, torrent, anime
+* Change suppress the redundant first run dateutil zoneinfo warning
+* Update CFScrape 1.6.8 (be0a536) to custom 1.9.5 (be0a536)
+* Update pyjsparser 2.4.5 (cd5b829) to 2.4.5 (39b468e)
+* Update Js2Py 0.43 (c1442f1) to 0.43 (da310bb)
+* Change it's the time of year to wear a fluffy hat
+
+
+### 0.18.4 (2018-12-04 15:45:00 UTC)
 
 * Fix "Test Emby" notifications output when there are not enough API keys for hosts
 * Change About page to include current base @ version number

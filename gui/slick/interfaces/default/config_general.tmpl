@@ -161,7 +161,7 @@
 						<p>Options for software updates.</p>
 					</div>
 					<fieldset class="component-group-list">
-
+#if not $sg_var('EXT_UPDATES')
 						<div class="field-pair">
 							<label for="version_notify">
 								<span class="component-title">Check software updates</span>
@@ -206,6 +206,9 @@
 
 						<input type="submit" class="btn config_submitter" value="Save Changes">
 					</fieldset>
+#else
+					<div><p>Repo updates disabled. Using $sg_var('EXT_UPDATES') update method</p></div>
+#end if
 
 				</div>
 				</div><!-- /component-group1 //-->
@@ -619,6 +622,7 @@
 
 					<fieldset class="component-group-list">
 
+#if not $sg_var('EXT_UPDATES')
 						<div class="field-pair">
 							<label>
 								<span class="component-title">Branch version:</span>
@@ -666,6 +670,7 @@
 								</span>
 							</label>
 						</div>
+#end if
 
 						<div class="field-pair">
 							<label>

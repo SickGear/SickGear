@@ -1,0 +1,27 @@
+#!/bin/sh -e
+##
+# Goals:
+# 1) Create an initial config file
+# 2) Relocate scripts used in third party apps so their configs can be edited
+##
+#set -x
+#mkdir -p "$SNAP_COMMON"
+#exec >> "$SNAP_COMMON/install.log" 2>&1
+#echo "$(date '+%Y-%m-%d %H:%M:%S') $0: Entering hook"
+##
+data="${SNAP_COMMON}/data"
+cfg="${data}/config.ini"
+mkdir -p "${data}"
+
+# create initial config
+[ ! -f "${cfg}" ] && cat > "${cfg}" <<EOT
+[General]
+branch = master
+git_remote = origin
+cur_commit_hash = "snap"
+cur_commit_branch = "master"
+version_notify = 0
+EOT
+
+# relocate autoProcessTV to /var/snap/sickgear/current/
+cp -R "${SNAP}/${SNAP_NAME}/autoProcessTV" "${SNAP_DATA}"
