@@ -181,6 +181,9 @@ $(document).ready(function(){
 			el$.on('layoutComplete', llUpdate);
 			el$.isotope({ filter: filterValue });
 		} else {
+			if (-1 !== filterValue.indexOf('more_imdb')){
+				filterValue = $('#showfilter').find('option:not([value="more_imdb"]).selected').val() + '&more=1';
+			}
 #end raw
 			location = '$sg_root/home/addShows/' + filterValue;
 #raw
@@ -286,8 +289,9 @@ $(document).ready(function(){
 		<optgroup label="IMDb Popular">
                 #for $i, $p in enumerate($periods)
                     #set $period='%s,%s' % ($p[0], $p[1])
-			<option value="popular_imdb?period=$period"#echo ('', selected)[('popular-%s' % $period) == $mode]#>#echo '%s - %s' % (($p[1], 'Current')[not $i], $p[0])#</option>
+			<option value="popular_imdb?period=$period"#echo ('', selected)[('popular-%s' % $period) in $mode]#>#echo '%s - %s' % (($p[1], 'Current')[not $i], $p[0])#</option>
                 #end for
+			<option value="more_imdb"#echo ('', selected + ' disabled')[mode.endswith('more')]#>... list more</option>
 		</optgroup>
             #end if
             #if not hasattr($sickbeard, 'IMDB_ACCOUNTS')#<optgroup label="Restart SickGear to reveal"><option>new options after restart</option></optgroup>#else#

@@ -17,6 +17,15 @@
 
 
 
+### 0.18.6 (2018-12-12 19:30:00 UTC)
+
+* Change to public IMDb lists is now handled when adding a list
+* Change IMDb cards view to feedback when a list has no TV shows
+* Change IMDb cards view to include TV Mini Series
+* Change add "list more" to list choices on IMDb cards view
+* Change IMDb requests to be https
+
+
 ### 0.18.5 (2018-12-10 12:15:00 UTC)
 
 * Change all nzb provider requests to 60s timeout

@@ -3510,14 +3510,19 @@ class NewHomeAddShows(Home):
                 return json.dumps({'result': 'Fail: Invalid IMDb ID'})
             acc_id = account_id[0]
 
-            url = 'http://www.imdb.com/user/ur%s/watchlist' % acc_id + \
-                  '/_ajax?sort=date_added,desc&mode=detail&page=1&title_type=tvSeries%2CtvEpisode&ref_=wl_vm_dtl'
+            url = 'https://www.imdb.com/user/ur%s/watchlist' % acc_id + \
+                '?sort=date_added,desc&title_type=tvSeries,tvEpisode,tvMiniSeries&view=detail'
             html = helpers.getURL(url, nocache=True)
+            if not html:
+                return json.dumps({'result': 'Fail: No list found with id: %s' % acc_id})
+            if 'id="unavailable"' in html or 'list is not public' in html or 'not enabled public view' in html:
+                return json.dumps({'result': 'Fail: List is not public with id: %s' % acc_id})
 
             try:
-                list_name = re.findall('(?i)<h1[^>]+>(.*)\s+Watchlist</h1>', html)[0].replace('\'s', '')
+                list_name = re.findall('(?i)og:title[^>]+?content[^"]+?"([^"]+?)\s+Watchlist\s*"',
+                                       html)[0].replace('\'s', '')
                 accounts[acc_id] = list_name or 'noname'
-            except:
+            except (Exception, BaseException):
                 return json.dumps({'result': 'Fail: No list found with id: %s' % acc_id})
 
         else:
@@ -3621,7 +3626,7 @@ class NewHomeAddShows(Home):
                     overview='No overview yet' if not overview else self.encode_html(overview[:250:]),
                     rating=int(helpers.tryFloat(rating) * 10),
                     title=row.get('primary').get('title'),
-                    url_src_db='http://www.imdb.com/%s/' % row.get('primary').get('href').strip('/'),
+                    url_src_db='https://www.imdb.com/%s/' % row.get('primary').get('href').strip('/'),
                     votes=helpers.tryInt(voting, 'TBA')))
 
                 indexer, indexerid = idx_ids.get(ids['imdb'], (None, None))
@@ -3684,7 +3689,7 @@ class NewHomeAddShows(Home):
                             high = int(max([match.group(9), match.group(11)]))
                             scaled = [scale(x, high) for x in
                                       [(int(match.group(n)), high)[high == int(match.group(n))] for n in
-                                       3, 5, 7, 9, 11]]
+                                       (3, 5, 7, 9, 11)]]
                             parts = [match.group(1), match.group(4), match.group(6), match.group(8), match.group(10),
                                      match.group(12)]
                             img_uri = img_uri.replace(match.group(), ''.join(
@@ -3704,7 +3709,7 @@ class NewHomeAddShows(Home):
                         overview='No overview yet' if not overview else self.encode_html(overview[:250:]),
                         rating=0 if not len(rating) else int(helpers.tryFloat(rating) * 10),
                         title=title.get_text().strip(),
-                        url_src_db='http://www.imdb.com/%s/' % url_path.strip('/'),
+                        url_src_db='https://www.imdb.com/%s/' % url_path.strip('/'),
                         votes=0 if not len(voting) else helpers.tryInt(voting, 'TBA')))
 
                     show = filter(lambda x: x.imdbid == ids['imdb'], sickbeard.showList)[0]
@@ -3744,8 +3749,9 @@ class NewHomeAddShows(Home):
 
         list_name += ('\'s', '')['your' == list_name.replace('(Off) ', '').lower()]
 
-        url = 'http://www.imdb.com/user/ur%s/watchlist' % acc_id
-        url_ui = '?mode=detail&page=1&sort=date_added,desc&title_type=tvSeries%2CtvEpisode&ref_=wl_ref_typ'
+        url = 'https://www.imdb.com/user/ur%s/watchlist' % acc_id
+        url_ui = '?mode=detail&page=1&sort=date_added,desc&' \
+                 'title_type=tvSeries,tvEpisode,tvMiniSeries&ref_=wl_ref_typ'
 
         html = helpers.getURL(url + url_ui, headers={'Accept-Language': 'en-US'})
         if html:
@@ -3763,7 +3769,7 @@ class NewHomeAddShows(Home):
                 footnote = ('Note; Some images on this page may be cropped at source: ' +
                             '<a target="_blank" href="%s">%s watchlist at IMDb</a>' % (
                                 helpers.anon_url(url + url_ui), list_name))
-            elif None is not show_list_found:
+            elif None is not show_list_found or (None is show_list_found and list_name in html):
                 kwargs['show_header'] = True
                 kwargs['error_msg'] = 'No TV titles in the <a target="_blank" href="%s">%s watchlist at IMDb</a>' % (
                     helpers.anon_url(url + url_ui), list_name)
@@ -3787,7 +3793,11 @@ class NewHomeAddShows(Home):
 
         mode = 'popular-%s,%s' % (start_year, end_year)
 
-        url = 'http://www.imdb.com/search/title?at=0&sort=moviemeter&title_type=tv_series&year=%s,%s' % (start_year, end_year)
+        page = 'more' in kwargs and '51' or ''
+        if page:
+            mode += '-more'
+        url = 'https://www.imdb.com/search/title?at=0&sort=moviemeter&' \
+              'title_type=tvSeries,tvEpisode,tvMiniSeries&year=%s,%s&start=%s' % (start_year, end_year, page)
         html = helpers.getURL(url, headers={'Accept-Language': 'en-US'})
         if html:
             show_list_found = None
