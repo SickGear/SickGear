@@ -1,7 +1,7 @@
 ﻿### 0.19.0 (2019-xx-xx xx:xx:xx UTC)
 
 * Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
-* Update Certifi 2018.08.24 (8be9f89) to 2018.10.15 (a462d21)
+* Update Certifi 2018.10.15 (a462d21) to 2018.11.29 (10a1f8a)
 * Update dateutil 2.7.2 (49690ee) to 2.7.5 (e954819)
 * Update html5lib 1.1-dev (e9ef538) to 1.1-dev (4f92357)
 * Update idna library 2.7 (0f50bdc) to 2.8 (032fc55)
@@ -14,6 +14,7 @@
 
 
 [develop changelog]
+* Update Certifi 2018.08.24 (8be9f89) to 2018.10.15 (a462d21)
 
 
 
