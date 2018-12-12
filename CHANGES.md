@@ -8,13 +8,14 @@
 * Update MsgPack 0.5.6 (d4675be) to 0.6.0 (197e307)
 * Update Requests library 2.19.1 (2c6a842) to 2.20.1 (57d7284)
 * Update SimpleJSON 3.16.0 (e2a54f7) to 3.16.1 (ce75e60)
-* Update Six compatibility library 1.11.0 (68112f3) to 1.11.0 (0b4265e)
+* Update Six compatibility library 1.11.0 (0b4265e) to 1.12.0 (d927b9e)
 * Update urllib3 release 1.23 (7c216f4) to 1.24.1 (a6ec68a)
 * Change suppress logging false positive of bad Emby request
 
 
 [develop changelog]
 * Update Certifi 2018.08.24 (8be9f89) to 2018.10.15 (a462d21)
+* Update Six compatibility library 1.11.0 (68112f3) to 1.11.0 (0b4265e)
 
 
 
