@@ -937,8 +937,9 @@ def initialize(console_logging=True):
                        or check_setting_str(CFG, 'NZBget', 'nzbget_host', ''))
         NZBGET_USE_HTTPS = (bool(check_setting_int(CFG, 'NZBGet', 'nzbget_use_https', 0))
                             or bool(check_setting_int(CFG, 'NZBget', 'nzbget_use_https', 0)))
-        NZBGET_PRIORITY = (check_setting_int(CFG, 'NZBGet', 'nzbget_priority', 0)
-                           or check_setting_int(CFG, 'NZBget', 'nzbget_priority', 100))
+        NZBGET_PRIORITY = check_setting_int(CFG, 'NZBGet', 'nzbget_priority', None)
+        if None is NZBGET_PRIORITY:
+            NZBGET_PRIORITY = check_setting_int(CFG, 'NZBget', 'nzbget_priority', 100)
         NZBGET_MAP = check_setting_str(CFG, 'NZBGet', 'nzbget_map', '')
 
         try:
@@ -1981,7 +1982,8 @@ def save_config():
         cfg_keys += [cfg]
         new_config[cfg] = {}
         for (k, v) in filter(lambda (_, y): any([y]) or (
-                cfg_lc in ('kodi', 'xbmc', 'synoindex') and _ in ('always_on',)), items):
+                # allow saving where item value default is non-zero but 0 is a required setting value
+                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget') and _ in ('always_on', 'priority')), items):
             k = '%s' in k and (k % cfg_lc) or (cfg_lc + '_' + k)
             # correct for cases where keys are named in an inconsistent manner to parent stanza
             k = k.replace('blackhole_', '').replace('sabnzbd_', 'sab_')

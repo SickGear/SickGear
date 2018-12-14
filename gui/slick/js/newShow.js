@@ -49,6 +49,8 @@ $(document).ready(function () {
 		if (!elNameToSearch.val().length)
 			return;
 
+		$('#more-results').hide();
+
 		if (searchRequestXhr)
 			searchRequestXhr.abort();
 
