@@ -20,6 +20,12 @@
 
 
 
+### 0.18.7 (2018-12-14 01:00:00 UTC)
+
+* Fix saving NZBGet priority to Normal
+* Change hide "More results" between add show searches
+
+
 ### 0.18.6 (2018-12-12 19:30:00 UTC)
 
 * Change to public IMDb lists is now handled when adding a list
