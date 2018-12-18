@@ -24,26 +24,22 @@ parts:
     plugin: python
     source: .
     python-version: python2
-    python-packages: [cheetah3, cryptography, lxml, regex, scandir]
+    python-packages: [cheetah3, cryptography, lxml, regex, scandir, python-levenshtein]
     build-attributes: [no-system-libraries]
 
-    stage-packages:
-    - libffi-dev
-    - libssl-dev
-    - p7zip-full
-    - python-dev
-    - unrar
-
     build-packages:
-    - libffi-dev
-    - libssl-dev
-    - libxslt1-dev
-    - libxml2-dev
-    - p7zip-full
-    - python-dev
-    - python-lxml
-    - python-regex
-    - unrar
+      - to i386: ["libffi-dev:i386", "libssl-dev:i386",  "libxml2-dev:i386", "libxslt1-dev:i386",
+                   "python-dev:i386", "python-levenshtein:i386", "python-lxml:i386", "python-regex:i386"]
+      - to amd64: ["libffi-dev:amd64", "libssl-dev:amd64",  "libxml2-dev:amd64", "libxslt1-dev:amd64",
+                   "python-dev:amd64", "python-levenshtein:amd64", "python-lxml:amd64", "python-regex:amd64"]
+      - to arm64: ["libffi-dev:arm64", "libssl-dev:arm64",  "libxml2-dev:arm64", "libxslt1-dev:arm64",
+                   "python-dev:arm64", "python-levenshtein:arm64", "python-lxml:arm64", "python-regex:arm64"]
+      - to armhf: ["libffi-dev:armhf", "libssl-dev:armhf",  "libxml2-dev:armhf", "libxslt1-dev:armhf",
+                   "python-dev:armhf", "python-levenshtein:armhf", "python-lxml:armhf", "python-regex:armhf"]
+      - to s390x: ["libffi-dev:s390x", "libssl-dev:s390x",  "libxml2-dev:s390x", "libxslt1-dev:s390x",
+                   "python-dev:s390x", "python-levenshtein:s390x", "python-lxml:s390x", "python-regex:s390x"]
+      - to ppc64el: ["libffi-dev:ppc64el", "libssl-dev:ppc64el",  "libxml2-dev:ppc64el", "libxslt1-dev:ppc64el",
+                   "python-dev:ppc64el", "python-levenshtein:ppc64el", "python-lxml:ppc64el", "python-regex:ppc64el"]
 
     override-pull: |
       snapcraftctl pull
@@ -87,3 +83,16 @@ parts:
       for Torrent (*nix), $snap_current/autoProcessTV/onTxComplete.sh
       for Torrent (Win), $snap_current/autoProcessTV/onTxComplete.bat
       EOT
+
+  unrar:
+    plugin: make
+    source: https://www.rarlab.com/rar/unrarsrc-5.6.8.tar.gz
+    source-type: tar
+
+    build-packages:
+      - to i386: ["g++:i386"]
+      - to amd64: ["g++:amd64"]
+      - to arm64: ["g++:arm64"]
+      - to armhf: ["g++:armhf"]
+      - to s390x: ["g++:s390x"]
+      - to ppc64el: ["g++:ppc64el"]

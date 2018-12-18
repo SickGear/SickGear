@@ -1,12 +1,18 @@
+dist: xenial
+
 language: python
-sudo: false
 python:
   - 2.7
 
+before_install:
+  - export BOTO_CONFIG=/dev/null # Workaround for https://github.com/travis-ci/travis-ci/issues/7940
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)
+
 install:
-  - pip install cheetah
+  - pip install -r requirements.txt
   - pip install coveralls
  
-before_script: cd ./tests
-script: coverage run --source=.. --omit=../lib/*,../tornado/* all_tests.py
+before_script:
+  - cd ./tests
+script: coverage run --source=.. --omit=../lib/* ./all_tests.py
 after_success: coveralls
