@@ -740,7 +740,7 @@ def initialize(console_logging=True):
 
         THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
         GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
-        DEFAULT_HOME = check_setting_str(CFG, 'GUI', 'default_home', 'home')
+        DEFAULT_HOME = check_setting_str(CFG, 'GUI', 'default_home', 'episodes')
         FANART_LIMIT = check_setting_int(CFG, 'GUI', 'fanart_limit', 3)
         FANART_PANEL = check_setting_str(CFG, 'GUI', 'fanart_panel', 'highlight2')
         FANART_RATINGS = check_setting_str(CFG, 'GUI', 'fanart_ratings', None)
@@ -1200,18 +1200,18 @@ def initialize(console_logging=True):
         FOOTER_TIME_LAYOUT = check_setting_int(CFG, 'GUI', 'footer_time_layout', 0)
         POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
         POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
-        DISPLAY_SHOW_VIEWMODE = check_setting_int(CFG, 'GUI', 'display_show_viewmode', 0)
-        DISPLAY_SHOW_BACKGROUND = bool(check_setting_int(CFG, 'GUI', 'display_show_background', 0))
+        DISPLAY_SHOW_VIEWMODE = check_setting_int(CFG, 'GUI', 'display_show_viewmode', 2)
+        DISPLAY_SHOW_BACKGROUND = bool(check_setting_int(CFG, 'GUI', 'display_show_background', 1))
         DISPLAY_SHOW_BACKGROUND_TRANSLUCENT = bool(check_setting_int(
-            CFG, 'GUI', 'display_show_background_translucent', 0))
+            CFG, 'GUI', 'display_show_background_translucent', 1))
         DISPLAY_SHOW_VIEWART = check_setting_int(CFG, 'GUI', 'display_show_viewart', 0)
         DISPLAY_SHOW_MINIMUM = bool(check_setting_int(CFG, 'GUI', 'display_show_minimum', 1))
         DISPLAY_SHOW_SPECIALS = bool(check_setting_int(CFG, 'GUI', 'display_show_specials', 0))
 
-        EPISODE_VIEW_VIEWMODE = check_setting_int(CFG, 'GUI', 'episode_view_viewmode', 0)
-        EPISODE_VIEW_BACKGROUND = bool(check_setting_int(CFG, 'GUI', 'episode_view_background', 0))
+        EPISODE_VIEW_VIEWMODE = check_setting_int(CFG, 'GUI', 'episode_view_viewmode', 2)
+        EPISODE_VIEW_BACKGROUND = bool(check_setting_int(CFG, 'GUI', 'episode_view_background', 1))
         EPISODE_VIEW_BACKGROUND_TRANSLUCENT = bool(check_setting_int(
-            CFG, 'GUI', 'episode_view_background_translucent', 0))
+            CFG, 'GUI', 'episode_view_background_translucent', 1))
         EPISODE_VIEW_LAYOUT = check_setting_str(CFG, 'GUI', 'episode_view_layout', 'daybyday')
         EPISODE_VIEW_SORT = check_setting_str(CFG, 'GUI', 'episode_view_sort', 'time')
         EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(CFG, 'GUI', 'episode_view_display_paused', 1))

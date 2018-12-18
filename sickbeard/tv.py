@@ -1000,7 +1000,7 @@ class TVShow(object):
         sqlResults = myDB.select('SELECT * FROM imdb_info WHERE indexer_id = ?', [self.indexerid])
 
         if 0 < len(sqlResults):
-            self.imdb_info = dict(zip(sqlResults[0].keys(), sqlResults[0]))
+            self.imdb_info = dict(zip(sqlResults[0].keys(), [(r, '')[None is r] for r in sqlResults[0]]))
         elif sickbeard.USE_IMDB_INFO:
             logger.log('%s: The next show update will attempt to find IMDb info for [%s]' %
                        (self.indexerid, self.name), logger.DEBUG)

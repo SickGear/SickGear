@@ -20,6 +20,14 @@
 
 
 
+### 0.18.8 (2018-12-18 21:00:00 UTC)
+
+* Change first run GUI defaults to enable fanart and episode view as home
+* Fix an issue in the Travis CI test system used by GitHub
+* Fix potential issue parsing IMDb response
+* Update IMDb-pie 5.6.3 (df7411d1) to 5.6.3 (4220e83)
+
+
 ### 0.18.7 (2018-12-14 01:00:00 UTC)
 
 * Fix saving NZBGet priority to Normal
