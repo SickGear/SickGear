@@ -4,6 +4,7 @@
 * Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
 * Update Certifi 2018.10.15 (a462d21) to 2018.11.29 (10a1f8a)
 * Update dateutil 2.7.2 (49690ee) to 2.7.5 (e954819)
+* Update DiskCache library 3.0.6 (6397269) to 3.1.1 (05cac6a)
 * Update html5lib 1.1-dev (e9ef538) to 1.1-dev (4f92357)
 * Update idna library 2.7 (0f50bdc) to 2.8 (032fc55)
 * Update MsgPack 0.5.6 (d4675be) to 0.6.0 (197e307)
