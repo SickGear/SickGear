@@ -1,5 +1,6 @@
 ﻿### 0.19.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Update attrs 18.2.0.dev0 (c2bc831) to 18.3.0.dev0 (55642b3)
 * Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
 * Update Certifi 2018.10.15 (a462d21) to 2018.11.29 (10a1f8a)
 * Update dateutil 2.7.2 (49690ee) to 2.7.5 (e954819)
