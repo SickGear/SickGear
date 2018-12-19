@@ -33,7 +33,7 @@ from . import generic
 from sickbeard import classes, db, helpers, logger, tvcache
 from sickbeard.common import neededQualities, Quality, DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST
 from sickbeard.exceptions import AuthException, MultipleShowObjectsException
-from sickbeard.helpers import tryInt
+from sickbeard.helpers import tryInt, remove_non_release_groups
 from sickbeard.indexers.indexer_config import *
 from sickbeard.network_timezones import sb_timezone
 from sickbeard.sbdatetime import sbdatetime
@@ -477,6 +477,7 @@ class NewznabProvider(generic.NZBProvider):
     def _title_and_url(self, item):
         title, url = None, None
         try:
+            url = str(item.findtext('link')).replace('&amp;', '&')
             title = ('%s' % item.findtext('title')).strip()
             title = re.sub(r'\s+', '.', title)
             # remove indexer specific release name parts
@@ -488,7 +489,8 @@ class NewznabProvider(generic.NZBProvider):
                     if re.search(pattern, title):
                         r_found = True
                         title = re.sub(pattern, repl, title)
-            url = str(item.findtext('link')).replace('&amp;', '&')
+            parts = re.findall('(.*(?:(?:h.?|x)26[45]|vp9|av1|xvid|divx)[^-]*)(.*)', title, re.I)[0]
+            title = '%s-%s' % (parts[0], remove_non_release_groups(parts[1].split('-')[1]))
         except (StandardError, Exception):
             pass
 
