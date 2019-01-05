@@ -94,9 +94,13 @@ class NewznabConstants:
 
     SERVER_DEFAULT = 0
     SERVER_SPOTWEB = 1
+    SERVER_HYDRA1 = 2
+    SERVER_HYDRA2 = 3
 
     server_types = {SERVER_DEFAULT: 'newznab',
-                    SERVER_SPOTWEB: 'spotweb'}
+                    SERVER_SPOTWEB: 'spotweb',
+                    SERVER_HYDRA1: 'NZBHydra',
+                    SERVER_HYDRA2: 'NZBHydra 2'}
 
     def __init__(self):
         pass
@@ -194,6 +198,8 @@ class NewznabProvider(generic.NZBProvider):
 
     def image_name(self):
 
+        if self.server_type not in (NewznabConstants.SERVER_DEFAULT, NewznabConstants.SERVER_SPOTWEB):
+            return 'warning16.png'
         return generic.GenericProvider.image_name(
             self, ('newznab', 'spotweb')[self.server_type == NewznabConstants.SERVER_SPOTWEB])
 
@@ -239,9 +245,17 @@ class NewznabProvider(generic.NZBProvider):
         if None is not xml_caps:
             server_node = xml_caps.find('.//server')
             if None is not server_node:
-                self.server_type = (NewznabConstants.SERVER_DEFAULT, NewznabConstants.SERVER_SPOTWEB)[
-                    NewznabConstants.server_types.get(NewznabConstants.SERVER_SPOTWEB) in
-                    (server_node.get('type', '') or server_node.get('title', '')).lower()]
+                if NewznabConstants.server_types.get(NewznabConstants.SERVER_SPOTWEB) in \
+                        (server_node.get('type', '') or server_node.get('title', '')).lower():
+                    self.server_type = NewznabConstants.SERVER_SPOTWEB
+                elif 'nzbhydra 2' in server_node.get('title', '').lower() or \
+                        'nzbhydra2' in server_node.get('url', '').lower():
+                    self.server_type = NewznabConstants.SERVER_HYDRA2
+                elif 'nzbhydra' == server_node.get('title', '').lower().strip() or \
+                         server_node.get('url', '').lower().strip().endswith('nzbhydra'):
+                    self.server_type = NewznabConstants.SERVER_HYDRA1
+                else:
+                    self.server_type = NewznabConstants.SERVER_DEFAULT
 
             tv_search = xml_caps.find('.//tv-search')
             if None is not tv_search:

@@ -1,7 +1,8 @@
-﻿### 0.18.9 (2018-12-19 12:20:00 UTC)
+﻿### 0.18.9 (2019-01-08 01:00:00 UTC)
 
 * Change ensure utf-8 locale for Ubuntu snap
 * Change remove non-release group stuff from newnab results
+* Add detection of NZBHydra and NZBHydra 2 to config providers
 * Remove Torrentz2
 
 

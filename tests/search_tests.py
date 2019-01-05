@@ -1,3 +1,7 @@
+import warnings
+warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
+warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
+
 import unittest
 
 from sickbeard import properFinder

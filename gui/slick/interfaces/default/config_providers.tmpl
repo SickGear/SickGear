@@ -97,6 +97,7 @@
     #set $cur_url = $cur_provider.url
     #set $show_type = $sickbeard.USE_NZBS and $sickbeard.USE_TORRENTS and $GenericProvider.NZB == $cur_provider.providerType
     #set $spotweb = ('', 'sw ')[$getattr($cur_provider, 'server_type', None) == $NewznabConstants.SERVER_SPOTWEB and type($cur_provider).__name__ not in ['TorrentRssProvider']]
+    #set $is_hydra = $getattr($cur_provider, 'server_type', None) in ($NewznabConstants.SERVER_HYDRA1, $NewznabConstants.SERVER_HYDRA2)
     #set $bad_url = not $cur_url and cur_provider.is_enabled()
     #set $tip = ($cur_provider.name + ('', ' (enable for link)')[not $cur_url and not cur_provider.is_enabled()],
         'Site Down')[$bad_url]
@@ -109,6 +110,8 @@
 								<span style="font-size:10px;vertical-align:top;font-weight:normal">(PA)</span>
     #end if##if $show_type##slurp
 								<span style="font-size:10px;vertical-align:top;font-weight:normal">($spotweb$cur_provider.providerType)</span>
+    #end if##if $is_hydra##slurp
+								(<a href="https://github.com/SickGear/SickGear/wiki/%5BWarning%5D-Using-External-Search-Tools" target="_blank" title="This tool degrades SickGear"><span class="red-text">read this</span></a>)
     #end if##if not $cur_provider.supports_backlog#*#set $backlog_only_tip=True##end if##slurp
 								<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="margin-top:3px"></span>
 							</li>
