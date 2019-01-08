@@ -1,4 +1,7 @@
 # coding=utf-8
+import warnings
+warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
+warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
 
 import unittest
 import test_lib as test

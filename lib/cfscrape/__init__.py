@@ -1,3 +1,4 @@
+from base64 import b64encode
 from time import sleep
 import logging
 import random
@@ -42,15 +43,33 @@ class CloudflareScraper(Session):
     def request(self, method, url, *args, **kwargs):
         resp = super(CloudflareScraper, self).request(method, url, *args, **kwargs)
 
-        # Check if Cloudflare anti-bot is on
+        # Check if anti-bot is on
         if (isinstance(resp, type(Response()))
-                and 503 == resp.status_code
-                and re.search('(?i)cloudflare', resp.headers.get('Server', ''))
-                and b'jschl_vc' in resp.content
-                and b'jschl_answer' in resp.content):
-            resp = self.solve_cf_challenge(resp, **kwargs)
+                and resp.status_code in (503, 403)):
+            if (re.search('(?i)cloudflare', resp.headers.get('Server', ''))
+                    and 'jschl_vc' in resp.content
+                    and 'jschl_answer' in resp.content):
+                resp = self.solve_cf_challenge(resp, **kwargs)
+            elif 'ddgu' in resp.content:
+                resp = self.solve_ddg_challenge(resp, **kwargs)
 
-        # Otherwise, no Cloudflare anti-bot detected
+        # Otherwise, no anti-bot detected
+        return resp
+
+    def solve_ddg_challenge(self, resp, **original_kwargs):
+        sleep(self.delay)
+        parsed_url = urlparse(resp.url)
+        try:
+            submit_url = parsed_url.scheme + ':' + re.findall('"frm"[^>]+?action="([^"]+)"', resp.text)[0]
+            kwargs = {k: v for k, v in original_kwargs.items() if k not in ['hooks']}
+            kwargs.setdefault('headers', {})
+            kwargs.setdefault('data', dict(
+                h=b64encode('%s://%s' % (parsed_url.scheme, parsed_url.hostname)),
+                u=b64encode(parsed_url.path), p=b64encode(parsed_url.port or '')
+            ))
+            resp = self.request('POST', submit_url, **kwargs)
+        except(StandardError, BaseException):
+            pass
         return resp
 
     def solve_cf_challenge(self, resp, **original_kwargs):

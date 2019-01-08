@@ -22,6 +22,14 @@
 
 
 
+### 0.18.9 (2019-01-08 01:00:00 UTC)
+
+* Change ensure utf-8 locale for Ubuntu snap
+* Change remove non-release group stuff from newnab results
+* Add detection of NZBHydra and NZBHydra 2 to config providers
+* Remove Torrentz2
+
+
 ### 0.18.8 (2018-12-18 21:00:00 UTC)
 
 * Change first run GUI defaults to enable fanart and episode view as home

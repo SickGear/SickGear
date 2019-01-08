@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<caps>
+	<server version="0.1" title="Spotweb" strapline="Spotweb API Index" email="spotweb@fake.fake" url="https://fake.fake/" image="https://fake.fake/spotnet.gif" type="Spotweb" />
+	<limits max="500" default="25" />
+	<registration available="no" open="no" />
+	<searching>
+		<search available="yes" />
+		<tv-search available="yes" supportedParams="q,rid,tvmazeid,season,ep" />
+		<movie-search available="yes" supportedParams="q,imdbid" />
+		<audio-search available="yes" />
+	</searching>
+	<categories>
+		<category id="1000" name="Console">
+			<subcat id="1010" name="NDS" />
+			<subcat id="1020" name="PSP" />
+			<subcat id="1030" name="Wii" />
+			<subcat id="1040" name="Xbox" />
+			<subcat id="1050" name="Xbox 360" />
+			<subcat id="1080" name="PS3" />
+		</category>
+		<category id="2000" name="Movies">
+			<subcat id="2030" name="SD" />
+			<subcat id="2040" name="HD" />
+			<subcat id="2050" name="BluRay" />
+		</category>
+		<category id="3000" name="Audio">
+			<subcat id="3010" name="MP3" />
+			<subcat id="3020" name="Video" />
+			<subcat id="3040" name="Lossless" />
+		</category>
+		<category id="4000" name="PC">
+			<subcat id="4030" name="Mac" />
+			<subcat id="4040" name="Mobile" />
+			<subcat id="4050" name="Games" />
+		</category>
+		<category id="5000" name="TV">
+			<subcat id="5020" name="Foreign" />
+			<subcat id="5030" name="SD" />
+			<subcat id="5040" name="HD" />
+			<subcat id="5050" name="Other" />
+			<subcat id="5060" name="Sport" />
+			<subcat id="5070" name="Anime" />
+		</category>
+		<category id="6000" name="XXX">
+			<subcat id="6010" name="DVD" />
+			<subcat id="6020" name="WMV" />
+			<subcat id="6030" name="XviD" />
+			<subcat id="6040" name="x264" />
+		</category>
+		<category id="7000" name="Other">
+			<subcat id="7010" name="Misc" />
+			<subcat id="7020" name="Ebook" />
+		</category>
+	</categories>
+</caps>
