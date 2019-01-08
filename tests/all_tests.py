@@ -19,7 +19,10 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-if __name__ == '__main__':
+if '__main__' == __name__:
+    import warnings
+    warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
+
     import glob
     import unittest
     import sys
@@ -32,10 +35,24 @@ if __name__ == '__main__':
     print('==================')
     print('STARTING - ALL TESTS')
     print('==================')
-    print('this will include')
-    for includedfiles in test_file_strings:
-        print('- ' + includedfiles)
 
-    text_runner = unittest.TextTestRunner().run(testSuite)
-    if not text_runner.wasSuccessful():
-        sys.exit(-1)
+    test_individually = False
+    
+    if not test_individually:
+        print('this will include')
+        for includedfiles in test_file_strings:
+            print('- ' + includedfiles)
+
+        text_runner = unittest.TextTestRunner().run(testSuite)
+        if not text_runner.wasSuccessful():
+            sys.exit(-1)
+    else:
+        complete_success = True
+        for file_string in module_strings:
+            testSuite = unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromName(file_string)])
+            print('- running ' + file_string)
+            test_runner = unittest.TextTestRunner().run(testSuite)
+            if complete_success and not test_runner.wasSuccessful():
+                complete_success = False
+        if not complete_success:
+            sys.exit(-1)

@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+	<server appversion="0.2.3p" version="0.5" title="Newznab" strapline="Fake Provider" email="fake@fake.fake" url="https://fake.in/" image="https://fake.in/logo.jpg" />
+	<limits max="100" default="100" />
+	<registration available="yes" open="no" />
+	<searching>
+		<search available="yes" supportedParams="q" />
+		<tv-search available="yes" supportedParams="q,rid,tvdbid,tvmazeid,season,ep" />
+		<movie-search available="yes" supportedParams="q,imdbid" />
+	</searching>
+	<categories>
+		<category id="1000" name="Console">
+			<subcat id="1010" name="NDS" />
+			<subcat id="1110" name="NSW" />
+			<subcat id="1080" name="PS3" />
+			<subcat id="1085" name="PS4" />
+			<subcat id="1020" name="PSP" />
+			<subcat id="1030" name="Wii" />
+			<subcat id="1060" name="WiiWare/VC" />
+			<subcat id="1070" name="XBOX 360 DLC" />
+			<subcat id="1090" name="XBOX ONE" />
+			<subcat id="1040" name="Xbox" />
+			<subcat id="1050" name="Xbox 360" />
+		</category>
+		<category id="2000" name="Movies">
+			<subcat id="2060" name="3D" />
+			<subcat id="2050" name="BluRay" />
+			<subcat id="2010" name="Foreign" />
+			<subcat id="2040" name="HD" />
+			<subcat id="2070" name="HEVC" />
+			<subcat id="2020" name="Other" />
+			<subcat id="2080" name="Remux" />
+			<subcat id="2030" name="SD" />
+			<subcat id="2045" name="UHD" />
+		</category>
+		<category id="3000" name="Music">
+			<subcat id="3030" name="Audiobook" />
+			<subcat id="3040" name="Lossless" />
+			<subcat id="3010" name="MP3" />
+			<subcat id="3020" name="Video" />
+		</category>
+		<category id="4000" name="PC">
+			<subcat id="4010" name="0day" />
+			<subcat id="4050" name="Games" />
+			<subcat id="4020" name="ISO" />
+			<subcat id="4030" name="Mac" />
+			<subcat id="4070" name="Mobile-Android" />
+			<subcat id="4040" name="Mobile-Other" />
+			<subcat id="4060" name="Mobile-iOS" />
+		</category>
+		<category id="5000" name="TV">
+			<subcat id="5070" name="Anime" />
+			<subcat id="5185" name="Docu HD" />
+			<subcat id="5180" name="Docu SD" />
+			<subcat id="5020" name="Foreign" />
+			<subcat id="5040" name="HD" />
+			<subcat id="5200" name="HEVC" />
+			<subcat id="5050" name="Other" />
+			<subcat id="5030" name="SD" />
+			<subcat id="5060" name="Sport" />
+			<subcat id="5045" name="UHD" />
+		</category>
+		<category id="6000" name="XXX">
+			<subcat id="6082" name="Clips HD" />
+			<subcat id="6081" name="Clips SD" />
+			<subcat id="6085" name="Clips UHD" />
+			<subcat id="6010" name="DVD" />
+			<subcat id="6040" name="HD" />
+			<subcat id="6060" name="ImgSet" />
+			<subcat id="6070" name="Other" />
+			<subcat id="6050" name="Pack" />
+			<subcat id="6030" name="SD" />
+			<subcat id="6020" name="WMV" />
+		</category>
+		<category id="7000" name="Books">
+			<subcat id="7030" name="Comics" />
+			<subcat id="7020" name="Ebook" />
+			<subcat id="7010" name="Mags" />
+		</category>
+		<category id="8000" name="Misc">
+			<subcat id="8090" name="Crap" />
+			<subcat id="8010" name="Other" />
+			<subcat id="8050" name="To Sort" />
+		</category>
+	</categories>
+	<groups>
+		<group id="40" name="alt.binaries.cd.image" description="This group contains PC-ISO." lastupdate="Tue, 01 Jan 2019 08:30:19 +0100" />
+		<group id="124" name="alt.binaries.comics.dcp" description="This group contains Comic Books" lastupdate="Tue, 01 Jan 2019 07:35:35 +0100" />
+		<group id="38" name="alt.binaries.console.ps3" description="This group contains PS3 Games." lastupdate="Tue, 01 Jan 2019 08:30:27 +0100" />
+		<group id="86" name="alt.binaries.documentaries" description="This group contains Documentaries TV and Movies." lastupdate="Tue, 01 Jan 2019 08:30:27 +0100" />
+		<group id="210" name="alt.binaries.documentaries.french" lastupdate="Tue, 01 Jan 2019 08:29:49 +0100" />
+		<group id="28" name="alt.binaries.e-book" description="This group contains E-Books." lastupdate="Tue, 01 Jan 2019 08:30:32 +0100" />
+		<group id="52" name="alt.binaries.e-book.flood" description="This group contains E-Books." lastupdate="Tue, 01 Jan 2019 00:57:11 +0100" />
+		<group id="192" name="alt.binaries.e-book.magazines" description="True PDF magazine" lastupdate="Tue, 01 Jan 2019 07:01:18 +0100" />
+		<group id="41" name="alt.binaries.e-book.technical" description="This group contains E-Books." lastupdate="Tue, 01 Jan 2019 08:30:28 +0100" />
+		<group id="96" name="alt.binaries.ebook" description="This group contains Ebook&#039;s." lastupdate="Mon, 31 Dec 2018 22:26:46 +0100" />
+		<group id="42" name="alt.binaries.erotica.divx" description="This group contains XXX." lastupdate="Tue, 01 Jan 2019 08:30:23 +0100" />
+		<group id="34" name="alt.binaries.games" description="This group contains PC and Console Games." lastupdate="Tue, 01 Jan 2019 08:29:56 +0100" />
+		<group id="209" name="alt.binaries.games.dox" lastupdate="Tue, 01 Jan 2019 08:30:01 +0100" />
+		<group id="13" name="alt.binaries.games.wii" description="This group contains Nintendo WII Games, WII-Ware, and VC." lastupdate="Tue, 01 Jan 2019 08:29:57 +0100" />
+		<group id="12" name="alt.binaries.games.xbox360" description="This group contains XBOX 360 Games and DLC." lastupdate="Tue, 01 Jan 2019 08:29:40 +0100" />
+		<group id="161" name="alt.binaries.hdtv.french" description="Contains TV shows in French or VOSTFR " lastupdate="Tue, 01 Jan 2019 08:29:48 +0100" />
+		<group id="11" name="alt.binaries.hdtv.x264" description="This group contains X264 Movies and HDTV." lastupdate="Tue, 01 Jan 2019 08:29:37 +0100" />
+		<group id="217" name="alt.binaries.howard-stern" description="Howard Stern show and other junk" lastupdate="Mon, 31 Dec 2018 12:37:18 +0100" />
+		<group id="27" name="alt.binaries.mac" description="This group contains MAC/OSX Software." lastupdate="Tue, 01 Jan 2019 04:35:18 +0100" />
+		<group id="17" name="alt.binaries.moovee" description="This group contains XVID and X264 Movies." lastupdate="Tue, 01 Jan 2019 08:29:33 +0100" />
+		<group id="132" name="alt.binaries.movies" description="This group contains an assortment of Movies." lastupdate="Tue, 01 Jan 2019 08:29:56 +0100" />
+		<group id="5" name="alt.binaries.movies.divx" description="This group contains XVID Movies" lastupdate="Tue, 01 Jan 2019 08:29:22 +0100" />
+		<group id="7" name="alt.binaries.movies.xvid" description="This group contains XVID Movies." lastupdate="Tue, 01 Jan 2019 08:30:10 +0100" />
+		<group id="67" name="alt.binaries.mp3.audiobooks" description="This group contains Audio Books." lastupdate="Tue, 01 Jan 2019 08:30:22 +0100" />
+		<group id="4" name="alt.binaries.multimedia" description="This group contains TV, Movies, and Music." lastupdate="Tue, 01 Jan 2019 08:29:33 +0100" />
+		<group id="137" name="alt.binaries.multimedia.anime.highspeed" description="This group contains Anime Television." lastupdate="Tue, 01 Jan 2019 08:29:31 +0100" />
+		<group id="73" name="alt.binaries.multimedia.cartoons" description="This group contains Cartoon TV and Movies." lastupdate="Tue, 01 Jan 2019 09:28:57 +0100" />
+		<group id="74" name="alt.binaries.multimedia.sports" description="This group contains Sports TV and Movies." lastupdate="Tue, 01 Jan 2019 09:28:58 +0100" />
+		<group id="8" name="alt.binaries.sony.psp" description="This group contains PSP Games." lastupdate="Sun, 09 Dec 2018 00:03:32 +0100" />
+		<group id="147" name="alt.binaries.sounds.flac" description="This group contains lossless audio." lastupdate="Tue, 01 Jan 2019 09:41:37 +0100" />
+		<group id="47" name="alt.binaries.sounds.lossless" description="This group contains a variety of Lossless Music." lastupdate="Tue, 01 Jan 2019 09:28:58 +0100" />
+		<group id="76" name="alt.binaries.sounds.lossless.classical" description="This group contains lossless Classical Music." lastupdate="Mon, 31 Dec 2018 23:18:55 +0100" />
+		<group id="100" name="alt.binaries.sounds.lossless.country" description="This group contains lossless Country Music." lastupdate="Tue, 01 Jan 2019 12:09:37 +0100" />
+		<group id="22" name="alt.binaries.sounds.mp3.complete_cd" description="This group contains a variety of Music." lastupdate="Fri, 28 Dec 2018 23:57:38 +0100" />
+		<group id="20" name="alt.binaries.teevee" description="This group contains X264 and XVID TV." lastupdate="Tue, 01 Jan 2019 08:29:00 +0100" />
+		<group id="99" name="alt.binaries.tv" description="This group contains XVID TV." lastupdate="Tue, 01 Jan 2019 09:41:41 +0100" />
+		<group id="195" name="alt.binaries.tv.big-brother" description="Big Brother Live Feed" lastupdate="Tue, 01 Jan 2019 08:29:23 +0100" />
+		<group id="30" name="alt.binaries.tvseries" description="This group contains X264 and XVID TV." lastupdate="Tue, 01 Jan 2019 09:28:55 +0100" />
+		<group id="136" name="alt.binaries.worms" description="This group contains a lot of U4ALL." lastupdate="Tue, 01 Jan 2019 08:29:12 +0100" />
+		<group id="15" name="alt.binaries.x264" description="This group contains X264 Movies and TV." lastupdate="Tue, 01 Jan 2019 09:41:42 +0100" />
+	</groups>
+	<genres>
+		<genre id="3028" categoryid="3000" name="" />
+		<genre id="20" categoryid="1000" name="Action" />
+		<genre id="21" categoryid="1000" name="Adventure" />
+		<genre id="3002" categoryid="3000" name="Alternative Rock" />
+		<genre id="22" categoryid="1000" name="Arcade" />
+		<genre id="3003" categoryid="3000" name="Blues" />
+		<genre id="32" categoryid="1000" name="Board Games" />
+		<genre id="3004" categoryid="3000" name="Broadway &amp; Vocalists" />
+		<genre id="30" categoryid="1000" name="Cards" />
+		<genre id="26" categoryid="1000" name="Casino" />
+		<genre id="3005" categoryid="3000" name="Children" />
+		<genre id="1026" categoryid="3000" name="Children&#039;s Music" />
+		<genre id="3006" categoryid="3000" name="Christian" />
+		<genre id="1027" categoryid="3000" name="Christian &amp; Gospel" />
+		<genre id="3008" categoryid="3000" name="Classic Rock" />
+		<genre id="3007" categoryid="3000" name="Classical" />
+		<genre id="3009" categoryid="3000" name="Country" />
+		<genre id="3010" categoryid="3000" name="Dance &amp; Electronic" />
+		<genre id="37" categoryid="1000" name="Flying" />
+		<genre id="3011" categoryid="3000" name="Folk" />
+		<genre id="3012" categoryid="3000" name="Gospel" />
+		<genre id="3013" categoryid="3000" name="Hard Rock &amp; Metal" />
+		<genre id="3014" categoryid="3000" name="Indie Music" />
+		<genre id="3015" categoryid="3000" name="Jazz" />
+		<genre id="3016" categoryid="3000" name="Latin" />
+		<genre id="3027" categoryid="3000" name="Latin Music" />
+		<genre id="3025" categoryid="3000" name="Miscellaneous" />
+		<genre id="3026" categoryid="3000" name="New Age" />
+		<genre id="3017" categoryid="3000" name="Opera &amp; Vocal Music" />
+		<genre id="1" categoryid="3000" name="Other" />
+		<genre id="3018" categoryid="3000" name="Pop" />
+		<genre id="23" categoryid="1000" name="Puzzle" />
+		<genre id="1025" categoryid="3000" name="R&amp;B" />
+		<genre id="3019" categoryid="3000" name="R&amp;B &amp; Soul" />
+		<genre id="29" categoryid="1000" name="Racing" />
+		<genre id="3020" categoryid="3000" name="Rap &amp; Hip-Hop" />
+		<genre id="31" categoryid="1000" name="Rhythm" />
+		<genre id="3021" categoryid="3000" name="Rock" />
+		<genre id="24" categoryid="1000" name="Role-Playing" />
+		<genre id="19" categoryid="1000" name="Simulation" />
+		<genre id="3022" categoryid="3000" name="Soundtracks" />
+		<genre id="3024" categoryid="3000" name="Specialty Label Stores" />
+		<genre id="28" categoryid="1000" name="Sports" />
+		<genre id="25" categoryid="1000" name="Strategy" />
+		<genre id="27" categoryid="1000" name="Trivia" />
+		<genre id="33" categoryid="1000" name="Unknown" />
+		<genre id="3023" categoryid="3000" name="World Music" />
+	</genres>
+</caps>

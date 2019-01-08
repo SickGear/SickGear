@@ -1,3 +1,8 @@
+import warnings
+warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
+warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
+warnings.filterwarnings('ignore', module=r'.*zoneinfo.*', message='.*no such file.*')
+
 import unittest
 import test_lib as test
 import os.path

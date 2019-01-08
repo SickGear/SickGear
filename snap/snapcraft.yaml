@@ -11,10 +11,13 @@ description: |
 
 icon: gui/slick/images/sickgear.png
 confinement: strict
+grade: stable
 adopt-info: sickgear
 
 apps:
   sickgear:
+    environment:
+      LC_CTYPE: C.UTF-8
     command: python "$SNAP/sickgear/sickgear.py" --datadir="$SNAP_COMMON/data"
     # daemon: simple
     plugs: [network, network-bind, removable-media]
@@ -44,7 +47,7 @@ parts:
     override-pull: |
       snapcraftctl pull
 
-      [ -z $(grep -o 'xx:xx:xx' CHANGES.md) ] && grade=stable || grade=devel
+      [ -z $(grep -o "xx:xx:xx" CHANGES.md) ] && grade=stable || grade=devel
       snapcraftctl set-grade "$grade"
 
       version="$(sed -n '1 s/###[^0-9]\{1,\}\([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\).*/\1/p' CHANGES.md)"
