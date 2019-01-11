@@ -1,4 +1,9 @@
-﻿### 0.18.9 (2019-01-08 01:00:00 UTC)
+﻿### 0.18.10 (2019-01-11 14:00:00 UTC)
+
+* Fix using ampersand with find show search input
+
+
+### 0.18.9 (2019-01-08 01:00:00 UTC)
 
 * Change ensure utf-8 locale for Ubuntu snap
 * Change remove non-release group stuff from newnab results
