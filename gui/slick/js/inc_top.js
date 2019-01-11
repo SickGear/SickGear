@@ -57,7 +57,7 @@ $(function(){
 	});
 
 	var search = function(){
-		var link$ = $('#add-show-name'), text = link$.find('input').val(),
+		var link$ = $('#add-show-name'), text = encodeURIComponent(link$.find('input').val()),
 			param = '?show_to_add=|||' + text + '&use_show_name=True';
 		window.location.href = link$.attr('data-href') + (!text.length ? '' : param);
 	}, removeHref = function(){$('#add-show-name').removeAttr('href');};
