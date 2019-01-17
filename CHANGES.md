@@ -1,4 +1,9 @@
-﻿### 0.18.10 (2019-01-11 14:00:00 UTC)
+﻿### 0.18.11 (2019-01-17 23:10:00 UTC)
+
+* Add hd/sd quality detection for x265 hevc (to use; remove x265 and hevc from global ignore list)
+
+
+### 0.18.10 (2019-01-11 14:00:00 UTC)
 
 * Fix using ampersand with find show search input
 
