@@ -18,6 +18,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import re
 import time
 
 from . import generic
@@ -30,11 +31,11 @@ class RarbgProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'Rarbg')
 
-        self.url_base = 'https://rarbgmirror.xyz/'
+        self.url_home = ['https://rarbgmirror.xyz/']
         # api_spec: https://rarbg.com/pubapi/apidocs_v2.txt
         self.url_api = 'https://torrentapi.org/pubapi_v2.php?app_id=SickGear&'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'api_token': self.url_api + 'get_token=get_token',
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s'}
+        self.urls = {'api_token': self.url_api + 'get_token=get_token',
                      'api_list': self.url_api + 'mode=list',
                      'api_search': self.url_api + 'mode=search'}
 
@@ -46,7 +47,6 @@ class RarbgProvider(generic.TorrentProvider):
                        'param_peer': '&min_leechers=%(min_peers)s'}
 
         self.proper_search_terms = '{{.proper.|.repack.}}'
-        self.url = self.urls['config_provider_home_uri']
 
         self.minseed, self.minleech, self.token, self.token_expiry = 4 * [None]
         self.confirmed = False
@@ -68,6 +68,10 @@ class RarbgProvider(generic.TorrentProvider):
 
         logger.log(u'No usable API token returned from: %s' % self.urls['api_token'], logger.ERROR)
         return False
+
+    @staticmethod
+    def _has_signature(data=None):
+        return data and re.search(r'(?i)<title[^<]+?(rarbg)', data)
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -116,6 +120,7 @@ class RarbgProvider(generic.TorrentProvider):
                 if self.minleech:
                     search_url += self.params['param_peer'] % {'min_peers': self.minleech}
 
+                data_json = {}
                 cnt = len(items[mode])
                 for r in range(0, 3):
                     time_out = 0
@@ -148,7 +153,7 @@ class RarbgProvider(generic.TorrentProvider):
                 if 'error' not in data_json:
                     for item in data_json['torrent_results']:
                         title, download_magnet, seeders, size = [
-                            item.get(x) for x in 'title', 'download', 'seeders', 'size']
+                            item.get(x) for x in ('title', 'download', 'seeders', 'size')]
                         title = None is title and item.get('filename') or title
                         if not (title and download_magnet) or download_magnet in dedupe:
                             continue

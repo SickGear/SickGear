@@ -79,8 +79,6 @@ def search_propers(proper_list=None):
 def get_old_proper_level(show_obj, indexer, indexerid, season, episodes, old_status, new_quality,
                          extra_no_name, version, is_anime=False):
     level = 0
-    is_internal = False
-    codec = ''
     rel_name = None
     if old_status not in SNATCHED_ANY:
         level = Quality.get_proper_level(extra_no_name, version, is_anime)
@@ -106,22 +104,8 @@ def get_old_proper_level(show_obj, indexer, indexerid, season, episodes, old_sta
             level = Quality.get_proper_level(p.extra_info_no_name(), p.version, show_obj.is_anime)
             extra_no_name = p.extra_info_no_name()
             rel_name = result[0]['resource']
-            is_internal = p.extra_info_no_name() and re.search(r'\binternal\b', p.extra_info_no_name(), flags=re.I)
-            codec = _get_codec(p.extra_info_no_name())
             break
-    return level, is_internal, codec, extra_no_name, rel_name
-
-
-def _get_codec(extra_info_no_name):
-    if not extra_info_no_name:
-        return ''
-    if re.search(r'\b[xh]264\b', extra_info_no_name, flags=re.I):
-        return '264'
-    elif re.search(r'\bxvid\b', extra_info_no_name, flags=re.I):
-        return 'xvid'
-    elif re.search(r'\b[xh]\W?265|hevc\b', extra_info_no_name, flags=re.I):
-        return 'hevc'
-    return ''
+    return level, extra_no_name, rel_name
 
 
 def get_webdl_type(extra_info_no_name, rel_name):
@@ -298,26 +282,18 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_list=
             except (StandardError, Exception):
                 extra_info = None
             # don't take Proper of the same level we already downloaded
-            old_proper_level, old_is_internal, old_codec, old_extra_no_name, old_name = \
+            old_proper_level, old_extra_no_name, old_name = \
                 get_old_proper_level(cur_proper.parsed_show, cur_proper.indexer, cur_proper.indexerid,
                                      cur_proper.season, parse_result.episode_numbers,
                                      old_status, cur_proper.quality, extra_info,
                                      parse_result.version, parse_result.is_anime)
-            cur_proper.codec = _get_codec(parse_result.extra_info_no_name())
-            if cur_proper.proper_level < old_proper_level:
-                continue
-
-            cur_proper.is_internal = (parse_result.extra_info_no_name() and
-                                      re.search(r'\binternal\b', parse_result.extra_info_no_name(), flags=re.I))
-            if cur_proper.proper_level == old_proper_level:
-                if (('264' == cur_proper.codec and 'xvid' == old_codec)
-                        or (old_is_internal and not cur_proper.is_internal)):
-                    pass
+            if cur_proper.proper_level <= old_proper_level:
                 continue
 
             is_web = (old_quality in (Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB) or
-                      (old_quality == Quality.SDTV and re.search(r'\Wweb.?(dl|rip|.[hx]26[45])\W',
-                                                                 str(sql_results[0]['release_name']), re.I)))
+                      (old_quality == Quality.SDTV and
+                       isinstance(sql_results[0]['release_name'], basestring) and
+                       re.search(r'\Wweb.?(dl|rip|.([hx]\W?26[45]|hevc))\W', sql_results[0]['release_name'], re.I)))
 
             if is_web:
                 old_name = (old_name, sql_results[0]['release_name'])[old_name in ('', None)]

@@ -205,20 +205,20 @@ class Quality:
         from sickbeard import encodingKludge as ek
         name = ek.ek(os.path.basename, name)
 
-        check_name = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
+        name_has = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
 
         if anime:
-            sd_options = check_name(['360p', '480p', '848x480', 'XviD'], any)
-            dvd_options = check_name(['dvd', 'dvdrip'], any)
-            blue_ray_options = check_name(['bluray', 'blu-ray', 'BD'], any)
+            sd_options = name_has(['360p', '480p', '848x480', 'XviD'], any)
+            dvd_options = name_has(['dvd', 'dvdrip'], any)
+            blue_ray_options = name_has(['bluray', 'blu-ray', 'BD'], any)
 
             if sd_options and not dvd_options and not blue_ray_options:
                 return Quality.SDTV
             if dvd_options:
                 return Quality.SDDVD
 
-            hd_options = check_name(['720p', '1280x720', '960x720'], any)
-            full_hd = check_name(['1080p', '1920x1080'], any)
+            hd_options = name_has(['720p', '1280x720', '960x720'], any)
+            full_hd = name_has(['1080p', '1920x1080'], any)
             if not blue_ray_options:
                 if hd_options and not full_hd:
                     return Quality.HDTV
@@ -237,48 +237,45 @@ class Quality:
                 return Quality.HDTV
             return Quality.UNKNOWN
 
-        fmt = '((h.?|x)26[45]|vp9|av1)'
+        fmt = '((h.?|x)26[45]|vp9|av1|hevc)'
         webfmt = 'web.?(dl|rip|.%s)' % fmt
         rips = 'b[r|d]rip'
         hd_rips = 'blu.?ray|hddvd|%s' % rips
-        # for check in []:
 
-        if check_name(['(hdtv|pdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|%s))' % fmt]) \
-                and not (check_name(['(720|1080|2160)[pi]']) or check_name(['hr.ws.pdtv.(x264|h.?264)'])):
-            return Quality.SDTV
-        if check_name([webfmt, 'xvid|%s' % fmt]) \
-                and not check_name(['(720|1080|2160)[pi]']):
-            return Quality.SDTV
-        if check_name(['(dvd.?rip|%s)(.ws)?(.(xvid|divx|%s))?' % (rips, fmt)]) \
-                and not check_name(['(720|1080|2160)[pi]']):
-            return Quality.SDDVD
-        if check_name(['(xvid|divx|480p)']) \
-                and not (check_name(['(720|1080|2160)[pi]']) or check_name(['hr.ws.pdtv.%s' % fmt])):
-            return Quality.SDTV
-        if check_name(['720p', 'hdtv', fmt]) or check_name(['hr.ws.pdtv.%s' % fmt]) \
-                and not check_name(['(1080|2160)[pi]']):
-            return Quality.HDTV
-        if check_name(['720p|1080i', 'hdtv', 'mpeg-?2']) or check_name(['1080[pi].hdtv', 'h.?264']):
+        if not name_has(['(720|1080|2160)[pi]|720hd']):
+            if name_has(['(dvd.?rip|%s)(.ws)?(.(xvid|divx|%s))?' % (rips, fmt)]):
+                return Quality.SDDVD
+            if (not name_has(['hr.ws.pdtv.(h.?|x)264'])
+                and (name_has(['(hdtv|pdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|%s))' % fmt])
+                     or name_has(['(xvid|divx|480p|hevc|x265)']))) \
+                    or name_has([webfmt, 'xvid|%s' % fmt]):
+                return Quality.SDTV
+
+        if not name_has(['(1080|2160)[pi]']):
+            if name_has(['720p']):
+                if name_has([hd_rips, fmt]):
+                    return Quality.HDBLURAY
+                if name_has([webfmt]) or name_has(['itunes', fmt]):
+                    return Quality.HDWEBDL
+                if name_has([fmt]):
+                    return Quality.HDTV
+            # p2p
+            if name_has(['720hd']) \
+                    or name_has(['hr.ws.pdtv.%s' % fmt]):
+                return Quality.HDTV
+        if name_has(['720p|1080i', 'hdtv', 'mpeg-?2']) or name_has(['1080[pi].hdtv', 'h.?264']):
             return Quality.RAWHDTV
-        if check_name(['1080p', 'hdtv', fmt]):
-            return Quality.FULLHDTV
-        if check_name(['720p', webfmt]) or check_name(['720p', 'itunes', fmt]):
-            return Quality.HDWEBDL
-        if check_name(['1080p', webfmt]) or check_name(['1080p', 'itunes', fmt]):
-            return Quality.FULLHDWEBDL
-        if check_name(['720p', hd_rips, fmt]):
-            return Quality.HDBLURAY
-        if check_name(['1080p', hd_rips, fmt]) \
-                or (check_name(['1080[pi]', 'remux']) and not check_name(['hdtv'])):
+        if name_has(['1080[pi]', 'remux']) and not name_has(['hdtv']):
             return Quality.FULLHDBLURAY
-        if check_name(['2160p', webfmt]):
+        if name_has(['1080p']):
+            if name_has([hd_rips, fmt]) or name_has([hd_rips, 'avc|vc[ -.]?1']):
+                return Quality.FULLHDBLURAY
+            if name_has([webfmt]) or name_has(['itunes', fmt]):
+                return Quality.FULLHDWEBDL
+            if name_has([fmt]):
+                return Quality.FULLHDTV
+        if name_has(['2160p', webfmt]):
             return Quality.UHD4KWEB
-        # p2p
-        if check_name(['720HD']) \
-                and not check_name(['(1080|2160)[pi]']):
-            return Quality.HDTV
-        if check_name(['1080p', hd_rips, 'avc|vc[-\s.]?1']):
-            return Quality.FULLHDBLURAY
 
         return Quality.UNKNOWN
 

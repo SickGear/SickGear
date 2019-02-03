@@ -453,10 +453,16 @@ class QueueItemAdd(ShowQueueItem):
 
                 action_log = 'didn\'t find any episodes that need to be set wanted'
                 if actual:
-                    action_log = ('updated %s %s episodes > %s'
-                                  % ((((('%s of %s' % (actual, wanted_max)), ('%s of max %s limited' % (actual, wanted_max)))[10 == wanted_max]), ('max %s available' % actual))[-1 == wanted_max],
-                                     ('first season', 'latest')[latest],
-                                     ','.join([('S%02dE%02d=%d' % (a['season'], a['episode'], a['status'])) for a in wanted_updates])))
+                    action_log = ('updated %s %s episodes > %s' % (
+                        (((('%s of %s' % (actual, wanted_max)),
+                           ('%s of max %s limited' % (actual, wanted_max)))[10 == wanted_max]),
+                         ('max %s available' % actual))[-1 == wanted_max],
+                        ('first season', 'latest')[latest],
+                        ', '.join([
+                            ('S%02dE%02d=%s' % (a['season'], a['episode'], statusStrings[a['status']]))
+                            for a in wanted_updates
+                        ])
+                    ))
                 logger.log('Get wanted ' + action_log)
             return actual
 
