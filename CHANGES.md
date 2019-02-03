@@ -22,6 +22,15 @@
 
 
 
+### 0.18.11 (2019-02-03 13:50:00 UTC)
+
+* Add hd/sd quality detection for x265 hevc (to use; remove x265 and hevc from global ignore list)
+* Add prefer x265/hevc releases over x264 at equal qualities
+* Fix EpisodeView Webcal link for proxy use
+* Fix UI issue with /api/builder -> SickGear.Episode.SetStatus
+* Change provider Rarbg
+
+
 ### 0.18.10 (2019-01-11 14:00:00 UTC)
 
 * Fix using ampersand with find show search input

@@ -325,6 +325,9 @@ def best_candidate(best_result, cur_result):
             if 'xvid' in best_result.name.lower() and 'x264' in cur_result.name.lower():
                 logger.log(u'Preferring (x264 over xvid) [%s]' % cur_result.name)
                 best_result = cur_result
+            elif re.search('(?i)(h.?|x)264', best_result.name) and re.search('(?i)((h.?|x)265|hevc)', cur_result.name):
+                logger.log(u'Preferring (x265 over x264) [%s]' % cur_result.name)
+                best_result = cur_result
             elif 'internal' in best_result.name.lower() and 'internal' not in cur_result.name.lower():
                 best_result = cur_result
 

@@ -503,7 +503,7 @@ class NewznabProvider(generic.NZBProvider):
                     if re.search(pattern, title):
                         r_found = True
                         title = re.sub(pattern, repl, title)
-            parts = re.findall('(.*(?:(?:h.?|x)26[45]|vp9|av1|xvid|divx)[^-]*)(.*)', title, re.I)[0]
+            parts = re.findall('(.*(?:(?:h.?|x)26[45]|vp9|av1|hevc|xvid|divx)[^-]*)(.*)', title, re.I)[0]
             title = '%s-%s' % (parts[0], remove_non_release_groups(parts[1].split('-')[1]))
         except (StandardError, Exception):
             pass
