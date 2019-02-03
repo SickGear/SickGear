@@ -313,8 +313,9 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
         my_db = db.DBConnection()
         sql_results = my_db.select(
-            'SELECT * FROM tv_episodes WHERE status = ? AND season > 0 AND airdate <= ? AND airdate > 1',
-            [common.UNAIRED, cur_date])
+            'SELECT * FROM tv_episodes'
+            ' WHERE status = ? AND season > 0 AND airdate <= ? AND airdate > 1'
+            ' ORDER BY showid', [common.UNAIRED, cur_date])
 
         sql_l = []
         show = None
