@@ -1,4 +1,10 @@
-﻿### 0.18.11 (2019-02-03 13:50:00 UTC)
+﻿### 0.18.12 (2019-02-07 03:55:00 UTC)
+
+* Change improve DiskStation 6.2 connectivity and error logging
+* Fix TokyoToshokan
+
+
+### 0.18.11 (2019-02-03 13:50:00 UTC)
 
 * Add hd/sd quality detection for x265 hevc (to use; remove x265 and hevc from global ignore list)
 * Add prefer x265/hevc releases over x264 at equal qualities
