@@ -183,26 +183,26 @@ class GenericClient(object):
                 r_code = self._add_torrent_file(result)
 
             if not r_code:
-                logger.log('%s: Unable to send Torrent: Return code undefined (already exists in client?)' % self.name, logger.ERROR)
+                logger.log('%s: Unable to send torrent to client' % self.name, logger.ERROR)
                 return False
 
             if not self._set_torrent_pause(result):
-                logger.log('%s: Unable to set the pause for Torrent' % self.name, logger.ERROR)
+                logger.log('%s: Unable to set the pause for torrent' % self.name, logger.ERROR)
 
             if not self._set_torrent_label(result):
-                logger.log('%s: Unable to set the label for Torrent' % self.name, logger.ERROR)
+                logger.log('%s: Unable to set the label for torrent' % self.name, logger.ERROR)
 
             if not self._set_torrent_ratio(result):
-                logger.log('%s: Unable to set the ratio for Torrent' % self.name, logger.ERROR)
+                logger.log('%s: Unable to set the ratio for torrent' % self.name, logger.ERROR)
 
             if not self._set_torrent_seed_time(result):
-                logger.log('%s: Unable to set the seed time for Torrent' % self.name, logger.ERROR)
+                logger.log('%s: Unable to set the seed time for torrent' % self.name, logger.ERROR)
 
             if not self._set_torrent_path(result):
-                logger.log('%s: Unable to set the path for Torrent' % self.name, logger.ERROR)
+                logger.log('%s: Unable to set the path for torrent' % self.name, logger.ERROR)
 
             if 0 != result.priority and not self._set_torrent_priority(result):
-                logger.log('%s: Unable to set priority for Torrent' % self.name, logger.ERROR)
+                logger.log('%s: Unable to set priority for torrent' % self.name, logger.ERROR)
 
         except Exception as e:
             logger.log('%s: Failed sending torrent: %s - %s' % (self.name, result.name, result.hash), logger.ERROR)
@@ -228,6 +228,8 @@ class GenericClient(object):
             # FIXME: This test is redundant
             if authenticated and self.auth:
                 return True, 'Success: Connected and Authenticated'
+            if getattr(self, '_errmsg', None):
+                return False, 'Error: Failed to get %s authentication.%s' % (self.name, self._errmsg)
             return False, 'Error: Unable to get %s authentication, check your config!' % self.name
         except (StandardError, Exception):
             return False, 'Error: Unable to connect to %s' % self.name

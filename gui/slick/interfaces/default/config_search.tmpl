@@ -543,12 +543,12 @@
 								<label>
 									<span class="component-title">Downloaded files location</span>
 									<span class="component-desc">
-										<input type="text" name="torrent_path" id="torrent_path" value="$sickbeard.TORRENT_PATH" class="form-control input-sm input350">
+										<input type="text" name="torrent_path" id="torrent_path" value="$sickbeard.TORRENT_PATH" class="form-control input-sm input350" autocomplete="nope">
 										<p class="clear-left note">
 											where <span id="torrent-client">the torrent client</span> will save files
 											<span class="qbittorrent">(blank otherwise set will ignore label/category)</span>
 											<span id="path-blank">(blank for client default)</span>
-											<span class="synology"> <b>note:</b> the destination has to be a shared folder for Synology DS</span>
+											<span class="synology"> <b>note:</b> this destination path starts with a shared folder, not "volumexx". e.g. <span class="grey-text">Video/Downloads</span></span>
 											<span class="transmission grey-text"> (v2.92 and newer should <em>not</em> be blank)</span>
 										</p>
 									</span>
