@@ -1,4 +1,10 @@
-﻿### 0.18.12 (2019-02-07 03:55:00 UTC)
+﻿### 0.18.13 (2019-02-09 16:00:00 UTC)
+
+* Fix Nyaa provider
+* Fix HorribleSubs provider
+
+
+### 0.18.12 (2019-02-07 03:55:00 UTC)
 
 * Change improve DiskStation 6.2 connectivity and error logging
 * Fix TokyoToshokan

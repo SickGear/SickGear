@@ -50,7 +50,7 @@ class NyaaProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                search_url = self.urls['search'] % ((0, 2)[self.confirmed], search_string)
+                search_url = self.urls['search'] % ((0, 2)[self.confirmed], search_string.replace('.', ' '))
 
                 html = self.get_url(search_url)
                 if self.should_skip():
