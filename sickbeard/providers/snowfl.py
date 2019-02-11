@@ -38,10 +38,10 @@ class SnowflProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'Snowfl')
 
-        self.url_base = 'https://www.snowfl.com/'
+        self.url_base = 'https://snowfl.com/'
 
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'browse': self.url_base + '%(token)s/Q/%(ent)s/0/DATE/24/1?_=%(ts)s',
+                     'browse': self.url_base + '%(token)s/Q/%(ent)s/0/DATE/24/0?_=%(ts)s',
                      'search': self.url_base + '%(token)s/%(ss)s/%(ent)s/0/DATE/NONE/1?_=%(ts)s',
                      'get': self.url_base + '%(token)s/%(src)s/%(url)s?_=%(ts)s'}
 
@@ -93,18 +93,24 @@ class SnowflProvider(generic.TorrentProvider):
                             if self.should_skip():
                                 return results
 
-                        for item in filter(lambda di: re.match('(?i).*?(tv|television)', di.get('category', '')) and (
-                                not self.confirmed or di.get('verified')), data_json or {}):
-                            seeders, leechers, size = map(lambda n: tryInt(
-                                *([item.get(n)]) * 2), ('seed', 'leech', 'size'))
+                        for item in filter(lambda di: re.match('(?i).*?(tv|television)',
+                                                               di.get('type', '') or di.get('category', ''))
+                                           and (not self.confirmed or di.get('trusted') or di.get('verified')),
+                                           data_json or {}):
+                            seeders, leechers, size = map(lambda (n1, n2): tryInt(
+                                *([item.get(n1) if None is not item.get(n1) else item.get(n2)]) * 2),
+                                (('seeder', 'seed'), ('leecher', 'leech'), ('size', 'size')))
                             if self._reject_item(seeders, leechers):
                                 continue
-                            title = item.get('title')
-                            download_url = item.get('magnetLink')
-                            if not download_url and item.get('source') and item.get('pageLink'):
+                            title = item.get('name') or item.get('title')
+                            download_url = item.get('magnet') or item.get('magnetLink')
+                            if not download_url:
+                                source = item.get('site') or item.get('source')
+                                link = self._link(item.get('url') or item.get('pageLink'))
+                                if not source or not link:
+                                    continue
                                 download_url = self.urls['get'] % dict(
-                                    token=token[0], src=quote(item.get('source')),
-                                    url=base64.b64encode(quote(item.get('pageLink'))), ts='%(ts)s')
+                                    token=token[0], src=quote(source), url=base64.b64encode(quote(link)), ts='%(ts)s')
                             if title and download_url:
                                 items[mode].append((title, download_url, seeders, size))
 
@@ -126,8 +132,8 @@ class SnowflProvider(generic.TorrentProvider):
                 raise generic.HaltParseException
 
             rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-                'js': '<script[^>]+?src="([^"]+?js\?v=[\w]{8,})"',
-                'token': '\w\s*=\s*"(\w{30,40})"', 'seed': 'n random[^"]+"([^"]+)'}.items())
+                'js': r'<script[^>]+?src="([^"]+?js\?v=[\w]{8,})"',
+                'token': r'\w\s*=\s*"(\w{30,40})"', 'seed': r'n random[^"]+"([^"]+)'}.items())
 
             js_src = rc['js'].findall(html)
             for src in js_src:
@@ -164,7 +170,7 @@ class SnowflProvider(generic.TorrentProvider):
                 prov.enabled = state
                 if prov.url:
                     try:
-                        result = prov.urls.get('get', '') % re.findall('(\d+).torrent', url)[0]
+                        result = prov.urls.get('get', '') % re.findall(r'(\d+).torrent', url)[0]
                     except (IndexError, TypeError):
                         pass
 

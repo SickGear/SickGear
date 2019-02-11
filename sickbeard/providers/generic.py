@@ -671,7 +671,8 @@ class GenericProvider(object):
         saved = False
         for url in urls:
             cache_dir = sickbeard.CACHE_DIR or helpers._getTempDir()
-            base_name = '%s.%s' % (helpers.sanitizeFileName(result.name), self.providerType)
+            base_name = '%s.%s' % (re.sub('.%s$' % self.providerType, '', helpers.sanitizeFileName(result.name)),
+                                   self.providerType)
             final_file = ek.ek(os.path.join, final_dir, base_name)
             cached = getattr(result, 'cache_file', None)
             if cached and ek.ek(os.path.isfile, cached):

@@ -47,8 +47,7 @@ class HorribleSubsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': 'dl-label', 'get': 'magnet:', 'nodots': '[\.\s]+'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'nodots': r'[\.\s]+'}.items())
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
@@ -99,6 +98,12 @@ class HorribleSubsProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    def _season_strings(self, *args, **kwargs):
+        return [{'Season': show_name_helpers.makeSceneSeasonSearchString(self.show, *args)}]
+
+    def _episode_strings(self, *args, **kwargs):
+        return [{'Episode': show_name_helpers.makeSceneSearchString(self.show, *args)}]
 
     def get_data(self, url):
         result = None

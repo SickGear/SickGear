@@ -22,6 +22,15 @@
 
 
 
+### 0.18.14 (2019-02-11 15:10:00 UTC)
+
+* Fix ETTV provider cache search
+* Fix Snowfl provider
+* Fix HorribleSubs provider single digit episode search 
+* Change TokyoToshokan provider to prefer magnets and ignore invalid nyaa links
+* Fix saving duplicate filename extension .nzb and .torrent
+
+
 ### 0.18.13 (2019-02-09 16:00:00 UTC)
 
 * Fix Nyaa provider
