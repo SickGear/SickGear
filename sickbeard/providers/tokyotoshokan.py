@@ -41,14 +41,14 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
         items = {'Season': [], 'Episode': [], 'Propers': []}
 
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            'nodots': r'[\.\s]+', 'stats': r'S:\s*?(\d)+\s*L:\s*(\d+)', 'size': r'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
+
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                params = urllib.urlencode({'terms': search_string.encode('utf-8'), 'type': 1})  # get anime types
+                params = urllib.urlencode({'terms': rc['nodots'].sub(' ', search_string).encode('utf-8'), 'type': 1})
 
                 search_url = '%ssearch.php?%s' % (self.url, params)
-        
-                rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-                    'stats': 'S:\s*?(\d)+\s*L:\s*(\d+)', 'size': 'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
 
                 html = self.get_url(search_url)
                 if self.should_skip():
@@ -76,8 +76,10 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
                                     info = top.find('td', class_='desc-top')
                                     title = info and re.sub(r'[ .]{2,}', '.', info.get_text().strip())
-                                    urls = info and sorted([x.get('href') for x in info.find_all('a') or []])
-                                    download_url = urls and urls[0].startswith('http') and urls[0] or urls[1]
+                                    links = info and map(lambda l: l.get('href', ''), info.find_all('a')) or None
+                                    download_url = self._link(
+                                        (filter(lambda l: 'magnet:' in l, links)
+                                         or filter(lambda l: not re.search(r'(magnet:|\.se).+', l), links))[0])
                                 except (AttributeError, TypeError, ValueError, IndexError):
                                     continue
 
@@ -93,13 +95,11 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
         return results
 
-    def _season_strings(self, ep_obj, **kwargs):
-        return [{'Season': [
-            x.replace('.', ' ') for x in show_name_helpers.makeSceneSeasonSearchString(self.show, ep_obj)]}]
+    def _season_strings(self, *args, **kwargs):
+        return [{'Season': show_name_helpers.makeSceneSeasonSearchString(self.show, *args)}]
 
-    def _episode_strings(self, ep_obj, **kwargs):
-        return [{'Episode': [
-            x.replace('.', ' ') for x in show_name_helpers.makeSceneSearchString(self.show, ep_obj)]}]
+    def _episode_strings(self, *args, **kwargs):
+        return [{'Episode': show_name_helpers.makeSceneSearchString(self.show, *args)}]
 
 
 class TokyoToshokanCache(tvcache.TVCache):
@@ -118,7 +118,7 @@ class TokyoToshokanCache(tvcache.TVCache):
         results = []
         if data and 'entries' in data:
 
-            rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'size': 'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
+            rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'size': r'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
 
             for cur_item in data.get('entries', []):
                 try:
