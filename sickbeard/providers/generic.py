@@ -723,10 +723,13 @@ class GenericProvider(object):
                 urls = list(set([sickbeard.PROVIDER_HOMES[result.provider.get_id()][0]]
                                 + re.findall('^(https?://[^/]+/)', result.url)
                                 + getattr(sickbeard, 'PROVIDER_EXCLUDE', [])))
-                sickbeard.PROVIDER_HOMES[result.provider.get_id()] = ('', None)
                 # noinspection PyProtectedMember
-                result.provider._valid_home(url_exclude=urls)
-                setattr(sickbeard, 'PROVIDER_EXCLUDE', ([], urls)[any([result.provider.url])])
+                chk_url = result.provider._valid_home()
+                if chk_url not in urls:
+                    sickbeard.PROVIDER_HOMES[result.provider.get_id()] = ('', None)
+                    # noinspection PyProtectedMember
+                    result.provider._valid_home(url_exclude=urls)
+                    setattr(sickbeard, 'PROVIDER_EXCLUDE', ([], urls)[any([result.provider.url])])
 
             logger.log(u'Server failed to return anything useful', logger.ERROR)
 

@@ -32,8 +32,7 @@ class ZooqleProvider(generic.TorrentProvider):
 
         self.url_base = 'https://zooqle.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': self.url_base + 'search?q=%s category:%s&s=%s&v=t&sd=d',
-                     'get': self.url_base + 'download/%s.torrent'}
+                     'search': self.url_base + 'search?q=%s category:%s&s=%s&v=t&sd=d'}
 
         self.categories = {'Season': ['TV'], 'Episode': ['TV'], 'anime': ['Anime']}
         self.categories['Cache'] = self.categories['Episode']
@@ -49,14 +48,15 @@ class ZooqleProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'abd': '(\d{4}(?:[.]\d{2}){2})', 'peers': 'Seed[^\d]*(\d+)[\w\W]*?Leech[^\d]*(\d+)',
-            'info': '(\w+)[.]html'}.items())
+            'abd': r'(\d{4}(?:[.]\d{2}){2})', 'peers': r'Seed[^\d]*(\d+)[\w\W]*?Leech[^\d]*(\d+)',
+            'info': r'(\w+)[.]html', 'get': r'^magnet:'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                 search_string = '+'.join(rc['abd'].sub(r'%22\1%22', search_string).split())
-                search_url = self.urls['search'] % (search_string, self._categories_string(mode, '', ','),
-                                                    ('ns', 'dt')['Cache' == mode])
+                search_url = self.urls['search'] % (
+                    search_string, self._categories_string(mode, '', ',')
+                    + ' %2Blang%3Aen', ('ns', 'dt')['Cache' == mode])
 
                 html = self.get_url(search_url)
                 if self.should_skip():
@@ -81,17 +81,23 @@ class ZooqleProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(
-                                    tr, {'peers': r'(?:zqf\-cloud)', 'size': r'(?:zqf\-files)'})
+                                    tr, {'peers': r'(?:zqf\-clou)', 'size': r'(?:zqf\-file)', 'down': r'(?:zqf\-down)'})
                                 stats = rc['peers'].findall(
                                     (cells[head['peers']].find(class_='progress') or {}).get('title', ''))
                                 seeders, leechers = any(stats) and [tryInt(x) for x in stats[0]] or (0, 0)
                                 if self._reject_item(seeders, leechers):
                                     continue
-
-                                info = cells[1].find('a', href=rc['info']) or cells[0].find('a', href=rc['info'])
-                                title = info and info.get_text().strip()
+                                for cell in (1, 0):
+                                    info = cells[cell].find('a')
+                                    if ''.join(re.findall(r'[a-z0-9]+', info.get_text().lower())) in \
+                                            re.sub(r'html\?.*', '', ''.join(
+                                                re.findall(r'[a-z0-9?]+', info['href'].lower()))):
+                                        break
+                                else:
+                                    info = cells[1].find('a', href=rc['info']) or cells[0].find('a', href=rc['info'])
+                                title = info.get_text().strip()
                                 size = cells[head['size']].get_text().strip()
-                                download_url = info and (self.urls['get'] % rc['info'].findall(info['href'])[0])
+                                download_url = cells[head['down']].find('a', href=rc['get'])['href']
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
@@ -110,7 +116,8 @@ class ZooqleProvider(generic.TorrentProvider):
         return results
 
     def _episode_strings(self, ep_obj, **kwargs):
-        return super(ZooqleProvider, self)._episode_strings(ep_obj, sep_date='.', **kwargs)
+        return super(ZooqleProvider, self)._episode_strings(
+            ep_obj, sep_date='.', ep_detail_anime=lambda x: '%02i' % x, **kwargs)
 
     def _cache_data(self, **kwargs):
         return self._search_provider({'Cache': ['*']})
