@@ -43,6 +43,7 @@ indexerConfig = {
         dupekey='',
         mapped_only=True,
         icon='thetvdb16.png',
+        fallback=True,
     ),
     INDEXER_TVRAGE: dict(
         main_url='http://tvrage.com/',

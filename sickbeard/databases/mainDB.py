@@ -40,6 +40,7 @@ class MainSanityCheck(db.DBSanityCheck):
         self.fix_unaired_episodes()
         self.fix_scene_exceptions()
         self.fix_orphan_not_found_show()
+        self.fix_fallback_mapping()
 
     def fix_duplicate_shows(self, column='indexer_id'):
 
@@ -191,6 +192,16 @@ class MainSanityCheck(db.DBSanityCheck):
             ' tv_shows_not_found.indexer_id == tv_shows.indexer_id)')
         if sql_result.rowcount:
             logger.log('Fixed orphaned not found shows')
+
+    def fix_fallback_mapping(self):
+        fallback_indexer = [i for i in sickbeard.indexerApi().fallback_indexers]
+        if fallback_indexer:
+            sql_result = self.connection.action(
+                'DELETE FROM indexer_mapping WHERE mindexer IN (%s) OR indexer in (%s)' %
+                (','.join(['?'] * len(fallback_indexer)), ','.join(['?'] * len(fallback_indexer))),
+                fallback_indexer + fallback_indexer)
+            if sql_result.rowcount:
+                logger.log('Fixed fallback indexer mappings')
 
 
 class InitialSchema(db.SchemaUpgrade):
