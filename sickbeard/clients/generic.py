@@ -176,7 +176,12 @@ class GenericClient(object):
             result.ratio = result.provider.seed_ratio()
 
             result = self._get_torrent_hash(result)
+        except Exception as e:
+            logger.log('Bad torrent data: hash is %s for [%s]' % (result.hash, result.name), logger.ERROR)
+            logger.log('Exception raised when checking torrent data: %s' % (ex(e)), logger.DEBUG)
+            return r_code
 
+        try:
             if result.url.startswith('magnet'):
                 r_code = self._add_torrent_uri(result)
             else:

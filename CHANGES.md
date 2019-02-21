@@ -22,6 +22,16 @@
 
 
 
+### 0.18.15 (2019-02-21 15:30:00 UTC)
+
+* Change improve Zooqle
+* Change log bad torrent data
+* Change search HorribleSubs without fansub groups
+* Remove provider Anizb
+* Change improve handling Trakt API response errors with watchlists
+* Fix TV info source locked id check
+
+
 ### 0.18.14 (2019-02-11 15:10:00 UTC)
 
 * Fix ETTV provider cache search

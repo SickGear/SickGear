@@ -6,7 +6,7 @@ import time
 import datetime
 from sickbeard import logger
 
-from .exceptions import TraktException, TraktAuthException  # , TraktServerBusy
+from .exceptions import *
 
 
 class TraktAccount:
@@ -149,7 +149,10 @@ class TraktAPI:
     @staticmethod
     def delete_account(account):
         if account in sickbeard.TRAKT_ACCOUNTS:
-            TraktAPI().trakt_request('/oauth/revoke', send_oauth=account, method='POST')
+            try:
+                TraktAPI().trakt_request('/oauth/revoke', send_oauth=account, method='POST')
+            except TraktException:
+                logger.log('Failed to remove account from trakt.tv')
             sickbeard.TRAKT_ACCOUNTS.pop(account)
             sickbeard.save_config()
             return True
@@ -255,16 +258,21 @@ class TraktAPI:
             if not code:
                 if 'timed out' in e:
                     logger.log(u'Timeout connecting to Trakt', logger.WARNING)
+                    if count >= self.max_retrys:
+                        raise TraktTimeout()
                     return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                               send_oauth=send_oauth, method=method)
                 # This is pretty much a fatal error if there is no status_code
                 # It means there basically was no response at all
                 else:
                     logger.log(u'Could not connect to Trakt. Error: {0}'.format(e), logger.WARNING)
+                    raise TraktException('Could not connect to Trakt. Error: {0}'.format(e))
 
             elif 502 == code:
                 # Retry the request, Cloudflare had a proxying issue
                 logger.log(u'Retrying Trakt api request: %s' % path, logger.WARNING)
+                if count >= self.max_retrys:
+                    raise TraktCloudFlareException()
                 return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                           send_oauth=send_oauth, method=method)
 
@@ -289,18 +297,22 @@ class TraktAPI:
 
                 raise TraktAuthException()
             elif code in (500, 501, 503, 504, 520, 521, 522):
+                if count >= self.max_retrys:
+                    logger.log(u'Trakt may have some issues and it\'s unavailable. Code: %s' % code, logger.WARNING)
+                    raise TraktServerError(error_code=code)
                 # http://docs.trakt.apiary.io/#introduction/status-codes
                 logger.log(u'Trakt may have some issues and it\'s unavailable. Trying again', logger.WARNING)
-                self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
-                                   send_oauth=send_oauth, method=method)
+                return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
+                                          send_oauth=send_oauth, method=method)
             elif 404 == code:
                 logger.log(u'Trakt error (404) the resource does not exist: %s%s' % (url, path), logger.WARNING)
+                raise TraktMethodNotExisting('Trakt error (404) the resource does not exist: %s%s' % (url, path))
             else:
                 logger.log(u'Could not connect to Trakt. Code error: {0}'.format(code), logger.ERROR)
-            return {}
+                raise TraktException('Could not connect to Trakt. Code error: {0}'.format(code))
         except ValueError as e:
             logger.log(u'Value Error: {0}'.format(e), logger.ERROR)
-            return {}
+            raise TraktValueError(u'Value Error: {0}'.format(e))
 
         # check and confirm Trakt call did not fail
         if isinstance(resp, dict) and 'failure' == resp.get('status', None):

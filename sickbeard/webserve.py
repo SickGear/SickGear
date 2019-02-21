@@ -2137,7 +2137,7 @@ class Home(MainHandler):
                         i = helpers.tryInt(t.group(1))
                         if 'mid-%s' % i in kwargs:
                             l = helpers.tryInt(kwargs['mid-%s' % i], None)
-                            if None is not id and id >= 0:
+                            if None is not l and l >= 0:
                                 show_obj.ids.setdefault(i, {'id': 0, 'status': MapStatus.NONE, 'date':
                                     datetime.date.fromordinal(1)})['id'] = l
                         show_obj.ids.setdefault(i, {'id': 0, 'status': MapStatus.NONE, 'date':

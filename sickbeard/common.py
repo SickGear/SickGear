@@ -217,8 +217,8 @@ class Quality:
             if dvd_options:
                 return Quality.SDDVD
 
-            hd_options = name_has(['720p', '1280x720', '960x720'], any)
-            full_hd = name_has(['1080p', '1920x1080'], any)
+            hd_options = name_has(['720p', r'\[720\]', '1280x720', '960x720'], any)
+            full_hd = name_has(['1080p', r'\[1080\]', '1920x1080'], any)
             if not blue_ray_options:
                 if hd_options and not full_hd:
                     return Quality.HDTV
