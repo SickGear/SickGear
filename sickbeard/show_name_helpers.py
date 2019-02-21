@@ -149,7 +149,7 @@ def get_show_names_all_possible(show, season=-1, scenify=True, spacer='.'):
     return url_encode(show_names, spacer)
 
 
-def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
+def makeSceneSeasonSearchString(show, ep_obj, ignore_wl=False, extra_search_type=None):
 
     if show.air_by_date or show.sports:
         numseasons = 0
@@ -200,24 +200,24 @@ def makeSceneSeasonSearchString(show, ep_obj, extraSearchType=None):
     # search each show name
     for curShow in showNames:
         # most providers all work the same way
-        if not extraSearchType:
+        if not extra_search_type:
             # if there's only one season then we can just use the show name straight up
             if numseasons == 1:
                 toReturn.append(curShow)
             # for providers that don't allow multiple searches in one request we only search for Sxx style stuff
             else:
                 for cur_season in seasonStrings:
-                    if show.is_anime and show.release_groups is not None and show.release_groups.whitelist:
+                    if not ignore_wl and show.is_anime \
+                            and show.release_groups is not None and show.release_groups.whitelist:
                         for keyword in show.release_groups.whitelist:
-                            toReturn.append(keyword + '.' + curShow+ "." + cur_season)
+                            toReturn.append(keyword + '.' + curShow + "." + cur_season)
                     else:
                         toReturn.append(curShow + "." + cur_season)
-
 
     return toReturn
 
 
-def makeSceneSearchString(show, ep_obj):
+def makeSceneSearchString(show, ep_obj, ignore_wl=False):
     myDB = db.DBConnection()
     numseasonsSQlResult = myDB.select(
         "SELECT COUNT(DISTINCT season) as numseasons FROM tv_episodes WHERE showid = ? and season != 0",
@@ -244,7 +244,8 @@ def makeSceneSearchString(show, ep_obj):
 
     for curShow in showNames:
         for curEpString in epStrings:
-            if ep_obj.show.is_anime and ep_obj.show.release_groups is not None and ep_obj.show.release_groups.whitelist:
+            if not ignore_wl and ep_obj.show.is_anime and \
+                    ep_obj.show.release_groups is not None and ep_obj.show.release_groups.whitelist:
                 for keyword in ep_obj.show.release_groups.whitelist:
                     toReturn.append(keyword + '.' + curShow + '.' + curEpString)
             else:

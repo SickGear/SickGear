@@ -123,19 +123,26 @@ class indexerApi(object):
 
     @property
     def indexers(self):
-        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if not x['mapped_only'])
+        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if not x['mapped_only'] and True is not x.get('fallback'))
 
     @property
     def search_indexers(self):
         return dict((int(x['id']), x['name']) for x in indexerConfig.values() if not x['mapped_only'] and
-                    x.get('active') and not x.get('defunct'))
+                    x.get('active') and not x.get('defunct') and True is not x.get('fallback'))
 
     @property
     def all_indexers(self):
         """
-        return all indexers including mapped only indexers
+        return all indexers including mapped only indexers excluding fallback indexers
         """
-        return dict((int(x['id']), x['name']) for x in indexerConfig.values())
+        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if True is not x.get('fallback'))
+
+    @property
+    def fallback_indexers(self):
+        """
+        return all fallback indexers
+        """
+        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if True is x.get('fallback'))
 
     @property
     def xem_supported_indexers(self):

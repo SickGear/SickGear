@@ -39,7 +39,7 @@ __all__ = [
     'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'tvchaosuk',
     'wop', 'xspeeds', 'zooqle',
     # anime
-    'anizb', 'tokyotoshokan',
+    'tokyotoshokan',
     ]
 for module in __all__:
     try:
