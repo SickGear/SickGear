@@ -22,6 +22,12 @@
 
 
 
+### 0.18.16 (2019-02-26 21:15:00 UTC)
+
+* Update UnRar for Windows 5.61 to 5.70
+* Fix provider WOP 
+
+
 ### 0.18.15 (2019-02-21 15:30:00 UTC)
 
 * Change improve Zooqle
