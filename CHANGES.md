@@ -1,4 +1,10 @@
-﻿### 0.18.16 (2019-02-26 21:15:00 UTC)
+﻿### 0.18.17 (2019-03-17 08:50:00 UTC)
+
+* Change keep ignored status even when file exists during show update
+* Change improve TVDb invalid show detection
+
+
+### 0.18.16 (2019-02-26 21:15:00 UTC)
 
 * Update UnRar for Windows 5.61 to 5.70
 * Fix provider WOP 
