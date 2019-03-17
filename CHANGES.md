@@ -1,5 +1,7 @@
 ﻿### 0.18.17 (2019-03-17 08:50:00 UTC)
 
+* Fix Cloudflare issue (affects TorrentDay and others)
+* Fix provider Blutopia
 * Change keep ignored status even when file exists during show update
 * Change improve TVDb invalid show detection
 

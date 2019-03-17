@@ -1,12 +1,11 @@
 from base64 import b64encode
-from time import sleep
 import logging
 import random
 import re
+import time
 from requests.sessions import Session
 from requests.models import Response
 import js2py
-from copy import deepcopy
 
 try:
     from urlparse import urlparse
@@ -39,6 +38,7 @@ class CloudflareScraper(Session):
             self.headers['User-Agent'] = DEFAULT_USER_AGENT
 
         self.delay = kwargs.pop('delay', 8)
+        self.start_time = None
 
     def request(self, method, url, *args, **kwargs):
         resp = super(CloudflareScraper, self).request(method, url, *args, **kwargs)
@@ -46,6 +46,7 @@ class CloudflareScraper(Session):
         # Check if anti-bot is on
         if (isinstance(resp, type(Response()))
                 and resp.status_code in (503, 403)):
+            self.start_time = time.time()
             if (re.search('(?i)cloudflare', resp.headers.get('Server', ''))
                     and 'jschl_vc' in resp.content
                     and 'jschl_answer' in resp.content):
@@ -56,8 +57,11 @@ class CloudflareScraper(Session):
         # Otherwise, no anti-bot detected
         return resp
 
+    def wait(self):
+        delay = self.delay - (time.time() - self.start_time)
+        time.sleep((0, delay)[0 < delay])  # required delay before solving the challenge
+
     def solve_ddg_challenge(self, resp, **original_kwargs):
-        sleep(self.delay)
         parsed_url = urlparse(resp.url)
         try:
             submit_url = parsed_url.scheme + ':' + re.findall('"frm"[^>]+?action="([^"]+)"', resp.text)[0]
@@ -67,14 +71,13 @@ class CloudflareScraper(Session):
                 h=b64encode('%s://%s' % (parsed_url.scheme, parsed_url.hostname)),
                 u=b64encode(parsed_url.path), p=b64encode(parsed_url.port or '')
             ))
+            self.wait()
             resp = self.request('POST', submit_url, **kwargs)
         except(StandardError, BaseException):
             pass
         return resp
 
     def solve_cf_challenge(self, resp, **original_kwargs):
-        sleep(self.delay)  # Cloudflare requires a delay before solving the challenge
-
         body = resp.text
         parsed_url = urlparse(resp.url)
         domain = parsed_url.netloc
@@ -88,9 +91,10 @@ class CloudflareScraper(Session):
         try:
             params['jschl_vc'] = re.search(r'name="jschl_vc" value="(\w+)"', body).group(1)
             params['pass'] = re.search(r'name="pass" value="(.+?)"', body).group(1)
+            params['s'] = re.search(r'name="s" value="(.+?)"', body).group(1)
 
             # Extract the arithmetic operation
-            js = self.extract_js(body)
+            js = self.extract_js(body).replace('t.length', str(len(domain)))
 
         except Exception:
             # Something is wrong with the page.
@@ -102,10 +106,10 @@ class CloudflareScraper(Session):
 
         # Safely evaluate the Javascript expression
         try:
-            params['jschl_answer'] = str(js2py.eval_js(js) + len(domain))
+            params['jschl_answer'] = str(js2py.eval_js(js))
         except (Exception, BaseException):
             try:
-                params['jschl_answer'] = str(js2py.eval_js(js) + len(domain))
+                params['jschl_answer'] = str(js2py.eval_js(js))
             except (Exception, BaseException):
                 return
 
@@ -114,6 +118,7 @@ class CloudflareScraper(Session):
         # performing other types of requests even as the first request.
         method = resp.request.method
         cloudflare_kwargs['allow_redirects'] = False
+        self.wait()
         redirect = self.request(method, submit_url, **cloudflare_kwargs)
 
         location = redirect.headers.get('Location')
@@ -125,9 +130,8 @@ class CloudflareScraper(Session):
     @staticmethod
     def extract_js(body):
         js = re.search(r'setTimeout\(function\(\){\s+(var '
-                       's,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n', body).group(1)
-        js = re.sub(r'a\.value\s=\s([+]?.+?)\s?\+\s?[^.]+\.length.*', r'\1', js)
-        js = re.sub(r'a\.value\s=\s(parseInt\(.+?\)).+', r'\1', js)
+                       r's,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n', body).group(1)
+        js = re.sub(r'a\.value\s=\s([+]?.+?\s?\+\s?[^.]+\.length[^;]+).+', r'\1', js)
         js = re.sub(r'\s{3,}[a-z](?: = |\.).+', '', js)
         js = re.sub(r';\s+;', ';', js)
 
