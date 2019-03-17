@@ -566,7 +566,11 @@ class Tvdb:
 
     def _match_url_pattern(self, pattern, url):
         if pattern in self.config:
-            return re.search('^%s$' % re.escape(self.config[pattern]).replace('\\%s', '[^/]+'), url)
+            try:
+                return None is not re.search('^%s$' % re.escape(self.config[pattern]).replace('\\%s', '[^/]+'), url)
+            except (StandardError, Exception):
+                pass
+        return False
 
     @retry((tvdb_error, tvdb_tokenexpired))
     def _load_url(self, url, params=None, language=None):
@@ -588,7 +592,8 @@ class Tvdb:
             headers.update({'Accept-Language': language})
 
         resp = None
-        if self._match_url_pattern('url_seriesInfo', url):
+        is_series_info = self._match_url_pattern('url_seriesInfo', url)
+        if is_series_info:
             self.show_not_found = False
         self.not_found = False
         try:
@@ -600,7 +605,7 @@ class Tvdb:
                 sickbeard.THETVDB_V2_API_TOKEN = self.get_new_token()
                 raise tvdb_tokenexpired
             elif 404 == e.response.status_code:
-                if self._match_url_pattern('url_seriesInfo', url):
+                if is_series_info:
                     self.show_not_found = True
                 elif self._match_url_pattern('url_epInfo', url):
                     resp = {'data': []}
@@ -609,6 +614,12 @@ class Tvdb:
                 raise tvdb_error
         except (StandardError, Exception):
             raise tvdb_error
+
+        if is_series_info and isinstance(resp, dict) and isinstance(resp.get('data'), dict) and \
+                isinstance(resp['data'].get('seriesName'), basestring) and\
+                re.search(r'^[*]\s*[*]\s*[*]', resp['data'].get('seriesName', ''), flags=re.I):
+            self.show_not_found = True
+            self.not_found = True
 
         map_show = {'airstime': 'airs_time', 'airsdayofweek': 'airs_dayofweek', 'imdbid': 'imdb_id',
                     'writers': 'writer'}

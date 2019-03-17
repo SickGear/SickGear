@@ -1031,8 +1031,8 @@ class TVShow(object):
             t = tvapi
 
         myEp = t[self.indexerid, False]
-        if None is myEp:
-            if hasattr(t, 'show_not_found') and t.show_not_found:
+        if None is myEp or getattr(t, 'show_not_found', False):
+            if getattr(t, 'show_not_found', False):
                 self.inc_not_found_count()
                 logger.log('Show [%s] not found (maybe even removed?)' % self.name, logger.WARNING)
             else:
@@ -2099,8 +2099,11 @@ class TVEpisode(object):
 
         # if we have a media file then it's downloaded
         elif sickbeard.helpers.has_media_ext(self.location):
+            if IGNORED == self.status:
+                logger.log('File exists for %sx%s, ignoring because of status %s' %
+                           (self.season, self.episode, statusStrings[self.status]), logger.DEBUG)
             # leave propers alone, you have to either post-process them or manually change them back
-            if self.status not in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED:
+            elif self.status not in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED:
                 msg = '(1) Status changes from %s to ' % statusStrings[self.status]
                 self.status = Quality.statusFromNameOrFile(self.location, anime=self.show.is_anime)
                 logger.log('%s%s' % (msg, statusStrings[self.status]), logger.DEBUG)

@@ -37,9 +37,10 @@ class BlutopiaProvider(generic.TorrentProvider):
                      'login': self.url_base + 'torrents',
                      'search': self.url_base + 'filterTorrents?%s' % '&'.join(
                          ['_token=%s', 'search=%s', 'categories[]=%s', 'freeleech=%s', 'doubleupload=%s', 'featured=%s',
-                          'username=', 'imdb=', 'tvdb=', 'tmdb=', 'sorting=created_at', 'qty=50', 'direction=desc'])}
+                          'username=', 'imdb=', 'tvdb=', 'tmdb=', 'mal=', 'view=list', 'sorting=created_at', 'qty=50',
+                          'direction=desc'])}
 
-        self.categories = {'Season': [2], 'Episode': [2], 'Cache': [2]}
+        self.categories = {'shows': [2]}
 
         self.url = self.urls['config_provider_home_uri']
 
@@ -47,11 +48,11 @@ class BlutopiaProvider(generic.TorrentProvider):
         self.may_filter = OrderedDict([
             ('f0', ('not marked', False)), ('free', ('free', True)),
             ('double', ('2x up', True)), ('feat', ('featured', True))])
-        self.digest, self.token, self.resp, self.scene, self.minseed, self.minleech = 6 * [None]
+        self.digest, self.token, self.resp, self.minseed, self.minleech = 5 * [None]
 
     def logged_in(self, resp):
         try:
-            self.token = re.findall('csrf\s*=\s*"([^"]+)', resp)[0]
+            self.token = re.findall(r'csrf[^=]*=\s*"([^"]+)', resp)[0]
             resp = re.findall('(?sim)(<table.*?Result.*?</table>)', resp)
             if resp:
                 self.resp = resp[0]
@@ -102,7 +103,7 @@ class BlutopiaProvider(generic.TorrentProvider):
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                 search_url = self.urls['search'] % (
-                    self.token, '+'.join(search_string.split()), self._categories_string(mode, ''), '', '', '')
+                    self.token, search_string.replace('.', ' '), self._categories_string(template=''), '', '', '')
 
                 resp = self.get_url(search_url)
                 if self.should_skip():
@@ -141,6 +142,7 @@ class BlutopiaProvider(generic.TorrentProvider):
                                     'i', attrs={'class': ['text-gold', 'fa-diamond', 'fa-certificate']})])
                                 # noinspection PyTypeChecker
                                 munged = ''.join(filter(marked.__contains__, ['free', 'double', 'feat']))
+                                # noinspection PyUnboundLocalVariable
                                 if ((non_marked and rc['filter'].search(munged)) or
                                         (not non_marked and not rc['filter'].search(munged))):
                                     continue
