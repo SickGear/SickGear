@@ -226,7 +226,7 @@ function rowRestore() {
 			imgUpdate(link$, 'Loading', uiOptions.loadingImage);
 			uiWanted(link$.closest('tr'));
 
-			$.getJSON({url: baseUrl() + $(this).attr('href'), timeout: 15000})
+			$.getJSON({url: $(this).attr('href'), timeout: 15000})
 				.done(function(data) {
 					logInfo('getJSON() data...', data);
 
