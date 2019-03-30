@@ -1,4 +1,9 @@
-﻿### 0.18.18 (2019-03-25 16:45:00 UTC)
+﻿### 0.18.19 (2019-03-31 12:00:00 UTC)
+
+* Fix season search at provider ETTV
+
+
+### 0.18.18 (2019-03-25 16:45:00 UTC)
 
 * Fix "Search now" under reverse proxy configurations (credit: nojp)
 

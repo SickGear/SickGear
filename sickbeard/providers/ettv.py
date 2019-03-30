@@ -120,7 +120,7 @@ class ETTVProvider(generic.TorrentProvider):
         for x, types in enumerate(params):
             for y, ep_type in enumerate(types):
                 new_list = []
-                for t in params[0]['Episode']:
+                for t in params[0].get('Episode') or params[0].get('Season', []):
                     t = t.replace(' ', '.')
                     new_list += ['%2B ' + t, t]
                 params[x][ep_type] = new_list
