@@ -22,6 +22,12 @@
 
 
 
+### 0.18.19 (2019-04-19 02:00:00 UTC)
+
+* Fix season search at provider ETTV
+* Change improve IMDb id parsing
+
+
 ### 0.18.18 (2019-03-25 16:45:00 UTC)
 
 * Fix "Search now" under reverse proxy configurations (credit: nojp)

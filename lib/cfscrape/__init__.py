@@ -132,7 +132,7 @@ class CloudflareScraper(Session):
         js = re.search(r'setTimeout\(function\(\){\s+(var '
                        r's,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n', body).group(1)
         js = re.sub(r'a\.value\s=\s([+]?.+?\s?\+\s?[^.]+\.length[^;]+).+', r'\1', js)
-        js = re.sub(r'\s{3,}[a-z](?: = |\.).+', '', js)
+        js = ';'.join(filter(lambda ln: re.search(r'\(\+', ln), js.split(';')))
         js = re.sub(r';\s+;', ';', js)
 
         # Strip characters that could be used to exit the string context

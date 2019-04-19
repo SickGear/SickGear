@@ -276,7 +276,10 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
         new_ids = NewIdDict()
 
         if isinstance(show_obj.imdbid, basestring) and re.search(r'\d+$', show_obj.imdbid):
-            new_ids[INDEXER_IMDB] = tryInt(re.search(r'(?:tt)?(\d+)', show_obj.imdbid))
+            try:
+                new_ids[INDEXER_IMDB] = tryInt(re.search(r'(?:tt)?(\d+)', show_obj.imdbid).group(1))
+            except (StandardError, Exception):
+                pass
 
         if 0 < len(url_tvmaze):
             new_ids.update(get_tvmaze_ids(url_tvmaze))
@@ -300,7 +303,7 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
 
         if INDEXER_TVMAZE not in new_ids:
             f_date = get_premieredate(show_obj)
-            if f_date and f_date is not datetime.date.fromordinal(1):
+            if f_date and f_date != datetime.date.fromordinal(1):
                 tvids = {k: v for k, v in get_tvmaze_by_name(show_obj.name, f_date).iteritems() if k == INDEXER_TVMAZE
                          or k not in new_ids or new_ids.get(k) in (None, 0, '', MapStatus.NOT_FOUND)}
                 new_ids.update(tvids)
