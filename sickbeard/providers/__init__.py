@@ -33,7 +33,7 @@ __all__ = [
     'alpharatio', 'bb', 'beyondhd', 'bithdtv', 'blutopia', 'btn',
     'custom01', 'custom11', 'dh', 'ettv', 'eztv', 'fano', 'filelist', 'funfile', 'grabtheinfo',
     'hdbits', 'hdme', 'hdspace', 'hdtorrents', 'horriblesubs',
-    'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'milkie', 'morethan', 'nebulance', 'ncore', 'nyaa',
+    'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'morethan', 'nebulance', 'ncore', 'nyaa',
     'pisexy', 'potuk', 'pretome', 'privatehd', 'ptf',
     'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'skytorrents', 'snowfl', 'speedcd',
     'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'tvchaosuk',
@@ -203,8 +203,8 @@ def makeTorrentRssProvider(configString):
 def getDefaultNewznabProviders():
     return '!!!'.join(['Sick Beard Index|https://lolo.sickbeard.com/|0|5030,5040|0|eponly|0|0|0',
                        'NZBgeek|https://api.nzbgeek.info/||5030,5040|0|eponly|0|0|0',
-                       'NZBs.org|https://nzbs.org/||5030,5040|0|eponly|0|0|0',
                        'DrunkenSlug|https://api.drunkenslug.com/||5030,5040|0|eponly|0|0|0',
+                       'NinjaCentral|https://ninjacentral.co.za/||5030,5040|0|eponly|0|0|0',
                        ])
 
 

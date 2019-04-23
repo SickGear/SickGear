@@ -1261,8 +1261,8 @@ class NZBProvider(GenericProvider):
             return results
 
         index = 0
-        alt_search = ('nzbs_org' == self.get_id())
-        do_search_alt = False
+        # alt_search = ('nzbs_org' == self.get_id())
+        # do_search_alt = False
 
         search_terms = []
         regex = []
@@ -1282,16 +1282,17 @@ class NZBProvider(GenericProvider):
                 break
 
             search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
-            if alt_search:
-
-                if do_search_alt:
-                    search_params['t'] = 'search'
-                    index += 1
-
-                do_search_alt = not do_search_alt
-
-            else:
-                index += 1
+            # if alt_search:
+            #
+            #     if do_search_alt:
+            #         search_params['t'] = 'search'
+            #         index += 1
+            #
+            #     do_search_alt = not do_search_alt
+            #
+            # else:
+            #     index += 1
+            index += 1
 
             for item in self._search_provider({'Propers': [search_params]}):
 

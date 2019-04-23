@@ -1,4 +1,11 @@
-﻿### 0.18.19 (2019-04-19 02:00:00 UTC)
+﻿### 0.18.20 (2019-04-23 12:20:00 UTC)
+
+* Add NinjaCentral usenet provider
+* Remove Nzb.org usenet provider (r.i.p)
+* Remove Milkie torrent provider (last activity > 3 months)
+
+
+### 0.18.19 (2019-04-19 02:00:00 UTC)
 
 * Fix season search at provider ETTV
 * Change improve IMDb id parsing
