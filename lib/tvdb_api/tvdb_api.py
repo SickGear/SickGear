@@ -659,6 +659,14 @@ class Tvdb:
                                 v = ''
                     else:
                         v = clean_data(v)
+                else:
+                    if 'seriesname' == k:
+                        if isinstance(data.get('aliases'), list) and 0 < len(data.get('aliases')):
+                            v = data['aliases'].pop(0)
+                        # this is a invalid show, it has no Name
+                        if None is v:
+                            return None
+
                 if k in map_show:
                     k = map_show[k]
                 if k_org is not k:
@@ -677,9 +685,13 @@ class Tvdb:
             if isinstance(resp['data'], dict):
                 resp['data'] = map_show_keys(resp['data'])
             elif isinstance(resp['data'], list):
+                data_list = []
                 for idx, row in enumerate(resp['data']):
                     if isinstance(row, dict):
-                        resp['data'][idx] = map_show_keys(row)
+                        cr = map_show_keys(row)
+                        if None is not cr:
+                            data_list.append(cr)
+                resp['data'] = data_list
             return resp
         return dict([(u'data', None)])
 
