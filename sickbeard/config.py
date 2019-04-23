@@ -647,10 +647,9 @@ class ConfigMigrator:
                 if name == 'Sick Beard Index':
                     key = '0'
 
-                if name == 'NZBs.org':
-                    cat_ids = '5030,5040,5060,5070,5090'
-                else:
-                    cat_ids = '5030,5040,5060'
+                cat_ids = '5030,5040,5060'
+                # if name == 'NZBs.org':
+                #     cat_ids = '5030,5040,5060,5070,5090'
 
                 cur_provider_data_list = [name, url, key, cat_ids, enabled]
                 new_newznab_data.append('|'.join(cur_provider_data_list))

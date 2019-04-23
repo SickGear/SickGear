@@ -92,6 +92,13 @@ quality_map = {'sdtv': Quality.SDTV,
 quality_map_inversed = {v: k for k, v in quality_map.iteritems()}
 
 
+class PythonObjectEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
 class Api(webserve.BaseHandler):
     """ api class that returns json results """
     version = 10  # use an int since float-point is unpredictible
@@ -182,7 +189,7 @@ class Api(webserve.BaseHandler):
     def _out_as_json(self, dict):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')
         try:
-            out = json.dumps(dict, indent=self.intent, sort_keys=True)
+            out = json.dumps(dict, indent=self.intent, sort_keys=True, cls=PythonObjectEncoder)
             callback = self.get_query_argument('callback', None) or self.get_query_argument('jsonp', None)
             if None is not callback:
                 out = '%s(%s);' % (callback, out)  # wrap with JSONP call if requested
@@ -2684,7 +2691,7 @@ class CMD_SickGearListIgnoreWords(ApiCall):
             return_type = 'Global'
 
         return_data['use regex'] = ignore_words.startswith('regex:')
-        return_data['ignore words'] = [w.strip() for w in ignore_words.replace('regex:', '').split(',')]
+        return_data['ignore words'] = [w.strip() for w in ignore_words.replace('regex:', '').split(',') if w.strip()]
         return _responds(RESULT_SUCCESS, data=return_data, msg="%s ignore words" % return_type)
 
 
@@ -2717,20 +2724,22 @@ class CMD_SickGearSetIgnoreWords(ApiCall):
 
         def _create_ignore_words():
             use_regex = ignore_words.startswith('regex:')
-            ignore_list = [w.strip() for w in ignore_words.replace('regex:', '').split(',')]
+            ignore_list = {w.strip() for w in ignore_words.replace('regex:', '').split(',') if w.strip()}
 
             if None is not self.regex:
                 use_regex = self.regex
             if self.add:
                 for a in self.add:
-                    ignore_list.append(a)
+                    ignore_list.add(a.strip())
             if self.remove:
                 for r in self.remove:
                     try:
                         ignore_list.remove(r)
-                    except ValueError:
+                    except KeyError:
                         pass
-            return use_regex, ignore_list, '%s%s' % (('', 'regex:')[use_regex], ', '.join(ignore_list))
+            return use_regex, ignore_list, \
+                ('', '%s%s' % (('', 'regex:')[use_regex],
+                               ', '.join([i.strip() for i in ignore_list if i.strip()])))[0 < len(ignore_list)]
 
         if self.indexer and self.indexerid:
             showObj = helpers.find_show_by_id(sickbeard.showList, {self.indexer: self.indexerid})
@@ -2804,7 +2813,7 @@ class CMD_SickGearListRequireWords(ApiCall):
             return_type = 'Global'
 
         return_data['use regex'] = required_words.startswith('regex:')
-        return_data['required words'] = [w.strip() for w in required_words.replace('regex:', '').split(',')]
+        return_data['required words'] = [w.strip() for w in required_words.replace('regex:', '').split(',') if w.strip()]
         return _responds(RESULT_SUCCESS, data=return_data, msg="%s required words" % return_type)
 
 
@@ -2831,26 +2840,28 @@ class CMD_SickGearSetRequrieWords(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ set ignore words """
+        """ set require words """
         if not self.add and not self.remove:
             return _responds(RESULT_FAILURE, msg="No words to add/remove provided")
 
         def _create_required_words():
             use_regex = requried_words.startswith('regex:')
-            require_list = [w.strip() for w in requried_words.replace('regex:', '').split(',')]
+            require_list = {w.strip() for w in requried_words.replace('regex:', '').split(',') if w.strip()}
 
             if None is not self.regex:
                 use_regex = self.regex
             if self.add:
                 for a in self.add:
-                    require_list.append(a)
+                    require_list.add(a.strip())
             if self.remove:
                 for r in self.remove:
                     try:
                         require_list.remove(r)
-                    except ValueError:
+                    except KeyError:
                         pass
-            return use_regex, require_list, '%s%s' % (('', 'regex:')[use_regex], ', '.join(require_list))
+            return use_regex, require_list, \
+                ('', '%s%s' % (('', 'regex:')[use_regex],
+                               ', '.join([r.strip() for r in require_list if r.strip()])))[0 < len(require_list)]
 
         if self.indexer and self.indexerid:
             showObj = helpers.find_show_by_id(sickbeard.showList, {self.indexer: self.indexerid})
