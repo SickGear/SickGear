@@ -317,11 +317,11 @@ class NewznabProvider(generic.NZBProvider):
             caps[NewznabConstants.SEARCH_TEXT] = 'q'
 
         if NewznabConstants.CAT_HD not in cats or not cats.get(NewznabConstants.CAT_HD):
-            cats[NewznabConstants.CAT_HD] = (['5040'], ['5040', '5090'])['nzbs_org' == self.get_id()]
+            cats[NewznabConstants.CAT_HD] = ['5040']  # (['5040'], ['5040', '5090'])['nzbs_org' == self.get_id()]
         if NewznabConstants.CAT_SD not in cats or not cats.get(NewznabConstants.CAT_SD):
-            cats[NewznabConstants.CAT_SD] = (['5030'], ['5030', '5070'])['nzbs_org' == self.get_id()]
+            cats[NewznabConstants.CAT_SD] = ['5030']  # (['5030'], ['5030', '5070'])['nzbs_org' == self.get_id()]
         if NewznabConstants.CAT_ANIME not in cats or not cats.get(NewznabConstants.CAT_ANIME):
-            cats[NewznabConstants.CAT_ANIME] = (['5070'], ['6070', '7040'])['nzbs_org' == self.get_id()]
+            cats[NewznabConstants.CAT_ANIME] = ['5070']  # (['5070'], ['6070', '7040'])['nzbs_org' == self.get_id()]
         if NewznabConstants.CAT_SPORT not in cats or not cats.get(NewznabConstants.CAT_SPORT):
             cats[NewznabConstants.CAT_SPORT] = ['5060']
 
@@ -763,7 +763,8 @@ class NewznabProvider(generic.NZBProvider):
                     base_params_uc['t'] = base_params['cat']
 
                 request_params = base_params.copy()
-                if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
+                # if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
+                if 'Propers' == mode \
                         and 'q' in params and not (any(x in params for x in ['season', 'ep'])):
                     request_params['t'] = 'search'
                 request_params.update(params)
@@ -892,8 +893,8 @@ class NewznabProvider(generic.NZBProvider):
             return results
 
         index = 0
-        alt_search = ('nzbs_org' == self.get_id())
-        do_search_alt = False
+        # alt_search = ('nzbs_org' == self.get_id())
+        # do_search_alt = False
 
         search_terms = []
         regex = []
@@ -913,16 +914,17 @@ class NewznabProvider(generic.NZBProvider):
                 break
 
             search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
-            if alt_search:
-
-                if do_search_alt:
-                    search_params['t'] = 'search'
-                    index += 1
-
-                do_search_alt = not do_search_alt
-
-            else:
-                index += 1
+            # if alt_search:
+            #
+            #     if do_search_alt:
+            #         search_params['t'] = 'search'
+            #         index += 1
+            #
+            #     do_search_alt = not do_search_alt
+            #
+            # else:
+            #     index += 1
+            index += 1
 
             items, n_space = self._search_provider({'Propers': [search_params]})
 

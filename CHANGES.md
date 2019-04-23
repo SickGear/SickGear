@@ -22,6 +22,15 @@
 
 
 
+### 0.18.20 (2019-04-23 23:10:00 UTC)
+
+* Add NinjaCentral usenet provider
+* Remove Nzb.org usenet provider (r.i.p)
+* Remove Milkie torrent provider (last activity > 3 months)
+* Fix setting ignore/require words in webapi
+* Change handle TVDb api returns None for some shows as 'seriesName'
+
+
 ### 0.18.19 (2019-04-19 02:00:00 UTC)
 
 * Fix season search at provider ETTV
