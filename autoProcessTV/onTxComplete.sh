@@ -147,7 +147,7 @@ install_dir="$(dirname $(realpath "$0"))"
 log(){
   local logfile="${install_dir}/onTxComplete.log"
   local txt="$1"
-  [ "1" == "$testmode" ] || [ "" != "$2" ] && echo "$txt"
+  [ "1" = "$testmode" ] || [ "" != "$2" ] && echo "$txt"
 
   local ts="$(date '+%Y/%m/%d %H:%M:%S')"
   if [ -e "$logfile" ]; then
@@ -173,7 +173,7 @@ else
   # Process config file
   cfgfile="$install_dir"/onTxComplete.cfg
   eval $(sed -r '/[^=]+=[^=]+/!d;/^[ *;#]/d;s/\s*=\s*/=/g' "$cfgfile")
-  if [ "1" == "$testmode" ]; then
+  if [ "1" = "$testmode" ]; then
     log "Config ... param1 = ${param1}"
     log "Config ... param2 = ${param2}"
   fi
@@ -236,7 +236,7 @@ while [ -e "$syncfile" ]; do
   num=$((1 + $num))
 done
 
-[ "1" == "$testmode" ] && log "Running in ***test mode*** - files will not be copied"
+[ "1" = "$testmode" ] && log "Running in ***test mode*** - files will not be copied"
 log "**** cmd = \"$(realpath "$0")\""
 log "  param1 = \"$sg_path\""
 log "  param2 = \"$sg_label\""
@@ -274,7 +274,7 @@ case "$sg_label" in "$client_label"*)
         dstdir="$sg_path$parent$child"
         dstfile="$dstdir/$filename"
 
-        if [ "1" == "$testmode" ]; then
+        if [ "1" = "$testmode" ]; then
 
           [ ! -d "$dstdir" ] && log "mkdir -p \"$dstdir\""
           if [ ! -e "$dstfile" ]; then
@@ -298,7 +298,7 @@ case "$sg_label" in "$client_label"*)
       # Create a file to prevent SG premature post processing (ref: step (d)) ..
       echo "Copying file \"$content_path\" to \"$sg_path/\"" > "$syncfile"
 
-      if [ "1" == "$testmode" ]; then
+      if [ "1" = "$testmode" ]; then
 
         log "cp \"$content_path\" \"$sg_path/\""
 
