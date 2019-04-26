@@ -22,6 +22,11 @@
 
 
 
+### 0.18.21 (2019-04-26 09:35:00 UTC)
+
+* Change torrent client post process script to be compatible with Dash (tested with Ubuntu 18.04 LTS)
+
+
 ### 0.18.20 (2019-04-23 23:10:00 UTC)
 
 * Add NinjaCentral usenet provider
