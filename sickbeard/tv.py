@@ -1966,6 +1966,8 @@ class TVEpisode(object):
         except (sickbeard.indexer_error, IOError) as e:
             logger.log('%s threw up an error: %s' % (sickbeard.indexerApi(self.indexer).name, ex(e)), logger.DEBUG)
             # if the episode is already valid just log it, if not throw it up
+            if UNKNOWN == self.status:
+                self.status = SKIPPED
             if self.name:
                 logger.log('%s timed out but we have enough info from other sources, allowing the error' %
                            sickbeard.indexerApi(self.indexer).name, logger.DEBUG)
@@ -1980,6 +1982,8 @@ class TVEpisode(object):
             # if I'm no longer on the Indexers but I once was then delete myself from the DB
             if -1 != self.indexerid and helpers.should_delete_episode(self.status):
                 self.deleteEpisode()
+            elif UNKNOWN == self.status:
+                self.status = SKIPPED
             return
 
         if getattr(myEp, 'absolute_number', None) in (None, ''):
@@ -2025,7 +2029,17 @@ class TVEpisode(object):
             # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
             if -1 != self.indexerid and helpers.should_delete_episode(self.status):
                 self.deleteEpisode()
+            elif UNKNOWN == self.status:
+                self.status = SKIPPED
             return False
+
+        today = datetime.date.today()
+        delta = datetime.timedelta(days=1)
+        show_time = network_timezones.parse_date_time(self.airdate.toordinal(), self.show.airs, self.show.network)
+        show_length = datetime.timedelta(minutes=helpers.tryInt(self.show.runtime, 60))
+        tz_now = datetime.datetime.now(network_timezones.sb_timezone)
+        future_airtime = (self.airdate > (today + delta) or
+                          (not self.airdate < (today - delta) and ((show_time + show_length) > tz_now)))
 
         # early conversion to int so that episode doesn't get marked dirty
         self.indexerid = getattr(myEp, 'id', None)
@@ -2033,13 +2047,19 @@ class TVEpisode(object):
             logger.log('Failed to retrieve ID from %s' % sickbeard.indexerApi(self.indexer).name, logger.ERROR)
             if helpers.should_delete_episode(self.status):
                 self.deleteEpisode()
+            elif UNKNOWN == self.status:
+                self.status = (SKIPPED, UNAIRED)[future_airtime]
             return False
 
         # don't update show status if show dir is missing, unless it's missing on purpose
         if not ek.ek(os.path.isdir,
                      self.show._location) and not sickbeard.CREATE_MISSING_SHOW_DIRS and not sickbeard.ADD_SHOWS_WO_DIR:
-            logger.log(
-                'The show directory is missing, not bothering to change the episode statuses since it\'d probably be invalid')
+            if UNKNOWN == self.status:
+                self.status = (SKIPPED, UNAIRED)[future_airtime]
+                logger.log('The show directory is missing but an episode status found at Unknown is set Skipped')
+            else:
+                logger.log('The show directory is missing,'
+                           ' not bothering to change the episode statuses since it\'d probably be invalid')
             return
 
         if self.location:
@@ -2050,14 +2070,7 @@ class TVEpisode(object):
         if not ek.ek(os.path.isfile, self.location):
 
             if self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
-                today = datetime.date.today()
-                delta = datetime.timedelta(days=1)
                 very_old_delta = datetime.timedelta(days=90)
-                show_time = network_timezones.parse_date_time(self.airdate.toordinal(), self.show.airs, self.show.network)
-                show_length = datetime.timedelta(minutes=helpers.tryInt(self.show.runtime, 60))
-                tz_now = datetime.datetime.now(network_timezones.sb_timezone)
-                future_airtime = (self.airdate > (today + delta) or
-                                  (not self.airdate < (today - delta) and ((show_time + show_length) > tz_now)))
                 very_old_airdate = datetime.date.fromordinal(1) < self.airdate < (today - very_old_delta)
 
                 # if this episode hasn't aired yet set the status to UNAIRED
