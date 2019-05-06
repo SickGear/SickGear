@@ -1,4 +1,14 @@
-﻿### 0.18.21 (2019-04-26 09:35:00 UTC)
+﻿### 0.18.22 (2019-05-06 19:25:00 UTC)
+
+* Update UnRar for Windows 5.70 to 5.71 x64
+* Change improve clarity for media provider search task
+* Add Milkie torrent provider
+* Change check manual search of illegal UNKNOWN status and change it to SKIPPED
+* Change set status for shows without location
+* Change set status to SKIPPED/UNARIED when update is exited early
+
+
+### 0.18.21 (2019-04-26 09:35:00 UTC)
 
 * Change torrent client post process script to be compatible with Dash (tested with Ubuntu 18.04 LTS)
 
