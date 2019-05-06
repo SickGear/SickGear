@@ -47,7 +47,8 @@ from sickbeard import config, sab, nzbget, clients, history, notifiers, processT
 from sickbeard import encodingKludge as ek
 from sickbeard.providers import newznab, rsstorrent
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
-from sickbeard.common import SNATCHED, SNATCHED_ANY, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED
+from sickbeard.common import SNATCHED, SNATCHED_ANY, UNAIRED, IGNORED, ARCHIVED, WANTED, FAILED, SKIPPED, DOWNLOADED, \
+    UNKNOWN
 from sickbeard.common import SD, HD720p, HD1080p, UHD2160p
 from sickbeard.exceptions import ex, MultipleShowObjectsException
 from sickbeard.helpers import has_image_ext, remove_article, starify
@@ -2779,6 +2780,8 @@ class Home(MainHandler):
         # retrieve the episode object and fail if we can't get one
         ep_obj = self._getEpisode(show, season, episode)
         if not isinstance(ep_obj, str):
+            if UNKNOWN == Quality.splitCompositeStatus(ep_obj.status)[0]:
+                ep_obj.status = SKIPPED
 
             # make a queue item for the TVEpisode and put it on the queue
             ep_queue_item = (search_queue.ManualSearchQueueItem(ep_obj.show, ep_obj),
