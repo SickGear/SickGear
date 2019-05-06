@@ -1,4 +1,11 @@
-﻿### 0.18.21 (2019-04-26 09:35:00 UTC)
+﻿### 0.18.22 (2019-05-06 13:50:00 UTC)
+
+* Update UnRar for Windows 5.70 to 5.71 x64
+* Change improve clarity for media provider search task
+* Add Milkie torrent provider
+
+
+### 0.18.21 (2019-04-26 09:35:00 UTC)
 
 * Change torrent client post process script to be compatible with Dash (tested with Ubuntu 18.04 LTS)
 
