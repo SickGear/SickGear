@@ -11,7 +11,7 @@
 * Update Requests library 2.20.1 (57d7284) to 2.21.0 (c452e3b)
 * Update SimpleJSON 3.16.0 (e2a54f7) to 3.16.1 (ce75e60)
 * Update Six compatibility library 1.11.0 (0b4265e) to 1.12.0 (d927b9e)
-* Update urllib3 release 1.23 (7c216f4) to 1.24.1 (a6ec68a)
+* Update urllib3 release 1.24.1 (a6ec68a) to 1.24.3 (324e47a)
 * Change suppress logging false positive of bad Emby request
 
 
@@ -19,6 +19,7 @@
 * Update Certifi 2018.08.24 (8be9f89) to 2018.10.15 (a462d21)
 * Update Requests library 2.19.1 (2c6a842) to 2.20.1 (57d7284)
 * Update Six compatibility library 1.11.0 (68112f3) to 1.11.0 (0b4265e)
+* Update urllib3 release 1.23 (7c216f4) to 1.24.1 (a6ec68a)
 
 
 
