@@ -98,13 +98,13 @@ def send_nzb(nzb):
         data = nzb.get_data()
         if not data:
             return False
-        nzbcontent64 = standard_b64encode(data)
+        nzbcontent64 = standard_b64encode(data).decode('utf-8')
     elif 'Anizb' == nzb.provider.name and 'nzb' == nzb.resultType:
         gen_provider = GenericProvider('')
         data = gen_provider.get_url(nzb.url)
         if None is data:
             return result
-        nzbcontent64 = standard_b64encode(data)
+        nzbcontent64 = standard_b64encode(data).decode('utf-8')
 
     logger.log(u'Sending NZB to NZBGet: %s' % nzb.name)
 
@@ -139,7 +139,7 @@ def send_nzb(nzb):
                     if None is data:
                         return result
 
-                    nzbcontent64 = standard_b64encode(data)
+                    nzbcontent64 = standard_b64encode(data).decode('utf-8')
                 nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
                                                   add_to_top, nzbcontent64)
         else:

@@ -568,7 +568,7 @@
             #set $user_value = $getattr($cur_torrent_provider, $user_type) or ''
 						<div class="field-pair">
 							<label for="$prov_type">
-								<span class="component-title">$user_type.capitalize():</span>
+								<span class="component-title">#if $hasattr($cur_torrent_provider, 'email')#User email#else#$user_type.capitalize():#end if#</span>
 								<span class="component-desc">
 									<input type="text" name="$prov_type" id="$prov_type" value="$user_value" class="form-control input-sm input350" />
 								</span>
