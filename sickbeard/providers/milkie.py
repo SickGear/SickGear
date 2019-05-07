@@ -18,6 +18,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from . import generic
+from sickbeard import logger
 from sickbeard.helpers import tryInt
 from lib.unidecode import unidecode
 
@@ -32,10 +33,11 @@ class MilkieProvider(generic.TorrentProvider):
         
         self.api = self.url_base + 'api/v1/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.api + 'auth/sessions', 'get': self.api + 'torrents/%s',
+                     'login': self.api + 'auth/sessions', 'auth': self.api + 'auth',
+                     'get': self.api + 'torrents/%s/torrent?key=%s',
                      'search': self.api + 'torrents?pi=0&ps=100&query=%s&categories=2&mode=release'}
 
-        self.username, self.password, self.minseed, self.minleech, self._token = 5 * [None]
+        self.username, self.email, self.password, self.minseed, self.minleech, self._token, self._dkey = 7 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -46,6 +48,10 @@ class MilkieProvider(generic.TorrentProvider):
     def logged_in(self, resp=None):
         
         self._token = resp and resp.get('token')
+        if self._token:
+            resp = self.get_url(self.urls['auth'], skip_auth=True,
+                                headers=dict(Authorization='Bearer %s' % self._token), json=True)
+            self._dkey = isinstance(resp, dict) and resp.get('user', {}).get('downloadKey')
         return bool(self._token)
 
     def _search_provider(self, search_params, **kwargs):
@@ -61,19 +67,25 @@ class MilkieProvider(generic.TorrentProvider):
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
                 search_url = self.urls['search'] % search_string
 
-                data_json = self.get_url(search_url, headers=dict(Authorization='Bearer %s' % self._token), json=True)
+                data_json, sess = self.get_url(search_url, headers=dict(Authorization='Bearer %s' % self._token),
+                                               resp_sess=True, json=True)
                 if self.should_skip():
                     return results
 
                 cnt = len(items[mode])
-                if data_json:
-                    for tr in data_json.get('releases'):
+                if isinstance(data_json, dict):
+                    for tr in data_json.get('torrents') or data_json.get('releases') or []:
                         seeders, leechers, size = (tryInt(n, n) for n in [
                             tr.get(x) for x in ('seeders', 'leechers', 'size')])
                         if not self._reject_item(seeders, leechers):
-                            title, download_url = tr.get('releaseName'), self._link(tr.get('shortId'))
+                            title = tr.get('releaseName')
+                            download_id = tr.get('id') or tr.get('shortId')
+                            download_url = download_id and self.urls.get('get') % (download_id, self._dkey)
                             if title and download_url:
                                 items[mode].append((title, download_url, seeders, self._bytesizer(size)))
+                elif 200 != getattr(sess, 'response', {}).get('status_code', 0):
+                    logger.log('The site search is not working, skipping')
+                    break
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

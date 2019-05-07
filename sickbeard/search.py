@@ -77,7 +77,7 @@ def _download_result(result):
             if not data:
                 new_result = False
             else:
-                with ek.ek(open, file_name, 'w') as file_out:
+                with ek.ek(open, file_name, 'wb') as file_out:
                     file_out.write(data)
 
                 helpers.chmodAsParent(file_name)
