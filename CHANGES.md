@@ -15,6 +15,7 @@
 * Update Six compatibility library 1.12.0 (d927b9e) to 1.12.0 (8da94b8)
 * Update Tornado Web Server 5.1.1 (cc2cf07) to 5.1.1 (a99f1471)
 * Update unidecode module 1.0.22 (578cdb9) to 1.0.22 (a5045ab)
+* Update win_inet_pton 1.0.1 (934a852) to 1.1.0 (57e3558)
 
 
 [develop changelog]
