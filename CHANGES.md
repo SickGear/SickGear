@@ -2,6 +2,7 @@
 
 * Update attr 18.3.0.dev0 (55642b3) to 19.2.0.dev0 (de84609) 
 * Update Beautiful Soup 4.6.3 (r475) to 4.7.1 (r497)
+* Add soupsieve 1.9.1 (24859cc)
 
 
 [develop changelog]
