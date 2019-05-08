@@ -12,6 +12,7 @@
 * Update MsgPack 0.6.0 (197e307) to 0.6.1 (737f08a)
 * Update profilehooks module 1.10.1 (fdbf19d) to 1.11.0 (e17f378)
 * Update scandir 1.9.0 (9ab3d1f) to 1.10.0 (982e6ba)
+* Update Six compatibility library 1.12.0 (d927b9e) to 1.12.0 (8da94b8)
 
 
 [develop changelog]
