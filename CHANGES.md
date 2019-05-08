@@ -5,6 +5,7 @@
 * Add soupsieve 1.9.1 (24859cc)
 * Update CacheControl library 0.12.5 (0fedbba) to 0.12.5 (007e8ca)    
 * Update Certifi 2018.11.29 (10a1f8a) to 2019.03.09 (401100f)
+* Update dateutil 2.7.5 (e954819) to 2.8.0 (c90a30c)
 
 
 [develop changelog]
