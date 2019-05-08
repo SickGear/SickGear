@@ -9,6 +9,7 @@
 * Update DiskCache library 3.1.1 (05cac6a) to 3.1.1 (2649ac9)
 * Update Hachoir library 2.0a3 to 2.0a6 (c102cc7)
 * Update html5lib 1.1-dev (4f92357) to 1.1-dev (4b22754)
+* Update MsgPack 0.6.0 (197e307) to 0.6.1 (737f08a)
 
 
 [develop changelog]
