@@ -14,6 +14,7 @@
 * Update scandir 1.9.0 (9ab3d1f) to 1.10.0 (982e6ba)
 * Update Six compatibility library 1.12.0 (d927b9e) to 1.12.0 (8da94b8)
 * Update Tornado Web Server 5.1.1 (cc2cf07) to 5.1.1 (a99f1471)
+* Update unidecode module 1.0.22 (578cdb9) to 1.0.22 (a5045ab)
 
 
 [develop changelog]
