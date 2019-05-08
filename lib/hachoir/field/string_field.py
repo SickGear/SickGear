@@ -247,7 +247,7 @@ class GenericString(Bytes):
                 text = unicode(text + "\0", self._charset, "strict")
                 self.warning("Fix truncated %s string: add missing nul byte" % self._charset)
                 return text
-            except UnicodeDecodeError, err:
+            except UnicodeDecodeError:
                 pass
 
         # On error, use FALLBACK_CHARSET

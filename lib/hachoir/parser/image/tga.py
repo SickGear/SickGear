@@ -65,7 +65,7 @@ class TargaFile(Parser):
             return "Unknown codec"
         if self["palette_type"].value not in (0, 1):
             return "Unknown palette type %d" % self["palette_type"].value
-        if self["bpp"].value not in (8, 15, 16, 24):
+        if self["bpp"].value not in (8, 15, 16, 24, 32):
             return "Unknown bits/pixel value %d" % self["bpp"].value
         return True
 

@@ -349,6 +349,7 @@ class Zip64EndCentralDirectoryLocator(FieldSet):
 
 class ZipFile(Parser):
     endian = LITTLE_ENDIAN
+    MAGIC = b"PK\3\4"
     MIME_TYPES = {
         # Default ZIP archive
         u"application/zip": "zip",
@@ -395,9 +396,9 @@ class ZipFile(Parser):
     PARSER_TAGS = {
         "id": "zip",
         "category": "archive",
-        "file_ext": tuple(MIME_TYPES.itervalues()),
-        "mime": tuple(MIME_TYPES.iterkeys()),
-        "magic": (("PK\3\4", 0),),
+        "file_ext": tuple(MIME_TYPES.values()),
+        "mime": tuple(MIME_TYPES.keys()),
+        "magic": ((MAGIC, 0),),
         "subfile": "skip",
         "min_size": (4 + 26) * 8,  # header + file entry
         "description": "ZIP archive"
@@ -414,15 +415,19 @@ class ZipFile(Parser):
     }
 
     def validate(self):
+        # For generic ZIP files, don't attempt to locate a header in the middle of the file.
+        if self.stream.readBytes(0, len(self.MAGIC)) != self.MAGIC:
+            return "No magic found at start of file"
+
         try:
             if self["header[0]"].value != FileEntry.HEADER:
                 return "Invalid magic"
-        except Exception as err:
+        except Exception:
             return "Unable to get header #0"
 
         try:
             file0 = self["file[0]"]
-        except Exception as err:
+        except Exception:
             return "Unable to get file #0"
         err = file0.validate()
         if err:
