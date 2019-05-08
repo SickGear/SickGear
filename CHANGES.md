@@ -11,6 +11,7 @@
 * Update html5lib 1.1-dev (4f92357) to 1.1-dev (4b22754)
 * Update MsgPack 0.6.0 (197e307) to 0.6.1 (737f08a)
 * Update profilehooks module 1.10.1 (fdbf19d) to 1.11.0 (e17f378)
+* Update scandir 1.9.0 (9ab3d1f) to 1.10.0 (982e6ba)
 
 
 [develop changelog]

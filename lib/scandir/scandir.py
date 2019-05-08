@@ -44,7 +44,7 @@ elif _scandir is None and ctypes is None:
     import warnings
     warnings.warn("scandir can't find the compiled _scandir C module or ctypes, using slow generic fallback")
 
-__version__ = '1.9.0'
+__version__ = '1.10.0'
 __all__ = ['scandir', 'walk']
 
 # Windows FILE_ATTRIBUTE constants for interpreting the
