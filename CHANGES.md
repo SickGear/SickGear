@@ -8,6 +8,7 @@
 * Update dateutil 2.7.5 (e954819) to 2.8.0 (c90a30c)
 * Update DiskCache library 3.1.1 (05cac6a) to 3.1.1 (2649ac9)
 * Update Hachoir library 2.0a3 to 2.0a6 (c102cc7)
+* Update html5lib 1.1-dev (4f92357) to 1.1-dev (4b22754)
 
 
 [develop changelog]
