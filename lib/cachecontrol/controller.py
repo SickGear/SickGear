@@ -293,6 +293,15 @@ class CacheController(object):
         if no_store:
             return
 
+        # https://tools.ietf.org/html/rfc7234#section-4.1:
+        # A Vary header field-value of "*" always fails to match.
+        # Storing such a response leads to a deserialization warning
+        # during cache lookup and is not allowed to ever be served,
+        # so storing it can be avoided.
+        if "*" in response_headers.get("vary", ""):
+            logger.debug('Response header has "Vary: *"')
+            return
+
         # If we've been given an etag, then keep the response
         if self.cache_etags and "etag" in response_headers:
             logger.debug("Caching due to etag")
