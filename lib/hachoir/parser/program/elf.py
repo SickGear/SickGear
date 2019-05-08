@@ -17,6 +17,7 @@ from hachoir.core.endian import LITTLE_ENDIAN, BIG_ENDIAN
 
 
 class ElfHeader(FieldSet):
+    MAGIC = b"\x7FELF"
     LITTLE_ENDIAN_ID = 1
     BIG_ENDIAN_ID = 2
     MACHINE_NAME = {
@@ -130,7 +131,7 @@ class ElfHeader(FieldSet):
         yield UInt16(self, "shstrndx", "Section header string table index")
 
     def isValid(self):
-        if self["signature"].value != "\x7FELF":
+        if self["signature"].value != self.MAGIC:
             return "Wrong ELF signature"
         if self["class"].value not in self.CLASS_NAME:
             return "Unknown class"
@@ -299,7 +300,6 @@ class ProgramHeader64(ProgramHeader32):
 
 
 class ElfFile(HachoirParser, RootSeekableFieldSet):
-    MAGIC = "\x7FELF"
     PARSER_TAGS = {
         "id": "elf",
         "category": "program",
@@ -311,7 +311,7 @@ class ElfFile(HachoirParser, RootSeekableFieldSet):
             u"application/x-sharedlib",
             u"application/x-executable-file",
             u"application/x-coredump"),
-        "magic": (("\x7FELF", 0),),
+        "magic": ((ElfHeader.MAGIC, 0),),
         "description": "ELF Unix/BSD program/library"
     }
     endian = LITTLE_ENDIAN
@@ -322,7 +322,7 @@ class ElfFile(HachoirParser, RootSeekableFieldSet):
         HachoirParser.__init__(self, stream, **args)
 
     def validate(self):
-        if self.stream.readBytes(0, len(self.MAGIC)) != self.MAGIC:
+        if self.stream.readBytes(0, len(ElfHeader.MAGIC)) != ElfHeader.MAGIC:
             return "Invalid magic"
         err = self["header"].isValid()
         if err:

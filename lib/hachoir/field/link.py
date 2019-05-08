@@ -1,8 +1,10 @@
 from hachoir.field import Field, FieldSet, ParserError, Bytes, MissingField
 from hachoir.stream import FragmentedStream
+import collections
 
 
 class Link(Field):
+
     def __init__(self, parent, name, *args, **kw):
         Field.__init__(self, parent, name, 0, *args, **kw)
 
@@ -25,6 +27,7 @@ class Link(Field):
 
 
 class Fragments:
+
     def __init__(self, first):
         self.first = first
 
@@ -48,7 +51,7 @@ class Fragment(FieldSet):
     def getData(self):
         try:
             return self._getData()
-        except MissingField, e:
+        except MissingField as e:
             self.error(str(e))
         return None
 
@@ -64,15 +67,13 @@ class Fragment(FieldSet):
         if self._first is None:
             raise ParserError("first is None")
         return self
-
     first = property(lambda self: self._feedLinks()._first)
 
     def _getNext(self):
         next = self._feedLinks()._next
-        if callable(next):
+        if isinstance(next, collections.Callable):
             self._next = next = next()
         return next
-
     next = property(_getNext)
 
     def _createInputStream(self, **args):
