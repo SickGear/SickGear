@@ -5547,7 +5547,8 @@ class History(MainHandler):
 
                     for folder_id in user.get('Policy', {}).get('EnabledFolders') or []:
                         folder = sickbeard.helpers.getURL('%s/Items/%s' % (user_url, folder_id), headers=headers,
-                                                          params=dict(format='json'), timeout=10, json=True)
+                                                          params=dict(format='json'), timeout=10, json=True,
+                                                          mute_http_error=True)
 
                         if not folder or 'tvshows' != folder.get('CollectionType', ''):
                             continue

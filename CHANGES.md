@@ -1,4 +1,21 @@
-﻿### 0.18.23 (2019-05-07 12:15:00 UTC)
+﻿### 0.19.0 (2019-05-08 01:10:00 UTC)
+
+* Update attrs 18.2.0.dev0 (c2bc831) to 18.3.0.dev0 (55642b3)
+* Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
+* Update Certifi 2018.10.15 (a462d21) to 2018.11.29 (10a1f8a)
+* Update dateutil 2.7.2 (49690ee) to 2.7.5 (e954819)
+* Update DiskCache library 3.0.6 (6397269) to 3.1.1 (05cac6a)
+* Update html5lib 1.1-dev (e9ef538) to 1.1-dev (4f92357)
+* Update idna library 2.7 (0f50bdc) to 2.8 (032fc55)
+* Update MsgPack 0.5.6 (d4675be) to 0.6.0 (197e307)
+* Update Requests library 2.21.0 (c452e3b) to 2.21.0 (e52932c)
+* Update SimpleJSON 3.16.0 (e2a54f7) to 3.16.1 (ce75e60)
+* Update Six compatibility library 1.11.0 (0b4265e) to 1.12.0 (d927b9e)
+* Update urllib3 release 1.24.1 (a6ec68a) to 1.24.3 (324e47a)
+* Change suppress logging false positive of bad Emby request
+
+
+### 0.18.23 (2019-05-07 12:15:00 UTC)
 
 * Fix Milkie torrent provider
 

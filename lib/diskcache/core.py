@@ -374,7 +374,7 @@ class Cache(object):
             raise ValueError('disk must subclass diskcache.Disk')
 
         self._directory = directory
-        self._timeout = 60    # Use 1 minute timeout for initialization.
+        self._timeout = 0  # Manually handle retries during initialization.
         self._local = threading.local()
 
         if not op.isdir(directory):
@@ -388,7 +388,7 @@ class Cache(object):
                         ' and could not be created' % self._directory
                     )
 
-        sql = self._sql
+        sql = self._sql_retry
 
         # Setup Settings table.
 
@@ -409,10 +409,8 @@ class Cache(object):
         # Chance to set pragmas before any tables are created.
 
         for key, value in sorted(sets.items()):
-            if not key.startswith('sqlite_'):
-                continue
-
-            self.reset(key, value, update=False)
+            if key.startswith('sqlite_'):
+                self.reset(key, value, update=False)
 
         sql('CREATE TABLE IF NOT EXISTS Settings ('
             ' key TEXT NOT NULL UNIQUE,'
@@ -537,7 +535,17 @@ class Cache(object):
 
 
     @property
-    def _sql(self):
+    def _con(self):
+        # Check process ID to support process forking. If the process
+        # ID changes, close the connection and update the process ID.
+
+        local_pid = getattr(self._local, 'pid', None)
+        pid = os.getpid()
+
+        if local_pid != pid:
+            self.close()
+            self._local.pid = pid
+
         con = getattr(self._local, 'con', None)
 
         if con is None:
@@ -547,9 +555,10 @@ class Cache(object):
                 isolation_level=None,
             )
 
-            # Some SQLite pragmas work on a per-connection basis so query the
-            # Settings table and reset the pragmas. The Settings table may not
-            # exist so catch and ignore the OperationalError that may occur.
+            # Some SQLite pragmas work on a per-connection basis so
+            # query the Settings table and reset the pragmas. The
+            # Settings table may not exist so catch and ignore the
+            # OperationalError that may occur.
 
             try:
                 select = 'SELECT key, value FROM Settings'
@@ -561,7 +570,40 @@ class Cache(object):
                     if key.startswith('sqlite_'):
                         self.reset(key, value, update=False)
 
-        return con.execute
+        return con
+
+
+    @property
+    def _sql(self):
+        return self._con.execute
+
+
+    @property
+    def _sql_retry(self):
+        sql = self._sql
+
+        # 2018-11-01 GrantJ - Some SQLite builds/versions handle
+        # the SQLITE_BUSY return value and connection parameter
+        # "timeout" differently. For a more reliable duration,
+        # manually retry the statement for 60 seconds. Only used
+        # by statements which modify the database and do not use
+        # a transaction (like those in ``__init__`` or ``reset``).
+        # See Issue #85 for and tests/issue_85.py for more details.
+
+        def _execute_with_retry(statement, *args, **kwargs):
+            start = time.time()
+            while True:
+                try:
+                    return sql(statement, *args, **kwargs)
+                except sqlite3.OperationalError as exc:
+                    if str(exc) != 'database is locked':
+                        raise
+                    diff = time.time() - start
+                    if diff > 60:
+                        raise
+                    time.sleep(0.001)
+
+        return _execute_with_retry
 
 
     @cl.contextmanager
@@ -942,12 +984,9 @@ class Cache(object):
 
             try:
                 value = self._disk.fetch(mode, filename, db_value, read)
-            except IOError as error:
-                if error.errno == errno.ENOENT:
-                    # Key was deleted before we could retrieve result.
-                    return default
-                else:
-                    raise
+            except IOError:
+                # Key was deleted before we could retrieve result.
+                return default
 
         else:  # Slow path, transaction required.
             cache_hit = (
@@ -1853,51 +1892,56 @@ class Cache(object):
         :raises Timeout: if database timeout expires
 
         """
+        sql = self._sql
+        sql_retry = self._sql_retry
+
         if value is ENOVAL:
             select = 'SELECT value FROM Settings WHERE key = ?'
-            (value,), = self._sql(select, (key,)).fetchall()
+            (value,), = sql_retry(select, (key,)).fetchall()
             setattr(self, key, value)
             return value
-        else:
-            if update:
-                with self._transact() as (sql, _):
-                    statement = 'UPDATE Settings SET value = ? WHERE key = ?'
-                    sql(statement, (value, key))
-            else:
-                sql = self._sql
 
-            if key.startswith('sqlite_'):
+        if update:
+            statement = 'UPDATE Settings SET value = ? WHERE key = ?'
+            sql_retry(statement, (value, key))
 
-                # 2016-02-17 GrantJ - PRAGMA and autocommit_level=None
-                # don't always play nicely together. Retry setting the
-                # PRAGMA. I think some PRAGMA statements expect to
-                # immediately take an EXCLUSIVE lock on the database. I
-                # can't find any documentation for this but without the
-                # retry, stress will intermittently fail with multiple
-                # processes.
+        if key.startswith('sqlite_'):
+            pragma = key[7:]
 
-                pause = 0.001
-                count = 60000  # 60 / 0.001
-                error = sqlite3.OperationalError
-                pragma = key[7:]
+            # 2016-02-17 GrantJ - PRAGMA and isolation_level=None
+            # don't always play nicely together. Retry setting the
+            # PRAGMA. I think some PRAGMA statements expect to
+            # immediately take an EXCLUSIVE lock on the database. I
+            # can't find any documentation for this but without the
+            # retry, stress will intermittently fail with multiple
+            # processes.
 
-                for _ in range(count):
+            # 2018-11-05 GrantJ - Avoid setting pragma values that
+            # are already set. Pragma settings like auto_vacuum and
+            # journal_mode can take a long time or may not work after
+            # tables have been created.
+
+            start = time.time()
+            while True:
+                try:
                     try:
-                        args = pragma, value
-                        sql('PRAGMA %s = %s' % args).fetchall()
-                    except sqlite3.OperationalError as exc:
-                        error = exc
-                        time.sleep(pause)
-                    else:
-                        break
-                else:
-                    raise error
+                        (old_value,), = sql('PRAGMA %s' % (pragma)).fetchall()
+                        update = old_value != value
+                    except ValueError:
+                        update = True
+                    if update:
+                        sql('PRAGMA %s = %s' % (pragma, value)).fetchall()
+                    break
+                except sqlite3.OperationalError as exc:
+                    if str(exc) != 'database is locked':
+                        raise
+                    diff = time.time() - start
+                    if diff > 60:
+                        raise
+                    time.sleep(0.001)
+        elif key.startswith('disk_'):
+            attr = key[5:]
+            setattr(self._disk, attr, value)
 
-                del error
-
-            elif key.startswith('disk_'):
-                attr = key[5:]
-                setattr(self._disk, attr, value)
-
-            setattr(self, key, value)
-            return value
+        setattr(self, key, value)
+        return value
