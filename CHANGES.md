@@ -6,6 +6,7 @@
 * Update CacheControl library 0.12.5 (0fedbba) to 0.12.5 (007e8ca)    
 * Update Certifi 2018.11.29 (10a1f8a) to 2019.03.09 (401100f)
 * Update dateutil 2.7.5 (e954819) to 2.8.0 (c90a30c)
+* Update DiskCache library 3.1.1 (05cac6a) to 3.1.1 (2649ac9)
 
 
 [develop changelog]
