@@ -14,13 +14,9 @@ except ImportError:  # pragma no cover
         from StringIO import StringIO
     except ImportError:
         from io import StringIO
-try:  # pragma no cover
-    from collections import OrderedDict
-except ImportError:  # pragma no cover
-    try:
-        from ordereddict import OrderedDict
-    except ImportError:
-        OrderedDict = dict
+
+from collections import OrderedDict
+from inspect import isgenerator
 
 try:  # pragma no cover
     _basestring = basestring
@@ -32,7 +28,7 @@ except NameError:  # pragma no cover
     _unicode = str
 
 __author__ = 'Martin Blech'
-__version__ = '0.11.0'
+__version__ = '0.12.0'
 __license__ = 'MIT'
 
 
@@ -75,13 +71,16 @@ class _DictSAXHandler(object):
         self.force_list = force_list
 
     def _build_name(self, full_name):
-        if not self.namespaces:
+        if self.namespaces is None:
             return full_name
         i = full_name.rfind(self.namespace_separator)
         if i == -1:
             return full_name
         namespace, name = full_name[:i], full_name[i+1:]
-        short_namespace = self.namespaces.get(namespace, namespace)
+        try:
+            short_namespace = self.namespaces[namespace]
+        except KeyError:
+            short_namespace = namespace
         if not short_namespace:
             return name
         else:
@@ -181,6 +180,8 @@ class _DictSAXHandler(object):
     def _should_force_list(self, key, value):
         if not self.force_list:
             return False
+        if isinstance(self.force_list, bool):
+            return self.force_list
         try:
             return key in self.force_list
         except TypeError:
@@ -191,7 +192,7 @@ def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
           namespace_separator=':', disable_entities=True, **kwargs):
     """Parse the given XML input and convert it into a dictionary.
 
-    `xml_input` can either be a `string` or a file-like object.
+    `xml_input` can either be a `string`, a file-like object, or a generator of strings.
 
     If `xml_attribs` is `True`, element attributes are put in the dictionary
     among regular child elements, using `@` as a prefix to avoid collisions. If
@@ -326,6 +327,10 @@ def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
             parser.ExternalEntityRefHandler = lambda *x: 1
     if hasattr(xml_input, 'read'):
         parser.ParseFile(xml_input)
+    elif isgenerator(xml_input):
+        for chunk in xml_input:
+            parser.Parse(chunk,False)
+        parser.Parse(b'',True)
     else:
         parser.Parse(xml_input, True)
     return handler.item
@@ -340,7 +345,7 @@ def _process_namespace(name, namespaces, ns_sep=':', attr_prefix='@'):
         pass
     else:
         ns_res = namespaces.get(ns.strip(attr_prefix))
-        name = '{0}{1}{2}{3}'.format(
+        name = '{}{}{}{}'.format(
             attr_prefix if ns.startswith(attr_prefix) else '',
             ns_res, ns_sep, name) if ns_res else name
     return name
@@ -393,7 +398,7 @@ def _emit(key, value, content_handler,
                                         attr_prefix)
                 if ik == '@xmlns' and isinstance(iv, dict):
                     for k, v in iv.items():
-                        attr = 'xmlns{0}'.format(':{0}'.format(k) if k else '')
+                        attr = 'xmlns{}'.format(':{}'.format(k) if k else '')
                         attrs[attr] = _unicode(v)
                     continue
                 if not isinstance(iv, _unicode):
@@ -462,6 +467,7 @@ def unparse(input_dict, output=None, encoding='utf-8', full_document=True,
             pass
         return value
 
+
 if __name__ == '__main__':  # pragma: no cover
     import sys
     import marshal
@@ -474,7 +480,6 @@ if __name__ == '__main__':  # pragma: no cover
 
     (item_depth,) = sys.argv[1:]
     item_depth = int(item_depth)
-
 
     def handle_item(path, item):
         marshal.dump((path, item), stdout)
