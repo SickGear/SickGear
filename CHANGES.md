@@ -10,6 +10,7 @@
 * Update Hachoir library 2.0a3 to 2.0a6 (c102cc7)
 * Update html5lib 1.1-dev (4f92357) to 1.1-dev (4b22754)
 * Update MsgPack 0.6.0 (197e307) to 0.6.1 (737f08a)
+* Update profilehooks module 1.10.1 (fdbf19d) to 1.11.0 (e17f378)
 
 
 [develop changelog]
