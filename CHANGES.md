@@ -1,4 +1,4 @@
-﻿### 0.19.0 (2019-xx-xx xx:xx:xx UTC)
+﻿### 0.19.0 (2019-05-08 01:10:00 UTC)
 
 * Update attrs 18.2.0.dev0 (c2bc831) to 18.3.0.dev0 (55642b3)
 * Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
@@ -13,15 +13,6 @@
 * Update Six compatibility library 1.11.0 (0b4265e) to 1.12.0 (d927b9e)
 * Update urllib3 release 1.24.1 (a6ec68a) to 1.24.3 (324e47a)
 * Change suppress logging false positive of bad Emby request
-
-
-[develop changelog]
-* Update Certifi 2018.08.24 (8be9f89) to 2018.10.15 (a462d21)
-* Update Requests library 2.20.1 (57d7284) to 2.21.0 (c452e3b)
-* Update Requests library 2.19.1 (2c6a842) to 2.20.1 (57d7284)
-* Update Six compatibility library 1.11.0 (68112f3) to 1.11.0 (0b4265e)
-* Update urllib3 release 1.23 (7c216f4) to 1.24.1 (a6ec68a)
-
 
 
 ### 0.18.23 (2019-05-07 12:15:00 UTC)
