@@ -4,6 +4,7 @@
 * Update Beautiful Soup 4.6.3 (r475) to 4.7.1 (r497)
 * Add soupsieve 1.9.1 (24859cc)
 * Update CacheControl library 0.12.5 (0fedbba) to 0.12.5 (007e8ca)    
+* Update Certifi 2018.11.29 (10a1f8a) to 2019.03.09 (401100f)
 
 
 [develop changelog]
