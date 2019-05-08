@@ -1,5 +1,6 @@
 ﻿### 0.20.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Update attr 18.3.0.dev0 (55642b3) to 19.2.0.dev0 (de84609) 
 
 
 [develop changelog]
