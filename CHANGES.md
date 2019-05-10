@@ -3,6 +3,7 @@
 * Update attr 18.3.0.dev0 (55642b3) to 19.2.0.dev0 (de84609) 
 * Update Beautiful Soup 4.6.3 (r475) to 4.7.1 (r497)
 * Add soupsieve 1.9.1 (24859cc)
+* Add functools_lru_cache (soupsieve dep) 1.5 (21e85f5)
 * Update CacheControl library 0.12.5 (0fedbba) to 0.12.5 (007e8ca)    
 * Update Certifi 2018.11.29 (10a1f8a) to 2019.03.09 (401100f)
 * Update dateutil 2.7.5 (e954819) to 2.8.0 (c90a30c)
