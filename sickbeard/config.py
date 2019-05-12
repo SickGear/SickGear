@@ -466,7 +466,9 @@ class ConfigMigrator:
                                 14: 'Convert Trakt to multi-account',
                                 15: 'Transmithe.net rebranded Nebulance',
                                 16: 'Purge old cache image folders',
-                                17: 'Add "vp9", "av1" to ignore words if not found'}
+                                17: 'Add "vp9", "av1" to ignore words if not found',
+                                18: 'Update "Spanish" ignore word'
+                                }
 
     def migrate_config(self):
         """ Calls each successive migration until the config is the same version as SG expects """
@@ -550,7 +552,7 @@ class ConfigMigrator:
             logger.log(u'No shows were using season folders before so I am disabling flattening on all shows')
 
             # don't flatten any shows at all
-            my_db.action('UPDATE tv_shows SET flatten_folders = 0')
+            my_db.action('UPDATE tv_shows SET flatten_folders = 0 WHERE 1=1')
 
         sickbeard.NAMING_FORCE_FOLDERS = naming.check_force_season_folders()
 
@@ -607,7 +609,7 @@ class ConfigMigrator:
             final_name += naming_sep_tmpl[sep_type] + ep_quality
 
         if use_periods:
-            final_name = re.sub('\s+', '.', final_name)
+            final_name = re.sub(r'\s+', '.', final_name)
 
         return final_name
 
@@ -846,29 +848,37 @@ class ConfigMigrator:
             sickbeard.CACHE_DIR = cache_default
 
     @staticmethod
-    def add_ignore_words(wordlist):
+    def add_ignore_words(wordlist, removelist=None):
         # add words to ignore list and insert spaces to improve the ui config readability
         if not isinstance(wordlist, list):
             wordlist = [wordlist]
-        config_words = sickbeard.IGNORE_WORDS.split(',')
+        if not isinstance(removelist, list):
+            removelist = ([removelist], [])[None is removelist]
+
+        words = sickbeard.IGNORE_WORDS.split(',') + wordlist
+
         new_list = []
+        dedupe = []
         using_regex = ''
-        for new_word in wordlist:
-            add_word = True
-            for ignore_word in config_words:
-                ignored = ignore_word.strip().lower()
-                if ignored.startswith('regex:'):
-                    ignored = ignored.lstrip('regex:')
-                    using_regex = 'regex:'
-                if ignored and ignored not in new_list:
-                    new_list += [ignored]
-                if new_word in ignored:
-                    add_word = False
-            if add_word:
-                new_list += [new_word]
+        for ignore_word in words:
+            word = ignore_word.strip()
+            if word.startswith('regex:'):
+                word = word.lstrip('regex:').strip()
+                using_regex = 'regex:'
+            if word:
+                check_word = word.lower()
+                if check_word not in dedupe and check_word not in removelist:
+                    dedupe += [check_word]
+                    if 'spanish' in check_word:
+                        word = re.sub(r'(?i)(portuguese)\|spanish(\|swedish)', r'\1\2', word)
+                    new_list += [word]
 
         sickbeard.IGNORE_WORDS = '%s%s' % (using_regex, ', '.join(new_list))
 
     def _migrate_v17(self):
 
         self.add_ignore_words(['vp9', 'av1'])
+
+    def _migrate_v18(self):
+
+        self.add_ignore_words([r'regex:^(?=.*?\bspanish\b)((?!spanish.?princess).)*$'], ['spanish'])
