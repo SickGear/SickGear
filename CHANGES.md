@@ -18,6 +18,7 @@
 * Update Six compatibility library 1.12.0 (d927b9e) to 1.12.0 (8da94b8)
 * Update Tornado Web Server 5.1.1 (cc2cf07) to 5.1.1 (a99f1471)
 * Update unidecode module 1.0.22 (578cdb9) to 1.0.22 (a5045ab)
+* Update urllib3 release 1.24.3 (324e47a) to 1.25.2 (49eea80)
 * Update win_inet_pton 1.0.1 (934a852) to 1.1.0 (57e3558)
 * Update xmltodict library 0.11.0 (79ac9a4) to 0.12.0 (f3ab7e1)
 
