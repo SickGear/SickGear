@@ -20,6 +20,7 @@
 * Update scandir 1.9.0 (9ab3d1f) to 1.10.0 (982e6ba)
 * Update Six compatibility library 1.12.0 (d927b9e) to 1.12.0 (8da94b8)
 * Update Tornado Web Server 5.1.1 (cc2cf07) to 5.1.1 (a99f1471)
+* Update TZlocal 1.4 to 2.0.0.dev0 (b73a692)
 * Update unidecode module 1.0.22 (578cdb9) to 1.0.22 (a5045ab)
 * Update urllib3 release 1.24.3 (324e47a) to 1.25.2 (49eea80)
 * Update win_inet_pton 1.0.1 (934a852) to 1.1.0 (57e3558)
