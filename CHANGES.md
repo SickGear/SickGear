@@ -11,6 +11,7 @@
 * Update Hachoir library 2.0a3 to 2.0a6 (c102cc7)
 * Update html5lib 1.1-dev (4f92357) to 1.1-dev (4b22754)
 * Update IMDb-pie 5.6.3 (4220e83) to 5.6.4 (f695e87)
+* Update Js2Py 0.43 (da310bb) to 0.64 (efbfcca)
 * Update MsgPack 0.6.0 (197e307) to 0.6.1 (737f08a)
 * Update profilehooks module 1.10.1 (fdbf19d) to 1.11.0 (e17f378)
 * Update pyjsparser 2.4.5 (39b468e) to 2.7.1 (5465d03)
