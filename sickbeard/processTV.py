@@ -243,6 +243,11 @@ class ProcessTVShow(object):
                                  u'you fill out your completed TV download folder in the PP config.')
             return self.result
 
+        for path in sickbeard.ROOT_DIRS.split('|')[1:]:
+            if dir_name.startswith(ek.ek(os.path.realpath, path)):
+                self._log_helper('Dir is subdir of show root dir: %s, not processing.' % path)
+                return self.result
+
         if dir_name == sickbeard.TV_DOWNLOAD_DIR:
             self.is_basedir = True
 
@@ -332,6 +337,7 @@ class ProcessTVShow(object):
                        (ex(e), e.filename and (' (file %s)' % e.filename) or ''), logger.WARNING)
 
         # Process video files in TV subdirectories
+        root_show_dirs = [ek.ek(os.path.realpath, rp) for rp in sickbeard.ROOT_DIRS.split('|')[1:]]
         for directory in [x for x in dirs if self._validate_dir(
                 path, x, nzb_name_original, failed,
                 showObj=self.showObj_helper(showObj, dir_name, x, nzb_name, pp_type))]:
@@ -343,6 +349,15 @@ class ProcessTVShow(object):
                 if sickbeard.POSTPONE_IF_SYNC_FILES and any(filter(helpers.isSyncFile, files)):
                     self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
                     return self.result
+
+                is_sub = False
+                for r_path in root_show_dirs:
+                    if walk_path.startswith(ek.ek(os.path.realpath, r_path)):
+                        self._log_helper('Dir is subdir of show root dir: %s, not processing.' % r_path)
+                        is_sub = True
+                        break
+                if is_sub:
+                    continue
 
                 # Ignore any symlinks at this stage to avoid the potential for unraring a symlinked archive
                 files = [x for x in files if not helpers.is_link(ek.ek(os.path.join, walk_path, x))]
@@ -850,6 +865,7 @@ class ProcessTVShow(object):
                        use_trash=False, showObj=None):
 
         processor = None
+        root_show_dirs = [ek.ek(os.path.realpath, rp) for rp in sickbeard.ROOT_DIRS.split('|')[1:]]
         for cur_video_file in video_files:
 
             if self._already_postprocessed(process_path, cur_video_file, force):
@@ -857,6 +873,15 @@ class ProcessTVShow(object):
                 continue
 
             cur_video_file_path = ek.ek(os.path.join, process_path, cur_video_file)
+
+            is_sub = False
+            for r_path in root_show_dirs:
+                if cur_video_file_path.startswith(r_path):
+                    self._log_helper('Dir is subdir of show root dir: %s, not processing.' % r_path)
+                    is_sub = True
+                    break
+            if is_sub:
+                continue
 
             try:
                 processor = postProcessor.PostProcessor(
