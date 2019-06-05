@@ -60,9 +60,7 @@ PID = None
 
 CFG = None
 CONFIG_FILE = None
-
-# This is the version of the config we EXPECT to find
-CONFIG_VERSION = 17
+CONFIG_VERSION = None
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -522,8 +520,9 @@ EXTRA_SCRIPTS = []
 
 GIT_PATH = None
 
-IGNORE_WORDS = 'core2hd, hevc, MrLss, reenc, x265, danish, deutsch, dutch, flemish, french, ' + \
-               'german, italian, nordic, norwegian, portuguese, spanish, swedish, turkish'
+IGNORE_WORDS = 'regex:^(?=.*?\bspanish\b)((?!spanish.?princess).)*$, ' + \
+               'core2hd, hevc, MrLss, reenc, x265, danish, deutsch, dutch, flemish, french, ' + \
+               'german, italian, nordic, norwegian, portuguese, swedish, turkish'
 REQUIRE_WORDS = ''
 
 WANTEDLIST_CACHE = None
@@ -575,7 +574,8 @@ def initialize(console_logging=True):
         # Misc
         global __INITIALIZED__, showList, providerList, newznabProviderList, torrentRssProviderList, \
             WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, CREATE_MISSING_SHOW_DIRS, \
-            RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, CONFIG_FILE, \
+            RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, \
+            CONFIG_FILE, CONFIG_VERSION, \
             REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES
         # Schedulers
         # global traktCheckerScheduler
@@ -1308,6 +1308,8 @@ def initialize(console_logging=True):
             logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
             update_config = True
 
+        # Get expected config version
+        CONFIG_VERSION = max(ConfigMigrator(CFG).migration_names.keys())
         if update_config:
             save_config()
 

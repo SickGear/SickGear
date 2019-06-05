@@ -28,22 +28,27 @@ class TestCase(unittest.TestCase):
         ('[GroupName].Show.Name.-.%02d.[required]', 'Show.Name', 'required', False),
 
         ('[GroupName].Show.Name.-.%02d.[ignore]', 'regex: no_ignore', '', True),
-        ('[GroupName].Show.Name.-.%02d.[480p]', 'ignore', 'regex: \d?\d80p', True),
-        ('[GroupName].Show.Name.-.%02d.[480p]', 'ignore', 'regex: \[\d?\d80p\]', True),
+        ('[GroupName].Show.Name.-.%02d.[480p]', 'ignore', r'regex: \d?\d80p', True),
+        ('[GroupName].Show.Name.-.%02d.[480p]', 'ignore', r'regex: \[\d?\d80p\]', True),
         ('[GroupName].Show.Name.-.%02d.[ignore]', 'regex: ignore', '', False),
-        ('[GroupName].Show.Name.-.%02d.[ignore]', 'regex: \[ignore\]', '', False),
+        ('[GroupName].Show.Name.-.%02d.[ignore]', r'regex: \[ignore\]', '', False),
         ('[GroupName].Show.Name.-.%02d.[ignore]', 'regex: ignore', 'required', False),
 
         # The following test is True because a boundary is added to each regex not overridden with the prefix param
         ('[GroupName].Show.ONEONE.-.%02d.[required]', 'regex: (one(two)?)', '', True),
         ('[GroupName].Show.ONETWO.-.%02d.[required]', 'regex: ((one)?two)', 'required', False),
         ('[GroupName].Show.TWO.-.%02d.[required]', 'regex: ((one)?two)', 'required', False),
+
+        ('The.Spanish.Princess.-.%02d',
+         r'regex:^(?:(?=.*?\bspanish\b)((?!spanish.?princess).)*|.*princess.*?spanish.*)$, ignore', '', True),
+        ('Spanish.Princess.Spanish.-.%02d',
+         r'regex:^(?:(?=.*?\bspanish\b)((?!spanish.?princess).)*|.*princess.*?spanish.*)$, ignore', '', False)
     ]
 
     cases_contains = [
         ('[GroupName].Show.Name.-.%02d.[illegal_regex]', 'regex:??illegal_regex', False),
         ('[GroupName].Show.Name.-.%02d.[480p]', 'regex:(480|1080)p', True),
-        ('[GroupName].Show.Name.-.%02d.[contains]', 'regex:\[contains\]', True),
+        ('[GroupName].Show.Name.-.%02d.[contains]', r'regex:\[contains\]', True),
         ('[GroupName].Show.Name.-.%02d.[contains]', '[contains]', True),
         ('[GroupName].Show.Name.-.%02d.[contains]', 'contains', True),
         ('[GroupName].Show.Name.-.%02d.[contains]', '[not_contains]', False),
@@ -52,7 +57,7 @@ class TestCase(unittest.TestCase):
 
     cases_not_contains = [
         ('[GroupName].Show.Name.-.%02d.[480p]', 'regex:(480|1080)p', False),
-        ('[GroupName].Show.Name.-.%02d.[contains]', 'regex:\[contains\]', False),
+        ('[GroupName].Show.Name.-.%02d.[contains]', r'regex:\[contains\]', False),
         ('[GroupName].Show.Name.-.%02d.[contains]', '[contains]', False),
         ('[GroupName].Show.Name.-.%02d.[contains]', 'contains', False),
         ('[GroupName].Show.Name.-.%02d.[not_contains]', '[blah_blah]', True),
@@ -65,7 +70,7 @@ class TestCase(unittest.TestCase):
 
         test_cases = (self.cases_pass_wordlist_checks, isolated)[len(isolated)]
         for case_num, (name, ignore_list, require_list, expected_result) in enumerate(test_cases):
-            name = (name, name % case_num)['%02d' in name]
+            name = name if '%02d' not in name else name % case_num
             sickbeard.IGNORE_WORDS = ignore_list
             sickbeard.REQUIRE_WORDS = require_list
             self.assertEqual(expected_result, show_name_helpers.pass_wordlist_checks(name, False),
@@ -78,7 +83,7 @@ class TestCase(unittest.TestCase):
 
         test_cases = (self.cases_contains, isolated)[len(isolated)]
         for case_num, (name, csv_words, expected_result) in enumerate(test_cases):
-            name = (name, name % case_num)['%02d' in name]
+            name = name if '%02d' not in name else name % case_num
             self.assertEqual(expected_result, self.call_contains_any(name, csv_words),
                              'Expected %s test: "%s" with csv_words: "%s"' %
                              (expected_result, name, csv_words))
@@ -95,7 +100,7 @@ class TestCase(unittest.TestCase):
 
         test_cases = (self.cases_not_contains, isolated)[len(isolated)]
         for case_num, (name, csv_words, expected_result) in enumerate(test_cases):
-            name = (name, name % case_num)['%02d' in name]
+            name = name if '%02d' not in name else name % case_num
             self.assertEqual(expected_result, self.call_not_contains_any(name, csv_words),
                              'Expected %s test: "%s" with csv_words:"%s"' %
                              (expected_result, name, csv_words))
