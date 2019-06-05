@@ -1,4 +1,11 @@
-﻿### 0.19.0 (2019-05-08 01:10:00 UTC)
+﻿### 0.19.1 (2019-06-06 00:00:00 UTC)
+
+* Change ignore word "Spanish" to not match Spanish Princess
+* Remove BeyondHD torrent provider (API nuked)
+* Change TVDb mappings
+
+
+### 0.19.0 (2019-05-08 01:10:00 UTC)
 
 * Update attrs 18.2.0.dev0 (c2bc831) to 18.3.0.dev0 (55642b3)
 * Update CacheControl library 0.12.5 (cd91309) to 0.12.5 (0fedbba)
