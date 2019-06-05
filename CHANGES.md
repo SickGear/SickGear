@@ -2,6 +2,7 @@
 
 * Change ignore word "Spanish" to not match Spanish Princess
 * Remove BeyondHD torrent provider (API nuked)
+* Change TVDb mappings
 
 
 ### 0.19.0 (2019-05-08 01:10:00 UTC)

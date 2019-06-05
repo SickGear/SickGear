@@ -622,7 +622,7 @@ class Tvdb:
             self.not_found = True
 
         map_show = {'airstime': 'airs_time', 'airsdayofweek': 'airs_dayofweek', 'imdbid': 'imdb_id',
-                    'writers': 'writer'}
+                    'writers': 'writer', 'siterating': 'rating'}
 
         def map_show_keys(data):
             keep_data = {}
@@ -643,6 +643,8 @@ class Tvdb:
                     elif 'writers' == k:
                         keep_data[k] = v
                         v = '|%s|' % '|'.join([clean_data(c) for c in v if isinstance(c, basestring)])
+                    elif 'rating' == k:
+                        new_data['contentrating'] = v
                     elif 'firstaired' == k:
                         if v:
                             try:
