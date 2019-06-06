@@ -3026,6 +3026,10 @@ class NewHomeAddShows(Home):
     def sanitizeFileName(self, name):
         return helpers.sanitizeFileName(name)
 
+    @staticmethod
+    def generate_show_dir_name(show_name):
+        return helpers.generate_show_dir_name(None, show_name)
+
     # noinspection PyPep8Naming
     def searchIndexersForShowName(self, search_term, lang='en', indexer=None):
         if not lang or 'null' == lang:
@@ -5880,8 +5884,8 @@ class ConfigGeneral(Config):
                     home_search_focus=None, display_freespace=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
-                    indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
-                    fanart_limit=None, show_tags=None, showlist_tagview=None):
+                    indexer_timeout=None, rootDir=None, show_dirs_with_dots=None, theme_name=None, default_home=None,
+                    use_imdb_info=None, fanart_limit=None, show_tags=None, showlist_tagview=None):
 
         results = []
 
@@ -5904,6 +5908,7 @@ class ConfigGeneral(Config):
                 sickbeard.INDEXER_DEFAULT = INDEXER_TVDB
         if indexer_timeout:
             sickbeard.INDEXER_TIMEOUT = config.to_int(indexer_timeout)
+        sickbeard.SHOW_DIRS_WITH_DOTS = config.checkbox_to_value(show_dirs_with_dots)
 
         # Updates
         config.schedule_version_notify(config.checkbox_to_value(version_notify))
