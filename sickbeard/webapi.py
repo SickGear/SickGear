@@ -3237,7 +3237,7 @@ class CMD_SickGearShowAddNew(ApiCall):
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         # moved the logic check to the end in an attempt to eliminate empty directory being created from previous errors
-        showPath = ek.ek(os.path.join, self.location, helpers.sanitizeFileName(indexerName))
+        showPath = helpers.generate_show_dir_name(self.location, indexerName)
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:

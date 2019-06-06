@@ -4186,7 +4186,7 @@ class NewHomeAddShows(Home):
             show_dir = ek.ek(os.path.normpath, fullShowPath)
             new_show = False
         else:
-            show_dir = ek.ek(os.path.join, rootDir, helpers.sanitizeFileName(show_name))
+            show_dir = helpers.generate_show_dir_name(rootDir, show_name)
             new_show = True
 
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts

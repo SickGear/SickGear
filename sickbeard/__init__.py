@@ -249,6 +249,7 @@ UNAIRED_RECENT_SEARCH_ONLY = True
 
 ADD_SHOWS_WO_DIR = False
 CREATE_MISSING_SHOW_DIRS = False
+SHOW_DIRS_WITH_DOTS = False
 RENAME_EPISODES = False
 AIRDATE_EPISODES = False
 PROCESS_AUTOMATICALLY = False
@@ -574,6 +575,7 @@ def initialize(console_logging=True):
         # Misc
         global __INITIALIZED__, showList, providerList, newznabProviderList, torrentRssProviderList, \
             WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, CREATE_MISSING_SHOW_DIRS, \
+            SHOW_DIRS_WITH_DOTS, \
             RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, \
             CONFIG_FILE, CONFIG_VERSION, \
             REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES
@@ -915,6 +917,7 @@ def initialize(console_logging=True):
         POSTPONE_IF_SYNC_FILES = bool(check_setting_int(CFG, 'General', 'postpone_if_sync_files', 1))
         NFO_RENAME = bool(check_setting_int(CFG, 'General', 'nfo_rename', 1))
         CREATE_MISSING_SHOW_DIRS = bool(check_setting_int(CFG, 'General', 'create_missing_show_dirs', 0))
+        SHOW_DIRS_WITH_DOTS = bool(check_setting_int(CFG, 'General', 'show_dirs_with_dots', 0))
         ADD_SHOWS_WO_DIR = bool(check_setting_int(CFG, 'General', 'add_shows_wo_dir', 0))
         REMOVE_FILENAME_CHARS = check_setting_str(CFG, 'General', 'remove_filename_chars', '')
         IMPORT_DEFAULT_CHECKED_SHOWS = bool(check_setting_int(CFG, 'General', 'import_default_checked_shows', 0))
@@ -1723,6 +1726,7 @@ def save_config():
     new_config['General']['rename_episodes'] = int(RENAME_EPISODES)
     new_config['General']['airdate_episodes'] = int(AIRDATE_EPISODES)
     new_config['General']['create_missing_show_dirs'] = int(CREATE_MISSING_SHOW_DIRS)
+    new_config['General']['show_dirs_with_dots'] = int(SHOW_DIRS_WITH_DOTS)
     new_config['General']['add_shows_wo_dir'] = int(ADD_SHOWS_WO_DIR)
     new_config['General']['remove_filename_chars'] = REMOVE_FILENAME_CHARS
     new_config['General']['import_default_checked_shows'] = int(IMPORT_DEFAULT_CHECKED_SHOWS)
