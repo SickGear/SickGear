@@ -207,6 +207,22 @@ class ProcessTVShow(object):
 
         return None
 
+    @staticmethod
+    def find_parent(path):
+        """
+        Test path is inside a parent folder
+
+        :param path: Path to check
+        :type path: String
+        :return: Parent root dir that matches path, or None
+        :rtype: String, None
+        """
+        process_path = ek.ek(os.path.realpath, ek.ek(os.path.expanduser, path.lower()))
+        # sort paths by longest to test path containing "abc123" before "abc"
+        for parent in sorted(sickbeard.ROOT_DIRS.split('|')[1:], reverse=True):
+            if process_path.startswith(ek.ek(os.path.realpath, ek.ek(os.path.expanduser, parent.lower()))):
+                return parent
+
     def process_dir(self, dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
                     failed=False, pp_type='auto', cleanup=False, showObj=None):
         """
@@ -241,6 +257,11 @@ class ProcessTVShow(object):
                 self._log_helper(u'Unable to figure out what folder to process. ' +
                                  u'If your downloader and SickGear aren\'t on the same PC then make sure ' +
                                  u'you fill out your completed TV download folder in the PP config.')
+            return self.result
+
+        parent = self.find_parent(dir_name)
+        if parent:
+            self._log_helper('Dir is subdir of show root dir: %s, not processing.' % parent)
             return self.result
 
         if dir_name == sickbeard.TV_DOWNLOAD_DIR:
@@ -343,6 +364,11 @@ class ProcessTVShow(object):
                 if sickbeard.POSTPONE_IF_SYNC_FILES and any(filter(helpers.isSyncFile, files)):
                     self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
                     return self.result
+
+                parent = self.find_parent(walk_path)
+                if parent:
+                    self._log_helper('Dir is subdir of show root dir: %s, not processing files.' % parent)
+                    continue
 
                 # Ignore any symlinks at this stage to avoid the potential for unraring a symlinked archive
                 files = [x for x in files if not helpers.is_link(ek.ek(os.path.join, walk_path, x))]
@@ -857,6 +883,11 @@ class ProcessTVShow(object):
                 continue
 
             cur_video_file_path = ek.ek(os.path.join, process_path, cur_video_file)
+
+            parent = self.find_parent(cur_video_file_path)
+            if parent:
+                self._log_helper('Dir is subdir of show root dir: %s, not processing media.' % parent)
+                continue
 
             try:
                 processor = postProcessor.PostProcessor(
