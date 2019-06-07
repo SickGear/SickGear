@@ -79,7 +79,7 @@ def buildNameCache(show=None):
 
         cache_results = cacheDB.select(
             'SELECT show_name, indexer_id, season FROM scene_exceptions WHERE indexer_id IN (%s)' % ','.join(
-                ['?'] * len(indexer_ids)), indexer_ids)
+                ['%s' % i for i in indexer_ids]))
 
         if cache_results:
             for cache_result in cache_results:
