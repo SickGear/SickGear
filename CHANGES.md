@@ -1,6 +1,11 @@
-﻿### 0.19.2 (2019-06-07 11:55:00 UTC)
+﻿### 0.19.3 (2019-06-07 21:40:00 UTC)
 
-Change prevent post processing under a parent (or show root) folder
+* Fix "too many SQL variables" with over 999 shows when updating name cache
+
+
+### 0.19.2 (2019-06-07 11:55:00 UTC)
+
+* Change prevent post processing under a parent (or show root) folder
 
 
 ### 0.19.1 (2019-06-06 00:00:00 UTC)
