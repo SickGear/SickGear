@@ -151,6 +151,16 @@
 							</label>
 						</div>
 
+						<div class="field-pair">
+							<label for="show_dirs_with_dots">
+								<span class="component-title">Use dots in show.name path</span>
+								<span class="component-desc">
+									<input type="checkbox" name="show_dirs_with_dots" id="show_dirs_with_dots"#echo ('', $checked)[$sg_var('SHOW_DIRS_WITH_DOTS')]#>
+									<p>or use space i.e. "show name" (default:unset)</p>
+								</span>
+							</label>
+						</div>
+
 						<input type="submit" class="btn config_submitter" value="Save Changes">
 					</fieldset>
 				</div>
