@@ -217,11 +217,12 @@ class ProcessTVShow(object):
         :return: Parent root dir that matches path, or None
         :rtype: String, None
         """
-        process_path = ek.ek(os.path.realpath, ek.ek(os.path.expanduser, path.lower()))
-        # sort paths by longest to test path containing "abc123" before "abc"
-        for parent in sorted(sickbeard.ROOT_DIRS.split('|')[1:], reverse=True):
-            if process_path.startswith(ek.ek(os.path.realpath, ek.ek(os.path.expanduser, parent.lower()))):
-                return parent
+        build_path = (lambda old_path: '%s%s' % (helpers.real_path(old_path).rstrip(os.path.sep), os.path.sep))
+
+        process_path = build_path(path)
+        for parent in map(lambda p: build_path(p), sickbeard.ROOT_DIRS.split('|')[1:]):
+            if process_path.startswith(parent):
+                return parent.rstrip(os.path.sep)
 
     def process_dir(self, dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
                     failed=False, pp_type='auto', cleanup=False, showObj=None):
@@ -261,7 +262,7 @@ class ProcessTVShow(object):
 
         parent = self.find_parent(dir_name)
         if parent:
-            self._log_helper('Dir is subdir of show root dir: %s, not processing.' % parent)
+            self._log_helper('Dir %s is subdir of show root dir: %s, not processing.' % (dir_name, parent))
             return self.result
 
         if dir_name == sickbeard.TV_DOWNLOAD_DIR:
@@ -367,7 +368,8 @@ class ProcessTVShow(object):
 
                 parent = self.find_parent(walk_path)
                 if parent:
-                    self._log_helper('Dir is subdir of show root dir: %s, not processing files.' % parent)
+                    self._log_helper('Dir %s is subdir of show root dir: %s, not processing files.' %
+                                     (walk_path, parent))
                     continue
 
                 # Ignore any symlinks at this stage to avoid the potential for unraring a symlinked archive
@@ -886,7 +888,8 @@ class ProcessTVShow(object):
 
             parent = self.find_parent(cur_video_file_path)
             if parent:
-                self._log_helper('Dir is subdir of show root dir: %s, not processing media.' % parent)
+                self._log_helper('Video %s is in a subdir of show root dir: %s, not processing media.' %
+                                 (cur_video_file_path, parent))
                 continue
 
             try:
