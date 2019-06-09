@@ -24,17 +24,17 @@ if '__main__' == __name__:
     warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 
     import glob
-    import unittest
     import sys
+    import unittest
 
     test_file_strings = [x for x in glob.glob('*_tests.py') if x not in __file__]
     module_strings = [file_string[0:len(file_string) - 3] for file_string in test_file_strings]
     suites = [unittest.defaultTestLoader.loadTestsFromName(file_string) for file_string in module_strings]
     testSuite = unittest.TestSuite(suites)
 
-    print('==================')
+    print('====================')
     print('STARTING - ALL TESTS')
-    print('==================')
+    print('====================')
 
     test_individually = False
     

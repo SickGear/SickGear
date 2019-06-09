@@ -1,4 +1,9 @@
-﻿### 0.19.3 (2019-06-07 21:40:00 UTC)
+﻿### 0.19.4 (2019-06-09 02:30:00 UTC)
+
+* Change improve post processing checks for complete folder names
+
+
+### 0.19.3 (2019-06-07 21:40:00 UTC)
 
 * Fix "too many SQL variables" with over 999 shows when updating name cache
 

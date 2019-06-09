@@ -20,26 +20,23 @@
 from __future__ import print_function
 from __future__ import with_statement
 
-import unittest
-import sqlite3
 import glob
-import sys
 import os.path
+import shutil
+import sqlite3
+import sys
+import unittest
 
 sys.path.insert(1, os.path.abspath('..'))
 sys.path.insert(1, os.path.abspath('../lib'))
 
 import sickbeard
-import shutil
+from sickbeard import db, encodingKludge as ek, providers, tvcache
+from sickbeard.databases import cache_db, failed_db, mainDB
 
-from sickbeard import encodingKludge as ek, providers, tvcache
-from sickbeard import db
-from sickbeard.databases import mainDB
-from sickbeard.databases import cache_db, failed_db
-
-#=================
+# =================
 # test globals
-#=================
+# =================
 TESTDIR = os.path.abspath('.')
 TESTDBNAME = 'sickbeard.db'
 TESTCACHEDBNAME = 'cache.db'
@@ -54,26 +51,29 @@ FILEPATH = os.path.join(FILEDIR, FILENAME)
 
 SHOWDIR = os.path.join(TESTDIR, SHOWNAME + ' final')
 
-#sickbeard.logger.sb_log_instance = sickbeard.logger.SBRotatingLogHandler(os.path.join(TESTDIR, 'sickgear.log'), sickbeard.logger.NUM_LOGS, sickbeard.logger.LOG_SIZE)
+# sickbeard.logger.sb_log_instance = sickbeard.logger.SBRotatingLogHandler(
+#     os.path.join(TESTDIR, 'sickgear.log'), sickbeard.logger.NUM_LOGS, sickbeard.logger.LOG_SIZE)
 sickbeard.logger.SBRotatingLogHandler.log_file = os.path.join(os.path.join(TESTDIR, 'Logs'), 'test_sickgear.log')
 
 
-#=================
+# =================
 # prepare env functions
-#=================
-def createTestLogFolder():
+# =================
+def create_test_log_folder():
     if not os.path.isdir(sickbeard.LOG_DIR):
         os.mkdir(sickbeard.LOG_DIR)
 
-def createTestCacheFolder():
+
+def create_test_cache_folder():
     if not os.path.isdir(sickbeard.CACHE_DIR):
         os.mkdir(sickbeard.CACHE_DIR)
 
+
 # call env functions at appropriate time during sickbeard var setup
 
-#=================
+# =================
 # sickbeard globals
-#=================
+# =================
 sickbeard.SYS_ENCODING = 'UTF-8'
 sickbeard.showList = []
 sickbeard.QUALITY_DEFAULT = 4  # hdtv
@@ -84,75 +84,81 @@ sickbeard.NAMING_ABD_PATTERN = ''
 sickbeard.NAMING_SPORTS_PATTERN = ''
 sickbeard.NAMING_MULTI_EP = 1
 
-
 sickbeard.PROVIDER_ORDER = ['sick_beard_index']
-sickbeard.newznabProviderList = providers.getNewznabProviderList("'Sick Beard Index|http://lolo.sickbeard.com/|0|5030,5040,5060|0|eponly|0'")
+sickbeard.newznabProviderList = providers.getNewznabProviderList(
+    "'Sick Beard Index|http://lolo.sickbeard.com/|0|5030,5040,5060|0|eponly|0'")
 sickbeard.providerList = providers.makeProviderList()
 
 sickbeard.PROG_DIR = os.path.abspath('..')
 sickbeard.DATA_DIR = sickbeard.PROG_DIR
 sickbeard.LOG_DIR = os.path.join(TESTDIR, 'Logs')
-createTestLogFolder()
+create_test_log_folder()
 sickbeard.logger.sb_log_instance.init_logging(False)
 
 sickbeard.CACHE_DIR = os.path.join(TESTDIR, 'cache')
 sickbeard.ZONEINFO_DIR = os.path.join(TESTDIR, 'zoneinfo')
-createTestCacheFolder()
+create_test_cache_folder()
 
-#=================
+
+# =================
 # dummy functions
-#=================
-def _dummy_saveConfig():
+# =================
+def _dummy_save_config():
     return True
 
-# this overrides the sickbeard save_config which gets called during a db upgrade
+
+# this overrides the save_config which gets called during a db upgrade
 # this might be considered a hack
-mainDB.sickbeard.save_config = _dummy_saveConfig
+mainDB.sickbeard.save_config = _dummy_save_config
 
 
 # the real one tries to contact tvdb just stop it from getting more info on the ep
-def _fake_specifyEP(self, season, episode, show_sql=None):
+# noinspection PyUnusedLocal
+def _fake_specify_ep(self, season, episode, show_sql=None):
     pass
 
-sickbeard.tv.TVEpisode.specifyEpisode = _fake_specifyEP
+
+sickbeard.tv.TVEpisode.specifyEpisode = _fake_specify_ep
 
 
-#=================
+# =================
 # test classes
-#=================
+# =================
 class SickbeardTestDBCase(unittest.TestCase):
     def setUp(self):
         sickbeard.showList = []
-        setUp_test_db()
-        setUp_test_episode_file()
-        setUp_test_show_dir()
+        setup_test_db()
+        setup_test_episode_file()
+        setup_test_show_dir()
 
     def tearDown(self):
         sickbeard.showList = []
-        tearDown_test_db()
-        tearDown_test_episode_file()
-        tearDown_test_show_dir()
+        teardown_test_db()
+        teardown_test_episode_file()
+        teardown_test_show_dir()
 
 
 class TestDBConnection(db.DBConnection, object):
 
-    def __init__(self, dbFileName=TESTDBNAME):
-        dbFileName = os.path.join(TESTDIR, dbFileName)
-        super(TestDBConnection, self).__init__(dbFileName)
+    def __init__(self, db_file_name=TESTDBNAME):
+        db_file_name = os.path.join(TESTDIR, db_file_name)
+        super(TestDBConnection, self).__init__(db_file_name)
 
 
 class TestCacheDBConnection(TestDBConnection, object):
 
-    def __init__(self, providerName):
+    def __init__(self, provider_name):
         db.DBConnection.__init__(self, os.path.join(TESTDIR, TESTCACHEDBNAME))
 
         # Create the table if it's not already there
         try:
-            sql = 'CREATE TABLE ' + providerName + ' (name TEXT, season NUMERIC, episodes TEXT, indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT);'
+            sql = 'CREATE TABLE ' + provider_name + \
+                  ' (name TEXT, season NUMERIC, episodes TEXT,' \
+                  ' indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT);'
             self.connection.execute(sql)
             self.connection.commit()
         except sqlite3.OperationalError as e:
-            if str(e) != 'table ' + providerName + ' already exists':
+            if 'table %s already exists' % provider_name != str(e):
                 raise
 
         # Create the table if it's not already there
@@ -161,17 +167,19 @@ class TestCacheDBConnection(TestDBConnection, object):
             self.connection.execute(sql)
             self.connection.commit()
         except sqlite3.OperationalError as e:
-            if str(e) != 'table lastUpdate already exists':
+            if 'table lastUpdate already exists' != str(e):
                 raise
+
 
 # this will override the normal db connection
 sickbeard.db.DBConnection = TestDBConnection
 sickbeard.tvcache.CacheDBConnection = TestCacheDBConnection
 
-#=================
+
+# =================
 # test functions
-#=================
-def setUp_test_db():
+# =================
+def setup_test_db():
     """upgrades the db to the latest version
     """
     # upgrading the db
@@ -187,12 +195,12 @@ def setUp_test_db():
     db.upgradeDatabase(db.DBConnection('failed.db'), failed_db.InitialSchema)
 
 
-def tearDown_test_db():
+def teardown_test_db():
     """Deletes the test db
         although this seams not to work on my system it leaves me with an zero kb file
     """
     # uncomment next line so leave the db intact between test and at the end
-    #return False
+    # return False
 
     for filename in glob.glob(os.path.join(TESTDIR, TESTDBNAME) + '*'):
         os.remove(filename)
@@ -202,7 +210,7 @@ def tearDown_test_db():
         os.remove(os.path.join(TESTDIR, TESTFAILEDDBNAME))
 
 
-def setUp_test_episode_file():
+def setup_test_episode_file():
     if not os.path.exists(FILEDIR):
         os.makedirs(FILEDIR)
 
@@ -214,26 +222,27 @@ def setUp_test_episode_file():
         raise
 
 
-def tearDown_test_episode_file():
+def teardown_test_episode_file():
     if os.path.exists(FILEDIR):
         shutil.rmtree(FILEDIR)
 
 
-def setUp_test_show_dir():
+def setup_test_show_dir():
     if not os.path.exists(SHOWDIR):
         os.makedirs(SHOWDIR)
 
 
-def tearDown_test_show_dir():
+def teardown_test_show_dir():
     if os.path.exists(SHOWDIR):
         shutil.rmtree(SHOWDIR)
 
-tearDown_test_db()
+
+teardown_test_db()
 
 if __name__ == '__main__':
-    print('==================')
+    print('=========================')
     print('Dont call this directly')
-    print('==================')
+    print('=========================')
     print('you might want to call')
 
     dirList = os.listdir(TESTDIR)
@@ -241,5 +250,5 @@ if __name__ == '__main__':
         if (fname.find('_test') > 0) and (fname.find('pyc') < 0):
             print('- ' + fname)
 
-    print('==================')
+    print('=========================')
     print('or just call all_tests.py')
