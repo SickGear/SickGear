@@ -2430,7 +2430,7 @@ class TVEpisode(object):
                 for relEp in self.relatedEps:
                     goodName += " & " + relEp.name
 
-        return goodName
+        return goodName or 'tba'
 
     def _replace_map(self):
         """

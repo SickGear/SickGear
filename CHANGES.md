@@ -1,5 +1,6 @@
 ﻿### 0.20.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Change if episode name is not known at point of rename, then use 'tba'
 * Add "Use dots in show.name path" to config/General/Misc, this will only affect newly added shows
 * Change displayed folder on add show page to update based on "Use dots in show.name path" setting
 * Update attr 18.3.0.dev0 (55642b3) to 19.2.0.dev0 (de84609) 
@@ -13,7 +14,6 @@
 * Update Hachoir library 2.0a3 to 2.0a6 (c102cc7)
 * Update html5lib 1.1-dev (4f92357) to 1.1-dev (4b22754)
 * Update IMDb-pie 5.6.3 (4220e83) to 5.6.4 (f695e87)
-* Update Js2Py 0.43 (da310bb) to 0.64 (efbfcca)
 * Update MsgPack 0.6.0 (197e307) to 0.6.1 (737f08a)
 * Update profilehooks module 1.10.1 (fdbf19d) to 1.11.0 (e17f378)
 * Update pyjsparser 2.4.5 (39b468e) to 2.7.1 (5465d03)
