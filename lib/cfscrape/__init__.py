@@ -1,17 +1,27 @@
-from base64 import b64encode
+from base64 import b64encode, b64decode
+
+from requests.adapters import HTTPAdapter
+from requests.exceptions import RequestException
+from requests.models import Response
+from requests.sessions import Session
+from urllib3.util.ssl_ import create_urllib3_context
+
 import logging
 import random
 import re
+import ssl
 import time
-from requests.sessions import Session
-from requests.models import Response
+
 import js2py
 
 try:
     from urlparse import urlparse
+    from urlparse import urlunparse
 except ImportError:
     # noinspection PyCompatibility
     from urllib.parse import urlparse
+    # noinspection PyCompatibility
+    from urllib.parse import urlunparse
 
 DEFAULT_USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko)'
@@ -26,7 +36,9 @@ DEFAULT_USER_AGENTS = [
     ' Gecko/20100101 Firefox/41.0'
 ]
 
-DEFAULT_USER_AGENT = random.choice(DEFAULT_USER_AGENTS)
+
+class CloudflareError(RequestException):
+    pass
 
 
 class CloudflareScraper(Session):
@@ -35,17 +47,22 @@ class CloudflareScraper(Session):
 
         if 'requests' in self.headers['User-Agent']:
             # Set a random User-Agent if no custom User-Agent has been set
-            self.headers['User-Agent'] = DEFAULT_USER_AGENT
+            self.headers['User-Agent'] = random.choice(DEFAULT_USER_AGENTS)
+        self.cf_ua = self.headers['User-Agent']
 
-        self.delay = kwargs.pop('delay', 8)
+        self.default_delay = 8
+        self.delay = kwargs.pop('delay', self.default_delay)
         self.start_time = None
+
+        self.cipher_suite = self.load_cipher_suite()
+        self.mount('https://', CloudflareAdapter(self.cipher_suite))
 
     def request(self, method, url, *args, **kwargs):
         resp = super(CloudflareScraper, self).request(method, url, *args, **kwargs)
 
         # Check if anti-bot is on
         if (isinstance(resp, type(Response()))
-                and resp.status_code in (503, 403)):
+                and resp.status_code in (503, 429, 403)):
             self.start_time = time.time()
             if (re.search('(?i)cloudflare', resp.headers.get('Server', ''))
                     and 'jschl_vc' in resp.content
@@ -73,7 +90,7 @@ class CloudflareScraper(Session):
             ))
             self.wait()
             resp = self.request('POST', submit_url, **kwargs)
-        except(StandardError, BaseException):
+        except(Exception, BaseException):
             pass
         return resp
 
@@ -81,6 +98,12 @@ class CloudflareScraper(Session):
         body = resp.text
         parsed_url = urlparse(resp.url)
         domain = parsed_url.netloc
+
+        if '/cdn-cgi/l/chk_captcha' in body:
+            raise CloudflareError(
+                'Cloudflare captcha presented for %s, please notify SickGear for an update, ua: %s' %
+                (domain, self.cf_ua), response=resp)
+
         submit_url = '%s://%s/cdn-cgi/l/chk_jschl' % (parsed_url.scheme, domain)
 
         cloudflare_kwargs = {k: v for k, v in original_kwargs.items() if k not in ['hooks']}
@@ -88,61 +111,105 @@ class CloudflareScraper(Session):
         headers = cloudflare_kwargs.setdefault('headers', {})
         headers['Referer'] = resp.url
 
-        try:
-            params['jschl_vc'] = re.search(r'name="jschl_vc" value="(\w+)"', body).group(1)
-            params['pass'] = re.search(r'name="pass" value="(.+?)"', body).group(1)
-            params['s'] = re.search(r'name="s" value="(.+?)"', body).group(1)
-
-            # Extract the arithmetic operation
-            js = self.extract_js(body).replace('t.length', str(len(domain)))
-
-        except Exception:
-            # Something is wrong with the page.
-            # This may indicate Cloudflare has changed their anti-bot
-            # technique. If you see this and are running the latest version,
-            # please open a GitHub issue so I can update the code accordingly.
-            logging.error('[!] Unable to parse Cloudflare anti-bots page.')
-            raise
-
-        # Safely evaluate the Javascript expression
-        try:
-            params['jschl_answer'] = str(js2py.eval_js(js))
-        except (Exception, BaseException):
+        if self.delay == self.default_delay:
             try:
-                params['jschl_answer'] = str(js2py.eval_js(js))
-            except (Exception, BaseException):
-                return
+                # no instantiated delay, therefore check js for hard coded CF delay
+                self.delay = float(re.search(r'submit\(\);[^0-9]*?([0-9]+)', body).group(1)) / float(1000)
+            except(Exception, BaseException):
+                pass
+
+        for i in re.findall(r'(<input[^>]+?hidden[^>]+?>)', body):
+            value = re.findall(r'value="([^"\']+?)["\']', i)
+            name = re.findall(r'name="([^"\']+?)["\']', i)
+            if all([name, value]):
+                params[name[0]] = value[0]
+
+        js = self.extract_js(body, domain)
+        atob = (lambda s: b64decode('%s' % s).decode('utf-8'))
+        try:
+            # Eval the challenge algorithm
+            params['jschl_answer'] = str(js2py.EvalJs({'atob': atob}).eval(js))
+        except(Exception, BaseException):
+            try:
+                params['jschl_answer'] = str(js2py.EvalJs({'atob': atob}).eval(js))
+            except(Exception, BaseException) as e:
+                # Something is wrong with the page. This may indicate Cloudflare has changed their anti-bot technique.
+                raise ValueError('Unable to parse Cloudflare anti-bot IUAM page: %s' % e.message)
 
         # Requests transforms any request into a GET after a redirect,
         # so the redirect has to be handled manually here to allow for
         # performing other types of requests even as the first request.
         method = resp.request.method
         cloudflare_kwargs['allow_redirects'] = False
+
         self.wait()
         redirect = self.request(method, submit_url, **cloudflare_kwargs)
 
         location = redirect.headers.get('Location')
-        parsed_location = urlparse(location)
-        if not parsed_location.netloc:
-            location = '%s://%s%s' % (parsed_url.scheme, domain, parsed_location.path)
+        r = urlparse(location)
+        if not r.netloc:
+            location = urlunparse((parsed_url.scheme, domain, r.path, r.params, r.query, r.fragment))
         return self.request(method, location, **original_kwargs)
 
     @staticmethod
-    def extract_js(body):
-        js = re.search(r'setTimeout\(function\(\){\s+(var '
-                       r's,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n', body).group(1)
-        js = re.sub(r'a\.value\s=\s([+]?.+?\s?\+\s?[^.]+\.length[^;]+).+', r'\1', js)
-        js = ';'.join(filter(lambda ln: re.search(r'\(\+', ln), js.split(';')))
-        js = re.sub(r';\s+;', ';', js)
+    def extract_js(body, domain):
+        try:
+            js = re.search(
+                r'''(?x)
+                setTimeout\(function\(\){\s*?(var\s*?
+                (?:s,t,o,p,b,r,e,a,k,i,n,g|t,r,a),f.+?[\r\n\s\S]*?a\.value\s*=.+?)[\r\n]+
+                ''', body).group(1)
+        except(Exception, BaseException):
+            raise RuntimeError('Error #1 Cloudflare anti-bots changed, please notify SickGear for an update')
 
-        # Strip characters that could be used to exit the string context
-        # These characters are not currently used in Cloudflare's arithmetic snippet
-        js = re.sub(r'[\n\\"]', '', js)
+        if not re.search(r'(?i)(toFixed|t\.length)', js):
+            raise RuntimeError('Error #2 Cloudflare anti-bots changed, please notify SickGear for an update')
 
-        if 'toFixed' not in js:
-            raise ValueError('Error Cloudflare IUAM JavaScript changed, contact SickGear IRC')
+        js = re.sub(r'(;\s+);', r'\1', js)
+        js = re.sub(r'([)\]];)(\w)', r'\1\n\n\2', js)
+        js = re.sub(r'\s*\';\s*\d+\'\s*$', '', js)
 
-        return js
+        innerHTML = re.search(r'(?sim)<div(?: [^<>]*)? id="([^<>]*?)">([^<>]*?)</div>', body)
+        innerHTML = '' if not innerHTML else innerHTML.group(2).strip()
+
+        # Prefix the challenge with a fake document object.
+        # Interpolate the domain, div contents, and JS challenge.
+        # The `a.value` to be returned is tacked onto the end.
+        return r'''
+            var document = {
+                createElement: function () {
+                    return { firstChild: { href: 'https://%s/' } }
+                },
+                getElementById: function () {
+                    return { innerHTML: '%s'};
+                }
+            };
+            String.prototype.italics=function() {return '<i>' + this + '</i>';};
+            %s;a.value
+        ''' % (domain, innerHTML, js)
+
+    @staticmethod
+    def load_cipher_suite():
+
+        suite = []
+        if hasattr(ssl, 'PROTOCOL_TLS'):
+            ctx = ssl.SSLContext(getattr(ssl, 'PROTOCOL_TLSv1_3', ssl.PROTOCOL_TLSv1_2))
+
+            for cipher in (
+                    ([], ['GREASE_3A', 'GREASE_6A', 'AES128-GCM-SHA256', 'AES256-GCM-SHA256', 'AES256-GCM-SHA384',
+                          'CHACHA20-POLY1305-SHA256'])[hasattr(ssl, 'PROTOCOL_TLSv1_3')] +
+                    ['ECDHE-ECDSA-AES128-GCM-SHA256', 'ECDHE-RSA-AES128-GCM-SHA256',
+                     'ECDHE-ECDSA-AES256-GCM-SHA384', 'ECDHE-RSA-AES256-GCM-SHA384',
+                     'ECDHE-ECDSA-CHACHA20-POLY1305-SHA256', 'ECDHE-RSA-CHACHA20-POLY1305-SHA256',
+                     'ECDHE-RSA-AES128-CBC-SHA', 'ECDHE-RSA-AES256-CBC-SHA', 'RSA-AES128-GCM-SHA256',
+                     'RSA-AES256-GCM-SHA384', 'ECDHE-RSA-AES128-GCM-SHA256', 'RSA-AES256-SHA', '3DES-EDE-CBC']):
+                try:
+                    ctx.set_ciphers(cipher)
+                    suite += [cipher]
+                except ssl.SSLError:
+                    pass
+
+        return ':'.join(suite)
 
     @classmethod
     def create_scraper(cls, sess=None, **kwargs):
@@ -168,16 +235,14 @@ class CloudflareScraper(Session):
         if user_agent:
             scraper.headers['User-Agent'] = user_agent
 
-        # noinspection PyUnusedLocal
         try:
             resp = scraper.get(url, **kwargs)
             resp.raise_for_status()
-        except Exception as e:
+        except(Exception, BaseException):
             logging.error('[%s] returned an error. Could not collect tokens.' % url)
             raise
 
         domain = urlparse(resp.url).netloc
-        # cookie_domain = None
 
         for d in scraper.cookies.list_domains():
             if d.startswith('.') and d in ('.' + domain):
@@ -187,10 +252,10 @@ class CloudflareScraper(Session):
             raise ValueError('Unable to find Cloudflare cookies.'
                              ' Does the site actually have Cloudflare IUAM (\'I\'m Under Attack Mode\') enabled?')
 
-        return ({'__cfduid': scraper.cookies.get('__cfduid', '', domain=cookie_domain),
-                 'cf_clearance': scraper.cookies.get('cf_clearance', '', domain=cookie_domain)
-                 },
-                scraper.headers['User-Agent'])
+        return (
+            {'__cfduid': scraper.cookies.get('__cfduid', '', domain=cookie_domain),
+             'cf_clearance': scraper.cookies.get('cf_clearance', '', domain=cookie_domain)},
+            scraper.headers['User-Agent'])
 
     @classmethod
     def get_cookie_string(cls, url, user_agent=None):
@@ -199,6 +264,29 @@ class CloudflareScraper(Session):
         """
         tokens, user_agent = cls.get_tokens(url, user_agent=user_agent, **kwargs)
         return '; '.join('='.join(pair) for pair in tokens.items()), user_agent
+
+
+class CloudflareAdapter(HTTPAdapter):
+    """
+    HTTPS adapter that creates a SSL context with custom ciphers
+    """
+    def __init__(self, cipher_suite=None, **kwargs):
+        self.cipher_suite = cipher_suite
+
+        params = dict(ssl_version=ssl.PROTOCOL_TLSv1)
+        if hasattr(ssl, 'PROTOCOL_TLS'):
+            params = dict(ssl_version=getattr(ssl, 'PROTOCOL_TLSv1_3', ssl.PROTOCOL_TLSv1_2), ciphers=cipher_suite)
+        self.ssl_context = create_urllib3_context(**params)
+
+        super(CloudflareAdapter, self).__init__(**kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs['ssl_context'] = self.ssl_context
+        return super(CloudflareAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs['ssl_context'] = self.ssl_context
+        return super(CloudflareAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
 create_scraper = CloudflareScraper.create_scraper
