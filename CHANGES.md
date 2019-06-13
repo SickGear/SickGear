@@ -1,7 +1,8 @@
-﻿### 0.19.5 (2019-06-12 23:00:00 UTC)
+﻿### 0.19.5 (2019-06-13 18:25:00 UTC)
 
 * Update Js2Py 0.43 (da310bb) to 0.64 (efbfcca)
 * Change update Cloudflare anti-bot handler
+* Fix force reload all images and don't force reload all images for ended shows during show update
 
 
 ### 0.19.4 (2019-06-09 02:30:00 UTC)

@@ -707,7 +707,7 @@ class GenericMetadata():
 
         return self._write_image(banner_data, banner_path)
 
-    def _write_image(self, image_data, image_path):
+    def _write_image(self, image_data, image_path, force=False):
         """
         Saves the data in image_data to the location image_path. Returns True/False
         to represent success or failure.
@@ -717,7 +717,7 @@ class GenericMetadata():
         """
 
         # don't bother overwriting it
-        if ek.ek(os.path.isfile, image_path):
+        if not force and ek.ek(os.path.isfile, image_path):
             logger.log(u"Image already exists, not downloading", logger.DEBUG)
             return False
 
@@ -1047,5 +1047,5 @@ class GenericMetadata():
     def retrieve_show_image(self, image_type, show_obj, which=None):
         return self._retrieve_show_image(image_type=image_type, show_obj=show_obj, which=which)
 
-    def write_image(self, image_data, image_path):
-        return self._write_image(image_data=image_data, image_path=image_path)
+    def write_image(self, image_data, image_path, force=False):
+        return self._write_image(image_data=image_data, image_path=image_path, force=force)

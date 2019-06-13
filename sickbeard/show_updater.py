@@ -143,7 +143,7 @@ class ShowUpdater:
                         logger.log(
                             u'Not updating episodes for show ' + curShow.name + ' because it\'s marked as ended and ' +
                             'last/next episode is not within the grace period.', logger.DEBUG)
-                        cur_queue_item = sickbeard.showQueueScheduler.action.refreshShow(curShow, True, True, force_image_cache=True)
+                        cur_queue_item = sickbeard.showQueueScheduler.action.refreshShow(curShow, True, True)
 
                     pi_list.append(cur_queue_item)
 
