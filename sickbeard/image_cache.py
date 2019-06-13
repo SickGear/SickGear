@@ -275,7 +275,7 @@ class ImageCache:
 
         return ek.ek(os.path.isfile, dest_path) and dest_path or None
 
-    def _cache_image_from_indexer(self, show_obj, img_type, num_files=0, max_files=500):
+    def _cache_image_from_indexer(self, show_obj, img_type, num_files=0, max_files=500, force=False):
         """
         Retrieves an image of the type specified from indexer and saves it to the cache folder
 
@@ -367,7 +367,7 @@ class ImageCache:
         img_data = metadata_generator.retrieve_show_image(img_type_name, show_obj)
         if None is img_data:
             return False
-        result = metadata_generator.write_image(img_data, dest_path)
+        result = metadata_generator.write_image(img_data, dest_path, force=force)
         if result:
             logger.log(u'Saved image type %s' % img_type_name)
         return result
@@ -402,13 +402,13 @@ class ImageCache:
         show_id = '%s' % show_obj.indexerid
 
         # check if any images are cached
-        need_images = {self.POSTER: not self.has_poster(show_id),
-                       self.BANNER: not self.has_banner(show_id),
+        need_images = {self.POSTER: not self.has_poster(show_id) or force,
+                       self.BANNER: not self.has_banner(show_id) or force,
                        self.FANART: 0 < sickbeard.FANART_LIMIT and (force or not self.has_fanart(show_id + '.001.*')),
                        # use limit? shows less than a limit of say 50 would fail to fulfill images every day
                        # '.%03d.*' % sickbeard.FANART_LIMIT
-                       self.POSTER_THUMB: not self.has_poster_thumbnail(show_id),
-                       self.BANNER_THUMB: not self.has_banner_thumbnail(show_id)}
+                       self.POSTER_THUMB: not self.has_poster_thumbnail(show_id) or force,
+                       self.BANNER_THUMB: not self.has_banner_thumbnail(show_id) or force}
 
         if not any(need_images.values()):
             logger.log(u'%s: No new cache images needed. Done.' % show_id)
@@ -493,6 +493,6 @@ class ImageCache:
             if need_images[image_type]:
                 file_num = (need_images[image_type] + 1, 1)[isinstance(need_images[image_type], bool)]
                 if file_num <= max_files:
-                    self._cache_image_from_indexer(show_obj, image_type, file_num, max_files)
+                    self._cache_image_from_indexer(show_obj, image_type, file_num, max_files, force=force)
 
         logger.log(u'Done cache check')

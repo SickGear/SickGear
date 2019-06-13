@@ -2,11 +2,12 @@ dist: xenial
 
 language: python
 python:
-  - 2.7
+  - "2.7"
 
 before_install:
   - export BOTO_CONFIG=/dev/null # Workaround for https://github.com/travis-ci/travis-ci/issues/7940
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
+  - pip install responses # Used only in tests with dep pkg_resources
 
 install:
   - pip install -r requirements.txt
