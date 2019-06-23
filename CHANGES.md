@@ -33,6 +33,12 @@
 
 
 
+### 0.19.6 (2019-06-24 00:15:00 UTC)
+
+* Change add rTorrent 0.9.7 compatibility
+* Change improve Cloudflare connectivity
+
+
 ### 0.19.5 (2019-06-13 18:25:00 UTC)
 
 * Update Js2Py 0.43 (da310bb) to 0.64 (efbfcca)

@@ -1,7 +1,13 @@
+/** @namespace $.SickGear.Root */
 /** @namespace config.defaultHost */
 $(document).ready(function(){
 
-	var loading = '<img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />';
+	var loading = '<img src="' + $.SickGear.Root + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />',
+		handleSCGI = function() {
+			var opts$ = $('#torrent-username-option,#torrent-password-option');
+			$('#torrent_username,#torrent_password').each(function() {$(this).val(
+				/^\s*scgi:\/\//.test($('#torrent_host').val()) ? opts$.hide() && $('#torrent_label').select() && ''
+					: opts$.show() && $('#torrent_username').select() && $(this).prop('defaultValue'));});};
 
 	function toggleTorrentTitle() {
 		var noTorrent$ = $('#no_torrents');
@@ -65,13 +71,16 @@ $(document).ready(function(){
 				pathBlank = '#path-blank',
 				seedTimeOption = '#torrent-seed-time-option',
 				pausedOption = '#torrent-paused-option',
-				highBandwidthOption = '#torrent-high-bandwidth-option';
+				highBandwidthOption = '#torrent-high-bandwidth-option',
+				torrentHost$ = $('#torrent_host');
 
 			$([labelWarningDeluge, hostDescDeluge, hostDescRtorrent, verifyCertOption, seedTimeOption,
 				highBandwidthOption, qBitTorrent, synology, transmission].join(',')).hide();
 
 			$([hostDesc, usernameOption, pathOption, labelOption, pathBlank, pausedOption].join(',')).show();
 			$(pathOption).find('.fileBrowser').show();
+
+			torrentHost$.off('blur');
 
 			switch (selectedProvider) {
 				case 'utorrent':
@@ -99,8 +108,9 @@ $(document).ready(function(){
 					$(synology).show();
 					break;
 				case 'rtorrent':
-					client = 'rTorrent'; hideHostDesc = !0; hidePausedOption = !0;
+					client = 'rTorrent'; hideHostDesc = !0;
 					$(hostDescRtorrent).show();
+					torrentHost$.on('blur', handleSCGI);
 					break;
 			}
 			hideHostDesc && $(hostDesc).hide();
@@ -129,8 +139,10 @@ $(document).ready(function(){
 
 	$('#test_torrent').click(function() {
 		$('#test-torrent-result').html(loading);
+		var method = $('#torrent_method').find(':selected').val();
+		(('rtorrent' === method) && handleSCGI());
 		$.get(sbRoot + '/home/test_torrent',
-			{'torrent_method': $('#torrent_method').find(':selected').val(), 'host': $('#torrent_host').val(),
+			{'torrent_method': method, 'host': $('#torrent_host').val(),
 				'username': $('#torrent_username').val(), 'password': $('#torrent_password').val()},
 				function(data) { $(this).testResult(data, '#test-torrent-result'); });
 	});

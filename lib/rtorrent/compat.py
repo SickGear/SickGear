@@ -24,7 +24,17 @@ import sys
 def is_py3():
     return sys.version_info[0] == 3
 
+
 if is_py3():
+    # noinspection PyCompatibility
+    from urllib.parse import parse_qs, ParseResult, urlparse, urlunparse
+    # noinspection PyCompatibility
+    from urllib.request import urlopen
+
     import xmlrpc.client as xmlrpclib
 else:
+    from urllib2 import urlopen
+    # noinspection PyProtectedMember
+    from urlparse import parse_qs, ParseResult, urlparse, urlunparse
+
     import xmlrpclib
