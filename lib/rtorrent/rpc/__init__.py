@@ -10,7 +10,7 @@
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# THE SOFTWARE IS PROVIDED "AS IS",  WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
 # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
@@ -18,13 +18,14 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+from ..common import bool_to_int, convert_version_tuple_to_str, safe_repr
+from ..compat import xmlrpclib
+from ..err import MethodError
+
 import inspect
-import rtorrent
 import re
-from rtorrent.common import bool_to_int, convert_version_tuple_to_str,\
-    safe_repr
-from rtorrent.err import MethodError
-from rtorrent.compat import xmlrpclib
+
+import rtorrent
 
 
 def get_varname(rpc_call):
@@ -36,91 +37,78 @@ def get_varname(rpc_call):
     """
     # extract variable name from xmlrpc func name
     r = re.search(
-        "([ptdf]\.|system\.|get\_|is\_|set\_)+([^=]*)", rpc_call, re.I)
+        r'(^([dtfp]|system)\.|(is|[sg]et)_)+([^=]*?)(?:=|.[sg]et)?$', rpc_call, re.I)
     if r:
-        return(r.groups()[-1])
-    else:
-        return(None)
+        return r.groups()[-1]
 
 
 def _handle_unavailable_rpc_method(method, rt_obj):
-    msg = "Method isn't available."
-    if rt_obj._get_client_version_tuple() < method.min_version:
-        msg = "This method is only available in " \
-            "RTorrent version v{0} or later".format(
-            convert_version_tuple_to_str(method.min_version))
+    msg = 'Method isn\'t available.'
+    if rt_obj.get_client_version_tuple() < method.min_version:
+        msg = 'This method is only available in ' \
+              'RTorrent version v{0} or later'.format(convert_version_tuple_to_str(method.min_version))
 
     raise MethodError(msg)
 
 
-class DummyClass:
+class DummyClass(object):
     def __init__(self):
         pass
 
 
-class Method:
+class Method(object):
     """Represents an individual RPC method"""
 
-    def __init__(self, _class, method_name,
-                 rpc_call, docstring=None, varname=None, **kwargs):
+    def __init__(self, _class, method_name, rpc_call, docstring=None, **kwargs):
         self._class = _class  # : Class this method is associated with
         self.class_name = _class.__name__
         self.method_name = method_name  # : name of public-facing method
         self.rpc_call = rpc_call  # : name of rpc method
         self.docstring = docstring  # : docstring for rpc method (optional)
-        self.varname = varname  # : variable for the result of the method call, usually set to self.varname
-        self.min_version = kwargs.get("min_version", (
-            0, 0, 0))  # : Minimum version of rTorrent required
-        self.boolean = kwargs.get("boolean", False)  # : returns boolean value?
-        self.post_process_func = kwargs.get(
-            "post_process_func", None)  # : custom post process function
-        self.aliases = kwargs.get(
-            "aliases", [])  # : aliases for method (optional)
-        self.required_args = []
-            #: Arguments required when calling the method (not utilized)
-
+        self.min_version = kwargs.get('min_version', (0, 0, 0))  # : Minimum version of rTorrent required
+        self.boolean = kwargs.get('boolean', False)  # : returns boolean value?
+        self.post_process_func = kwargs.get('post_process_func', None)  # : custom post process function
+        self.aliases = kwargs.get('aliases', [])  # : aliases for method (optional)
+        self.required_args = []  # : Arguments required when calling the method (not utilized)
         self.method_type = self._get_method_type()
-
-        if self.varname is None:
-            self.varname = get_varname(self.rpc_call)
-        assert self.varname is not None, "Couldn't get variable name."
+        self.varname = None  # : variable for the result of the method call, usually set to self.varname
 
     def __repr__(self):
-        return safe_repr("Method(method_name='{0}', rpc_call='{1}')",
-                        self.method_name, self.rpc_call)
+        return safe_repr('Method(method_name="{0}", rpc_call="{1}")', self.method_name, self.rpc_call)
 
     def _get_method_type(self):
         """Determine whether method is a modifier or a retriever"""
-        if self.method_name[:4] == "set_": return('m')  # modifier
-        else:
-            return('r')  # retriever
+        if 'set_' == self.method_name[:4]:
+            return 'm'  # modifier
+        return 'r'  # retriever
 
     def is_modifier(self):
-        if self.method_type == 'm':
-            return(True)
-        else:
-            return(False)
+        return 'm' == self.method_type
 
     def is_retriever(self):
-        if self.method_type == 'r':
-            return(True)
-        else:
-            return(False)
+        return 'r' == self.method_type
 
     def is_available(self, rt_obj):
-        if rt_obj._get_client_version_tuple() < self.min_version or \
-                self.rpc_call not in rt_obj._get_rpc_methods():
-            return(False)
-        else:
-            return(True)
+
+        if rt_obj.get_client_version_tuple() >= self.min_version:
+            try:
+                self.varname = get_varname(filter(lambda f: rt_obj.method_exists(f),
+                                                  (self.rpc_call,) + tuple(getattr(self, 'aliases', '')))[0])
+                return True
+            except IndexError:
+                pass
+
+        return False
 
 
-class Multicall:
+class Multicall(object):
+    # noinspection PyUnusedLocal
     def __init__(self, class_obj, **kwargs):
         self.class_obj = class_obj
-        if class_obj.__class__.__name__ == "RTorrent":
+        if 'RTorrent' == class_obj.__class__.__name__:
             self.rt_obj = class_obj
         else:
+            # noinspection PyProtectedMember
             self.rt_obj = class_obj._rt_obj
         self.calls = []
 
@@ -138,7 +126,8 @@ class Multicall:
         if isinstance(method, str):
             result = find_method(method)
             # if result not found
-            if result == -1:
+            if -1 == result:
+                # noinspection PyTypeChecker
                 method = Method(DummyClass, method, method)
             else:
                 method = result
@@ -159,17 +148,25 @@ class Multicall:
         @return: the results (post-processed), in the order they were added
         @rtype: tuple
         """
-        m = xmlrpclib.MultiCall(self.rt_obj._get_conn())
+        xmc = xmlrpclib.MultiCall(self.rt_obj.get_connection())
         for call in self.calls:
             method, args = call
-            rpc_call = getattr(method, "rpc_call")
-            getattr(m, rpc_call)(*args)
+            rpc_call = method.rpc_call
+            if not self.rt_obj.method_exists(rpc_call):
+                for alias in getattr(method, 'aliases', None) or []:
+                    if self.rt_obj.method_exists(alias):
+                        rpc_call = alias
+                        break
+            getattr(xmc, rpc_call)(*args)
 
-        results = m()
-        results = tuple(results)
+        try:
+            results = tuple(filter(lambda x: isinstance(x, list), xmc().results)[0])
+        except IndexError:
+            return [[]]
+
         results_processed = []
 
-        for r, c in zip(results, self.calls):
+        for r, c in list(zip(results, self.calls)):
             method = c[0]  # Method instance
             result = process_result(method, r)
             results_processed.append(result)
@@ -178,7 +175,7 @@ class Multicall:
             if not exists or not inspect.ismethod(getattr(self.class_obj, method.varname)):
                 setattr(self.class_obj, method.varname, result)
 
-        return(tuple(results_processed))
+        return tuple(results_processed)
 
 
 def call_method(class_obj, method, *args):
@@ -193,51 +190,35 @@ def call_method(class_obj, method, *args):
     if method.is_retriever():
         args = args[:-1]
     else:
-        assert args[-1] is not None, "No argument given."
+        assert args[-1] is not None, 'No argument given.'
 
-    if class_obj.__class__.__name__ == "RTorrent":
+    if 'RTorrent' == class_obj.__class__.__name__:
         rt_obj = class_obj
     else:
+        # noinspection PyProtectedMember
         rt_obj = class_obj._rt_obj
 
     # check if rpc method is even available
     if not method.is_available(rt_obj):
         _handle_unavailable_rpc_method(method, rt_obj)
 
-    m = Multicall(class_obj)
-    m.add(method, *args)
+    mc = Multicall(class_obj)
+    mc.add(method, *args)
     # only added one method, only getting one result back
-    ret_value = m.call()[0]
+    ret_value = mc.call()[0]
 
-    ####### OBSOLETE ##########################################################
-    # if method.is_retriever():
-    #    #value = process_result(method, ret_value)
-    #    value = ret_value #MultiCall already processed the result
-    # else:
-    #    # we're setting the user's input to method.varname
-    #    # but we'll return the value that xmlrpc gives us
-    #    value = process_result(method, args[-1])
-    ##########################################################################
-
-    return(ret_value)
+    return ret_value
 
 
 def find_method(rpc_call):
     """Return L{Method} instance associated with given RPC call"""
-    method_lists = [
-        rtorrent.methods,
-        rtorrent.file.methods,
-        rtorrent.tracker.methods,
-        rtorrent.peer.methods,
-        rtorrent.torrent.methods,
-    ]
-
-    for l in method_lists:
-        for m in l:
-            if m.rpc_call.lower() == rpc_call.lower():
-                return(m)
-
-    return(-1)
+    try:
+        rpc_call = rpc_call.lower()
+        return filter(lambda m: rpc_call in map(lambda n: n.lower(), [m.rpc_call] + list(getattr(m, 'aliases', []))),
+                      rtorrent.methods + rtorrent.torrent.methods +
+                      rtorrent.file.methods + rtorrent.tracker.methods + rtorrent.peer.methods)[0]
+    except IndexError:
+        return -1
 
 
 def process_result(method, result):
@@ -249,7 +230,7 @@ def process_result(method, result):
     @param result: result to be processed (the result of given L{Method} instance)
 
     @note: Supported Processing:
-        - boolean - convert ones and zeros returned by rTorrent and
+        - bololean - convert ones and zeros returned by rTorrent and
         convert to python boolean values
     """
     # handle custom post processing function
@@ -263,7 +244,7 @@ def process_result(method, result):
         elif result in [0, '0']:
             result = False
 
-    return(result)
+    return result
 
 
 def _build_rpc_methods(class_, method_list):
@@ -273,47 +254,26 @@ def _build_rpc_methods(class_, method_list):
         instance = class_
         class_ = instance.__class__
 
+    method_store = (instance, class_)[None is instance]
     for m in method_list:
         class_name = m.class_name
         if class_name != class_.__name__:
             continue
 
-        if class_name == "RTorrent":
-            caller = lambda self, arg = None, method = m:\
-                call_method(self, method, bool_to_int(arg))
-        elif class_name == "Torrent":
-            caller = lambda self, arg = None, method = m:\
-                call_method(self, method, self.rpc_id,
-                            bool_to_int(arg))
-        elif class_name in ["Tracker", "File"]:
-            caller = lambda self, arg = None, method = m:\
-                call_method(self, method, self.rpc_id,
-                            bool_to_int(arg))
+        caller = None
+        if 'RTorrent' == class_name:
+            caller = (lambda self, arg=None, method=m: call_method(self, method, bool_to_int(arg)))
+        elif class_name in ['Torrent', 'Tracker', 'File', 'Peer']:
+            caller = (lambda self, arg=None, method=m: call_method(self, method, self.rpc_id, bool_to_int(arg)))
+        elif 'Group' == class_name:
+            caller = (lambda arg=None, method=m: call_method(instance, method, bool_to_int(arg)))
 
-        elif class_name == "Peer":
-            caller = lambda self, arg = None, method = m:\
-                call_method(self, method, self.rpc_id,
-                            bool_to_int(arg))
+        if None is not caller:
+            for method_name in [m.method_name] + list(getattr(m, 'aliases', [])):
+                setattr(method_store, method_name, caller)
 
-        elif class_name == "Group":
-            caller = lambda arg = None, method = m: \
-                call_method(instance, method, bool_to_int(arg))
-
-        if m.docstring is None:
-            m.docstring = ""
-
-        # print(m)
-        docstring = """{0}
-
-        @note: Variable where the result for this method is stored: {1}.{2}""".format(
-            m.docstring,
-            class_name,
-            m.varname)
-
-        caller.__doc__ = docstring
-
-        for method_name in [m.method_name] + list(m.aliases):
-            if instance is None:
-                setattr(class_, method_name, caller)
-            else:
-                setattr(instance, method_name, caller)
+            m.docstring = m.docstring or ''
+            caller.__doc__ = """{0}
+    
+            @note: Variable where the result for this method is stored: {1}.{2}""".format(
+                m.docstring, class_name, m.varname)  # print(m)
