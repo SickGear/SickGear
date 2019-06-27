@@ -208,6 +208,7 @@ $(document).ready(function () {
 			$.tablesorter.filter.bindSearch($(obj), $('.search'));
 		});
 	}
+	llUpdate();
 	$('.resetshows').click(function() {
 		var input = $('#search_show_name');
 		if ('' !== input.val()){
