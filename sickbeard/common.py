@@ -246,7 +246,7 @@ class Quality:
             if name_has(['(dvd.?rip|%s)(.ws)?(.(xvid|divx|%s))?' % (rips, fmt)]):
                 return Quality.SDDVD
             if (not name_has(['hr.ws.pdtv.(h.?|x)264'])
-                and (name_has(['(hdtv|pdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|%s))' % fmt])
+                and (name_has([r'(hdtv|pdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|%s))' % fmt])
                      or name_has(['(xvid|divx|480p|hevc|x265)']))) \
                     or name_has([webfmt, 'xvid|%s' % fmt]):
                 return Quality.SDTV
