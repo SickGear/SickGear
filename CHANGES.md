@@ -33,6 +33,11 @@
 
 
 
+### 0.19.8 (2019-07-01 12:00:00 UTC)
+
+* Fix the develop branch Travis build badge on GitHub homepage
+
+
 ### 0.19.7 (2019-06-27 12:05:00 UTC)
 
 * Fix FF/WF display images on viewing show list
