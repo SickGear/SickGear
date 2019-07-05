@@ -467,7 +467,8 @@ class ConfigMigrator:
                                 15: 'Transmithe.net rebranded Nebulance',
                                 16: 'Purge old cache image folders',
                                 17: 'Add "vp9", "av1" to ignore words if not found',
-                                18: 'Update "Spanish" ignore word'
+                                18: 'Update "Spanish" ignore word',
+                                19: 'Change (mis)use of Anonymous redirect dereferer.org service to nullrefer.com',
                                 }
 
     def migrate_config(self):
@@ -882,3 +883,9 @@ class ConfigMigrator:
     def _migrate_v18(self):
 
         self.add_ignore_words([r'regex:^(?=.*?\bspanish\b)((?!spanish.?princess).)*$'], ['spanish'])
+
+    @staticmethod
+    def _migrate_v19():
+        # change misuse of dereferrer.org to the nullrefer.com service, but leave any other url untouched
+        if re.search(r'https?://dereferer.org', sickbeard.ANON_REDIRECT):
+            sickbeard.ANON_REDIRECT = 'https://nullrefer.com/?'
