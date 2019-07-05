@@ -1,4 +1,9 @@
-﻿### 0.19.8 (2019-07-01 12:00:00 UTC)
+﻿### 0.19.9 (2019-07-05 23:30:00 UTC)
+
+* Change Anonymous redirect misuse of dereferer.org (was removed from SG in 2015) to nullrefer.com service
+
+
+### 0.19.8 (2019-07-01 12:00:00 UTC)
 
 * Fix the develop branch Travis build badge on GitHub homepage
 
