@@ -1,4 +1,9 @@
-﻿### 0.19.9 (2019-07-05 23:30:00 UTC)
+﻿### 0.19.10 (2019-07-10 17:42:00 UTC)
+
+* Fix catch error on systems with no local timezone
+
+
+### 0.19.9 (2019-07-05 23:30:00 UTC)
 
 * Change Anonymous redirect misuse of dereferer.org (was removed from SG in 2015) to nullrefer.com service
 
