@@ -7,8 +7,21 @@ import webapi
 
 from sickbeard import logger
 from sickbeard.helpers import create_https_certificates, re_valid_hostname
-from tornado.web import Application
+from tornado.web import Application, _ApplicationRouter
 from tornado.ioloop import IOLoop
+from tornado.routing import AnyMatches, Rule
+
+
+class MyApplication(Application):
+
+    def __init__(self, *args, **kwargs):
+        super(MyApplication, self).__init__(*args, **kwargs)
+
+    def reset_handlers(self):
+        self.wildcard_router = _ApplicationRouter(self, [])
+        self.default_router = _ApplicationRouter(self, [
+            Rule(AnyMatches(), self.wildcard_router)
+        ])
 
 
 class WebServer(threading.Thread):
@@ -69,30 +82,65 @@ class WebServer(threading.Thread):
                 sickbeard.save_config()
 
         # Load the app
-        self.app = Application([],
-                               debug=True,
-                               serve_traceback=True,
-                               autoreload=False,
-                               compress_response=True,
-                               cookie_secret=sickbeard.COOKIE_SECRET,
-                               xsrf_cookies=True,
-                               login_url='%s/login/' % self.options['web_root'])
+        self.app = MyApplication([],
+                                 debug=True,
+                                 serve_traceback=True,
+                                 autoreload=False,
+                                 compress_response=True,
+                                 cookie_secret=sickbeard.COOKIE_SECRET,
+                                 xsrf_cookies=True,
+                                 login_url='%s/login/' % self.options['web_root'])
 
-        re_host_pattern = re_valid_hostname()
+        self.re_host_pattern = re_valid_hostname()
+        self._add_loading_rules()
 
+    def _add_loading_rules(self):
         # webui login/logout handlers
-        self.app.add_handlers(re_host_pattern, [
+        self.app.add_handlers(self.re_host_pattern, [
+            (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),
+            (r'%s/logout(/?)' % self.options['web_root'], webserve.LogoutHandler),
+        ])
+
+        # Static File Handlers
+        self.app.add_handlers(self.re_host_pattern, [
+            # favicon
+            (r'%s/(favicon\.ico)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+             {'path': os.path.join(self.options['data_root'], 'images/ico/favicon.ico')}),
+
+            # images
+            (r'%s/images/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+             {'path': os.path.join(self.options['data_root'], 'images')}),
+
+            # css
+            (r'%s/css/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+             {'path': os.path.join(self.options['data_root'], 'css')}),
+
+            # javascript
+            (r'%s/js/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+             {'path': os.path.join(self.options['data_root'], 'js')}),
+        ])
+
+        # Main Handler
+        self.app.add_handlers(self.re_host_pattern, [
+            (r'%s/api(/?.*)' % self.options['web_root'], webapi.ApiServerLoading),
+            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
+            (r'%s(/?.*)' % self.options['web_root'], webserve.LoadingWebHandler),
+        ])
+
+    def _add_default_rules(self):
+        # webui login/logout handlers
+        self.app.add_handlers(self.re_host_pattern, [
             (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),
             (r'%s/logout(/?)' % self.options['web_root'], webserve.LogoutHandler),
         ])
 
         # Web calendar handler (Needed because option Unprotected calendar)
-        self.app.add_handlers(re_host_pattern, [
+        self.app.add_handlers(self.re_host_pattern, [
             (r'%s/calendar' % self.options['web_root'], webserve.CalendarHandler),
         ])
 
         # Static File Handlers
-        self.app.add_handlers(re_host_pattern, [
+        self.app.add_handlers(self.re_host_pattern, [
             # favicon
             (r'%s/(favicon\.ico)' % self.options['web_root'], webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'images/ico/favicon.ico')}),
@@ -119,7 +167,7 @@ class WebServer(threading.Thread):
         ])
 
         # Main Handler
-        self.app.add_handlers(re_host_pattern, [
+        self.app.add_handlers(self.re_host_pattern, [
             (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
             (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
             (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
@@ -172,6 +220,15 @@ class WebServer(threading.Thread):
         except (IOError, ValueError):
             # Ignore errors like 'ValueError: I/O operation on closed kqueue fd'. These might be thrown during a reload.
             pass
+
+    def switch_handlers(self, new_handler='_add_default_rules'):
+        if hasattr(self, new_handler):
+            def d_f(s, nh):
+                s.app.reset_handlers()
+                getattr(s, nh)()
+                sickbeard.classes.loading_msg.reset()
+            self.io_loop.add_callback(d_f, self, new_handler)
+            logger.log('Switching HTTP Server handlers to %s' % new_handler, logger.DEBUG)
 
     def shut_down(self):
         self.alive = False

@@ -92,6 +92,14 @@ quality_map = {'sdtv': Quality.SDTV,
 quality_map_inversed = {v: k for k, v in quality_map.iteritems()}
 
 
+class ApiServerLoading(webserve.BaseHandler):
+    @gen.coroutine
+    def get(self, route, *args, **kwargs):
+        self.finish(json.dumps({'error_msg': 'Server is loading'}))
+
+    post = get
+
+
 class PythonObjectEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, set):

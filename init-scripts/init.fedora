@@ -47,7 +47,7 @@ fi
 start() {
         # Start daemon.
         echo -n $"Starting $prog: "
-        daemon --user=${username} --pidfile=${pidfile} ${nice} python ${homedir}/SickBeard.py ${options}
+        daemon --user=${username} --pidfile=${pidfile} ${nice} python ${homedir}/sickgear.py ${options}
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && touch $lockfile

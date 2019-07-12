@@ -27,6 +27,11 @@
 * Update urllib3 release 1.24.3 (324e47a) to 1.25.2 (49eea80)
 * Update win_inet_pton 1.0.1 (934a852) to 1.1.0 (57e3558)
 * Update xmltodict library 0.11.0 (79ac9a4) to 0.12.0 (f3ab7e1)
+* Change sickgear.py can now be run as start up instead of SickBeard.py
+* Change refactor startup functions to prevent possible latency issues with systemd
+* Add startup loading page
+* Change restart to use loading page
+* Add upgrade messages for sickbeard, cache, and failed db upgrade processes to loading page
 
 
 [develop changelog]

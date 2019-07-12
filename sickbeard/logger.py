@@ -325,6 +325,18 @@ def log_error_and_exit(error_msg):
     sb_log_instance.log_error_and_exit(error_msg)
 
 
+def load_log(load_msg, to_log, log_level=MESSAGE):
+    """
+    logs messages and adds log_level = MESSAGE messages as progress to loading page
+    :param load_msg: base loading page message
+    :param to_log: message to log to file and as progress for loading page
+    :param log_level: log level (only level MESSAGE is also output as loading page progress)
+    """
+    if MESSAGE == log_level:
+        sickbeard.classes.loading_msg.set_msg_progress(load_msg, to_log)
+    log(to_log, log_level)
+
+
 def close():
     sb_log_instance.close_log()
 

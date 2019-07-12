@@ -325,9 +325,16 @@ class DBSanityCheck(object):
         pass
 
 
+def load_msg(db_name, progess_msg):
+    logger.load_log('Upgrading %s' % db_name, progess_msg)
+
+
 def upgradeDatabase(connection, schema):
     logger.log(u'Checking database structure...', logger.MESSAGE)
+    connection.is_upgrading = False
     _processUpgrade(connection, schema)
+    if connection.is_upgrading:
+        load_msg(connection.filename, 'Finished')
 
 
 def prettyName(class_name):
@@ -347,11 +354,13 @@ def _processUpgrade(connection, upgradeClass):
     instance = upgradeClass(connection)
     logger.log(u'Checking %s database upgrade' % prettyName(upgradeClass.__name__), logger.DEBUG)
     if not instance.test():
+        connection.is_upgrading = True
+        load_msg(connection.filename, getattr(upgradeClass, 'pretty_name', None) or prettyName(upgradeClass.__name__))
         logger.log(u'Database upgrade required: %s' % prettyName(upgradeClass.__name__), logger.MESSAGE)
         try:
             instance.execute()
         except sqlite3.DatabaseError as e:
-            # attemping to restore previous DB backup and perform upgrade
+            # attempting to restore previous DB backup and perform upgrade
             try:
                 instance.execute()
             except:
@@ -377,7 +386,7 @@ def _processUpgrade(connection, upgradeClass):
 
 # Base migration class. All future DB changes should be subclassed from this class
 class SchemaUpgrade(object):
-    def __init__(self, connection):
+    def __init__(self, connection, **kwargs):
         self.connection = connection
 
     def hasTable(self, tableName):
@@ -571,6 +580,7 @@ def MigrationCode(myDB):
 
     else:
 
+        load_msg('main db', 'Upgrading')
         while db_version < sickbeard.mainDB.MAX_DB_VERSION:
             if None is schema[db_version]:  # skip placeholders used when multi PRs are updating DB
                 db_version += 1
@@ -587,6 +597,7 @@ def MigrationCode(myDB):
                     logger.log_error_and_exit(u'Successfully restored database version: %s' % db_version)
                 else:
                     logger.log_error_and_exit(u'Failed to restore database version: %s' % db_version)
+        load_msg('main db', 'Finished')
 
 
 def backup_database(filename, version):
