@@ -23,6 +23,8 @@ from unidecode import unidecode
 import datetime
 import os
 import re
+import threading
+import copy
 
 import sickbeard
 
@@ -466,3 +468,36 @@ class SimpleNamespace:
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
+
+
+class LoadingMessage(object):
+    def __init__(self):
+        self.lock = threading.Lock()
+        self._message = [{'msg': 'Loading', 'progress': -1}]
+
+    @property
+    def message(self):
+        with self.lock:
+            return copy.deepcopy(self._message)
+
+    @message.setter
+    def message(self, msg):
+        with self.lock:
+            if 0 != len(self._message) and msg != self._message[-1:][0]['msg']:
+                self._message.append({'msg': msg, 'progress': -1})
+
+    def set_msg_progress(self, msg, progress):
+        with self.lock:
+            for m in self._message:
+                if msg == m.get('msg'):
+                    m['progress'] = progress
+                    return
+            self._message.append({'msg': msg, 'progress': progress})
+
+    def reset(self, msg=None):
+        msg = msg or {'msg': 'Loading', 'progress': -1}
+        with self.lock:
+            self._message = [msg]
+
+
+loading_msg = LoadingMessage()

@@ -104,8 +104,9 @@ class PageTemplate(Template):
         self.sbThemeName = sickbeard.THEME_NAME
 
         self.log_num_errors = len(classes.ErrorViewer.errors)
-        self.log_num_not_found_shows = len([x for x in sickbeard.showList if 0 < x.not_found_count])
-        self.log_num_not_found_shows_all = len([x for x in sickbeard.showList if 0 != x.not_found_count])
+        if None is not sickbeard.showList:
+            self.log_num_not_found_shows = len([x for x in sickbeard.showList if 0 < x.not_found_count])
+            self.log_num_not_found_shows_all = len([x for x in sickbeard.showList if 0 != x.not_found_count])
         self.sbPID = str(sickbeard.PID)
         self.menu = [
             {'title': 'Home', 'key': 'home'},
@@ -625,6 +626,44 @@ class IsAliveHandler(BaseHandler):
             results = callback + '(' + json.dumps({'msg': 'nope'}) + ');'
 
         self.write(results)
+
+
+class LoadingWebHandler(BaseHandler):
+    def __init__(self, *arg, **kwargs):
+        super(BaseHandler, self).__init__(*arg, **kwargs)
+        self.lock = threading.Lock()
+
+    def page_not_found(self):
+        self.set_status(404)
+        t = PageTemplate(web_handler=self, file='404.tmpl')
+        return t.respond()
+
+    def loading_page(self, *args, **kwargs):
+        t = PageTemplate(web_handler=self, file='loading.tmpl')
+        t.message = classes.loading_msg.message
+        return t.respond()
+
+    def get_message(self, *args, **kwargs):
+        return json.dumps({'message': classes.loading_msg.message})
+
+    @authenticated
+    @gen.coroutine
+    def get(self, route, *args, **kwargs):
+        route = route.strip('/')
+        if 'get_message' != route:
+            route = 'loading_page'
+        try:
+            method = getattr(self, route)
+        except:
+            self.finish(self.page_not_found())
+        else:
+            kwargss = {k: v if not (isinstance(v, list) and 1 == len(v)) else v[0]
+                       for k, v in self.request.arguments.iteritems() if '_xsrf' != k}
+            result = method(**kwargss)
+            if result:
+                self.finish(result)
+
+    post = get
 
 
 class WebHandler(BaseHandler):

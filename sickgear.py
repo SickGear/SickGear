@@ -1,6 +1,4 @@
 #!/usr/bin/env python2
-# Author: Nic Wolfe <nic@wolfeden.ca>
-# URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
 #
@@ -73,7 +71,6 @@ import sickbeard
 from sickbeard import db, logger, network_timezones, failed_history, name_cache
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
-from sickbeard.databases.mainDB import MIN_DB_VERSION, MAX_DB_VERSION
 from sickbeard.event_queue import Events
 from sickbeard.exceptions import ex
 from lib.configobj import ConfigObj
@@ -158,13 +155,15 @@ class SickGear(object):
         return '\n'.join(help_msg)
 
     @staticmethod
-    def execute_rollback(mo, max_v):
+    def execute_rollback(mo, max_v, load_msg):
         global rollback_loaded
         try:
             if None is rollback_loaded:
                 rollback_loaded = db.get_rollback_module()
             if None is not rollback_loaded:
-                rollback_loaded.__dict__[mo]().run(max_v)
+                rc = rollback_loaded.__dict__[mo]()
+                rc.load_msg = load_msg
+                rc.run(max_v)
             else:
                 print(u'ERROR: Could not download Rollback Module.')
         except (StandardError, Exception):
@@ -204,7 +203,7 @@ class SickGear(object):
             print('or find another way to force Python to use %s for string encoding.' % sickbeard.SYS_ENCODING)
             sys.exit(1)
 
-        # Need console logging for SickBeard.py and SickBeard-console.exe
+        # Need console logging for sickgear.py and SickBeard-console.exe
         self.console_logging = (not hasattr(sys, 'frozen')) or (sickbeard.MY_NAME.lower().find('-console') > 0)
 
         # Rename the main thread
@@ -339,59 +338,14 @@ class SickGear(object):
             except (StandardError, Exception) as er:
                 print('Stack Size %s not set: %s' % (stack_size, er.message))
 
-        # check all db versions
-        for d, min_v, max_v, base_v, mo in [
-            ('failed.db', sickbeard.failed_db.MIN_DB_VERSION, sickbeard.failed_db.MAX_DB_VERSION,
-             sickbeard.failed_db.TEST_BASE_VERSION, 'FailedDb'),
-            ('cache.db', sickbeard.cache_db.MIN_DB_VERSION, sickbeard.cache_db.MAX_DB_VERSION,
-             sickbeard.cache_db.TEST_BASE_VERSION, 'CacheDb'),
-            ('sickbeard.db', sickbeard.mainDB.MIN_DB_VERSION, sickbeard.mainDB.MAX_DB_VERSION,
-             sickbeard.mainDB.TEST_BASE_VERSION, 'MainDb')
-        ]:
-            cur_db_version = db.DBConnection(d).checkDBVersion()
-
-            # handling of standalone TEST db versions
-            if cur_db_version >= 100000 and cur_db_version != max_v:
-                print('Your [%s] database version (%s) is a test db version and doesn\'t match SickGear required '
-                      'version (%s), downgrading to production db' % (d, cur_db_version, max_v))
-                self.execute_rollback(mo, max_v)
-                cur_db_version = db.DBConnection(d).checkDBVersion()
-                if cur_db_version >= 100000:
-                    print(u'Rollback to production failed.')
-                    sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
-                if 100000 <= max_v and None is not base_v:
-                    max_v = base_v  # set max_v to the needed base production db for test_db
-                print(u'Rollback to production of [%s] successful.' % d)
-
-            # handling of production db versions
-            if 0 < cur_db_version < 100000:
-                if cur_db_version < min_v:
-                    print(u'Your [%s] database version (%s) is too old to migrate from with this version of SickGear'
-                          % (d, cur_db_version))
-                    sys.exit(u'Upgrade using a previous version of SG first,'
-                             + u' or start with no database file to begin fresh')
-                if cur_db_version > max_v:
-                    print(u'Your [%s] database version (%s) has been incremented past'
-                          u' what this version of SickGear supports. Trying to rollback now. Please wait...' %
-                          (d, cur_db_version))
-                    self.execute_rollback(mo, max_v)
-                    if db.DBConnection(d).checkDBVersion() > max_v:
-                        print(u'Rollback failed.')
-                        sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
-                    print(u'Rollback of [%s] successful.' % d)
-
-        # free memory
-        global rollback_loaded
-        rollback_loaded = None
-
-        # Initialize the config and our threads
-        sickbeard.initialize(console_logging=self.console_logging)
-
         if self.run_as_daemon:
             self.daemonize()
 
         # Get PID
         sickbeard.PID = os.getpid()
+
+        # Initialize the config
+        sickbeard.initialize(console_logging=self.console_logging)
 
         if self.forced_port:
             logger.log(u'Forcing web server to port %s' % self.forced_port)
@@ -440,6 +394,7 @@ class SickGear(object):
 
             self.webserver = WebServer(self.web_options)
             self.webserver.start()
+            sickbeard.started = True
         except (StandardError, Exception):
             logger.log(u'Unable to start web server, is something else running on port %d?' % self.start_port,
                        logger.ERROR)
@@ -450,30 +405,95 @@ class SickGear(object):
                 sickbeard.launch_browser(self.start_port)
             self.exit(1)
 
+        # Launch browser
+        if sickbeard.LAUNCH_BROWSER and not self.no_launch:
+            sickbeard.launch_browser(self.start_port)
+
+        # check all db versions
+        for d, min_v, max_v, base_v, mo in [
+            ('failed.db', sickbeard.failed_db.MIN_DB_VERSION, sickbeard.failed_db.MAX_DB_VERSION,
+             sickbeard.failed_db.TEST_BASE_VERSION, 'FailedDb'),
+            ('cache.db', sickbeard.cache_db.MIN_DB_VERSION, sickbeard.cache_db.MAX_DB_VERSION,
+             sickbeard.cache_db.TEST_BASE_VERSION, 'CacheDb'),
+            ('sickbeard.db', sickbeard.mainDB.MIN_DB_VERSION, sickbeard.mainDB.MAX_DB_VERSION,
+             sickbeard.mainDB.TEST_BASE_VERSION, 'MainDb')
+        ]:
+            cur_db_version = db.DBConnection(d).checkDBVersion()
+
+            # handling of standalone TEST db versions
+            load_msg = 'Downgrading %s to production version' % d
+            if cur_db_version >= 100000 and cur_db_version != max_v:
+                sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
+                print('Your [%s] database version (%s) is a test db version and doesn\'t match SickGear required '
+                      'version (%s), downgrading to production db' % (d, cur_db_version, max_v))
+                self.execute_rollback(mo, max_v, load_msg)
+                cur_db_version = db.DBConnection(d).checkDBVersion()
+                if cur_db_version >= 100000:
+                    print(u'Rollback to production failed.')
+                    sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
+                if 100000 <= max_v and None is not base_v:
+                    max_v = base_v  # set max_v to the needed base production db for test_db
+                print(u'Rollback to production of [%s] successful.' % d)
+                sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
+
+            # handling of production db versions
+            if 0 < cur_db_version < 100000:
+                if cur_db_version < min_v:
+                    print(u'Your [%s] database version (%s) is too old to migrate from with this version of SickGear'
+                          % (d, cur_db_version))
+                    sys.exit(u'Upgrade using a previous version of SG first,'
+                             + u' or start with no database file to begin fresh')
+                if cur_db_version > max_v:
+                    sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
+                    print(u'Your [%s] database version (%s) has been incremented past'
+                          u' what this version of SickGear supports. Trying to rollback now. Please wait...' %
+                          (d, cur_db_version))
+                    self.execute_rollback(mo, max_v, load_msg)
+                    if db.DBConnection(d).checkDBVersion() > max_v:
+                        print(u'Rollback failed.')
+                        sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
+                    print(u'Rollback of [%s] successful.' % d)
+                    sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
+
+        # free memory
+        global rollback_loaded
+        rollback_loaded = None
+        sickbeard.classes.loading_msg.message = 'Init SickGear'
+
+        # Initialize the threads and other stuff
+        sickbeard.initialize(console_logging=self.console_logging)
+
         # Check if we need to perform a restore first
         restore_dir = os.path.join(sickbeard.DATA_DIR, 'restore')
         if os.path.exists(restore_dir):
+            sickbeard.classes.loading_msg.message = 'Restoring files'
             if self.restore(restore_dir, sickbeard.DATA_DIR):
                 logger.log(u'Restore successful...')
             else:
                 logger.log_error_and_exit(u'Restore FAILED!')
 
         # Build from the DB to start with
+        sickbeard.classes.loading_msg.message = 'Loading shows from db'
         self.load_shows_from_db()
 
         # Fire up all our threads
+        sickbeard.classes.loading_msg.message = 'Starting threads'
         sickbeard.start()
 
         # Build internal name cache
+        sickbeard.classes.loading_msg.message = 'Build name cache'
         name_cache.buildNameCache()
 
         # refresh network timezones
+        sickbeard.classes.loading_msg.message = 'Checking network timezones'
         network_timezones.update_network_dict()
 
         # load all ids from xem
+        sickbeard.classes.loading_msg.message = 'Loading xem data'
         startup_background_tasks = threading.Thread(name='FETCH-XEMDATA', target=sickbeard.scene_exceptions.get_xem_ids)
         startup_background_tasks.start()
 
+        sickbeard.classes.loading_msg.message = 'Checking history'
         # check history snatched_proper update
         if not db.DBConnection().has_flag('history_snatch_proper'):
             # noinspection PyUnresolvedReferences
@@ -486,12 +506,17 @@ class SickGear(object):
 
         # Start an update if we're supposed to
         if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:
+            sickbeard.classes.loading_msg.message = 'Starting a forced show update'
             sickbeard.showUpdateScheduler.action.run(force=True)  # @UndefinedVariable
 
-        # Launch browser
-        if sickbeard.LAUNCH_BROWSER and not self.no_launch:
-            sickbeard.launch_browser(self.start_port)
+        sickbeard.classes.loading_msg.message = 'Switching to default web server'
+        time.sleep(2)
+        self.webserver.switch_handlers()
 
+        # # Launch browser
+        # if sickbeard.LAUNCH_BROWSER and not self.no_launch:
+        #     sickbeard.launch_browser(self.start_port)
+        
         # main loop
         while True:
             time.sleep(1)

@@ -32,7 +32,7 @@ DESC=SickGear
 ## Edit user configuation in /etc/default/sickgear to change
 ##
 ## SG_USER=         #$RUN_AS, username to run sickgear under, the default is sickgear
-## SG_HOME=         #$APP_PATH, the location of SickBeard.py, the default is /opt/sickgear
+## SG_HOME=         #$APP_PATH, the location of sickgear.py, the default is /opt/sickgear
 ## SG_DATA=         #$DATA_DIR, the location of sickbeard.db, cache, logs, the default is /opt/sickgear
 ## SG_PIDFILE=      #$PID_FILE, the location of sickgear.pid, the default is /var/run/sickgear/sickgear.pid
 ## PYTHON_BIN=      #$DAEMON, the location of the python binary, the default is /usr/bin/python
@@ -47,7 +47,7 @@ DESC=SickGear
 # Run as username
 RUN_AS=${SG_USER-sickgear}
 
-# Path to app SG_HOME=path_to_app_SickBeard.py
+# Path to app SG_HOME=path_to_app_sickgear.py
 APP_PATH=${SG_HOME-/opt/sickgear}
 
 # Data directory where sickbeard.db, cache and logs are stored
@@ -67,7 +67,7 @@ EXTRA_SSD_OPTS=${SSD_OPTS-}
 ##
 
 PID_PATH=`dirname $PID_FILE`
-DAEMON_OPTS=" SickBeard.py -q --daemon --nolaunch --pidfile=${PID_FILE} --datadir=${DATA_DIR} ${EXTRA_DAEMON_OPTS}"
+DAEMON_OPTS=" sickgear.py -q --daemon --nolaunch --pidfile=${PID_FILE} --datadir=${DATA_DIR} ${EXTRA_DAEMON_OPTS}"
 
 ##
 
