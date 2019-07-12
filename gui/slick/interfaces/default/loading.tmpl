@@ -41,7 +41,7 @@
 <script type="text/javascript" src="$sg_root/js/loadingStartup.js?v=$sg_pid"></script>
 
 <style>
-body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;margin-bottom:-10px;background:url(${sg_root}/images/sickgear.png) no-repeat 0 0}.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}.sub-title{padding-bottom:10px}.desc, .images i{margin-right:6px}.images i{vertical-align:middle}.hide,.hide-yes,.hide-no{display:none}
+body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;margin-bottom:-10px;background:url(${sg_root}/images/sickgear.png) no-repeat 0 0}.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}.sub-title{padding-bottom:10px}.desc, .images i{margin-right:6px}.images i{vertical-align:middle}.hide{display:none}
 </style>
 
 <link rel="stylesheet" type="text/css" href="$sg_root/css/style.css?v=$sg_pid">
@@ -52,9 +52,9 @@ body{padding-top:0 !important}.sglogo{display:block;width:138px;height:74px;marg
 <h2 class="sub-title">Starting up</h2>
 #set msg_cnt = len($message) - 1
 #for i, msg in enumerate($message)
-<div class="loading-step">
-	<span class="desc grey-text" data-message="$msg">$msg: </span>
-	<span class="images">#if i == msg_cnt#<i class="spinner"></i>#end if#<span #if i == msg_cnt#class="hide-yes"#end if#><i class="yes"></i></span></span>
+<div class="loading-step" data-message="$msg['msg']">
+	<span class="desc grey-text">$msg['msg']: </span><span class="count"></span>
+	<span class="images"><i class="spinner#if i != msg_cnt# hide#end if#"></i><span class="result#if i == msg_cnt# hide#end if#"><i class="yes"></i></span></span>
 </div>
 #end for
 

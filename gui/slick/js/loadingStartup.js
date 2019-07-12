@@ -1,13 +1,11 @@
 /** @namespace $.SickGear.Root */
 
 var dev = !1,
-	logInfo = dev && console.info.bind(window.console) || function(){},
-	logErr = dev && console.error.bind(window.console) || function(){};
+	logInfo = dev && console.info.bind(window.console) || function (){},
+	logErr = dev && console.error.bind(window.console) || function (){};
 
 $(function () {
-
 	ajaxConsumer.checkLoadNotifications();
-
 });
 
 var baseUrl = function () {
@@ -49,22 +47,36 @@ var ajaxConsumer = function () {
 }();
 
 function putMsg(msg) {
-	var loading = '.loading-step', lastStep = $(loading).filter(':last');
-	if (msg !== lastStep.find('.desc').attr('data-message')){
-		lastStep.after(lastStep.clone());
-		lastStep.find('.spinner').hide();
-		lastStep.find('.hide-yes').removeClass('hide-yes');
-		$(loading).filter(':last')
-			.find('.desc')
-			.attr('data-message', msg)
-			.text(msg + ': ');
+	var loading = '.loading-step', lastStep$ = $(loading).filter(':last');
+	if (msg !== lastStep$.attr('data-message')) {
+		lastStep$.clone().insertAfter(lastStep$);
+
+		var result$ = lastStep$.find('.result');
+		lastStep$.find('.spinner').addClass('hide');
+		if (!lastStep$.find('.count').text().length) {
+			result$.removeClass('hide');
+		} else {
+			result$.addClass('hide');
+		}
+		lastStep$ =  $(loading).filter(':last');
+		lastStep$.attr('data-message', msg);
+		lastStep$.find('.desc').text(msg + ': ');
+		lastStep$.find('.count').text('');
+		lastStep$.find('.spinner').removeClass('hide');
+		lastStep$.find('.result').addClass('hide');
 	}
 }
 
 function uiUpdateComplete(data) {
 	$.each(data, function (i, msg) {
-		if (i >= $('.loading-step').length){
-			putMsg(msg)
+		var loading = '.loading-step';
+		if (i >= $(loading).length) {
+			putMsg(msg.msg);
+		}
+		if (-1 !== msg.progress) {
+			var loading$ = $(loading + '[data-message="' + msg.msg + '"]');
+			loading$.find('.spinner, .result').addClass('hide');
+			loading$.find('.count').text(msg.progress);
 		}
 	});
 }

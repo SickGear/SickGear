@@ -32,6 +32,7 @@
 * Add startup loading page
 * Change restart to use loading page
 * Add upgrade messages for sickbeard, cache, and failed db upgrade processes to loading page
+* Change add WorkingDirectory to systemd startup prevents startup git issue
 
 
 [develop changelog]
