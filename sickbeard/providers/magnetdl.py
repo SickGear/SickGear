@@ -48,19 +48,25 @@ class MagnetDLProvider(generic.TorrentProvider):
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
-                search_url = self.urls['browse']
+                urls = [self.urls['browse'], self.urls['browse'] + '2']
                 if 'Cache' != mode:
                     search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                    search_url = self.urls['search'] % re.sub('[.\s]+', ' ', search_string)
+                    urls = [self.urls['search'] % re.sub(r'[.\s]+', ' ', search_string)]
 
-                html = self.get_url(search_url)
-                if self.should_skip():
-                    return results
+                html = ''
+                for search_url in urls:
+                    html += self.get_url(search_url) or ''
+                    if self.should_skip():
+                        return results
+                search_url = ', '.join(urls)
 
                 cnt = len(items[mode])
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
+
+                    if 'Cache' == mode:
+                        html = re.sub(r'(?mis)^\s*?<tr><td[^>]+?id="pages">.*?</thead>\s*?<tbody>\r?\n', '', html)
 
                     with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
                         torrent_table = soup.find('table', attrs={'class': 'download'})
