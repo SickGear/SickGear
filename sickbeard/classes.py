@@ -49,6 +49,9 @@ class SearchResult(object):
         # assign function to get the data for the download
         self.get_data_func = None
 
+        # assign function for after getting the download data
+        self.after_get_data_func = None
+
         # list of TVEpisode objects that this result is associated with
         self.episodes = episodes
 

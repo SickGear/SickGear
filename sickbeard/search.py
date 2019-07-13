@@ -922,7 +922,11 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                     if 'blackhole' != sickbeard.TORRENT_METHOD:
                         best_result.content = td
 
-            # add result if its not a duplicate and
+                if None is not best_result.after_get_data_func:
+                    best_result.after_get_data_func(best_result)
+                    best_result.after_get_data_func = None  # consume only once
+
+            # add result if its not a duplicate
             found = False
             for i, result in enumerate(final_results):
                 for best_result_ep in best_result.episodes:
