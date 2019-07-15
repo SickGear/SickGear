@@ -1,4 +1,4 @@
-﻿### 0.20.0 (2019-xx-xx xx:xx:xx UTC)
+﻿### 0.20.0 (2019-07-15 21:25:00 UTC)
 
 * Change if episode name is not known at point of rename, then use 'tba'
 * Add "Use dots in show.name path" to config/General/Misc, this will only affect newly added shows
@@ -35,10 +35,6 @@
 * Change add WorkingDirectory to systemd startup prevents startup git issue
 * Change improve MagnetDLProvider latest releases search
 * Add option to TVChaosUK settings, 'Send "Say thanks!"'
-
-
-[develop changelog]
-
 
 
 ### 0.19.10 (2019-07-10 17:42:00 UTC)
