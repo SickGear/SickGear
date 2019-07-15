@@ -5,17 +5,31 @@
 import operator as op
 import sys
 
-from collections import MutableMapping, OrderedDict, Sequence
-from collections import KeysView, ValuesView, ItemsView
-from itertools import islice
+from collections import OrderedDict
+from contextlib import contextmanager
 from shutil import rmtree
 from tempfile import mkdtemp
 
-from .core import BytesType, Cache, ENOVAL, TextType, Timeout
+from .core import BytesType, Cache, ENOVAL, TextType
+
+############################################################################
+# BEGIN Python 2/3 Shims
+############################################################################
+
+try:
+    from collections.abc import MutableMapping, Sequence
+    from collections.abc import KeysView, ValuesView, ItemsView
+except ImportError:
+    from collections import MutableMapping, Sequence
+    from collections import KeysView, ValuesView, ItemsView
 
 if sys.hexversion < 0x03000000:
     from itertools import izip as zip  # pylint: disable=redefined-builtin,no-name-in-module,ungrouped-imports
     range = xrange  # pylint: disable=redefined-builtin,invalid-name,undefined-variable
+
+############################################################################
+# END Python 2/3 Shims
+############################################################################
 
 
 def _make_compare(seq_op, doc):
@@ -91,7 +105,8 @@ class Deque(Sequence):
         if directory is None:
             directory = mkdtemp()
         self._cache = Cache(directory, eviction_policy='none')
-        self.extend(iterable)
+        with self.transact():
+            self.extend(iterable)
 
 
     @classmethod
@@ -121,35 +136,47 @@ class Deque(Sequence):
 
 
     @property
+    def cache(self):
+        "Cache used by deque."
+        return self._cache
+
+
+    @property
     def directory(self):
         "Directory path where deque is stored."
         return self._cache.directory
 
 
-    def _key(self, index):
+    def _index(self, index, func):
         len_self = len(self)
 
-        if index < 0:
-            index += len_self
-            if index < 0:
+        if index >= 0:
+            if index >= len_self:
                 raise IndexError('deque index out of range')
-        elif index >= len_self:
-            raise IndexError('deque index out of range')
 
-        diff = len_self - index - 1
-        _cache_iterkeys = self._cache.iterkeys
+            for key in self._cache.iterkeys():
+                if index == 0:
+                    try:
+                        return func(key)
+                    except KeyError:
+                        continue
+                index -= 1
+        else:
+            if index < -len_self:
+                raise IndexError('deque index out of range')
 
-        try:
-            if index <= diff:
-                iter_keys = _cache_iterkeys()
-                key = next(islice(iter_keys, index, index + 1))
-            else:
-                iter_keys = _cache_iterkeys(reverse=True)
-                key = next(islice(iter_keys, diff, diff + 1))
-        except StopIteration:
-            raise IndexError('deque index out of range')
+            index += 1
 
-        return key
+            for key in self._cache.iterkeys(reverse=True):
+                if index == 0:
+                    try:
+                        return func(key)
+                    except KeyError:
+                        continue
+                index += 1
+
+        raise IndexError('deque index out of range')
+
 
 
     def __getitem__(self, index):
@@ -157,30 +184,23 @@ class Deque(Sequence):
 
         Return corresponding item for `index` in deque.
 
+        See also `Deque.peekleft` and `Deque.peek` for indexing deque at index
+        ``0`` or ``-1``.
+
         >>> deque = Deque(directory='/tmp/diskcache/deque')
         >>> deque.clear()
         >>> deque.extend('abcde')
-        >>> deque[0]
-        'a'
-        >>> deque[-1]
-        'e'
-        >>> deque[2]
-        'c'
+        >>> deque[1]
+        'b'
+        >>> deque[-2]
+        'd'
 
         :param int index: index of item
         :return: corresponding item
         :raises IndexError: if index out of range
 
         """
-        _key = self._key
-        _cache = self._cache
-
-        while True:
-            try:
-                key = _key(index)
-                return _cache[key]
-            except (KeyError, Timeout):
-                continue
+        return self._index(index, self._cache.__getitem__)
 
 
     def __setitem__(self, index, value):
@@ -202,16 +222,8 @@ class Deque(Sequence):
         :raises IndexError: if index out of range
 
         """
-        _key = self._key
-        _cache = self._cache
-
-        while True:
-            try:
-                key = _key(index)
-                _cache[key] = value
-                return
-            except Timeout:
-                continue
+        set_value = lambda key: self._cache.__setitem__(key, value)
+        self._index(index, set_value)
 
 
     def __delitem__(self, index):
@@ -232,16 +244,7 @@ class Deque(Sequence):
         :raises IndexError: if index out of range
 
         """
-        _key = self._key
-        _cache = self._cache
-
-        while True:
-            try:
-                key = _key(index)
-                del _cache[key]
-                return
-            except (KeyError, Timeout):
-                continue
+        self._index(index, self._cache.__delitem__)
 
 
     def __repr__(self):
@@ -267,6 +270,9 @@ class Deque(Sequence):
 
         Extend back side of deque with items from iterable.
 
+        :param iterable: iterable of items to append to deque
+        :return: deque with added items
+
         """
         self.extend(iterable)
         return self
@@ -283,7 +289,7 @@ class Deque(Sequence):
         for key in _cache.iterkeys():
             try:
                 yield _cache[key]
-            except (KeyError, Timeout):
+            except KeyError:
                 pass
 
 
@@ -316,7 +322,7 @@ class Deque(Sequence):
         for key in _cache.iterkeys(reverse=True):
             try:
                 yield _cache[key]
-            except (KeyError, Timeout):
+            except KeyError:
                 pass
 
 
@@ -342,14 +348,7 @@ class Deque(Sequence):
         :param value: value to add to back of deque
 
         """
-        _cache_push = self._cache.push
-
-        while True:
-            try:
-                _cache_push(value)
-                return
-            except Timeout:
-                continue
+        self._cache.push(value, retry=True)
 
 
     def appendleft(self, value):
@@ -366,28 +365,14 @@ class Deque(Sequence):
         :param value: value to add to front of deque
 
         """
-        _cache_push = self._cache.push
-
-        while True:
-            try:
-                _cache_push(value, side='front')
-                return
-            except Timeout:
-                continue
+        self._cache.push(value, side='front', retry=True)
 
 
     def clear(self):
         """Remove all elements from deque.
 
         """
-        _cache_clear = self._cache.clear
-
-        while True:
-            try:
-                _cache_clear()
-                return
-            except Timeout:
-                continue
+        self._cache.clear(retry=True)
 
 
     def count(self, value):
@@ -404,9 +389,10 @@ class Deque(Sequence):
         4
 
         :param value: value to count in deque
+        :return: count of items equal to value in deque
 
         """
-        return sum(1 for item in self if item == value)
+        return sum(1 for item in self if value == item)
 
 
     def extend(self, iterable):
@@ -435,6 +421,62 @@ class Deque(Sequence):
             self.appendleft(value)
 
 
+    def peek(self):
+        """Peek at value at back of deque.
+
+        Faster than indexing deque at -1.
+
+        If deque is empty then raise IndexError.
+
+        >>> deque = Deque(directory='/tmp/diskcache/deque')
+        >>> deque.clear()
+        >>> deque.peek()
+        Traceback (most recent call last):
+            ...
+        IndexError: peek from an empty deque
+        >>> deque += 'abc'
+        >>> deque.peek()
+        'c'
+
+        :return: value at back of deque
+        :raises IndexError: if deque is empty
+
+        """
+        default = None, ENOVAL
+        _, value = self._cache.peek(default=default, side='back', retry=True)
+        if value is ENOVAL:
+            raise IndexError('peek from an empty deque')
+        return value
+
+
+    def peekleft(self):
+        """Peek at value at back of deque.
+
+        Faster than indexing deque at 0.
+
+        If deque is empty then raise IndexError.
+
+        >>> deque = Deque(directory='/tmp/diskcache/deque')
+        >>> deque.clear()
+        >>> deque.peekleft()
+        Traceback (most recent call last):
+            ...
+        IndexError: peek from an empty deque
+        >>> deque += 'abc'
+        >>> deque.peekleft()
+        'a'
+
+        :return: value at front of deque
+        :raises IndexError: if deque is empty
+
+        """
+        default = None, ENOVAL
+        _, value = self._cache.peek(default=default, side='front', retry=True)
+        if value is ENOVAL:
+            raise IndexError('peek from an empty deque')
+        return value
+
+
     def pop(self):
         """Remove and return value at back of deque.
 
@@ -452,21 +494,15 @@ class Deque(Sequence):
             ...
         IndexError: pop from an empty deque
 
+        :return: value at back of deque
         :raises IndexError: if deque is empty
 
         """
-        _cache_pull = self._cache.pull
-
-        while True:
-            try:
-                default = None, ENOVAL
-                _, value = _cache_pull(default=default, side='back')
-            except Timeout:
-                continue
-            else:
-                if value is ENOVAL:
-                    raise IndexError('pop from an empty deque')
-                return value
+        default = None, ENOVAL
+        _, value = self._cache.pull(default=default, side='back', retry=True)
+        if value is ENOVAL:
+            raise IndexError('pop from an empty deque')
+        return value
 
 
     def popleft(self):
@@ -484,19 +520,15 @@ class Deque(Sequence):
             ...
         IndexError: pop from an empty deque
 
-        """
-        _cache_pull = self._cache.pull
+        :return: value at front of deque
+        :raises IndexError: if deque is empty
 
-        while True:
-            try:
-                default = None, ENOVAL
-                _, value = _cache_pull(default=default)
-            except Timeout:
-                continue
-            else:
-                if value is ENOVAL:
-                    raise IndexError('pop from an empty deque')
-                return value
+        """
+        default = None, ENOVAL
+        _, value = self._cache.pull(default=default, retry=True)
+        if value is ENOVAL:
+            raise IndexError('pop from an empty deque')
+        return value
 
 
     def remove(self, value):
@@ -524,27 +556,16 @@ class Deque(Sequence):
 
         for key in _cache.iterkeys():
             try:
-                while True:
-                    try:
-                        item = _cache[key]
-                    except Timeout:
-                        continue
-                    else:
-                        break
+                item = _cache[key]
             except KeyError:
                 continue
             else:
                 if value == item:
                     try:
-                        while True:
-                            try:
-                                del _cache[key]
-                            except Timeout:
-                                continue
-                            else:
-                                return
+                        del _cache[key]
                     except KeyError:
                         continue
+                    return
 
         raise ValueError('deque.remove(value): value not in deque')
 
@@ -552,20 +573,25 @@ class Deque(Sequence):
     def reverse(self):
         """Reverse deque in place.
 
-        """
-        # pylint: disable=protected-access
-        directory = mkdtemp()
-        temp = None
+        >>> deque = Deque(directory='/tmp/diskcache/deque')
+        >>> deque.clear()
+        >>> deque += 'abc'
+        >>> deque.reverse()
+        >>> list(deque)
+        ['c', 'b', 'a']
 
-        try:
-            temp = Deque(iterable=reversed(self), directory=directory)
-            self.clear()
-            self.extend(temp)
-        finally:
-            if temp is not None:
-                temp._cache.close()
-            del temp
-            rmtree(directory)
+        """
+        # GrantJ 2019-03-22 Consider using an algorithm that swaps the values
+        # at two keys. Like self._cache.swap(key1, key2, retry=True) The swap
+        # method would exchange the values at two given keys. Then, using a
+        # forward iterator and a reverse iterator, the reversis method could
+        # avoid making copies of the values.
+        temp = Deque(iterable=reversed(self))
+        self.clear()
+        self.extend(temp)
+        directory = temp.directory
+        del temp
+        rmtree(directory)
 
 
     def rotate(self, steps=1):
@@ -618,11 +644,36 @@ class Deque(Sequence):
                     self.append(value)
 
 
-    def __del__(self):
-        self._cache.close()
-
-
     __hash__ = None
+
+
+    @contextmanager
+    def transact(self):
+        """Context manager to perform a transaction by locking the deque.
+
+        While the deque is locked, no other write operation is permitted.
+        Transactions should therefore be as short as possible. Read and write
+        operations performed in a transaction are atomic. Read operations may
+        occur concurrent to a transaction.
+
+        Transactions may be nested and may not be shared between threads.
+
+        >>> from diskcache import Deque
+        >>> deque = Deque(directory='/tmp/diskcache/deque')
+        >>> deque.clear()
+        >>> deque += range(5)
+        >>> with deque.transact():  # Atomically rotate elements.
+        ...     value = deque.pop()
+        ...     deque.appendleft(value)
+        >>> list(deque)
+        [4, 0, 1, 2, 3]
+
+        :return: context manager for use in `with` statement
+        :raises Timeout: if database timeout occurs
+
+        """
+        with self._cache.transact(retry=True):
+            yield
 
 
 class Index(MutableMapping):
@@ -706,6 +757,12 @@ class Index(MutableMapping):
 
 
     @property
+    def cache(self):
+        "Cache used by index."
+        return self._cache
+
+
+    @property
     def directory(self):
         "Directory path where items are stored."
         return self._cache.directory
@@ -733,13 +790,7 @@ class Index(MutableMapping):
         :raises KeyError: if key is not found
 
         """
-        _cache = self._cache
-
-        while True:
-            try:
-                return _cache[key]
-            except Timeout:
-                continue
+        return self._cache[key]
 
 
     def __setitem__(self, key, value):
@@ -758,15 +809,7 @@ class Index(MutableMapping):
         :param value: value for item
 
         """
-        _cache = self._cache
-
-        while True:
-            try:
-                _cache[key] = value
-            except Timeout:
-                continue
-            else:
-                return
+        self._cache[key] = value
 
 
     def __delitem__(self, key):
@@ -790,15 +833,7 @@ class Index(MutableMapping):
         :raises KeyError: if key is not found
 
         """
-        _cache = self._cache
-
-        while True:
-            try:
-                del _cache[key]
-            except Timeout:
-                continue
-            else:
-                return
+        del self._cache[key]
 
 
     def setdefault(self, key, default=None):
@@ -820,18 +855,31 @@ class Index(MutableMapping):
 
         """
         _cache = self._cache
-
         while True:
             try:
-                return self[key]
+                return _cache[key]
             except KeyError:
-                while True:
-                    try:
-                        _cache.add(key, default)
-                    except Timeout:
-                        continue
-                    else:
-                        break
+                _cache.add(key, default, retry=True)
+
+
+    def peekitem(self, last=True):
+        """Peek at key and value item pair in index based on iteration order.
+
+        >>> index = Index('/tmp/diskcache/index')
+        >>> index.clear()
+        >>> for num, letter in enumerate('xyz'):
+        ...     index[letter] = num
+        >>> index.peekitem()
+        ('z', 2)
+        >>> index.peekitem(last=False)
+        ('x', 0)
+
+        :param bool last: last item in iteration order (default True)
+        :return: key and value item pair
+        :raises KeyError: if cache is empty
+
+        """
+        return self._cache.peekitem(last, retry=True)
 
 
     def pop(self, key, default=ENOVAL):
@@ -858,18 +906,11 @@ class Index(MutableMapping):
         :raises KeyError: if key is not found and default is ENOVAL
 
         """
-
         _cache = self._cache
-
-        while True:
-            try:
-                value = _cache.pop(key, default=default)
-            except Timeout:
-                continue
-            else:
-                if value is ENOVAL:
-                    raise KeyError(key)
-                return value
+        value = _cache.pop(key, default=default, retry=True)
+        if value is ENOVAL:
+            raise KeyError(key)
+        return value
 
 
     def popitem(self, last=True):
@@ -911,8 +952,8 @@ class Index(MutableMapping):
                 raise KeyError
 
             try:
-                value = _cache.pop(key)
-            except (KeyError, Timeout):
+                value = _cache.pop(key, retry=True)
+            except KeyError:
                 continue
             else:
                 return key, value
@@ -948,13 +989,7 @@ class Index(MutableMapping):
         :return: key for item in cache
 
         """
-        _cache_push = self._cache.push
-
-        while True:
-            try:
-                return _cache_push(value, prefix, side)
-            except Timeout:
-                continue
+        return self._cache.push(value, prefix, side, retry=True)
 
 
     def pull(self, prefix=None, default=(None, None), side='front'):
@@ -996,27 +1031,14 @@ class Index(MutableMapping):
         :return: key and value item pair or default if queue is empty
 
         """
-        _cache_pull = self._cache.pull
-
-        while True:
-            try:
-                return _cache_pull(prefix, default, side)
-            except Timeout:
-                continue
+        return self._cache.pull(prefix, default, side, retry=True)
 
 
     def clear(self):
         """Remove all items from index.
 
         """
-        _cache_clear = self._cache.clear
-
-        while True:
-            try:
-                _cache_clear()
-                return
-            except Timeout:
-                continue
+        self._cache.clear(retry=True)
 
 
     def __iter__(self):
@@ -1135,11 +1157,8 @@ class Index(MutableMapping):
                     try:
                         yield _cache[key]
                     except KeyError:
-                        break
-                    except Timeout:
-                        continue
-                    else:
-                        break
+                        pass
+                    break
 
 
         def iteritems(self):
@@ -1161,11 +1180,8 @@ class Index(MutableMapping):
                     try:
                         yield key, _cache[key]
                     except KeyError:
-                        break
-                    except Timeout:
-                        continue
-                    else:
-                        break
+                        pass
+                    break
 
 
         def viewkeys(self):
@@ -1296,6 +1312,7 @@ class Index(MutableMapping):
         True
 
         :param other: other mapping in equality comparison
+        :return: True if index equals other
 
         """
         if len(self) != len(other):
@@ -1329,9 +1346,89 @@ class Index(MutableMapping):
         True
 
         :param other: other mapping in inequality comparison
+        :return: True if index does not equal other
 
         """
         return not self == other
+
+
+    def memoize(self, name=None, typed=False):
+        """Memoizing cache decorator.
+
+        Decorator to wrap callable with memoizing function using cache.
+        Repeated calls with the same arguments will lookup result in cache and
+        avoid function evaluation.
+
+        If name is set to None (default), the callable name will be determined
+        automatically.
+
+        If typed is set to True, function arguments of different types will be
+        cached separately. For example, f(3) and f(3.0) will be treated as
+        distinct calls with distinct results.
+
+        The original underlying function is accessible through the __wrapped__
+        attribute. This is useful for introspection, for bypassing the cache,
+        or for rewrapping the function with a different cache.
+
+        >>> from diskcache import Index
+        >>> mapping = Index('/tmp/diskcache/index')
+        >>> @mapping.memoize(typed=True)
+        ... def fibonacci(number):
+        ...     if number == 0:
+        ...         return 0
+        ...     elif number == 1:
+        ...         return 1
+        ...     else:
+        ...         return fibonacci(number - 1) + fibonacci(number - 2)
+        >>> print(sum(fibonacci(number=value) for value in range(100)))
+        573147844013817084100
+
+        Remember to call memoize when decorating a callable. If you forget,
+        then a TypeError will occur. Note the lack of parenthenses after
+        memoize below:
+
+        >>> @mapping.memoize
+        ... def test():
+        ...     pass
+        Traceback (most recent call last):
+            ...
+        TypeError: name cannot be callable
+
+        :param str name: name given for callable (default None, automatic)
+        :param bool typed: cache different types separately (default False)
+        :return: callable decorator
+
+        """
+        return self._cache.memoize(name, typed)
+
+
+    @contextmanager
+    def transact(self):
+        """Context manager to perform a transaction by locking the index.
+
+        While the index is locked, no other write operation is permitted.
+        Transactions should therefore be as short as possible. Read and write
+        operations performed in a transaction are atomic. Read operations may
+        occur concurrent to a transaction.
+
+        Transactions may be nested and may not be shared between threads.
+
+        >>> from diskcache import Index
+        >>> mapping = Index('/tmp/diskcache/index')
+        >>> with mapping.transact():  # Atomically increment two keys.
+        ...     mapping['total'] = mapping.get('total', 0) + 123.4
+        ...     mapping['count'] = mapping.get('count', 0) + 1
+        >>> with mapping.transact():  # Atomically calculate average.
+        ...     average = mapping['total'] / mapping['count']
+        >>> average
+        123.4
+
+        :return: context manager for use in `with` statement
+        :raises Timeout: if database timeout occurs
+
+        """
+        with self._cache.transact(retry=True):
+            yield
 
 
     def __repr__(self):
@@ -1342,7 +1439,3 @@ class Index(MutableMapping):
         """
         name = type(self).__name__
         return '{0}({1!r})'.format(name, self.directory)
-
-
-    def __del__(self):
-        self._cache.close()

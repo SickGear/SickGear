@@ -1,5 +1,5 @@
 """
-Parent of all (field) classes in Hachoir: Field.
+Parent of all field classes in :mod:`hachoir.field`.
 """
 
 from hachoir.stream import InputFieldStream
@@ -11,7 +11,7 @@ from weakref import ref as weakref_ref
 
 class FieldError(Exception):
     """
-    Error raised by a L{Field}.
+    Error raised by a :class:`Field`
     """
     pass
 
@@ -37,35 +37,36 @@ class MissingField(KeyError, FieldError):
 
 
 class Field(Logger):
-    # static size can have two differents value: None (no static size), an
-    # integer (number of bits), or a function which returns an integer.
-    #
-    # This function receives exactly the same arguments than the constructor
-    # except the first one (one). Example of function:
-    #    static_size = staticmethod(lambda *args, **kw: args[1])
     static_size = None
+    """(optional) Helper to compute field size.
 
-    # Indicate if this field contains other fields (is a field set) or not
+    May have types:
+        None: field size is computed dynamically.
+        int: field size, in bits.
+        callable: function that receives the same arguments as the constructor,
+            without ``parent``.
+    """
+
     is_field_set = False
+    """bool: True if this field contains other fields (ie. is a field set),
+    False otherwise.
+    """
 
     def __init__(self, parent, name, size=None, description=None):
-        """
-        Set default class attributes, set right address if None address is
+        """Set default class attributes, set right address if None address is
         given.
 
-        @param parent: Parent field of this field
-        @type parent: L{Field}|None
-        @param name: Name of the field, have to be unique in parent. If it ends
-            with "[]", end will be replaced with "[new_id]" (eg. "raw[]"
-            becomes "raw[0]", next will be "raw[1]", and then "raw[2]", etc.)
-        @type name: str
-        @param size: Size of the field in bit (can be None, so it
-            will be computed later)
-        @type size: int|None
-        @param address: Address in bit relative to the parent absolute address
-        @type address: int|None
-        @param description: Optional string description
-        @type description: str|None
+        Args:
+            parent (Field): Parent field of this field
+            name (str): The name of the field, it must be unique in `parent`. If
+                it ends with `[]`, end will be replaced with "[new_id]" (eg.
+                "raw[]" becomes "raw[0]", next will be "raw[1]", and then
+                "raw[2]", etc.)
+            size (int, optional): Size of the field in bits. If `None` then it
+                will be computed later.
+            address (int, optional): Address in bit relative to the parent
+                absolute address.
+            description (str, optional): String description
         """
         assert issubclass(parent.__class__, Field)
         assert (size is None) or (0 <= size)
@@ -81,9 +82,17 @@ class Field(Logger):
         return self.path
 
     def createDescription(self):
+        """Override in derived classes to provide :attr:`description`."""
         return ""
 
-    def _getDescription(self):
+    @property
+    def description(self):
+        """str: Informal description of this field. Cached.
+
+        The description of a field may provide a general summary of its usage
+        or for field sets it can be used to give a short indication of the
+        contents without having to expand the node.
+        """
         if self._description is None:
             try:
                 self._description = self.createDescription()
@@ -95,10 +104,8 @@ class Field(Logger):
                 self._description = ""
         return self._description
 
-    description = property(_getDescription,
-                           doc="Description of the field (string)")
-
     def __str__(self):
+        """Alias for :attr:`display`."""
         return self.display
 
     def __unicode__(self):
@@ -109,41 +116,47 @@ class Field(Logger):
             self.__class__.__name__, self.path, self._address, self._size)
 
     def hasValue(self):
-        return self._getValue() is not None
+        """bool: Check if field has a value."""
+        return self.value is not None
 
     def createValue(self):
+        """Override in derived classes to provide :attr:`value`."""
         raise NotImplementedError()
 
-    def _getValue(self):
+    @property
+    def value(self):
+        """Value of field."""
         try:
-            value = self.createValue()
-        except Exception as err:
-            self.error(_("Unable to create value: %s") % unicode(err))
-            value = None
-        self._getValue = lambda: value
-        return value
+            return self.__value
+        except AttributeError:
+            try:
+                self.__value = self.createValue()
+            except Exception as err:
+                self.error("Unable to create value: %s" % str(err))
+                self.__value = None
+            return self.__value
 
-    value = property(lambda self: self._getValue(), doc="Value of field")
-
-    def _getParent(self):
+    @property
+    def parent(self):
+        """GenericFieldSet: Parent of this field."""
         return self._parent
 
-    parent = property(_getParent, doc="Parent of this field")
-
     def createDisplay(self):
-        return unicode(self.value)
+        """Override in derived classes to provide :attr:`display`."""
+        return str(self.value)
 
-    def _getDisplay(self):
-        if not hasattr(self, "_Field__display"):
+    @property
+    def display(self):
+        """str: Short, human-friendly string representing field contents."""
+        try:
+            return self.__display
+        except AttributeError:
             try:
                 self.__display = self.createDisplay()
             except Exception as err:
                 self.error("Unable to create display: %s" % err)
                 self.__display = u""
-        return self.__display
-
-    display = property(lambda self: self._getDisplay(),
-                       doc="Short (unicode) string which represents field content")
+            return self.__display
 
     def createRawDisplay(self):
         value = self.value
@@ -152,32 +165,34 @@ class Field(Logger):
         else:
             return unicode(value)
 
-    def _getRawDisplay(self):
-        if not hasattr(self, "_Field__raw_display"):
+    @property
+    def raw_display(self):
+        """str: Represents raw field content"""
+        try:
+            return self.__raw_display
+        except AttributeError:
             try:
                 self.__raw_display = self.createRawDisplay()
             except Exception as err:
                 self.error("Unable to create raw display: %s" % err)
                 self.__raw_display = u""
-        return self.__raw_display
+            return self.__raw_display
 
-    raw_display = property(lambda self: self._getRawDisplay(),
-                           doc="(Unicode) string which represents raw field content")
-
-    def _getName(self):
+    @property
+    def name(self):
+        """str: Field name, unique in its parent field set list."""
         return self._name
 
-    name = property(_getName,
-                    doc="Field name (unique in its parent field set list)")
-
-    def _getIndex(self):
+    @property
+    def index(self):
+        """int: index of the field in parent field set, starting from 0."""
         if not self._parent:
             return None
         return self._parent.getFieldIndex(self)
 
-    index = property(_getIndex)
-
-    def _getPath(self):
+    @property
+    def path(self):
+        """str: Full path of this field starting from the root field."""
         if not self._parent:
             return '/'
         names = []
@@ -188,16 +203,14 @@ class Field(Logger):
         names[-1] = ''
         return '/'.join(reversed(names))
 
-    path = property(_getPath,
-                    doc="Full path of the field starting at root field")
-
-    def _getAddress(self):
+    @property
+    def address(self):
+        """int: Relative address to parent address, in bits."""
         return self._address
 
-    address = property(_getAddress,
-                       doc="Relative address in bit to parent address")
-
-    def _getAbsoluteAddress(self):
+    @property
+    def absolute_address(self):
+        """int: Absolute address (from beginning of stream), in bits."""
         address = self._address
         current = self._parent
         while current:
@@ -205,13 +218,10 @@ class Field(Logger):
             current = current._parent
         return address
 
-    absolute_address = property(_getAbsoluteAddress,
-                                doc="Absolute address (from stream beginning) in bit")
-
-    def _getSize(self):
+    @property
+    def size(self):
+        """int: Size of this field, in bits. Cached."""
         return self._size
-
-    size = property(_getSize, doc="Content size in bit")
 
     def _getField(self, name, const):
         if name.strip("."):
@@ -224,6 +234,15 @@ class Field(Logger):
         return field
 
     def getField(self, key, const=True):
+        """
+        Args:
+            key (str): relative or absolute path for the desired field.
+            const (bool): For field sets, whether to consume additional input to
+                find a matching field.
+
+        Returns:
+            Field: The field matching the provided path.
+        """
         if key:
             if key[0] == "/":
                 if self._parent:
@@ -244,19 +263,38 @@ class Field(Logger):
         raise KeyError("Key must not be an empty string!")
 
     def __getitem__(self, key):
+        """Alias for :meth:`getField`, with ``const=False``"""
         return self.getField(key, False)
 
     def __contains__(self, key):
+        """Check whether a field set contains the provided field.
+
+        Args:
+            key (str): The path to the field.
+
+        Returns:
+            bool
+        """
         try:
             return self.getField(key, False) is not None
         except FieldError:
             return False
 
     def _createInputStream(self, **args):
+        """Override in derived classes to provide the input stream returned by
+        :meth:`getSubIStream`.
+
+        Returns:
+            InputFieldStream
+        """
         assert self._parent
         return InputFieldStream(self, **args)
 
     def getSubIStream(self):
+        """
+        Returns:
+            InputFieldStream: an input stream containing the field content.
+        """
         if hasattr(self, "_sub_istream"):
             stream = self._sub_istream()
         else:
@@ -267,12 +305,17 @@ class Field(Logger):
         return stream
 
     def setSubIStream(self, createInputStream):
+        """
+        Args:
+            createInputStream (``callback(cis, **args)``): Function to use in place of
+                :meth:`_createInputStream`. Receives the previous value of
+                ``_createInputStream`` as its first argument, for chaining.
+        """
         cis = self._createInputStream
         self._createInputStream = lambda **args: createInputStream(cis, **args)
 
     def __nonzero__(self):
-        """
-        Method called by code like "if field: (...)".
+        """Method called by code like "if field: (...)".
         Always returns True
         """
         return True

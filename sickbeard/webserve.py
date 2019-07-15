@@ -104,8 +104,9 @@ class PageTemplate(Template):
         self.sbThemeName = sickbeard.THEME_NAME
 
         self.log_num_errors = len(classes.ErrorViewer.errors)
-        self.log_num_not_found_shows = len([x for x in sickbeard.showList if 0 < x.not_found_count])
-        self.log_num_not_found_shows_all = len([x for x in sickbeard.showList if 0 != x.not_found_count])
+        if None is not sickbeard.showList:
+            self.log_num_not_found_shows = len([x for x in sickbeard.showList if 0 < x.not_found_count])
+            self.log_num_not_found_shows_all = len([x for x in sickbeard.showList if 0 != x.not_found_count])
         self.sbPID = str(sickbeard.PID)
         self.menu = [
             {'title': 'Home', 'key': 'home'},
@@ -625,6 +626,44 @@ class IsAliveHandler(BaseHandler):
             results = callback + '(' + json.dumps({'msg': 'nope'}) + ');'
 
         self.write(results)
+
+
+class LoadingWebHandler(BaseHandler):
+    def __init__(self, *arg, **kwargs):
+        super(BaseHandler, self).__init__(*arg, **kwargs)
+        self.lock = threading.Lock()
+
+    def page_not_found(self):
+        self.set_status(404)
+        t = PageTemplate(web_handler=self, file='404.tmpl')
+        return t.respond()
+
+    def loading_page(self, *args, **kwargs):
+        t = PageTemplate(web_handler=self, file='loading.tmpl')
+        t.message = classes.loading_msg.message
+        return t.respond()
+
+    def get_message(self, *args, **kwargs):
+        return json.dumps({'message': classes.loading_msg.message})
+
+    @authenticated
+    @gen.coroutine
+    def get(self, route, *args, **kwargs):
+        route = route.strip('/')
+        if 'get_message' != route:
+            route = 'loading_page'
+        try:
+            method = getattr(self, route)
+        except:
+            self.finish(self.page_not_found())
+        else:
+            kwargss = {k: v if not (isinstance(v, list) and 1 == len(v)) else v[0]
+                       for k, v in self.request.arguments.iteritems() if '_xsrf' != k}
+            result = method(**kwargss)
+            if result:
+                self.finish(result)
+
+    post = get
 
 
 class WebHandler(BaseHandler):
@@ -3026,6 +3065,10 @@ class NewHomeAddShows(Home):
     def sanitizeFileName(self, name):
         return helpers.sanitizeFileName(name)
 
+    @staticmethod
+    def generate_show_dir_name(show_name):
+        return helpers.generate_show_dir_name(None, show_name)
+
     # noinspection PyPep8Naming
     def searchIndexersForShowName(self, search_term, lang='en', indexer=None):
         if not lang or 'null' == lang:
@@ -4186,7 +4229,7 @@ class NewHomeAddShows(Home):
             show_dir = ek.ek(os.path.normpath, fullShowPath)
             new_show = False
         else:
-            show_dir = ek.ek(os.path.join, rootDir, helpers.sanitizeFileName(show_name))
+            show_dir = helpers.generate_show_dir_name(rootDir, show_name)
             new_show = True
 
         # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
@@ -5880,8 +5923,8 @@ class ConfigGeneral(Config):
                     home_search_focus=None, display_freespace=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
-                    indexer_timeout=None, rootDir=None, theme_name=None, default_home=None, use_imdb_info=None,
-                    fanart_limit=None, show_tags=None, showlist_tagview=None):
+                    indexer_timeout=None, rootDir=None, show_dirs_with_dots=None, theme_name=None, default_home=None,
+                    use_imdb_info=None, fanart_limit=None, show_tags=None, showlist_tagview=None):
 
         results = []
 
@@ -5904,6 +5947,7 @@ class ConfigGeneral(Config):
                 sickbeard.INDEXER_DEFAULT = INDEXER_TVDB
         if indexer_timeout:
             sickbeard.INDEXER_TIMEOUT = config.to_int(indexer_timeout)
+        sickbeard.SHOW_DIRS_WITH_DOTS = config.checkbox_to_value(show_dirs_with_dots)
 
         # Updates
         config.schedule_version_notify(config.checkbox_to_value(version_notify))
@@ -6673,7 +6717,7 @@ class ConfigProviders(Config):
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
 
             for attr in filter(lambda a: hasattr(torrent_src, a), [
-                'confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
+                'confirmed', 'freeleech', 'reject_m2ts', 'use_after_get_data', 'enable_recentsearch',
                 'enable_backlog', 'search_fallback', 'enable_scheduled_backlog',
                 'scene_only', 'scene_loose', 'scene_loose_active',
                 'scene_rej_nuked', 'scene_nuked_active'

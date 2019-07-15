@@ -1,4 +1,43 @@
-﻿### 0.19.10 (2019-07-10 17:42:00 UTC)
+﻿### 0.20.0 (2019-07-15 21:25:00 UTC)
+
+* Change if episode name is not known at point of rename, then use 'tba'
+* Add "Use dots in show.name path" to config/General/Misc, this will only affect newly added shows
+* Change displayed folder on add show page to update based on "Use dots in show.name path" setting
+* Update attr 18.3.0.dev0 (55642b3) to 19.2.0.dev0 (de84609) 
+* Update Beautiful Soup 4.6.3 (r475) to 4.7.1 (r497)
+* Add soupsieve 1.9.1 (24859cc)
+* Add functools_lru_cache (soupsieve dep) 1.5 (21e85f5)
+* Update CacheControl library 0.12.5 (0fedbba) to 0.12.5 (007e8ca)    
+* Update Certifi 2018.11.29 (10a1f8a) to 2019.03.09 (401100f)
+* Update dateutil 2.7.5 (e954819) to 2.8.0 (c90a30c)
+* Update DiskCache library 3.1.1 (05cac6a) to 3.1.1 (2649ac9)
+* Update Hachoir library 2.0a3 to 2.0a6 (c102cc7)
+* Update html5lib 1.1-dev (4f92357) to 1.1-dev (4b22754)
+* Update IMDb-pie 5.6.3 (4220e83) to 5.6.4 (f695e87)
+* Update MsgPack 0.6.0 (197e307) to 0.6.1 (737f08a)
+* Update profilehooks module 1.10.1 (fdbf19d) to 1.11.0 (e17f378)
+* Update pyjsparser 2.4.5 (39b468e) to 2.7.1 (5465d03)
+* Update PySocks 1.6.8 (b687a34) to 1.7.0 (91dcdf0)
+* Update Requests library 2.21.0 (e52932c) to 2.22.0 (aeda65b)
+* Update scandir 1.9.0 (9ab3d1f) to 1.10.0 (982e6ba)
+* Update Six compatibility library 1.12.0 (d927b9e) to 1.12.0 (8da94b8)
+* Update Tornado Web Server 5.1.1 (cc2cf07) to 5.1.1 (a99f1471)
+* Update TZlocal 1.4 to 2.0.0.dev0 (b73a692)
+* Update unidecode module 1.0.22 (578cdb9) to 1.0.22 (a5045ab)
+* Update urllib3 release 1.24.3 (324e47a) to 1.25.2 (49eea80)
+* Update win_inet_pton 1.0.1 (934a852) to 1.1.0 (57e3558)
+* Update xmltodict library 0.11.0 (79ac9a4) to 0.12.0 (f3ab7e1)
+* Change sickgear.py can now be run as start up instead of SickBeard.py
+* Change refactor startup functions to prevent possible latency issues with systemd
+* Add startup loading page
+* Change restart to use loading page
+* Add upgrade messages for sickbeard, cache, and failed db upgrade processes to loading page
+* Change add WorkingDirectory to systemd startup prevents startup git issue
+* Change improve MagnetDLProvider latest releases search
+* Add option to TVChaosUK settings, 'Send "Say thanks!"'
+
+
+### 0.19.10 (2019-07-10 17:42:00 UTC)
 
 * Fix catch error on systems with no local timezone
 

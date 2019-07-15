@@ -14,7 +14,7 @@ class CompatibilityTests(unittest.TestCase):
                     if x.endswith('.py'):
                         pyfiles.append(os.path.join(dirpath, x))
 
-        pyfiles.append(os.path.join(path,'SickBeard.py'))
+        pyfiles.append(os.path.join(path, 'sickgear.py'))
 
         output = subprocess.Popen('2to3'
                                   ' -f except'

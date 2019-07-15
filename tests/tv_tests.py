@@ -24,6 +24,7 @@ import test_lib as test
 import sickbeard
 from sickbeard.tv import TVEpisode, TVShow
 
+
 class TVShowTests(test.SickbeardTestDBCase):
 
     def setUp(self):
@@ -83,7 +84,8 @@ class TVTests(test.SickbeardTestDBCase):
         super(TVTests, self).setUp()
         sickbeard.showList = []
 
-    def test_getEpisode(self):
+    @staticmethod
+    def test_getEpisode():
         show = TVShow(1, 1, 'en')
         show.name = 'show name'
         show.tvrname = 'show name'
@@ -95,7 +97,6 @@ class TVTests(test.SickbeardTestDBCase):
         show.startyear = 1987
         show.saveToDB()
         sickbeard.showList = [show]
-        #TODO: implement
 
 
 class TVFormatPatternTests(test.SickbeardTestDBCase):
@@ -120,11 +121,16 @@ class TVFormatPatternTests(test.SickbeardTestDBCase):
         show.episodes[1][1].dirty = False
         show.episodes[1][1].name = None
         self.assertEqual(show.episodes[1][1].dirty, False)
-        self.assertEqual(show.episodes[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'), 'show name - 1x01 -  - Unknown')
+        self.assertEqual(
+            show.episodes[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'),
+            'show name - 1x01 - tba - Unknown')
         show.episodes[1][1].dirty = False
         show.episodes[1][1].name = 'ep name'
         self.assertEqual(show.episodes[1][1].dirty, True)
-        self.assertEqual(show.episodes[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'), 'show name - 1x01 - ep name - Unknown')
+        self.assertEqual(
+            show.episodes[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'),
+            'show name - 1x01 - ep name - Unknown')
+
 
 if __name__ == '__main__':
     print('==================')

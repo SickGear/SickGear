@@ -43,7 +43,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.username, self.password, self.freeleech, self.minseed, self.minleech, self.use_after_get_data = 6 * [None]
         self.search_fallback = True
 
     def _authorised(self, **kwargs):
@@ -63,7 +63,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                search_string = re.sub('(?i)[^a-z0-9\s]', '%', unquote_plus(search_string))
+                search_string = re.sub(r'(?i)[^a-z0-9\s]', '%', unquote_plus(search_string))
 
                 kwargs = dict(post_data={'keywords': search_string, 'do': 'quick_sort', 'page': '0',
                                          'category': '0', 'search_type': 't_name', 'sort': 'added',
@@ -162,20 +162,20 @@ class TVChaosUKProvider(generic.TorrentProvider):
     @staticmethod
     def regulate_title(title, mode='-', search_string=''):
 
-        has_series = re.findall('(?i)(.*?series[^\d]*?\d+)(.*)', title)
+        has_series = re.findall(r'(?i)(.*?series[^\d]*?\d+)(.*)', title)
         if has_series:
-            rc_xtras = re.compile('(?i)([. _-]|^)(special|extra)s?\w*([. _-]|$)')
+            rc_xtras = re.compile(r'(?i)([. _-]|^)(special|extra)s?\w*([. _-]|$)')
             has_special = rc_xtras.findall(has_series[0][1])
             if has_special:
                 title = has_series[0][0] + rc_xtras.sub(list(set(
                     list(has_special[0][0]) + list(has_special[0][2])))[0], has_series[0][1])
             title = re.sub('(?i)series', r'Season', title)
 
-        years = re.findall('((?:19|20)\d\d)', title)
-        title = re.sub('(19|20)\d\d', r'{{yr}}', title)
+        years = re.findall(r'((?:19|20)\d\d)', title)
+        title = re.sub(r'(19|20)\d\d', r'{{yr}}', title)
         title_parts = re.findall(
-            '(?im)^(.*?)(?:Season[^\d]*?(\d+).*?)?' +
-            '(?:(?:pack|part|pt)\W*?)?(\d+)[^\d]*?of[^\d]*?(?:\d+)(.*?)$', title)
+            r'(?im)^(.*?)(?:Season[^\d]*?(\d+).*?)?' +
+            r'(?:(?:pack|part|pt)\W*?)?(\d+)[^\d]*?of[^\d]*?(?:\d+)(.*?)$', title)
         if len(title_parts):
             new_parts = [tryInt(part, part) for part in title_parts[0]]
             if not new_parts[1]:
@@ -185,9 +185,9 @@ class TVChaosUKProvider(generic.TorrentProvider):
             title = '%s`S%02d%s`%s' % tuple(new_parts)
         for yr in years:
             # noinspection RegExpRedundantEscape
-            title = re.sub('\{\{yr\}\}', yr, title, count=1)
+            title = re.sub(r'\{\{yr\}\}', yr, title, count=1)
 
-        date_re = '(?i)([(\s.]*)((?:\d+[\s.]*(?:st|nd|rd|th)?[\s.])?)([adfjmnos]\w{2,}[\s.]+)((?:19|20)\d\d)([)\s.]*)'
+        date_re = r'(?i)([(\s.]*)((?:\d+[\s.]*(?:st|nd|rd|th)?[\s.])?)([adfjmnos]\w{2,}[\s.]+)((?:19|20)\d\d)([)\s.]*)'
         dated = re.findall(date_re, title)
         dnew = None
         for d in dated:
@@ -198,17 +198,17 @@ class TVChaosUKProvider(generic.TorrentProvider):
             except (StandardError, Exception):
                 pass
         if dated:
-            add_pad = re.findall('((?:19|20)\d\d[-]\d\d[-]\d\d)([\w\W])', title)
+            add_pad = re.findall(r'((?:19|20)\d\d[-]\d\d[-]\d\d)([\w\W])', title)
             if any(add_pad) and add_pad[0][1] not in [' ', '.']:
                 title = title.replace(''.join(
                     add_pad[0]), '%s %s' % (add_pad[0][0], add_pad[0][1]))
             title = re.sub(r'(?sim)(.*?)(?:Episode|Season).\d+.(.*)', r'\1\2', title)
 
         t = ['']
-        bl = '[*\[({]+\s*'
-        br = '\s*[})\]*]+'
+        bl = r'[*\[({]+\s*'
+        br = r'\s*[})\]*]+'
         title = re.sub('(.*?)((?i)%sproper%s)(.*)' % (bl, br), r'\1\3\2', title)
-        for r in '\s+-\s+', '(?:19|20)\d\d(?:\-\d\d\-\d\d)?', 'S\d\d+(?:E\d\d+)?':
+        for r in r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?':
             m = re.findall('(.*%s)(.*)' % r, title)
             if any(m) and len(m[0][0]) > len(t[0]):
                 t = m[0]
@@ -216,7 +216,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         tags = [re.findall(x, t[-1], flags=re.X) for x in
                 ('(?i)%sProper%s|\bProper\b$' % (bl, br),
-                 '(?i)(?:\d{3,4}(?:[pi]|hd)|hd(?:tv)?\s*\d{3,4}(?:[pi])?)',
+                 r'(?i)(?:\d{3,4}(?:[pi]|hd)|hd(?:tv)?\s*\d{3,4}(?:[pi])?)',
                  '''
                  (?i)(hr.ws.pdtv|blu.?ray|hddvd|
                  pdtv|hdtv|dsr|tvrip|web.?(?:dl|rip)|dvd.?rip|b[r|d]rip|mpeg-?2)
@@ -227,15 +227,15 @@ class TVChaosUKProvider(generic.TorrentProvider):
                  ''')]
         title = ('%s`%s' % (
             re.sub('|'.join(['|'.join([re.escape(y) for y in x]) for x in tags if x]).strip('|'), '', t[-1]),
-            re.sub('(?i)(?:hd(?:tv)?\s*)?(\d{3,4})(?:hd|p)?', r'\1p',
+            re.sub(r'(?i)(?:hd(?:tv)?\s*)?(\d{3,4})(?:hd|p)?', r'\1p',
                    '`'.join(['`'.join(x) for x in tags[:-1]]).rstrip('`')) +
             ('', '`hdtv')[not any(tags[2])] + ('', '`x264')[not any(tags[3])]))
-        for r in [('(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
-                  ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), ('%s\s*%s' % (bl, br), '`')]:
+        for r in [(r'(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
+                  ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), (r'%s\s*%s' % (bl, br), '`')]:
             title = re.sub(r[0], r[1], title)
 
         title = '%s%s-nogrp' % (('', t[0])[1 < len(t)], title)
-        for r in [('\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', '.')]:
+        for r in [(r'\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', '.')]:
             title = re.sub(r[0], r[1], title)
 
         titles = []
@@ -253,15 +253,29 @@ class TVChaosUKProvider(generic.TorrentProvider):
                 return titles
 
             try:
-                sxxexx_r = '(?i)S\d\d+E\d\d+'
+                sxxexx_r = r'(?i)S\d\d+E\d\d+'
                 if dnew and re.search(sxxexx_r, title):
-                    titles += [re.sub(sxxexx_r, dnew, re.sub('[_.\-\s]?%s' % dnew, '', title))]
+                    titles += [re.sub(sxxexx_r, dnew, re.sub(r'[_.\-\s]?%s' % dnew, '', title))]
             except (StandardError, Exception):
                 pass
 
         titles += [title]
 
         return titles
+
+    def after_get_data(self, result):
+        if self.use_after_get_data:
+            tid = None
+            try:
+                tid = re.findall(r'id=(\d+)$', result.url)[0]
+            except IndexError:
+                pass
+            if tid:
+                response = self.get_url(self.url_base + 'takethanks.php', post_data={'torrentid': tid})
+                if not self.should_skip():
+                    msg = '' if not response else ' err=%s' % re.sub('</?error>', '', response)
+                    if not re.search('(?i)remove[^>]+?thank', msg):
+                        logger.log('Failed to "Say thanks!" to uploader of id=%s%s' % (tid, msg), logger.DEBUG)
 
     def _season_strings(self, ep_obj, **kwargs):
 
@@ -273,9 +287,9 @@ class TVChaosUKProvider(generic.TorrentProvider):
     def _episode_strings(self, ep_obj, **kwargs):
 
         return super(TVChaosUKProvider, self)._episode_strings(ep_obj, scene=False, prefix='%', date_detail=(
-            lambda d: [x.strip('0') for x in (
-                ['{0} {1}% {2}'.format(d.strftime('%d')[-1], d.strftime('%b'), d.strftime('%Y'))] +
-                [d.strftime('%d %b %Y')] + ([d.strftime('%d %B %Y')], [])[d.strftime('%b') == d.strftime('%B')])]),
+            lambda date: ['%s %s %s'.lstrip('0') % x for x in
+                          [((d[-1], '%s%%' % m, y), (d, m, y)) + (((d, mf, y),), ())[m == mf]
+                           for (d, m, mf, y) in [(date.strftime(x) for x in ('%d', '%b', '%B', '%Y'))]][0]]),
             ep_detail=(lambda e: [naming_ep_type[2] % e] + (
                 [], ['%(episodenumber)dof' % e])[1 == tryInt(e.get('seasonnumber'))]), **kwargs)
 
@@ -283,7 +297,10 @@ class TVChaosUKProvider(generic.TorrentProvider):
     def ui_string(key):
 
         return ('tvchaosuk_tip' == key
-                and 'releases are often "Air by date release names" - edit search settings of show if required' or '')
+                and 'releases are often "Air by date release names" - edit search settings of show if required'
+                or 'tvchaosuk_use_after_get_data' == key and 'Send "Say thanks!"'
+                or 'tvchaosuk_use_after_get_data_tip' == key and 'to each release that is snatched'
+                or '')
 
 
 provider = TVChaosUKProvider()

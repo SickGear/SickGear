@@ -32,7 +32,7 @@ load_rc_config ${name}
 : ${sickgear_datadir:="${sickgear_dir}"}
 : ${sickgear_pidfile:="${sickgear_dir}/sickgear.pid"}
 
-command="${sickgear_dir}/SickBeard.py"
+command="${sickgear_dir}/sickgear.py"
 command_interpreter="/usr/local/bin/python"
 command_args="--daemon --pidfile ${sickgear_pidfile}"
 

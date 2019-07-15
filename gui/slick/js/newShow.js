@@ -376,7 +376,7 @@ $(document).ready(function () {
 
 		// if we have a show name then sanitize and use it for the dir name
 		if (show_name.length) {
-			$.get(sbRoot + '/home/addShows/sanitizeFileName', {name: cleanseText(show_name, !1)}, function (data) {
+			$.get(sbRoot + '/home/addShows/generate_show_dir_name', {show_name: cleanseText(show_name, !1)}, function (data) {
 				$('#displayText').html(sample_text.replace('||', data));
 			});
 		// if not then it's unknown

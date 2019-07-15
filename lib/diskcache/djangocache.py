@@ -1,5 +1,6 @@
 "Django-compatible disk and file backed cache."
 
+from functools import wraps
 from django.core.cache.backends.base import BaseCache
 
 try:
@@ -9,6 +10,8 @@ except ImportError:
     DEFAULT_TIMEOUT = 300
 
 from .fanout import FanoutCache
+
+MARK = object()
 
 
 class DjangoCache(BaseCache):
@@ -26,7 +29,12 @@ class DjangoCache(BaseCache):
         options = params.get('OPTIONS', {})
         self._directory = directory
         self._cache = FanoutCache(directory, shards, timeout, **options)
-        self.memoize = self._cache.memoize
+
+
+    @property
+    def cache(self):
+        "FanoutCache used by DjangoCache."
+        return self._cache
 
 
     @property
@@ -70,7 +78,7 @@ class DjangoCache(BaseCache):
         :param int version: key version number (default None, cache parameter)
         :param bool read: read value as bytes from file (default False)
         :param str tag: text to associate with key (default None)
-        :param bool retry: retry if database timeout expires (default True)
+        :param bool retry: retry if database timeout occurs (default True)
         :return: True if item was added
 
         """
@@ -93,7 +101,7 @@ class DjangoCache(BaseCache):
         :param float expire_time: if True, return expire_time in tuple
             (default False)
         :param tag: if True, return tag in tuple (default False)
-        :param bool retry: retry if database timeout expires (default False)
+        :param bool retry: retry if database timeout occurs (default False)
         :return: value for item if key is found else default
 
         """
@@ -127,7 +135,7 @@ class DjangoCache(BaseCache):
         :param int version: key version number (default None, cache parameter)
         :param bool read: read value as bytes from file (default False)
         :param str tag: text to associate with key (default None)
-        :param bool retry: retry if database timeout expires (default True)
+        :param bool retry: retry if database timeout occurs (default True)
         :return: True if item was set
 
         """
@@ -135,6 +143,24 @@ class DjangoCache(BaseCache):
         key = self.make_key(key, version=version)
         timeout = self.get_backend_timeout(timeout=timeout)
         return self._cache.set(key, value, timeout, read, tag, retry)
+
+
+    def touch(self, key, timeout=DEFAULT_TIMEOUT, version=None, retry=True):
+        """Touch a key in the cache. If timeout is given, that timeout will be
+        used for the key; otherwise the default cache timeout will be used.
+
+        :param key: key for item
+        :param float timeout: seconds until the item expires
+            (default 300 seconds)
+        :param int version: key version number (default None, cache parameter)
+        :param bool retry: retry if database timeout occurs (default True)
+        :return: True if key was touched
+
+        """
+        # pylint: disable=arguments-differ
+        key = self.make_key(key, version=version)
+        timeout = self.get_backend_timeout(timeout=timeout)
+        return self._cache.touch(key, timeout, retry)
 
 
     def pop(self, key, default=None, version=None, expire_time=False,
@@ -151,7 +177,7 @@ class DjangoCache(BaseCache):
         :param float expire_time: if True, return expire_time in tuple
             (default False)
         :param tag: if True, return tag in tuple (default False)
-        :param bool retry: retry if database timeout expires (default True)
+        :param bool retry: retry if database timeout occurs (default True)
         :return: value for item if key is found else default
 
         """
@@ -164,7 +190,7 @@ class DjangoCache(BaseCache):
 
         :param key: key for item
         :param int version: key version number (default None, cache parameter)
-        :param bool retry: retry if database timeout expires (default True)
+        :param bool retry: retry if database timeout occurs (default True)
         :return: True if item was deleted
 
         """
@@ -190,7 +216,7 @@ class DjangoCache(BaseCache):
         :param int delta: amount to increment (default 1)
         :param int version: key version number (default None, cache parameter)
         :param int default: value if key is missing (default None)
-        :param bool retry: retry if database timeout expires (default True)
+        :param bool retry: retry if database timeout occurs (default True)
         :return: new value for item on success else None
         :raises ValueError: if key is not found and default is None
 
@@ -223,7 +249,7 @@ class DjangoCache(BaseCache):
         :param int delta: amount to decrement (default 1)
         :param int version: key version number (default None, cache parameter)
         :param int default: value if key is missing (default None)
-        :param bool retry: retry if database timeout expires (default True)
+        :param bool retry: retry if database timeout occurs (default True)
         :return: new value for item on success else None
         :raises ValueError: if key is not found and default is None
 
@@ -269,7 +295,7 @@ class DjangoCache(BaseCache):
 
         It is better to initialize cache with `tag_index=True` than use this.
 
-        :raises Timeout: if database timeout expires
+        :raises Timeout: if database timeout occurs
 
         """
         self._cache.create_tag_index()
@@ -278,7 +304,7 @@ class DjangoCache(BaseCache):
     def drop_tag_index(self):
         """Drop tag index on cache database.
 
-        :raises Timeout: if database timeout expires
+        :raises Timeout: if database timeout occurs
 
         """
         self._cache.drop_tag_index()
@@ -327,3 +353,84 @@ class DjangoCache(BaseCache):
             # ticket 21147 - avoid time.time() related precision issues
             timeout = -1
         return None if timeout is None else timeout
+
+
+    def memoize(self, name=None, timeout=DEFAULT_TIMEOUT, version=None,
+                typed=False, tag=None):
+        """Memoizing cache decorator.
+
+        Decorator to wrap callable with memoizing function using cache.
+        Repeated calls with the same arguments will lookup result in cache and
+        avoid function evaluation.
+
+        If name is set to None (default), the callable name will be determined
+        automatically.
+
+        If typed is set to True, function arguments of different types will be
+        cached separately. For example, f(3) and f(3.0) will be treated as
+        distinct calls with distinct results.
+
+        The original underlying function is accessible through the __wrapped__
+        attribute. This is useful for introspection, for bypassing the cache,
+        or for rewrapping the function with a different cache.
+
+        Remember to call memoize when decorating a callable. If you forget, then a
+        TypeError will occur.
+
+        :param str name: name given for callable (default None, automatic)
+        :param float timeout: seconds until the item expires
+            (default 300 seconds)
+        :param int version: key version number (default None, cache parameter)
+        :param bool typed: cache different types separately (default False)
+        :param str tag: text to associate with arguments (default None)
+        :return: callable decorator
+
+        """
+        # Caution: Nearly identical code exists in memo.memoize
+        if callable(name):
+            raise TypeError('name cannot be callable')
+
+        def decorator(function):
+            "Decorator created by memoize call for callable."
+            if name is None:
+                try:
+                    reference = function.__qualname__
+                except AttributeError:
+                    reference = function.__name__
+
+                reference = function.__module__ + reference
+            else:
+                reference = name
+
+            reference = (reference,)
+
+            @wraps(function)
+            def wrapper(*args, **kwargs):
+                "Wrapper for callable to cache arguments and return values."
+
+                key = reference + args
+
+                if kwargs:
+                    key += (MARK,)
+                    sorted_items = sorted(kwargs.items())
+
+                    for item in sorted_items:
+                        key += item
+
+                if typed:
+                    key += tuple(type(arg) for arg in args)
+
+                    if kwargs:
+                        key += tuple(type(value) for _, value in sorted_items)
+
+                result = self.get(key, MARK, version, retry=True)
+
+                if result is MARK:
+                    result = function(*args, **kwargs)
+                    self.set(key, result, timeout, version, tag=tag, retry=True)
+
+                return result
+
+            return wrapper
+
+        return decorator

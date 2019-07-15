@@ -1823,5 +1823,7 @@ class TorrentProvider(GenericProvider):
             result = super(TorrentProvider, self).get_result(episodes, url)
             if hasattr(self, 'get_data'):
                 result.get_data_func = self.get_data
+            if hasattr(self, 'after_get_data'):
+                result.after_get_data_func = self.after_get_data
 
         return result

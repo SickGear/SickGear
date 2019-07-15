@@ -1830,3 +1830,12 @@ def getOverview(epStatus, show_quality, upgrade_once):
                     (quality in best_qualities or (None is not min_best and quality > min_best))):
             return Overview.GOOD
         return Overview.QUAL
+
+
+def generate_show_dir_name(root_dir, show_name):
+    san_show_name = sanitizeFileName(show_name)
+    if sickbeard.SHOW_DIRS_WITH_DOTS:
+        san_show_name = san_show_name.replace(' ', '.')
+    if None is root_dir:
+        return san_show_name
+    return ek.ek(os.path.join, root_dir, san_show_name)
