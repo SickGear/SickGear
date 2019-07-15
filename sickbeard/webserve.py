@@ -6717,7 +6717,7 @@ class ConfigProviders(Config):
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
 
             for attr in filter(lambda a: hasattr(torrent_src, a), [
-                'confirmed', 'freeleech', 'reject_m2ts', 'enable_recentsearch',
+                'confirmed', 'freeleech', 'reject_m2ts', 'use_after_get_data', 'enable_recentsearch',
                 'enable_backlog', 'search_fallback', 'enable_scheduled_backlog',
                 'scene_only', 'scene_loose', 'scene_loose_active',
                 'scene_rej_nuked', 'scene_nuked_active'

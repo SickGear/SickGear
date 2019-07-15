@@ -648,6 +648,22 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 							</label>
 						</div>
     #end if
+    #if callable(getattr(cur_torrent_provider, 'ui_string', None))
+        #set $field_name = cur_torrent_provider.get_id() + '_use_after_get_data'
+        #set $desc_text = cur_torrent_provider.ui_string($field_name)
+        #set $tip_text = cur_torrent_provider.ui_string($field_name + '_tip')
+        #if $tip_text and $hasattr($cur_torrent_provider, 'after_get_data'):
+						<div class="field-pair">
+							<label for="$field_name">
+								<span class="component-title">$desc_text</span>
+								<span class="component-desc">
+									<input type="checkbox" name="$field_name" id="$field_name" <%= html_checked if cur_torrent_provider.use_after_get_data else '' %>>
+									<p>$tip_text</p>
+								</span>
+							</label>
+						</div>
+        #end if
+    #end if
 						<div class="field-pair">
 							<span class="component-title">$filter_title</span>
 							<span class="component-desc">

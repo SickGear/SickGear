@@ -34,6 +34,7 @@
 * Add upgrade messages for sickbeard, cache, and failed db upgrade processes to loading page
 * Change add WorkingDirectory to systemd startup prevents startup git issue
 * Change improve MagnetDLProvider latest releases search
+* Add option to TVChaosUK settings, 'Send "Say thanks!"'
 
 
 [develop changelog]

@@ -1275,7 +1275,7 @@ def init_stage_1(console_logging):
             ('_seed_ratio', ''), ('minseed', 0), ('minleech', 0),
             ('scene_only', False), ('scene_or_contain', ''), ('scene_loose', False), ('scene_loose_active', False),
             ('scene_rej_nuked', False), ('scene_nuked_active', False),
-            ('freeleech', False), ('confirmed', False), ('reject_m2ts', False),
+            ('freeleech', False), ('confirmed', False), ('reject_m2ts', False), ('use_after_get_data', True),
             ('search_mode', 'eponly'), ('search_fallback', False)
         ]:
             if hasattr(torrent_prov, attr):
@@ -1770,6 +1770,7 @@ def save_config():
     new_config['General']['require_words'] = REQUIRE_WORDS
     new_config['General']['calendar_unprotected'] = int(CALENDAR_UNPROTECTED)
 
+    default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog', 'use_after_get_data')
     for src in filter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sortedProviderList()):
         src_id = src.get_id()
         src_id_uc = src_id.upper()
@@ -1788,7 +1789,7 @@ def save_config():
                 ('enable_recentsearch', 1), ('enable_backlog', 1), ('enable_scheduled_backlog', 1),
                 ('api_key', None), ('passkey', None), ('digest', None), ('hash', None), ('username', ''), ('uid', ''),
                 ('minseed', 1), ('minleech', 1), ('seed_time', None),
-                ('confirmed', 1), ('freeleech', 1), ('reject_m2ts', 1),
+                ('confirmed', 1), ('freeleech', 1), ('reject_m2ts', 1), ('use_after_get_data', 1),
                 ('scene_only', None), ('scene_or_contain', ''), ('scene_loose', None), ('scene_loose_active', None),
                 ('scene_rej_nuked', None), ('scene_nuked_active', None),
                 ('search_mode', None), ('search_fallback', 1)
@@ -1796,8 +1797,7 @@ def save_config():
                 if hasattr(src, k)]:
             if (value and not ('search_mode' == attr and 'eponly' == value)
                     # must allow the following to save '0' not '1' because default is enable (1) instead of disable (0)
-                    and (attr not in ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog'))
-                    or not value and (attr in ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog'))):
+                    and (attr not in default_not_zero) or not value and (attr in default_not_zero)):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = value
 
         if getattr(src, '_seed_ratio', None):
@@ -1808,6 +1808,7 @@ def save_config():
         if not new_config[src_id_uc]:
             del new_config[src_id_uc]
 
+    default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog')
     for src in filter(lambda px: GenericProvider.NZB == px.providerType, providers.sortedProviderList()):
         src_id = src.get_id()
         src_id_uc = src.get_id().upper()
@@ -1826,8 +1827,7 @@ def save_config():
                 'search_fallback', 'server_type')):
             value = helpers.tryInt(getattr(src, attr, None))
             # must allow the following to save '0' not '1' because default is enable (1) instead of disable (0)
-            if (value and (attr not in ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog'))
-                    or not value and (attr in ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog'))):
+            if (value and (attr not in default_not_zero)) or (not value and (attr in default_not_zero)):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = value
 
         attr = 'scene_or_contain'
