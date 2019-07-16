@@ -30,7 +30,6 @@ from __future__ import absolute_import, unicode_literals
 
 import cgi
 import codecs
-import collections
 import re
 
 try:
@@ -69,11 +68,11 @@ ZERO_BYTES = '\x00\x00'
 
 # Match the opening XML declaration.
 # Example: <?xml version="1.0" encoding="utf-8"?>
-RE_XML_DECLARATION = re.compile('^<\?xml[^>]*?>')
+RE_XML_DECLARATION = re.compile(r'^<\?xml[^>]*?>')
 
 # Capture the value of the XML processing instruction's encoding attribute.
 # Example: <?xml version="1.0" encoding="utf-8"?>
-RE_XML_PI_ENCODING = re.compile(b'^<\?.*encoding=[\'"](.*?)[\'"].*\?>')
+RE_XML_PI_ENCODING = re.compile(br'^<\?.*encoding=[\'"](.*?)[\'"].*\?>')
 
 def convert_to_utf8(http_headers, data, result):
     '''Detect and convert the character encoding to UTF-8.
@@ -241,7 +240,7 @@ def convert_to_utf8(http_headers, data, result):
     # try: HTTP encoding, declared XML encoding, encoding sniffed from BOM
     for proposed_encoding in (rfc3023_encoding, xml_encoding, bom_encoding,
                               lazy_chardet_encoding, 'utf-8', 'windows-1252', 'iso-8859-2'):
-        if isinstance(proposed_encoding, collections.Callable):
+        if callable(proposed_encoding):
             proposed_encoding = proposed_encoding(data)
         if not proposed_encoding:
             continue
