@@ -544,6 +544,23 @@ def durationWin64(value):
     return timedelta(microseconds=value / 10)
 
 
+def durationMillisWin64(value):
+    """
+    Convert Windows 64-bit duration to string. The timestamp format is
+    a 64-bit number: number of milliseconds. See also timestampMilliWin64().
+
+    >>> str(durationMillisWin64(107258))
+    '0:01:47.258000'
+    >>> str(durationMillisWin64(214628))
+    '0:03:34.628000'
+    """
+    if not isinstance(value, (float, int)):
+        raise TypeError("an integer or float is required")
+    if value < 0:
+        raise ValueError("value have to be a positive or nul integer")
+    return timedelta(microseconds=value * 1000)
+
+
 # Start of 64-bit Windows timestamp: 1st January 1600 at 00:00
 WIN64_TIMESTAMP_T0 = datetime(1601, 1, 1, 0, 0, 0)
 
