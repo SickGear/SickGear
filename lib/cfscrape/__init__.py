@@ -195,14 +195,17 @@ class CloudflareScraper(Session):
         if hasattr(ssl, 'PROTOCOL_TLS'):
             ctx = ssl.SSLContext(getattr(ssl, 'PROTOCOL_TLSv1_3', ssl.PROTOCOL_TLSv1_2))
 
-            for cipher in (
-                    ([], ['GREASE_3A', 'GREASE_6A', 'AES128-GCM-SHA256', 'AES256-GCM-SHA256', 'AES256-GCM-SHA384',
-                          'CHACHA20-POLY1305-SHA256'])[hasattr(ssl, 'PROTOCOL_TLSv1_3')] +
-                    ['ECDHE-ECDSA-AES128-GCM-SHA256', 'ECDHE-RSA-AES128-GCM-SHA256',
-                     'ECDHE-ECDSA-AES256-GCM-SHA384',
-                     'ECDHE-ECDSA-CHACHA20-POLY1305-SHA256', 'ECDHE-RSA-CHACHA20-POLY1305-SHA256',
-                     'ECDHE-RSA-AES128-CBC-SHA', 'ECDHE-RSA-AES256-CBC-SHA', 'RSA-AES128-GCM-SHA256',
-                     'RSA-AES256-GCM-SHA384', 'ECDHE-RSA-AES128-GCM-SHA256', 'RSA-AES256-SHA', '3DES-EDE-CBC']):
+            for cipher in ([
+                'ECDHE-ECDSA-AES128-GCM-SHA256',
+                'ECDHE-RSA-AES128-GCM-SHA256',
+                'ECDHE-ECDSA-AES128-SHA256',
+                'ECDHE-ECDSA-AES256-GCM-SHA384',
+                'ECDHE-ECDSA-AES256-SHA384',
+                'ECDHE-ECDSA-AES256-SHA',
+                'ECDHE-ECDSA-CHACHA20-POLY1305',
+                'ECDHE-RSA-AES256-GCM-SHA384',
+                'ECDHE-RSA-AES256-SHA384',
+            ]):
                 try:
                     ctx.set_ciphers(cipher)
                     suite += [cipher]

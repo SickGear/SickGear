@@ -5,6 +5,7 @@
 * Update DiskCache library 3.1.1 (2649ac9) to 4.0.0 (2c79bb9)
 * Update feedparser 5.2.1 (2b11c80) to 5.2.1 (cbe18d0)
 * Update Hachoir library 2.0a6 (c102cc7) to 2.0a6 (5b9e05a)
+* Update Js2Py 0.64 (efbfcca) to 0.64 (7858d1d)
 
 
 [develop changelog]
