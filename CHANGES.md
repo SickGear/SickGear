@@ -8,6 +8,7 @@
 * Update Js2Py 0.64 (efbfcca) to 0.64 (7858d1d)
 * Update MsgPack 0.6.1 (737f08a) to 0.6.1 (05ff11d)
 * Update Requests library 2.22.0 (aeda65b) to 2.22.0 (0b6c110)
+* Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
 
 
 [develop changelog]
