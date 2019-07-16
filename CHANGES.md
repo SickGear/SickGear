@@ -7,6 +7,7 @@
 * Update Hachoir library 2.0a6 (c102cc7) to 2.0a6 (5b9e05a)
 * Update Js2Py 0.64 (efbfcca) to 0.64 (7858d1d)
 * Update MsgPack 0.6.1 (737f08a) to 0.6.1 (05ff11d)
+* Update Requests library 2.22.0 (aeda65b) to 2.22.0 (0b6c110)
 
 
 [develop changelog]
