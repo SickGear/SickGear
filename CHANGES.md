@@ -11,6 +11,7 @@
 * Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
 * Update TZlocal 2.0.0.dev0 (b73a692) to 2.0.0b3 (410a838)
 * Update unidecode module 1.0.22 (a5045ab) to 1.1.1 (632af82)
+* Update urllib3 release 1.25.2 (49eea80) to 1.25.3 (3387b20)
 
 
 [develop changelog]
