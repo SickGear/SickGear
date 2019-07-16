@@ -13,12 +13,15 @@ import pickletools
 import sqlite3
 import struct
 import sys
+import tempfile
 import threading
 import time
 import warnings
 import zlib
 
-from .memo import memoize
+############################################################################
+# BEGIN Python 2/3 Shims
+############################################################################
 
 if sys.hexversion < 0x03000000:
     import cPickle as pickle  # pylint: disable=import-error
@@ -38,6 +41,20 @@ else:
     BytesType = bytes
     INT_TYPES = (int,)
     io_open = open  # pylint: disable=invalid-name
+
+def full_name(func):
+    "Return full name of `func` by adding the module and function name."
+    try:
+        # The __qualname__ attribute is only available in Python 3.3 and later.
+        # GrantJ 2019-03-29 Remove after support for Python 2 is dropped.
+        name = func.__qualname__
+    except AttributeError:
+        name = func.__name__
+    return func.__module__ + '.' + name
+
+############################################################################
+# END Python 2/3 Shims
+############################################################################
 
 try:
     WindowsError
@@ -356,10 +373,38 @@ class EmptyDirWarning(UserWarning):
     "Warning used by Cache.check for empty directories."
 
 
+def args_to_key(base, args, kwargs, typed):
+    """Create cache key out of function arguments.
+
+    :param tuple base: base of key
+    :param tuple args: function arguments
+    :param dict kwargs: function keyword arguments
+    :param bool typed: include types in cache key
+    :return: cache key tuple
+
+    """
+    key = base + args
+
+    if kwargs:
+        key += (ENOVAL,)
+        sorted_items = sorted(kwargs.items())
+
+        for item in sorted_items:
+            key += item
+
+    if typed:
+        key += tuple(type(arg) for arg in args)
+
+        if kwargs:
+            key += tuple(type(value) for _, value in sorted_items)
+
+    return key
+
+
 class Cache(object):
     "Disk and file backed cache."
     # pylint: disable=bad-continuation
-    def __init__(self, directory, timeout=60, disk=Disk, **settings):
+    def __init__(self, directory=None, timeout=60, disk=Disk, **settings):
         """Initialize cache instance.
 
         :param str directory: cache directory
@@ -372,6 +417,11 @@ class Cache(object):
             assert issubclass(disk, Disk)
         except (TypeError, AssertionError):
             raise ValueError('disk must subclass diskcache.Disk')
+
+        if directory is None:
+            directory = tempfile.mkdtemp(prefix='diskcache-')
+        directory = op.expanduser(directory)
+        directory = op.expandvars(directory)
 
         self._directory = directory
         self._timeout = 0  # Manually handle retries during initialization.
@@ -621,8 +671,7 @@ class Cache(object):
         Raises :exc:`Timeout` error when database timeout occurs and `retry` is
         `False` (default).
 
-        >>> cache = Cache('/tmp/diskcache')
-        >>> _ = cache.clear()
+        >>> cache = Cache()
         >>> with cache.transact():  # Atomically increment two keys.
         ...     _ = cache.incr('total', 123.4)
         ...     _ = cache.incr('count', 1)
@@ -688,6 +737,9 @@ class Cache(object):
         When `read` is `True`, `value` should be a file-like object opened
         for reading in binary mode.
 
+        If `expire` is less than or equal to zero then immediately returns
+        `False`.
+
         Raises :exc:`Timeout` error when database timeout occurs and `retry` is
         `False` (default).
 
@@ -702,6 +754,9 @@ class Cache(object):
         :raises Timeout: if database timeout occurs
 
         """
+        if expire is not None and expire <= 0:
+            return False
+
         now = time.time()
         db_key, raw = self._disk.put(key)
         expire_time = None if expire is None else now + expire
@@ -1344,8 +1399,7 @@ class Cache(object):
 
         See also `Cache.pull`.
 
-        >>> cache = Cache('/tmp/diskcache')
-        >>> _ = cache.clear()
+        >>> cache = Cache()
         >>> print(cache.push('first value'))
         500000000000000
         >>> cache.get(500000000000000)
@@ -1438,8 +1492,7 @@ class Cache(object):
 
         See also `Cache.push` and `Cache.get`.
 
-        >>> cache = Cache('/tmp/diskcache')
-        >>> _ = cache.clear()
+        >>> cache = Cache()
         >>> cache.pull()
         (None, None)
         >>> for letter in 'abc':
@@ -1555,8 +1608,7 @@ class Cache(object):
 
         See also `Cache.pull` and `Cache.push`.
 
-        >>> cache = Cache('/tmp/diskcache')
-        >>> _ = cache.clear()
+        >>> cache = Cache()
         >>> for letter in 'abc':
         ...     print(cache.push(letter))
         500000000000000
@@ -1654,8 +1706,7 @@ class Cache(object):
         Raises :exc:`Timeout` error when database timeout occurs and `retry` is
         `False` (default).
 
-        >>> cache = Cache('/tmp/diskcache')
-        >>> _ = cache.clear()
+        >>> cache = Cache()
         >>> for num, letter in enumerate('abc'):
         ...     cache[letter] = num
         >>> cache.peekitem()
@@ -1706,9 +1757,6 @@ class Cache(object):
                     continue
                 else:
                     raise
-            finally:
-                if name is not None:
-                    self._disk.remove(name)
             break
 
         if expire_time and tag:
@@ -1721,7 +1769,92 @@ class Cache(object):
             return key, value
 
 
-    memoize = memoize
+    def memoize(self, name=None, typed=False, expire=None, tag=None):
+        """Memoizing cache decorator.
+
+        Decorator to wrap callable with memoizing function using cache.
+        Repeated calls with the same arguments will lookup result in cache and
+        avoid function evaluation.
+
+        If name is set to None (default), the callable name will be determined
+        automatically.
+
+        If typed is set to True, function arguments of different types will be
+        cached separately. For example, f(3) and f(3.0) will be treated as
+        distinct calls with distinct results.
+
+        The original underlying function is accessible through the __wrapped__
+        attribute. This is useful for introspection, for bypassing the cache,
+        or for rewrapping the function with a different cache.
+
+        >>> from diskcache import Cache
+        >>> cache = Cache()
+        >>> @cache.memoize(expire=1, tag='fib')
+        ... def fibonacci(number):
+        ...     if number == 0:
+        ...         return 0
+        ...     elif number == 1:
+        ...         return 1
+        ...     else:
+        ...         return fibonacci(number - 1) + fibonacci(number - 2)
+        >>> print(fibonacci(100))
+        354224848179261915075
+
+        An additional `__cache_key__` attribute can be used to generate the
+        cache key used for the given arguments.
+
+        >>> key = fibonacci.__cache_key__(100)
+        >>> print(cache[key])
+        354224848179261915075
+
+        Remember to call memoize when decorating a callable. If you forget,
+        then a TypeError will occur. Note the lack of parenthenses after
+        memoize below:
+
+        >>> @cache.memoize
+        ... def test():
+        ...     pass
+        Traceback (most recent call last):
+            ...
+        TypeError: name cannot be callable
+
+        :param cache: cache to store callable arguments and return values
+        :param str name: name given for callable (default None, automatic)
+        :param bool typed: cache different types separately (default False)
+        :param float expire: seconds until arguments expire
+            (default None, no expiry)
+        :param str tag: text to associate with arguments (default None)
+        :return: callable decorator
+
+        """
+        # Caution: Nearly identical code exists in DjangoCache.memoize
+        if callable(name):
+            raise TypeError('name cannot be callable')
+
+        def decorator(func):
+            "Decorator created by memoize() for callable `func`."
+            base = (full_name(func),) if name is None else (name,)
+
+            @ft.wraps(func)
+            def wrapper(*args, **kwargs):
+                "Wrapper for callable to cache arguments and return values."
+                key = wrapper.__cache_key__(*args, **kwargs)
+                result = self.get(key, default=ENOVAL, retry=True)
+
+                if result is ENOVAL:
+                    result = func(*args, **kwargs)
+                    self.set(key, result, expire=expire, tag=tag, retry=True)
+
+                return result
+
+            def __cache_key__(*args, **kwargs):
+                "Make key for cache given function arguments."
+                return args_to_key(base, args, kwargs, typed)
+
+            wrapper.__cache_key__ = __cache_key__
+            return wrapper
+
+        return decorator
 
 
     def check(self, fix=False, retry=False):
@@ -2046,8 +2179,7 @@ class Cache(object):
     def iterkeys(self, reverse=False):
         """Iterate Cache keys in database sort order.
 
-        >>> cache = Cache('/tmp/diskcache')
-        >>> _ = cache.clear()
+        >>> cache = Cache()
         >>> for key in [4, 1, 3, 0, 2]:
         ...     cache[key] = key
         >>> list(cache.iterkeys())
@@ -2200,6 +2332,8 @@ class Cache(object):
 
 
     def __enter__(self):
+        # Create connection in thread.
+        connection = self._con  # pylint: disable=unused-variable
         return self
 
 

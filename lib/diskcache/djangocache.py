@@ -9,9 +9,8 @@ except ImportError:
     # For older versions of Django simply use 300 seconds.
     DEFAULT_TIMEOUT = 300
 
+from .core import ENOVAL, args_to_key, full_name
 from .fanout import FanoutCache
-
-MARK = object()
 
 
 class DjangoCache(BaseCache):
@@ -27,20 +26,23 @@ class DjangoCache(BaseCache):
         shards = params.get('SHARDS', 8)
         timeout = params.get('DATABASE_TIMEOUT', 0.010)
         options = params.get('OPTIONS', {})
-        self._directory = directory
         self._cache = FanoutCache(directory, shards, timeout, **options)
-
-
-    @property
-    def cache(self):
-        "FanoutCache used by DjangoCache."
-        return self._cache
 
 
     @property
     def directory(self):
         """Cache directory."""
-        return self._directory
+        return self._cache.directory
+
+
+    def cache(self, name):
+        """Return Cache with given `name` in subdirectory.
+
+        :param str name: subdirectory name for Cache
+        :return: Cache with given name
+
+        """
+        return self._cache.cache(name)
 
 
     def deque(self, name):
@@ -293,7 +295,7 @@ class DjangoCache(BaseCache):
     def create_tag_index(self):
         """Create tag index on cache database.
 
-        It is better to initialize cache with `tag_index=True` than use this.
+        Better to initialize cache with `tag_index=True` than use this.
 
         :raises Timeout: if database timeout occurs
 
@@ -374,8 +376,11 @@ class DjangoCache(BaseCache):
         attribute. This is useful for introspection, for bypassing the cache,
         or for rewrapping the function with a different cache.
 
-        Remember to call memoize when decorating a callable. If you forget, then a
-        TypeError will occur.
+        An additional `__cache_key__` attribute can be used to generate the
+        cache key used for the given arguments.
+
+        Remember to call memoize when decorating a callable. If you forget,
+        then a TypeError will occur.
 
         :param str name: name given for callable (default None, automatic)
         :param float timeout: seconds until the item expires
@@ -386,51 +391,33 @@ class DjangoCache(BaseCache):
         :return: callable decorator
 
         """
-        # Caution: Nearly identical code exists in memo.memoize
+        # Caution: Nearly identical code exists in Cache.memoize
         if callable(name):
             raise TypeError('name cannot be callable')
 
-        def decorator(function):
-            "Decorator created by memoize call for callable."
-            if name is None:
-                try:
-                    reference = function.__qualname__
-                except AttributeError:
-                    reference = function.__name__
+        def decorator(func):
+            "Decorator created by memoize() for callable `func`."
+            base = (full_name(func),) if name is None else (name,)
 
-                reference = function.__module__ + reference
-            else:
-                reference = name
-
-            reference = (reference,)
-
-            @wraps(function)
+            @wraps(func)
             def wrapper(*args, **kwargs):
                 "Wrapper for callable to cache arguments and return values."
+                key = wrapper.__cache_key__(*args, **kwargs)
+                result = self.get(key, ENOVAL, version, retry=True)
 
-                key = reference + args
-
-                if kwargs:
-                    key += (MARK,)
-                    sorted_items = sorted(kwargs.items())
-
-                    for item in sorted_items:
-                        key += item
-
-                if typed:
-                    key += tuple(type(arg) for arg in args)
-
-                    if kwargs:
-                        key += tuple(type(value) for _, value in sorted_items)
-
-                result = self.get(key, MARK, version, retry=True)
-
-                if result is MARK:
-                    result = function(*args, **kwargs)
-                    self.set(key, result, timeout, version, tag=tag, retry=True)
+                if result is ENOVAL:
+                    result = func(*args, **kwargs)
+                    self.set(
+                        key, result, timeout, version, tag=tag, retry=True,
+                    )
 
                 return result
 
+            def __cache_key__(*args, **kwargs):
+                "Make key for cache given function arguments."
+                return args_to_key(base, args, kwargs, typed)
+
+            wrapper.__cache_key__ = __cache_key__
             return wrapper
 
         return decorator

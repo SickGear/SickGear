@@ -4,21 +4,28 @@ import itertools as it
 import operator
 import os.path as op
 import sqlite3
+import sys
+import tempfile
 import time
 
-try:
-    from functools import reduce
-except ImportError:
-    reduce  # pylint: disable=pointless-statement
-
 from .core import ENOVAL, DEFAULT_SETTINGS, Cache, Disk, Timeout
-from .memo import memoize
 from .persistent import Deque, Index
+
+############################################################################
+# BEGIN Python 2/3 Shims
+############################################################################
+
+if sys.hexversion >= 0x03000000:
+    from functools import reduce
+
+############################################################################
+# END Python 2/3 Shims
+############################################################################
 
 
 class FanoutCache(object):
     "Cache that shards keys and values."
-    def __init__(self, directory, shards=8, timeout=0.010, disk=Disk,
+    def __init__(self, directory=None, shards=8, timeout=0.010, disk=Disk,
                  **settings):
         """Initialize cache instance.
 
@@ -29,13 +36,19 @@ class FanoutCache(object):
         :param settings: any of `DEFAULT_SETTINGS`
 
         """
-        self._directory = directory
-        self._count = shards
+        if directory is None:
+            directory = tempfile.mkdtemp(prefix='diskcache-')
+        directory = op.expanduser(directory)
+        directory = op.expandvars(directory)
+
         default_size_limit = DEFAULT_SETTINGS['size_limit']
         size_limit = settings.pop('size_limit', default_size_limit) / shards
+
+        self._count = shards
+        self._directory = directory
         self._shards = tuple(
             Cache(
-                op.join(directory, '%03d' % num),
+                directory=op.join(directory, '%03d' % num),
                 timeout=timeout,
                 disk=disk,
                 size_limit=size_limit,
@@ -44,6 +57,7 @@ class FanoutCache(object):
             for num in range(shards)
         )
         self._hash = self._shards[0].disk.hash
+        self._caches = {}
         self._deques = {}
         self._indexes = {}
 
@@ -348,9 +362,6 @@ class FanoutCache(object):
         del shard[key]
 
 
-    memoize = memoize
-
-
     def check(self, fix=False, retry=False):
         """Check database and file system consistency.
 
@@ -391,7 +402,7 @@ class FanoutCache(object):
     def create_tag_index(self):
         """Create tag index on cache database.
 
-        It is better to initialize cache with `tag_index=True` than use this.
+        Better to initialize cache with `tag_index=True` than use this.
 
         :raises Timeout: if database timeout occurs
 
@@ -492,6 +503,7 @@ class FanoutCache(object):
         "Close database connection."
         for shard in self._shards:
             shard.close()
+        self._caches.clear()
         self._deques.clear()
         self._indexes.clear()
 
@@ -545,7 +557,6 @@ class FanoutCache(object):
         :param str key: Settings key for item
         :param value: value for item (optional)
         :return: updated value for item
-        :raises Timeout: if database timeout occurs
 
         """
         for shard in self._shards:
@@ -559,12 +570,41 @@ class FanoutCache(object):
         return result
 
 
+    def cache(self, name):
+        """Return Cache with given `name` in subdirectory.
+
+        >>> fanout_cache = FanoutCache()
+        >>> cache = fanout_cache.cache('test')
+        >>> cache.set('abc', 123)
+        True
+        >>> cache.get('abc')
+        123
+        >>> len(cache)
+        1
+        >>> cache.delete('abc')
+        True
+
+        :param str name: subdirectory name for Cache
+        :return: Cache with given name
+
+        """
+        _caches = self._caches
+
+        try:
+            return _caches[name]
+        except KeyError:
+            parts = name.split('/')
+            directory = op.join(self._directory, 'cache', *parts)
+            temp = Cache(directory=directory)
+            _caches[name] = temp
+            return temp
+
+
     def deque(self, name):
         """Return Deque with given `name` in subdirectory.
 
-        >>> cache = FanoutCache('/tmp/diskcache/fanoutcache')
+        >>> cache = FanoutCache()
         >>> deque = cache.deque('test')
-        >>> deque.clear()
         >>> deque.extend('abc')
         >>> deque.popleft()
         'a'
@@ -592,9 +632,8 @@ class FanoutCache(object):
     def index(self, name):
         """Return Index with given `name` in subdirectory.
 
-        >>> cache = FanoutCache('/tmp/diskcache/fanoutcache')
+        >>> cache = FanoutCache()
         >>> index = cache.index('test')
-        >>> index.clear()
         >>> index['abc'] = 123
         >>> index['def'] = 456
         >>> index['ghi'] = 789
@@ -620,3 +659,19 @@ class FanoutCache(object):
             temp = Index(directory)
             _indexes[name] = temp
             return temp
+
+
+############################################################################
+# BEGIN Python 2/3 Shims
+############################################################################
+
+if sys.hexversion < 0x03000000:
+    import types
+    memoize_func = Cache.__dict__['memoize']  # pylint: disable=invalid-name
+    FanoutCache.memoize = types.MethodType(memoize_func, None, FanoutCache)
+else:
+    FanoutCache.memoize = Cache.memoize
+
+############################################################################
+# END Python 2/3 Shims
+############################################################################

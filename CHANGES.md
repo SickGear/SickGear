@@ -2,6 +2,7 @@
 
 * Update attr 19.2.0.dev0 (de84609) to 19.2.0.dev0 (154b4e5)
 * Update Certifi 2019.03.09 (401100f) to 2019.06.16 (84dc766)
+* Update DiskCache library 3.1.1 (2649ac9) to 4.0.0 (2c79bb9)
 
 
 [develop changelog]
