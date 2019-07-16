@@ -10,6 +10,7 @@
 * Update Requests library 2.22.0 (aeda65b) to 2.22.0 (0b6c110)
 * Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
 * Update TZlocal 2.0.0.dev0 (b73a692) to 2.0.0b3 (410a838)
+* Update unidecode module 1.0.22 (a5045ab) to 1.1.1 (632af82)
 
 
 [develop changelog]
