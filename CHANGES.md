@@ -1,4 +1,12 @@
-﻿### 0.20.0 (2019-07-15 21:25:00 UTC)
+﻿### 0.21.0 (2019-xx-xx xx:xx:xx UTC)
+
+
+
+[develop changelog]
+
+
+
+### 0.20.0 (2019-07-15 21:25:00 UTC)
 
 * Change if episode name is not known at point of rename, then use 'tba'
 * Add "Use dots in show.name path" to config/General/Misc, this will only affect newly added shows
