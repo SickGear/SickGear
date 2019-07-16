@@ -1,6 +1,7 @@
 ﻿### 0.21.0 (2019-xx-xx xx:xx:xx UTC)
 
 * Update attr 19.2.0.dev0 (de84609) to 19.2.0.dev0 (154b4e5)
+* Update Certifi 2019.03.09 (401100f) to 2019.06.16 (84dc766)
 
 
 [develop changelog]
