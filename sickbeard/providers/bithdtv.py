@@ -81,15 +81,14 @@ class BitHDTVProvider(generic.TorrentProvider):
 
                     html = '<table%s' % re.split('</table>\s*<table', html)[-1]
                     html = re.sub(r'</td>([^<]*)<tr', r'</td></tr>\1<tr', html)
-                    with BS4Parser(html, 'html.parser') as soup:
-                        torrent_table = soup.find('table')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only='table') as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 6 > len(cells):
                                 continue
@@ -112,7 +111,7 @@ class BitHDTVProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)

@@ -39,15 +39,17 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         self.url_home = ['https://thepiratebay.se/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[h\sI]+', '', x[::-1]) for x in [
+                            [re.sub(r'[h\sI]+', '', x[::-1]) for x in [
                                 'm IY', '5  F', 'HhIc', 'vI J', 'HIhe', 'uI k', '2  d', 'uh l']],
-                            [re.sub('[N\sQ]+', '', x[::-1]) for x in [
+                            [re.sub(r'[N\sQ]+', '', x[::-1]) for x in [
                                 'lN Gc', 'X  Yy', 'c lNR', 'vNJNH', 'kQNHe', 'GQdQu', 'wNN9']],
                         ]]]
 
-        self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/'}
-        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s',
-                         'browse': '%(home)s%(vars)s'}
+        self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/',
+                         'search2': 'search.php?q=%s&video=on&category=0&page=0&orderby=99', 'browse2': '?load=/recent'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s',
+                         'search': '%(home)s%(vars)s', 'search2': '%(home)s%(vars)s',
+                         'browse': '%(home)s%(vars)s', 'browse2': '%(home)s%(vars)s'}
 
         self.proper_search_terms = None
 
@@ -132,7 +134,6 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         return super(ThePirateBayProvider, self)._episode_strings(
             ep_obj, date_or=True,
-            ep_detail=lambda x: '%s*|%s*' % (config.naming_ep_type[2] % x, config.naming_ep_type[0] % x),
             ep_detail_anime=lambda x: '%02i' % x, **kwargs)
 
     def _search_provider(self, search_params, search_mode='eponly', epcount=0, **kwargs):
@@ -145,33 +146,39 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
             'info': 'detail', 'get': 'download[^"]+magnet', 'tid': r'.*/(\d{5,}).*',
-            'verify': '(?:helper|moderator|trusted|vip)', 'size': 'size[^\d]+(\d+(?:[.,]\d+)?\W*[bkmgt]\w+)'}.items())
+            'verify': '(?:helper|moderator|trusted|vip)', 'size': r'size[^\d]+(\d+(?:[.,]\d+)?\W*[bkmgt]\w+)'}.items())
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
-                search_url = self.urls['browse'] if 'Cache' == mode \
-                    else self.urls['search'] % (urllib.quote(search_string))
-                html = self.get_url(search_url)
-                if self.should_skip():
-                    return results
+                s_mode = 'browse' if 'Cache' == mode else 'search'
+                for i in ('', '2'):
+                    search_url = self.urls['%s%s' % (s_mode, i)]
+                    if 'Cache' != mode:
+                        search_url = search_url % urllib.quote(search_string)
 
+                    html = self.get_url(search_url)
+                    if self.should_skip():
+                        return results
+
+                    if html and not self._has_no_results(html):
+                        break
+                        
                 cnt = len(items[mode])
                 try:
                     if not html or self._has_no_results(html):
                         self._url = None
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='id="searchResult"') as soup:
-                        torrent_table = soup.find(id='searchResult')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only=dict(table={'id': 'searchResult'})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_table.find_all('tr')[1:]:
+                        for tr in tbl.find_all('tr')[1:]:
                             cells = tr.find_all('td')
                             if 3 > len(cells):
                                 continue
@@ -202,14 +209,14 @@ class ThePirateBayProvider(generic.TorrentProvider):
                                 size = None
                                 try:
                                     size = rc['size'].findall(tr.find_all(class_='detDesc')[0].get_text())[0]
-                                except (StandardError, Exception):
+                                except (BaseException, Exception):
                                     pass
 
                                 items[mode].append((title, download_magnet, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

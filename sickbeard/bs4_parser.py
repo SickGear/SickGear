@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, SoupStrainer
 import re
 
 
@@ -10,6 +10,17 @@ class BS4Parser:
         for k, v in kwargs.items():
             if 'features' in k and isinstance(v, list):
                 v = [item for item in v if item in ['html5lib', 'html.parser', 'html', 'lxml', 'xml']][0]
+
+            elif 'parse_only' in k:
+                if isinstance(v, dict):
+                    (parse_key, filter_dict), = kwargs[k].items()
+                    v = SoupStrainer(parse_key, filter_dict)
+                else:
+                    v = SoupStrainer(v)
+
+            elif 'preclean' in k and v:
+                args = (re.sub(r'(?si)(<!--.*?-->|<style.*?</style>)', '', args[0]),) + args[1:]
+                continue
 
             kwargs_new[k] = v
 

@@ -69,15 +69,15 @@ class SceneHDProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='cellpadding="5"') as soup:
-                        torrent_table = soup.find('table', class_='browse')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, attr='cellpadding="5"') as soup:
+                        tbl = soup.find('table', class_='browse')
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -87,7 +87,7 @@ class SceneHDProvider(generic.TorrentProvider):
                                 seeders, leechers, size = [n for n in [
                                     cells[head[x]].get_text().strip() for x in 'leech', 'leech', 'size']]
                                 seeders, leechers, size = [tryInt(n, n) for n in
-                                                           list(re.findall('^(\d+)[^\d]+?(\d+)', leechers)[0])
+                                                           list(re.findall(r'^(\d+)[^\d]+?(\d+)', leechers)[0])
                                                            + re.findall('^[^\n\t]+', size)]
                                 if self._reject_item(seeders, leechers,
                                                      self.freeleech and (not tr.find('a', class_=rc['filter'])),
@@ -105,7 +105,7 @@ class SceneHDProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)

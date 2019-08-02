@@ -34,9 +34,9 @@ class EztvProvider(generic.TorrentProvider):
 
         self.url_home = ['https://eztv.ag/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[v\sz]+', '', x[::-1]) for x in [
+                            [re.sub(r'[v\sz]+', '', x[::-1]) for x in [
                                 '0vp XZ', 'uvEj d', 'i5 Wzd', 'j9 vGb', 'kV2v a', '0zdvnL', '==vg Z']],
-                            [re.sub('[f\sT]+', '', x[::-1]) for x in [
+                            [re.sub(r'[f\sT]+', '', x[::-1]) for x in [
                                 '0TpfXZ', 'ufTEjd', 'i5WTTd', 'j9f Gb', 'kV f2a', 'z1mTTL']],
                         ]]]
         self.url_vars = {'search': 'search/%s', 'browse': 'page_%s'}
@@ -74,19 +74,19 @@ class EztvProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.findAll('table', attrs={'class': ['table', 'forum_header_border']})[-1]
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
-                        for tr in torrent_rows:
+                    with BS4Parser(html) as soup:
+                        tbl = soup.findAll('table', attrs={'class': ['table', 'forum_header_border']})[-1]
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
+                        for tr in tbl_rows:
                             if 5 > len(tr.find_all('td')):
                                 tr.decompose()
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             try:
                                 head = head if None is not head else self._header_row(tr)
@@ -105,7 +105,7 @@ class EztvProvider(generic.TorrentProvider):
 
                 except (generic.HaltParseException, IndexError):
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)

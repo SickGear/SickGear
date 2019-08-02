@@ -99,15 +99,14 @@ class PTFProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', id='tortable')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only=dict(table={'id': 'tortable'})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
@@ -115,8 +114,9 @@ class PTFProvider(generic.TorrentProvider):
                                 marker = ''
                                 try:
                                     marker = tr.select('a[href^="browse"] .tip')[0].get_text().strip()
-                                except (StandardError, Exception):
+                                except (BaseException, Exception):
                                     pass
+                                # noinspection PyUnboundLocalVariable
                                 if ((non_marked and rc['filter'].search(marker)) or
                                         (not non_marked and not rc['filter'].search(marker))):
                                     continue
@@ -141,7 +141,7 @@ class PTFProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, log + self.session.response.get('url'))

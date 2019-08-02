@@ -34,9 +34,9 @@ class TorLockProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.torlock.com/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[g\sF]+', '', x[::-1]) for x in [
+                            [re.sub(r'[g\sF]+', '', x[::-1]) for x in [
                                 'y9FFGd', 'j9FgGb', '15 Fya', 'sF Jmb', 'rN 2Fb', 'uQW FZ', '0Vmg Y']],
-                            [re.sub('[O\si]+', '', x[::-1]) for x in [
+                            [re.sub(r'[O\si]+', '', x[::-1]) for x in [
                                 'byO9Gid', 'y aji9G', '02O bj1', 'vJ Hicu', 'cz 5OCe', 'QZij FG', '=  =']],
                         ]]]
 
@@ -61,7 +61,7 @@ class TorLockProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': 'torrent.?(\d+)', 'versrc': r'ver\.', 'verified': 'Verified'}.iteritems())
+            'info': r'torrent.?(\d+)', 'versrc': r'ver\.', 'verified': 'Verified'}.iteritems())
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
@@ -79,21 +79,21 @@ class TorLockProvider(generic.TorrentProvider):
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                    with BS4Parser(html.replace('thead', 'tr')) as soup:
 
-                        torrent_table = soup.find(
+                        tbl = soup.find(
                             'div', class_=('panel panel-default', 'table-responsive')['Cache' == mode])
-                        if None is torrent_table:
+                        if None is tbl:
                             raise generic.HaltParseException
-                        torrent_table = torrent_table.find(
+                        tbl = tbl.find(
                             'table', class_='table table-striped table-bordered table-hover table-condensed')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -117,7 +117,7 @@ class TorLockProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)

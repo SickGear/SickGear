@@ -67,15 +67,15 @@ class ZooqleProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
                     html = html.replace('</a> </i>', '</a>').replace('"href=', '" href=').replace('"style', '" style')
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', class_='table-torrents')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    parse_only = dict(table={'class': (lambda at: at and 'table-torrents' in at)})
+                    with BS4Parser(html, parse_only=parse_only) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
@@ -106,7 +106,7 @@ class ZooqleProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)

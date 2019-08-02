@@ -26,7 +26,7 @@ from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.config import naming_ep_type
 from sickbeard.helpers import tryInt
-from bs4 import BeautifulSoup
+from sickbeard.bs4_parser import BS4Parser
 from dateutil.parser import parse
 from lib.unidecode import unidecode
 
@@ -71,7 +71,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
                 vals = [i for i in range(5, 16)]
                 random.SystemRandom().shuffle(vals)
-                attempts = html = soup = torrent_table = None
+                attempts = html = soup = tbl = None
                 fetch = 'failed fetch'
                 for attempts, s in enumerate((0, vals[0], vals[5], vals[10])):
                     time.sleep(s)
@@ -79,27 +79,30 @@ class TVChaosUKProvider(generic.TorrentProvider):
                     if self.should_skip():
                         return results
                     if html:
-                        soup = BeautifulSoup(html, 'html.parser')
-                        torrent_table = soup.find('table', id='sortabletable')
-                        if torrent_table:
-                            fetch = 'data fetched'
-                            break
+                        try:
+                            soup = BS4Parser(html).soup
+                            tbl = soup.find('table', id='sortabletable')
+                            if tbl:
+                                fetch = 'data fetched'                                                 
+                                break
+                        except(BaseException, Exception):
+                            pass
                 if attempts:
                     logger.log('%s %s after %s attempts' % (mode, fetch, attempts+1))
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html) or not torrent_table:
+                    if not html or self._has_no_results(html) or not tbl:
                         raise generic.HaltParseException
 
-                    torrent_rows = torrent_table.find_all('tr')
+                    tbl_rows = tbl.find_all('tr')
                     get_detail = True
 
-                    if 2 > len(torrent_rows):
+                    if 2 > len(tbl_rows):
                         raise generic.HaltParseException
 
                     head = None
-                    for tr in torrent_rows[1:]:
+                    for tr in tbl_rows[1:]:
                         cells = tr.find_all('td')
                         if 6 > len(cells):
                             continue
@@ -115,21 +118,20 @@ class TVChaosUKProvider(generic.TorrentProvider):
                             title = (tr.find('div', class_='tooltip-content').get_text() or info.get_text()).strip()
                             title = re.findall('(?m)(^[^\r\n]+)', title)[0]
                             download_url = self._link(tr.find('a', href=rc['get'])['href'])
-                        except (StandardError, Exception):
+                        except (BaseException, Exception):
                             continue
 
                         if get_detail and title.endswith('...'):
                             try:
                                 with BS4Parser(self.get_url('%s%s' % (
                                         self.urls['config_provider_home_uri'], info['href'].lstrip('/').replace(
-                                            self.urls['config_provider_home_uri'], ''))),
-                                               'html.parser') as soup_detail:
+                                            self.urls['config_provider_home_uri'], '')))) as soup_detail:
                                     title = soup_detail.find(
                                         'td', class_='thead', attrs={'colspan': '3'}).get_text().strip()
                                     title = re.findall('(?m)(^[^\r\n]+)', title)[0]
                             except IndexError:
                                 continue
-                            except (StandardError, Exception):
+                            except (BaseException, Exception):
                                 get_detail = False
 
                         try:
@@ -137,12 +139,12 @@ class TVChaosUKProvider(generic.TorrentProvider):
                             if download_url and titles:
                                 for title in titles:
                                     items[mode].append((title, download_url, seeders, self._bytesizer(size)))
-                        except (StandardError, Exception):
+                        except (BaseException, Exception):
                             pass
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 if soup:
@@ -195,7 +197,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                 dout = parse(''.join(d[1:4])).strftime('%Y-%m-%d')
                 dnew = dout[0: not any(d[2]) and 4 or not any(d[1]) and 7 or len(dout)]
                 title = title.replace(''.join(d), '%s%s%s' % (('', ' ')[1 < len(d[0])], dnew, ('', ' ')[1 < len(d[4])]))
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
         if dated:
             add_pad = re.findall(r'((?:19|20)\d\d[-]\d\d[-]\d\d)([\w\W])', title)
@@ -246,7 +248,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                 try:
                     sout = parse(''.join(d[1:4])).strftime('%Y-%m-%d')
                     snew = sout[0: not any(d[2]) and 4 or not any(d[1]) and 7 or len(sout)]
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     pass
 
             if snew and dnew and snew != dnew:
@@ -256,7 +258,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                 sxxexx_r = r'(?i)S\d\d+E\d\d+'
                 if dnew and re.search(sxxexx_r, title):
                     titles += [re.sub(sxxexx_r, dnew, re.sub(r'[_.\-\s]?%s' % dnew, '', title))]
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
 
         titles += [title]

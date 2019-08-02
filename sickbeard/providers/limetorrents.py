@@ -34,9 +34,9 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.limetorrents.cc/'] + \
                         ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('[F\sp]+', '', x[::-1]) for x in [
+                            [re.sub(r'[F\sp]+', '', x[::-1]) for x in [
                                 'XZFtlpGb', 'lJn pcvR', 'nFLpzRnb', 'v xpmYuV', 'CZlt F2Y', '=F QXYs5']],
-                            [re.sub('[K\sP]+', '', x[::-1]) for x in [
+                            [re.sub(r'[K\sP]+', '', x[::-1]) for x in [
                                 'XZKtPlGb', 'lJncPPvR', 'nKLzRnKb', 'vxm Y uV', 'CZlPt2PY', '==wYK2P5']],
                         ]]]
 
@@ -76,18 +76,17 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find_all('table', class_='table2')
-                        torrent_rows = [] if not torrent_table else [
-                            t.select('tr[bgcolor]') for t in torrent_table if
+                    with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'table2' in at)})) as tbl:
+                        tbl_rows = [] if not tbl else [
+                            t.select('tr[bgcolor]') for t in tbl if
                             all([x in ' '.join(x.get_text() for x in t.find_all('th')).lower() for x in
                                  ['torrent', 'size']])]
 
-                        if not len(torrent_rows):
+                        if not len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[0]:  # 0 = all rows
+                        for tr in tbl_rows[0]:  # 0 = all rows
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -110,7 +109,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)

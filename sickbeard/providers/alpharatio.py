@@ -73,15 +73,14 @@ class AlphaRatioProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find(id='torrent_table')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only=dict(table={'id': 'torrent_table'})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -105,7 +104,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

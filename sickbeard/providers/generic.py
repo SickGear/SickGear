@@ -181,9 +181,9 @@ class ProviderFailList(object):
                             self._fails.append(ProviderFail(
                                 fail_type=helpers.tryInt(r['fail_type']), code=helpers.tryInt(r['fail_code']),
                                 fail_time=datetime.datetime.fromtimestamp(helpers.tryInt(r['fail_time']))))
-                        except (StandardError, Exception):
+                        except (BaseException, Exception):
                             continue
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
 
     def clear_old(self):
@@ -193,7 +193,7 @@ class ProviderFailList(object):
                 if my_db.hasTable('provider_fails'):
                     time_limit = sbdatetime.totimestamp(datetime.datetime.now() - datetime.timedelta(days=28))
                     my_db.action('DELETE FROM provider_fails WHERE fail_time < ?', [time_limit])
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
 
 
@@ -285,7 +285,7 @@ class GenericProvider(object):
     def last_fail(self):
         try:
             return sorted(self.fails.fails, key=lambda x: x.fail_time, reverse=True)[0].fail_type
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             return None
 
     @property
@@ -541,7 +541,7 @@ class GenericProvider(object):
             self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.timeout))
         except (requests.exceptions.Timeout, socket.timeout):
             self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.connection_timeout))
-        except (StandardError, Exception) as e:
+        except (BaseException, Exception) as e:
             log_failure_url = True
             self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.other))
 
@@ -564,7 +564,7 @@ class GenericProvider(object):
 
     @staticmethod
     def make_id(name):
-        return re.sub('[^\w\d_]', '_', name.strip().lower())
+        return re.sub(r'[^\w\d_]', '_', name.strip().lower())
 
     def image_name(self, *default_name):
 
@@ -640,11 +640,11 @@ class GenericProvider(object):
             try:
                 btih = None
                 try:
-                    btih = re.findall('urn:btih:([\w]{32,40})', result.url)[0]
+                    btih = re.findall(r'urn:btih:([\w]{32,40})', result.url)[0]
                     if 32 == len(btih):
                         from base64 import b16encode, b32decode
                         btih = b16encode(b32decode(btih))
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     pass
 
                 if not btih or not re.search('(?i)[0-9a-f]{32,40}', btih):
@@ -655,7 +655,7 @@ class GenericProvider(object):
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
                         for u in (('s', 'itorrents.org'), ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
                                   ('', 'thetorrent.org'))]
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 link_type = 'torrent'
                 urls = [result.url]
 
@@ -670,7 +670,7 @@ class GenericProvider(object):
         ref_state = 'Referer' in self.session.headers and self.session.headers['Referer']
         saved = False
         for url in urls:
-            cache_dir = sickbeard.CACHE_DIR or helpers._getTempDir()
+            cache_dir = sickbeard.CACHE_DIR or helpers.get_system_temp_dir()
             base_name = '%s.%s' % (re.sub('.%s$' % self.providerType, '', helpers.sanitizeFileName(result.name)),
                                    self.providerType)
             final_file = ek.ek(os.path.join, final_dir, base_name)
@@ -715,7 +715,7 @@ class GenericProvider(object):
                 if 'blackhole' == sickbeard.TORRENT_METHOD:
                     logger.log('Tip: If your client fails to load magnet in files, ' +
                                'change blackhole to a client connection method in search settings')
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 logger.log(u'Failed to save magnet link to file, %s' % final_file)
         elif not saved:
             if 'torrent' == link_type and result.provider.get_id() in sickbeard.PROVIDER_HOMES:
@@ -746,13 +746,14 @@ class GenericProvider(object):
             try:
                 stream = FileInputStream(file_name)
                 parser = guessParser(stream)
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
             result = parser and 'application/x-bittorrent' == parser.mime_type
 
             try:
+                # noinspection PyProtectedMember
                 stream._input.close()
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
 
         return result
@@ -794,7 +795,7 @@ class GenericProvider(object):
         try:
             title, url = isinstance(item, tuple) and (item[0], item[1]) or \
                 (item.get('title', None), item.get('link', None))
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
         title = title and re.sub(r'\s+', '.', u'%s' % title)
@@ -834,8 +835,8 @@ class GenericProvider(object):
             ((any([cell.get_text()]) and any([rc[x].search(cell.get_text()) for x in rc.keys()]) and cell.get_text())
              or (cell.attrs.get('id') and any([rc[x].search(cell['id']) for x in rc.keys()]) and cell['id'])
              or (cell.attrs.get('title') and any([rc[x].search(cell['title']) for x in rc.keys()]) and cell['title'])
-             or next(iter(set(filter(lambda z: any([z]), [
-                next(iter(set(filter(lambda y: any([y]), [
+             or next(iter(set(filter(lambda rz: any([rz]), [
+                next(iter(set(filter(lambda ry: any([ry]), [
                     cell.find(tag, **p) for p in [{attr: rc[x]} for x in rc.keys()]]))), {}).get(attr)
                 for (tag, attr) in [
                     ('img', 'title'), ('img', 'src'), ('i', 'title'), ('i', 'class'),
@@ -873,7 +874,7 @@ class GenericProvider(object):
             if 32 == len(btih):
                 btih = b16encode(b32decode(btih)).lower()
             btih = re.search('(?i)[0-9a-f]{32,40}', btih) and btih or None
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             btih = None
         return (btih and 'magnet:?xt=urn:btih:%s&dn=%s&tr=%s' % (btih, quote_plus(name or btih), '&tr='.join(
             [quote_plus(tr) for tr in
@@ -1151,14 +1152,14 @@ class GenericProvider(object):
             str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
             logger.log((u'%s %s in response%s from %s' % (('No' + str1, count)[0 < count], (
                 '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
-                ('', ' (rejects: %s)' % rejects)[bool(rejects)], re.sub('(\s)\s+', r'\1', url))).replace('%%', '%'))
+                ('', ' (rejects: %s)' % rejects)[bool(rejects)], re.sub(r'(\s)\s+', r'\1', url))).replace('%%', '%'))
 
     def check_auth_cookie(self):
 
         if hasattr(self, 'cookies'):
             cookies = self.cookies
 
-            if not (cookies and re.match('^(?:\w+=[^;\s]+[;\s]*)+$', cookies)):
+            if not (cookies and re.match(r'^(?:\w+=[^;\s]+[;\s]*)+$', cookies)):
                 return False
 
             cj = requests.utils.add_dict_to_cookiejar(self.session.cookies,
@@ -1196,13 +1197,13 @@ class GenericProvider(object):
     def _bytesizer(size_dim=''):
 
         try:
-            value = float('.'.join(re.findall('(?i)(\d+)(?:[.,](\d+))?', size_dim)[0]))
+            value = float('.'.join(re.findall(r'(?i)(\d+)(?:[.,](\d+))?', size_dim)[0]))
         except TypeError:
             return size_dim
         except IndexError:
             return None
         try:
-            value *= 1024 ** ['b', 'k', 'm', 'g', 't'].index(re.findall('(t|g|m|k)[i]?b', size_dim.lower())[0])
+            value *= 1024 ** ['b', 'k', 'm', 'g', 't'].index(re.findall('([tgmk])[i]?b', size_dim.lower())[0])
         except IndexError:
             pass
         return long(math.ceil(value))
@@ -1520,9 +1521,9 @@ class TorrentProvider(GenericProvider):
 
                 for x in obf.keys():
                     if self.__module__.endswith(self._decode(bytearray(b64decode(x)), c)):
-                        for u in obf[x]:
+                        for ux in obf[x]:
                             urls += [self._decode(bytearray(
-                                b64decode(''.join([re.sub('[\s%s]+' % u[0], '', x[::-1]) for x in u[1:]]))), c)]
+                                b64decode(''.join([re.sub(r'[\s%s]+' % ux[0], '', x[::-1]) for x in ux[1:]]))), c)]
                         url_exclude = url_exclude or []
                         if url_exclude:
                             urls = urls[1:]
@@ -1532,16 +1533,17 @@ class TorrentProvider(GenericProvider):
                     setattr(sickbeard, seen_attr, list(set(getattr(sickbeard, seen_attr, []) + [self.__module__])))
 
         if not urls:
-            urls = filter(lambda u: 'http' in u, getattr(self, 'url_home', []))
+            urls = filter(lambda uh: 'http' in uh, getattr(self, 'url_home', []))
 
         return urls
 
+    # noinspection DuplicatedCode
     @staticmethod
     def _decode(data, c):
         try:
             result = ''.join(chr(int(str(
                 bytearray((8 * c)[i] ^ x for i, x in enumerate(data))[i:i + 2]), 16)) for i in range(0, len(data), 2))
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             result = '|'
         return result
 
@@ -1591,6 +1593,9 @@ class TorrentProvider(GenericProvider):
                     sickbeard.save_config()
                 return cur_url
 
+        seen_attr = 'PROVIDER_SEEN'
+        setattr(sickbeard, seen_attr, filter(lambda u: self.__module__ not in u, getattr(sickbeard, seen_attr, [])))
+
         self.failure_count = 3 * bool(failure_count)
         if self.should_skip():
             return None
@@ -1617,13 +1622,13 @@ class TorrentProvider(GenericProvider):
     def _authorised(self, logged_in=None, post_params=None, failed_msg=None, url=None, timeout=30, **kwargs):
 
         maxed_out = (lambda y: re.search(r'(?i)[1-3]((<[^>]+>)|\W)*' +
-                                         '(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)', y))
+                                         r'(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)', y))
         logged_in, failed_msg = [None is not a and a or b for (a, b) in (
             (logged_in, (lambda y=None: self.has_all_cookies())),
             (failed_msg, (lambda y='': maxed_out(y) and u'Urgent abort, running low on login attempts. ' +
                                                         u'Password flushed to prevent service disruption to %s.' or
                           (re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
-                                     '(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
+                                     r'(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
                            u'Invalid username or password for %s. Check settings' or
                            u'Failed to authenticate or parse a response from %s, abort provider')))
         )]
@@ -1794,13 +1799,13 @@ class TorrentProvider(GenericProvider):
 
     @staticmethod
     def _has_no_results(html):
-        return re.search(r'(?i)<(?:b|div|h\d|p|span|strong|td)[^>]*>\s*(?:' +
-                         'your\ssearch.*?did\snot\smatch|' +
-                         '(?:nothing|0</b>\s+torrents)\sfound|' +
-                         '(?:sorry,\s)?no\s(?:results|torrents)\s(found|here|match)|' +
-                         'no\s(?:match|results|torrents)!*|'
-                         '[^<]*?there\sare\sno\sresults|' +
-                         '[^<]*?no\shits\.\sTry\sadding' +
+        return re.search(r'(?i)<(?:b|div|font|h\d|p|span|strong|td)[^>]*>\s*(?:' +
+                         r'your\ssearch.*?did\snot\smatch|' +
+                         r'(?:nothing|0</b>\s+torrents)\sfound|' +
+                         r'(?:sorry,\s)?no\s(?:results|torrents)\s(found|here|match)|' +
+                         r'no\s(?:match|results|torrents)!*|'
+                         r'[^<]*?there\sare\sno\sresults|' +
+                         r'[^<]*?no\shits\.\sTry\sadding' +
                          ')', html)
 
     def _cache_data(self, **kwargs):

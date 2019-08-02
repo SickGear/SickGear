@@ -60,7 +60,7 @@ class ShazbatProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'show_id': '"show\?id=(\d+)[^>]+>([^<]+)<\/a>',
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'show_id': r'"show\?id=(\d+)[^>]+>([^<]+)<\/a>',
                                                              'get': 'load_torrent'}.items())
         search_types = sorted([x for x in search_params.items()], key=lambda tup: tup[0], reverse=True)
         maybe_only = search_types[0][0]
@@ -98,14 +98,14 @@ class ShazbatProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_rows = soup.tbody.find_all('tr') or soup.table.find_all('tr') or []
+                    with BS4Parser(html) as soup:
+                        tbl_rows = soup.tbody.find_all('tr') or soup.table.find_all('tr') or []
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[0:]:
+                        for tr in tbl_rows[0:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
@@ -113,11 +113,11 @@ class ShazbatProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(tr)
                                 stats = cells[head['leech']].get_text().strip()
                                 seeders, leechers = [(tryInt(x[0], 0), tryInt(x[1], 0)) for x in
-                                                     re.findall('(?::(\d+))(?:\W*[/]\W*:(\d+))?', stats) if x[0]][0]
+                                                     re.findall(r'(?::(\d+))(?:\W*[/]\W*:(\d+))?', stats) if x[0]][0]
                                 if self._reject_item(seeders, leechers):
                                     continue
                                 sizes = [(tryInt(x[0], x[0]), tryInt(x[1], False)) for x in
-                                         re.findall('([\d.]+\w+)?(?:\s*[(\[](\d+)[)\]])?', stats) if x[0]][0]
+                                         re.findall(r'([\d.]+\w+)?(?:\s*[(\[](\d+)[)\]])?', stats) if x[0]][0]
                                 size = sizes[(0, 1)[1 < len(sizes)]]
 
                                 for element in [x for x in cells[2].contents[::-1] if unicode(x).strip()]:
@@ -134,7 +134,7 @@ class ShazbatProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

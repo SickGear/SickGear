@@ -228,16 +228,14 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             if not html:
                 raise generic.HaltParseException
 
-            with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                torrent_table = soup.find('table', attrs={'id': 'table_table'})
-                torrent_rows = []
-                if torrent_table:
-                    torrent_rows = torrent_table.find('tbody').find_all('tr')
+            with BS4Parser(html) as soup:
+                tbl = soup.find('table', attrs={'id': 'table_table'})
+                tbl_rows = [] if not tbl else tbl.find('tbody').find_all('tr')
 
-                if 1 > len(torrent_rows):
+                if 1 > len(tbl_rows):
                     raise generic.HaltParseException
 
-                for tr in torrent_rows:
+                for tr in tbl_rows:
                     try:
                         if tr.find('img', src=rc['nuked']) or not tr.find('a', href=rc['cat']):
                             continue
@@ -255,7 +253,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         except generic.HaltParseException:
             time.sleep(1.1)
             pass
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
         mode = (mode, search_mode)['Propers' == search_mode]
@@ -276,7 +274,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                     title, url = self._title_and_url(item)
                     try:
                         result_date = datetime.fromtimestamp(int(item['usenetage']))
-                    except (StandardError, Exception):
+                    except (BaseException, Exception):
                         result_date = None
 
                     if result_date:
@@ -293,7 +291,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             api_key = self._check_auth()
             if not api_key.startswith('cookie:'):
                 return api_key
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             return None
 
         self.cookies = re.sub(r'(?i)([\s\']+|cookie\s*:)', '', api_key)

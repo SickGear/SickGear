@@ -884,7 +884,7 @@ def search_providers(show, episodes, manual_search=False, torrent_only=False, tr
                     if 'blackhole' != sickbeard.TORRENT_METHOD:
                         best_result.content = None
                 else:
-                    cache_file = ek.ek(os.path.join, sickbeard.CACHE_DIR or helpers._getTempDir(),
+                    cache_file = ek.ek(os.path.join, sickbeard.CACHE_DIR or helpers.get_system_temp_dir(),
                                        '%s.torrent' % (helpers.sanitizeFileName(best_result.name)))
                     if not helpers.download_file(best_result.url, cache_file, session=best_result.provider.session):
                         continue
