@@ -48,7 +48,7 @@ class ImmortalSeedProvider(generic.TorrentProvider):
     def _check_auth(self, **kwargs):
         try:
             secret_key = 'secret_key=' + re.split('secret_key\s*=\s*([0-9a-zA-Z]+)', self.api_key)[1]
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             raise sickbeard.exceptions.AuthException('Invalid secret key for %s in Media Providers/Options' % self.name)
 
         if secret_key != self.api_key:
@@ -90,7 +90,7 @@ class ImmortalSeedProvider(generic.TorrentProvider):
                             continue
                         title = rc['title'].sub(r'\1', item.title.strip())
                         download_url = self._link(rc['get'].findall(getattr(item, 'link', ''))[0])
-                    except (StandardError, Exception):
+                    except (BaseException, Exception):
                         continue
 
                     if download_url and title:

@@ -65,7 +65,7 @@ class PrivateHDProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'info': '.*?details\s*-\s*', 'get': 'download'}.items())
+                  for (k, v) in {'info': r'.*?details\s*-\s*', 'get': 'download'}.items())
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -103,15 +103,14 @@ class PrivateHDProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', class_='table')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'table' in at)})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells) or (self.confirmed and tr.find('i', title=re.compile('(?i)unverified'))):
                                 continue
@@ -119,6 +118,7 @@ class PrivateHDProvider(generic.TorrentProvider):
                                 marked = ','.join([x.attrs.get('title', '').lower() for x in tr.find_all(
                                     'i', attrs={'class': ['fa-star', 'fa-diamond', 'fa-star-half-o']})])
                                 munged = ''.join(filter(marked.__contains__, ['free', 'half', 'double']))
+                                # noinspection PyUnboundLocalVariable
                                 if ((non_marked and rc['filter'].search(munged)) or
                                         (not non_marked and not rc['filter'].search(munged))):
                                     continue
@@ -139,7 +139,7 @@ class PrivateHDProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, log + search_url)

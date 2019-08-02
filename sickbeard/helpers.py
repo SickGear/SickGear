@@ -1067,20 +1067,19 @@ def touch_file(fname, atime=None):
     return False
 
 
-def _getTempDir():
-    """Returns the [system temp dir]/tvdb_api-u501 (or
-    tvdb_api-myuser)
+def get_system_temp_dir():
+    """Returns the [system temp dir]/tvdb_api-u501 (or tvdb_api-myuser)
     """
     if hasattr(os, 'getuid'):
-        uid = "u%d" % (os.getuid())
+        uid = 'u%d' % (os.getuid())
     else:
         # For Windows
         try:
             uid = getpass.getuser()
         except ImportError:
-            return ek.ek(os.path.join, tempfile.gettempdir(), "SickGear")
+            return ek.ek(os.path.join, tempfile.gettempdir(), 'SickGear')
 
-    return ek.ek(os.path.join, tempfile.gettempdir(), "SickGear-%s" % (uid))
+    return ek.ek(os.path.join, tempfile.gettempdir(), 'SickGear-%s' % uid)
 
 
 def proxy_setting(proxy_setting, request_url, force=False):
@@ -1164,7 +1163,7 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
         session.stream = True
 
     if not kwargs.pop('nocache', False):
-        cache_dir = sickbeard.CACHE_DIR or _getTempDir()
+        cache_dir = sickbeard.CACHE_DIR or get_system_temp_dir()
         session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
 
     provider = kwargs.pop('provider', None)

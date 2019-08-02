@@ -66,7 +66,7 @@ class XspeedsProvider(generic.TorrentProvider):
                 return results
             for search_string in search_params[mode]:
                 search_string = search_string.replace(u'£', '%')
-                search_string = re.sub('[\s\.]+', '%', search_string)
+                search_string = re.sub(r'[\s.]+', '%', search_string)
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
 
                 kwargs = dict(post_data={'keywords': search_string, 'do': 'quick_sort', 'page': '0',
@@ -82,16 +82,16 @@ class XspeedsProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, 'html.parser') as soup:
-                        torrent_table = soup.find('table', id='sortabletable')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    parse_only = dict(table={'id': (lambda at: at and 'sortabletable' in at)})
+                    with BS4Parser(html, parse_only=parse_only) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
                         get_detail = True
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 6 > len(cells):
                                 continue
@@ -107,21 +107,20 @@ class XspeedsProvider(generic.TorrentProvider):
                                 title = (tr.find('div', class_='tooltip-content').get_text() or info.get_text()).strip()
                                 title = re.findall('(?m)(^[^\r\n]+)', title)[0]
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
-                            except (StandardError, Exception):
+                            except (BaseException, Exception):
                                 continue
 
                             if get_detail and title.endswith('...'):
                                 try:
                                     with BS4Parser(self.get_url('%s%s' % (
                                             self.urls['config_provider_home_uri'], info['href'].lstrip('/').replace(
-                                                self.urls['config_provider_home_uri'], ''))),
-                                                   'html.parser') as soup_detail:
+                                                self.urls['config_provider_home_uri'], '')))) as soup_detail:
                                         title = soup_detail.find(
                                             'td', class_='thead', attrs={'colspan': '3'}).get_text().strip()
                                         title = re.findall('(?m)(^[^\r\n]+)', title)[0]
                                 except IndexError:
                                     continue
-                                except (StandardError, Exception):
+                                except (BaseException, Exception):
                                     get_detail = False
 
                             title = self.regulate_title(title)
@@ -130,7 +129,7 @@ class XspeedsProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt,
@@ -155,7 +154,7 @@ class XspeedsProvider(generic.TorrentProvider):
             form = re.findall('(?is).*(<form.*?save.*?</form>)', html)[0]
             save_url = self._link(re.findall('(?i)action="([^"]+?)"', form)[0])
             tags = re.findall(r'(?is)(<input[^>]*?name=[\'"][^\'"]+[^>]*)', form)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             return None, None
 
         cats, params = [], {}
@@ -165,7 +164,7 @@ class XspeedsProvider(generic.TorrentProvider):
             if 'cat' == name[0:3] and 'checkbox' == itype.lower():
                 if any(checked):
                     try:
-                        cats += [re.findall('(\d+)[^\d]*$', name)[0]]
+                        cats += [re.findall(r'(\d+)[^\d]*$', name)[0]]
                     except IndexError:
                         pass
             elif 'hidden' == itype.lower() or 'nothing' in name or \
@@ -175,7 +174,7 @@ class XspeedsProvider(generic.TorrentProvider):
         for select in selects:
             name, values, index = None, None, 0
             try:
-                name = re.findall('(?is)<select\sname="([^"]+)"', select)[0]
+                name = re.findall(r'(?is)<select\sname="([^"]+)"', select)[0]
                 values = re.findall('(?is)value="([^"]+)"[^"]+("selected"|</option)', select)
                 index = ['"selected"' in x[1] for x in values].index(True)
             except ValueError:
@@ -200,7 +199,7 @@ class XspeedsProvider(generic.TorrentProvider):
     @staticmethod
     def regulate_title(title):
 
-        if re.search('(?i)\.web.?(rip)?$', title):
+        if re.search(r'(?i)\.web.?(rip)?$', title):
             title = '%s.x264' % title
 
         return title

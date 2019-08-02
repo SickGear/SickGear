@@ -94,13 +94,13 @@ class ShowRSSProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_rows = soup.select('ul.user-timeline > li')
+                    with BS4Parser(html) as soup:
+                        tbl_rows = soup.select('ul.user-timeline > li')
 
-                        if not len(torrent_rows):
+                        if not len(tbl_rows):
                             raise generic.HaltParseException
 
-                        for tr in torrent_rows:
+                        for tr in tbl_rows:
                             try:
                                 anchor = tr.find('a', href=rc['get'])
                                 title = self.regulate_title(anchor)
@@ -113,7 +113,7 @@ class ShowRSSProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

@@ -33,9 +33,9 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
         self.url_home = (['https://iptorrents.com/'] +
                          [base64.b64decode(x) for x in [''.join(x) for x in [
-                             [re.sub('(?i)[q\s1]+', '', x[::-1]) for x in [
+                             [re.sub(r'(?i)[q\s1]+', '', x[::-1]) for x in [
                                  'c0RHa', 'vo1QD', 'hJ2L', 'GdhdXe', 'vdnLoN', 'J21cptmc', '5yZulmcv', '02bj', '=iq=']],
-                             [re.sub('(?i)[q\seg]+', '', x[::-1]) for x in [
+                             [re.sub(r'(?i)[q\seg]+', '', x[::-1]) for x in [
                                  'RqHEa', 'LvEoDc0', 'Zvex2', 'LuF2', 'NXdu Vn', 'XZwQxeWY1', 'Yu42bzJ', 'tgG92']],
                          ]]])
 
@@ -87,15 +87,15 @@ class IPTorrentsProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find(id='torrents') or soup.find('table', class_='torrents')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html) as soup:
+                        tbl = soup.find(id='torrents') or soup.find('table', class_='torrents')
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -119,7 +119,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

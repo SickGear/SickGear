@@ -61,7 +61,7 @@ class PotUKProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        opts = re.findall('(?sim)forumchoice\[\][^<]+(.*?)</select>', self.resp)[0]
+        opts = re.findall(r'(?sim)forumchoice\[\][^<]+(.*?)</select>', self.resp)[0]
         cat_opts = re.findall(r'(?mis)<option[^>]*?value=[\'"](\d+)[^>]*>(.*?)</option>', opts)
         include = []
         tv = False
@@ -102,20 +102,19 @@ class PotUKProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', id='threadslist')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only=dict(table={'id': 'threadslist'})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             if 6 > len(tr.find_all('td')) or not tr.select('img[alt*="ttach"]'):
                                 continue
                             try:
                                 link = tr.select('td[id^="td_threadtitle"]')[0].select('a[id*="title"]')[0]
                                 title = link.get_text().strip()
-                                download_url = self.urls['get_data'] % re.findall('t=(\d+)', link['href'])[0]
+                                download_url = self.urls['get_data'] % re.findall(r't=(\d+)', link['href'])[0]
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
@@ -124,7 +123,7 @@ class PotUKProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(
@@ -141,7 +140,7 @@ class PotUKProvider(generic.TorrentProvider):
             return result
 
         try:
-            result = self._link(re.findall('(?i)"(attachment\.php[^"]+?)"', html)[0])
+            result = self._link(re.findall(r'(?i)"(attachment\.php[^"]+?)"', html)[0])
         except IndexError:
             logger.log('Failed no torrent in response', logger.DEBUG)
         return result

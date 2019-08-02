@@ -62,7 +62,7 @@ class HDSpaceProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': 'torrent-details', 'get': 'download', 'peers': 'page=peers', 'nodots': '[\.\s]+'}.items())
+            'info': 'torrent-details', 'get': 'download', 'peers': 'page=peers', 'nodots': r'[\.\s]+'}.items())
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -89,17 +89,17 @@ class HDSpaceProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive'],
-                                   attr='width="100%"\Wclass="lista"') as soup:
-                        torrent_table = soup.find_all('table', class_='lista')[-1]
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, attr=r'width="100%"\Wclass="lista"') as soup:
+                        tbl = soup.find_all('table', class_='lista')[-1]
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
+                            # noinspection PyUnboundLocalVariable
                             if (6 > len(cells) or tr.find('td', class_='header')
                                 or (any(self.filter)
                                     and ((non_marked and tr.find('img', src=rc['filter']))
@@ -127,7 +127,7 @@ class HDSpaceProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, log + search_url)
 

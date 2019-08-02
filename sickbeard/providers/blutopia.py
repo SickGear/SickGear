@@ -88,7 +88,7 @@ class BlutopiaProvider(generic.TorrentProvider):
                          + (not all([x not in filters for x in 'free', 'double']) and ['freedouble'] or [])
                          + (not all([x not in filters for x in 'feat', 'double']) and ['featdouble'] or []))
                         )[non_marked]
-            rc['filter'] = re.compile('(?i)^(%s)$' % '|'.join(
+            rc['filter'] = re.compile(r'(?i)^(%s)$' % '|'.join(
                 ['%s' % f for f in filters if (f in self.may_filter and self.may_filter[f][1]) or f]))
             log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join(
                 [f in self.may_filter and self.may_filter[f][0] or f for f in filters]))
@@ -114,7 +114,7 @@ class BlutopiaProvider(generic.TorrentProvider):
                     try:
                         from lib import simplejson as json
                         resp_json = json.loads(resp)
-                    except (StandardError, Exception):
+                    except (BaseException, Exception):
                         pass
 
                 cnt = len(items[mode])
@@ -125,15 +125,14 @@ class BlutopiaProvider(generic.TorrentProvider):
                     html = '<html><body>%s</body></html>' % \
                            (resp if None is self.resp else
                             self.resp.replace('</tbody>', '%s</tbody>' % ''.join(resp_json.get('result', []))))
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', class_='table')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'table' in at)})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -166,7 +165,7 @@ class BlutopiaProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, log + search_url)

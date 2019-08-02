@@ -75,7 +75,7 @@ class HorribleSubsProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser('<html><body>%s</body></html>' % html, features=['html5lib', 'permissive']) as soup:
+                    with BS4Parser('<html><body>%s</body></html>' % html) as soup:
                         for link in soup.find_all('a'):
                             try:
                                 variants = map(lambda t: t.get_text().replace('SD', '480p'),
@@ -91,7 +91,7 @@ class HorribleSubsProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
@@ -110,7 +110,7 @@ class HorribleSubsProvider(generic.TorrentProvider):
         html = self.get_url(url)
         if self.should_skip():
             return result
-        with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+        with BS4Parser(html) as soup:
             re_showid = re.compile(r'(?i)hs_showid\s*=\s*(\d+)')
             try:
                 hs_id = re_showid.findall(
@@ -120,7 +120,7 @@ class HorribleSubsProvider(generic.TorrentProvider):
         html = self.get_url(self.urls['get_data'] % hs_id)
         if self.should_skip():
             return result
-        with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+        with BS4Parser(html) as soup:
             try:
                 result = sorted(map(lambda t: t.get('href'),
                                     soup.find(id=re.findall(r'.*#(\d+-\d+\w)$', url)[0])

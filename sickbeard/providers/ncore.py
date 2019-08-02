@@ -76,15 +76,15 @@ class NcoreProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('div', class_=rc['list'])
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('div', class_='box_torrent')
+                    parse_only = dict(div={'class': (lambda at: at and rc['list'].search(at))})
+                    with BS4Parser(html, parse_only=parse_only) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('div', class_='box_torrent')
                         key = rc['key'].findall(html)[0]
 
-                        if not len(torrent_rows):
+                        if not len(tbl_rows):
                             raise generic.HaltParseException
 
-                        for tr in torrent_rows:
+                        for tr in tbl_rows:
                             try:
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     tr.find('div', class_=x).get_text().strip()
@@ -103,7 +103,7 @@ class NcoreProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)

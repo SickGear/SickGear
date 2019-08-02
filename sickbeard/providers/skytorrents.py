@@ -45,7 +45,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': '(^(info|torrent)/|/[\w+]{40,}\s*$)', 'get': '^magnet:'}.items())
+            'info': r'(^(info|torrent)/|/[\w+]{40,}\s*$)', 'get': '^magnet:'}.items())
 
         for mode in search_params.keys():
             for search_string in search_params[mode]:
@@ -64,15 +64,15 @@ class SkytorrentsProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'class': ['table', 'is-striped']})
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    parse_only = dict(table={'class': (lambda at: at and 'is-striped' in at)})
+                    with BS4Parser(html, parse_only=parse_only, preclean=True) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -83,10 +83,10 @@ class SkytorrentsProvider(generic.TorrentProvider):
                                 if self._reject_item(seeders, leechers):
                                     continue
 
-                                info = tr.select(
-                                    '[alt*="magnet"], [title*="magnet"], [alt*="torrent"], [title*="torrent"]')[0] \
+                                info = tr.select_one(
+                                    '[alt*="magnet"], [title*="magnet"], [alt*="torrent"], [title*="torrent"]') \
                                     or tr.find('a', href=rc['info'])
-                                title = re.sub('\s(using|use|magnet|link)', '', (
+                                title = re.sub(r'\s(using|use|magnet|link)', '', (
                                         info.attrs.get('title') or info.attrs.get('alt') or info.get_text())).strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, KeyError):
@@ -97,7 +97,7 @@ class SkytorrentsProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)

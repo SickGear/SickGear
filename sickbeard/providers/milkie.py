@@ -35,7 +35,7 @@ class MilkieProvider(generic.TorrentProvider):
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.api + 'auth/sessions', 'auth': self.api + 'auth',
                      'get': self.api + 'torrents/%s/torrent?key=%s',
-                     'search': self.api + 'torrents?pi=0&ps=100&query=%s&categories=2&mode=release'}
+                     'search': self.api + 'torrents?pi=0&ps=100&query=%s&categories=2&mode=release&t.o=native'}
 
         self.username, self.email, self.password, self.minseed, self.minleech, self._token, self._dkey = 7 * [None]
 

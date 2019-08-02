@@ -17,6 +17,7 @@
 
 import re
 import time
+import urlparse
 from urllib import quote, unquote
 
 from . import generic
@@ -29,19 +30,16 @@ import sickbeard
 class SpeedCDProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SpeedCD', update_freq=7*60)
+        generic.TorrentProvider.__init__(self, 'SpeedCD', update_freq=4*60)
 
-        self.url_base = 'https://speed.cd/'
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'rss.php',
-                     'login_action': None,
-                     'do_login': self.url_base,
-                     'search': self.url_base + 'V3/API/API.php'}
+        self.url_home = ['https://speed.cd/']
 
-        self.categories = {'Season': [41, 53], 'Episode': [2, 49, 50, 55], 'anime': [30]}
+        self.url_vars = {'login': 'rss.php', 'search': 'V3/API/'}
+        self.url_tmpl = dict(config_provider_home_uri='%(home)s', login='%(home)s%(vars)s', do_login='%(home)s',
+                             login_action='', search='%(home)s%(vars)s')
+
+        self.categories = {'Season': [41, 53, 57], 'Episode': [2, 49, 50, 55, 57], 'anime': [30]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
-
-        self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.digest, self.freeleech, self.minseed, self.minleech = 6 * [None]
 
@@ -52,16 +50,16 @@ class SpeedCDProvider(generic.TorrentProvider):
             self.digest = digest[2] + digest[1] + quote(unquote(digest[0]))
             params = dict(
                 logged_in=(lambda y='': all(
-                    [self.session.cookies.get_dict(domain='.speed.cd') and
-                     self.session.cookies.clear('.speed.cd') is None or True] +
+                    [self.url and self.session.cookies.get_dict(domain='.' + urlparse.urlparse(self.url).netloc) and
+                     self.session.cookies.clear('.' + urlparse.urlparse(self.url).netloc) is None or True] +
                     ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
                     [(self.session.cookies.get('inSpeed_' + c) or 'sg!no!pw') in self.digest for c in ['speedian']])),
                 failed_msg=(lambda y=None: None), post_params={'login': False})
             result = super(SpeedCDProvider, self)._authorised(**params)
 
         if not result and not self.failure_count:
-            if self.digest:
-                self.get_url('%slogout.php' % self.url_base, skip_auth=True, post_data={'submit.x': 24, 'submit.y': 11})
+            if self.url and self.digest:
+                self.get_url('%slogout.php' % self.url, skip_auth=True, post_data={'submit.x': 24, 'submit.y': 11})
             self.digest = ''
             params = dict(
                 logged_in=(lambda y='': all(
@@ -72,13 +70,13 @@ class SpeedCDProvider(generic.TorrentProvider):
                      or (self.session.cookies.get('inSpeed_speedian') or 'sg!no!pw') in self.digest])),
                 failed_msg=(lambda y='': (
                     re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
-                              '(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
+                              r'(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
                     u'Invalid username or password for %s. Check settings' or
                     u'Failed to authenticate or parse a response from %s, abort provider')),
                 post_params={'form_tmpl': True})
             self.urls['login_action'] = self.urls.get('do_login')
             session = super(SpeedCDProvider, self)._authorised(session=None, resp_sess=True, **params)
-            self.urls['login_action'] = None
+            self.urls['login_action'] = ''
             if session:
                 self.digest = 'inSpeed_speedian=%s' % session.cookies.get('inSpeed_speedian')
                 sickbeard.save_config()
@@ -97,10 +95,11 @@ class SpeedCDProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': '/t/', 'get': 'download', 'fl': '\[freeleech\]'}.items())
+            'info': '/t/', 'get': 'download', 'fl': r'\[freeleech\]'}.items())
 
         for mode in search_params.keys():
-            rc['cats'] = re.compile('(?i)(cat|c\[\])=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
+            rc['cats'] = re.compile(r'(?i)(cat|c\[\])=(?:%s)'
+                                    % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
                 post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')),
                                  search=search_string.replace('.', ' ').replace('^@^', '.'),
@@ -116,15 +115,14 @@ class SpeedCDProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', attrs={'cellspacing': 0}) or soup.find('table')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only='table') as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
@@ -146,7 +144,7 @@ class SpeedCDProvider(generic.TorrentProvider):
                             if title and download_url:
                                 items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     time.sleep(1.1)
 
                 self._log_search(mode, len(items[mode]) - cnt,

@@ -81,24 +81,24 @@ class GrabTheInfoProvider(generic.TorrentProvider):
                     html = html.replace('<?xml version="1.0" encoding="iso-8859-1"?>', '')
                     html = re.sub(r'(</td>)[^<]*</td>', r'\1', html)
                     html = re.sub(r'(<a[^<]*)<a[^<]*?href=details[^<]*', r'\1', html)
-                    with BS4Parser(html, 'html.parser') as soup:
+                    with BS4Parser(html) as soup:
                         shows_found = False
-                        torrent_rows = soup.find_all('tr')
-                        for index, row in enumerate(torrent_rows):
+                        tbl_rows = soup.find_all('tr')
+                        for index, row in enumerate(tbl_rows):
                             if 'type' == row.find_all('td')[0].get_text().strip().lower():
                                 shows_found = index
                                 break
 
-                        if not shows_found or 2 > (len(torrent_rows) - shows_found):
+                        if not shows_found or 2 > (len(tbl_rows) - shows_found):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1 + shows_found:]:
+                        for tr in tbl_rows[1 + shows_found:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
                             try:
-                                head = head if None is not head else self._header_row(torrent_rows[shows_found])
+                                head = head if None is not head else self._header_row(tbl_rows[shows_found])
                                 seeders, leechers, size = [tryInt(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
                                 if self._reject_item(seeders, leechers):
@@ -115,7 +115,7 @@ class GrabTheInfoProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
