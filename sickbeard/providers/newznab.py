@@ -182,7 +182,7 @@ class NewznabProvider(generic.NZBProvider):
                 res = my_db.select('SELECT' + ' "datetime" FROM "lastrecentsearch" WHERE "name"=?', [self.get_id()])
                 if res:
                     self._last_recent_search = datetime.datetime.fromtimestamp(int(res[0]['datetime']))
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
         return self._last_recent_search
 
@@ -192,7 +192,7 @@ class NewznabProvider(generic.NZBProvider):
             my_db = db.DBConnection('cache.db')
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
                          [self.get_id(), sbdatetime.totimestamp(value, default=0)])
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
         self._last_recent_search = value
 
@@ -284,7 +284,7 @@ class NewznabProvider(generic.NZBProvider):
                                 for s, v in NewznabConstants.catSearchStrings.iteritems():
                                     if None is not re.search(s, cat_name, re.IGNORECASE):
                                         cats.setdefault(v, []).append(cat_id)
-                            except (StandardError, Exception):
+                            except (BaseException, Exception):
                                 continue
                     elif category.get('name', '').upper() in ['XXX', 'OTHER', 'MISC']:
                         for subcat in category.findall('subcat'):
@@ -292,9 +292,9 @@ class NewznabProvider(generic.NZBProvider):
                                 if None is not re.search(r'^Anime$', subcat.attrib['name'], re.IGNORECASE):
                                     cats.setdefault(NewznabConstants.CAT_ANIME, []).append(subcat.attrib['id'])
                                     break
-                            except (StandardError, Exception):
+                            except (BaseException, Exception):
                                 continue
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 logger.log('Error parsing result for [%s]' % self.name, logger.DEBUG)
 
         if not caps and self._caps and not all_cats and self._caps_all_cats and not cats and self._caps_cats:
@@ -505,7 +505,7 @@ class NewznabProvider(generic.NZBProvider):
                         title = re.sub(pattern, repl, title)
             parts = re.findall('(.*(?:(?:h.?|x)26[45]|vp9|av1|hevc|xvid|divx)[^-]*)(.*)', title, re.I)[0]
             title = '%s-%s' % (parts[0], remove_non_release_groups(parts[1].split('-')[1]))
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
         return title, url
@@ -668,11 +668,11 @@ class NewznabProvider(generic.NZBProvider):
                 p = parser.parse(p, fuzzy=True)
                 try:
                     p = p.astimezone(sb_timezone)
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     pass
                 if isinstance(p, datetime.datetime):
                     parsed_date = p.replace(tzinfo=None)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
         return parsed_date
@@ -688,7 +688,7 @@ class NewznabProvider(generic.NZBProvider):
                         parsed_size = helpers.tryInt(attr.get('value'), -1)
                     elif 'guid' == attr.get('name', ''):
                         uid = attr.get('value')
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
         return parsed_size, uid
 
@@ -804,7 +804,7 @@ class NewznabProvider(generic.NZBProvider):
                     try:
                         parsed_xml, n_spaces = self.cache.parse_and_get_ns(data)
                         items = parsed_xml.findall('channel/item')
-                    except (StandardError, Exception):
+                    except (BaseException, Exception):
                         logger.log('Error trying to load %s RSS feed' % self.name, logger.WARNING)
                         break
 
@@ -992,7 +992,7 @@ class NewznabCache(tvcache.TVCache):
                     items = None
                 else:
                     (items, n_spaces) = self.provider.cache_data(needed=needed)
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 items = None
 
             if items:

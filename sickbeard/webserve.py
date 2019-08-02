@@ -5583,7 +5583,7 @@ class History(MainHandler):
                 users = sickbeard.helpers.getURL(base_url, headers=headers,
                                                  params=dict(format='json'), timeout=10, json=True)
 
-                for user_id in [u.get('Id') for u in users if u.get('Id')]:
+                for user_id in users and [u.get('Id') for u in users if u.get('Id')] or []:
                     user_url = '%s/%s' % (base_url, user_id)
                     user = sickbeard.helpers.getURL(user_url, headers=headers,
                                                     params=dict(format='json'), timeout=10, json=True)

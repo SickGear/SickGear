@@ -47,7 +47,7 @@ class WOPProvider(generic.TorrentProvider):
 
         return super(WOPProvider, self)._authorised(
             logged_in=(lambda y=None: all(
-                [(None is y or re.search('(?i)rss\slink', y)), self.has_all_cookies()] +
+                [(None is y or re.search(r'(?i)rss\slink', y)), self.has_all_cookies()] +
                 [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in ['hashv']])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
@@ -79,15 +79,15 @@ class WOPProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', class_='yenitorrenttable')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    parse_only = dict(table={'class': (lambda at: at and 'yenitorrenttable' in at)})
+                    with BS4Parser(html, tag='table', attr='yenitorrenttable', parse_only=parse_only) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -110,7 +110,7 @@ class WOPProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
@@ -130,7 +130,7 @@ class WOPProvider(generic.TorrentProvider):
     @staticmethod
     def _search_params(search_params):
 
-        return [dict((k, ['*%s*' % re.sub('[.\s]', '*', v) for v in v]) for k, v in d.items()) for d in search_params]
+        return [dict((k, ['*%s*' % re.sub(r'[.\s]', '*', v) for v in v]) for k, v in d.items()) for d in search_params]
 
     @staticmethod
     def ui_string(key):

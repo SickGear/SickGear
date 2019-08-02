@@ -37,6 +37,7 @@ warnings.filterwarnings('ignore', module=r'.*Cheetah.*')
 warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
 warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 warnings.filterwarnings('ignore', module=r'.*zoneinfo.*', message='.*file or directory.*')
+warnings.filterwarnings('ignore', module=r'.*bs4_parser.*', message='.*No parser was explicitly specified.*')
 
 if not (2, 7, 9) <= sys.version_info < (3, 0):
     print('Python %s.%s.%s detected.' % sys.version_info[:3])

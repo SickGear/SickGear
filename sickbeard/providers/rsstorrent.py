@@ -65,7 +65,7 @@ class TorrentRssProvider(generic.TorrentProvider):
         for cur_attempt in attempt_list:
             try:
                 url = cur_attempt()
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 continue
 
             if title and url:
@@ -93,7 +93,7 @@ class TorrentRssProvider(generic.TorrentProvider):
                         if 32 == len(btih):
                             from base64 import b16encode, b32decode
                             btih = b16encode(b32decode(btih))
-                    except (StandardError, Exception):
+                    except (BaseException, Exception):
                         pass
                     if re.search('(?i)[0-9a-f]{32,40}', btih):
                         break
@@ -105,7 +105,7 @@ class TorrentRssProvider(generic.TorrentProvider):
                     try:
                         bdecode(torrent_file)
                         break
-                    except (StandardError, Exception):
+                    except (BaseException, Exception):
                         pass
             else:
                 return False, '%s fetched RSS feed data: %s' % \

@@ -131,7 +131,7 @@
             #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sg_var('SORT_ARTICLE')]
             #set $poster_id += 1
             #if None is not $display_status
-                #if re.search(r'(?i)(?:new|returning)\s*series', $curShow.status)
+                #if re.search(r'(?i)(?:(?:new|returning)\s*series|upcoming)', $curShow.status)
                     #set $display_status = 'Continuing'
                 #else if re.search(r'(?i)(?:nded)', $curShow.status)
                     #set $display_status = 'Ended'
@@ -452,7 +452,7 @@
 				<td>
             #set $display_status = $curShow.status
             #if None is not $display_status
-                #if re.search(r'(?i)(?:new|returning)\s*series', $curShow.status)
+                #if re.search(r'(?i)(?:(?:new|returning)\s*series|upcoming)', $curShow.status)
                     #set $display_status = 'Continuing'
                 #else if re.search(r'(?i)(?:nded)', $curShow.status)
                     #set $display_status = 'Ended'

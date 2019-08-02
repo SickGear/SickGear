@@ -70,13 +70,13 @@ class FLProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_rows = soup.find_all('div', 'torrentrow')
+                    with BS4Parser(html) as soup:
+                        tbl_rows = soup.find_all('div', 'torrentrow')
 
-                        if not len(torrent_rows):
+                        if not len(tbl_rows):
                             raise generic.HaltParseException
 
-                        for tr in torrent_rows:
+                        for tr in tbl_rows:
                             cells = tr.select('span[style*="cell"]')
                             if 6 > len(cells):
                                 continue
@@ -96,7 +96,7 @@ class FLProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, self.session.response.get('url'))

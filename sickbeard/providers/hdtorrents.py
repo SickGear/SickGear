@@ -92,23 +92,24 @@ class HDTorrentsProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    html = re.sub('(?ims)<div[^>]+display:\s*none;.*?</div>', '', html)
+                    html = re.sub(r'(?ims)<div[^>]+display:\s*none;.*?</div>', '', html)
                     html = re.sub('(?im)href=([^\\"][^>]+)>', r'href="\1">', html)
                     html = (html.replace('"/></td>', '" /></a></td>')
                             .replace('"title="', '" title="')
                             .replace('</u></span></a></td>', '</u></a></span></td>'))
                     html = re.sub('(?im)<b([mtwfs][^>]+)', r'<b>\1</b', html)
 
-                    with BS4Parser(html, features=['html5lib', 'permissive'], attr='width="100%"') as soup:
-                        torrent_rows = [tr for tr in ([] if not soup else soup.find_all('tr'))
-                                        if tr.find('a', href=rc['info'])]
+                    with BS4Parser(html, attr='width="100%"') as soup:
+                        tbl_rows = [tr for tr in ([] if not soup else soup.find_all('tr'))
+                                    if tr.find('a', href=rc['info'])]
 
-                        if not len(torrent_rows):
+                        if not len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows:
+                        for tr in tbl_rows:
                             cells = tr.find_all('td')
+                            # noinspection PyUnboundLocalVariable
                             if (6 > len(cells) or any(self.filter)
                                 and ((non_marked and tr.find('img', src=rc['filter']))
                                      or (not non_marked and not tr.find('img', src=rc['filter'])))):
@@ -129,7 +130,7 @@ class HDTorrentsProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, log + search_url)

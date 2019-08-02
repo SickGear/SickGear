@@ -51,8 +51,8 @@ class PiSexyProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'get': 'info.php\?id', 'cats': 'cat=(?:0|50[12])', 'filter': 'free',
-            'title': r'Download\s*([^\s]+).*', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
+            'get': r'info.php\?id', 'cats': 'cat=(?:0|50[12])', 'filter': 'free',
+            'title': r'Download\s([^"\']+)', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
         for mode in search_params.keys():
             for search_string in search_params[mode]:
                 search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
@@ -67,15 +67,14 @@ class PiSexyProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', 'listor')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
+                    with BS4Parser(html, parse_only=dict(table={'class': 'listor'})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
 
-                        if 2 > len(torrent_rows):
+                        if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in torrent_rows[1:]:
+                        for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -89,7 +88,14 @@ class PiSexyProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['get'])
-                                title = (rc['title'].sub(r'\1', info.attrs.get('title', '')) or info.get_text()).strip()
+                                tag = tr.find('a', alt=rc['title']) or tr.find('a', title=rc['title'])
+                                title = tag and rc['title'].findall(str(tag))
+                                title = title and title[0]
+                                if not isinstance(title, basestring) or 10 > len(title):
+                                    title = (rc['title'].sub(r'\1', info.attrs.get('title', ''))
+                                             or info.get_text()).strip()
+                                if (10 > len(title)) or (4 > len(re.sub(r'[^.\-\s]', '', title))):
+                                    continue
                                 size = cells[head['size']].get_text().strip()
                                 download_url = self._link(info['href'])
                             except (AttributeError, TypeError, ValueError, KeyError, IndexError):
@@ -100,7 +106,7 @@ class PiSexyProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
@@ -116,7 +122,7 @@ class PiSexyProvider(generic.TorrentProvider):
             return result
 
         try:
-            result = self._link(re.findall('(?i)"([^"]*?download\.php[^"]+?&(?!pimp)[^"]*)"', html)[0])
+            result = self._link(re.findall(r'(?i)"([^"]*?download\.php[^"]+?&(?!pimp)[^"]*)"', html)[0])
         except IndexError:
             logger.log('Failed no torrent in response', logger.DEBUG)
         return result

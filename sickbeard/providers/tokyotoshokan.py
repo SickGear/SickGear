@@ -59,13 +59,12 @@ class TokyoToshokanProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                        torrent_table = soup.find('table', class_='listing')
-                        torrent_rows = [] if not torrent_table else torrent_table.find_all('tr')
-                        if torrent_rows:
-                            a = (0, 1)[None is not torrent_rows[0].find('td', class_='centertext')]
+                    with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'listing' in at)})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.find_all('tr')
+                        if tbl_rows:
+                            a = (0, 1)[None is not tbl_rows[0].find('td', class_='centertext')]
 
-                            for top, bottom in zip(torrent_rows[a::2], torrent_rows[a+1::2]):
+                            for top, bottom in zip(tbl_rows[a::2], tbl_rows[a+1::2]):
                                 try:
                                     bottom_text = bottom.get_text() or ''
                                     stats = rc['stats'].findall(bottom_text)
@@ -86,7 +85,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
                                 if title and download_url:
                                     items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     time.sleep(1.1)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
