@@ -20,6 +20,7 @@
 import re
 import time
 import traceback
+from urllib import unquote_plus
 
 from . import generic
 from sickbeard import helpers, logger
@@ -81,25 +82,23 @@ class ShazbatProvider(generic.TorrentProvider):
                         return results
 
                     shows = rc['show_id'].findall(html)
-                    if not any(shows):
-                        continue
-                    html = ''
-                    for show in shows:
-                        sid, title = show
-                        if title not in search_string:
-                            continue
-                        html and time.sleep(1.1)
-                        html += self.get_url(self.urls['show'] % sid)
-                        if self.should_skip():
-                            return results
+                    if any(shows):
+                        html = ''
+                        for show in set(shows):
+                            sid, title = show
+                            if title in unquote_plus(search_string):
+                                html and time.sleep(1.1)
+                                html += self.get_url(self.urls['show'] % sid)
+                                if self.should_skip():
+                                    return results
 
                 cnt = len(items[mode])
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html) as soup:
-                        tbl_rows = soup.tbody.find_all('tr') or soup.table.find_all('tr') or []
+                    with BS4Parser(html) as tbl:
+                        tbl_rows = tbl.tbody.find_all('tr') or tbl.table.find_all('tr') or []
 
                         if 2 > len(tbl_rows):
                             raise generic.HaltParseException

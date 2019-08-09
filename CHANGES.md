@@ -1,4 +1,11 @@
-﻿### 0.20.1 (2019-08-02 20:45:00 UTC)
+﻿### 0.20.2 (2019-10-02 00:25:00 UTC)
+
+* Fix some missing reference issues in webserve
+* Add a link 'FAQ: Episode not found / Snatch failed' to 'View Log File'
+* Fix Shazbat torrent provider
+
+
+### 0.20.1 (2019-08-02 20:45:00 UTC)
 
 * Change ensure TVDb statuses display as "Continuing" on home page where applicable
 * Change improve handling an enabled Emby server that becomes unreachable
