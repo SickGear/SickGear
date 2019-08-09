@@ -91,11 +91,11 @@ class PageTemplate(Template):
     def __init__(self, web_handler, *args, **kwargs):
 
         headers = web_handler.request.headers
-        self.xsrf_form_html = re.sub('\s*/>$', '>', web_handler.xsrf_form_html())
+        self.xsrf_form_html = re.sub(r'\s*/>$', '>', web_handler.xsrf_form_html())
         self.sbHost = headers.get('X-Forwarded-Host')
         if None is self.sbHost:
             sbHost = headers.get('Host') or 'localhost'
-            self.sbHost = re.match('(?msx)^' + (('[^:]+', '\[.*\]')['[' == sbHost[0]]), sbHost).group(0)
+            self.sbHost = re.match('(?msx)^' + (('[^:]+', r'\[.*\]')['[' == sbHost[0]]), sbHost).group(0)
         self.sbHttpPort = sickbeard.WEB_PORT
         self.sbHttpsPort = headers.get('X-Forwarded-Port') or self.sbHttpPort
         self.sbRoot = sickbeard.WEB_ROOT
@@ -185,7 +185,7 @@ class BaseHandler(RequestHandler):
                 image_file_name = cache_obj.banner_thumb_path(show)
             elif 'fanart' == which[0:6]:
                 image_file_name = cache_obj.fanart_path('%s%s' % (
-                    show, re.sub('.*?fanart_(\d+(?:\.\w{1,20})?\.(?:\w{5,8})).*', r'.\1', which, 0, re.I)))
+                    show, re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.(?:\w{5,8})).*', r'.\1', which, 0, re.I)))
 
             if ek.ek(os.path.isfile, image_file_name):
                 static_image_path = image_file_name
@@ -375,7 +375,7 @@ class RepoHandler(BaseStaticFileHandler):
                     if f.is_file(follow_symlinks=False) and f.name[-4:] in ('.zip', '.md5'):
                         try:
                             ek.ek(os.remove, f.path)
-                        except OSError:
+                        except OSError as e:
                             logger.log('Unable to delete %s: %r / %s' % (f.path, e, str(e)), logger.WARNING)
                 zip_data = zip_method()
                 with io.open(zip_file, 'wb') as zh:
@@ -462,11 +462,11 @@ class RepoHandler(BaseStaticFileHandler):
                            ])
 
     def repo_sickgear_details(self):
-        return re.findall('(?si)addon\sid="(repository\.[^"]+)[^>]+version="([^"]+)',
+        return re.findall(r'(?si)addon\sid="(repository\.[^"]+)[^>]+version="([^"]+)',
                           self.render_kodi_repo_addon_xml())[0]
 
     def addon_watchedstate_details(self):
-        return re.findall('(?si)addon\sid="([^"]+)[^>]+version="([^"]+)',
+        return re.findall(r'(?si)addon\sid="([^"]+)[^>]+version="([^"]+)',
                           self.get_watchedstate_updater_addon_xml())[0]
 
     @staticmethod
@@ -482,11 +482,11 @@ class RepoHandler(BaseStaticFileHandler):
     def render_kodi_repo_addons_xml(self):
         t = PageTemplate(web_handler=self, file='repo_kodi_addons.tmpl')
         t.watchedstate_updater_addon_xml = re.sub(
-            '(?m)^([\s]*<)', r'\t\1',
+            r'(?m)^([\s]*<)', r'\t\1',
             '\n'.join(self.get_watchedstate_updater_addon_xml().split('\n')[1:]))  # skip xml header
 
         t.repo_xml = re.sub(
-            '(?m)^([\s]*<)', r'\t\1',
+            r'(?m)^([\s]*<)', r'\t\1',
             '\n'.join(self.render_kodi_repo_addon_xml().split('\n')[1:]))
 
         return t.respond()
@@ -510,7 +510,7 @@ class RepoHandler(BaseStaticFileHandler):
                     infile = fh.read()
                 zh.writestr('repository.sickgear/icon.png', infile, zipfile.ZIP_DEFLATED)
         except OSError as e:
-            logger.log('Unable to zip %s: %r / %s' % (f.path, e, str(e)), logger.WARNING)
+            logger.log('Unable to zip: %r / %s' % (e, str(e)), logger.WARNING)
 
         zip_data = bfr.getvalue()
         bfr.close()
@@ -594,9 +594,9 @@ class NoXSRFHandler(RequestHandler):
                 result, change = helpers.path_mapper(m[0], m[1], d['path_file'])
                 if change:
                     if not mapping:
-                        mapping = (states[idx]['path_file'], result)
+                        mapping = (d['path_file'], result)
                     mapped += 1
-                    states[idx]['path_file'] = result
+                    d['path_file'] = result
                     break
 
         if mapping:
@@ -654,7 +654,7 @@ class LoadingWebHandler(BaseHandler):
             route = 'loading_page'
         try:
             method = getattr(self, route)
-        except:
+        except(BaseException, Exception):
             self.finish(self.page_not_found())
         else:
             kwargss = {k: v if not (isinstance(v, list) and 1 == len(v)) else v[0]
@@ -682,7 +682,7 @@ class WebHandler(BaseHandler):
         route = route.strip('/') or 'index'
         try:
             method = getattr(self, route)
-        except:
+        except(BaseException, Exception):
             self.finish(self.page_not_found())
         else:
             kwargss = {k: v if not (isinstance(v, list) and 1 == len(v)) else v[0]
@@ -725,7 +725,7 @@ class MainHandler(WebHandler):
         elif self.settings.get('debug') and 'exc_info' in kwargs:
             exc_info = kwargs['exc_info']
             trace_info = ''.join(['%s<br/>' % line for line in traceback.format_exception(*exc_info)])
-            request_info = ''.join(['<strong>%s</strong>: %s<br/>' % (k, self.request.__dict__[k] ) for k in
+            request_info = ''.join(['<strong>%s</strong>: %s<br/>' % (k, self.request.__dict__[k]) for k in
                                     self.request.__dict__.keys()])
             error = exc_info[1]
 
@@ -1162,7 +1162,7 @@ r.close()
 
     def _genericMessage(self, subject, message):
         t = PageTemplate(web_handler=self, file='genericMessage.tmpl')
-        t.submenu = self.HomeMenu()
+        t.submenu = Home(self.application, self.request).HomeMenu()
         t.subject = subject
         t.message = message
         return t.respond()
@@ -1403,7 +1403,7 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_host(host)
-        if not hosts:
+        if not host:
             return 'Fail: No valid host(s)'
 
         return notifiers.NotifierFactory().get('NMJ').test_notify(urllib.unquote_plus(host), database, mount)
@@ -1412,7 +1412,7 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_host(host)
-        if not hosts:
+        if not host:
             return 'Fail: No valid host(s)'
 
         return notifiers.NotifierFactory().get('NMJ').notify_settings(urllib.unquote_plus(host))
@@ -1421,7 +1421,7 @@ class Home(MainHandler):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
         host = config.clean_host(host)
-        if not hosts:
+        if not host:
             return 'Fail: No valid host(s)'
 
         return notifiers.NotifierFactory().get('NMJV2').test_notify(urllib.unquote_plus(host))
@@ -1655,7 +1655,7 @@ class Home(MainHandler):
             if not line.strip():
                 continue
             if line.startswith('  '):
-                change_parts = re.findall('^[\W]+(.*)$', line)
+                change_parts = re.findall(r'^[\W]+(.*)$', line)
                 change['text'] += change_parts and (' %s' % change_parts[0].strip()) or ''
             else:
                 if change:
@@ -1739,7 +1739,7 @@ class Home(MainHandler):
         if not show_obj:
             return json.dumps(response)
 
-        re_season = re.compile('(?i)^showseason-(\d+)$')
+        re_season = re.compile(r'(?i)^showseason-(\d+)$')
         season = None if not any(re_season.findall(season)) else \
             helpers.tryInt(re_season.findall(season)[0], None)
         if None is season:
@@ -2174,15 +2174,15 @@ class Home(MainHandler):
                          MapStatus.NO_AUTOMATIC_CHANGE != old_status) or
                         (MapStatus.NO_AUTOMATIC_CHANGE != new_status and
                          MapStatus.NO_AUTOMATIC_CHANGE == old_status)):
-                        i = helpers.tryInt(t.group(1))
-                        if 'mid-%s' % i in kwargs:
-                            l = helpers.tryInt(kwargs['mid-%s' % i], None)
-                            if None is not l and l >= 0:
-                                show_obj.ids.setdefault(i, {'id': 0, 'status': MapStatus.NONE, 'date':
-                                    datetime.date.fromordinal(1)})['id'] = l
-                        show_obj.ids.setdefault(i, {'id': 0, 'status': MapStatus.NONE, 'date':
+                        locked_val = helpers.tryInt(t.group(1))
+                        if 'mid-%s' % locked_val in kwargs:
+                            mid_val = helpers.tryInt(kwargs['mid-%s' % locked_val], None)
+                            if None is not mid_val and mid_val >= 0:
+                                show_obj.ids.setdefault(locked_val, {'id': 0, 'status': MapStatus.NONE, 'date':
+                                    datetime.date.fromordinal(1)})['id'] = mid_val
+                        show_obj.ids.setdefault(locked_val, {'id': 0, 'status': MapStatus.NONE, 'date':
                             datetime.date.fromordinal(1)})['status'] = new_status
-                        save_map.append(i)
+                        save_map.append(locked_val)
             if len(save_map):
                 save_mapping(show_obj, save_map=save_map)
             map_indexers_to_show(show_obj, force=True)
@@ -2266,7 +2266,7 @@ class Home(MainHandler):
                     try:
                         anime = adba.Anime(sickbeard.ADBA_CONNECTION, name=showObj.name)
                         t.groups = anime.get_groups()
-                    except Exception as e:
+                    except(BaseException, Exception):
                         t.groups.append(dict([('name', 'Fail:AniDB connect. Restart sg else check debug log'), ('rating', ''), ('range', '')]))
                 else:
                     t.groups.append(dict([('name', 'Did not initialise AniDB. Check debug log if reqd.'), ('rating', ''), ('range', '')]))
@@ -2421,7 +2421,7 @@ class Home(MainHandler):
             try:
                 sickbeard.showQueueScheduler.action.updateShow(showObj, True)  # @UndefinedVariable
                 helpers.cpu_sleep()
-            except exceptions.CantUpdateException as e:
+            except exceptions.CantUpdateException:
                 errors.append('Unable to force an update on the show.')
 
         if do_update_exceptions:
@@ -3221,7 +3221,7 @@ class NewHomeAddShows(Home):
                 idx_sort,
                 sorted(
                     sorted(data_result, reverse=reverse, key=lambda x: (dateutil.parser.parse(
-                        re.match('^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
+                        re.match(r'^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
                         or (x[idx_aired] and str(x[idx_aired])) or '1900'))),
                     reverse=False, key=lambda x: x[idx_src]), is_last_sort)
 
@@ -3323,7 +3323,7 @@ class NewHomeAddShows(Home):
                 for root_dir in sickbeard.ROOT_DIRS.split('|')[1:]:
                     try:
                         file_list = ek.ek(os.listdir, root_dir)
-                    except:
+                    except(BaseException, Exception):
                         continue
 
                     for cur_file in file_list:
@@ -3526,7 +3526,7 @@ class NewHomeAddShows(Home):
                             votes=votes, rating=rating,
                             genres='', overview=''
                         ))
-            except:
+            except(BaseException, Exception):
                 pass
 
             kwargs.update(dict(oldest=oldest, newest=newest))
@@ -3551,7 +3551,7 @@ class NewHomeAddShows(Home):
         accounts = dict(map(None, *[iter(sickbeard.IMDB_ACCOUNTS)] * 2))
 
         if 'enable' == kwargs.get('action'):
-            account_id = re.findall('\d{6,32}', kwargs.get('input', ''))
+            account_id = re.findall(r'\d{6,32}', kwargs.get('input', ''))
             if not account_id:
                 return json.dumps({'result': 'Fail: Invalid IMDb ID'})
             acc_id = account_id[0]
@@ -3565,7 +3565,7 @@ class NewHomeAddShows(Home):
                 return json.dumps({'result': 'Fail: List is not public with id: %s' % acc_id})
 
             try:
-                list_name = re.findall('(?i)og:title[^>]+?content[^"]+?"([^"]+?)\s+Watchlist\s*"',
+                list_name = re.findall(r'(?i)og:title[^>]+?content[^"]+?"([^"]+?)\s+Watchlist\s*"',
                                        html)[0].replace('\'s', '')
                 accounts[acc_id] = list_name or 'noname'
             except (Exception, BaseException):
@@ -3657,7 +3657,7 @@ class NewHomeAddShows(Home):
                     scale = (lambda low1, high1: int((float(450) / high1) * low1))
                     dims = [row.get('poster', {}).get('width', 0), row.get('poster', {}).get('height', 0)]
                     s = [scale(x, int(max(dims))) for x in dims]
-                    img_uri = re.sub('(?im)(.*V1_?)(\..*?)$', r'\1UX%s_CR0,0,%s,%s_AL_\2' % (s[0], s[0], s[1]), img_uri)
+                    img_uri = re.sub(r'(?im)(.*V1_?)(\..*?)$', r'\1UX%s_CR0,0,%s,%s_AL_\2' % (s[0], s[0], s[1]), img_uri)
                     images = dict(poster=dict(thumb='imagecache?path=browse/thumb/imdb&source=%s' % img_uri))
                     sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
@@ -3731,7 +3731,7 @@ class NewHomeAddShows(Home):
                         img_uri = img[0].get('loadlate')
                         match = img_size.search(img_uri)
                         if match and 'tv_series.gif' not in img_uri and 'nopicture' not in img_uri:
-                            scale = lambda low1, high1: int((float(450) / high1) * low1)
+                            scale = (lambda low1, high1: int((float(450) / high1) * low1))
                             high = int(max([match.group(9), match.group(11)]))
                             scaled = [scale(x, high) for x in
                                       [(int(match.group(n)), high)[high == int(match.group(n))] for n in
@@ -3868,7 +3868,7 @@ class NewHomeAddShows(Home):
         return self.redirect('/home/addShows/popular_imdb')
 
     def addIMDbShow(self, indexer_id, showName):
-        return self.new_show('|'.join(['', '', '', re.search('(?i)tt\d+$', indexer_id) and indexer_id or showName]),
+        return self.new_show('|'.join(['', '', '', re.search(r'(?i)tt\d+$', indexer_id) and indexer_id or showName]),
                             use_show_name=True)
 
     def trakt_anticipated(self, *args, **kwargs):
@@ -3988,7 +3988,7 @@ class NewHomeAddShows(Home):
         oldest = None
         newest = None
         for item in normalised:
-            ignore = '''
+            ignore = r'''
                     ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
                     '''
             if re.search(ignore, item['show']['title'].strip(), re.I | re.X):
@@ -4124,7 +4124,7 @@ class NewHomeAddShows(Home):
                 try:
                     item['show_id'] = str(item['ids'][tvdb])
                     tvshow = helpers.findCertainShow(sickbeard.showList, item['show_id'])
-                except:
+                except(BaseException, Exception):
                     continue
                 # check tvshow indexer is not using the same id from another indexer
                 if tvshow and (index + 1) == tvshow.indexer:
@@ -4173,7 +4173,7 @@ class NewHomeAddShows(Home):
             indexer, void, indexer_id, show_name = self.split_extra_show(whichSeries)
             if bool(helpers.tryInt(cancel_form)):
                 indexer = indexer or providedIndexer or '0'
-                indexer_id = re.findall('show=([\d]+)', return_to)[0]
+                indexer_id = re.findall(r'show=([\d]+)', return_to)[0]
             return self.redirect(return_to % (indexer, indexer_id))
 
         # grab our list of other dirs if given
@@ -4288,7 +4288,7 @@ class NewHomeAddShows(Home):
 
     def split_extra_show(self, extra_show):
         if not extra_show:
-            return (None, None, None, None)
+            return None, None, None, None
         if isinstance(extra_show, str):
             extra_show = extra_show.decode('utf-8', 'replace')
         split_vals = extra_show.split('|')
@@ -5018,7 +5018,7 @@ class Manage(MainHandler):
             if quality_preset == 'keep':
                 anyQualities, bestQualities = Quality.splitQuality(showObj.quality)
             elif int(quality_preset):
-                 bestQualities = []
+                bestQualities = []
 
             exceptions_list = []
 
@@ -5478,7 +5478,7 @@ class History(MainHandler):
 
             t.provider_fails = 0 < len([p for p in t.provider_fail_stats if len(p['fails'])])
 
-        article_match = '^((?:A(?!\s+to)n?)|The)\s+(.*)$'
+        article_match = r'^((?:A(?!\s+to)n?)|The)\s+(.*)$'
         for rs in [getattr(t, name, []) for name in result_sets]:
             for r in rs:
                 r['name1'] = ''
@@ -5838,7 +5838,7 @@ class Config(MainHandler):
 
         try:
             with open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'CHANGES.md')) as fh:
-                t.version = re.findall('###[^0-9]+([0-9]+\.[0-9]+\.[0-9]+)', fh.readline())[0]
+                t.version = re.findall(r'###[^0-9]+([0-9]+\.[0-9]+\.[0-9]+)', fh.readline())[0]
         except (StandardError, BaseException):
             t.version = ''
 
@@ -6589,7 +6589,7 @@ class ConfigProviders(Config):
 
                     for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
                                  'scene_only', 'scene_loose', 'scene_loose_active',
-                                 'scene_rej_nuked', 'scene_nuked_active',]:
+                                 'scene_rej_nuked', 'scene_nuked_active']:
                         setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
 
                     for attr in ['scene_or_contain', 'search_mode']:
@@ -7172,8 +7172,8 @@ class ErrorLogs(MainHandler):
     def ErrorLogsMenu():
         if len(classes.ErrorViewer.errors):
             return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'},
-                    {'title': 'Clear Errors', 'path': 'errorlogs/clearerrors/'},]
-        return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'},]
+                    {'title': 'Clear Errors', 'path': 'errorlogs/clearerrors/'}]
+        return [{'title': 'Download Log', 'path': 'errorlogs/downloadlog/'}]
 
     def index(self, *args, **kwargs):
 
@@ -7210,7 +7210,7 @@ class ErrorLogs(MainHandler):
 
         min_level = int(min_level)
 
-        regex = '^(\d\d\d\d)\-(\d\d)\-(\d\d)\s*(\d\d)\:(\d\d):(\d\d)\s*([A-Z]+)\s*(.+?)\s*\:\:\s*(.*)$'
+        regex = r'^(\d\d\d\d)\-(\d\d)\-(\d\d)\s*(\d\d)\:(\d\d):(\d\d)\s*([A-Z]+)\s*(.+?)\s*\:\:\s*(.*)$'
 
         final_data = []
         normal_data = []
@@ -7344,7 +7344,7 @@ class CachedImages(MainHandler):
                     CachedImages.delete_dummy_image(dummy_file)
                     return True
                 return False
-        except:
+        except(BaseException, Exception):
             pass
         return True
 
@@ -7355,7 +7355,7 @@ class CachedImages(MainHandler):
         try:
             with open(dummy_file, 'w'):
                 pass
-        except:
+        except(BaseException, Exception):
             pass
 
     @staticmethod
@@ -7363,7 +7363,7 @@ class CachedImages(MainHandler):
         try:
             if ek.ek(os.path.isfile, dummy_file):
                 ek.ek(os.remove, dummy_file)
-        except:
+        except(BaseException, Exception):
             pass
 
     @staticmethod
