@@ -1,4 +1,9 @@
-﻿### 0.20.2 (2019-10-02 00:25:00 UTC)
+﻿### 0.20.3 (2019-08-27 18:50:00 UTC)
+
+* Fix provider LimeTorrents
+
+
+### 0.20.2 (2019-08-10 00:25:00 UTC)
 
 * Fix some missing reference issues in webserve
 * Add a link 'FAQ: Episode not found / Snatch failed' to 'View Log File'

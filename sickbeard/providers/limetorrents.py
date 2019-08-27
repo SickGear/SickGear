@@ -58,8 +58,6 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'dl'}.iteritems())
-
         for mode in search_params.keys():
             for search_string in search_params[mode]:
 
@@ -76,17 +74,24 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
-                    with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'table2' in at)})) as tbl:
-                        tbl_rows = [] if not tbl else [
-                            t.select('tr[bgcolor]') for t in tbl if
-                            all([x in ' '.join(x.get_text() for x in t.find_all('th')).lower() for x in
-                                 ['torrent', 'size']])]
+                    with BS4Parser(html, parse_only=dict(
+                            table={'class': (lambda at: at and bool(re.search(r'table[23\d]*', at)))})) as tbl:
+                        tbl_rows = [] if not tbl else tbl.select('tr')
+                        for x, tr in enumerate(tbl_rows):
+                            row_text = tr.get_text().lower()
+                            if not('torrent' in row_text and 'size' in row_text):
+                                tr.decompose()
+                            else:
+                                break
+                            if 5 < x:
+                                break
+                        tbl_rows = [] if not tbl else tbl.select('tr')
 
                         if not len(tbl_rows):
                             raise generic.HaltParseException
 
                         head = None
-                        for tr in tbl_rows[0]:  # 0 = all rows
+                        for tr in tbl_rows:
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
@@ -99,8 +104,9 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
                                 anchors = tr.td.find_all('a')
                                 stats = anchors and [len(a.get_text()) for a in anchors]
-                                title = stats and anchors[stats.index(max(stats))].get_text().strip()
-                                download_url = self._link((tr.td.find('a', class_=rc['get']) or {}).get('href'))
+                                anchor = stats and anchors[stats.index(max(stats))]
+                                title = anchor and anchor.get_text().strip()
+                                download_url = anchor and self._link(anchor.get('href'))
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
@@ -117,6 +123,18 @@ class LimeTorrentsProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    def get_data(self, url):
+        result = None
+        html = self.get_url(url)
+        if self.should_skip():
+            return result
+
+        try:
+            result = re.findall('(?i)"(magnet:[^"]+?)"', html)[0]
+        except IndexError:
+            logger.log('Failed no magnet in response', logger.DEBUG)
+        return result
 
 
 provider = LimeTorrentsProvider()
