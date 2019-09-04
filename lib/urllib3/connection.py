@@ -99,7 +99,7 @@ class HTTPConnection(_HTTPConnection, object):
     is_verified = False
 
     def __init__(self, *args, **kw):
-        if six.PY3:
+        if not six.PY2:
             kw.pop("strict", None)
 
         # Pre-set source_address.
@@ -429,7 +429,7 @@ def _match_hostname(cert, asserted_hostname):
     try:
         match_hostname(cert, asserted_hostname)
     except CertificateError as e:
-        log.error(
+        log.warning(
             "Certificate did not match expected hostname: %s. " "Certificate: %s",
             asserted_hostname,
             cert,

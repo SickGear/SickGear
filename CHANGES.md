@@ -14,13 +14,14 @@
 * Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
 * Update TZlocal 2.0.0.dev0 (b73a692) to 2.0.0b3 (410a838)
 * Update unidecode module 1.0.22 (a5045ab) to 1.1.1 (632af82)
-* Update urllib3 release 1.25.2 (49eea80) to 1.25.3 (3387b20)
+* Update urllib3 release 1.25.3 (3387b20) to 1.25.3 (67715fd)
 
 
 [develop changelog]
 
 * Update attr 19.2.0.dev0 (de84609) to 19.2.0.dev0 (154b4e5)
 * Update Requests library 2.22.0 (aeda65b) to 2.22.0 (0b6c110)
+* Update urllib3 release 1.25.2 (49eea80) to 1.25.3 (3387b20)
 
 
 ### 0.20.3 (2019-08-27 18:50:00 UTC)
