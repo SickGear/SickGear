@@ -1,10 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
 import copy
-import hashlib
 import linecache
 import sys
 import threading
+import uuid
 import warnings
 
 from operator import itemgetter
@@ -41,6 +41,9 @@ _classvar_prefixes = ("typing.ClassVar", "t.ClassVar", "ClassVar")
 _hash_cache_field = "_attrs_cached_hash"
 
 _empty_metadata_singleton = metadata_proxy({})
+
+# Unique object for unequivocal getattr() defaults.
+_sentinel = object()
 
 
 class _Nothing(object):
@@ -371,38 +374,20 @@ def _transform_attrs(cls, these, auto_attribs, kw_only):
 
     attrs = AttrsClass(base_attrs + own_attrs)
 
+    # Mandatory vs non-mandatory attr order only matters when they are part of
+    # the __init__ signature and when they aren't kw_only (which are moved to
+    # the end and can be mandatory or non-mandatory in any order, as they will
+    # be specified as keyword args anyway). Check the order of those attrs:
     had_default = False
-    was_kw_only = False
-    for a in attrs:
-        if (
-            was_kw_only is False
-            and had_default is True
-            and a.default is NOTHING
-            and a.init is True
-            and a.kw_only is False
-        ):
+    for a in (a for a in attrs if a.init is not False and a.kw_only is False):
+        if had_default is True and a.default is NOTHING:
             raise ValueError(
                 "No mandatory attributes allowed after an attribute with a "
                 "default value or factory.  Attribute in question: %r" % (a,)
             )
-        elif (
-            had_default is False
-            and a.default is not NOTHING
-            and a.init is not False
-            and
-            # Keyword-only attributes without defaults can be specified
-            # after keyword-only attributes with defaults.
-            a.kw_only is False
-        ):
+
+        if had_default is False and a.default is not NOTHING:
             had_default = True
-        if was_kw_only is True and a.kw_only is False and a.init is True:
-            raise ValueError(
-                "Non keyword-only attributes are not allowed after a "
-                "keyword-only attribute (unless they are init=False).  "
-                "Attribute in question: {a!r}".format(a=a)
-            )
-        if was_kw_only is False and a.init is True and a.kw_only is True:
-            was_kw_only = True
 
     return _Attributes((attrs, base_attrs, base_attr_map))
 
@@ -504,7 +489,7 @@ class _ClassBuilder(object):
             for name in self._attr_names:
                 if (
                     name not in base_names
-                    and getattr(cls, name, None) is not None
+                    and getattr(cls, name, _sentinel) != _sentinel
                 ):
                     try:
                         delattr(cls, name)
@@ -662,7 +647,10 @@ class _ClassBuilder(object):
     def add_hash(self):
         self._cls_dict["__hash__"] = self._add_method_dunders(
             _make_hash(
-                self._attrs, frozen=self._frozen, cache_hash=self._cache_hash
+                self._cls,
+                self._attrs,
+                frozen=self._frozen,
+                cache_hash=self._cache_hash,
             )
         )
 
@@ -671,6 +659,7 @@ class _ClassBuilder(object):
     def add_init(self):
         self._cls_dict["__init__"] = self._add_method_dunders(
             _make_init(
+                self._cls,
                 self._attrs,
                 self._has_post_init,
                 self._frozen,
@@ -689,7 +678,8 @@ class _ClassBuilder(object):
         cd["__eq__"], cd["__ne__"], cd["__lt__"], cd["__le__"], cd[
             "__gt__"
         ], cd["__ge__"] = (
-            self._add_method_dunders(meth) for meth in _make_cmp(self._attrs)
+            self._add_method_dunders(meth)
+            for meth in _make_cmp(self._cls, self._attrs)
         )
 
         return self
@@ -904,20 +894,20 @@ def attrs(
             raise TypeError(
                 "Invalid value for hash.  Must be True, False, or None."
             )
-        elif hash is False or (hash is None and cmp is False):
+        elif hash is False or (hash is None and cmp is False) or is_exc:
+            # Don't do anything. Should fall back to __object__'s __hash__
+            # which is by id.
             if cache_hash:
                 raise TypeError(
                     "Invalid value for cache_hash.  To use hash caching,"
                     " hashing must be either explicitly or implicitly "
                     "enabled."
                 )
-        elif (
-            hash is True
-            or (hash is None and cmp is True and frozen is True)
-            and is_exc is False
-        ):
+        elif hash is True or (hash is None and cmp is True and frozen is True):
+            # Build a __hash__ if told so, or if it's safe.
             builder.add_hash()
         else:
+            # Raise TypeError on attempts to hash.
             if cache_hash:
                 raise TypeError(
                     "Invalid value for cache_hash.  To use hash caching,"
@@ -983,7 +973,37 @@ def _attrs_to_tuple(obj, attrs):
     return tuple(getattr(obj, a.name) for a in attrs)
 
 
-def _make_hash(attrs, frozen, cache_hash):
+def _generate_unique_filename(cls, func_name):
+    """
+    Create a "filename" suitable for a function being generated.
+    """
+    unique_id = uuid.uuid4()
+    extra = ""
+    count = 1
+
+    while True:
+        unique_filename = "<attrs generated {0} {1}.{2}{3}>".format(
+            func_name,
+            cls.__module__,
+            getattr(cls, "__qualname__", cls.__name__),
+            extra,
+        )
+        # To handle concurrency we essentially "reserve" our spot in
+        # the linecache with a dummy line.  The caller can then
+        # set this value correctly.
+        cache_line = (1, None, (str(unique_id),), unique_filename)
+        if (
+            linecache.cache.setdefault(unique_filename, cache_line)
+            == cache_line
+        ):
+            return unique_filename
+
+        # Looks like this spot is taken. Try again.
+        count += 1
+        extra = "-{0}".format(count)
+
+
+def _make_hash(cls, attrs, frozen, cache_hash):
     attrs = tuple(
         a
         for a in attrs
@@ -992,10 +1012,7 @@ def _make_hash(attrs, frozen, cache_hash):
 
     tab = "        "
 
-    # We cache the generated hash methods for the same kinds of attributes.
-    sha1 = hashlib.sha1()
-    sha1.update(repr(attrs).encode("utf-8"))
-    unique_filename = "<attrs generated hash %s>" % (sha1.hexdigest(),)
+    unique_filename = _generate_unique_filename(cls, "hash")
     type_hash = hash(unique_filename)
 
     method_lines = ["def __hash__(self):"]
@@ -1052,7 +1069,7 @@ def _add_hash(cls, attrs):
     """
     Add a hash method to *cls*.
     """
-    cls.__hash__ = _make_hash(attrs, frozen=False, cache_hash=False)
+    cls.__hash__ = _make_hash(cls, attrs, frozen=False, cache_hash=False)
     return cls
 
 
@@ -1074,13 +1091,10 @@ WARNING_CMP_ISINSTANCE = (
 )
 
 
-def _make_cmp(attrs):
+def _make_cmp(cls, attrs):
     attrs = [a for a in attrs if a.cmp]
 
-    # We cache the generated eq methods for the same kinds of attributes.
-    sha1 = hashlib.sha1()
-    sha1.update(repr(attrs).encode("utf-8"))
-    unique_filename = "<attrs generated eq %s>" % (sha1.hexdigest(),)
+    unique_filename = _generate_unique_filename(cls, "eq")
     lines = [
         "def __eq__(self, other):",
         "    if other.__class__ is not self.__class__:",
@@ -1185,7 +1199,7 @@ def _add_cmp(cls, attrs=None):
         attrs = cls.__attrs_attrs__
 
     cls.__eq__, cls.__ne__, cls.__lt__, cls.__le__, cls.__gt__, cls.__ge__ = _make_cmp(  # noqa
-        attrs
+        cls, attrs
     )
 
     return cls
@@ -1255,14 +1269,11 @@ def _add_repr(cls, ns=None, attrs=None):
 
 
 def _make_init(
-    attrs, post_init, frozen, slots, cache_hash, base_attr_map, is_exc
+    cls, attrs, post_init, frozen, slots, cache_hash, base_attr_map, is_exc
 ):
     attrs = [a for a in attrs if a.init or a.default is not NOTHING]
 
-    # We cache the generated init methods for the same kinds of attributes.
-    sha1 = hashlib.sha1()
-    sha1.update(repr(attrs).encode("utf-8"))
-    unique_filename = "<attrs generated init {0}>".format(sha1.hexdigest())
+    unique_filename = _generate_unique_filename(cls, "init")
 
     script, globs, annotations = _attrs_to_init_script(
         attrs, frozen, slots, post_init, cache_hash, base_attr_map, is_exc
