@@ -1,6 +1,6 @@
 ﻿### 0.21.0 (2019-xx-xx xx:xx:xx UTC)
 
-* Update attr 19.2.0.dev0 (de84609) to 19.2.0.dev0 (154b4e5)
+* Update attr 19.2.0.dev0 (154b4e5) to 19.2.0.dev0 (daf2bc8)
 * Update Beautiful Soup 4.7.1 (r497) to 4.8.0 (r526)
 * Update cachecontrol library 0.12.4 (bd94f7e) to 0.12.5 (007e8ca)
 * Update Certifi 2019.03.09 (401100f) to 2019.06.16 (84dc766)
@@ -19,6 +19,7 @@
 
 [develop changelog]
 
+* Update attr 19.2.0.dev0 (de84609) to 19.2.0.dev0 (154b4e5)
 
 
 ### 0.20.3 (2019-08-27 18:50:00 UTC)
