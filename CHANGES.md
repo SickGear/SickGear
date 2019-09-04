@@ -4,6 +4,7 @@
 * Update Beautiful Soup 4.7.1 (r497) to 4.8.0 (r526)
 * Update cachecontrol library 0.12.4 (bd94f7e) to 0.12.5 (007e8ca)
 * Update Certifi 2019.03.09 (401100f) to 2019.06.16 (84dc766)
+* Update ConfigObj 5.1.0 (a68530a) to 5.1.0 (45fbf1b)
 * Update DiskCache library 3.1.1 (2649ac9) to 4.0.0 (2c79bb9)
 * Update feedparser 5.2.1 (2b11c80) to 5.2.1 (cbe18d0)
 * Update Hachoir library 2.0a6 (c102cc7) to 2.0a6 (5b9e05a)
