@@ -1,29 +1,5 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""
-fuzz.py
-
-Copyright (c) 2011 Adam Cohen
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
 from __future__ import unicode_literals
 import platform
 import warnings
@@ -43,6 +19,7 @@ from . import utils
 ###########################
 
 @utils.check_for_none
+@utils.check_for_equivalence
 @utils.check_empty_string
 def ratio(s1, s2):
     s1, s2 = utils.make_type_consistent(s1, s2)
@@ -52,6 +29,7 @@ def ratio(s1, s2):
 
 
 @utils.check_for_none
+@utils.check_for_equivalence
 @utils.check_empty_string
 def partial_ratio(s1, s2):
     """"Return the ratio of the most similar substring
@@ -142,6 +120,9 @@ def _token_set(s1, s2, partial=True, force_ascii=True, full_process=True):
             <sorted_intersection><sorted_remainder>
         - take ratios of those two strings
         - controls for unordered partial matches"""
+
+    if not full_process and s1 == s2:
+        return 100
 
     p1 = utils.full_process(s1, force_ascii=force_ascii) if full_process else s1
     p2 = utils.full_process(s2, force_ascii=force_ascii) if full_process else s2
