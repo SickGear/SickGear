@@ -675,33 +675,15 @@ def create_https_certificates(ssl_cert, ssl_key):
     """
     Create self-signed HTTPS certificares and store in paths 'ssl_cert' and 'ssl_key'
     """
+
     try:
-        from OpenSSL import crypto
-        from lib.certgen import createKeyPair, createCertRequest, createCertificate, TYPE_RSA,  serial
+        from lib.certgen import generate_key, generate_local_cert
     except (StandardError, Exception):
-        logger.log(u"pyopenssl module missing, please install for https access", logger.WARNING)
         return False
 
-    # Create the CA Certificate
-    cakey = createKeyPair(TYPE_RSA, 4096)
-    careq = createCertRequest(cakey, CN='Certificate Authority')
-    cacert = createCertificate(careq, (careq, cakey), serial, (0, 60 * 60 * 24 * 365 * 10))  # ten years
-
-    pkey = createKeyPair(TYPE_RSA, 4096)
-    req = createCertRequest(pkey, CN='SickGear')
-    cert = createCertificate(req, (cacert, cakey), serial, (0, 60 * 60 * 24 * 365 * 10))  # ten years
-
-    # Save the key and certificate to disk
-    try:
-        with open(ssl_key, 'w') as file_hd:
-            file_hd.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey))
-        with open(ssl_cert, 'w') as file_hd:
-            file_hd.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
-    except (StandardError, Exception):
-        logger.log(u"Error creating SSL key and certificate", logger.ERROR)
-        return False
-
-    return True
+    private_key = generate_key(key_size=4096, output_file=ssl_key)
+    cert = generate_local_cert(private_key, days_valid=3650, output_file=ssl_cert)
+    return bool(cert)
 
 
 if __name__ == '__main__':
